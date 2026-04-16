@@ -26,6 +26,7 @@
 #include "consumption_policy.h"
 #include "credmon_interface.h"
 #include "condor_holdcodes.h"
+#include "condor_config.h"
 
 #include <map>
 
@@ -2541,6 +2542,132 @@ command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 	s->encode();
 	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to send response to %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
+command_rehome(int /*dc_cmd*/, Stream* s)
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !getClassAd(s, ad) ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read classad from %s\n", s->peer_description());
+		return FALSE;
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read end of message from %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "Processing rehome request from %s\n", s->peer_description());
+	dPrintAd(D_ALWAYS, ad);
+
+	// Extract parameters from the request ad
+	[[maybe_unused]] int timeout = 0;
+	ad.LookupInteger("RehomeTimeout", timeout);
+	// TODO: use timeout to set a deadline for the rehome operation
+
+	bool cancel = false;
+	ad.LookupBool("Cancel", cancel);
+
+	std::string schedd_name;
+	std::string schedd_pool;
+	if( !ad.LookupString("ScheddName", schedd_name) || schedd_name.empty() ) {
+		dprintf(D_ALWAYS, "command_rehome: ScheddName not specified in request from %s\n", s->peer_description());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "ScheddName not specified");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+	
+	// ScheddPool is optional - if not specified, COLLECTOR_HOST will be used
+	ad.LookupString("ScheddPool", schedd_pool);
+
+	if( cancel ) {
+		// Cancel rehome: unset STARTD_DIRECT_ATTACH_SCHEDD_NAME without evicting jobs
+		int rc = set_persistent_config(strdup("rehome"), strdup(""));
+		if( rc < 0 ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to unset persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+			ClassAd response_ad;
+			response_ad.Assign(ATTR_RESULT, false);
+			response_ad.Assign(ATTR_ERROR_STRING, "Failed to unset persistent config");
+			s->encode();
+			putClassAd(s, response_ad);
+			s->end_of_message();
+			return FALSE;
+		}
+
+		dprintf(D_ALWAYS, "command_rehome: cancelled rehome, unset STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, true);
+
+		s->encode();
+		if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	// Check if already attached to the requested schedd
+	auto_free_ptr current_schedd(param("STARTD_DIRECT_ATTACH_SCHEDD_NAME"));
+	if( current_schedd && schedd_name == current_schedd.ptr() ) {
+		dprintf(D_ALWAYS, "command_rehome: already attached to schedd %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Already attached to this schedd");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME and STARTD_DIRECT_ATTACH_SCHEDD_POOL so they survive restarts
+	std::string config_value;
+	formatstr(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		formatstr_cat(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s\n", schedd_pool.c_str());
+	}
+	int rc = set_persistent_config(strdup("rehome"), strdup(config_value.c_str()));
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to set persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Failed to set persistent config");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "command_rehome: set STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		dprintf(D_ALWAYS | D_NOHEADER, ", STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s", schedd_pool.c_str());
+	}
+	dprintf(D_ALWAYS | D_NOHEADER, "\n");
+
+	// Fast-kill all running starters
+	resmgr->killAllClaims("rehome", CONDOR_HOLD_CODE::StartdRehoming, 0);
+
+	// TODO: use timeout parameter
+	// TODO: report back to schedd when all starters have exited
+	// TODO: determine end state after rehome completes
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT, true);
+
+	s->encode();
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
 		return FALSE;
 	}
 

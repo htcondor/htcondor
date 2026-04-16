@@ -19,6 +19,7 @@ from .htcondor2_impl import (
     _startd_drain_jobs,
     _startd_vacate_slots,
     _startd_cancel_drain_jobs,
+    _startd_rehome,
     _history_query,
 )
 
@@ -102,6 +103,17 @@ class Startd():
         """
         _startd_vacate_slots(self._addr, None, vacate_fast)
 
+
+    def rehome(self, schedd_name : Optional[str] = None, timeout : int = 0, cancel : bool = False) -> None:
+        """
+        Send a rehome command to this startd, killing all running jobs.
+
+        :param schedd_name:  The name of the schedd to rehome to.
+        :param timeout:  Timeout for the rehome operation.
+        :param cancel:  If True, cancel a previous rehome by unsetting
+            STARTD_DIRECT_ATTACH_SCHEDD without evicting jobs.
+        """
+        _startd_rehome(self._addr, schedd_name, timeout, cancel)
 
     def cancelDrainJobs(self, request_id : Optional[str] = None) -> None:
         """

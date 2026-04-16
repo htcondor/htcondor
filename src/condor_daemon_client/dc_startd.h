@@ -198,6 +198,14 @@ public:
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
 
+		// Send REHOME command to startd
+		// schedd_name: the schedd to rehome to
+		// schedd_pool: the collector pool to use to find the schedd (NULL = use COLLECTOR_HOST)
+		// timeout: timeout for the rehome operation
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false);
+
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
  private:

@@ -93,6 +93,7 @@ htcondor_cli/conf.py
 htcondor_cli/convert_ad.py
 htcondor_cli/credential.py
 htcondor_cli/dagman.py
+htcondor_cli/ep.py
 htcondor_cli/eventlog.py
 htcondor_cli/histogram.py
 htcondor_cli/job.py
