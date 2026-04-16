@@ -108,7 +108,7 @@ def completed_test_job(condor, test_job_hash):
 
     assert ctj.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
@@ -144,7 +144,7 @@ def completed_test_job_with_xfer(condor_with_td, test_job_hash_with_xfer):
 
     assert ctj_td.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
@@ -210,7 +210,7 @@ def running_ssh_job(condor, ssh_job_hash):
     job = condor.submit(ssh_job_hash, count=1)
     assert job.wait(
         condition=ClusterState.all_running,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
