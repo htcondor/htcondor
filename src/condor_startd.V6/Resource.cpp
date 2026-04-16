@@ -2570,6 +2570,14 @@ void Resource::publish_static(ClassAd* cap)
 	cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 
 	{
+		std::string direct_attach_schedd;
+		param(direct_attach_schedd, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+		if (!direct_attach_schedd.empty()) {
+			cap->Assign(ATTR_IS_DIRECT_ATTACH, direct_attach_schedd);
+		}
+	}
+
+	{
 		// Since the Rank expression itself only lives in the
 		// config file and the r_classad (not any obejects), we
 		// have to insert it here from r_classad.  If Rank is
