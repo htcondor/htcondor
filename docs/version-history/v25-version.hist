@@ -70,7 +70,7 @@
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
 
@@ -94,20 +94,23 @@
   appends them to the default output.
   :jira:`3604`
 
+- Fixed a spurious error message in the StarterLog about unhandled
+  job exit.
+  :jira:`3653`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
 
-*** 25.8.1 features
+*** 25.8.2 features
 
-- The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
+- The *condor_shadow* can now log a CSV record to the :macro:`SHADOW_RECONNECT_LOG`
   file each time it successfully reconnects to a disconnected starter or
   gives up trying.  Each record contains timing information about when the
   job was activated, the last known contact time, whether the reconnect
   succeeded, the configured lease duration, and whether the starter is
-  known to be dead.  This is controlled by the new configuration knobs
-  :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
-  :macro:`SHADOW_RECONNECT_LOG`.
+  known to be dead.  This is controlled by :macro:`SHADOW_LOG_RECONNECT`
+  which defaults to ``True``.
   :jira:`3593`
 
 - HTCondor now correctly detects and advertises the NVIDIA driver version
@@ -140,7 +143,7 @@
   :jira:`3517`
 
 - In the python bindings, functions arguments that used to have a default
-  of the `None` type now take a python Optional.  This is more compliant
+  of the :obj:`None` type now take a python Optional.  This is more compliant
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
@@ -151,7 +154,7 @@
   allow this.
   :jira:`3549`
 
-- Singularity or Apptainer jobs now also pass --rocm to GPU jobs
+- Singularity or Apptainer jobs now also pass ``--rocm`` to GPU jobs
   to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
   set to false.
   :jira:`3537`
@@ -168,7 +171,7 @@
   two daemons is broken or disconnected.
   :jira:`3547`
 
-- :tool:`condor_top` now supports a `-history` option to read the most
+- :tool:`condor_top` now supports a ``-history`` option to read the most
   recently recorded on disk performance statistics.  Runs much faster,
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
@@ -191,7 +194,7 @@
   in the cooldown state.
   :jira:`3525`
 
-- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+- :tool:`condor_status` ``-server`` now correctly labels the count of discovered Slots
   in the summary table.
   :jira:`3535`
 
@@ -201,7 +204,7 @@
   for all job credential types.
   :jira:`3536`
 
-- Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
+- Added new ``histogram`` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
 - Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
@@ -210,8 +213,7 @@
   :jira:`3519`
 
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
-  supported.
-  This does not affect the ability to spool a job's full input sandbox.
+  supported. This does not affect the ability to spool a job's full input sandbox.
   :jira:`3545`
 
 - No longer warn about configuration knobs with dots in the names if the knob
@@ -249,9 +251,9 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.1 bugs
+*** 25.8.2 bugs
 
-- Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
+- Fixed a bug that caused the *condor_starter* to log confusing errors and not exit
   promptly if it failed to launch a Singularity job.
   :jira:`3531`
 
@@ -268,7 +270,7 @@
 
 - Fixed a minor bug whereby the Access Point is unaware that the Execution Point relinquishes a
   match when the EP's :macro:`WANT_HOLD` is triggered.  This can result in the AP failing to
-  activate the next job in a job list due to VacateReasonCode 1033 ( :ad-attr:`ActivationRefusedUnclaimed` ).
+  activate the next job in a job list due to VacateReasonCode 1033 ``ActivationRefusedUnclaimed``.
   :jira:`3609`
 
 *** 25.0.9 bugs

@@ -795,6 +795,7 @@
 #define ATTR_STREAM_ERROR  "StreamErr"
 #define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
 #define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
+#define ATTR_SUBMIT_EVENT_STRUCTURED_NOTES "StructuredNotes"
 #define ATTR_SUBMITTER "Submitter"
 #define ATTR_SUBMITTER_GLOBAL_JOB_ID  "SubmitterGlobalJobId"
 #define ATTR_SUBMITTER_ID  "SubmitterId"

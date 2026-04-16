@@ -729,7 +729,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-bool
+ReapResult
 OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );

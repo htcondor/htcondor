@@ -1516,7 +1516,7 @@ BaseShadow::log_except(const char *msg_str)
 	int dummy;
 	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
 		std::string vacate_str = "Shadow Exception: ";
-		vacate_str += msg_str;
+		if (msg_str) vacate_str += msg_str;
 		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
 		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);

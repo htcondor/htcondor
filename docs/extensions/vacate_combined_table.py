@@ -12,7 +12,8 @@ import os
 import re
 from typing import List
 
-GENERATED_REL_PATH = "codes-other-values/vacate-code-combined-table.rst"
+from generation import generate_rst
+
 VACATE_TABLE_REL_PATH = "codes-other-values/vacate-code-table.rst"
 HOLD_REASON_CODES_REL_PATH = "codes-other-values/hold-reason-codes.rst"
 
@@ -22,7 +23,7 @@ class VacateCombinedTableGenerator:
 
     def __init__(self, docs_root: str) -> None:
         self.docs_root = docs_root
-        self.out_path = os.path.join(docs_root, GENERATED_REL_PATH)
+        self.out_path = generate_rst(docs_root, "vacate-code-combined-table.rst")
         self.vacate_table_path = os.path.join(docs_root, VACATE_TABLE_REL_PATH)
         hold_reason_codes_path = os.path.join(docs_root, HOLD_REASON_CODES_REL_PATH)
         self.hold_table_path = self._resolve_hold_table_path(hold_reason_codes_path)
@@ -165,13 +166,7 @@ def _on_builder_inited(app) -> None:
     generator.generate()
 
 
-def _on_config_inited(app, config) -> None:
-    if GENERATED_REL_PATH not in config.exclude_patterns:
-        config.exclude_patterns.append(GENERATED_REL_PATH)
-
-
 def setup(app):
-    app.connect("config-inited", _on_config_inited)
     app.connect("builder-inited", _on_builder_inited)
     return {
         "version": "1.0",

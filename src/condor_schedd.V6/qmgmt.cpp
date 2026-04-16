@@ -8031,7 +8031,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		ChainCollapse(*expanded_ad);
 
 		JobQueueJob* job = dynamic_cast<JobQueueJob*>(ad);
-		if (job->ownerinfo->OsUser()) {
+		if (job && job->ownerinfo && job->ownerinfo->OsUser()) {
 			expanded_ad->Assign(ATTR_OS_USER, job->ownerinfo->OsUser());
 		}
 

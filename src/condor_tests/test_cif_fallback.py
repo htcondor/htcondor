@@ -556,10 +556,18 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
 

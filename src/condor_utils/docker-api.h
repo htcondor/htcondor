@@ -77,15 +77,6 @@ class DockerAPI {
 					    bool interactive = true);
 
 		/**
-		 * copy files/folders from srcPath to the given path in the container
-		 *   invokes
-		 *      docker cp SRC_PATH CONTAINER:CONTAINER_PATH
-		 */
-		static int copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
-						const std::string &container,       // container to copy into
-						const std::string & containerPath,  // destination path in container
-						const std::vector<std::string>& options);
-		/**
 		 * copy files/folders from given path in the container to destPath
 		 *   invokes
 		 *      docker cp CONTAINER:CONTAINER_PATH DEST_PATH
