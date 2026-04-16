@@ -69,6 +69,7 @@ def condor(test_dir):
     # without building a large container with lots of shared libraries
     with Condor(test_dir / "condor", config={
         "SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\"",
+        "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
         "SINGULARITY": "/usr/bin/singularity"
         }) as condor:
         yield condor
