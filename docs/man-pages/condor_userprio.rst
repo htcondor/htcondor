@@ -178,41 +178,53 @@ General Remarks
 The default tool output will display the following information for each active
 submitter
 
- Effective Priority
-    The effective priority value of the submitter, which is used to calculate
-    the submitter's share when allocating resources. A lower value means a
-    higher priority, and the minimum value (highest priority) is 0.5.
-    The effective priority is calculated by multiplying the real
-    priority by the priority factor.
- Priority Factor
-    The system administrator can set this value for each submitter, thus
-    controlling a submitter's effective priority relative to other submitters.
-    This can be used to create different classes of submitters.
- Weighted In Use
-    The number of resources currently used.
- Total Usage (Weighted hours)
-    The accumulated number of resource-hours used by the submitter since the
-    usage start time.
- Time Since Last Usage
-    Elapsed time since the specific submitter last had claimed resources.
- Submitter Floor
-    The minimum guaranteed number of CPU cores assigned to the specific submitter.
- Submitter Ceiling
-    Maximum number of CPU cores assigned to the specific submitter.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Effective Priority
+     - The effective priority value of the submitter, which is used to calculate
+       the submitter's share when allocating resources. A lower value means a
+       higher priority, and the minimum value (highest priority) is 0.5.
+       The effective priority is calculated by multiplying the real
+       priority by the priority factor.
+   * - Priority Factor
+     - The system administrator can set this value for each submitter, thus
+       controlling a submitter's effective priority relative to other submitters.
+       This can be used to create different classes of submitters.
+   * - Weighted In Use
+     - The number of resources currently used.
+   * - Total Usage (Weighted hours)
+     - The accumulated number of resource-hours used by the submitter since the
+       usage start time.
+   * - Time Since Last Usage
+     - Elapsed time since the specific submitter last had claimed resources.
+   * - Submitter Floor
+     - The minimum guaranteed number of CPU cores assigned to the specific submitter.
+   * - Submitter Ceiling
+     - Maximum number of CPU cores assigned to the specific submitter.
 
 When executed with the **-all** option, the following additional columns of
 information will be displayed
 
- Real Priority
-    The value of the real priority of the submitter. This value follows the
-    submitter's resource usage.
- Usage Start Time
-    The time since when usage has been recorded for the submitter. This time
-    is set when a submitter job runs for the first time. It is reset to the
-    present time when the usage for the submitter is reset.
- Last Usage Time
-    The most recent time a resource usage has been recorded for the
-    submitter.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Real Priority
+     - The value of the real priority of the submitter. This value follows the
+       submitter's resource usage.
+   * - Usage Start Time
+     - The time since when usage has been recorded for the submitter. This time
+       is set when a submitter job runs for the first time. It is reset to the
+       present time when the usage for the submitter is reset.
+   * - Last Usage Time
+     - The most recent time a resource usage has been recorded for the
+       submitter.
 
 For security purposes of authentication and authorization, specifying an
 Edit Option requires the ADMINISTRATOR level of access.

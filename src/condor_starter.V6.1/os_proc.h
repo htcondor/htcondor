@@ -58,7 +58,7 @@ public:
 			@param status Its status
 		    @return True if our OsProc is no longer active, false if it is
 		*/
-	virtual bool JobReaper( int pid, int status );
+	virtual ReapResult JobReaper( int pid, int status );
 
 		/** In this function, we determine what protocol to use to
 			send the shadow a CONDOR_job_exit remote syscall, which

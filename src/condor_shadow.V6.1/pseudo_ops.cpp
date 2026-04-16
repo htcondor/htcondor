@@ -2171,7 +2171,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// need to copy from both ranges.)
 		//
 
-		auto transfer_these_catalogs = LookupClassAdStringList(
+		auto transfer_these_catalogs = LookupClassAdListOfStrings(
 			* jobAd, ATTR_TRANSFER_THESE_CATALOGS
 		);
 		if( transfer_these_catalogs ) {

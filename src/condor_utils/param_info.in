@@ -3489,6 +3489,12 @@ description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
 
+[SCHEDULER_UNIVERSE_COOL_DOWN_DURATION]
+default=300
+description=Time in seconds to put scheduler universe job in cool down when exited with non-zero exit code.
+type=int
+tags=schedd
+
 [MAX_JOBS_SUBMITTED]
 default=2147483647
 type=int
@@ -6238,7 +6244,7 @@ type=bool
 default=false
 type=bool
 
-[KEEP_COMMON_IDLE]
+[KEEP_DATA_CLAIM_IDLE]
 default=300
 type=int
 description=How long should a common object catalog persiste after its last use?

@@ -61,7 +61,7 @@ def the_condor(test_dir, the_lock_dir):
             # "STARTD_ENFORCE_DISK_LIMITS":  True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_BACKTRACE D_HOSTNAME",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
@@ -162,7 +162,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
         config={
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_ZKM",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_ALLOW_RUNAS_OWNER":    False,
@@ -171,7 +171,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
             "STARTER_NESTED_SCRATCH":   False,
-            "KEEP_COMMON_IDLE": 5,
+            "KEEP_DATA_CLAIM_IDLE": 5,
         },
     ) as the_condor:
         yield the_condor
@@ -265,7 +265,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     #
     # The 'multi' test below verifies that sequential re-use works if
-    # KEEP_COMMON_IDLE doesn't expire, so we'll use this test to verify
+    # KEEP_DATA_CLAIM_IDLE doesn't expire, so we'll use this test to verify
     # that common files work if it does expire.
     #
     # It can take a _long_ time for the last shadow to be reaped after

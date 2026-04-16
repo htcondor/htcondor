@@ -388,12 +388,19 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
-            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "8",
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 
@@ -543,10 +550,18 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
 

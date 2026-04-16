@@ -33,6 +33,7 @@
 #include "file_transfer.h"
 #include "condor_holdcodes.h"
 #include "job_ad_instance_recording.h"
+#include "transfer_proc.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -103,7 +104,7 @@ parseArgs( int argc, char *argv[] )
 		opt = tmp[0];
 
 		if( sscanf(opt, "%d.%d", &cluster, &proc) == 2 ) {
-			if( cluster < 0 || (0 < proc && proc < -1000) ) {
+			if( cluster < 0 || isInvalidProcID(proc) ) {
 				dprintf(D_ALWAYS,
 						"ERROR: invalid cluster specified: %s\n", opt);
 				usage(argc, argv);
@@ -494,11 +495,6 @@ main_init(int argc, char *argv[])
 	ClassAd* ad = readJobAd();
 	if( ! ad ) {
 		EXCEPT( "Failed to read job ad!" );
-	}
-
-	// Arguably, the schedd should fix this for us.
-	if( cxfer_type != CXFER_STATE::INVALID ) {
-		ad->Assign( ATTR_PROC_ID, proc );
 	}
 
 	startShadow( ad );

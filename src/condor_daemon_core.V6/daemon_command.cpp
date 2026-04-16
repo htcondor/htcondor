@@ -661,7 +661,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", m_sock->peer_description());
 
-		if( !getClassAd(m_sock, m_auth_info)) {
+		if( !getPODClassAd(m_sock, m_auth_info)) {
 			dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 					 "receive auth_info from %s!\n", m_sock->peer_description());
 			m_result = FALSE;

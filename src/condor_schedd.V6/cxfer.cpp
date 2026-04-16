@@ -74,16 +74,13 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 
 
 	//
-	// (HTCODNOR-3641)  See the note in schedd.cpp.
+	// (HTCONDOR-3641)  See the note in schedd.cpp.
 	//
 	int clusterID = jobID.cluster;
-	int procID = jobID.proc;
-	if( GetAttributeInt( jobID.cluster, jobID.proc, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
-		procID = 0;
-	}
+	GetAttributeInt( jobID.cluster, jobID.proc, ATTR_DAGMAN_JOB_ID, & clusterID );
 
 	int commonTransferFailed = FALSE;
-	GetAttributeInt( clusterID, procID, "CommonTransferFailed", & commonTransferFailed );
+	GetAttributeInt( clusterID, -1, "CommonTransferFailed", & commonTransferFailed );
 	if( commonTransferFailed ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
@@ -91,6 +88,11 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 
 	// Now we start looking at the job ad.
 	ClassAd * jobAd = GetJobAd(jobID);
+	if( jobAd == NULL ) {
+		dprintf( D_ERROR, "cxfer: Failed to obtain job ad, falling back to uncommon transfer.\n" );
+		return {CXFER_TYPE::CANT, {}};
+	}
+
 	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
 	if(! common_file_catalogs) {
 		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );

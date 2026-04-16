@@ -45,6 +45,7 @@
 #include <algorithm>
 #include "log_rotate.h"
 #include "safe_open.h"
+#include "transfer_proc.h"
 
 #include "cxfer_state.h"
 extern CXFER_STATE cxfer_type;
@@ -236,8 +237,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// initialize the UserPolicy object
-	shadow_user_policy.init( jobAd, this );
-
+	if(cxfer_type != CXFER_STATE::STAGING) {
+		shadow_user_policy.init( jobAd, this );
+	} else {
+		shadow_user_policy.init( NULL, this );
+	}
 		// setup an object to keep our job ad updated to the schedd's
 		// permanent job queue.  this clears all the dirty bits on our
 		// copy of the classad, so anything we touch after this will
@@ -1512,7 +1516,7 @@ BaseShadow::log_except(const char *msg_str)
 	int dummy;
 	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
 		std::string vacate_str = "Shadow Exception: ";
-		vacate_str += msg_str;
+		if (msg_str) vacate_str += msg_str;
 		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
 		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);
@@ -1640,7 +1644,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		// on the worker node.
 
 	// Don't waste the schedd's time with an update it can't store.
-	if( getProc() > -1000 ) {
+	if(! isTransferShadowProcID(getProc())) {
 		return job_updater->updateJob( type, 0 );
 	} else {
 		return true;

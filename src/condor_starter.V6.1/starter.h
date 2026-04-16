@@ -236,6 +236,13 @@ public:
 	const char *GetSlotDir() const {
 		return SlotDir.c_str();
 	}
+
+		/** Return the user's home directory for this job.
+		 *  Owned by the job user; same as WorkingDir when nested scratch is off.
+		 */
+	const char *GetJobHomeDir() const {
+		return JobHomeDir.c_str();
+	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?
 		 */

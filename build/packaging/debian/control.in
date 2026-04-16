@@ -76,10 +76,12 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.23.0),
-         pelican-osdf-compat (>= 7.23.0),
+         pelican (>= 7.24.2),
+         pelican-osdf-compat (>= 7.24.2),
 #endif
+#if !defined(JAMMY)
          libjs-bootstrap5,
+#endif
          libjs-jquery,
          jq,
          ${lib:Depends},

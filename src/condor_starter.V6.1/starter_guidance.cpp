@@ -429,19 +429,6 @@ Starter::handleJobSetupCommand(
 			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
 			if( context_p != NULL ) { context.CopyFrom(* context_p); }
 
-/*
-			// In the current design, the _starter_ should never wait for
-			// common file transfer to finish; that's the schedd's job.  This
-			// command should thus only be used by the transfer shadow, so
-			// printing this out is just more confusing than helpful.
-			bool first_wait = true;
-			context.LookupBool( "FirstWait", first_wait );
-			if( first_wait ) {
-				context.InsertAttr( "FirstWait", false );
-				dprintf( D_ALWAYS, "Waiting for common files to be transferred.\n" );
-			}
-*/
-
 			daemonCore->Register_Timer( retry_delay, 0,
 				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
 				"guidance: retry request"

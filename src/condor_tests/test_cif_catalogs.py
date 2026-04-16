@@ -249,7 +249,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
-            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "8",
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
         },
     ) as the_dagman_condor:
@@ -406,10 +406,18 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
             "SINGULARITY":              "/usr/bin/singularity",
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 

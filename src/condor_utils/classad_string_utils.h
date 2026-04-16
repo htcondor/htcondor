@@ -11,7 +11,7 @@
 // is valid.  List entries which are not string literals are silently ignored,
 // which means the returned vector may be empty.
 std::optional< std::vector<std::string> >
-LookupClassAdStringList(
+LookupClassAdListOfStrings(
     const classad::ClassAd & ad,
     const std::string & attribute
 );
@@ -19,7 +19,7 @@ LookupClassAdStringList(
 // Converts `list` into a ClassAd list of ClassAd strings and assigns it to
 // the `attribute` in the `ad`.  Returns true iff the assignment succeeded.
 bool
-AssignClassAdStringList(
+AssignClassAdListOfStrings(
     classad::ClassAd & ad,
     const std::string & attribute,
     const std::ranges::view auto & list

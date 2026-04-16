@@ -130,8 +130,8 @@ def the_closed_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('127.0.0.1', 0))
     (address, port) = s.getsockname()
-    s.close()
     yield port
+    s.close()
 
 
 def slow_reply_handler(request):

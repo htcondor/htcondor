@@ -708,7 +708,7 @@ void DBHandler::writeFileInfo(FileInfo &info) {
  * Update LastOffset for the history and epoch files after parsing.
  * Change offset to match progress in reading Epoch + History files
  */
-void DBHandler::updateFileInfo(FileInfo historyFile) {
+void DBHandler::updateFileInfo(const FileInfo &historyFile) {
     const char* updateSQL = R"(
         UPDATE Files
         SET LastOffset = ?
@@ -867,7 +867,11 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
         return false;
     }
 
-    sqlite3_step(stmt);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        dprintf(D_ERROR, "Failed to query database: %s\n", sqlite3_errmsg(db_));
+        sqlite3_finalize(stmt);
+        return false;
+    }
     int count = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 

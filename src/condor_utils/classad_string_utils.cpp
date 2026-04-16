@@ -9,7 +9,7 @@
 
 
 std::optional< std::vector<std::string> >
-LookupClassAdStringList( const classad::ClassAd & ad, const std::string & attribute ) {
+LookupClassAdListOfStrings( const classad::ClassAd & ad, const std::string & attribute ) {
     classad::ExprTree * tree = ad.Lookup( attribute );
     if( tree == NULL ) { return {}; }
 
@@ -34,7 +34,7 @@ LookupClassAdStringList( const classad::ClassAd & ad, const std::string & attrib
 
 
 bool
-AssignClassAdStringList(
+AssignClassAdListOfStrings(
     classad::ClassAd & ad,
     const std::string & attribute,
     const std::ranges::view auto & list
@@ -70,7 +70,7 @@ using the_keys_type = decltype( std::ranges::views::keys(
 
 
 template bool
-AssignClassAdStringList(
+AssignClassAdListOfStrings(
     classad::ClassAd & ad,
     const std::string & attribute,
     const the_keys_type & list
