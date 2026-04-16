@@ -8444,6 +8444,8 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 	ASSERT( path );
 	ASSERT( sandbox );
 
+	if( !path[0] ) { return false; }
+
 	std::string buf = path;
 	canonicalize_dir_delimiters( buf );
 	path = buf.c_str();
