@@ -880,8 +880,6 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
-    args.AppendArg("--autobackup");
-    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
