@@ -239,7 +239,12 @@ def num_busy_slots_history(startd_log_file, handle, num_resources):
     active_claims_history = track_quantity(
         startd_log_file.read(),
         increment_condition=lambda msg: "Changing activity: Idle -> Busy" in msg,
-        decrement_condition=lambda msg: "Changing activity: Busy -> Idle" in msg,
+        # Either "Busy -> Cleaning" (starter's final update arrived before
+        # reap) or "Busy -> Idle" (reap arrived first, e.g. short job or
+        # starter crash) marks the exit from Busy.
+        decrement_condition=lambda msg:
+            "Changing activity: Busy -> Cleaning" in msg or
+            "Changing activity: Busy -> Idle" in msg,
         max_quantity=num_resources,
         expected_quantity=num_resources,
     )

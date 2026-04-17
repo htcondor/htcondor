@@ -460,6 +460,11 @@ public:
 	bool            r_no_collector_updates; // true for HIDDEN slots
 	bool            r_acceptedWhileDraining;// true when the job was started while draining
 	bool            r_do_not_delete{false}; // true when slot is broken and should not be deleted
+	// Set when a release/kill arrives while the slot is in Claimed/Cleaning
+	// (the starter has sent its final update but not yet been reaped).
+	// Survives Claim::resetClaim() and tells Resource::starterExited to
+	// route the reap into Preempting rather than back to Idle.
+	bool            r_cleaning_preempt_pending{false};
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource

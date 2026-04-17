@@ -876,6 +876,7 @@
 #define ATTR_TOTAL_TIME_BACKFILL_IDLE  "TotalTimeBackfillIdle"
 #define ATTR_TOTAL_TIME_BACKFILL_KILLING  "TotalTimeBackfillKilling"
 #define ATTR_TOTAL_TIME_CLAIMED_BUSY  "TotalTimeClaimedBusy"
+#define ATTR_TOTAL_TIME_CLAIMED_CLEANING  "TotalTimeClaimedCleaning"
 #define ATTR_TOTAL_TIME_CLAIMED_IDLE  "TotalTimeClaimedIdle"
 #define ATTR_TOTAL_TIME_CLAIMED_RETIRING  "TotalTimeClaimedRetiring"
 #define ATTR_TOTAL_TIME_CLAIMED_SUSPENDED  "TotalTimeClaimedSuspended"
