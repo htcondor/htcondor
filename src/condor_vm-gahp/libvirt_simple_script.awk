@@ -127,6 +127,7 @@ END {
             {
 		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
             }
+	    print "<model type='e1000'/>" ;
 	    print "</interface>" ;
 	}
 	else
@@ -140,6 +141,7 @@ END {
 	    {
 		print "<source bridge='" attrs["VMPARAM_Bridge_Interface"] "'/>" ;
 	    }
+	    print "<model type='e1000'/>" ;
 	    print "</interface>" ;
 	}
     }
