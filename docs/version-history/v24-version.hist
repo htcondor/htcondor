@@ -11,10 +11,10 @@
   jobs.
   :jira:`3658`
 
-- VM Universe jobs now use the widely supported and ubiguitous Intel e1000 network card.
-  This is needed on Enterprise Linux hosts, since the default card that libvirt uses is
+- VM Universe jobs now use the widely supported and ubiquitous Intel e1000 network card.
+  This is needed on Enterprise Linux 10 hosts, since the default card that libvirt uses is
   not supported.
-  :jira:`3462`
+  :jira:`3642`
 
 *** 24.0.19 features
 
