@@ -477,13 +477,14 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
     (the_container_kill_dir / f"kill-cc-{job_handle_b.clusterid}.1").touch(exist_ok=True)
 
 
-    # Wait for them to finish.
+    # Wait for them to finish.  Container jobs (Singularity startup/teardown)
+    # need more headroom than plain shell jobs.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=120,
         condition=ClusterState.all_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=120,
         condition=ClusterState.all_terminal
     )
 
