@@ -1722,6 +1722,7 @@ Claim::starterExited( Starter* starter, int status)
 	int orphanedJob = 0;
 	bool still_broken = true;
 	CleanupReminder* reminder = nullptr;
+	c_reaping = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -2795,6 +2796,18 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 		}
 		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
 			resmgr->startd_stats.bytes_recvd += bytes_recvd;
+		}
+
+		// Job is done running on the EP. Move the slot into Claimed/Cleaning
+		// so it stops matching new work and absorbs preempts while the
+		// starter winds down. Skip if we're already being reaped (the
+		// upcoming starter reap will handle the post-run transition
+		// directly) or if the slot is no longer in a running activity.
+		if (c_rip && !c_reaping && c_rip->state() == claimed_state) {
+			Activity a = c_rip->activity();
+			if (a == busy_act || a == retiring_act || a == suspended_act) {
+				c_rip->change_state(cleaning_act);
+			}
 		}
 	}
 }

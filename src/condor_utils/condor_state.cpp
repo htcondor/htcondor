@@ -24,9 +24,9 @@ static const char* condor_states [] =
 { "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
   "Shutdown", "Delete", "Backfill", "Drained" };
 
-static const char* condor_activities [] = 
+static const char* condor_activities [] =
 { "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",
-  "Killing" };
+  "Killing", "Cleaning" };
 
 State 
 string_to_state(const char* state_string) 

@@ -481,6 +481,14 @@ Resource::retire_claim(bool reversible, const std::string& reason, int code, int
 {
 	switch( state() ) {
 	case claimed_state:
+		// Cleaning is terminal: the starter has sent its final update and
+		// is on its way out. Record the vacate reason for audit/logging
+		// but do not change state -- the reaper will complete the
+		// transition when the starter exits.
+		if (activity() == cleaning_act) {
+			setVacateReason(reason, code, subcode);
+			return TRUE;
+		}
 		if(r_cur) {
 			if( !reversible ) {
 					// Do not allow backing out of retirement (e.g. if
@@ -528,6 +536,17 @@ Resource::release_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		// Cleaning absorbs the state change: the starter has already sent
+		// its final update and is on its way out. Remember that a
+		// release/kill arrived so the reaper routes us into Preempting
+		// rather than back to Idle, and still push a soft kill down to
+		// the starter in case it needs a nudge to exit promptly.
+		if (activity() == cleaning_act) {
+			setVacateReason(reason, code, subcode);
+			r_cleaning_preempt_pending = true;
+			if (r_cur) r_cur->starterKillSoft();
+			return TRUE;
+		}
 		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, vacating_act );
 		break;
@@ -557,6 +576,18 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		// Cleaning absorbs the state change. The starter has already
+		// sent its final update; record the reason and route the
+		// reap into Preempting/Killing instead of Idle. Still issue
+		// a hard kill so a stuck starter is not left running (e.g.
+		// during fast shutdown).
+		if (activity() == cleaning_act) {
+			setVacateReason(reason, code, subcode);
+			r_cleaning_preempt_pending = true;
+			if (r_cur) r_cur->starterKillHard();
+			return TRUE;
+		}
+		[[fallthrough]];
 	case preempting_state:
 		setVacateReason(reason, code, subcode);
 			// We might be in preempting/vacating, in which case we'd
@@ -1065,6 +1096,21 @@ Resource::starterExited( Claim* cur_claim )
 		r_cur->client()->c_user = r_cur->client()->c_owner;
 		if(a == retiring_act) {
 			change_state(preempting_state);
+		}
+		else if (a == cleaning_act) {
+			// Starter exited while we were in Claimed/Cleaning. If a
+			// release/kill was absorbed during cleaning (flag survives
+			// Claim::resetClaim) or a preempting claim is pending, head
+			// straight to Preempting; otherwise drop back to Idle and
+			// let the normal idle-state policy (CLAIM_WORKLIFE, draining,
+			// IS_OWNER, preempting claim) take over.
+			bool preempt = r_cleaning_preempt_pending || hasPreemptingClaim();
+			r_cleaning_preempt_pending = false;
+			if (preempt) {
+				change_state(preempting_state);
+			} else {
+				change_state( idle_act );
+			}
 		}
 		else {
 			change_state( idle_act );

@@ -59,7 +59,7 @@
 const char* digest_state_and_activity (char * sa, State st, Activity ac)
 {
 	const char state_letters[] = "~OUMCPSXFD#?";
-	const char act_letters[] = "0ibrvsek#?";
+	const char act_letters[] = "0ibrvsekc#?";
 
 	sa[1] = sa[0] = ' ';
 	sa[2] = 0;
