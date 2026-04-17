@@ -59,6 +59,8 @@ def the_condor(test_dir, the_lock_dir):
         local_dir=local_dir,
         config={
             # "STARTD_ENFORCE_DISK_LIMITS":  True,
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING":  True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
@@ -160,9 +162,11 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING":  True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_ZKM",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_ALLOW_RUNAS_OWNER":    False,
@@ -319,6 +323,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING":  True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",

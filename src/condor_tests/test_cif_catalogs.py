@@ -91,6 +91,8 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
         local_dir=the_cs_local_dir,
         config={
             # "STARTD_ENFORCE_DISK_LIMITS": True,
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING": True,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
@@ -244,6 +246,8 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
         local_dir=the_dagman_local_dir,
         config={
             # "STARTD_ENFORCE_DISK_LIMITS": True,
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING": True,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
@@ -400,6 +404,8 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
         local_dir=the_container_local_dir,
         config={
             # "STARTD_ENFORCE_DISK_LIMITS": True,
+            # "FORBID_HARDLINK_MAPPING":  True,
+            # "FORBID_BINDMOUNT_MAPPING": True,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
