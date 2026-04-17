@@ -33,6 +33,7 @@
 #include <set>
 #include <thread>
 #include <chrono>
+#include <tuple>
 
 #include "JobRecord.h"
 #include "dbHandler.h"
@@ -985,7 +986,12 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
     std::vector<FileInfo>& newFiles = fileSetChange.newFiles;
     std::vector<int>& deletedFileIds = fileSetChange.deletedFileIds;
 
-    sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    char *errMsg = nullptr;
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "Failed to begin transaction: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return false;
+    }
 
     bool success = true;
 
@@ -1001,13 +1007,13 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
             dprintf(D_ERROR, "Failed to prepare update statement: %s\n", sqlite3_errmsg(db_));
             success = false;
         } else {
-            sqlite3_bind_text(stmt, 1, newName.c_str(), -1, SQLITE_STATIC);
+            std::ignore = sqlite3_bind_text(stmt, 1, newName.c_str(), -1, SQLITE_STATIC);
 
             // Set DateOfRotation to current UNIX timestamp
             std::time_t now = std::time(nullptr);
-            sqlite3_bind_int64(stmt, 2, static_cast<sqlite3_int64>(now));
+            std::ignore = sqlite3_bind_int64(stmt, 2, static_cast<sqlite3_int64>(now));
 
-            sqlite3_bind_int(stmt, 3, oldFileId);
+            std::ignore = sqlite3_bind_int(stmt, 3, oldFileId);
 
             if (sqlite3_step(stmt) != SQLITE_DONE) {
                 dprintf(D_ERROR, "Failed to update rotated file: %s\n", sqlite3_errmsg(db_));
