@@ -323,15 +323,19 @@ namespace ArchiveMonitor{
     * Returns std::nullopt if no rotation timestamp is found.
     */
     std::optional<std::string> extractDateOfRotation(const std::string& filename) {
-        std::regex rotatedPattern(R"(.*(\d{4}\d{2}\d{2}T\d{2}\d{2}\d{2})\d*$)");
-        std::smatch match;
+        try {
+            std::regex rotatedPattern(R"(.*(\d{4}\d{2}\d{2}T\d{2}\d{2}\d{2})\d*$)");
+            std::smatch match;
 
-        if (std::regex_match(filename, match, rotatedPattern)) {
-            // Extract the YYYYMMDDTHHMMSS part (first 15 characters of the timestamp)
-            return match[1].str();
+            if (std::regex_match(filename, match, rotatedPattern)) {
+                // Extract the YYYYMMDDTHHMMSS part (first 15 characters of the timestamp)
+                return match[1].str();
+            }
+            
+            return std::nullopt;  // No match found
+        } catch (const std::regex_error& e) {
+            EXCEPT("Failed to compile rotation timestamp regex: %s", e.what());
         }
-        
-        return std::nullopt;  // No match found
     }
 
     // Given a filepath, we check if its equal to the fileInfo struct using hash and inode
