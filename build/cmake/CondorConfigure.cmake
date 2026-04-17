@@ -58,9 +58,14 @@ if("${OS_NAME}" MATCHES "^WIN")
 	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
 		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
 	endif()
-	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
-		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
-	endif()
+	# On batlab, we are randomly getting a permission error from msbuild when it 
+	# tries to access the global semaphore which EnforceProcessCountAcrossBuilds uses.
+
+	# Let's try turning off the semaphore, we build /mp:4, and condor controls the
+	# number of builds, so I think we should be ok.  Better than getting red builds
+	#if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+	#	list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	#endif()
 
 endif()
 
