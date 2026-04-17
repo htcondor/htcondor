@@ -1853,8 +1853,8 @@ void parse_args(int argc, const char *argv[])
 					fprintf( stderr, "Error: -format requires two other arguments\n");
 					exit(1);
 				}
-				ixArg += 2;
 				App.print_mask.registerFormatF( argv[ixArg+1], argv[ixArg+2], FormatOptionNoTruncate );
+				ixArg += 2;
 			} else if (IsArgColon(parg, "autoformat", &pcolon, 5) ||
 			           IsArgColon(parg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
