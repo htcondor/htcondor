@@ -241,6 +241,11 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
 
     if(memcmp(data, THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4) == 0) {
         // We found stuff, go with 6.3 header format
+        if (length < SAFE_MSG_CRYPTO_HEADER_SIZE) {
+            dprintf(D_ALWAYS, "ERROR: Packet too short (%d) for crypto header (%d)\n",
+                    length, SAFE_MSG_CRYPTO_HEADER_SIZE);
+            return;
+        }
         // First six bytes are hash/encryption related
         data += 4;
         memcpy(&stemp, data, 2);
@@ -259,6 +264,11 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
                 mdKeyIdLen, encKeyIdLen);
 
         if ((flags & MD_IS_ON) && (mdKeyIdLen > 0)) {
+            if (mdKeyIdLen + MAC_SIZE > length) {
+                dprintf(D_ALWAYS, "ERROR: MD header lengths (%d + %d) exceed remaining packet size (%d)\n",
+                        mdKeyIdLen, MAC_SIZE, length);
+                return;
+            }
             // Scan for the key
             incomingHashKeyId_ = (char *) malloc(mdKeyIdLen+1);
             memset(incomingHashKeyId_, 0, mdKeyIdLen+1);
@@ -281,6 +291,19 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
         }
 
         if ((flags & ENCRYPTION_IS_ON) && (encKeyIdLen > 0)) {
+            if (encKeyIdLen > length) {
+                dprintf(D_ALWAYS, "ERROR: ENC key length (%d) exceeds remaining packet size (%d)\n",
+                        encKeyIdLen, length);
+                if (incomingHashKeyId_) {
+                    free(incomingHashKeyId_);
+                    incomingHashKeyId_ = nullptr;
+                }
+                if (md_) {
+                    free(md_);
+                    md_ = nullptr;
+                }
+                return;
+            }
             incomingEncKeyId_ = (char *) malloc(encKeyIdLen+1);
             memset(incomingEncKeyId_, 0, encKeyIdLen + 1);
             memcpy(incomingEncKeyId_, data, encKeyIdLen);
