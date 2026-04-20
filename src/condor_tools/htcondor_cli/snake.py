@@ -1,6 +1,8 @@
 import htcondor2 as htcondor
+import shutil
+import subprocess
+import sys
 import time
-from htcondor2._utils.ansi import Color, colorize, bold, stylize, AnsiOptions
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -10,7 +12,6 @@ from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 from htcondor_cli import MutualExclusionArgs
-from htcondor_cli.snakemake_long import submit_local
 import traceback
 import yaml
 import textwrap
@@ -24,181 +25,144 @@ from htcondor_cli.verb import Verb
 
 class Submit(Verb):
     """
-    Milestone One: htcondor snake submit
-    when running htcondor snake submit:
-    - snakemake_long.py is invoked for the long running job for the workflow
-    --> this launches a local universe job
-    - Snakemake jobs are submitted: 2 ways
-    --> from a profile configuration
-    --> from regular snakemake commands
-
-
-    #additional behavior
-    - after running condor_q -nobatch or watch_q: local universe job should appear sth like
-    `snakemake_$(clusterid)` as a job management id
+    Submit a local universe job and Snakemake jobs when run.
     """
     # command-line argument configurations
     options = {
         "snakefile": {
-            "args": ("--snakefile",),
+            "args": ("snakefile",), # positional argument
             "help": "Path to Snakefile. If omitted, Snakefile is assumed to be at the current directory.",
-            "required": False,
+            "nargs": "?",
         },
         "profile": {
             "args": ("--profile",),
             "help": "Snakemake profile directory.",
             "required": False,
         }, 
-        "htcondor_jobdir": {
-            "args": ("--htcondor_jobdir",),
-            "help": "Directory for htcondor logs. If omitted, a `snakemake-long-logs` directory will be created as the current directory.",
+        "jobdir": {
+            "args": ("--jobdir",),
+            "help": "Directory for HTCondor log files. If omitted, a `logs` directory will be created as the current directory.",
             "required": False,
         },
-        "snake-args": {
-            "args": ("--snake_args",),
-            "help": "Additional Snakemake arguments (comma-seperated) and must be wrapped around quotation marks and is comma-seperated. E.g: --snake-args \"core: 4, dry-run\"",
-            "required": False,
-        },
+        "executor": {
+            "args": ("--executor",),
+            "help": "Required Snakemake-HTCondor executor plugin to be sent to the execution point (EP). Please install the executor beforehand.",
+            "required": True,
+        }
     }
 
-    def __init__(self, logger, **options):
+    def __init__(self, logger, snakefile, snakemake_args=None, **options):
         # Basic validations of CLI
-        snakefile = self._validate_snakefile(options)
+        snakefile = self._validate_snakefile(snakefile)
         profile = self._validate_profile(options) # can be None depends on what users' choices
         jobdir = self._setup_jobdir(options)
-        snake_args = self._snake_args(options, profile)
-
+        executor = options.get("executor")
 
         # submit a local universe job
         try:
-            submit_local(snakefile, profile, jobdir)
+            self._submit_local(snakefile, profile, jobdir, executor, snakemake_args or [])
         except Exception as e:
             print("Error: Could not submit local universe job.")
             print(f"Exception details:", str(e))
             traceback.print_exc()
             raise
 
-    def _validate_snakefile(self, options):
+    def _validate_snakefile(self, snakefile):
         """Minimal validation: file exists"""
-        if options.get("snakefile"):
-            snakefile = Path(options.get("snakefile"))
-        else:
-            snakefile = Path.cwd()/"Snakefile"
+        # if snakefile is not provided
+        if snakefile is None:
+            snakefile = "Snakefile"
+        snakefile = Path(snakefile)
         if not snakefile.exists():
             raise FileNotFoundError(
                 f"Could not find Snakefile: {snakefile}\n"
-                f"Specify with --snakefile or create ./Snakefile"
+                f"Make sure to provide the path to the Snakefile or place it at the submit directory or "
             )
         return snakefile
 
     def _validate_profile(self, options):
-        """Minimal validation and create profile if it does not exist:"""
+        """Return profile path if it is explicitly provided by user"""
         profile_specified = options.get("profile")
         if profile_specified:
             profile = Path(profile_specified) 
-        else:
-            # use default profile directory in cwd
-            profile = Path.cwd() / "profile"
-        
-        if not profile.exists():
-            # create profile directory by default
-            profile.mkdir(parents=True, exist_ok=True)
-            if not profile_specified: 
-                print(f"Created default profile directory at: {profile}")
-                print(f"You can specify snakemake and htcondor arguments in the config.yaml or use --snake-args")
-
-        # create config file if it does not exist
-        config_file = profile / "config.yaml"
-        if not config_file.exists():
-            config_content = textwrap.dedent("""\
-            # Snakemake HTCondor Profile Configuration
-            # Uncomment and modify settings as needed
-            # Your snake-args will be appended here
-
-            # Number of jobs to run in parallels
-            jobs: 10
-
-            # Executor type (required for HTCondor)
-            executor : htcondor
-
-            # File system usage
-            shared-fs-usage: none
-
-            # Number of retires for failed jobs
-            retries: 3
-
-            # Default resources for HTCondor jobs
-            default-resources:
-                # if you have wrapper script
-                job_wrapper: "wrapper.sh"
-                # example environment package needed
-                htcondor_transfer_input_files: "/workspaces/htcondor/example/snakemake-env.tar.gz"
-                reserve_relative_paths: true
-                universe: "vanilla"
-                request_disk: "4GB"
-                request_memory: "1GB"
-                threads: 1
-            """)
-            config_file.write_text(config_content)
-        else:  
-            with open(config_file, "r") as f:
-                config = yaml.safe_load(f) or {}
-
-            # check if the executor is present
-            if "executor" not in  config or config["executor"] is None:
-                # add executor
-                config["executor"] = "htcondor"
-
-            with open(config_file, "w") as f:
-                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
-        return profile
+            if not profile.exists():
+                raise FileNotFoundError(f"Profile directory not found: {profile}")
+            return profile
+        return None
 
     def _setup_jobdir(self, options):
         """Create log directory if needed"""
-        if options.get("htcondor_jobdir"):
-            jobdir = Path(options.get("htcondor_jobdir"))
+        if options.get("jobdir"):
+            jobdir = Path(options.get("jobdir"))
         else:
-            jobdir = Path.cwd()/ "snakemake-long-logs"
-        jobdir.mkdir(parents=True, exist_ok = True)
+            jobdir = Path.cwd() / "logs"
+        
+        jobdir.mkdir(parents=True, exist_ok=True)
         return jobdir
 
-    def _snake_args(self, options, profile):
-        """Append additional snake-args into the profile"""
-        snake_args = options.get("snake_args")
-        # no snake-args specified 
-        if not snake_args:
-            return
-    
-        # we have snake-args to process. Profile already exists
-        config_file = profile/"config.yaml"
+    # ===== HTCondor SUBMISSION METHODS =====
+    def _submit_local(self, snakefile, profile, jobdir, executor, snakemake_args):
+        """Submit snakemake as an HTCondor local universe job."""
+        # Resolve snakemake executable from user's environment
+        snakemake_path = shutil.which("snakemake")
+        if snakemake_path is None:
+            raise RuntimeError(
+                "Could not find 'snakemake' executable on PATH.\n"
+                "Make sure your Snakemake environment is activated."
+            )
+        
+        # Check if user already specified --htcondor-jobdir in snakemake_args
+        has_htcondor_jobdir = any(snakemake_args[i] == "--htcondor-jobdir" for i in range(len(snakemake_args)))
+        # Build arguments for snakemake
+        args_list = [
+            f"-s {snakefile}",
+            f"--executor {executor}",
+        ]
+        
+        # Only add --htcondor-jobdir if user did not specify it 
+        if not has_htcondor_jobdir:
+            args_list.append(f"--htcondor-jobdir {jobdir}")
 
-        with open(config_file, "r") as f:
-            config = yaml.safe_load(f) or {}
-
-        for arg in snake_args.split(","):
-            arg = arg.strip()
-            if not arg:
-                continue
-            # replace the corresponding argument's value if it is already existed before
-            parsed = yaml.safe_load(arg)
-            if isinstance(parsed, dict):
-                # update value for the resources if needed
-                config.update(parsed)
-            else:
-                # set one argument resources to True if specified. i.e: dry-run: True
-                config[arg] = True
+        # Add profile if specified
+        if profile:
+            args_list.append(f"--profile {profile}")
+        
+        # Add any additional snakemake args
+        if snakemake_args:
+            args_list.extend(snakemake_args)
+        
+        arguments = " ".join(args_list)
+        
+        submit_description = htcondor.Submit({
+            "executable": snakemake_path,
+            "arguments": arguments,
+            "universe": "local",
+            "request_disk": "512MB",
+            "request_cpus": 1,
+            "request_memory": 512,
             
-        with open(config_file, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            # Set up logging
+            "log": f"{jobdir}/snakemake-mgmt-$(ClusterId).log",
+            "output": f"{jobdir}/snakemake-mgmt-$(ClusterId).out",
+            "error": f"{jobdir}/snakemake-mgmt-$(ClusterId).err",
             
+            # Specify getenv so the job uses the submitter's environment
+            "getenv": "true",
+            
+            # Job naming - updated with cluster ID after submission
+            "JobBatchName": f"snakemake-mgmt-{time.strftime('%Y%m%d-%H%M%S')}",
+        })
+        
+        # Submit to HTCondor
+        schedd = htcondor.Schedd()
+        submit_result = schedd.submit(submit_description)
+        
+        cluster_id = submit_result.cluster()
+        # Immediately update JobBatchName with cluster ID
+        schedd.edit([f"{cluster_id}.0"], "JobBatchName", f"snakemake-mgmt-{cluster_id}")
 
-#class Status(Verb):
-#    pass
-
-
-#class Halt(Verb):
-#    pass
+        print(f"Snakemake managment job submitted with JobID {cluster_id}.0")
+        print(f"Logs can be found in {jobdir}")
 
 
 class Snake(Noun):

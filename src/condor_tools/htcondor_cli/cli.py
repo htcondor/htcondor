@@ -69,6 +69,16 @@ def parse_args():
                 else:
                     add_verb_argument(verb_parser, verb_cls.options[option_name])
 
+    # Handling the -- seperator only if it exists
+    snakemake_args = []
+    # Take out the htcondor name
+    argv = sys.argv[1:]
+    if "--" in argv:
+        seperator_idx = argv.index("--")
+        snakemake_args = argv[seperator_idx + 1: ] #args after --
+        argv = argv[:seperator_idx] # args before --
+        sys.argv = [sys.argv[0]] + argv # rebuilding
+
     # Parse args and get the dict representation
     try:
         parsed_args = base_parser.parse_args()
@@ -94,6 +104,7 @@ def parse_args():
         noun_parser = noun_parsers[parsed_vars["noun"]]
         raise TypeError(noun_parser.format_help().rstrip())
 
+    parsed_vars["snakemake_args"] = snakemake_args
     # Return the dict representation
     return parsed_vars
 
