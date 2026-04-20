@@ -310,8 +310,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.c_str(), claimid.c_str());
 	
-		classy_counted_ptr<DCMsgCallback> cb = 
-			new DCMsgCallback((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
+		std::shared_ptr<DCMsgCallback> cb =
+			std::make_shared<DCMsgCallback>((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
 			this, jobAd);
 																 
 			// this can't fail, will always call the callback
