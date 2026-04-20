@@ -493,6 +493,55 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	statsd->getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
 
+	if ( isAggregateMetric() && 
+		 derivative && 
+		 value.IsNumber() &&
+		 value.IsBooleanValue() == false )
+	{
+		// For aggregate derivative metrics, we want to keep track of the previous value reported in the
+		// daemon ad in order to calculate the derivative.
+		// The key into the map is the metric name, the daemon ad name, the daemon ad type, the collector name
+		// plus daemon start time, as this uniquely identifies a metric derived from a specific daemon instance.
+		std::string daemon_name;
+		daemon_ad.EvaluateAttrString(ATTR_NAME,daemon_name);
+		std::string ad_type;
+		daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,ad_type);
+		std::string collector_name;
+		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
+			collector_name = statsd->getDefaultAggregateHost();
+		}
+		time_t start_time = 0;
+		daemon_ad.LookupInteger(ATTR_DAEMON_START_TIME,start_time);
+		// Create the map key
+		std::string key = name + "/" + daemon_name + "/" + ad_type + "/" + collector_name + "/" + std::to_string(start_time);
+		double current_numeric_value, previous_numeric_value;
+		value.IsNumber(current_numeric_value); // we know this is a number because we checked above
+		bool have_previous_value = statsd->getPreviousValue(key, previous_numeric_value);
+		// Store the value into our previous value map for use in calculating the derivative the next time we see this metric from this daemon instance.
+		statsd->storePreviousValue(key, current_numeric_value);
+		if( have_previous_value ) {
+			// we have a previous value, so we can calculate the derivative
+			double delta_value = current_numeric_value - previous_numeric_value;
+			if ( delta_value < 0.0 ) {
+				// if the value decreased, this likely means the daemon restarted and thus the previous value is meaningless
+				dprintf(D_FULLDEBUG,"Metric %s has decreased from %g to %g\n",name.c_str(),previous_numeric_value,current_numeric_value);
+				have_previous_value = false;
+			} else {
+				// delta value did not decrease, so change current metric value to the delta value
+				if ( value.IsIntegerValue() ) {
+					value.SetIntegerValue((int)delta_value);
+				} else {
+					value.SetRealValue(delta_value);
+				}
+			}
+		}
+		if (!have_previous_value) {
+			// we don't have a legitimate previous value to calculate a derivative, so we should not publish this metric since it would be misleading.  Instead, we'll wait until the next time we see this metric from this daemon instance when we will have a previous value and can calculate a valid derivative, and we'll publish then.
+			dprintf(D_FULLDEBUG,"Not publishing derivative metric %s because no previous value to calculate a delta\n",name.c_str());
+			return false;	
+		}
+	}
+
 	if( isAggregateMetric() ) {
 		statsd->addToAggregateValue(*this);
 	}
@@ -1176,7 +1225,7 @@ StatsD::publishMetrics( int /* timerID */ )
 {
 	dprintf(D_ALWAYS,"Starting update...\n");
 
-    double start_time = condor_gettimestamp_double();
+    m_start_time = condor_gettimestamp_double();
 
     m_stats_time_till_pub -= m_stats_heartbeat_interval;
 
@@ -1215,8 +1264,10 @@ StatsD::publishMetrics( int /* timerID */ )
 
     sendHeartbeats();
 
+	cleanupOldPreviousValues();
+
     // Did we take longer than a heartbeat period?
-    int heartbeats_missed = (int)(condor_gettimestamp_double() - start_time) /
+    int heartbeats_missed = (int)(condor_gettimestamp_double() - m_start_time) /
                             m_stats_heartbeat_interval;
     if (heartbeats_missed) {
         dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
@@ -1473,6 +1524,27 @@ StatsD::addToAggregateValue(Metric const &metric) {
 	map_item->second->addToAggregateValue(metric);
 }
 
+bool
+StatsD::getPreviousValue(std::string const &key, double &value)
+{
+	auto it = m_previous_values.find(key);
+	if (it != m_previous_values.end()) {
+		value = it->second.value;
+		return true;
+	}
+	return false;
+}
+
+void
+StatsD::cleanupOldPreviousValues()
+{
+	// Remove any previous values that are from before the start of this update,
+	// as they are now stale and we don't want to use them for future updates.
+	// Plus this keeps the m_previous_values map from growing without bound.
+	std::erase_if(m_previous_values, [this](const auto &entry) {
+		return entry.second.time < m_start_time;
+	});
+}
 
 void
 StatsD::mapDaemonIPs(std::vector<ClassAd> &daemon_ads) {

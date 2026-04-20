@@ -162,6 +162,12 @@ class StatsD: Service {
 	bool publishPerExecuteNodeMetrics() const {return m_per_execute_node_metrics; }
 	bool isExecuteOnlyNode(std::string &machine) {return m_execute_only_nodes.count(machine)!=0;}
 
+	// Store a previous value for a metric for use in calculating derivatives of aggregate metrics.
+	void storePreviousValue(std::string const &key, double value) { m_previous_values[key] = {value, m_start_time}; }
+
+	// Get a previous value for a metric for use in calculating derivatives of aggregate metrics. Return true if a previous value was found, false otherwise.
+	bool getPreviousValue(std::string const &key, double &value);
+
  protected:
 	int m_verbosity;
 	std::string m_requirements;
@@ -190,10 +196,22 @@ class StatsD: Service {
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
 
+	double m_start_time; // time most recent update cycle started
+
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
 
 	std::string m_param_monitor_multiple_collectors;
 	std::unordered_set< std::string > m_unresponsive_collectors;
+
+	// Map that contains previous value of each metric for each machine, used to calculate derivatives of aggregate metrics
+	struct m_previous_value_entry {
+		double value;	// the previous value of the metric for a given daemon instance
+		double time;	// the time at which this previous value was stored, used to determine staleness of the value
+	};
+	std::map<std::string, m_previous_value_entry> m_previous_values;
+
+	// Remove entries from m_previous_values whose time doesn't match m_start_time
+	void cleanupOldPreviousValues();
 
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();
