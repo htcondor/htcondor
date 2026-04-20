@@ -3718,6 +3718,12 @@ type=path
 description=Path to log file for KBDD
 tags=kbdd,log
 
+[LIBRARIAN_LOG]
+default=$(LOG)/LibrarianLog
+type=path
+description=Path to log file for the archive Librarian
+tags=librarian,log
+
 [MASTER_LOG]
 default=$(LOG)/MasterLog
 type=path
@@ -5648,6 +5654,12 @@ description=Debug logging options for the kbdd
 [MAX_KBDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
+[LIBRARIAN_DEBUG]
+default=
+description=Debug loggin options for the archive librarian
+[MAX_LIBRARIAN_LOG]
+default=$(MAX_DEFAULT_LOG)
+
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 description=Debug logging options for the negotiator
@@ -5839,6 +5851,69 @@ type=string
 [TRUSTED_VAULT_HOSTS]
 default=
 type=string
+
+# Archive librarian configuration options
+[LIBRARIAN]
+default=$(SBIN)/condor_librarian
+win32_default=$(SBIN)\condor_librarian.exe
+type=path
+customization=devel
+description=Path to the HTCondor archive librarian daemon binary
+tags=master
+
+[LIBRARIAN_UPDATE_INTERVAL]
+default=30
+type=int
+description=Archive librarians update interval in seconds
+tags=librarian
+
+[LIBRARIAN_DATABASE]
+default=$(SPOOL)/library.db
+type=path
+description=Path to the archive librarians SQLite3 database
+tags=librarian
+
+[LIBRARIAN_MAX_JOBS_CACHED]
+default=10000
+type=int
+description=Maximum number of cached job entries within the archive librarian
+tags=librarian
+
+[LIBRARIAN_STATUS_RETENTION_SECONDS]
+default=300
+type=int
+description=Time in seconds per update status rows will stay in the archive librarians database
+tags=librarian
+
+[LIBRARIAN_MAX_UPDATES_PER_CYCLE]
+default=1000000
+#type=longlong
+description=The upper limit of records indexed in one update interval for the archive librarian.
+tags=librarian
+
+[LIBRARIAN_MAX_DATABASE_SIZE]
+default=2 * 1024 * 1024 * 1024
+#type=longlong
+description=Maximum size of the archive librarians indexing SQLite3 database
+tags=librarian
+
+[LIBRARIAN_HIGH_WATER_MARK]
+default=0.97
+type=double
+description=The percentage of the database size to use as the upper threshold to trigger garbage collection.
+tags=librarian
+
+[LIBRARIAN_LOW_WATER_MARK]
+default=0.8
+type=double
+description=The percentage of the database size that the librarian aims to reduce to during garbage collection.
+tags=librarian
+
+[USING_LIBRARIAN]
+default=False
+type=bool
+description=Boolean to denote archive librarian indexing in use for tools to utilize for quick reference.
+tags=librarian
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -7216,6 +7291,20 @@ win32_default : @end
 	VMWARE_NETWORKING_TYPE=nat
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+
+[$FEATURE.LIBRARIAN]
+description=Enable a databse that indexes historical archive records args:(max_size, file_path).
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) LIBRARIAN
+	USING_LIBRARIAN=True
+	if $(1?)
+		LIBRARIAN_MAX_DATABASE_SIZE=$(1)
+	endif
+	if $(2?)
+		LIBRARIAN_DATABASE=$(2)
+	endif
 @end
 
 

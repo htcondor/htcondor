@@ -9,19 +9,21 @@ namespace LibrarianConfigOptions {
 	};
 
 	enum class i { // Librarian integer config options
-		MaxRecordsPerUpdate = 0,                      // Maximum records to process per update
-		DBMaxJobCacheSize,                            // Maximum cache size for record JobId -> Job Table Unique Id
+		DBMaxJobCacheSize = 0,                        // Maximum cache size for record JobId -> Job Table Unique Id
 		UpdateInterval,                               // Interval in seconds the librarian should process archive files
+		StatusRetentionSeconds,                       // How long (seconds) to retain Status rows in the DB
 		_SIZE // MUST BE FINAL ITEM
 	};
 
 	enum class ll { // Librarian 64 byte integer config options
 		DBMaxSizeBytes = 0,                           // Maximum size of data base in bytes
+        MaxRecordsPerUpdate,                          // Maximum records to process per update
 		_SIZE // MUST BE FINAL ITEM
 	};
 
 	enum class dbl { // Librarian double config options
-		//Option = 0,
+		DBHighWaterMark = 0,                          // DB size percentage upper limit to trigger garbage collection
+		DBLowWaterMark,                               // DB size percentage to reduce to upon garbage collection
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -37,10 +39,13 @@ public:
 	LibrarianConfig() {
 		using namespace LibrarianConfigOptions;
 
-		intOpts[static_cast<size_t>(i::MaxRecordsPerUpdate)] = 1'000'000;
+		intOpts[static_cast<size_t>(ll::MaxRecordsPerUpdate)] = 1'000'000;
 		intOpts[static_cast<size_t>(i::DBMaxJobCacheSize)] = 10'000;
 		intOpts[static_cast<size_t>(i::UpdateInterval)] = 30;
+		intOpts[static_cast<size_t>(i::StatusRetentionSeconds)] = 300;
 		int64Opts[static_cast<size_t>(ll::DBMaxSizeBytes)] = 2LL * 1024 * 1024 * 1024;
+		doubleOpts[static_cast<size_t>(dbl::DBHighWaterMark)] = 0.97;
+		doubleOpts[static_cast<size_t>(dbl::DBLowWaterMark)] = 0.80;
 	}
 
 	bool operator[](LibrarianConfigOptions::b opt) const { return boolOpts[static_cast<size_t>(opt)]; }

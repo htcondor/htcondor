@@ -1,71 +1,56 @@
 #pragma once
 
-#include <string>
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
+
+#include "archive_reader.h"
+#include "librarian_types.h"
 #include "dbHandler.h"
-#include "JobRecord.h"
 #include "config.hpp"
 
 /**
  * @class Librarian
- * @brief Orchestrates history processing: reads static HTCondor files and syncs them to a database.
+ * @brief Orchestrates history processing: reads HTCondor archive files and syncs them to a database.
  *
  * Responsibilities:
  * - Initialize DB schema and handlers.
- * - Run update protocol:
- *   - Collect file info
- *   - Parse epoch and standard history files incrementally
- *   - Insert new job/epoch records into database
- *   - Update file metadata
- *
- * Notes:
- * - Currently supports static files only.
- * - Future versions will support file monitoring and rotation.
+ * - Run the update cycle each timer tick:
+ *   - Discover current archive files via findHistoryFiles()
+ *   - Detect file rotations and register new files (reconcileArchiveFiles)
+ *   - Read new records incrementally with persistent per-file readers
+ *   - Insert records and update file state in the database atomically
+ *   - Garbage collect old data when the DB exceeds its size limit
+ *   - Record per-cycle and rolling status metrics
  */
 class Librarian {
 public:
-
-    /**
-     * @brief Initializes DBHandler and sets up the schema.
-     * @return true on success, false on failure.
-     */
     bool initialize();
-
-    /**
-     * @brief Runs the update protocol: parses new records and syncs to DB.
-     * @return true on success, false on failure.
-     */
     bool update();
-
-    // TODO: Add garbage collection function
-    // TODO: Add status table update function
 
     void reconfig(bool startup = false);
 
-    // Configuration manager
     LibrarianConfig config{};
 
 private:
-    // Members
-    DBHandler dbHandler_{config};
-    FileSet historyFileSet_;
-
-    // TODO: cleanup status code
-    StatusData statusData_;
+    StatusData statusData_{};
     double EstimatedBytesPerJobInArchive_{0.0};
-    int EstimatedJobsPerFileInArchive_{0};
-    double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
+    int    EstimatedJobsPerFileInArchive_{0};
+    double EstimatedBytesPerJobInDatabase_{1024};
 
-    // Helper methods for Librarian::update()
-    bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
-    ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
-    bool buildProcessingQueue(const FileSet& fileSet, const ArchiveChange& changes, std::vector<FileInfo>& queue);
+    // update() helpers
+    bool readJobRecords(std::vector<ArchiveRecord>& records, const std::string& path, ArchiveFile& info);
+    void reconcileArchiveFiles(const std::vector<std::string>& archive_files);
     bool calculateEstimatedBytesPerJob();
-    int calculateBacklogFromBytes(const Status& status);
+    void updateBytesPerJobEstimate();
+    int  calculateBacklogFromBytes(const Status& status);
     void updateStatusData(Status status);
     void estimateArrivalRateWhileAsleep();
-
-    // Librarian::update() : Step 6 - Garbage Collection
     bool cleanupDatabaseIfNeeded();
 
+    DBHandler dbHandler_{config};
+
+    // In-memory archive file state, keyed by full path
+    std::map<std::string, ArchiveFile> m_archive_files{};
 };

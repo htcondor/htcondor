@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS Files (
     LastOffset INTEGER,
     DateOfRotation INTEGER,
     DateOfDeletion INTEGER,
-    FullyRead INTEGER DEFAULT 0
+    FullyRead INTEGER DEFAULT 0,
+    AvgRecordSize REAL DEFAULT 0.0,
+    RecordsRead INTEGER DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_inode_hash ON Files(FileInode, FileHash);
 CREATE INDEX IF NOT EXISTS idx_date_of_deletion ON Files(DateOfDeletion);
@@ -106,7 +108,6 @@ CREATE TABLE IF NOT EXISTS StatusData (
 )";
 
 // TODO: Break this up and do logic/steps in librarian code
-// TODO: Make Status table clean out time configurable
     // Garbage collection query
     const std::string GC_QUERY_SQL = R"(
 -- 1. Find files to delete (ordered by deletion date, limited by job count target that we calculate)
@@ -146,15 +147,14 @@ AND JobListId NOT IN (SELECT DISTINCT JobListId FROM Jobs WHERE JobListId IS NOT
     -- Delete the File entries that we had previously marked
 DELETE FROM Files WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
--- 7. Delete all Status updates that are more than 5 minutes old
-DELETE FROM Status
-WHERE TimeOfUpdate < strftime('%s','now') - (60 * 5);
-
--- 8. Drop temporary tables
+-- 7. Drop temporary tables
 DROP TABLE IF EXISTS FilesToDelete;
 DROP TABLE IF EXISTS JobsToDelete;
 DROP TABLE IF EXISTS JobListsToCheck;
 )";
+
+    // Prune Status rows older than a configurable retention window (parameterized in seconds)
+    const std::string PRUNE_STATUS_SQL = R"(DELETE FROM Status WHERE TimeOfUpdate < strftime('%s','now') - ?;)";
 }
 
 #endif // SAVED_QUERIES_H

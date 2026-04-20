@@ -3,15 +3,16 @@
 # Tests for condor_librarian: history file ingestion and rotation handling.
 #
 # Scenario:
-#   1. Submit NUM_JOBS jobs and wait for completion.
-#   2. Run condor_librarian (first cycle) → check initial DB state.
-#   3. Simulate history rotation, submit 1 more job, run condor_librarian again.
-#   4. Check final DB state: new job added, original jobs unchanged.
+#   1. condor_librarian runs as a long-lived daemon managed by condor_master.
+#   2. Submit NUM_JOBS jobs and wait for completion.
+#   3. Poll until the librarian DB reflects the initial ingest (with timeout).
+#   4. Simulate history rotation, submit 1 more job.
+#   5. Poll until the DB reflects the post-rotation state (with timeout).
+#   6. Check final DB state: new job added, original jobs unchanged.
 
 import datetime
 import os
 from pathlib import Path
-import shutil
 import sqlite3
 import time
 import htcondor2
@@ -22,18 +23,49 @@ from ornithology import *
 
 NUM_JOBS = 10
 
+DB_POLL_INTERVAL         = 2    # seconds between DB polls
+DB_POLL_TIMEOUT          = 120  # seconds before giving up
+UPDATE_INTERVAL          = 5    # seconds — matches LIBRARIAN_UPDATE_INTERVAL
+STATUS_RETENTION_SECONDS = 10   # seconds — short window to exercise Status pruning in tests
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _run_librarian_cycle(condor):
-    """Run one condor_librarian update cycle with no sleep."""
-    result = condor.run_command(
-        ["condor_librarian", "-delay", "0", "-break-after", "1"]
-    )
-    assert result.returncode == 0, (
-        f"condor_librarian failed ({result.returncode})\n{result.stderr}"
-    )
+def _get_db_path(condor):
+    """Return the LIBRARIAN_DATABASE path from the running pool config."""
+    with condor.use_config():
+        return Path(htcondor2.param["LIBRARIAN_DATABASE"])
+
+
+def _wait_for_db_job_count(condor, expected_count, timeout=DB_POLL_TIMEOUT):
+    """
+    Poll the librarian DB until JobRecords has at least `expected_count` rows,
+    or raise AssertionError on timeout.  Opens a fresh connection each poll so
+    we never observe a stale SQLite cache while the daemon is writing.
+    """
+    db_path = _get_db_path(condor)
+    start = time.time()
+    while True:
+        assert time.time() - start <= timeout, (
+            f"Timed out after {timeout}s waiting for {expected_count} "
+            f"JobRecord(s) in librarian DB (last seen: {_safe_job_count(db_path)})"
+        )
+        count = _safe_job_count(db_path)
+        if count >= expected_count:
+            return
+        time.sleep(DB_POLL_INTERVAL)
+
+
+def _safe_job_count(db_path):
+    """Return current JobRecords row count, or 0 if the DB does not yet exist."""
+    try:
+        conn = sqlite3.connect(str(db_path))
+        count = conn.execute("SELECT COUNT(*) FROM JobRecords").fetchone()[0]
+        conn.close()
+        return count
+    except sqlite3.OperationalError:
+        return 0
 
 
 def _submit_and_wait(condor, log_path, path_to_sleep, count):
@@ -74,7 +106,11 @@ def _submit_and_wait(condor, log_path, path_to_sleep, count):
 def condor_config():
     return {
         "config": {
-            "LIBRARIAN_DATABASE": "$(LOCAL_DIR)/librarian.db",
+            # Run condor_librarian as a long-lived daemon under condor_master.
+            "DAEMON_LIST": "$(DAEMON_LIST) LIBRARIAN",
+            # Short update interval so tests don't wait the 30-second default.
+            "LIBRARIAN_UPDATE_INTERVAL":          UPDATE_INTERVAL,
+            "LIBRARIAN_STATUS_RETENTION_SECONDS": STATUS_RETENTION_SECONDS,
         }
     }
 
@@ -96,13 +132,14 @@ def completed_job_cluster(condor, test_dir, path_to_sleep):
 
 @action
 def librarian_db(completed_job_cluster, condor, test_dir):
-    """Run the first librarian cycle and yield an open DB connection."""
+    """
+    Wait for the librarian daemon to ingest all initial jobs, then yield an
+    open DB connection.  No records are read until the daemon has confirmed
+    all NUM_JOBS entries are present.
+    """
+    _wait_for_db_job_count(condor, NUM_JOBS)
 
-    _run_librarian_cycle(condor)
-
-    with condor.use_config():
-        db_path = Path(htcondor2.param["LIBRARIAN_DATABASE"])
-
+    db_path = _get_db_path(condor)
     assert db_path.exists(), f"Database not created at {db_path}"
 
     conn = sqlite3.connect(str(db_path))
@@ -117,8 +154,8 @@ def initial_db_snapshot(librarian_db):
     first librarian run so rotation tests can assert no original rows were mutated.
     """
     rows = librarian_db.execute(
-        "SELECT j.ClusterId, j.ProcId, jr.Offset, jr.CompletionDate, jr.FileId "
-        "FROM Jobs j JOIN JobRecords jr ON j.JobId = jr.JobId"
+        r"SELECT j.ClusterId, j.ProcId, jr.Offset, jr.CompletionDate, jr.FileId "
+        r"FROM Jobs j JOIN JobRecords jr ON j.JobId = jr.JobId"
     ).fetchall()
     return {(r[0], r[1]): {"offset": r[2], "completion_date": r[3], "file_id": r[4]} for r in rows}
 
@@ -126,12 +163,11 @@ def initial_db_snapshot(librarian_db):
 @action
 def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     """
-    Simulate a history rotation, complete one more job, and run a second cycle.
+    Simulate a history rotation, complete one more job.
 
-    ArchiveMonitor detects rotation by finding files with mtime > lastStatusTime
-    whose inode/hash match the last-read file.  rename() preserves mtime, so
-    os.utime() is called after the rename; the preceding sleep() ensures the
-    updated mtime is strictly after the first run's TimeOfUpdate (second precision).
+    rename() preserves mtime, so os.utime() is called after the rename; the
+    preceding sleep() ensures the updated mtime is strictly after the first
+    run's TimeOfUpdate (second precision).
     """
 
     with condor.use_config():
@@ -149,7 +185,7 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     # Restart the schedd to close file handle to rotated file
     p = condor.run_command(["condor_restart", "-fast"])
 
-    # Wait for condor to be back up
+    # Wait for condor to be back up (schedd + librarian daemon both restart)
     start = time.time()
     while True:
         assert time.time() - start <= 30, "Failed to restart condor"
@@ -165,16 +201,17 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
 
 @action
 def post_rotation_db(post_rotation_handle, condor):
-    """Open a fresh DB connection after the second librarian run."""
+    """
+    Wait for the librarian daemon to ingest the post-rotation job, then yield
+    a fresh DB connection.  Blocks until the daemon confirms NUM_JOBS + 1
+    records are present, with a timeout.
+    """
+    _wait_for_db_job_count(condor, NUM_JOBS + 1)
 
-    _run_librarian_cycle(condor)
-
-    with condor.use_config():
-        db_path = Path(htcondor2.param["LIBRARIAN_DATABASE"])
-
+    db_path = _get_db_path(condor)
     assert db_path.exists(), f"Database not created at {db_path}"
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(str(db_path))
     yield conn
     conn.close()
 
@@ -224,6 +261,49 @@ class TestLibrarianIngestion:
             r"SELECT COUNT(*) FROM JobRecords WHERE CompletionDate <= 0"
         ).fetchone()[0] == 0
 
+    def test_initial_status_recorded(self, librarian_db):
+        """The daemon must have written at least one Status row after ingest."""
+        assert librarian_db.execute(
+            r"SELECT COUNT(*) FROM Status"
+        ).fetchone()[0] >= 1
+
+    def test_status_retention(self, condor):
+        """Status rows older than LIBRARIAN_STATUS_RETENTION_SECONDS must be pruned each cycle."""
+        time.sleep(STATUS_RETENTION_SECONDS + 2 * UPDATE_INTERVAL)
+
+        db_path = _get_db_path(condor)
+        conn = sqlite3.connect(str(db_path))
+        rows = conn.execute(r"SELECT TimeOfUpdate FROM Status").fetchall()
+        conn.close()
+
+        now = int(time.time())
+        assert len(rows) >= 1, "Expected at least one recent Status row to survive"
+        stale = [r[0] for r in rows if now - r[0] > STATUS_RETENTION_SECONDS + UPDATE_INTERVAL]
+        assert not stale, (
+            f"Found Status rows older than retention window "
+            f"({STATUS_RETENTION_SECONDS + UPDATE_INTERVAL}s): {stale}"
+        )
+
+    def test_initial_active_file_not_fully_read(self, librarian_db):
+        """The active archive file (no rotation time) must not be marked done."""
+        row = librarian_db.execute(
+            r"SELECT COUNT(*) FROM Files WHERE DateOfRotation IS NULL AND FullyRead = 0"
+        ).fetchone()
+        assert row[0] >= 1, "Expected at least one active (non-rotated, non-fully-read) file"
+
+    def test_initial_avg_record_size_positive(self, librarian_db):
+        """AvgRecordSize must be > 0 for every tracked file after the first ingest cycle."""
+        rows = librarian_db.execute(r"SELECT AvgRecordSize FROM Files").fetchall()
+        assert len(rows) >= 1
+        assert all(r[0] > 0 for r in rows), \
+            f"Expected all Files.AvgRecordSize > 0, got: {[r[0] for r in rows]}"
+
+    def test_initial_records_read_count(self, librarian_db):
+        """Sum of RecordsRead across all files must be >= NUM_JOBS after the first ingest."""
+        total = librarian_db.execute(r"SELECT SUM(RecordsRead) FROM Files").fetchone()[0] or 0
+        assert total >= NUM_JOBS, \
+            f"Expected SUM(RecordsRead) >= {NUM_JOBS}, got {total}"
+
     # --- Post-rotation (second cycle, NUM_JOBS + 1 total) ---
 
     def test_post_rotation_job_counts(self, post_rotation_db):
@@ -256,9 +336,43 @@ class TestLibrarianIngestion:
             assert current[key] == orig, f"Job {key} data changed: was {orig}, now {current[key]}"
 
     def test_post_rotation_files_tracked(self, post_rotation_db):
-        assert post_rotation_db.execute("SELECT COUNT(*) FROM Files").fetchone()[0] >= 2
+        assert post_rotation_db.execute(r"SELECT COUNT(*) FROM Files").fetchone()[0] >= 2
 
     def test_post_rotation_owner_unchanged(self, post_rotation_db):
         assert post_rotation_db.execute(
             r"SELECT COUNT(DISTINCT UserId) FROM Jobs WHERE UserId IS NOT NULL"
         ).fetchone()[0] == 1
+
+    def test_post_rotation_rotated_file_marked(self, post_rotation_db):
+        """Exactly one file must carry a RotationTime after a single rotation."""
+        count = post_rotation_db.execute(
+            r"SELECT COUNT(*) FROM Files WHERE DateOfRotation IS NOT NULL"
+        ).fetchone()[0]
+        assert count >= 1, "No file was marked with a DateOfRotation after rotation"
+
+    def test_post_rotation_rotated_file_fully_read(self, post_rotation_db):
+        """The rotated file must be marked FullyRead once the librarian drains it."""
+        count = post_rotation_db.execute(
+            r"SELECT COUNT(*) FROM Files WHERE DateOfRotation IS NOT NULL AND FullyRead = 1"
+        ).fetchone()[0]
+        assert count >= 1, "Rotated file not marked FullyRead"
+
+    def test_post_rotation_status_updated(self, post_rotation_db):
+        """The daemon must have written multiple Status rows across both cycles."""
+        assert post_rotation_db.execute(
+            r"SELECT COUNT(*) FROM Status"
+        ).fetchone()[0] >= 2
+
+    def test_post_rotation_avg_record_size_persisted(self, post_rotation_db):
+        """AvgRecordSize must remain > 0 for all files after a daemon restart (DB persistence)."""
+        rows = post_rotation_db.execute(r"SELECT FileName, AvgRecordSize FROM Files").fetchall()
+        assert len(rows) >= 2, "Expected at least 2 Files entries after rotation"
+        bad = [(r[0], r[1]) for r in rows if r[1] <= 0]
+        assert not bad, \
+            f"AvgRecordSize reset to 0 after restart for: {bad}"
+
+    def test_post_rotation_records_read_total(self, post_rotation_db):
+        """Total RecordsRead across all files must be >= NUM_JOBS + 1 after the post-rotation ingest."""
+        total = post_rotation_db.execute(r"SELECT SUM(RecordsRead) FROM Files").fetchone()[0] or 0
+        assert total >= NUM_JOBS + 1, \
+            f"Expected SUM(RecordsRead) >= {NUM_JOBS + 1}, got {total}"

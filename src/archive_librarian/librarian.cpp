@@ -1,198 +1,248 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "historyFileFinder.h"
+#include "stl_string_utils.h"
 
 #include "librarian.h"
-#include "readHistory.h"
-#include "archiveMonitor.h"
 #include "SavedQueries.h"
 
-#include <filesystem>
-#include <cstdio>
-#include <chrono>
-#include <memory>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
+#include <memory>
+#include <optional>
+#include <regex>
 #include <string>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
+#include <unordered_set>
+
+#ifndef _WIN32
+    #include <sys/stat.h>
+    #include <sys/types.h>
+#endif
 
 namespace conf = LibrarianConfigOptions;
-namespace fs = std::filesystem;
+
+
+// ================================
+// FILE FINGERPRINTING (PRIVATE STATIC HELPERS)
+// ================================
+
+static uint64_t fnv1a_64(const std::string& s) {
+    uint64_t hash = UINT64_C(14695981039346656037);
+    for (unsigned char c : s) {
+        hash ^= c;
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
+}
+
+// Reads the first record from path and returns an FNV-1a hex string of its raw text.
+// Returns empty string on failure.
+static std::string computeFileHash(const std::string& path) {
+    ArchiveReader reader(path, ArchiveReader::Direction::Forward);
+    if ( ! reader.IsOpen()) {
+        dprintf(D_ERROR, "computeFileHash: failed to open '%s'\n", path.c_str());
+        return {};
+    }
+    ArchiveRecord rec;
+    reader.Next(rec);
+    std::string hash;
+    formatstr(hash, "%llx", (unsigned long long)fnv1a_64(rec.GetRawRecord()));
+    return hash;
+}
+
+// Extracts the YYYYMMDDTHHMMSS rotation timestamp from a filename suffix.
+// Returns nullopt when the filename has no rotation suffix.
+static std::optional<std::string> extractRotationTime(const std::string& filename) {
+    static const std::regex rotatedPattern(R"(.*(\d{8}T\d{6})\d*$)");
+    std::smatch match;
+    if (std::regex_match(filename, match, rotatedPattern)) {
+        return match[1].str();
+    }
+    return std::nullopt;
+}
+
+// Collects disk metadata for path and returns a populated ArchiveFile.
+// Returns nullopt if any required stat / hash step fails.
+static std::optional<ArchiveFile> makeArchiveFile(const std::string& path) {
+    ArchiveFile result;
+    std::error_code ec;
+    std::filesystem::path filePath(path);
+
+    result.filename = filePath.filename().string();
+
+    result.size = static_cast<int64_t>(std::filesystem::file_size(filePath, ec));
+    if (ec) {
+        dprintf(D_ERROR, "makeArchiveFile: could not get size for '%s': %s\n",
+                path.c_str(), ec.message().c_str());
+        return std::nullopt;
+    }
+
+    auto ftime = std::filesystem::last_write_time(filePath, ec);
+    if (ec) {
+        dprintf(D_ERROR, "makeArchiveFile: could not get mtime for '%s': %s\n",
+                path.c_str(), ec.message().c_str());
+        return std::nullopt;
+    }
+    auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+        ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+    result.last_modified = std::chrono::system_clock::to_time_t(sctp);
+
+#ifdef _WIN32
+    result.inode = 0;
+#else
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) {
+        dprintf(D_ERROR, "makeArchiveFile: stat failed for '%s'\n", path.c_str());
+        return std::nullopt;
+    }
+    result.inode = static_cast<int64_t>(st.st_ino);
+#endif
+
+    result.hash = computeFileHash(path);
+    if (result.hash.empty()) {
+        dprintf(D_ERROR, "makeArchiveFile: failed to compute hash for '%s'\n", path.c_str());
+        return std::nullopt;
+    }
+
+    auto rotTime = extractRotationTime(result.filename);
+    if (rotTime) {
+        result.rotation_time = *rotTime;
+    }
+
+    return result;
+}
+
 
 // ================================
 // FILE READS AND WRITES
-// ================================  
-
+// ================================
 
 /**
- * @brief Reads new job records from the history file and updates the file offset
- * @param newJobRecords Output vector to store newly read job records
- * @param fileInfo Input/output file information containing current offset, updated with new offset
- * @return true if successful, false on failure
+ * @brief Reads new job records from path using the persistent reader embedded in info.
+ *
+ * On the first call for a given ArchiveFile the reader is created.  If last_offset > 0
+ * (daemon restart recovery) the reader seeks past already-processed records.  On
+ * subsequent calls the existing reader has its EOF cleared so newly appended records
+ * are picked up without reopening the file.
+ *
+ * When a rotated file reaches clean EOF the reader is released and fully_read is set.
  */
-bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& fileInfo) {
+bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
+                               const std::string& path,
+                               ArchiveFile& info) {
+    if ( ! info.reader) {
+        auto reader = std::make_unique<ArchiveReader>(path, ArchiveReader::Direction::Forward);
+        if ( ! reader->IsOpen()) {
+            dprintf(D_ERROR, "readJobRecords: failed to open '%s'\n", path.c_str());
+            return false;
+        }
 
-    fs::path fullPath = historyFileSet_.GetDirectory() / fileInfo.FileName;
-    long newOffset = readHistoryIncremental(fullPath.string().c_str(), newJobRecords, fileInfo);
-    if (newOffset < 0) {
-        dprintf(D_ERROR, "Failed to read job records.\n");
-        return false;
+        if (info.last_offset > 0) {
+            // last_offset is the byte position *after* the last processed record.
+            if ( ! reader->SeekForward(info.last_offset)) {
+                dprintf(D_ERROR, "readJobRecords: seek to offset %lld failed for '%s'\n",
+                        (long long)info.last_offset, path.c_str());
+                return false;
+            }
+        }
+
+        info.reader = std::move(reader);
+    } else {
+        info.reader->ClearEOF();
     }
-    fileInfo.LastOffset = newOffset;
 
-    // Check if this rotated file is now fully read
-    if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
-        fileInfo.FullyRead = true;
+    ArchiveRecord rec;
+    int64_t prevPos = info.last_offset;
+    while (info.reader->Next(rec)) {
+        int64_t curPos = info.reader->Tellp();
+        int64_t recordBytes = curPos - prevPos;
+        if (recordBytes > 0) {
+            info.records_read++;
+            info.avg_record_size += (static_cast<double>(recordBytes) - info.avg_record_size)
+                                  / static_cast<double>(info.records_read);
+        }
+        prevPos = curPos;
+        records.push_back(rec);
+    }
+
+    // Store the position *after* the last processed byte so that
+    // calculateBacklogFromBytes sees fileSize - last_offset == 0 when fully
+    // caught up, and recovery seeks directly to the next unread record.
+    info.last_offset = info.reader->Tellp();
+
+    // A rotated file that reached clean EOF is done; release the file descriptor.
+    if ( ! info.rotation_time.empty() && info.reader->LastError() == 0) {
+        info.fully_read = true;
+        info.reader.reset();
     }
 
     return true;
 }
 
+
 // ================================
 // STATUS TRACKING UTILITIES
 // ================================
 
-// Finds a history file matching the config name pattern and calculates 
-// EstimatedBytesPerJobInArchive_ as the byte size from file start to first "***" line
-bool Librarian::calculateEstimatedBytesPerJob() {
-    std::error_code ec;
-    std::filesystem::path historyDir = historyFileSet_.GetDirectory();
+// Computes EstimatedBytesPerJobInArchive_ as a weighted mean across all files
+// that have seen at least one record. Called after each read cycle and on restart
+// (when per-file data is recovered from the DB) to replace cold-start sampling.
+void Librarian::updateBytesPerJobEstimate() {
+    int64_t totalRecords = 0;
+    double  weightedSum  = 0.0;
 
-    // Check if directory exists
-    if (!std::filesystem::exists(historyDir, ec) || ec) {
-        return false;
-    }
-
-    // Find a file that starts with historyConfigName and has additional content
-    for (const auto& entry : std::filesystem::directory_iterator(historyDir, ec)) {
-        if (ec) {
-            return false;
-        }
-
-        if (entry.is_regular_file(ec) && !ec) {
-            std::string filename = entry.path().filename().string();
-
-            auto setFileNameLen = historyFileSet_.GetFileName().length();
-
-            // Check if filename starts with archive file root filename and has more content after it
-            if (filename.length() > setFileNameLen && filename.substr(0, setFileNameLen) == historyFileSet_.GetFileName()) {
-
-                std::ifstream file(entry.path(), std::ios::binary);
-                if (!file.is_open()) {
-                    continue; // Try next file
-                }
-
-                std::string line;
-                std::streampos startPos = file.tellg();
-                if (startPos == std::streampos(-1)) {
-                    file.close();
-                    continue;
-                }
-
-                // Read until we find a line starting with "***"
-                while (std::getline(file, line)) {
-                    if (line.length() >= 3 && line.substr(0, 3) == "***") {
-                        std::streampos endPos = file.tellg();
-                        if (endPos == std::streampos(-1)) {
-                            file.close();
-                            continue;
-                        }
-
-                        std::streamsize chunkSize = endPos - startPos;
-                        EstimatedBytesPerJobInArchive_ = static_cast<double>(chunkSize);
-
-                        file.close();
-
-                        // Now get the size of the whole file
-                        std::uintmax_t fileSize = std::filesystem::file_size(entry.path(), ec);
-                        if (ec || EstimatedBytesPerJobInArchive_ <= 0.0) {
-                            return false;
-                        }
-
-                        EstimatedJobsPerFileInArchive_ = static_cast<int>(
-                            static_cast<double>(fileSize) / EstimatedBytesPerJobInArchive_
-                        );
-
-                        return true;
-                    }
-                }
-
-                file.close(); // No "***" line found
-            }
+    for (const auto& [path, info] : m_archive_files) {
+        if (info.records_read > 0) {
+            weightedSum  += info.avg_record_size * static_cast<double>(info.records_read);
+            totalRecords += info.records_read;
         }
     }
 
-    return false;
+    if (totalRecords > 0) {
+        EstimatedBytesPerJobInArchive_ = weightedSum / static_cast<double>(totalRecords);
+        dprintf(D_FULLDEBUG, "Estimated bytes per record updated: %.1f bytes (%lld records)\n",
+                EstimatedBytesPerJobInArchive_, (long long)totalRecords);
+    }
 }
 
-
 /**
- * @brief Estimates remaining job records by calculating unread bytes in history files
- * 
- * Calculates bytes remaining in the last partially-read file plus all bytes in
- * unread files (LastOffset == 0), then estimates job count using EstimatedBytesPerJobInArchive_.
+ * @brief Estimates remaining job records by summing unread bytes across all tracked files.
+ *
+ * For the most-recently-touched file uses status.last_file_offset (current cycle's value).
+ * For all other not-fully-read files uses their stored last_offset.
  */
 int Librarian::calculateBacklogFromBytes(const Status& status) {
     if (EstimatedBytesPerJobInArchive_ <= 0) return 0;
 
     int64_t totalUnreadBytes = 0;
+    std::error_code ec;
 
-    // Find the last read file info
-    auto lastFileIt = historyFileSet_.fileMap.find(status.HistoryFileIdLastRead);
-    if (lastFileIt != historyFileSet_.fileMap.end()) {
-        const FileInfo& lastFileInfo = lastFileIt->second;
+    for (const auto& [path, info] : m_archive_files) {
+        if (info.fully_read) continue;
 
-        // Construct full path to the history file
-        std::filesystem::path fullFilePath = historyFileSet_.GetDirectory() / lastFileInfo.FileName;
-
-        // Check if file exists and get its size without exceptions
-        std::error_code ec;
-        int64_t lastFileSizeBytes = std::filesystem::file_size(fullFilePath, ec);
-
-        if (!ec) {
-            // File size retrieved successfully
-            // Calculate bytes left in the partially read file
-            int64_t unreadInLastFile = std::max<int64_t>(0, lastFileSizeBytes - status.HistoryFileOffsetLastRead);
-            totalUnreadBytes += unreadInLastFile;
-        } else {
+        int64_t fileSize = static_cast<int64_t>(std::filesystem::file_size(path, ec));
+        if (ec) {
             dprintf(D_ERROR, "Warning: Could not get file size for %s: %s\n",
-                    fullFilePath.string().c_str(), ec.message().c_str());
-            // Continue without counting this file
+                    path.c_str(), ec.message().c_str());
+            continue;
         }
-    } else {
-        dprintf(D_ERROR, "Warning: Last history file ID (%d) not found.\n",
-                status.HistoryFileIdLastRead);
+
+        int64_t offset = (info.id == status.last_file_id)
+                       ? status.last_file_offset
+                       : info.last_offset;
+
+        totalUnreadBytes += std::max<int64_t>(0, fileSize - offset);
     }
 
-    // Find all unread files (LastOffset == 0) and sum their sizes
-    for (const auto& [fileId, fileInfo] : historyFileSet_.fileMap) {
-        if (fileInfo.LastOffset == 0) {
-            // Construct full path to the history file
-            std::filesystem::path fullFilePath = historyFileSet_.GetDirectory() / fileInfo.FileName;
-
-            // Check if file exists and get its size without exceptions
-            std::error_code ec;
-            int64_t fileSize = std::filesystem::file_size(fullFilePath, ec);
-
-            if (!ec) {
-                // File size retrieved successfully
-                totalUnreadBytes += fileSize;
-            } else {
-                dprintf(D_ERROR, "Warning: Could not get file size for %s: %s\n",
-                        fullFilePath.string().c_str(), ec.message().c_str());
-                // Continue without counting this file
-            }
-        }
-    }
-
-    // Calculate estimated backlog
-    int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
+    int estimatedBacklog = static_cast<int>(
+        std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
 
     dprintf(D_ALWAYS, "Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n",
-            (long long) totalUnreadBytes, estimatedBacklog);
+            (long long)totalUnreadBytes, estimatedBacklog);
 
     return estimatedBacklog;
 }
@@ -201,239 +251,177 @@ void Librarian::estimateArrivalRateWhileAsleep() {
     int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // Calculate arrival rate if we didn't leave backlog last time and have previous timestamp
-    // Create dummy status for backlog calculation
-    Status dummyStatus = {};
-    dummyStatus.HistoryFileIdLastRead = historyFileSet_.lastFileReadId;
-
-    auto lastFileIt = historyFileSet_.fileMap.find(dummyStatus.HistoryFileIdLastRead);
-    if (lastFileIt != historyFileSet_.fileMap.end()) {
-        dummyStatus.HistoryFileOffsetLastRead = lastFileIt->second.LastOffset;
-
-        int backlogAds = calculateBacklogFromBytes(dummyStatus);
-        int64_t timeDeltaMs = currentTime - statusData_.TimeOfLastUpdate;
-
-        if (timeDeltaMs > 0) {
-            double arrivalHz = (backlogAds * 1000.0) / timeDeltaMs;
-            double n = static_cast<double>(statusData_.TotalCycles + 1); // +1 for the cycle about to start
-            statusData_.MeanArrivalHz += (arrivalHz - statusData_.MeanArrivalHz) / n;
+    // Find the file with the highest id that has been partially read.
+    long    lastId     = 0;
+    int64_t lastOffset = 0;
+    for (const auto& [path, info] : m_archive_files) {
+        if (info.last_offset > 0 && info.id > lastId) {
+            lastId     = info.id;
+            lastOffset = info.last_offset;
         }
     }
-}
+    if (lastId == 0) return;
 
+    Status dummyStatus;
+    dummyStatus.last_file_id     = lastId;
+    dummyStatus.last_file_offset = lastOffset;
+
+    int     backlogAds  = calculateBacklogFromBytes(dummyStatus);
+    int64_t timeDeltaMs = currentTime - statusData_.TimeOfLastUpdate;
+
+    if (timeDeltaMs > 0) {
+        double arrivalHz = (backlogAds * 1000.0) / timeDeltaMs;
+        double n = static_cast<double>(statusData_.TotalCycles + 1);
+        statusData_.MeanArrivalHz += (arrivalHz - statusData_.MeanArrivalHz) / n;
+    }
+}
 
 void Librarian::updateStatusData(Status status) {
     int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // Increment total cycles
     statusData_.TotalCycles++;
+    statusData_.TotalAdsIngested += status.records_processed;
 
-    // Update total ads ingested
-    statusData_.TotalAdsIngested += status.TotalJobsRead;
+    double currentAdsPerCycle    = static_cast<double>(status.records_processed);
+    double currentDurationMs     = static_cast<double>(status.duration_ms);
+    double currentIngestHz       = (currentDurationMs > 0)
+                                 ? (currentAdsPerCycle * 1000.0 / currentDurationMs) : 0.0;
+    double currentBacklogEstimate = static_cast<double>(status.backlog_estimate);
 
-    // Calculate current cycle values
-    double currentAdsPerCycle = static_cast<double>(status.TotalJobsRead);
-    double currentDurationMs = static_cast<double>(status.DurationMs);
-    double currentIngestHz = (currentDurationMs > 0) ? 
-        (currentAdsPerCycle * 1000.0 / currentDurationMs) : 0.0;
-    double currentBacklogEstimate = static_cast<double>(status.JobBacklogEstimate);
-
-    // Update averages using incremental formula: new_avg = old_avg + (new_value - old_avg) / n
     double n = static_cast<double>(statusData_.TotalCycles);
 
-    statusData_.AvgAdsIngestedPerCycle += 
-        (currentAdsPerCycle - statusData_.AvgAdsIngestedPerCycle) / n;
+    statusData_.AvgAdsIngestedPerCycle += (currentAdsPerCycle     - statusData_.AvgAdsIngestedPerCycle) / n;
+    statusData_.AvgIngestDurationMs    += (currentDurationMs      - statusData_.AvgIngestDurationMs)    / n;
+    statusData_.MeanIngestHz           += (currentIngestHz        - statusData_.MeanIngestHz)           / n;
+    statusData_.MeanBacklogEstimate    += (currentBacklogEstimate - statusData_.MeanBacklogEstimate)    / n;
 
-    statusData_.AvgIngestDurationMs += 
-        (currentDurationMs - statusData_.AvgIngestDurationMs) / n;
-
-    statusData_.MeanIngestHz += 
-        (currentIngestHz - statusData_.MeanIngestHz) / n;
-
-    statusData_.MeanBacklogEstimate += 
-        (currentBacklogEstimate - statusData_.MeanBacklogEstimate) / n;
-
-    // Update hit max ingest limit rate
-    if (status.HitMaxIngestLimit) {
-        // Count of cycles that hit limit is now: (old_rate * old_n) + 1
-        // New rate is: ((old_rate * old_n) + 1) / new_n
-        statusData_.HitMaxIngestLimitRate = 
-            (statusData_.HitMaxIngestLimitRate * (n - 1) + 1.0) / n;
+    if (status.hit_ingest_limit) {
+        statusData_.HitMaxIngestLimitRate = (statusData_.HitMaxIngestLimitRate * (n - 1) + 1.0) / n;
     } else {
-        // No hit this cycle, just update denominator
-        statusData_.HitMaxIngestLimitRate = 
-            (statusData_.HitMaxIngestLimitRate * (n - 1)) / n;
+        statusData_.HitMaxIngestLimitRate = (statusData_.HitMaxIngestLimitRate * (n - 1)) / n;
     }
 
-    // Update tracking variables
-    statusData_.TimeOfLastUpdate = currentTime;
+    statusData_.TimeOfLastUpdate  = currentTime;
+    statusData_.LastRunLeftBacklog = status.hit_ingest_limit;
 }
 
+
 // ================================
-// ARCHIVE MANAGEMENT (PRIVATE HELPERS)
+// ARCHIVE MANAGEMENT
 // ================================
 
 /**
- * @brief Applies detected archive changes to the in-memory FileSet
- * This function synchronizes the FileSet with filesystem changes detected by ArchiveMonitor
- * @param change Archive changes detected (rotations, additions, deletions)
- * @param fileSet Target FileSet to update
+ * @brief Registers new archive paths and resolves file rotations.
+ *
+ * For each path returned by findHistoryFiles() that is not yet in m_archive_files:
+ *   - If the path has a rotation timestamp AND its inode (Unix) or hash (Windows)
+ *     matches the currently-active ArchiveFile, a rotation is recorded:
+ *       * The active entry is re-keyed to the rotated path and its rotation_time set.
+ *       * A fresh ArchiveFile is created for the original (now active) path.
+ *   - Otherwise the path is treated as a brand-new file.
+ *
+ * All new entries are inserted into the database via writeFileInfo().
  */
-void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) {
+void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_files) {
+    for (const auto& path : archive_files) {
+        if (m_archive_files.contains(path)) continue;
 
-    // 1. Handle rotated file
-    if (!change.rotatedFile.second.empty()) {
-        const long lastFileReadId = change.rotatedFile.first;
-        const std::string& newName = change.rotatedFile.second;
+        // Locate the active entry (the one file not yet rotated).
+        std::string activePath;
+        for (const auto& [key, entry] : m_archive_files) {
+            if (entry.rotation_time.empty() && ! entry.fully_read) {
+                activePath = key;
+                break;
+            }
+        }
 
-        auto it = fileSet.fileMap.find(lastFileReadId);
-        if (it != fileSet.fileMap.end()) {
-            it->second.FileName = newName;
+        bool isRotation = false;
+        if ( ! activePath.empty()) {
+            const ArchiveFile& active = m_archive_files[activePath];
+            std::string basename = std::filesystem::path(path).filename().string();
+            if (extractRotationTime(basename)) {
+                // Windows (inode == 0): fall back to hash comparison.
+                if (active.inode) {
+                #ifndef _WIN32
+                    struct stat st;
+                    if (stat(path.c_str(), &st) == 0) {
+                        isRotation = (static_cast<int64_t>(st.st_ino) == active.inode);
+                    }
+                #endif
+                } else {
+                    isRotation = ( ! active.hash.empty() && computeFileHash(path) == active.hash);
+                }
+            }
+        }
 
-            // Extract and set DateOfRotation from the new rotated filename
-            if (auto dateOfRotation = ArchiveMonitor::extractDateOfRotation(newName)) {
-                it->second.DateOfRotation = *dateOfRotation;
+        if (isRotation) {
+            dprintf(D_STATUS, "reconcileArchiveFiles: rotation detected — '%s' → '%s'\n",
+                    activePath.c_str(), path.c_str());
+
+            // Re-key the active entry to the rotated path.
+            auto node = m_archive_files.extract(activePath);
+            node.key()                = path;
+            node.mapped().filename    = std::filesystem::path(path).filename().string();
+            node.mapped().rotation_time =
+                *extractRotationTime(node.mapped().filename);
+            m_archive_files.insert(std::move(node));
+
+            dbHandler_.updateFileInfo(m_archive_files[path]);
+
+            // Register the fresh active file.
+            auto newActive = makeArchiveFile(activePath);
+            if ( ! newActive) {
+                dprintf(D_ERROR, "reconcileArchiveFiles: failed to build ArchiveFile for '%s'\n",
+                        activePath.c_str());
+            } else {
+                dbHandler_.writeFileInfo(*newActive);
+                m_archive_files[activePath] = std::move(*newActive);
             }
         } else {
-            dprintf(D_ERROR, "Warning: Rotated file not found in fileMap. FileId=%ld\n", lastFileReadId);
-        }
-    }
-
-    // 2. Add new files to FileSet's FileMap
-    for (const auto& newFile : change.newFiles) {
-        if (newFile.FileId != 0) {
-            fileSet.fileMap[newFile.FileId] = newFile;
-        } else {
-            dprintf(D_ERROR, "Warning: New file has invalid FileId. Skipping.\n");
-        }
-    }
-
-    // 3. Remove deleted files from FileSet's FileMap
-    for (long deletedFileId : change.deletedFileIds) {
-        size_t erased = fileSet.fileMap.erase(deletedFileId);
-        if (erased == 0) {
-            dprintf(D_ERROR, "Warning: Tried to delete file not found in fileMap. FileId=%ld\n", deletedFileId);
+            auto newFile = makeArchiveFile(path);
+            if ( ! newFile) {
+                dprintf(D_ERROR, "reconcileArchiveFiles: failed to build ArchiveFile for '%s'\n",
+                        path.c_str());
+            } else {
+                dbHandler_.writeFileInfo(*newFile);
+                m_archive_files[path] = std::move(*newFile);
+            }
         }
     }
 }
-
-
-/**
- * @brief Scans directory for changes and updates both database and in-memory FileSet
- * This is the main coordination function for file tracking
- * @param fileSet FileSet to scan and update
- * @return ArchiveChange struct containing all detected changes
- */
-ArchiveChange Librarian::trackAndUpdateFileSet(FileSet& fileSet) {
-    // Step 1: Scan the directory to detect changes since the last check.
-    // This includes:
-    //   - detecting rotated files
-    //   - identifying newly added files
-    //   - finding deleted files
-    ArchiveChange fileSetChange = ArchiveMonitor::trackHistoryFileSet(fileSet);
-
-    // Step 2: Apply SOME of those changes to the persistent database.
-    // Change the name of the rotated file, add new files to directory and populate their FileIds. 
-    dbHandler_.insertNewFilesAndMarkOldOnes(fileSetChange);
-
-    // Step 3: Apply the same changes to the in-memory FileSet,
-    // so that the system’s internal state reflects what’s on disk.
-    applyArchiveChangeToFileSet(fileSetChange, fileSet);
-
-    return fileSetChange;
-}
-
-/**
- * @brief Builds a processing queue from file set and archive changes
- * @param fileSet The history file set containing file cache
- * @param changes Archive changes detected during scanning
- * @param queue Output queue of FileInfo structs to process
- * @return true if successful, false on error
- */
-bool Librarian::buildProcessingQueue(const FileSet& fileSet, 
-                                    const ArchiveChange& changes,
-                                    std::vector<FileInfo>& queue) {
-    queue.clear();
-
-    // FIRST PRIORITY: Continue reading the last file we were working on
-    if (fileSet.lastFileReadId != -1) {
-        auto it = fileSet.fileMap.find(fileSet.lastFileReadId);
-        if (it != fileSet.fileMap.end()) {
-            queue.push_back(it->second);
-            dprintf(D_FULLDEBUG, "Added lastFileRead to queue: %s (FileId: %ld)\n",
-                    it->second.FileName.c_str(), it->second.FileId);
-        } else {
-            dprintf(D_ERROR, "Error: lastFileReadId %ld not found in fileMap\n", fileSet.lastFileReadId);
-            return false;
-        }
-    }
-
-    // SECOND PRIORITY: Add new files from archive changes in order 
-    for (const FileInfo& newFile : changes.newFiles) {
-        queue.push_back(newFile);
-        dprintf(D_ALWAYS, "Added new file to queue: %s (FileId: %ld)\n",
-               newFile.FileName.c_str(), newFile.FileId);
-    }
-
-    return true;
-}
-
 
 
 // ================================
 // GARBAGE COLLECTION
 // ================================
 
-
-/**
- * Get the file system size of the database in bytes.
- * Portable across all file systems.
- * 
- * @param db_path Path to the database file
- * @return Size in bytes, or 0 if file doesn't exist
- */
-std::uintmax_t get_database_size(const std::string& db_path) {
+static std::uintmax_t get_database_size(const std::string& db_path) {
     std::error_code ec;
     auto size = std::filesystem::file_size(db_path, ec);
-
-    if (ec) {
-        return 0;  // File doesn't exist or other error
-    }
-
-    return size;
+    return ec ? 0 : size;
 }
 
-
 bool Librarian::cleanupDatabaseIfNeeded() {
-    bool garbageCollected =  false;
+    bool garbageCollected = false;
 
-    // Get current database size
-    size_t currentSize = get_database_size(config[conf::str::DBPath]);
+    size_t currentSize  = get_database_size(config[conf::str::DBPath]);
+    long long sizeLimit = config[conf::ll::DBMaxSizeBytes];
+    size_t highWatermark = static_cast<size_t>(sizeLimit * config[conf::dbl::DBHighWaterMark]);
 
-    long long size_limit = config[conf::ll::DBMaxSizeBytes];
-
-    // Calculate high watermark (97% of capacity)
-    size_t highWatermark = static_cast<size_t>(size_limit * 0.97);
-
-    // Check if we've exceeded the high watermark
     if (currentSize > highWatermark) {
-        // Calculate low watermark (85% of capacity)
-        size_t lowWatermark = static_cast<size_t>(size_limit * 0.85);
+        size_t lowWatermark   = static_cast<size_t>(sizeLimit * config[conf::dbl::DBLowWaterMark]);
+        size_t bytesToDelete  = currentSize - lowWatermark;
+        int numJobsToDelete   = static_cast<int>(
+            std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
+        int numFilesToDelete = 1;
+        if (EstimatedJobsPerFileInArchive_ > 0) {
+            numFilesToDelete = static_cast<int>(
+                std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
+        }
 
-        // Calculate how many bytes we need to free up
-        size_t bytesToDelete = currentSize - lowWatermark;
-
-        // Calculate number of jobs to delete (round up to ensure we delete enough)
-        int numJobsToDelete = static_cast<int>(std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
-
-        // Convert jobs to files: calculate how many files we need to delete to satisfy numJobsToDelete
-        // Round up to ensure we delete enough files to cover the required number of jobs
-        int numFilesToDelete = static_cast<int>(std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
-
-        // Next step: run the query to delete jobs
         garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
-        if(!garbageCollected){
+        if ( ! garbageCollected) {
             dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
         }
     }
@@ -446,11 +434,6 @@ bool Librarian::cleanupDatabaseIfNeeded() {
 // CORE PUBLIC INTERFACE
 // ================================
 
-/**
- * @brief Initializes the Librarian service
- * This should only be called once during daemon startup
- * @return true if initialization successful, false on failure
- */
 bool Librarian::initialize() {
     const std::string& archive = config[conf::str::ArchiveFile];
     if (archive.empty()) {
@@ -461,164 +444,170 @@ bool Librarian::initialize() {
     dprintf(D_FULLDEBUG, "Initializing DBHandler.\n");
     dprintf(D_STATUS, "Tracking archive file: %s\n", archive.c_str());
 
-    historyFileSet_.Init(archive);
-
-    // Construct the DBHandler with provided schema, db path, and cache size.
     if ( ! dbHandler_.initialize()) {
         return false;
     }
-
-    // Check whether database is connected and has correct expect tables
-    if (!dbHandler_.testDatabaseConnection()) {
+    if ( ! dbHandler_.testDatabaseConnection()) {
         dprintf(D_ERROR, "DBHandler connection test failed\n");
         return false;
     }
-    if(!dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL)) {
+    if ( ! dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL)) {
         dprintf(D_ERROR, "DBHandler schema is not as expected\n");
         return false;
     }
 
+    std::string directory = std::filesystem::path(archive).parent_path().string();
+    dbHandler_.maybeRecoverStatusAndFiles(m_archive_files, statusData_, directory);
+
     dprintf(D_FULLDEBUG, "DBHandler initialized.\n");
 
-    // Fill in info to be used for Status estimates later
-    if (!calculateEstimatedBytesPerJob()) {
-        EstimatedBytesPerJobInArchive_ = 5814.0;
-    }
+    updateBytesPerJobEstimate();
 
     return true;
 }
 
-
 /**
- * @brief Executes one complete update cycle
- * 
- * This is the main processing function that:
- * 1. Scans directories for file changes (rotations, additions, deletions)
- * 2. Builds processing queues for epoch and history files
- * 3. Reads new records from files and inserts them into the database
- * 4. Updates file offsets and internal state
- * 5. Calculates and stores status information
- * 
- * @return true if update cycle completed successfully, false on error
+ * @brief Executes one complete update cycle.
+ *
+ * Phase 1:   Discover current archive files on disk.
+ * Phase 1.5: Reconcile new/rotated files into m_archive_files and the DB.
+ * Phase 2:   Evict stale entries (files removed from disk since last cycle).
+ * Phase 3:   Read new records from each file and insert them into the DB.
+ * Phase 4:   Run garbage collection if the DB exceeds its size limit.
+ * Phase 5:   Record status metrics for this cycle.
  */
 bool Librarian::update() {
     dprintf(D_FULLDEBUG, "Starting update protocol.\n");
 
-    // PhHASE  0: Status Tracking and Data Recovery
-    // Initialize status tracking for this update cycle
+    Status status;
 
-    auto startTime = std::chrono::system_clock::now();
+    // PHASE 1: Discover all current archive files (oldest rotated first, active last).
+    auto archive_files = findHistoryFiles(config[conf::str::ArchiveFile].c_str());
 
-    // Recovery: Populate statusData_ and FileSet structs if memory is empty
-    dbHandler_.maybeRecoverStatusAndFiles(historyFileSet_, statusData_);
-    Status status = {};
+    // PHASE 1.5: Register new files and handle rotations.
+    reconcileArchiveFiles(archive_files);
 
-    // Estimate arrivalHz while asleep if there was no backlog left last cycle
-    if (!statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) estimateArrivalRateWhileAsleep ();
+    // PHASE 2: Remove entries for files that no longer exist on disk.
+    const std::unordered_set<std::string> archive_set(archive_files.begin(), archive_files.end());
+    std::erase_if(m_archive_files, [&](const auto& item) {
+        const auto& [path, info] = item;
+        bool removed = (archive_set.count(path) == 0);
+        if (removed) {
+            int64_t now = static_cast<int64_t>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
-    // PHASE 1: Directory Scanning and File Tracking
-    ArchiveChange historyChange = trackAndUpdateFileSet(historyFileSet_);
+            if (info.rotation_time.empty()) {
+                std::string removedName = info.filename + ".REMOVED";
+                dprintf(D_STATUS, "update: active archive '%s' disappeared without rotation; renaming to '%s' and marking deleted in DB.\n",
+                        path.c_str(), removedName.c_str());
+                ArchiveFile updated = info;
+                updated.filename = removedName;
+                dbHandler_.updateFileInfo(updated);
+            } else if ( ! info.fully_read) {
+                dprintf(D_STATUS, "update: rotated archive '%s' disappeared before being fully read; marking deleted in DB.\n",
+                        path.c_str());
+            }
 
-    // PHASE 2: Queue Construction
-    // TODO: use lastFileReadId in queue construction so that we don't reread tracked but unread files
-    std::vector<FileInfo> historyQueue;
+            dbHandler_.markFileDeleted(info.id, now);
+        }
+        return removed;
+    });
 
-    if (!buildProcessingQueue(historyFileSet_, historyChange, historyQueue)) {
-        dprintf(D_ERROR, "Failed to build history processing queue\n");
-        return false;
+    if ( ! statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) {
+        estimateArrivalRateWhileAsleep();
     }
 
-    // PHASE 3: Record Processing
-    // Process History Queue
-    size_t totalJobRecordsProcessed = 0;
-    size_t historyFilesProcessed = 0;
+    // PHASE 3: Read and ingest records from each file.
+    size_t filesProcessed = 0;
     dprintf(D_FULLDEBUG, "Processing history file queue.\n");
+    auto startTime = std::chrono::system_clock::now();
 
-    for (FileInfo& fileInfo : historyQueue) {
-
-        // Check if we've already exceeded the limit
-        if (totalJobRecordsProcessed >= (size_t)config[conf::i::MaxRecordsPerUpdate]) {
-            dprintf(D_STATUS, "Reached job record limit (%d), stopping history processing. Processed %zu files, %zu remaining.\n",
-                    config[conf::i::MaxRecordsPerUpdate], historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
-            status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
+    for (const auto& path : archive_files) {
+        if (status.records_processed >= config[conf::ll::MaxRecordsPerUpdate]) {
+            dprintf(D_STATUS, "Reached record limit (%" PRId64 "); stopping after %zu files.\n",
+                    config[conf::ll::MaxRecordsPerUpdate], filesProcessed);
+            status.hit_ingest_limit = true;
             break;
         }
 
-        dprintf(D_STATUS, "Processing history file: %s (offset: %ld)\n",
-                fileInfo.FileName.c_str(), fileInfo.LastOffset);
-        
-        std::vector<JobRecord> fileRecords;
-        if (!readJobRecords(fileRecords, fileInfo)) {
-            dprintf(D_ERROR, "Failed to read job records from %s\n", fileInfo.FileName.c_str());
+        auto it = m_archive_files.find(path);
+        if (it == m_archive_files.end()) continue; // reconcile failed for this path
+        if (it->second.fully_read) continue;
+
+        filesProcessed++;
+        ArchiveFile& info = it->second;
+
+        dprintf(D_STATUS, "Processing history file: %s (offset: %lld)\n",
+                path.c_str(), (long long)info.last_offset);
+
+        std::vector<ArchiveRecord> records;
+        if ( ! readJobRecords(records, path, info)) {
+            dprintf(D_ERROR, "Failed to read job records from %s\n", path.c_str());
             return false;
         }
 
-        // If nothing new to read, move on to the next file
-        if(fileRecords.empty()){
-            dprintf(D_FULLDEBUG, "No new job records in %s, skipping this file\n", fileInfo.FileName.c_str());
-                status.HistoryFileIdLastRead = fileInfo.FileId;
-                status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
-            continue;
+        if (records.empty()) {
+            dprintf(D_FULLDEBUG, "No new job records in %s\n", path.c_str());
+            if (info.fully_read) {
+                dbHandler_.updateFileInfo(info);
+            }
+        } else if ( ! dbHandler_.insertJobFileRecords(records, info)) {
+            dprintf(D_ERROR, "Failed to atomically process history file %s\n", path.c_str());
+            // TODO: Seek back to previous position and restore last_offset.
         }
 
-        // Atomic transaction: Insert records AND update file offset
-        if (!dbHandler_.insertJobFileRecords(fileRecords, fileInfo)) {
-                dprintf(D_ERROR, "Failed to atomically process history file %s\n", fileInfo.FileName.c_str());
-                continue;
-        }
-        
-        // Update in-memory FileSet with new offset
-        auto it = historyFileSet_.fileMap.find(fileInfo.FileId);
-        if (it != historyFileSet_.fileMap.end()) {
-            it->second.LastOffset = fileInfo.LastOffset;
-        } else {
-            dprintf(D_ERROR, "Warning: FileId %ld not found in historyFileSet.fileMap\n", fileInfo.FileId);
-        }
-
-        // Accumulate stats for status reporting
-        totalJobRecordsProcessed += fileRecords.size(); 
-        status.TotalJobsRead += fileRecords.size();
-
-        // Record the last ID read
-        status.HistoryFileIdLastRead = fileInfo.FileId;
-        status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
+        status.last_file_id     = info.id;
+        status.last_file_offset = info.last_offset;
+        status.records_processed += records.size();
     }
 
-    // PHASE 4: Garbage Collection
-    bool garbageCollected = cleanupDatabaseIfNeeded();
-
-    // PHASE 5: Status Update and Finalization
     auto endTime = std::chrono::system_clock::now();
-    status.TimeOfUpdate = std::chrono::system_clock::to_time_t(endTime); 
-    status.DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-    status.JobBacklogEstimate = calculateBacklogFromBytes(status);
-    status.GarbageCollectionRun = garbageCollected;
+
+    if (status.records_processed > 0) {
+        updateBytesPerJobEstimate();
+    }
+
+    // PHASE 4: Garbage Collection.
+    status.ran_garbage_collect = cleanupDatabaseIfNeeded();
+
+    // PHASE 5: Status Update and Finalization.
+    status.update_time    = std::chrono::system_clock::to_time_t(endTime);
+    status.duration_ms    = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                endTime - startTime).count();
+    status.backlog_estimate = calculateBacklogFromBytes(status);
+
     updateStatusData(status);
 
-    // Persist status to database
-    if (!dbHandler_.writeStatusAndData(status, statusData_)) {
-        dprintf(D_ERROR, "Warning: Failed to write status to database\n");
-        // Don't want to fail the entire update cycle for this, just logging it
+    if ( ! dbHandler_.writeStatusAndData(status, statusData_)) {
+        dprintf(D_ERROR, "WARNING: Failed to write status to database\n");
+        return false;
     }
 
-    dprintf(D_FULLDEBUG, "Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
-            status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);
+    if (status.records_processed > 0) {
+        dprintf(D_STATUS, "Update completed. Inserted %" PRId64 " records in %" PRId64 " ms.\n",
+                status.records_processed, status.duration_ms);
+    }
+
     return true;
 }
 
 void Librarian::reconfig(bool startup) {
     using namespace LibrarianConfigOptions;
 
-    // Configuration options that only change during restart not reconfig
     if (startup) {
         config[i::UpdateInterval] = param_integer("LIBRARIAN_UPDATE_INTERVAL", 30);
     }
 
     param(config[str::ArchiveFile], "HISTORY");
-    param(config[str::DBPath], "LIBRARIAN_DATABASE");
+    param(config[str::DBPath],      "LIBRARIAN_DATABASE");
 
-    config[i::MaxRecordsPerUpdate] = param_integer("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 1'000'000);
-    config[i::DBMaxJobCacheSize] = param_integer("LIBRARIAN_MAX_JOBS_CACHED", 10'000);
+    config[i::DBMaxJobCacheSize]          = param_integer("LIBRARIAN_MAX_JOBS_CACHED", 10'000);
+    config[i::StatusRetentionSeconds]     = param_integer("LIBRARIAN_STATUS_RETENTION_SECONDS", 300);
 
-    param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[i::DBMaxJobCacheSize], true, 2LL * 1024 * 1024 * 1024);
+    param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", config[ll::MaxRecordsPerUpdate], true,
+                   1'000'000);
+    param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[ll::DBMaxSizeBytes], true,
+                   2LL * 1024 * 1024 * 1024);
+
+    config[dbl::DBHighWaterMark] = param_double("LIBRARIAN_HIGH_WATER_MARK", 0.97, 0, 1);
+    config[dbl::DBLowWaterMark] = param_double("LIBRARIAN_LOW_WATER_MARK", 0.80, 0, 1);
 }
