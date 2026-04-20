@@ -1113,7 +1113,7 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				if ( !pw_wc ) {
 					answer = FAILURE_NOT_FOUND;
 				} else {
-					sprintf(passw, "%S", pw_wc);
+					snprintf(passw, MAX_PASSWORD_LENGTH, "%S", pw_wc);
 					SecureZeroMemory(pw_wc, wcslen(pw_wc));
 					delete[] pw_wc;
 					
