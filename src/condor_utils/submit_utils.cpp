@@ -8480,7 +8480,8 @@ bool SubmitHash::is_dag_command(const char * line) {
 	};
 
 	StringTokenIterator l(line, " \t");
-	return dag_commands.contains(l.first());
+	const char * first = l.first();
+	return first && dag_commands.contains(first);
 }
 
 
