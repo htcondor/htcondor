@@ -1285,9 +1285,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 
 	if ( o ) {
 		fquser = strdup(o);
-			// owner is just fquser that stops at the first '@' 
+			// owner is just fquser that stops at the last '@'
 		owner = strdup(o);
-		char *atsign = strchr(owner,'@');
+		char *atsign = strrchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
 		}
@@ -9084,7 +9084,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		job->LookupString(attr_JobUser, job_user);
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
-		if (last_at != std::string::npos && !accounting_domain.empty()) {
+		if (user_is_the_new_owner && last_at != std::string::npos && !accounting_domain.empty()) {
 			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
 			cremain -= last_at;
 			strncat(powner, "@", cremain); cremain--;

@@ -66,6 +66,9 @@
 - Improved the *blahpd*'s efficiency in monitoring job status.
   :jira:`3634,3640`
 
+- Improved handling of OS usernames that include the ``@`` character.
+  :jira:`3655`
+
 - Container universe jobs whose image is an url (like docker://) now work
   when file transfer is off.
   :jira:`3638`
