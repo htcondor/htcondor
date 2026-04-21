@@ -3759,8 +3759,8 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             gridoptions.bool_to_num = true;
 			if (options.chartArea === undefined) options.chartArea = {};
 			if (options.chartArea.height === undefined) options.chartArea.height="70%";
-			if (options.chartArea.left === undefined) options.chartArea.left="5%";
-			if (options.chartArea.right === undefined) options.chartArea.right="5%";
+			if (options.chartArea.left === undefined) options.chartArea.left="10%";
+			if (options.chartArea.right === undefined) options.chartArea.right="10%";
         }
         else {
             chart = new google.visualization.Table(el);

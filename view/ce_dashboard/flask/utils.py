@@ -1,6 +1,5 @@
 import pickle
 import threading
-import htcondor2 as htcondor
 from urllib.error import HTTPError
 from urllib.request import urlopen
 import json
@@ -19,7 +18,7 @@ def set_flask_app(flask_app):
     app = flask_app
 
 # Implementation of method decorator on a flask response function
-def cache_response_to_disk(seconds_to_cache: int | None = None, file_name: str | None = None):
+def cache_response_to_disk(seconds_to_cache: int = None, file_name: str = None):
     """
     A decorator to cache the response of a function to disk for a specified duration.
     Args:
@@ -95,29 +94,7 @@ def cache_response_to_disk(seconds_to_cache: int | None = None, file_name: str |
     return decorator
 
 
-def get_cache_file_mtime(file_name: str) -> datetime.datetime | None:
-    """
-    Returns the last modification time of a named cache file as a datetime object,
-    or None if the file does not exist or is empty.
-
-    Args:
-        file_name (str): The name of the cache file, as passed to cache_response_to_disk.
-
-    Returns:
-        datetime.datetime | None: The last modification time of the cache file,
-            or None if the file does not exist or has never been written.
-    """
-    CACHE_DIR = app.config['CE_DASHBOARD_CACHE_DIRECTORY']
-    cache_file = os.path.join(CACHE_DIR, file_name)
-    if not os.path.exists(cache_file):
-        return None
-    fsize = os.path.getsize(cache_file)
-    if fsize == 0:
-        return None
-    return datetime.datetime.fromtimestamp(os.path.getmtime(cache_file))
-
-
-def make_data_response(response_body: str, cached_response: bool | str, browser_cache_minutes: int | None = None) -> Response:
+def make_data_response(response_body: str, cached_response: bool, browser_cache_minutes: int = None) -> Response:
     """
     Creates an HTTP response for with specified caching headers and metadata.
 
