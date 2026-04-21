@@ -1,5 +1,10 @@
 *** 24.0.20 bugs
 
+- Fixed a bug in the parallel universe where the job attribute
+  :ad-attr:`RemoteUserCpu` would only contain the cpu usage from one
+  proc in the parallel job.
+  :jira:`3677`
+
 - Fixed bug where Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS` without
   being explicitly provided a backing store (Volume Group) would fail clean up to
   clean up the automatically generated backing store on shutdown.
