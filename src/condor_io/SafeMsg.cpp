@@ -196,14 +196,24 @@ int _condorPacket::getHeader(int msgsize,
         md_ = 0;
     }
 
+	// Our caller should treat len==0 as an indicator of an invalid packet
+	// (bad headers). If the headers look good, then we'll set len to the
+	// amount of payload data.
+	len = 0;
+	length = msgsize;
+
+	if (msgsize < 8) {
+		return true;
+	}
     if(memcmp(&dataGram[0], SAFE_MSG_MAGIC, 8)) {
-        if(len >= 0) {
-            length = len;
-        }
         dta = data = &dataGram[0];
         checkHeader(len , dta);
         return true;
 	}   
+
+	if (length < SAFE_MSG_HEADER_SIZE) {
+		return true;
+	}
 
 	last = (bool)dataGram[8];
 
@@ -214,7 +224,7 @@ int _condorPacket::getHeader(int msgsize,
 	// Calculate it from the packet size we received.
 	//memcpy(&stemp, &dataGram[11], 2);
 	//len = length = ntohs(stemp);
-	len = length = msgsize - SAFE_MSG_HEADER_SIZE;
+	length -= SAFE_MSG_HEADER_SIZE;
 
 	memcpy(&ltemp, &dataGram[13], 4);
 	mID.ip_addr = ntohl(ltemp);
@@ -230,7 +240,7 @@ int _condorPacket::getHeader(int msgsize,
 
     dta = data = &dataGram[25];
     dprintf(D_NETWORK, "Fragmentation Header: last=%d,seq=%d,len=%d,data=[25]\n",
-           last, seq, len); 
+            last, seq, msgsize);
 
     checkHeader(len, dta);    
 
@@ -242,6 +252,9 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
     uint16_t stemp;
     short flags = 0, mdKeyIdLen = 0, encKeyIdLen = 0;
 
+    if (length < 4) {
+        return;
+    }
     if(memcmp(data, THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4) == 0) {
         // We found stuff, go with 6.3 header format
         if (length < SAFE_MSG_CRYPTO_HEADER_SIZE) {
@@ -320,9 +333,12 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             }
         }
 
-        len = length;
         dta = data;
     }
+
+    // All of the headers check out. Set len to the size of the payload data,
+    // which will tell our caller that the packet is valid.
+    len = length;
 }
 
 bool _condorPacket::verifyMD(Condor_MD_MAC * mdChecker)
