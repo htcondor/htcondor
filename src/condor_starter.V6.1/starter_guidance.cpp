@@ -484,7 +484,14 @@ Starter::handleJobSetupCommand(
 			// Create the staging directory.
 			//
 
-			std::filesystem::path executeDir( s->GetSlotDir() );
+			// This produces a sibling of the scratch directory if
+			// NESTED_SCRATCH is enabled and a subdirectory otherwise; but
+			// we can't presently have a sibling directory which uses blocks
+			// from the LV.  Since common files really should staged to the
+			// LV, `staging` must always be a subdirectory.
+			// std::filesystem::path executeDir( s->GetSlotDir() );
+			const bool OUTSIDE = false;
+			std::filesystem::path executeDir( s->GetWorkingDir(OUTSIDE) );
 			std::filesystem::path parentDir = executeDir / "staging";
 
 			StagingDirectoryFactory sdf;
