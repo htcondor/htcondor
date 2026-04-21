@@ -58,9 +58,14 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            # "STARTD_ENFORCE_DISK_LIMITS":  True,
-            # "FORBID_HARDLINK_MAPPING":  True,
-            # "FORBID_BINDMOUNT_MAPPING":  True,
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            "STARTER_NESTED_SCRATCH":       True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
@@ -162,8 +167,15 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            # "FORBID_HARDLINK_MAPPING":  True,
-            # "FORBID_BINDMOUNT_MAPPING":  True,
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            # This is not test-specific.
+            "STARTER_NESTED_SCRATCH":       False,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
@@ -174,7 +186,6 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_2_USER":     "sorcy",
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
-            "STARTER_NESTED_SCRATCH":   False,
             "KEEP_DATA_CLAIM_IDLE": 5,
         },
     ) as the_condor:
@@ -323,14 +334,19 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            # "FORBID_HARDLINK_MAPPING":  True,
-            # "FORBID_BINDMOUNT_MAPPING":  True,
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            "STARTER_NESTED_SCRATCH":       True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
-            "STARTER_NESTED_SCRATCH":   True,
         },
     ) as the_condor:
         yield the_condor
