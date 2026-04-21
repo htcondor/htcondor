@@ -12,8 +12,7 @@ from math import floor
 import time
 import threading
 import re
-from datetime import datetime
-from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID, get_cache_file_mtime
+from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
 ##########################################
@@ -86,9 +85,6 @@ class ResourceInfo:
     glideinsRunning: int = 0
     glideinsIdle: int = 0
     glideinsHeld: int = 0
-    epsReporting: int = 0
-    cpusContributed: int = 0
-    cpusAllocated: int = 0
     lastHeardFrom: str = "Unknown"
     
     def __post_init__(self):
@@ -102,7 +98,7 @@ class HeaderLink:
     tooltip: str
     url: str
 
-def returnOrAddUnregisteredInfo(resource_info_by_fqdn: dict[str, ResourceInfo], fqdn: str) -> ResourceInfo:
+def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
     """
     Add an unregistered CE to the resource info dictionary.
     """
@@ -162,41 +158,6 @@ def ce_info_from_ganglia(resource_info_by_fqdn):
         info = returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn)
         info.allocationsPastMonth = True
 
-def query_ce_startd_cpu_totals(ceColl: htcondor.Collector) -> dict:
-    """
-    Queries all startd ads from a CE and returns the summed TotalCpus
-    and TotalInUseCpus across all ads.
-
-    Args:
-        ceColl (htcondor.Collector): The collector to query for startd ads.
-
-    Returns:
-        dict: A dictionary with keys:
-            - "TotalCpus" (int): Sum of TotalCpus across all startd ads.
-            - "TotalInUseCpus" (int): Sum of TotalInUseCpus across all startd ads.
-            - "TotalAds" (int): Count of startd ads returned by the CE.
-
-    Raises:
-        htcondor.HTCondorException: If the collector cannot be reached or the
-            query fails.
-    """
-    ads = list(ceColl.query(
-        htcondor.AdTypes.StartDaemon,
-        projection=["TotalCpus", "TotalInUseCpus"],
-    ))
-
-    total_cpus = 0
-    total_in_use_cpus = 0
-    for ad in ads:
-        total_cpus += ad.get("TotalCpus", 0)
-        total_in_use_cpus += ad.get("TotalInUseCpus", 0)
-
-    return {
-        "TotalCpus": total_cpus,
-        "TotalInUseCpus": total_in_use_cpus,
-        "TotalAds": len(ads),
-    }
-    
 def ce_info_from_collectors(resource_info_by_fqdn):
     """
     Given a dictionary of CE info from Topology, augment this with information
@@ -227,32 +188,23 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         # If CE is hosted and active, try to query the CE collector for grid ads
         if info.hosted and info.active:
             canReachCeCollector = False
-            ceColl: htcondor.Collector | None = None
-            gridAds : list[classad.ClassAd] = []
             if "CollectorHost" in ad:
                 ceColl = htcondor.Collector(ad["CollectorHost"])
                 try:
-                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableTimeReason", "LastHeardFrom"])
+                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableTimeReason"])
                     canReachCeCollector = True
-                except Exception:
+                except:
                     canReachCeCollector = False
-            if not canReachCeCollector or not ceColl:
+            if not canReachCeCollector:
                 info.health="Poor"
                 info.healthInfo="CE Collector unreachable"
                 continue
-            startd_data = query_ce_startd_cpu_totals(ceColl)
-            info.epsReporting = startd_data["TotalAds"]
-            info.cpusContributed = startd_data["TotalCpus"]
-            info.cpusAllocated = startd_data["TotalInUseCpus"]
-            
             for gridAd in gridAds:
                 if "GridResourceUnavailableTime" in gridAd and "GridResourceUnavailableTimeReason" in gridAd:
                     hinfo = classad.ExprTree('strcat("Since ",formatTime(GridResourceUnavailableTime),": ",GridResourceUnavailableTimeReason)').eval(gridAd)
                     info.health="Poor"
                     info.healthInfo=hinfo
                     continue
-                if "LastHeardFrom" in gridAd:
-                    info.lastHeardFrom = datetime.fromtimestamp(gridAd["LastHeardFrom"]).strftime("%Y-%m-%d %H:%M:%S")
         
         # Check for too many held jobs, or idle jobs without anything running, etc.
         totalHeld = ad["TotalHeldJobs"]
@@ -272,8 +224,6 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         info.glideinsRunning = totalRunning
         info.glideinsIdle = totalIdle
         info.glideinsHeld = totalHeld
-        
-
 
         status = "Unknown"
         if "Status" in ad:
@@ -484,13 +434,6 @@ def ce_landing_data():
 @landing_bp.route('/landing.html')
 def ce_admin_landing_page():
     return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
-    
-@landing_bp.route('/landing2.html')
-def ce_admin_landing_page_2():
-    ce_info_mtime = get_cache_file_mtime("ce_info.csv")
-    ce_info_mtime_str = (ce_info_mtime if ce_info_mtime else datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
-    return render_template('landing2.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards",
-                           ce_info_mtime=ce_info_mtime_str)
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
