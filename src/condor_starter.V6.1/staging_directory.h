@@ -9,10 +9,11 @@ class StagingDirectory {
 
 	public:
 
+		static bool usable() { return false; }
 		virtual bool create() = 0;
 		virtual bool modify() = 0;
 		virtual bool map( const std::filesystem::path & d ) = 0;
-		virtual std::filesystem::path path() const = 0;
+		virtual std::filesystem::path path() { return stagingDir; }
 
 		virtual ~StagingDirectory() = default;
 
@@ -21,11 +22,14 @@ class StagingDirectory {
 		StagingDirectory(
 			const std::filesystem::path & d,
 			const std::string & c
-		) : parentDir(d), catalogName(c) { }
+		) : parentDir(d), catalogName(c) { stagingDir = d / c; }
 
 		StagingDirectory(
 			const std::string & s
-		) : stagingDir(s) { }
+		) : stagingDir(s) {
+		    parentDir = stagingDir.parent_path();
+		    catalogName = stagingDir.filename().string();
+		}
 
 		std::filesystem::path parentDir;
 		std::string catalogName;
