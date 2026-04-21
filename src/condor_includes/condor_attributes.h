@@ -1344,6 +1344,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 // Attributes related to dataflow jobs
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_SKIP_MATCHMAKING "SkipMatchmaking"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 #ifdef LINUX
