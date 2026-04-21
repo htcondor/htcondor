@@ -9,8 +9,231 @@
 
 #include "staging_directory.h"
 
+//
+// Declare the different staging directory implementations.
+//
+// It might be less confusing to inherit a default create() and modify()
+// implementation from StagingDirectory instead of HardlinkStagingDirectory.
+//
 
-#if defined(LINUX) || defined(DARWIN)
+class HardlinkStagingDirectory : public StagingDirectory {
+
+	public:
+
+		static bool usable();
+
+		virtual bool create();
+		virtual bool modify();
+		virtual bool map( const std::filesystem::path & destination );
+
+		virtual ~HardlinkStagingDirectory() = default;
+
+	protected:
+
+		HardlinkStagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : StagingDirectory(d, c) { }
+
+		HardlinkStagingDirectory(
+			const std::string & s
+		) : StagingDirectory(s) { }
+
+
+	friend class StagingDirectoryFactory;
+};
+
+
+class BindMountStagingDirectory : public StagingDirectory {
+
+	public:
+
+		static  bool usable();
+
+		virtual bool create();
+		virtual bool modify();
+		virtual bool map( const std::filesystem::path & destination );
+
+		virtual ~BindMountStagingDirectory() = default;
+
+	protected:
+
+		BindMountStagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : StagingDirectory(d, c) { }
+
+		BindMountStagingDirectory(
+			const std::string & s
+		) : StagingDirectory(s) { }
+
+
+	friend class StagingDirectoryFactory;
+};
+
+
+class CopyStagingDirectory : public StagingDirectory {
+
+	public:
+
+		static bool usable();
+
+		virtual bool create();
+		virtual bool modify();
+		virtual bool map( const std::filesystem::path & destination );
+
+		virtual ~CopyStagingDirectory() = default;
+
+	protected:
+
+		CopyStagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : StagingDirectory(d, c) { }
+
+		CopyStagingDirectory(
+			const std::string & s
+		) : StagingDirectory(s) { }
+
+
+	friend class StagingDirectoryFactory;
+};
+
+
+//
+// Implement the StagingDirectoryFactory(), which decides at runtime which
+// concrete StagingDirectory subclass we'll use.
+//
+
+
+StagingDirectoryFactory::StagingDirectoryFactory() {
+	if( HardlinkStagingDirectory::usable() ) {
+		this->typeToUse = StagingDirectoryType::Hardlink;
+	} else if( BindMountStagingDirectory::usable() ) {
+		this->typeToUse = StagingDirectoryType::BindMount;
+	} else if( CopyStagingDirectory::usable() ) {
+		this->typeToUse = StagingDirectoryType::Copy;
+	}
+}
+
+
+std::unique_ptr<StagingDirectory>
+StagingDirectoryFactory::make(
+	const std::filesystem::path & directory,
+	const std::string & catalogName
+) {
+	switch( this->typeToUse ) {
+		case StagingDirectoryType::Hardlink: {
+			auto * p = new HardlinkStagingDirectory( directory, catalogName );
+			return std::unique_ptr<HardlinkStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::BindMount: {
+			auto * p = new BindMountStagingDirectory( directory, catalogName );
+			return std::unique_ptr<BindMountStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::Copy: {
+			auto * p = new CopyStagingDirectory( directory, catalogName );
+			return std::unique_ptr<CopyStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::MIN:
+		case StagingDirectoryType::MAX:
+		case StagingDirectoryType::INVALID: {
+			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
+			return nullptr;
+		} break;
+	}
+
+	// Why does the compiler think this is necessary?
+	return nullptr;
+}
+
+
+std::unique_ptr<StagingDirectory>
+StagingDirectoryFactory::make(
+	const std::string & stagingDirectory
+) {
+	switch( this->typeToUse ) {
+		case StagingDirectoryType::Hardlink: {
+			auto * p = new HardlinkStagingDirectory( stagingDirectory );
+			return std::unique_ptr<HardlinkStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::BindMount: {
+			auto * p = new BindMountStagingDirectory( stagingDirectory );
+			return std::unique_ptr<BindMountStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::Copy: {
+			auto * p = new CopyStagingDirectory( stagingDirectory );
+			return std::unique_ptr<CopyStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::MIN:
+		case StagingDirectoryType::MAX:
+		case StagingDirectoryType::INVALID: {
+			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
+			return nullptr;
+		} break;
+	}
+
+	// Why does the compiler think this is necessary?
+	return nullptr;
+}
+
+
+//
+// The platform-specific code begins here.
+//
+#if defined(WINDOWS)
+
+
+int
+createStagingDirectory(
+	const std::filesystem::path & parentDir,
+	const std::filesystem::path & stagingDir
+) {
+	return -1;
+}
+
+
+bool
+convertToStagingDirectory(
+	const std::filesystem::path & location
+) {
+	return false;
+}
+
+
+bool
+mapContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+
+bool
+bindMountContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+bool
+copyContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+
+#else /* WINDOWS */
 
 
 int
@@ -26,7 +249,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	std::error_code errorCode;
 	std::filesystem::create_directories( stagingDir, errorCode );
 	if( errorCode ) {
-		dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+		dprintf( D_ALWAYS, "Unable to create staging directory '%s', aborting: %s (%d)\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
 		return errorCode.value();
 	}
 
@@ -67,8 +290,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 
 
 //
-// Assume ownership is correct, but make each file 0444 and each
-// directory (including the root) 0500.
+// Make each file 0444 and each directory (including the root) 0500.
 //
 // This allows root to hardlink each file into place (root can traverse
 // the directory tree even if the starters are running as different OS
@@ -90,7 +312,7 @@ convertToStagingDirectory(
 	dprintf( D_ZKM, "convertToStagingDirectory(): begin.\n" );
 
 	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' is not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
 
@@ -137,6 +359,18 @@ convertToStagingDirectory(
 	}
 
 
+	{
+		TemporaryPrivSentry tpt(PRIV_ROOT);
+
+		auto parentDir = location.parent_path();
+		int rv = chown( parentDir.string().c_str(), get_condor_uid(), get_condor_gid() );
+		if( rv != 0 ) {
+			dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
+			return errno;
+		}
+	}
+
+
 	dprintf( D_ZKM, "convertToStagingDirectory(): end.\n" );
 	return true;
 }
@@ -176,12 +410,12 @@ mapContentsOfDirectoryInto(
 	TemporaryPrivSentry tps(PRIV_ROOT);
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
 		return false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
 
@@ -259,7 +493,108 @@ mapContentsOfDirectoryInto(
 }
 
 
-#endif /* LINUX || DARWIN */
+bool
+copyContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	using std::filesystem::perms;
+	std::error_code ec;
+
+	dprintf( D_ZKM, "CopyStagingDirectory::map(): begin.\n" );
+
+	// We must be root (or the user the common files were transferred by) to
+	// traverse into the staging directory, which includes listing its
+	// contents, checking the permissions on its files, readin from those
+	// files, or even seeing if the directory exists all (if we're
+	// not running in STARTER_NESTED_SCRATCH mode).
+	TemporaryPrivSentry tps(PRIV_ROOT);
+
+	if(! std::filesystem::is_directory( sandbox, ec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): sandbox '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
+		return false;
+	}
+
+	if(! std::filesystem::is_directory( location, ec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): location '%s' is not a directory, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+
+	std::filesystem::recursive_directory_iterator di(
+		location, {}, ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
+
+	for( const auto & entry : di ) {
+		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", entry.path().string().c_str() );
+		auto relative_path = entry.path().lexically_relative(location);
+		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", relative_path.string().c_str() );
+
+		//
+		// For reasons I don't understand std::filesystem::copy() can't copy
+		// nested directories whose write bit isn't set, so we have to do
+		// all of this by hand, instead.
+		//
+		if( entry.is_directory() ) {
+			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
+				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
+			auto dir = sandbox / relative_path;
+			std::filesystem::create_directory( dir, ec );
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
+			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+
+			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
+			if( rv != 0 ) {
+				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
+				return false;
+			}
+
+			continue;
+		} else {
+			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
+				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
+			std::filesystem::copy_file(
+				entry.path(), sandbox / relative_path,
+				std::filesystem::copy_options::overwrite_existing |
+				std::filesystem::copy_options::copy_symlinks,
+				ec
+			);
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS,
+					"CopyStagingDirectory::map(): Failed to copy %s to %s: %s (%d)\n",
+					entry.path().string().c_str(), (sandbox / relative_path).string().c_str(),
+					ec.message().c_str(), ec.value()
+				);
+
+				return false;
+			}
+
+			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
+		}
+	}
+
+
+	dprintf( D_ZKM, "CopyStagingDirectory::map(): end.\n" );
+	return true;
+}
 
 
 #if defined(LINUX)
@@ -284,12 +619,12 @@ bindMountContentsOfDirectoryInto(
 	TemporaryPrivSentry tps(PRIV_ROOT);
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
 		return false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
 
@@ -387,7 +722,7 @@ bindMountContentsOfDirectoryInto(
 }
 
 
-#else
+#else /* LINUX */
 
 
 bool
@@ -398,228 +733,16 @@ bindMountContentsOfDirectoryInto(
 	return false;
 }
 
-
-#endif
-#if defined(WINDOWS)
-
-
-int
-createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
-	return -1;
-}
-
-
-bool
-convertToStagingDirectory(
-	const std::filesystem::path & location
-) {
-	return false;
-}
-
-
-bool
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return false;
-}
-
-
-#endif
-
-
-class HardlinkStagingDirectory : public StagingDirectory {
-
-	public:
-
-		virtual bool create();
-		virtual bool modify();
-		virtual bool map( const std::filesystem::path & destination );
-		virtual std::filesystem::path path() const;
-
-		virtual ~HardlinkStagingDirectory() = default;
-
-	protected:
-
-		HardlinkStagingDirectory(
-			const std::filesystem::path & d,
-			const std::string & c
-		) : StagingDirectory(d, c) { stagingDir = d / c; }
-
-		HardlinkStagingDirectory(
-			const std::string & s
-		) : StagingDirectory(s) {
-			parentDir = stagingDir.parent_path();
-			catalogName = stagingDir.filename().string();
-		}
-
-
-	friend class StagingDirectoryFactory;
-};
-
-
-class BindMountStagingDirectory : public HardlinkStagingDirectory {
-
-	public:
-
-		virtual bool map( const std::filesystem::path & destination );
-
-		virtual ~BindMountStagingDirectory() = default;
-
-	protected:
-
-		BindMountStagingDirectory(
-			const std::filesystem::path & d,
-			const std::string & c
-		) : HardlinkStagingDirectory(d, c) { }
-
-		BindMountStagingDirectory(
-			const std::string & s
-		) : HardlinkStagingDirectory(s) { }
-
-
-	friend class StagingDirectoryFactory;
-};
-
-
-class CopyStagingDirectory : public HardlinkStagingDirectory {
-
-	public:
-
-		virtual bool map( const std::filesystem::path & destination );
-
-		virtual ~CopyStagingDirectory() = default;
-
-	protected:
-
-		CopyStagingDirectory(
-			const std::filesystem::path & d,
-			const std::string & c
-		) : HardlinkStagingDirectory(d, c) { }
-
-		CopyStagingDirectory(
-			const std::string & s
-		) : HardlinkStagingDirectory(s) { }
-
-
-	friend class StagingDirectoryFactory;
-};
-
-
-bool
-hardlink_usable() {
-#if defined(WINDOWS)
-	return false;
-#endif /* WINDOWS */
-
-	bool forbidden = param_boolean( "FORBID_HARDLINK_MAPPING", false );
-	bool allowed = ! param_boolean( "STARTD_ENFORCE_DISK_LIMITS", false );
-
-	return (! forbidden) && allowed;
-}
-
-
-bool
-bindmount_usable() {
-#if defined(WINDOWS)
-	return false;
-#endif /* WINDOWS */
-
-	bool forbidden = param_boolean( "FORBID_BINDMOUNT_MAPPING", false );
-	bool allowed = param_boolean( "ALLOW_LVS_TO_BIND_MOUNT_COMMON_FILES", false );
-
-	return (! forbidden) && allowed;
-}
-
-
-bool
-copy_usable() {
-	bool forbidden = param_boolean( "FORBID_COPY_MAPPING", false );
-	bool allowed = true;
-
-	return (! forbidden) && allowed;
-}
-
-
-StagingDirectoryFactory::StagingDirectoryFactory() {
-	// Arguably, these calls should be xStagingDirectory::usable().
-	if( hardlink_usable() ) {
-		this->typeToUse = StagingDirectoryType::Hardlink;
-	} else if( bindmount_usable() ) {
-		this->typeToUse = StagingDirectoryType::BindMount;
-	} else if( copy_usable() ) {
-		this->typeToUse = StagingDirectoryType::Copy;
-	}
-}
-
-
-std::unique_ptr<StagingDirectory>
-StagingDirectoryFactory::make(
-	const std::filesystem::path & directory,
-	const std::string & catalogName
-) {
-	switch( this->typeToUse ) {
-		case StagingDirectoryType::Hardlink: {
-			auto * p = new HardlinkStagingDirectory( directory, catalogName );
-			return std::unique_ptr<HardlinkStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::BindMount: {
-			auto * p = new BindMountStagingDirectory( directory, catalogName );
-			return std::unique_ptr<BindMountStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::Copy: {
-			auto * p = new CopyStagingDirectory( directory, catalogName );
-			return std::unique_ptr<CopyStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::MIN:
-		case StagingDirectoryType::MAX:
-		case StagingDirectoryType::INVALID: {
-			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
-			return nullptr;
-		} break;
-	}
-
-	// Why does the compiler think this is necessary?
-	return nullptr;
-}
-
-
-std::unique_ptr<StagingDirectory>
-StagingDirectoryFactory::make(
-	const std::string & stagingDirectory
-) {
-	switch( this->typeToUse ) {
-		case StagingDirectoryType::Hardlink: {
-			auto * p = new HardlinkStagingDirectory( stagingDirectory );
-			return std::unique_ptr<HardlinkStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::BindMount: {
-			auto * p = new BindMountStagingDirectory( stagingDirectory );
-			return std::unique_ptr<BindMountStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::Copy: {
-			auto * p = new CopyStagingDirectory( stagingDirectory );
-			return std::unique_ptr<CopyStagingDirectory>(p);
-		} break;
-
-		case StagingDirectoryType::MIN:
-		case StagingDirectoryType::MAX:
-		case StagingDirectoryType::INVALID: {
-			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
-			return nullptr;
-		} break;
-	}
-
-	// Why does the compiler think this is necessary?
-	return nullptr;
-}
-
+#endif /* not LINUX */
+#endif /* not (LINUX || DARWIN ) */
+//
+// The platform-specific code ends here.
+//
+
+
+//
+// Define HardLinkStagingDirectory.
+//
 
 bool
 HardlinkStagingDirectory::create() {
@@ -639,9 +762,32 @@ HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
 }
 
 
-std::filesystem::path
-HardlinkStagingDirectory::path() const {
-	return this->stagingDir;
+bool
+HardlinkStagingDirectory::usable() {
+#if defined(WINDOWS)
+	return false;
+#endif /* WINDOWS */
+
+	bool forbidden = param_boolean( "FORBID_HARDLINK_MAPPING", false );
+	bool allowed = ! param_boolean( "STARTD_ENFORCE_DISK_LIMITS", false );
+
+	return (! forbidden) && allowed;
+}
+
+
+//
+// Define BindMountStagingDirectory.
+//
+
+bool
+BindMountStagingDirectory::create() {
+	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+}
+
+
+bool
+BindMountStagingDirectory::modify() {
+	return convertToStagingDirectory( this->path() );
 }
 
 
@@ -652,104 +798,49 @@ BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
 
 
 bool
+BindMountStagingDirectory::usable() {
+#if defined(WINDOWS)
+	return false;
+#endif /* WINDOWS */
+
+	bool forbidden = param_boolean( "FORBID_BINDMOUNT_MAPPING", false );
+	bool allowed = param_boolean( "ALLOW_LVS_TO_BIND_MOUNT_COMMON_FILES", false );
+
+	return (! forbidden) && allowed;
+}
+
+
+
+
+//
+// Define CopyStagingDirectory.
+//
+
+bool
+CopyStagingDirectory::create() {
+	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+}
+
+
+bool
+CopyStagingDirectory::modify() {
+	return convertToStagingDirectory( this->path() );
+}
+
+
+bool
 CopyStagingDirectory::map( const std::filesystem::path & destination ) {
-	using std::filesystem::perms;
-	std::error_code ec;
-
-	const auto & sandbox = destination;
-	const auto & location = this->path();
-
-	dprintf( D_ZKM, "CopyStagingDirectory::map(): begin.\n" );
-
-	// We must be root (or the user the common files were transferred by) to
-	// traverse into the staging directory, which includes listing its
-	// contents, checking the permissions on its files, creating hardlinks
-	// to its files, or even seeing if the directory exists all (if we're
-	// not running in STARTER_NESTED_SCRATCH mode).
-	TemporaryPrivSentry tps(PRIV_ROOT);
-
-	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
-	}
-
-	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' not a directory, aborting.\n", location.string().c_str() );
-		return false;
-	}
-
-	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return false;
-	}
+	return copyContentsOfDirectoryInto( this->path(), destination );
+}
 
 
-	std::filesystem::recursive_directory_iterator di(
-		location, {}, ec
-	);
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
-	}
+bool
+CopyStagingDirectory::usable() {
+#if defined(WINDOWS)
+	return false;
+#endif /* WINDOWS */
+	bool forbidden = param_boolean( "FORBID_COPY_MAPPING", false );
+	bool allowed = true;
 
-	for( const auto & entry : di ) {
-		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", entry.path().string().c_str() );
-		auto relative_path = entry.path().lexically_relative(location);
-		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", relative_path.string().c_str() );
-
-		//
-		// For reasons I don't understand std::filesystem::copy() can't copy
-		// nested directories whose write bit isn't set, so we have to do
-		// all of this by hand, instead.
-		//
-		if( entry.is_directory() ) {
-			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-
-			auto dir = sandbox / relative_path;
-			std::filesystem::create_directory( dir, ec );
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
-			}
-			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
-			}
-
-			continue;
-		} else {
-			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-
-			std::filesystem::copy_file(
-				entry.path(), sandbox / relative_path,
-				std::filesystem::copy_options::overwrite_existing |
-				std::filesystem::copy_options::copy_symlinks,
-				ec
-			);
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS,
-					"CopyStagingDirectory::map(): Failed to copy %s to %s: %s (%d)\n",
-					entry.path().string().c_str(), (sandbox / relative_path).string().c_str(),
-					ec.message().c_str(), ec.value()
-				);
-
-				return false;
-			}
-
-			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
-		}
-	}
-
-
-	dprintf( D_ZKM, "CopyStagingDirectory::map(): end.\n" );
-	return true;
+	return (! forbidden) && allowed;
 }
