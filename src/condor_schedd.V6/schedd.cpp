@@ -8691,7 +8691,7 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 		return false;
 	}
 
-	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+	std::shared_ptr<DCMsgCallback> cb = std::make_shared<DCMsgCallback>(
 		(DCMsgCallback::CppFunction)&Scheduler::claimStartdForUs,
 		this,
 		nullptr);
@@ -9656,7 +9656,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	// Setup to claim the slot asynchronously
 
-	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+	std::shared_ptr<DCMsgCallback> cb = std::make_shared<DCMsgCallback>(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
 		this,
 		mrec);

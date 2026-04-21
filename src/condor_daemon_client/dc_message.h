@@ -50,7 +50,7 @@ desired), and send it, using Daemon::sendMsg().  Example:
 
 	// If we need to be called back after successful/failed delivery,
 	// register a callback function.
-	msg->setCallback( new DCMsgCallback(
+	msg->setCallback( std::make_shared<DCMsgCallback>(
 	    (DCMsgCallback::CppFunction)&MyClass::MyCallbackFunction,
 	    this ) );
 
@@ -166,7 +166,7 @@ public:
 
 		/* sets the callback function to call when MESSAGE_FINISHED
 		   is returned by one of the message closure functions */
-	void setCallback(classy_counted_ptr<DCMsgCallback> cb);
+	void setCallback(std::shared_ptr<DCMsgCallback> cb);
 
 	void doCallback();
 
@@ -250,7 +250,12 @@ public:
 private:
 	int m_cmd;
 	char const *m_cmd_str;
-	classy_counted_ptr<DCMsgCallback> m_cb;
+		// Note: m_cb and DCMsgCallback::m_msg form a reference cycle
+		// (DCMsg -> DCMsgCallback -> DCMsg).  The cycle is broken in
+		// doCallback(), which resets m_cb before invoking the callback.
+		// All message completion paths (success, failure, cancel) call
+		// doCallback(), so the cycle is always broken.
+	std::shared_ptr<DCMsgCallback> m_cb;
 	int m_msg_success_debug_level;
 	int m_msg_failure_debug_level;
 	int m_msg_cancel_debug_level;
@@ -388,13 +393,14 @@ private:
   a message has been delivered.
  */
 
-class DCMsgCallback: public ClassyCountedPtr {
+class DCMsgCallback {
  public:
 	typedef void (Service::*CppFunction)(DCMsgCallback *cb);
 
 		// As needed, additional constructors should be added to handle
 		// other types of callback functions.
 	DCMsgCallback(CppFunction fn,Service *service,void *misc_data=NULL);
+	virtual ~DCMsgCallback() = default;
 
 	virtual void doCallback();
 
@@ -422,9 +428,11 @@ class DCMsgCallback: public ClassyCountedPtr {
 	CppFunction m_fn_cpp;
 	Service *m_service;
 	void *m_misc_data;
+		// Back-reference to the message.  Forms a reference cycle with
+		// DCMsg::m_cb; see comment there for how it is broken.
 	classy_counted_ptr<DCMsg> m_msg;
 
-		// This is called by DCMsg::setMessage().
+		// This is called by DCMsg::setCallback().
 	void setMessage(classy_counted_ptr<DCMsg> msg) {m_msg = msg;}
 };
 
