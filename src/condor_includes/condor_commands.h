@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 208> makeCommandTable() {
+std::array<std::pair<int, const char *>, 209> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -406,6 +406,8 @@ std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
 #define DEACTIVATE_CLAIM_FINAL_XFER	(SCHED_VERS+161)  	// deactivate claim and do final transfer
 		{DEACTIVATE_CLAIM_FINAL_XFER, "DEACTIVATE_CLAIM_FINAL_XFER"},
+#define REHOME	(SCHED_VERS+162)
+		{REHOME, "REHOME"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

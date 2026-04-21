@@ -598,6 +598,9 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 	if( user && user[0] ) {
 		flags = IF_VERBOSEPUB;
 			// The first character of the up_down_user tells us if it is uploading or downloading
+			// TODO This doesn't handle usenames that contain
+			//   non-aplphnumeric characters (which can't be in ClassAd
+			//   attribute names).
 		if( user[0] == 'U' ) downloading = false;
 		if( user[0] == 'D' ) uploading = false;
 		char const *at = strchr(user,'@');

@@ -502,13 +502,12 @@ const char * format_job_factory_mode (const classad::Value &val, Formatter &)
 
 bool render_job_id (std::string & result, ClassAd* ad, Formatter &)
 {
-	char str[PROC_ID_STR_BUFLEN];
-	int cluster_id=0, proc_id=0;
-	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id))
-		return false;
-	ad->LookupInteger(ATTR_PROC_ID,proc_id);
-	ProcIdToStr(cluster_id, proc_id, str);
-	result = str;
+	JOB_ID_KEY jid{0,-1};
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster)) {
+		return ad->LookupString(ATTR_JOB_ID, result);
+	}
+	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
+	jid.sprint(result);
 	return true;
 }
 
@@ -863,7 +862,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_FACTORY_MODE",ATTR_JOB_MATERIALIZE_PAUSED, 0, format_job_factory_mode, NULL },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" ATTR_JOB_ID "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 #if 0
 	//This was a collision between queue table and history table

@@ -20,6 +20,9 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
+  :jira:`3681`
+
 - In the very rare case that a job fails after the *condor_starter* forks
   it, but before it execs the job, we now log a much more coherent
   error message.  Previously, HTCondor would log an incorrect message
@@ -63,6 +66,9 @@
 - Improved the *blahpd*'s efficiency in monitoring job status.
   :jira:`3634,3640`
 
+- Improved handling of OS usernames that include the ``@`` character.
+  :jira:`3655`
+
 - Container universe jobs whose image is an url (like docker://) now work
   when file transfer is off.
   :jira:`3638`
@@ -70,7 +76,7 @@
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
 
@@ -98,6 +104,10 @@
   that also exhausted their :subcom:`RequestMemory` would not go
   on hold immediately, but only after a 20 minute delay.
   :jira:`3621`
+
+- Fixed a spurious error message in the StarterLog about unhandled
+  job exit.
+  :jira:`3653`
 
 *** 25.10.0 bugs
 

@@ -99,6 +99,11 @@ class Lexer
 
 		// initialize methods
 		bool Initialize(LexerSource *source);
+		// Initialize from a caller-owned character buffer. The lexer does not
+		// copy the contents of str; it stores a reference to the supplied buffer.
+		// The caller must ensure that str remains valid for the duration of
+		// lexing, until the next Initialize() call or FinishedParse().
+		bool Initialize(const char *str);
 		bool Reinitialize(void);
         
         bool WasInitialized(void) const;
@@ -138,6 +143,7 @@ class Lexer
         bool        initialized;
 		TokenType	tokenType;             		// the integer id of the token
 		LexerSource *lexSource;
+		CharLexerSource ownedSource{""};		// used by Initialize(const char*)
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character

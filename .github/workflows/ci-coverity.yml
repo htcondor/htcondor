@@ -7,6 +7,7 @@ on:
 
 jobs:
   resolve-ubunturoot-image:
+    if: github.repository == 'htcondor/htcondor'
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.extract.outputs.image }}
@@ -21,6 +22,7 @@ jobs:
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
   build_and_analyze:
+    if: github.repository == 'htcondor/htcondor'
     needs: resolve-ubunturoot-image
     runs-on: ubuntu-latest
 

@@ -108,6 +108,241 @@ static const Keyword GroupKeywordItems[] = {
 #undef GW
 static const KeywordTable GroupKeywords = SORTED_TOKENER_TABLE(GroupKeywordItems);
 
+static void unexpected_token(std::string & message, const char * tag, int line_no, tokener & toke)
+{
+	std::string tok; toke.copy_token(tok);
+	formatstr_cat(message, "%s was unexpected at line %d offset %d in %s\n",
+		tok.c_str(), line_no, (int)toke.offset(), tag);
+}
+
+static void expected_token(std::string & message, const char * reason, const char * tag, int line_no, tokener & toke)
+{
+	std::string tok; toke.copy_token(tok);
+	formatstr_cat(message, "expected %s at line %d offset %d in %s\n",
+		reason, line_no, (int)toke.offset(), tag);
+}
+
+std::string AddAttrListRow(
+	tokener & toke,
+	int line_no,
+	const CustomFormatFnTable * FnTable, // in: table of custom output functions for SELECT
+	const CustomFormatFnTable & GlobalFnTable,
+	AttrListPrintMask & mask, // out: columns and headers set in SELECT
+	const char * labelsep, // if non-null label fields and use this to separate label from value
+	classad::References & attrs,
+	std::string & error_messages,  // out, parse errors are appended to this string
+	int aarl_flags)
+{
+	toke.mark();
+
+	std::string attr;
+	std::string name;
+	bool add_heading = aarl_flags & AddAttrListRow_AddHeading;
+	bool truncate_by_default = aarl_flags & AddAttrListRow_Truncate;
+	int opts = 0;
+	int def_opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+	const char * def_fmt = "%v";
+	if (aarl_flags & AddAttrListRow_DefFmtMask) { def_fmt = AddAttrListRow_DefFmtTable[(aarl_flags & AddAttrListRow_DefFmtMask)>>4]; }
+	const char * fmt = def_fmt;
+	int wid = 0;
+	bool width_from_label = true;
+	bool label_fields = labelsep != nullptr;
+	CustomFormatFn cust;
+
+	bool got_attr = false;
+	while (toke.next()) {
+		const Keyword * pkw = SelectKeywords.lookup_token(toke);
+		if ( ! pkw)
+			continue;
+
+		// next token is a keyword, if we have not set the attribute yet
+		// it is everything up to the current token.
+		int kw = pkw->value;
+		if ( ! got_attr) {
+			toke.copy_marked(attr);
+			got_attr = true;
+		}
+
+		switch (kw) {
+		case kw_AS: {
+			if (toke.next()) {
+				toke.copy_token(name);
+				if (toke.is_quoted_string()) { collapse_escapes(name); }
+			} else {
+				expected_token(error_messages, "column name after AS", "SELECT", line_no, toke);
+			}
+			toke.mark_after();
+		} break;
+		case kw_PRINTF: {
+			if (toke.next()) {
+				std::string val; toke.copy_token(val);
+				fmt = mask.store(val.c_str());
+			} else {
+				expected_token(error_messages, "format after PRINTF", "SELECT", line_no, toke);
+			}
+		} break;
+		case kw_RENDERAS: // RENDERAS is used when you want to specify a PRINTF format also
+		case kw_PRINTAS: {
+			if (toke.next()) {
+				const CustomFormatFnTableItem * pcffi = NULL;
+				if (FnTable){ pcffi = FnTable->lookup_token(toke); } //Check for local print format table options
+				if (!pcffi) { pcffi = GlobalFnTable.lookup_token(toke); } //If pcffi is Null then check for global print format table options
+
+				if (pcffi) {
+					cust = pcffi->cust;
+					if (kw == kw_PRINTAS || (fmt == def_fmt && pcffi->printfFmt != nullptr)) {
+						fmt = pcffi->printfFmt;
+						if (fmt) fmt = mask.store(fmt);
+					}
+					//cust_type = pcffi->cust;
+					const char * pszz = pcffi->extra_attribs;
+					if (pszz) {
+						size_t cch = strlen(pszz);
+						while (cch > 0) {
+							attrs.insert(pszz);
+							pszz += cch+1; cch = strlen(pszz);
+						}
+					}
+				} else {
+					std::string aa; toke.copy_token(aa);
+					formatstr_cat(error_messages, "Unknown argument %s for %s\n", aa.c_str(),
+						(kw == kw_RENDERAS) ? "RENDERAS" : "PRINTAS");
+				}
+			} else {
+				expected_token(error_messages,
+					(kw == kw_RENDERAS) ? "function name after RENDERAS" : "function name after PRINTAS",
+					"SELECT", line_no, toke);
+			}
+		} break;
+		case kw_OR: {
+			if (toke.next()) {
+				std::string val; toke.copy_token(val);
+				const char alt_chars[] = " ?*.-_#0";
+				if (val.length() > 0 && strchr(alt_chars, val[0])) {
+					int ix = (int)(strchr(alt_chars, val[0]) - &alt_chars[0]);
+					opts |= (ix*AltQuestion);
+					if (val.length() > 1 && val[0] == val[1]) { opts |= AltWide; }
+				} else {
+					formatstr_cat(error_messages, "Unknown argument %s for OR\n", val.c_str());
+				}
+			} else {
+				expected_token(error_messages, "? or ?? after OR", "SELECT", line_no, toke);
+			}
+		} break;
+		case kw_NOSUFFIX: {
+			opts |= FormatOptionNoSuffix;
+		} break;
+		case kw_NOPREFIX: {
+			opts |= FormatOptionNoPrefix;
+		} break;
+		case kw_LEFT: {
+			opts |= FormatOptionLeftAlign;
+		} break;
+		case kw_RIGHT: {
+			opts &= ~FormatOptionLeftAlign;
+		} break;
+		case kw_FIT: {
+			opts |= FormatOptionFitToData | FormatOptionNoTruncate;
+		} break;
+		case kw_TRUNCATE: {
+			opts &= ~FormatOptionNoTruncate;
+			def_opts &= ~FormatOptionNoTruncate;
+		} break;
+		case kw_ALWAYS: {
+			opts |= FormatOptionAlwaysCall;
+		} break;
+		case kw_WIDTH: {
+			if (toke.next()) {
+				std::string val; toke.copy_token(val);
+				if (toke.matches("AUTO")) {
+					opts |= FormatOptionAutoWidth;
+					def_opts |= (FormatOptionAutoWidth | FormatOptionNoTruncate);
+				} else {
+					wid = atoi(val.c_str());
+					def_opts &= ~FormatOptionAutoWidth;
+					if (truncate_by_default) {
+						def_opts &= ~FormatOptionNoTruncate;
+					}
+					width_from_label = false;
+					//TODO: TJ decide how LEFT & RIGHT interact with pos and neg widths.
+					if (fmt == def_fmt) {
+						fmt = NULL;
+					}
+				}
+			} else {
+				expected_token(error_messages, "number or AUTO after WIDTH", "SELECT", line_no, toke);
+			}
+		} break;
+		default:
+			unexpected_token(error_messages, "SELECT", line_no, toke);
+			break;
+		} // switch
+	} // while
+
+	if ( ! got_attr) { attr = toke.content(); }
+	trim(attr);
+	if (attr.empty() || attr[0] == '#') {
+		// nothing to add, or this is a non-classad column source (condor_who)
+		return attr;
+	}
+
+	opts |= def_opts;
+
+	const char * lbl = name.empty() ? attr.c_str() : name.c_str();
+	if (label_fields) {
+		// build a format string that contains the label
+		std::string label(lbl);
+		if (labelsep) { label += labelsep; }
+		if (fmt) { label += fmt; } 
+		else {
+			label += "%";
+			if (wid) {
+				if (opts & FormatOptionNoTruncate)
+					formatstr_cat(label, "%d", wid);
+				else
+					formatstr_cat(label, "%d.%d", wid, wid < 0 ? -wid : wid);
+			}
+			label += cust ? "s" : "v";
+		}
+		lbl = mask.store(label.c_str());
+		fmt = lbl;
+		wid = 0;
+	} else {
+		if (width_from_label) { wid = 0 - (int)strlen(lbl); }
+		if (add_heading) mask.set_heading(lbl);
+		lbl = NULL;
+		if (cust) {
+			lbl = fmt;
+		} else if ( ! fmt) {
+			// if we get to here and there is no format, that means that
+			// a width was specified, but no custom or printf format. so we
+			// need to manufacture a printf format based on the given width.
+			if ( ! wid) { fmt = def_fmt; }
+			else if (truncate_by_default) {
+				char tmp[40] = "%"; char *p = tmp+1;
+				if (wid < 0) { opts |= FormatOptionLeftAlign; wid = -wid; *p++ = '-'; }
+				auto [end, ec] = std::to_chars(p, p + 12, wid);
+				p = end;
+				if ( ! (opts & FormatOptionNoTruncate)) {
+					*p = '.';
+					p++;
+					auto [end, ec] = std::to_chars(p, p + 12, wid);
+					p = end;
+				}
+				*p++ = 'v'; *p = 0;
+				fmt = mask.store(tmp);
+			}
+		}
+	}
+	if (cust) {
+		mask.registerFormat (lbl, wid, opts, cust, attr.c_str());
+	} else {
+		mask.registerFormat(fmt, wid, opts, attr.c_str());
+	}
+
+	return attr;
+}
+
 static void unexpected_token(std::string & message, const char * tag, SimpleInputStream & stream, tokener & toke)
 {
 	std::string tok; toke.copy_token(tok);
@@ -139,7 +374,7 @@ int SetAttrListPrintMaskFromStream (
 	enum cust_t { PRINTAS_STRING, PRINTAS_INT, PRINTAS_FLOAT };
 
 	bool label_fields = false;
-	const char * labelsep = " = ";
+	const char * labelsep = nullptr;
 	const char * prowpre = NULL;
 	const char * pcolpre = " ";
 	const char * pcolsux = NULL;
@@ -149,6 +384,7 @@ int SetAttrListPrintMaskFromStream (
 	classad::References * attrs = NULL;
 	classad::References * scopes = NULL;
 	const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
+	const bool truncate_by_default = (pmms.fixed_width_implies_truncate | pmms.generate_printf_from_width) != 0;
 
 	error_message.clear();
 
@@ -196,6 +432,7 @@ int SetAttrListPrintMaskFromStream (
 					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot | HF_NOSUMMARY);
 				} else if (toke.matches("LABEL")) {
 					label_fields = true;
+					labelsep = " = ";
 				} else if (label_fields && toke.matches("SEPARATOR")) {
 					if (toke.next()) { std::string tmp; toke.copy_token(tmp); collapse_escapes(tmp); labelsep = mask->store(tmp.c_str()); }
 				} else if (toke.matches("RECORDPREFIX")) {
@@ -253,207 +490,14 @@ int SetAttrListPrintMaskFromStream (
 			}
 		// fall through
 		case SELECT: {
-			toke.mark();
-			std::string attr;
-			std::string name;
-			int opts = 0;
-			int def_opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-			const char * def_fmt = "%v";
-			const char * fmt = def_fmt;
-			int wid = 0;
-			bool width_from_label = true;
-			CustomFormatFn cust;
-
-			bool got_attr = false;
-			while (toke.next()) {
-				const Keyword * pkw = SelectKeywords.lookup_token(toke);
-				if ( ! pkw)
-					continue;
-
-				// next token is a keyword, if we havent set the attribute yet
-				// it's everything up to the current token.
-				int kw = pkw->value;
-				if ( ! got_attr) {
-					toke.copy_marked(attr);
-					got_attr = true;
-				}
-
-				switch (kw) {
-				case kw_AS: {
-					if (toke.next()) {
-						toke.copy_token(name);
-						if (toke.is_quoted_string()) { collapse_escapes(name); }
-					} else {
-						expected_token(error_message, "column name after AS", "SELECT", stream, toke);
-					}
-					toke.mark_after();
-				} break;
-				case kw_PRINTF: {
-					if (toke.next()) {
-						std::string val; toke.copy_token(val);
-						fmt = mask->store(val.c_str());
-					} else {
-						expected_token(error_message, "format after PRINTF", "SELECT", stream, toke);
-					}
-				} break;
-				case kw_RENDERAS: // RENDERAS is used when you want to specify a PRINTF format also
-				case kw_PRINTAS: {
-					if (toke.next()) {
-						const CustomFormatFnTableItem * pcffi = NULL;
-						if (FnTable){ pcffi = FnTable->lookup_token(toke); } //Check for local print format table options
-						if (!pcffi) { pcffi = GlobalFnTable.lookup_token(toke); } //If pcffi is Null then check for global print format table options
-
-						if (pcffi) {
-							cust = pcffi->cust;
-							if (kw == kw_PRINTAS || (fmt == def_fmt && pcffi->printfFmt != nullptr)) {
-								fmt = pcffi->printfFmt;
-								if (fmt) fmt = mask->store(fmt);
-							}
-							//cust_type = pcffi->cust;
-							const char * pszz = pcffi->extra_attribs;
-							if (pszz) {
-								size_t cch = strlen(pszz);
-								while (cch > 0) {
-									attrs->insert(pszz);
-									pszz += cch+1; cch = strlen(pszz);
-								}
-							}
-						} else {
-							std::string aa; toke.copy_token(aa);
-							formatstr_cat(error_message, "Unknown argument %s for %s\n", aa.c_str(),
-								(kw == kw_RENDERAS) ? "RENDERAS" : "PRINTAS");
-						}
-					} else {
-						expected_token(error_message, 
-							(kw == kw_RENDERAS) ? "function name after RENDERAS" : "function name after PRINTAS",
-							"SELECT", stream, toke);
-					}
-				} break;
-				case kw_OR: {
-					if (toke.next()) {
-						std::string val; toke.copy_token(val);
-						const char alt_chars[] = " ?*.-_#0";
-						if (val.length() > 0 && strchr(alt_chars, val[0])) {
-							int ix = (int)(strchr(alt_chars, val[0]) - &alt_chars[0]);
-							opts |= (ix*AltQuestion);
-							if (val.length() > 1 && val[0] == val[1]) { opts |= AltWide; }
-						} else {
-							formatstr_cat(error_message, "Unknown argument %s for OR\n", val.c_str());
-						}
-					} else {
-						expected_token(error_message, "? or ?? after OR", "SELECT", stream, toke);
-					}
-				} break;
-				case kw_NOSUFFIX: {
-					opts |= FormatOptionNoSuffix;
-				} break;
-				case kw_NOPREFIX: {
-					opts |= FormatOptionNoPrefix;
-				} break;
-				case kw_LEFT: {
-					opts |= FormatOptionLeftAlign;
-				} break;
-				case kw_RIGHT: {
-					opts &= ~FormatOptionLeftAlign;
-				} break;
-				case kw_FIT: {
-					opts |= FormatOptionFitToData | FormatOptionNoTruncate;
-				} break;
-				case kw_TRUNCATE: {
-					opts &= ~FormatOptionNoTruncate;
-					def_opts &= ~FormatOptionNoTruncate;
-				} break;
-				case kw_ALWAYS: {
-					opts |= FormatOptionAlwaysCall;
-				} break;
-				case kw_WIDTH: {
-					if (toke.next()) {
-						std::string val; toke.copy_token(val);
-						if (toke.matches("AUTO")) {
-							opts |= FormatOptionAutoWidth;
-							def_opts |= (FormatOptionAutoWidth | FormatOptionNoTruncate);
-						} else {
-							wid = atoi(val.c_str());
-							def_opts &= ~FormatOptionAutoWidth;
-							if (pmms.fixed_width_implies_truncate) {
-								def_opts &= ~FormatOptionNoTruncate;
-							}
-							width_from_label = false;
-							//PRAGMA_REMIND("TJ: decide how LEFT & RIGHT interact with pos and neg widths."
-							if (fmt == def_fmt) {
-								fmt = NULL;
-							}
-						}
-					} else {
-						expected_token(error_message, "number or AUTO after WIDTH", "SELECT", stream, toke);
-					}
-				} break;
-				default:
-					unexpected_token(error_message, "SELECT", stream, toke);
-				break;
-				} // switch
-			} // while
-
-			if ( ! got_attr) { attr = toke.content(); }
-			trim(attr);
-			if (attr.empty() || attr[0] == '#') continue;
-
-			opts |= def_opts;
-
-			const char * lbl = name.empty() ? attr.c_str() : name.c_str();
-			if (label_fields) {
-				// build a format string that contains the label
-				std::string label(lbl);
-				if (labelsep) { label += labelsep; }
-				if (fmt) { label += fmt; } 
-				else {
-					label += "%";
-					if (wid) {
-						if (opts & FormatOptionNoTruncate)
-							formatstr_cat(label, "%d", wid);
-						else
-							formatstr_cat(label, "%d.%d", wid, wid < 0 ? -wid : wid);
-					}
-					label += cust ? "s" : "v";
-				}
-				lbl = mask->store(label.c_str());
-				fmt = lbl;
-				wid = 0;
-			} else {
-				if (width_from_label) { wid = 0 - (int)strlen(lbl); }
-				mask->set_heading(lbl);
-				lbl = NULL;
-				if (cust) {
-					lbl = fmt;
-				} else if ( ! fmt) {
-					// if we get to here and there is no format, that means that
-					// a width was specified, but no custom or printf format. so we
-					// need to manufacture a printf format based on the given width.
-					if ( ! wid) { fmt = def_fmt; }
-					else if (pmms.generate_printf_from_width) {
-						char tmp[40] = "%"; char *p = tmp+1;
-						if (wid < 0) { opts |= FormatOptionLeftAlign; wid = -wid; *p++ = '-'; }
-						auto [end, ec] = std::to_chars(p, p + 12, wid);
-						p = end;
-						if ( ! (opts & FormatOptionNoTruncate)) {
-							*p = '.';
-							p++;
-							auto [end, ec] = std::to_chars(p, p + 12, wid);
-							p = end;
-						}
-						*p++ = 'v'; *p = 0;
-						fmt = mask->store(tmp);
-					}
-				}
-			}
-			if (cust) {
-				mask->registerFormat (lbl, wid, opts, cust, attr.c_str());
-			} else {
-				mask->registerFormat(fmt, wid, opts, attr.c_str());
-			}
-
-			if ( ! IsValidClassAdExpression(attr.c_str(), attrs, scopes)) {
-				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", attr.c_str());
+			int aarl_flags = AddAttrListRow_AddHeading;
+			if (truncate_by_default) aarl_flags |= AddAttrListRow_Truncate;
+			auto exprstr = AddAttrListRow(toke, stream.count_of_lines_read(), FnTable, GlobalFnTable, *mask,
+				labelsep, *attrs, error_message, aarl_flags);
+			if (exprstr.empty() || exprstr[0] == '#')
+				continue; // blank line or commented out.
+			if ( ! IsValidClassAdExpression(exprstr.c_str(), attrs, scopes)) {
+				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", exprstr.c_str());
 			}
 		}
 		break;

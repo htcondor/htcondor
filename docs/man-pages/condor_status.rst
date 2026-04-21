@@ -186,7 +186,7 @@ Options
     (Custom option) Show compact form, with a single line per machine
     using information from the partitionable slot.  Some information will
     be incorrect if the machine has static slots.
- **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
+ **-autoformat[:jlhVrTY,tng]** *attr1 [attr2 ...]* or **-af[:jlhVrTY,tng]** *attr1 [attr2 ...]*
     (Output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -207,6 +207,8 @@ Options
 
        * - Qualifier
          - Description
+       * - j
+         - Print the job ID as the first field
        * - l
          - Label each field
        * - h
@@ -215,6 +217,10 @@ Options
          - Use %V rather than %v for formatting (string values are quoted)
        * - r
          - Print "raw", or unevaluated values
+       * - T
+         - Use %T formatting. Use for elapsed time values in seconds
+       * - Y
+         - Use %Y formatting. Use for unix timestamp values
        * - ,
          - Add a comma character after each field
        * - t
@@ -231,12 +237,12 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
- **-aaf[:Vr]** *attr1 [attr2 ...]*
+ **-aaf[:VrTY]** *attr1 [attr2 ...]*
     (output option) Like **-autoformat**, but instead of replacing the
     standard output columns, appends the specified attribute(s) as
     additional columns after whatever standard format or **-print-format* file is in
     effect.
-    Accepts the **-autoformat** V or r format qualifiers which will affect only
+    Accepts the **-autoformat** V, r, T or Y format qualifiers which will affect only
     the appended columns.  This option allows adding extra information to the default
     *condor_status* output without losing the standard columns. Appended columns will
     use the column separator and row terminator characters from the format that is appended to.

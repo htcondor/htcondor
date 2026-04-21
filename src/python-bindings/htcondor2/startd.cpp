@@ -48,6 +48,31 @@ _startd_cancel_drain_jobs(PyObject *, PyObject * args) {
 }
 
 static PyObject *
+_startd_rehome(PyObject *, PyObject * args) {
+    // _startd_rehome(addr, schedd_name, schedd_pool, timeout, cancel)
+
+    const char * addr = NULL;
+    const char * schedd_name = NULL;
+    const char * schedd_pool = NULL;
+    long timeout = 0;
+    int cancel = 0;
+    if(! PyArg_ParseTuple( args, "szzlp", & addr, & schedd_name, & schedd_pool, & timeout, & cancel )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCStartd startd(addr);
+    bool r = startd.rehome( schedd_name, schedd_pool, timeout, cancel != 0 );
+    if(! r) {
+        const char * err = startd.error();
+        PyErr_SetString( PyExc_HTCondorException, err ? err : "Startd failed to process rehome request." );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 _startd_vacate_slots(PyObject *, PyObject * args) {
     // _startd_vacate_slots(addr, slot_name, vacate_fast)
 

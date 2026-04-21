@@ -60,6 +60,11 @@
 #include "history_queue.h"
 #include "live_job_counters.h"
 
+#include <utility>
+#include <string>
+#include <optional>
+#include "catalog_utils.h"
+
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
@@ -119,6 +124,8 @@ int init_user_ids(const JobQueueUserRec * user);
 
 class match_rec;
 
+#include "cxfer_state.h"
+
 struct shadow_rec
 {
     int             pid;
@@ -144,9 +151,14 @@ struct shadow_rec
 	bool			exit_already_handled;
 	char*			secret; // Secret provided to spawned daemon for authorization of commands with tools
 
+	// Common transfer management.
+	ListOfCatalogs cxfer_catalogs;
+	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
+	ClassAd * matchInfo {nullptr};
+
 	shadow_rec();
 	~shadow_rec();
-}; 
+};
 
 
 struct SubmitterFlockCounters {
@@ -738,8 +750,37 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
-	OCU *getOCU(int ocu_id); 
+	OCU *getOCU(int ocu_id);
+
+
+	// Maintains the invariant that all entries in the map are valid pointers.
+	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
+
+	// If a shadow has gone away (or we know it's about to go way), remove
+	// the (soon to be) dangling pointers from the catalog-to-shadow map.
+	void unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid );
+
+	// Don't inadvertently create empty vectors.
+	// Note that the returned vector is a copy, and does not own the pointers.
+	std::optional<std::vector<match_rec *>> getMatchesBySinful( const std::string & sinful );
+
+	// Remove empty vectors from the map.
+	bool removeMatchFromSinful( const std::string & sinful, match_rec * match );
+
+	// Prevents duplicate entries.
+	bool addMatchToSinful( const std::string & sinful, match_rec * match );
+
+
+	// Start a timer to release the corresponding claim.
+	bool mark_catalog_dead( const std::string & catalogName );
+
+	// Stop the timer, if any, waiting to release the claim.
+	bool mark_catalog_live( const std::string & catalogName );
+
 private:
+
+	// Managing common transfers.
+	std::unordered_map<std::string, shadow_rec *> catalogToShadowMap;
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -954,7 +995,8 @@ private:
 	void			tryNextJob();
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
-	bool			jobExitCode( PROC_ID job_id, int exit_code );
+	bool			shadowExitCode( PROC_ID job_id, int exit_code );
+	bool            transferShadowExitCode( PROC_ID job_id, int exit_code );
 	void			setJobCoolDown(const PROC_ID job_id, const long long duration);
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
@@ -1002,20 +1044,33 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, const PROC_ID &);
+	bool			StartJob(match_rec*, const PROC_ID &);
+
 	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
 	shadow_rec*		start_sched_universe_job(const PROC_ID &);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
-										Env const *env, 
+										Env const *env,
 										const char* name, bool want_udp );
 	void			check_zombie(int, const PROC_ID &);
 	void			kill_zombie(int, const PROC_ID &);
 	int				is_alive(shadow_rec* srec);
-	
+
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
 
 	static void		token_request_callback(bool success, void *miscdata);
+
+	// This vector does NOT own its match records; it is an optimization.
+	// I'd indicate that with a shared_ptr<>, but that won't work if the
+	// owner doesn't hold onto one, and it doesn't.
+	std::vector<match_rec *> matchesHeldByBlockedJobs;
+
+	// This map does NOT own its match records; it is an optimization.
+	// I'd indicate that with a shared_ptr<>, but that won't work if the
+	// owner doesn't hold onto one, and it doesn't.
+	std::unordered_map<std::string, std::vector<match_rec *>> matchesBySinfulMap;
+
+	std::unordered_map<std::string, int> catalogToTimerMap;
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;

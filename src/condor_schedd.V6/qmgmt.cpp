@@ -1285,9 +1285,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 
 	if ( o ) {
 		fquser = strdup(o);
-			// owner is just fquser that stops at the first '@' 
+			// owner is just fquser that stops at the last '@'
 		owner = strdup(o);
-		char *atsign = strchr(owner,'@');
+		char *atsign = strrchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
 		}
@@ -2569,12 +2569,29 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			int job_status = 0;
 			if (ad->LookupInteger(ATTR_JOB_STATUS, job_status)) {
+				// Presently, the only reason for a job to be in the blocked
+				// state is because it's waiting for a transfer shadow.  That's
+				// a transient (soft) state and should not have ever been made
+				// permanent (hard) state in the job queue log, but there's
+				// not presently a good way to manage that, AFAICT.  So if we
+				// see a blocked job, it's a mistake; correct it.
+				//
+				// This will have to be updated when anybody else uses the
+				// blocked state for anything; TJ has some ideas about how to
+				// record this information.
+				//
+				// I don't have any worthwhile ideas about how to test this.
+				if( job_status == JOB_STATUS_BLOCKED ) {
+					job_status = JOB_STATUS_IDLE;
+				}
+
 				if (ad->Status() != job_status) {
 					if (clusterad) {
 						clusterad->JobStatusChanged(ad->Status(), job_status);
 					}
 					ad->SetStatus(job_status);
 				}
+
 				IncrementLiveJobCounter(scheduler.liveJobCounts, ad->Universe(), ad->Status(), 1);
 				if (ad->ownerinfo) { IncrementLiveJobCounter(ad->ownerinfo->live, ad->Universe(), ad->Status(), 1); }
 				if (ad->project) { IncrementLiveJobCounter(ad->project->live, ad->Universe(), ad->Status(), 1); }
@@ -9067,7 +9084,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		job->LookupString(attr_JobUser, job_user);
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
-		if (last_at != std::string::npos && !accounting_domain.empty()) {
+		if (user_is_the_new_owner && last_at != std::string::npos && !accounting_domain.empty()) {
 			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
 			cremain -= last_at;
 			strncat(powner, "@", cremain); cremain--;
@@ -9818,10 +9835,14 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			end = std::upper_bound(first, end, user_str, prio_rec_submitter_ub{});
 		}
 
+		// ... so why isn't my job in the priorec array?
+		// dprintf( D_ZKM, "Entering priorec array loop\n" );
 		for (auto p = first; p != end; p++) {
+			// dprintf( D_ZKM, "%d.%d: considering..\n", p->id.cluster, p->id.proc );
 			if ( p->not_runnable /* || p->matched */ ) {
 					// This record has been disabled, because it is no longer runnable
 					// (can't trust the matched flag here like we can in ::negotiate)
+				// dprintf( D_ZKM, "%d.%d: case A\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -9829,12 +9850,14 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if ( ! job) {
 					// This ad must have been deleted since we last built
 					// runnable job list.
+				// dprintf( D_ZKM, "%d.%d: case B\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
 			if (PrioRecAutoClusterRejected.contains(p->auto_cluster_id)) {
 					// We have already failed to match a job from this same
 					// autocluster with this machine.  Skip it.
+				// dprintf( D_ZKM, "%d.%d: case C\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -9845,23 +9868,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+				// dprintf( D_ZKM, "%d.%d: case D\n", p->id.cluster, p->id.proc );
 			} else if (scheduler.FindMrecByJobID(job->jid)) {
 				p->matched = true;
 				runnable_code = runnable_reason_code::AlreadyMatched;
+				// dprintf( D_ZKM, "%d.%d: case E\n", p->id.cluster, p->id.proc );
 			}
-
-		#if 0 // code for debugging stale matched flag
-			if (matched_flag != p->matched) {
-				std::string jobid = (std::string)JOB_ID_KEY(p->id);
-				if (matched_flag) {
-					dprintf(D_MATCH, "BAD prio_rec matched=1 but AlreadyMatched=0 !! for job %d.%d (fixing)\n",
-						p->id.cluster, p->id.proc);
-				} else {
-					//dprintf(D_MATCH, "prio_rec matched flag %d disagrees with AlreadyMatched %d for job %d.%d\n",
-					//	matched_flag, p->matched, p->id.cluster, p->id.proc);
-				}
-			}
-		#endif
 
 			bool OCUWanted = false;
 			job->LookupBool(ATTR_OCU_WANTED, OCUWanted);
@@ -9909,6 +9921,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			// if we have a match_user, and it doesn't match the job owner
 			// keep looking.
 			if ( ! match_user.empty() && match_user != job->ownerinfo->Name()) {
+				// dprintf( D_ZKM, "%d.%d: case F\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -9979,6 +9992,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 				if( EvalFloat(ATTR_RANK, my_match_ad, job, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
+						// dprintf( D_ZKM, "%d.%d: case G\n", p->id.cluster, p->id.proc );
 						continue;
 					}
 				}

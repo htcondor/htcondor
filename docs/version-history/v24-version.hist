@@ -13,13 +13,28 @@
   spooled by the AP to fail.
   :jira:`3660`
 
+- Messages in the StartLog when the *condor_startd* aborts because it
+  cannot detect the amount of physical memory or when the amount of reserved
+  memory leaves no memory for creating slots have been improved.
+  :jira:`3667`
+
 *** 24.0.20 bugs
+
+- Fixed bug where Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS` without
+  being explicitly provided a backing store (Volume Group) would fail clean up to
+  clean up the automatically generated backing store on shutdown.
+  :jira:`3657`
 
 - :tool:`condor_ssh_to_job` now properly supports running into
   docker and container universe jobs with a one-shot command argument,
   and the shell now enters the cgroup of the job for container universe
   jobs.
   :jira:`3658`
+
+- VM Universe jobs now use the widely supported and ubiquitous Intel e1000 network card.
+  This is needed on Enterprise Linux 10 hosts, where the default virtual NIC model selected
+  by libvirt is incompatible.
+  :jira:`3642`
 
 *** 24.12.19 bugs
 

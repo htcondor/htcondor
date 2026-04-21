@@ -1394,6 +1394,7 @@ JobActionResults::JobActionResults( action_result_type_t res_type )
 	ar_bad_status = 0;
 	ar_already_done = 0;
 	ar_error = 0;
+	ar_limit_exceeded = 0;
 	action = JA_ERROR;
 }
 
@@ -1793,11 +1794,12 @@ bool DCSchedd::getJobConnectInfo(
 int DCSchedd::offerResources(
 	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
 	const std::string & submitter_name,
-	int timeout)
+	int timeout,
+	const char * claimID)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
-		return -1; 
+		return -1;
 	}
 
 	if (submitter_name.empty()) {
@@ -1823,6 +1825,10 @@ int DCSchedd::offerResources(
 	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if( claimID != NULL ) {
+	    // The CEDAR machinery (in _putClassAd()) encrypts this attribute.
+	    cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());

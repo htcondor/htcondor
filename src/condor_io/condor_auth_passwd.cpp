@@ -2262,7 +2262,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			login = m_t_client.a; // client is remote to server
 		}
 		ASSERT(login);
-		domain = strchr(login,'@');
+		domain = strrchr(login,'@');
 		if (domain) {
 			*domain='\0';
 			domain++;
@@ -2530,7 +2530,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		}
 		if (match) {
 			char * login = strdup(m_identity.c_str());
-			char * domain = strchr(login,'@');
+			char * domain = strrchr(login,'@');
 			if (domain) {
 				*domain='\0';
 				domain++;
