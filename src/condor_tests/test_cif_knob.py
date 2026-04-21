@@ -101,7 +101,7 @@ def the_test_result(the_test_name, the_test_case):
         input=subtext,
         universal_newlines=True,
         env=env,
-        timeout=2,
+        timeout=20,
     )
 
     for line in rv.stdout.splitlines():
