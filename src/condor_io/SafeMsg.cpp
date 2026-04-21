@@ -181,7 +181,7 @@ bool _condorPacket::init_MD(const char * keyId)
  *	@return: true, if this packet is the whole message
  *         false, otherwise
  */
-int _condorPacket::getHeader(int /* msgsize */,
+int _condorPacket::getHeader(int msgsize,
                              bool &last,
                              int &seq,
                              int &len,
@@ -210,8 +210,11 @@ int _condorPacket::getHeader(int /* msgsize */,
 	memcpy(&stemp, &dataGram[9], 2);
 	seq = ntohs(stemp);
 
-	memcpy(&stemp, &dataGram[11], 2);
-	len = length = ntohs(stemp);
+	// Ignore the length field from the header.
+	// Calculate it from the packet size we received.
+	//memcpy(&stemp, &dataGram[11], 2);
+	//len = length = ntohs(stemp);
+	len = length = msgsize - SAFE_MSG_HEADER_SIZE;
 
 	memcpy(&ltemp, &dataGram[13], 4);
 	mID.ip_addr = ntohl(ltemp);
