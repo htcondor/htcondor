@@ -1,5 +1,9 @@
 *** 25.10.0 features
 
+*** 25.0.11 bugs
+
+*** 25.10.0 features
+
 - Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
   :jira:`3584`
