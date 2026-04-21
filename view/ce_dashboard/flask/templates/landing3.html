@@ -6,6 +6,7 @@
     <style>
         .graph .vizchart {
             height: 40vh;
+            min-height: 120px;
         }
 		#table-now .graph .vizchart {
 			height: 8vh;
@@ -91,79 +92,29 @@
        </div>
    </div>
 </div>
-<div class="graphs"></div>
 
-<script>
-const sites = {{ sites | map(attribute='__dict__') | list | tojson }};
-
-const PAGE_SIZE = 10;
-let nextIndex = 0;
-let isLoading = false;
-
-// latestBySite maps FQDN -> the most recent date string for that site
-let latestBySite = {};
-
-function buildStatsP(date) {
-    return $('<p class="site-stats"></p>').text(date);
-}
-
-// Fetch the latest heard-from time per site FQDN
-$.getJSON('/data/ce_update_times', function (data) {
-    latestBySite = data;
-
-    // Backfill stats onto any rows that were already rendered before this request completed
-    $('[data-fqdn]').each(function () {
-        const $labelCol = $(this);
-        const fqdn = $labelCol.data('fqdn');
-        const date = latestBySite[fqdn];
-        if (date) {
-            $labelCol.find('.site-stats').text(buildStatsP(date).text());
-        }
-    });
-});
-
-function addRow(site, index) {
-    const $graphs = $('.graphs');
-    const i = index + 1;
-    const cpuId      = i + '-cpu';
-    const glideinsId = i + '-glideins';
-
-    const $row = $('<div class="row"></div>');
-
-    // Label column
-    const ccstarHtml = site.isCCStar ? ' <span class="ccstar-label">(CC*)</span>' : '';
-    const $labelCol = $('<div class="col-2 htcv-col-2 site-info"></div>').attr('data-fqdn', site.fqdn).append(
-        $('<p class="site-name"></p>').text(site.name),
-        $('<p></p>').html(site.site_name + ccstarHtml)
-    );
-
-    // Always render a placeholder; the $.getJSON callback will replace it when data arrives
-    const $statsP = $('<p class="site-stats"></p>').text('Loading update time...');
-    $labelCol.append($statsP);
-
-    // Replace placeholder immediately if data is already available
-    const date = latestBySite[site.fqdn];
-    if (date) {
-        $statsP.text(buildStatsP(date).text());
-    }
-
-    $row.append($labelCol);
-
-    // Glideins graph column
-    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', glideinsId));
-    
-    // CPU graph column
-    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', cpuId));
-
-    $graphs.append($row);
-    
+<div class="graphs">
+{% for site in sites %}
+{% set i = loop.index %}
+{% set cpu_id = i ~ '-cpu' %}
+{% set glideins_id = i ~ '-glideins' %}
+    <div class="row">
+        <div class="col-2 htcv-col-2 site-info" data-fqdn="{{ site.fqdn }}">
+            <p class="site-name">{{ site.name }}</p>
+            <p>{{ site.site_name }}{% if site.isCCStar %} <span class="ccstar-label">(CC*)</span>{% endif %}</p>
+            <p class="site-stats">Loading update time...</p>
+        </div>
+        <div class="col-5 htcv-col-5" id="{{ glideins_id }}"></div>
+        <div class="col-5 htcv-col-5" id="{{ cpu_id }}"></div>
+    </div>
+    <script>
     new HTCondorView({
-        dst_id: cpuId,
+        dst_id: "{{ cpu_id }}",
         title: '',
         data_url: '/data/landing_graphs?r=week',
         has_edit_menu: false,
         graph_query: urlEscapeGraphQuery(`
-            filter=Site=${site.fqdn}
+            filter=Site={{ site.fqdn }}
             pivot=Date
             add=CpusInUse,CpusNotInUse,CpusContributed
             rename=CpusInUse=CpusAllocated
@@ -177,14 +128,13 @@ function addRow(site, index) {
             chart=area
         `)
     });
-
     new HTCondorView({
-        dst_id: glideinsId,
+        dst_id: "{{ glideins_id }}",
         title: '',
         data_url: '/data/landing_graphs?r=week',
-        //has_edit_menu: false,
+        has_edit_menu: false,
         graph_query: urlEscapeGraphQuery(`
-            filter=Site=${site.fqdn}
+            filter=Site={{ site.fqdn }}
             pivot=Date
             unselect=Site,CpusInUse,CpusNotInUse
             legend.position=none
@@ -196,38 +146,23 @@ function addRow(site, index) {
             chart=area
         `)
     });
+    </script>
+{% endfor %}
+</div>
 
-}
-
-function loadNextPage(pageSize) {
-    if (isLoading || nextIndex >= sites.length) return;
-    isLoading = true;
-    const end = Math.min(nextIndex + pageSize, sites.length);
-    for (let i = nextIndex; i < end; i++) {
-        addRow(sites[i], i);
-    }
-    nextIndex = end;
-    isLoading = false;
-}
-
-$(function () {
-    // Load the first page immediately - get a smaller amount of data
-    loadNextPage(10);
-
-    // Append more rows when the user scrolls near the bottom
-    $(window).on('scroll', function () {
-        const distanceFromBottom = $(document).height() - $(window).scrollTop() - $(window).height();
-        if (distanceFromBottom < 200) {
-            loadNextPage(20);
+<script>
+// Fetch the latest heard-from time per site FQDN
+$.getJSON('/data/ce_update_times', function (data) {
+    $('[data-fqdn]').each(function () {
+        const $labelCol = $(this);
+        const fqdn = $labelCol.data('fqdn');
+        const date = data[fqdn];
+        if (date) {
+            $labelCol.find('.site-stats').text(date);
+        } else {
+            $labelCol.find('.site-stats').text('');
         }
-    }); 
-    // Automatically incrementally load pages while the user is not scrolling
-    const interval = setInterval(function () {
-        loadNextPage(10);
-        if (nextIndex >= sites.length) {
-            clearInterval(interval);
-        }
-    }, 2000);
+    });
 });
 </script>
 
