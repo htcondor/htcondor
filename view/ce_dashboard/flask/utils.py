@@ -78,7 +78,6 @@ def cache_response_to_disk(seconds_to_cache: int | None = None, file_name: str |
                     if (fsize == 0) or \
                        (fmtime < (time.time() - effective_seconds_to_cache)):
                         cached_response = False
-                        print("I am running the code to generate a new response")
                         response = func(*args, **kwargs)
                         try:
                             f.seek(0)
@@ -89,7 +88,6 @@ def cache_response_to_disk(seconds_to_cache: int | None = None, file_name: str |
                             os.remove(cache_file)
                             print(f"ERROR writing cache file {cache_file}: {e}")
                     else:
-                        print("I am using the existing cached response")
                         f.seek(0)
                         response = f.read()
             return response, cached_response
