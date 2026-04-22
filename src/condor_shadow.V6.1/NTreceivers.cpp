@@ -542,10 +542,19 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
 		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
-			// Payload of `len` bytes follows; cannot safely drain an
-			// invalid length.  Return -1 to tear down the connection.
 			dprintf(D_ALWAYS, "CONDOR_write: invalid len %ld\n", (long)len);
-			return -1;
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return 0;
 		}
 		buf = (void *)malloc( len );
 		ASSERT( buf );
@@ -1030,10 +1039,19 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  offset = %ld\n", (long)offset);
 		if (len == 0 || len > MAX_REMOTE_BUF_SIZE) {
-			// Payload of `len` bytes follows; cannot safely drain an
-			// invalid length.  Return -1 to tear down the connection.
 			dprintf(D_ALWAYS, "CONDOR_pwrite: invalid len %ld\n", (long)len);
-			return -1;
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return 0;
 		}
 		buf = malloc( len );
 		memset( buf, 0, len );
@@ -1160,10 +1178,19 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  stride_skip = %ld\n", (long)stride_skip);
 		if (len == 0 || len > MAX_REMOTE_BUF_SIZE || stride_length > MAX_REMOTE_BUF_SIZE) {
-			// Payload of `len` bytes follows; cannot safely drain an
-			// invalid length.  Return -1 to tear down the connection.
 			dprintf(D_ALWAYS, "CONDOR_swrite: invalid len %ld or stride_length %ld\n", (long)len, (long)stride_length);
-			return -1;
+			// Discard the untouched payload so the socket stays usable.
+			syscall_sock->end_of_message();
+			rval = -1;
+			terrno = (condor_errno_t)EINVAL;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(rval) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return 0;
 		}
 		buf = (void *)malloc( len );
 		memset( buf, 0, len );
@@ -1337,7 +1364,26 @@ case CONDOR_putfile:
 		dprintf(D_SYSCALLS, "  length: %d\n", length);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
-		
+
+		// Reject an oversized putfile before opening the file.  The
+		// client only sends the payload when the fd reply is >= 0, so
+		// returning an error here keeps the connection and socket
+		// state clean without having to drain a huge data block.
+		if ((size_t)length > MAX_REMOTE_BUF_SIZE) {
+			dprintf(D_ALWAYS, "CONDOR_putfile: length %d exceeds maximum\n", length);
+			fd = -1;
+			terrno = (condor_errno_t)EFBIG;
+			syscall_sock->encode();
+			result = ( syscall_sock->code(fd) );
+			ASSERT( result );
+			result = ( syscall_sock->code(terrno) );
+			ASSERT( result );
+			free((char*)path);
+			result = ( syscall_sock->end_of_message() );
+			ON_ERROR_RETURN( result );
+			return 0;
+		}
+
 		if (write_access(path)) {
 			errno = 0;
 			fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
@@ -1364,13 +1410,6 @@ case CONDOR_putfile:
         if (length <= 0) {
 			if (fd >= 0) close(fd);
 			return 0;
-		}
-		if ((size_t)length > MAX_REMOTE_BUF_SIZE) {
-			// Payload of `length` bytes follows; cannot safely drain an
-			// invalid length.  Return -1 to tear down the connection.
-			dprintf(D_ALWAYS, "CONDOR_putfile: length %d exceeds maximum\n", length);
-			if (fd >= 0) close(fd);
-			return -1;
 		}
 
 		int num = -1;
