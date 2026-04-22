@@ -1295,6 +1295,17 @@ fi
 # configuration
 
 %changelog
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.19-1
+- Fix crash when a user provided Docker script produces unexpected output
+- All changes in 24.0.19
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.19-1
+- Now properly reports NVIDIA MIG GPU device names
+- Fix performance problem in the htcondor2 Python ClassAd parser
+- Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+- Batch grid universe jobs now tolerate a dot in the username
+- Fix huge reported job execution times when an AP restarts
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
 - Improve AMD GPU detection when using RCOM6/HIP libraries
 - Fix for new jobs getting kicked off LVM EP due to quantization mismatch
@@ -1391,7 +1402,7 @@ fi
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
 - Fix condor_token_request to accept automatically-approved tokens
 
-* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.3-1
 - Fix condor_store_cred bug that broke installing with get_htcondor
 
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
