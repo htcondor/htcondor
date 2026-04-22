@@ -807,9 +807,9 @@ BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
 
 bool
 BindMountStagingDirectory::usable() {
-#if defined(WINDOWS)
+#if defined(WINDOWS) || defined(DARWIN)
 	return false;
-#endif /* WINDOWS */
+#endif /* WINDOWS || DARWIN */
 
 	bool forbidden = param_boolean( "FORBID_BINDMOUNT_MAPPING", false );
 	bool allowed = param_boolean( "ALLOW_LVS_TO_BIND_MOUNT_COMMON_FILES", false );
