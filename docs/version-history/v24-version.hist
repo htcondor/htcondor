@@ -23,20 +23,24 @@
 
 *** 24.0.19 features
 
-- HTCondor tarballs now contain `Pelican 7.24.2 <https://pelicanplatform.org/releases>`_
+- HTCondor tarballs now contain `Pelican 7.24.0 <https://pelicanplatform.org/releases>`_
 
-- The condor package now requires pelican-7.24.2.
+- The condor package now requires pelican-7.24.0.
 
 *** 24.0.19 bugs
-
-- Fixed a performance problem with the classad2 python bindings that
-  caused the parseAds methods to run in n-squared time.
-  :jira:`3632`
 
 - Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
   would not properly pass the device names in the various NVIDIA related
   environment variables.
   :jira:`3567`
+
+- Fixed a performance problem with the classad2 python bindings that
+  caused the parseAds methods to run in n-squared time.
+  :jira:`3632`
+
+- Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
+  respected for jobs that did not do input file transfer.
+  :jira:`3633`
 
 - Fixed a bug for **batch** grid universe jobs where submitting to a remote
   system would fail if the username on the remote system contained a dot.
@@ -45,10 +49,6 @@
 - Fixed a bug where some of the values reported for job execution time were
   enormous if the Access Point daemons restarted while the job was running.
   :jira:`3592`
-
-- Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
-  respected for jobs that did not do input file transfer.
-  :jira:`3633`
 
 - Fixed a bug where an administrator couldn't query a daemon's configuration
   using :tool:`condor_config_val` when authentication is required for READ
