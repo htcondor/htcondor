@@ -12,9 +12,6 @@
 //
 // Declare the different staging directory implementations.
 //
-// It might be less confusing to inherit a default create() and modify()
-// implementation from StagingDirectory instead of HardlinkStagingDirectory.
-//
 
 class HardlinkStagingDirectory : public StagingDirectory {
 
@@ -22,9 +19,9 @@ class HardlinkStagingDirectory : public StagingDirectory {
 
 		static bool usable();
 
-		virtual bool create();
-		virtual bool modify();
-		virtual bool map( const std::filesystem::path & destination );
+		virtual std::error_code create();
+		virtual std::error_code modify();
+		virtual std::error_code map( const std::filesystem::path & destination );
 
 		virtual ~HardlinkStagingDirectory() = default;
 
@@ -50,9 +47,9 @@ class BindMountStagingDirectory : public StagingDirectory {
 
 		static  bool usable();
 
-		virtual bool create();
-		virtual bool modify();
-		virtual bool map( const std::filesystem::path & destination );
+		virtual std::error_code create();
+		virtual std::error_code modify();
+		virtual std::error_code  map( const std::filesystem::path & destination );
 
 		virtual ~BindMountStagingDirectory() = default;
 
@@ -78,9 +75,9 @@ class CopyStagingDirectory : public StagingDirectory {
 
 		static bool usable();
 
-		virtual bool create();
-		virtual bool modify();
-		virtual bool map( const std::filesystem::path & destination );
+		virtual std::error_code create();
+		virtual std::error_code modify();
+		virtual std::error_code map( const std::filesystem::path & destination );
 
 		virtual ~CopyStagingDirectory() = default;
 
@@ -184,13 +181,17 @@ StagingDirectoryFactory::make(
 }
 
 
+const std::error_code ec_true =  std::error_code(0, std::system_category());
+const std::error_code ec_false = std::error_code(1, std::system_category());
+
+
 //
 // The platform-specific code begins here.
 //
 #if defined(WINDOWS)
 
 
-int
+std::error_code
 createStagingDirectory(
 	const std::filesystem::path & parentDir,
 	const std::filesystem::path & stagingDir
@@ -199,7 +200,7 @@ createStagingDirectory(
 }
 
 
-bool
+std::error_code
 convertToStagingDirectory(
 	const std::filesystem::path & location
 ) {
@@ -207,7 +208,7 @@ convertToStagingDirectory(
 }
 
 
-bool
+std::error_code
 mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -216,7 +217,7 @@ mapContentsOfDirectoryInto(
 }
 
 
-bool
+std::error_code
 bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -224,7 +225,7 @@ bindMountContentsOfDirectoryInto(
 	return false;
 }
 
-bool
+std::error_code
 copyContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -236,7 +237,7 @@ copyContentsOfDirectoryInto(
 #else /* WINDOWS */
 
 
-int
+std::error_code
 createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
 	using std::filesystem::perms;
 
@@ -250,7 +251,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	std::filesystem::create_directories( stagingDir, errorCode );
 	if( errorCode ) {
 		dprintf( D_ALWAYS, "Unable to create staging directory '%s', aborting: %s (%d)\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+		return errorCode;
 	}
 
 	std::filesystem::permissions(
@@ -260,7 +261,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	);
 	if( errorCode ) {
 		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+		return errorCode;
 	}
 
 	std::filesystem::permissions(
@@ -270,22 +271,22 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	);
 	if( errorCode ) {
 		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+		return errorCode;
 	}
 
 	int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-		return errno;
+		return std::error_code(errno, std::system_category());
 	}
 
 	rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-		return errno;
+		return std::error_code(errno, std::system_category());
 	}
 
-	return 0;
+	return ec_true;
 }
 
 
@@ -299,7 +300,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 // the source directory isn't writable).  Simultaneously, the starter
 // will be able to clean up the destination hardlinks as normal.
 //
-bool
+std::error_code
 convertToStagingDirectory(
 	const std::filesystem::path & location
 ) {
@@ -313,7 +314,8 @@ convertToStagingDirectory(
 
 	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' is not a directory, aborting.\n", location.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	std::filesystem::permissions(
@@ -323,7 +325,7 @@ convertToStagingDirectory(
 	);
 	if( ec.value() != 0 ) {
 		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions on staging directory '%s': %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
+		return ec;
 	}
 
 	std::filesystem::recursive_directory_iterator rdi(
@@ -331,7 +333,7 @@ convertToStagingDirectory(
 	);
 	if( ec.value() != 0 ) {
 		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
+		return ec;
 	}
 
 	for( const auto & entry : rdi ) {
@@ -343,7 +345,7 @@ convertToStagingDirectory(
 			);
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
+				return ec;
 			}
 			continue;
 		}
@@ -354,7 +356,7 @@ convertToStagingDirectory(
 		);
 		if( ec.value() != 0 ) {
 			dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
-			return false;
+			return ec;
 		}
 	}
 
@@ -366,13 +368,13 @@ convertToStagingDirectory(
 		int rv = chown( parentDir.string().c_str(), get_condor_uid(), get_condor_gid() );
 		if( rv != 0 ) {
 			dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-			return errno;
+			return std::error_code(errno, std::system_category());
 		}
 	}
 
 
 	dprintf( D_ZKM, "convertToStagingDirectory(): end.\n" );
-	return true;
+	return ec_true;
 }
 
 
@@ -392,7 +394,7 @@ check_permissions(
 }
 
 
-bool
+std::error_code
 mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -411,17 +413,19 @@ mapContentsOfDirectoryInto(
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", location.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return false;
+		return ec_false;
 	}
 
 	// To be clear: this recurses into subdirectories for us.
@@ -430,7 +434,7 @@ mapContentsOfDirectoryInto(
 	);
 	if( ec.value() != 0 ) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
+		return ec;
 	}
 
 	for( const auto & entry : rdi ) {
@@ -440,21 +444,21 @@ mapContentsOfDirectoryInto(
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			auto dir = sandbox / relative_path;
 			std::filesystem::create_directory( dir, ec );
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
+				return ec;
 			}
 			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
+				return std::error_code(rv, std::system_category());
 			}
 
 			continue;
@@ -463,7 +467,7 @@ mapContentsOfDirectoryInto(
 
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			// If this file already exists, it must have been written
@@ -475,25 +479,25 @@ mapContentsOfDirectoryInto(
 			);
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
+				return ec;
 			}
 			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
+				return std::error_code(rv, std::system_category());
 			}
 		}
 	}
 
 
 	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): end.\n" );
-	return true;
+	return ec_true;
 }
 
 
-bool
+std::error_code
 copyContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -512,17 +516,19 @@ copyContentsOfDirectoryInto(
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
 		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): sandbox '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): location '%s' is not a directory, aborting.\n", location.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
 		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return false;
+		return ec_false;
 	}
 
 
@@ -531,7 +537,7 @@ copyContentsOfDirectoryInto(
 	);
 	if( ec.value() != 0 ) {
 		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
+		return ec;
 	}
 
 	for( const auto & entry : di ) {
@@ -547,28 +553,28 @@ copyContentsOfDirectoryInto(
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			auto dir = sandbox / relative_path;
 			std::filesystem::create_directory( dir, ec );
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
+				return ec;
 			}
 			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
+				return std::error_code(rv, std::system_category());
 			}
 
 			continue;
 		} else {
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
 				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			std::filesystem::copy_file(
@@ -584,7 +590,7 @@ copyContentsOfDirectoryInto(
 					ec.message().c_str(), ec.value()
 				);
 
-				return false;
+				return ec;
 			}
 
 			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
@@ -593,7 +599,7 @@ copyContentsOfDirectoryInto(
 
 
 	dprintf( D_ZKM, "CopyStagingDirectory::map(): end.\n" );
-	return true;
+	return ec_true;
 }
 
 
@@ -601,7 +607,7 @@ copyContentsOfDirectoryInto(
 #include <sys/mount.h>
 
 
-bool
+std::error_code
 bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -620,17 +626,19 @@ bindMountContentsOfDirectoryInto(
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
 		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", location.string().c_str() );
-		return false;
+		if( ec.value() != 0 ) { return ec; }
+		return ec_false;
 	}
 
 	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
 		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return false;
+		return ec_false;
 	}
 
 
@@ -641,7 +649,7 @@ bindMountContentsOfDirectoryInto(
 	);
 	if( ec.value() != 0 ) {
 		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
+		return ec;
 	}
 
 	for( const auto & entry : di ) {
@@ -659,20 +667,20 @@ bindMountContentsOfDirectoryInto(
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			std::filesystem::create_directory( target, ec );
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", target.string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
+				return ec;
 			}
 
 			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 		} else {
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
 				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
+				return ec_false;
 			}
 
 			int fd = safe_create_keep_if_exists(
@@ -681,7 +689,7 @@ bindMountContentsOfDirectoryInto(
 			);
 			if( fd == -1 ) {
 				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to touch(%s): %s (%d)\n", target.string().c_str(), strerror(errno), errno );
-				return false;
+				return ec_false;
 			}
 			close(fd);
 
@@ -702,7 +710,7 @@ bindMountContentsOfDirectoryInto(
 		);
 		if( rv != 0 ) {
 			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_BIND, NULL ): %s (%d)\n", entry.path().string().c_str(), target.string().c_str(), strerror(errno), errno );
-			return false;
+			return std::error_code(rv, std::system_category());
 		}
 
 		rv = mount(
@@ -712,25 +720,25 @@ bindMountContentsOfDirectoryInto(
 		);
 		if( rv != 0 ) {
 			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_REMOUNT | MS_BIND MS_READONLY, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
-			return false;
+			return std::error_code(rv, std::system_category());
 		}
 	}
 
 
 	dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): end.\n" );
-	return true;
+	return ec_true;
 }
 
 
 #else /* LINUX */
 
 
-bool
+std::error_code
 bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
 ) {
-	return false;
+	return ec_false;
 }
 
 #endif /* not LINUX */
@@ -744,19 +752,19 @@ bindMountContentsOfDirectoryInto(
 // Define HardLinkStagingDirectory.
 //
 
-bool
+std::error_code
 HardlinkStagingDirectory::create() {
-	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+	return createStagingDirectory( this->parentDir, this->path() );
 }
 
 
-bool
+std::error_code
 HardlinkStagingDirectory::modify() {
 	return convertToStagingDirectory( this->path() );
 }
 
 
-bool
+std::error_code
 HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
 	return mapContentsOfDirectoryInto( this->path(), destination );
 }
@@ -779,19 +787,19 @@ HardlinkStagingDirectory::usable() {
 // Define BindMountStagingDirectory.
 //
 
-bool
+std::error_code
 BindMountStagingDirectory::create() {
-	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+    return createStagingDirectory( this->parentDir, this->path() );
 }
 
 
-bool
+std::error_code
 BindMountStagingDirectory::modify() {
 	return convertToStagingDirectory( this->path() );
 }
 
 
-bool
+std::error_code
 BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
 	return bindMountContentsOfDirectoryInto( this->path(), destination );
 }
@@ -816,19 +824,19 @@ BindMountStagingDirectory::usable() {
 // Define CopyStagingDirectory.
 //
 
-bool
+std::error_code
 CopyStagingDirectory::create() {
-	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+	return createStagingDirectory( this->parentDir, this->path() );
 }
 
 
-bool
+std::error_code
 CopyStagingDirectory::modify() {
 	return convertToStagingDirectory( this->path() );
 }
 
 
-bool
+std::error_code
 CopyStagingDirectory::map( const std::filesystem::path & destination ) {
 	return copyContentsOfDirectoryInto( this->path(), destination );
 }

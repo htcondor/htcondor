@@ -10,9 +10,9 @@ class StagingDirectory {
 	public:
 
 		static bool usable() { return false; }
-		virtual bool create() = 0;
-		virtual bool modify() = 0;
-		virtual bool map( const std::filesystem::path & d ) = 0;
+		virtual std::error_code create() = 0;
+		virtual std::error_code modify() = 0;
+		virtual std::error_code map( const std::filesystem::path & d ) = 0;
 		virtual std::filesystem::path path() { return stagingDir; }
 
 		virtual ~StagingDirectory() = default;

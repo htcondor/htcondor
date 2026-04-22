@@ -501,10 +501,10 @@ Starter::handleJobSetupCommand(
 				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, -1 );
 			}
 
-			int errorCode = staging->create();
-			if( errorCode ) {
+			std::error_code errorCode = staging->create();
+			if( errorCode.value() != 0 ) {
 				dprintf( D_ALWAYS, "Failed to create() staging directory, reporting failure.\n" );
-				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode );
+				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 			}
 
 
@@ -523,9 +523,11 @@ Starter::handleJobSetupCommand(
 				// and its contents suitable for mapping before we actually
 				// do the mapping.  This will need to be synchronized with
 				// our mapping implementation.
-				if(! staging->modify()) {
+				std::error_code errorCode = staging->modify();
+				if( errorCode.value() != 0 ) {
 					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", staging->path().string().c_str() );
 				}
+				// Not sure that it's OK to fail here, actually.
 			}
 
 			// We could send a generic event notification here, as we did
@@ -671,11 +673,11 @@ Starter::handleJobSetupCommand(
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
 			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
-			bool result = staging->map( sandbox );
+			std::error_code errorCode = staging->map( sandbox );
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-			context.InsertAttr( ATTR_RESULT, result );
+			context.InsertAttr( ATTR_RESULT, errorCode.value() == 0 );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_ABORT ) {
