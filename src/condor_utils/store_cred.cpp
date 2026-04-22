@@ -1555,8 +1555,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		if ( ! sock->get(credlen)) {
 			got_message = false;
 		} else if (credlen) {
-			if (credlen > 0x1000000 * 100) {
-				dprintf(D_ALWAYS, "store_cred: ERROR cred too large (%d). possible protocol mismatch\n", credlen);
+			if (credlen < 0 || credlen > 100 * 1024 * 1024) {
+				dprintf(D_ALWAYS, "store_cred: ERROR cred size invalid (%d). possible protocol mismatch\n", credlen);
 				got_message = false;
 			} else {
 				cred.set((char*)malloc(credlen));
