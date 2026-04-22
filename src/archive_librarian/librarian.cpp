@@ -14,7 +14,6 @@
 #include <fstream>
 #include <memory>
 #include <optional>
-#include <regex>
 #include <string>
 #include <unordered_set>
 
@@ -56,13 +55,12 @@ static std::string computeFileHash(const std::string& path) {
 
 // Extracts the YYYYMMDDTHHMMSS rotation timestamp from a filename suffix.
 // Returns nullopt when the filename has no rotation suffix.
+// NOTE: findHistoryFiles() gets all archive files and verifies that each
+//       is a rotated archive file in <basename>.YYYYMMDDTHHMMSS format
+// NOTE: rfind in case history file basename contains '.' e.g. schedd1.history
 static std::optional<std::string> extractRotationTime(const std::string& filename) {
-    static const std::regex rotatedPattern(R"(.*(\d{8}T\d{6})\d*$)");
-    std::smatch match;
-    if (std::regex_match(filename, match, rotatedPattern)) {
-        return match[1].str();
-    }
-    return std::nullopt;
+    auto pos = filename.rfind(".");
+    return (pos == std::string::npos || pos + 1 >= filename.length()) ? std::nullopt : std::make_optional(filename.substr(pos + 1));
 }
 
 // Collects disk metadata for path and returns a populated ArchiveFile.
@@ -133,7 +131,8 @@ static std::optional<ArchiveFile> makeArchiveFile(const std::string& path) {
  */
 bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
                                const std::string& path,
-                               ArchiveFile& info) {
+                               ArchiveFile& info,
+                               int64_t limit) {
     if ( ! info.reader) {
         auto reader = std::make_unique<ArchiveReader>(path, ArchiveReader::Direction::Forward);
         if ( ! reader->IsOpen()) {
@@ -167,6 +166,7 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
         }
         prevPos = curPos;
         records.push_back(rec);
+        if (limit > 0 && static_cast<int64_t>(records.size()) >= limit) { break; }
     }
 
     // Store the position *after* the last processed byte so that
@@ -540,7 +540,8 @@ bool Librarian::update() {
                 path.c_str(), (long long)info.last_offset);
 
         std::vector<ArchiveRecord> records;
-        if ( ! readJobRecords(records, path, info)) {
+        int64_t remaining = config[conf::ll::MaxRecordsPerUpdate] - status.records_processed;
+        if ( ! readJobRecords(records, path, info, remaining)) {
             dprintf(D_ERROR, "Failed to read job records from %s\n", path.c_str());
             return false;
         }
@@ -594,7 +595,7 @@ void Librarian::reconfig(bool startup) {
     using namespace LibrarianConfigOptions;
 
     if (startup) {
-        config[i::UpdateInterval] = param_integer("LIBRARIAN_UPDATE_INTERVAL", 30);
+        config[i::UpdateInterval] = param_integer("LIBRARIAN_UPDATE_INTERVAL", 5);
     }
 
     param(config[str::ArchiveFile], "HISTORY");
@@ -604,7 +605,7 @@ void Librarian::reconfig(bool startup) {
     config[i::StatusRetentionSeconds]     = param_integer("LIBRARIAN_STATUS_RETENTION_SECONDS", 300);
 
     param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", config[ll::MaxRecordsPerUpdate], true,
-                   1'000'000);
+                   100'000);
     param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[ll::DBMaxSizeBytes], true,
                    2LL * 1024 * 1024 * 1024);
 

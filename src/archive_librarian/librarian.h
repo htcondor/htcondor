@@ -40,7 +40,7 @@ private:
     double EstimatedBytesPerJobInDatabase_{1024};
 
     // update() helpers
-    bool readJobRecords(std::vector<ArchiveRecord>& records, const std::string& path, ArchiveFile& info);
+    bool readJobRecords(std::vector<ArchiveRecord>& records, const std::string& path, ArchiveFile& info, int64_t limit = -1);
     void reconcileArchiveFiles(const std::vector<std::string>& archive_files);
     bool calculateEstimatedBytesPerJob();
     void updateBytesPerJobEstimate();

@@ -17,7 +17,7 @@ namespace LibrarianConfigOptions {
 
 	enum class ll { // Librarian 64 byte integer config options
 		DBMaxSizeBytes = 0,                           // Maximum size of data base in bytes
-        MaxRecordsPerUpdate,                          // Maximum records to process per update
+		MaxRecordsPerUpdate,                          // Maximum records to process per update
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -39,9 +39,9 @@ public:
 	LibrarianConfig() {
 		using namespace LibrarianConfigOptions;
 
-		intOpts[static_cast<size_t>(ll::MaxRecordsPerUpdate)] = 1'000'000;
+		int64Opts[static_cast<size_t>(ll::MaxRecordsPerUpdate)] = 100'000;
 		intOpts[static_cast<size_t>(i::DBMaxJobCacheSize)] = 10'000;
-		intOpts[static_cast<size_t>(i::UpdateInterval)] = 30;
+		intOpts[static_cast<size_t>(i::UpdateInterval)] = 5;
 		intOpts[static_cast<size_t>(i::StatusRetentionSeconds)] = 300;
 		int64Opts[static_cast<size_t>(ll::DBMaxSizeBytes)] = 2LL * 1024 * 1024 * 1024;
 		doubleOpts[static_cast<size_t>(dbl::DBHighWaterMark)] = 0.97;

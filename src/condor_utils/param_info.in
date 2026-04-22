@@ -5862,7 +5862,7 @@ description=Path to the HTCondor archive librarian daemon binary
 tags=master
 
 [LIBRARIAN_UPDATE_INTERVAL]
-default=30
+default=5
 type=int
 description=Archive librarians update interval in seconds
 tags=librarian
@@ -5886,7 +5886,7 @@ description=Time in seconds per update status rows will stay in the archive libr
 tags=librarian
 
 [LIBRARIAN_MAX_UPDATES_PER_CYCLE]
-default=1000000
+default=100000
 #type=longlong
 description=The upper limit of records indexed in one update interval for the archive librarian.
 tags=librarian
