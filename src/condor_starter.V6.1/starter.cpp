@@ -1947,7 +1947,13 @@ Starter::createTempExecuteDir( void )
 				if (fd >= 0) {
 					TemporaryPrivSentry sentry(PRIV_ROOT);
 					r = fchown(fd, get_user_uid(), get_user_gid());
-					close(fd);
+					if (r < 0) {
+						int fchown_errno = errno;
+						close(fd);
+						errno = fchown_errno;
+					} else {
+						close(fd);
+					}
 				} else {
 					r = -1;
 				}
