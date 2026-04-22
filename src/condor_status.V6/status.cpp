@@ -190,6 +190,7 @@ std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored f
 bool explicit_format = false;
 bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
 std::vector<const char *> append_autoformat_args;
+static void add_aaf_columns_to_print_mask();
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 int			sdo_mode = SDO_NotSet;
@@ -207,7 +208,7 @@ bool        multipleAdsTest = false;
 const char* multipleAdsTestOpts = nullptr;
 CondorQuery *query;
 char		buffer[1024];
-char		*myName;
+const char* myName;
 ClassadSortSpecs sortSpecs;
 bool			noSort = false; // set to true to disable sorting entirely
 bool			naturalSort = true;
@@ -221,7 +222,7 @@ AdCluster<std::string> ad_groups; // does the actually grouping
 std::string get_ad_name_string(ClassAd &ad) { std::string name; ad.LookupString(ATTR_NAME, name); return name; }
 
 
-char *			target = NULL;
+const char *	target = NULL;
 bool			print_attrs_in_hash_order = false;
 
 
@@ -255,54 +256,9 @@ PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
 
 // function declarations
 void usage 		(const char * opts=NULL);
-void firstPass  (int, char *[]);
-void secondPass (int, char *[]);
+void firstPass  (int, const char *[]);
+void secondPass (int, const char *[]);
 
-// incorporate the -aaf (append autoformat) columns into the output format.
-static void add_aaf_columns_to_print_mask()
-{
-	if (append_autoformat_args.empty())
-		return;
-
-	// if the last column of the existing format has width 0, set it to a non-zero width
-	// so that the column gets auto-width adjusted to match the data.
-	int lastcol = mainPP.pm.ColCount()-1;
-	mainPP.pm.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
-		if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
-			fmt->width = 3;
-			fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
-		}
-		return 1;
-		}, &lastcol);
-
-	int nargs = (int)append_autoformat_args.size();
-	append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
-	classad::References refs;
-	const char * pcolon;
-	for (int i = 0; i < nargs; ++i) {
-		if (is_dash_arg_colon_prefix(append_autoformat_args[i], "aaf", &pcolon, 3)) {
-			const char * format_char = nullptr;
-			if (pcolon) {
-				++pcolon;
-				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
-				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
-				if (*pcolon) {
-					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aaf:V are permitted.\n", pcolon);
-					exit(1);
-				}
-			}
-			int ixNext = parse_autoformat_args(nargs, &append_autoformat_args[0], i+1, format_char, mainPP.pm, refs, diagnose, true);
-			if (ixNext < 0) {
-				exit(-ixNext);
-			}
-			if (ixNext > i) {
-				i = ixNext-1;
-			}
-		}
-	}
-	projList.insert(refs.begin(), refs.end());
-	mainPP.wide_display = true;
-}
 
 // prototype for CollectorList:query, CondorQuery::processAds,
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
@@ -1217,7 +1173,7 @@ void doNormalOutput( struct _process_ads_info & ai, AdTypes & adType );
 void doMergeOutput( struct _process_ads_info & ai );
 
 int
-main (int argc, char *argv[])
+main (int argc, const char *argv[])
 {
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
@@ -2396,7 +2352,53 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "TOTAL_GPUS", "GPUs", 0, local_render_totgpus, "AssignedGPUs\0OfflineGPUs\0" },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
+static const CustomAutoformatColumns CustomAfColumns{{}, &LocalPrintFormatsTable};
 
+// incorporate the -aaf (append autoformat) columns into the output format.
+static void add_aaf_columns_to_print_mask()
+{
+	if (append_autoformat_args.empty())
+		return;
+
+	// if the last column of the existing format has width 0, set it to a non-zero width
+	// so that the column gets auto-width adjusted to match the data.
+	int lastcol = mainPP.pm.ColCount()-1;
+	mainPP.pm.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
+		if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
+			fmt->width = 3;
+			fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
+		}
+		return 1;
+		}, &lastcol);
+
+	int nargs = (int)append_autoformat_args.size();
+	append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
+	auto argv = &append_autoformat_args[0];
+	classad::References refs;
+	const char * pcolon;
+	for (int i = 0; i < nargs; ++i) {
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V, r, T or Y is permitted.\n", pcolon);
+					exit(1);
+				}
+			}
+			int ixNext = parse_autoformat_args(nargs, argv, i+1, format_char, mainPP.pm, refs, diagnose, true, &CustomAfColumns);
+			if (ixNext < 0) {
+				exit(-ixNext);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	projList.insert(refs.begin(), refs.end());
+	mainPP.wide_display = true;
+}
 
 int PrettyPrinter::set_print_mask_from_stream (
 	SimpleInputStream & stream,
@@ -2614,21 +2616,23 @@ usage (const char * opts)
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-format <fmt> <attr>\tDisplay <attr> values with formatting\n"
 		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
-		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
+		"\t-af[:jlhVrTY,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [lhVr,tng] options modify the formatting\n"
-		//"\t        j   display Job id\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
+		"\t        j   display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
-		"\t-aaf[:Vr] <attr> [attr2 [...]]\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
 		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-merge <file>\t\tCompare ads in file and query by sort key\n"
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
@@ -2655,7 +2659,7 @@ usage (const char * opts)
 
 
 void
-firstPass (int argc, char *argv[])
+firstPass (int argc, const char *argv[])
 {
 	int had_pool_error = 0;
 	int had_direct_error = 0;
@@ -3198,7 +3202,7 @@ firstPass (int argc, char *argv[])
 
 
 void
-secondPass (int argc, char *argv[])
+secondPass (int argc, const char *argv[])
 {
 	const char * pcolon = NULL;
 	char *daemonname;
@@ -3269,6 +3273,16 @@ secondPass (int argc, char *argv[])
 				exit( 1 );
 			}
 
+#if 1
+			if (pcolon) ++pcolon;
+			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mainPP.pm, projList, diagnose, false);
+			if (ixNext < 0) {
+				exit(1);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+#else
 			bool flabel = false;
 			bool fCapV  = false;
 			bool fRaw = false;
@@ -3328,6 +3342,7 @@ secondPass (int argc, char *argv[])
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
+#endif
 			continue;
 		}
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {

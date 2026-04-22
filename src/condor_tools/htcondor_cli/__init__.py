@@ -111,6 +111,7 @@ from htcondor_cli.server import Server
 from htcondor_cli.access_point import AccessPoint
 from htcondor_cli.central_manager import CentralManager
 from htcondor_cli.ocu import OCU
+from htcondor_cli.ep import EP
 NOUNS = _OrderedDict()
 NOUNS["dag"] = DAG
 NOUNS["job"] = Job
@@ -119,6 +120,7 @@ NOUNS["eventlog"] = EventLog
 NOUNS["credential"] = Credential
 NOUNS["server"] = Server
 NOUNS["ap"] = AccessPoint
+NOUNS["ep"] = EP
 NOUNS["cm"] = CentralManager
 NOUNS["ocu"] = OCU
 

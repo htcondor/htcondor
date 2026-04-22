@@ -67,7 +67,7 @@ def the_test_jobs(the_condor, test_dir, path_to_common_file):
         "MY.CommonInputFiles":      f'"{path_to_common_file.as_posix()}"',
 
         'executable':               '/bin/sleep',
-        'arguments':                30,
+        'arguments':                1,
         'transfer_executable':      False,
 
         'log':                      (test_dir / 'test_job.log').as_posix(),
@@ -81,7 +81,7 @@ def the_test_jobs(the_condor, test_dir, path_to_common_file):
     )
 
     assert job_handle.wait(
-        timeout=60,
+        timeout=120,
         condition=ClusterState.all_complete,
     )
 

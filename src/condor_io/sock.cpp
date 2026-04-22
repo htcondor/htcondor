@@ -2479,7 +2479,8 @@ Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
 		std::string peer_ip = _who.to_ip_string();
-		strcpy(_peer_ip_buf, peer_ip.c_str());
+		strncpy(_peer_ip_buf, peer_ip.c_str(), IP_STRING_BUF_SIZE);
+		_peer_ip_buf[IP_STRING_BUF_SIZE - 1] = '\0';
 	}
 	return _peer_ip_buf;
 		/*

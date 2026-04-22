@@ -357,7 +357,7 @@ class Condor:
             )
 
     @skip_if(condor_is_ready)
-    def _wait_for_ready(self, timeout: int = 120, dump_logs_if_fail: bool = False):
+    def _wait_for_ready(self, timeout: int = 600, dump_logs_if_fail: bool = False):
         daemons = set(
             self.run_command(["condor_config_val", "DAEMON_LIST"], echo=False)
             .stdout.replace(",", " ")

@@ -51,6 +51,11 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
  		return false;
 	}
 
+	if ((numExprs < 0) || (numExprs > 1'000'000)) {
+		dprintf(D_FULLDEBUG, "Suspicious number of expressions: %d\n", numExprs);
+		return false;
+	}
+
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
 

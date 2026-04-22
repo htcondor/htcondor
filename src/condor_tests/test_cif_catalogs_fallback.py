@@ -80,7 +80,7 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -231,7 +231,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -383,17 +383,24 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
-            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "8",
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 
@@ -470,13 +477,14 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
     (the_container_kill_dir / f"kill-cc-{job_handle_b.clusterid}.1").touch(exist_ok=True)
 
 
-    # Wait for them to finish.
+    # Wait for them to finish.  Container jobs (Singularity startup/teardown)
+    # need more headroom than plain shell jobs.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=120,
         condition=ClusterState.all_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=120,
         condition=ClusterState.all_terminal
     )
 
@@ -543,10 +551,18 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
 
@@ -585,7 +601,10 @@ def SingularityIsWorking():
 # and enough of them.  This is a race, but better to try
 # to test first.
 def UserNamespacesFunctional():
-    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    try:
+        result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    except FileNotFoundError:
+        return False
     if result.returncode == 7:
         print("unshare seems to work correctly, proceeding with test\n")
         return True

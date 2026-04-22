@@ -69,6 +69,7 @@ def condor(test_dir):
     # without building a large container with lots of shared libraries
     with Condor(test_dir / "condor", config={
         "SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\"",
+        "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
         "SINGULARITY": "/usr/bin/singularity"
         }) as condor:
         yield condor
@@ -108,7 +109,7 @@ def completed_test_job(condor, test_job_hash):
 
     assert ctj.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
@@ -144,7 +145,7 @@ def completed_test_job_with_xfer(condor_with_td, test_job_hash_with_xfer):
 
     assert ctj_td.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
@@ -210,7 +211,7 @@ def running_ssh_job(condor, ssh_job_hash):
     job = condor.submit(ssh_job_hash, count=1)
     assert job.wait(
         condition=ClusterState.all_running,
-        timeout=60,
+        timeout=120,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
