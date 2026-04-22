@@ -629,9 +629,7 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 			DockerAPI::rm( containerName, error );
 
 			starter->jic->allJobsGone();
-			this->JobExit();
-
-			starter->ShutdownFast();
+			starter->StarterExit(starter->GetShutdownExitCode());
 			return ReapResult::JobDone;
 		}
 
