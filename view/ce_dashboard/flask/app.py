@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from blueprints.landing import landing_bp
 from blueprints.overview import overview_bp
+from blueprints.landing_graphs import landing_graphs_bp
 import os
 import utils
 
@@ -63,6 +64,7 @@ def handle_edit():
 # Register blueprints
 app.register_blueprint(landing_bp)
 app.register_blueprint(overview_bp)
+app.register_blueprint(landing_graphs_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

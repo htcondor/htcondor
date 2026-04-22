@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% import 'utils.jinja' as utils %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 40vh;
+            min-height: 120px;
+        }
+		#table-now .graph .vizchart {
+			height: 8vh;
+		}
+		#table-now .google-visualization-table {
+			border-style: groove;
+		}
+		#table-now .google-visualization-table-td {
+		    text-align: center;
+			font-size: 125%;
+		}
+		.htcv-col-5 .graph .vizchart {
+			height: 12vh;
+		}
+		
+		.graphs .row:nth-child(even) {
+            background-color: whitesmoke;
+		}
+		
+		svg > rect {
+		    fill: transparent;
+		}
+		.site-name {
+		    font-weight: bold;
+		}
+		.ccstar-label {
+		    color: green;
+		    font-weight: bold;
+		}
+		.site-stats {
+		    font-size: 0.8em;
+		    color: #555;
+		    margin-bottom: 0;
+		}
+		
+		.site-info p {
+            padding-bottom: 2px;
+            padding-top: 2px;
+            padding-left: 8px;
+            margin-bottom: 0;
+		}
+		
+		.header-labels {
+            font-weight: bold;
+		}
+		
+		.graph-headers {
+		    position: sticky;
+		    top: 50px; /* height of the Bootstrap navbar */
+		    z-index: 100;
+		    background-color: white;
+		    border-bottom: 1px solid #dee2e6;
+		}
+		
+		.graph-headers p {
+		    margin-bottom: 8px;
+			margin-top: 8px;
+		}
+		
+		.navbar {
+		    margin-bottom: 0;
+		}
+    </style>
+{% endblock style %}
+
+{% block js %}
+    {{ super() }}
+    <script src="static/util.js"></script>
+{% endblock js %}
+
+{% block body %}
+
+<div class="graph-headers">
+   <div class="row header-labels">
+       <div class="col-2 htcv-col-2 site-info">
+           <p>Site</p>
+       </div>
+       <div class="col-5 htcv-col-5">
+           <p>Glideins Running vs EPs Reporting</p>
+       </div>
+       <div class="col-5 htcv-col-5">
+           <p>CPUs Contributed vs Allocated</p>
+       </div>
+   </div>
+</div>
+
+<div class="graphs">
+{% for site in sites %}
+{% set i = loop.index %}
+{% set cpu_id = i ~ '-cpu' %}
+{% set glideins_id = i ~ '-glideins' %}
+    <div class="row">
+        <div class="col-2 htcv-col-2 site-info" data-fqdn="{{ site.fqdn }}">
+            <p class="site-name">{{ site.name }}</p>
+            <p>{{ site.site_name }}{% if site.isCCStar %} <span class="ccstar-label">(CC*)</span>{% endif %}</p>
+            <p class="site-stats">Loading update time...</p>
+        </div>
+        <div class="col-5 htcv-col-5" id="{{ glideins_id }}"></div>
+        <div class="col-5 htcv-col-5" id="{{ cpu_id }}"></div>
+    </div>
+    <script>
+    new HTCondorView({
+        dst_id: "{{ cpu_id }}",
+        title: '',
+        data_url: '/data/landing_graphs?r=week',
+        has_edit_menu: false,
+        graph_query: urlEscapeGraphQuery(`
+            filter=Site={{ site.fqdn }}
+            pivot=Date
+            add=CpusInUse,CpusNotInUse,CpusContributed
+            rename=CpusInUse=CpusAllocated
+            unselect=Site,EPsRunning,GlideinsRunning,CpusNotInUse
+            legend.position=none
+            series.0.areaOpacity=1
+            series.1.areaOpacity=0.05
+            series.0.color=#66AADD
+            series.1.color=#FF0000
+            vAxis.format=short
+            chart=area
+        `)
+    });
+    new HTCondorView({
+        dst_id: "{{ glideins_id }}",
+        title: '',
+        data_url: '/data/landing_graphs?r=week',
+        has_edit_menu: false,
+        graph_query: urlEscapeGraphQuery(`
+            filter=Site={{ site.fqdn }}
+            pivot=Date
+            unselect=Site,CpusInUse,CpusNotInUse
+            legend.position=none
+            series.0.areaOpacity=1
+            series.1.areaOpacity=0.025
+            series.0.color=#999999
+            series.1.color=#FF6600
+            vAxis.format=short
+            chart=area
+        `)
+    });
+    </script>
+{% endfor %}
+</div>
+
+<script>
+// Fetch the latest heard-from time per site FQDN
+$.getJSON('/data/ce_update_times', function (data) {
+    $('[data-fqdn]').each(function () {
+        const $labelCol = $(this);
+        const fqdn = $labelCol.data('fqdn');
+        const date = data[fqdn];
+        if (date) {
+            $labelCol.find('.site-stats').text(date);
+        } else {
+            $labelCol.find('.site-stats').text('');
+        }
+    });
+});
+</script>
+
+{% endblock body %}
