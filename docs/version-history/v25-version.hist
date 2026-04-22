@@ -2,10 +2,6 @@
 
 *** 25.0.10 bugs
 
-- Fixed a rare bug in the *condor_startd* that would cause it to crash
-  when users installed a custom docker wrapper script.
-  :jira:`3691
-
 *** 25.0.9 bugs
 
 *** 25.0.8 bugs
