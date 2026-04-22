@@ -1,3 +1,9 @@
+*** 24.0.20 features
+
+- HTCondor tarballs now contain `Pelican 7.24.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.24.2.
+
 *** 24.0.20 bugs
 
 - Fixed a bug in the parallel universe where the job attribute
