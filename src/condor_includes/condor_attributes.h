@@ -82,6 +82,7 @@
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
 #define ATTR_COMMAND  "Command"
 #define ATTR_COMMON_INPUT_FILES "CommonInputFiles"
+#define ATTR_COMMON_INPUT_FILES_SIZE_MB "CommonInputFilesSizeMB"
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_DURATION "ContainerDuration"
@@ -338,6 +339,7 @@
 #define ATTR_INTERACTIVE  "Interactive"
 #define ATTR_IS_DAEMON_CORE  "IsDaemonCore"
 #define ATTR_IS_LOCAL_STARTD  "IsLocalStartd"
+#define ATTR_IS_DIRECT_ATTACH  "IsDirectAttach"
 #define ATTR_IS_OWNER  "IsOwner"
 #define ATTR_IS_QUEUE_SUPER_USER  "IsQueueSuperUser"
 #define ATTR_IS_LOCAL_USER "IsLocalUser"
@@ -607,6 +609,7 @@
 #define ATTR_NOTIFY_USER  "NotifyUser"
 #define ATTR_NT_DOMAIN  "NTDomain"
 #define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
+#define ATTR_TRANSFER_THESE_CATALOGS "TransferTheseCatalogs"
 //extern const char ATTR_WINDOWS_VERSION [];
 #define ATTR_WINDOWS_MAJOR_VERSION  "WindowsMajorVersion"
 #define ATTR_WINDOWS_MINOR_VERSION  "WindowsMinorVersion"
@@ -711,6 +714,7 @@
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
 #define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"
 #define ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY "RestrictToAuthenticatedIdentity"
+#define ATTR_SLOT_AD  "SlotAd"
 #define ATTR_SLOT_TYPE  "SlotType"
 #define ATTR_SLOT_TYPE_ID  "SlotTypeID"
 #define ATTR_SLOT_WEIGHT  "SlotWeight"
@@ -1340,6 +1344,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 // Attributes related to dataflow jobs
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_SKIP_MATCHMAKING "SkipMatchmaking"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 #ifdef LINUX

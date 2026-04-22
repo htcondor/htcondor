@@ -1983,7 +1983,9 @@ static void PrintResList(ClassAd* ad)
             break;
 
     char* p=strrchr(name,'@');
-    *p='\0';
+	if (p) {
+		*p='\0';
+	}
     time_t Now=time(0)-StartTime;
 	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }

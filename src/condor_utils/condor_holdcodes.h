@@ -217,6 +217,7 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	,ActivationRefusedClaimNotFound = 1034   // claim id was not found
 	,ActivationRefusedOldClaim = 1035        // claim id existed once, but has been consumed (future)
 	,ActivationRefusedUnhealthy = 1036       // slot is unhealthy (future)
+	,StartdRehoming = 1037                   // startd is being rehomed to a different schedd
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
 

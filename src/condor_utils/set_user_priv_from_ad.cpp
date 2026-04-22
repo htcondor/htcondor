@@ -33,8 +33,12 @@ bool init_user_ids_from_ad( const classad::ClassAd &ad )
 	std::string ntdomain;
 
 	if (ad.EvaluateAttrString(ATTR_OS_USER, user)) {
+#if defined(WIN32)
 		owner = name_of_user(user.c_str(), buf);
 		domain = domain_of_user(user.c_str(), nullptr);
+#else
+		owner = user.c_str();
+#endif
 	} else {
 		if (!ad.EvaluateAttrString(ATTR_USER,  user)) {
 			dPrintAd(D_ERROR, ad);

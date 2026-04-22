@@ -31,6 +31,8 @@
 #include <generic_stats.h>
 #include <vector>
 
+#include "transfer_proc.h"
+
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
 

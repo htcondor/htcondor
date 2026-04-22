@@ -14,7 +14,7 @@ class DockerProc : public VanillaProc {
 		virtual int StartJob();
 		virtual int LaunchContainer();
 		virtual int PullImage();
-		virtual bool JobReaper( int pid, int status );
+		virtual ReapResult JobReaper( int pid, int status );
 		virtual int ExecReaper( int pid, int status );
 		virtual int PullReaper( int pid, int status );
 		virtual bool JobExit();

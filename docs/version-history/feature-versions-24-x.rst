@@ -6,6 +6,23 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 24.12.y versions. New features will be added in the 25.x.y feature versions.
 
+Version 24.12.21
+----------------
+
+Release Notes:
+
+.. HTCondor version 24.12.21 released on June 11, 2026.
+
+- HTCondor version 24.12.21 planned release date is June 11, 2026.
+
+New Features:
+
+.. include-history:: features 24.12.21 24.0.21
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.12.21 24.0.21
+
 Version 24.12.20
 ----------------
 
@@ -28,9 +45,7 @@ Version 24.12.19
 
 Release Notes:
 
-.. HTCondor version 24.12.19 released on April 16, 2026.
-
-- HTCondor version 24.12.19 planned release date is April 16, 2026.
+- HTCondor version 24.12.19 released on April 16, 2026.
 
 New Features:
 

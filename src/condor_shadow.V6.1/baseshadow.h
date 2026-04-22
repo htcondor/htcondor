@@ -35,6 +35,8 @@
 
 #include <optional>
 #include "guidance.h"
+#include <utility>
+#include <string>
 #include "catalog_utils.h"
 
 /* Forward declaration to prevent loops... */
@@ -424,15 +426,19 @@ class BaseShadow : public Service
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
+	// Returns false iff there was an error computing an output parameters.
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
-		ClassAd * /* jobAd */
-	) { return {}; }
+		ClassAd * /* jobAd */,
+		std::map<std::string, std::string> * = NULL
+	) { return {ListOfCatalogs()}; }
 
+	// Return false iff there was an error computing an output parameter.
 	virtual bool computeCommonInputFiles(
 		ClassAd * /* jobAd */,
 		ListOfCatalogs & /* commonFileCatalogs */,
-		int & /* required_version */
-	) { return false; }
+		int & /* required_version */,
+		std::map<std::string, std::string> * = NULL
+	) { return true; }
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }
 

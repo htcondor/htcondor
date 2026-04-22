@@ -283,7 +283,7 @@ bool PlacementDaemon::ReadUserMapFile()
 			continue;
 		}
 		if (items[1] == "*") {
-			auto at = items[0].find('@');
+			auto at = items[0].find_last_of('@');
 			items[1] = items[0].substr(0, at);
 		}
 		if (items[1].find('@') == std::string::npos) {

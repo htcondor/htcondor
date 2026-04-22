@@ -483,6 +483,12 @@ public:
 		  */
 	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
+		/** Same as above, but the callback is a std::function whose
+			closure owns any caller state that the legacy overload
+			passed via void *misc_data. Must not be empty.
+		 */
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
 			uses nonblocking connects; everything else is blocking.
@@ -513,6 +519,12 @@ public:
 			@return see definition of StartCommandResult enumeration.
 		*/
 	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+
+		/** Same as above, but the callback is a std::function whose
+			closure owns any caller state that the legacy overload
+			passed via void *misc_data.
+		 */
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the

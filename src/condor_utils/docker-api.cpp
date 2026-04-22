@@ -657,51 +657,6 @@ DockerAPI::execInContainer( const std::string &containerName,
 	return 0;
 }
 
-/*static*/ /* docker cp SRC_PATH CONTAINER : CONTAINER_PATH */
-int DockerAPI::copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
-	const std::string & container,       // container to copy into
-	const std::string & containerPath,     // destination path in container
-	const std::vector<std::string>& options)
-{
-	ArgList args;
-	if (! add_docker_arg(args))
-		return -1;
-	args.AppendArg("cp");
-
-	for (auto& opt: options) {
-		args.AppendArg(opt);
-	}
-
-	args.AppendArg(srcPath);
-
-	std::string dest(container);
-	dest += ":";
-	dest += containerPath;
-	args.AppendArg(dest);
-
-	std::string displayString;
-	args.GetArgsStringForLogging(displayString);
-	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
-
-	MyPopenTimer pgm;
-	if (pgm.start_program(args, true, NULL, false) < 0) {
-		dprintf(D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str());
-		return -2;
-	}
-
-	int exitCode;
-	if (! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
-		pgm.close_program(1);
-		std::string line;
-		readLine(line, pgm.output(), false); chomp(line);
-		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n",
-			displayString.c_str(), exitCode, line.c_str());
-		return -3;
-	}
-
-	return pgm.output_size() > 0;
-}
-
 /*static*/ /* docker cp CONTAINER:CONTAINER_PATH DEST_PATH */
 int DockerAPI::copyFromContainer(const std::string &container, // container to copy into
 	const std::string & containerPath,             // source file or folder in container
@@ -1584,7 +1539,7 @@ gc_image(const std::string & image) {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &DockerAPI::ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1683,7 +1638,7 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
