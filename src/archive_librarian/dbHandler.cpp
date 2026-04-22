@@ -19,8 +19,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include <sqlite3.h>
+
+#ifndef _WIN32
+    #include <sys/stat.h>
+#endif
 
 #include "dbHandler.h"
 #include "SavedQueries.h"
@@ -48,9 +53,16 @@ bool DBHandler::initialize() {
     if (sqlite3_open(config[conf::str::DBPath].c_str(), &db_) != SQLITE_OK) {
         std::string err = sqlite3_errmsg(db_);
         dprintf(D_ERROR, "Failed to open SQLite database: %s\n", err.c_str());
-        sqlite3_close(db_);
+        std::ignore = sqlite3_close(db_);
         return false;
     }
+
+#ifndef _WIN32
+    if (chmod(config[conf::str::DBPath].c_str(), 0644) != 0) {
+        dprintf(D_ERROR, "DBHandler::initialize: failed to set permissions on '%s': %s\n",
+                config[conf::str::DBPath].c_str(), strerror(errno));
+    }
+#endif
 
     char* errMsg = nullptr;
     int rc;
@@ -159,13 +171,13 @@ bool DBHandler::initialize() {
 }
 
 DBHandler::~DBHandler() {
-    if (jobIdLookupStmt_)   { sqlite3_finalize(jobIdLookupStmt_);   jobIdLookupStmt_   = nullptr; }
-    if (userInsertStmt_)    { sqlite3_finalize(userInsertStmt_);     userInsertStmt_    = nullptr; }
-    if (userSelectStmt_)    { sqlite3_finalize(userSelectStmt_);     userSelectStmt_    = nullptr; }
-    if (jobListInsertStmt_) { sqlite3_finalize(jobListInsertStmt_);  jobListInsertStmt_ = nullptr; }
-    if (jobListSelectStmt_) { sqlite3_finalize(jobListSelectStmt_);  jobListSelectStmt_ = nullptr; }
-    if (jobInsertStmt_)     { sqlite3_finalize(jobInsertStmt_);      jobInsertStmt_     = nullptr; }
-    if (jobSelectStmt_)     { sqlite3_finalize(jobSelectStmt_);      jobSelectStmt_     = nullptr; }
+    if (jobIdLookupStmt_)   { std::ignore = sqlite3_finalize(jobIdLookupStmt_);    jobIdLookupStmt_   = nullptr; }
+    if (userInsertStmt_)    { std::ignore = sqlite3_finalize(userInsertStmt_);     userInsertStmt_    = nullptr; }
+    if (userSelectStmt_)    { std::ignore = sqlite3_finalize(userSelectStmt_);     userSelectStmt_    = nullptr; }
+    if (jobListInsertStmt_) { std::ignore = sqlite3_finalize(jobListInsertStmt_);  jobListInsertStmt_ = nullptr; }
+    if (jobListSelectStmt_) { std::ignore = sqlite3_finalize(jobListSelectStmt_);  jobListSelectStmt_ = nullptr; }
+    if (jobInsertStmt_)     { std::ignore = sqlite3_finalize(jobInsertStmt_);      jobInsertStmt_     = nullptr; }
+    if (jobSelectStmt_)     { std::ignore = sqlite3_finalize(jobSelectStmt_);      jobSelectStmt_     = nullptr; }
 
     if (db_) {
         int rc = sqlite3_close(db_);
@@ -215,7 +227,7 @@ bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL) {
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         actualTableCount = sqlite3_column_int(stmt, 0);
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 
     if (actualTableCount != expectedTableCount) {
         dprintf(D_ERROR, "Table count mismatch. Expected: %d, Found: %d\n",
@@ -239,7 +251,7 @@ int DBHandler::getSchemaVersion() {
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         version = sqlite3_column_int(stmt, 0);
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
     return version;
 }
 
@@ -260,14 +272,14 @@ std::pair<int, int> DBHandler::jobIdLookup(int clusterId, int procId) {
         return {-1, -1};
     }
 
-    sqlite3_reset(jobIdLookupStmt_);
-    sqlite3_clear_bindings(jobIdLookupStmt_);
-    sqlite3_bind_int(jobIdLookupStmt_, 1, clusterId);
-    sqlite3_bind_int(jobIdLookupStmt_, 2, procId);
+    std::ignore = sqlite3_reset(jobIdLookupStmt_);
+    std::ignore = sqlite3_clear_bindings(jobIdLookupStmt_);
+    std::ignore = sqlite3_bind_int(jobIdLookupStmt_, 1, clusterId);
+    std::ignore = sqlite3_bind_int(jobIdLookupStmt_, 2, procId);
 
     int rc = sqlite3_step(jobIdLookupStmt_);
     if (rc == SQLITE_ROW) {
-        int jobId    = sqlite3_column_int(jobIdLookupStmt_, 0);
+        int jobId     = sqlite3_column_int(jobIdLookupStmt_, 0);
         int jobListId = sqlite3_column_int(jobIdLookupStmt_, 1);
         jobIdCache_.insert(key, {jobId, jobListId});
         return {jobId, jobListId};
@@ -293,25 +305,25 @@ static int getOrInsertIdPrepared(
     int rc = sqlite3_step(selectStmt);
     if (rc == SQLITE_ROW) {
         id = extractId(selectStmt);
-        sqlite3_reset(selectStmt);
-        sqlite3_clear_bindings(selectStmt);
+        std::ignore = sqlite3_reset(selectStmt);
+        std::ignore = sqlite3_clear_bindings(selectStmt);
         return id;
     } else if (rc != SQLITE_DONE) {
         dprintf(D_ERROR, "Select failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
-        sqlite3_reset(selectStmt);
-        sqlite3_clear_bindings(selectStmt);
+        std::ignore = sqlite3_reset(selectStmt);
+        std::ignore = sqlite3_clear_bindings(selectStmt);
         return -1;
     }
-    sqlite3_reset(selectStmt);
-    sqlite3_clear_bindings(selectStmt);
+    std::ignore = sqlite3_reset(selectStmt);
+    std::ignore = sqlite3_clear_bindings(selectStmt);
 
     bindInsert(insertStmt);
     rc = sqlite3_step(insertStmt);
     if (rc == SQLITE_DONE) {
         id = static_cast<int>(sqlite3_last_insert_rowid(sqlite3_db_handle(insertStmt)));
     } else if (rc == SQLITE_CONSTRAINT) {
-        sqlite3_reset(insertStmt);
-        sqlite3_clear_bindings(insertStmt);
+        std::ignore = sqlite3_reset(insertStmt);
+        std::ignore = sqlite3_clear_bindings(insertStmt);
         bindSelect(selectStmt);
         rc = sqlite3_step(selectStmt);
         if (rc == SQLITE_ROW) {
@@ -320,22 +332,22 @@ static int getOrInsertIdPrepared(
             dprintf(D_ERROR, "Race condition SELECT fallback failed: %s\n",
                     sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
         }
-        sqlite3_reset(selectStmt);
-        sqlite3_clear_bindings(selectStmt);
+        std::ignore = sqlite3_reset(selectStmt);
+        std::ignore = sqlite3_clear_bindings(selectStmt);
     } else {
         dprintf(D_ERROR, "Insert failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(insertStmt)));
     }
 
-    sqlite3_reset(insertStmt);
-    sqlite3_clear_bindings(insertStmt);
+    std::ignore = sqlite3_reset(insertStmt);
+    std::ignore = sqlite3_clear_bindings(insertStmt);
     return id;
 }
 
 bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation) {
     int userId = getOrInsertIdPrepared(
         userInsertStmt_, userSelectStmt_,
-        [&](sqlite3_stmt* s) { sqlite3_bind_text(s, 1, owner.c_str(), -1, SQLITE_TRANSIENT); },
-        [&](sqlite3_stmt* s) { sqlite3_bind_text(s, 1, owner.c_str(), -1, SQLITE_TRANSIENT); },
+        [&](sqlite3_stmt* s) { std::ignore = sqlite3_bind_text(s, 1, owner.c_str(), -1, SQLITE_TRANSIENT); },
+        [&](sqlite3_stmt* s) { std::ignore = sqlite3_bind_text(s, 1, owner.c_str(), -1, SQLITE_TRANSIENT); },
         [](sqlite3_stmt* s)  { return sqlite3_column_int(s, 0); }
     );
     if (userId == -1) {
@@ -345,8 +357,14 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
 
     int jobListId = getOrInsertIdPrepared(
         jobListInsertStmt_, jobListSelectStmt_,
-        [&](sqlite3_stmt* s) { sqlite3_bind_int(s, 1, clusterId); sqlite3_bind_int(s, 2, userId); },
-        [&](sqlite3_stmt* s) { sqlite3_bind_int(s, 1, clusterId); sqlite3_bind_int(s, 2, userId); },
+        [&](sqlite3_stmt* s) {
+            std::ignore = sqlite3_bind_int(s, 1, clusterId);
+            std::ignore = sqlite3_bind_int(s, 2, userId);
+        },
+        [&](sqlite3_stmt* s) {
+            std::ignore = sqlite3_bind_int(s, 1, clusterId);
+            std::ignore = sqlite3_bind_int(s, 2, userId);
+        },
         [](sqlite3_stmt* s)  { return sqlite3_column_int(s, 0); }
     );
     if (jobListId == -1) {
@@ -358,15 +376,15 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
     int jobId = getOrInsertIdPrepared(
         jobInsertStmt_, jobSelectStmt_,
         [&](sqlite3_stmt* s) {
-            sqlite3_bind_int(s, 1, clusterId);
-            sqlite3_bind_int(s, 2, procId);
-            sqlite3_bind_int(s, 3, userId);
-            sqlite3_bind_int(s, 4, jobListId);
-            sqlite3_bind_int64(s, 5, timeOfCreation);
+            std::ignore = sqlite3_bind_int(s, 1, clusterId);
+            std::ignore = sqlite3_bind_int(s, 2, procId);
+            std::ignore = sqlite3_bind_int(s, 3, userId);
+            std::ignore = sqlite3_bind_int(s, 4, jobListId);
+            std::ignore = sqlite3_bind_int64(s, 5, timeOfCreation);
         },
         [&](sqlite3_stmt* s) {
-            sqlite3_bind_int(s, 1, clusterId);
-            sqlite3_bind_int(s, 2, procId);
+            std::ignore = sqlite3_bind_int(s, 1, clusterId);
+            std::ignore = sqlite3_bind_int(s, 2, procId);
         },
         [](sqlite3_stmt* s) { return sqlite3_column_int(s, 0); }
     );
@@ -420,11 +438,11 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
             std::tie(jobId, jobListId) = jobIdLookup(clusterId, procId);
         }
 
-        sqlite3_bind_int64(stmt, 1, offset);
-        sqlite3_bind_int64(stmt, 2, completionDate);
-        sqlite3_bind_int(stmt,  3, jobId);
-        sqlite3_bind_int64(stmt, 4, fileId);
-        sqlite3_bind_int(stmt,  5, jobListId);
+        std::ignore = sqlite3_bind_int64(stmt, 1, offset);
+        std::ignore = sqlite3_bind_int64(stmt, 2, completionDate);
+        std::ignore = sqlite3_bind_int(stmt,  3, jobId);
+        std::ignore = sqlite3_bind_int64(stmt, 4, fileId);
+        std::ignore = sqlite3_bind_int(stmt,  5, jobListId);
 
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
@@ -432,11 +450,11 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
                     (long long)offset, clusterId, procId, sqlite3_errmsg(db_));
         }
 
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
+        std::ignore = sqlite3_reset(stmt);
+        std::ignore = sqlite3_clear_bindings(stmt);
     }
 
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
     return true;
 }
 
@@ -453,9 +471,11 @@ static int64_t convertRotationStringToTimestamp(const std::string& rotationStr) 
  * Inserts ArchiveRecords and updates the File table offset atomically.
  */
 bool DBHandler::insertJobFileRecords(const std::vector<ArchiveRecord>& records, const ArchiveFile& info) {
-    int result = sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    char* errMsg = nullptr;
+    int result = sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
     if (result != SQLITE_OK) {
-        dprintf(D_ERROR, "Failed to begin transaction for job file records insertion\n");
+        dprintf(D_ERROR, "Failed to begin transaction for job file records insertion: %s\n", errMsg);
+        sqlite3_free(errMsg);
         return false;
     }
 
@@ -481,20 +501,20 @@ bool DBHandler::insertJobFileRecords(const std::vector<ArchiveRecord>& records, 
 
     if ( ! info.rotation_time.empty()) {
         int64_t rotationTimestamp = convertRotationStringToTimestamp(info.rotation_time);
-        sqlite3_bind_int64(stmt,  2, rotationTimestamp);
-        sqlite3_bind_int(stmt,    3, info.fully_read ? 1 : 0);
-        sqlite3_bind_double(stmt, 4, info.avg_record_size);
-        sqlite3_bind_int64(stmt,  5, info.records_read);
-        sqlite3_bind_int64(stmt,  6, info.id);
+        std::ignore = sqlite3_bind_int64(stmt,  2, rotationTimestamp);
+        std::ignore = sqlite3_bind_int(stmt,    3, info.fully_read ? 1 : 0);
+        std::ignore = sqlite3_bind_double(stmt, 4, info.avg_record_size);
+        std::ignore = sqlite3_bind_int64(stmt,  5, info.records_read);
+        std::ignore = sqlite3_bind_int64(stmt,  6, info.id);
     } else {
-        sqlite3_bind_int(stmt,    2, info.fully_read ? 1 : 0);
-        sqlite3_bind_double(stmt, 3, info.avg_record_size);
-        sqlite3_bind_int64(stmt,  4, info.records_read);
-        sqlite3_bind_int64(stmt,  5, info.id);
+        std::ignore = sqlite3_bind_int(stmt,    2, info.fully_read ? 1 : 0);
+        std::ignore = sqlite3_bind_double(stmt, 3, info.avg_record_size);
+        std::ignore = sqlite3_bind_int64(stmt,  4, info.records_read);
+        std::ignore = sqlite3_bind_int64(stmt,  5, info.id);
     }
 
     result = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 
     if (result != SQLITE_DONE) {
         dprintf(D_ERROR, "Failed to update Files table for FileId %" PRId64 ": %s\n",
@@ -532,19 +552,19 @@ void DBHandler::writeFileInfo(ArchiveFile& info) {
         return;
     }
 
-    sqlite3_bind_text(insertStmt,   1, info.filename.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(insertStmt,  2, info.inode);
-    sqlite3_bind_text(insertStmt,   3, info.hash.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(insertStmt,  4, info.last_offset);
-    sqlite3_bind_double(insertStmt, 5, info.avg_record_size);
-    sqlite3_bind_int64(insertStmt,  6, info.records_read);
+    std::ignore = sqlite3_bind_text(insertStmt,   1, info.filename.c_str(), -1, SQLITE_TRANSIENT);
+    std::ignore = sqlite3_bind_int64(insertStmt,  2, info.inode);
+    std::ignore = sqlite3_bind_text(insertStmt,   3, info.hash.c_str(), -1, SQLITE_TRANSIENT);
+    std::ignore = sqlite3_bind_int64(insertStmt,  4, info.last_offset);
+    std::ignore = sqlite3_bind_double(insertStmt, 5, info.avg_record_size);
+    std::ignore = sqlite3_bind_int64(insertStmt,  6, info.records_read);
 
     if (sqlite3_step(insertStmt) != SQLITE_DONE) {
         dprintf(D_ERROR, "Insert (or ignore) failed: %s\n", sqlite3_errmsg(db_));
-        sqlite3_finalize(insertStmt);
+        std::ignore = sqlite3_finalize(insertStmt);
         return;
     }
-    sqlite3_finalize(insertStmt);
+    std::ignore = sqlite3_finalize(insertStmt);
 
     const char* selectSql = R"(
         SELECT FileId, LastOffset, AvgRecordSize, RecordsRead FROM Files WHERE FileInode = ? AND FileHash = ?
@@ -556,8 +576,8 @@ void DBHandler::writeFileInfo(ArchiveFile& info) {
         return;
     }
 
-    sqlite3_bind_int64(selectStmt, 1, info.inode);
-    sqlite3_bind_text(selectStmt,  2, info.hash.c_str(), -1, SQLITE_TRANSIENT);
+    std::ignore = sqlite3_bind_int64(selectStmt, 1, info.inode);
+    std::ignore = sqlite3_bind_text(selectStmt,  2, info.hash.c_str(), -1, SQLITE_TRANSIENT);
 
     if (sqlite3_step(selectStmt) == SQLITE_ROW) {
         info.id              = sqlite3_column_int(selectStmt, 0);
@@ -567,7 +587,7 @@ void DBHandler::writeFileInfo(ArchiveFile& info) {
     } else {
         dprintf(D_ERROR, "Failed to fetch FileId/LastOffset after insert/ignore.\n");
     }
-    sqlite3_finalize(selectStmt);
+    std::ignore = sqlite3_finalize(selectStmt);
 }
 
 /**
@@ -590,19 +610,19 @@ void DBHandler::updateFileInfo(const ArchiveFile& info) {
 
     int64_t rotationTimestamp = convertRotationStringToTimestamp(info.rotation_time);
 
-    sqlite3_bind_text(stmt,   1, info.filename.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(stmt,  2, rotationTimestamp);
-    sqlite3_bind_int64(stmt,  3, info.last_offset);
-    sqlite3_bind_int(stmt,    4, info.fully_read ? 1 : 0);
-    sqlite3_bind_double(stmt, 5, info.avg_record_size);
-    sqlite3_bind_int64(stmt,  6, info.records_read);
-    sqlite3_bind_int64(stmt,  7, info.id);
+    std::ignore = sqlite3_bind_text(stmt,   1, info.filename.c_str(), -1, SQLITE_TRANSIENT);
+    std::ignore = sqlite3_bind_int64(stmt,  2, rotationTimestamp);
+    std::ignore = sqlite3_bind_int64(stmt,  3, info.last_offset);
+    std::ignore = sqlite3_bind_int(stmt,    4, info.fully_read ? 1 : 0);
+    std::ignore = sqlite3_bind_double(stmt, 5, info.avg_record_size);
+    std::ignore = sqlite3_bind_int64(stmt,  6, info.records_read);
+    std::ignore = sqlite3_bind_int64(stmt,  7, info.id);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         dprintf(D_ERROR, "Failed to update file info for FileId %" PRId64 " (%s): %s\n",
                 info.id, info.filename.c_str(), sqlite3_errmsg(db_));
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 }
 
 
@@ -613,13 +633,13 @@ void DBHandler::markFileDeleted(long fileId, int64_t deletionTime) {
         dprintf(D_ERROR, "markFileDeleted: prepare failed: %s\n", sqlite3_errmsg(db_));
         return;
     }
-    sqlite3_bind_int64(stmt, 1, deletionTime);
-    sqlite3_bind_int64(stmt, 2, fileId);
+    std::ignore = sqlite3_bind_int64(stmt, 1, deletionTime);
+    std::ignore = sqlite3_bind_int64(stmt, 2, fileId);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         dprintf(D_ERROR, "markFileDeleted: update failed for FileId %ld: %s\n",
                 fileId, sqlite3_errmsg(db_));
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 }
 
 
@@ -668,14 +688,14 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     bool success = false;
 
     if (sqlite3_prepare_v2(db_, statusSql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_int64(stmt, 1, status.update_time);
-        sqlite3_bind_int64(stmt, 2, status.last_file_id);
-        sqlite3_bind_int64(stmt, 3, status.last_file_offset);
-        sqlite3_bind_int64(stmt, 4, status.records_processed);
-        sqlite3_bind_int64(stmt, 5, status.duration_ms);
-        sqlite3_bind_int64(stmt, 6, status.backlog_estimate);
-        sqlite3_bind_int(stmt,   7, status.hit_ingest_limit   ? 1 : 0);
-        sqlite3_bind_int(stmt,   8, status.ran_garbage_collect ? 1 : 0);
+        std::ignore = sqlite3_bind_int64(stmt, 1, status.update_time);
+        std::ignore = sqlite3_bind_int64(stmt, 2, status.last_file_id);
+        std::ignore = sqlite3_bind_int64(stmt, 3, status.last_file_offset);
+        std::ignore = sqlite3_bind_int64(stmt, 4, status.records_processed);
+        std::ignore = sqlite3_bind_int64(stmt, 5, status.duration_ms);
+        std::ignore = sqlite3_bind_int64(stmt, 6, status.backlog_estimate);
+        std::ignore = sqlite3_bind_int(stmt,   7, status.hit_ingest_limit   ? 1 : 0);
+        std::ignore = sqlite3_bind_int(stmt,   8, status.ran_garbage_collect ? 1 : 0);
 
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             dprintf(D_ERROR, "Failed to insert into Status: %s\n", sqlite3_errmsg(db_));
@@ -685,21 +705,21 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     } else {
         dprintf(D_ERROR, "Failed to prepare Status insert: %s\n", sqlite3_errmsg(db_));
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 
     if (success) {
         if (sqlite3_prepare_v2(db_, statusDataSql, -1, &stmt, nullptr) == SQLITE_OK) {
             int idx = 1;
-            sqlite3_bind_double(stmt, idx++, statusData.AvgAdsIngestedPerCycle);
-            sqlite3_bind_double(stmt, idx++, statusData.AvgIngestDurationMs);
-            sqlite3_bind_double(stmt, idx++, statusData.MeanIngestHz);
-            sqlite3_bind_double(stmt, idx++, statusData.MeanArrivalHz);
-            sqlite3_bind_double(stmt, idx++, statusData.MeanBacklogEstimate);
-            sqlite3_bind_int64(stmt,  idx++, statusData.TotalCycles);
-            sqlite3_bind_int64(stmt,  idx++, statusData.TotalAdsIngested);
-            sqlite3_bind_double(stmt, idx++, statusData.HitMaxIngestLimitRate);
-            sqlite3_bind_int(stmt,    idx++, statusData.LastRunLeftBacklog ? 1 : 0);
-            sqlite3_bind_int64(stmt,  idx++, statusData.TimeOfLastUpdate);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.AvgAdsIngestedPerCycle);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.AvgIngestDurationMs);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.MeanIngestHz);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.MeanArrivalHz);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.MeanBacklogEstimate);
+            std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TotalCycles);
+            std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TotalAdsIngested);
+            std::ignore = sqlite3_bind_double(stmt, idx++, statusData.HitMaxIngestLimitRate);
+            std::ignore = sqlite3_bind_int(stmt,    idx++, statusData.LastRunLeftBacklog ? 1 : 0);
+            std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TimeOfLastUpdate);
 
             if (sqlite3_step(stmt) != SQLITE_DONE) {
                 dprintf(D_ERROR, "Failed to insert/update StatusData: %s\n", sqlite3_errmsg(db_));
@@ -709,7 +729,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             dprintf(D_ERROR, "Failed to prepare StatusData insert/update: %s\n", sqlite3_errmsg(db_));
             success = false;
         }
-        sqlite3_finalize(stmt);
+        std::ignore = sqlite3_finalize(stmt);
     }
 
     if (success) {
@@ -731,11 +751,11 @@ void DBHandler::pruneStatusTable(int64_t retentionSeconds) {
         dprintf(D_ERROR, "pruneStatusTable: prepare failed: %s\n", sqlite3_errmsg(db_));
         return;
     }
-    sqlite3_bind_int64(stmt, 1, retentionSeconds);
+    std::ignore = sqlite3_bind_int64(stmt, 1, retentionSeconds);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         dprintf(D_ERROR, "pruneStatusTable: delete failed: %s\n", sqlite3_errmsg(db_));
     }
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 }
 
 /**
@@ -759,7 +779,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         return false;
     }
     int count = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+    std::ignore = sqlite3_finalize(stmt);
 
     if (count == 0) {
         dprintf(D_FULLDEBUG, "No existing data found; skipping recovery.\n");
@@ -815,7 +835,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
             statusData.TimeOfLastUpdate = timeOfUpdate;
         }
     }
-    sqlite3_finalize(stmtS);
+    std::ignore = sqlite3_finalize(stmtS);
 
     // 3. Recover Files — only non-deleted, non-rotated files (active tracking set)
     const char* filesSql =
@@ -845,7 +865,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         std::string path = (fs::path(directory) / file.filename).string();
         archiveFiles[path] = std::move(file);
     }
-    sqlite3_finalize(stmtF);
+    std::ignore = sqlite3_finalize(stmtF);
 
     rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
@@ -888,12 +908,12 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
     }
     if (sqlite3_bind_int(stmt, 1, fileLimit) != SQLITE_OK) {
         dprintf(D_ERROR, "Garbage collection bind failed: %s\n", sqlite3_errmsg(db_));
-        sqlite3_finalize(stmt);
+        std::ignore = sqlite3_finalize(stmt);
         ROLLBACK_AND_RETURN();
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         dprintf(D_ERROR, "Garbage collection execute step1 failed: %s\n", sqlite3_errmsg(db_));
-        sqlite3_finalize(stmt);
+        std::ignore = sqlite3_finalize(stmt);
         ROLLBACK_AND_RETURN();
     }
     sqlite3_finalize(stmt);
