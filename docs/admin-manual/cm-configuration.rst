@@ -1818,8 +1818,16 @@ Recognized metric attribute names and their use:
     recommended.
  Derivative
     A boolean value that specifies if Ganglia should graph the
-    derivative of this metric. Ganglia versions prior to 3.4 do not
-    support this.
+    derivative of this metric. If ``True``, and this metric is an aggregate metric, then the derivative of
+    each value to be aggregated is computed, and the aggregate function is applied to these derivatives.
+    This is useful for numeric attributes that are "counters", i.e. they start at zero and are
+    monotonically increasing throughout the lifetime of a slot or a daemon.  
+    For example, consider the schedd ad attribute :ad-attr:`FileTransferUploadBytes` which publishes the total number of
+    bytes uploaded by the schedd. If `Derivative` is set to ``True``, and this metric is an aggregate metric, then the sum of the derivatives of "FileTransferUploadBytes"
+    across the pool is computed and published. The derivative of "FileTransferUploadBytes" for each ClassAd is the positive change
+    in the value of "FileTransferUploadBytes" since the last update.
+    If this metric is not an aggregate metric, then computing of the derivative is performed by
+    Ganglia as usual (note: this requires Ganglia versions 3.4 or later).
  Type
     A string specifying the type of the metric. Possible values are
     "double", "float", "int32", "uint32", "int16", "uint16", "int8",
