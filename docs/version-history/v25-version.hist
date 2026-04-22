@@ -6,6 +6,13 @@
 
 *** 25.10.0 features
 
+- :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
+  to install a time-limited ceiling *lease*: the prior ceiling is
+  automatically restored after the given number of seconds. Leases are
+  persistent across *condor_negotiator* restarts. A new
+  ``-cancelceilinglease`` option cancels an in-effect lease.
+  :jira:`3518`
+
 - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
   A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
   final job update and exits when the starter process is reaped. While
