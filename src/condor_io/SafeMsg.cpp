@@ -202,6 +202,8 @@ int _condorPacket::getHeader(int msgsize,
 	len = 0;
 	length = msgsize;
 
+	// A valid packet must be at least 8 bytes long (a bare command integer
+	// with no fragmentation or crypto headers and no additional data).
 	if (msgsize < 8) {
 		return true;
 	}
@@ -220,10 +222,9 @@ int _condorPacket::getHeader(int msgsize,
 	memcpy(&stemp, &dataGram[9], 2);
 	seq = ntohs(stemp);
 
-	// Ignore the length field from the header.
-	// Calculate it from the packet size we received.
-	//memcpy(&stemp, &dataGram[11], 2);
-	//len = length = ntohs(stemp);
+	// dataGram[11-12] contains the size of the data following the
+	// fragmentation header, but we can calculate that ourselves by
+	// substracting the header size from the full UDP packet size.
 	length -= SAFE_MSG_HEADER_SIZE;
 
 	memcpy(&ltemp, &dataGram[13], 4);
