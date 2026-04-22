@@ -99,10 +99,10 @@
   submitters in the negotiator.
   :jira;`3283`
 
-- :tool:`condor_status` now supports an `-aaf` option, for append
+- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but
   appends them to the default output.
-  :jira:`3604`
+  :jira:`3604,3684`
 
 - Fixed a spurious error message in the StarterLog about unhandled
   job exit.
@@ -114,6 +114,52 @@
 
 *** 25.8.2 features
 
+- HTCondor now correctly detects and advertises the NVIDIA driver version
+  for NVIDIA GPUs which are configured to run in "MIG" mode.
+  :jira:`3626`
+
+- Singularity or Apptainer jobs now also pass ``--rocm`` to GPU jobs
+  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
+  set to false.
+  :jira:`3537`
+
+- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
+  a running job, the job will transfer any output files it has produced
+  back to the submit machine before exiting.
+  :jira:`3519`
+
+- :tool:`condor_q` now supports a ``-aaf`` option
+  that works like ``-autoformat`` (``-af``) but appends the specified
+  attributes as additional columns after the standard output columns,
+  rather than replacing them.
+  :jira:`3571`
+
+- :tool:`condor_top` now supports a ``-history`` option to read the most
+  recently recorded on disk performance statistics.  Runs much faster,
+  and works even when the *condor_schedd* is slow or not running.
+  :jira:`3582`
+
+- :tool:`htcondor dag status` now also shows information about jobs
+  transferring sandboxes and in the transfer queue.
+  :jira:`3517`
+
+- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
+  in the cooldown state.
+  :jira:`3525`
+
+- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
+  generated submit file.  There is a new option ``-getenv`` to 
+  allow this.
+  :jira:`3549`
+
+- :tool:`condor_ssh_to_job` now work with container universe jobs where
+  the Singularity or Apptainer runtime uses the setuid flow.
+  :jira:`3308`
+
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
+  going beneath a user's floor number of resources while preempting.
+  :jira:`3226`
+
 - The *condor_shadow* can now log a CSV record to the :macro:`SHADOW_RECONNECT_LOG`
   file each time it successfully reconnects to a disconnected starter or
   gives up trying.  Each record contains timing information about when the
@@ -123,18 +169,14 @@
   which defaults to ``True``.
   :jira:`3593`
 
-- HTCondor now correctly detects and advertises the NVIDIA driver version
-  for NVIDIA GPUs which are configured to run in "MIG" mode.
-  :jira:`3626`
+- :tool:`condor_config_val` now has a -default option to shows the default
+  value of a knob.
+  :jira:`2683`
 
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
   (e.g. with :tool:`condor_transfer_data`).
   :jira:`3508`
-
-- :tool:`condor_config_val` now has a -default option to shows the default
-  value of a knob.
-  :jira:`2683`
 
 - Failed URL transfer where the URL was longer than about 100 bytes would
   never have the URL scheme logged in the hold message or user log.
@@ -144,30 +186,12 @@
   support python 3.12.
   :jira:`2213`
 
-- :tool:`condor_ssh_to_job` now work with container universe jobs where
-  the Singularity or Apptainer runtime uses the setuid flow.
-  :jira:`3308`
-
-- :tool:`htcondor dag status` now also shows information about jobs
-  transferring sandboxes and in the transfer queue.
-  :jira:`3517`
-
 - In the python bindings, functions arguments that used to have a default
   of the :obj:`None` type now take a python Optional.  This is more compliant
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
   :jira:`3553`
-
-- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
-  generated submit file.  There is a new option ``-getenv`` to 
-  allow this.
-  :jira:`3549`
-
-- Singularity or Apptainer jobs now also pass ``--rocm`` to GPU jobs
-  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
-  set to false.
-  :jira:`3537`
 
 - When cgroups are active, *condor_startds* now advertise
   :ad-attr:`CgroupEnforced` to be true.
@@ -181,28 +205,9 @@
   two daemons is broken or disconnected.
   :jira:`3547`
 
-- :tool:`condor_top` now supports a ``-history`` option to read the most
-  recently recorded on disk performance statistics.  Runs much faster,
-  and works even when the *condor_schedd* is slow or not running.
-  :jira:`3582`
-
-- :tool:`condor_q` now supports a ``-aaf`` option
-  that works like ``-autoformat`` (``-af``) but appends the specified
-  attributes as additional columns after the standard output columns,
-  rather than replacing them.
-  :jira:`3571`
-
 - Updated list of default environment variables that *condor_dagman* always
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
-
-- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
-  going beneath a user's floor number of resources while preempting.
-  :jira:`3226`
-
-- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
-  in the cooldown state.
-  :jira:`3525`
 
 - :tool:`condor_status` ``-server`` now correctly labels the count of discovered Slots
   in the summary table.
@@ -216,11 +221,6 @@
 
 - Added new ``histogram`` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
-
-- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
-  a running job, the job will transfer any output files it has produced
-  back to the submit machine before exiting.
-  :jira:`3519`
 
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
   supported. This does not affect the ability to spool a job's full input sandbox.
@@ -263,16 +263,16 @@
 
 *** 25.8.2 bugs
 
-- Fixed a bug that caused the *condor_starter* to log confusing errors and not exit
-  promptly if it failed to launch a Singularity job.
-  :jira:`3531`
-
 - Fixed bugs where a job would be placed on hold if there was a problem transferring
   files via Pelican (OSDF) or HTTP.  Now in several cases where the problem was the
   fault of HTCSS and not the fault of the job, the job will go back to idle and attempt
   to be rematched instead of going on hold.  Several additional VacateReasonSubCodes where
   added in support of this; see section :ref:`Vacate Reason Codes`.
   :jira:`2952`
+
+- Fixed a bug that caused the *condor_starter* to log confusing errors and not exit
+  promptly if it failed to launch a Singularity job.
+  :jira:`3531`
 
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
   was off, that caused jobs to start in the users home directory.
