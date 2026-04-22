@@ -1,3 +1,26 @@
+condor (25.0.9-1) stable; urgency=medium
+
+  * All changes in 24.12.19
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 15:03:00 -0500
+
+condor (24.12.19-1) stable; urgency=medium
+
+  * Fix crash when a user provided Docker script produces unexpected output
+  * All changes in 24.0.19
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 14:43:00 -0500
+
+condor (24.0.19-1) stable; urgency=medium
+
+  * Now properly reports NVIDIA MIG GPU device names
+  * Fix performance problem in the htcondor2 Python ClassAd parser
+  * Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+  * Batch grid universe jobs now tolerate a dot in the username
+  * Fix huge reported job execution times when an AP restarts
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 13:00:00 -0500
+
 condor (25.0.8-1) stable; urgency=medium
 
   * All changes in 24.12.18
