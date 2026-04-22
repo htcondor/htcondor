@@ -492,7 +492,7 @@ void Accountant::SetFloor(const std::string& CustomerName, int floor)
 
 time_t Accountant::GetCeilingLeaseExpiration(const std::string& CustomerName)
 {
-  int expiration = 0;
+  long long expiration = 0;
   db->GetAttributeInt(AccountantTable::Customer, CustomerName,
                       CeilingLeaseExpirationAttr, expiration);
   if (expiration < 0) expiration = 0;
@@ -529,7 +529,7 @@ bool Accountant::SetCeilingLease(const std::string& CustomerName, int ceiling,
   db->SetAttributeInt(AccountantTable::Customer, CustomerName,
                       CeilingPreLeaseValueAttr, prior);
   db->SetAttributeInt(AccountantTable::Customer, CustomerName,
-                      CeilingLeaseExpirationAttr, (int)expiration);
+                      CeilingLeaseExpirationAttr, (int64_t)expiration);
   db->SetAttributeInt(AccountantTable::Customer, CustomerName,
                       CeilingAttr, ceiling);
   return true;
@@ -563,7 +563,7 @@ void Accountant::CheckCeilingLeases()
   std::vector<std::pair<std::string,int>> expired; // (name, priorCeiling)
   db->ForEachInTable(AccountantTable::Customer,
       [&](const std::string& name, ClassAd* ad) -> bool {
-          int expiration = 0;
+          long long expiration = 0;
           if (!ad || !ad->LookupInteger(CeilingLeaseExpirationAttr, expiration)) {
               return true;
           }
