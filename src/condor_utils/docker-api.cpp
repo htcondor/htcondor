@@ -1539,7 +1539,7 @@ gc_image(const std::string & image) {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &DockerAPI::ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1638,7 +1638,7 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
