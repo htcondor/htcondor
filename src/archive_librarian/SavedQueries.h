@@ -47,12 +47,9 @@ CREATE TABLE IF NOT EXISTS Jobs (    -- Info from Spawn Ads
     UserId INTEGER,
     TimeOfCreation INTEGER, 
     JobListId INTEGER,
-    FileId INTEGER,       -- For possible EpochRecord tracking functionality in the future, currently not filled
-    Offset INTEGER, 
     UNIQUE (ClusterId, ProcId),
-    FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId), 
-    FOREIGN KEY (UserId) REFERENCES Users(UserId), 
-    FOREIGN KEY (FileId) REFERENCES Files(FileId)
+    FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId),
+    FOREIGN KEY (UserId)    REFERENCES Users(UserId)
 );
 CREATE INDEX IF NOT EXISTS idx_OwnerInJobs ON Jobs(UserId);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc_jobs ON Jobs(ClusterId, ProcId);
