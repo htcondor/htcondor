@@ -1442,6 +1442,15 @@ incorporates.
        ``True`` by default, meaning this template is automatically applied to Access Points.
        To disable this behavior, set :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` to ``False``.
 
+    - :config-template:`Librarian([max_size], [file_path])<FEATURE>`
+
+        Sets configuration to enable the use of the archive librarian for an
+        Access Point to index historical archive records in a database.The
+        optional argument ``max_size`` can be provided to set the maximum size
+        of the SQLite3 database file. Additionally, the optional argument
+        ``file_path`` can be provided to inform the librarian where to create
+        and write the database.
+
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.
