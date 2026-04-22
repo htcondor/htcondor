@@ -300,7 +300,7 @@ DCStartd::asyncRequestOpportunisticClaim(
 	char const *scheduler_addr,
 	int alive_interval,
 	requestClaimOptions & opts,
-	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+	int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
