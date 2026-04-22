@@ -1,5 +1,10 @@
 *** 25.11.0 features
 
+- Introducing the :ref:`archive-librarian`. A new daemon that maintains an
+  SQLite3 database of indexes to historical job records located in an Access
+  Point's :macro:`HISTORY` archive.
+  :jira:`3143`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
