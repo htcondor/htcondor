@@ -95,10 +95,10 @@
   submitters in the negotiator.
   :jira;`3283`
 
-- :tool:`condor_status` now supports an `-aaf` option, for append
+- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but
   appends them to the default output.
-  :jira:`3604`
+  :jira:`3604,3684`
 
 - Fixed a spurious error message in the StarterLog about unhandled
   job exit.
@@ -182,11 +182,11 @@
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
 
-- :tool:`condor_q`, :tool:`condor_qusers`, and :tool:`condor_who` now support an ``-aaf`` option
+- :tool:`condor_q` now supports an ``-aaf`` option
   that works like ``-autoformat`` (``-af``) but appends the specified
   attributes as additional columns after the standard output columns,
   rather than replacing them.
-  :jira:`3571,3684`
+  :jira:`3571`
 
 - Updated list of default environment variables that *condor_dagman* always
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
