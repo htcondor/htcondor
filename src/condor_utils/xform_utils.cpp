@@ -1505,7 +1505,7 @@ struct _parse_rules_args {
 // returns 1  if the delete happened.
 static int DoDeleteAttr(ClassAd * ad, const std::string & attr, struct _parse_rules_args *pra)
 {
-	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	bool log_steps = (pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
 	if (log_steps) { pra->fnlog(*pra, false, "DELETE %s\n", attr.c_str()); }
 	if (pra->DeleteAdExpr(ad, attr)) {
 		return 1;
