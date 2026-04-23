@@ -679,6 +679,10 @@ Metric::convertToNonAggregateValue() {
 		}
 	}
 	aggregate = NO_AGGREGATE;
+
+	// Set derivative to false since we have already calculated the derivative if needed when we
+	// added datapoints to the aggregate value, and we don't want to calculate the derivative again when we publish this metric.
+	derivative = false;
 }
 
 StatsD::StatsD():
