@@ -502,7 +502,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			&procRaw.proc_flags, &procRaw.minfault, &u, &procRaw.majfault, &u, 
 			&procRaw.user_time_1, &procRaw.sys_time_1, &i, &i, &i, &i, 
 			&u, &u, &procRaw.creation_time, &imgsize_bytes, &procRaw.rssize, &u, &u, &u, 
-			&u, &u, &u, &i, &i, &i, &i, &u ) != 35 )
+			&u, &u, &u, &i, &i, &i, &i, &u ) != 34 )
 		{
 			// couldn't read the right number of entries.
 			status = PROCAPI_UNSPECIFIED;
