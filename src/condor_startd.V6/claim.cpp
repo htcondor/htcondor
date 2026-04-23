@@ -2462,6 +2462,7 @@ Claim::resetClaim( void )
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
 	c_schedd_reported_job_done = false;
+	c_reaping = false;
 }
 
 
