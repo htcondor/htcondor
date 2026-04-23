@@ -1823,7 +1823,7 @@ Recognized metric attribute names and their use:
     This is useful for numeric attributes that are "counters", i.e. they start at zero and are
     monotonically increasing throughout the lifetime of a slot or a daemon.  
     For example, consider the schedd ad attribute :ad-attr:`FileTransferUploadBytes` which publishes the total number of
-    bytes uploaded by the schedd. If `Derivative` is set to ``True``, and this metric is an aggregate metric, then the sum of the derivatives of "FileTransferUploadBytes"
+    bytes uploaded by the schedd. If ``Derivative`` is set to ``True``, and this metric is an aggregate metric, then the sum of the derivatives of "FileTransferUploadBytes"
     across the pool is computed and published. The derivative of "FileTransferUploadBytes" for each ClassAd is the positive change
     in the value of "FileTransferUploadBytes" since the last update.
     If this metric is not an aggregate metric, then computing of the derivative is performed by
