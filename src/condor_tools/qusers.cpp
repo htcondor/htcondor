@@ -516,8 +516,8 @@ int process_daily_ads(void* pv, ClassAd* ad)
 			{
 				MyRowOfValues & rov = pp2.first->second;
 				rov.SetMaxCols(1+cols);
-				
-				ad->EvaluateExpr("formattime(time() - time()%(24*3600) - (24*3600),\"    %A\")", val);
+
+				val.SetStringValue("    Day Before");
 				rov += val;
 
 				if (ad->EvaluateExpr("DailyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
