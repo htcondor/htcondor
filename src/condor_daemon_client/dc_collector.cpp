@@ -569,6 +569,11 @@ private:
 			// future use).
 
 		DCCollector *dcc = this->dc_collector;
+			// clearAndNotifyUpdateQueue deletes every UpdateData in the
+			// pending list (including this one) and nulls its `failed`
+			// out-parameter.  Route `this` through `self` so we can tell
+			// whether the failure path already deleted us.
+		UpdateData *self = this;
 		if(!success) {
 			char const *who = "unknown";
 			if(sock) {
@@ -579,7 +584,6 @@ private:
 			}
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
 			if (dcc) {
-				UpdateData *self = this;
 				dcc->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, self);
 				dcc->relocate();
 			}
@@ -589,7 +593,6 @@ private:
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
 			if (dcc) {
-				UpdateData *self = this;
 				dcc->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, self);
 				dcc->relocate();
 			}
@@ -604,7 +607,9 @@ private:
 		if(sock) {
 			delete sock;
 		}
-		delete this;
+		if (self) {
+			delete self;
+		}
 
 			// Now that we finished sending the update, we can start sequentially sending
 			// the pending updates.  We send these updates synchronously in sequence
@@ -664,20 +669,24 @@ private:
 
 void
 DCCollector::clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, UpdateData*& failed) {
-	for (auto& ud : pending_update_list) {
-		// Run callback function for all except for the failed (handled outside prior)
+		// Drain via pop_front rather than a range-based for: ~UpdateData
+		// erases itself from pending_update_list, which would invalidate
+		// the loop's iterators if we iterated in place.  Popping first
+		// makes the destructor's erase a no-op.
+	while (!pending_update_list.empty()) {
+		UpdateData *ud = pending_update_list.front();
+		pending_update_list.pop_front();
+
+			// Run callback function for all except for the failed (handled outside prior)
 		if (ud != failed && ud->m_callback) {
 			ud->m_callback(false, sock, nullptr, trust_domain, should_try_token_request);
 		}
 
 		delete ud;
-		ud = nullptr;
 	}
 
-	// The failed UpdateData point will have been deleted so remove dangling pointer
+		// The failed UpdateData pointer has been deleted; clear the caller's reference.
 	failed = nullptr;
-
-	pending_update_list.clear();
 }
 
 
