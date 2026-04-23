@@ -183,7 +183,7 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     os.utime(str(rotated_path), None)
 
     # Restart the schedd to close file handle to rotated file
-    p = condor.run_command(["condor_restart", "-fast"])
+    p = condor.run_command(["condor_restart", "-fast", "-daemon", "schedd"])
 
     # Wait for condor to be back up (schedd + librarian daemon both restart).
     # condor_q is used instead of condor_ping because it exercises a full
@@ -192,7 +192,7 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     start = time.time()
     while True:
         assert time.time() - start <= 30, "Failed to restart condor"
-        q = condor.run_command(["condor_q"])
+        q = condor.run_command(["condor_ping", "-type", "schedd"])
         if q.returncode == 0:
             break
         time.sleep(1)
