@@ -5656,7 +5656,7 @@ default=$(MAX_DEFAULT_LOG)
 
 [LIBRARIAN_DEBUG]
 default=
-description=Debug loggin options for the archive librarian
+description=Debug logging options for the archive librarian
 [MAX_LIBRARIAN_LOG]
 default=$(MAX_DEFAULT_LOG)
 
@@ -7300,7 +7300,7 @@ win32_default : @end
 
 
 [$FEATURE.LIBRARIAN]
-description=Enable a databse that indexes historical archive records args:(max_size, file_path).
+description=Enable a database that indexes historical archive records args:(max_size, file_path).
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) LIBRARIAN
 	USING_LIBRARIAN=True

@@ -45,14 +45,16 @@ static int fseek_64b(FILE* f, int64_t offset, int origin) {
 
 // Read one line from f into line (newline consumed but not stored).
 // Returns true if any characters were read (including a partial last line at EOF).
-static bool fgetline(FILE* f, std::string& line) {
+static bool fgetline(FILE* f, std::string& line, int& error) {
 	line.clear();
+	error = 0;
 	int ch;
 	while ((ch = fgetc(f)) != EOF) {
 		if (ch == '\n') { return true; }
 		if (ch != '\r') { line += static_cast<char>(ch); }
 	}
-	return !line.empty(); // partial line at EOF counts
+	if (ferror(f)) { error = errno; }
+	return !line.empty();
 }
 
 // Chunk size for backward reads.
@@ -129,7 +131,7 @@ ArchiveReader::ParseBanner(const std::string& banner, ClassAd& ad) {
 		// advance p to point to the next key=value pair
 		size_t dist = strcspn(rhs, " ");
 		p = rhs + dist;
-		while (isspace(*p)) ++p;
+		while (isspace(static_cast<unsigned char>(*p))) { ++p; }
 	}
 }
 
@@ -158,15 +160,23 @@ ArchiveReader::ArchiveReader(const std::string& filename, Direction dir)
 	    nullptr
 	);
 	if (hFile != INVALID_HANDLE_VALUE) {
-	    int fd = _open_osfhandle(reinterpret_cast<intptr_t>(hFile), _O_RDONLY | _O_BINARY);
-	    if (fd != -1) {
-	        raw = _fdopen(fd, "rb");
-	        if ( ! raw) { _close(fd); } // _close releases fd and the underlying HANDLE
-	    } else {
-	        CloseHandle(hFile);
-	    }
+		int fd = _open_osfhandle(reinterpret_cast<intptr_t>(hFile), _O_RDONLY | _O_BINARY);
+		if (fd != -1) {
+			raw = _fdopen(fd, "rb");
+			if ( ! raw) { _close(fd); } // _close releases fd and the underlying HANDLE
+		} else {
+			CloseHandle(hFile);
+		}
 	} else {
-	    _dosmaperr(GetLastError()); // translate Win32 error → errno for the check below
+		// Translate the most meaningful Win32 error codes to errno so that
+		// strerror() produces a useful message in the failure path below.
+		// _dosmaperr() would do this but is an internal CRT symbol; use public APIs instead.
+		switch (GetLastError()) {
+			case ERROR_FILE_NOT_FOUND:
+			case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+			case ERROR_ACCESS_DENIED:  errno = EACCES; break;
+			default:                   errno = EIO;    break;
+		}
 	}
 #else
 	raw = safe_fopen_no_create(filename.c_str(), "rb");
@@ -265,9 +275,22 @@ ArchiveReader::NextForward(ArchiveRecord& record) {
 
 	while (true) {
 		int64_t line_off = ftell_64b(m_file.get());
-		if ( ! fgetline(m_file.get(), line)) {
+		int io_error = 0;
+		if ( ! fgetline(m_file.get(), line, io_error)) {
 			// EOF (or I/O error) before finding another banner.
 			// A trailing partial record with no banner is discarded.
+			if (io_error) {
+				m_error = io_error;
+				dprintf(D_ERROR, "ArchiveReader: read error in forward scan: %s\n",
+				        strerror(m_error));
+			}
+			return false;
+		}
+
+		if (io_error) {
+			m_error = io_error;
+			dprintf(D_ERROR, "ArchiveReader: read error mid-line in forward scan: %s\n",
+			        strerror(m_error));
 			return false;
 		}
 
@@ -325,17 +348,23 @@ ArchiveReader::FillBackwardBuffer() {
 
 	fseek_64b(m_file.get(), chunk_base, SEEK_SET);
 	std::vector<char> raw(static_cast<size_t>(read_size));
-	fread(raw.data(), 1, static_cast<size_t>(read_size), m_file.get());
+	size_t bytes_read = fread(raw.data(), 1, static_cast<size_t>(read_size), m_file.get());
 	if (ferror(m_file.get())) {
 		m_error = errno;
 		dprintf(D_ERROR, "ArchiveReader: read error in backward buffer fill: %s\n",
 		        strerror(m_error));
 		return false;
 	}
+	if (bytes_read != static_cast<size_t>(read_size)) {
+		m_error = EIO;
+		dprintf(D_ERROR, "ArchiveReader: short read in backward buffer fill: expected %zu, got %zu\n",
+		        static_cast<size_t>(read_size), bytes_read);
+		return false;
+	}
 
 	// Build combined = chunk + carry.
 	// Byte i in combined corresponds to file offset chunk_base + i.
-	std::string combined(raw.data(), static_cast<size_t>(read_size));
+	std::string combined(raw.data(), bytes_read);
 	combined += m_bwd_carry;
 	m_bwd_carry.clear();
 
@@ -349,7 +378,7 @@ ArchiveReader::FillBackwardBuffer() {
 	while (start != std::string::npos) {
 		// Line occupies [start+1, end).
 		std::string text = combined.substr(start + 1, end - start - 1);
-		if (!text.empty()) {
+		if (!text.empty() || end < combined.size()) {
 			int64_t off = chunk_base + static_cast<int64_t>(start + 1);
 			m_bwd_buf.push_back({std::move(text), off});
 		}

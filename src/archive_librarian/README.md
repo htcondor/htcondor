@@ -143,8 +143,8 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 |------|---------|-------------|
 | `LIBRARIAN_DATABASE` | *(required)* | Path to the SQLite database file |
 | `HISTORY` | *(inherited)* | Path to the active HTCondor history archive file |
-| `LIBRARIAN_UPDATE_INTERVAL` | `30` | Seconds between update cycles |
-| `LIBRARIAN_MAX_UPDATES_PER_CYCLE` | `1000000` | Maximum records ingested per cycle |
+| `LIBRARIAN_UPDATE_INTERVAL` | `5` | Seconds between update cycles |
+| `LIBRARIAN_MAX_UPDATES_PER_CYCLE` | `100000` | Maximum records ingested per cycle |
 | `LIBRARIAN_MAX_JOBS_CACHED` | `10000` | In-memory `(ClusterId, ProcId) → JobId` cache size |
 | `LIBRARIAN_MAX_DATABASE_SIZE` | `2147483648` (2 GiB) | DB size limit in bytes |
 | `LIBRARIAN_HIGH_WATER_MARK` | `0.97` | Fraction of size limit that triggers GC |

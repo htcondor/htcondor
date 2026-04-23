@@ -185,11 +185,14 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     # Restart the schedd to close file handle to rotated file
     p = condor.run_command(["condor_restart", "-fast"])
 
-    # Wait for condor to be back up (schedd + librarian daemon both restart)
+    # Wait for condor to be back up (schedd + librarian daemon both restart).
+    # condor_q is used instead of condor_ping because it exercises a full
+    # schedd command connection; condor_ping can respond before the schedd is
+    # ready to accept job submissions, producing SECMAN:2007 on the next call.
     start = time.time()
     while True:
         assert time.time() - start <= 30, "Failed to restart condor"
-        q = condor.run_command(["condor_ping", "-type", "schedd"])
+        q = condor.run_command(["condor_q"])
         if q.returncode == 0:
             break
         time.sleep(1)
