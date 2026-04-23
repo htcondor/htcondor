@@ -1591,7 +1591,9 @@ transition numbers referred to in this manual will be **bold**.
 
       subgraph ClaimedState
       cidle[Idle] -- Activate\nby shadow\n11 --> busy
-      busy -- job exit\n12 --> cidle
+      busy -- job exit\n12 --> cleaning[Cleaning]
+      cretiring -- job exit --> cleaning
+      cleaning -- starter reaped\n12a --> cidle
       busy -- RANK preemption\nfrom negotiator\n13 --> cretiring
       busy -- periodic\ncheck --> isPreempt
       isPreempt{PREEMPT\nexpression} -- true\n13 --> cretiring
