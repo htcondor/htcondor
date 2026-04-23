@@ -6,6 +6,7 @@
 
 #include "starter.h"
 #include "safe_open.h"
+#include "condor_uid.h"
 
 #include "staging_directory.h"
 
@@ -190,13 +191,16 @@ const std::error_code ec_false = std::error_code(1, std::system_category());
 //
 #if defined(WINDOWS)
 
+// The Windows-specific code ERROR_CALL_NOT_IMPLEMENTED would be appropriate
+// here; we could also use ENOSYS ("function not implemented"), but since we
+// should never be calling these functions anyway, let's not bother.
 
 std::error_code
 createStagingDirectory(
 	const std::filesystem::path & parentDir,
 	const std::filesystem::path & stagingDir
 ) {
-	return -1;
+	return ec_false;
 }
 
 
@@ -213,7 +217,7 @@ mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
 ) {
-	return false;
+	return ec_false;
 }
 
 
@@ -222,15 +226,16 @@ bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
 ) {
-	return false;
+	return ec_false;
 }
+
 
 std::error_code
 copyContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
 ) {
-	return false;
+	return ec_false;
 }
 
 
@@ -458,7 +463,7 @@ mapContentsOfDirectoryInto(
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(rv, std::system_category());
+				return std::error_code(errno, std::system_category());
 			}
 
 			continue;
@@ -486,7 +491,7 @@ mapContentsOfDirectoryInto(
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(rv, std::system_category());
+				return std::error_code(errno, std::system_category());
 			}
 		}
 	}
@@ -567,7 +572,7 @@ copyContentsOfDirectoryInto(
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(rv, std::system_category());
+				return std::error_code(errno, std::system_category());
 			}
 
 			continue;
@@ -577,9 +582,14 @@ copyContentsOfDirectoryInto(
 				return ec_false;
 			}
 
-			std::filesystem::copy_file(
+			std::filesystem::copy(
 				entry.path(), sandbox / relative_path,
-				std::filesystem::copy_options::overwrite_existing |
+				// The way common files are now implemented, this should
+				// never be necessary, but it's better to be consistent
+				// with the other StagingDirectory implementations so that
+				// if we ever do go back to transferring uncommon files
+				// while waiting for common files, the uncommon ones win.
+				/* std::filesystem::copy_options::overwrite_existing | */
 				std::filesystem::copy_options::copy_symlinks,
 				ec
 			);
@@ -710,7 +720,7 @@ bindMountContentsOfDirectoryInto(
 		);
 		if( rv != 0 ) {
 			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_BIND, NULL ): %s (%d)\n", entry.path().string().c_str(), target.string().c_str(), strerror(errno), errno );
-			return std::error_code(rv, std::system_category());
+			return std::error_code(errno, std::system_category());
 		}
 
 		rv = mount(
@@ -719,8 +729,8 @@ bindMountContentsOfDirectoryInto(
 			NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL
 		);
 		if( rv != 0 ) {
-			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_REMOUNT | MS_BIND MS_READONLY, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
-			return std::error_code(rv, std::system_category());
+			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_REMOUNT | MS_BIND MS_READONLY, NULL ): %s (%d)\n", entry.path().string().c_str(), target.string().c_str(), strerror(errno), errno );
+			return std::error_code(errno, std::system_category());
 		}
 	}
 
@@ -807,17 +817,15 @@ BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
 
 bool
 BindMountStagingDirectory::usable() {
-#if defined(WINDOWS) || defined(DARWIN)
-	return false;
-#endif /* WINDOWS || DARWIN */
-
+#if defined(LINUX)
 	bool forbidden = param_boolean( "FORBID_BINDMOUNT_MAPPING", false );
 	bool allowed = param_boolean( "ALLOW_LVS_TO_BIND_MOUNT_COMMON_FILES", false );
 
 	return (! forbidden) && allowed;
+#else /* LINUX */
+    return false;
+#endif /* LINUX */
 }
-
-
 
 
 //
