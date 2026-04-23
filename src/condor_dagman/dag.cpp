@@ -3993,7 +3993,6 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintNodeList();
-	OwnedMaterials *om = nullptr;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
 	if (layer == DESCENDENTS && _splices.size() == 0) {
@@ -4003,7 +4002,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& [splice_name, splice]: _splices) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
-		om = splice->LiftSplices(DESCENDENTS);
+		OwnedMaterials *om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice_name, om);
 		delete om;
