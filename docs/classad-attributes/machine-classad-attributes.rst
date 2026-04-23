@@ -33,9 +33,9 @@ Machine ClassAd Attributes
     ``"Cleaning"``
         The job has finished running and the *condor_starter* has sent
         its final update, but the starter process has not yet been
-        reaped. The slot is no longer available to run new work and
-        cannot transition back to ``"Busy"`` or into ``"Preempting"``;
-        it leaves this activity when the starter exits.
+        reaped. When the starter exits, the slot leaves this activity
+        and returns to ``"Idle"`` (or moves to the ``"Preempting"``
+        state if a release, kill, or preempting claim is pending).
 
 :classad-attribute-def:`Arch`
     String with the architecture of the machine. Currently supported

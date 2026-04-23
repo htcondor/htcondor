@@ -1107,6 +1107,9 @@ Resource::starterExited( Claim* cur_claim )
 			bool preempt = r_cleaning_preempt_pending || hasPreemptingClaim();
 			r_cleaning_preempt_pending = false;
 			if (preempt) {
+				// The state-only overload of change_state routes through
+				// _preempting_activity(), which picks vacating_act or
+				// killing_act -- we never land in Preempting/Cleaning.
 				change_state(preempting_state);
 			} else {
 				change_state( idle_act );

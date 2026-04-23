@@ -3,8 +3,10 @@
 - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
   A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
   final job update and exits when the starter process is reaped. While
-  cleaning, the slot will not match new work and absorbs preempt
-  requests -- the starter is already on its way out. A new
+  cleaning, the slot will not match new work; :tool:`condor_vacate`
+  and other preempt requests that arrive during cleaning are recorded
+  and applied when the starter is reaped, rather than triggering a
+  second state change while the starter is already exiting. A new
   :ad-attr:`TotalTimeClaimedCleaning` machine attribute accumulates
   time spent in this activity.
   :jira:`3686`
