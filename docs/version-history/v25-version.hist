@@ -1,5 +1,11 @@
 *** 25.11.0 features
 
+- Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
+  correctly for jobs submitted after the tool began executing. The incorrect
+  behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan
+  execution.
+  :jira:`3656`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs

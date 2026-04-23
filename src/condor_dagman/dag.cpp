@@ -3244,37 +3244,49 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 	// a submit event.
 	if (event->eventNumber == ULOG_SUBMIT) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
-		if ( ! submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID(condorID);
+		std::string nodeName;
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in submit event notes: <%s>\n",
-				             submit_event->submitEventLogNotes.c_str());
+		if (submit_event->hasStructuredNotes()) {
+			submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method
+		if (nodeName.empty() && ! submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 
@@ -3317,39 +3329,50 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 
 	if (event->eventNumber == ULOG_CLUSTER_SUBMIT) {
 		const ClusterSubmitEvent* cluster_submit_event = (const ClusterSubmitEvent*)event;
-		if ( ! cluster_submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID( condorID );
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					// std::map::find() returns an iterator pointing to the desired element, or end() if not found
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						// std::map::insert() returns a pair, second element is the success bool
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in cluster submit event notes: <%s>\n",
-				             cluster_submit_event->submitEventLogNotes.c_str());
+		std::string nodeName;
+
+		if (cluster_submit_event->hasStructuredNotes()) {
+			cluster_submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method
+		if (nodeName.empty() && ! cluster_submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in cluster submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 	return node;

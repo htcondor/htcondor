@@ -5834,6 +5834,24 @@ Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const cha
 		event.submitEventWarnings = warning;
 	}
 
+	std::string structuredAttrs;
+	job->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (job->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
+	}
+
 	bool status = false;
 	if (do_fsync) {
 		double startTime = _condor_debug_get_time_double();
@@ -6146,6 +6164,24 @@ Scheduler::WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_f
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
 	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
+
+	std::string structuredAttrs;
+	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (cluster->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
+	}
 
 	bool status = false;
 	if (do_fsync) {
