@@ -235,6 +235,35 @@ runCondorTool("condor_reconfig",\@outarray,2,{emit_output=>0});
 
 print "reconfig to tune flocking and assign startds to collectors \n";
 
+# Wait for each startd to re-register with its newly assigned collector after
+# reconfig -- submitting jobs before they appear causes flocked jobs to stall
+# waiting for resources that haven't been discovered yet.
+print "Waiting for flocking startds to register with their collectors\n";
+my $wait_flock = 0;
+while ($wait_flock < 120) {
+	my $all_registered = 1;
+	foreach my $ii (1..5) {
+		my $coll_file = $daemon_address_files->{$ii}->{collector};
+		open my $fh, '<', $coll_file or do { $all_registered = 0; next; };
+		my $coll_addr = '';
+		while (<$fh>) { chomp; if (/^<.+>$/) { $coll_addr = $_; last; } }
+		close $fh;
+		unless ($coll_addr) { $all_registered = 0; next; }
+		# Strip <> and query params so the address is safe to pass via shell
+		(my $pool_host = $coll_addr) =~ s/^<([^>?]+)[^>]*>$/$1/;
+		my @stres = ();
+		# Use attempt count 1 to avoid long retry delays inside the poll loop
+		runCondorTool("condor_status -pool $pool_host -startd -af Name",\@stres,1,{emit_output=>0});
+		my $found = grep { /\S/ } @stres;
+		$all_registered = 0 unless $found;
+	}
+	last if $all_registered;
+	sleep(5);
+	$wait_flock += 5;
+	print "Waiting for flocking startds, ${wait_flock}s elapsed\n";
+}
+print "Flocking startds are registered\n";
+
 sub on_submit {
 };
 
