@@ -20,8 +20,6 @@ class HardlinkStagingDirectory : public StagingDirectory {
 
 		static bool usable();
 
-		virtual std::error_code create();
-		virtual std::error_code modify();
 		virtual std::error_code map( const std::filesystem::path & destination );
 
 		virtual ~HardlinkStagingDirectory() = default;
@@ -48,8 +46,6 @@ class BindMountStagingDirectory : public StagingDirectory {
 
 		static  bool usable();
 
-		virtual std::error_code create();
-		virtual std::error_code modify();
 		virtual std::error_code  map( const std::filesystem::path & destination );
 
 		virtual ~BindMountStagingDirectory() = default;
@@ -76,8 +72,6 @@ class CopyStagingDirectory : public StagingDirectory {
 
 		static bool usable();
 
-		virtual std::error_code create();
-		virtual std::error_code modify();
 		virtual std::error_code map( const std::filesystem::path & destination );
 
 		virtual ~CopyStagingDirectory() = default;
@@ -759,20 +753,24 @@ bindMountContentsOfDirectoryInto(
 
 
 //
-// Define HardLinkStagingDirectory.
+// Define StagingDirectory.
 //
 
 std::error_code
-HardlinkStagingDirectory::create() {
+StagingDirectory::create() {
 	return createStagingDirectory( this->parentDir, this->path() );
 }
 
 
 std::error_code
-HardlinkStagingDirectory::modify() {
+StagingDirectory::modify() {
 	return convertToStagingDirectory( this->path() );
 }
 
+
+//
+// Define HardLinkStagingDirectory.
+//
 
 std::error_code
 HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
@@ -798,18 +796,6 @@ HardlinkStagingDirectory::usable() {
 //
 
 std::error_code
-BindMountStagingDirectory::create() {
-    return createStagingDirectory( this->parentDir, this->path() );
-}
-
-
-std::error_code
-BindMountStagingDirectory::modify() {
-	return convertToStagingDirectory( this->path() );
-}
-
-
-std::error_code
 BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
 	return bindMountContentsOfDirectoryInto( this->path(), destination );
 }
@@ -831,18 +817,6 @@ BindMountStagingDirectory::usable() {
 //
 // Define CopyStagingDirectory.
 //
-
-std::error_code
-CopyStagingDirectory::create() {
-	return createStagingDirectory( this->parentDir, this->path() );
-}
-
-
-std::error_code
-CopyStagingDirectory::modify() {
-	return convertToStagingDirectory( this->path() );
-}
-
 
 std::error_code
 CopyStagingDirectory::map( const std::filesystem::path & destination ) {

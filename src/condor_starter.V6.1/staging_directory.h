@@ -5,14 +5,27 @@
 #include <memory>
 #include <filesystem>
 
+//
+// The staging starter calls create(), transfer the common files, and then
+// calls modify().  The mapping starter calls map().  StagingDirectory
+// provides a default implementation for create() and for modify() just to
+// remove lines code.
+//
+// The map() method ...
+//
+// The path() method is an accessor (note that it returns a copy).
+//
+
 class StagingDirectory {
 
 	public:
 
 		static bool usable() { return false; }
-		virtual std::error_code create() = 0;
-		virtual std::error_code modify() = 0;
+
+		virtual std::error_code create();
+		virtual std::error_code modify();
 		virtual std::error_code map( const std::filesystem::path & d ) = 0;
+
 		virtual std::filesystem::path path() { return stagingDir; }
 
 		virtual ~StagingDirectory() = default;
