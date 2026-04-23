@@ -1533,7 +1533,7 @@ StatsD::getPreviousValue(std::string const &key, double &value)
 {
 	auto it = m_previous_values.find(key);
 	if (it != m_previous_values.end()) {
-		value = it->second.value;
+		value = it->second;
 		return true;
 	}
 	return false;
@@ -1544,10 +1544,10 @@ StatsD::cleanupOldPreviousValues()
 {
 	// Remove any previous values that are from before the start of this update,
 	// as they are now stale and we don't want to use them for future updates.
-	// Plus this keeps the m_previous_values map from growing without bound.
-	std::erase_if(m_previous_values, [this](const auto &entry) {
-		return entry.second.time < m_start_time;
-	});
+	// Plus this keeps the maps from growing without bounds as daemons come and go over time.
+	m_previous_values.clear();
+	// Now, swap the current values into the previous values map so they can be used for the next update.
+	std::swap(m_previous_values,m_current_values);
 }
 
 void
