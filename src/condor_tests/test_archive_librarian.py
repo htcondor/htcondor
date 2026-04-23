@@ -177,24 +177,40 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
     rotated_path = history_path.parent / f"{history_path.name}.{timestamp}"
     history_path.rename(rotated_path)
 
-    # This makes me sad but is required to ensure proper file rotation detection
-    time.sleep(1)
-
     os.utime(str(rotated_path), None)
 
-    # Restart the schedd to close file handle to rotated file
-    p = condor.run_command(["condor_restart", "-fast", "-daemon", "schedd"])
+    who = condor.run_command(["condor_who", "-quick"])
+    old_pid = None
+    assert who.returncode == 0, "Failed to query daemon information with condor_who"
 
-    # Wait for condor to be back up (schedd + librarian daemon both restart).
-    # condor_q is used instead of condor_ping because it exercises a full
-    # schedd command connection; condor_ping can respond before the schedd is
-    # ready to accept job submissions, producing SECMAN:2007 on the next call.
+    for line in who.stdout.split("\n"):
+        if line.startswith("SCHEDD_PID"):
+            old_pid = line.split("=")[1]
+            break
+
+    assert old_pid is not None, "Failed to get schedd pid before restart"
+
+    # Restart the schedd to close file handle to rotated file
+    p = condor.run_command(["condor_restart", "-fast"])
+
+    # Wait for schedd to restart
     start = time.time()
     while True:
-        assert time.time() - start <= 30, "Failed to restart condor"
-        q = condor.run_command(["condor_ping", "-type", "schedd"])
-        if q.returncode == 0:
-            break
+        assert time.time() - start <= 60, "Failed to restart condor"
+
+        who = condor.run_command(["condor_who", "-quick"])
+        if who.returncode == 0:
+            alive = False
+            pid = None
+            for line in who.stdout.split("\n"):
+                if line.startswith("SCHEDD_PID"):
+                    pid = line.split("=")[1]
+                elif line.startswith("SCHEDD =") and '"alive"' in line.lower():
+                    alive = True
+
+            if alive and pid is not None and pid != old_pid:
+                break
+
         time.sleep(1)
 
     handle = _submit_and_wait(condor, test_dir / "job_post_rotation.log", path_to_sleep, 1)
