@@ -159,7 +159,11 @@ $success = sub
 		chomp();
 		$line = $_;
 
-		if( $line =~ /DAG Node: NodeA/ ) {
+		# NOTE: Check for both structured notes and old style DAG notes due to
+		#       the schedd setting the structured notes ClassAd but the DAGMan
+		#       fake_condor_submit uses the old style
+
+		if( $line =~ /DAGNodeName = "NodeA"/ || $line =~ /DAG Node: NodeA/ ) {
 			CondorTest::debug("$name: $line\n",1);
 			if( $state == 0 or $state == 2 ) {
 				$state++;
@@ -172,12 +176,12 @@ $success = sub
 			if( $state == 1 ) {
 				$state++;
 			}
-		} elsif( $line =~ /DAG Node: NodeB1/ ) {
+		} elsif( $line =~ /DAGNodeName = "NodeB1"/ || $line =~ /DAG Node: NodeB1/ ) {
 			CondorTest::debug("$name: $line\n",1);
 			if( $state == 3 ) {
 				$state++;
 			}
-		} elsif( $line =~ /DAG Node: NodeB2/ ) {
+		} elsif( $line =~ /DAGNodeName = "NodeB2"/ || $line =~ /DAG Node: NodeB2/ ) {
 			CondorTest::debug("$name: $line\n",1);
 			if( $state == 4 ) {
 				$state++;

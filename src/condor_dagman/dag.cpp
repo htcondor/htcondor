@@ -3250,7 +3250,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 			submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
 		}
 
-		// Fall back to old method
+		// Fall back to old method (We need this for fake condor submits i.e. no-ops)
 		if (nodeName.empty() && ! submit_event->submitEventLogNotes.empty()) {
 			char buf[1024] = "";
 			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
