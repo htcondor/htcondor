@@ -1490,7 +1490,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 					// through to the usual "ignoring" report.
 				std::error_code rmEc;
 				TemporaryPrivSentry sentry(PRIV_ROOT);
-				if( std::filesystem::remove( jobDir.path(), rmEc ) && ! rmEc ) {
+				if( std::filesystem::remove( jobDir.path(), rmEc ) ) {
 					dprintf( D_ALWAYS, "Removed empty orphan cleanup directory %s.\n", jobDir.path().string().c_str() );
 					continue;
 				}
