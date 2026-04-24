@@ -59,6 +59,7 @@ if [ "$ARCH" = 'aarch64' ]; then
     buildimage aarch64_AlmaLinux9 linux/arm64 arm64v8/almalinux:9 &
     buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10 &
     buildimage aarch64_Ubuntu24 linux/arm64 arm64v8/ubuntu:noble &
+    buildimage aarch64_Ubuntu26 linux/arm64 arm64v8/ubuntu:resolute &
 else
     buildimage ppc64le_AlmaLinux8 linux/ppc64le ppc64le/almalinux:8 &
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
