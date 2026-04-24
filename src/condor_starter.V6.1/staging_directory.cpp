@@ -610,26 +610,6 @@ CopyStagingDirectory::entry_is_file(
 
 
 std::error_code
-BindMountStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-BindMountStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
 bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -756,27 +736,16 @@ bindMountContentsOfDirectoryInto(
 
 
 std::error_code
-BindMountStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
+bindMountContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
 ) {
 	return ec_false;
 }
 
 
-std::error_code
-BindMountStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-#endif /* not LINUX */
-#endif /* not (LINUX || DARWIN ) */
+#endif /* LINUX */
+#endif /* (LINUX || DARWIN ) */
 //
 // The platform-specific code ends here.
 //
@@ -826,8 +795,28 @@ HardlinkStagingDirectory::usable() {
 //
 
 std::error_code
+BindMountStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+std::error_code
+BindMountStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+std::error_code
 BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
-    return map_impl( this->path(), destination, "BindMountStagingDirectory::map()" );
+    return bindMountContentsOfDirectoryInto( this->path(), destination );
 }
 
 
