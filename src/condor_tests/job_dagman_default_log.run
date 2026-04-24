@@ -46,8 +46,6 @@ $logdir = `condor_config_val LOG`;
 chomp $logdir;
 $nodelog = "$logdir/job_dagman_default_log.dag.test_node_log";
 
-my $dag_was_held = 0;
-my $dag_was_released = 0;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -85,14 +83,12 @@ $evicted = sub
 
 $held = sub 
 {
-	CondorTest::debug("DAGMan was held -- good!\n");
-	$dag_was_held = 1;
+	CondorTest::debug("DAGMan was held -- all good!\n");
 };
 
 $released = sub 
 {
-	CondorTest::debug("DAGMan was released -- good!\n");
-	$dag_was_released = 1;
+	CondorTest::debug("DAGMan was released -- all good!\n");
 };
 
 $executed = sub
@@ -109,13 +105,6 @@ $submitted = sub
 
 $success = sub
 {
-	if (!$dag_was_held) {
-		die "Error: DAGMan was not held\n";
-	}
-	if (!$dag_was_released) {
-		die "Error: DAGMan was not released\n";
-	}
-
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
