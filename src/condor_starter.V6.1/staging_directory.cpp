@@ -252,6 +252,7 @@ StagingDirectory::map_impl(
 }
 
 
+std::error_code
 HardlinkStagingDirectory::entry_is_file(
 	const std::filesystem::path & sandbox,
 	const std::filesystem::path & relative_path,
@@ -261,6 +262,7 @@ HardlinkStagingDirectory::entry_is_file(
 }
 
 
+std::error_code
 HardlinkStagingDirectory::entry_is_directory(
 	const std::filesystem::path & sandbox,
 	const std::filesystem::path & relative_path,
@@ -270,6 +272,7 @@ HardlinkStagingDirectory::entry_is_directory(
 }
 
 
+std::error_code
 CopyStagingDirectory::entry_is_file(
 	const std::filesystem::path & sandbox,
 	const std::filesystem::path & relative_path,
@@ -279,6 +282,7 @@ CopyStagingDirectory::entry_is_file(
 };
 
 
+std::error_code
 CopyStagingDirectory::entry_is_directory(
 	const std::filesystem::path & sandbox,
 	const std::filesystem::path & relative_path,
