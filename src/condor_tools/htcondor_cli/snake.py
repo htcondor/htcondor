@@ -6,19 +6,13 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from htcondor_cli.eventlog import convert_seconds_to_dhms
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
-from htcondor_cli import JobStatus
-from htcondor_cli import TMP_DIR
-from htcondor_cli import MutualExclusionArgs
 import traceback
-import yaml
-import textwrap
+
+
 """
 HTCondor CLI for running Snakemake workflow
-
-- need `-help` flag to guide users about the commands
 """
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
@@ -31,17 +25,17 @@ class Submit(Verb):
     options = {
         "snakefile": {
             "args": ("snakefile",), # positional argument
-            "help": "Path to Snakefile. If omitted, Snakefile is assumed to be at the current directory.",
+            "help": "Positional argument to Snakefile. If omitted, Snakefile is assumed to be at the current directory.",
             "nargs": "?",
         },
         "profile": {
             "args": ("--profile",),
-            "help": "Snakemake profile directory.",
+            "help": "Optional flag to specify the path of Snakemake profile directory. You can also specify this flag after the seperator `--`",
             "required": False,
         }, 
         "jobdir": {
             "args": ("--jobdir",),
-            "help": "Directory for HTCondor log files. If omitted, a `logs` directory will be created as the current directory.",
+            "help": "Optional directory for HTCondor log files. If omitted, a `logs` directory will be created at the current directory. If `--htcondor-jobdir` is not specified for Snakemake's logs, all log files will be placed under `--jobdir` location.",
             "required": False,
         },
         "executor": {
@@ -100,7 +94,7 @@ class Submit(Verb):
         jobdir.mkdir(parents=True, exist_ok=True)
         return jobdir
 
-    # ===== HTCondor SUBMISSION METHODS =====
+    # ===== HTCondor SUBMISSION METHODS ===== #
     def _submit_local(self, snakefile, profile, jobdir, executor, snakemake_args):
         """Submit snakemake as an HTCondor local universe job."""
         # Resolve snakemake executable from user's environment
@@ -110,18 +104,13 @@ class Submit(Verb):
                 "Could not find 'snakemake' executable on PATH.\n"
                 "Make sure your Snakemake environment is activated."
             )
-        
-        # Check if user already specified --htcondor-jobdir in snakemake_args
-        has_htcondor_jobdir = any(snakemake_args[i] == "--htcondor-jobdir" for i in range(len(snakemake_args)))
+
         # Build arguments for snakemake
         args_list = [
             f"-s {snakefile}",
             f"--executor {executor}",
+            f"--htcondor-jobdir {jobdir}"
         ]
-        
-        # Only add --htcondor-jobdir if user did not specify it 
-        if not has_htcondor_jobdir:
-            args_list.append(f"--htcondor-jobdir {jobdir}")
 
         # Add profile if specified
         if profile:
