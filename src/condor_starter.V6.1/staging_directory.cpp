@@ -242,6 +242,52 @@ convertToStagingDirectory(
 }
 
 
+std::error_code
+StagingDirectory::map_impl(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+HardlinkStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+HardlinkStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+CopyStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+};
+
+
+CopyStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
 #else /* WINDOWS */
 
 
