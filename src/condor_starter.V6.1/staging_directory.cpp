@@ -604,6 +604,8 @@ CopyStagingDirectory::entry_is_file(
 
 	return ec_true;
 }
+#endif /* WINDOWS */
+
 
 #if defined(LINUX)
 #include <sys/mount.h>
@@ -745,7 +747,6 @@ bindMountContentsOfDirectoryInto(
 
 
 #endif /* LINUX */
-#endif /* (LINUX || DARWIN ) */
 //
 // The platform-specific code ends here.
 //
