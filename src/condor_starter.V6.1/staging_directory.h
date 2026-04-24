@@ -40,9 +40,31 @@ class StagingDirectory {
 		StagingDirectory(
 			const std::string & s
 		) : stagingDir(s) {
-		    parentDir = stagingDir.parent_path();
-		    catalogName = stagingDir.filename().string();
+			parentDir = stagingDir.parent_path();
+			catalogName = stagingDir.filename().string();
 		}
+
+		//
+		// map_directory uses the Visitor pattern: it walks the staging
+		// directory `location`, checking permissions as it goes, and
+		// and calls entry_is_directory() or entry_is_file() as appropriate.
+		//
+		virtual std::error_code map_impl(
+			const std::filesystem::path & location,
+			const std::filesystem::path & sandbox,
+			const std::string & log_prefix
+		);
+		virtual std::error_code entry_is_directory(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		) = 0;
+		virtual std::error_code entry_is_file(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		) = 0;
+
 
 		std::filesystem::path parentDir;
 		std::string catalogName;
@@ -57,12 +79,12 @@ class StagingDirectoryFactory {
 		StagingDirectoryFactory();
 
 		std::unique_ptr<StagingDirectory> make(
-		    const std::filesystem::path & directory,
-		    const std::string & catalogName
+			const std::filesystem::path & directory,
+			const std::string & catalogName
 		);
 
 		std::unique_ptr<StagingDirectory> make(
-		    const std::string & stagingDirectory
+			const std::string & stagingDirectory
 		);
 
 	private:

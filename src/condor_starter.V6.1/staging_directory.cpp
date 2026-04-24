@@ -35,6 +35,18 @@ class HardlinkStagingDirectory : public StagingDirectory {
 			const std::string & s
 		) : StagingDirectory(s) { }
 
+		virtual std::error_code entry_is_directory(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
+
+		virtual std::error_code entry_is_file(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
+
 
 	friend class StagingDirectoryFactory;
 };
@@ -61,6 +73,18 @@ class BindMountStagingDirectory : public StagingDirectory {
 			const std::string & s
 		) : StagingDirectory(s) { }
 
+		virtual std::error_code entry_is_directory(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
+
+		virtual std::error_code entry_is_file(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
+
 
 	friend class StagingDirectoryFactory;
 };
@@ -86,6 +110,18 @@ class CopyStagingDirectory : public StagingDirectory {
 		CopyStagingDirectory(
 			const std::string & s
 		) : StagingDirectory(s) { }
+
+		virtual std::error_code entry_is_directory(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
+
+		virtual std::error_code entry_is_file(
+			const std::filesystem::path & sandbox,
+			const std::filesystem::path & relative_path,
+			const std::string & log_prefix
+		);
 
 
 	friend class StagingDirectoryFactory;
@@ -394,6 +430,26 @@ check_permissions(
 
 
 std::error_code
+HardlinkStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+std::error_code
+HardlinkStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+std::error_code
 mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
@@ -497,14 +553,16 @@ mapContentsOfDirectoryInto(
 
 
 std::error_code
-copyContentsOfDirectoryInto(
+StagingDirectory::map_impl(
 	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
+	const std::filesystem::path & sandbox,
+	const std::string & log_prefix
 ) {
+
 	using std::filesystem::perms;
 	std::error_code ec;
 
-	dprintf( D_ZKM, "CopyStagingDirectory::map(): begin.\n" );
+	dprintf( D_ZKM, "%s: begin.\n", log_prefix.c_str() );
 
 	// We must be root (or the user the common files were transferred by) to
 	// traverse into the staging directory, which includes listing its
@@ -514,19 +572,19 @@ copyContentsOfDirectoryInto(
 	TemporaryPrivSentry tps(PRIV_ROOT);
 
 	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): sandbox '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
+		dprintf( D_ALWAYS, "%s: sandbox '%s' is not a directory, aborting.\n", log_prefix.c_str(), sandbox.string().c_str() );
 		if( ec.value() != 0 ) { return ec; }
 		return ec_false;
 	}
 
 	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): location '%s' is not a directory, aborting.\n", location.string().c_str() );
+		dprintf( D_ALWAYS, "%s: location '%s' is not a directory, aborting.\n", log_prefix.c_str(), location.string().c_str() );
 		if( ec.value() != 0 ) { return ec; }
 		return ec_false;
 	}
 
 	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+		dprintf( D_ALWAYS, "%s: '%s' has the wrong permissions, aborting.\n", log_prefix.c_str(), location.string().c_str() );
 		return ec_false;
 	}
 
@@ -535,14 +593,15 @@ copyContentsOfDirectoryInto(
 		location, {}, ec
 	);
 	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		dprintf( D_ALWAYS, "%s: Failed to construct recursive_directory_iterator(%s): %s (%d)\n", log_prefix.c_str(), location.string().c_str(), ec.message().c_str(), ec.value()
+		);
 		return ec;
 	}
 
 	for( const auto & entry : di ) {
-		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", entry.path().string().c_str() );
+		// dprintf( D_ZKM, "%s: '%s'\n", log_prefix.c_str(), entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(location);
-		// dprintf( D_ZKM, "CopyStagingDirectory::map(): '%s'\n", relative_path.string().c_str() );
+		// dprintf( D_ZKM, "%s: '%s'\n", log_prefix.c_str(), relative_path.string().c_str() );
 
 		//
 		// For reasons I don't understand std::filesystem::copy() can't copy
@@ -551,64 +610,117 @@ copyContentsOfDirectoryInto(
 		//
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				dprintf( D_ALWAYS, "%s: '%s' has the wrong permissions, aborting.\n", log_prefix.c_str(), location.string().c_str() );
 				return ec_false;
 			}
 
-			auto dir = sandbox / relative_path;
-			std::filesystem::create_directory( dir, ec );
+			ec = this->entry_is_directory( sandbox, relative_path, log_prefix );
 			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				// entry_is_directory() already report the problem.
 				return ec;
-			}
-			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(errno, std::system_category());
 			}
 
 			continue;
 		} else {
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
-				dprintf( D_ALWAYS, "CopyStagingDirectory::map(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				dprintf( D_ALWAYS, "%s: '%s' has the wrong permissions, aborting.\n", log_prefix.c_str(), location.string().c_str() );
 				return ec_false;
 			}
 
-			std::filesystem::copy(
-				entry.path(), sandbox / relative_path,
-				// The way common files are now implemented, this should
-				// never be necessary, but it's better to be consistent
-				// with the other StagingDirectory implementations so that
-				// if we ever do go back to transferring uncommon files
-				// while waiting for common files, the uncommon ones win.
-				/* std::filesystem::copy_options::overwrite_existing | */
-				std::filesystem::copy_options::copy_symlinks,
-				ec
-			);
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS,
-					"CopyStagingDirectory::map(): Failed to copy %s to %s: %s (%d)\n",
-					entry.path().string().c_str(), (sandbox / relative_path).string().c_str(),
-					ec.message().c_str(), ec.value()
-				);
+			ec = this->entry_is_file( sandbox, relative_path, log_prefix );
 
-				return ec;
-			}
 
 			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
 		}
 	}
 
 
-	dprintf( D_ZKM, "CopyStagingDirectory::map(): end.\n" );
+	dprintf( D_ZKM, "%s: end.\n", log_prefix.c_str() );
 	return ec_true;
 }
 
 
+std::error_code
+CopyStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+    std::filesystem::path dir = sandbox/relative_path;
+
+	std::error_code ec;
+	std::filesystem::create_directory( dir, ec );
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "%s: Failed to create_directory(%s): %s (%d)\n", log_prefix.c_str(), dir.string().c_str(), ec.message().c_str(), ec.value() );
+		return ec;
+	}
+	dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+
+	int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "%s: Unable to change owner of common input directory, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
+		return std::error_code(errno, std::system_category());
+	}
+
+	return ec_true;
+}
+
+
+std::error_code
+CopyStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+    std::error_code ec;
+
+	std::filesystem::copy(
+		stagingDir / relative_path, sandbox / relative_path,
+		// The way common files are now implemented, this should
+		// never be necessary, but it's better to be consistent
+		// with the other StagingDirectory implementations so that
+		// if we ever do go back to transferring uncommon files
+		// while waiting for common files, the uncommon ones win.
+		/* std::filesystem::copy_options::overwrite_existing | */
+		std::filesystem::copy_options::copy_symlinks,
+		ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS,
+			"%s: Failed to copy %s to %s: %s (%d)\n", log_prefix.c_str(),
+			(stagingDir / relative_path).string().c_str(),
+			(sandbox / relative_path).string().c_str(),
+			ec.message().c_str(), ec.value()
+		);
+
+		return ec;
+	}
+
+	return ec_true;
+}
+
 #if defined(LINUX)
 #include <sys/mount.h>
+
+
+std::error_code
+BindMountStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
+
+std::error_code
+BindMountStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
 
 
 std::error_code
@@ -820,7 +932,7 @@ BindMountStagingDirectory::usable() {
 
 std::error_code
 CopyStagingDirectory::map( const std::filesystem::path & destination ) {
-	return copyContentsOfDirectoryInto( this->path(), destination );
+	return StagingDirectory::map_impl( this->path(), destination, "CopyStagingDirectory()" );
 }
 
 
