@@ -228,7 +228,7 @@ Resource::Resource (
 		if (_donor->is_partitionable_slot()) { _parent = _donor; }
 		else if (_donor->is_dynamic_slot()) { _parent = _donor->get_parent(); }
 		else {
-			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str);
+			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str ? _donor->r_id_str : "<null>");
 			// we can't fail a constructor, so create an unusable slot instead
 			set_feature(BROKEN_SLOT);
 			m_parent = nullptr;

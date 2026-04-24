@@ -521,7 +521,8 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	}
 
 	// submit transaction starts here
-	if (MyQ) {
+	// Note: removed conditional here
+	{
 		int cluster_id = MyQ->get_NewCluster(*submitHash.error_stack());
 		if (cluster_id < 0) {
 			rval = cluster_id;

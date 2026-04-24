@@ -92,13 +92,19 @@ void reset_pty_and_exit(int signo) {
 }
 
 int enter_ns(pid_t pid, const char *ns) {
-	struct stat st;
+	struct stat st{};
 	char buf[256];
-	sprintf(buf, "/proc/self/ns/%s", ns);
-	stat(buf, &st);
+	snprintf(buf, sizeof(buf), "/proc/self/ns/%s", ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
 	long my_ns = st.st_ino;
-	sprintf(buf, "/proc/%d/ns/%s", pid, ns);
-	stat(buf, &st);
+	snprintf(buf, sizeof(buf), "/proc/%d/ns/%s", pid, ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
 	long your_ns = st.st_ino;
 
 	// It is an error to try to setns to a namespace we are already in.

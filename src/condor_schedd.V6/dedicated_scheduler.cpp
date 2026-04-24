@@ -3914,6 +3914,9 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		nprocs++;
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
+		if (!job) {
+			continue;
+		}
 			// Foreach node of each job
 			// 1.) create mrec
 			// 2.) add to all_matches, and all_matches_by_name
