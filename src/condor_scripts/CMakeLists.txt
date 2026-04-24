@@ -31,7 +31,7 @@ install ( FILES annex/path-facility.multi-pilot annex/path-facility.pilot annex/
 install ( FILES common_transfer_savings.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 # These files should be installed without execute bits set
-install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/delta.fragment annex/expanse.fragment annex/perlmutter.fragment annex/spark.fragment DESTINATION ${C_LIBEXEC}/annex)
+install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/delta.fragment annex/expanse.fragment annex/perlmutter.fragment annex/spark.fragment annex/00-annex-pilot-base DESTINATION ${C_LIBEXEC}/annex)
 
 if (WINDOWS)
   install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

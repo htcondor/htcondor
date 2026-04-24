@@ -1355,31 +1355,45 @@ def annex_inner_func2(
         )
     request_id = results[0]["GlobalJobID"]
 
+    version = htcondor.version().split()[1]
 
-    setup_file = Path(os.path.join(control_path, "annex_setup.sh"))
-    # write file
     gpu_argument = str(gpus)
     if gpu_type is not None:
         gpu_argument = f"{gpu_type}:{gpus}"
-    with open(setup_file, "w") as f:
-        f.write(f"""#!/bin/bash
-./spark.sh {system} {startd_noclaim_shutdown} {annex_name} {queue_name} {collector} $(pwd)/{token_file.name} {lifetime} $(pwd)/{SYSTEM_TABLE[system].other_scripts[0]} {owners} {nodes} $(pwd)/{SYSTEM_TABLE[system].other_scripts[1]} {allocation} {request_id} $(pwd)/{password_file.name} {schedd_name} {cpus} {mem_mb} {gpu_argument}
+    record_file = Path(os.path.join(control_path, "annex.record"))
+    with open(record_file, "w") as f:
+        f.write(f"""# Annex record
+SYSTEM={system}
+VERSION={version}
+STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
+JOB_NAME={annex_name}
+QUEUE_NAME={queue_name}
+COLLECTOR={collector}
+TOKEN_FILE={token_file.name}
+LIFETIME={lifetime}
+PILOT_BIN=annex-node.sh
+OWNERS={owners}
+NODES={nodes}
+ALLOCATION={allocation}
+REQUEST_ID={request_id}
+PASSWORD_FILE={password_file.name}
+SCHEDD_NAME={schedd_name}
+CPUS={cpus}
+MEM_MB={mem_mb}
+GPUS={gpu_argument}
 """)
-    os.chmod(setup_file, 0o755)
-
-    atexit.register(lambda: os.remove(setup_file))
+    atexit.register(lambda: os.remove(record_file))
 
     # Create the setup tarball
     # TODO add a README
     files = [
-        f"-C {local_script_dir} {SYSTEM_TABLE[system].executable}",
+        f"-C {local_script_dir} annex-setup.sh",
         f"-C {local_script_dir} {system}.fragment",
+        f"-C {local_script_dir} annex-node.sh",
+        f"-C {local_script_dir} 00-annex-pilot-base",
         f"-C {str(token_file.parent)} {token_file.name}",
         f"-C {str(password_file.parent)} {password_file.name}",
-        f"-C {str(setup_file.parent)} {setup_file.name}",
-        * [
-            f"-C {local_script_dir} {other_script}" for other_script in SYSTEM_TABLE[system].other_scripts
-        ]
+        f"-C {str(record_file.parent)} {record_file.name}",
     ]
     files = " ".join(files)
     tar_filename = "annex-setup.tar.gz"

@@ -1,0 +1,83 @@
+# This is the base configuration for an HPC annex EP
+# It assumes the following instance-specific parameters will be set in
+# a separate configuration file:
+#   ANNEX_PILOT_COLLECTOR
+#   ANNEX_PILOT_LIFETIME
+#   ANNEX_PILOT_OWNERS
+#   ANNEX_PILOT_JOB_NAME
+#   ANNEX_PILOT_REQUEST_ID
+
+use role:execute
+use security:recommended
+
+COLLECTOR_HOST = $(ANNEX_PILOT_COLLECTOR)
+
+# We shouldn't ever actually need this, but it's convenient for testing.
+SHARED_PORT_PORT = 0
+
+# Eliminate a bogus, repeated warning in the logs.  This is a bug;
+# it should be the default.
+SEC_PASSWORD_DIRECTORY = $(LOCAL_DIR)/passwords.d
+
+# This is a bug; it should be the default.
+SEC_TOKEN_SYSTEM_DIRECTORY = $(LOCAL_DIR)/tokens.d
+# Having to set it twice is also a bug.
+SEC_TOKEN_DIRECTORY = $(LOCAL_DIR)/tokens.d
+
+# Don't run benchmarks.
+RUNBENCHMARKS = FALSE
+
+# We definitely need CCB.
+CCB_ADDRESS = $(ANNEX_PILOT_COLLECTOR)
+
+#
+# Commit suicide after being idle for long enough.
+#
+STARTD_NOCLAIM_SHUTDOWN = 300
+
+#
+# Send updates a bit more than twice as often as the default, since this
+# is an ephemeral resource.  If STARTD_NOCLAIM_SHUTDOWN is the default,
+# this gives the startd a second chance to match if its initial update
+# to the collector failed.
+#
+UPDATE_INTERVAL = 137
+
+
+#
+# Don't run for more than two hours, to make sure we have time to clean up.
+#
+MASTER.DAEMON_SHUTDOWN_FAST = (time() - DaemonStartTime) > ($(ANNEX_PILOT_LIFETIME) - 300)
+
+# Only start jobs from the specified owner.
+START = $(START) && stringListMember( Owner, "$(ANNEX_PILOT_OWNERS)" )
+# Only start jobs for this annex.
+START = $(START) && MY.AnnexName == TARGET.TargetAnnexName
+
+# Advertise the standard annex attributes (master ad for condor_off).
+IsAnnex = TRUE
+AnnexName = "$(ANNEX_PILOT_JOB_NAME)"
+hpc_annex_request_id = "$(ANNEX_PILOT_REQUEST_ID)"
+STARTD_ATTRS = $(STARTD_ATTRS) AnnexName IsAnnex hpc_annex_request_id
+MASTER_ATTRS = $(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
+
+#
+# Connect directly to the schedd.
+#
+STARTD_DIRECT_ATTACH_SCHEDD_NAME = $(ANNEX_PILOT_SCHEDD_NAME)
+STARTD_DIRECT_ATTACH_SCHEDD_POOL = $(ANNEX_PILOT_COLLECTOR)
+
+# Update slots often enough that we can do more than one job. ;)
+# The direct attach interval is the minimum interval; this interval
+# is checked every UPDATE_INTERVAL.
+STARTD_DIRECT_ATTACH_INTERVAL = 5
+UPDATE_INTERVAL = 5
+
+#
+# We have to hand out memory in chunks large enough to avoid the problem(s)
+# HTCondor has with having too many slots.  The appropriate chunk size may
+# vary from system to system.
+#
+MUST_MODIFY_REQUEST_EXPRS = TRUE
+MEMORY_CHUNK_SIZE = 3072
+MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ $(MEMORY_CHUNK_SIZE), quantize(RequestMemory, {128}) })
