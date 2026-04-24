@@ -227,8 +227,8 @@ const std::error_code ec_false = std::error_code(1, std::system_category());
 
 std::error_code
 createStagingDirectory(
-	const std::filesystem::path & parentDir,
-	const std::filesystem::path & stagingDir
+	const std::filesystem::path & /* parentDir */,
+	const std::filesystem::path & /* stagingDir */
 ) {
 	return ec_false;
 }
@@ -236,7 +236,7 @@ createStagingDirectory(
 
 std::error_code
 convertToStagingDirectory(
-	const std::filesystem::path & location
+	const std::filesystem::path & /* location */
 ) {
 	return ec_false;
 }
@@ -796,9 +796,9 @@ HardlinkStagingDirectory::usable() {
 
 std::error_code
 BindMountStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
+	const std::filesystem::path & /* sandbox */,
+	const std::filesystem::path & /* relative_path */,
+	const std::string & /* log_prefix */
 ) {
 	return ec_false;
 }
@@ -806,9 +806,9 @@ BindMountStagingDirectory::entry_is_directory(
 
 std::error_code
 BindMountStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
+	const std::filesystem::path & /* sandbox */,
+	const std::filesystem::path & /* relative_path */,
+	const std::string & /* log_prefix */
 ) {
 	return ec_false;
 }
