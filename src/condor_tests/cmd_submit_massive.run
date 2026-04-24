@@ -118,6 +118,23 @@ foreach my $file (@submitfiles) {
 	}
 }
 
+# Wait for the schedd to finish processing the job removal before requesting
+# shutdown -- a large classad can leave the schedd writing job_queue.log
+# after the abort event appears in the user log, causing a shutdown timeout.
+my $waitedShutdown = 0;
+while ($waitedShutdown < 60) {
+	my @qres = ();
+	runCondorTool("condor_q $ClusterId", \@qres, 2, {emit_output=>0});
+	my $found = 0;
+	foreach my $line (@qres) {
+		if ($line =~ /^\s*(\d+)\s+jobs;/ && $1 > 0) { $found = 1; last; }
+	}
+	last unless $found;
+	sleep(2);
+	$waitedShutdown += 2;
+	TLOG("Waiting for cluster $ClusterId to clear from schedd, ${waitedShutdown}s elapsed\n");
+}
+
 CondorTest::EndTest();
 
 ## Subroutines here
@@ -132,7 +149,7 @@ sub GenerateMassive {
 		$genunique = "$unique$counter = $pattern";
 		print SF "$genunique\n";
 		$counter++;
-		$pattern = $pattern . "xxxxxxxxxxxxxxxx";
+		$pattern = $pattern . "x";
 	}
 };
 

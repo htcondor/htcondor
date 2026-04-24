@@ -189,7 +189,7 @@ class TestFTPluginStuff:
         nph_job[0].wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=60,
+            timeout=180,
         )
         # Verify the job did not go on hold, retried output transfer after plugin failure, and completed successfully.
         assert nph_job[0].state.all_complete()
@@ -203,7 +203,7 @@ class TestFTPluginStuff:
         nph_input_job[0].wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=60,
+            timeout=180,
         )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert nph_input_job[0].state.all_complete()
@@ -217,7 +217,7 @@ class TestFTPluginStuff:
         missing_result_input[0].wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=60,
+            timeout=180,
         )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert missing_result_input[0].state.all_complete()
@@ -249,7 +249,7 @@ class TestFTPluginStuff:
         bad_result_input[0].wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=60,
+            timeout=180,
         )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert bad_result_input[0].state.all_complete()

@@ -184,6 +184,7 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 **Lambda Expressions:**
 **Designated Initializers (C++20):**
 **Constexpr & Consteval:**
+**std::filesystem** Please never use the std::filesystem overloads that throw excecptions, always prefer the non-throwing overloads and check the error codes.
 
 ### Safe File I/O (SECURITY-CRITICAL)
 
@@ -249,7 +250,6 @@ HTCondor provides Python bindings for scripting and automation.
 **Modern (Python C API):**
 - `htcondor2` - Drop-in replacement for `htcondor`
 - `classad2` - Drop-in replacement for `classad`
-- `classad3` - Future API-breaking improvements
 
 ## Documentation
 

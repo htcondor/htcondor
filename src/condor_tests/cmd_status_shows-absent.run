@@ -138,18 +138,37 @@ runCondorTool("condor_advertise -debug -multiple UPDATE_STARTD_AD $adfile",\@adr
 
 #
 # Verify that we added the ads succesfully.
+# Poll until all expected ads appear, to avoid a race where condor_status
+# runs before the collector has stored all ads from condor_advertise.
 #
 my %verifiedAdNames;
-
-my @statusres = ();
-runCondorTool("condor_status -af Name -const \"(TRUE || Absent)\"",\@statusres,2,{emit_output=>1});
-print "verifying ads were advertised\n";
-foreach my $line (@statusres ) {
-    $line =~ s/[\012\015]+$//;
-	print "verifying ads published\n";
-	print ":$line:\n";
-    #$verifiedAdNames{ $line } = undef;
-    $verifiedAdNames{ $line } = 1;
+my @allExpected = (@presentnames, @absentnames);
+my $maxWait = 30;
+my $waited = 0;
+my @statusres;
+while(1) {
+	%verifiedAdNames = ();
+	@statusres = ();
+	runCondorTool("condor_status -af Name -const \"(TRUE || Absent)\"",\@statusres,2,{emit_output=>1});
+	print "verifying ads were advertised\n";
+	foreach my $line (@statusres) {
+		$line =~ s/[\012\015]+$//;
+		print "verifying ads published\n";
+		print ":$line:\n";
+		$verifiedAdNames{ $line } = 1;
+	}
+	my $allFound = 1;
+	foreach my $ad (@allExpected) {
+		unless(exists $verifiedAdNames{$ad}) { $allFound = 0; last; }
+	}
+	last if $allFound;
+	if($waited >= $maxWait) {
+		print "Timed out waiting for all ads to appear in collector\n";
+		last;
+	}
+	sleep(2);
+	$waited += 2;
+	print "Waiting for ads to appear, ${waited}s elapsed...\n";
 }
 
 # by checking both array presentname and absent names for existence in @verifiedAdNames

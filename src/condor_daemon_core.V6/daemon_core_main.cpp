@@ -435,15 +435,15 @@ private:
 
 		std::string subsys_name = get_mySubSystemName();
 
-		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
-			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
-			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_ERROR, "Logic error!  Token request without associated daemon.\n");
 			req.m_client_id = "";
 			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
 		}
+		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
+			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
+			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		std::string token;
 		if (req.m_client_id.empty()) {
 			req.m_request_id = "";

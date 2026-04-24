@@ -2779,8 +2779,12 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		dprintf( D_ALWAYS, "Failed to receive number of users for %s command: aborting\n", cmd_name);
 		return FALSE;
 	}
+	if (num_users <= 0 || num_users > 1'000'000) {
+		dprintf( D_ALWAYS, "Invalid number of users %d for %s command: aborting\n", num_users, cmd_name);
+		return FALSE;
+	}
 
-	std::vector<ClassAd> acts; 
+	std::vector<ClassAd> acts;
 	if (num_users > 1) { acts.reserve(num_users); }
 	for (int ii = 0; ii < num_users; ++ii) {
 		ClassAd & ad = acts.emplace_back();
