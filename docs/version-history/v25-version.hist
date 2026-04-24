@@ -1,5 +1,9 @@
 *** 25.0.11 bugs
 
+- It was possible for docker universe jobs to generate duplicate volume mounts.
+  We now remove duplicates before invoking docker.
+  :jira:`3702`
+
 *** 25.0.10 bugs
 
 *** 25.0.9 bugs
