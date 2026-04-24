@@ -242,33 +242,6 @@ convertToStagingDirectory(
 }
 
 
-std::error_code
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return ec_false;
-}
-
-
-std::error_code
-bindMountContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return ec_false;
-}
-
-
-std::error_code
-copyContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return ec_false;
-}
-
-
 #else /* WINDOWS */
 
 
@@ -430,129 +403,6 @@ check_permissions(
 
 
 std::error_code
-HardlinkStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-HardlinkStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	using std::filesystem::perms;
-	std::error_code ec;
-
-	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): begin.\n" );
-
-	// We must be root (or the user the common files were transferred by) to
-	// traverse into the staging directory, which includes listing its
-	// contents, checking the permissions on its files, creating hardlinks
-	// to its files, or even seeing if the directory exists all (if we're
-	// not running in STARTER_NESTED_SCRATCH mode).
-	TemporaryPrivSentry tps(PRIV_ROOT);
-
-	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", sandbox.string().c_str() );
-		if( ec.value() != 0 ) { return ec; }
-		return ec_false;
-	}
-
-	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' is not a directory, aborting.\n", location.string().c_str() );
-		if( ec.value() != 0 ) { return ec; }
-		return ec_false;
-	}
-
-	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return ec_false;
-	}
-
-	// To be clear: this recurses into subdirectories for us.
-	std::filesystem::recursive_directory_iterator rdi(
-		location, {}, ec
-	);
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return ec;
-	}
-
-	for( const auto & entry : rdi ) {
-		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
-		auto relative_path = entry.path().lexically_relative(location);
-		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
-		if( entry.is_directory() ) {
-			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return ec_false;
-			}
-
-			auto dir = sandbox / relative_path;
-			std::filesystem::create_directory( dir, ec );
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return ec;
-			}
-			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(errno, std::system_category());
-			}
-
-			continue;
-		} else {
-			dprintf( D_ZKM, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
-
-			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return ec_false;
-			}
-
-			// If this file already exists, it must have been written
-			// there by (the proc-specific) input file transfer.  Since that
-			// _should_ win, semantically, at some point we'll have to fix
-			// this to ignore E_EXISTS.
-			std::filesystem::create_hard_link(
-				entry.path(), sandbox/relative_path, ec
-			);
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return ec;
-			}
-			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable to change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
-				return std::error_code(errno, std::system_category());
-			}
-		}
-	}
-
-
-	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): end.\n" );
-	return ec_true;
-}
-
-
-std::error_code
 StagingDirectory::map_impl(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox,
@@ -589,7 +439,7 @@ StagingDirectory::map_impl(
 	}
 
 
-	std::filesystem::recursive_directory_iterator di(
+	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
 	);
 	if( ec.value() != 0 ) {
@@ -598,16 +448,11 @@ StagingDirectory::map_impl(
 		return ec;
 	}
 
-	for( const auto & entry : di ) {
+	for( const auto & entry : rdi ) {
 		// dprintf( D_ZKM, "%s: '%s'\n", log_prefix.c_str(), entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(location);
 		// dprintf( D_ZKM, "%s: '%s'\n", log_prefix.c_str(), relative_path.string().c_str() );
 
-		//
-		// For reasons I don't understand std::filesystem::copy() can't copy
-		// nested directories whose write bit isn't set, so we have to do
-		// all of this by hand, instead.
-		//
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "%s: '%s' has the wrong permissions, aborting.\n", log_prefix.c_str(), location.string().c_str() );
@@ -616,7 +461,7 @@ StagingDirectory::map_impl(
 
 			ec = this->entry_is_directory( sandbox, relative_path, log_prefix );
 			if( ec.value() != 0 ) {
-				// entry_is_directory() already report the problem.
+				// entry_is_directory() already reported the problem.
 				return ec;
 			}
 
@@ -628,6 +473,10 @@ StagingDirectory::map_impl(
 			}
 
 			ec = this->entry_is_file( sandbox, relative_path, log_prefix );
+			if( ec.value() != 0 ) {
+			    // entry_is_file() already reported the problem.
+			    return ec;
+			}
 
 
 			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
@@ -637,6 +486,63 @@ StagingDirectory::map_impl(
 
 	dprintf( D_ZKM, "%s: end.\n", log_prefix.c_str() );
 	return ec_true;
+}
+
+
+std::error_code
+HardlinkStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+    std::error_code ec;
+
+	auto dir = sandbox / relative_path;
+	std::filesystem::create_directory( dir, ec );
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "%s: Failed to create_directory(%s): %s (%d)\n", log_prefix.c_str(), dir.string().c_str(), ec.message().c_str(), ec.value() );
+		return ec;
+	}
+	dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+
+	int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "%s: Unable to change owner of common input directory, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
+		return std::error_code(errno, std::system_category());
+	}
+
+    return ec_true;
+}
+
+
+std::error_code
+HardlinkStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+    std::error_code ec;
+
+	// If this file already exists, it must have been written
+	// there by (the proc-specific) input file transfer.  Since that
+	// _should_ win, semantically, at some point we'll have to fix
+	// this to ignore E_EXISTS.
+	std::filesystem::create_hard_link(
+		stagingDir/relative_path, sandbox/relative_path, ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "%s: Failed to create_hard_link(%s, %s): %s (%d)\n", log_prefix.c_str(), (stagingDir/relative_path).string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+		return ec;
+	}
+	dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
+
+	int rv = chown( (stagingDir/relative_path).string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "%s: Unable to change owner of common input file hardlink, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
+		return std::error_code(errno, std::system_category());
+	}
+
+    return ec_true;
 }
 
 
@@ -850,12 +756,24 @@ bindMountContentsOfDirectoryInto(
 
 
 std::error_code
-bindMountContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
+BindMountStagingDirectory::entry_is_directory(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
 ) {
 	return ec_false;
 }
+
+
+std::error_code
+BindMountStagingDirectory::entry_is_file(
+	const std::filesystem::path & sandbox,
+	const std::filesystem::path & relative_path,
+	const std::string & log_prefix
+) {
+	return ec_false;
+}
+
 
 #endif /* not LINUX */
 #endif /* not (LINUX || DARWIN ) */
@@ -886,7 +804,7 @@ StagingDirectory::modify() {
 
 std::error_code
 HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
-	return mapContentsOfDirectoryInto( this->path(), destination );
+    return map_impl( this->path(), destination, "HardlinkStagingDirectory::map()" );
 }
 
 
@@ -909,7 +827,7 @@ HardlinkStagingDirectory::usable() {
 
 std::error_code
 BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
-	return bindMountContentsOfDirectoryInto( this->path(), destination );
+    return map_impl( this->path(), destination, "BindMountStagingDirectory::map()" );
 }
 
 
@@ -932,7 +850,7 @@ BindMountStagingDirectory::usable() {
 
 std::error_code
 CopyStagingDirectory::map( const std::filesystem::path & destination ) {
-	return StagingDirectory::map_impl( this->path(), destination, "CopyStagingDirectory()" );
+	return map_impl( this->path(), destination, "CopyStagingDirectory()" );
 }
 
 
