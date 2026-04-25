@@ -595,7 +595,7 @@ make -C docs man
 # Any changes here should be synchronized with
 # ../debian/rules 
 
-%if 0%{?suse_version}
+%if 0%{?suse_version} || 0%{?fedora} >= 44
 %cmake \
 %else
 %cmake3 \
