@@ -381,7 +381,7 @@ def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
                    all be in the same format.
     :param parser:  Which parser to use (serialization format to assume).  If
                     unspecified, attempt to determine if the serialized ads
-                    are in the :const:`ParserType.Old or
+                    are in the :const:`ParserType.Old` or
                     :const:`ParserType.New` formats.
     '''
     seekable = True
@@ -431,7 +431,7 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
                    all be in the same format.
     :param parser:  Which parser to use (serialization format to assume).  If
                     unspecified, attempt to determine if the serialized ads
-                    are in the :const:`ParserType.Old or
+                    are in the :const:`ParserType.Old` or
                     :const:`ParserType.New` formats.
     :raises ClassAdException:  If ``input`` is not a string and can
                                not be rewound.
@@ -461,7 +461,7 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
         rv = _classad_parse_next_fd(input.fileno(), int(parser))
 
     if rv is None:
-        return classad2.ClassAd()
+        return ClassAd()
     else:
         return rv
 
