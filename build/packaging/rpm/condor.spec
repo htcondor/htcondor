@@ -633,20 +633,25 @@ make -C docs man
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
+
+%if 0%{?fedora} >= 44
+%cmake_build
+%else
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
+%endif
 %endif
 
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
@@ -663,7 +668,11 @@ echo ---------------------------- makefile ---------------------------------
 %if 0%{?suse_version}
 cd build
 %endif
+%if 0%{?fedora} >= 44
+%cmake_install
+%else
 make install DESTDIR=%{buildroot}
+%endif
 
 %if %uw_build
 make tests-tar-pkg
