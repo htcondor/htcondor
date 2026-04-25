@@ -1,5 +1,4 @@
-from typing import Optional
-from typing import Tuple
+from typing import Optional, Union, Tuple
 
 from ._common_imports import classad
 from .htcondor2_impl import _send_generic_payload_command
@@ -41,6 +40,7 @@ class DAGMan():
 
         HALT = 1
         RESUME = 2
+        SET_THROTTLES = 3
 
     class Failure(enum.IntEnum):
         """
@@ -141,6 +141,67 @@ class DAGMan():
         return (True, f"Resumed DAG {self.dag_id}")
 
 
+    def throttle(self, **kwargs) -> Union[classad.ClassAd, str]:
+        """
+        Set DAGMan throttles.
+
+        :param max_nodes: Set maximum number of submitted nodes (Optional).
+        :type max_nodes: int
+        :param max_idle: Set maximum number of idle jobs (Optional).
+        :type max_idle: int
+        :param max_pre: Set maximum number of executing Pre-Scripts (Optional).
+        :type max_pre: int
+        :param max_hold: Set maximum number of executing Hold-Scripts (Optional).
+        :type max_hold: int
+        :param max_post: Set maximum number of executing Post-Scripts (Optional).
+        :type max_post: int
+        :param max_submits: Set maximum number of job submissions per submit interval (Optional).
+        :type max_submits: int
+
+        .. note::
+            At least one of the parameters must be provided.
+
+        :return: ClassAd containing the DAGMan's set throttles or an error message.
+        """
+        request = classad.ClassAd({"DagCommand" : self.Command.SET_THROTTLES})
+
+        ARGS_TO_AD_ATTR = {
+            "max_nodes": "DAGMan_MaxJobs",
+            "max_idle": "DAGMan_MaxIdle",
+            "max_pre": "DAGMan_MaxPreScripts",
+            "max_hold": "DAGMan_MaxHoldScripts",
+            "max_post": "DAGMan_MaxPostScripts",
+            "max_submits": "DAGMan_MaxSubmitsPerInterval",
+        }
+
+        has_throttle = False
+
+        # Add new throttle values to request ad
+        for key, attr in ARGS_TO_AD_ATTR.items():
+            throttle = kwargs.get(key)
+            if throttle is not None:
+                has_throttle = True
+                request[attr] = throttle
+
+        if not has_throttle:
+            return "No valid throttle specified"
+
+        result, ret, err = self.__contact_dagman(self._CMD_DAGMAN_GENERIC, request)
+
+        if ret != self._SUCCESS:
+            return err
+
+        if not result.get("Result", False):
+            return result.get('ErrorString', 'Unknown')
+
+        # Copy over all set DAGMan throttles
+        throttles = classad.ClassAd()
+        for attr in ARGS_TO_AD_ATTR.values():
+            throttles[attr] = result.get(attr)
+
+        return throttles
+
+
     def __contact_dagman(self, cmd: int, request: classad.ClassAd) -> Tuple[classad.ClassAd, int, Optional[str]]:
         """
         Attempt to send command with payload to DAGMan and recieve a result ClassAd.
@@ -205,7 +266,7 @@ class DAGMan():
             return (self.Failure.CONNECT_SCHEDD, f"Failed to get contact information: {str(e)}")
 
         if not ad.get("Result", False):
-            ret = self.Failure.DENIED if result.get("Permitted", False) else self.Failure.GET_CONTACT
+            ret = self.Failure.DENIED if ad.get("Permitted", False) else self.Failure.GET_CONTACT
             return (ret, ad.get("ErrorString", "Unknown"))
 
         self._contact = DAGMan.ContactInfo(ad["Address"], ad["Secret"])

@@ -975,6 +975,11 @@ These macros control the *condor_schedd*.
     cool-down state for that number of seconds. During this time, the
     job will not be run again.
 
+:macro-def:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`
+    An integer representing the time in seconds that a scheduler universe job,
+    such as *condor_dagman*, will be in the cool down state when it exits
+    with a non-zero exit code. The default value is 300 seconds, i.e. 5 minutes.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
@@ -1537,3 +1542,30 @@ These macros control the *condor_schedd*.
    User security level used to write links to the directory specified by
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:  **<user>**, **<condor>** or **<%username%>**
+
+:macro-def:`KEEP_DATA_CLAIM_IDLE`
+    After an AP stages common files to an EP, it is responsible for keeping
+    those files there for as long as jobs running on that EP require them.
+    This integer duration in seconds defines how long the AP will keep those
+    common files on the EP after the last such job exits.  This delay gives
+    other jobs using those common files time to be submitted (if necessary)
+    and matched (if no claim can re-used).  It is analagous to
+    :subcom:`KEEP_CLAIM_IDLE`, but the latency reductions are probably
+    larger and reduce overall system overhead.
+
+    Defaults to 300 seconds.
+
+:macro-def:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`
+    Container images are definitionally immutable and usually the same for
+    every job in a cluster (and many clusters in a DAG); in addition, they
+    are usually large.  Thus, container images are prime candidates for
+    common file transfer, so that they get transferred to an EP once and
+    can be used many times.  (Because they use the same common file transfer
+    mechanism as any other common file, container images are not presently
+    shared between different job owners.)
+
+    Defaults to false.  Setting this knob to true will cause HTCondor to
+    do common file transfer for every container image that HTCondor transfers
+    (*i.e.*, not Docker images) unless :subcom:`ContainerIsCommon` is set.
+
+    We expect this knob to default to true in a later version of HTCondor.

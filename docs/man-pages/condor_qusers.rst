@@ -50,7 +50,7 @@ Options
     Print ClassAds in the specified form. If no form is specified, long form will be used.
  **-format** *fmt* *attr*
     Print selected attribute of the User or Project ClassAds using the given format.
- **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
+ **-autoformat[:lhVrTY,tng]** *attr1 [attr2 ...]* or **-af[:lhVrTY,tng]** *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
     arbitrary number of attribute names as arguments, and prints out
@@ -90,6 +90,16 @@ Options
 
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
+
+ **-aaf[:VrTY]** *attr1 [attr2 ...]*
+    (output option) Like **-autoformat**, but instead of replacing the
+    standard output columns, appends the specified attribute(s) as
+    additional columns after whatever standard format or **-print-format* file is in
+    effect.
+    Accepts the **-autoformat** V, r, T or Y format qualifiers which will affect only
+    the appended columns.  This option allows adding extra information to the default
+    *condor_status* output without losing the standard columns. Appended columns will
+    use the column separator and row terminator characters from the format that is appended to.
 
  **-usage**
     Display CPU and Slot usage.  The ``Completed`` and ``Removed`` columns as

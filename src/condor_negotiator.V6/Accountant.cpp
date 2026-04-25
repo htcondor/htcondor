@@ -551,15 +551,6 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
       SlotWeight = match_cost;
       ResourceName += suffix;
   } else {
-      // Check if the resource is used
-	  std::string RemoteUser;
-      if (db->GetAttributeString(AccountantTable::Resource, ResourceName,RemoteUserAttr,RemoteUser)) {
-        if (CustomerName==RemoteUser) {
-    	  dprintf(D_ACCOUNTANT,"Match already existed!\n");
-          return;
-        }
-        RemoveMatch(ResourceName,T);
-      }
       SlotWeight = GetSlotWeight(ResourceAd);
   }
 
@@ -992,24 +983,20 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     }
   }
 
-  // Remove matches that were broken
-  db->ForEachInTable(AccountantTable::Resource, [&](const std::string& resName, ClassAd* resAd) -> bool {
-    auto itr = resource_hash.find(resName);
-    if (itr == resource_hash.end()) {
-      dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",resName.c_str());
-      RemoveMatch(resName);
-    }
-	else {
-		// Here we need to figure out the CustomerName.
-      ClassAd* ResourceAd = itr->second;
-      resAd->LookupString(RemoteUserAttr,CustomerName);
-      if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
-        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",resName.c_str(),CustomerName.c_str());
-        RemoveMatch(resName);
-      }
-    }
-    return true;
-  });
+    //
+    // Reset all usage to zero.  The matchmaker calls this _after_ adjusting
+    // priorities, so this is probably OK, but it might be wiser to expose
+    // this a method that that the matchmaker explicitly calls at the right
+    // time (after adjusting prioities, before checkMatches()).
+    //
+    db->ForEachInTable( AccountantTable::Customer,
+        [&](const std::string& resName, ClassAd* /* resAd */) -> bool {
+            db->SetAttributeFloat( AccountantTable::Customer,
+                resName, WeightedResourcesUsedAttr, 0
+            );
+            return true;
+        }
+    );
 
   // Scan startd ads and add matches that are not registered
   for (ClassAd *ResourceAd: ResourceList) {
@@ -1402,6 +1389,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
+		ad->Assign(ATTR_LAST_UPDATE, LastUpdateTime);
 		SetMyTypeName(*ad, ACCOUNTING_ADTYPE); // MyType in the accounting log is * (so is target type actually)
 		// SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
@@ -1608,7 +1596,7 @@ ClassAd* Accountant::GetClassAd(AccountantTable table, const std::string& Key)
 std::string Accountant::GetDomain(const std::string& CustomerName)
 {
   std::string S;
-  size_t pos=CustomerName.find('@');
+  size_t pos=CustomerName.find_last_of('@');
   if (pos== std::string::npos) return S;
   S=CustomerName.substr(pos+1);
   return S;

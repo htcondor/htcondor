@@ -48,8 +48,8 @@ def get_rel_path_to_root_dir(inliner):
 def make_headerlink_node(attribute_name, options):
     """Create a headerlink associated with the paragraph symbol"""
     ref = '#' + attribute_name
-    node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
-    return node
+    html_markup = f'<a class="headerlink" href="{html.escape(ref)}" title="Permalink to this headline">¶</a>'
+    return nodes.raw("", html_markup, format="html")
 
 def make_inline_literal_node(attribute_name, id=None):
     html_parser = html.parser.HTMLParser()

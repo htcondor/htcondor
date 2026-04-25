@@ -1005,7 +1005,7 @@ VanillaProc::outOfMemoryEvent() {
 	return 0;
 }
 
-bool
+ReapResult
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
@@ -1030,8 +1030,8 @@ VanillaProc::JobReaper(int pid, int status)
 	if( m_pid_ns_status_filename.length() > 0 ) {
 		status = pidNameSpaceReaper( status );
 	}
-	bool jobExited = OsProc::JobReaper( pid, status );
-	if( pid != JobPid ) { return jobExited; }
+	ReapResult result = OsProc::JobReaper( pid, status );
+	if( pid != JobPid ) { return result; }
 
 	//
 	// We have three cases to consider:
@@ -1051,12 +1051,12 @@ VanillaProc::JobReaper(int pid, int status)
 		if( exit_status == successfulCheckpointStatus ) {
 			if( isSoftKilling ) {
 				notifySuccessfulEvictionCheckpoint();
-				return true;
+				return ReapResult::JobDone;
 			}
 
 			if( restartCheckpointedJob() ) {
 				isCheckpointing = false;
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1080,18 +1080,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
-
-
-
-				// FIXME: but doesn't.
-
-
-
-				starter->jic->setOutputTransfer(true);
-
-				// This job is done.
-				return true;
+				return ReapResult::JobShouldReExec;
 			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
@@ -1124,17 +1113,17 @@ VanillaProc::JobReaper(int pid, int status)
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
 			starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
 			starter->Hold();
-			return true;
+			return ReapResult::JobDone;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() and the job self-checkpointed.\n" );
 
 		if( isSoftKilling ) {
 			notifySuccessfulEvictionCheckpoint();
-			return true;
+			return ReapResult::JobDone;
 		} else {
 			if( restartCheckpointedJob() ) {
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1158,7 +1147,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
+				return ReapResult::JobShouldReExec;
 			}
 		}
 	} else {
@@ -1175,7 +1164,7 @@ VanillaProc::JobReaper(int pid, int status)
 		// force that no
 		daemonCore->Unregister_subfamily(pid);
 
-		return jobExited;
+		return result;
 	}
 }
 

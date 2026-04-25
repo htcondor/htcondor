@@ -56,6 +56,45 @@ struct SimpleSubmitKeyword {
 #define UN_ATTR(a,d) {#a, a, 0x5000 | (d<<24)},
 #define NO_ATTR(a,d) {#a, a, 0x6000 | (d<<24)},
 
+const int f_error        = 0x040; // use of this command has been disabled in submit
+const int f_alt_name     = 0x080;
+const int f_special      = 0x20000; // special parsing if the value is required
+const int f_special_mask = 0x1F000; // mask out the special group id
+
+constexpr const char * f_special_tag[]{
+	"resource",
+	"exe",
+	"args",
+	"grid",
+	"vm",
+	"java",
+	"env",
+	"stdin",
+	"stdout",
+	"stderr",
+	"notify",
+	"rank",
+	"concurrency",
+	"parallel",
+	"acctgroup",
+	"future",
+	"periodic",
+	"leaveinqueue",
+	"retries",
+	"container",
+	"future",
+	"future",
+	"future",
+	"future",
+	"future",
+	"signal",
+	"cred",
+	"tdp",
+	"deferral",
+	"imagesize",
+	"transfer",
+};
+
 static const SimpleSubmitKeyword intrinsics[] = {
 // future: generate from condor_attributes.h
 //#include "the_attributes_table.lst"
@@ -187,19 +226,32 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 
 	for (auto k = submit_keywords; k->key || k->attr; ++k) {
 		line.clear();
+		bool show_opts = false;
 		if (options & HELP_INFO_COMMANDS) {
-			if (k->key) {
-				if (! line.empty()) line += ", ";
-				line += k->key;
-			}
+			if (k->key) line += k->key;
+			if (options & HELP_INFO_ATTRIBUTES) line += ", ";
 		}
 		if (options & HELP_INFO_ATTRIBUTES) {
-			if (k->attr) {
-				if (! line.empty()) line += ", ";
-				line += k->attr;
-			}
+			if (k->attr) line += k->attr;
+			show_opts = (options & HELP_INFO_COMMANDS);
 		}
 		if (! line.empty()) {
+			if (show_opts) {
+				line += ",";
+				if (k->opts) {
+					if (k->opts & f_error) line += " ERR";
+					if (k->opts & f_alt_name) line += " ALT";
+					if (k->opts & f_special) { 
+						line += " (";
+						line += f_special_tag[(k->opts & f_special_mask)>>12];
+						line += ")";
+					} else {
+						line += " (simple)";
+					}
+				} else {
+					line += " (simple)";
+				}
+			}
 			line += "\n";
 			fputs(line.c_str(), out);
 			++lines;

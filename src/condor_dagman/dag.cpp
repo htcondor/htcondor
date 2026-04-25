@@ -53,6 +53,7 @@ const CondorID Dag::_defaultCondorId;
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
 	config                 (dm.config),
+	throttles              (dm.throttles),
 	_schedd                (dm._schedd),
 	_metrics               (dm.metrics),
 	_DAGManJobId           (&dm.DAGManJobId),
@@ -90,7 +91,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	}
 
 	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
-	             dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
+	             dm.throttles[Throttle::MAX_NODES], dm.throttles[Throttle::MAX_PRE], dm.throttles[Throttle::MAX_POST]);
 }
 
 //-------------------------------------------------------------------------
@@ -1546,25 +1547,22 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 		}
 	}
 
-	int maxJobs = dagOpts[shallow::i::MaxJobs];
-	int maxIdle = dagOpts[shallow::i::MaxIdle];
-
-	while (numSubmitsThisCycle < config[conf::i::SubmitsPerInterval]) {
+	while (dm.throttles.WithinLimit(Throttle::MAX_INT_SUBMITS, numSubmitsThisCycle)) {
 
 		// no nodes ready to submit
 		if (_readyQ->empty()) { break; }
 
 		// max jobs already submitted
-		if (maxJobs && _numNodesSubmitted >= maxJobs) {
+		if ( ! dm.throttles.WithinLimit(Throttle::MAX_NODES, _numNodesSubmitted)) {
 			debug_printf(DEBUG_DEBUG_1, "Max jobs (%d) already running; deferring submission of %d ready node%s.\n",
-			             maxJobs, _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_NODES], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
 
-		if (maxIdle && _numIdleJobProcs >= maxIdle) {
+		if ( ! dm.throttles.WithinLimit(Throttle::MAX_IDLE, _numIdleJobProcs)) {
 			debug_printf(DEBUG_DEBUG_1, "Hit max number of idle DAG nodes (%d); deferring submission of %d ready node%s.\n",
-			             maxIdle, _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_IDLE], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
@@ -2843,7 +2841,7 @@ Dag::EnforceNewJobsLimit() {
 	for (auto & node : _nodes) {
 		if (node->GetStatus() == Node::STATUS_SUBMITTED) {
 			submittedJobsCount++;
-			if (submittedJobsCount > dagOpts[shallow::i::MaxJobs]) {
+			if ( ! throttles.WithinLimit(Throttle::MAX_NODES, submittedJobsCount)) {
 				node->AddRetry();
 				std::string rm_reason = "DAG Limit: Max number of submitted nodes was reached.";
 				RemoveBatchJob(node, rm_reason);
@@ -2959,12 +2957,12 @@ Dag::PrintDeferrals(debug_level_t level, bool force) const
 
 	if (_maxJobsDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxJobs limit (%d)\n",
-		             _maxJobsDeferredCount, dagOpts[shallow::i::MaxJobs]);
+		             _maxJobsDeferredCount, throttles[Throttle::MAX_NODES]);
 	}
 
 	if (_maxIdleDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxIdle limit (%d)\n",
-		             _maxIdleDeferredCount, dagOpts[shallow::i::MaxIdle]);
+		             _maxIdleDeferredCount, throttles[Throttle::MAX_IDLE]);
 	}
 
 	if (_catThrottleDeferredCount > 0 || force) {
@@ -2973,17 +2971,17 @@ Dag::PrintDeferrals(debug_level_t level, bool force) const
 
 	if (_preScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total PRE script deferrals because of -MaxPre limit (%d) or DEFER\n",
-		             _preScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxPre]);
+		             _preScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_PRE]);
 	}
 
 	if (_postScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total POST script deferrals because of -MaxPost limit (%d) or DEFER\n",
-		             _postScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxPost]);
+		             _postScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_POST]);
 	}
 
 	if (_holdScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total HOLD script deferrals because of -MaxHold limit (%d) or DEFER\n",
-		             _holdScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxHold]);
+		             _holdScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_HOLD]);
 	}
 }
 
@@ -3995,7 +3993,6 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintNodeList();
-	OwnedMaterials *om = nullptr;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
 	if (layer == DESCENDENTS && _splices.size() == 0) {
@@ -4005,7 +4002,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& [splice_name, splice]: _splices) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
-		om = splice->LiftSplices(DESCENDENTS);
+		OwnedMaterials *om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice_name, om);
 		delete om;

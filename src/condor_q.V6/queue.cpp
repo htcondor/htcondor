@@ -156,18 +156,17 @@ static int parse_append_format_args(int argc, const char * argv[], AttrListPrint
 			return 1;
 		}, &lastcol);
 
-	ClassAd ad;
+	//ClassAd ad;
 	const char * pcolon;
 	for (int i = 0; i < argc; ++i)
 	{
 		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
 			const char * format_char = nullptr;
 			if (pcolon) {
-				++pcolon; // check to see if rV formating options have been passed
-				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
-				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
 				if (*pcolon) {
-					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aff:V are permitted.\n", pcolon);
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V,r,T, or Y is permitted.\n", pcolon);
 					return -1;
 				}
 			}
@@ -1813,7 +1812,8 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		constexpr const char * amo[]{ "", "normal", "run", "idle", "grid", "grid:ec2", "hold", "holdcodes", "io",
+			"factory", "dag", "totals", "batch", "autocluster", "jobset", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -2230,26 +2230,25 @@ usage (const char *myName, int other)
 		"\t-version\t\t Print the HTCondor version and exit\n"
 		"\t-wide[:<width>]\t\t Don't truncate data to fit in 80 columns.\n"
 		"\t\t\t\t Truncates to console width or <width> argument.\n"
-		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-autoformat[:jlhVrTY,tng] <attr> [<attr2> [...]]\n"
 		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
 		"\t        j   Display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
-		"\t-appendautoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
-		"\t-aaf[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
 		"\t    Like -af, but appends attr(s) after the standard columns\n"
-		"\t    Note: For -appendautoformat/-aaf, only jlhVr options affect formatting;\n"
-		"\t          separator options ,tng are ignored and existing separators are used.\n"
 		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
 		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
 		"\t\t\t\t (experimental, see htcondor-wiki for more information)\n"

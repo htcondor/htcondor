@@ -269,6 +269,12 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		}
 		std::string myargs;
 		args.GetArgsStringForLogging(myargs);
+		if (myargs.size() > 100000) {
+			std::string errmsg;
+			formatstr(errmsg, "Arguments to remote history query are too long (%ld), try with shorter constraint and/or projection", myargs.size());
+			dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
+			return sendHistoryErrorAd(state.GetStream(), 6, errmsg);
+		}
 		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
 	}
 

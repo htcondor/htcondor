@@ -768,6 +768,9 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 	}
 	if (!new_tcp_connections) {
 		dprintf(D_FULLDEBUG, "Not allowing new TCP connection to collector %s\n", update_destination);
+		if (callback_fn) {
+			(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+		}
 		return false;
 	}
 	if(nonblocking) {

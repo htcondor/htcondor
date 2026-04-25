@@ -26,6 +26,7 @@ Installation options:
 --channel NAME: Specify version channel to install; NAME can be
        feature: Most recent release with new features [default]
        lts    : Most recent release with only bug-fixes
+       oldlts : Previous release with only bug-fixes
 --password: Set the password used to secure the pool.  Use only if
             nobody else can log into the machine.  Otherwise specify
             in the environment (GET_HTCONDOR_PASSWORD) or interactively.
@@ -324,6 +325,7 @@ EOF
                 $sh_c "${apt_get} update"
                 $sh_c "${apt_get} install -y curl gnupg"
                 $sh_c "mkdir -p /etc/apt/keyrings"
+                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Daily-Key -o /etc/apt/keyrings/htcondor-snapshot.asc"
                 $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/htcondor.asc"
 
                 # Our repository redirects to https even if you try to
@@ -333,7 +335,7 @@ EOF
                 # Add our repository.
                 HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
                 $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/${ID}/htcondor-${CHANNEL_DIR}-${VERSION_CODENAME}.list -o ${HTCONDOR_LIST}"
-                if [ "${REPO_SUFFIX}" ]; then
+                if [ "${REPO_SUFFIX}" ] && [ -f ${HTCONDOR_LIST} ]; then
                     sed -i "/$REPO_SUFFIX/s/^#//" ${HTCONDOR_LIST}
                 fi
 
@@ -609,7 +611,7 @@ do_download() {
 }
 
 # Set global defaults
-CHANNEL="feature"
+CHANNEL_DIR="25.x"
 DOWNLOAD_URL="https://htcss-downloads.chtc.wisc.edu"
 DRY_RUN=1
 sh_c='sh -c'
@@ -687,11 +689,17 @@ while [ $# -gt 0 ]; do
             ;;
         --channel)
             case $2 in
-                lts|stable)
-                    CHANNEL="lts"
+                24.0|oldlts)
+                    CHANNEL_DIR="24.0"
                     ;;
-                feature|current|latest|developer)
-                    CHANNEL="feature"
+                24.x)
+                    CHANNEL_DIR="24.x"
+                    ;;
+                25.0|lts|stable)
+                    CHANNEL_DIR="25.0"
+                    ;;
+                25.x|feature|current|latest|developer)
+                    CHANNEL_DIR="25.x"
                     ;;
                 *)
                     echo "Illegal option $2 for --channel"
@@ -724,15 +732,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-# We have to update this once every LTS release; we don't want
-# to update a symlink, like we do for 'feature', because we don't
-# want to surprise other lts-channel users with new features.
-if [ "${CHANNEL}" = "lts" ]; then
-    CHANNEL_DIR=25.0
-elif [ "${CHANNEL}" = "feature" ]; then
-    CHANNEL_DIR=25.x
-fi
 
 # wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"

@@ -1745,6 +1745,23 @@ Matchmaker::negotiationTime( int /* timerID */ )
 		return;
 	}
 
+	// Filter out submitters that have asked to be skipped this round.
+	// Done before pie/normalization so their demand does not affect
+	// other submitters' fair-share calculations.
+	auto skipSubmitter = [](const ClassAd *ad) {
+		bool skip = false;
+		if (ad->LookupBool(ATTR_SKIP_MATCHMAKING, skip) && skip) {
+			std::string name;
+			ad->LookupString(ATTR_NAME, name);
+			dprintf(D_ALWAYS,
+				"Skipping submitter %s for this negotiation cycle (%s=true)\n",
+				name.c_str(), ATTR_SKIP_MATCHMAKING);
+			return true;
+		}
+		return false;
+	};
+	std::erase_if(submitterAds, skipSubmitter);
+
     // From here we are committed to the main negotiator cycle, which is non
     // reentrant wrt reconfig. Set any reconfig to delay until end of this cycle
     // to protect HGQ structures and also to prevent blocking of other commands

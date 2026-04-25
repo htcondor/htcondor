@@ -228,7 +228,7 @@ Resource::Resource (
 		if (_donor->is_partitionable_slot()) { _parent = _donor; }
 		else if (_donor->is_dynamic_slot()) { _parent = _donor->get_parent(); }
 		else {
-			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str);
+			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str ? _donor->r_id_str : "<null>");
 			// we can't fail a constructor, so create an unusable slot instead
 			set_feature(BROKEN_SLOT);
 			m_parent = nullptr;
@@ -1327,6 +1327,14 @@ Resource::publish_slot_config_overrides(ClassAd * cad)
 		const char * val = SlotType::type_param(r_attr, attrs[ix]);
 		if (val) cad->AssignExpr(attrs[ix], val);
 	}
+
+	// also publish admin-defined requirements clauses that have slot config overrides
+	for (auto & attr : r_reqexp.normal_clauses) {
+		if (YourStringNoCase(ATTR_START) != attr && YourStringNoCase(ATTR_WITHIN_RESOURCE_LIMITS) != attr) {
+			const char * val = SlotType::type_param(r_attr, attr.c_str());
+			if (val) cad->AssignExpr(attr, val);
+		}
+	}
 }
 
 // this is called on startup AND ON RECONFIG!
@@ -1688,6 +1696,18 @@ Resource::get_update_ads(ClassAd & public_ad, ClassAd & private_ad)
 
 	// Get the public and private ads
 	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
+
+	// If we are directly attached to a schedd, make the collector ad
+	// unclaimable by overriding START with a descriptive string.
+	// This prevents other schedds from matching while still showing
+	// a useful reason in condor_status -analyze.
+	std::string da_schedd;
+	param(da_schedd, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+	if (!da_schedd.empty()) {
+		std::string reason;
+		formatstr(reason, "\"Directly attached to schedd %s\"", da_schedd.c_str());
+		public_ad.AssignExpr(ATTR_START, reason.c_str());
+	}
 
 		// refresh the machine ad in the job sandbox
 	refresh_sandbox_ad(&public_ad);
@@ -2562,6 +2582,14 @@ void Resource::publish_static(ClassAd* cap)
 	cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 
 	{
+		std::string direct_attach_schedd;
+		param(direct_attach_schedd, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+		if (!direct_attach_schedd.empty()) {
+			cap->Assign(ATTR_IS_DIRECT_ATTACH, direct_attach_schedd);
+		}
+	}
+
+	{
 		// Since the Rank expression itself only lives in the
 		// config file and the r_classad (not any obejects), we
 		// have to insert it here from r_classad.  If Rank is
@@ -2852,6 +2880,10 @@ Resource::publish_dynamic(ClassAd* cap)
 		reqexp_set_state(r_reqexp.rstate);
 	} else {
 		publish_requirements(cap);
+		// special case for attrs related to ATTR_HEALTHY because these need to be copied
+		// when we are building a new ad (but it isn't necessary that they exist)
+		caCopyIfDefined(*cap, *r_config_classad, "HealthExprs");
+		caCopyIfDefined(*cap, *r_config_classad, "HealthFactor");
 	}
 
 	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );

@@ -427,6 +427,11 @@ public:
 			: (r_reqexp.rstate==COD_REQ ? "COD" 
 			: (r_reqexp.rstate==UNAVAIL_REQ ? "UNAVAIL" : "?"));
 	}
+	void add_reqexp_clauses(classad::References & clauses) const {
+		if ( ! r_reqexp.normal_clauses.empty()) {
+			clauses.insert(r_reqexp.normal_clauses.begin(), r_reqexp.normal_clauses.end());
+		}
+	}
 
 
 private:

@@ -287,7 +287,7 @@ test_main( int /* argv */, char ** /* argv */ ) {
 
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentReady( & ms );
         ASSERT( ms.jwuet_called && ! ms.sji_called );

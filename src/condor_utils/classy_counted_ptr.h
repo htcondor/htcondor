@@ -94,16 +94,19 @@ class ClassyCountedPtr {
 public:
 	ClassyCountedPtr()
 		: m_ref_count(0) {}
-	virtual ~ClassyCountedPtr()
-		{ASSERT( m_ref_count == 0 );}
+	// Destructor and decRefCount are deliberately out-of-line so that
+	// they act as the "key function" for the vtable.  Keeping them
+	// out-of-line prevents the compiler from inlining `delete this`
+	// at every call site; with multiple inheritance (e.g. CCBListener,
+	// which has ClassyCountedPtr as a non-primary base), GCC 16's
+	// devirtualization would otherwise emit an `operator delete` call
+	// on the offset-adjusted base subobject pointer rather than going
+	// through the deleting-destructor slot in the vtable, producing a
+	// -Wfree-nonheap-object warning (and potentially incorrect codegen).
+	virtual ~ClassyCountedPtr();
 
 	void incRefCount() {m_ref_count++;}
-	void decRefCount() {
-		ASSERT( m_ref_count > 0 );
-		if( --m_ref_count == 0 ) {
-			delete this;
-		}
-	}
+	void decRefCount();
 
 private:
 	int m_ref_count;

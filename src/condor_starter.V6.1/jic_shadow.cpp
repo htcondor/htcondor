@@ -3194,23 +3194,25 @@ JICShadow::initIOProxy( void )
 		condor_sockaddr *bindTo = NULL;
 
 		condor_sockaddr dockerInterface;
-		condor_sockaddr dockerInterfaceV6;   // not used;
-		condor_sockaddr dockerInterfaceBest; // also not used;
-		std::string docker_network_name;
-		param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
-		network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest);
-
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
 		std::string dockerImage;
 		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
 		bool hasDockerImage = ! dockerImage.empty();
 		if (wantDocker || hasDockerImage) {
-			bindTo = &dockerInterface;
+			condor_sockaddr dockerInterfaceV6;   // not used;
+			condor_sockaddr dockerInterfaceBest; // also not used;
+			std::string docker_network_name;
+			param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
+			if (network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest)) {
+				bindTo = &dockerInterface;
+			} else {
+				dprintf(D_ERROR, "Failed to find Docker network '%s' for IO Proxy.\n", docker_network_name.c_str());
+			}
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetJobHomeDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {

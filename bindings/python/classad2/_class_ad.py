@@ -304,23 +304,24 @@ def _convert_local_datetime_to_utc_ts(dt):
 
 def _parse_ads_generator(input, parser : Parser = Parser.Auto):
     seekable = True
-    total_offset = 0
+    file_offset = 0
     if not isinstance(input, str):
         try:
-            total_offset = input.tell()
+            file_offset = input.tell()
         except io.UnsupportedOperation:
-            total_offset = None
+            file_offset = None
             seekable = False
 
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (ad, offset) = _classad_parse_next(input_string, int(parser))
+        (ad, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
-        input_string = input_string[offset:]
+        string_offset += offset
         if not isinstance(input, str):
             if seekable:
-                total_offset += offset
-                input.seek(total_offset, 0)
+                file_offset += offset
+                input.seek(file_offset, 0)
 
         if ad is None or offset == 0:
             return
@@ -384,31 +385,31 @@ def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
                     :const:`ParserType.New` formats.
     '''
     seekable = True
-    total_offset = 0
+    file_offset = 0
     if not isinstance(input, str):
         try:
-            total_offset = input.tell()
+            file_offset = input.tell()
         except io.UnsupportedOperation:
-            total_offset = None
+            file_offset = None
             seekable = False
 
     result = ClassAd()
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (firstAd, offset) = _classad_parse_next(input_string, int(parser))
+        (firstAd, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
         if firstAd is None or offset == 0:
             return result
 
         if firstAd is not None:
             result.update(firstAd)
-        if offset != 0:
-            input_string = input_string[offset:]
+        string_offset += offset
 
         if not isinstance(input, str):
             if seekable:
-                total_offset += offset
-                input.seek(total_offset, 0)
+                file_offset += offset
+                input.seek(file_offset, 0)
 
 
 # In version 1, this never actually returned an iterator, and it only

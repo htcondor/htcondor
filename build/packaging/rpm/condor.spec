@@ -46,8 +46,8 @@ URL: https://htcondor.org/
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-# Do not provide libfmt
-%global __requires_exclude ^libfmt\\.so.*$
+# # Do not provide libfmt
+# %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 Source1: %{name}.sysusers.conf
@@ -239,8 +239,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.23.0 or pelican-debug >= 7.23.0)
-Requires: pelican-osdf-compat >= 7.23.0
+Requires: (pelican >= 7.24.2 or pelican-debug >= 7.24.2)
+Requires: pelican-osdf-compat >= 7.24.2
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
@@ -816,9 +816,9 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/condor/libfmt.so
-%_libdir/condor/libfmt.so.10
-%_libdir/condor/libfmt.so.10.1.0
+# %_libdir/condor/libfmt.so
+# %_libdir/condor/libfmt.so.10
+# %_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
@@ -1311,6 +1311,35 @@ fi
 # configuration
 
 %changelog
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.8.2-1
+- Fix detection and reporting of NVIDIA MIG GPU attributes
+- Add '--rocm' flag to Apptainer GPU jobs to support AMD GPUs
+- Can now use 'condor_rm -transfer' to fetch whatever output is available
+- Can now use 'condor_q -aaf' to append columns to the standard output
+- Can now run 'condor_top --history' to get fast response from stored data
+- htcondor dag status now includes information about file transfers
+- htcondor job status and condor_q now report cool down state information
+- condor_run no longer passes 'getenv = true' to the submit file
+- Fix condor_ssh_to_job for setuid Apptainer or Singularity runtimes
+- The negotiator now knows the user's floor to avoid improper preemption
+- The condor_shadow now logs information about reconnect attempts
+- condor_config_val can now report configuration option's default value
+- All changes in 25.0.9
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.9-1
+- All changes in 24.12.19
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.19-1
+- Fix crash when a user provided Docker script produces unexpected output
+- All changes in 24.0.19
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.19-1
+- Now properly reports NVIDIA MIG GPU device names
+- Fix performance problem in the htcondor2 Python ClassAd parser
+- Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+- Batch grid universe jobs now tolerate a dot in the username
+- Fix huge reported job execution times when an AP restarts
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.7.2-1
 - Improve schedd performance with large job records by sizing pipe buffers
 - condor_watch_q display improvements
@@ -1479,7 +1508,7 @@ fi
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
 - Fix condor_token_request to accept automatically-approved tokens
 
-* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.3-1
 - Fix condor_store_cred bug that broke installing with get_htcondor
 
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1

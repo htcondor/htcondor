@@ -49,6 +49,8 @@ catalog_utils.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
+classad_string_utils.cpp
+classad_string_utils.h
 compat_classad.cpp
 compat_classad.h
 compat_classad_util.cpp
@@ -187,6 +189,7 @@ classad_oldnew.h
 classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
+classy_counted_ptr.cpp
 classy_counted_ptr.h
 command_strings.cpp
 command_strings.h
