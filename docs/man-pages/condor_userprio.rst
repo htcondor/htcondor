@@ -80,6 +80,21 @@ Edit Options
     of all running jobs (See :macro:`SLOT_WEIGHT`).
     Setting the ceiling to -1 clears any previously set ceiling, and
     sets the effective ceiling to unlimited.
+    When combined with **-duration**, the ceiling is set as a temporary
+    *lease*: at the next negotiation cycle on or after *seconds* have
+    elapsed, the ceiling is automatically restored to its prior value.
+    Lease state is persistent, so it survives a *condor_negotiator*
+    restart.  It is an error to set a lease while one is already in
+    effect for the same submitter; cancel the existing lease first
+    with **-cancelceilinglease**.
+ **-duration** *seconds*
+    Only valid with **-setceiling**.  Make the ceiling a lease that
+    expires after *seconds* seconds, at which point the prior ceiling
+    is restored.
+ **-cancelceilinglease** *submitter*
+    Cancel an in-effect ceiling lease for *submitter*, immediately
+    restoring the ceiling value that was in effect before the lease
+    was set.  It is an error if no lease is in effect.
  **-setfloor** *submitter* *value*
     Set the floor for the submitter specified by *submitter* to the
     specified *value*. Where *value* is the sum of the SlotWeight
