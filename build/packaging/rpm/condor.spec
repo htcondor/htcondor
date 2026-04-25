@@ -633,7 +633,7 @@ make -C docs man
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora} < 44
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{fedora} < 44 
 cd redhat-linux-build
 %endif
 %endif
@@ -651,7 +651,7 @@ make %{?_smp_mflags} tests
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora} < 44
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{fedora} < 44 
 cd redhat-linux-build
 %endif
 %endif
