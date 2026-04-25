@@ -5628,6 +5628,19 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 	dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
 			 "forking a shadow\n", srec->job_id.cluster,
 			 srec->job_id.proc );
+
+		// For MPI/PARALLEL jobs we still hold a DedicatedScheduler
+		// AllocationNode for this cluster. The shadow-death cleanup
+		// path (DedicatedScheduler::removeAllocation) never runs here
+		// because no shadow was ever spawned. Drop the allocation now
+		// so the cluster can be rematched; otherwise the next
+		// DedicatedScheduler::createAllocations() for this cluster
+		// would ASSERT on the duplicate map entry and EXCEPT the schedd.
+	if( universe == CONDOR_UNIVERSE_MPI ||
+	    universe == CONDOR_UNIVERSE_PARALLEL ) {
+		dedicated_scheduler.removeOrphanedAllocation( srec->job_id.cluster );
+	}
+
 	mark_job_stopped( srec->job_id );
 	delete_shadow_rec( srec );
 	return false;
