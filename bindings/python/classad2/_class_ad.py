@@ -346,12 +346,12 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
     Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
-    read *input* one ad at a time, but note for some types of :class:`IO`, you
+    read *input* one ad at a time, but note for some types of :class:`~typing.IO`, you
     must specify the serialization format.
 
-	Some serializations can represent empty ads, which will be returned by
-	the generator.  You must therefore exhaust the generator to be sure
-	you've read every ad in *input*.
+    Some serializations can represent empty ads, which will be returned by
+    the generator.  You must therefore exhaust the generator to be sure
+    you've read every ad in *input*.
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
@@ -368,12 +368,12 @@ def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     Parses all of the ads in *input*, merges them into one, and returns it.  If
     there are no ads in *input*, returns the empty ad.
 
-    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
+    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
     Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
     read *input* one ad at a time, (and then :func:`update` the previous
-    result),  but note for some types of :class:`IO`, you must specify the
+    result),  but note for some types of :class:`~typing.IO`, you must specify the
     serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
