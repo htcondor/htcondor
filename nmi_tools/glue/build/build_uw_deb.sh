@@ -91,6 +91,8 @@ elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     SYS99='ubu22'
 elif [ "$VERSION_CODENAME" = 'noble' ]; then
     SYS99='ubu24'
+elif [ "$VERSION_CODENAME" = 'resolute' ]; then
+    SYS99='ubu26'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
     SYS99='dev04'
 else
