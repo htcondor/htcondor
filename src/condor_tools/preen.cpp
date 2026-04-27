@@ -1482,6 +1482,18 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 				fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
 			}
 			if(! fp) {
+					// No .job.ad means we can't determine what to clean up,
+					// but the directory may be an empty orphan left behind by
+					// a crashed or aborted cleanup.  std::filesystem::remove
+					// only succeeds on empty directories, so it's safe to
+					// try here; non-empty dirs will fail quietly and we fall
+					// through to the usual "ignoring" report.
+				std::error_code rmEc;
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				if( std::filesystem::remove( jobDir.path(), rmEc ) ) {
+					dprintf( D_ALWAYS, "Removed empty orphan cleanup directory %s.\n", jobDir.path().string().c_str() );
+					continue;
+				}
 				formatstr( message, "No .job.ad file found in %s, ignoring.", jobDir.path().string().c_str() );
 				dprintf( D_ALWAYS, "%s\n", message.c_str() );
 				badPathMap[jobDir.path()] = message;

@@ -2842,6 +2842,22 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
+    .. warning::
+
+        This command is intended for system use such as DAGMan. To
+        add a user note use :subcom:`submit_event_user_notes`
+
+ :subcom-def:`submit_event_notes_attrs` = <ClassAd Attribute>[, ... ]
+    A comma separated list of ClassAd attribute names to include within
+    the job event log submit event structured notes ClassAd in addition
+    to the :ad-attr:`JobBatchName` and :ad-attr:`DAGNodeName`. The provided
+    attributes are fully evaluated and added as best effort such that an
+    attribute specified in the list is not added to the structured notes
+    if the evaluation results in ``Undefined`` or an error.
+
+ :subcom-def:`submit_event_user_notes` = <note>
+    A string that is appended to the submit event in the job's log file.
+
  :subcom-def:`ulog_execute_attrs` = <attribute-list>
     A comma-separated list of machine ClassAd attribute names. The named
     attributes and their values are written as part of the execution event
