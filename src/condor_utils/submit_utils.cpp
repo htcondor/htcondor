@@ -4852,6 +4852,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserNotes
 	{SUBMIT_KEY_UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_NotesAttrsCommand, ATTR_SUBMIT_EVENT_NOTES_ATTRS, SimpleSubmitKeyword::f_as_string},
 	// formerly SetStackSize
 	{SUBMIT_KEY_StackSize, ATTR_STACK_SIZE, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJarFiles

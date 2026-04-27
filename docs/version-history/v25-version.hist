@@ -1,5 +1,11 @@
 *** 25.11.0 features
 
+- Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
+  correctly for jobs submitted after the tool began executing. The incorrect
+  behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan
+  execution.
+  :jira:`3656`
+
 - Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
