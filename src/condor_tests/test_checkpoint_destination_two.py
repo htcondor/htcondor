@@ -408,81 +408,42 @@ def the_transfers(test_dir, the_completed_job_ad, the_condor):
     clusterID = the_completed_job_ad["ClusterID"]
     procID = the_completed_job_ad["ProcID"]
 
-    # Find each transfer ad for this job.
+    # Find each transfer ad for this job. The file is a sequence of records
+    # separated by "***\n" lines (with a leading separator at the top of the
+    # file and no trailing one after the last record).
     transfers = []
     globalJobID = the_completed_job_ad["GlobalJobID"].replace('#', '_')
+    prefix = "./_condor_checkpoint_MANIFEST."
     with open(FILE_TRANSFER_STATS_LOG, "r") as transfer_history:
-            #
-            # This is _amazingly_ stupid.  Why don't any of the condor tools
-            # actually handle this?  Why is there no Python API that does?
-            #
+        records = transfer_history.read().split("\n***\n")
 
-            # Eat the first "separator" line.
-            line = transfer_history.readline()
-            while True:
-                buffer = ''
+    # The leading "***" makes the first split element start with "***\n";
+    # drop that prefix on the first record. Skip empty records (e.g. from
+    # a transient half-flushed write seen by the reader).
+    if records and records[0].startswith("***\n"):
+        records[0] = records[0][len("***\n"):]
 
-                while True:
-                    line = transfer_history.readline()
-                    if line == "":
-                        # Because Python has no eof() function.
-                        break
-                    elif line != "***\n":
-                        buffer += line
-                    else:
-                        ad = classad.parseOne(buffer)
+    for buffer in records:
+        if not buffer.strip():
+            continue
+        ad = classad.parseOne(buffer)
 
-                        # We only care about the job we're looking at.
-                        if ad['JobClusterID'] != clusterID:
-                            break
-                        if ad['JobProcID'] != procID:
-                            break
+        # We only care about the job we're looking at. Some records may lack
+        # these attributes; skip them rather than KeyError'ing.
+        if ad.get('JobClusterID') != clusterID:
+            continue
+        if ad.get('JobProcID') != procID:
+            continue
+        if ad.get('TransferProtocol') != "cedar":
+            continue
+        if ad.get('TransferType') != 'download':
+            continue
 
-                        # What I want to generate here was a list of all
-                        # the checkpoint numbers downloaded by the starter.
-                        #
-                        # The original idea was to look at the URLs downloaded
-                        # by the starter and parse them to find the checkpoint
-                        # numbers, and report the list of those.
-                        #
-                        # For some reason, the file transfer object doesn't
-                        # actually log downloaded URLs.  It also doesn't log
-                        # CEDAR uploads, and it logs uploads from the starter
-                        # to a URL as CEDAR downloads.
-                        #
-                        # The upshot of this disaster is that even adding
-                        # which subsystem logged to the transfer doesn't
-                        # let me figure out what actually happened.
-                        #
-                        # Instead, I'm going to look for the starter's records
-                        # of downloaded MANIFEST files, and declare those to be
-                        # a true indication of what actually happened.
-                        #
-
-                        # However, we can set SHADOW.FILE_TRANSFER_STATS_LOG
-                        # and keep the shadow events out of the default
-                        # transfer history file without (further) hacks.
-                        # if ad['Subsystem'] != "STARTER":
-                        #   break
-                        if ad['TransferProtocol'] != "cedar":
-                            break
-                        # Just in case we ever fix any of the above.
-                        if ad['TransferType'] != 'download':
-                            break
-
-                        # The ./ seems redundant, but it's always there.
-                        prefix = "./_condor_checkpoint_MANIFEST."
-                        transferFileName = ad['TransferFileName']
-                        if transferFileName.startswith(prefix):
-                            # Only for Python >= 3.9 :(
-                            # suffix = transferFileName.removeprefix(prefix)
-                            suffix = transferFileName[len(prefix):]
-                            transfers.append(suffix[0:4])
-
-                        break
-
-                if line == "" and buffer == "":
-                    break
+        # The ./ seems redundant, but it's always there.
+        transferFileName = ad.get('TransferFileName', '')
+        if transferFileName.startswith(prefix):
+            suffix = transferFileName[len(prefix):]
+            transfers.append(suffix[0:4])
 
     # print(f"TRANSFERS: {transfers}")
     return transfers
