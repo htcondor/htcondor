@@ -47,15 +47,18 @@ else
 fi
 
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
-    apt-get update
     export DEBIAN_FRONTEND='noninteractive'
+    apt-get update --yes; apt-get upgrade --yes
     INSTALL='apt-get install --yes'
 elif [ "$ID" = 'centos' ]; then
+    yum upgrade --assumeyes
     INSTALL='yum install --assumeyes'
 elif [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
+    zypper --non-interactive update
     INSTALL='zypper --non-interactive install'
     $INSTALL system-group-wheel system-user-mail
 elif [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
+    dnf upgrade --assumeyes
     INSTALL='dnf install --assumeyes'
     $INSTALL 'dnf-command(config-manager)'
 fi

@@ -7,7 +7,7 @@ docker://htcondor/nmi-build:aarch64_AlmaLinux8-25080200,arm-AL8,ubuntu-24.04-arm
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-25080200,arm-AL9,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25080200,arm-AL10,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:aarch64_Ubuntu24-25100000,arm-U24,ubuntu-24.04-arm,all
-docker://htcondor/nmi-build:aarch64_Ubuntu26-25100000,arm-U26,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_Ubuntu26-25100001,arm-U26,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25080200,ppc-AL8,batlab,batlab
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25080200,x86-AL8,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-25080200,x86-AL9,ubuntu-latest,all
@@ -21,7 +21,7 @@ docker://htcondor/nmi-build:x86_64_openSUSE16-25080200,x86-OS16,ubuntu-latest,al
 docker://htcondor/nmi-build:x86_64_SLES15SP5-25080200,x86-SLES15,batlab,batlab
 docker://htcondor/nmi-build:x86_64_Ubuntu22-25080200,x86-U22,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_Ubuntu24-25080200,x86-U24,ubuntu-latest,all:ubunturoot
-docker://htcondor/nmi-build:x86_64_Ubuntu26-25100000,x86-U26,ubuntu-latest,all:ubunturoot
+docker://htcondor/nmi-build:x86_64_Ubuntu26-25100001,x86-U26,ubuntu-latest,all:ubunturoot
 x86_64_macOS13,macos,batlab,batlabonly
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9,win,batlab,batlabonly
