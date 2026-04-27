@@ -17,6 +17,17 @@
 
 *** 25.10.0 features
 
+- The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
+  A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
+  final job update and exits when the starter process is reaped. While
+  cleaning, the slot will not match new work; :tool:`condor_vacate`
+  and other preempt requests that arrive during cleaning are recorded
+  and applied when the starter is reaped, rather than triggering a
+  second state change while the starter is already exiting. A new
+  :ad-attr:`TotalTimeClaimedCleaning` machine attribute accumulates
+  time spent in this activity.
+  :jira:`3686`
+
 - Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
   :jira:`3584`
