@@ -5,6 +5,11 @@
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
+  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
+  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
+  :jira:`3664`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs

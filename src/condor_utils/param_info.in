@@ -5116,6 +5116,12 @@ default=100
 type=int
 range=0,
 
+[MAX_CONCURRENT_UPLOADS_PER_USER]
+default=$(MAX_CONCURRENT_UPLOADS:100)/5
+type=int
+range=0,
+
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=2.0
 type=string
