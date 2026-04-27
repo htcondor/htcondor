@@ -6,6 +6,11 @@
   execution.
   :jira:`3656`
 
+- Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
+  to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
+  throughout the lifetime of a daemon.
+  :jira:`3687`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs

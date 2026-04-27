@@ -5281,10 +5281,10 @@ AttributeUpdate::readEvent(ULogFile& file, bool & got_sync_line)
 		return 0;
 	}
 
-	int retval = sscanf(line.c_str(), "Changing job attribute %s from %s to %s", buf1, buf2, buf3);
+	int retval = sscanf(line.c_str(), "Changing job attribute %4095s from %4095s to %4095s", buf1, buf2, buf3);
 	if (retval < 0)
 	{
-		retval = sscanf(line.c_str(), "Setting job attribute %s to %s", buf1, buf3);
+		retval = sscanf(line.c_str(), "Setting job attribute %4095s to %4095s", buf1, buf3);
 		if (retval < 0)
 		{
 			return 0;
