@@ -216,7 +216,7 @@ jobs:
         run: |
           sudo condor_master
           condor_version
-          sleep 5
+          sleep 50
           condor_status
 
   ubuntu_root:
