@@ -5,6 +5,10 @@
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
+  (8 hours).
+  :jira:`3706`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs

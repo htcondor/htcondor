@@ -593,7 +593,7 @@ These macros control the *condor_schedd*.
     fewer transactions it has to play to figure out what state the job
     queue is really in. This macro determines how often the
     *condor_schedd* should rework this queue to cleaning it up. It is
-    defined in terms of seconds and defaults to 86400 (once a day).
+    defined in terms of seconds and defaults to 28800 (every 8 hours).
 
 :macro-def:`WALL_CLOCK_CKPT_INTERVAL`
     The job queue contains a counter for each job's "wall clock" run
