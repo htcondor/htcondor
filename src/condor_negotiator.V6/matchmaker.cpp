@@ -576,6 +576,9 @@ initialize (const char *neg_name)
     daemonCore->Register_Command (SET_FLOOR, "SetFloor",
             (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
 			"SET_FLOOR_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (MANAGE_CEILING, "ManageCeilingLease",
+            (CommandHandlercpp) &Matchmaker::MANAGE_CEILING_commandHandler,
+			"MANAGE_CEILING_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
             (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler,
 			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
@@ -1165,6 +1168,67 @@ SET_CEILING_or_FLOOR_commandHandler (int command, Stream *stream) {
 	return TRUE;
 }
 
+// Request ad:  { Submitter = "...", Action = "set"|"cancel",
+//                Ceiling = N, Duration = N }  (latter two for "set" only)
+// Reply ad:    { Success = true|false, ErrorString = "..." }
+int Matchmaker::
+MANAGE_CEILING_commandHandler (int /*command*/, Stream *stream)
+{
+	ClassAd req;
+	stream->decode();
+	bool read_ok = getClassAd(stream, req) && stream->end_of_message();
+
+	std::string submitter;
+	std::string action;
+	bool ok = false;
+	std::string err;
+
+	if (!read_ok) {
+		err = "negotiator could not decode MANAGE_CEILING request ad";
+	} else if (!req.LookupString(ATTR_SUBMITTER, submitter) || submitter.empty()) {
+		err = "request is missing Submitter";
+	} else if (!req.LookupString("Action", action)) {
+		err = "request is missing Action";
+	} else if (strcasecmp(action.c_str(), "set") == 0) {
+		int ceiling = 0;
+		int duration = 0;
+		if (!req.LookupInteger("Ceiling", ceiling)) {
+			err = "set action requires Ceiling";
+		} else if (!req.LookupInteger("Duration", duration)) {
+			err = "set action requires Duration";
+		} else {
+			ok = accountant.SetCeilingLease(submitter, ceiling, duration, err);
+			if (ok) {
+				dprintf(D_ALWAYS,
+				        "Set ceiling lease for %s to %d for %d seconds\n",
+				        submitter.c_str(), ceiling, duration);
+			}
+		}
+	} else if (strcasecmp(action.c_str(), "cancel") == 0) {
+		ok = accountant.CancelCeilingLease(submitter, err);
+		if (ok) {
+			dprintf(D_ALWAYS, "Cancelled ceiling lease for %s\n",
+			        submitter.c_str());
+		}
+	} else {
+		formatstr(err, "unknown Action '%s'", action.c_str());
+	}
+
+	if (!ok) {
+		dprintf(D_ALWAYS, "MANAGE_CEILING rejected: %s\n", err.c_str());
+	}
+
+	ClassAd reply;
+	reply.Assign("Success", ok);
+	reply.Assign("ErrorString", err);
+	stream->encode();
+	if (!putClassAd(stream, reply) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "MANAGE_CEILING: failed to send reply\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 
 int Matchmaker::
 SET_PRIORITY_commandHandler (int, Stream *strm)
@@ -1721,6 +1785,10 @@ Matchmaker::negotiationTime( int /* timerID */ )
     }
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
+
+	// Expire any ceiling leases whose time has passed. Doing this before we
+	// read submitter ceilings ensures restored values take effect this cycle.
+	accountant.CheckCeilingLeases();
 
 	time_t start_time = time(NULL);
 

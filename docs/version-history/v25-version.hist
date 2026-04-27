@@ -11,6 +11,14 @@
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
+  to install a time-limited ceiling *lease*: the prior ceiling is
+  automatically restored after the given number of seconds. Leases are
+  persistent across *condor_negotiator* restarts. A new
+  ``-cancelceilinglease`` option cancels an in-effect lease.
+  :jira:`3518`
+
+ - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
