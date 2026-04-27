@@ -56,6 +56,8 @@
 // in later versions when PY_SSIZE_T_CLEAN is defined by default.
 #define Py_LIMITED_API 0x03030000
 #define PY_SSIZE_T_CLEAN
+#undef _POSIX_C_SOURCE
+#undef _XOPEN_SOURCE
 #include <Python.h>
 
 
