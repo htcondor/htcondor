@@ -2733,6 +2733,10 @@ default=false
 type=bool
 tags=io,condor_auth_fs
 
+[FS_ROOT_TO_CONDOR]
+default=true
+type=bool
+
 [KERBEROS_MAP_FILE]
 default=
 type=string

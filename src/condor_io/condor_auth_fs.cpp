@@ -405,6 +405,14 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 							"Unable to lookup uid %i", stat_buf.st_uid);
 				} else {
 					server_result = 0;	// 0 means success here. sigh.
+					// Map user 'root' to the condor user. The client attempts
+					// to switch euid to the condor user for FS authentication,
+					// but some code has all priv-switching disabled.
+					if (param_boolean("FS_ROOT_TO_CONDOR", true) && strcmp(tmpOwner, "root") == 0 && get_condor_username()) {
+						dprintf(D_SECURITY|D_FULLDEBUG, "FS Mapping 'root' to '%s'\n", get_condor_username());
+						free(tmpOwner);
+						tmpOwner = strdup(get_condor_username());
+					}
 					setRemoteUser( tmpOwner );
 					setAuthenticatedName( tmpOwner );
 					free( tmpOwner );
