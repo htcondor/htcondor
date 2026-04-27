@@ -154,6 +154,11 @@ def the_condor(test_dir):
 
 @action
 def installed_limit(helper_path, the_condor, schedd_address):
+    # window=60: the schedd may serialize the 3 startups across 1-2 slots with
+    # several seconds between each (claim-reuse, negotiation cycle delays).
+    # A 60s window throttles any 2nd+ startup that lands within a minute of
+    # the first, regardless of slot/claim-reuse timing. With a 5s window the
+    # test was flaky when startups happened to land >5s apart.
     return _create_limit(
         helper_path,
         schedd_address,
@@ -161,7 +166,7 @@ def installed_limit(helper_path, the_condor, schedd_address):
         name="rate-test",
         expr="true",
         count=1,
-        window=5,
+        window=60,
     )
 
 
