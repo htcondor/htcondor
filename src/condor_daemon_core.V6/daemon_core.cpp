@@ -85,6 +85,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
+#include "condor_random_num.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
 #include "valgrind.h"
@@ -10979,13 +10980,13 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 	return true;
 }
 
-bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
+bool DaemonCore :: cookie_is_valid( const unsigned char* data, int len ) {
 
 	if ( data == NULL || _cookie_data == NULL ) {
 		return false;
 	}
 
-	if ( strcmp((const char*)_cookie_data, (const char*)data) == 0 ) {
+	if ( len == _cookie_len && timing_safe_compare(_cookie_data, data, len) ) {
 		// we have a match... trust this command.
 		return true;
 	} else if ( _cookie_data_old != NULL ) {
@@ -10994,7 +10995,7 @@ bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 		// rotated the cookie. So check it with
 		// the old cookie.
 
-		if ( strcmp((const char*)_cookie_data_old, (const char*)data) == 0 ) {
+		if ( len == _cookie_len_old && timing_safe_compare(_cookie_data_old, data, len) ) {
 			return true;
 		} else {
 

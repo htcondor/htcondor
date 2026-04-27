@@ -1642,7 +1642,7 @@ class DaemonCore : public Service
 	/* manage the secret cookie data */
 	bool set_cookie( int len, const unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
-	bool cookie_is_valid( const unsigned char* data );
+	bool cookie_is_valid( const unsigned char* data, int len );
 
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
