@@ -15761,7 +15761,7 @@ Scheduler::Init()
 	m_negotiate_timeslice.setMaxInterval( SchedDInterval.getMaxInterval() );
 
 	// default every 24 hours
-	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
+	QueueCleanInterval = param_integer("QUEUE_CLEAN_INTERVAL", 8*60*60);
 
 	// default every hour
 	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );

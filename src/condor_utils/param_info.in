@@ -3369,7 +3369,7 @@ customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [QUEUE_CLEAN_INTERVAL]
-default=86400
+default=28800
 type=int
 tags=Schedd
 
