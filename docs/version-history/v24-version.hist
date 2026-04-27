@@ -1,5 +1,11 @@
 *** 24.0.21 bugs
 
+- When the python bindings are run as user ``root`` and use the FS method
+  to authenticate with a daemon, the authenticated identity will be
+  ``condor`` instead of ``root``.
+  This matches the behavior of all of the commmand line tools.
+  :jira:`3695`
+
 *** 24.0.20 features
 
 - HTCondor tarballs now contain `Pelican 7.24.2 <https://pelicanplatform.org/releases>`_
