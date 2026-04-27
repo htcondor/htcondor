@@ -1064,6 +1064,11 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
              - BOOLEAN
              - 0
              - ``1`` if garbage collection executed during this cycle.
+           * - ``RecordsLostOnInsertFailure``
+             - INTEGER
+             - 0
+             - Count of job ads read from disk but dropped during this cycle because the database
+               insert transaction failed and was rolled back.
 
         **Indexes**
 
@@ -1071,8 +1076,12 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
 
     .. tab:: StatusData
 
-        A single-row table (``StatusDataId`` is constrained to ``1``) holding cumulative
-        running statistics across all cycles. Updated on every cycle.
+        Holds cumulative running statistics across all cycles, updated on every cycle.
+        Normally contains a single active row (``StatusDataId = 1``). When any integer
+        counter (``TotalCycles``, ``TotalAdsIngested``, or ``TotalRecordsLost``) would
+        overflow ``INT64_MAX``, the active row is automatically rotated to
+        ``StatusDataId = 2`` and the affected counters reset to ``0``. At most two rows
+        exist at any time: row ``1`` (active) and row ``2`` (pre-reset snapshot).
 
         .. list-table::
            :header-rows: 1
@@ -1083,7 +1092,8 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
              - Description
            * - ``StatusDataId``
              - INTEGER
-             - Primary key; CHECK constraint forces exactly one row (``= 1``).
+             - Primary key; ``1`` for the active row, ``2`` for the pre-reset snapshot
+               preserved after a counter overflow. CHECK constraint allows only these two values.
            * - ``AvgAdsIngestedPerCycle``
              - REAL
              - Cumulative mean of records processed per cycle.
@@ -1101,10 +1111,17 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
              - Cumulative mean estimated backlog across all cycles.
            * - ``TotalCycles``
              - INTEGER
-             - Total number of update cycles completed since the daemon started (or DB was created).
+             - Total number of update cycles completed. Resets to ``0`` if it would overflow
+               ``INT64_MAX``; when this happens all Welford rolling means are also reset to
+               ``0`` (since they use the cycle count as their denominator).
            * - ``TotalAdsIngested``
              - INTEGER
-             - Cumulative count of job ads ingested across all cycles.
+             - Cumulative count of job ads successfully ingested across all cycles. Resets to
+               ``0`` if it would overflow ``INT64_MAX``.
+           * - ``TotalRecordsLost``
+             - INTEGER
+             - Cumulative count of job ads read from disk but dropped due to a failed database
+               insert transaction. Resets to ``0`` if it would overflow ``INT64_MAX``.
            * - ``HitMaxIngestLimitRate``
              - REAL
              - Rolling proportion of cycles that hit :macro:`LIBRARIAN_MAX_UPDATES_PER_CYCLE`.

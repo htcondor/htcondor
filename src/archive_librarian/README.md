@@ -102,8 +102,39 @@ In-memory state for one tracked archive file; keyed by full path in `m_archive_f
 ### `Status`
 Per-cycle metrics written to the `Status` DB table at the end of each update.
 
+| Field | Description |
+|-------|-------------|
+| `update_time` | Unix timestamp of cycle end |
+| `last_file_id` | DB `FileId` of the last file touched this cycle |
+| `last_file_offset` | Byte offset after the last record read |
+| `backlog_estimate` | Estimated number of unprocessed records remaining |
+| `duration_ms` | Wall-clock duration of the cycle in milliseconds |
+| `records_processed` | Records successfully ingested this cycle |
+| `records_lost` | Records read from disk but dropped because the DB insert transaction failed |
+| `hit_ingest_limit` | True when `MaxRecordsPerUpdate` cap was reached |
+| `ran_garbage_collect` | True when GC ran during this cycle |
+
 ### `StatusData`
-Rolling aggregate metrics (Welford means, totals) written to the `StatusData` DB table.
+Rolling aggregate metrics (Welford means, cumulative totals) written to the `StatusData` DB table.
+Normally holds a single active row (`StatusDataId = 1`). When any integer counter (`TotalCycles`,
+`TotalAdsIngested`, or `TotalRecordsLost`) would overflow `INT64_MAX`, the active row is
+rotated to `StatusDataId = 2` and the counters are reset to 0 before continuing. A `D_STATUS`
+log message is emitted for each reset. At most two rows exist at any time: row 1 (active) and
+row 2 (pre-reset snapshot).
+
+| Field | Description |
+|-------|-------------|
+| `AvgAdsIngestedPerCycle` | Welford mean of records processed per cycle |
+| `AvgIngestDurationMs` | Welford mean cycle duration in milliseconds |
+| `MeanIngestHz` | Welford mean ingest rate (ads/sec) |
+| `MeanArrivalHz` | Welford mean arrival rate of new ads (ads/sec) |
+| `MeanBacklogEstimate` | Welford mean estimated backlog across all cycles |
+| `TotalCycles` | Cumulative update cycles; resets to 0 at INT64_MAX (also resets all Welford means) |
+| `TotalAdsIngested` | Cumulative records ingested; resets to 0 at INT64_MAX |
+| `TotalRecordsLost` | Cumulative records dropped on insert failure; resets to 0 at INT64_MAX |
+| `HitMaxIngestLimitRate` | Rolling proportion of cycles that hit the ingest cap |
+| `LastRunLeftBacklog` | True if the previous cycle did not drain the backlog |
+| `TimeOfLastUpdate` | Millisecond timestamp of the most recent update |
 
 ---
 
@@ -118,8 +149,8 @@ Schema version is tracked via `PRAGMA user_version` (current: 1).
 | `JobLists` | `(ClusterId, UserId)` associations |
 | `Jobs` | One row per `(ClusterId, ProcId)` |
 | `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId` |
-| `Status` | Per-cycle metrics; rows older than 5 minutes are pruned by GC |
-| `StatusData` | Single-row rolling aggregate (upserted each cycle) |
+| `Status` | Per-cycle metrics; rows older than `LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle |
+| `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
 
 Garbage collection (`GC_QUERY_SQL`) targets files where `DateOfDeletion IS NOT NULL`, deletes
 them oldest-first up to the calculated file limit, then cascades to `JobRecords` and `Jobs`.
