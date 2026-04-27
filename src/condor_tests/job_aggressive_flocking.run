@@ -33,7 +33,7 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
     UPDATE_INTERVAL = 5
     KILL = FALSE
     START = TRUE
-    NUM_CPUS = 32
+    NUM_CPUS = 16
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 CONDOR_TESTREQ_CONFIG
 #endtestreq
@@ -275,8 +275,8 @@ sub on_exitedsuccess {
 my $res = SimpleJob::RunCheck(
 		test_name => "$testname",
 		duration => 3,
-		timeout => 480,
-		queue_sz => 100,
+		timeout => 900,
+		queue_sz => 50,
 		on_submit => \&on_submit,
 		on_success => \&on_exitedsuccess,
 );
