@@ -409,7 +409,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 					// to switch euid to the condor user for FS authentication,
 					// but some code has all priv-switching disabled.
 					if (param_boolean("FS_ROOT_TO_CONDOR", true) && strcmp(tmpOwner, "root") == 0 && get_condor_username()) {
-						dprintf(D_SECURITY|D_FULLDEBUG, "FS Mapping 'root' to '%s'\n", get_condor_username());
+						dprintf(D_SECURITY, "FS Mapping 'root' to '%s'\n", get_condor_username());
 						free(tmpOwner);
 						tmpOwner = strdup(get_condor_username());
 					}

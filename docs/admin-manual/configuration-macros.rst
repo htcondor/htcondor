@@ -9596,6 +9596,12 @@ macros are described in the :doc:`/admin-manual/security` section.
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
 
+:macro-def:`FS_ROOT_TO_CONDOR[SECURITY]`
+    When this boolean value is ``True``, when a client authenticates as
+    user ``root`` via the FS or FS_REMOTE method, the server changes the
+    authenticated identity to the Condor user (usually ``condor``).
+    The default value is ``True``.
+
 :macro-def:`DISABLE_EXECUTE_DIRECTORY_ENCRYPTION[SECURITY]`
     A boolean value that when set to ``True`` disables the ability for
     encryption of job execute directories on the specified host. Defaults
