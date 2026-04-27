@@ -15,6 +15,10 @@
 
 *** 25.0.11 bugs
 
+- Fix a recently introduced bug where a parallel universe job that cannot activate one
+  of its claims can cause the *condor_schedd* to crash.
+  :jira:`3704`
+
 *** 25.10.0 features
 
 - Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
