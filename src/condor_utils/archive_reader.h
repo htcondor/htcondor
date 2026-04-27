@@ -55,8 +55,6 @@ public:
 
 		ClassAd* ad = new ClassAd();
 
-		if ( ! ad) { return nullptr; }
-
 		bool is_eof = false;
 		int error = 0;
 		CompatStringViewLexerSource lexsrc(m_classad_text);

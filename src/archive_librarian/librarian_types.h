@@ -68,6 +68,7 @@ struct Status {
     int64_t duration_ms{0};         // Wall-clock duration of the update cycle in milliseconds
 
     int64_t records_processed{0};   // Records ingested this cycle
+    int64_t records_lost{0};        // Records read but dropped due to insert failure
 
     bool hit_ingest_limit{false};   // True when MaxRecordsPerUpdate cap was reached
     bool ran_garbage_collect{false};
@@ -81,6 +82,7 @@ struct StatusData {
     double  MeanBacklogEstimate{0.0};
     int64_t TotalCycles{0};
     int64_t TotalAdsIngested{0};
+    int64_t TotalRecordsLost{0};
     double  HitMaxIngestLimitRate{0.0};
     int64_t TimeOfLastUpdate{0};
     bool    LastRunLeftBacklog{false};

@@ -242,7 +242,7 @@ ArchiveReader::SeekForward(int64_t offset) {
 
 bool
 ArchiveReader::Next(ArchiveRecord& record) {
-	if (m_error) { return false; }
+	if (m_error || !m_file) { return false; }
 	return (m_dir == Direction::Forward)
 	     ? NextForward(record)
 	     : NextBackward(record);
@@ -250,11 +250,14 @@ ArchiveReader::Next(ArchiveRecord& record) {
 
 int64_t
 ArchiveReader::Tellp() const {
+	if ( ! m_file) { return -1; }
 	return ftell_64b(m_file.get());
 }
 
 int64_t
 ArchiveReader::Size() {
+	if ( ! m_file) { return -1; }
+
 	int64_t curr = Tellp();
 	fseek_64b(m_file.get(), 0, SEEK_END);
 

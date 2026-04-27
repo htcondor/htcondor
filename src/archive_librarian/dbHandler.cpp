@@ -647,7 +647,7 @@ void DBHandler::markFileDeleted(long fileId, int64_t deletionTime) {
 // Status Tracking
 // -------------------------
 
-bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData) {
+bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData, bool rotateStatusData) {
     const char* statusSql = R"(
         INSERT INTO Status (
             TimeOfUpdate,
@@ -657,8 +657,9 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             DurationMs,
             JobBacklogEstimate,
             HitMaxIngestLimit,
-            GarbageCollectionRun
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            GarbageCollectionRun,
+            RecordsLostOnInsertFailure
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     const char* statusDataSql = R"(
@@ -671,10 +672,11 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             MeanBacklogEstimate,
             TotalCycles,
             TotalAdsIngested,
+            TotalRecordsLost,
             HitMaxIngestLimitRate,
             LastRunLeftBacklog,
             TimeOfLastUpdate
-        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     char* errMsg = nullptr;
@@ -682,6 +684,23 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         dprintf(D_ERROR, "Failed to begin transaction: %s\n", errMsg);
         sqlite3_free(errMsg);
         return false;
+    }
+
+    if (rotateStatusData) {
+        // Evict any existing previous snapshot, then promote the active row (1) to previous (2).
+        const char* evictSql = "DELETE FROM StatusData WHERE StatusDataId = 2;";
+        const char* promoteSql = "UPDATE StatusData SET StatusDataId = 2 WHERE StatusDataId = 1;";
+        if (sqlite3_exec(db_, evictSql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            dprintf(D_ERROR, "Failed to evict previous StatusData snapshot: %s\n", errMsg);
+            sqlite3_free(errMsg);
+            ROLLBACK_AND_RETURN();
+        }
+        if (sqlite3_exec(db_, promoteSql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            dprintf(D_ERROR, "Failed to promote StatusData row to previous slot: %s\n", errMsg);
+            sqlite3_free(errMsg);
+            ROLLBACK_AND_RETURN();
+        }
+        dprintf(D_STATUS, "StatusData rotated: previous data preserved in row 2, row 1 will hold reset data.\n");
     }
 
     sqlite3_stmt* stmt = nullptr;
@@ -694,8 +713,9 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         std::ignore = sqlite3_bind_int64(stmt, 4, status.records_processed);
         std::ignore = sqlite3_bind_int64(stmt, 5, status.duration_ms);
         std::ignore = sqlite3_bind_int64(stmt, 6, status.backlog_estimate);
-        std::ignore = sqlite3_bind_int(stmt,   7, status.hit_ingest_limit   ? 1 : 0);
+        std::ignore = sqlite3_bind_int(stmt,   7, status.hit_ingest_limit    ? 1 : 0);
         std::ignore = sqlite3_bind_int(stmt,   8, status.ran_garbage_collect ? 1 : 0);
+        std::ignore = sqlite3_bind_int64(stmt, 9, status.records_lost);
 
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             dprintf(D_ERROR, "Failed to insert into Status: %s\n", sqlite3_errmsg(db_));
@@ -717,6 +737,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             std::ignore = sqlite3_bind_double(stmt, idx++, statusData.MeanBacklogEstimate);
             std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TotalCycles);
             std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TotalAdsIngested);
+            std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TotalRecordsLost);
             std::ignore = sqlite3_bind_double(stmt, idx++, statusData.HitMaxIngestLimitRate);
             std::ignore = sqlite3_bind_int(stmt,    idx++, statusData.LastRunLeftBacklog ? 1 : 0);
             std::ignore = sqlite3_bind_int64(stmt,  idx++, statusData.TimeOfLastUpdate);
@@ -797,7 +818,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
     // 1. Recover StatusData
     const char* statusDataSql =
         "SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
-        "MeanBacklogEstimate, TotalCycles, TotalAdsIngested, HitMaxIngestLimitRate, "
+        "MeanBacklogEstimate, TotalCycles, TotalAdsIngested, TotalRecordsLost, HitMaxIngestLimitRate, "
         "LastRunLeftBacklog, TimeOfLastUpdate FROM StatusData WHERE StatusDataId = 1;";
 
     sqlite3_stmt* stmtSD = nullptr;
@@ -814,9 +835,10 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         statusData.MeanBacklogEstimate    = sqlite3_column_double(stmtSD, 4);
         statusData.TotalCycles            = sqlite3_column_int64(stmtSD,  5);
         statusData.TotalAdsIngested       = sqlite3_column_int64(stmtSD,  6);
-        statusData.HitMaxIngestLimitRate  = sqlite3_column_double(stmtSD, 7);
-        statusData.LastRunLeftBacklog     = sqlite3_column_int(stmtSD, 8) != 0;
-        statusData.TimeOfLastUpdate       = sqlite3_column_int64(stmtSD,  9);
+        statusData.TotalRecordsLost       = sqlite3_column_int64(stmtSD,  7);
+        statusData.HitMaxIngestLimitRate  = sqlite3_column_double(stmtSD, 8);
+        statusData.LastRunLeftBacklog     = sqlite3_column_int(stmtSD,    9) != 0;
+        statusData.TimeOfLastUpdate       = sqlite3_column_int64(stmtSD,  10);
     }
     sqlite3_finalize(stmtSD);
 

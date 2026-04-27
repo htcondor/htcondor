@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -276,12 +277,40 @@ void Librarian::estimateArrivalRateWhileAsleep() {
     }
 }
 
-void Librarian::updateStatusData(Status status) {
+bool Librarian::updateStatusData(Status status) {
     int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
+    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+    bool any_reset = false;
+
+    if (statusData_.TotalCycles == kMax) {
+        dprintf(D_STATUS, "StatusData: TotalCycles reached INT64_MAX; resetting cycle counter and all rolling means.\n");
+        statusData_.TotalCycles            = 0;
+        statusData_.AvgAdsIngestedPerCycle = 0.0;
+        statusData_.AvgIngestDurationMs    = 0.0;
+        statusData_.MeanIngestHz           = 0.0;
+        statusData_.MeanArrivalHz          = 0.0;
+        statusData_.MeanBacklogEstimate    = 0.0;
+        statusData_.HitMaxIngestLimitRate  = 0.0;
+        any_reset = true;
+    }
+
+    if (status.records_processed > kMax - statusData_.TotalAdsIngested) {
+        dprintf(D_STATUS, "StatusData: TotalAdsIngested would overflow INT64_MAX; resetting to 0.\n");
+        statusData_.TotalAdsIngested = 0;
+        any_reset = true;
+    }
+
+    if (status.records_lost > kMax - statusData_.TotalRecordsLost) {
+        dprintf(D_STATUS, "StatusData: TotalRecordsLost would overflow INT64_MAX; resetting to 0.\n");
+        statusData_.TotalRecordsLost = 0;
+        any_reset = true;
+    }
+
     statusData_.TotalCycles++;
     statusData_.TotalAdsIngested += status.records_processed;
+    statusData_.TotalRecordsLost += status.records_lost;
 
     double currentAdsPerCycle    = static_cast<double>(status.records_processed);
     double currentDurationMs     = static_cast<double>(status.duration_ms);
@@ -304,6 +333,8 @@ void Librarian::updateStatusData(Status status) {
 
     statusData_.TimeOfLastUpdate  = currentTime;
     statusData_.LastRunLeftBacklog = status.hit_ingest_limit;
+
+    return any_reset;
 }
 
 
@@ -517,6 +548,7 @@ bool Librarian::update() {
     }
 
     // PHASE 3: Read and ingest records from each file.
+    bool success = true;
     size_t filesProcessed = 0;
     dprintf(D_FULLDEBUG, "Processing history file queue.\n");
     auto startTime = std::chrono::system_clock::now();
@@ -543,7 +575,8 @@ bool Librarian::update() {
         int64_t remaining = config[conf::ll::MaxRecordsPerUpdate] - status.records_processed;
         if ( ! readJobRecords(records, path, info, remaining)) {
             dprintf(D_ERROR, "Failed to read job records from %s\n", path.c_str());
-            return false;
+            success = false;
+            break;
         }
 
         if (records.empty()) {
@@ -552,8 +585,11 @@ bool Librarian::update() {
                 dbHandler_.updateFileInfo(info);
             }
         } else if ( ! dbHandler_.insertJobFileRecords(records, info)) {
-            dprintf(D_ERROR, "Failed to atomically process history file %s\n", path.c_str());
-            // TODO: Seek back to previous position and restore last_offset.
+            dprintf(D_ERROR, "Failed to store %zu records for %s\n",
+                    records.size(), path.c_str());
+            status.records_lost += static_cast<int64_t>(records.size());
+            success = false;
+            break;
         }
 
         status.last_file_id     = info.id;
@@ -576,11 +612,11 @@ bool Librarian::update() {
                                 endTime - startTime).count();
     status.backlog_estimate = calculateBacklogFromBytes(status);
 
-    updateStatusData(status);
+    bool statusDataReset = updateStatusData(status);
 
-    if ( ! dbHandler_.writeStatusAndData(status, statusData_)) {
+    if ( ! dbHandler_.writeStatusAndData(status, statusData_, statusDataReset)) {
         dprintf(D_ERROR, "WARNING: Failed to write status to database\n");
-        return false;
+        success = false;
     }
 
     if (status.records_processed > 0) {
@@ -588,7 +624,7 @@ bool Librarian::update() {
                 status.records_processed, status.duration_ms);
     }
 
-    return true;
+    return success;
 }
 
 void Librarian::reconfig(bool startup) {

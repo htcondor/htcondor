@@ -131,7 +131,7 @@ them oldest-first up to the calculated file limit, then cascades to `JobRecords`
 `condor_librarian` reads its configuration from the HTCondor config system. Add it to the
 pool configuration:
 
-```ini
+```
 LIBRARIAN          = $(SBIN)/condor_librarian
 DAEMON_LIST        = $(DAEMON_LIST) LIBRARIAN
 LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
@@ -162,5 +162,5 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 
 ## Related Links
 
-- Project Report: [https://docs.google.com/document/d/1msO0zYkLzXs1MPPRfWmt5gBZxX1ZGw8SQpbsSJojxdo/edit?usp=sharing] (link will only work within UW Madison workspace emails)
-- CHTC Fellowship Website: [Link to CHTC fellowship website, will be added when Fellows page is updated]
+- Project Report: [https://docs.google.com/document/d/1msO0zYkLzXs1MPPRfWmt5gBZxX1ZGw8SQpbsSJojxdo/edit?usp=sharing](link will only work within UW Madison workspace emails)
+- CHTC Fellowship Website: [https://chtc.cs.wisc.edu/fellowships/reports/2025/sandhya-nayar](Final Report)

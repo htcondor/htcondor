@@ -45,7 +45,7 @@ private:
     bool calculateEstimatedBytesPerJob();
     void updateBytesPerJobEstimate();
     int  calculateBacklogFromBytes(const Status& status);
-    void updateStatusData(Status status);
+    bool updateStatusData(Status status);
     void estimateArrivalRateWhileAsleep();
     bool cleanupDatabaseIfNeeded();
 

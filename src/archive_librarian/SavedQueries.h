@@ -81,12 +81,13 @@ CREATE TABLE IF NOT EXISTS Status (
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
     JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
     HitMaxIngestLimit BOOLEAN DEFAULT 0,               -- Whether this ingestion cycle hit the max ingest limit
-    GarbageCollectionRun BOOLEAN DEFAULT 0             -- Whether garbage collection ran during this ingestion cycle
+    GarbageCollectionRun BOOLEAN DEFAULT 0,            -- Whether garbage collection ran during this ingestion cycle
+    RecordsLostOnInsertFailure INTEGER DEFAULT 0       -- Records read but dropped due to a failed DB insert
 );
 CREATE INDEX IF NOT EXISTS idx_TimeOfUpdateInStatus ON Status(TimeOfUpdate);
 
 CREATE TABLE IF NOT EXISTS StatusData (
-    StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1),     
+    StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1 OR StatusDataId = 2),
 
     AvgAdsIngestedPerCycle REAL,          -- Mean ads processed per ingest cycle
     AvgIngestDurationMs REAL,             -- Mean duration (ms) per ingest cycle
@@ -96,6 +97,7 @@ CREATE TABLE IF NOT EXISTS StatusData (
 
     TotalCycles INTEGER,                  -- Total number of timeout cycles
     TotalAdsIngested INTEGER,             -- Cumulative count of ads ingested
+    TotalRecordsLost INTEGER DEFAULT 0,   -- Cumulative count of records dropped due to insert failures
 
     HitMaxIngestLimitRate REAL,           -- Proportion of cycles that hit ingest cap
     LastRunLeftBacklog BOOLEAN DEFAULT 0, -- Whether the previous run left backlog
