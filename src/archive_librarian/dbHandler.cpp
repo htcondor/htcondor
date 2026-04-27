@@ -67,6 +67,13 @@ bool DBHandler::initialize() {
     char* errMsg = nullptr;
     int rc;
 
+    rc = sqlite3_exec(db_, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        dprintf(D_ERROR, "Failed to enable WAL journal mode: %s\n", errMsg ? errMsg : "Unknown");
+        sqlite3_free(errMsg);
+        return false;
+    }
+
     rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         dprintf(D_ERROR, "Failed to enable foreign keys: %s\n", errMsg ? errMsg : "Unknown");

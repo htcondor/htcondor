@@ -588,8 +588,8 @@ bool Librarian::update() {
             dprintf(D_ERROR, "Failed to store %zu records for %s\n",
                     records.size(), path.c_str());
             status.records_lost += static_cast<int64_t>(records.size());
-            success = false;
-            break;
+            dbHandler_.updateFileInfo(info);
+            continue;
         }
 
         status.last_file_id     = info.id;
