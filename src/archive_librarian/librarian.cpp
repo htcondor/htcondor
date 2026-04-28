@@ -46,8 +46,13 @@ static std::string computeFileHash(const std::string& path) {
         dprintf(D_ERROR, "computeFileHash: failed to open '%s'\n", path.c_str());
         return {};
     }
+
     ArchiveRecord rec;
-    reader.Next(rec);
+    if ( ! reader.Next(rec)) {
+        dprintf(D_ERROR, "computeFileHash: failed to read '%s' to compute hash\n", path.c_str());
+        return {};
+    }
+
     std::string hash;
     formatstr(hash, "%llx", (unsigned long long)fnv1a_64(rec.GetRawRecord()));
     return hash;
@@ -192,13 +197,19 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
         }
     }
 
+    int error = info.reader->LastError();
+    if (error) {
+        dprintf(D_ERROR, "Failed to read %s (%d): %s\n", path.c_str(), error, strerror(error));
+        return false;
+    }
+
     // Store the position *after* the last processed byte so that
     // calculateBacklogFromBytes sees fileSize - last_offset == 0 when fully
     // caught up, and recovery seeks directly to the next unread record.
     info.last_offset = info.reader->Tellp();
 
     // A rotated file that reached clean EOF is done; release the file descriptor.
-    if ( ! limit_reached && ! info.rotation_time.empty() && info.reader->LastError() == 0) {
+    if ( ! limit_reached && ! info.rotation_time.empty()) {
         info.fully_read = true;
         info.reader.reset();
     }
