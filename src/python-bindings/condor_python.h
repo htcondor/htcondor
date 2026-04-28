@@ -33,10 +33,6 @@
 #endif /* __FreeBSD__ */
 
 
-#if defined(_CONDOR_COMMON_FIRST)
-    #include "condor_common.h"
-#endif /* _CONDOR_COMMON_FIRST */
-
 // By defining Py_LIMITED_API, we ensure that we see only the symbols that are
 // part of the "limited API", which is a strict subset of the "stable ABI", which is in
 // turn guaranteed to be compatible between all minor versions of Python 3 after
@@ -56,10 +52,16 @@
 // in later versions when PY_SSIZE_T_CLEAN is defined by default.
 #define Py_LIMITED_API 0x03030000
 #define PY_SSIZE_T_CLEAN
-#undef _POSIX_C_SOURCE
-#undef _XOPEN_SOURCE
-#include <Python.h>
 
+// We can get rid of this when we rename "dprintf"
+#define dprintf _hide_dprintf
+#include <Python.h>
+#undef dprintf
+
+
+#if defined(_CONDOR_COMMON_FIRST)
+    #include "condor_common.h"
+#endif /* _CONDOR_COMMON_FIRST */
 
 // Cargo-culted over from python_bindings_common.h in version 1.
 #if defined(_MSC_VER)
