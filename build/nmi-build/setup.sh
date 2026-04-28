@@ -29,7 +29,7 @@ if [ -d /etc/rpm ]; then
     echo "%os_release_id $ID" > /etc/rpm/macros.os-release-id
 fi
 
-# Early versions of AlmaLinux did not properly overide rpm-macros for x86_64-v2
+# Early versions of AlmaLinux did not properly override rpm-macros for x86_64-v2
 if [ "$ID" = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
@@ -356,7 +356,7 @@ fi
 
 # Install apptainer into externals directory
 if [ "$ID" != 'amzn' ]; then
-    if [ "$ID" != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
+    if [ "$ID" != 'ubuntu' ] || [ "$ARCH" != 'ppc64le' ]; then
         mkdir -p "$externals_dir/apptainer"
         if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
             $INSTALL cpio rpm2cpio

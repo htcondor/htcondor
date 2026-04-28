@@ -106,7 +106,7 @@ get_distribution() {
         #     debian 13 trixie
         #     ubuntu 22 jammy
         #     ubuntu 24 noble
-        #     ubuntu 24 resolute
+        #     ubuntu 26 resolute
         #     almalinux 8
         #     almalinux 9
         #     rocky 8
