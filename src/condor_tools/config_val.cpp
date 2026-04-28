@@ -533,7 +533,7 @@ public:
 		}
 		return names.count(name);
 	}
-	virtual void log(const char * name, const char * old_value, const char * new_value, MACRO_META & meta) {
+	virtual void log(const char * name, const char * old_value, [[maybe_unused]] const char * new_value, MACRO_META & meta) {
 		std::string location;
 		fprintf(out, " # trace: %s\n", name?name:"");
 		if (old_value) fprintf(out, "  # was: %s\n", old_value);
@@ -852,7 +852,6 @@ main( int argc, const char* argv[] )
 			fprintf(stderr, "%s is not a valid argument\n", argv[i]);
 			usage();
 		}
-
 	}
 
 	// Set subsystem to tool, and subsystem name to either "TOOL" or what was 

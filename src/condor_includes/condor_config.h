@@ -73,6 +73,7 @@ typedef struct macro_meta {
 } MACRO_META;
 class macro_meta_tracer {
 public:
+	virtual ~macro_meta_tracer() = default;
 	virtual bool match(const char * name) = 0;
 	virtual void log(const char * name, const char * old_value, const char * new_value, MACRO_META & meta) = 0;
 };
