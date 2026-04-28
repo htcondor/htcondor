@@ -11,6 +11,11 @@
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
+  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
+  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
+  :jira:`3664`
+
 - :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
   to install a time-limited ceiling *lease*: the prior ceiling is
   automatically restored after the given number of seconds. Leases are
