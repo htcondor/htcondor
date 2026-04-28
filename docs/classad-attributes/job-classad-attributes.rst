@@ -1721,6 +1721,18 @@ all attributes.
     negotiation when the configuration variable :macro:`GROUP_AUTOREGROUP`
     was ``True``. It will be ``False`` otherwise.
 
+:classad-attribute-def:`SubmitEventNotes`
+    An arbitrary string set by the system to write into the job logs
+    submit event. Intended for use by DAGMan.
+
+:classad-attribute-def:`SubmitEventNotesAttrs`
+    A comma separated list of ClassAd attribute names specified by
+    to insert into the job log submit events structured notes ClassAd.
+
+:classad-attribute-def:`SubmitEventUserNotes`
+    An arbitrary string set by the system to write into the job logs
+    submit event.
+
 :classad-attribute-def:`SubmitterGlobalJobId`
     When HTCondor-C submits a job to a remote *condor_schedd*, it sets
     this attribute in the remote job ad to match the :ad-attr:`GlobalJobId`

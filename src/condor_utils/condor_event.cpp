@@ -1531,7 +1531,12 @@ SubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
@@ -5468,7 +5473,12 @@ ClusterSubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if ( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;

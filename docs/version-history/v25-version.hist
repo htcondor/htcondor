@@ -1,5 +1,11 @@
 *** 25.11.0 features
 
+- Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
+  correctly for jobs submitted after the tool began executing. The incorrect
+  behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan
+  execution.
+  :jira:`3656`
+
 - Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
@@ -10,9 +16,21 @@
   by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
   :jira:`3664`
 
+- :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
+  to install a time-limited ceiling *lease*: the prior ceiling is
+  automatically restored after the given number of seconds. Leases are
+  persistent across *condor_negotiator* restarts. A new
+  ``-cancelceilinglease`` option cancels an in-effect lease.
+  :jira:`3518`
+
+ - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
+
+- Fix a recently introduced bug where a parallel universe job that cannot activate one
+  of its claims can cause the *condor_schedd* to crash.
+  :jira:`3704`
 
 *** 25.10.0 features
 

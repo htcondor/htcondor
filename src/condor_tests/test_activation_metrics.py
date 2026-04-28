@@ -264,5 +264,8 @@ class TestActivationMetrics:
         assert job_two_teardown is not None
         logger.info(f"job_two_setup = {job_two_setup}")
         logger.info(f"job_two_teardown = {job_two_teardown}")
-        # We will allow one second of slop in all this, thus below 'job_two_duration + 1'
-        assert( job_two_setup + job_two_execution_durations[0] + job_two_execution_durations[1] + job_two_execution_durations[2] + job_two_teardown ) <= ( job_two_duration + 1 )
+        # ActivationDuration in the final ad reflects only the last activation.
+        # The shadow guarantees setup + execution + teardown == ActivationDuration
+        # for a single activation (see RemoteResource::resourceExit), so if setup
+        # or teardown were inflated by prior executions, this identity would break.
+        assert( job_two_setup + job_two_execution_durations[-1] + job_two_teardown ) <= ( job_two_duration + 1 )

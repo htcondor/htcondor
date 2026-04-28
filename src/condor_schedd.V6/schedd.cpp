@@ -5628,6 +5628,19 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 	dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
 			 "forking a shadow\n", srec->job_id.cluster,
 			 srec->job_id.proc );
+
+		// For MPI/PARALLEL jobs we still hold a DedicatedScheduler
+		// AllocationNode for this cluster. The shadow-death cleanup
+		// path (DedicatedScheduler::removeAllocation) never runs here
+		// because no shadow was ever spawned. Drop the allocation now
+		// so the cluster can be rematched; otherwise the next
+		// DedicatedScheduler::createAllocations() for this cluster
+		// would ASSERT on the duplicate map entry and EXCEPT the schedd.
+	if( universe == CONDOR_UNIVERSE_MPI ||
+	    universe == CONDOR_UNIVERSE_PARALLEL ) {
+		dedicated_scheduler.removeOrphanedAllocation( srec->job_id.cluster );
+	}
+
 	mark_job_stopped( srec->job_id );
 	delete_shadow_rec( srec );
 	return false;
@@ -5832,6 +5845,24 @@ Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const cha
 	job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 	if ( warning != NULL && warning[0] ) {
 		event.submitEventWarnings = warning;
+	}
+
+	std::string structuredAttrs;
+	job->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (job->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
 	}
 
 	bool status = false;
@@ -6146,6 +6177,24 @@ Scheduler::WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_f
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
 	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
+
+	std::string structuredAttrs;
+	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (cluster->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
+	}
 
 	bool status = false;
 	if (do_fsync) {

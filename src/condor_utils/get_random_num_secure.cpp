@@ -28,6 +28,7 @@
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include <openssl/rand.h>
+#include <openssl/crypto.h>
 
 #include <chrono>
 
@@ -81,4 +82,13 @@ unsigned int get_csrng_uint( void )
 	int r = RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
 	ASSERT(r == 1);
 	return retval;
+}
+
+bool
+timing_safe_compare(const unsigned char *a, const unsigned char *b, int len)
+{
+	if (len <= 0 || !a || !b) {
+		return false;
+	}
+	return CRYPTO_memcmp(a, b, len) == 0;
 }

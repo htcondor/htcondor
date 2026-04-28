@@ -68,6 +68,7 @@ class Matchmaker : public Service
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int SET_CEILING_or_FLOOR_commandHandler(int, Stream*);
 		int SET_FLOOR_commandHandler(int, Stream*);
+		int MANAGE_CEILING_commandHandler(int, Stream*);
 		int SET_ACCUMUSAGE_commandHandler(int, Stream*);
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
