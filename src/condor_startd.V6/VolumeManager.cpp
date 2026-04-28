@@ -114,7 +114,12 @@ VolumeManager::VolumeManager()
             goto end_lvm_setup;
         }
 
-        m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        // Secret config option to name the volume group when auto generated
+        param(m_volume_group_name, "LVM_AUTO_VG_NAME");
+        if (m_volume_group_name.empty()) {
+            m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        }
+
         if (m_use_thin_provision) { m_pool_lv_name = m_volume_group_name + "_THINPOOL"; }
 
             // Preemptively clean-up condor-owned devices.
