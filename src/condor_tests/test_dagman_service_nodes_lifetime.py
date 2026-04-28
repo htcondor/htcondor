@@ -128,7 +128,7 @@ def submit_dag(default_condor, path_to_sleep, check_queue_script, test_dir):
     while not REMOVE_CALLED and now() - START_T < TIMEOUT:
         for event in JEL.events(stop_after=1):
             if event.type == htcondor2.JobEventType.SUBMIT:
-                node = event["LogNotes"].split()[2]
+                node = event["StructuredNotes"].get("DAGNodeName")
                 if node == NODE_NAME_WORKER:
                     default_condor.run_command(["condor_rm", handle.clusterid])
                     REMOVE_CALLED = True
@@ -174,7 +174,7 @@ class TestDAGManServieNodeLifetime:
 
             for event in JEL.events(stop_after=1):
                 if event.type == htcondor2.JobEventType.SUBMIT:
-                    node = event["LogNotes"].split()[2]
+                    node = event["StructuredNotes"].get("DAGNodeName")
                     NODE_INFO[event.cluster] = NodeInfo(node)
                 elif event.type == htcondor2.JobEventType.EXECUTE:
                     assert event.cluster in NODE_INFO

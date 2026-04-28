@@ -586,7 +586,7 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( ATTR_RESULT, success );
 			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
 			context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
-			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd() );
+			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd()->Copy() );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_MAP_COMMON_FILES ) {

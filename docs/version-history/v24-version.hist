@@ -1,3 +1,11 @@
+*** 24.12.21 bugs
+
+- Fixed a rare bug in the *condor_startd* that would cause it to crash
+  when users installed a custom docker wrapper script.
+  :jira:`3691`
+
+*** 24.0.21 bugs
+
 *** 24.12.20 bugs
 
 - There are five configuration macros type as long integers.
@@ -18,7 +26,18 @@
   memory leaves no memory for creating slots have been improved.
   :jira:`3667`
 
+*** 24.0.20 features
+
+- HTCondor tarballs now contain `Pelican 7.24.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.24.2.
+
 *** 24.0.20 bugs
+
+- Fixed a bug in the parallel universe where the job attribute
+  :ad-attr:`RemoteUserCpu` would only contain the cpu usage from one
+  proc in the parallel job.
+  :jira:`3677`
 
 - Fixed bug where Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS` without
   being explicitly provided a backing store (Volume Group) would fail clean up to
@@ -30,6 +49,11 @@
   and the shell now enters the cgroup of the job for container universe
   jobs.
   :jira:`3658`
+
+- VM Universe jobs now use the widely supported and ubiquitous Intel e1000 network card.
+  This is needed on Enterprise Linux 10 hosts, where the default virtual NIC model selected
+  by libvirt is incompatible.
+  :jira:`3642`
 
 *** 24.12.19 bugs
 
@@ -53,20 +77,24 @@
 
 *** 24.0.19 features
 
-- HTCondor tarballs now contain `Pelican 7.24.2 <https://pelicanplatform.org/releases>`_
+- HTCondor tarballs now contain `Pelican 7.24.0 <https://pelicanplatform.org/releases>`_
 
-- The condor package now requires pelican-7.24.2.
+- The condor package now requires pelican-7.24.0.
 
 *** 24.0.19 bugs
-
-- Fixed a performance problem with the classad2 python bindings that
-  caused the parseAds methods to run in n-squared time.
-  :jira:`3632`
 
 - Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
   would not properly pass the device names in the various NVIDIA related
   environment variables.
   :jira:`3567`
+
+- Fixed a performance problem with the classad2 python bindings that
+  caused the parseAds methods to run in n-squared time.
+  :jira:`3632`
+
+- Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
+  respected for jobs that did not do input file transfer.
+  :jira:`3633`
 
 - Fixed a bug for **batch** grid universe jobs where submitting to a remote
   system would fail if the username on the remote system contained a dot.
@@ -75,10 +103,6 @@
 - Fixed a bug where some of the values reported for job execution time were
   enormous if the Access Point daemons restarted while the job was running.
   :jira:`3592`
-
-- Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
-  respected for jobs that did not do input file transfer.
-  :jira:`3633`
 
 - Fixed a bug where an administrator couldn't query a daemon's configuration
   using :tool:`condor_config_val` when authentication is required for READ

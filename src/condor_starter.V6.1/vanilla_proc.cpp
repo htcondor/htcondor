@@ -1081,17 +1081,6 @@ VanillaProc::JobReaper(int pid, int status)
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
 				return ReapResult::JobShouldReExec;
-
-
-
-				// FIXME: but doesn't.
-
-
-
-				starter->jic->setOutputTransfer(true);
-
-				// This job is done.
-				return ReapResult::JobDone;
 			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do

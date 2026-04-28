@@ -728,7 +728,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str());
+			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str(), (int)incoming_cookie.size());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.

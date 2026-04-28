@@ -1940,9 +1940,23 @@ Starter::createTempExecuteDir( void )
 
 #if !defined(WIN32)
 			{
-				// Made it as condor, now chown it to user
-				TemporaryPrivSentry sentry(PRIV_ROOT);
-				r = chown(JobHomeDir.c_str(),get_user_uid(), get_user_gid());
+				// Made it as condor, now chown it to user.
+				// Use safe_open_no_create to avoid a symlink TOCTOU
+				// race between the mkdir above and this chown.
+				int fd = safe_open_no_create(JobHomeDir.c_str(), O_RDONLY | O_DIRECTORY);
+				if (fd >= 0) {
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					r = fchown(fd, get_user_uid(), get_user_gid());
+					if (r < 0) {
+						int fchown_errno = errno;
+						close(fd);
+						errno = fchown_errno;
+					} else {
+						close(fd);
+					}
+				} else {
+					r = -1;
+				}
 			}
 
 			if (r < 0) {
@@ -3072,7 +3086,8 @@ Starter::Reaper(int pid, int exit_status)
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
-		pre_script = NULL; // done with pre-script
+		delete pre_script;
+		pre_script = nullptr; // done with pre-script
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
 			main_shutdown_fast();

@@ -1531,7 +1531,12 @@ SubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
@@ -5276,10 +5281,10 @@ AttributeUpdate::readEvent(ULogFile& file, bool & got_sync_line)
 		return 0;
 	}
 
-	int retval = sscanf(line.c_str(), "Changing job attribute %s from %s to %s", buf1, buf2, buf3);
+	int retval = sscanf(line.c_str(), "Changing job attribute %4095s from %4095s to %4095s", buf1, buf2, buf3);
 	if (retval < 0)
 	{
-		retval = sscanf(line.c_str(), "Setting job attribute %s to %s", buf1, buf3);
+		retval = sscanf(line.c_str(), "Setting job attribute %4095s to %4095s", buf1, buf3);
 		if (retval < 0)
 		{
 			return 0;
@@ -5468,7 +5473,12 @@ ClusterSubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if ( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;

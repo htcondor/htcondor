@@ -288,7 +288,7 @@ class match_rec
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
 	ClaimIdParser claim_id;
-	classy_counted_ptr<DCMsgCallback> claim_requester{nullptr};
+	std::shared_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the

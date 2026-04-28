@@ -228,7 +228,7 @@ Resource::Resource (
 		if (_donor->is_partitionable_slot()) { _parent = _donor; }
 		else if (_donor->is_dynamic_slot()) { _parent = _donor->get_parent(); }
 		else {
-			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str);
+			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str ? _donor->r_id_str : "<null>");
 			// we can't fail a constructor, so create an unusable slot instead
 			set_feature(BROKEN_SLOT);
 			m_parent = nullptr;
@@ -1697,6 +1697,18 @@ Resource::get_update_ads(ClassAd & public_ad, ClassAd & private_ad)
 	// Get the public and private ads
 	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
 
+	// If we are directly attached to a schedd, make the collector ad
+	// unclaimable by overriding START with a descriptive string.
+	// This prevents other schedds from matching while still showing
+	// a useful reason in condor_status -analyze.
+	std::string da_schedd;
+	param(da_schedd, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+	if (!da_schedd.empty()) {
+		std::string reason;
+		formatstr(reason, "\"Directly attached to schedd %s\"", da_schedd.c_str());
+		public_ad.AssignExpr(ATTR_START, reason.c_str());
+	}
+
 		// refresh the machine ad in the job sandbox
 	refresh_sandbox_ad(&public_ad);
 
@@ -2568,6 +2580,14 @@ void Resource::publish_static(ClassAd* cap)
 	cap->Assign(ATTR_NAME, r_name);
 
 	cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+
+	{
+		std::string direct_attach_schedd;
+		param(direct_attach_schedd, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+		if (!direct_attach_schedd.empty()) {
+			cap->Assign(ATTR_IS_DIRECT_ATTACH, direct_attach_schedd);
+		}
+	}
 
 	{
 		// Since the Rank expression itself only lives in the

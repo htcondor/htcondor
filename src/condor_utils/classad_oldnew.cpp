@@ -50,6 +50,10 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 		dprintf(D_FULLDEBUG, "FAILED to get number of expressions.\n");
  		return false;
 	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAd: invalid numExprs %d\n", numExprs);
+		return false;
+	}
 
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
@@ -318,6 +322,10 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 	if( !sock->code( numExprs ) ) {
 		return false;
 	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAdEx: invalid numExprs %d\n", numExprs);
+		return false;
+	}
 
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
@@ -366,7 +374,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		//
 		bool inserted = false;
 		IF_PROFILE_GETCLASSAD(int subtype = 0);
-		size_t cbrhs = cb - (rhs - strptr);
+		size_t cbrhs = (cb > 0 && (rhs - strptr) < cb) ? (size_t)(cb - (rhs - strptr)) : 0;
 		if (fast_tricks) {
 			char ch = rhs[0];
 			if (cbrhs == 5 && (ch&~0x20) == 'T' && (rhs[1]&~0x20) == 'R' && (rhs[2]&~0x20) == 'U' && (rhs[3]&~0x20) == 'E') {
@@ -487,6 +495,10 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
+	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAdNoTypes: invalid numExprs %d\n", numExprs);
+		return false;
 	}
 
 		// pack exprs into classad

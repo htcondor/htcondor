@@ -37,7 +37,9 @@
 #include "generic_query.h"
 #include "dc_collector.h"
 // for std::sort
-#include <algorithm> 
+#include <algorithm>
+#include <charconv>
+#include <limits>
 #include <vector>
 
 //-----------------------------------------------------------------
@@ -363,6 +365,8 @@ main(int argc, const char* argv[])
   int SetPrio=0;
   int SetFloor=0;
   int SetCeiling=0;
+  int LeaseDuration=0;              // seconds; >0 when -duration supplied
+  int CancelCeilingLeaseArg=0;      // argv index of -cancelceilinglease, 0 if unused
   int SetAccum=0;
   int SetBegin=0;
   int SetLast=0;
@@ -404,6 +408,24 @@ main(int argc, const char* argv[])
       if (i+2>=argc) usage(argv[0]);
       SetCeiling=i;
       i+=2;
+    }
+    else if (IsArg(argv[i],"duration")) {
+      if (i+1>=argc) usage(argv[0]);
+      const std::string_view sv{argv[i+1]};
+      int v = 0;
+      auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), v);
+      if (ec != std::errc{} || ptr != sv.data() + sv.size() ||
+          v <= 0 || v == std::numeric_limits<int>::max()) {
+        fprintf(stderr, "%s: -duration requires a positive integer number of seconds\n", argv[0]);
+        exit(1);
+      }
+      LeaseDuration = v;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelceilinglease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelCeilingLeaseArg=i;
+      i+=1;
     }
     else if (IsArg(argv[i],"setbegin")) {
       if (i+2>=argc) usage(argv[0]);
@@ -717,18 +739,22 @@ main(int argc, const char* argv[])
 		name = "floor";
 		command = SET_FLOOR;
 		minValue = 0;
+		if (LeaseDuration > 0) {
+			fprintf(stderr, "%s: -duration is only valid with -setceiling\n", argv[0]);
+			exit(1);
+		}
 	} else {
 		argIndex = SetCeiling;
 		name = "ceiling";
-		command = SET_CEILING;
+		command = (LeaseDuration > 0) ? MANAGE_CEILING : SET_CEILING;
 		minValue = -1;
 	}
 	const char* tmp;
 	if( ! (tmp = strchr(argv[argIndex+1], '@')) ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
-		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n", 
+		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n",
 				 name, "user@uid.domain", "user@full.host.name", argv[argIndex+1] );
 		exit(1);
 	}
@@ -740,20 +766,92 @@ main(int argc, const char* argv[])
 	}
 
     // send request
-    Sock* sock;
-    if( !(sock = negotiator.startCommand(command,
-										 Stream::reli_sock, 0) ) ||
-        !sock->put(argv[argIndex+1]) ||
-        !sock->put(value) ||
-        !sock->end_of_message()) {
-      fprintf( stderr, "failed to send SET_%s command to negotiator\n", name);
+    Sock* sock = negotiator.startCommand(command, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
       exit(1);
     }
 
+    if (command == MANAGE_CEILING) {
+      ClassAd req;
+      req.Assign(ATTR_SUBMITTER, argv[argIndex+1]);
+      req.Assign("Action", "set");
+      req.Assign("Ceiling", (int)value);
+      req.Assign("Duration", LeaseDuration);
+      if (!putClassAd(sock, req) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to send MANAGE_CEILING request to negotiator\n");
+        exit(1);
+      }
+      sock->decode();
+      ClassAd reply;
+      if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to read MANAGE_CEILING reply from negotiator\n");
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      bool success = false;
+      std::string err;
+      reply.LookupBool("Success", success);
+      reply.LookupString("ErrorString", err);
+      if (!success) {
+        fprintf(stderr, "negotiator rejected ceiling lease: %s\n",
+                err.empty() ? "unknown error" : err.c_str());
+        exit(1);
+      }
+      printf("Set ceiling lease on %s to %ld for %d seconds\n",
+             argv[argIndex+1], value, LeaseDuration);
+    } else {
+      if (!sock->put(argv[argIndex+1]) ||
+          !sock->put(value) ||
+          !sock->end_of_message()) {
+        fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      printf("The %s of %s was set to %ld\n", name, argv[argIndex+1], value);
+    }
+  }
+
+  else if (CancelCeilingLeaseArg) {
+    const char* submitter = argv[CancelCeilingLeaseArg+1];
+    if (!strchr(submitter, '@')) {
+      fprintf(stderr,
+              "%s: -cancelceilinglease requires a full submitter name (user@domain)\n",
+              argv[0]);
+      exit(1);
+    }
+    Sock* sock = negotiator.startCommand(MANAGE_CEILING, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to start MANAGE_CEILING command to negotiator\n");
+      exit(1);
+    }
+    ClassAd req;
+    req.Assign(ATTR_SUBMITTER, submitter);
+    req.Assign("Action", "cancel");
+    if (!putClassAd(sock, req) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to send MANAGE_CEILING request to negotiator\n");
+      exit(1);
+    }
+    sock->decode();
+    ClassAd reply;
+    if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to read MANAGE_CEILING reply from negotiator\n");
+      exit(1);
+    }
     sock->close();
     delete sock;
-
-    printf("The %s of %s was set to %ld\n",name, argv[argIndex+1],value);
+    bool success = false;
+    std::string err;
+    reply.LookupBool("Success", success);
+    reply.LookupString("ErrorString", err);
+    if (!success) {
+      fprintf(stderr, "negotiator rejected cancel: %s\n",
+              err.empty() ? "unknown error" : err.c_str());
+      exit(1);
+    }
+    printf("Cancelled ceiling lease for %s\n", submitter);
   }
 
   else if (SetAccum) { // set accumulated usage
@@ -1909,6 +2007,9 @@ static void usage(const char* name) {
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
      "\t-setfloor <user> <val>\tSet floor for <user>\n"
      "\t-setceiling <user> <val>\tSet ceiling for <user>\n"
+     "\t-setceiling <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary ceiling lease on <user> for <secs> seconds\n"
+     "\t-cancelceilinglease <user>\tCancel an in-effect ceiling lease for <user>\n"
      "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
      "\t-setbegin <user> <val>\tset last first date for <user>\n"
      "\t-setlast <user> <val>\tset last active date for <user>\n"
@@ -1983,7 +2084,9 @@ static void PrintResList(ClassAd* ad)
             break;
 
     char* p=strrchr(name,'@');
-    *p='\0';
+	if (p) {
+		*p='\0';
+	}
     time_t Now=time(0)-StartTime;
 	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }

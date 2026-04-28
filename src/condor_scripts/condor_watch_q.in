@@ -1020,12 +1020,20 @@ class JobStateTracker:
                 if new_status is None:
                     continue
 
+                # Check submit type events for structured notes for a batch name if missing
+                batch_name = self.batch_names.get(event.cluster)
+                if batch_name is None and event.type in [htcondor.JobEventType.SUBMIT, htcondor.JobEventType.CLUSTER_SUBMIT]:
+                    note_attrs = event.get("StructuredNotes")
+                    if note_attrs is not None:
+                        batch_name = note_attrs.get("JobBatchName")
+                        self.batch_names[event.cluster] = batch_name
+
                 cluster = self.cluster_id_to_cluster.setdefault(
                     event.cluster,
                     Cluster(
                         cluster_id=event.cluster,
                         event_log_path=event_log_path,
-                        batch_name=self.batch_names.get(event.cluster),
+                        batch_name=batch_name,
                         proc_count=self.num_procs_by_cluster.get(event.cluster),
                     ),
                 )

@@ -100,7 +100,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
-        timeout=5,
+        timeout=60,
         echo=True,
         as_user='tlmiller',
     )

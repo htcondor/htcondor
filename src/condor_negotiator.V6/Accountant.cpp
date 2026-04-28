@@ -41,6 +41,8 @@
 
 static char const *PriorityAttr="Priority";
 static char const *CeilingAttr="Ceiling";
+static char const *CeilingLeaseExpirationAttr="CeilingLeaseExpiration";
+static char const *CeilingPreLeaseValueAttr="CeilingPreLeaseValue";
 static char const *FloorAttr="Floor";
 static char const *ResourcesUsedAttr="ResourcesUsed";
 static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
@@ -478,10 +480,107 @@ void Accountant::SetCeiling(const std::string& CustomerName, int ceiling)
 // Set the Floor of a customer
 //------------------------------------------------------------------
 
-void Accountant::SetFloor(const std::string& CustomerName, int floor) 
+void Accountant::SetFloor(const std::string& CustomerName, int floor)
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Floor=%d\n",CustomerName.c_str(),floor);
   db->SetAttributeInt(AccountantTable::Customer, CustomerName,FloorAttr, floor);
+}
+
+//------------------------------------------------------------------
+// Ceiling lease accessors
+//------------------------------------------------------------------
+
+time_t Accountant::GetCeilingLeaseExpiration(const std::string& CustomerName)
+{
+  long long expiration = 0;
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingLeaseExpirationAttr, expiration);
+  if (expiration < 0) expiration = 0;
+  return (time_t)expiration;
+}
+
+bool Accountant::SetCeilingLease(const std::string& CustomerName, int ceiling,
+                                 int DurationSeconds, std::string& err)
+{
+  if (DurationSeconds <= 0) {
+    err = "lease duration must be positive";
+    return false;
+  }
+  if (ceiling < -1) {
+    err = "ceiling must be -1 (unlimited) or non-negative";
+    return false;
+  }
+  // Flush any already-expired lease first, so GetCeiling below reports the
+  // true pre-lease ceiling rather than a stale leased value.
+  CheckCeilingLeases();
+  time_t now = time(nullptr);
+  time_t existing = GetCeilingLeaseExpiration(CustomerName);
+  if (existing > now) {
+    formatstr(err, "ceiling lease for %s is already in effect (expires at %lld)",
+              CustomerName.c_str(), (long long)existing);
+    return false;
+  }
+  int prior = GetCeiling(CustomerName); // -1 == unlimited
+  time_t expiration = now + DurationSeconds;
+  dprintf(D_ACCOUNTANT,
+          "Accountant::SetCeilingLease - CustomerName=%s, Ceiling=%d, "
+          "PriorCeiling=%d, Expiration=%lld\n",
+          CustomerName.c_str(), ceiling, prior, (long long)expiration);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingPreLeaseValueAttr, prior);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingLeaseExpirationAttr, (int64_t)expiration);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingAttr, ceiling);
+  return true;
+}
+
+bool Accountant::CancelCeilingLease(const std::string& CustomerName, std::string& err)
+{
+  time_t expiration = GetCeilingLeaseExpiration(CustomerName);
+  if (expiration == 0) {
+    formatstr(err, "no ceiling lease in effect for %s", CustomerName.c_str());
+    return false;
+  }
+  int prior = -1;
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingPreLeaseValueAttr, prior);
+  dprintf(D_ACCOUNTANT,
+          "Accountant::CancelCeilingLease - CustomerName=%s, "
+          "RestoringCeiling=%d\n", CustomerName.c_str(), prior);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingAttr, prior);
+  // Clear lease state by zeroing expiration; pre-lease value is harmless stale.
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,
+                      CeilingLeaseExpirationAttr, 0);
+  return true;
+}
+
+void Accountant::CheckCeilingLeases()
+{
+  time_t now = time(nullptr);
+  // Collect first, mutate after: avoid modifying table mid-iteration.
+  std::vector<std::pair<std::string,int>> expired; // (name, priorCeiling)
+  db->ForEachInTable(AccountantTable::Customer,
+      [&](const std::string& name, ClassAd* ad) -> bool {
+          long long expiration = 0;
+          if (!ad || !ad->LookupInteger(CeilingLeaseExpirationAttr, expiration)) {
+              return true;
+          }
+          if (expiration <= 0 || (time_t)expiration > now) return true;
+          int prior = -1;
+          ad->LookupInteger(CeilingPreLeaseValueAttr, prior);
+          expired.emplace_back(name, prior);
+          return true;
+      });
+  for (const auto& [name, prior] : expired) {
+    dprintf(D_ALWAYS,
+            "Ceiling lease expired for %s; restoring ceiling to %d\n",
+            name.c_str(), prior);
+    db->SetAttributeInt(AccountantTable::Customer, name, CeilingAttr, prior);
+    db->SetAttributeInt(AccountantTable::Customer, name,
+                        CeilingLeaseExpirationAttr, 0);
+  }
 }
 
 
@@ -1596,7 +1695,7 @@ ClassAd* Accountant::GetClassAd(AccountantTable table, const std::string& Key)
 std::string Accountant::GetDomain(const std::string& CustomerName)
 {
   std::string S;
-  size_t pos=CustomerName.find('@');
+  size_t pos=CustomerName.find_last_of('@');
   if (pos== std::string::npos) return S;
   S=CustomerName.substr(pos+1);
   return S;

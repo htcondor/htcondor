@@ -2857,7 +2857,37 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		// allocation node from our table.
 	allocations.erase( srec->job_id.cluster );
 
-		// Finally, delete the object itself so we don't leak it. 
+		// Finally, delete the object itself so we don't leak it.
+	delete alloc;
+}
+
+
+void
+DedicatedScheduler::removeOrphanedAllocation( int cluster )
+{
+	auto alloc_it = allocations.find(cluster);
+	if (alloc_it == allocations.end()) {
+		return;
+	}
+	AllocationNode* alloc = alloc_it->second;
+
+		// Reset any match_recs still referenced by this allocation.
+		// In the typical case (startd rejected all claim activations)
+		// DelMrec has already erased them from these MRecArrays, so
+		// this is a no-op; we do it for safety in case we arrive from
+		// a different cleanup path.
+	for (int i = 0; i < alloc->num_procs; i++) {
+		MRecArray* matches = (*alloc->matches)[i];
+		for (match_rec* m : *matches) {
+			deallocMatchRec( m );
+		}
+	}
+
+	dprintf( D_FULLDEBUG,
+	         "DedicatedScheduler::removeOrphanedAllocation: "
+	         "removed allocation for cluster %d\n", cluster );
+
+	allocations.erase(alloc_it);
 	delete alloc;
 }
 
@@ -3914,6 +3944,9 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		nprocs++;
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
+		if (!job) {
+			continue;
+		}
 			// Foreach node of each job
 			// 1.) create mrec
 			// 2.) add to all_matches, and all_matches_by_name

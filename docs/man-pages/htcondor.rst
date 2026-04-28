@@ -51,6 +51,7 @@ Synopsis
 | **htcondor** **server** *status*
 
 | **htcondor** **ap** *status* [**hostname** ...]
+| **htcondor** **ap** *claims* [**-\-name** *ap-name*]
 
 | **htcondor** **cm** *status*
 
@@ -448,6 +449,17 @@ Access Point Verbs
     Returns the health status of all Access Points in a given pool.
     Specific hostnames can be provided to target which Access Points
     to get the status of.
+
+  **htcondor ap claims** [**-\-name** *ap-name*]
+
+    Displays active claims held by an access point.  For each claim,
+    shows the slot name, current activity, the source of the claim
+    (Negotiator, DirectAttach, or OCU), and the number of job
+    activations on that claim.
+
+    **-\-name** *ap-name*
+        Name or address of the access point to query.  If not specified,
+        the local access point is queried.
 
 Central Manager Verbs
 ---------------------

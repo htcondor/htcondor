@@ -776,7 +776,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 			continue;
 		}
 		char pidstr[64]; // Far beyond max size of a pid
-		while (fscanf(f, "%s\n", pidstr) == 1) {
+		while (fscanf(f, "%63s\n", pidstr) == 1) {
 			processes_in_cgroup++;
 		}
 		fclose(f);
@@ -1083,7 +1083,7 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid, int exit_status) {
 	uint64_t oom_count = 0;
 
 	char word[128]; // max size of a word in memory_events
-	while (fscanf(f, "%s", word) != EOF) {
+	while (fscanf(f, "%127s", word) != EOF) {
 		// if word is oom_killed
 		uint64_t oom_kill_value = 0;
 		if ((strcmp(word, "oom_group_kill") == 0) ||

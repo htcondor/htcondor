@@ -339,6 +339,7 @@
 #define ATTR_INTERACTIVE  "Interactive"
 #define ATTR_IS_DAEMON_CORE  "IsDaemonCore"
 #define ATTR_IS_LOCAL_STARTD  "IsLocalStartd"
+#define ATTR_IS_DIRECT_ATTACH  "IsDirectAttach"
 #define ATTR_IS_OWNER  "IsOwner"
 #define ATTR_IS_QUEUE_SUPER_USER  "IsQueueSuperUser"
 #define ATTR_IS_LOCAL_USER "IsLocalUser"
@@ -795,6 +796,7 @@
 #define ATTR_STREAM_ERROR  "StreamErr"
 #define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
 #define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
+#define ATTR_SUBMIT_EVENT_NOTES_ATTRS "SubmitEventNotesAttrs"
 #define ATTR_SUBMIT_EVENT_STRUCTURED_NOTES "StructuredNotes"
 #define ATTR_SUBMITTER "Submitter"
 #define ATTR_SUBMITTER_GLOBAL_JOB_ID  "SubmitterGlobalJobId"
@@ -1343,6 +1345,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 // Attributes related to dataflow jobs
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_SKIP_MATCHMAKING "SkipMatchmaking"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 #ifdef LINUX

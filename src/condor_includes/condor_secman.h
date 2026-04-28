@@ -25,6 +25,7 @@
 #include "KeyCache.h"
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
+#include <functional>
 #include <map>
 
 // For AES (and newer).
@@ -34,6 +35,12 @@
 #define SEC_SESSION_KEY_LENGTH_OLD 24
 
 typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
+
+// std::function replacement for StartCommandCallbackType. Caller state that the
+// legacy API passed via void *misc_data lives in the closure instead.
+using StartCommandCallback = std::function<void(bool success, Sock *sock, CondorError *errstack,
+                                                const std::string &trust_domain,
+                                                bool should_try_token_request)>;
 
 extern char const *USE_TMP_SEC_SESSION;
 
@@ -118,8 +125,7 @@ public:
 		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};
-		StartCommandCallbackType *m_callback_fn{nullptr};
-		void *m_misc_data{nullptr};
+		StartCommandCallback m_callback;
 		bool m_nonblocking{false};
 		const char *m_cmd_description{nullptr};
 		const char *m_sec_session_id{nullptr};

@@ -1285,9 +1285,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 
 	if ( o ) {
 		fquser = strdup(o);
-			// owner is just fquser that stops at the first '@' 
+			// owner is just fquser that stops at the last '@'
 		owner = strdup(o);
-		char *atsign = strchr(owner,'@');
+		char *atsign = strrchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
 		}
@@ -1874,7 +1874,9 @@ void JobQueueBase::PopulateFromAd()
 bool JobQueueBase::UpdateSecureAttribute(const char * attr)
 {
 	classad::Value val;
-	this->EvaluateAttr(attr, val, classad::Value::ALL_VALUES);
+	if (!this->EvaluateAttr(attr, val, classad::Value::ALL_VALUES)) {
+		return false;
+	}
 	return SetSecureAttribute(jid, attr, val) == 0;
 }
 
@@ -4205,6 +4207,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueueCluster * clusterad = ad->Cluster();
 	if ( ! clusterad) {
 		clusterad = GetClusterAd(ad->jid);
+		ASSERT(clusterad);
 	}
 
 	// We'll need the JobPrio value later after the ad has been destroyed
@@ -6258,7 +6261,7 @@ void AddClusterEditedAttributes(std::vector<JobQueueKey> & exist_keys)
 
 		if ( ! job || ! job->IsCluster()) continue; // just a safety check, we don't expect this to fire.
 		auto *cad = dynamic_cast<JobQueueCluster*>(job);
-		if ( ! cad->factory) continue; // don't need to do this for non-factory clusters
+		if ( ! cad || ! cad->factory) continue; // don't need to do this for non-factory clusters
 
 		// get the attrs modified in this transaction
 		classad::References attrs;
@@ -9084,7 +9087,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		job->LookupString(attr_JobUser, job_user);
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
-		if (last_at != std::string::npos && !accounting_domain.empty()) {
+		if (user_is_the_new_owner && last_at != std::string::npos && !accounting_domain.empty()) {
 			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
 			cremain -= last_at;
 			strncat(powner, "@", cremain); cremain--;

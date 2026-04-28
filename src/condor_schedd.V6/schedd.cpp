@@ -1571,7 +1571,7 @@ Scheduler::count_jobs()
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
 		} else {
-			char *at_sign = strchr(rec->user, '@');
+			char *at_sign = strrchr(rec->user, '@');
 			if ( ! at_sign) {
 				SubDat = insert_submitter(rec->user);
 			} else {
@@ -2779,8 +2779,12 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		dprintf( D_ALWAYS, "Failed to receive number of users for %s command: aborting\n", cmd_name);
 		return FALSE;
 	}
+	if (num_users <= 0 || num_users > 1'000'000) {
+		dprintf( D_ALWAYS, "Invalid number of users %d for %s command: aborting\n", num_users, cmd_name);
+		return FALSE;
+	}
 
-	std::vector<ClassAd> acts; 
+	std::vector<ClassAd> acts;
 	if (num_users > 1) { acts.reserve(num_users); }
 	for (int ii = 0; ii < num_users; ++ii) {
 		ClassAd & ad = acts.emplace_back();
@@ -3431,11 +3435,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			dprintf(dpf_level, "%s command %s\n", getCommandStringSafe(cmd),
 				authenticated ? "was authenticated" : "failed to authenticate");
 		}
-		const char * p0wn = rsock->getOwner();
-		if (p0wn && ( ! authenticated || MATCH == strcasecmp(p0wn, "unauthenticated"))) p0wn = NULL;
-		if (user_is_the_new_owner) {
-			p0wn = rsock->getFullyQualifiedUser();
-		}
+		const char * p0wn = rsock->isMappedFQU() ? rsock->getFullyQualifiedUser() : nullptr;
+
 		if (IsDebugCatAndVerbosity(dpf_level)) {
 			dprintf(dpf_level, "QUERY_JOB_ADS detected %s = %s\n", attr_JobUser.c_str(), p0wn ? p0wn : "<null>");
 		}
@@ -5627,6 +5628,19 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 	dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
 			 "forking a shadow\n", srec->job_id.cluster,
 			 srec->job_id.proc );
+
+		// For MPI/PARALLEL jobs we still hold a DedicatedScheduler
+		// AllocationNode for this cluster. The shadow-death cleanup
+		// path (DedicatedScheduler::removeAllocation) never runs here
+		// because no shadow was ever spawned. Drop the allocation now
+		// so the cluster can be rematched; otherwise the next
+		// DedicatedScheduler::createAllocations() for this cluster
+		// would ASSERT on the duplicate map entry and EXCEPT the schedd.
+	if( universe == CONDOR_UNIVERSE_MPI ||
+	    universe == CONDOR_UNIVERSE_PARALLEL ) {
+		dedicated_scheduler.removeOrphanedAllocation( srec->job_id.cluster );
+	}
+
 	mark_job_stopped( srec->job_id );
 	delete_shadow_rec( srec );
 	return false;
@@ -5831,6 +5845,24 @@ Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const cha
 	job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 	if ( warning != NULL && warning[0] ) {
 		event.submitEventWarnings = warning;
+	}
+
+	std::string structuredAttrs;
+	job->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (job->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
 	}
 
 	bool status = false;
@@ -6145,6 +6177,24 @@ Scheduler::WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_f
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
 	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
+
+	std::string structuredAttrs;
+	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES_ATTRS, structuredAttrs);
+	if ( ! structuredAttrs.empty()) { structuredAttrs += ","; }
+	structuredAttrs += ATTR_DAG_NODE_NAME "," ATTR_JOB_BATCH_NAME;
+
+	// Copy the fully evaluated classad expression if found
+	for (const auto& attr : StringTokenIterator(structuredAttrs)) {
+		classad::Value val;
+		if (cluster->EvaluateAttr(attr, val)) {
+			if ( ! val.IsUndefinedValue() && ! val.IsErrorValue()) {
+				ExprTree *lit = classad::Literal::MakeLiteral(val);
+				if (lit) {
+					event.setStructuredNotes().Insert(attr, lit);
+				}
+			}
+		}
+	}
 
 	bool status = false;
 	if (do_fsync) {
@@ -8694,7 +8744,7 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 		return false;
 	}
 
-	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+	std::shared_ptr<DCMsgCallback> cb = std::make_shared<DCMsgCallback>(
 		(DCMsgCallback::CppFunction)&Scheduler::claimStartdForUs,
 		this,
 		nullptr);
@@ -9094,8 +9144,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	if (user_is_the_new_owner || scheddsAreSubmitters) {
 		// SubmitterData is keyed by fully qualified names
 	} else {
-		// SubmitterData is keyed by bare names, so truncate owner at '@'
-		char *at_sign = strchr(owner, '@');
+		// SubmitterData is keyed by bare names, so truncate owner at last '@'
+		char *at_sign = strrchr(owner, '@');
 		if (at_sign) *at_sign = '\0';
 	}
 	// find owner in the Submitters array
@@ -9659,7 +9709,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	// Setup to claim the slot asynchronously
 
-	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+	std::shared_ptr<DCMsgCallback> cb = std::make_shared<DCMsgCallback>(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
 		this,
 		mrec);

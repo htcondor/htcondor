@@ -286,7 +286,7 @@ Claim::publish( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -440,7 +440,7 @@ Claim::publishPreemptingClaim( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
