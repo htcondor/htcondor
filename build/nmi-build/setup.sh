@@ -48,7 +48,8 @@ fi
 
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     export DEBIAN_FRONTEND='noninteractive'
-    apt-get update --yes; apt-get upgrade --yes
+    apt-get update --yes
+    apt-get upgrade --yes
     INSTALL='apt-get install --yes'
 elif [ "$ID" = 'centos' ]; then
     yum upgrade --assumeyes
