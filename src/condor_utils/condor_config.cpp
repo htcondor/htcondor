@@ -1332,6 +1332,10 @@ get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files )
 	return true;
 }
 
+void enable_config_tracing(macro_meta_tracer * tracer) {
+	ConfigMacroSet.tracer = tracer;
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( const char* dirlist, const char* host )

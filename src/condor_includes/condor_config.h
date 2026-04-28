@@ -71,6 +71,11 @@ typedef struct macro_meta {
 	short int    use_count{0};
 	short int    ref_count{0};
 } MACRO_META;
+class macro_meta_tracer {
+public:
+	virtual bool match(const char * name) = 0;
+	virtual void log(const char * name, const char * old_value, const char * new_value, MACRO_META & meta) = 0;
+};
 typedef struct macro_defaults {
 	int size{0};
 	MACRO_DEF_ITEM * table{nullptr}; // points to const table[size] key/default-value pairs (pointer not owned here)
@@ -91,6 +96,7 @@ typedef struct macro_set {
 	MACRO_SOURCES sources;
 	MACRO_DEFAULTS * defaults{nullptr}; // optional reference to const defaults table (ptr not owned here)
 	CondorError * errors{nullptr}; // optional error stack, if non NULL, use instead of fprintf to stderr (owned here)
+	macro_meta_tracer * tracer{nullptr};
 
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
@@ -367,6 +373,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool check_config_file_access(const char * username, std::vector<std::string> &errfiles);
 
 	bool get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files );
+
+	// enable tracing of file and line for self-substitution for the given param names
+	void enable_config_tracing(macro_meta_tracer *);
 
 	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults

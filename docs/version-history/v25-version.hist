@@ -11,6 +11,10 @@
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- :tool:`condor_config_val` now accepts a ``-trace`` option which prints the file, line and previous value
+  each time a value is replaced as the configuration files are read.
+  :jira:`3699`
+
 - :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
   to install a time-limited ceiling *lease*: the prior ceiling is
   automatically restored after the given number of seconds. Leases are

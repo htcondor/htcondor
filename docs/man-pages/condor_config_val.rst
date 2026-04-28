@@ -120,6 +120,9 @@ Options
     (view option) Display configuration file name and line number where
     the variable is set, along with the raw, expanded, and default
     values of the variable.
+ **-trace**
+    (view option) Display old configuration file name and line number and
+    value each time the variable is replaced as the configuration is loaded.
  **-debug[:<opts>]**
     (view option) Send output to ``stderr``, overriding a set value of
     :macro:`TOOL_DEBUG`.
