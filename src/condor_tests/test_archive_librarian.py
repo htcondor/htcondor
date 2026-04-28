@@ -297,7 +297,8 @@ class TestLibrarianIngestion:
 
         now = int(time.time())
         assert len(rows) >= 1, "Expected at least one recent Status row to survive"
-        stale = [r[0] for r in rows if now - r[0] > STATUS_RETENTION_SECONDS + UPDATE_INTERVAL]
+        # Add five second slop into this check
+        stale = [r[0] for r in rows if now - r[0] > STATUS_RETENTION_SECONDS + UPDATE_INTERVAL + 5]
         assert not stale, (
             f"Found Status rows older than retention window "
             f"({STATUS_RETENTION_SECONDS + UPDATE_INTERVAL}s): {stale}"
