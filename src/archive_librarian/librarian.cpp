@@ -12,7 +12,6 @@
 #include <cmath>
 #include <limits>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -58,10 +57,29 @@ static std::string computeFileHash(const std::string& path) {
 // Returns nullopt when the filename has no rotation suffix.
 // NOTE: findHistoryFiles() gets all archive files and verifies that each
 //       is a rotated archive file in <basename>.YYYYMMDDTHHMMSS format
-// NOTE: rfind in case history file basename contains '.' e.g. schedd1.history
+// NOTE: rfind used so base filenames containing '.' (e.g. schedd1.history,
+//       foo.bar) are not mistaken for rotated files — the suffix is then
+//       validated: exactly 15 chars, 'T' at index 8, all other chars digits.
 static std::optional<std::string> extractRotationTime(const std::string& filename) {
     auto pos = filename.rfind(".");
-    return (pos == std::string::npos || pos + 1 >= filename.length()) ? std::nullopt : std::make_optional(filename.substr(pos + 1));
+
+    if (pos == std::string::npos || pos + 1 >= filename.length()) {
+        return std::nullopt;
+    }
+
+    std::string suffix = filename.substr(pos + 1);
+    if (suffix.length() != 15 || suffix[8] != 'T') {
+        return std::nullopt;
+    }
+
+    for (size_t i = 0; i < 15; ++i) {
+        if (i == 8) { continue; }
+        if ( ! std::isdigit(static_cast<unsigned char>(suffix[i]))) {
+            return std::nullopt;
+        }
+    }
+
+    return std::make_optional(suffix);
 }
 
 // Collects disk metadata for path and returns a populated ArchiveFile.
@@ -157,6 +175,7 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
 
     ArchiveRecord rec;
     int64_t prevPos = info.last_offset;
+    bool limit_reached = false;
     while (info.reader->Next(rec)) {
         int64_t curPos = info.reader->Tellp();
         int64_t recordBytes = curPos - prevPos;
@@ -167,7 +186,10 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
         }
         prevPos = curPos;
         records.push_back(rec);
-        if (limit > 0 && static_cast<int64_t>(records.size()) >= limit) { break; }
+        if (limit > 0 && static_cast<int64_t>(records.size()) >= limit) {
+            limit_reached = true;
+            break;
+        }
     }
 
     // Store the position *after* the last processed byte so that
@@ -176,7 +198,7 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
     info.last_offset = info.reader->Tellp();
 
     // A rotated file that reached clean EOF is done; release the file descriptor.
-    if ( ! info.rotation_time.empty() && info.reader->LastError() == 0) {
+    if ( ! limit_reached && ! info.rotation_time.empty() && info.reader->LastError() == 0) {
         info.fully_read = true;
         info.reader.reset();
     }

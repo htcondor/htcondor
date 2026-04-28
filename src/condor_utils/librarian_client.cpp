@@ -23,6 +23,8 @@
 
 #include "librarian_client.h"
 
+#include <tuple>   // std::ignore
+
 #ifdef HAVE_SQLITE3_H
 #include <sqlite3.h>
 #endif

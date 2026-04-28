@@ -25,6 +25,7 @@
 #include <cerrno>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 
 // Portable 64-bit seek/tell (same pattern as backward_file_reader.cpp).
 static int64_t ftell_64b(FILE* f) {
@@ -340,6 +341,7 @@ ArchiveReader::FillBackwardBuffer() {
 	// Edge case: file position reached BOF but carry was not yet emitted.
 	// (Can only happen if a previous chunk ended exactly on a newline.)
 	if (m_bwd_pos == 0) {
+		if (!m_bwd_carry.empty() && m_bwd_carry.back() == '\r') m_bwd_carry.pop_back();
 		m_bwd_buf.push_back({std::move(m_bwd_carry), m_bwd_carry_base});
 		m_bwd_carry.clear();
 		return true;
@@ -381,6 +383,7 @@ ArchiveReader::FillBackwardBuffer() {
 	while (start != std::string::npos) {
 		// Line occupies [start+1, end).
 		std::string text = combined.substr(start + 1, end - start - 1);
+		if (!text.empty() && text.back() == '\r') text.pop_back();
 		if (!text.empty() || end < combined.size()) {
 			int64_t off = chunk_base + static_cast<int64_t>(start + 1);
 			m_bwd_buf.push_back({std::move(text), off});
@@ -401,6 +404,7 @@ ArchiveReader::FillBackwardBuffer() {
 	// If we have just consumed the very beginning of the file, the carry
 	// is the first line of the file – emit it now.
 	if (m_bwd_pos == 0 && !m_bwd_carry.empty()) {
+		if (m_bwd_carry.back() == '\r') m_bwd_carry.pop_back();
 		m_bwd_buf.push_back({std::move(m_bwd_carry), m_bwd_carry_base});
 		m_bwd_carry.clear();
 	}

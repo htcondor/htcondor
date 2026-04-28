@@ -43,6 +43,7 @@
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
 #include <utility> // for std::move
+#include <map>
 
 #include "classad_helpers.h"
 #include "history_utils.h"

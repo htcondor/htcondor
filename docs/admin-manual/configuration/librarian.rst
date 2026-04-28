@@ -3,7 +3,7 @@
 Librarian Configuration Options
 ===============================
 
-The following options effect the operations of the archive librarian. Automatically
+The following options affect the operations of the archive librarian. Automatically
 enable historical archive record indexing to a database by setting :macro:`use feature:librarian`.
 
 :macro-def:`USING_LIBRARIAN`
@@ -18,7 +18,7 @@ enable historical archive record indexing to a database by setting :macro:`use f
 
 :macro-def:`MAX_LIBRARIAN_LOG`
     The maximum size of the archive librarian's debug file before being rotated. Defaults
-    to :macro:`MAX_DEBUG_LOG`.
+    to :macro:`MAX_DEFAULT_LOG`.
 
 :macro-def:`LIBRARIAN_DEBUG`
     The archive librarian's debugging level. Default is nothing.

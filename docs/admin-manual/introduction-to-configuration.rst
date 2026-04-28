@@ -1445,7 +1445,7 @@ incorporates.
     - :config-template:`Librarian([max_size], [file_path])<FEATURE>`
 
         Sets configuration to enable the use of the archive librarian for an
-        Access Point to index historical archive records in a database.The
+        Access Point to index historical archive records in a database. The
         optional argument ``max_size`` can be provided to set the maximum size
         of the SQLite3 database file. Additionally, the optional argument
         ``file_path`` can be provided to inform the librarian where to create

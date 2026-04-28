@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
+#include <string>
 
 namespace LibrarianConfigOptions {
 	enum class b { // Librarian boolean config options
