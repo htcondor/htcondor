@@ -95,6 +95,7 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "ALPHA",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             # This is not test-specific.
@@ -255,6 +256,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "BETA",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             "STARTER_NESTED_SCRATCH":       True,
@@ -417,6 +419,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "GAMMA",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             "STARTER_NESTED_SCRATCH":       True,

@@ -63,6 +63,7 @@ def the_condor(test_dir, the_lock_dir):
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "alpha",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             "STARTER_NESTED_SCRATCH":       True,
@@ -172,6 +173,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "beta",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             # This is not test-specific.
@@ -339,6 +341,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
             # "FORBID_BINDMOUNT_MAPPING":     True,
             # This only matters when testing as root.
             # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "gamma",
             # This must be AUTO for cxfer to work when enforcing disk limits.
             "LVM_HIDE_MOUNT":               "AUTO",
             "STARTER_NESTED_SCRATCH":       True,
