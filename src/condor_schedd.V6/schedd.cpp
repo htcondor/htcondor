@@ -11309,6 +11309,10 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 	}
 }
 
+VanillaMatchAd::~VanillaMatchAd() {
+	Reset();
+}
+
 void VanillaMatchAd::Reset()
 {
 	std::string slot_attr("SLOT");
