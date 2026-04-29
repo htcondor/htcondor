@@ -2202,9 +2202,19 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		download_info *info = (download_info *)malloc(sizeof(download_info));
 		ASSERT ( info );
 		info->myobj = this;
-		ActiveTransferTid = daemonCore->
-			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
-						  (void *)info, s, ReaperId);
+
+#if defined(WINDOWS)
+		ActiveTransferTid = daemonCore->CallImmediatelyButReapLater(
+			[info, s]() -> int { int rv = FileTransfer::DownloadThread(info, s); free(info); return rv; },
+			ReaperId
+		);
+#else
+		ActiveTransferTid = daemonCore->ForkToCall(
+			[info, s]() -> int { int rv = FileTransfer::DownloadThread(info, s); free(info); return rv; },
+			ReaperId
+		);
+#endif /* defined(WINDOWS) */
+
 		if (ActiveTransferTid == FALSE) {
 			dprintf(D_ALWAYS,
 					"Failed to create FileTransfer DownloadThread!\n");
@@ -3878,9 +3888,19 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		upload_info *info = (upload_info *)malloc(sizeof(upload_info));
 		ASSERT( info );
 		info->myobj = this;
-		ActiveTransferTid = daemonCore->
-			Create_Thread((ThreadStartFunc)&FileTransfer::UploadThread,
-						  (void *)info, s, ReaperId);
+
+#if defined(WINDOWS)
+		ActiveTransferTid = daemonCore->CallImmediatelyButReapLater(
+			[info, s]() -> int { return FileTransfer::UploadThread(info, s); },
+			ReaperId
+		);
+#else
+		ActiveTransferTid = daemonCore->ForkToCall(
+			[info, s]() -> int { return FileTransfer::UploadThread(info, s); },
+			ReaperId
+		);
+#endif /* defined(WINDOWS) */
+
 		if (ActiveTransferTid == FALSE) {
 			dprintf(D_ALWAYS, "Failed to create FileTransfer UploadThread!\n");
 			free(info);

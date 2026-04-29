@@ -1602,6 +1602,26 @@ class DaemonCore : public Service
 	//@}
 
 
+	//
+	// Aside from the considerably-improved interface, these two functions
+	// are identical to (and indeed call) Create_Thread().  I'd like to
+	// get rid of Create_Thread() entirely, because even if it did what it
+	// says on any platform, none of our existing uses would work.  However,
+	// it's a little too deeply entwined for now, so I'm just fixing the
+	// most confusing calls (those in the FileTransfer class).
+	//
+#if defined(WINDOWS)
+	// Execute `r = f();` in the current process, then schedule a 0-second
+	// timer to call reaperID with `r` as the exit code.
+	int CallImmediatelyButReapLater(
+		std::function<int(void)> f, int reaperID
+	);
+#else
+	// Call `exit(f())` in a forked child, with registered reaper reaperID.
+	int ForkToCall( std::function<int(void)> f, int reaperID );
+#endif
+
+
 	/** Public method to allow things that fork() themselves without
 		using Create_Thread() to set the magic DC variable so that our
 		version of exit() uses _exit() instead of exit() and we don't
