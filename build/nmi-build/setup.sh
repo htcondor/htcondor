@@ -24,11 +24,13 @@ VERSION_ID=${VERSION_ID%%.*}
 ARCH=$(arch)
 REPO_ARCH='noarch'
 
+# We need this RPM macro to tell SLES apart for openSUSE
 if [ -d /etc/rpm ]; then
     echo "%os_release_id $ID" > /etc/rpm/macros.os-release-id
 fi
 
-if [ $ID = 'almalinux' ]; then
+# Early versions of AlmaLinux did not properly override rpm-macros for x86_64-v2
+if [ "$ID" = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
         REPO_ARCH='x86_64_v2'
@@ -38,27 +40,31 @@ fi
 
 echo "ID=$ID VERSION_ID=$VERSION_ID VERSION_CODENAME=$VERSION_CODENAME ARCH=$ARCH"
 
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     SUDO_GROUP='sudo'
 else
     SUDO_GROUP='wheel'
 fi
 
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    apt-get update
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     export DEBIAN_FRONTEND='noninteractive'
+    apt-get update --yes
+    apt-get upgrade --yes
     INSTALL='apt-get install --yes'
-elif [ $ID = 'centos' ]; then
+elif [ "$ID" = 'centos' ]; then
+    yum upgrade --assumeyes
     INSTALL='yum install --assumeyes'
-elif [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+elif [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
+    zypper --non-interactive update
     INSTALL='zypper --non-interactive install'
     $INSTALL system-group-wheel system-user-mail
-elif [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
+elif [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
+    dnf upgrade --assumeyes
     INSTALL='dnf install --assumeyes'
     $INSTALL 'dnf-command(config-manager)'
 fi
 
-if [ $ID = 'amzn' ]; then
+if [ "$ID" = 'amzn' ]; then
     $INSTALL -y shadow-utils
 fi
 
@@ -66,12 +72,12 @@ fi
 # The HTCondor that runs inside the container needs to have the user defined
 for i in {1..161}; do
     uid=$((i+5000));
-    useradd --uid  $uid --gid $SUDO_GROUP --shell /bin/bash --create-home slot$i;
+    useradd --uid  $uid --gid $SUDO_GROUP --shell /bin/bash --create-home "slot$i";
 done
 
 for i in {1..161}; do
     uid=$((i+5299));
-    useradd --uid  $uid --gid $SUDO_GROUP --shell /bin/bash --create-home slot1_$i;
+    useradd --uid  $uid --gid $SUDO_GROUP --shell /bin/bash --create-home "slot1_$i";
 done
 
 useradd --uid  6004 --gid $SUDO_GROUP --shell /bin/bash --create-home condorauto
@@ -91,36 +97,36 @@ useradd --uid 25197 --gid $SUDO_GROUP --shell /bin/bash --create-home westphall
 mkdir -p /usr/local/condor/etc/examples
 echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
-if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'centos' ]; then
     $INSTALL epel-release
-    if [ $VERSION_ID -eq 7 ]; then
+    if [ "$VERSION_ID" -eq 7 ]; then
         $INSTALL centos-release-scl
-    elif [ $VERSION_ID -eq 8 ]; then
+    elif [ "$VERSION_ID" -eq 8 ]; then
         dnf config-manager --set-enabled powertools
-    elif [ $VERSION_ID -eq 9 ] || [ $VERSION_ID -eq 10 ]; then
+    elif [ "$VERSION_ID" -eq 9 ] || [ "$VERSION_ID" -eq 10 ]; then
         dnf config-manager --set-enabled crb
     fi
 fi
 
 # Setup RPM based repositories (include alpha repositories)
-if [ $ID = 'amzn' ]; then
+if [ "$ID" = 'amzn' ]; then
     $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
-if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'centos' ]; then
     $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
-if [ $ID = 'fedora' ]; then
+if [ "$ID" = 'fedora' ]; then
     $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
-if [ $ID = 'opensuse-leap' ]; then
+if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
     for key in /etc/pki/rpm-gpg/*; do
@@ -128,7 +134,7 @@ if [ $ID = 'opensuse-leap' ]; then
     done
 fi
 
-if [ $ID = 'sles' ]; then
+if [ "$ID" = 'sles' ]; then
     # Hard code version in this special case
     zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.sles15sp5.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
@@ -138,7 +144,7 @@ if [ $ID = 'sles' ]; then
 fi
 
 # Setup Debian based repositories
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     $INSTALL apt-transport-https apt-utils curl gnupg
     mkdir -p /etc/apt/keyrings
     curl -fsSL "https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
@@ -156,14 +162,14 @@ if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     apt-get update
 fi
 # Enterprise Linux, select on version
-if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; then
+if [ "$ID" = 'future' ] && [ "$VERSION_ID" -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
     # ] ] Help out vim syntax highlighting
 fi
 # SUSE is special
-if [ $ID = 'future-suse' ]; then
+if [ "$ID" = 'future-suse' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
@@ -171,13 +177,13 @@ if [ $ID = 'future-suse' ]; then
 fi
 
 # Install the build dependencies
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ]; then
     $INSTALL make rpm-build yum-utils
     yum-builddep -y /tmp/rpm/condor.spec
 fi
 
 # Install the build dependencies
-if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     $INSTALL make rpm-build
     # shellcheck disable=SC2046 # we want word splitting
     $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
@@ -190,7 +196,7 @@ if [ "$VERSION_CODENAME" = 'bionic' ]; then
     apt-get update
 fi
 
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     $INSTALL build-essential devscripts equivs gpp
     (cd /tmp/debian; ./prepare-build-files.sh -DUW_BUILD)
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
@@ -204,13 +210,13 @@ fi
 
 # Add useful tools
 $INSTALL gdb git less python3-pip strace sudo vim
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     $INSTALL iputils rpmlint
 fi
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     $INSTALL lintian net-tools
 fi
-if [ $ID != 'sles' ]; then
+if [ "$ID" != 'sles' ]; then
     $INSTALL nano
 fi
 
@@ -222,7 +228,7 @@ else
 fi
 
 # Add in the ninja build system
-if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     $INSTALL ninja
 else
     $INSTALL ninja-build
@@ -233,7 +239,7 @@ exists() {
 }
 
 # Make the gcc-toolset compiler the default on AlmaLinux
-if [ $ID = 'almalinux' ]; then
+if [ "$ID" = 'almalinux' ]; then
     if exists /opt/rh/gcc-toolset-*/enable; then
         echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
         # shellcheck disable=SC2016 # we want this expanded at runtime
@@ -247,20 +253,20 @@ fi
 echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     $INSTALL condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
-    if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+    if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
         $INSTALL procps
     else
         $INSTALL procps-ng
     fi
-    if [ $ID != 'amzn' ] && [ $ID != 'sles' ]; then
+    if [ "$ID" != 'amzn' ] && [ "$ID" != 'sles' ]; then
         $INSTALL apptainer
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
@@ -268,8 +274,8 @@ fi
 
 # Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
-if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
-    if [ $VERSION_CODENAME = 'trixie' ]; then
+if [ "$ID" = 'debian' ]; then
+    if [ "$VERSION_CODENAME" = 'trixie' ]; then
         TRIXIE='-trixie+'
     else
         TRIXIE=''
@@ -281,10 +287,13 @@ if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
 fi
 
-if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
-    $INSTALL software-properties-common
-    add-apt-repository -y ppa:apptainer/ppa
-    apt-get update
+if [ "$ID" = 'ubuntu' ]; then
+    # Add PPA for older Ubuntu versions
+    if [ "$VERSION_CODENAME" = 'jammy' ] || [ "$VERSION_CODENAME" = 'noble' ]; then
+        $INSTALL software-properties-common
+        add-apt-repository -y ppa:apptainer/ppa
+        apt-get update
+    fi
     $INSTALL apptainer
 fi
 
@@ -292,21 +301,23 @@ fi
 # Include packages for tarball in the image.
 externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
     apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
-    if [ $VERSION_CODENAME = 'bullseye' ]; then
+    if [ "$VERSION_CODENAME" = 'bullseye' ]; then
         apt-get download libscitokens0 libvomsapi1v5
-    elif [ $VERSION_CODENAME = 'bookworm' ]; then
+    elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
         apt-get download libscitokens0 libvomsapi1v5
-    elif [ $VERSION_CODENAME = 'trixie' ]; then
+    elif [ "$VERSION_CODENAME" = 'trixie' ]; then
         apt-get download libscitokens0t64 libvomsapi1t64
-    elif [ $VERSION_CODENAME = 'focal' ]; then
+    elif [ "$VERSION_CODENAME" = 'focal' ]; then
         apt-get download libscitokens0 libvomsapi1v5
-    elif [ $VERSION_CODENAME = 'jammy' ]; then
+    elif [ "$VERSION_CODENAME" = 'jammy' ]; then
         apt-get download libscitokens0 libvomsapi1v5
-    elif [ $VERSION_CODENAME = 'noble' ]; then
+    elif [ "$VERSION_CODENAME" = 'noble' ]; then
+        apt-get download libscitokens0t64 libvomsapi1t64
+    elif [ "$VERSION_CODENAME" = 'resolute' ]; then
         apt-get download libscitokens0t64 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
@@ -314,41 +325,41 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     fi
     popd
 fi
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
+if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
         libgomp munge-libs pelican pelican-osdf-compat pcre2 scitokens-cpp
-    if [ $ID != 'amzn' ]; then
+    if [ "$ID" != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
-if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican pelican-osdf-compat
 fi
-if [ $ID = 'opensuse-leap' ]; then
+if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
 # Clean up package caches
-if [ $ID = 'centos' ]; then
+if [ "$ID" = 'centos' ]; then
     yum clean all
     rm -rf /var/cache/yum/*
 fi
-if [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
+if [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
     dnf clean all
     rm -rf /var/cache/yum/*
 fi
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     apt-get -y autoremove
     apt-get -y clean
 fi
 
 # Install apptainer into externals directory
-if [ $ID != 'amzn' ]; then
-    if [ $ID != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
+if [ "$ID" != 'amzn' ]; then
+    if [ "$ID" != 'ubuntu' ] || [ "$ARCH" != 'ppc64le' ]; then
         mkdir -p "$externals_dir/apptainer"
-        if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+        if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
             $INSTALL cpio rpm2cpio
         fi
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
@@ -362,21 +373,21 @@ fi
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
 # Install scitokens for BaTLab testing
-if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
         pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     else
         pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     fi
 else
-    if [ $ID = 'centos' ]; then
+    if [ "$ID" = 'centos' ]; then
         pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
     else
         pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     fi
 fi
 
-if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
+if [ "$ID" = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
     # with sphinx on these platforms. Downgrade markupsafe and hope for the best
     pip3 install markupsafe==2.0.1
