@@ -24,6 +24,15 @@ import shutil
 import htcondor2
 
 
+def try_shutil_chown( * p, ** v ):
+    try:
+        shutil.chown( * p, ** v )
+    except PermissionError as pe:
+        logger.debug(pe)
+    except LookupError as le:
+        logger.debug(le)
+
+
 #
 # This is based on `test_cif.py`; these test aren't included there because
 # (a) that test already takes close to two minutes to run, and
@@ -65,6 +74,7 @@ def the_cs_local_dir(test_dir):
 def the_cs_user_dir(the_cs_local_dir):
     the_cs_user_dir = the_cs_local_dir / "user.d"
     the_cs_user_dir.mkdir(exist_ok=True)
+    try_shutil_chown( the_cs_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
     return the_cs_user_dir
 
 
@@ -76,13 +86,24 @@ def the_cs_lock_dir(the_cs_local_dir):
 @action
 def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=the_cs_local_dir,
         config={
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "ALPHA",
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            # This is not test-specific.
+            "STARTER_NESTED_SCRATCH":       False,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
-            "STARTER_NESTED_SCRATCH":   True,
         },
     ) as the_cs_condor:
         yield the_cs_condor
@@ -214,6 +235,7 @@ def the_dagman_local_dir(test_dir):
 def the_dagman_user_dir(the_dagman_local_dir):
     the_dagman_user_dir = the_dagman_local_dir / "user.d"
     the_dagman_user_dir.mkdir(exist_ok=True)
+    try_shutil_chown( the_dagman_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
     return the_dagman_user_dir
 
 
@@ -225,13 +247,23 @@ def the_dagman_lock_dir(the_dagman_local_dir):
 @action
 def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=the_dagman_local_dir,
         config={
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "BETA",
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            "STARTER_NESTED_SCRATCH":       True,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
-            "STARTER_NESTED_SCRATCH":   True,
             "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
         },
@@ -359,6 +391,7 @@ def the_container_local_dir(test_dir):
 def the_container_user_dir(the_container_local_dir):
     the_container_user_dir = the_container_local_dir / "user.d"
     the_container_user_dir.mkdir(exist_ok=True)
+    try_shutil_chown( the_container_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
     return the_container_user_dir
 
 
@@ -377,13 +410,23 @@ def the_container_lock_dir(the_container_local_dir):
 @action
 def the_container_condor(the_container_local_dir, the_container_lock_dir, the_container_kill_dir):
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=the_container_local_dir,
         config={
+            # Set both of these to require the use COPY mapping.
+            # "FORBID_HARDLINK_MAPPING":      True,
+            # "FORBID_BINDMOUNT_MAPPING":     True,
+            # This only matters when testing as root.
+            # "STARTD_ENFORCE_DISK_LIMITS":   True,
+            # "LVM_AUTO_VG_NAME":             "GAMMA",
+            # This must be AUTO for cxfer to work when enforcing disk limits.
+            "LVM_HIDE_MOUNT":               "AUTO",
+            "STARTER_NESTED_SCRATCH":       True,
             "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
-            "STARTER_NESTED_SCRATCH":   True,
             "SINGULARITY":              "/usr/bin/singularity",
             "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',

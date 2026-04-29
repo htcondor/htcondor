@@ -44,6 +44,8 @@ remote_proc.cpp
 script_proc.cpp
 singularity.cpp
 sshd_proc.cpp
+staging_directory.cpp
+staging_directory.h
 StarterHookMgr.cpp
 starter_user_policy.cpp
 starter_util.cpp

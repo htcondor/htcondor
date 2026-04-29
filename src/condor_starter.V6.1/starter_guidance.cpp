@@ -33,6 +33,7 @@
 #include "condor_uid.h"
 
 #include "jic_shadow.h"
+#include "staging_directory.h"
 
 
 #define SEND_REPLY_AND_CONTINUE_CONVERSATION \
@@ -386,221 +387,6 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 }
 
 
-//
-// Assume ownership is correct, but make each file 0444 and each
-// directory (including the root) 0500.
-//
-// This allows root to hardlink each file into place (root can traverse
-// the directory tree even if the starters are running as different OS
-// accounts).  Since the file permisisons are 0444, they can be read, but
-// the source hardlink can not be deleted (because of ownership or that
-// the source directory isn't writable).  Simultaneously, the starter
-// will be able to clean up the destination hardlinks as normal.
-//
-bool
-convertToStagingDirectory(
-	const std::filesystem::path & location
-) {
-	using std::filesystem::perms;
-	std::error_code ec;
-
-
-	TemporaryPrivSentry tps(PRIV_USER);
-
-	dprintf( D_ZKM, "convertToStagingDirectory(): begin.\n" );
-
-	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' not a directory, aborting.\n", location.string().c_str() );
-		return false;
-	}
-
-	std::filesystem::permissions(
-		location,
-		perms::owner_read | perms::owner_exec,
-		ec
-	);
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions on staging directory '%s': %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
-	}
-
-	std::filesystem::recursive_directory_iterator rdi(
-		location, {}, ec
-	);
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
-	}
-
-	for( const auto & entry : rdi ) {
-		if( entry.is_directory() ) {
-			std::filesystem::permissions(
-				entry.path(),
-				perms::owner_read | perms::owner_exec,
-				ec
-			);
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
-			}
-			continue;
-		}
-		std::filesystem::permissions(
-			entry.path(),
-			perms::owner_read | perms::group_read | perms::others_read,
-			ec
-		);
-		if( ec.value() != 0 ) {
-			dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
-			return false;
-		}
-	}
-
-
-	dprintf( D_ZKM, "convertToStagingDirectory(): end.\n" );
-	return true;
-}
-
-
-bool
-check_permissions(
-	const std::filesystem::path & l,
-	const std::filesystem::perms p
-) {
-	std::error_code ec;
-	auto status = std::filesystem::status( l, ec );
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "check_permissions(): status(%s) failed: %s (%d)\n", l.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
-	}
-	auto permissions = status.permissions();
-	return permissions == p;
-}
-
-
-#ifdef    WINDOWS
-
-// The Windows implementation will almost certainly require changes to
-// convertToStagingDirectory() as well.
-//
-// Build fix only.
-
-bool
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return false;
-}
-
-
-#else
-
-
-bool
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	using std::filesystem::perms;
-	std::error_code ec;
-
-	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): begin.\n" );
-
-	// We must be root (or the user the common files were transferred by) to
-	// traverse into the staging directory, which includes listing its
-	// contents, checking the permissions on its files, creating hardlinks
-	// to its files, or even seeing if the directory exists all (if we're
-	// not running in STARTER_NESTED_SCRATCH mode).
-	TemporaryPrivSentry tps(PRIV_ROOT);
-
-	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
-	}
-
-	if(! std::filesystem::is_directory( location, ec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
-		return false;
-	}
-
-	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-		return false;
-	}
-
-	// To be clear: this recurses into subdirectories for us.
-	std::filesystem::recursive_directory_iterator rdi(
-		location, {}, ec
-	);
-	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
-		return false;
-	}
-
-	for( const auto & entry : rdi ) {
-		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
-		auto relative_path = entry.path().lexically_relative(location);
-		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
-		if( entry.is_directory() ) {
-			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-
-			auto dir = sandbox / relative_path;
-			std::filesystem::create_directory( dir, ec );
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
-			}
-			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
-			}
-
-			continue;
-		} else {
-			dprintf( D_ZKM, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
-
-			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-
-			// If this file already exists, it must have been written
-			// there by (the proc-specific) input file transfer.  Since that
-			// _should_ win, semantically, at some point we'll have to fix
-			// this to ignore E_EXISTS.
-			std::filesystem::create_hard_link(
-				entry.path(), sandbox/relative_path, ec
-			);
-			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
-				return false;
-			}
-			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
-
-			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
-			if( rv != 0 ) {
-				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
-				return false;
-			}
-		}
-	}
-
-
-	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): end.\n" );
-	return true;
-}
-
-
-#endif /* WINDOWS */
-
-
 #define REPLY_WITH_ERROR(cmd,code,subcode) \
 	{ \
 	ClassAd context; \
@@ -695,71 +481,38 @@ Starter::handleJobSetupCommand(
 			// dprintf( D_ZKM, "Will send transfer key '%s'\n", transferKey.c_str() );
 
 			//
-			// Construct the new FileTransfer object.
+			// Create the staging directory.
 			//
 
-			std::filesystem::path executeDir( s->GetSlotDir() );
+			// This produces a sibling of the scratch directory if
+			// NESTED_SCRATCH is enabled and a subdirectory otherwise; but
+			// we can't presently have a sibling directory which uses blocks
+			// from the LV.  Since common files really should staged to the
+			// LV, `staging` must always be a subdirectory.
+			// std::filesystem::path executeDir( s->GetSlotDir() );
+			const bool OUTSIDE = false;
+			std::filesystem::path executeDir( s->GetWorkingDir(OUTSIDE) );
 			std::filesystem::path parentDir = executeDir / "staging";
-			std::filesystem::path stagingDir = parentDir / cifName;
-			{
-				// We could check STARTER_NESTED_SCRATCH to see if we needed
-				// to create this directory as PRIV_CONDOR instead of PRIV_USER,
-				// but since we'd need to escalate to root to chown afterwards
-				// anyway, let's not duplicate code for now.
-				TemporaryPrivSentry tps(PRIV_ROOT);
 
-				std::error_code errorCode;
-				std::filesystem::create_directories( stagingDir, errorCode );
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
+			StagingDirectoryFactory sdf;
+			auto staging = sdf.make(parentDir, cifName);
+			if(! staging) {
+				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
+				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, -1 );
+			}
 
-				std::filesystem::permissions(
-					parentDir,
-					perms::owner_read | perms::owner_write | perms::owner_exec,
-					errorCode
-				);
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
-
-				std::filesystem::permissions(
-					stagingDir,
-					perms::owner_read | perms::owner_write | perms::owner_exec,
-					errorCode
-				);
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
-
-#ifdef    WINDOWS
-
-				// Likely, everything in this TemporaryPrivSentry block needs
-				// to be different for Windows, suggesting that this block may
-				// be better refactored as a function.
-				//
-				// Build fix only.
-
-#else
-				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
-				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
-				}
-				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
-				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
-				}
-#endif /* WINDOWS */
+			std::error_code errorCode = staging->create();
+			if( errorCode.value() != 0 ) {
+				dprintf( D_ALWAYS, "Failed to create() staging directory, reporting failure.\n" );
+				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 			}
 
 
+			//
+			// Transfer the common files.
+			//
 			ClassAd ftAd( guidance );
-			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
+			ftAd.Assign( ATTR_JOB_IWD, staging->path().string() );
 			// ... blocking, at least for now.
 			dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 			bool result = s->jic->transferCommonInput( & ftAd );
@@ -770,14 +523,11 @@ Starter::handleJobSetupCommand(
 				// and its contents suitable for mapping before we actually
 				// do the mapping.  This will need to be synchronized with
 				// our mapping implementation.
-				if( convertToStagingDirectory( stagingDir ) ) {
-					// We'll need to do this, or something like it, at some
-					// point in the future -- probably just telling the
-					// startd about it.  When we do, be sure check if it worked.
-					// s->jic->setCommonFilesLocation( cifName, stagingDir );
-				} else {
-					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", stagingDir.string().c_str() );
+				std::error_code errorCode = staging->modify();
+				if( errorCode.value() != 0 ) {
+					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", staging->path().string().c_str() );
 				}
+				// Not sure that it's OK to fail here, actually.
 			}
 
 			// We could send a generic event notification here, as we did
@@ -786,7 +536,7 @@ Starter::handleJobSetupCommand(
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
-			context.InsertAttr( "StagingDir", stagingDir.string() );
+			context.InsertAttr( "StagingDir", staging->path().string() );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_COLOR_SLOT ) {
@@ -907,18 +657,27 @@ Starter::handleJobSetupCommand(
 				}
 			}
 
-			std::filesystem::path location(stagingDir);
-			// s->jic->getCommonFilesLocation( cifName, location );
+			StagingDirectoryFactory sdf;
+			auto staging = sdf.make( stagingDir );
+			if(! staging) {
+				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
 
-			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
+				ClassAd context;
+				context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+				context.InsertAttr( ATTR_RESULT, false );
+				continue_conversation(context);
+				return true;
+			}
+
+			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), stagingDir.c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
 			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
-			bool result = mapContentsOfDirectoryInto( location, sandbox );
+			std::error_code errorCode = staging->map( sandbox );
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-			context.InsertAttr( ATTR_RESULT, result );
+			context.InsertAttr( ATTR_RESULT, errorCode.value() == 0 );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_ABORT ) {

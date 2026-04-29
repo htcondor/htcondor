@@ -103,10 +103,7 @@ printClassAd( void )
 	// Include HasCommonFilesTransfer has an integer (version number)
 	// that therefore always also evaluates to boolean true.
 	if( CFT_VERSION != 0 ) {
-		// (HTCONDOR-3523)  We haven't implemented a mapping scheme for LVs.
-		if(! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-			printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
-		}
+		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
 	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {
