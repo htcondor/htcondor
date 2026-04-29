@@ -156,13 +156,15 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 
 		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1 )
 
-		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
+		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN}
+		FILE_PERMISSIONS ${CONDOR_FILE_PERMS} DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	endif()
 
 else()
 	message(STATUS "NOTE: Will install prebuilt man-pages")
 	#Use trailing slash; otherwise, it will be C_MAN/man
-	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
+	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN}
+		FILE_PERMISSIONS ${CONDOR_FILE_PERMS} DIRECTORY_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 endif()
 
 ##########################################################################
