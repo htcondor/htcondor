@@ -911,8 +911,7 @@ Starter::handleJobSetupCommand(
 			// s->jic->getCommonFilesLocation( cifName, location );
 
 			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
-			const bool OUTER = false;
-			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
+			std::filesystem::path sandbox( s->GetWorkingDir(WD::OUTER) );
 			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
 			bool result = mapContentsOfDirectoryInto( location, sandbox );
 

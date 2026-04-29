@@ -218,7 +218,7 @@ DockerProc::LaunchContainer() {
 	std::string innerdir("/test/execute/");
 	starter->SetInnerWorkingDir(innerdir.c_str());
 	#else
-	const char * outerdir = starter->GetWorkingDir(false);
+	const char * outerdir = starter->GetWorkingDir(WD::OUTER);
 	std::string innerdir(outerdir);
 	const char * tmp = strstr(outerdir, "\\execute\\");
 	if (tmp) {
@@ -269,7 +269,7 @@ DockerProc::LaunchContainer() {
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string workingDir = starter->GetWorkingDir(0);
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 
 	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -331,7 +331,7 @@ DockerProc::PullImage() {
 	CondorError err;
 	int pullReaperId = daemonCore->Register_Reaper("PullReaper", (ReaperHandlercpp)&DockerProc::PullReaper,
 			"PullReaper", this);
-	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(0), *JobAd, pullReaperId, err);
+	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(WD::OUTER), *JobAd, pullReaperId, err);
 	if (r == 0) {
 		return TRUE;
 	} else {
@@ -709,8 +709,8 @@ DockerProc::SetupDockerSsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
 	pipe_addr_len = SUN_LEN(&pipe_addr);
@@ -1001,7 +1001,7 @@ DockerProc::getStats( int /* timerID */ ) {
 
 			// Append serviceAd to the sandbox's copy of the job ad.
 			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", starter->GetWorkingDir(0) );
+			formatstr( jobAdFileName, "%s/.job.ad", starter->GetWorkingDir(WD::OUTER) );
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				// ... sigh ...
@@ -1156,7 +1156,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 #endif
 
 	if (scratchNames.length() > 0) {
-		std::string workingDir = starter->GetWorkingDir(0);
+		std::string workingDir = starter->GetWorkingDir(WD::OUTER);
 			// Foreach scratch name...
 		for (const auto &scratchName: StringTokenIterator(scratchNames)) {
 			std::string hostdirbuf;

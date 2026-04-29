@@ -109,7 +109,7 @@ OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *jo
 		}
 		else if ( starter->jic->usingFileTransfer() && transfer_exe ) {
 			formatstr( JobName, "%s%c%s",
-					starter->GetWorkingDir(0),
+					starter->GetWorkingDir(WD::OUTER),
 					DIR_DELIM_CHAR,
 					condor_basename(JobName.c_str()) );
 		}
@@ -467,7 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
 				launcher = htcondor::Singularity::USE_LAUNCHER;
 			}
-			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(0), job_env, launcher);
+			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(WD::OUTER), job_env, launcher);
 		} else {
 			sing_result = htcondor::Singularity::DISABLE;
 		}
@@ -745,7 +745,7 @@ OsProc::JobReaper( int pid, int status )
 			if (droppedContainerLaunched) {
 				TemporaryPrivSentry sentry(PRIV_USER);
 				
-				std::string launchFilePath = starter->GetWorkingDir(0);
+				std::string launchFilePath = starter->GetWorkingDir(WD::OUTER);
 				launchFilePath += "/.condor_container_launched";
 				struct stat unused;
 				int r = stat(launchFilePath.c_str(), &unused);
@@ -1110,8 +1110,8 @@ OsProc::SetupSingularitySsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
 	pipe_addr_len = SUN_LEN(&pipe_addr);
