@@ -1,5 +1,11 @@
 *** 25.11.0 features
 
+- Scheduler universe jobs no longer have their argv[0] set to sched_univ_job.id.  This means
+  that so-called "multibin" programs, like often created from go or rust source and
+  have many executables linked into one static binary, and dispatch based on argv[0]
+  now work as scheduler universe jobs.
+  :jira:`3711`
+
 - Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
   correctly for jobs submitted after the tool began executing. The incorrect
   behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan
