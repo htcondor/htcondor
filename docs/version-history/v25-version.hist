@@ -1,5 +1,8 @@
 *** 25.0.11 bugs
 
+- It was possible for docker universe jobs to generate duplicate volume mounts.
+  We now remove duplicates before invoking docker.
+  :jira:`3702`
 - Add Ubuntu 26.04 (Resolute Raccoon) support.
   :jira:`3703`
 
