@@ -4,7 +4,8 @@
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-25000901
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-25000901
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25000901
-docker://htcondor/nmi-build:aarch64_Ubuntu24-25000901
+docker://htcondor/nmi-build:aarch64_Ubuntu24-25001000
+docker://htcondor/nmi-build:aarch64_Ubuntu26-25001001
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25000901
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25000901
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-25000901
@@ -18,6 +19,7 @@ docker://htcondor/nmi-build:x86_64_openSUSE16-25000901
 docker://htcondor/nmi-build:x86_64_SLES15SP5-25000901
 docker://htcondor/nmi-build:x86_64_Ubuntu22-25000901
 docker://htcondor/nmi-build:x86_64_Ubuntu24-25000901
+docker://htcondor/nmi-build:x86_64_Ubuntu26-25001001
 x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
