@@ -1816,7 +1816,7 @@ fi
 - Fix so 'condor_submit -interactive' works on cgroup v2 execution points
 
 * Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
-- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Preliminary support for Ubuntu 24.04 (Noble Numbat)
 - Warns about deprecated multiple queue statements in a submit file
 - Fix bug where plugins could not signify to retry a file transfer
 - The condor_upgrade_check script checks for proper token file permissions
