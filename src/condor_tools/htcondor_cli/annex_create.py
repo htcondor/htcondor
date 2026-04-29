@@ -1064,88 +1064,21 @@ def annex_inner_func(
 def annex_inner_func2(
     logger,
     annex_name,
-    nodes,
-    lifetime,
-    allocation,
-    queue_at_system,
     owners,
     collector,
     token_file,
     password_file,
     control_path,
-    cpus,
-    mem_mb,
-    login_name,
-    login_host,
     startd_noclaim_shutdown,
-    gpus,
-    gpu_type,
     test,
 ):
-    if '@' in queue_at_system:
-        (queue_name, system) = queue_at_system.split('@', 1)
-    else:
-        error_string = "Argument must have the form queue@system."
-
-        system = queue_at_system.casefold()
-        if system not in SYSTEM_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a supported system."
-            system_list = "\n    ".join(SYSTEM_TABLE.keys())
-            error_string = f"{error_string}  Supported systems are:\n    {system_list}"
-        else:
-            default_queue = SYSTEM_TABLE[system].default_queue
-            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system].queues])
-            error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
-
-        raise ValueError(error_string)
 
     # We use this same method to determine the user name in `htcondor job`,
     # so even if it's wrong, it will at least consistently so.
     username = getpass.getuser()
 
-    system = system.casefold()
-    if system not in SYSTEM_TABLE:
-        error_string = f"'{system}' is not the name of a supported system."
-        system_list = "\n    ".join(SYSTEM_TABLE.keys())
-        error_string = f"{error_string}  Supported systems are:\n    {system_list}"
-        raise ValueError(error_string)
-
-
-    #
-    # Handle special case for Bridges 2.
-    #
-    if gpus is not None:
-        if ":" in gpus:
-            (gpu_type, gpus) = gpus.split(":")
-        try:
-            gpus = int(gpus)
-        except ValueError:
-            error_string = f"The --gpus argument must be either an integer or an integer followed by ':' and a GPU type."
-            raise ValueError(error_string)
-
-
-    #
-    # We'll need to validate the requested nodes (or CPUs and memory)
-    # against the requested queue[-system pair].  We also need to
-    # check the lifetime (and idle time, once we support it).
-    #
-
     # As reminders for when we fix lifetime being specified in seconds.
-    lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
-
-    gpus, real_queue_name, mem_mb = validate_constraints(
-        system=system,
-        queue_name=queue_name,
-        nodes=nodes,
-        lifetime_in_seconds=lifetime_in_seconds,
-        allocation=allocation,
-        cpus=cpus,
-        mem_mb=mem_mb,
-        idletime_in_seconds=idletime_in_seconds,
-        gpus=gpus,
-        gpu_type=gpu_type,
-    )
 
     if test is not None and test == 1:
         return
@@ -1231,47 +1164,6 @@ def annex_inner_func2(
     if test == 2:
         return
 
-    #
-    # Print out what's going to be done, along with how to change the
-    # values that came from defaults rather than the command-line.
-    #
-    # FIXME: add --idle, once that's implemented.
-    #
-    resources = ""
-    if cpus is not None:
-        resources = f"{cpus} CPUs "
-        if mem_mb is not None:
-            resources = f"{resources}and "
-    if mem_mb is not None:
-        resources = f"{resources}{mem_mb}MB of RAM "
-    if resources == "":
-        resources = f"{nodes} nodes "
-    resources = f"{resources}for {lifetime/(60*60):.2f} hours"
-
-    as_project = " (as the default project) "
-    if allocation is not None:
-        as_project = f" (as the project '{allocation}') "
-
-
-    project_line = "  To change the project, use --project.  "
-    resources_line = "To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
-    if system == "aws-ec2":
-        project_line = ""
-        resources_line = "  To change the resources requested, change the queue name; see https://aws.amazon.com/ec2/instance-types/ for details."
-
-    logger.info(
-        f"This will{as_project}request {resources} for an annex named '{annex_name}'"
-        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'."
-        f"{project_line}"
-        f"{resources_line}"
-        f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
-        f"\n"
-    )
-
-
-    remote_script_dir = None
-
-
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
     local_job_executable = local_script_dir / "annex-local-universe.py"
@@ -1303,7 +1195,7 @@ def annex_inner_func2(
             # the job lingers in X state for a good long time.
             "cron_minute": "*/5",
             "on_exit_remove": "PeriodicRemove =?= true",
-            "periodic_remove": f"hpc_annex_start_time + {lifetime} + 3600 < time()",
+            "periodic_remove": f"hpc_annex_start_time + 14*24*3600 < time()",
             # Consider adding a log, an output, and an error file to assist
             # in debugging later.  Problem: where should it go?  How does it
             # get cleaned up?
@@ -1317,23 +1209,11 @@ def annex_inner_func2(
             # just pull this ad from the collector (after this local universe
             # job has forwarded it there).
             "+hpc_annex_name": f'"{annex_name}"',
-            "+hpc_annex_queue_name": f'"{queue_name}"',
             "+hpc_annex_collector": f'"{collector}"',
-            "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            "+hpc_annex_nodes": f'"{nodes}"'
-                if nodes is not None else "undefined",
-            "+hpc_annex_cpus": f'"{cpus}"'
-                if cpus is not None else "undefined",
-            "+hpc_annex_mem_mb": f'"{mem_mb}"'
-                if mem_mb is not None else "undefined",
-            "+hpc_annex_allocation": f'"{allocation}"'
-                if allocation is not None else "undefined",
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
-            "+hpc_annex_remote_script_dir": f'"{remote_script_dir}"'
-                if remote_script_dir is not None else "undefined",
         }
     )
 
@@ -1357,30 +1237,18 @@ def annex_inner_func2(
 
     version = htcondor.version().split()[1]
 
-    gpu_argument = str(gpus)
-    if gpu_type is not None:
-        gpu_argument = f"{gpu_type}:{gpus}"
     record_file = Path(os.path.join(control_path, "annex.record"))
     with open(record_file, "w") as f:
         f.write(f"""# Annex record
-SYSTEM={system}
 VERSION={version}
 STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
 JOB_NAME={annex_name}
-QUEUE_NAME={queue_name}
 COLLECTOR={collector}
 TOKEN_FILE={token_file.name}
-LIFETIME={lifetime}
-PILOT_BIN=annex-node.sh
 OWNERS={owners}
-NODES={nodes}
-ALLOCATION={allocation}
 REQUEST_ID={request_id}
 PASSWORD_FILE={password_file.name}
 SCHEDD_NAME={schedd_name}
-CPUS={cpus}
-MEM_MB={mem_mb}
-GPUS={gpu_argument}
 """)
     atexit.register(lambda: os.remove(record_file))
 
@@ -1388,7 +1256,7 @@ GPUS={gpu_argument}
     # TODO add a README
     files = [
         f"-C {local_script_dir} annex-setup.sh",
-        f"-C {local_script_dir} {system}.fragment",
+        f"-C {local_script_dir} annex-job-setup.sh",
         f"-C {local_script_dir} annex-node.sh",
         f"-C {local_script_dir} 00-annex-pilot-base",
         f"-C {str(token_file.parent)} {token_file.name}",

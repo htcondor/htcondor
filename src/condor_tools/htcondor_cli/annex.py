@@ -155,29 +155,6 @@ class Create2(Verb):
             "metavar": "annex-name",
             "help": "Provide a name for your annex",
         },
-        "queue_at_system": {
-            "args": ("queue_at_system",),
-            "metavar": "queue@system",
-            "help": "Specify the queue and the HPC system",
-        },
-        "nodes": {
-            "args": ("--nodes",),
-            "help": "Number of HPC nodes to schedule. Defaults to %(default)s",
-            "type": int,
-            "default": 1,
-        },
-        "lifetime": {
-            "args": ("--lifetime",),
-            "help": "Annex lifetime (in seconds). Defaults to %(default)s",
-            "type": int,
-            "default": 3600,
-        },
-        "allocation": {
-            "args": ("--project",),
-            "dest": "allocation",
-            "help": "The project name associated with HPC allocation (may be optional on some HPC systems)",
-            "default": None,
-        },
         "owners": {
             "args": ("--owners",),
             #"help": "List (comma-separated) of annex owners. Defaults to current user (%(default)s)",
@@ -210,29 +187,6 @@ class Create2(Verb):
             "type": Path,
             "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
         },
-        "cpus": {
-            "args": ("--cpus",),
-            "help": "Number of CPUs to request (shared queues only).  Unset by default.",
-            "type": int,
-            "default": None,
-        },
-        "mem_mb": {
-            "args": ("--mem_mb",),
-            # TODO: Parse units instead of requiring this to be a number of MBs
-            "help": "Memory (in MB) to request (shared queues only).  Unset by default.",
-            "type": int,
-            "default": None,
-        },
-        "login_name": {
-            "args": ("--login-name","--login",),
-            "help": "The (SSH) login name to use for this capacity request.  Uses SSH's default.",
-            "default": None,
-        },
-        "login_host": {
-            "args": ("--login-host","--host",),
-            "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
-            "default": None,
-        },
         "startd_noclaim_shutdown": {
             "args": ("--idle-time", "--startd-noclaim-shutdown"),
             "metavar": "SECONDS",
@@ -240,17 +194,6 @@ class Create2(Verb):
             "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
             "default": 300,
             "type": int,
-        },
-        "gpus": {
-            "args": ("--gpus",),
-            "help": "Number of GPUs to request (GPU queues only).  Unset by default.",
-            "type": str,
-            "default": None,
-        },
-        "gpu_type": {
-            "args": ("--gpu-type",),
-            "help": "Type of GPU to request (GPU queues only).  Unset by default.",
-            "default": None,
         },
         "test": {
             "args": ("--test",),
