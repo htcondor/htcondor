@@ -574,7 +574,7 @@ def count_starter_log_lines(the_condor, the_phrase):
 
     count = 0
     for log in Path(LOG).iterdir():
-        if log.name.startswith("StarterLog.slot1_"):
+        if log.name.startswith("StarterLog.slot1_") or log.name.startswith("StarterLog.data1_"):
             for line in log.read_text().split("\n"):
                 if the_phrase in line:
                     count = count + 1
