@@ -12532,10 +12532,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		}
 	}
 
-	// Don't use a_out_name for argv[0], use
-	// "condor_scheduniv_exec.cluster.proc" instead. 
-	formatstr(argbuf,"condor_scheduniv_exec.%d.%d",job_id.cluster,job_id.proc);
-	args.AppendArg(argbuf);
+	args.AppendArg(a_out_name);
 
 	if(!args.AppendArgsFromClassAd(userJob,error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job arguments: %s\n",
