@@ -111,6 +111,22 @@ def condor(test_dir, slot_config):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # condor_who's IsReady only guarantees the startd is up; it does not
+        # guarantee every slot ad (with Assigned<RESOURCE>s populated by the
+        # MACHINE_RESOURCE_INVENTORY_* script) has reached the collector. Wait
+        # for that here so every test in the class starts from a fully
+        # advertised pool.
+        import time
+        deadline = time.time() + 60
+        for resource, number in resources.items():
+            while time.time() < deadline:
+                result = condor.status(
+                    ad_type=htcondor.AdTypes.Startd,
+                    projection=["SlotID", f"Assigned{resource}s"],
+                )
+                if len([ad for ad in result if f"Assigned{resource}s" in ad]) == number:
+                    break
+                time.sleep(1)
         yield condor
 
 
