@@ -820,7 +820,7 @@ ResMgr::init_resources( void )
 		for( i=0; i<num_res; i++ ) {
 			CpuAttributes * cpu_attrs = new_cpu_attrs[i];
 			if (cpu_attrs) {
-				Resource * rip = new Resource(cpu_attrs, i+1);
+				Resource * rip = new Resource(cpu_attrs, i+1, nullptr);
 				// create a broken_things record for each resource that is born broken
 				// TODO: maybe these things should not be added to the slots array?
 				if (cpu_attrs->is_broken()) {
