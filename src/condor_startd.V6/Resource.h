@@ -94,8 +94,14 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _donor = nullptr, bool take_donor_claim = false);
+	Resource(
+		CpuAttributes*, int id, const char * prefx,
+		Resource * _donor = nullptr,
+		bool take_donor_claim = false
+	);
 	~Resource();
+
+	void set_name_prefix( const std::string & prefix );
 
 		// override param by slot_type
 	char * param(const char * name) const;
@@ -185,7 +191,7 @@ public:
 	void	suspendForCOD( void );
 	void	resumeForCOD( void );
 
-		// Methods for computing and publishing resource attributes 
+		// Methods for computing and publishing resource attributes
 
 		// called when creating a d-slot
 	void	initial_compute(Resource * pslot);
@@ -261,7 +267,7 @@ public:
 	void	log_shutdown_ignore( int cmd );
 
 		// Return a pointer to the Claim object whose starter has the
-		// given pid.  
+		// given pid.
 	Claim*	findClaimByPid( pid_t starter_pid );
 
 		// Return a pointer to the Claim object with the given ClaimId
@@ -294,7 +300,7 @@ public:
 		// have to do lots of funky twiddling with our claim objects,
 		// we put all the actions and logic in one place that gets
 		// called whenever we're finally ready to leave the preempting
-		// state. 
+		// state.
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
@@ -572,6 +578,13 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 	std::list<int> m_affinity_mask;
+
+	void compute_r_id_str(
+		const char * prefix,
+		CpuAttributes * cap = nullptr,
+		Resource * _parent = nullptr
+	);
+	void compute_r_name();
 };
 
 

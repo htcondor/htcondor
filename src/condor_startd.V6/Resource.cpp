@@ -182,11 +182,62 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
+
+void
+Resource::compute_r_id_str( const char * prefix, CpuAttributes * cap, Resource * _parent ) {
+    std::string tmp;
+
+    if( cap == nullptr ) { cap = r_attr; }
+    if( _parent == nullptr) { _parent = m_parent; }
+
+	const char * name_prefix = prefix;
+	if(! name_prefix) {
+		name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
+	}
+
+	if (name_prefix) {
+		tmp = name_prefix;
+	} else {
+		::param(tmp, "STARTD_RESOURCE_PREFIX", "");
+		if (tmp.empty()) tmp = "slot";
+	}
+	// append slot id
+	// for dynamic slots, also append sub_id
+	formatstr_cat( tmp, "%d", r_id );
+	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
+	// save the constucted slot name & id string.
+	r_id_str = strdup( tmp.c_str() );
+}
+
+
+void
+Resource::compute_r_name() {
+    std::string tmp;
+
+	// make the full slot name "<r_id_str>@<name>"
+	// prior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
+	tmp = r_id_str;
+	tmp += "@";
+	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
+	r_name = strdup(tmp.c_str());
+}
+
+
+void
+Resource::set_name_prefix( const std::string & prefix ) {
+    dprintf( D_ZKM, "Changing slot prefix to %s\n", prefix.c_str() );
+    compute_r_id_str( prefix.c_str() );
+    compute_r_name();
+}
+
+
 Resource::Resource (
 	CpuAttributes* cap,
 	int rid,                 // new resource id
+	const char * prefix,
 	Resource* _donor,        // resource donor
-	bool _take_donor_claim)  // if creating a d-slot, take the claim id from the _parent
+	bool _take_donor_claim   // if creating a d-slot, take the claim id from the _parent
+)
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
 	, r_classad(nullptr)
@@ -239,19 +290,7 @@ Resource::Resource (
 
 		// we need this before we instantiate any Claim objects...
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
-	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
-	if (name_prefix) {
-		tmp = name_prefix;
-	} else {
-		::param(tmp, "STARTD_RESOURCE_PREFIX", "");
-		if (tmp.empty()) tmp = "slot";
-	}
-	// append slot id
-	// for dynamic slots, also append sub_id
-	formatstr_cat( tmp, "%d", r_id );
-	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
-	// save the constucted slot name & id string.
-	r_id_str = strdup( tmp.c_str() );
+    compute_r_id_str( prefix, cap, _parent );
 
 		// we need this before we can call type()...
 	r_attr = cap;
@@ -333,12 +372,7 @@ Resource::Resource (
 		r_cur = new Claim(this);
 	}
 
-	// make the full slot name "<r_id_str>@<name>"
-	// prior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
-	tmp = r_id_str;
-	tmp += "@";
-	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
-	r_name = strdup(tmp.c_str());
+	compute_r_name();
 
 	// check if slot should be hidden from the collector
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
@@ -4264,7 +4298,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_donor_claim);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, nullptr, rip, take_donor_claim);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );

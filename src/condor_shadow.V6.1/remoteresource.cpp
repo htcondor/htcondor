@@ -204,6 +204,13 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 		return false;
 	}
 
+    // This attribute should be part of a command ad, but it looks
+    // ACTIVATE_CLAIM doesn't have one.
+    jobAd->Delete( "DesiredSlotPrefix" );
+    if( cxfer_type == CXFER_STATE::STAGING ) {
+        jobAd->Assign( "DesiredSlotPrefix", "data" );
+    }
+
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		ClassAd replyAd;
