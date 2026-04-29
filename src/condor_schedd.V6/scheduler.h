@@ -402,8 +402,8 @@ class VanillaMatchAd : public ClassAd
 {
 	public:
 		/// Default constructor
-		VanillaMatchAd() {};
-		virtual ~VanillaMatchAd() { Reset(); };
+	VanillaMatchAd() {};
+	virtual ~VanillaMatchAd();
 
 	bool Insert(const std::string &attr, ClassAd*ad);
 	bool EvalAsBool(ExprTree *expr, bool def_value);
