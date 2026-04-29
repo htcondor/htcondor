@@ -5,7 +5,6 @@
 // On Windows and FreeBSD, everything is terrible.
 //
 
-#define _CONDOR_COMMON_FIRST
 #define CONDOR_PYTHON_BINDINGS 2
 
 // Cargo-culted over from python_bindings_common.h in version 1.
@@ -21,17 +20,7 @@
     #pragma push_macro("_DEBUG")
     #undef _DEBUG
 
-    #undef _CONDOR_COMMON_FIRST
 #endif /* _MSC_VER */
-
-// Cargo-culted over from python_bindings_common.h in version 1.
-#if defined(__FreeBSD__)
-    #define profil _hide_profil
-    #define dprintf _hide_dprintf
-
-    #undef _CONDOR_COMMON_FIRST
-#endif /* __FreeBSD__ */
-
 
 // By defining Py_LIMITED_API, we ensure that we see only the symbols that are
 // part of the "limited API", which is a strict subset of the "stable ABI", which is in
@@ -58,11 +47,6 @@
 #include <Python.h>
 #undef dprintf
 
-
-#if defined(_CONDOR_COMMON_FIRST)
-    #include "condor_common.h"
-#endif /* _CONDOR_COMMON_FIRST */
-
 // Cargo-culted over from python_bindings_common.h in version 1.
 #if defined(_MSC_VER)
     #pragma pop_macro("_DEBUG")
@@ -73,14 +57,6 @@
     #undef S_ISDIR
     #undef S_ISREG
 
-    #include "condor_common.h"
 #endif /* _MSC_VER */
 
-// Cargo-culted over from python_bindings_common.h in version 1.
-#if defined(__FreeBSD__)
-    #undef profil
-    #undef dprintf
-
-    #include "condor_common.h"
-#endif /* __FreeBSD__ */
-
+#include "condor_common.h"
