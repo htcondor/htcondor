@@ -960,7 +960,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
-	const char *jic_iwd = GetWorkingDir(0);
+	const char *jic_iwd = GetWorkingDir(WD::OUTER);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
 	char real_iwd[MAXPATHLEN+1];
@@ -1447,7 +1447,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.c_str());
-	setup_args.AppendArg(GetWorkingDir(0));
+	setup_args.AppendArg(GetWorkingDir(WD::OUTER));
 	setup_args.AppendArg(ssh_to_job_shell_setup.c_str());
 	setup_args.AppendArg(sshd_config_template.c_str());
 	setup_args.AppendArg(ssh_keygen_cmd.c_str());
@@ -1466,7 +1466,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			.wantCommandPort(FALSE)
 			.wantUDPCommandPort(FALSE)
 			.env(&setup_env)
-			.cwd(GetWorkingDir(0))
+			.cwd(GetWorkingDir(WD::OUTER))
 			.std(setup_std_fds)
 			.jobOptMask(setup_opt_mask));
 
@@ -3423,9 +3423,9 @@ Starter::OpenManifestFile( const char * filename, bool add_to_output )
 	// so set cwd to the sandbox (but reset the cwd when we return)
 	std::string errMsg;
 	TmpDir tmpDir;
-	if (!tmpDir.Cd2TmpDir(GetWorkingDir(0),errMsg)) {
+	if (!tmpDir.Cd2TmpDir(GetWorkingDir(WD::OUTER),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
-			filename, GetWorkingDir(0));
+			filename, GetWorkingDir(WD::OUTER));
 		return NULL;
 
 	}
@@ -3674,11 +3674,11 @@ Starter::PublishToEnv( Env* proc_env )
 		// job scratch space
 	env_name = base;
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
+	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(WD::INNER) );
 
 		// Apptainer/Singlarity scratch dir
-	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
-	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
+	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(WD::INNER));
+	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(WD::INNER));
 
 		// slot identifier
 	env_name = base;
@@ -3708,7 +3708,7 @@ Starter::PublishToEnv( Env* proc_env )
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	std::string tmpdirenv = this->tmpdir.empty() ? GetWorkingDir(true) : this->tmpdir;
+	std::string tmpdirenv = this->tmpdir.empty() ? GetWorkingDir(WD::INNER) : this->tmpdir;
 	proc_env->SetEnv("TMPDIR", tmpdirenv);
 	proc_env->SetEnv("TEMP",tmpdirenv);
 	proc_env->SetEnv("TMP", tmpdirenv);
@@ -3747,7 +3747,7 @@ Starter::PublishToEnv( Env* proc_env )
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
 			std::string wrapper_err;
-			formatstr(wrapper_err, "%s%c%s", GetWorkingDir(0),
+			formatstr(wrapper_err, "%s%c%s", GetWorkingDir(WD::OUTER),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3760,7 +3760,7 @@ Starter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	std::string path;
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetWorkingDir(WD::INNER),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3773,7 +3773,7 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetWorkingDir(WD::INNER),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3805,7 +3805,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
-	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(true)));
+	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(WD::INNER)));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
@@ -4176,7 +4176,7 @@ Starter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir(0);
+	const char* dir = this->GetWorkingDir(WD::OUTER);
 	std::string filename;
 	FILE* fp;
 	bool ret_val = true;

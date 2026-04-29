@@ -44,8 +44,8 @@ class DockerProc : public VanillaProc {
 		static bool Detect();
 		static bool Version( std::string & version );
 
-		std::string DockerErrorFile() { 
-			return std::string(starter->GetWorkingDir(0)) + "/.docker_stderror";
+		std::string DockerErrorFile() {
+			return std::string(starter->GetWorkingDir(WD::OUTER)) + "/.docker_stderror";
 		}
 	protected:
 		virtual bool restartCheckpointedJob();
