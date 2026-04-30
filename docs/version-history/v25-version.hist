@@ -127,7 +127,7 @@
   the command line, if the submitter is an active submitter in the 
   *condor_collector* fallback to look again at the non-active 
   submitters in the negotiator.
-  :jira;`3283`
+  :jira:`3283`
 
 - :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but

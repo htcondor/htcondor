@@ -68,6 +68,7 @@ my %memory_data64 = (
 	"fedora41" => "904",
 	"fedora42" => "904",
 	"fedora43" => "1064",
+	"fedora44" => "1064",
 	"opensuse15" => "904",
 	"opensuse16" => "1860",
 	"redhat5"  => "448",
