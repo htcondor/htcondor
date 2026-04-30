@@ -32,6 +32,13 @@
 
 - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
 
+- The shadow reconnect log (:macro:`SHADOW_RECONNECT_LOG`) now records the last
+  time the *condor_shadow* heard from the *condor_starter* *before* the
+  disconnect, rather than the time of the most recent contact.  On a successful
+  reconnect, this allows the duration of the reconnection to be computed by
+  subtracting that field from the reconnect time.
+  :jira:`3593`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
