@@ -686,6 +686,11 @@ RemoteResource::disconnectClaimSock(const char *err_msg)
 
 	thisRemoteResource->closeClaimSock();
 
+		// Snapshot the last time we heard from the starter BEFORE this disconnect.
+		// This is logged as T2 in the reconnect record so we can later compute how
+		// long the reconnect took (T3 - T2) on success.
+	Shadow->m_reconnect_record.m_last_contact_time = thisRemoteResource->last_job_lease_renewal;
+
 	if( Shadow->supportsReconnect() ) {
 			// instead of having to EXCEPT, we can now try to
 			// reconnect.  happy day! :)
@@ -2156,7 +2161,6 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
-	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2208,6 +2212,10 @@ RemoteResource::reconnect( void )
 					ATTR_JOB_LEASE_DURATION );
 		}
 		shadow->m_reconnect_record.m_lease_duration = lease_duration;
+			// First-time reconnect entry: capture the pre-disconnect contact time
+			// for T2 in the reconnect record. For shadows spawned in reconnect
+			// mode, last_job_lease_renewal was loaded from the job ad.
+		shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 		if( ! last_job_lease_renewal ) {
 				// if we were spawned in reconnect mode, this should
 				// be set.  if we're just trying a reconnect because
