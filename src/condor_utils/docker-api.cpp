@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <charconv>
 
@@ -191,10 +192,17 @@ int DockerAPI::createContainer(
 #ifdef WIN32
 	// TODO: extra volumes is used for /home/ when not doing file transfer, we can't support this on Windows
 #else
-	// Now any extra volumes
-	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
+	// Now any extra volumes.  The list can contain duplicates because mounts
+	// are accumulated from multiple sources (slot dir, iwd, MOUNT_UNDER_SCRATCH,
+	// DOCKER_MOUNT_VOLUMES, etc.).  Drop duplicates while preserving order,
+	// keeping the first occurrence — docker rejects duplicate bind targets.
+	std::unordered_set<std::string> seenVolumes;
+	for (const auto &volume : extraVolumes) {
+		if (!seenVolumes.insert(volume).second) {
+			dprintf(D_FULLDEBUG, "Skipping duplicate docker volume mount %s\n", volume.c_str());
+			continue;
+		}
 		runArgs.AppendArg("--volume");
-		std::string volume = *it;
 		runArgs.AppendArg(volume);
 	}
 #endif

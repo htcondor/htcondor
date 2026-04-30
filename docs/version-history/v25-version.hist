@@ -22,7 +22,8 @@
   ``-cancelceilinglease`` option cancels an in-effect lease.
   :jira:`3518`
 
- - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
+- The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
