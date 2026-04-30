@@ -10,6 +10,12 @@
 
 *** 24.0.21 bugs
 
+- Fixed a bug introduced in 24.0.18 where new STARTD_CRON values weren't
+  incorporated into the *condor_startd*'s internal slot ads for several
+  minutes, though the ads sent to the *condor_collector* were updated
+  immediately.
+  :jira:`3709`
+
 *** 24.12.20 bugs
 
 - There are five configuration macros type as long integers.
