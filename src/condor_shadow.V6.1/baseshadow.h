@@ -44,7 +44,7 @@ class RemoteResource;
 
 struct ReconnectRecord {
 	time_t m_activation_time{0};       // T1: when claim was activated
-	time_t m_last_contact_time{0};     // T2: last successful communication
+	time_t m_last_contact_time{0};     // T2: last successful communication before disconnect
 	int m_lease_duration{0};           // T4: configured lease duration in seconds
 	std::string m_timeout_version_id;  // ID1: timeout version identifier
 
