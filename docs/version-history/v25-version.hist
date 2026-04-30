@@ -32,7 +32,7 @@
   of its claims can cause the *condor_schedd* to crash.
   :jira:`3704`
 
-*** 25.10.0 features
+*** 25.10.1 features
 
 - Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
@@ -138,7 +138,9 @@
   job exit.
   :jira:`3653`
 
-*** 25.10.0 bugs
+*** 25.10.1 bugs
+
+*** 25.0.10 features
 
 - Add Ubuntu 26.04 (Resolute Raccoon) support.
   :jira:`3703`

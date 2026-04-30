@@ -1088,6 +1088,7 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     // this a method that that the matchmaker explicitly calls at the right
     // time (after adjusting prioities, before checkMatches()).
     //
+    db->BeginTransaction();
     db->ForEachInTable( AccountantTable::Customer,
         [&](const std::string& resName, ClassAd* /* resAd */) -> bool {
             db->SetAttributeFloat( AccountantTable::Customer,
@@ -1096,6 +1097,7 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
             return true;
         }
     );
+    db->CommitTransaction();
 
   // Scan startd ads and add matches that are not registered
   for (ClassAd *ResourceAd: ResourceList) {
