@@ -1,8 +1,10 @@
 *** 25.11.0 features
 
-- Scheduler universe jobs no longer have their argv[0] set to sched_univ_job.id.  This means
-  that so-called "multibin" programs, like often created from go or rust source and
-  have many executables linked into one static binary, and dispatch based on argv[0]
+- Scheduler universe jobs no longer have their argv[0] set to
+  ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
+  executable name (``a_out_name``). This means that so-called "multibin"
+  programs, like often created from go or rust source and have many
+  executables linked into one static binary, and dispatch based on argv[0]
   now work as scheduler universe jobs.
   :jira:`3711`
 
