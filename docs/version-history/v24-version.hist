@@ -4,6 +4,10 @@
   when users installed a custom docker wrapper script.
   :jira:`3691`
 
+- It was possible for docker universe jobs to generate duplicate volume mounts.
+  We now remove duplicates before invoking docker.
+  :jira:`3702`
+
 *** 24.0.21 bugs
 
 *** 24.12.20 bugs
