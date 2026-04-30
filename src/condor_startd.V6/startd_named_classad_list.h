@@ -35,7 +35,6 @@ class StartdNamedClassAdList : public NamedClassAdList
 	int	Publish( ClassAd *ad, unsigned r_id, const char * r_id_str = NULL );
 	int DeleteJob ( StartdCronJob * job );
 	int ClearJob ( StartdCronJob * job );
-	StartdNamedClassAd* LookupJob(const char* name);
 	virtual NamedClassAd * New( const char *name, ClassAd *ad = NULL );
 
 	const std::list<NamedClassAd*> & Enum() const { return m_ads; }
