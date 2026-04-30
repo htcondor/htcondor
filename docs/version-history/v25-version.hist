@@ -1,5 +1,10 @@
 *** 25.11.0 features
 
+- Introducing the :ref:`archive-librarian`. A new daemon that maintains an
+  SQLite3 database of indexes to historical job records located in an Access
+  Point's :macro:`HISTORY` archive.
+  :jira:`3143`
+
 - Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
   correctly for jobs submitted after the tool began executing. The incorrect
   behavior was noticeable when using :tool:`condor_watch_q` to track a DAGMan

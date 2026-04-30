@@ -1,185 +1,197 @@
-# Archive Librarian 
-The Archive Librarian is a tool that aims to make dealing with historical job data from Condor easier. It ingests job record data from history files and writes it to a database - it can then answer queries and generate statistics for users. The goal of this project to be able to 
-1) speed up job queries by avoiding the sequential scan mechanic that condor_history uses
-2) make generating aggregates/statistics easier by storing job info in a structured database, like SQLite
-3) allow information about finished jobs to persist slightly longer after they are deleted from the flat file history archive 
+# Archive Librarian (`condor_librarian`)
 
-## Current Status
-The Archive Librarian is currently not a finished product. However, you can run a small demo by following the instructions under "How to run the Archive Librarian". 
+`condor_librarian` is an HTCondor daemon that ingests job completion records from history archive
+files into a SQLite database. It runs as a long-lived process managed by `condor_master` and
+updates incrementally on a configurable timer.
 
-**Note**: The system is currently hard-coded to read both epoch records and history records, but this should be made configurable in future versions. 
+**Goals:**
+1. Speed up job history queries by replacing sequential file scans with indexed DB lookups.
+2. Make aggregate statistics easier to compute with structured relational storage.
+3. Retain job data slightly longer than the flat-file archive retention window.
 
-## Main Files
+---
 
-### File Structure
+## File Structure
+
 ```
-├── librarian.cpp
-├── readHistory.cpp  
-├── dbHandler.cpp
-├── archiveMonitor.cpp
-├── JobAnalysisUtils.cpp
-├── librarian_config.txt
-├── hist/
-│   └── [test history files]
+src/archive_librarian/
+├── librarian_main.cpp      # DaemonCore entry point
+├── librarian.cpp           # Core update-cycle orchestration
+├── librarian.h             # Librarian class declaration
+├── librarian_types.h       # Shared data structures (ArchiveFile, Status, StatusData)
+├── dbHandler.cpp           # SQLite database operations
+├── dbHandler.h             # DBHandler class declaration
+├── config.hpp              # LibrarianConfig class and option enums
+├── SavedQueries.h          # SQL strings: schema DDL and garbage-collection query
+├── CMakeLists.txt
 └── README.md
+
+src/condor_utils/
+├── archive_reader.cpp      # Low-level archive file reader (forward and backward)
+└── archive_reader.h        # ArchiveReader and ArchiveRecord declarations
 ```
 
-### librarian.cpp
-Core orchestration code that handles query execution, file management, and coordinates between file reading operations, database insertions, and querying interface functionality.
+---
 
-### readHistory.cpp
-Handles the low-level reading and parsing of HTCondor history files. May later be replaced by an 'ArchiveReader' class, which will hopefully be more generic. Does not currently use ClassAds. 
+## Architecture Overview
 
-### dbHandler.cpp
-Manages SQLite database operations, including reading and writing. 
+### Daemon Lifecycle (`librarian_main.cpp`)
 
-### archiveMonitor.cpp
-Monitors and manages HTCondor history file archives. Provides the main functionality for noticing and handling file rotation. 
+`condor_librarian` integrates with DaemonCore:
 
-### JobAnalysisUtils.cpp
-Contains parsing utilities and output formatting functions for queries. 
+| Callback | Purpose |
+|----------|---------|
+| `main_init` | Calls `librarian.reconfig(true)`, `librarian.initialize()`, registers the periodic `update_timer` |
+| `main_config` | Calls `librarian.reconfig()` on `condor_reconfig` |
+| `update_timer` | Fires every `LIBRARIAN_UPDATE_INTERVAL` seconds; calls `librarian.update()` |
+| `main_exit` | Calls `DC_Exit(0)` |
 
-### SavedQueries.h
-Contains important SQL code:\
-    'SCHEMA_SQL'    - defines the schema of the database, including its tables, indexes, and constraints\
-    'GC_QUERY_SQL'  - defines the garbage collection policy for the database\
+### Update Cycle (`librarian.cpp`)
 
-These queries are read in and saved upon initialization of the Librarian() class. 
+Each timer tick runs `Librarian::update()` in five phases:
 
-### librarian_config.txt
-Currently the file that contains the configurations for the librarian file. These configs include:\
-- epoch_history_path : a path to an epoch history file
-- history_path : a path to a history file
-- db_path : a path to where we want the database to go (the librarian creates the database at this location, with this name at startup)
-- the Librarian is initialized with other configurations that are currently hardcoded into main.cpp (dbSizeLimit, jobCacheSize, schemaVersionNumber)
+| Phase | What happens |
+|-------|-------------|
+| 1 | `findHistoryFiles()` discovers all current archive files on disk (oldest rotated first, active last) |
+| 1.5 | `reconcileArchiveFiles()` registers new files and detects rotations by comparing inodes (Linux) or first-record hashes (Windows) |
+| 2 | `std::erase_if` removes in-memory entries for files that have left disk; marks them `DateOfDeletion` in the DB; renames unexpectedly removed active files to `<name>.REMOVED` in the DB |
+| 3 | For each unread file, `readJobRecords()` opens (or reuses) a persistent `ArchiveReader`, reads new records incrementally, and calls `dbHandler_.insertJobFileRecords()` to atomically insert records and update the file's offset |
+| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records) until the DB shrinks below `LIBRARIAN_LOW_WATER_MARK` |
+| 5 | `writeStatusAndData()` records per-cycle and rolling aggregate metrics |
 
-### FileSet.h
-File management structures - Defines the 'FileSet' struct to help the librarian and archiveMonitor track collections of history files 
+### File Reading (`archive_reader.cpp`)
 
-### JobRecord.h
-Core data structures that manage ingestion and insertion - Fundamental structs that store data for 'Jobs', 'JobRecords', 'Files', 'Status, and other structs. Composes the internal data model throughout
-the system. 
+`ArchiveReader` wraps a `FILE*` and reads HTCondor archive files record-by-record. Each record
+consists of key=value ClassAd body lines terminated by a `***`-prefixed banner line. The reader
+supports:
+- **Forward** reading with `SeekForward(offset)` for incremental ingestion.
+- **Backward** reading (chunk-buffered) for reverse traversal.
+- On Windows, the file is opened via `CreateFileA` with `FILE_SHARE_DELETE` so that
+  `condor_schedd`'s `MoveFile()` rotation calls are never blocked.
 
-### JobQueryStructures.h
-Query data structures for the demo command line tool to use - Defines 'ParsedJobRecord', 'QueryResult', and other structs to help the command line interface manage queried data. 
+Per-file read progress (byte offset) is tracked in `ArchiveFile::last_offset` and persisted to
+`Files.LastOffset` in the DB so restarts resume exactly where they left off.
 
-# Architecture Overview
-The librarian works by ingesting historical job data from the flat file archive and then writing it into a SQLite database. 
-- The ingestion part of this cycle is handled by the readHistory.cpp file. 
-- The writing part of this cycle is handled by the dbHandler.cpp file. 
-- The archiveMonitor.cpp file holds utilities that allow the process to track and react to file rotation. 
-- The librarian.cpp file holds the functionality that orchestrates all this different code working together. 
+### Record Size Estimation
+
+Each file tracks a Welford online running average of record sizes
+(`ArchiveFile::avg_record_size`, `ArchiveFile::records_read`). After each update cycle these
+per-file averages are combined into a global `EstimatedBytesPerJobInArchive_`, which drives the
+backlog estimator and GC file-count calculation.
+
+---
+
+## Data Structures (`librarian_types.h`)
+
+### `ArchiveFile`
+In-memory state for one tracked archive file; keyed by full path in `m_archive_files`.
+
+| Field | Description |
+|-------|-------------|
+| `reader` | Persistent `ArchiveReader`; held open between cycles; released when `fully_read` |
+| `filename` | Basename only (e.g. `history` or `history.20241215T143022`) |
+| `hash` | FNV-1a hash of the first record — used as a file identity fingerprint |
+| `rotation_time` | Rotation timestamp string; empty while the file is still the active archive |
+| `last_offset` | Byte offset of the next unread byte |
+| `id` | DB `FileId` |
+| `inode` | Inode number (0 on Windows) |
+| `fully_read` | True once a rotated file's reader reaches clean EOF |
+| `avg_record_size` | Welford running mean: bytes per record |
+| `records_read` | Welford denominator: records seen so far |
+
+### `Status`
+Per-cycle metrics written to the `Status` DB table at the end of each update.
+
+| Field | Description |
+|-------|-------------|
+| `update_time` | Unix timestamp of cycle end |
+| `last_file_id` | DB `FileId` of the last file touched this cycle |
+| `last_file_offset` | Byte offset after the last record read |
+| `backlog_estimate` | Estimated number of unprocessed records remaining |
+| `duration_ms` | Wall-clock duration of the cycle in milliseconds |
+| `records_processed` | Records successfully ingested this cycle |
+| `records_lost` | Records read from disk but dropped because the DB insert transaction failed |
+| `hit_ingest_limit` | True when `MaxRecordsPerUpdate` cap was reached |
+| `ran_garbage_collect` | True when GC ran during this cycle |
+
+### `StatusData`
+Rolling aggregate metrics (Welford means, cumulative totals) written to the `StatusData` DB table.
+Normally holds a single active row (`StatusDataId = 1`). When any integer counter (`TotalCycles`,
+`TotalAdsIngested`, or `TotalRecordsLost`) would overflow `INT64_MAX`, the active row is
+rotated to `StatusDataId = 2` and the counters are reset to 0 before continuing. A `D_STATUS`
+log message is emitted for each reset. At most two rows exist at any time: row 1 (active) and
+row 2 (pre-reset snapshot).
+
+| Field | Description |
+|-------|-------------|
+| `AvgAdsIngestedPerCycle` | Welford mean of records processed per cycle |
+| `AvgIngestDurationMs` | Welford mean cycle duration in milliseconds |
+| `MeanIngestHz` | Welford mean ingest rate (ads/sec) |
+| `MeanArrivalHz` | Welford mean arrival rate of new ads (ads/sec) |
+| `MeanBacklogEstimate` | Welford mean estimated backlog across all cycles |
+| `TotalCycles` | Cumulative update cycles; resets to 0 at INT64_MAX (also resets all Welford means) |
+| `TotalAdsIngested` | Cumulative records ingested; resets to 0 at INT64_MAX |
+| `TotalRecordsLost` | Cumulative records dropped on insert failure; resets to 0 at INT64_MAX |
+| `HitMaxIngestLimitRate` | Rolling proportion of cycles that hit the ingest cap |
+| `LastRunLeftBacklog` | True if the previous cycle did not drain the backlog |
+| `TimeOfLastUpdate` | Millisecond timestamp of the most recent update |
+
+---
+
+## Database Schema (`SavedQueries.h`)
+
+Schema version is tracked via `PRAGMA user_version` (current: 1).
+
+| Table | Purpose |
+|-------|---------|
+| `Files` | One row per tracked archive file; holds offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
+| `Users` | Unique job owners |
+| `JobLists` | `(ClusterId, UserId)` associations |
+| `Jobs` | One row per `(ClusterId, ProcId)` |
+| `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId` |
+| `Status` | Per-cycle metrics; rows older than `LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle |
+| `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
+
+Garbage collection (`GC_QUERY_SQL`) targets files where `DateOfDeletion IS NOT NULL`, deletes
+them oldest-first up to the calculated file limit, then cascades to `JobRecords` and `Jobs`.
+
+---
 
 ## Configuration
-Config file (librarianc_config.txt) accepts these attributes:\
-    epoch_history_path  - the path to the current epoch history file that's being written to\
-    history_path        - the path to the current history file that's being written to\
-    db_path             - the path to the database we'd like to write to (the librarian will build the database here, it shouldn't already exist)
 
+`condor_librarian` reads its configuration from the HTCondor config system. Add it to the
+pool configuration:
 
-The following attributes are not currently configurable, but could be made to be:\
-    jobCacheSize        - the maximum number of jobs that the incache map of processed jobs will hold\
-    dbSizeLimit         - the maximum size, in bytes, that the database will grow to 
+```
+LIBRARIAN          = $(SBIN)/condor_librarian
+DAEMON_LIST        = $(DAEMON_LIST) LIBRARIAN
+LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
+```
+
+### Config Knobs
+
+| Knob | Default | Description |
+|------|---------|-------------|
+| `LIBRARIAN_DATABASE` | *(required)* | Path to the SQLite database file |
+| `HISTORY` | *(inherited)* | Path to the active HTCondor history archive file |
+| `LIBRARIAN_UPDATE_INTERVAL` | `5` | Seconds between update cycles |
+| `LIBRARIAN_MAX_UPDATES_PER_CYCLE` | `100000` | Maximum records ingested per cycle |
+| `LIBRARIAN_MAX_JOBS_CACHED` | `10000` | In-memory `(ClusterId, ProcId) → JobId` cache size |
+| `LIBRARIAN_MAX_DATABASE_SIZE` | `2147483648` (2 GiB) | DB size limit in bytes |
+| `LIBRARIAN_HIGH_WATER_MARK` | `0.97` | Fraction of size limit that triggers GC |
+| `LIBRARIAN_LOW_WATER_MARK` | `0.80` | Fraction of size limit GC targets |
+
+---
 
 ## Dependencies
-- C++20 or later
+
+- C++20
 - SQLite3
+- HTCondor DaemonCore (links against `condor_utils`)
 
-
-## Future Development
-- Epoch data added to database (EpochAds, TransferAds, SpawnAds)
-- Job record projection table with data from the body of a JobRecord (for ex, ExitStatus)
-- Daemonized process
-- More thorough error propogation
-- Safer database operations (possibly make a Transaction wrapper class that handles cleanup after a SQL statement is run)
-
-# myHistoryList Demo Overview
-myHistoryList serves as a demo command line tool to demonstrate what a fully fleshed out Archive Librarian could theoretically do. Because of how the Archive Librarian isn't currently daemonized, you'll note that it's functionality has limitations - you have to use the menu to choose '1. Update' to ingest a history file before users can test the query functionality. This tool serves more as a proof of concept than a working service. 
-
-## Features
-- Query jobs by user and cluster ID
-- Multiple analysis modes (usage, files, batch, DAG, timing, location, status)
-- Statistical summaries with min/max/mean/median calculations
-- File reading with offset jumping rather than sequential scans
-- Table output format
-
-## How to run the Archive Librarian demo (myHistoryList)
-```bash
-# Build instructions here
-make
-```
-
-## Usage
-
-**Main Function**: Currently serves as a demo of database capabilities. To run queries, you must:
-1. Run the program
-2. Navigate to the menu 
-3. Select "1. Update" to populate the database
-4. Select "2. Queries" to run actual queries - the menu will prompt you when to enter your actual query
-
-### Basic Query Syntax
-```bash
--user <username> -clusterId <clusterid> [analysis_flags]
-```
-
-### Required Arguments
-- `-user <username>` - Filter by job owner
-- `-clusterId <clusterid>` - Filter by cluster ID
-
-### Analysis Flags (Optional)
-- `-usage` - Show resource usage statistics (memory, wall clock time)
-- `-files` - Show file paths (output, error, log, submit files)
-- `-batch` - Show batch-related information
-- `-dag` - Show DAG-related information  
-- `-when` - Show timing information (job start dates)
-- `-where` - Show execution location information
-- `-status` - Show job status and exit codes
-
-### Examples
-
-#### Basic Query (Raw ClassAd Output)
-```bash
--user aanand37 -clusterId 4327172
-```
-
-#### Single Analysis Mode
-```bash
--user aanand37 -clusterId 4327172 -usage
-```
-
-#### Multiple Analysis Modes
-```bash
--user aanand37 -clusterId 4327172 -usage -files -status
-```
-
-## Output Format
-
-### Usage Analysis
-- Table showing memory usage (MB) and wall clock time (seconds)
-- Statistics: min, max, mean, median, total
-
-### Files Analysis  
-- Table showing output files, error files, user logs, and submit files
-
-### Status Analysis
-- Table showing job status, exit codes, and exit status
-- Distribution statistics with counts and percentages
-
-### Other Analysis Modes (-dag, -batch, -where, -when)
-- Table format with other relevant job information
-- Summary statistics where applicable 
-
-## Performance
-- Query execution times are logged to `librarian_query_times.txt`
-- Offset-based file reading theoretically speeds up query retrieval time
-
-### Data Flow / How the Demo Works
-1. Query database for job offsets
-2. Read from archive files at specified offsets  
-3. Parse ClassAd records into structured data
-4. Apply analysis filters and generate output
-
+---
 
 ## Related Links
-- Project Report: [https://docs.google.com/document/d/1msO0zYkLzXs1MPPRfWmt5gBZxX1ZGw8SQpbsSJojxdo/edit?usp=sharing] (link will only work within UW Madison workspace emails)
-- CHTC Fellowship Website: [Link to CHTC fellowship website, will be added when Fellows page is updated]
+
+- Project Report: [https://docs.google.com/document/d/1msO0zYkLzXs1MPPRfWmt5gBZxX1ZGw8SQpbsSJojxdo/edit?usp=sharing](link will only work within UW Madison workspace emails)
+- CHTC Fellowship Website: [https://chtc.cs.wisc.edu/fellowships/reports/2025/sandhya-nayar](Final Report)

@@ -752,3 +752,382 @@ part of a checkpoint and computes and compares the checksum of every file
 download from a checkpoint; if any don't match, the checkpoint is considered
 invalid and deleted, and the job is rescheduled (and will resume from the
 "extra" checkpoint(s), if one remains available).
+
+.. _archive-librarian:
+
+Archive Librarian
+-----------------
+
+The archive librarian is a daemon that makes an SQLite3 database indexing
+historical job records stored within an Access Points :macro:`HISTORY` file.
+The purpose of the librarian's database are:
+
+1. Keep a smaller amount metadata about what jobs have completed for longer.
+2. To allow clients tools to quickly locate a full archived record assuming
+   the associated file has not been rotated out.
+
+The following tools will automatically utilize the librarian in certain cases
+when the Access Point is configured with :config:`USING_LIBRARIAN = True`
+
+.. list-table::
+    :header-rows: 1
+    :widths: 20 15 80
+
+    * - Tool
+      - Disable
+      - Conditions
+    * - :tool:`condor_history`
+      - ``-no-librarian``
+      - When asked to query final job records for a specific user or cluster
+        and for a set of specific job ids.
+
+.. note::
+
+    The **Disable** section denotes how to disable the use of the librarian
+    database even when enabled. This may be useful for cases of jobs that have
+    recently finished but are not index yet and thus appear to not exist in
+    the history.
+
+Update Process
+''''''''''''''
+
+The librarian will periodically scan the archive files reading new entries
+and update the database accordingly. The librarian reads from oldest to newest
+to reduce the chance of losing record metadata before files are rotated.
+The librarian will always begin reading from where it left off or the oldest
+point it discovers. During the update process, if the backing database is found
+to be over the configured size then it will garbage collect old job id and job
+record entries associated with archive files that have already rotated out. This
+process will prioritize removing entries associated with the oldest timestamped
+history files.
+
+.. note::
+
+    The librarian may take some time to initially process any backlog of
+    records on startup.
+
+Schema
+''''''
+
+The librarian maintains a SQLite database with six tables. Five are persistent;
+``Status`` accumulates one row per update cycle and is periodically pruned.
+
+.. tabs::
+
+    .. tab:: Files
+
+        Tracks each archive file the librarian has discovered, including rotated copies.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``FileId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``FileName``
+             - TEXT
+             - —
+             - Base filename of the archive (e.g. ``history`` or ``history.20240101T120000``).
+           * - ``FileInode``
+             - INTEGER
+             - —
+             - Inode number used for rotation detection on POSIX systems.
+           * - ``FileHash``
+             - TEXT
+             - —
+             - FNV-1a hex hash of the first record; used as the rotation identity on Windows.
+           * - ``LastOffset``
+             - INTEGER
+             - —
+             - Byte position after the last record processed in this file.
+           * - ``DateOfRotation``
+             - INTEGER
+             - —
+             - Unix timestamp set when the file is rotated. ``NULL`` while the file is active.
+           * - ``DateOfDeletion``
+             - INTEGER
+             - —
+             - Unix timestamp set when the file disappears from disk. ``NULL`` while present.
+           * - ``FullyRead``
+             - INTEGER
+             - 0
+             - Set to ``1`` once a rotated file reaches clean EOF and its reader is released.
+           * - ``AvgRecordSize``
+             - REAL
+             - 0.0
+             - Running mean of compressed ClassAd record sizes in bytes (used for backlog estimation).
+           * - ``RecordsRead``
+             - INTEGER
+             - 0
+             - Count of records processed from this file across all cycles.
+
+        **Indexes**
+
+        - ``idx_unique_inode_hash`` — unique on ``(FileInode, FileHash)``; enforces that the same physical file is never registered twice.
+        - ``idx_date_of_deletion`` — on ``DateOfDeletion``; speeds up the garbage collection file selection query.
+
+    .. tab:: Users
+
+        One row per unique submitting user, normalized out of ``Jobs`` to save space.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Primary key.
+           * - ``UserName``
+             - TEXT
+             - —
+             - HTCondor owner string (unique constraint enforced).
+           * - ``DateOfLastJob``
+             - INTEGER
+             - —
+             - Reserved for future garbage collection; not currently populated.
+
+    .. tab:: JobLists
+
+        Groups all jobs of a cluster together under a single owner, so cluster-level
+        queries can be answered with a single index lookup.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Primary key.
+           * - ``ClusterId``
+             - INTEGER
+             - —
+             - HTCondor cluster ID (not null).
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Foreign key → ``Users.UserId``.
+
+        **Indexes**
+
+        - ``idx_unique_cluster_user`` — unique on ``(ClusterId, UserId)``; one ``JobList`` per cluster/owner pair.
+
+    .. tab:: Jobs
+
+        One row per job (``ClusterId.ProcId``), populated from spawn ads.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``ClusterId``
+             - INTEGER
+             - —
+             - HTCondor cluster ID (not null).
+           * - ``ProcId``
+             - INTEGER
+             - —
+             - HTCondor proc ID (not null).
+           * - ``UserId``
+             - INTEGER
+             - —
+             - Foreign key → ``Users.UserId``.
+           * - ``TimeOfCreation``
+             - INTEGER
+             - —
+             - Unix timestamp when the job was first submitted.
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Foreign key → ``JobLists.JobListId``.
+
+        **Indexes**
+
+        - ``idx_unique_cluster_proc_jobs`` — unique on ``(ClusterId, ProcId)``; prevents duplicate proc entries.
+        - ``idx_OwnerInJobs`` — on ``UserId``; accelerates owner-filtered history queries.
+        - ``idx_JobListIdInJobs`` — on ``JobListId``; accelerates cluster-level aggregation.
+
+    .. tab:: JobRecords
+
+        One row per completed job ad ingested from an archive file. Multiple records
+        for the same ``JobId`` are possible if the ad appears in more than one file
+        (e.g. after a rotation).
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 20 12 8 60
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``JobRecordId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``Offset``
+             - INTEGER
+             - —
+             - Byte offset within the archive file where this record begins.
+           * - ``CompletionDate``
+             - INTEGER
+             - —
+             - Unix timestamp from the job's ``CompletionDate`` ClassAd attribute.
+           * - ``JobId``
+             - INTEGER
+             - —
+             - Foreign key → ``Jobs.JobId``.
+           * - ``FileId``
+             - INTEGER
+             - —
+             - Foreign key → ``Files.FileId``; identifies which archive file holds the raw ad.
+           * - ``JobListId``
+             - INTEGER
+             - —
+             - Foreign key → ``JobLists.JobListId``; denormalized here to speed up cluster-count queries without joining through ``Jobs``.
+
+        **Indexes**
+
+        - ``idx_JobIdInJobRecords`` — on ``JobId``.
+        - ``idx_JobListIdInJobRecords`` — on ``JobListId``.
+        - ``idx_FileIdInJobRecords`` — on ``FileId``; used by garbage collection to find all records in a file slated for deletion.
+
+    .. tab:: Status
+
+        Append-only cycle log. One row is inserted after every update cycle and rows
+        older than :macro:`LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle.
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 24 12 8 56
+
+           * - Column
+             - Type
+             - Default
+             - Description
+           * - ``StatusId``
+             - INTEGER
+             - —
+             - Primary key (auto-increment).
+           * - ``TimeOfUpdate``
+             - INTEGER
+             - —
+             - Unix timestamp for this cycle (not null).
+           * - ``FileIdLastRead``
+             - INTEGER
+             - —
+             - ``FileId`` of the last archive file touched in this cycle.
+           * - ``FileOffsetLastRead``
+             - INTEGER
+             - —
+             - Byte offset after the last record read in that file.
+           * - ``TotalRecordsRead``
+             - INTEGER
+             - 0
+             - Number of records processed during this cycle.
+           * - ``DurationMs``
+             - INTEGER
+             - 0
+             - Wall-clock duration of the cycle in milliseconds.
+           * - ``JobBacklogEstimate``
+             - INTEGER
+             - 0
+             - Estimated number of unprocessed job ads remaining across all tracked files.
+           * - ``HitMaxIngestLimit``
+             - BOOLEAN
+             - 0
+             - ``1`` if the cycle stopped early because :macro:`LIBRARIAN_MAX_UPDATES_PER_CYCLE` was reached.
+           * - ``GarbageCollectionRun``
+             - BOOLEAN
+             - 0
+             - ``1`` if garbage collection executed during this cycle.
+           * - ``RecordsLostOnInsertFailure``
+             - INTEGER
+             - 0
+             - Count of job ads read from disk but dropped during this cycle because the database
+               insert transaction failed and was rolled back.
+
+        **Indexes**
+
+        - ``idx_TimeOfUpdateInStatus`` — on ``TimeOfUpdate``; used by the pruning query to efficiently drop old rows.
+
+    .. tab:: StatusData
+
+        Holds cumulative running statistics across all cycles, updated on every cycle.
+        Normally contains a single active row (``StatusDataId = 1``). When any integer
+        counter (``TotalCycles``, ``TotalAdsIngested``, or ``TotalRecordsLost``) would
+        overflow ``INT64_MAX``, the active row is automatically rotated to
+        ``StatusDataId = 2`` and the affected counters reset to ``0``. At most two rows
+        exist at any time: row ``1`` (active) and row ``2`` (pre-reset snapshot).
+
+        .. list-table::
+           :header-rows: 1
+           :widths: 28 12 60
+
+           * - Column
+             - Type
+             - Description
+           * - ``StatusDataId``
+             - INTEGER
+             - Primary key; ``1`` for the active row, ``2`` for the pre-reset snapshot
+               preserved after a counter overflow. CHECK constraint allows only these two values.
+           * - ``AvgAdsIngestedPerCycle``
+             - REAL
+             - Cumulative mean of records processed per cycle.
+           * - ``AvgIngestDurationMs``
+             - REAL
+             - Cumulative mean cycle duration in milliseconds.
+           * - ``MeanIngestHz``
+             - REAL
+             - Cumulative mean ingest rate in ads per second.
+           * - ``MeanArrivalHz``
+             - REAL
+             - Estimated mean arrival rate of new ads (ads/sec), updated when the daemon begins an update cycle.
+           * - ``MeanBacklogEstimate``
+             - REAL
+             - Cumulative mean estimated backlog across all cycles.
+           * - ``TotalCycles``
+             - INTEGER
+             - Total number of update cycles completed. Resets to ``0`` if it would overflow
+               ``INT64_MAX``; when this happens all Welford rolling means are also reset to
+               ``0`` (since they use the cycle count as their denominator).
+           * - ``TotalAdsIngested``
+             - INTEGER
+             - Cumulative count of job ads successfully ingested across all cycles. Resets to
+               ``0`` if it would overflow ``INT64_MAX``.
+           * - ``TotalRecordsLost``
+             - INTEGER
+             - Cumulative count of job ads read from disk but dropped due to a failed database
+               insert transaction. Resets to ``0`` if it would overflow ``INT64_MAX``.
+           * - ``HitMaxIngestLimitRate``
+             - REAL
+             - Rolling proportion of cycles that hit :macro:`LIBRARIAN_MAX_UPDATES_PER_CYCLE`.
+           * - ``LastRunLeftBacklog``
+             - BOOLEAN
+             - ``1`` if the most recent cycle did not drain the backlog.
+           * - ``TimeOfLastUpdate``
+             - INTEGER
+             - Unix timestamp of the most recent update.

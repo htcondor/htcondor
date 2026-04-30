@@ -1018,7 +1018,6 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_version
-%_bindir/condor_librarian
 %_bindir/condor_history
 %_bindir/condor_status
 %_bindir/condor_wait
@@ -1070,6 +1069,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_fetchlog
 %_sbindir/condor_ft-gahp
 %_sbindir/condor_had
+%_sbindir/condor_librarian
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
 %_sbindir/condor_off

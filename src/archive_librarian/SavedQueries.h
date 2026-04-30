@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS Files (
     LastOffset INTEGER,
     DateOfRotation INTEGER,
     DateOfDeletion INTEGER,
-    FullyRead INTEGER DEFAULT 0
+    FullyRead INTEGER DEFAULT 0,
+    AvgRecordSize REAL DEFAULT 0.0,
+    RecordsRead INTEGER DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_inode_hash ON Files(FileInode, FileHash);
 CREATE INDEX IF NOT EXISTS idx_date_of_deletion ON Files(DateOfDeletion);
@@ -45,12 +47,9 @@ CREATE TABLE IF NOT EXISTS Jobs (    -- Info from Spawn Ads
     UserId INTEGER,
     TimeOfCreation INTEGER, 
     JobListId INTEGER,
-    FileId INTEGER,       -- For possible EpochRecord tracking functionality in the future, currently not filled
-    Offset INTEGER, 
     UNIQUE (ClusterId, ProcId),
-    FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId), 
-    FOREIGN KEY (UserId) REFERENCES Users(UserId), 
-    FOREIGN KEY (FileId) REFERENCES Files(FileId)
+    FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId),
+    FOREIGN KEY (UserId)    REFERENCES Users(UserId)
 );
 CREATE INDEX IF NOT EXISTS idx_OwnerInJobs ON Jobs(UserId);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc_jobs ON Jobs(ClusterId, ProcId);
@@ -82,12 +81,13 @@ CREATE TABLE IF NOT EXISTS Status (
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
     JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
     HitMaxIngestLimit BOOLEAN DEFAULT 0,               -- Whether this ingestion cycle hit the max ingest limit
-    GarbageCollectionRun BOOLEAN DEFAULT 0             -- Whether garbage collection ran during this ingestion cycle
+    GarbageCollectionRun BOOLEAN DEFAULT 0,            -- Whether garbage collection ran during this ingestion cycle
+    RecordsLostOnInsertFailure INTEGER DEFAULT 0       -- Records read but dropped due to a failed DB insert
 );
 CREATE INDEX IF NOT EXISTS idx_TimeOfUpdateInStatus ON Status(TimeOfUpdate);
 
 CREATE TABLE IF NOT EXISTS StatusData (
-    StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1),     
+    StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1 OR StatusDataId = 2),
 
     AvgAdsIngestedPerCycle REAL,          -- Mean ads processed per ingest cycle
     AvgIngestDurationMs REAL,             -- Mean duration (ms) per ingest cycle
@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS StatusData (
 
     TotalCycles INTEGER,                  -- Total number of timeout cycles
     TotalAdsIngested INTEGER,             -- Cumulative count of ads ingested
+    TotalRecordsLost INTEGER DEFAULT 0,   -- Cumulative count of records dropped due to insert failures
 
     HitMaxIngestLimitRate REAL,           -- Proportion of cycles that hit ingest cap
     LastRunLeftBacklog BOOLEAN DEFAULT 0, -- Whether the previous run left backlog
@@ -106,7 +107,6 @@ CREATE TABLE IF NOT EXISTS StatusData (
 )";
 
 // TODO: Break this up and do logic/steps in librarian code
-// TODO: Make Status table clean out time configurable
     // Garbage collection query
     const std::string GC_QUERY_SQL = R"(
 -- 1. Find files to delete (ordered by deletion date, limited by job count target that we calculate)
@@ -146,15 +146,14 @@ AND JobListId NOT IN (SELECT DISTINCT JobListId FROM Jobs WHERE JobListId IS NOT
     -- Delete the File entries that we had previously marked
 DELETE FROM Files WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
--- 7. Delete all Status updates that are more than 5 minutes old
-DELETE FROM Status
-WHERE TimeOfUpdate < strftime('%s','now') - (60 * 5);
-
--- 8. Drop temporary tables
+-- 7. Drop temporary tables
 DROP TABLE IF EXISTS FilesToDelete;
 DROP TABLE IF EXISTS JobsToDelete;
 DROP TABLE IF EXISTS JobListsToCheck;
 )";
+
+    // Prune Status rows older than a configurable retention window (parameterized in seconds)
+    const std::string PRUNE_STATUS_SQL = R"(DELETE FROM Status WHERE TimeOfUpdate < strftime('%s','now') - ?;)";
 }
 
 #endif // SAVED_QUERIES_H

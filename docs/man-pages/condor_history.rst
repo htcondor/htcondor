@@ -20,7 +20,7 @@ Synopsis
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
 [**-xml**] [**-json**] [**-jsonl**] [**-wide[:N]**]
-[**-extract** *filename*]
+[**-extract** *filename*] [**-no-librarian**]
 
 Description
 -----------
@@ -49,6 +49,9 @@ Options
 **-forwards**
     List ClassAds in chronological order. The ClassAd most recently added to the
     history file is last.
+**-no-librarian**
+    Ignore using the *condor_librarian* record index database regardless of
+    :macro:`USING_LIBRARIAN` being ``True``.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
 *cluster.process*
