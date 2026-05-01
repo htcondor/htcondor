@@ -239,7 +239,7 @@ command_activate_claim(int cmd, Stream* stream )
 
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		refuse(stream, send_failure_ad, CONDOR_HOLD_CODE::ActivationRefusedClaimNotFound, "ClaimId not found");
 		return FALSE;
@@ -256,7 +256,7 @@ command_activate_claim(int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	if( rip->isDeactivating() ) { 
+	if( rip->isDeactivating() ) {
 			// We're in the middle of deactivating another claim, so
 			// tell the shadow to try again.  Any shadow before 6.1.9
 			// will just treat this like a "NOT_OK", which is what
@@ -265,7 +265,7 @@ command_activate_claim(int cmd, Stream* stream )
 			// initiate a new ACTIVATE_CLAIM protocol.
 		const char * deactivating_reason = rip->isDeactivatingReason();
 		if ( ! deactivating_reason) { deactivating_reason = "starter is still alive"; }
-		rip->dprintf( D_ALWAYS, 
+		rip->dprintf( D_ALWAYS,
 					  "Got activate claim while %s. Telling shadow to try again later.\n", deactivating_reason );
 		if (send_failure_ad) {
 			refuseX(stream, CONDOR_HOLD_CODE::ActivationRefusedStillCleaning, deactivating_reason, CONDOR_TRY_AGAIN);
@@ -274,7 +274,7 @@ command_activate_claim(int cmd, Stream* stream )
 		}
 		return FALSE;
 	}
-	
+
 		// If we got this far and we're not in claimed/idle, there
 		// really is a problem activating the claim.
 	if( a != idle_act ) {
@@ -2839,7 +2839,7 @@ command_coalesce_slots(int, Stream * stream ) {
 		if (r) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
-		// Despite appearances, this also transfers the nonfungible resources.
+			// Despite appearances, this also transfers the nonfungible resources.
 			(r->r_attr)->unbind_DevIds(resmgr->m_attr, r->r_id, r->r_sub_id, 0);
 			*(parent->r_attr) += *(r->r_attr);
 			*(r->r_attr) -= *(r->r_attr);
@@ -2856,7 +2856,12 @@ command_coalesce_slots(int, Stream * stream ) {
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
 	if (parent->can_create_dslot()) {
-		coalescedSlot = create_dslot(parent, requestAd, false);
+		std::string nsp;
+		const char * new_slot_prefix = nullptr;
+		if( commandAd.LookupString( "DesiredSlotPrefix", nsp ) ) {
+			new_slot_prefix = nsp.c_str();
+		}
+		coalescedSlot = create_dslot(parent, requestAd, false, new_slot_prefix);
 	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );

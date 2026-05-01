@@ -94,7 +94,11 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _donor = nullptr, bool take_donor_claim = false);
+	Resource(
+		CpuAttributes*, int id, const char * prefx,
+		Resource * _donor = nullptr,
+		bool take_donor_claim = false
+	);
 	~Resource();
 
 		// override param by slot_type
@@ -294,7 +298,7 @@ public:
 		// have to do lots of funky twiddling with our claim objects,
 		// we put all the actions and logic in one place that gets
 		// called whenever we're finally ready to leave the preempting
-		// state. 
+		// state.
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
@@ -597,7 +601,7 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim, const char * new_slot_prefix = NULL);
 
 /*
 Create multiple dynamic slots for a single request ad

@@ -185,8 +185,10 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 Resource::Resource (
 	CpuAttributes* cap,
 	int rid,                 // new resource id
+	const char * prefix,
 	Resource* _donor,        // resource donor
-	bool _take_donor_claim)  // if creating a d-slot, take the claim id from the _parent
+	bool _take_donor_claim   // if creating a d-slot, take the claim id from the _parent
+)
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
 	, r_classad(nullptr)
@@ -239,7 +241,10 @@ Resource::Resource (
 
 		// we need this before we instantiate any Claim objects...
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
-	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
+	const char * name_prefix = prefix;
+	if(! name_prefix) {
+		name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
+	}
 	if (name_prefix) {
 		tmp = name_prefix;
 	} else {
@@ -252,6 +257,7 @@ Resource::Resource (
 	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
 	r_id_str = strdup( tmp.c_str() );
+
 
 		// we need this before we can call type()...
 	r_attr = cap;
@@ -3985,7 +3991,7 @@ bool Resource::fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad,
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim, const char * new_slot_prefix)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -4264,7 +4270,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_donor_claim);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, new_slot_prefix, rip, take_donor_claim);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
