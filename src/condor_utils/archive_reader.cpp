@@ -260,10 +260,26 @@ ArchiveReader::Size() {
 	if ( ! m_file) { return -1; }
 
 	int64_t curr = Tellp();
-	fseek_64b(m_file.get(), 0, SEEK_END);
+
+	if (curr < 0) {
+		dprintf(D_ERROR, "ERROR: Failed to get current position of archive file (%d): %s\n",
+		        errno, strerror(errno));
+		return -1;
+	}
+
+	if (fseek_64b(m_file.get(), 0, SEEK_END) != 0) {
+		dprintf(D_ERROR, "ERROR: Failed to seek to end of archive file (%d): %s\n",
+		        errno, strerror(errno));
+		return -1;
+	}
 
 	int64_t size = Tellp();
-	fseek_64b(m_file.get(), curr, SEEK_SET);
+
+	if (fseek_64b(m_file.get(), curr, SEEK_SET) != 0) {
+		dprintf(D_ERROR, "ERROR: Failed to restore position of archive file (%d): %s\n",
+		        errno, strerror(errno));
+		return -1;
+	}
 
 	return size;
 }
@@ -351,7 +367,12 @@ ArchiveReader::FillBackwardBuffer() {
 	int64_t read_size = std::min(BW_CHUNK, m_bwd_pos);
 	int64_t chunk_base = m_bwd_pos - read_size;
 
-	fseek_64b(m_file.get(), chunk_base, SEEK_SET);
+	if (fseek_64b(m_file.get(), chunk_base, SEEK_SET) != 0) {
+		dprintf(D_ERROR, "ERROR: Failed to seek to chunk border %llu in archive file (%d): %s\n",
+		        (unsigned long long)chunk_base, errno, strerror(errno));
+		return false;
+	}
+
 	std::vector<char> raw(static_cast<size_t>(read_size));
 	size_t bytes_read = fread(raw.data(), 1, static_cast<size_t>(read_size), m_file.get());
 	if (ferror(m_file.get())) {

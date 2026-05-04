@@ -1,0 +1,60 @@
+_____________________________________________________________________________________________
+*** CID 560637:         Error handling issues  (CHECKED_RETURN)
+/__w/htcondor/htcondor/src/condor_utils/archive_reader.cpp: 266             in ArchiveReader::Size()()
+260           if ( ! m_file) { return -1; }
+261     
+262         int64_t curr = Tellp();
+263       fseek_64b(m_file.get(), 0, SEEK_END);
+264     
+265           int64_t size = Tellp();
+>>>     CID 560637:         Error handling issues  (CHECKED_RETURN)
+>>>     Calling "fseek_64b(this->m_file.get(), curr, 0)" without checking return value. It wraps a library function that may fail and return an error code.
+266          fseek_64b(m_file.get(), curr, SEEK_SET);
+267     
+268           return size;
+269     }
+270     
+271     // =====================================================================
+
+** CID 560636:       Error handling issues  (CHECKED_RETURN)
+
+
+_____________________________________________________________________________________________
+*** CID 560636:         Error handling issues  (CHECKED_RETURN)
+/__w/htcondor/htcondor/src/condor_utils/archive_reader.cpp: 354             in ArchiveReader::FillBackwardBuffer()()
+348         }
+349     
+350             // Read the next chunk ending at m_bwd_pos.
+351       int64_t read_size = std::min(BW_CHUNK, m_bwd_pos);
+352            int64_t chunk_base = m_bwd_pos - read_size;
+353     
+>>>     CID 560636:         Error handling issues  (CHECKED_RETURN)
+>>>     Calling "fseek_64b(this->m_file.get(), chunk_base, 0)" without checking return value. It wraps a library function that may fail and return an error code.
+354           fseek_64b(m_file.get(), chunk_base, SEEK_SET);
+355        std::vector<char> raw(static_cast<size_t>(read_size));
+356           size_t bytes_read = fread(raw.data(), 1, static_cast<size_t>(read_size), m_file.get());
+357       if (ferror(m_file.get())) {
+358               m_error = errno;
+359                  dprintf(D_ERROR, "ArchiveReader: read error in backward buffer fill: %s\n",
+
+** CID 560635:       Integer handling issues  (NEGATIVE_RETURNS)
+
+
+_____________________________________________________________________________________________
+*** CID 560635:         Integer handling issues  (NEGATIVE_RETURNS)
+/__w/htcondor/htcondor/src/condor_utils/archive_reader.cpp: 266             in ArchiveReader::Size()()
+260          if ( ! m_file) { return -1; }
+261     
+262        int64_t curr = Tellp();
+263      fseek_64b(m_file.get(), 0, SEEK_END);
+264     
+265          int64_t size = Tellp();
+>>>     CID 560635:         Integer handling issues  (NEGATIVE_RETURNS)
+>>>     "curr" is passed to a parameter that cannot be negative.
+266          fseek_64b(m_file.get(), curr, SEEK_SET);
+267     
+268           return size;
+269     }
+270     
+271     // =====================================================================
+
