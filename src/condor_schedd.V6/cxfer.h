@@ -4,6 +4,7 @@
 //
 // #include "scheduler.h"
 // #include "catalog_utils.h"
+// #include "dc_coroutines.h"
 // #include "cxfer.h"
 //
 
@@ -22,5 +23,8 @@ std::tuple<
     std::optional<ListOfCatalogs>
 >
 determine_cxfer_type(match_rec * mrec, const PROC_ID & jobID );
+
+condor::cr::void_coroutine
+start_conversion_to_data_slot( match_rec * mrec, ClassAd requestAd );
 
 #endif /* _CONDOR_CXFER_H */

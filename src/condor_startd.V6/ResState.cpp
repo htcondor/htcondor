@@ -21,9 +21,9 @@
 #include "condor_common.h"
 #include "startd.h"
 
-ResState::ResState( Resource* res_ip )
+ResState::ResState( Resource* res_ip, State initial_state )
 {
-	r_state = owner_state;
+	r_state = initial_state;
 	r_destination = no_state;
 	r_act = idle_act;
 	r_act_was_benchmark = false;

@@ -2931,3 +2931,185 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	return TRUE;
 }
+
+
+int
+command_data_slot(int, Stream * stream ) {
+	Sock * sock = (Sock *)stream;
+	dprintf( D_ALWAYS, "command_data_slot(): begin\n" );
+
+
+	ClassAd commandAd;
+	if(! getClassAd( sock, commandAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get command ad\n" );
+		return FALSE;
+	}
+
+
+	// This becomes owned by the new slot's claim.
+	ClassAd * requestAd = new ClassAd();
+	if(! getClassAd( sock, * requestAd ) || ! sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get resource request\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+
+	std::string claimIDListString;
+	if(! commandAd.LookupString( ATTR_CLAIM_ID_LIST, claimIDListString )) {
+		dprintf( D_ALWAYS, "command_data_slot(): command ad missing claim ID list\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+	// Remove duplicate claims.
+	std::set<std::string> ucil;
+	for( auto & claimID: StringTokenIterator(claimIDListString) ) {
+		ucil.insert( claimID );
+	}
+
+	if( ucil.size() != 1 ) {
+		dprintf( D_ALWAYS, "command_data_slot(): command ad's claim ID list does not contain exactly one valid claim ID.\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+
+	//
+	// Confirm that we can use these resources to build a data slot.
+	//
+	std::string errorString;
+	CAResult result = CA_SUCCESS;
+
+	Resource * r = nullptr;
+	unsigned valid_slots = 0;
+	for( auto& claimID : ucil ) {
+		r = resmgr->get_by_cur_id( claimID.c_str() );
+
+		if(! r) {
+			formatstr( errorString, "can't find slot with given claim ID" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( r->state() != claimed_state ) {
+			formatstr( errorString, "given slot is not claimed" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+			formatstr( errorString, "given slot is broken" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( r->activity() != idle_act ) {
+			formatstr( errorString, "given slot is not idle" );
+			result = CA_INVALID_STATE;
+			break;
+		}
+
+		if( r->isDeactivating() ) {
+			formatstr( errorString, "given slot is deactivating, try again later" );
+			result = CA_INVALID_STATE;
+			break;
+		}
+
+		if( r->get_parent() == NULL ) {
+			formatstr( errorString, "given slot is not dynamic" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		++ valid_slots;
+	}
+
+	sock->encode();
+
+	if( result != CA_SUCCESS ) {
+		dprintf( D_ALWAYS, "command_data_slot(): %s\n", errorString.c_str() );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( result ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, errorString.c_str() );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+	if( valid_slots <= 0 ) {
+		dprintf( D_ALWAYS, "command_data_slot(): unable to coalesce any slots\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "Unable to coalesce any slots" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+
+	//
+	// Because we only have one slot, it's easy to make a new slot out of the
+	// resources of the old one without invalidating the original claim ID.
+	//
+	std::string nsp;
+	const char * new_slot_prefix = nullptr;
+	if( commandAd.LookupString( "DesiredSlotPrefix", nsp ) ) {
+		new_slot_prefix = nsp.c_str();
+	}
+	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
+	r->change_state( unclaimed_state );
+
+	if( data_slot == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "create_dslot() failed" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+
+	//
+	// Reply with success.
+	//
+	ClassAd replyAd;
+	replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	replyAd.InsertAttr( ATTR_CLAIM_ID, data_slot->r_cur->id() );
+
+	if(! putClassAd( sock, replyAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send reply ad\n" );
+		return FALSE;
+	}
+
+	ClassAd slotAd( * data_slot->r_classad );
+	if(! putClassAd( sock, slotAd ) || !sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send slot ad\n" );
+		return FALSE;
+	}
+
+	dprintf( D_ALWAYS, "command_data_slot(): end\n" );
+	return TRUE;
+}

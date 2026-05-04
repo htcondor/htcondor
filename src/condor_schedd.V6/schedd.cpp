@@ -98,6 +98,7 @@
 #include "classad_merge.h"
 
 #include "catalog_utils.h"
+#include "dc_coroutines.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
 
@@ -10956,6 +10957,16 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// Otherwise, the schedd won't start the actual job because
 				// it already has a match.
 				SetMrecJobID(mrec, transfer_job_id);
+
+				// Before we start the shadow, convert the matched slot to
+				// a data slot.  FIXME: Obviously, we can't actually block
+				// to do this, so we'll have to mark the prompting job
+				// blocked, poke the startd and only then start the shadow
+				// (or timeout and clean up).  We probably need to all the
+				// rest of above this comment before contacting the startd.
+
+				JobQueueJob * job = GetJobAd( job_id );
+				start_conversion_to_data_slot( mrec, * job );
 
 				addRunnableJob( transfer_shadow_rec );
 

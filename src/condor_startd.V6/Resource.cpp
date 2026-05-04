@@ -187,7 +187,8 @@ Resource::Resource (
 	int rid,                 // new resource id
 	const char * prefix,
 	Resource* _donor,        // resource donor
-	bool _take_donor_claim   // if creating a d-slot, take the claim id from the _parent
+	bool _take_donor_claim,  // if creating a d-slot, take the claim id from the _parent
+	bool is_replacement_slot
 )
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
@@ -317,17 +318,28 @@ Resource::Resource (
 
 	if (_donor && _take_donor_claim) {
 		if (_donor != _parent) {
-			// This is the normal case for splitting a d-slot into two d-slots
-			// TODO: pass the claim id in here rather than using the first one?
-			// TODO: this code only works if r_claims always has only a single claim id
-			Resource::claims_t::iterator j(_donor->r_claims.begin());
-			if (j != _donor->r_claims.end()) {
-				r_cur = *j;
-				r_cur->setResource(this);
-				_donor->r_claims.erase(*j);
-				_donor->r_claims.insert(new Claim(_donor));
+			if( is_replacement_slot ) {
+				r_cur = _donor->r_cur;
+				r_cur->setResource( this );
+				_donor->r_cur = new Claim( _donor );
+
+				// If r_state is not in synch with r_cur's state, there's
+				// presently no reasonable way to synch them.
+				delete r_state;
+				r_state = new ResState( this, _donor->r_state->state() );
 			} else {
-				r_cur = new Claim(this);
+				// This is the normal case for splitting a d-slot into two d-slots
+				// TODO: pass the claim id in here rather than using the first one?
+				// TODO: this code only works if r_claims always has only a single claim id
+				Resource::claims_t::iterator j(_donor->r_claims.begin());
+				if (j != _donor->r_claims.end()) {
+					r_cur = *j;
+					r_cur->setResource(this);
+					_donor->r_claims.erase(*j);
+					_donor->r_claims.insert(new Claim(_donor));
+				} else {
+					r_cur = new Claim(this);
+				}
 			}
 		} else {
 			// this is the normal case for creating a d-slot from a p-slot
@@ -338,6 +350,7 @@ Resource::Resource (
 	} else {
 		r_cur = new Claim(this);
 	}
+
 
 	// make the full slot name "<r_id_str>@<name>"
 	// prior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
@@ -3991,7 +4004,7 @@ bool Resource::fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad,
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim, const char * new_slot_prefix)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim, const char * new_slot_prefix, bool is_replacement_slot)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -4270,7 +4283,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, new_slot_prefix, rip, take_donor_claim);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, new_slot_prefix, rip, take_donor_claim, is_replacement_slot);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
@@ -4279,7 +4292,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 
 		// HACK!! give a split claim to the new d-slot
 		// TODO: do this later? make it conditional??
-		if (rip->is_partitionable_slot() && new_rip->r_claims.empty()) {
+		if (new_rip->r_claims.empty()) {
 			new_rip->r_claims.insert(new Claim(new_rip));
 		}
 
@@ -4289,7 +4302,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 			// Initialize the rest of the Resource
 		new_rip->initial_compute(rip);
 		new_rip->init_classad();
-		new_rip->refresh_classad_slot_attrs(); 
+		new_rip->refresh_classad_slot_attrs();
 
 			// Recompute the partitionable slot's resources
 			// Call update() in case we were never matched, i.e. no state change

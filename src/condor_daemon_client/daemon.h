@@ -709,6 +709,12 @@ public:
 	void setRequestAuthentication(bool request) { m_request_auth = request; }
 	bool getRequestAuthentication() { return m_request_auth; }
 
+		/**
+		   Helper method for commands to see if we've already
+		   authenticated this socket, and if not, to try to do so.
+		*/
+	bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
+
 protected:
 	// Data members
 	std::string _name;
@@ -937,12 +943,6 @@ protected:
 		   if we failed to locate it.
 		*/
 	bool checkAddr( void );
-
-		/**
-           Helper method for commands to see if we've already
-           authenticated this socket, and if not, to try to do so.
-		*/
-    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
 		/**
 		   Internal function used by public versions of startCommand().

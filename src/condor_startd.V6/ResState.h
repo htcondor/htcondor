@@ -25,7 +25,7 @@
 class ResState
 {
 public:
-	ResState(Resource* rip);
+	ResState(Resource* rip, State initial_state = owner_state);
 	State	state( void ) const { return r_state; };
 	Activity activity( void ) const { return r_act; };
 	void	publish( ClassAd* );

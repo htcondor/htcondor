@@ -97,7 +97,8 @@ public:
 	Resource(
 		CpuAttributes*, int id, const char * prefx,
 		Resource * _donor = nullptr,
-		bool take_donor_claim = false
+		bool take_donor_claim = false,
+		bool is_replacement_slot = false
 	);
 	~Resource();
 
@@ -601,7 +602,7 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim, const char * new_slot_prefix = NULL);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim, const char * new_slot_prefix = NULL, bool is_replacement_slot = false );
 
 /*
 Create multiple dynamic slots for a single request ad
