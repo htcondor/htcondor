@@ -168,69 +168,102 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 }
 
 
+condor::cr::void_coroutine
+command_data_slot_callback(
+	Sock * sock,
+	std::string originaClaimID,
+	ClassAd requestAd
+);
+
+
 //
-// FIXME: This can't actually take a (bare) pointer, for lifetime-management
-// reasons.  Instead, it needs to take a copy and then look for the original
-// (using FindMrecByClaimID()) after it get backs from the event loop.
+// If this were the coroutine it should be, we'd need to worry about the
+// lifetime of the `mrec` pointer; but see what we're already doing to avoid
+// having to do so.  Likewise, we'd need a copy of the `requestAd`.
+//
+void
+start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
+	// dprintf( D_ALWAYS, "start_command_data_slot(): begin.\n" );
+
+	CondorError errorStack;
+	DCStartd startd( mrec->peer, nullptr );
+
+	std::string originalClaimID = mrec->claim_id.claimId();
+	auto result = startd.startCommand_nonblocking(
+		COMMAND_DATA_SLOT,
+		Sock::reli_sock,
+		20 /* seconds of careful research */,
+		/* & errorStack, */ // We'll figure out the lifetime of this later.
+		nullptr,
+		[originalClaimID, requestAd](
+			bool success, Sock * sock, CondorError * errorStack,
+			const std::string & /* trust_domain */,
+			bool /* should_try_token_request */
+		) -> void {
+			if( success ) {
+				command_data_slot_callback( sock, originalClaimID, requestAd );
+			} else {
+				// ... FIXME ...
+				dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT): failed: %s.\n", errorStack == nullptr ? "no error stack" : errorStack->getFullText().c_str() );
+			}
+		}
+	);
+
+	switch (result) {
+		case StartCommandFailed:
+			// ... FIXME ...
+			dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT) failed.\n" );
+			break;
+		case StartCommandSucceeded:  /* that was quick */
+			break;
+		case StartCommandInProgress: /* as prophesied */
+			break;
+		case StartCommandWouldBlock: /* impossible */
+			break;
+		case StartCommandContinue:   /* impossible */
+			break;
+	}
+
+	// dprintf( D_ALWAYS, "start_command_data_slot(): end.\n" );
+}
+
+
+//
+// The `sock`et needs to live on the heap, and this function needs to control
+// its lifetime.  These requriements appear to be guaranteed by the
+// startCommand_nonblocking() callback API.
+//
+// As always, the (other) parameters are all copies so that we don't have to
+// think about lifetime and ownership.
 //
 condor::cr::void_coroutine
-start_conversion_to_data_slot( match_rec * mrec, ClassAd requestAd ) {
-	dprintf( D_ALWAYS, "start_conversion_to_data_slot(): begin.\n" );
+command_data_slot_callback(
+	Sock * sock,
+	std::string originalClaimID,
+	ClassAd requestAd
+) {
+    auto scope_guard = std::unique_ptr<Sock>(sock);
 
 	ClassAd commandAd;
-	commandAd.InsertAttr( ATTR_CLAIM_ID_LIST, mrec->claim_id.claimId() );
+	commandAd.InsertAttr( ATTR_CLAIM_ID_LIST, originalClaimID );
 	commandAd.InsertAttr( "DesiredSlotPrefix", "data" );
 
 
-	// dprintf( D_ALWAYS, "start_conversion_to_data_slot(): connecting to %s\n", mrec->peer );
-	DCStartd startd( mrec->peer, nullptr );
-
-	CondorError errorStack;
-	const int forever = 0;
-	const int connect_timeout = 20;
-	const bool non_blocking = true;
-	const bool blocking = false;
-	ReliSock * sock = startd.reliSock(
-		connect_timeout, forever, & errorStack, blocking
-	);
-	if( sock == nullptr) {
-		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not reliSock().\n" );
-		co_return;
-	}
-
-	// FIXME: This version of startCommand() is blocking; apparently the
-	// non_blocking above only applies to the initial connection.  Looks like
-	// it's time for AwaitableStartCommand().  sigh.
-	if(! startd.startCommand( COMMAND_DATA_SLOT, sock, 20, & errorStack )) {
-		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not startCommand().\n" );
-		dprintf( D_ALWAYS, "maybe-because: %s\n", errorStack.getFullText().c_str() );
-		co_return;
-	}
-
-	if(! startd.forceAuthentication( sock, & errorStack )) {
-		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not forceAuthentication().\n" );
-		co_return;
-	}
-
-	sock->encode();
 	if(! putClassAd( sock, commandAd )) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not putClassAd(commandAd).\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(commandAd).\n" );
 		co_return;
 	}
 
 	if(! putClassAd( sock, requestAd )) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not putClassAd(requestAd).\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(requestAd).\n" );
 		co_return;
 	}
 
 	if(! sock->end_of_message()) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not end message.\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
 		co_return;
 	}
 
@@ -240,8 +273,7 @@ start_conversion_to_data_slot( match_rec * mrec, ClassAd requestAd ) {
 	// (not sure about how that works with EWOULDBLOCK on connect), so we
 	// only need to return to the event loop before waiting for the reply.
 	//
-/*
-	dprintf( D_ALWAYS, "start_conversion_to_data_slot(): waiting for reply.\n" );
+	// dprintf( D_ALWAYS, "start_command_data_slot(): waiting for reply.\n" );
 	condor::dc::AwaitableDeadlineSocket ads;
 	const int reply_timeout = 20;
 	ads.deadline( sock, reply_timeout );
@@ -249,68 +281,76 @@ start_conversion_to_data_slot( match_rec * mrec, ClassAd requestAd ) {
 	ASSERT(_ == sock || timed_out);
 
 	if( timed_out ) {
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): timed out.\n" );
+	    // ... FIXME ...
+		dprintf( D_ALWAYS, "start_command_data_slot(): timed out.\n" );
 		co_return;
 	}
-*/
 
-dprintf( D_ALWAYS, "start_conversion_to_data_slot(): 7\n" );
+
 	ClassAd replyAd;
 	if(! getClassAd( sock, replyAd )) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not getClassAd(replyAd).\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(replyAd).\n" );
 		co_return;
 	}
 
-dprintf( D_ALWAYS, "start_conversion_to_data_slot(): 8\n" );
 	ClassAd newSlotAd;
 	if(! getClassAd( sock, newSlotAd )) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not getClassAd(newSlotAd).\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(newSlotAd).\n" );
 		co_return;
 	}
-	// FIXME: do something with the new machine ad.
-	// ... anything other than just update the new mrec?
-
 	if(! sock->end_of_message()) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): could not end message.\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
 		co_return;
 	}
 
 
-dprintf( D_ALWAYS, "start_conversion_to_data_slot(): 9\n" );
 	std::string resultString;
 	replyAd.LookupString( ATTR_RESULT, resultString );
 	CAResult result = getCAResultNum( resultString.c_str() );
 	if( result != CA_SUCCESS ) {
 		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): result was not success\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): result was not success\n" );
 		co_return;
 	}
 
-dprintf( D_ALWAYS, "start_conversion_to_data_slot(): 10\n" );
 	// We shouldn't ever need this in anger.
 	std::string claimIDString;
 	if(! replyAd.LookupString( ATTR_CLAIM_ID, claimIDString )) {
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): result did not contain claim ID.\n" );
+	    // ... FIXME ...
+		dprintf( D_ALWAYS, "start_command_data_slot(): result did not contain claim ID.\n" );
 		co_return;
 	}
-	if( claimIDString != mrec->claim_id.claimId() ) {
-		// The point of preserving the claim ID is how much of a pain it
-		// would be to fix up all of the schedd's internal book keeping.
-		dprintf( D_ALWAYS, "start_conversion_to_data_slot(): startd erroneously returned new claim ID.\n" );
+	if( claimIDString != originalClaimID ) {
+	    // ... FIXME ...
+		dprintf( D_ALWAYS, "start_command_data_slot(): startd erroneously returned new claim ID.\n" );
+		dprintf( D_ALWAYS, "%s\n", originalClaimID.c_str() );
+		dprintf( D_ALWAYS, "%s\n", claimIDString.c_str() );
 		co_return;
 	}
 
 
 	//
-	// ... FIXME ...
+	// The slot is now a data slot; find the corresponding match record,
+	// update it, and start a transfer shadow on it.
 	//
-	// Do all the things.
-	//
+	match_rec * mrec = scheduler.FindMrecByClaimID( originalClaimID.c_str() );
+	if( mrec == nullptr ) {
+		// ... FIXME ...
+		dprintf( D_ALWAYS, "command_data_slot(): startCommand(COMMAND_DATA_SLOT, ...) returned but corresponding match record no longer exists.\n" );
+		co_return;
+	}
+
+	// Stolen from Scheduler::claimedStartd(); we should probably refactor.
+	mrec->my_match_ad->CopyFrom(newSlotAd);
+	mrec->my_match_ad->Update(mrec->m_added_attrs);
+	mrec->makeDescription();
+
+	scheduler.addRunnableJob( mrec->shadowRec );
 
 
-	dprintf( D_ALWAYS, "start_conversion_to_data_slot(): success!\n" );
+	// dprintf( D_ALWAYS, "start_command_data_slot(): success!\n" );
 	co_return;
 }
