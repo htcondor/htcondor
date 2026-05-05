@@ -98,7 +98,6 @@
 #include "classad_merge.h"
 
 #include "catalog_utils.h"
-#include "dc_coroutines.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
 
@@ -10920,6 +10919,12 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 			// on a larger role for the startd in managing the disk resources.
 			ASSERT(catalogs);
 			{
+				JobQueueJob * job = GetJobAd( job_id );
+				if(! job) {
+					dprintf( D_ALWAYS, "Scheduler::StartJob() failed to GetJobAd(), not starting job.\n" );
+					return false;
+				}
+
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
 
@@ -10958,7 +10963,8 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// it already has a match.
 				SetMrecJobID(mrec, transfer_job_id);
 
-				JobQueueJob * job = GetJobAd( job_id );
+				// Run the transfer shadow on a data slot created out of
+				// the job slot we matched against.
 				start_command_data_slot( mrec, * job );
 
 

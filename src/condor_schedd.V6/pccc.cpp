@@ -170,9 +170,6 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	// encrypt/decrypt whenever we're about to put/get it on/from the wire.
 	commandAd.InsertAttr( ATTR_CLAIM_ID_LIST, claimIDList.c_str() );
 
-	// FIXME: Remove, for validation only.
-	commandAd.InsertAttr( "DesiredSlotPrefix", "now" );
-
 	ClassAd * jobAd = GetJobAd( nowJob.cluster, nowJob.proc );
 	if(! jobAd) {
 		// We checked that the now job existed when we accepted the coalesce
