@@ -450,6 +450,7 @@ public:
 	Claim*			r_cur;		// Info about the current claim
 	Claim*			r_pre;		// Info about the possibly preempting claim
 	Claim*			r_pre_pre;	// Info about the preempting preempting claim
+	bool			is_data_slot {false};
 
     // store multiple claims (currently > 1 for consumption policies)
     struct claimset_less {
