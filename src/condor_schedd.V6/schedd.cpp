@@ -11341,6 +11341,10 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 	}
 }
 
+VanillaMatchAd::~VanillaMatchAd() {
+	Reset();
+}
+
 void VanillaMatchAd::Reset()
 {
 	std::string slot_attr("SLOT");
@@ -11881,6 +11885,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if( isTransferShadowProcID( job_id.proc ) ) {
 		// This `job_ad` has the prompting job's ID.
 		job_ad->InsertAttr( ATTR_PROC_ID, job_id.proc );
+
+		// Let the EP know that this EP's sandbox must not be hide-mounted.
+		job_ad->InsertAttr( ATTR_IS_TRANSFER_SHADOW, true );
 
 		AssignClassAdListOfStrings(
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
@@ -12564,10 +12571,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		}
 	}
 
-	// Don't use a_out_name for argv[0], use
-	// "condor_scheduniv_exec.cluster.proc" instead. 
-	formatstr(argbuf,"condor_scheduniv_exec.%d.%d",job_id.cluster,job_id.proc);
-	args.AppendArg(argbuf);
+	args.AppendArg(a_out_name);
 
 	if(!args.AppendArgsFromClassAd(userJob,error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job arguments: %s\n",
@@ -15842,7 +15846,7 @@ Scheduler::Init()
 	m_negotiate_timeslice.setMaxInterval( SchedDInterval.getMaxInterval() );
 
 	// default every 24 hours
-	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
+	QueueCleanInterval = param_integer("QUEUE_CLEAN_INTERVAL", 8*60*60);
 
 	// default every hour
 	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );

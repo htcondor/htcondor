@@ -111,6 +111,22 @@ def condor(test_dir, slot_config):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # condor_who's IsReady only guarantees the startd is up; it does not
+        # guarantee every slot ad (with Assigned<RESOURCE>s populated by the
+        # MACHINE_RESOURCE_INVENTORY_* script) has reached the collector. Wait
+        # for that here so every test in the class starts from a fully
+        # advertised pool.
+        import time
+        deadline = time.time() + 60
+        for resource, number in resources.items():
+            while time.time() < deadline:
+                result = condor.status(
+                    ad_type=htcondor.AdTypes.Startd,
+                    projection=["SlotID", f"Assigned{resource}s"],
+                )
+                if len([ad for ad in result if f"Assigned{resource}s" in ad]) == number:
+                    break
+                time.sleep(1)
         yield condor
 
 
@@ -194,7 +210,12 @@ def num_busy_slots_history(startd_log_file, handle, num_resources):
     active_claims_history = track_quantity(
         startd_log_file.read(),
         increment_condition=lambda msg: "Changing activity: Idle -> Busy" in msg,
-        decrement_condition=lambda msg: "Changing activity: Busy -> Idle" in msg,
+        # Either "Busy -> Cleaning" (starter's final update arrived before
+        # reap) or "Busy -> Idle" (reap arrived first, e.g. short job or
+        # starter crash) marks the exit from Busy.
+        decrement_condition=lambda msg:
+            "Changing activity: Busy -> Cleaning" in msg or
+            "Changing activity: Busy -> Idle" in msg,
         max_quantity=num_resources,
         expected_quantity=num_resources,
     )

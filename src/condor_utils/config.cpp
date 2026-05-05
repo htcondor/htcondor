@@ -2211,6 +2211,10 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
 		char * tvalue = expand_self_macro(value, name, set, ctx);
+		if (set.metat && set.tracer && set.tracer->match(name)) {
+			// if replacement tracing is enabled, call the tracer log function before we do the replacement
+			set.tracer->log(name, pitem->raw_value, tvalue, set.metat[pitem - set.table]);
+		}
 		if (MATCH != strcmp(tvalue, pitem->raw_value)) {
 			pitem->raw_value = set.apool.insert(tvalue);
 		}

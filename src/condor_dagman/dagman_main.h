@@ -28,6 +28,7 @@
 #include "../condor_utils/dagman_utils.h"
 #include "config.hpp"
 #include "throttles.hpp"
+#include "dagman_submit.h"
 
 extern DagmanUtils dagmanUtils;
 
@@ -72,6 +73,10 @@ public:
 			delete metrics;
 			metrics = nullptr;
 		}
+		if (submitter) {
+			delete submitter;
+			submitter = nullptr;
+		}
 	}
 
 	void ResolveDefaultLog(); // Resolve macro substitutions in nodes.log and verify NFS logging
@@ -89,6 +94,8 @@ public:
 			default:
 				EXCEPT("ERROR: Unsupported metrics file version: %d",
 				       config[i::MetricsVersion]);
+				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
+				break;
 		}
 
 		ASSERT(metrics);
@@ -100,11 +107,31 @@ public:
 
 	void SetThrottles(Throttles userThrottles);
 
+	void CreateSubmitter() {
+		using namespace DagmanDeepOptions;
+		DagSubmitMethod method = static_cast<DagSubmitMethod>(options[i::SubmitMethod]);
+		switch (method) {
+			case DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
+				submitter = new ShellSubmit(*this);
+				break;
+			case DagSubmitMethod::DIRECT: // direct submit
+				submitter = new DirectSubmit(*this);
+				break;
+			default:
+				EXCEPT("ERROR: Unknown submit method (%d)\n", (int)method);
+				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
+				break;
+		}
+
+		ASSERT(submitter);
+	}
+
 	Dag *dag{nullptr};
 	DCSchedd *_schedd{nullptr};
 	MapFile *_protectedUrlMap{nullptr}; // Protected URL Mapfile
 	DagmanClassad *_dagmanClassad{nullptr};
 	DagmanMetrics *metrics{nullptr};
+	DagSubmit *submitter{nullptr};
 
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags

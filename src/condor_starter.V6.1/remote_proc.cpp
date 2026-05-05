@@ -51,7 +51,7 @@ int RemoteProc::StartJob()
 	InitWorkerArgs(args, env, "submit_wait_stageout");
 
 	std::string sandbox_dir = starter->jic->jobRemoteIWD();
-	std::string scratch_dir = starter->GetWorkingDir(0);
+	std::string scratch_dir = starter->GetWorkingDir(WD::OUTER);
 
 	std::string job_ad_file = scratch_dir + ".job.ad";
 	args.AppendArg(job_ad_file.c_str());
@@ -119,7 +119,7 @@ ReapResult RemoteProc::JobReaper( int pid, int status )
 			// remote location.
 			// TODO For now, we're assuming tool's entire stdout/err
 			//   makes a suitable hold reason message.
-			std::string scratch_dir = starter->GetWorkingDir(0);
+			std::string scratch_dir = starter->GetWorkingDir(WD::OUTER);
 			std::string message;
 
 			char buf[512];
@@ -305,7 +305,7 @@ RemoteProc::getStats( int /* timerID */ ) {
 bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 	// TODO Use data from .status.ad file
 
-	std::string status_file = starter->GetWorkingDir(0);
+	std::string status_file = starter->GetWorkingDir(WD::OUTER);
 	status_file += "/.job.ad.out";
 	FILE *status_fp = safe_fopen_wrapper_follow(status_file.c_str(), "r");
 	if ( status_fp != NULL ) {

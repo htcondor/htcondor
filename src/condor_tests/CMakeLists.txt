@@ -86,7 +86,7 @@ if (BUILD_TESTING)
 	endif()
 
     condor_exe( test_starter_guidance.exe
-        "../condor_starter.V6.1/starter_guidance.cpp;test_starter_guidance.cpp"
+        "../condor_starter.V6.1/starter_guidance.cpp;../condor_starter.V6.1/staging_directory.cpp;test_starter_guidance.cpp"
         "${C_LIBEXEC}"
         "${CONDOR_LIBS}"
         OFF
@@ -307,6 +307,11 @@ if (BUILD_TESTING)
 			condor_pl_test(job_filexfer_streamout_van "Vanilla: test for streaming of output when both stream_output is true and false" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_stream.pl")
 			condor_pl_test(test_shadow_reconnect_log "Test shadow reconnect CSV logging" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_htcondor "Test that the Python htcondor bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			if (HAVE_SQLITE3_H)
+				condor_pl_test(test_archive_librarian "Test basic librarian functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			endif()
+
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -386,6 +391,7 @@ endif()
 			condor_pl_test(test_chirp_to_dagman_log "Test chirp events get written to DAGMan log" "dagman;quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_script_debug_file "Test DAGMan ability to capture script standard output streams" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_startd_cron "Test startd cron one shots write to start log" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_startd_cleaning_activity "Test startd Claimed/Cleaning activity" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_script_macros "Test DAGMan script macros" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -394,6 +400,7 @@ endif()
 			condor_pl_test(test_dagman_options_mutual_exclusion "Test DAGMan Util options mutual exclusion" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_specify_rescue "Test DAGMan rescue file by name specification" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dag_all_nodes "Test DAG ALL_NODES keyword" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_no_submit_retry "Test DAGMan does not re-submit permanent failures" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_job_list_failure_tolerance "Test DAGMan tolerance for job list failures" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -970,7 +977,7 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 	condor_pl_test(job_dagman_node_status_rm "Test node status file /w condor_rm" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_status_rm.dag;src/condor_tests/job_dagman_node_status_rm_node.pl;src/condor_tests/job_dagman_node_status_rm_node.cmd;src/condor_tests/job_dagman_node_status_rm_node.template")
 	condor_pl_test(job_dagman_job_held "Test removing jobs held too many times" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_job_held.config;src/condor_tests/job_dagman_job_held.dag;src/condor_tests/job_dagman_job_held-nodeA.cmd;src/condor_tests/job_dagman_job_held-nodeB.cmd;src/condor_tests/job_dagman_job_held-node.pl")
 	condor_pl_test(job_dagman_reject "Test the REJECT keyword, inside a splice" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_reject-0.dag;src/condor_tests/job_dagman_reject-1.dag;src/condor_tests/job_dagman_reject.cmd")
-	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_jobstate_log.config;src/condor_tests/job_dagman_jobstate_log-nodeB.pl;src/condor_tests/job_dagman_jobstate_log-nodeD.pl;src/condor_tests/job_dagman_jobstate_log-upper-nodeA.cmd;src/condor_tests/job_dagman_jobstate_log.dag;src/condor_tests/job_dagman_jobstate_log-nodeC.cmd;src/condor_tests/job_dagman_jobstate_log-nodeE.cmd;src/condor_tests/job_dagman_jobstate_log-upper-nodeA.pl;src/condor_tests/job_dagman_jobstate_log-nodeA.cmd;src/condor_tests/job_dagman_jobstate_log-nodeC.pl;src/condor_tests/job_dagman_jobstate_log-post.pl;src/condor_tests/job_dagman_jobstate_log-wrapper.dag;src/condor_tests/job_dagman_jobstate_log-nodeA.pl;src/condor_tests/job_dagman_jobstate_log-nodeC-post.pl;src/condor_tests/job_dagman_jobstate_log-pre.pl;src/condor_tests/job_dagman_jobstate_log-nodeB.cmd;src/condor_tests/job_dagman_jobstate_log-nodeD.cmd")
+	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_jobstate_log-nodeB.pl;src/condor_tests/job_dagman_jobstate_log-nodeD.pl;src/condor_tests/job_dagman_jobstate_log-upper-nodeA.cmd;src/condor_tests/job_dagman_jobstate_log.dag;src/condor_tests/job_dagman_jobstate_log-nodeC.cmd;src/condor_tests/job_dagman_jobstate_log-nodeE.cmd;src/condor_tests/job_dagman_jobstate_log-upper-nodeA.pl;src/condor_tests/job_dagman_jobstate_log-nodeA.cmd;src/condor_tests/job_dagman_jobstate_log-nodeC.pl;src/condor_tests/job_dagman_jobstate_log-post.pl;src/condor_tests/job_dagman_jobstate_log-wrapper.dag;src/condor_tests/job_dagman_jobstate_log-nodeA.pl;src/condor_tests/job_dagman_jobstate_log-nodeC-post.pl;src/condor_tests/job_dagman_jobstate_log-pre.pl;src/condor_tests/job_dagman_jobstate_log-nodeB.cmd;src/condor_tests/job_dagman_jobstate_log-nodeD.cmd")
 	condor_pl_test(job_dagman_gt1957 "Test gittrac #1957 fix" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_gt1957.cmd;src/condor_tests/job_dagman_gt1957.dag;src/condor_tests/job_dagman_gt1957.testlog")
 	#condor_pl_test(perf_busy_lynn_100_100_500_sched "Generated cpu loading performance test" "performance;long")
 	condor_pl_test(job_dagman_subdag_multi_prohibit-A "Test multi setting prohibiting subdags A" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_subdag_multi_prohibit-A.config;src/condor_tests/job_dagman_subdag_multi_prohibit-A-nodeA.cmd;src/condor_tests/job_dagman_subdag_multi_prohibit-A-sub.dag;src/condor_tests/job_dagman_subdag_multi_prohibit-A.dag;src/condor_tests/job_dagman_subdag_multi_prohibit-A-subnode.cmd")

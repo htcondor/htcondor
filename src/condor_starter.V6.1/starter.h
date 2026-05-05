@@ -26,13 +26,17 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+enum class WD : bool {
+	INNER = true,
+	OUTER = false,
+};
+
 #if defined(LINUX) || defined(DARWIN)
     // We don't test on BSD, so don't claim the hardlink code works there.
     #define CFT_VERSION 2
 #else
     #define CFT_VERSION 0
 #endif
-
 
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
@@ -226,8 +230,8 @@ public:
 		/** Return the temporary directory under Execute for this job.
 		 *  If file transfer is used, this will also be the job's IWD.
 		 */
-	const char *GetWorkingDir(bool inner) const {
-		if (inner && ! InnerWorkingDir.empty()) {
+	const char *GetWorkingDir(WD which) const {
+		if (which == WD::INNER && ! InnerWorkingDir.empty()) {
 			return InnerWorkingDir.c_str();
 		}
 		return WorkingDir.c_str();

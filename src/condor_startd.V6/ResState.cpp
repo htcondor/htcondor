@@ -41,6 +41,7 @@ ResState::ResState( Resource* res_ip )
 	m_time_claimed_busy = 0;
 	m_time_claimed_suspended = 0;
 	m_time_claimed_retiring = 0;
+	m_time_claimed_cleaning = 0;
 	m_time_preempting_vacating = 0;
 	m_time_preempting_killing = 0;
 	m_time_drained_retiring = 0;
@@ -74,6 +75,7 @@ ResState::publish( ClassAd* cp )
 	publishHistoryInfo(cp, claimed_state, busy_act);
 	publishHistoryInfo(cp, claimed_state, suspended_act);
 	publishHistoryInfo(cp, claimed_state, retiring_act);
+	publishHistoryInfo(cp, claimed_state, cleaning_act);
 	publishHistoryInfo(cp, preempting_state, vacating_act);
 	publishHistoryInfo(cp, preempting_state, killing_act);
 	publishHistoryInfo(cp, backfill_state, idle_act);
@@ -272,7 +274,13 @@ ResState::eval_policy(State & _state, Activity & _act, const Resource * rip, std
 	switch (_state) {
 
 	case claimed_state:
-		if( _act == suspended_act && rip->isSuspendedForCOD() ) { 
+		// Cleaning is terminal within a claim: the starter has sent its
+		// final update and we are just waiting for it to be reaped. No
+		// policy expression can move us out of here.
+		if( _act == cleaning_act ) {
+			return 0;
+		}
+		if( _act == suspended_act && rip->isSuspendedForCOD() ) {
 				// this is the special case where we do *NOT* want to
 				// evaluate any policy expressions.  so long as
 				// there's an active COD job, we want to leave the
@@ -694,6 +702,11 @@ ResState::do_periodic_actions( void )
 	switch( r_state ) {
 
 	case claimed_state:
+		// In Cleaning, the starter has sent its final update and is on
+		// its way out. No checkpoint, no fetch, no reqexp changes.
+		if( r_act == cleaning_act ) {
+			break;
+		}
 		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
@@ -800,6 +813,7 @@ act_to_load( Activity act )
 	switch( act ) {
 	case idle_act:
 	case suspended_act:
+	case cleaning_act:
 		return 0;
 		break;
 	case busy_act:
@@ -938,8 +952,10 @@ ResState::enter_action( State s, Activity a,
 		}
 		// If the slot is leaving retiring action but remaining in claimed
 		// state, clear the vacate reason that caused it to enter retiring
-		// action.
-		if (a != retiring_act) {
+		// action. Preserve the vacate reason when entering cleaning so a
+		// preempt that arrived before/during Busy->Cleaning survives to the
+		// subsequent Preempting transition on starter reap.
+		if (a != retiring_act && a != cleaning_act) {
 			rip->r_cur->clearVacateReason();
 		}
 		if (a == suspended_act) {
@@ -1424,6 +1440,10 @@ ResState::getHistoryInfo( State _state, Activity _act ) {
 		case retiring_act:
 			var_ptr = &m_time_claimed_retiring;
 			attr_name = ATTR_TOTAL_TIME_CLAIMED_RETIRING;
+			break;
+		case cleaning_act:
+			var_ptr = &m_time_claimed_cleaning;
+			attr_name = ATTR_TOTAL_TIME_CLAIMED_CLEANING;
 			break;
 		default:
 			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",

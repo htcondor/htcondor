@@ -216,6 +216,7 @@ jobs:
         run: |
           sudo condor_master
           condor_version
+          condor_who -wait:600 'IsReady && STARTD_State =?= "Ready"'
           sleep 50
           condor_status
 

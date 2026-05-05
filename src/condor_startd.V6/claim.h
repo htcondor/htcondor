@@ -371,6 +371,11 @@ private:
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	bool        c_schedd_reported_job_done;
+	// Set while Claim::starterExited is on the stack so that a pending final
+	// update drained via handle_pending_updates() does not push the slot
+	// through Claimed/Cleaning before the reap completes the normal
+	// post-starter transition.
+	bool        c_reaping{false};
 	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 	std::string c_ocu_name;

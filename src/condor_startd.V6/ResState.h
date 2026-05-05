@@ -120,6 +120,7 @@ private:
 	time_t	m_time_claimed_busy;
 	time_t	m_time_claimed_suspended;
 	time_t	m_time_claimed_retiring;
+	time_t	m_time_claimed_cleaning;
 	time_t	m_time_preempting_vacating;
 	time_t	m_time_preempting_killing;
 	time_t	m_time_backfill_idle;

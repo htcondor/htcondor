@@ -153,6 +153,10 @@ ad_printmask.h
 print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
+archive_reader.cpp
+archive_reader.h
+librarian_client.cpp
+librarian_client.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h

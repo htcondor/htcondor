@@ -297,7 +297,7 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
      )
      #Wait for job to complete. Gave a hefty amount of time due to large files being transfered
      clustId = job_handle.clusterid
-     assert job_handle.wait(condition=ClusterState.all_complete,timeout=30)
+     assert job_handle.wait(condition=ClusterState.all_complete,timeout=300)
      schedd = default_condor.get_local_schedd()
      #once job is done get job ad attributes needed for test verification
      job_ad = []

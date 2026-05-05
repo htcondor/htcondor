@@ -731,7 +731,9 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
-	dagman.CreateMetrics(); // Must be created post argument parsing
+	// Must be created post argument parsing
+	dagman.CreateMetrics();
+	dagman.CreateSubmitter();
 
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
 	int parentDAGid = dagman._dagmanClassad->Initialize(dagOpts);

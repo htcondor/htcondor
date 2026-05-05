@@ -68,6 +68,7 @@ my %memory_data64 = (
 	"fedora41" => "904",
 	"fedora42" => "904",
 	"fedora43" => "1064",
+	"fedora44" => "1064",
 	"opensuse15" => "904",
 	"opensuse16" => "1860",
 	"redhat5"  => "448",
@@ -83,6 +84,7 @@ my %memory_data64 = (
 	"ubuntu20" => "752",
 	"ubuntu22" => "1500",
 	"ubuntu24" => "1284",
+	"ubuntu26" => "3000", # Sometime ubuntu 26 arm uses 2Mb of heap.  Should investigate this someday
 );
 # for X86 shadows
 my %memory_data32 = (

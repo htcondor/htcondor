@@ -595,7 +595,7 @@ make -C docs man
 # Any changes here should be synchronized with
 # ../debian/rules 
 
-%if 0%{?suse_version}
+%if 0%{?suse_version} || 0%{?fedora} >= 44
 %cmake \
 %else
 %cmake3 \
@@ -633,20 +633,28 @@ make -C docs man
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
+
+%if 0%{?fedora} >= 44
+%cmake_build
+%if %uw_build
+%cmake_build -t tests
+%endif
+%else
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
+%endif
 %endif
 
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
@@ -663,10 +671,18 @@ echo ---------------------------- makefile ---------------------------------
 %if 0%{?suse_version}
 cd build
 %endif
+%if 0%{?fedora} >= 44
+%cmake_install
+%else
 make install DESTDIR=%{buildroot}
+%endif
 
 %if %uw_build
+%if 0%{?fedora} >= 44
+%cmake_build -t tests-tar-pkg
+%else
 make tests-tar-pkg
+%endif
 # tarball of tests
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
@@ -1002,7 +1018,6 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_version
-%_bindir/condor_librarian
 %_bindir/condor_history
 %_bindir/condor_status
 %_bindir/condor_wait
@@ -1054,6 +1069,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_fetchlog
 %_sbindir/condor_ft-gahp
 %_sbindir/condor_had
+%_sbindir/condor_librarian
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
 %_sbindir/condor_off
@@ -1816,7 +1832,7 @@ fi
 - Fix so 'condor_submit -interactive' works on cgroup v2 execution points
 
 * Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
-- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Preliminary support for Ubuntu 24.04 (Noble Numbat)
 - Warns about deprecated multiple queue statements in a submit file
 - Fix bug where plugins could not signify to retry a file transfer
 - The condor_upgrade_check script checks for proper token file permissions
