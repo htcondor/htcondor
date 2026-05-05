@@ -341,9 +341,9 @@ ResMgr::init_config_classad( void )
 					// then insert that as the argument list for a min function call. In effect, this becomes
 					// Healthy = min({$(STARTD_HEALTH_EXPRS),1})
 					// when STARTD_HEALTH_EXPRS is a valid list of classad expressions.
-					if (health_checks->size() > 1) {
-						config_classad->Insert("HealthExprs", health_checks->Copy());
-						formatstr(exprstr, "sum(HealthExprs) / %u.0", (int)health_checks->size());
+					if (health_checks->size() > 0) {
+						config_classad->Insert(ATTR_HEALTH_EXPRS, health_checks->Copy());
+						formatstr(exprstr, "sum(" ATTR_HEALTH_EXPRS ") / %u.0", (unsigned int)health_checks->size());
 						config_classad->AssignExpr("HealthFactor", exprstr.c_str());
 					}
 					health_checks->push_back(classad::Literal::MakeInteger(1));
@@ -542,16 +542,13 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	if ( ! broken_reasons.empty()) {
 		broken_reasons.insert(0,"{");
 		broken_reasons.push_back('}');
-		ad.AssignExpr("BrokenReasons", broken_reasons.c_str());
-		// for backward compat, assign a BrokenSlots attribute that just refs the new BrokenReasons attribute
-		// TODO: add add for compat with 24.2,  remove someday
-		ad.AssignExpr("BrokenSlots", "BrokenReasons");
+		ad.AssignExpr(ATTR_BROKEN_REASONS, broken_reasons.c_str());
 	}
 
 	if ( ! broken_contexts.empty()) {
 		broken_contexts.insert(0,"{");
 		broken_contexts.push_back('}');
-		ad.AssignExpr("BrokenContextAds", broken_contexts.c_str());
+		ad.AssignExpr(ATTR_BROKEN_CONTEXT_ADS, broken_contexts.c_str());
 	}
 
 	// static information about custom resources

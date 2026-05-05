@@ -97,6 +97,23 @@ protected:
 	double bk_mem_usage{0.0};
 };
 
+class StartdHealthTotal : public ClassTotal
+{
+public:
+	StartdHealthTotal() : ClassTotal(PP_STARTD_HEALTH) {}
+	virtual void addProjection(classad::References & attrs);
+	virtual int update (ClassAd *, int options);
+	virtual void displayHeader(FILE *);
+	virtual void displayInfo(FILE *, int);
+
+protected:
+	int healthy{0};
+	int unhealthy{0};
+	int broken{0};
+	int unsupported{0};
+};
+
+
 // slot totals
 class StartdNormalTotal : public ClassTotal
 {
