@@ -126,7 +126,7 @@ jobs:
         run: ( cd __build && ctest --output-junit test.xml -j 40 -R job_dagman_vars )
 
   winbuild:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
