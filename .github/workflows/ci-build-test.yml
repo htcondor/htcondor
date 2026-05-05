@@ -149,7 +149,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
 
       - name: cmake configuration
-        run: (cmake -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false .)
+        run: (cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false .)
 
       - name: build
         run: (cmake --build . --verbose --config Release --parallel 4)
