@@ -176,6 +176,16 @@ command_data_slot_callback(
 );
 
 
+void
+call_StartJobFailure( const std::string & claimID ) {
+	match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
+	if( mrec != nullptr ) {
+		PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
+		scheduler.StartJobFailed( mrec, id );
+	}
+}
+
+
 //
 // If this were the coroutine it should be, we'd need to worry about the
 // lifetime of the `mrec` pointer; but see what we're already doing to avoid
@@ -203,17 +213,22 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 			if( success ) {
 				command_data_slot_callback( sock, originalClaimID, requestAd );
 			} else {
-				// ... FIXME ...
-				dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT): failed: %s.\n", errorStack == nullptr ? "no error stack" : errorStack->getFullText().c_str() );
+				dprintf( D_ALWAYS,
+					"start_command_data_slot(): startCommand(COMMAND_DATA_SLOT): failed: %s.\n",
+					errorStack == nullptr ? "no error stack" : errorStack->getFullText().c_str()
+				);
+
+				call_StartJobFailure( originalClaimID );
+				return;
 			}
 		}
 	);
 
 	switch (result) {
-		case StartCommandFailed:
-			// ... FIXME ...
+		case StartCommandFailed: {
 			dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT) failed.\n" );
-			break;
+			call_StartJobFailure( originalClaimID );
+			} return;
 		case StartCommandSucceeded:  /* that was quick */
 			break;
 		case StartCommandInProgress: /* as prophesied */
@@ -248,22 +263,21 @@ command_data_slot_callback(
 	commandAd.InsertAttr( ATTR_CLAIM_ID_LIST, originalClaimID );
 	commandAd.InsertAttr( "DesiredSlotPrefix", "data" );
 
-
 	if(! putClassAd( sock, commandAd )) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(commandAd).\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
 	if(! putClassAd( sock, requestAd )) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(requestAd).\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
 	if(! sock->end_of_message()) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
@@ -281,28 +295,28 @@ command_data_slot_callback(
 	ASSERT(_ == sock || timed_out);
 
 	if( timed_out ) {
-	    // ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): timed out.\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
 
 	ClassAd replyAd;
 	if(! getClassAd( sock, replyAd )) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(replyAd).\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
 	ClassAd newSlotAd;
 	if(! getClassAd( sock, newSlotAd )) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(newSlotAd).\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 	if(! sock->end_of_message()) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
@@ -311,23 +325,21 @@ command_data_slot_callback(
 	replyAd.LookupString( ATTR_RESULT, resultString );
 	CAResult result = getCAResultNum( resultString.c_str() );
 	if( result != CA_SUCCESS ) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): result was not success\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
 	// We shouldn't ever need this in anger.
 	std::string claimIDString;
 	if(! replyAd.LookupString( ATTR_CLAIM_ID, claimIDString )) {
-	    // ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): result did not contain claim ID.\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 	if( claimIDString != originalClaimID ) {
-	    // ... FIXME ...
 		dprintf( D_ALWAYS, "start_command_data_slot(): startd erroneously returned new claim ID.\n" );
-		dprintf( D_ALWAYS, "%s\n", originalClaimID.c_str() );
-		dprintf( D_ALWAYS, "%s\n", claimIDString.c_str() );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
@@ -338,8 +350,8 @@ command_data_slot_callback(
 	//
 	match_rec * mrec = scheduler.FindMrecByClaimID( originalClaimID.c_str() );
 	if( mrec == nullptr ) {
-		// ... FIXME ...
 		dprintf( D_ALWAYS, "command_data_slot(): startCommand(COMMAND_DATA_SLOT, ...) returned but corresponding match record no longer exists.\n" );
+		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
 
@@ -348,6 +360,7 @@ command_data_slot_callback(
 	mrec->my_match_ad->Update(mrec->m_added_attrs);
 	mrec->makeDescription();
 
+	// And -- finally -- schedule the transfer shadow to to be spawned.
 	scheduler.addRunnableJob( mrec->shadowRec );
 
 
