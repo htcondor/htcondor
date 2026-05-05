@@ -10,8 +10,8 @@ machine
 Synopsis
 --------
 
-**condor_who** [*help options* ] [*address options* ] [*display
-options* ]
+**condor_who** [*help options* ] [*daemon options* ] [*address options* ]
+[*display options* ]
 
 Description
 -----------
@@ -20,16 +20,19 @@ Description
 the jobs running on a machine. It is intended to be run on an execute
 machine.
 
-The options that may be supplied to *condor_who* belong to three
+The options that may be supplied to *condor_who* belong to four
 groups:
 
 -  **Help options** provide information about the *condor_who* tool.
+-  **Daemon options** display information about HTCondor daemons rather
+   than running jobs, and do not query the *condor_startd*.
 -  **Address options** allow destination specification for query.
 -  **Display options** control the formatting and which of the queried
    information to display.
 
-At any time, only one **help option** and one **address option** may be
-specified. Any number of **display options** may be specified.
+At any time, only one **help option**, one **daemon option** and one
+**address option** may be specified. Any number of **display options**
+may be specified.
 
 *condor_who* obtains its information about jobs by talking to one or
 more *condor_startd* daemons. So, *condor_who* must identify the
@@ -54,9 +57,24 @@ Options
  **-help**
     (help option) Display usage information
  **-daemons**
-    (help option) Display information about the daemons running on the
+    (daemon option) Display information about the daemons running on the
     specified machine, including the daemon's PID, IP address and
-    command port
+    command port. In this mode *condor_who* does not query
+    *condor_startd* daemons for running jobs.
+ **-quickdaemons**
+    (daemon option) Query the *condor_master* for its readiness ClassAd
+    and display it. If the *condor_master* is not running, report the
+    last known *condor_master* address and the *condor_master* exit code
+    instead. Like **-daemons**, this option does not query the
+    *condor_startd* for running jobs.
+ **-wait-for-ready[:**\ *seconds*\ **]** *expression*
+    (daemon option) Query the *condor_master* for its readiness ClassAd
+    and wait up to *seconds* seconds for the given ClassAd
+    *expression* to evaluate to *true* against that ad. The short form
+    **-wait** is equivalent. If the optional *seconds* timeout is
+    omitted, *condor_who* will not wait and will simply report the
+    current value of *expression*. As with **-quickdaemons**, the
+    *condor_startd* is not queried for jobs.
  **-diagnostic**
     (help option) Display extra information helpful for debugging
  **-verbose**
@@ -74,6 +92,31 @@ Options
     *condor_startd* daemon to query
  **-long**
     (display option) Display entire ClassAds
+ **-jobs**
+    (display option) Display the job ClassAds running on the
+    *condor_startd* rather than the slot ClassAds. Useful with
+    **-long** to inspect job attributes as seen by the execute machine.
+ **-startd**
+    (display option) Display the *condor_startd* daemon ClassAd rather
+    than the slot ClassAds.
+ **-constraint** *expression*
+    (display option) Restrict the displayed ClassAds to those for which
+    the ClassAd *expression* evaluates to *true*.
+ **-limit** *number*
+    (display option) Limit the number of ClassAds returned by the
+    *condor_startd* to at most *number*.
+ **-snapshot[:**\ *details*\ **]**
+    (display option) Request a snapshot of the *condor_startd*'s
+    internal state, including slot ClassAds that would not normally be
+    advertised (for example, slots without a running job). The optional
+    *details* argument is passed to the *condor_startd* to select which
+    internal ClassAds are returned; the default is ``1``. Most useful
+    in combination with **-long**.
+ **-statistics** *WhichStatistics*
+    (display option) Identifies which Statistics attributes to include
+    in the *condor_startd* ClassAd. *WhichStatistics* is specified
+    using the same syntax as defined for
+    :macro:`STATISTICS_TO_PUBLISH`.
  **-wide**
     (display option) Displays fields without truncating them in order to
     fit screen width

@@ -3253,7 +3253,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 			if ( ! pcolval) continue;
 
 			const char * name = NULL;
-			pcolval->IsStringValue(name);
+			if ( ! pcolval->IsStringValue(name) || ! name) continue;
 			int cch = (int)strlen(name);
 
 			buf.clear();

@@ -654,10 +654,18 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 	// There's a race condition with partitionable slots where we can get the same
 	// mrec twice, if we are claiming partitionable leftovers at the same time
 	// as we are claiming.  If there's a dup, just drop it here instead of
-	// messing up all our data structures.
-	//
+	// messing up all our data structures.  Check both completed matches and
+	// in-flight (pending) matches: the negotiator may re-present a pslot whose
+	// claim id we have already requested but for which we have not yet received
+	// the post-split dslot ad. Claiming again would issue a duplicate
+	// REQUEST_CLAIM that the startd rejects (slot already in Claimed state),
+	// which then causes us to DelMrec the original and lose the claim.
 
-	if (dedicated_scheduler.all_matches_by_id.find(claim_id) != dedicated_scheduler.all_matches_by_id.end()) {
+	if (dedicated_scheduler.all_matches_by_id.find(claim_id) != dedicated_scheduler.all_matches_by_id.end() ||
+	    dedicated_scheduler.pending_matches.find(claim_id) != dedicated_scheduler.pending_matches.end()) {
+		dprintf(D_FULLDEBUG,
+		        "DedicatedScheduler: ignoring duplicate match for claim %s (already claimed or in flight)\n",
+		        ClaimIdParser(claim_id).publicClaimId());
 		return false;
 	}
 
@@ -3185,6 +3193,18 @@ DedicatedScheduler::AddMrec(
 	if (all_matches.find(slot_name) != all_matches.end()) {
 			// Already have this match
 		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
+		return nullptr;
+	}
+		// Also reject if this claim id is already in flight (pending_matches)
+		// or already fully claimed (all_matches_by_id). Without this guard,
+		// the partitionable path below would silently overwrite the existing
+		// pending_matches[claim_id] entry and orphan the original match_rec,
+		// then issue a duplicate REQUEST_CLAIM that the startd rejects.
+	if (pending_matches.find(claim_id) != pending_matches.end() ||
+	    all_matches_by_id.find(claim_id) != all_matches_by_id.end()) {
+		dprintf(D_ALWAYS,
+		        "DedicatedScheduler: negotiator sent match for %s with claim %s already in use, ignoring\n",
+		        slot_name, ClaimIdParser(claim_id).publicClaimId());
 		return nullptr;
 	}
 		// Now, create a match_rec for this resource

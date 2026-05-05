@@ -613,7 +613,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 	#endif // HAVE_BACKTRACE
 	}
 
-	if ( ! dbgInfo->debugFP && dbgInfo->dont_panic) {
+	if ( ! dbgInfo->debugFP) {
 		// TODO: buffer until the file opens?
 		return;
 	}

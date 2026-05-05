@@ -182,6 +182,12 @@ Options
     the options: **-dump**, **-config**, or **-verbose**.
  **-master | -schedd | -startd | -collector | -negotiator**
     (location option) The specific daemon to query.
+ **-root-config** *file*
+    (location option) Read configuration starting from *file* as the
+    root configuration file, rather than the configuration file
+    determined from :macro:`CONDOR_CONFIG` or the usual search path. Only
+    applies when *condor_config_val* is reading the configuration from
+    files; it is ignored when querying a daemon.
  **use** *category* [*:set name* ] [**-expand** ]
     Display information about configuration templates (see
     :ref:`admin-manual/introduction-to-configuration:configuration templates`).

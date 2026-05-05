@@ -34,6 +34,7 @@
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
 #include "dag_commands.h"
+#include "dagman_submit.h"
 #include "throttles.hpp"
 #include <ranges>
 #include <filesystem>
@@ -401,12 +402,6 @@ protected:
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
-	typedef enum {
-		SUBMIT_RESULT_OK,
-		SUBMIT_RESULT_FAILED,
-		SUBMIT_RESULT_NO_SUBMIT,
-	} submit_result_t;
-
 	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
@@ -435,7 +430,7 @@ private:
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
+	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -521,7 +516,8 @@ private:
 	ScriptQ* _postScriptQ{nullptr};
 	ScriptQ* _holdScriptQ{nullptr};
 
-	DagmanMetrics* _metrics{nullptr};
+	DagSubmit* submitter{nullptr}; // This does not own this pointer
+	DagmanMetrics* _metrics{nullptr}; // This does not own this pointer
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access

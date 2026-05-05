@@ -516,9 +516,19 @@ public:
 			for (const auto &restr : names) {
 				auto & re = patterns[ix++];
 				int errcode, errindex;
-				re.compile(restr.c_str(), &errcode, &errindex, PCRE2_CASELESS);
+				if (! re.compile(restr.c_str(), &errcode, &errindex, PCRE2_CASELESS)) {
+					fprintf(stderr, "warning: failed to compile trace pattern '%s' (PCRE2 error %d at offset %d); ignoring it.\n",
+						restr.c_str(), errcode, errindex);
+					// re is left uninitialized; match() already skips
+					// patterns where re.isInitialized() is false.
+				}
 			}
 		}
+	}
+	~ConfigMetaTracer() {
+		// Tie the global tracer registration to this object's lifetime, so
+		// the global doesn't outlive the wrapped state.
+		enable_config_tracing(nullptr);
 	}
 	std::set<std::string, CaseIgnLTYourString> names;
 	std::vector<Regex> patterns;

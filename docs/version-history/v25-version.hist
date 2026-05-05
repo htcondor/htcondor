@@ -1,5 +1,16 @@
 *** 25.11.0 features
 
+- Introducing the :ref:`archive-librarian`. A new daemon that maintains an
+  SQLite3 database of indexes to historical job records located in an Access
+  Point's :macro:`HISTORY` archive.
+  :jira:`3143`
+
+- DAGMan will no longer re-attempt placement of jobs to the *condor_schedd*
+  when submission will never work such as when an invalid job description file
+  is provided to a node. Note, this only occurs when DAGMan is in direct
+  submission mode (default).
+  :jira:`3716`
+
 - Scheduler universe jobs no longer have their argv[0] set to
   ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
   executable name (``a_out_name``). This means that so-called "multibin"
@@ -31,6 +42,20 @@
   :jira:`3518`
 
 - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
+  A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
+  final job update and exits when the starter process is reaped. While
+  cleaning, the slot will not match new work; :tool:`condor_vacate`
+  and other preempt requests that arrive during cleaning are recorded
+  and applied when the starter is reaped, rather than triggering a
+  second state change while the starter is already exiting. A new
+  :ad-attr:`TotalTimeClaimedCleaning` machine attribute accumulates
+  time spent in this activity.
+  :jira:`3686`
+
+- Docker universe jobs that also had a credential being refreshed
+  that also exhausted their :subcom:`RequestMemory` would not go
+  on hold immediately, but only after a 20 minute delay.
+  :jira:`3621`
 
 *** 25.11.0 bugs
 
