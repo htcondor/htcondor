@@ -57,6 +57,11 @@
   on hold immediately, but only after a 20 minute delay.
   :jira:`3621`
 
+- Slots used by an AP to transfer (and then store) common files now have
+  the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
+  slots now also set the attribute ``IsDataSlot`` in their slot ads.
+  :jira:`3715`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
