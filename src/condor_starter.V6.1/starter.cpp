@@ -2433,7 +2433,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 		this->deferral_tid = daemonCore->Register_Timer(
 										deltaT,
-										(TimerHandlercpp)&Starter::SpawnPreScript,
+										(TimerHandlercpp)&Starter::SpawnJobOrPreScript,
 										"deferred job start",
 										this );
 			//
@@ -2527,12 +2527,13 @@ Starter::removeDeferredJobs() {
 }
 
 /**
- * Start the prescript for a job, if one exists
- * If one doesn't, then we will call SpawnJob() directly
+ * Timer callback to Start the job command(s).  If there is a
+ * job pre script and pre-scripts are allowed, it will start that.
+ * Otherwise (the normal case) it will call SpawnJob directly.
  * 
  **/
 void
-Starter::SpawnPreScript( int /* timerID */ )
+Starter::SpawnJobOrPreScript( int /* timerID */ )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -2544,23 +2545,27 @@ Starter::SpawnPreScript( int /* timerID */ )
 	
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
-	char* tmp = NULL;
-	std::string attr;
+	ClassAd * mad = jic->machClassAd();
 
-	attr = "Pre";
-	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr, &tmp) ) {
-		free( tmp );
-		tmp = NULL;
-		pre_script = new ScriptProc( jobAd, "Pre" );
-	}
+	std::string precmd, postcmd;
+	jobAd->LookupString("Pre" ATTR_JOB_CMD, precmd);
+	jobAd->LookupString("Post" ATTR_JOB_CMD, postcmd);
 
-	attr = "Post";
-	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr, &tmp) ) {
-		free( tmp );
-		tmp = NULL;
-		post_script = new ScriptProc( jobAd, "Post" );
+	if ( ! precmd.empty() || ! postcmd.empty()) {
+
+		dprintf(D_ALWAYS, "Job PreCmd: %s\n", precmd.c_str());
+		dprintf(D_ALWAYS, "Job PostCmd: %s\n", postcmd.c_str());
+
+		// job defined PreCmd and PostCmd are obsolete and disabled by default.
+		// If an admin wants to enable them, they can do so with an expression
+		// that references both slot and job.
+		const bool def_allow_pre_post = false;
+		if (param_boolean("STARTER_ALLOW_JOB_PRE_AND_POST_CMD", def_allow_pre_post, false, mad, jobAd)) {
+			if ( ! precmd.empty())  { pre_script = new ScriptProc( jobAd, "Pre" ); }
+			if ( ! postcmd.empty()) { post_script = new ScriptProc( jobAd, "Post" ); }
+		} else {
+			dprintf(D_ALWAYS, "STARTER_ALLOW_JOB_PRE_AND_POST_CMD evaluated to false, PreCmd and PostCmd will be ignored\n");
+		}
 	}
 
 	if( pre_script ) {
@@ -2589,7 +2594,7 @@ Starter::SpawnPreScript( int /* timerID */ )
 
 /**
 * Timer handler to Skip job execution because we failed setup
-* used instead of the deferral timer that executes SpawnPreScript above
+* used instead of the deferral timer that executes SpawnJobOrPreScript above
 * return true if no errors occured
 **/
 void

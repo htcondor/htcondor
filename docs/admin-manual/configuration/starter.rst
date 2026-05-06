@@ -461,6 +461,13 @@ These settings affect the *condor_starter*.
     than 2047 have no real meaning on 32-bit platforms, values larger
     than 2047 result in no limit set on 32-bit platforms.
 
+:macro-def:`STARTER_ALLOW_JOB_PRE_AND_POST_CMD`
+    A boolean classad expression that determines whether the any job defined
+    pre and post scripts will be run. Pre and post scripts run outside
+    of the VM or container of the job and are seldom used because of that.
+    This expression is evaluated in the context of both machine
+    and job ClassAds. Defaults to ``False``.
+
 :macro-def:`USE_PID_NAMESPACES`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to

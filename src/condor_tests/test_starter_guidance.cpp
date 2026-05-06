@@ -382,7 +382,7 @@ bool Starter::skipJobImmediately() { EXCEPT("MOCK"); return false; }
 bool Starter::removeDeferredJobs() { EXCEPT("MOCK"); return false; }
 int Starter::jobEnvironmentReady() { EXCEPT("MOCK"); return -1; }
 int Starter::jobEnvironmentCannotReady(int i, UnreadyReason const&) { EXCEPT("MOCK"); return i; }
-void Starter::SpawnPreScript(int) { EXCEPT("MOCK"); }
+void Starter::SpawnJobOrPreScript(int) { EXCEPT("MOCK"); }
 void Starter::SkipJobs(int) { EXCEPT("MOCK"); }
 bool Starter::allJobsDone() { EXCEPT("MOCK"); return false; }
 int Starter::Reaper(int, int) { EXCEPT("MOCK"); }
