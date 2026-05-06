@@ -208,6 +208,14 @@ _Evaluate (EvalState &state, Value &val) const
 
 			state.depth_remaining++;
 
+			// I think this is indicative of a more serious problem.
+			if( state.depth_remaining > 0 ) {
+				ExprList * el = nullptr;
+				if( val.IsListValue(el) && el == tree ) {
+					state.TakeFromDeletionCache(tree);
+				}
+			}
+
 			state.curAd = curAd;
 
 			return rval;
