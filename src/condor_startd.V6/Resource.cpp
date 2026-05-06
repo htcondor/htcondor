@@ -2827,10 +2827,9 @@ void Resource::publish_static(ClassAd* cap)
 		case DYNAMIC_SLOT:
 			cap->Assign(ATTR_SLOT_DYNAMIC, true);
 			if( is_data_slot ) {
-				cap->Assign(ATTR_SLOT_TYPE, "Data");
-			} else {
-				cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
+				cap->Assign(ATTR_IS_DATA_SLOT, true);
 			}
+			cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			cap->Assign(ATTR_PARENT_SLOT_ID, r_id);
 			cap->Assign(ATTR_DSLOT_ID, r_sub_id);
 			if ( param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) ) {
