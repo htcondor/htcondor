@@ -698,7 +698,26 @@ DockerProc::SetupDockerSsh() {
 	listener.close();
 	listener.assignDomainSocket(uds);
 
-	// and bind it to a filename in the scratch directory
+	// Bind the socket to .docker_sock in the scratch directory.
+	//
+	// The catch: AF_UNIX bind() copies the path out of sun_path, which on
+	// Linux is only 108 bytes.  HTCondor's execute directory path can
+	// easily exceed that (e.g. with long machine/slot names or deeply
+	// nested per-job subdirs), so the obvious "workingDir + /.docker_sock"
+	// does not fit and bind() returns ENAMETOOLONG.
+	//
+	// The Linux-only trick: open the working directory and refer to the
+	// socket via /proc/self/fd/<N>/.docker_sock.  /proc/self/fd/<N> is a
+	// magic symlink that resolves to whatever the open fd points at, so
+	// the kernel does the path lookup starting from our dirfd and creates
+	// the socket inode under the real (long) directory.  The string we
+	// actually place in sun_path is bounded by the width of an int's
+	// decimal representation plus a fixed prefix/suffix -- well under 108
+	// bytes regardless of how deep the working directory is.
+	//
+	// On the wire / on disk the socket still lives at workingDir/.docker_sock
+	// (that is what readdir / stat will show); only the address we hand to
+	// the kernel during bind() is the /proc/self/fd indirection.
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
@@ -707,7 +726,25 @@ DockerProc::SetupDockerSsh() {
 	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
 	std::string pipeName = workingDir + "/.docker_sock";
 
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	// O_PATH is enough: we only need the fd as a directory reference for
+	// the /proc/self/fd lookup; we never read or write through it.
+	int dirfd = -1;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	dirfd = open(workingDir.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+	}
+	if (dirfd < 0) {
+		dprintf(D_ALWAYS, "Cannot open working dir %s for docker ssh_to_job: %d\n", workingDir.c_str(), errno);
+		return;
+	}
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		dprintf(D_ALWAYS, "Cannot format /proc/self/fd path for docker ssh_to_job\n");
+		close(dirfd);
+		return;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	{
@@ -715,9 +752,13 @@ DockerProc::SetupDockerSsh() {
 	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
 	if (rc < 0) {
 		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for docker ssh_to_job: %d\n", pipeName.c_str(), errno);
+		close(dirfd);
 		return;
 	}
 	}
+	// The socket file now exists at workingDir/.docker_sock; the dirfd
+	// was only needed to dodge the sun_path length limit during bind().
+	close(dirfd);
 
 	listen(uds, 50);
 	listener._state = Sock::sock_special;
