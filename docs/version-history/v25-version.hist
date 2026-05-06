@@ -63,6 +63,10 @@
 
 *** 25.11.0 bugs
 
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segfault.
+  :jira:`3554`
+
 *** 25.0.11 bugs
 
 - Fix a recently introduced bug where a parallel universe job that cannot activate one
