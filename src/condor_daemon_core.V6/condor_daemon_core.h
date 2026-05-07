@@ -1875,7 +1875,6 @@ class DaemonCore : public Service
 	bool m_never_use_kill_for_dc_signals;
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
-	bool m_invalidate_sessions_via_tcp;
 
 	// This pairing should representing the "same" socket, just on UDP and TCP.
 	// It's okay for parts to be NULL.  Safe to copy, although all of the
@@ -2364,14 +2363,6 @@ class DaemonCore : public Service
 		   themselves.
 		*/
 	void initCollectorList(void);
-
-	// Inform a client that they attempted to resume a session that
-	// we don't have.
-	// If the client is version 8.8.0 or later, extended information
-	// can be provided in the info_ad. Older clients will assume the
-	// ad is part of the session id to invalidate.
-	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const ClassAd* info_ad = NULL ) const;
 
 	bool m_wants_restart{true};
 	bool m_in_shutdown_peaceful{false};

@@ -28,6 +28,10 @@
 - :tool:`condor_status` now accepts a ``-health`` option which displays machines
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`
+  
+- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
+  (8 hours).
+  :jira:`3706`
 
 - Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
@@ -59,7 +63,7 @@
 - Docker universe jobs that also had a credential being refreshed
   that also exhausted their :subcom:`RequestMemory` would not go
   on hold immediately, but only after a 20 minute delay.
-  :jira:`3621`
+  :jira:`3672`
 
 *** 25.11.0 bugs
 

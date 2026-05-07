@@ -323,10 +323,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
-				// but first, we should be nice and send a message back to
-				// the people who sent us the wrong session id.
-				daemonCore->send_invalidate_session ( return_address_ss, sess_id );
-
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -417,9 +413,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
-
-				// but first, send a message to whoever provided us with incorrect session id
-				daemonCore->send_invalidate_session( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -787,22 +780,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
 						}
 					} else {
-						// Old client (pre-9.9.0), send out-of-band
+						// Old client (pre-9.9.0), can't send
 						// notification of invalid session.
-						std::string our_sinful;
-						m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						ClassAd info_ad;
-						// Presence of the ConnectSinful attribute indicates
-						// that the client understands and wants the
-						// extended information ad in the
-						// DC_INVALIDATE_KEY message.
-						if ( !our_sinful.empty() ) {
-							info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						}
-
-						if( !return_addr.empty() ) {
-							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid.c_str(), &info_ad );
-						}
 
 						// consume the rejected message
 						m_sock->decode();

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 210> makeCommandTable() {
+std::array<std::pair<int, const char *>, 209> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -544,8 +544,8 @@ std::array<std::pair<int, const char *>, 210> makeCommandTable() {
 		{DC_RECONFIG_FULL, "DC_RECONFIG_FULL"},
 #define DC_FETCH_LOG        (DC_BASE+13)
 		{DC_FETCH_LOG, "DC_FETCH_LOG"},
-#define DC_INVALIDATE_KEY   (DC_BASE+14)
-		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
+//#define DC_INVALIDATE_KEY   (DC_BASE+14) /* not used */
+//		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
 #define DC_OFF_PEACEFUL     (DC_BASE+15)
 		{DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL"},
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
