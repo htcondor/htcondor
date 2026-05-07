@@ -846,6 +846,7 @@ bool render_failed_health_exprs ( classad::Value & value, ClassAd* ad, Formatter
 		// if unhealthy is not supported, look for a slot broken string
 		// or a Startd broken reasons list of strings.
 		if (ad->LookupString(ATTR_SLOT_BROKEN_REASON, unhealth)) {
+			value.SetStringValue(unhealth);
 			return true;
 		} else if (ad->EvaluateAttr(ATTR_BROKEN_REASONS, value)) {
 			return render_unique_strings(value, ad, fmt);
@@ -873,7 +874,7 @@ bool render_failed_health_exprs ( classad::Value & value, ClassAd* ad, Formatter
 				unhealth += ExprTreeToString(expr, buf);
 			}
 		} else if (itemval.IsUndefinedValue()) {
-			// undefined, skip thos one.
+			// undefined, skip this one.
 			//if ( ! unhealth.empty()) unhealth += ",";
 			//unhealth += "undef";
 		} else if (itemval.IsErrorValue()) {
