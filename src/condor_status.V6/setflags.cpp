@@ -90,8 +90,8 @@ int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 			return 0;
 		}
 	}
-
-	if ( PP_IS_LONGish(pps) || (ppStyle <= pps || setby.ppArgIndex == 0) ) {
+	bool is_allowed = ppStyle <= pps || (ppStyle == PP_STARTD_HEALTH && pps == PP_SLOTS_HEALTH);
+	if ( PP_IS_LONGish(pps) || (setby.ppArgIndex == 0 || is_allowed) ) {
 		ppStyle = pps;
 		setby.ppArgIndex = arg_index;
 		setby.ppArg = argv;

@@ -2939,7 +2939,7 @@ firstPass (int argc, const char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			if (sdo_mode == SDO_StartD_Health || sdo_mode == SDO_Slots) {
+			if (sdo_mode == SDO_StartD_Health || sdo_mode == SDO_Slots_Health) {
 				mainPP.resetMode(SDO_Slots_Health, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_Slots, i, argv[i]);
@@ -3011,6 +3011,8 @@ firstPass (int argc, const char *argv[])
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_LvUsage) {
 				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else if (sdo_mode == SDO_StartD_Health) {
+				// already correct, -health before -startd.
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}
