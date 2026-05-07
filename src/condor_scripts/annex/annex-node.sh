@@ -1,5 +1,8 @@
 #!/bin/bash
 
+IWD=${PWD}
+ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
+
 # TODO Handle a PILOT_DIR that's local to the node and needs to be set up
 #   from files in $PWD
 PILOT_DIR=$1
@@ -18,8 +21,7 @@ fi
 FULL_HOSTNAME=`condor_config_val FULL_HOSTNAME`
 echo "Creating host-specific directory for HTCondor on ${FULL_HOSTNAME}..."
 cp -a local "${FULL_HOSTNAME}"
-# FIXME: This should have been done already.
-echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)" >> etc/condor_config
+mkdir "${ANNEX_LOGDIR}/log.${FULL_HOSTNAME}"
 
 # Detect on-node resource limits and amend the condor configuration
 if [ ! -z $SLURM_CPUS_ON_NODE ] ; then

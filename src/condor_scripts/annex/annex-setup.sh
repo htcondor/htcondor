@@ -1,8 +1,5 @@
 #!/bin/bash
 
-CONTROL_PREFIX="=-.-="
-echo "${CONTROL_PREFIX} PID $$"
-
 function usage() {
     echo "Usage: ${0} [record-file]"
     echo "where record-file is a file containing the annex record data."
