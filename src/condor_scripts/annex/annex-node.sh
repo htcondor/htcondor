@@ -7,6 +7,13 @@ ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
 #   from files in $PWD
 PILOT_DIR=$1
 
+# If we can't see the PILOT_DIR, then assume it's on each node's local disk.
+# Then, we need to run the job setup script now and cleanup at the end.
+if [ ! -d $PILOT_DIR ] ; then
+    LOCAL_SETUP=1
+    ${IWD}/annex-job-setup.sh ${PILOT_DIR}
+fi
+
 cd ${PILOT_DIR}/condor-*
 
 . condor.sh
@@ -48,4 +55,11 @@ $CONDOR_RUNTIME_LINE
 
 echo "Starting HTCondor on ${FULL_HOSTNAME}..."
 condor_master -f
-exit $?
+rc=$?
+
+if [ "$LOCAL_SETUP" == 1 ] ; then
+    cd ${IWD}
+    rm -rf ${PILOT_DIR}
+fi
+
+exit $rc
