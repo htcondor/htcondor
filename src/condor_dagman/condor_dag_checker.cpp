@@ -20,7 +20,12 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "dag_parser.h"
+#include "submit_utils.h"
+#include "submit_protocol.h"
+#include "condor_version.h"
+#include "my_username.h"
 
+#include <limits>
 #include <set>
 #include <vector>
 #include <filesystem>
@@ -46,6 +51,11 @@
 #define DAG_STAT_HEIGHT            "GraphHeight"
 #define DAG_STAT_WIDTH             "GraphWidth"
 #define DAG_STAT_WIDTH_BY_DEPTH    "WidthByDepth"
+
+constexpr short CHECK_SUB_DAGS = (1 << 0);
+constexpr short CHECK_JDL      = (1 << 1);
+constexpr short CHECK_SCRIPTS  = (1 << 2);
+constexpr short CHECK_EXTERNAL = std::numeric_limits<short>::max();
 
 
 class ChangeDir {
@@ -82,11 +92,12 @@ void addCommandError(const BaseDagCommand* cmd, const std::string& err, std::vec
 	ref.SetCommand(cmd->GetCommand());
 }
 
+// Helper macro function to store error and return the caller
+#define FAIL_AND_RETURN(cmd, msg, errors) addCommandError(cmd, msg, errors); return;
+
 
 struct MockDag {
-	MockDag(bool join_nodes) {
-		use_join_nodes = join_nodes;
-	}
+	MockDag() = default;
 
 	struct Node {
 		Node(const std::string& n, const uint32_t i, DAG::CMD t) {
@@ -197,7 +208,7 @@ struct MockDag {
 			return nullptr;
 		}
 
-		auto& splice = splices.emplace_back(use_join_nodes);
+		auto& splice = splices.emplace_back();
 		splice.node_index_offset = node_index;
 
 		return &splice;
@@ -339,10 +350,11 @@ struct MockDag {
 	size_t num_splices{0};
 	uint32_t node_index_offset{0};
 
-	bool use_join_nodes{true};
-
 	static uint32_t node_index;
 	static uint32_t join_node_index;
+	static short check_external; // Check all JDL simulation for job submission
+	static bool strict; // Check extra stuff with stricter rules e.g. JDL files exist
+	static bool use_join_nodes;
 
 private:
 	bool walkDFS(Node& node, size_t depth, uint32_t& height, std::vector<uint32_t>& widths, std::vector<uint32_t>& ancestors) {
@@ -414,13 +426,251 @@ private:
 
 uint32_t MockDag::node_index = 0;
 uint32_t MockDag::join_node_index = 0;
+short MockDag::check_external = 0;
+bool MockDag::strict = false;
+bool MockDag::use_join_nodes = false;
 static std::set<std::string> included_files;
+
+
+enum class JDL {
+	PATH = 0,
+	INLINE = 1,
+};
+
+
+// Forward declaration
+void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& errors);
+
+
+void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagParseError>& errors) {
+	ChangeDir cd(cmd->GetDir(), cmd->HasDir());
+	if (cd.failed()) {
+		if (strict) { addCommandError(cmd, cd.error(), errors); }
+		return;
+	}
+
+	std::string source = cmd->GetSubmit();
+	if (std::filesystem::exists(source)) {
+		DagParser parser(source);
+		if (parser.failed()) {
+			FAIL_AND_RETURN(cmd, parser.error(), errors);
+		}
+
+		const std::string file = parser.GetAbsolutePath();
+		if (included_files.contains(file)) {
+			FAIL_AND_RETURN(cmd, "Recursive sub-DAG detected", errors);
+		}
+
+		std::vector<DagParseError> subdag_errors;
+		MockDag subdag;
+
+		uint32_t restore_node_idx = subdag.node_index;
+		uint32_t restore_join_node_idx = subdag.join_node_index;
+		subdag.node_index = 0;
+		subdag.join_node_index = 0;
+
+		included_files.insert(file);
+		parseDAG(parser, subdag, subdag_errors);
+		included_files.erase(file);
+
+		if ( ! subdag_errors.empty()) {
+			for (const auto& err : subdag_errors) {
+				addCommandError(cmd, err.GetLocation() + ">" + err.GetError(), errors);
+			}
+		}
+
+		subdag.node_index = restore_node_idx;
+		subdag.join_node_index = restore_join_node_idx;
+
+		included_files.erase(file);
+	} else if (strict) {
+		addCommandError(cmd, source + " does not exist", errors);
+	}
+}
+
+
+void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
+              std::vector<DagParseError>& errors, std::map<std::string, DagParseError>* jdl_dne = nullptr) {
+	std::string queue_args;
+	auto_free_ptr owner(my_username());
+	char* tmp_qline = nullptr;
+
+	MacroStreamFile msf;
+	MACRO_SOURCE msm_source;
+	MacroStreamMemoryFile msm(nullptr, 0, msm_source);
+	MacroStream* ms = nullptr;
+
+	SubmitHash submitHash;
+	SubmitStepFromQArgs ssi(submitHash);
+
+	submitHash.init(JSM_DAGMAN);
+	submitHash.setDisableFileChecks(true);
+	submitHash.setScheddVersion(CondorVersion());
+	submitHash.init_base_ad(time(nullptr), owner);
+
+	std::string errmsg;
+
+	switch (src) {
+		case JDL::PATH:
+			{
+				// Only node commands can provide a directory
+				const NodeCommand* node = dynamic_cast<const NodeCommand*>(cmd);
+				ASSERT(node);
+				ChangeDir cd(node->GetDir(), node->HasDir());
+				if (cd.failed()) {
+					FAIL_AND_RETURN(cmd, cd.error(), errors);
+				}
+
+				if (std::filesystem::exists(jdl)) {
+					if ( ! msf.open(jdl.c_str(), false, submitHash.macros(), errmsg)) {
+						FAIL_AND_RETURN(cmd, errmsg, errors);
+					}
+
+					ms = &msf;
+					// set submit filename into the submit hash so that $(SUBMIT_FILE) works
+					submitHash.insert_submit_filename(jdl.c_str(), msf.source());
+				} else {
+					// Defer to higher powers to ensure this is not an inline submit description reference
+					if (jdl_dne) {
+						auto [src, line] = cmd->GetSource();
+						auto [ref, _] = jdl_dne->insert({jdl, DagParseError(src, line, "Submit JDL does not exist")});
+						ref->second.SetCommand(cmd->GetCommand());
+					}
+
+					return;
+				}
+			}
+			break;
+		case JDL::INLINE:
+			msm.set(jdl.c_str(), jdl.size(), 0, msm_source);
+			ms = &msm;
+			submitHash.insert_submit_filename("internal-jdl", msm_source);
+			break;
+	}
+
+	ASSERT(ms);
+
+	if (submitHash.parse_up_to_q_line(*ms, errmsg, &tmp_qline)) {
+		FAIL_AND_RETURN(cmd, "Failed to parse to queue line: " + errmsg, errors);
+	}
+
+	if (tmp_qline) {
+		const char* qargs = submitHash.is_queue_statement(tmp_qline);
+		if (qargs) { queue_args = qargs; }
+	}
+
+	if (ssi.init(queue_args.c_str(), errmsg) != 0) {
+		FAIL_AND_RETURN(cmd, "Invalid queue args: " + queue_args, errors);
+	}
+
+	if (ssi.load_items(*ms, false, errmsg) < 0) {
+		FAIL_AND_RETURN(cmd, "Failed to load submit step items: " + errmsg, errors);
+	}
+
+	// Simulate job submission (not perfect)
+
+	long long max_materialize = 0;
+	bool is_factory = submitHash.want_factory_submit(max_materialize);
+
+	constexpr int sim_starting_cluster = 1;
+	SimScheddQ simQ(sim_starting_cluster);
+	simQ.Connect(nullptr, false, false);
+
+	ClassAd extended_cmds;
+	if (simQ.has_extended_submit_commands(extended_cmds)) {
+		submitHash.addExtendedCommands(extended_cmds);
+	}
+
+	// Begin transaction
+	int cluster_id = simQ.get_NewCluster(*submitHash.error_stack());
+	if (cluster_id < 0) {
+		FAIL_AND_RETURN(cmd, "Simulation failed to allocate cluster", errors);
+	}
+
+	int proc_id = 0, item_index = 0, step = 0, rval = 0;
+	JOB_ID_KEY jid(cluster_id, proc_id);
+	ssi.begin(jid, !is_factory);
+
+	bool iter_selected = !is_factory;
+	while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
+		bool send_cluster = (rval == 2);
+
+		if ( ! is_factory) {
+			proc_id = simQ.get_NewProc(cluster_id);
+			if (proc_id != jid.proc) {
+				FAIL_AND_RETURN(cmd, "Simulation produced job id mismatch", errors);
+			}
+		} else {
+			std::string submit_digest;
+			submitHash.make_digest(submit_digest, cluster_id, ssi.vars(), 0);
+			if (submit_digest.empty()) {
+				FAIL_AND_RETURN(cmd, "Simulation failed to build submit digest", errors);
+			}
+
+			rval = simQ.send_Itemdata(cluster_id, ssi.m_fea, errmsg);
+			if (rval < 0) {
+				FAIL_AND_RETURN(cmd, "Simulation failed to send item data: " + errmsg, errors);
+			}
+
+			rval = append_queue_statement(submit_digest, ssi.m_fea);
+			if (rval < 0) {
+				FAIL_AND_RETURN(cmd, "Simulation failed to append queue statement to digest", errors);
+			}
+
+			int total_procs = ssi.selected_job_count();
+			if (max_materialize <= 0) { max_materialize = INT_MAX; }
+			max_materialize = MIN(max_materialize, total_procs);
+			max_materialize = MAX(max_materialize, 1);
+
+			rval = simQ.set_Factory(cluster_id, static_cast<int>(max_materialize), "", submit_digest.c_str());
+			if (rval < 0) {
+				FAIL_AND_RETURN(cmd, "Simulation failed to set factory", errors);
+			}
+
+			ssi.set_live_vars();
+		}
+
+		ClassAd* proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
+		if ( ! proc_ad) {
+			CondorError* err = submitHash.error_stack();
+			FAIL_AND_RETURN(cmd, err ? err->getFullText() : "Simulation make job ad failed", errors);
+		}
+
+		if (send_cluster) {
+			classad::ClassAd* cluster_ad = proc_ad->GetChainedParentAd();
+			if (cluster_ad) {
+				errmsg = simQ.send_JobAttributes(JOB_ID_KEY(cluster_id, -1), *cluster_ad, SetAttribute_NoAck);
+				if (!errmsg.empty()) {
+					FAIL_AND_RETURN(cmd, "Simulation cluster ad rejected: " + errmsg, errors);
+				}
+			}
+		}
+
+		// break out of the loop, we are done.
+		if (is_factory) { break; }
+
+		errmsg = simQ.send_JobAttributes(jid, *proc_ad, SetAttribute_NoAck);
+		if ( ! errmsg.empty()) {
+			FAIL_AND_RETURN(cmd, "Simulation proc ad rejected: " + errmsg, errors);
+		}
+	}
+
+	if (rval < 0) {
+		FAIL_AND_RETURN(cmd, "Simulation job iteration failed: " + errmsg, errors);
+	}
+
+	CondorError disconnect_err;
+	if ( ! simQ.disconnect(true, disconnect_err)) {
+		FAIL_AND_RETURN(cmd, "Simulation failed to commit transaction: " + disconnect_err.getFullText(), errors);
+	}
+}
 
 
 void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& errors) {
 	static istring_view all_nodes_keyword(DAG::ALL_NODES.c_str());
 
 	std::vector<DagCmd> commands{};
+	std::map<std::string, DagParseError> node_jdl_dne;
 
 	for (auto cmd : parser) {
 		if (cmd) {
@@ -437,6 +687,22 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 						std::string err = dag.addNode(node->GetName(), cmd_val);
 						if ( ! err.empty()) {
 							addCommandError(node, err, errors);
+						}
+
+						if (cmd_val == DAG::CMD::SUBDAG && dag.check_external & CHECK_SUB_DAGS) {
+							std::string parent_dag = parser.GetAbsolutePath();
+							included_files.insert(parent_dag);
+							checkSubdag(DAG::DERIVE_CMD<SubdagCommand>(cmd), dag.strict, errors);
+							included_files.erase(parent_dag);
+						} else if (dag.check_external & CHECK_JDL){
+							std::string src = node->GetSubmit();
+							JDL type = JDL::PATH;
+							if (node->HasInlineDesc()) {
+								src = node->GetInlineDesc();
+								type = JDL::INLINE;
+							}
+
+							checkJDL(cmd.get(), src, type, errors, &node_jdl_dne);
 						}
 					}
 					break;
@@ -543,6 +809,13 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 						error = "References undefined node " + node_name;
 					}
 
+					if (dag.check_external & CHECK_SCRIPTS && cmd_val == DAG::CMD::SCRIPT) {
+						const ScriptCommand* script = DAG::DERIVE_CMD<ScriptCommand>(cmd);
+						if ( ! std::filesystem::exists(script->GetScript())) {
+							addCommandError(script, "Script file does not exist", errors);
+						}
+					}
+
 					if ( ! error.empty()) {
 						addCommandError(mod, error, errors);
 					}
@@ -593,10 +866,26 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					errors.emplace_back(src, line, "DAG marked with REJECT command");
 				}
 				break;
+			case DAG::CMD::SUBMIT_DESCRIPTION:
+				{
+					const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
+					std::ignore = node_jdl_dne.erase(desc->GetName());
+					if (dag.check_external) {
+						checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, errors);
+					}
+				}
 			default:
 				break;
 		} // End switch(cmd)
 	} // End command process for loop
+
+	// Any missing JDL files can now be added since we
+	// removed any submit description references
+	if (dag.strict) {
+		for (auto& [_, err] : node_jdl_dne) {
+			errors.push_back(std::move(err));
+		}
+	}
 }
 
 
@@ -700,9 +989,14 @@ void usage(int code = EXIT_SUCCESS) {
 	printf("Options:\n");
 	printf("\t-h/-help                Print Tool Usage\n\n");
 	printf("\t-AllowIllegalChars      Allow node names to contain illegal characters [+]\n");
+	printf("\t-CheckExternalFiles     Best effort process external files\n");
+	printf("\t-CheckJDL               Best effort process node submit descriptions\n");
+	printf("\t-CheckScripts           Verify scripts exist\n");
+	printf("\t-CheckSubDags           Best effort process Sub-DAG files\n");
 	printf("\t-json                   Print Results in JSON Format\n");
 	printf("\t-[No]JoinNodes          Enable/Disable creating join nodes (Default enabled)\n");
 	printf("\t-Statistics             Print statistics about parsed DAG\n");
+	printf("\t-Strict                 Enable strict checking: Error if missing external files\n");
 	printf("\t-UseDagDir              Change into DAG file directory prior to parsing\n");
 
 	exit(code);
@@ -782,6 +1076,16 @@ int main(int argc, const char** argv) {
 		} else if (matchOption(option, "statistics", 4)) {
 			setPrinterOption(DagPrinter::STATISTICS, option);
 			printer = stats_printer;
+		} else if (matchOption(option, "CheckExternalFiles", 8)) {
+			MockDag::check_external |= CHECK_EXTERNAL;
+		} else if (matchOption(option, "CheckSubDags", 8)) {
+			MockDag::check_external |= CHECK_SUB_DAGS;
+		} else if (matchOption(option, "CheckJDL", 8)) {
+			MockDag::check_external |= CHECK_JDL;
+		} else if (matchOption(option, "CheckScripts", 8)) {
+			MockDag::check_external |= CHECK_SCRIPTS;
+		} else if (matchOption(option, "Strict", 6)) {
+			MockDag::strict = true;
 		} else if (option.starts_with("-")) {
 			fprintf(stderr, "ERROR: Unknown command line option '%s'\n", option.data());
 			usage(EXIT_ERROR);
@@ -789,6 +1093,8 @@ int main(int argc, const char** argv) {
 			dag_files.emplace_back(option.data());
 		}
 	}
+
+	MockDag::use_join_nodes = use_join_nodes;
 
 	if (dag_files.empty()) {
 		fprintf(stderr, "ERROR: No DAG file(s) provided for linting.\n");
@@ -804,7 +1110,7 @@ int main(int argc, const char** argv) {
 		DagParser parser(file);
 		std::vector<DagParseError> errors;
 
-		MockDag dag(use_join_nodes);
+		MockDag dag;
 		dag.node_index = 0;
 		dag.join_node_index = 0;
 

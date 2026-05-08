@@ -25,6 +25,10 @@
   execution.
   :jira:`3656`
 
+- :tool:`condor_dag_checker` now has options to process and check the existence
+  and validity of node submit submit descriptions, Sub-DAG files, and scripts.
+  :jira:`3540`
+
 - :tool:`condor_status` now accepts a ``-health`` option which displays machines
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`

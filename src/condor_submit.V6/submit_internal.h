@@ -40,42 +40,6 @@
 // functions for handling the queue statement
 int queue_connect(SubmitHash &submit_hash);
 
-class SimScheddQ : public AbstractScheddQ {
-public:
-	SimScheddQ(int starting_cluster=0);
-	virtual ~SimScheddQ();
-	virtual int get_NewCluster(CondorError & errstack);
-	virtual int get_NewProc(int cluster_id);
-	virtual int get_Capabilities(ClassAd& reply);
-	virtual int get_ExtendedHelp(std::string &content);
-	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
-	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
-	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
-	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
-	virtual int  get_type() { return AbstractQ_TYPE_SIM; }
-	virtual bool has_late_materialize(int &ver) { ver = 2; return true; }
-	virtual bool allows_late_materialize() { return true; }
-	virtual bool has_extended_submit_commands(ClassAd &cmds);
-	virtual bool has_extended_help(std::string & filename); // helpfile for extended submit commands
-	virtual bool has_send_jobset(int & /*ver*/) { return true; }
-	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o, std::string & errmsg);
-	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad);
-
-	// set a file that send_Itemdata should "echo" items into. If this file is not set
-	// items are sent but not echoed.
-	bool echo_Itemdata(const char * filename);
-
-	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
-private:
-	int cluster;
-	int proc;
-	bool close_file_on_disconnect;
-	bool log_all_communication;
-	std::string echo_itemdata_filepath;
-	FILE * fp;
-};
-
 
 // global struct that we use to keep track of where we are so we
 // can give useful error messages.

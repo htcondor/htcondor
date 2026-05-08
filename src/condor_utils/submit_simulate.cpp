@@ -1,59 +1,11 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "spooled_job_files.h"
-#include "subsystem_info.h"
-#include "env.h"
-#include "basename.h"
-#include "condor_getcwd.h"
-#include <time.h>
-#include "write_user_log.h"
 #include "condor_classad.h"
-#include "condor_attributes.h"
-#include "condor_adtypes.h"
-#include "condor_io.h"
-#include "condor_distribution.h"
-#include "condor_ver_info.h"
-#if !defined(WIN32)
-#include <pwd.h>
-#include <sys/stat.h>
-#else
-// WINDOWS only
-#include "store_cred.h"
-#endif
-#include "internet.h"
-#include "my_hostname.h"
-#include "domain_tools.h"
-#include "condor_qmgr.h"
-#include "sig_install.h"
-#include "access.h"
-#include "daemon.h"
-#include "match_prefix.h"
-
-#include "sig_name.h"
-#include "print_wrapped_text.h"
-#include "dc_schedd.h"
-#include "dc_collector.h"
-#include "my_username.h"
-#include "globus_utils.h"
-#include "enum_utils.h"
-#include "setenv.h"
-#include "directory.h"
-#include "filename_tools.h"
-#include "fs_util.h"
-#include "condor_crontab.h"
-#include "condor_holdcodes.h"
-#include "condor_url.h"
-#include "condor_version.h"
 #include "shortfile.h"
+#include "submit_protocol.h"
 
-#include "condor_vm_universe_types.h"
-#include "vm_univ_utils.h"
-#include "submit_internal.h"
-
-#include <algorithm>
 #include <string>
-#include <set>
 
 //====================================================================================
 // functions for a simulate schedd q
@@ -138,14 +90,10 @@ bool SimScheddQ::has_extended_help(std::string & filename) {
 	return param(filename, "EXTENDED_SUBMIT_HELPFILE");
 }
 
-// hack for 8.7.8 testing
-extern int attr_chain_depth;
-
 int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, const char *value, SetAttributeFlags_t /*flags*/) {
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
-		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth - 1);
 		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%s\n", attr, value);
 	}
