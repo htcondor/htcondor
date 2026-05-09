@@ -1810,11 +1810,12 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	std::string target_type;
 	if (whichAds == GENERIC_AD || whichAds == ANY_AD || whichAds == BOGUS_AD) {
 		if (query.LookupString(ATTR_TARGET_TYPE, target_type)) {
+			__mytype__ = target_type.c_str(); // in case we want to constrain an invalidate
 			hTable = collector.getGenericHashTable(target_type.c_str());
 			if (hTable) { makeKey = makeGenericAdHashKey; }
 			else if (whichAds != GENERIC_AD) {
 				// maybe a standard table after all?
-				AdTypes adtype = AdTypeStringToWhichAds(target_type.c_str());
+				AdTypes adtype = AdTypeStringToWhichAds(__mytype__);
 				if (adtype != NO_AD) {
 					collector.LookupByAdType(adtype, hTable, makeKey);
 				}
@@ -1841,6 +1842,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	}
 	if ( ! hTable) {
 		dprintf(D_ALWAYS, "Invalidate failed - %s has no table\n", target_type.c_str());
+		__mytype__ = nullptr; // just in case
 		return;
 	}
 
@@ -1891,6 +1893,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 			}
 		}
 	}
+	__mytype__ = nullptr; // just in case
 
 	if (hTablePvt) {
 		dprintf (D_ALWAYS, "(Invalidated %d ads) + %d private ads\n", __numAds__, num_pvt );
