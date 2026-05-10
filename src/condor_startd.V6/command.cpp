@@ -239,7 +239,7 @@ command_activate_claim(int cmd, Stream* stream )
 
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
 		refuse(stream, send_failure_ad, CONDOR_HOLD_CODE::ActivationRefusedClaimNotFound, "ClaimId not found");
 		return FALSE;
@@ -256,7 +256,7 @@ command_activate_claim(int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	if( rip->isDeactivating() ) { 
+	if( rip->isDeactivating() ) {
 			// We're in the middle of deactivating another claim, so
 			// tell the shadow to try again.  Any shadow before 6.1.9
 			// will just treat this like a "NOT_OK", which is what
@@ -265,7 +265,7 @@ command_activate_claim(int cmd, Stream* stream )
 			// initiate a new ACTIVATE_CLAIM protocol.
 		const char * deactivating_reason = rip->isDeactivatingReason();
 		if ( ! deactivating_reason) { deactivating_reason = "starter is still alive"; }
-		rip->dprintf( D_ALWAYS, 
+		rip->dprintf( D_ALWAYS,
 					  "Got activate claim while %s. Telling shadow to try again later.\n", deactivating_reason );
 		if (send_failure_ad) {
 			refuseX(stream, CONDOR_HOLD_CODE::ActivationRefusedStillCleaning, deactivating_reason, CONDOR_TRY_AGAIN);
@@ -274,7 +274,7 @@ command_activate_claim(int cmd, Stream* stream )
 		}
 		return FALSE;
 	}
-	
+
 		// If we got this far and we're not in claimed/idle, there
 		// really is a problem activating the claim.
 	if( a != idle_act ) {
@@ -1773,6 +1773,15 @@ activate_claim( Resource* rip, Stream* stream, ClassAd * req_classad, bool send_
 	// variables for refuse_and_abort
 	CONDOR_HOLD_CODE refuse_code = CONDOR_HOLD_CODE::Unspecified;
 	const char * refuse_reason = "";
+
+	// Change the slot name prefix, if desired.  (This should be filtered
+	// in the shadow so that users can't do it.)  If we're going to change
+	// the prefix, invalidate the previous ad immediately.
+	std::string requested_slot_prefix;
+	if( req_classad->LookupString( "DesiredSlotPrefix", requested_slot_prefix ) ) {
+	    rip->final_update();
+		rip->set_name_prefix( requested_slot_prefix.c_str() );
+	}
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
