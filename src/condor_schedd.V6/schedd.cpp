@@ -9397,6 +9397,15 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
 	}
 
+	long long disk_held_by_claim_in_mb = -1;
+	if( cmd_ad.LookupInteger( ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb ) ) {
+		//
+		// Now what?  We don't want to permanently modify the job ad, because
+		// it might someday have to match against another slot, but the
+		// resource request (claim command) is sent asynchronously and uses
+		// the job ad to as the resource request.
+		//
+	}
 
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;

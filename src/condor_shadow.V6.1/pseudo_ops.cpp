@@ -1058,7 +1058,17 @@ LookupAdInContext( const ClassAd & ad, const std::string attr, ClassAd * & value
 
 
 bool
-LookupIntInContext( const ClassAd & ad, const std::string & attr, int & value ) {
+LookupIntInContext( const ClassAd & ad, const std::string & attr, int  & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if( context ) {
+		return context->LookupInteger( attr, value );
+	}
+	return false;
+}
+
+bool
+LookupIntInContext( const ClassAd & ad, const std::string & attr, long long & value ) {
 	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
 	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
 	if( context ) {
@@ -1595,7 +1605,7 @@ UniShadow::start_staging_only_conversation(
 	//
 	std::string user;
 
-	int sizeOnDiskInMB = -1;
+	long long sizeOnDiskInMB = -1;
 	if(! LookupIntInContext( request, ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB )) {
 		// It's possible that a different starter would reply properly,
 		// so abort this attempt and leave the job in the queue idle.
@@ -1624,7 +1634,8 @@ UniShadow::start_staging_only_conversation(
 	resources.emplace_back( claimID, slotAd );
 	int rval = schedd.offerResources(
 		resources, user, timeout,
-		originalClaimID
+		originalClaimID,
+		sizeOnDiskInMB
 	);
 	free( originalClaimID );
 

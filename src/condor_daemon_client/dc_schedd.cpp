@@ -1795,7 +1795,8 @@ int DCSchedd::offerResources(
 	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
 	const std::string & submitter_name,
 	int timeout,
-	const char * claimID)
+	const char * claimID,
+	long long disk_held_by_claim_in_mb)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
@@ -1826,9 +1827,14 @@ int DCSchedd::offerResources(
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
 	}
+	if( disk_held_by_claim_in_mb != 0 ) {
+		cmd_ad.InsertAttr(
+			ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb
+		);
+	}
 	if( claimID != NULL ) {
-	    // The CEDAR machinery (in _putClassAd()) encrypts this attribute.
-	    cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
+		// The CEDAR machinery (in _putClassAd()) encrypts this attribute.
+		cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());

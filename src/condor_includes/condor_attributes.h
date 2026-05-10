@@ -190,6 +190,7 @@
 #define ATTR_DESTINATION  "Destination"
 #define ATTR_DISABLE_REASON "DisableReason"
 #define ATTR_DISK  "Disk"
+#define ATTR_DISK_HELD_BY_CLAIM_IN_MB "DiskHeldByClaimInMB"
 #define ATTR_DISK_USAGE  "DiskUsage"
 #define ATTR_DISK_USAGE_ENFORCED "IsEnforcingDiskUsage"
 #define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"
