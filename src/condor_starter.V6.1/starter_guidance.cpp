@@ -578,7 +578,9 @@ Starter::handleJobSetupCommand(
 
 
 			// (HTCONDOR-3521)  How much space should be reserved?
-			long long sizeOnDiskInMB = 1000;
+			const bool EXITING = true;
+			auto usage = s->GetDiskUsage(! EXITING);
+			long long sizeOnDiskInMB = (usage.execute_size / 1024 / 1024) + 1;
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
