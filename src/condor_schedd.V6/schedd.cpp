@@ -14717,7 +14717,14 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 		case JOB_SHOULD_REMOVE:
 		case JOB_SHOULD_REQUEUE:
 
-		// At some point, we should start tracking transient/systemtic
+		// This is intended to indicate that the FTO believes the failure
+		// to transfer is permanent and the user's fault.  It's not presently
+		// used (because the FTO can't presently say that), and it may never
+		// be: if we can get the proper information to the schedd, then it
+		// can (and should) make the decision like it does for hold vs
+		// cool-down vs requeue right now.
+		case JOB_CXFER_FAILED_HOLD:
+		// At some point, we should start tracking transient/systemic
 		// failures and not retrying them indefinitely.
 		case JOB_CXFER_FAILED_REQUEUE:
 		// As above, except in this case, when we stop retrying, we should
@@ -14758,7 +14765,6 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 				dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
 			}
 			break;
-
 
 		case JOB_SHADOW_USAGE:
 			EXCEPT( "Transfer shadow (%d.%d) exited with incorrect usage!", job_id.cluster, job_id.proc );
@@ -15172,45 +15178,74 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 			break;
 		}
 
+		case JOB_MAPPING_FAILED:
+			dprintf( D_ALWAYS, "Shadow for %d.%d failed to map common files.\n",
+				job_id.cluster, job_id.proc
+			);
+
+			//
+			// Also report this as an exception for the transfer shadow(s).
+			// We can't presently tell which catalog mapping failed -- see
+			// elsewhere for data storage problems -- so just mark an
+			// exception on all of them.
+			//
+			if( srec ) {
+				for( const auto & catalog : srec->cxfer_catalogs ) {
+					auto shadow = getShadowForCatalog( catalog.first );
+					if( shadow ) {
+						HadException((*shadow)->match);
+					}
+				}
+			}
+
+			reportException = true;
+			break;
+
+		case JOB_CXFER_FAILED_REQUEUE:
+		case JOB_CXFER_FAILED_HOLD:
+			dprintf( D_ALWAYS, "A shadow not known to be transferring "
+				"common files exited as if it had failed to do so (%d); "
+				"treating as unknown exception.\n", exit_code
+			);
+
+			reportException = true;
+			break;
+
 		case DPRINTF_ERROR:
 			dprintf( D_ALWAYS,
 					 "ERROR: %s had fatal error writing its log file\n",
 					 daemon_name.c_str() );
 			stats.JobsDebugLogError += 1;
 			OTHER.JobsDebugLogError += 1;
-			// We don't want to break, we want to fall through 
-			// and treat this like a shadow exception for now.
-			//@fallthrough@
-		case JOB_EXCEPTION:
-			if ( exit_code == JOB_EXCEPTION ){
-				dprintf( D_ALWAYS,
-						 "ERROR: %s exited with exception code!\n",
-						 daemon_name.c_str() );
-			}
-			// We don't want to break, we want to fall through 
-			// and treat this like a shadow exception for now.
-			//@fallthrough@
-		default:
-				//
-				// The default case is now a shadow exception in case ANYTHING
-				// goes wrong with the shadow exit status
-				//
-			if ( ( exit_code != DPRINTF_ERROR ) &&
-				 ( exit_code != JOB_EXCEPTION ) ) {
-				dprintf( D_ALWAYS,
-						 "ERROR: %s exited with unknown value %d!\n",
-						 daemon_name.c_str(), exit_code );
-			}
-				// The logic to report a shadow exception has been
-				// moved down below. We just set this flag to 
-				// make sure we hit it
+
 			reportException = true;
-			stats.JobsExitException += 1;
-			OTHER.JobsExitException += 1;
-			is_badput = true;
+			break;
+
+		case JOB_EXCEPTION:
+			dprintf( D_ALWAYS,
+					 "ERROR: %s exited with exception code!\n",
+					 daemon_name.c_str()
+			);
+
+			reportException = true;
+			break;
+
+		default:
+			dprintf( D_ALWAYS,
+					 "ERROR: %s exited with unknown value %d!\n",
+					 daemon_name.c_str(), exit_code
+			);
+
+			reportException = true;
 			break;
 	} // SWITCH
-	
+
+	if( reportException ) {
+		stats.JobsExitException += 1;
+		OTHER.JobsExitException += 1;
+		is_badput = true;
+	}
+
 		// calculate badput and goodput statistics.
 		//
 	if ( ! is_goodput && ! is_badput) {
@@ -15230,6 +15265,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
 			}
+	
 		} else if (is_badput) {
 			stats.JobsAccumChurnTime += job_running_time;
 			OTHER.JobsAccumChurnTime += job_running_time;
