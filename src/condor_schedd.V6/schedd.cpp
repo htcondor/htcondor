@@ -17393,6 +17393,18 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	// release the claim on the startd
 	if( match->needs_release_claim) {
+		// If we're deleting a transfer shadow's mrec, we need to know
+		// both that we shouldn't start another job using its catalogs
+		// and that we shouldn't start another shadow to do the transfer
+		// until the current one dies.
+		if( match->shadowRec ) {
+			if( isTransferShadowProcID(match->shadowRec->job_id.proc ) ) {
+				if( match->shadowRec->cxfer_state != CXFER_STATE::RETIRING ) {
+					dprintf( D_ALWAYS, "Unexpectedly marking transfer shadow %d.%d retiring.\n", match->shadowRec->job_id.cluster,  match->shadowRec->job_id.proc );
+				}
+				match->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
+			}
+		}
 		send_vacate(match, RELEASE_CLAIM);
 	}
 
@@ -17915,6 +17927,11 @@ Scheduler::HadException( match_rec* mrec )
 		dprintf( D_ERROR, 
 				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
 				 mrec->cluster, mrec->num_exceptions );
+		// If we always do this before DelMrec() does, we'll learn about cases
+		// we're don't know about that we otherwise couldn't.
+		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id.proc ) ) {
+			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
+		}
 		DelMrec(mrec);
 	}
 }
