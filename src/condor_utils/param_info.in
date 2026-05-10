@@ -6319,9 +6319,9 @@ default=false
 type=bool
 
 [KEEP_DATA_CLAIM_IDLE]
-default=$(KEEP_CLAIM_IDLE)
+default=300
 type=int
-description=How long should a common object catalog persist after its last use?
+description=How long should a common object catalog persiste after its last use?
 
 ######
 ## add metaknobs below this banner
