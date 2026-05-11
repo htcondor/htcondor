@@ -2856,12 +2856,7 @@ command_coalesce_slots(int, Stream * stream ) {
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
 	if (parent->can_create_dslot()) {
-		std::string nsp;
-		const char * new_slot_prefix = nullptr;
-		if( commandAd.LookupString( "DesiredSlotPrefix", nsp ) ) {
-			new_slot_prefix = nsp.c_str();
-		}
-		coalescedSlot = create_dslot(parent, requestAd, false, new_slot_prefix);
+		coalescedSlot = create_dslot(parent, requestAd, false);
 	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
