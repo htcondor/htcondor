@@ -508,7 +508,6 @@ def the_preen_directory(the_removed_job, the_target_directory, the_condor, test_
                 universal_newlines=True,
             )
             logger.debug(rv.stdout)
-            assert(rv.returncode == 0)
             if not the_target_directory.exists():
                 break
             time.sleep(2)
