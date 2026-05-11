@@ -6829,7 +6829,7 @@ default : @fin
 description=Set the ProjectName of the job by mapping the job's Owner attribute args:(map_name [, map_file])
 default : @fin
 	if ! $(1?)
-	  error : use FEATURE : AssignProject requires a map_name argument
+	  error : use FEATURE : AssignProjectName requires a map_name argument
 	endif
 	use FEATURE : SetJobAttrFromUsermap(ProjectName, Owner, $(1+))
 @fin
