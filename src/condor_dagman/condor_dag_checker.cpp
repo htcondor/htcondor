@@ -800,12 +800,10 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				}
 				break;
 			case DAG::CMD::SUBMIT_DESCRIPTION:
-				{
+				if (dag.check_external & CHECK_JDL) {
 					const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
 					std::ignore = node_jdl_dne.erase(desc->GetName());
-					if (dag.check_external) {
-						checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, errors);
-					}
+					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, errors);
 				}
 			default:
 				break;
