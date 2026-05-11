@@ -4,18 +4,14 @@
   spooled by the AP to fail.
   :jira:`3660`
 
-- There are five configuration macros type as long integers.
-  (:macro:`PREEN_COREFILE_MAX_SIZE`, :macro:`EVENT_LOG_MAX_SIZE`,
-  :macro:`EVENT_LOG_MAX_ROTATIONS`, :macro:`ANNEX_DEFAULT_LEASE_DURATION`,
-  and
-  :macro:`ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`.)  These are now properly handled
-  by :data:`htcondor2.param`, and looking up large values (more than
-  approximately 2 billion) will no longer cause the process to abort.
+- :data:`htcondor2.param` now properly handles configuration options typed
+  as long integers containing values greater than approximately 2 billion
+  and no longer crashes the process when accessing the ``param`` object.
   :jira:`3616`
 
-- Messages in the StartLog when the *condor_startd* aborts because it
-  cannot detect the amount of physical memory or when the amount of reserved
-  memory leaves no memory for creating slots have been improved.
+- Improved messages in :macro:`STARTD_LOG` when the *condor_startd* aborts due to
+  failing to detect the total amount of physical memory or when :macro:`RESERVED_MEMORY`
+  leaves no memory for slot creation.
   :jira:`3667`
 
 *** 24.0.20 features
