@@ -3076,7 +3076,7 @@ command_data_slot(int, Stream * stream ) {
 
 		ClassAd replyAd;
 		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		replyAd.InsertAttr( ATTR_ERROR_STRING, "create_dslot() failed" );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed" );
 		putClassAd( sock, replyAd );
 
 		ClassAd slotAd;
