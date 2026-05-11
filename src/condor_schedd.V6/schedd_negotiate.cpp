@@ -213,26 +213,19 @@ ScheddNegotiate::nextJob()
 					}
 					else {
 						int count_max = INT_MAX;
+						if (job->Universe() != CONDOR_UNIVERSE_PARALLEL) { count_max = 1+clusterSize; }
 
 						if ( ! scheduler_getRequestConstraints(m_current_job_id, m_current_job_ad, &count_max)) {
 							dprintf(D_MATCH,
 								"skipping job %d.%d because scheduler_getRequestConstraints returned false\n",
 								m_current_job_id.cluster,m_current_job_id.proc);
 						}
-						// Insert the number of jobs remaining in this
-						// resource request cluster into the ad - the negotiator
+						// Insert the number of jobs for which we are willing to request matches
+						// in this resource request cluster into the ad - the negotiator
 						// may use this information to give us more than one match
 						// at a time.
-						// [[Future optimization idea: there may be jobs in this resource request
-						// cluster that no longer exist in the queue; perhaps we should
-						// iterate through them and make sure they still exist to prevent
-						// asking the negotiator for more resources than we can really
-						// use at the moment. ]]
-						// - Todd July 2013 <tannenba@cs.wisc.edu>
-						int universe = CONDOR_UNIVERSE_MIN;
-						m_current_job_ad.LookupInteger(ATTR_JOB_UNIVERSE,universe);
 						// For now, do not use request counts with the dedicated scheduler
-						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
+						if (job->Universe() != CONDOR_UNIVERSE_PARALLEL) {
 							// resource_count is the remaining un-iterated jobs plus this one.
 							int resource_count = 1+clusterSize;
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
@@ -466,6 +459,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		m_current_job_ad.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, count);
 		m_current_job_ad.LookupInteger(ATTR_AUTO_CLUSTER_ID, aid);
 		formatstr_cat(details, " %d |%d|%d.%d|", count, aid, m_current_job_id.cluster, m_current_job_id.proc);
+		if (m_curbed) { details += " (curb)"; }
 		dprintf(D_DYE, "\t%s\n", details.c_str());
 	}
 
