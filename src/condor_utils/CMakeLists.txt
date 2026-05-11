@@ -458,7 +458,6 @@ str_isxxx.h
 submit_glob.cpp
 submit_protocol.cpp
 submit_protocol.h
-submit_simulate.cpp
 submit_utils.cpp
 submit_utils.h
 systemd_manager.cpp

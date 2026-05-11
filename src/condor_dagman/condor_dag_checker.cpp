@@ -21,7 +21,6 @@
 #include "condor_config.h"
 #include "dag_parser.h"
 #include "submit_utils.h"
-#include "submit_protocol.h"
 #include "condor_version.h"
 #include "my_username.h"
 
@@ -567,101 +566,35 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 		FAIL_AND_RETURN(cmd, "Failed to load submit step items: " + errmsg, errors);
 	}
 
-	// Simulate job submission (not perfect)
-
-	long long max_materialize = 0;
-	bool is_factory = submitHash.want_factory_submit(max_materialize);
-
-	constexpr int sim_starting_cluster = 1;
-	SimScheddQ simQ(sim_starting_cluster);
-	simQ.Connect(nullptr, false, false);
-
-	ClassAd extended_cmds;
-	if (simQ.has_extended_submit_commands(extended_cmds)) {
-		submitHash.addExtendedCommands(extended_cmds);
+	// Load extended submit commands from config (like a schedd would provide)
+	std::string extended_cmds;
+	param(extended_cmds, "EXTENDED_SUBMIT_COMMANDS");
+	if ( ! extended_cmds.empty()) {
+		ClassAd ext_cmd_ad;
+		initAdFromString(extended_cmds.c_str(), ext_cmd_ad);
+		submitHash.addExtendedCommands(ext_cmd_ad);
 	}
 
-	// Begin transaction
-	int cluster_id = simQ.get_NewCluster(*submitHash.error_stack());
-	if (cluster_id < 0) {
-		FAIL_AND_RETURN(cmd, "Simulation failed to allocate cluster", errors);
-	}
+	// Simulate job submission: ignore late materialization, iterate item data directly
+	constexpr int cluster_id = 1;
+	int item_index = 0, step = 0, rval = 0;
+	JOB_ID_KEY jid(cluster_id, 0);
+	ssi.begin(jid, true);
 
-	int proc_id = 0, item_index = 0, step = 0, rval = 0;
-	JOB_ID_KEY jid(cluster_id, proc_id);
-	ssi.begin(jid, !is_factory);
-
-	bool iter_selected = !is_factory;
+	bool iter_selected = true;
 	while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
-		bool send_cluster = (rval == 2);
-
-		if ( ! is_factory) {
-			proc_id = simQ.get_NewProc(cluster_id);
-			if (proc_id != jid.proc) {
-				FAIL_AND_RETURN(cmd, "Simulation produced job id mismatch", errors);
-			}
-		} else {
-			std::string submit_digest;
-			submitHash.make_digest(submit_digest, cluster_id, ssi.vars(), 0);
-			if (submit_digest.empty()) {
-				FAIL_AND_RETURN(cmd, "Simulation failed to build submit digest", errors);
-			}
-
-			rval = simQ.send_Itemdata(cluster_id, ssi.m_fea, errmsg);
-			if (rval < 0) {
-				FAIL_AND_RETURN(cmd, "Simulation failed to send item data: " + errmsg, errors);
-			}
-
-			rval = append_queue_statement(submit_digest, ssi.m_fea);
-			if (rval < 0) {
-				FAIL_AND_RETURN(cmd, "Simulation failed to append queue statement to digest", errors);
-			}
-
-			int total_procs = ssi.selected_job_count();
-			if (max_materialize <= 0) { max_materialize = INT_MAX; }
-			max_materialize = MIN(max_materialize, total_procs);
-			max_materialize = MAX(max_materialize, 1);
-
-			rval = simQ.set_Factory(cluster_id, static_cast<int>(max_materialize), "", submit_digest.c_str());
-			if (rval < 0) {
-				FAIL_AND_RETURN(cmd, "Simulation failed to set factory", errors);
-			}
-
-			ssi.set_live_vars();
-		}
-
 		ClassAd* proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
 		if ( ! proc_ad) {
 			CondorError* err = submitHash.error_stack();
-			FAIL_AND_RETURN(cmd, err ? err->getFullText() : "Simulation make job ad failed", errors);
+			FAIL_AND_RETURN(cmd, err ? err->getFullText() : "Submit description produced invalid job ad", errors);
 		}
 
-		if (send_cluster) {
-			classad::ClassAd* cluster_ad = proc_ad->GetChainedParentAd();
-			if (cluster_ad) {
-				errmsg = simQ.send_JobAttributes(JOB_ID_KEY(cluster_id, -1), *cluster_ad, SetAttribute_NoAck);
-				if (!errmsg.empty()) {
-					FAIL_AND_RETURN(cmd, "Simulation cluster ad rejected: " + errmsg, errors);
-				}
-			}
-		}
-
-		// break out of the loop, we are done.
-		if (is_factory) { break; }
-
-		errmsg = simQ.send_JobAttributes(jid, *proc_ad, SetAttribute_NoAck);
-		if ( ! errmsg.empty()) {
-			FAIL_AND_RETURN(cmd, "Simulation proc ad rejected: " + errmsg, errors);
-		}
+		// Break after first successful job ad unless strict checking is enabled
+		if ( ! MockDag::strict) { break; }
 	}
 
 	if (rval < 0) {
-		FAIL_AND_RETURN(cmd, "Simulation job iteration failed: " + errmsg, errors);
-	}
-
-	CondorError disconnect_err;
-	if ( ! simQ.disconnect(true, disconnect_err)) {
-		FAIL_AND_RETURN(cmd, "Simulation failed to commit transaction: " + disconnect_err.getFullText(), errors);
+		FAIL_AND_RETURN(cmd, "Failed to iterate submit description items: " + errmsg, errors);
 	}
 }
 
