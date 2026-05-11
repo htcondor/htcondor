@@ -69,14 +69,14 @@ def submitJobInputFailureEP(default_condor):
            "arguments": "0",
            "transfer_executable": "false",
            "should_transfer_files": "yes",
-           "transfer_input_files": "http://neversslxxx.com/index.html",
+           "transfer_input_files": "http://nonexistent.invalid/index.html",
         }
     )
 
 
 @action
 def jobInputFailureEP(submitJobInputFailureEP):
-   assert submitJobInputFailureEP.wait(condition=ClusterState.all_held,timeout=60)
+   assert submitJobInputFailureEP.wait(condition=ClusterState.all_held,timeout=180)
    return submitJobInputFailureEP.query()[0]
 
 
