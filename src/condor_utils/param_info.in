@@ -4891,6 +4891,12 @@ type=int
 description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
 tags=file_transfer
 
+[STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS]
+default=
+version=25.11
+description=Conditionally disable user-supplied transfer plugins, MY is slot and TARGET is job.
+tags=file_transfer
+
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
 version=7.9.4

@@ -6405,6 +6405,11 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
 }
 
+void FileTransfer::setDisableUserSuppliedTransferPlugins(UserPluginDisableMode disable_mode)
+{
+	I_dont_allow_user_supplied_transfer_plugins = disable_mode;
+}
+
 
 // will take a filename and look it up in our internal catalog.  returns
 // true if found and false if not.  also updates the parameters mod_time
@@ -6840,10 +6845,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	const char * label = plugin.path.c_str();
 	if (plugin.bad_plugin) {
-		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
-		// e.pushf(...)
 		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNotOperational;
+		if (plugin.from_job) {
+			e.pushf("FILETRANSFER", 1, "user-supplied plugin %s not allowed", label);
+		} else {
+			e.pushf("FILETRANSFER", 1, "plugin %s is not operational", label);
+		}
 		return TransferPluginResult::Error;
 	}
 
@@ -7548,7 +7555,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const {
 
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins || I_dont_allow_user_supplied_transfer_plugins) {
 		return 0;
 	}
 
@@ -7578,7 +7585,7 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 
 int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 {
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins) {
 		return 0;
 	}
 
@@ -7590,6 +7597,14 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	// start with the system table
 	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
+	}
+
+	bool fail_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Fail;
+	bool skip_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Ignore;
+	if (skip_job_plugins) {
+		// If mode is ignore, just don't load the user supplied plugins and assume that
+		// one of the built-in plugins will handle things.
+		return 0;
 	}
 
 	// process the user plugins
@@ -7604,8 +7619,11 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			std::string plugin_path(equals + 1);
 			trim(plugin_path);
 			auto & plugin = InsertPlugin(plugin_path, true);
+			if (fail_job_plugins) plugin.bad_plugin = true;
 			std::string dummy;
 			AddPluginMappings(methods, plugin, false, dummy);
+			//dprintf(D_ZKM, "AddPluginMappings(%s=%s)%s\n",
+			//	methods.c_str(), plugin_path.c_str(), fail_job_plugins ? " DISABLED" : "");
 			multifile_plugins_enabled = true;
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);

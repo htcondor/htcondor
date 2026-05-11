@@ -65,6 +65,11 @@
   on hold immediately, but only after a 20 minute delay.
   :jira:`3672`
 
+- User supplied transfer plugins can now be conditionally disabled in the
+  *condor_starter* using a new configuration variable.
+  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
+  :jira:`3722`
+
 *** 25.11.0 bugs
 
 *** 25.0.11 bugs
