@@ -14761,8 +14761,34 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 					DelMrec( srec->match );
 				}
 			} else {
-				// Not brave enough to make this an EXCEPT()ion.
-				dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
+				if( srec == NULL ) {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing.\n" );
+				} else if( srec->match == NULL ) {
+					// If we vacate a transfer shadow's match because its lease
+					// has expired, we don't immediately delete the match; we
+					// may be able to re-use it.  If a transfer shadow's
+					// match hits its exception limit -- maybe because other
+					// jobs have failed to map its common files -- we treat
+					// it like any other exceptional match and delete it
+					// immediately, leading to this case.  I'm not sure that
+					// it wouldn't be better practice in general to just mark
+					// the match for deletion so that we can detect the more-
+					// serious problem where we've incorrectly lost track of
+					// a shadow's match, but the thinking there may have been
+					// more subtle than "if we got a shadow exception, there's
+					// no shadow left to wait for."
+					//
+					// See line Scheduler::HadException() in case you want to
+					// change this logic for (just) the transfer shadow(s).
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing its match, probably because of mapping failures.\n" );
+				} else if( handleNowClaim ) {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record complete, but showed a now claim.\n" );
+				} else {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record complete and not a now claim, so how did we get here?\n" );
+				}
 			}
 			break;
 
