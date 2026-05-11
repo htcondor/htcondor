@@ -207,7 +207,9 @@ Evaluate( Value& val ) const
 	EvalState 	state;
 
 	state.SetScopes( GetParentScope() );
-	return( Evaluate( state, val ) );
+	auto r = Evaluate( state, val );
+	val.MakeSelfContained( state );
+    return r;
 }
 
 
