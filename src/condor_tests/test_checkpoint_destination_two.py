@@ -492,14 +492,25 @@ def the_preen_directory(the_removed_job, the_target_directory, the_condor, test_
             '_CONDOR_SPOOL': SPOOL,
             '_CONDOR_TOOL_DEBUG': 'D_TEST D_SUB_SECOND D_CATEGORY',
         }
-        rv = subprocess.run( ['condor_preen', '-d'],
-            # Crass empiricism.
-            env=preen_env, timeout=120,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True,
-        )
-        logger.debug(rv.stdout)
-        assert(rv.returncode == 0)
+
+        # condor_preen and the schedd's own checkpoint cleanup can race over
+        # the MANIFEST/FAILURE files in spool/checkpoint-cleanup; if the
+        # schedd's racer deletes (or partially deletes) those files while
+        # preen's condor_manifest is mid-iteration, preen's cleanup proc
+        # exits non-zero and leaves files behind. The cleanup script is
+        # idempotent, so a follow-up preen run completes the job. Retry
+        # until the destination directory is gone, or we've tried enough.
+        for attempt in range(5):
+            rv = subprocess.run( ['condor_preen', '-d'],
+                # Crass empiricism.
+                env=preen_env, timeout=120,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+            logger.debug(rv.stdout)
+            if not the_target_directory.exists():
+                break
+            time.sleep(2)
 
     return the_target_directory
 
