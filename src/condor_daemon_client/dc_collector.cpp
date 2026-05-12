@@ -283,6 +283,16 @@ bool DCCollector::checkCachedVersion(int major, int minor, int subminor, bool de
 bool
 DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata)
 {
+	StartCommandCallback callback;
+	if (callback_fn) {
+			// Wrap the legacy fn+misc pair into a std::function closure so
+			// everything below this point can use a single typed callback.
+		callback = [callback_fn, miscdata](bool success, Sock *s, CondorError *e,
+				const std::string &trust_domain, bool should_try_token_request) {
+			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, miscdata);
+		};
+	}
+
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
 		return true;
@@ -340,8 +350,8 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 				formatstr(err_msg, "Collector %s %s - will not send STARD daemon ad %s",
 					_name.c_str(), err_reason, adname.c_str());
 				newError(CA_INVALID_REQUEST, err_msg.c_str());
-				if (callback_fn) {
-					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+				if (callback) {
+					callback(false, nullptr, nullptr, "", false);
 				}
 				dprintf(D_ZKM, "DCCollector::sendUpdate will not send STARTD daemon ad because %s\n", err_reason);
 				return false;
@@ -379,8 +389,8 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 		formatstr(err_msg, "Can't send update: invalid collector port (%d)",
 						 _port );
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
-		if (callback_fn) {
-			(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+		if (callback) {
+			callback(false, nullptr, nullptr, "", false);
 		}
 		return false;
 	}
@@ -395,15 +405,15 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 			const char * myOwnSinful = daemonCore->InfoCommandSinfulString();
 			if( myOwnSinful == NULL ) {
 				dprintf( D_ALWAYS, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
-				if (callback_fn) {
-					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+				if (callback) {
+					callback(false, nullptr, nullptr, "", false);
 				}
 				return false;
 			}
 			if( _addr.empty() ) {
 				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name.c_str() );
-				if (callback_fn) {
-					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+				if (callback) {
+					callback(false, nullptr, nullptr, "", false);
 				}
 				return false;
 			}
@@ -414,15 +424,15 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 	}
 
 	if( use_tcp ) {
-		return sendTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
+		return sendTCPUpdate( cmd, ad1, ad2, nonblocking, std::move(callback) );
 	}
-	return sendUDPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
+	return sendUDPUpdate( cmd, ad1, ad2, nonblocking, std::move(callback) );
 }
 
 
 
 bool
-DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata )
+DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, const StartCommandCallback &callback )
 {
 		// Only send secrets in the case where
 		// the collector has been build since 8.9.3 and understands not
@@ -456,8 +466,8 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 			self->newError( CA_COMMUNICATION_ERROR,
 			                "Failed to send ClassAd #1 to collector" );
 		}
-		if (callback_fn) {
-			(*callback_fn)(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest(), miscdata);
+		if (callback) {
+			callback(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest());
 		}
 		return false;
 	}
@@ -467,8 +477,8 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send ClassAd #2 to collector" );
 		}
-		if (callback_fn) {
-			(*callback_fn)(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest(), miscdata);
+		if (callback) {
+			callback(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest());
 		}
 		return false;
 	}
@@ -477,37 +487,34 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send EOM to collector" );
 		}
-		if (callback_fn) {
-			(*callback_fn)(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest(), miscdata);
+		if (callback) {
+			callback(false, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest());
 		}
 		return false;
 	}
-	if (callback_fn) {
-		(*callback_fn)(true, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest(), miscdata);
+	if (callback) {
+		callback(true, sock, nullptr, sock->getTrustDomain(), sock->shouldTryTokenRequest());
 	}
 	return true;
 }
 
 class UpdateData {
 
-private:
+public:
 	int cmd;
 	Stream::stream_type sock_type;
-public:
 	ClassAd *ad1;
 	ClassAd *ad2;
 	DCCollector *dc_collector;
-	StartCommandCallbackType *m_callback_fn{nullptr};
-	void *m_miscdata{nullptr};
+	StartCommandCallback m_callback;
 
-	UpdateData(int ad_cmd, Stream::stream_type stype, ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect, StartCommandCallbackType *callback_fn, void *miscdata)
+	UpdateData(int ad_cmd, Stream::stream_type stype, ClassAd *cad1, ClassAd *cad2, DCCollector *dc_collect, StartCommandCallback callback)
 	  : cmd(ad_cmd),
 	    sock_type(stype),
-	    ad1(cad1 ? new ClassAd(*cad1) : NULL),
-	    ad2(cad2 ? new ClassAd(*cad2) : NULL),
+	    ad1(cad1 ? new ClassAd(*cad1) : nullptr),
+	    ad2(cad2 ? new ClassAd(*cad2) : nullptr),
 	    dc_collector(dc_collect),
-	    m_callback_fn(callback_fn),
-	    m_miscdata(miscdata)
+	    m_callback(std::move(callback))
 	{
 			// In case the collector object gets destructed before this
 			// update is finished, we need to register ourselves with
@@ -523,7 +530,7 @@ public:
 		delete ad2;
 			// Remove ourselves from the dc_collector's list.
 		if(dc_collector) {
-			std::deque<UpdateData *>::iterator iter = std::find(dc_collector->pending_update_list.begin(), dc_collector->pending_update_list.end(), this);
+			auto iter = std::find(dc_collector->pending_update_list.begin(), dc_collector->pending_update_list.end(), this);
 			if (iter != dc_collector->pending_update_list.end())
 			{
 				dc_collector->pending_update_list.erase(iter);
@@ -536,12 +543,21 @@ public:
 			// need it in order to finish the update.  We only keep
 			// a reference to it in order to do non-essential things.
 
-		dc_collector = NULL;
+		dc_collector = nullptr;
 	}
 
-	static void startUpdateCallback(bool success,Sock *sock,CondorError * /* errstack */, const std::string &trust_domain, bool should_try_token_request, void *misc_data) {
-		UpdateData *ud = (UpdateData *)misc_data;
+		// Builds a StartCommandCallback that dispatches back to this UpdateData.
+		// The raw-this capture mirrors the pre-std::function behavior where
+		// UpdateData * was passed through startCommand() as misc_data.
+	StartCommandCallback makeStartCommandCallback() {
+		return [this](bool success, Sock *sock, CondorError * /* errstack */,
+				const std::string &trust_domain, bool should_try_token_request) {
+			handleStartCommand(success, sock, trust_domain, should_try_token_request);
+		};
+	}
 
+private:
+	void handleStartCommand(bool success, Sock *sock, const std::string &trust_domain, bool should_try_token_request) {
 			// We got here because a nonblocking call to startCommand()
 			// has called us back.  Now we will finish sending the update.
 
@@ -552,42 +568,47 @@ public:
 			// modifies dc_collector (such as saving the TCP sock for
 			// future use).
 
-		DCCollector *dc_collector = ud->dc_collector;
+		DCCollector *dcc = this->dc_collector;
+			// clearAndNotifyUpdateQueue deletes every UpdateData in the
+			// pending list (including this one) and nulls its `failed`
+			// out-parameter.  Route `this` through `self` so we can tell
+			// whether the failure path already deleted us.
+		UpdateData *self = this;
 		if(!success) {
 			char const *who = "unknown";
 			if(sock) {
 				who = sock->get_sinful_peer();
 			}
-			if (ud->m_callback_fn) {
-				(*ud->m_callback_fn)(false, sock, nullptr, trust_domain, should_try_token_request, ud->m_miscdata);
+			if (m_callback) {
+				m_callback(false, sock, nullptr, trust_domain, should_try_token_request);
 			}
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
-			if (dc_collector) {
-				dc_collector->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, ud);
-				dc_collector->relocate();
+			if (dcc) {
+				dcc->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, self);
+				dcc->relocate();
 			}
 		}
-		else if(sock && !DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2, ud->m_callback_fn, ud->m_miscdata)) {
+		else if(sock && !DCCollector::finishUpdate(this->dc_collector,sock,this->ad1,this->ad2, m_callback)) {
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
-			if (dc_collector) {
-				dc_collector->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, ud);
-				dc_collector->relocate();
+			if (dcc) {
+				dcc->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, self);
+				dcc->relocate();
 			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
 			// We keep the TCP socket around for sending more updates.
-			if(ud->dc_collector && ud->dc_collector->update_rsock == NULL) {
-				ud->dc_collector->update_rsock = (ReliSock *)sock;
-				sock = NULL;
+			if(this->dc_collector && this->dc_collector->update_rsock == nullptr) {
+				this->dc_collector->update_rsock = (ReliSock *)sock;
+				sock = nullptr;
 			}
 		}
 		if(sock) {
 			delete sock;
 		}
-		if (ud) {
-			delete ud;
+		if (self) {
+			delete self;
 		}
 
 			// Now that we finished sending the update, we can start sequentially sending
@@ -596,31 +617,31 @@ public:
 			// connections to the collector.  Instead we send the updates one at a time
 			// via a single connection.
 
-		if (dc_collector && dc_collector->pending_update_list.size())
+		if (dcc && dcc->pending_update_list.size())
 		{
 
 			// Here we handle pending updates by sending them over a stashed
 			// TCP socket to the collector.
 			//
-			while (dc_collector->update_rsock && dc_collector->pending_update_list.size())
+			while (dcc->update_rsock && dcc->pending_update_list.size())
 			{
-				UpdateData *ud = dc_collector->pending_update_list.front();
-				dc_collector->update_rsock->encode();
+				UpdateData *ud = dcc->pending_update_list.front();
+				dcc->update_rsock->encode();
 					// NOTE: If there's a valid TCP socket available, we always
 					// push our updates over that (even if the update requested UDP).
 					// I don't think mixing TCP/UDP to the same collector is supported, so
 					// I believe this shortcut acceptable.
-				if (!dc_collector->update_rsock->put( ud->cmd ) ||
-					!DCCollector::finishUpdate(ud->dc_collector,dc_collector->update_rsock,ud->ad1,ud->ad2,ud->m_callback_fn,ud->m_miscdata))
+				if (!dcc->update_rsock->put( ud->cmd ) ||
+					!DCCollector::finishUpdate(ud->dc_collector,dcc->update_rsock,ud->ad1,ud->ad2,ud->m_callback))
 				{
 					char const *who = "unknown";
-					if(dc_collector->update_rsock) {
-						who = dc_collector->update_rsock->get_sinful_peer();
+					if(dcc->update_rsock) {
+						who = dcc->update_rsock->get_sinful_peer();
 					}
 					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
-					delete dc_collector->update_rsock;
-					dc_collector->update_rsock = NULL;
-					dc_collector->relocate();
+					delete dcc->update_rsock;
+					dcc->update_rsock = nullptr;
+					dcc->relocate();
 
 					// Notice we remove the element from the list of pending updates
 					// even on failure.
@@ -636,10 +657,10 @@ public:
 			// update here, then go back to daemonCore with a callback registered
 			// to ensure we do not block in the event we need to re-establish
 			// a new TCP socket.
-			if (dc_collector->pending_update_list.size())
+			if (dcc->pending_update_list.size())
 			{
-				UpdateData *ud = dc_collector->pending_update_list.front();
-				dc_collector->startCommand_nonblocking(ud->cmd, ud->sock_type, 20, NULL, UpdateData::startUpdateCallback, ud );
+				UpdateData *ud = dcc->pending_update_list.front();
+				dcc->startCommand_nonblocking(ud->cmd, ud->sock_type, 20, nullptr, ud->makeStartCommandCallback());
 			}
 		}
 	}
@@ -648,25 +669,29 @@ public:
 
 void
 DCCollector::clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, UpdateData*& failed) {
-	for (auto& ud : pending_update_list) {
-		// Run callback function for all except for the failed (handled outside prior)
-		if (ud != failed && ud->m_callback_fn) {
-			(*(ud->m_callback_fn))(false, sock, nullptr, trust_domain, should_try_token_request, ud->m_miscdata);
+		// Drain via pop_front rather than a range-based for: ~UpdateData
+		// erases itself from pending_update_list, which would invalidate
+		// the loop's iterators if we iterated in place.  Popping first
+		// makes the destructor's erase a no-op.
+	while (!pending_update_list.empty()) {
+		UpdateData *ud = pending_update_list.front();
+		pending_update_list.pop_front();
+
+			// Run callback function for all except for the failed (handled outside prior)
+		if (ud != failed && ud->m_callback) {
+			ud->m_callback(false, sock, nullptr, trust_domain, should_try_token_request);
 		}
 
 		delete ud;
-		ud = nullptr;
 	}
 
-	// The failed UpdateData point will have been deleted so remove dangling pointer
+		// The failed UpdateData pointer has been deleted; clear the caller's reference.
 	failed = nullptr;
-
-	pending_update_list.clear();
 }
 
 
 bool
-DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata )
+DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback )
 {
 		// with UDP it's pretty straight forward.  We always want to
 		// use Daemon::startCommand() so we get all the security stuff
@@ -679,10 +704,10 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			 update_destination );
 
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this, callback_fn, miscdata);
+		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this, std::move(callback));
 		if (this->pending_update_list.size() == 1)
 		{
-			startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud);
+			startCommand_nonblocking(cmd, Sock::safe_sock, 20, nullptr, ud->makeStartCommandCallback());
 		}
 		return true;
 	}
@@ -692,13 +717,13 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send UDP update command to collector" );
-		if (callback_fn) {
-			(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+		if (callback) {
+			callback(false, nullptr, nullptr, "", false);
 		}
 		return false;
 	}
 
-	bool success = finishUpdate( this, ssock, ad1, ad2, callback_fn, miscdata );
+	bool success = finishUpdate( this, ssock, ad1, ad2, callback );
 	delete ssock;
 
 	return success;
@@ -706,7 +731,7 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 
 
 bool
-DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata )
+DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback )
 {
 	dprintf( D_FULLDEBUG,
 			 "Attempting to send update via TCP to collector %s\n",
@@ -722,7 +747,7 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			// update at the same time.  if the security API changes
 			// in the future, we'll be able to make this code a little
 			// more straight-forward...
-		return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
+		return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, std::move(callback) );
 	}
 
 		// otherwise, we've already got our socket, it's connected,
@@ -735,15 +760,15 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		// int, and since we do *NOT* want to use startCommand() again
 		// on a cached TCP socket, just code the int ourselves...
 		//
-		// also note we do NOT pass the callback_fn to finishUpdate here - the idea
+		// also note we do NOT pass the callback to finishUpdate here - the idea
 		// is if finishUpdate fails, we turn around and try to start a new connection,
 		// and we only want to invoke the callback once.  So we avoid passing the callback to
 		// finishUpdate to prevent both finishUpdate and initiateUpdate from invoking the
 		// callback function in the case we need to create a new connection.
 	update_rsock->encode();
-	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2, nullptr, nullptr)) {
-		if (callback_fn) {
-			(*callback_fn)(true, update_rsock, nullptr, update_rsock->getTrustDomain(), update_rsock->shouldTryTokenRequest(), miscdata);
+	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2, {})) {
+		if (callback) {
+			callback(true, update_rsock, nullptr, update_rsock->getTrustDomain(), update_rsock->shouldTryTokenRequest());
 		}
 		return true;
 	}
@@ -751,34 +776,34 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			 "Couldn't reuse TCP socket to update collector, "
 			 "starting new connection\n" );
 	delete update_rsock;
-	update_rsock = NULL;
+	update_rsock = nullptr;
 	relocate();
 
-	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
+	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, std::move(callback) );
 }
 
 
 
 bool
-DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType *callback_fn, void *miscdata )
+DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback )
 {
 	if( update_rsock ) {
 		delete update_rsock;
-		update_rsock = NULL;
+		update_rsock = nullptr;
 	}
 	if (!new_tcp_connections) {
 		dprintf(D_FULLDEBUG, "Not allowing new TCP connection to collector %s\n", update_destination);
-		if (callback_fn) {
-			(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+		if (callback) {
+			callback(false, nullptr, nullptr, "", false);
 		}
 		return false;
 	}
 	if(nonblocking) {
-		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this, callback_fn, miscdata);
+		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this, std::move(callback));
 			// Note that UpdateData automatically adds itself to the pending_update_list.
 		if (this->pending_update_list.size() == 1)
 		{
-			startCommand_nonblocking(cmd, Sock::reli_sock, 20, NULL, UpdateData::startUpdateCallback, ud );
+			startCommand_nonblocking(cmd, Sock::reli_sock, 20, nullptr, ud->makeStartCommandCallback());
 		}
 		return true;
 	}
@@ -789,13 +814,13 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send TCP update command to collector" );
 		dprintf(D_ALWAYS,"Failed to send update to %s.\n",idStr());
-		if (callback_fn) {
-			(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+		if (callback) {
+			callback(false, nullptr, nullptr, "", false);
 		}
 		return false;
 	}
 	update_rsock = (ReliSock *)sock;
-	return finishUpdate( this, update_rsock, ad1, ad2, callback_fn, miscdata );
+	return finishUpdate( this, update_rsock, ad1, ad2, callback );
 }
 
 
