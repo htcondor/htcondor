@@ -2999,20 +2999,22 @@ command_data_slot(int, Stream * stream ) {
 			break;
 		}
 
-		if( r->activity() != idle_act ) {
-			formatstr( errorString, "given slot is not idle" );
-			result = CA_INVALID_STATE;
+		if( r->get_parent() == NULL ) {
+			formatstr( errorString, "given slot is not dynamic" );
+			result = CA_INVALID_REQUEST;
 			break;
 		}
 
 		if( r->isDeactivating() ) {
 			formatstr( errorString, "given slot is deactivating, try again later" );
+			// In case we ever decide to implement a delayed retry, make sure
+			// that this result code isn't used anywhere else in this function.
 			result = CA_INVALID_STATE;
 			break;
 		}
 
-		if( r->get_parent() == NULL ) {
-			formatstr( errorString, "given slot is not dynamic" );
+		if( r->activity() != idle_act ) {
+			formatstr( errorString, "given slot is not idle" );
 			result = CA_INVALID_REQUEST;
 			break;
 		}
