@@ -260,7 +260,7 @@ command_data_slot_callback(
     auto scope_guard = std::unique_ptr<Sock>(sock);
 
 	ClassAd commandAd;
-	commandAd.InsertAttr( ATTR_CLAIM_ID_LIST, originalClaimID );
+	commandAd.InsertAttr( ATTR_CLAIM_ID, originalClaimID );
 	commandAd.InsertAttr( "DesiredSlotPrefix", "data" );
 
 	if(! putClassAd( sock, commandAd )) {

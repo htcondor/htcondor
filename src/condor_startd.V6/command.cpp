@@ -2950,76 +2950,40 @@ command_data_slot(int, Stream * stream ) {
 	}
 
 
-	std::string claimIDListString;
-	if(! commandAd.LookupString( ATTR_CLAIM_ID_LIST, claimIDListString )) {
-		dprintf( D_ALWAYS, "command_data_slot(): command ad missing claim ID list\n" );
+	std::string claimID;
+	if(! commandAd.LookupString( ATTR_CLAIM_ID, claimID )) {
+		dprintf( D_ALWAYS, "command_data_slot(): command ad missing claim ID\n" );
 		delete requestAd;
 		return FALSE;
 	}
-
-	// Remove duplicate claims.
-	std::set<std::string> ucil;
-	for( auto & claimID: StringTokenIterator(claimIDListString) ) {
-		ucil.insert( claimID );
-	}
-
-	if( ucil.size() != 1 ) {
-		dprintf( D_ALWAYS, "command_data_slot(): command ad's claim ID list does not contain exactly one valid claim ID.\n" );
-		delete requestAd;
-		return FALSE;
-	}
-
 
 	//
-	// Confirm that we can use these resources to build a data slot.
+	// Confirm that we can use this resource to build a data slot.
 	//
 	std::string errorString;
 	CAResult result = CA_SUCCESS;
+	Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
 
-	Resource * r = nullptr;
-	unsigned valid_slots = 0;
-	for( auto& claimID : ucil ) {
-		r = resmgr->get_by_cur_id( claimID.c_str() );
-
-		if(! r) {
-			formatstr( errorString, "can't find slot with given claim ID" );
-			result = CA_INVALID_REQUEST;
-			break;
-		}
-
-		if( r->state() != claimed_state ) {
-			formatstr( errorString, "given slot is not claimed" );
-			result = CA_INVALID_REQUEST;
-			break;
-		}
-
-		if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
-			formatstr( errorString, "given slot is broken" );
-			result = CA_INVALID_REQUEST;
-			break;
-		}
-
-		if( r->get_parent() == NULL ) {
-			formatstr( errorString, "given slot is not dynamic" );
-			result = CA_INVALID_REQUEST;
-			break;
-		}
-
-		if( r->isDeactivating() ) {
-			formatstr( errorString, "given slot is deactivating, try again later" );
-			// In case we ever decide to implement a delayed retry, make sure
-			// that this result code isn't used anywhere else in this function.
-			result = CA_INVALID_STATE;
-			break;
-		}
-
-		if( r->activity() != idle_act ) {
-			formatstr( errorString, "given slot is not idle" );
-			result = CA_INVALID_REQUEST;
-			break;
-		}
-
-		++ valid_slots;
+	if(! r) {
+		formatstr( errorString, "can't find slot with given claim ID" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->state() != claimed_state ) {
+		formatstr( errorString, "given slot is not claimed" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+		formatstr( errorString, "given slot is broken" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->get_parent() == NULL ) {
+		formatstr( errorString, "given slot is not dynamic" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->isDeactivating() ) {
+		formatstr( errorString, "given slot is deactivating, try again later" );
+		// In case we ever decide to implement a delayed retry, make sure
+		// that this result code isn't used anywhere else in this function.
+		result = CA_INVALID_STATE;
+	} else if( r->activity() != idle_act ) {
+		formatstr( errorString, "given slot is not idle" );
+		result = CA_INVALID_REQUEST;
 	}
 
 	sock->encode();
@@ -3040,24 +3004,6 @@ command_data_slot(int, Stream * stream ) {
 
 		return FALSE;
 	}
-
-	if( valid_slots <= 0 ) {
-		dprintf( D_ALWAYS, "command_data_slot(): unable to coalesce any slots\n" );
-		delete requestAd;
-
-		ClassAd replyAd;
-		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
-		replyAd.InsertAttr( ATTR_ERROR_STRING, "Unable to coalesce any slots" );
-		putClassAd( sock, replyAd );
-
-		ClassAd slotAd;
-		putClassAd( sock, slotAd );
-
-		sock->end_of_message();
-
-		return FALSE;
-	}
-
 
 	//
 	// Because we only have one slot, it's easy to make a new slot out of the
