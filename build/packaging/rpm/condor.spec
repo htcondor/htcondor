@@ -1321,15 +1321,15 @@ fi
 # configuration
 
 %changelog
-* Thu May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.10-1
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.10-1
 - Add support for Ubuntu 26.04 (Resolute Raccoon)
 - All changes in HTCondor 24.12.20
 
-* Thu May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
 - Fixed Access Point spooled X.509 job proxy refresh
 - All changes in HTCondor 24.0.20
 
-* Thu May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
 - Fix reporting of RemoteUserCPU in parallel universe
 - condor_ssh_to_job can now execute one-shot commands when using containers
 - condor_ssh_to_job now enters the proper cgroup when using containers
