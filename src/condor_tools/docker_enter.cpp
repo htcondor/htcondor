@@ -59,20 +59,46 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	// Connect to .docker_sock in the current directory (the job's scratch
+	// dir, which is the cwd when condor_docker_enter is launched inside
+	// the container).
+	//
+	// AF_UNIX sun_path is only 108 bytes on Linux, but the absolute path
+	// to the scratch directory may be much longer.  We could rely on
+	// kernel cwd-relative lookup of a literal ".docker_sock" -- and the
+	// older code did -- but to mirror the bind() side in the starter
+	// (see docker_proc.cpp::SetupDockerSsh) we use the same Linux-only
+	// /proc/self/fd/<N>/<name> trick: open the directory as a dirfd and
+	// let the kernel resolve the magic /proc symlink back to it.  The
+	// resulting sun_path string is bounded by the fixed prefix plus an
+	// int and the filename, well under 108 bytes regardless of the real
+	// directory depth.
+	int dirfd = open(".", O_PATH | O_DIRECTORY | O_CLOEXEC);
+	if (dirfd < 0) {
+		fprintf(stderr, "Cannot open current directory for docker ssh_to_job: errno %d\n", errno);
+		return -1;
+	}
+
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string pipeName = ".docker_sock";	
-
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		fprintf(stderr, "Cannot format /proc/self/fd path for docker ssh_to_job\n");
+		close(dirfd);
+		return -1;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	int rc = connect(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
+	close(dirfd);
 
 	if (rc < 0) {
-		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for docker ssh_to_job: %d\n", pipeName.c_str(), errno);
+		dprintf(D_ALWAYS, "Cannot connect to unix domain socket .docker_sock for docker ssh_to_job: %d\n", errno);
 		return -1;
 	}
 	fdpass_send(uds, 0);
