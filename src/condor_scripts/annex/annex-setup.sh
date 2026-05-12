@@ -164,8 +164,8 @@ ln -s ${BINARIES_DIR}/${BINARIES_FILE} ${IWD}/condor.tar.gz
 mv ${TOKEN_FILE} annex.token
 mv ${PASSWORD_FILE} annex.password
 
-echo -e "\rStep 3 of 8: downloading configuration......."
-# This step was removed
+echo -e "\rStep 3 of 8: Cleaning old logs..............."
+find . -maxdepth 1 -name 'annex-logs.*' -mtime +14 -exec rm -rf '{}' ';'
 
 
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
