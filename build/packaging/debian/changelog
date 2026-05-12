@@ -1,3 +1,19 @@
+condor (24.12.20-1) stable; urgency=medium
+
+  * Fixed Access Point spooled X.509 job proxy refresh
+  * All changes in HTCondor 24.0.20
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:53:00 -0500
+
+condor (24.0.20-1) stable; urgency=medium
+
+  * Fix reporting of RemoteUserCPU in parallel universe
+  * condor_ssh_to_job can now execute one-shot commands when using containers
+  * condor_ssh_to_job now enters the proper cgroup when using containers
+  * HTCondor tarballs now contain Pelican 7.24.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:23:00 -0500
+
 condor (24.12.19-1) stable; urgency=medium
 
   * Fix crash when a user provided Docker script produces unexpected output
