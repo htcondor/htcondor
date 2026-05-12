@@ -17950,11 +17950,12 @@ Scheduler::HadException( match_rec* mrec )
 	}
 	mrec->num_exceptions++;
 	if( mrec->num_exceptions >= MaxExceptions ) {
-		dprintf( D_ERROR, 
-				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
-				 mrec->cluster, mrec->num_exceptions );
+		dprintf( D_ERROR,
+		         "Match for %d.%d has had %d shadow exceptions, relinquishing.\n",
+		         mrec->cluster, mrec->proc, mrec->num_exceptions
+				 );
 		// If we always do this before DelMrec() does, we'll learn about cases
-		// we're don't know about that we otherwise couldn't.
+		// we don't know about that we otherwise couldn't.
 		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id.proc ) ) {
 			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
 		}

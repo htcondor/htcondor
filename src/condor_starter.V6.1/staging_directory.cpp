@@ -584,7 +584,6 @@ HardlinkStagingDirectory::entry_is_file(
 		dprintf( D_ALWAYS, "%s: Failed to create_hard_link(%s, %s): %s (%d)\n", log_prefix.c_str(), (stagingDir/relative_path).string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 		return ec;
 	}
-	dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
 
 	int rv = chown( (stagingDir/relative_path).string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
