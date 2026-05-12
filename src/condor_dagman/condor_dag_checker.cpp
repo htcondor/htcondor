@@ -595,6 +595,12 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 
 	if (rval < 0) {
 		FAIL_AND_RETURN(cmd, "Failed to iterate submit description items: " + errmsg, errors);
+	} else if (submitHash.error_stack()) {
+		submitHash.warn_unused(stderr, "DAGMAN");
+		std::string errstk(submitHash.error_stack()->getFullText());
+		if ( ! errstk.empty()) {
+			FAIL_AND_RETURN(cmd, "Submit warning: " + errstk, errors);
+		}
 	}
 }
 

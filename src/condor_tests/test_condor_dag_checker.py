@@ -656,6 +656,20 @@ SUBMIT_DESCRIPTION echo @=desc
             }
         ],
     },
+    # Test Case: Unused variable in submit description is treated as an error via warn_unused
+    "OPT_CHECK_EXTERNAL_SUBMIT_DESC_UNUSED_VAR": {
+        KEY_DAG: "SUBMIT_DESCRIPTION desc {\n    executable = /bin/echo\n    MY_UNUSED_VAR = unused_value\n    queue\n}\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Submit warning: Submit:0:the line 'MY_UNUSED_VAR = unused_value' was unused by DAGMAN. Is it a typo?",
+                "SourceFile": "OPT_CHECK_EXTERNAL_SUBMIT_DESC_UNUSED_VAR.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBMIT_DESCRIPTION",
+            }
+        ],
+    },
     # Test Case: Errors inside a referenced SUBDAG are propagated to the parent as "<file>:<line>>reason"
     "OPT_CHECK_EXTERNAL_SUBDAG_ERRORS": {
         KEY_DAG: "SUBDAG EXTERNAL A sub.dag\n",
