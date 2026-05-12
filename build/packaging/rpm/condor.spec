@@ -1327,6 +1327,30 @@ fi
 # configuration
 
 %changelog
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.10.1-1
+- Several improvements to throttle and monitor DAGMan resource usage
+- Can now automatically retry a job with a larger disk request
+- .chirp.config has been moved out of the job's scratch directory
+- Disables swap for jobs on cgroup v1 systems by default
+- Can now append columns to condor_(qusers|status|who) output
+- Allow URL style container images when file transfer is off
+- Improvements to handling batch universe jobs
+- All changes in HTCondor 25.0.10
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.10-1
+- Add support for Ubuntu 26.04 (Resolute Raccoon)
+- All changes in HTCondor 24.12.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
+- Fixed Access Point spooled X.509 job proxy refresh
+- All changes in HTCondor 24.0.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
+- Fix reporting of RemoteUserCPU in parallel universe
+- condor_ssh_to_job can now execute one-shot commands when using containers
+- condor_ssh_to_job now enters the proper cgroup when using containers
+- HTCondor tarballs now contain Pelican 7.24.2
+
 * Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.8.2-1
 - Fix detection and reporting of NVIDIA MIG GPU attributes
 - Add '--rocm' flag to Apptainer GPU jobs to support AMD GPUs

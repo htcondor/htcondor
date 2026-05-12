@@ -29,9 +29,7 @@ Version 25.0.10
 
 Release Notes:
 
-.. HTCondor version 25.0.10 released on May 14, 2026.
-
-- HTCondor version 25.0.10 planned release date is May 14, 2026.
+- HTCondor version 25.0.10 released on May 14, 2026.
 
 New Features:
 
