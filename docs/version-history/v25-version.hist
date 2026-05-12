@@ -25,6 +25,10 @@
   execution.
   :jira:`3656`
 
+- :tool:`condor_dag_checker` now has options to process and check the existence
+  and validity of node submit submit descriptions, Sub-DAG files, and scripts.
+  :jira:`3540`
+
 - :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
   when the pathname of the :macro:`EXECUTE` directory is longer than about 80 characters.
   :jira:`3729`

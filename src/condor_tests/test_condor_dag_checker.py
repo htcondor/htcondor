@@ -77,6 +77,16 @@ def setup_validation_errors():
         with open("sub-sub-splice.dag", "w") as f:
             f.write("JOB\n")
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def setup_check_external_valid_jdl():
+    with open("valid.sub", "w") as f:
+        f.write("executable = /bin/echo\nqueue\n")
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def setup_check_external_subdag_errors():
+    with open("sub.dag", "w") as f:
+        f.write("JOB\n")
+
 #------------------------------------------------------------------
 KEY_DAG = "DagFile"
 KEY_SETUP = "SetupFunc"
@@ -537,6 +547,166 @@ JOB A+B desc
             "GraphWidth": 1,
             "WidthByDepth": [1],
         }
+    },
+    # Test Case: -CheckExternalFiles with valid existing JDL succeeds
+    "OPT_CHECK_EXTERNAL_VALID_JDL": {
+        KEY_DAG: "JOB A valid.sub\n",
+        KEY_SETUP: setup_check_external_valid_jdl,
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 0,
+        KEY_STATS: {
+            "TotalNodes": 1,
+            "NumNodes": 1,
+            "GraphHeight": 1,
+            "GraphWidth": 1,
+            "WidthByDepth": [1],
+        }
+    },
+    # Test Case: -CheckExternalFiles -Strict errors when JDL file is missing
+    "OPT_STRICT_MISSING_JDL": {
+        KEY_DAG: "JOB A missing.sub\n",
+        KEY_OPTIONS: ["-CheckExternalFiles", "-Strict"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Submit JDL does not exist",
+                "SourceFile": "OPT_STRICT_MISSING_JDL.dag",
+                "SourceLine": 1,
+                "DagCommand": "JOB",
+            }
+        ],
+    },
+    # Test Case: -CheckExternalFiles without -Strict silently skips missing JDL
+    "OPT_CHECK_EXTERNAL_MISSING_JDL_LENIENT": {
+        KEY_DAG: "JOB A missing.sub\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 0,
+        KEY_STATS: {
+            "TotalNodes": 1,
+            "NumNodes": 1,
+            "GraphHeight": 1,
+            "GraphWidth": 1,
+            "WidthByDepth": [1],
+        }
+    },
+    # Test Case: SUBMIT_DESCRIPTION matching a node's submit name clears the missing JDL error in strict mode
+    "OPT_SUBMIT_DESC_RESOLVES_MISSING_JDL": {
+        KEY_DAG:
+"""JOB A echo
+SUBMIT_DESCRIPTION echo @=desc
+    executable = /bin/echo
+    queue
+@desc
+""",
+        KEY_OPTIONS: ["-CheckExternalFiles", "-Strict"],
+        KEY_EXIT: 0,
+        KEY_STATS: {
+            "TotalNodes": 1,
+            "NumNodes": 1,
+            "GraphHeight": 1,
+            "GraphWidth": 1,
+            "WidthByDepth": [1],
+        }
+    },
+    # Test Case: -CheckExternalFiles -Strict errors when SUBDAG file is missing
+    "OPT_STRICT_MISSING_SUBDAG": {
+        KEY_DAG: "SUBDAG EXTERNAL A missing.dag\n",
+        KEY_OPTIONS: ["-CheckExternalFiles", "-Strict"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "missing.dag does not exist",
+                "SourceFile": "OPT_STRICT_MISSING_SUBDAG.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBDAG",
+            }
+        ],
+    },
+    # Test Case: -CheckExternalFiles without -Strict silently skips missing SUBDAG
+    "OPT_CHECK_EXTERNAL_MISSING_SUBDAG_LENIENT": {
+        KEY_DAG: "SUBDAG EXTERNAL A missing.dag\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 0,
+    },
+    # Test Case: SUBDAG referencing its own parent file is detected as recursive
+    "OPT_CHECK_EXTERNAL_RECURSIVE_SUBDAG": {
+        KEY_DAG: "SUBDAG EXTERNAL A OPT_CHECK_EXTERNAL_RECURSIVE_SUBDAG.dag\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Recursive sub-DAG detected",
+                "SourceFile": "OPT_CHECK_EXTERNAL_RECURSIVE_SUBDAG.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBDAG",
+            }
+        ],
+    },
+    # Test Case: SUBMIT_DESCRIPTION with no executable fails JDL simulation
+    "OPT_CHECK_EXTERNAL_INVALID_JDL_NO_EXEC": {
+        KEY_DAG: "SUBMIT_DESCRIPTION no_exec {\nqueue\n}\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Submit:-1:No 'executable' parameter was provided",
+                "SourceFile": "OPT_CHECK_EXTERNAL_INVALID_JDL_NO_EXEC.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBMIT_DESCRIPTION",
+            }
+        ],
+    },
+    # Test Case: Unused variable in submit description is treated as an error via warn_unused
+    "OPT_CHECK_EXTERNAL_SUBMIT_DESC_UNUSED_VAR": {
+        KEY_DAG: "SUBMIT_DESCRIPTION desc {\n    executable = /bin/echo\n    MY_UNUSED_VAR = unused_value\n    queue\n}\n",
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Submit warning: Submit:0:the line 'MY_UNUSED_VAR = unused_value' was unused by DAGMAN. Is it a typo?",
+                "SourceFile": "OPT_CHECK_EXTERNAL_SUBMIT_DESC_UNUSED_VAR.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBMIT_DESCRIPTION",
+            }
+        ],
+    },
+    # Test Case: Errors inside a referenced SUBDAG are propagated to the parent as "<file>:<line>>reason"
+    "OPT_CHECK_EXTERNAL_SUBDAG_ERRORS": {
+        KEY_DAG: "SUBDAG EXTERNAL A sub.dag\n",
+        KEY_SETUP: setup_check_external_subdag_errors,
+        KEY_OPTIONS: ["-CheckExternalFiles"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "sub.dag:1>Missing node name",
+                "SourceFile": "OPT_CHECK_EXTERNAL_SUBDAG_ERRORS.dag",
+                "SourceLine": 1,
+                "DagCommand": "SUBDAG",
+            }
+        ],
+    },
+    # Test Case: -CheckScripts errors when PRE and POST script files do not exist
+    "OPT_CHECK_SCRIPTS_MISSING": {
+        KEY_DAG: """JOB A desc
+SCRIPT PRE A /dne/pre.sh
+SCRIPT POST A /dne/post.sh
+""",
+        KEY_OPTIONS: ["-CheckScripts"],
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "Script file does not exist",
+                "SourceFile": "OPT_CHECK_SCRIPTS_MISSING.dag",
+                "SourceLine": 2,
+                "DagCommand": "SCRIPT",
+            },
+            {
+                "Reason": "Script file does not exist",
+                "SourceFile": "OPT_CHECK_SCRIPTS_MISSING.dag",
+                "SourceLine": 3,
+                "DagCommand": "SCRIPT",
+            },
+        ],
     },
 }
 
