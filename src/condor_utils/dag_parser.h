@@ -20,6 +20,7 @@
 #ifndef DAG_PARSER_H
 #define DAG_PARSER_H
 
+#include "condor_common.h"
 #include <set>
 #include <string>
 #include <fstream>

@@ -110,6 +110,12 @@ Options
     (Query option) Query *condor_startd* ClassAds of broken slots or
     broken machines and display a reason. Use with **-startd** to see
     broken machines.
+ **-healthy[:verbose]**
+    (Query option) Query *condor_startd* ClassAds of unhealthy slots or
+    broken machines and display a health factor and the failed health expressions.
+    Use with **-slot** to see health factor and reason per slot.  If **:verbose**
+    is added, then all machines or slots are printed. Otherwise slots or machines
+    that have full health and are not broken are counted but not printed.
  **-lvm**
     (Query option) Query *condor_startd* ClassAds of slots current
     enforced disk usage. Ues with **-startd** to see which *condor_startd*\s

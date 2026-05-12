@@ -115,7 +115,11 @@ def path_to_job_two_script(test_dir):
     nap += 1
 
     with HTChirp() as chirp:
-        chirp.set_job_attr_delayed("ChirpIterationNum", f"{nap}")
+        # Immediate (non-delayed) update: the delayed variant only flushes at
+        # starter exit, which races with the next iteration overwriting the
+        # value before the test poll catches it. Requires WantRemoteUpdates=true
+        # on the job ad (set in the submit description below).
+        chirp.set_job_attr("ChirpIterationNum", f"{nap}")
 
     if nap >= len(nap_lengths):
         print(f"Completed all naps.")
@@ -156,6 +160,8 @@ def job_two_handle(default_condor, test_dir, path_to_job_two_script):
 
             "hold":                         True,
             "getenv":                       "PYTHONPATH",
+
+            "+WantRemoteUpdates":           "true",
         },
         count=1,
     )
@@ -250,9 +256,8 @@ class TestActivationMetrics:
         assert job_two_duration is not None
 
         logger.info(f"job_two_duration = {job_two_duration}")
-        logger.info(f"first execution duration = {job_two_execution_durations[0]}")
-        logger.info(f"second execution duration = {job_two_execution_durations[1]}")
-        logger.info(f"third execution duration = {job_two_execution_durations[2]}")
+        for i, d in enumerate(job_two_execution_durations):
+            logger.info(f"execution duration #{i} = {d}")
         assert( job_two_execution_durations[0] + job_two_execution_durations[1] ) <= job_two_duration
 
 

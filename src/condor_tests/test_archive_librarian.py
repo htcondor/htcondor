@@ -377,11 +377,30 @@ class TestLibrarianIngestion:
         ).fetchone()[0]
         assert count >= 1, "Rotated file not marked FullyRead"
 
-    def test_post_rotation_status_updated(self, post_rotation_db):
-        """The daemon must have written multiple Status rows across both cycles."""
-        assert post_rotation_db.execute(
-            r"SELECT COUNT(*) FROM Status"
-        ).fetchone()[0] >= 2
+    def test_post_rotation_status_updated(self, post_rotation_db, condor):
+        """The daemon must keep writing Status rows after the schedd restart.
+
+        Asserted as a delta on MAX(TimeOfUpdate) so retention pruning (which
+        keeps the live count near 1) cannot mask a stalled daemon.
+        """
+        initial_max = post_rotation_db.execute(
+            r"SELECT MAX(TimeOfUpdate) FROM Status"
+        ).fetchone()[0]
+        assert initial_max is not None, "Expected at least one Status row before delta check"
+
+        # Wait for the librarian to run another update cycle.
+        time.sleep(UPDATE_INTERVAL + 5)
+
+        # Use a fresh connection so we don't observe a stale snapshot from
+        # the fixture's read transaction.
+        db_path = _get_db_path(condor)
+        conn = sqlite3.connect(str(db_path))
+        new_max = conn.execute(r"SELECT MAX(TimeOfUpdate) FROM Status").fetchone()[0]
+        conn.close()
+
+        assert new_max is not None and new_max > initial_max, (
+            f"Status TimeOfUpdate did not advance: was {initial_max}, now {new_max}"
+        )
 
     def test_post_rotation_avg_record_size_persisted(self, post_rotation_db):
         """AvgRecordSize must remain > 0 for all files after a daemon restart (DB persistence)."""

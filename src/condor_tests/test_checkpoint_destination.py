@@ -371,10 +371,10 @@ def path_to_the_job_script(the_condor, test_dir):
     # The shadow updates the schedd on a timer (and not when the starter
     # sends an update), so there's a delay between the starter incrementing
     # the checkpoint number (before it restarts the job) and the update
-    # becoming visible in the schedd.  By default, we test with that interval
-    # set to two seconds, so sleep for three to make sure it passes before
-    # we try again.
-    for i in range(1,3):
+    # becoming visible in the schedd.  Poll for up to 60 seconds so a
+    # heavily-loaded CI runner has time to propagate the update.
+    deadline = time.monotonic() + 60
+    while True:
         the_checkpoint_number = -1
         rv = subprocess.run(
             ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
@@ -386,8 +386,9 @@ def path_to_the_job_script(the_condor, test_dir):
             the_checkpoint_number = int(rv.stdout.strip())
         if the_checkpoint_number == my_checkpoint_number:
             break
-        else:
-            time.sleep(3)
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(1)
     print(f"Found the checkpoint number {the_checkpoint_number}")
 
     # Dump the sandbox contents (when resuming after the first checkpoint)

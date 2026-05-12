@@ -294,7 +294,7 @@ test_main( int /* argv */, char ** /* argv */ ) {
     }
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( const auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentUnready( & ms );
         ASSERT( ms.sji_called && ! ms.jwuet_called );
@@ -382,7 +382,7 @@ bool Starter::skipJobImmediately() { EXCEPT("MOCK"); return false; }
 bool Starter::removeDeferredJobs() { EXCEPT("MOCK"); return false; }
 int Starter::jobEnvironmentReady() { EXCEPT("MOCK"); return -1; }
 int Starter::jobEnvironmentCannotReady(int i, UnreadyReason const&) { EXCEPT("MOCK"); return i; }
-void Starter::SpawnPreScript(int) { EXCEPT("MOCK"); }
+void Starter::SpawnJobOrPreScript(int) { EXCEPT("MOCK"); }
 void Starter::SkipJobs(int) { EXCEPT("MOCK"); }
 bool Starter::allJobsDone() { EXCEPT("MOCK"); return false; }
 int Starter::Reaper(int, int) { EXCEPT("MOCK"); }

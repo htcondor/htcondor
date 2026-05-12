@@ -34,7 +34,6 @@
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
 
-      1) ~/.condor/     # if not started as root
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/

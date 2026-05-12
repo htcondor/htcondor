@@ -59,6 +59,9 @@ public:
                                     StatusData& statusData,
                                     const std::string& directory);
 
+    // WAL Management
+    bool checkpointWAL();
+
     // === Garbage Collection ===
     bool runGarbageCollection(const std::string& gcSql, int targetFileLimit);
 

@@ -236,6 +236,7 @@ bool			annexMode = false;
 bool			compactMode = false;
 bool			dash_gpus = false;
 bool			dash_broken = false;
+int				dash_healthy = 0;
 
 // Merge-mode globals.
 const char * rightFileName = NULL;
@@ -582,14 +583,14 @@ bool local_render_gpus_names ( classad::Value & value, ClassAd* ad, Formatter & 
 
 // arguments passed to the process_ads_callback
 struct _process_ads_info {
-   ROD_MAP_BY_KEY * pmap;
-   TrackTotals *  totals;
-   TrackGPUs *    gpusInfo;
-   unsigned int  ordinal;
-   int           columns;
-   FILE *        hfDiag; // write raw ads to this file for diagnostic purposes
-   unsigned int  diag_flags;
-   PrettyPrinter * pp;
+   ROD_MAP_BY_KEY * pmap{nullptr};
+   TrackTotals *  totals{nullptr};
+   TrackGPUs *    gpusInfo{nullptr};
+   unsigned int  ordinal{1};
+   int           columns{0};
+   FILE *        hfDiag{nullptr}; // write raw ads to this file for diagnostic purposes
+   unsigned int  diag_flags{0};
+   PrettyPrinter * pp{nullptr};
 };
 
 static bool store_ads_callback( void * arg, ClassAd * ad ) {
@@ -728,6 +729,19 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				}
 			} else if (ad->LookupBool(ATTR_SLOT_DYNAMIC, fDynSlot) && fDynSlot) {
 				srod.flags |= SROD_DYNAMIC_SLOT;
+			}
+
+			// when in -healthy mode, skip healthy EPs and/or slots.
+			if (dash_healthy) {
+				bool fBroken = ad->Lookup(ATTR_BROKEN_REASONS) || ad->Lookup(ATTR_SLOT_BROKEN_REASON);
+				bool fHealthy = false;
+				if (ad->LookupBool(ATTR_HEALTHY, fHealthy) && ! fBroken) {
+					// don't print rows that are healthy and unbroken
+					if(fHealthy && dash_healthy==1) { srod.flags |= SROD_SKIP;}
+				} else if ( ! ad->Lookup(ATTR_HEALTH_EXPRS)) {
+					// don't print rows which are unbroken and don't support HealthExprs, since we have nothing to print here.
+					if ( ! fBroken && dash_healthy==1) srod.flags |= SROD_SKIP;
+				}
 			}
 
 			{
@@ -1348,9 +1362,23 @@ main (int argc, const char *argv[])
 	} else if (dash_broken && explicit_format) {
 		mode_constraint = nullptr;
 		if (sdo_mode == SDO_StartD_Broken) {
-			mode_constraint = "size(BrokenReasons?:BrokenSlots) > 0";
+			mode_constraint = "size(BrokenReasons) > 0";
 		} else if (sdo_mode == SDO_Slots_Broken) {
 			mode_constraint = "size(SlotBrokenReason) > 0";
+		}
+		if (mode_constraint) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
+		}
+	} else if (dash_healthy && explicit_format) {
+		mode_constraint = nullptr;
+		if (sdo_mode == SDO_StartD_Health) {
+			// we want to look at all machines
+			//mode_constraint = PMODE_STARTD_HEALTH_CONSTRAINT;
+		} else if (sdo_mode == SDO_Slots_Health) {
+			// we want to look at all slots
+			//mode_constraint = PMODE_SLOT_HEALTH_CONSTRAINT;
 		}
 		if (mode_constraint) {
 			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
@@ -1398,87 +1426,12 @@ main (int argc, const char *argv[])
 
 	// in order to totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
-	#if 1
 		rightTotals.addProjection(projList);
 		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
 			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
 			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
 			query->addANDConstraint (constr);
 		}
-	#else
-		switch (mainPP.ppTotalStyle) {
-			case PP_SLOTS_SERVER:
-				projList.insert(ATTR_MEMORY);
-				projList.insert(ATTR_DISK);
-				// fall through
-			case PP_SLOTS_RUN:
-				projList.insert(ATTR_LOAD_AVG);
-				projList.insert(ATTR_MIPS);
-				projList.insert(ATTR_KFLOPS);
-				// fall through
-			case PP_SLOTS_NORMAL:
-			case PP_SLOTS_COD:
-				if (mainPP.ppTotalStyle == PP_SLOTS_COD) {
-					projList.insert(ATTR_CLAIM_STATE);
-					projList.insert(ATTR_COD_CLAIMS);
-				}
-				projList.insert(ATTR_STATE); // Norm, state, server
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS); // for key
-				break;
-
-			case PP_STARTDAEMON:
-				projList.insert(ATTR_TOTAL_SLOTS);
-				projList.insert(ATTR_NUM_DYNAMIC_SLOTS);
-				projList.insert(ATTR_TOTAL_CPUS);
-				projList.insert(ATTR_TOTAL_MEMORY);
-				projList.insert("TotalGPUs");
-				//projList.insert("TotalDisk");
-				// daemon ads have TotalInUse* and TotalBackfillInUse*
-				projList.insert("TotalInUseCpus");
-				projList.insert("TotalInUseMemory");
-				projList.insert("TotalInUseDisk");
-				projList.insert("TotalInUseGPUs");
-				projList.insert("TotalBackfillInUseCpus");
-				projList.insert("TotalBackfillInUseMemory");
-				projList.insert("TotalBackfillInUseDisk");
-				projList.insert("TotalBackfillInUseGPUs");
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS_AND_VER); // for key
-				projList.insert(ATTR_CONDOR_VERSION);
-				if (dash_gpus) {
-					const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-					if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-					query->addANDConstraint (constr);
-				}
-				break;
-
-			case PP_SLOTS_STATE:
-				projList.insert(ATTR_STATE);
-				projList.insert(ATTR_ACTIVITY); // for key
-				break;
-
-			case PP_SUBMITTER_NORMAL:
-				projList.insert(ATTR_NAME); // for key
-				projList.insert(ATTR_RUNNING_JOBS);
-				projList.insert(ATTR_IDLE_JOBS);
-				projList.insert(ATTR_HELD_JOBS);
-				break;
-
-			case PP_SCHEDD_NORMAL: // no key
-				projList.insert(ATTR_TOTAL_RUNNING_JOBS);
-				projList.insert(ATTR_TOTAL_IDLE_JOBS);
-				projList.insert(ATTR_TOTAL_HELD_JOBS);
-				break;
-
-			case PP_CKPT_SRVR_NORMAL:
-				projList.insert(ATTR_DISK);
-				break;
-
-			default:
-				break;
-		}
-	#endif
 	}
 
 	// fetch the query
@@ -2585,6 +2538,7 @@ usage (const char * opts)
 		"\t-slot\t\t\tDisplay slot resource attributes\n"
 		"\t-startd\t\t\tDisplay STARTD daemon attributes\n"
 		"\t-broken\t\t\tDisplay broken machine resources\n"
+		"\t-healthy[:verbose]\tDisplay machine or slot health factor\n"
 		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
@@ -2985,7 +2939,11 @@ firstPass (int argc, const char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			mainPP.setMode (SDO_Slots, i, argv[i]);
+			if (sdo_mode == SDO_StartD_Health || sdo_mode == SDO_Slots_Health) {
+				mainPP.resetMode(SDO_Slots_Health, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots, i, argv[i]);
+			}
 			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
@@ -3017,6 +2975,17 @@ firstPass (int argc, const char *argv[])
 				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
 			}
 		} else
+		if( is_dash_arg_colon_prefix (argv[i], "healthy", &pcolon, 4) ) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Health, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots) {
+				mainPP.resetMode (SDO_Slots_Health, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_StartD_Health, i, argv[i]);
+			}
+			dash_healthy = 1;
+			if (pcolon && is_arg_prefix(pcolon+1, "verbose")) { dash_healthy = 2; }
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -3042,6 +3011,8 @@ firstPass (int argc, const char *argv[])
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_LvUsage) {
 				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else if (sdo_mode == SDO_StartD_Health) {
+				// already correct, -health before -startd.
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}

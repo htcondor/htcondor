@@ -29,22 +29,18 @@
 
 *** 24.12.20 bugs
 
-- There are five configuration macros type as long integers.
-  (:macro:`PREEN_COREFILE_MAX_SIZE`, :macro:`EVENT_LOG_MAX_SIZE`,
-  :macro:`EVENT_LOG_MAX_ROTATIONS`, :macro:`ANNEX_DEFAULT_LEASE_DURATION`,
-  and
-  :macro:`ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`.)  These are now properly handled
-  by :data:`htcondor2.param`, and looking up large values (more than
-  approximately 2 billion) will no longer cause the process to abort.
-  :jira:`3616`
-
 - Fixed a bug that caused attempts to refresh a job's X.509 proxy file
   spooled by the AP to fail.
   :jira:`3660`
 
-- Messages in the StartLog when the *condor_startd* aborts because it
-  cannot detect the amount of physical memory or when the amount of reserved
-  memory leaves no memory for creating slots have been improved.
+- :data:`htcondor2.param` now properly handles configuration options typed
+  as long integers containing values greater than approximately 2 billion
+  and no longer crashes the process when accessing the ``param`` object.
+  :jira:`3616`
+
+- Improved messages in :macro:`STARTD_LOG` when the *condor_startd* aborts due to
+  failing to detect the total amount of physical memory or when :macro:`RESERVED_MEMORY`
+  leaves no memory for slot creation.
   :jira:`3667`
 
 *** 24.0.20 features
@@ -60,18 +56,18 @@
   proc in the parallel job.
   :jira:`3677`
 
+- :tool:`condor_ssh_to_job` now properly supports running into
+  docker and container universe jobs with a one-shot command argument.
+  In addition, the shell now enters the cgroup of the job for container
+  universe jobs.
+  :jira:`3658`
+
 - Fixed bug where Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS` without
   being explicitly provided a backing store (Volume Group) would fail clean up to
   clean up the automatically generated backing store on shutdown.
   :jira:`3657`
 
-- :tool:`condor_ssh_to_job` now properly supports running into
-  docker and container universe jobs with a one-shot command argument,
-  and the shell now enters the cgroup of the job for container universe
-  jobs.
-  :jira:`3658`
-
-- VM Universe jobs now use the widely supported and ubiquitous Intel e1000 network card.
+- VM Universe jobs now use the widely supported and ubiquitous ``Intel e1000`` network card.
   This is needed on Enterprise Linux 10 hosts, where the default virtual NIC model selected
   by libvirt is incompatible.
   :jira:`3642`
