@@ -1,8 +1,5 @@
 %define condor_version 1.0.0
 
-# Don't use changelog date in CondorVersion
-%global source_date_epoch_from_changelog 0
-
 # set uw_build to 0 for downstream (Fedora or EPEL)
 # UW build includes stuff for testing and tarballs
 %define uw_build 0

@@ -88,7 +88,7 @@ update_spec_define () {
 update_spec_define uw_build "1"
 update_spec_define condor_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
-if [ $condor_git_sha != -1 ]; then
+if [ "$condor_git_sha" != -1 ]; then
     update_spec_define condor_git_sha "$condor_git_sha"
 fi
 
@@ -98,6 +98,7 @@ if [ "$PRE_RELEASE" = 'OFF' ]; then
 else
     # Set HTCondor base release for pre-release build
     update_spec_define condor_release "0.$condor_build_id"
+    sed -i "/%changelog/a * $(date '+%a %b %d %Y') Tim Theisen <tim@cs.wisc.edu> - ${condor_version}-0.${condor_build_id}\n- Automated build\n" SOURCES/condor.spec
 fi
 
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
