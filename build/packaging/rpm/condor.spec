@@ -1492,6 +1492,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
+- Fix reporting of RemoteUserCPU in parallel universe
+- condor_ssh_to_job can now execute one-shot commands when using containers
+- condor_ssh_to_job now enters the proper cgroup when using containers
+- HTCondor tarballs now contain Pelican 7.24.2
+
 * Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.19-1
 - Now properly reports NVIDIA MIG GPU device names
 - Fix performance problem in the htcondor2 Python ClassAd parser
