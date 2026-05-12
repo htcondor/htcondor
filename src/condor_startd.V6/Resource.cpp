@@ -4344,7 +4344,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 
 		// HACK!! give a split claim to the new d-slot
 		// TODO: do this later? make it conditional??
-		if (new_rip->r_claims.empty()) {
+		if ((rip->is_partitionable_slot() || is_replacement_slot) && new_rip->r_claims.empty()) {
 			new_rip->r_claims.insert(new Claim(new_rip));
 		}
 
