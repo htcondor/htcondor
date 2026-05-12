@@ -150,7 +150,16 @@ sub timed_callback {
 		foreach my $line (@slines) {
         	CondorTest::debug("nt: $line",1);
 		}
-        # This always checks the first negotiation cycle (where somebody negotiated)
+
+        # The negotiator may run a "warmup" cycle before all jobs have
+        # registered with the schedd (e.g. only a.user visible, no b.user yet).
+        # Skip ahead to the first cycle that begins with "Group b - BEGIN",
+        # which is the first cycle where both groups are present.
+        while (@slines && $slines[0] !~ /Group b - BEGIN NEGOTIATION/) {
+            shift @slines;
+        }
+
+        # Now check that the first complete cycle has the expected order.
         my $succ = 1;
         my $expect = "";
         $expect = shift @slines || "";
@@ -180,12 +189,12 @@ sub timed_callback {
         if (!$succ) {
         	CondorTest::debug("Did not see expected output.  What I saw was:\n",1);
         	CondorTest::debug("$stat\n",1);
-			CondorTest::RegisterTimed($testname, \&timed_callback, 15);
         } else {
         	CondorTest::debug("Saw what we wanted!\n",1);
 			runToolNTimes("condor_rm -all",1 ,0);
 			CondorTest::RegisterResult($succ, test_name, $testname);
 			CondorTest::EndTest();
+			return;
 		}
         $negotiate_test_passed = $succ;
     }

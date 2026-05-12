@@ -798,6 +798,18 @@ void DBHandler::pruneStatusTable(int64_t retentionSeconds) {
     std::ignore = sqlite3_finalize(stmt);
 }
 
+bool DBHandler::checkpointWAL() {
+    if ( ! db_) return false;
+    int nLog = 0, nCkpt = 0;
+    int rc = sqlite3_wal_checkpoint_v2(db_, nullptr, SQLITE_CHECKPOINT_RESTART, &nLog, &nCkpt);
+    if (rc != SQLITE_OK) {
+        dprintf(D_ERROR, "WAL checkpoint failed: %s\n", sqlite3_errmsg(db_));
+        return false;
+    }
+    dprintf(D_FULLDEBUG, "WAL checkpoint (RESTART) completed: %d/%d frames checkpointed.\n", nCkpt, nLog);
+    return true;
+}
+
 /**
  * Recovers in-memory state from the database after a daemon restart.
  * Populates archiveFiles (keyed by full path = directory / filename) and statusData.

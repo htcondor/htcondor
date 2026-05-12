@@ -28,24 +28,6 @@
 #include "condor_email.h"
 #include "algorithm"
 
-TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
-	m_sock(sock),
-	m_queue_user(queue_user),
-	m_jobid(jobid),
-	m_sandbox_size_MB(sandbox_size/1024.0/1024.0),
-	m_fname(fname),
-	m_downloading(downloading),
-	m_gave_go_ahead(false), m_max_queue_age(max_queue_age), m_time_born(time(NULL)), m_time_go_ahead(0)
-{
-		// the up_down_queue_user name uniquely identifies the user and the direction of transfer
-	if( m_downloading ) {
-		m_up_down_queue_user = "D";
-	}
-	else {
-		m_up_down_queue_user = "U";
-	}
-	m_up_down_queue_user += m_queue_user;
-}
 
 TransferQueueRequest::~TransferQueueRequest() {
 	if( m_sock ) {
@@ -57,11 +39,11 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	formatstr(m_description, "%s %s job %s for %s (sandbox size %g MB, initial file %s)",
+	formatstr(m_description, "%s %s job %d.%d for %s (sandbox size %g MB, initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
-					m_jobid.c_str(),
-					m_queue_user.c_str(),
+					m_jobid.cluster, m_jobid.proc,
+					Name(),
 					m_sandbox_size_MB,
 					m_fname.c_str());
 	return m_description.c_str();
@@ -1189,7 +1171,7 @@ TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int fla
 {
 	// FIXME! shouldn't need
 	std::string up_down_user;
-	up_down_user = "DOwner_"; // D + Owner_ prefix.
+	up_down_user = "DOwner_"; // D + Owner_ prefix from TRANSFER_QUEUE_USER_EXPR
 	up_down_user += user;
 
 	const int ema_flags = flags | stats_entry_sum_ema_rate<double>::PubDefault;
@@ -1229,3 +1211,34 @@ TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int fla
 		m_iostats.upload_MB_waiting.Unpublish(*ad,"FileTransferMBWaitingToUpload");
 	}
 }
+
+bool TransferQueueManager::per_user_activity(
+	bool uploading,
+	const char * user,
+	unsigned int & transferring,
+	unsigned int & waiting)
+{
+	// D|O + Owner_ prefix from TRANSFER_QUEUE_USER_EXPR
+	std::string up_down_user(uploading ? "UOwner_" : "DOwner_");
+	up_down_user += user;
+
+	// first try lookup using fully qualified username, if that doesn't work
+	// (and by default it won't), remove the domain and try again with a bare owner name
+	auto itr = m_queue_users.find(up_down_user);
+	if (itr == m_queue_users.end()) {
+		auto last_at = up_down_user.find_last_of('@');
+		if (last_at != std::string::npos) {
+			up_down_user.erase(last_at);
+			itr = m_queue_users.find(up_down_user);
+		}
+	}
+
+	if (itr != m_queue_users.end()) {
+		const auto & info = itr->second;
+		transferring = info.running;
+		waiting = info.idle;
+		return true;
+	}
+	return false;
+}
+

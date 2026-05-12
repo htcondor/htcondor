@@ -442,6 +442,9 @@ void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_fi
                 dbHandler_.writeFileInfo(*newActive);
                 m_archive_files[activePath] = std::move(*newActive);
             }
+
+            dprintf(D_STATUS, "reconcileArchiveFiles: triggering WAL checkpoint after archive rotation.\n");
+            dbHandler_.checkpointWAL();
         } else {
             auto newFile = makeArchiveFile(path);
             if ( ! newFile) {
@@ -655,6 +658,17 @@ bool Librarian::update() {
     if (status.records_processed > 0) {
         dprintf(D_STATUS, "Update completed. Inserted %" PRId64 " records in %" PRId64 " ms.\n",
                 status.records_processed, status.duration_ms);
+    }
+
+    // Checkpoint the WAL if it has grown beyond 4 MB.
+    constexpr int64_t WAL_CHECKPOINT_THRESHOLD = 4 * 1024 * 1024;
+    std::string walPath = config[conf::str::DBPath] + "-wal";
+    std::error_code walEc;
+    auto walSize = static_cast<int64_t>(std::filesystem::file_size(walPath, walEc));
+    if ( ! walEc && walSize > WAL_CHECKPOINT_THRESHOLD) {
+        dprintf(D_STATUS, "WAL file size (%lld bytes) exceeds 4 MB threshold; triggering checkpoint.\n",
+                (long long)walSize);
+        dbHandler_.checkpointWAL();
     }
 
     return success;

@@ -446,6 +446,23 @@ DedicatedScheduler::~DedicatedScheduler()
 		delete mrec;
 	}
 
+		// Pending matches (claim sent to startd, not yet activated) are
+		// NOT in all_matches -- AddMrec puts a mrec in one or the other.
+		// Free them directly: do NOT go through DelMrec/releaseClaim here.
+		// DelMrec has assertions that don't hold mid-shutdown, and
+		// releaseClaim sends a network message that needs daemonCore.
+		// ~match_rec is shutdown-safe (it bails when daemonCore is null).
+		// The startd reclaims the claim via its unused-claim timeout, the
+		// same as today's shutdown_graceful behavior for these claims.
+	for (const auto& [cid, mrec] : pending_matches) {
+		delete mrec;
+	}
+	pending_matches.clear();
+	for (const auto& [cid, ad] : pending_requests) {
+		delete ad;
+	}
+	pending_requests.clear();
+
 		// Clear out the resource_requests queue
 	clearResourceRequests();  	// Delete classads in the queue
 }

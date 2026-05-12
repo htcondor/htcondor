@@ -266,6 +266,9 @@ condor_isidchar(int c)
 
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
 
+// characters allowed between + and = when using FOO += value
+#define CONFIG_PLUS_SEP_CHARSET ",;|&*"
+
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 // The length of the DOLLAR_ID string
@@ -965,6 +968,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	std::string hereData;
 	std::string hereName;
 	std::string hereTag;
+	std::string plusRhs;
 
 	for (const auto &line_str: StringTokenIterator(config, "\n")) {
 		auto_free_ptr line = strdup(line_str.c_str());
@@ -1015,6 +1019,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		const char * pop = line;
 		char * ptr = line.ptr();
 		int op = 0;
+		char plus_sep = 0, double_plus = 0;
 
 		// detect the 'use' keyword
 		bool is_meta = starts_with_ignore_case(ptr, "use ");
@@ -1043,6 +1048,19 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 				pop = ptr;
 				op = *ptr;
 				++ptr; // extra skip because @=
+			} else if (*ptr == '+') {
+				int ix = 1;
+				if (strchr(CONFIG_PLUS_SEP_CHARSET, ptr[ix])) {
+					plus_sep = ptr[ix++]; double_plus = 1;
+					if (ptr[ix] == plus_sep) { ++ix; double_plus = 2; }
+				}
+				if (ptr[ix] != '=') {
+					op = 0; // +<sep> must be followed by =
+					break;
+				}
+				pop = ptr;
+				op = *ptr;
+				ptr += ix; // ptr should now point to =
 			} else if (ISOP(*ptr)) {
 				if (ISOP(op)) {
 					op = 0; // more than one op is not allowed, so trigger a failure
@@ -1136,6 +1154,32 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 				hereTag = rhs;
 				hereData.clear();
 				continue;
+			}
+
+			// if there is a + operator, we turn  "XXX +<sep>= rhs" 
+			// into "XXX = $(XXX)<sep>rhs" when XXX already has a non-empty value
+			if (op == '+') {
+				const char * curval = lookup_macro(name, macro_set, ctx);
+				if (curval && *curval) {
+					plusRhs = curval;
+					// for single separator like ;,| we want XXX;XXX
+					// for double separator like &&  we want XXX && XXX
+					if (plus_sep) {
+						if (double_plus > 1) {
+							plusRhs.push_back(' ');
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(' ');
+						} else {
+							plusRhs.push_back(plus_sep);
+						}
+					} else {
+						plusRhs.push_back(' ');
+					}
+					plusRhs += rhs;
+					rhs = plusRhs.c_str();
+				}
+				op = '='; // we have handled the + op, to now we just need to fall down to do the = op
 			}
 
 			/* expand self references only */
@@ -1407,7 +1451,7 @@ Parse_macros(
 	char*	rhs = NULL;
 	char*	ptr = NULL;
 	char*	into_file = NULL; // holds <file> for "include command into <file> : <script>"
-	char	op, name_end_ch;
+	char	op, name_end_ch, plus_sep=0, double_plus=0;
 	int		retval = 0;
 	bool	firstRead = true;
 	const int gl_opt_old = 0;
@@ -1419,6 +1463,7 @@ Parse_macros(
 	std::string   hereData; // used to accumulate @= multiline values
 	std::string      hereName;
 	std::string      hereTag;
+	std::string   plusRhs; // used to build += right hand side.
 	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
 	if ( ! pctx) pctx = &defctx;
 
@@ -1561,19 +1606,28 @@ Parse_macros(
 		char * name_end = ptr; // keep track of where we null-terminate the name, so we can reverse it later
 		name_end_ch = *name_end;
 		if (*ptr) { *ptr++ = '\0'; }
-		// scan for an operator character if we don't have one already. operator can be : = or @=
+		// scan for an operator character if we don't have one already. operator can be : = @= or +=
 		if ( ! ISOP(op)) {
 			while (isspace(*ptr)) ++ptr;
-			if (*ptr && ! ISOP(*ptr) && ! (*ptr == '@')) word_before_op = ptr;
-			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@')) {
+			if (*ptr && ! ISOP(*ptr) && ! (*ptr == '@') && ! (*ptr == '+')) word_before_op = ptr;
+			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@') && ! (*ptr == '+')) {
 				++ptr;
 			}
 			pop = ptr;
 			op = *ptr;
 			if (op) {
+				double_plus = plus_sep = 0;
 				++ptr;
 				if (op == '@') {
 					// the @ op must be followed by an = to be valid.
+					if (*ptr == '=') ++ptr;
+					else op = 0;
+				} else if (op == '+') {
+					// the + op must be followed by an optional separator and then = to be valid.
+					if (strchr(CONFIG_PLUS_SEP_CHARSET, *ptr)) {
+						plus_sep = *ptr++; double_plus = 1;
+						if (*ptr == plus_sep) { double_plus = 2; ++ptr; }
+					}
 					if (*ptr == '=') ++ptr;
 					else op = 0;
 				}
@@ -1581,7 +1635,7 @@ Parse_macros(
 		}
 		// if we still haven't got an operator, then this isn't a valid config line,
 		// (it *might* be a valid submit line however.)
-		if ( ! ISOP(op) && op != '@' && ! is_submit) {
+		if ( ! ISOP(op) && op != '@' && op != '+' && ! is_submit) {
 			retval = -1;
 			name = NULL;
 			goto cleanup;
@@ -1800,7 +1854,7 @@ Parse_macros(
 			std::string plusname = "MY."; plusname += name+1;
 			insert_macro(plusname.c_str(), (*name=='+') ? rhs : "", macro_set, FileSource, *pctx);
 
-		} else if (is_submit && ((op != '=' && op != '@') || MATCH == strcasecmp(name, "queue"))) {
+		} else if (is_submit && ((op != '=' && op != '@' && op != '+') || MATCH == strcasecmp(name, "queue"))) {
 
 			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, config_errmsg);
 			if (retval != 0) { // this may or may not be a failure, but we should stop reading the file.
@@ -1833,15 +1887,42 @@ Parse_macros(
 				continue;
 			}
 
+			// if there is a + operator, we turn  "XXX +<sep>= rhs" 
+			// into "XXX = $(XXX)<sep>rhs" when XXX already has a non-empty value
+			const char * crhs = rhs;
+			if (op == '+') {
+				const char * curval = lookup_macro(name, macro_set, *pctx);
+				if (curval && *curval) {
+					plusRhs = curval;
+					// for single separator like ;,| we want XXX;XXX
+					// for double separator like &&  we want XXX && XXX
+					if (plus_sep) {
+						if (double_plus > 1) {
+							plusRhs.push_back(' ');
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(' ');
+						} else {
+							plusRhs.push_back(plus_sep);
+						}
+					} else {
+						plusRhs.push_back(' ');
+					}
+					plusRhs += rhs;
+					crhs = plusRhs.c_str();
+				}
+				op = '='; // we have handled the + op, to now we just need to fall down to do the = op
+			}
+
 			if (options & READ_MACROS_EXPAND_IMMEDIATE) {
-				value = expand_macro(rhs, macro_set, *pctx);
+				value = expand_macro(crhs, macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
 				}
 			} else  {
 				/* expand self references only */
-				value = expand_self_macro(rhs, name, macro_set, *pctx);
+				value = expand_self_macro(crhs, name, macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;

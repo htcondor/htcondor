@@ -20,7 +20,7 @@
 
 
 from ornithology import *
-from time import sleep
+from time import sleep, monotonic
 
 #-----------------------------------------------------------------------------------------
 @action
@@ -299,9 +299,11 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
      clustId = job_handle.clusterid
      assert job_handle.wait(condition=ClusterState.all_complete,timeout=300)
      schedd = default_condor.get_local_schedd()
-     #once job is done get job ad attributes needed for test verification
+     #once job is done get job ad attributes needed for test verification.
+     #History writes are flushed periodically, so poll for up to 60 seconds.
      job_ad = []
-     for i in range(0,5):
+     deadline = monotonic() + 60
+     while monotonic() < deadline:
           hist_itr = schedd.history(
                constraint=f"ClusterId=={clustId}",
                projection=["TransferInput","TransferInputStats","TransferOutputStats"],

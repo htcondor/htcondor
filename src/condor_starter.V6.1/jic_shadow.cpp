@@ -2692,6 +2692,21 @@ JICShadow::beginInputTransfer( void )
 		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
 		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
 
+			// check knob for disabling user supplied transfer plugins
+			// it has 3 states, false = Allow, true = Fail, 2 = Ignore
+		int disable_plugins = FileTransfer::UserPluginDisableMode::Allow;
+		if (param_integer("STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS", disable_plugins,
+			/*use_default*/ true, (int)FileTransfer::UserPluginDisableMode::Allow,
+			/*validate_range*/false, INT_MIN, INT_MAX, mach_ad, job_ad, false))
+		{
+			if (disable_plugins <= 0) { disable_plugins = FileTransfer::UserPluginDisableMode::Allow; }
+			else if (disable_plugins != FileTransfer::UserPluginDisableMode::Ignore) {
+				disable_plugins = FileTransfer::UserPluginDisableMode::Fail;
+			}
+			m_ft_user_plugin_disable = (FileTransfer::UserPluginDisableMode)disable_plugins;
+		}
+		filetrans->setDisableUserSuppliedTransferPlugins(m_ft_user_plugin_disable);
+
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
 			// output from the spool.  We always want to use

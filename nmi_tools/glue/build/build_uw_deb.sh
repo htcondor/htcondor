@@ -4,6 +4,9 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
+# Pin umask so file modes baked into the package are reproducible
+umask 022
+
 # build_uw_deb
 
 usage () {
