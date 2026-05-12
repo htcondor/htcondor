@@ -838,6 +838,56 @@ bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 	return true;
 }
 
+bool render_failed_health_exprs ( classad::Value & value, ClassAd* ad, Formatter & fmt )
+{
+	std::string buf;
+	std::string unhealth;
+	if( ! value.IsListValue() ) {
+		// if unhealthy is not supported, look for a slot broken string
+		// or a Startd broken reasons list of strings.
+		if (ad->LookupString(ATTR_SLOT_BROKEN_REASON, unhealth)) {
+			value.SetStringValue(unhealth);
+			return true;
+		} else if (ad->EvaluateAttr(ATTR_BROKEN_REASONS, value)) {
+			return render_unique_strings(value, ad, fmt);
+		}
+		return false;
+	}
+	const classad::ExprList * list = NULL;
+	if( ! value.IsListValue( list ) ) {
+		value.SetStringValue("[Attribute not a list.]");
+		return true;
+	}
+
+	classad::Value itemval;
+	classad::ExprList::const_iterator item = list->begin();
+	for( ; item != list->end(); ++item ) {
+		ExprTree * expr = *item /*, * sig = nullptr*/;
+		expr->SetParentScope(ad);
+		bool bval = true;
+		if (ad->EvaluateExpr(expr, itemval) && itemval.IsBooleanValueEquiv(bval)) {
+			if (bval) {
+				// health ok, skip this one.
+			} else {
+				if ( ! unhealth.empty()) unhealth += ", ";
+				buf.clear();
+				unhealth += ExprTreeToString(expr, buf);
+			}
+		} else if (itemval.IsUndefinedValue()) {
+			// undefined, skip this one.
+			//if ( ! unhealth.empty()) unhealth += ",";
+			//unhealth += "undef";
+		} else if (itemval.IsErrorValue()) {
+			if ( ! unhealth.empty()) unhealth += ",";
+			unhealth += "error";
+		}
+	}
+
+	value.SetStringValue(unhealth);
+	return true;
+}
+
+
 //=================================Format Table======================================
 //          !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!!
 const CustomFormatFnTableItem GlobalPrintFormats[] = {
@@ -891,6 +941,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
 	{ "STRINGS_FROM_LIST", NULL, 0, render_strings_from_list, NULL },
 	{ "TIME",            ATTR_KEYBOARD_IDLE, 0, format_real_time, NULL },
+	{ "UNHEALTH",        ATTR_HEALTH_EXPRS, 0, render_failed_health_exprs, ATTR_HEALTHY "\0" ATTR_BROKEN_REASONS "\0" ATTR_SLOT_BROKEN_REASON "\0" },
 	{ "UNIQUE",          NULL, 0, render_unique_strings, NULL },
 };
 

@@ -48,12 +48,10 @@
 #include "condor_holdcodes.h"
 #include "basename.h"
 #include "shadow.h"
+#include "pseudo_ops.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
-
-// for remote syscalls, this is currently in NTreceivers.C.
-extern int do_REMOTE_syscall();
 
 // To know if the schedd wants us to do common file transfer.  If not, this
 // is where we alter the input list to compensate.
@@ -550,12 +548,21 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
-	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+	switch(do_REMOTE_syscall()) {
+	case RemoteSyscallResult::ExpectedClose:
+		// The socket closed at the expected time. Start shutdown.
+		dprintf(D_SYSCALLS,"do_REMOTE_syscall returned ExpectedClose, assume starter is exiting after job exit\n");
 		attemptShutdown();
-		return KEEP_STREAM;
+		break;
+	case RemoteSyscallResult::UnexpectedClose:
+		// Unexpected network trouble. We'll be in reconnect mode now.
+		dprintf(D_SYSCALLS, "do_REMOTE_syscall returned UnexpectedClose, assume starter may still be alive\n");
+		break;
+	case RemoteSyscallResult::SyscallOK:
+		// Normal RPC, note contact from starter
+		hadContact();
+		break;
 	}
-	hadContact();
 	return KEEP_STREAM;
 }
 

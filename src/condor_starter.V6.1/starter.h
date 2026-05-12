@@ -153,7 +153,7 @@ public:
 		/**
 		 * Before a job is spawned, this method checks whether
 		 * a job has a deferrral time, which means we will need
-		 * to register timer to call SpawnPreScript()
+		 * to register timer to call SpawnJobOrPreScript()
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
@@ -185,7 +185,7 @@ public:
 		 *
 		 *
 		 **/
-	virtual void SpawnPreScript( int timerID = -1 );
+	virtual void SpawnJobOrPreScript( int timerID = -1 );
 
 		/* timer to handle unwinding to pump while skipping job spawn */
 	virtual void SkipJobs( int timerID = -1 );

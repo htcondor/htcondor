@@ -71,7 +71,15 @@ site use the following macros:
     Expression to be appended to vanilla job requirements.
 
 :macro-def:`APPEND_REQUIREMENTS`
-    Expression to be appended to any type of universe jobs. However, if
+    Expression to be appended to any type of universe jobs.
+    This is a *submit side* change. That is, when 
+    :tool:`condor_submit` submits to a remote *condor_schedd*, 
+    the value of :macro:`APPEND_REQUIREMENTS` on the submit machine,
+    not the schedd machine, is used.  HTCondor wraps this expression
+    in parentheses and ands (&&) it to the end of the job's 
+    Requirements expression.
+   
+    However, if
     :macro:`APPEND_REQ_VANILLA` is defined, then
     ignore the :macro:`APPEND_REQUIREMENTS` for that universe.
 

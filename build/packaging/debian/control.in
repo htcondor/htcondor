@@ -7,7 +7,7 @@ Maintainer: Debian HPC Team <debian-hpc@lists.debian.org>
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
 Priority: optional
-Build-Depends: cmake (>= 3.16),
+Build-Depends: cmake (>= 3.20),
                debhelper,
 #if defined(FOCAL)
                debhelper-compat (= 12),

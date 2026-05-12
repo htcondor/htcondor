@@ -3155,7 +3155,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 	auto itr = session_cache.find(key_id);
 	if (itr == session_cache.end()) {
 		dprintf( D_SECURITY,
-				 "DC_INVALIDATE_KEY: security session %s not found in cache.\n",
+				 "SECMAN: security session %s not found in cache.\n",
 				 key_id);
 		return false;
 	}
@@ -3163,7 +3163,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 
 	if ( keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
-				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
+				 "SECMAN: security session %s %s expired.\n",
 				 key_id, keyEntry->expirationType() );
 	}
 
@@ -3171,12 +3171,12 @@ bool SecMan :: invalidateKey(const char * key_id)
 
 	// Now, remove session id
 	if (daemonCore && !strcmp(daemonCore->m_family_session_id.c_str(), key_id) ) {
-		dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate family security key.\n" );
+		dprintf ( D_SECURITY, "SECMAN: ignoring request to invalidate family security key.\n" );
 		return false;
 	} else {
 		session_cache.erase(itr);
 		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: removed key id %s.\n",
+				  "SECMAN: removed key id %s.\n",
 				  key_id);
 	}
 

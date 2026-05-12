@@ -140,7 +140,7 @@ def the_job_description(test_dir, path_to_sleep):
         "starter_debug":            "D_FULLDEBUG",
         "request_cpus":             1,
         "request_memory":           1,
-        "transfer_input_files":     "http://no-such.tld/example",
+        "transfer_input_files":     "http://nonexistent.invalid/example",
     }
 
 

@@ -372,10 +372,10 @@ def path_to_the_job_script(the_condor, test_dir):
     # The shadow updates the schedd on a timer (and not when the starter
     # sends an update), so there's a delay between the starter incrementing
     # the checkpoint number (before it restarts the job) and the update
-    # becoming visible in the schedd.  By default, we test with that interval
-    # set to two seconds, so sleep for three to make sure it passes before
-    # we try again.
-    for i in range(1,3):
+    # becoming visible in the schedd.  Poll for up to 60 seconds so a
+    # heavily-loaded CI runner has time to propagate the update.
+    deadline = time.monotonic() + 60
+    while True:
         the_checkpoint_number = -1
         rv = subprocess.run(
             ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
@@ -387,8 +387,9 @@ def path_to_the_job_script(the_condor, test_dir):
             the_checkpoint_number = int(rv.stdout.strip())
         if the_checkpoint_number == my_checkpoint_number:
             break
-        else:
-            time.sleep(3)
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(1)
     print(f"Found the checkpoint number {the_checkpoint_number}")
 
     # Dump the sandbox contents (when resuming after the first checkpoint)
@@ -704,17 +705,19 @@ class TestCheckpointDestination:
         schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_removed_job.clusterid}'
 
-        # Make sure the job has left the queue.  Might not happen right away, so retry
-        result = {1}
-        retries = 0
-        while ((len(result) != 0) and (retries < 5)):
+        # Make sure the job has left the queue.  Might not happen right away
+        # (the job may sit in the 'X' state for a bit after condor_rm), so
+        # poll for up to 60 seconds.
+        deadline = time.monotonic() + 60
+        result = [1]
+        while time.monotonic() < deadline:
             result = schedd.query(
                     constraint=constraint,
                     projection=["CheckpointDestination", "GlobalJobID"],
                     )
-            if len(result) != 0:
-                time.sleep(3)
-            retries += 1
+            if len(result) == 0:
+                break
+            time.sleep(1)
 
         assert(len(result) == 0)
 

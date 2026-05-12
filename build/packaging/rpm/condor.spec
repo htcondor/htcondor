@@ -72,7 +72,7 @@ BuildRequires: openldap2-devel
 %else
 BuildRequires: openldap-devel
 %endif
-BuildRequires: cmake >= 3.16
+BuildRequires: cmake >= 3.20
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 %if 0%{?suse_version}

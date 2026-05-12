@@ -99,8 +99,8 @@ priv_to_string( priv_state p )
 void
 log_priv(priv_state prev, priv_state new_priv, const char *file, int line)
 {
-	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
-			priv_state_name[new_priv], file, line);
+	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_to_string(prev),
+			priv_to_string(new_priv), file, line);
 	priv_history[ph_head].timestamp = time(NULL);
 	priv_history[ph_head].priv = new_priv;
 	priv_history[ph_head].file = file; /* should be a constant - no alloc */
@@ -122,7 +122,7 @@ display_priv_log(void)
 	for (i=0; i < ph_count && i < HISTORY_LENGTH; i++) {
 		idx = (ph_head-i-1+HISTORY_LENGTH)%HISTORY_LENGTH;
 		dprintf(D_ALWAYS, "--> %s at %s:%d %s",
-				priv_state_name[priv_history[idx].priv],
+				priv_to_string(priv_history[idx].priv),
 				priv_history[idx].file, priv_history[idx].line,
 				ctime(&priv_history[idx].timestamp));
 	}
@@ -1789,6 +1789,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			set_root_euid();	/* must be root to switch */
 			set_condor_rgid();
 			set_condor_ruid();
+			break;
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:

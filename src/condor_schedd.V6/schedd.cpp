@@ -8425,6 +8425,9 @@ int
 MainScheddNegotiate::scheduler_maxJobsToOffer()
 {
 	int maxJobs = scheduler.shadowsSpawnLimit();
+	if (m_jobs_can_offer >= 0 && m_jobs_can_offer < maxJobs) {
+		maxJobs = m_jobs_can_offer;
+	}
 	if (maxJobs > 0)
 	{
 		dprintf(D_FULLDEBUG, "Negotiation cycle will offer at most %d jobs to stay under limits.\n", maxJobs);
@@ -8455,10 +8458,10 @@ MainScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 	// returns false if we should skip this request ad (i.e. and not send it to the negotiator at all)
 	// if return is true, and match_max is not null, match_max will be set to the maximum matches constraint, or MAX_INT
 	// The request constraint expression will be added to the request_ad if it is more complex than a simple boolean literal
-bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max)
+bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * count_max)
 {
-	// TODO: set this to the max matches we can allow for this resource request
-	if (match_max) { *match_max = INT_MAX; }
+	int match_max = INT_MAX;
+	if (count_max) { match_max = *count_max; }
 
 	const OwnerInfo* powni = NULL;
 	int universe = CONDOR_UNIVERSE_MIN;
@@ -8512,9 +8515,9 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 			}
 		}
 	}
-	if (powni && match_max) {
+	if (powni && match_max > 0) {
 		int max_running_per_user = MaxRunningPer(powni) - CurRunningPer(powni);
-		*match_max = MIN(max_running_per_user, *match_max);
+		match_max = MIN(max_running_per_user, match_max);
 	}
 #else
 	if (job_id.cluster < 0 || request_ad.size() < 0) {
@@ -8522,9 +8525,12 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 	}
 #endif
 
-	StartupLimitsAdjustRequest(job_for_limit, request_ad, match_max, getMatchUser(), getRemotePool());
+	StartupLimitsAdjustRequest(job_for_limit, request_ad, &match_max, getMatchUser(), getRemotePool());
 
-	return true;
+	if (match_max < 0) match_max = 0;
+	if (count_max) { *count_max = match_max; }
+
+	return match_max > 0;
 }
 
 
@@ -9149,8 +9155,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		if (at_sign) *at_sign = '\0';
 	}
 	// find owner in the Submitters array
-	SubmitterData * Owner = find_submitter(owner);
-	if ( ! Owner && !scheddsAreSubmitters) {
+	SubmitterData * SubDat = find_submitter(owner);
+	if ( ! SubDat && !scheddsAreSubmitters) {
 		dprintf(D_ALWAYS, "Can't find Submitter %s in Submitters table\n", owner);
 		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
@@ -9161,6 +9167,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	ResourceRequestList *resource_requests = new ResourceRequestList;
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
+	int max_matches_for_this_submitter = INT_MAX;
 
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
@@ -9173,13 +9180,15 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated with
-	// them.  Add them into the resource_requests list now, but only for the owners
-	// that belong to the submitter currently being negotiated.
-	if (Owner) {
-		for (const std::string &owner_name: Owner->owners) {
+	// Special processing per-submitter.
+	if (SubDat) {
+		unsigned int num_in_transfer_queue = 0;
+		for (const std::string &owner_name: SubDat->owners) {
 			OwnerInfo *oi = find_ownerinfo(owner_name.c_str());
 			if (oi) {
+				// OCUs represent requests for match_recs (slots) that have no jobs associated with
+				// them.  Add them into the resource_requests list now, but only for the owners
+				// that belong to the submitter currently being negotiated.
 				for (auto &ocu: oi->ocus) {
 					if (ocu.mrec == nullptr) {
 						int ocu_id = ocu.ocu_id;
@@ -9187,6 +9196,26 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 						resource_requests->add(ocu_id, ocu_request);
 					}
 				}
+
+				// Count the number of jobs this submitter has currently transferring or waiting to transfer.
+				// This code only works when TRANSFER_QUEUE_USER_EXPR is the default, giving us per-user stats.
+				if (EnablePerUserCurbMatchmaking) {
+					unsigned int transferring=0, waiting=0;
+					if (m_xfer_queue_mgr.per_user_activity(true, oi->Name(), transferring, waiting)) {
+						num_in_transfer_queue += transferring;
+						num_in_transfer_queue += waiting;
+					}
+				}
+			}
+		}
+
+		if (EnablePerUserCurbMatchmaking && MaxConcurrentUploadsPerUser > 0) {
+			max_matches_for_this_submitter = MaxConcurrentUploadsPerUser - (int)num_in_transfer_queue;
+			if (max_matches_for_this_submitter <= 0) {
+				dprintf(D_ALWAYS, "Submitter %s has %u jobs in the transfer queue, will not request matches this cycle.\n", SubDat->Name(), num_in_transfer_queue);
+				skip_negotiation = true;
+				// TODO: if we set this here, who would clear it?
+				// SubDat->skipNegotiation = true;
 			}
 		}
 	}
@@ -9257,6 +9286,9 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	sn->setWillMatchClaimedPslots(willMatchClaimedPslots);
 	sn->setMatchCaps(match_caps); // negotiator tells us about diagnostic capabilities
 	sn->setNegotiatorName(negotiator_name); // self-reported negotiator name, for when there are multiple per CM
+	if (max_matches_for_this_submitter < INT_MAX) {
+		sn->setMaxJobsCanOffer(max_matches_for_this_submitter);
+	}
 
 		// handle the rest of the negotiation protocol asynchronously
 	sn->negotiate(sock);
@@ -10497,7 +10529,8 @@ Scheduler::StartJob(match_rec *rec)
 		id.proc = rec->proc;
 	}
 
-	if(! StartJob(rec, id)) {
+	auto result = StartJob(rec, id);
+	if( result != SJ::SUCCEEDED ) {
 
 			// Start job failed. Throw away the match. The reason being that we
 			// don't want to keep a match around and pay for it if it's not
@@ -10517,7 +10550,7 @@ Scheduler::StartJob(match_rec *rec)
 
 			/* We want to send some email to the administrator
 			   about this.  We only want to do it once, though. */
-		if ( !sent_shadow_failure_email ) {
+		if ( (result != SJ::DID_NOT_TRY) && (!sent_shadow_failure_email) ) {
 			sent_shadow_failure_email = TRUE;
 			FILE *email = email_admin_open("Failed to start shadow.");
 			if( email ) {
@@ -10874,7 +10907,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	return true;
 }
 
-bool
+SJ
 Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 {
 	int		universe = -1;
@@ -10931,7 +10964,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				JobQueueJob * job = GetJobAd( job_id );
 				if(! job) {
 					dprintf( D_ALWAYS, "Scheduler::StartJob() failed to GetJobAd(), not starting job.\n" );
-					return false;
+					return SJ::DID_NOT_TRY;
 				}
 
 				// Create the transfer shadow rec with the list of catalogs
@@ -10991,7 +11024,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				set_job_status( job_id.cluster, job_id.proc, JOB_STATUS_BLOCKED );
 
 
-				return true;
+				return SJ::SUCCEEDED;
 			}
 
 		// Some other shadow is staging this job's cxfers to this slot.
@@ -11023,7 +11056,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				matchesHeldByBlockedJobs.push_back(mrec);
 
 				mrec->shadowRec = job_shadow_rec;
-				return true;
+				return SJ::SUCCEEDED;
 			}
 
 		// This job's common file catalog(s) are already on this slot.
@@ -11047,7 +11080,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				addRunnableJob( job_shadow_rec );
 
 				mrec->shadowRec = job_shadow_rec;
-				return true;
+				return SJ::SUCCEEDED;
 			}
 
 		// At least one of the shadows providing catalogs for this job
@@ -11056,12 +11089,12 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 		// which deletes the match record, etc, if we return false.)
 		case CXFER_TYPE::RETIRING:
 			dprintf( D_ALWAYS, "cxfer %d.%d: RETIRING.\n", job_id.cluster, job_id.proc );
-			return false;
+			return SJ::DID_NOT_TRY;
 	}
 
 
 	mrec->shadowRec = start_std( mrec, job_id, universe );
-	return mrec->shadowRec != NULL;
+	return mrec->shadowRec != NULL ? SJ::SUCCEEDED : SJ::FAILED;
 }
 
 
@@ -15831,7 +15864,7 @@ Scheduler::Init()
 	m_negotiate_timeslice.setMaxInterval( SchedDInterval.getMaxInterval() );
 
 	// default every 24 hours
-	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
+	QueueCleanInterval = param_integer("QUEUE_CLEAN_INTERVAL", 8*60*60);
 
 	// default every hour
 	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );
@@ -15911,6 +15944,16 @@ Scheduler::Init()
 	param(m_extendedSubmitHelpFile, "EXTENDED_SUBMIT_HELPFILE");
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
+
+	EnablePerUserCurbMatchmaking = param_boolean("SCHEDD_ENABLE_PER_USER_MATCH_LIMITS", true);
+	MaxConcurrentUploadsPerUser = param_integer("MAX_CONCURRENT_UPLOADS_PER_USER", -1);
+	if (MaxConcurrentUploadsPerUser == -1) {
+		// Note MAX_CONCURRENT_UPLOADS of 0 means unlimited. so if the value is < 5,
+		// per-user will be unlimited unless it is set explicitly. Since this limit currently only
+		// curbs matchmaking and will not prevent single user from filling the whole of MAX_CONCURRENT_UPLOADS
+		// if they can get there in a single negotation cycle, this seem acceptable.
+		MaxConcurrentUploadsPerUser = param_integer("MAX_CONCURRENT_UPLOADS", 100) / 5;
+	}
 
 		// Limit number of simultaenous connection attempts to startds.
 		// This avoids the schedd getting so busy authenticating with

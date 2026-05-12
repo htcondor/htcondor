@@ -25,11 +25,31 @@
   execution.
   :jira:`3656`
 
+- :tool:`condor_dag_checker` now has options to process and check the existence
+  and validity of node submit submit descriptions, Sub-DAG files, and scripts.
+  :jira:`3540`
+
+- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
+  when the pathname of the :macro:`EXECUTE` directory is longer than about 80 characters.
+  :jira:`3729`
+
+- :tool:`condor_status` now accepts a ``-health`` option which displays machines
+  that have less than 100% health, and totals for machines by health.
+  :jira:`3714`
+  
+- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
+  (8 hours).
+  :jira:`3706`
+
 - Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
   :jira:`3687`
 
+- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
+  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
+  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
+  :jira:`3664`
 - :tool:`condor_config_val` now accepts a ``-trace`` option which prints the file, line and previous value
   each time a value is replaced as the configuration files are read.
   :jira:`3699`
@@ -55,7 +75,12 @@
 - Docker universe jobs that also had a credential being refreshed
   that also exhausted their :subcom:`RequestMemory` would not go
   on hold immediately, but only after a 20 minute delay.
-  :jira:`3621`
+  :jira:`3672`
+
+- User supplied transfer plugins can now be conditionally disabled in the
+  *condor_starter* using a new configuration variable.
+  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
+  :jira:`3722`
 
 - Slots used by an AP to transfer (and then store) common files now have
   the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
@@ -85,41 +110,33 @@
   cool down in controlled by :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`.
   :jira:`3067`
 
-- Add new submit command :subcom:`retry_request_disk`, which operates
-  like :subcom:`retry_request_memory` but for the ``Disk`` resource.
-  :jira:`3552`
-
-- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
-  :jira:`3586`
-
-- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
-  :jira:`3682`
-
-- In the very rare case that a job fails after the *condor_starter* forks
-  it, but before it execs the job, we now log a much more coherent
-  error message.  Previously, HTCondor would log an incorrect message
-  about the "tracking gid".
-  :jira:`3654`
-
 - Added new :tool:`htcondor dag resources` command, which shows
   the resource usage for running and historical jobs.
   :jira:`3636`
 
-- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
-  :jira:`3564`
+- Add new submit command :subcom:`retry_request_disk`, which operates
+  like :subcom:`retry_request_memory` but for the ``Disk`` resource.
+  :jira:`3552`
+
+- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the **.chirp.config**
+  file no longer pollutes the user's scratch directory, it is located
+  in the slot's "user" directory.  The ``_CONDOR_CHIRP_CONFIG`` environment
+  variable still points to the correct place.
+  :jira:`2949`
 
 - On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
   memory swap space for jobs.  This can be disabled by setting
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`
 
-- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
-  This allows the :tool:`condor_userprio` use a interface to the negotiator
-  to fetch accounting ads in a way that allows constraint and projection.
-  This interface did not exist in pre htcondor 9.1 negotiators, and should
-  be set to false for new :tool:`condor_userprio` to work with such old
-  negotiators.
-  :jira:`3649`
+- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604,3684`
+
+- Container universe jobs whose image is an url (like ``docker://``) now work
+  when file transfer is off.
+  :jira:`3638`
 
 - **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
   :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
@@ -129,21 +146,33 @@
   in the ``blah.config`` file.
   :jira:`2415`
 
-- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the .chirp.config
-  file no longer pollutes the user's scratch directory, it is located
-  in the slot's "user" directory.  The _CONDOR_CHIRP_CONFIG environment
-  variable still points to the correct place.
-  :jira:`2949`
-
 - Improved the *blahpd*'s efficiency in monitoring job status.
   :jira:`3634,3640`
 
 - Improved handling of OS usernames that include the ``@`` character.
   :jira:`3655`
 
-- Container universe jobs whose image is an url (like docker://) now work
-  when file transfer is off.
-  :jira:`3638`
+- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
+  :jira:`3586`
+
+- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
+  :jira:`3682`
+
+- Improved the error handling and log messages in the rare case that a
+  job fails after the *condor_starter* calls the ``fork()`` system call
+  but before the ``exec()`` system call.
+  :jira:`3654`
+
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
+- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
+  This allows the :tool:`condor_userprio` to use an interface to the negotiator
+  to fetch accounting ads in a way that allows constraint and projection.
+  This interface did not exist in pre htcondor 9.1 negotiators, and should
+  be set to false for new :tool:`condor_userprio` to work with such old
+  negotiators.
+  :jira:`3649`
 
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
@@ -161,18 +190,12 @@
   clear error message when these bounds are exceeded.
   :jira:`3644` 
 
-- When :tool:`condor_userprio` is run with a specific submitter name on
-  the command line, if the submitter is an active submitter in the 
-  *condor_collector* fallback to look again at the non-active 
-  submitters in the negotiator.
+- Improve :tool:`condor_userprio` to return information about a specific
+  user provided on the command line whether or not the user is actively
+  running jobs and utilizing pool resources.
   :jira:`3283`
 
-- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
-  autoformat, which displays columns like the `-af` option does, but
-  appends them to the default output.
-  :jira:`3604,3684`
-
-- Fixed a spurious error message in the StarterLog about unhandled
+- Fixed a spurious error message in the :macro:`STARTER_LOG` about unhandled
   job exit.
   :jira:`3653`
 

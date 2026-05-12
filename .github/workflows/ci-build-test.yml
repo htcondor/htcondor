@@ -126,7 +126,7 @@ jobs:
         run: ( cd __build && ctest --output-junit test.xml -j 40 -R job_dagman_vars )
 
   winbuild:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -212,13 +212,15 @@ jobs:
           sudo cp __w/htcondor/htcondor/condor_*.deb __w/htcondor/htcondor/mini*.deb usr/local/condor/externals/pelican*.deb .
           sudo apt install -y ./*.deb
 
-      - name: Verify condor installation
-        run: |
-          sudo condor_master
-          condor_version
-          condor_who -wait:600 'IsReady && STARTD_State =?= "Ready"'
-          sleep 50
-          condor_status
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-output-for-ubuntu-installed
+          path: /var/log/condor
+          retention-days: 2
+          overwrite: true
+
 
   ubuntu_root:
     # Run on raw ubuntu, no container

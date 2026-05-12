@@ -77,6 +77,14 @@ extern char const * const HOME_POOL_SUBMITTER_TAG;
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 bool removeOtherJobs(int cluster_id, int proc_id);
 
+// StartJobs() doesn't always try to start a shadow, and when it
+// doesn't, we need to know, so we don't report that it didn't.
+enum class SJ : int {
+	SUCCEEDED,
+	FAILED,
+	DID_NOT_TRY,
+};
+
 //
 // Given a ClassAd from the job queue, we check to see if it
 // has the ATTR_SCHEDD_INTERVAL attribute defined. If it does, then
@@ -223,10 +231,11 @@ struct SubmitterData {
   // level.
   int FlockLevel;
   int OldFlockLevel;
-  time_t NegotiationTimestamp;
+  time_t NegotiationTimestamp; // used to grow the flock level because the near negotiators are not finding matches
   time_t lastUpdateTime; // the last time we sent updates to the collector
   bool isOwnerName; // the name of this submitter record is the same as the name of an owner record.
   bool absentUpdateSent;
+  bool skipNegotiation{false};
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
   SubmitterData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
       , lastUpdateTime(0), isOwnerName(false), absentUpdateSent(false)  { }
@@ -753,7 +762,6 @@ class Scheduler : public Service
 
 	OCU *getOCU(int ocu_id);
 
-
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
 
@@ -848,6 +856,8 @@ private:
 	bool			EnablePersistentProjectInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
+	bool			EnablePerUserCurbMatchmaking{true};
+	int				MaxConcurrentUploadsPerUser{100}; // curb matchmaking for this user when they exceed this number
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
@@ -1045,7 +1055,7 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	bool			StartJob(match_rec*, const PROC_ID &);
+	SJ				StartJob(match_rec*, const PROC_ID &);
 
 	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
 	shadow_rec*		start_sched_universe_job(const PROC_ID &);

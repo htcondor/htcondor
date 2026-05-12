@@ -291,7 +291,6 @@ DaemonCore::DaemonCore()
 	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ) {
 		m_wants_dc_udp_self = false;
 	}
-	m_invalidate_sessions_via_tcp = true;
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
 #ifdef WIN32
 	m_never_use_kill_for_dc_signals = true;
@@ -3130,8 +3129,6 @@ DaemonCore::reconfig(void) {
 		m_use_clone_to_create_processes = false;
 	}
 #endif /* HAVE CLONE */
-
-	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
 	// DaemonCore::Send_Signal behaviors
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
@@ -11448,42 +11445,6 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
 	}
 	return 0;
-}
-
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) const {
-	if ( !sinful ) {
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
-		return;
-	}
-
-	std::string the_msg = sessid;
-
-	// If given a non-empty ad, add it to our message.
-	// This extra information is understood in version 8.8.0
-	// and above.
-	if ( info_ad && info_ad->size() > 0 ) {
-		the_msg += "\n";
-		classad::ClassAdUnParser unparser;
-		unparser.Unparse(the_msg, info_ad);
-	}
-
-	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
-
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg(
-		DC_INVALIDATE_KEY,
-		the_msg.c_str() );
-
-	msg->setSuccessDebugLevel(D_SECURITY);
-	msg->setRawProtocol(true);
-
-	if( !daemon->hasUDPCommandPort() || m_invalidate_sessions_via_tcp ) {
-		msg->setStreamType(Stream::reli_sock);
-	}
-	else {
-		msg->setStreamType(Stream::safe_sock);
-	}
-
-	daemon->sendMsg( msg.get() );
 }
 
 

@@ -4,6 +4,9 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
+# Pin umask so file modes baked into the package are reproducible
+umask 022
+
 # makerpm.sh - generates source and binary rpms with a source tarball
 # along with condor.spec and the source files in this directory
 

@@ -45,6 +45,20 @@ These settings affect the *condor_starter*.
     uses the default instead. The default value is 0, on Unix, and the
     idle priority class on a Windows machine.
 
+:macro-def:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`
+    This macro can be used to disable transfer plugins supplied by
+    the user as part of the job description. The expression is evaluated in the context
+    of both the machine and job ClassAds, where the machine ClassAd is
+    the ``MY.`` ClassAd, and the job ClassAd is the ``TARGET.`` ClassAd.
+    The macro should evaluate to ``true``, ``false``, or the special value ``2``.
+    ``False`` will allow plugins, ``True`` or ``2`` will disable plugins. The
+    difference between ``true`` and ``2`` is how plugins are disabled. When
+    set to ``2``, the job attributes that define supplied transfer plugins
+    will be ignored and the job will only fail if a built-in plugin does not
+    handle the transfer. When set to any other value that evaluates
+    as ``True`` any transfer that tries to use that method will fail.
+    There is no default value, which will allow user supplied transfer plugins.
+
 :macro-def:`STARTER_LOCAL_LOGGING`
     This macro determines whether the starter should do local logging to
     its own log file, or send debug information back to the
@@ -460,6 +474,13 @@ These settings affect the *condor_starter*.
     There is no default value for this variable. Since values larger
     than 2047 have no real meaning on 32-bit platforms, values larger
     than 2047 result in no limit set on 32-bit platforms.
+
+:macro-def:`STARTER_ALLOW_JOB_PRE_AND_POST_CMD`
+    A boolean classad expression that determines whether the any job defined
+    pre and post scripts will be run. Pre and post scripts run outside
+    of the VM or container of the job and are seldom used because of that.
+    This expression is evaluated in the context of both machine
+    and job ClassAds. Defaults to ``False``.
 
 :macro-def:`USE_PID_NAMESPACES`
     A boolean value that, when ``True``, enables the use of per job PID

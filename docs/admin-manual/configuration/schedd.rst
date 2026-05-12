@@ -252,6 +252,14 @@ These macros control the *condor_schedd*.
     the limit is reached, additional transfers will queue up and wait
     before proceeding.
 
+:macro-def:`MAX_CONCURRENT_UPLOADS_PER_USER`
+    This specifies the maximum number of simultaneous transfers per user of input
+    files from the access point to execute machines. The limit applies
+    to all jobs submitted by a user from the same *condor_schedd*. The default is
+    ``$(MAX_CONCURRENT_UPLOADS)/5``. A setting of 0 means unlimited transfers. This limit currently
+    does not apply to grid universe jobs. When
+    the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*
+
 :macro-def:`BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER`
     This specifies the minimum size in bytes of a job's file transfer
     sandbox that is required before the job needs to enter the transfer
@@ -593,7 +601,7 @@ These macros control the *condor_schedd*.
     fewer transactions it has to play to figure out what state the job
     queue is really in. This macro determines how often the
     *condor_schedd* should rework this queue to cleaning it up. It is
-    defined in terms of seconds and defaults to 86400 (once a day).
+    defined in terms of seconds and defaults to 28800 (every 8 hours).
 
 :macro-def:`WALL_CLOCK_CKPT_INTERVAL`
     The job queue contains a counter for each job's "wall clock" run

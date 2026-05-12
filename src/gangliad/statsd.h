@@ -198,7 +198,7 @@ class StatsD: Service {
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
 
-	double m_start_time; // time most recent update cycle started
+	double m_start_time{0.0}; // time most recent update cycle started
 
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
 
