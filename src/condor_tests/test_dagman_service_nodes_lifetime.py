@@ -45,8 +45,14 @@ print(f"DAG ID: {{dag_id}}")
 
 print("Query Schedd for placed DAGMan jobs...")
 
+# Restrict to live jobs (idle/running). The FINAL node's local-universe job
+# briefly remains in the schedd's queue after it terminates, so without this
+# filter this POST script can race the schedd and see the FINAL node itself.
 schedd = htcondor2.Schedd()
-ads = schedd.query(constraint=f"DAGManJobId=={{dag_id}}", projection=['DagNodeName', 'JobStatus'])
+ads = schedd.query(
+    constraint=f"DAGManJobId=={{dag_id}} && (JobStatus == 1 || JobStatus == 2)",
+    projection=['DagNodeName', 'JobStatus'],
+)
 
 found = False
 
