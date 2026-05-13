@@ -1,5 +1,6 @@
 #!/usr/bin/env pytest
 
+import pytest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,12 @@ from ornithology import (
 
 from pathlib import Path
 import re
+
+from libcontainer import (
+    SingularityIsWorthy,
+    UserNamespacesFunctional,
+    SingularityIsWorking,
+)
 
 
 @action
@@ -94,6 +101,9 @@ def the_completed_jobs(the_condor, the_container_image):
 class TestShadowExitCodes:
 
 
+    @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
+    @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
+    @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
     def test_mapping_failed(self, the_completed_jobs, the_condor):
         # The jobs must complete.
         assert the_completed_jobs.state.all_terminal()
