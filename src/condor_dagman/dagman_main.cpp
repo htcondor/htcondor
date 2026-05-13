@@ -331,7 +331,8 @@ void Dagman::LocateSchedd() {
 
 
 void Dagman::RemoveLock() {
-	if (lock) { lock.release(); }
+	// Note: This is call the FileLock::release() not the std::unique_ptr::release()
+	if (lock) { lock->release(); }
 	if (dagman.m_lock_fd >= 0) { close(dagman.m_lock_fd); }
 	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
 }
@@ -1023,8 +1024,7 @@ void main_init(int argc, char ** const argv) {
 		DC_Exit(EXIT_ERROR);
 	}
 
-	dagman.lock.reset(new FileLock(dagman.m_lock_fd, nullptr, lock_file.c_str()));
-	ASSERT(dagman.lock);
+	dagman.lock = std::make_unique<FileLock>(dagman.m_lock_fd, nullptr, lock_file.c_str());
 	dagman.lock->setBlocking(false);
 
 	if ( ! dagman.lock->obtain(WRITE_LOCK)) { // NOTE: Windows mutex lock will take up to 10s to fail
@@ -1038,7 +1038,7 @@ void main_init(int argc, char ** const argv) {
 	}
 
 	debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
-	if( ! dagman.dag->Bootstrap(recovery)) {
+	if ( ! dagman.dag->Bootstrap(recovery)) {
 		dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
 		debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
 	}
