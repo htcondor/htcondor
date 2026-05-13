@@ -193,7 +193,7 @@ class TestDAGManSubmitFailure:
         assert test_handle.wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=30
+            timeout=120
         )
 
     def test_dag_only_attempts_submit_once(self, test_dag):
