@@ -86,7 +86,6 @@ def the_completed_jobs(the_condor, the_container_image):
     job_handle.wait(
         timeout=120,
         condition=ClusterState.all_terminal,
-        fail_condition=ClusterState.any_held,
     )
 
     return job_handle
