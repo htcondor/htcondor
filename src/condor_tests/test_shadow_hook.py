@@ -148,6 +148,9 @@ def condor(test_dir, write_job_hook_scripts):
         config={
             "SHADOW_DEBUG": "D_FULLDEBUG",
             "SHADOW_WORKLIFE": "0",
+            # Force claim release on the first shadow exception so the
+            # idle job's NumShadowStarts requirement actually gates re-matching.
+            "MAX_SHADOW_EXCEPTIONS": "1",
             "SCHEDD_ENVIRONMENT" : "SPECIAL_MSG='This message is brought to you by the shadow!'",
             "HOLD_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_hold_prepare.sh",
             "IDLE_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_idle_prepare.sh",
