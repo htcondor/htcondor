@@ -10449,6 +10449,29 @@ Scheduler::StartJobs( int /* timerID */ )
 }
 
 void
+Scheduler::StartJobFailed( match_rec * rec, PROC_ID id ) {
+	// It would super-cool if we _did_ get another match, but if we don't
+	// rebuild the priorec array, it's entirely possible that we won't
+	// for another twenty minutes.
+	//
+	// However, we don't need to (re)build the priorec array right now --
+	// if it's dirty, it will be rebuilt the next time the negotiator
+	// calls, which -- since we're deleting the match right here -- is
+	// as soon as we could possibly actually need it to be rebuilt.
+	//
+	// TODO: Nonetheless, this is more expensive than we need it to be.
+	// Instead, we should be clear the flag in this job's entry in the
+	// priorec array that causes it to be skipped (because we already
+	// added it to the start-a-shadow queue).
+	DirtyPrioRecArray();
+
+	dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
+			rec->description());
+	DelMrec(rec);
+	mark_job_stopped( id );
+}
+
+void
 Scheduler::StartJob(match_rec *rec)
 {
 	PROC_ID id;
@@ -10514,25 +10537,11 @@ Scheduler::StartJob(match_rec *rec)
 			// functioning and we don't know why. We might as well get another
 			// match.
 
-		// It would super-cool if we _did_ get another match, but if we don't
-		// rebuild the priorec array, it's entirely possible that we won't
-		// for another twenty minutes.
-		//
-		// However, we don't need to (re)build the priorec array right now --
-		// if it's dirty, it will be rebuilt the next time the negotiator
-		// calls, which -- since we're deleting the match right here -- is
-		// as soon as we could possibly actually need it to be rebuilt.
-		//
-		// TODO: Nonetheless, this is more expensive than we need it to be.
-		// Instead, we should be clear the flag in this job's entry in the
-		// priorec array that causes it to be skipped (because we already
-		// added it to the start-a-shadow queue).
-		DirtyPrioRecArray();
-
-		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
-				rec->description());
-		DelMrec(rec);
-		mark_job_stopped( id );
+		// If we tried to start the job asynchronously, we won't find out
+		// about the failure until after this call chain has returned to the
+		// event loop.  We therefore refactor the clean-up code so we can
+		// call it when we find out.
+		StartJobFailed( rec, id );
 
 		// (HTCONDOR-3668)  We don't actually want to send mail to the
 		// administrator if StartJob() failed because the transfer shadow
@@ -10952,6 +10961,12 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 			// on a larger role for the startd in managing the disk resources.
 			ASSERT(catalogs);
 			{
+				JobQueueJob * job = GetJobAd( job_id );
+				if(! job) {
+					dprintf( D_ALWAYS, "Scheduler::StartJob() failed to GetJobAd(), not starting job.\n" );
+					return SJ::DID_NOT_TRY;
+				}
+
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
 
@@ -10990,7 +11005,9 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// it already has a match.
 				SetMrecJobID(mrec, transfer_job_id);
 
-				addRunnableJob( transfer_shadow_rec );
+				// Run the transfer shadow on a data slot created out of
+				// the job slot we matched against.
+				start_command_data_slot( mrec, * job );
 
 
 				//

@@ -129,4 +129,7 @@ int command_rehome(int dc_cmd, Stream* s );
 // ...
 int command_coalesce_slots(int, Stream * stream );
 
+// ...
+int command_data_slot(int, Stream * stream );
+
 #endif /* _STARTD_COMMAND_H */

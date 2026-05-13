@@ -539,6 +539,7 @@ class Scheduler : public Service
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
+	void			StartJobFailed(match_rec * rec, PROC_ID id);
 	void			checkClaimLeases( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );

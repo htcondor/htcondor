@@ -397,6 +397,10 @@ main_init( int, char* argv[] )
 								  command_coalesce_slots,
 								  "command_coalesce_slots", DAEMON );
 
+	daemonCore->Register_Command( COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT",
+								  command_data_slot,
+								  "command_data_slot", DAEMON );
+
 		// ex-OWNER permission commands, now ADMINISTRATOR
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",

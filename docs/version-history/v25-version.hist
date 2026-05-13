@@ -82,6 +82,11 @@
   :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
   :jira:`3722`
 
+- Slots used by an AP to transfer (and then store) common files now have
+  the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
+  slots now also set the attribute ``IsDataSlot`` in their slot ads.
+  :jira:`3715`
+
 *** 25.11.0 bugs
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``

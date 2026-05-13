@@ -336,6 +336,10 @@ Machine ClassAd Attributes
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
+:classad-attribute-def:`IsDataSlot`
+    When ``True``, the slot is in use by the AP to transfer and then store
+    common files, rather than run a job.
+
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
     setup to enforce disk usage limits for each job the machine executes.
