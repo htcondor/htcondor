@@ -35,6 +35,8 @@
 #include "dagman_metrics.h"
 #include "directory.h"
 
+#include <filesystem>
+
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
 
@@ -328,6 +330,14 @@ void Dagman::LocateSchedd() {
 }
 
 
+void Dagman::RemoveLock() {
+	// Note: This is call the FileLock::release() not the std::unique_ptr::release()
+	if (lock) { lock->release(); }
+	if (dagman.m_lock_fd >= 0) { close(dagman.m_lock_fd); }
+	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+}
+
+
 // NOTE: this is only called on reconfig, not at startup
 void main_config() {
 		// This is commented out because, even if we get new config
@@ -437,7 +447,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 	}
 
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+	dagman.RemoveLock();
 	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit(exitVal);
@@ -460,7 +470,7 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_OKAY);
 	dagman.dag->ReportMetrics(EXIT_OKAY);
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+	dagman.RemoveLock();
 	dagman.CleanUp();
 	DC_Exit(EXIT_OKAY);
 }
@@ -991,49 +1001,48 @@ void main_init(int argc, char ** const argv) {
 	//------------------------------------------------------------------------
 	// Bootstrap and Recovery
 	//
-	// If the Lockfile exists, this indicates a premature termination
-	// of a previous run of Dagman. If condor log is also present,
-	// we run in recovery mode
+	// Check if lock file exists to automatically enter recovery mode
+	// Before doing any actual work acquire file lock to ensure we are the only
+	// DAGMan process executing on this DAG in this directory
 
-	// If the Daglog is not present, then we do not run in recovery
-	// mode
-	// I don't know what this comment means.  wenger 2013-09-11
+	const std::string& lock_file = dagOpts[shallow::str::LockFile];
+	bool recovery = std::filesystem::exists(lock_file);
 
-	{
-		const std::string &lockFile = dagOpts[shallow::str::LockFile];
-		bool recovery = access(lockFile.c_str(), F_OK) == 0;
-
-		if (recovery) {
-			debug_printf(DEBUG_VERBOSE, "Lock file %s detected,\n", lockFile.c_str());
-			if (dagman.abortDuplicates) {
-				if (dagmanUtils.check_lock_file(lockFile.c_str()) == 1) {
-					debug_printf(DEBUG_QUIET,
-					             "Aborting because it looks like another instance of DAGMan is "
-					             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
-					             "and re-submit the DAG.\n", lockFile.c_str());
-					dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_RESTART);
-					dagman.CleanUp();
-					DC_Exit(EXIT_ERROR);
-					// We should never get to here!
-				}
-			}
-
-		} else if (dagOpts[shallow::b::DoRecovery]) {
-			debug_printf(DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n");
-			recovery = true;
-		}
-
-		// If this DAGMan continues, it should overwrite the lock
-		// file if it exists.
-		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.abortDuplicates);
-
-		debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
-		if( ! dagman.dag->Bootstrap(recovery)) {
-			dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
-			debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
-		}
-		print_status(true);
+	if (recovery) {
+		debug_printf(DEBUG_VERBOSE, "Lock file %s detected\n", lock_file.c_str());
+	} else if (dagOpts[shallow::b::DoRecovery]) {
+		debug_printf(DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n");
+		recovery = true;
 	}
+
+	dagman.m_lock_fd = safe_open_wrapper_follow(lock_file.c_str(), O_CREAT | O_RDWR, 0600);
+	if (dagman.m_lock_fd < 0) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to create lock file %s (%d): %s\n",
+		             lock_file.c_str(), errno, strerror(errno));
+		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		dagman.CleanUp();
+		DC_Exit(EXIT_ERROR);
+	}
+
+	dagman.lock = std::make_unique<FileLock>(dagman.m_lock_fd, nullptr, lock_file.c_str());
+	dagman.lock->setBlocking(false);
+
+	if ( ! dagman.lock->obtain(WRITE_LOCK)) { // NOTE: Windows mutex lock will take up to 10s to fail
+		debug_printf(DEBUG_QUIET,
+		             "Aborting because it looks like another instance of DAGMan is "
+		             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
+		             "and re-submit the DAG.\n", lock_file.c_str());
+		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		dagman.CleanUp();
+		DC_Exit(EXIT_ERROR);
+	}
+
+	debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
+	if ( ! dagman.dag->Bootstrap(recovery)) {
+		dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
+		debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
+	}
+	print_status(true);
 
 	debug_printf(DEBUG_VERBOSE, "Registering condor_event_timer...\n");
 	daemonCore->Register_Timer(1, dagman.m_user_log_scan_interval, condor_event_timer, "condor_event_timer");

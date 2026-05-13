@@ -24,7 +24,10 @@
 #include "dagman_classad.h"
 #include "dagman_stats.h"
 #include "utc_time.h"
+#include "file_lock.h"
 #include "../condor_utils/dagman_utils.h"
+
+#include <memory>
 
 // Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -71,6 +74,7 @@ public:
 	// Resolve macro substitutions in _defaultNodeLog.  Also check
 	// for some errors/warnings.
 	void ResolveDefaultLog();
+	void RemoveLock(); // Remove exclusive access lock
 	// Publish statistics to a log file.
 	void PublishStats();
 	void LocateSchedd();
@@ -86,6 +90,8 @@ public:
 	DagmanStats _dagmanStats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
+
+	std::unique_ptr<FileLock> lock{nullptr}; // Exclusive execution file lock
 
 	std::string workingDir{}; // Directory in which DAGMan was invoked. Recoreded incase daemoncore hijacks
 	std::string rescueFileToRun{}; // Name of rescue DAG being run. Will remain "" if not in rescue mode
@@ -111,6 +117,7 @@ public:
 	int maxRescueDagNum{MAX_RESCUE_DAG_DEFAULT}; // Maximum rescue DAG number
 	int _maxJobHolds{100}; // Maximum number of holds a node job can have before being declared failed; 0 = infinite
 	int _claim_hold_time{20};
+	int m_lock_fd{-1};
 
 	static strict_level_t _strict;
 
