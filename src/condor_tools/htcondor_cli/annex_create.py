@@ -647,12 +647,12 @@ def annex_inner_func_old(
         raise RuntimeError(f"Token file {token_file} doesn't exist.")
 
     control_path = Path(control_path).expanduser()
-    if control_path.is_dir():
-        if not control_path.exists():
-            logger.debug(f"{control_path} not found, attempt to create it")
-            control_path.mkdir(parents=True, exist_ok=True)
+    if control_path.exists():
+        if not control_path.is_dir():
+            raise RuntimeError(f"{control_path} must be a directory")
     else:
-        raise RuntimeError(f"{control_path} must be a directory")
+        logger.debug(f"{control_path} not found, attempt to create it")
+        control_path.mkdir(parents=True, exist_ok=True)
 
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
@@ -1103,12 +1103,12 @@ def annex_inner_func_new(
         raise RuntimeError(f"Token file {token_file} doesn't exist.")
 
     control_path = Path(control_path).expanduser()
-    if control_path.is_dir():
-        if not control_path.exists():
-            logger.debug(f"{control_path} not found, attempt to create it")
-            control_path.mkdir(parents=True, exist_ok=True)
+    if control_path.exists():
+        if not control_path.is_dir():
+            raise RuntimeError(f"{control_path} must be a directory")
     else:
-        raise RuntimeError(f"{control_path} must be a directory")
+        logger.debug(f"{control_path} not found, attempt to create it")
+        control_path.mkdir(parents=True, exist_ok=True)
 
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
@@ -1264,7 +1264,7 @@ SCHEDD_NAME={schedd_name}
         f"-C {str(record_file.parent)} {record_file.name}",
     ]
     files = " ".join(files)
-    tar_filename = "annex-setup.tar.gz"
+    tar_filename = "annex-setup.tar"
     tar_proc = subprocess.Popen(
         [ f"tar -c -f {tar_filename} {files}" ],
         shell=True,
