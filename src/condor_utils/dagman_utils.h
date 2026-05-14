@@ -426,20 +426,6 @@ public:
 	*/
 	int popen (ArgList &args);
 
-	/** Create the given lock file, containing the PID of this process.
-	    @param lockFileName: the name of the lock file to create
-	    @return: 0 if successful, -1 if not
-	*/
-	int create_lock_file(const char *lockFileName, bool abortDuplicates);
-
-	/** Check the given lock file and see whether the PID given in it
-	    does, in fact, exist.
-	    @param lockFileName: the name of the lock file to check
-	    @return: 0 if successful, -1 if there was an error, 1 if the
-	             relevant PID does exist and this DAGMan should abort
-	*/
-	int check_lock_file(const char *lockFileName);
-
 	/*
 	*	Function to print DAGMan options to stdout
 	*	Args:
