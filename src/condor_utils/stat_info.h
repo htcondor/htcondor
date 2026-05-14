@@ -180,6 +180,11 @@ public:
 	*/
 	bool IsDomainSocket() const { return m_isDomainSocket; }
 
+	/** Determine if the file is a FIFO (named pipe)
+		@return true if the file is a FIFO, false if not
+	*/
+	bool IsFifo() const { return m_isFifo; }
+
 #ifndef WIN32
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
@@ -199,6 +204,7 @@ private:
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
 	bool m_isDomainSocket;
+	bool m_isFifo;
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
