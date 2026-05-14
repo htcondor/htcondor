@@ -3,19 +3,24 @@
 IWD=${PWD}
 ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
 
+echo "$(date) $(hostname) Creating log directory ${ANNEX_LOGDIR}"
+echo "$(date) $(hostname)   Logs will be available here after the Annex job completes"
 mkdir ${ANNEX_LOGDIR}
 
 if [ -z $1 ] ; then
-    echo "Missing PILOT_DIR"
+    echo "$(date) $(hostname) Missing PILOT_DIR"
     exit 1
 fi
 PILOT_DIR=$1
 
+echo "$(date) $(hostname) Creating temporary directory ${PILOT_DIR}"
 mkdir -p ${PILOT_DIR}
 cd ${PILOT_DIR}
 
-tar xvf ${IWD}/condor.tar.gz
+echo "$(date) $(hostname) Extracting HTCondor binaries from ${IWD}/condor.tar.gz"
+tar xf ${IWD}/condor.tar.gz
 cd condor-*
+echo "$(date) $(hostname) Configuring HTCondor EP"
 bin/make-personal-from-tarball
 # annex-node.sh will create the alternate local and log directories on each node
 echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)

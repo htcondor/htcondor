@@ -20,29 +20,35 @@ cd ${PILOT_DIR}/condor-*
 
 # On Spark, the job sometimes starts before the shared FS is ready.
 if ! condor_config_val FULL_HOSTNAME > /dev/null; then
-    echo "Sleeping five seconds on $(hostname -f) to let the shared FS catch up..."
+    echo "$(date) $(hostname) Sleeping five seconds to let the shared FS catch up..."
     sleep 5
 fi
 
 # In case I'm part of a multi-node job, make my own node-specific local dir.
 FULL_HOSTNAME=`condor_config_val FULL_HOSTNAME`
-echo "Creating host-specific directory for HTCondor on ${FULL_HOSTNAME}..."
+echo "$(date) $(hostname) Creating host-specific directory for HTCondor..."
 cp -a local "${FULL_HOSTNAME}"
 mkdir "${ANNEX_LOGDIR}/log.${FULL_HOSTNAME}"
 
 # Detect on-node resource limits and amend the condor configuration
 if [ ! -z $SLURM_CPUS_ON_NODE ] ; then
+    echo "$(date) $(hostname) Limiting EP to ${SLURM_CPUS_ON_NODE} cpus as requested by SLURM"
     CONDOR_CPUS_LINE="NUM_CPUS = ${SLURM_CPUS_ON_NODE}"
 fi
 if [ ! -z $SLURM_MEM_PER_NODE ] ; then
-    CONDOR_MEMORY_LINE="MEMORY=${SLURM_MEM_PER_NODE}"
+    memory_limit="MEMORY=${SLURM_MEM_PER_NODE}"
 elif [ ! -z $SLURM_MEM_PER_CPU ] ; then
-    CONDOR_MEMORY_LINE="MEMORY=$(($SLURM_MEM_PER_CPU * $SLURM_CPUS_ON_NODE))"
+    memory_limit="MEMORY=$(($SLURM_MEM_PER_CPU * $SLURM_CPUS_ON_NODE))"
 elif [ ! -z $SLURM_MEM_PER_GPU ] ; then
-    CONDOR_MEMORY_LINE="MEMORY=$(($SLURM_MEM_PER_GPU * $SLURM_GPUS_ON_NODE))"
+    memory_limit="MEMORY=$(($SLURM_MEM_PER_GPU * $SLURM_GPUS_ON_NODE))"
+fi
+if [ ! -z $memory_limit ] ; then
+    echo "$(date) $(hostname) Limiting EP to ${memory_limit}GB memory as requested by SLURM"
+    CONDOR_MEMORY_LIMIT="MEMORY=$memory_limit"
 fi
 if [ ! -z $SLURM_JOB_END_TIME ] ; then
     # Give condor 5 minutes to shutdown fast before slurm yanks the cord
+    echo "$(date) $(hostname) Configuring EP to shutdown at $(($SLURM_JOB_END_TIME - 300)) as requested by SLURM"
     CONDOR_RUNTIME_LINE="MASTER.DAEMON_SHUTDOWN_FAST = time() > ${SLURM_JOB_END_TIME} - 300"
 fi
 
@@ -53,9 +59,10 @@ $CONDOR_MEMORY_LINE
 $CONDOR_RUNTIME_LINE
 " >${FULL_HOSTNAME}/config.d/30-annex-node
 
-echo "Starting HTCondor on ${FULL_HOSTNAME}..."
+echo "$(date) $(hostname) Starting HTCondor..."
 condor_master -f
 rc=$?
+echo "$(date) $(hostname) HTCondor daemons exited with status $rc"
 
 if [ "$LOCAL_SETUP" == 1 ] ; then
     cd ${IWD}

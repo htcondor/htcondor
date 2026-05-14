@@ -209,17 +209,23 @@ if [ -f ~/.condor/annex_slurm_args ] ; then
 fi
 
 echo "
+echo \$(date) \$(hostname) Annex job starting
 SCRATCH=\${PWD}
 if [ -f ~/.condor/annex_config ] ; then
     . ~/.condor/annex_config
 fi
 PILOT_DIR=\${SCRATCH}/pilot.\${SLURM_JOBID}
 
+echo \$(date) \$(hostname) Performing setup tasks
 ./annex-job-setup.sh \$PILOT_DIR
 
 # This will block until all of the pilots terminate.
+echo \$(date) \$(hostname) Launching EPs
 srun -K0 -W0 annex-node.sh \${PILOT_DIR}
+echo \$(date) \$(hostname) All EPs have exited, performing cleanup
+echo \$(date) \$(hostname) Removing temporary directory \${PILOT_DIR}
 rm -fr \${PILOT_DIR}
+echo \$(date) \$(hostname) Annex job complete, exiting
 " >>${IWD}/hpc.slurm
 
 
