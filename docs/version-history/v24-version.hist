@@ -1,5 +1,10 @@
 *** 24.0.21 bugs
 
+- If a job creates a named pipe in the sandbox, file transfer is
+  unable to transfer any files in the sandbox back to the AP and the
+  job hangs.
+  :jira;`3743`
+
 - When the python bindings are run as user ``root`` and use the FS method
   to authenticate with a daemon, the authenticated identity will be
   ``condor`` instead of ``root``.
