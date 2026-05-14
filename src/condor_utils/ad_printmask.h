@@ -166,6 +166,7 @@ class AttrListPrintMask
 	int   display_Headings(FILE * file) { return display_Headings(file, headings); }
 	char *display_Headings(void) { return display_Headings(headings); }
 	void set_heading(const char * heading);
+	void set_heading(std::string_view heading);
 	bool has_headings() { return !headings.empty(); }
 	void clear_headings() { headings.clear(); }
 	void pop_back_heading() { headings.pop_back(); } // support hacky heading re-writing in condor_status
@@ -173,6 +174,17 @@ class AttrListPrintMask
 	const char * store(const char * psz) { return stringpool.insert(psz); } // store a string in the local string pool.
 	// iterate formatter and attribs, calling pfn and allowing fmt to be changed until pfn returns < 0
 	int adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv);
+
+	class column_info {
+	public:
+		const Formatter* fmt{nullptr};
+		const char * attr{nullptr};
+	};
+	bool empty() const { return formats.empty(); }
+	column_info back() const {
+		if (formats.empty()) return column_info();
+		return column_info{formats.back(), attributes.back()};
+	}
 
   private:
 	std::vector<Formatter *> formats;
@@ -261,6 +273,14 @@ private:
 	int           cmax;
 };
 
+// this class is for use when custom columns can be part of -af processing
+// an instance may be passed as an optional column
+class CustomAutoformatColumns {
+public:
+	std::map<YourString, YourString, CaseIgnLTYourString> ColFormatByName;
+	const CustomFormatFnTable* FnTable{nullptr};
+};
+
 // parse -af: options after the : and all of the included arguments up to the next -
 // returns the number of arguments consumed
 int parse_autoformat_args (
@@ -271,7 +291,8 @@ int parse_autoformat_args (
 	AttrListPrintMask & print_mask,
 	classad::References & attrs, // out: returns attributes referenced by the expressions added to print_mask
 	bool diagnostic,
-	bool append = false); // when true, don't reset column separators (for -aaf)
+	bool append = false, // when true, don't reset column separators (for -aaf)
+	const CustomAutoformatColumns * custom_cols = nullptr);
 
 // functions & classes in make_printmask.cpp
 
@@ -391,6 +412,32 @@ typedef struct PrintMaskMakeSettings {
 		aggregate = PR_NO_AGGREGATION;
 	}
 } PrintMaskMakeSettings;
+
+// Parse a line of in print-format SELECT section syntax
+//    "<expr> [AS <heading>] [WIDTH <width-args>] [RENDERAS|PRINTAS <func>] [PRINTF <%fmt>] [OR <alt-char>]"
+// Used when parsing print-format and also when parsing -aaf (and maybe someday -af) arguments
+// Adds a column to the print-mask and also returns the attribute or expression part of the line
+// Does not validate that the expression or attribute is a valid classad expression (for some tools it may not be)
+// sets error_message if there is a parse error for the sign.
+std::string AddAttrListRow(
+	tokener & toke, // tokener holding a single line within the SELECT section
+	int line_no, // line number for error messages
+	const CustomFormatFnTable * FnTable, // in: table of custom output functions for SELECT
+	const CustomFormatFnTable & GlobalFnTable,
+	AttrListPrintMask & mask, // out: columns and headers set in SELECT
+	const char * labelsep, // if non-null label fields and use this to separate label from value
+	classad::References & attrs, // add attribute references from custom formatters
+	std::string & error_messages, // parse errors will be appended to this
+	int options);
+// options flags for AddAttrListRow
+#define AddAttrListRow_Truncate   0x01 // default column to truncate
+#define AddAttrListRow_AddHeading 0x02 // add a heading to the print mask along with the column
+#define AddAttrListRow_DefFmtMask 0x70 // 3 bits for default % format, 0=%v
+#define AddAttrListRow_DefFmtCapV 0x10
+#define AddAttrListRow_DefFmtRaw  0x20
+#define AddAttrListRow_DefFmtTime 0x30
+#define AddAttrListRow_DefFmtDate 0x40
+constexpr const char * AddAttrListRow_DefFmtTable[]{"%v","%V","%r","%T","%Y","%v","%v","%v"}; // last 3 are placeholders/future use
 
 // Read a stream a line at a time, and parse it to fill out the print mask,
 // header, group_by, where expression, and projection attributes.

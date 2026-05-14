@@ -847,10 +847,15 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 			submitFileOrSubmitDesc = dagSubmitFile.c_str();
 
 		} else if ( strstr( submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX) ) {
-			// Assume JOB commands submit file ending with '.condor.sub' is a DAG
-			// submit file. This is no longer allowed for subdags
-			debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
-			return false;
+			// Assume JOB commands submit file ending with '.condor.sub' is a DAG submit file.
+			if (strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH) {
+				nestedDagFile = submitFileOrSubmitDesc;
+				nestedDagFile.replace(nestedDagFile.find(DAG_SUBMIT_FILE_SUFFIX), sizeof(DAG_SUBMIT_FILE_SUFFIX) - 1, "");
+			} else {
+				// This is no longer allowed for nodes (excluding final for LSST)
+				debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+				return false;
+			}
 		}
 	}
 
@@ -3162,11 +3167,16 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 	}
 
 	std::string desc = cmd->GetSubmit();
+	std::string final_node_dag;
 	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
 		desc += DAG_SUBMIT_FILE_SUFFIX;
-	} else if (strstr(desc.c_str(), DAG_SUBMIT_FILE_SUFFIX)) {
-		debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
-		return false;
+	} else if (ends_with(desc, DAG_SUBMIT_FILE_SUFFIX)) {
+		if (cmd->GetCommand() == DAG::CMD::FINAL) { // Allow this for final nodes (for LSST)
+			final_node_dag = desc.substr(0, desc.rfind(DAG_SUBMIT_FILE_SUFFIX));
+		} else {
+			debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+			return false;
+		}
 	} else if (cmd->HasInlineDesc()) {
 		static uint32_t inline_count = 0;
 		desc = name + "-InlineDesc" + std::to_string(inline_count++);
@@ -3204,6 +3214,8 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 
 	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
 		node->SetDagFile(cmd->GetSubmit().c_str());
+	} else if ( ! final_node_dag.empty()) {
+		node->SetDagFile(final_node_dag.c_str());
 	}
 
 	if ( ! dag.Add(node.release())) {

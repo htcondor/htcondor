@@ -51,7 +51,7 @@ public:
 
     // File Information Operations
     void writeFileInfo(FileInfo &info);
-    void updateFileInfo(FileInfo historyFile);
+    void updateFileInfo(const FileInfo &historyFile);
 
     // Status and Monitoring Operations
     bool writeStatusAndData(const Status& status, const StatusData& statusData);

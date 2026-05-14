@@ -59,7 +59,7 @@ def the_condor(test_dir, the_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
@@ -161,7 +161,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -317,7 +317,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -556,10 +556,18 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
 

@@ -683,20 +683,31 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			std::string err_msg = "Failed to execute '";
-			err_msg += JobName;
-			err_msg += "'";
-			if(!args_string.empty()) {
-				err_msg += " with arguments ";
-				err_msg += args_string;
-			}
-			err_msg += ": ";
-			err_msg += create_process_err_msg;
-			if( !ThisProcRunsAlongsideMainProc() ) {
-				starter->jic->notifyStarterError( err_msg.c_str(),
-			    	                              true,
-			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
-			            	                      create_process_errno );
+			if (create_process_errno == DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP) {
+				std::string err_msg = "Job was OOM killed by cgroup memory limit "
+					"before it could start. Consider requesting more memory.";
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
+			} else {
+				std::string err_msg = "Failed to execute '";
+				err_msg += JobName;
+				err_msg += "'";
+				if(!args_string.empty()) {
+					err_msg += " with arguments ";
+					err_msg += args_string;
+				}
+				err_msg += ": ";
+				err_msg += create_process_err_msg;
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
 			}
 		}
 
@@ -718,7 +729,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-bool
+ReapResult
 OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
@@ -1159,6 +1170,25 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// Read the length-prefixed command string from docker_enter.
+	// Length 0 means interactive shell; otherwise run the command.
+	std::string ssh_command;
+	uint32_t cmd_len = 0;
+	int cmd_fd = sns->get_file_desc();
+	if (read(cmd_fd, &cmd_len, sizeof(cmd_len)) == sizeof(cmd_len)) {
+		cmd_len = ntohl(cmd_len);
+		if (cmd_len > 0) {
+			ssh_command.resize(cmd_len);
+			int bytes_read = 0;
+			while (bytes_read < (int)cmd_len) {
+				int r = read(cmd_fd, &ssh_command[bytes_read], cmd_len - bytes_read);
+				if (r <= 0) break;
+				bytes_read += r;
+			}
+			ssh_command.resize(bytes_read);
+		}
+	}
+
 	// we have the pid of the singularity process, need pid of the job
 	// sometimes this is the direct child of singularity, sometimes singularity
 	// runs an init-like process and the job is the grandchild of singularity
@@ -1245,6 +1275,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
 	}
 
+	if (!ssh_command.empty()) {
+		args.AppendArg("--");
+		args.AppendArg("/bin/sh");
+		args.AppendArg("-c");
+		args.AppendArg(ssh_command);
+	}
+
 	std::string bin_dir;
 	param(bin_dir, "BIN");
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
@@ -1262,6 +1299,14 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+
+	// Close the ssh session fds in the starter; the child has inherited them.
+	// If we keep them open, sshd won't detect the command has finished.
+	for (int i = 0; i <= 2; i++) {
+		if (fds[i] >= 0) {
+			close(fds[i]);
+		}
+	}
 
 #else
 		(void)stream;	// shut the compiler up

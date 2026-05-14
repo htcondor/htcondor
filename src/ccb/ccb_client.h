@@ -53,7 +53,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	std::string m_target_peer_description; // who we are trying to connect to
 	Sock *m_ccb_sock;        // socket to the CCB server
 	std::string m_connect_id;
-	DCMsgCallback *m_ccb_cb; // callback object for async CCB request
+	std::shared_ptr<DCMsgCallback> m_ccb_cb; // callback object for async CCB request
 	int m_deadline_timer;
 
 	bool ReverseConnect_blocking( CondorError *error );

@@ -2135,7 +2135,7 @@ set_owner_egid()
 					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
 		}			
 	}
-	return SET_EFFECTIVE_GID(UserGid);
+	return SET_EFFECTIVE_GID(OwnerGid);
 }
 
 

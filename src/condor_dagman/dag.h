@@ -34,6 +34,7 @@
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
 #include "dag_commands.h"
+#include "throttles.hpp"
 #include <ranges>
 #include <filesystem>
 
@@ -390,6 +391,7 @@ public:
 
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
+	const Throttles& throttles; // DAGMan configured throttles
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling

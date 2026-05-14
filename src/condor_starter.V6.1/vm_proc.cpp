@@ -957,7 +957,7 @@ VMProc::CheckStatus( int /* timerID */ )
 	return;
 }
 
-bool
+ReapResult
 VMProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VMProc::JobReaper()\n");

@@ -146,6 +146,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_startd_drain_jobs", &_startd_drain_jobs, METH_VARARGS, NULL},
 	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
 	{"_startd_vacate_slots", &_startd_vacate_slots, METH_VARARGS, NULL},
+	{"_startd_rehome", &_startd_rehome, METH_VARARGS, NULL},
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},

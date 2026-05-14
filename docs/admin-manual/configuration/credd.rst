@@ -167,9 +167,10 @@ These macros affect the *condor_credd* and its credmon plugin.
     A string valued macro that defines a path to the credential monitor
     executable.
 
-:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
-    pass additional command line options to gettoken.  Mostly
-    used for vault, where this should be set to "-a vault_name".
+:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS`
+    A configuration option to pass additional command line options to
+    gettoken. Mostly used for vault, where this should be set to
+    "-a vault_name".
 
 :macro-def:`TRUSTED_VAULT_HOSTS`
     A space-and/or-comma-separated list of hostnames of Vault servers

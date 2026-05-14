@@ -487,7 +487,9 @@ class TestStartupLimitMonitoring:
             "+LimitGroup": '"monitor"',
         }
 
-        handle = the_condor.submit(description=desc, count=3)
+        # Submit exactly NUM_SLOTS (2) jobs so each slot gets one job
+        # and no claim reuse occurs, keeping the allowed count deterministic.
+        handle = the_condor.submit(description=desc, count=2)
         assert handle.wait(
             timeout=120,
             condition=ClusterState.all_complete,
@@ -497,4 +499,4 @@ class TestStartupLimitMonitoring:
         info = _query_limit(helper_path, schedd_address, monitoring_limit)
         assert info["skipped"] == 0
         assert info["ignored"] == 0
-        assert info["allowed"] == 3
+        assert info["allowed"] == 2

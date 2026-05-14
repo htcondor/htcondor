@@ -47,7 +47,7 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_target_sock(target_sock),
 	m_target_peer_description(m_target_sock->peer_description()),
 	m_ccb_sock(NULL),
-	m_ccb_cb(NULL),
+	m_ccb_cb(),
 	m_deadline_timer(-1)
 {
 	// balance load across the CCB servers by randomizing order
@@ -605,10 +605,11 @@ CCBClient::try_next_ccb()
 	classy_counted_ptr<CCBRequestMsg> msg = new CCBRequestMsg(ad);
 
 	incRefCount(); // do not delete self before CCBResultsCallback
-	m_ccb_cb = new DCMsgCallback(
+	auto ccb_cb = std::make_shared<DCMsgCallback>(
 	    (DCMsgCallback::CppFunction)&CCBClient::CCBResultsCallback,
 	    this );
-	msg->setCallback( m_ccb_cb );
+	m_ccb_cb = ccb_cb;
+	msg->setCallback( ccb_cb );
 
 	msg->setDeadlineTime( m_target_sock->get_deadline() );
 
@@ -628,7 +629,7 @@ CCBClient::try_next_ccb()
 
 		if( !client_sock->connect_socketpair(*server_sock) ) {
 			dprintf(D_ALWAYS,"CCBClient: connect_socket_pair() failed.\n");
-			CCBResultsCallback(m_ccb_cb);
+			CCBResultsCallback(m_ccb_cb.get());
 			return false;
 		}
 
@@ -666,7 +667,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 	// waiting for the connection to show up.
 
 	ASSERT( cb );
-	m_ccb_cb = NULL;
+	m_ccb_cb.reset();
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		// We failed to communicate with the CCB server, so we should
 		// not expect to receive ReverseConnectCallback().

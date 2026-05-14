@@ -110,6 +110,7 @@ const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
+const int DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP = 666670;
 const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
@@ -8183,11 +8184,28 @@ int DaemonCore::Create_Process(
 				// before writing to the pipe.  So it cannot have
 				// called exec(), because it always writes to the pipe
 				// before calling exec.
-			dprintf(D_ALWAYS,"Error: Create_Process(%s): failed to read child tracking gid: rc=%d, gid=%d, errno=%d %s.\n",
-					executable,tracking_gid_rc,child_tracking_gid,errno,strerror(errno));
 
 			int child_status;
 			waitpid(newpid, &child_status, 0);
+			return_errno = errno;
+
+#ifdef LINUX
+			if (m_proc_family && family_info &&
+				m_proc_family->has_been_oom_killed(newpid, child_status)) {
+				dprintf(D_ALWAYS,
+					"Error: Create_Process(%s): child was OOM killed by "
+					"cgroup memory limit before exec().\n",
+					executable);
+				return_errno = ERRNO_OOM_KILLED_AT_STARTUP;
+			} else
+#endif
+			{
+				dprintf(D_ALWAYS,
+					"Error: Create_Process(%s): child died before exec(): "
+					"child status=%d (0x%x).\n",
+					executable, child_status, child_status);
+			}
+
 			close(errorpipe[0]);
 			newpid = FALSE;
 			goto wrapup;

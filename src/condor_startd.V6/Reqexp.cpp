@@ -35,6 +35,71 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
 	// note that this param call will pick up the slot_type param overrides
 	r_reqexp.origstart.set(param("START"));
 
+	r_reqexp.normal_clauses.clear();
+
+	classad::References std_clauses{ATTR_START, ATTR_WITHIN_RESOURCE_LIMITS};
+	bool include_healthy_clause = resmgr->config_classad->Lookup(ATTR_HEALTHY);
+	if (include_healthy_clause) std_clauses.insert(ATTR_HEALTHY);
+
+	auto_free_ptr gen_clauses(param("SLOT_REQUIREMENTS_CLAUSES"));
+	const char * slot_param_name = m_parent ? "DSLOT_REQUIREMENTS_CLAUSES" : "PSLOT_REQUIREMENTS_CLAUSES";
+	auto_free_ptr slot_clauses(param(slot_param_name));
+	if (gen_clauses || slot_clauses || include_healthy_clause) {
+		r_reqexp.normal_clauses.reserve(size(std_clauses)+4);
+
+		if (include_healthy_clause) { r_reqexp.normal_clauses.push_back(ATTR_HEALTHY); }
+
+		// include the general sub clauses
+		if (gen_clauses) {
+			// when the admin specifies the slot clauses, we expect them to include Healthy in the list.
+			for (auto & attr : StringTokenIterator(gen_clauses)) {
+				const char * type_expr = SlotType::type_param(r_attr, attr.c_str());
+				auto_free_ptr expr(::param(attr.c_str()));
+				if (expr || type_expr) {
+					const char * slot_expr = type_expr ? type_expr : expr.ptr();
+					if (slot_expr && ! IsValidClassAdExpression(slot_expr)) {
+						dprintf(D_ERROR, "No jobs will match because of parse error in SLOT_REQUIREMENTS_CLAUSE %s = %s\n", attr.c_str(), slot_expr);
+					}
+				} else if ( ! resmgr->config_classad->Lookup(attr)) {
+					dprintf(D_ERROR, "ignoring undefined SLOT_REQUIREMENTS_CLAUSE %s\n", attr.c_str());
+					continue; // don't add the clause to the clause list
+				}
+				// add to clause list, unless its one of the standard clauses that we add explicitly
+				if (std_clauses.count(attr)) continue;
+				r_reqexp.normal_clauses.push_back(attr);
+				std_clauses.insert(attr);
+			}
+		}
+
+		// always include these subclauses
+		r_reqexp.normal_clauses.push_back("START"); // not ATTR_START because we want all caps
+		r_reqexp.normal_clauses.push_back(ATTR_WITHIN_RESOURCE_LIMITS);
+
+		// include the pslot/dslot sub clauses
+		if (slot_clauses) {
+			for (auto & attr : StringTokenIterator(slot_clauses)) {
+				const char * type_expr = SlotType::type_param(r_attr, attr.c_str());
+				auto_free_ptr expr(param(attr.c_str()));
+				if (expr || type_expr) {
+					const char * slot_expr = type_expr ? type_expr : expr.ptr();
+					if (slot_expr && ! IsValidClassAdExpression(slot_expr)) {
+						dprintf(D_ERROR, "parse error in %s %s = %s\n", slot_param_name, attr.c_str(), slot_expr);
+						if (m_parent) {
+							dprintf(D_ERROR, "ignoring %s %s\n", slot_param_name, attr.c_str());
+							continue; // for d-slots we just omit the unparseable clause rather than failing the match
+						}
+					}
+				} else {
+					dprintf(D_ERROR, "ignoring undefined %s %s\n", slot_param_name, attr.c_str());
+					continue;
+				}
+				if (std_clauses.count(attr)) continue;
+				r_reqexp.normal_clauses.push_back(attr);
+				std_clauses.insert(attr);
+			}
+		}
+	}
+
 	// and so will this one
 	r_reqexp.wrl_from_config.set(param(ATTR_WITHIN_RESOURCE_LIMITS));
 	if (r_reqexp.wrl_from_config) {
@@ -42,7 +107,6 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
 		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.wrl_from_config.ptr());
 		return;
 	}
-
 }
 
 bool
@@ -107,10 +171,14 @@ Resource::reqexp_set_state(reqexp_state rst)
 	// otherwise, we use some sort of override in the resource classad
 	r_reqexp.rstate = rst;
 	if (r_reqexp.rstate == NORMAL_REQ) {
-		ca->Delete(ATTR_START);
 		ca->Delete(ATTR_REQUIREMENTS);
-		ca->Delete(ATTR_WITHIN_RESOURCE_LIMITS);
 		ca->Delete(ATTR_RUNNING_COD_JOB);
+		if (r_reqexp.normal_clauses.empty()) {
+			ca->Delete(ATTR_START);
+			ca->Delete(ATTR_WITHIN_RESOURCE_LIMITS);
+		} else {
+			for (auto & attr : r_reqexp.normal_clauses) { ca->Delete(attr); }
+		}
 		publish_requirements(cb);
 	} else {
 		publish_requirements(ca);
@@ -122,7 +190,7 @@ Resource::reqexp_set_state(reqexp_state rst)
 void
 Resource::publish_requirements( ClassAd* ca )
 {
-	const char * slot_requirements = ATTR_START " && (" ATTR_WITHIN_RESOURCE_LIMITS ")";
+	const char * slot_requirements = ATTR_START " && " ATTR_WITHIN_RESOURCE_LIMITS;
 	const char * cod_requirements = "False && " ATTR_RUNNING_COD_JOB;
 
 	// For cod, we don't publish START at all, and set Requirements to "False && Cod"
@@ -152,7 +220,22 @@ Resource::publish_requirements( ClassAd* ca )
 		}
 
 		// Set Requirements and active WithinResourceLimits expression
-		ca->AssignExpr(ATTR_REQUIREMENTS, slot_requirements);
+		if (r_reqexp.normal_clauses.empty()) {
+			ca->AssignExpr(ATTR_REQUIREMENTS, slot_requirements);
+		} else {
+			std::string req = join(r_reqexp.normal_clauses, " && ");
+			ca->AssignExpr(ATTR_REQUIREMENTS, req.c_str());
+
+			// if publishing to non internal ads, we need to copy expressions out of the config ads
+			if (ca != r_config_classad && ca != r_classad && r_config_classad) {
+				for (auto & attr : r_reqexp.normal_clauses) {
+					if (YourStringNoCase(ATTR_START) != attr && YourStringNoCase(ATTR_WITHIN_RESOURCE_LIMITS) != attr) {
+						ExprTree * expr = r_config_classad->Lookup(attr);
+						if (expr) { ca->Insert(attr, expr->Copy()); }
+					}
+				}
+			}
+		}
 		const char * active_wrl;
 		if (r_reqexp.wrl_from_config) {
 			active_wrl = r_reqexp.wrl_from_config;

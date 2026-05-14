@@ -445,6 +445,8 @@ def job_dict_to_string(info):
     return "[" + " ".join(result) + " ]"
 
 def fill_cache(cache_location):
+    # Note: The blahpd reads this cache file and looks at the first and
+    # third fields of each line.
     log("Starting query to fill cache.")
     results = qstat()
     log("Finished query to fill cache.")
@@ -459,7 +461,8 @@ def fill_cache(cache_location):
                 str_val = binascii.b2a_hex(pickle.dumps(val))
                 if str is not bytes:
                     str_val = str_val.decode()
-                writer.writerow([key, str_val])
+                status = val.get("JobStatus", 0)
+                writer.writerow([key, str_val, status])
             os.fsync(fd)
         except:
             os.unlink(filename)

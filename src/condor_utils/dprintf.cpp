@@ -991,10 +991,8 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			backup.debugFP = NULL; // don't allow destructor to free stderr
 		}
 
-		int ixOutput = 0;
-
 		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
-		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
+		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 		{
 			if ( ! it->MatchesCatAndFlags(cat_and_flags))
 				continue;

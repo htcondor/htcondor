@@ -1,3 +1,39 @@
+condor (25.10.1-1) stable; urgency=medium
+
+  * Several improvements to throttle and monitor DAGMan resource usage
+  * Can now automatically retry a job with a larger disk request
+  * .chirp.config has been moved out of the job's scratch directory
+  * Disables swap for jobs on cgroup v1 systems by default
+  * Can now append columns to condor_(qusers|status|who) output
+  * Allow URL style container images when file transfer is off
+  * Improvements to handling batch universe jobs
+  * All changes in HTCondor 25.0.10
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 12:55:00 -0500
+
+condor (25.0.10-1) stable; urgency=medium
+
+  * Add support for Ubuntu 26.04 (Resolute Raccoon)
+  * All changes in HTCondor 24.12.20
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 11:25:00 -0500
+
+condor (24.12.20-1) stable; urgency=medium
+
+  * Fixed Access Point spooled X.509 job proxy refresh
+  * All changes in HTCondor 24.0.20
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:53:00 -0500
+
+condor (24.0.20-1) stable; urgency=medium
+
+  * Fix reporting of RemoteUserCPU in parallel universe
+  * condor_ssh_to_job can now execute one-shot commands when using containers
+  * condor_ssh_to_job now enters the proper cgroup when using containers
+  * HTCondor tarballs now contain Pelican 7.24.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:23:00 -0500
+
 condor (25.8.2-1) stable; urgency=medium
 
   * Fix detection and reporting of NVIDIA MIG GPU attributes
@@ -762,7 +798,7 @@ condor (23.7.2-1) stable; urgency=medium
 
 condor (23.0.10-1) stable; urgency=medium
 
-  * Preliminary support for Ubuntu 22.04 (Noble Numbat)
+  * Preliminary support for Ubuntu 24.04 (Noble Numbat)
   * Warns about deprecated multiple queue statements in a submit file
   * Fix bug where plugins could not signify to retry a file transfer
   * The condor_upgrade_check script checks for proper token file permissions

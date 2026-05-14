@@ -46,8 +46,8 @@ URL: https://htcondor.org/
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-# Do not provide libfmt
-%global __requires_exclude ^libfmt\\.so.*$
+# # Do not provide libfmt
+# %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 Source1: %{name}.sysusers.conf
@@ -239,8 +239,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.24.0 or pelican-debug >= 7.24.0)
-Requires: pelican-osdf-compat >= 7.24.0
+Requires: (pelican >= 7.24.2 or pelican-debug >= 7.24.2)
+Requires: pelican-osdf-compat >= 7.24.2
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
@@ -595,7 +595,7 @@ make -C docs man
 # Any changes here should be synchronized with
 # ../debian/rules 
 
-%if 0%{?suse_version}
+%if 0%{?suse_version} || 0%{?fedora} >= 44
 %cmake \
 %else
 %cmake3 \
@@ -633,20 +633,28 @@ make -C docs man
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
+
+%if 0%{?fedora} >= 44
+%cmake_build
+%if %uw_build
+%cmake_build -t tests
+%endif
+%else
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
+%endif
 %endif
 
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} >= 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora} && 0%{?fedora} < 44
 cd redhat-linux-build
 %endif
 %endif
@@ -663,10 +671,18 @@ echo ---------------------------- makefile ---------------------------------
 %if 0%{?suse_version}
 cd build
 %endif
+%if 0%{?fedora} >= 44
+%cmake_install
+%else
 make install DESTDIR=%{buildroot}
+%endif
 
 %if %uw_build
+%if 0%{?fedora} >= 44
+%cmake_build -t tests-tar-pkg
+%else
 make tests-tar-pkg
+%endif
 # tarball of tests
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
@@ -816,9 +832,9 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/condor/libfmt.so
-%_libdir/condor/libfmt.so.10
-%_libdir/condor/libfmt.so.10.1.0
+# %_libdir/condor/libfmt.so
+# %_libdir/condor/libfmt.so.10
+# %_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
@@ -1311,6 +1327,30 @@ fi
 # configuration
 
 %changelog
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.10.1-1
+- Several improvements to throttle and monitor DAGMan resource usage
+- Can now automatically retry a job with a larger disk request
+- .chirp.config has been moved out of the job's scratch directory
+- Disables swap for jobs on cgroup v1 systems by default
+- Can now append columns to condor_(qusers|status|who) output
+- Allow URL style container images when file transfer is off
+- Improvements to handling batch universe jobs
+- All changes in HTCondor 25.0.10
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.10-1
+- Add support for Ubuntu 26.04 (Resolute Raccoon)
+- All changes in HTCondor 24.12.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
+- Fixed Access Point spooled X.509 job proxy refresh
+- All changes in HTCondor 24.0.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
+- Fix reporting of RemoteUserCPU in parallel universe
+- condor_ssh_to_job can now execute one-shot commands when using containers
+- condor_ssh_to_job now enters the proper cgroup when using containers
+- HTCondor tarballs now contain Pelican 7.24.2
+
 * Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.8.2-1
 - Fix detection and reporting of NVIDIA MIG GPU attributes
 - Add '--rocm' flag to Apptainer GPU jobs to support AMD GPUs
@@ -1816,7 +1856,7 @@ fi
 - Fix so 'condor_submit -interactive' works on cgroup v2 execution points
 
 * Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
-- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Preliminary support for Ubuntu 24.04 (Noble Numbat)
 - Warns about deprecated multiple queue statements in a submit file
 - Fix bug where plugins could not signify to retry a file transfer
 - The condor_upgrade_check script checks for proper token file permissions

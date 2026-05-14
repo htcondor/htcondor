@@ -300,7 +300,7 @@ DCStartd::asyncRequestOpportunisticClaim(
 	char const *scheduler_addr,
 	int alive_interval,
 	requestClaimOptions & opts,
-	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+	int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -1250,6 +1250,64 @@ DCStartd::drainJobs(int how_fast,const char * reason,int on_completion,char cons
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
 		formatstr(error_msg,
 				"Received failure from %s in response to DRAIN_JOBS request: error code %d: %s",
+				name(),error_code,remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}
+
+bool
+DCStartd::rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel)
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( REHOME, Sock::reli_sock, 20 );
+	if( !sock ) {
+		formatstr(error_msg,"Failed to start REHOME command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	if( schedd_name ) {
+		request_ad.Assign("ScheddName", schedd_name);
+	}
+	if( schedd_pool ) {
+		request_ad.Assign("ScheddPool", schedd_pool);
+	}
+	request_ad.Assign("RehomeTimeout", timeout);
+	if( cancel ) {
+		request_ad.Assign("Cancel", true);
+	}
+
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to compose REHOME request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to get response to REHOME request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	bool result = false;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		int error_code = 0;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
+		formatstr(error_msg,
+				"Received failure from %s in response to REHOME request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;

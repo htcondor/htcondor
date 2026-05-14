@@ -1,3 +1,116 @@
+*** 25.10.1 features
+
+- Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
+  :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
+  :jira:`3584`
+
+- DAGMan is now born with a security session from its parent *condor_schedd*
+  allowing it to communicate without re-authentication.
+  :jira:`3298`
+
+- Scheduler universe jobs, such as *condor_dagman*, will now enter job
+  cool down when they exit with a non-zero exit code. The duration of the
+  cool down in controlled by :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`.
+  :jira:`3067`
+
+- Added new :tool:`htcondor dag resources` command, which shows
+  the resource usage for running and historical jobs.
+  :jira:`3636`
+
+- Add new submit command :subcom:`retry_request_disk`, which operates
+  like :subcom:`retry_request_memory` but for the ``Disk`` resource.
+  :jira:`3552`
+
+- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the **.chirp.config**
+  file no longer pollutes the user's scratch directory, it is located
+  in the slot's "user" directory.  The ``_CONDOR_CHIRP_CONFIG`` environment
+  variable still points to the correct place.
+  :jira:`2949`
+
+- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+  memory swap space for jobs.  This can be disabled by setting
+  :macro:`DISABLE_SWAP_FOR_JOB` to false.
+  :jira:`3630`
+
+- :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604,3684`
+
+- Container universe jobs whose image is an url (like ``docker://``) now work
+  when file transfer is off.
+  :jira:`3638`
+
+- **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
+  :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
+  temporary directory under the :ad-attr:`Iwd` or :ad-attr:`RemoteIwd`
+  directory.
+  The old behavior can be restored by setting ``blah_run_in_workdir=no``
+  in the ``blah.config`` file.
+  :jira:`2415`
+
+- Improved the *blahpd*'s efficiency in monitoring job status.
+  :jira:`3634,3640`
+
+- Improved handling of OS usernames that include the ``@`` character.
+  :jira:`3655`
+
+- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
+  :jira:`3586`
+
+- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
+  :jira:`3682`
+
+- Improved the error handling and log messages in the rare case that a
+  job fails after the *condor_starter* calls the ``fork()`` system call
+  but before the ``exec()`` system call.
+  :jira:`3654`
+
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
+- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
+  This allows the :tool:`condor_userprio` to use an interface to the negotiator
+  to fetch accounting ads in a way that allows constraint and projection.
+  This interface did not exist in pre htcondor 9.1 negotiators, and should
+  be set to false for new :tool:`condor_userprio` to work with such old
+  negotiators.
+  :jira:`3649`
+
+- Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
+  attribute is the condor version of the :tool:`condor_submit` version or
+  python bindings version used to submit the job.  In the case of a remote 
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
+  which represents the version of the *condor_schedd* the job was placed in.
+  :jira:`3413`
+
+- Fixed python deprecation warning in :tool:`condor_top`, so that it
+  will run without errors on not-yet-released future version of python.
+  :jira:`3643`
+
+- The python method :meth:`htcondor2.Schedd.history` has an upper bound on the
+  size in bytes of the constraint and projection argument.  Now return an
+  clear error message when these bounds are exceeded.
+  :jira:`3644` 
+
+- Improve :tool:`condor_userprio` to return information about a specific
+  user provided on the command line whether or not the user is actively
+  running jobs and utilizing pool resources.
+  :jira:`3283`
+
+- Fixed a spurious error message in the :macro:`STARTER_LOG` about unhandled
+  job exit.
+  :jira:`3653`
+
+*** 25.10.1 bugs
+
+*** 25.0.10 features
+
+- Add Ubuntu 26.04 (Resolute Raccoon) support.
+  :jira:`3703`
+
+*** 25.0.10 bugs
+
 *** 25.8.2 features
 
 - HTCondor now correctly detects and advertises the NVIDIA driver version

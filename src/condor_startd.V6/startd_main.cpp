@@ -454,6 +454,10 @@ main_init( int, char* argv[] )
 								  "DRAIN_JOBS",
 								  command_drain_jobs,
 											 "command_drain_jobs", ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( REHOME,
+								  "REHOME",
+								  command_rehome,
+											 "command_rehome", ADMINISTRATOR);
 	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
 								  "CANCEL_DRAIN_JOBS",
 								  command_cancel_drain_jobs,

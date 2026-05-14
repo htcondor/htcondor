@@ -1182,7 +1182,10 @@ Machine ClassAd Attributes
     after the jobs have ended.
 
 :classad-attribute-def:`UidDomain`
-    file entries, and therefore all have the same logins.
+    The value of the :macro:`UID_DOMAIN` configuration variable, which is a string.
+    When this matches the domain portion of the job submitter's user identity, 
+    the job may be allowed to run as the submitter's operating system identify.
+    See the :macro:`UID_DOMAIN` documentation for more details.
 
 :classad-attribute-def:`VirtualMemory`
     The amount of currently available virtual memory (swap space)
@@ -1550,4 +1553,5 @@ The following attributes are advertised when
     The instance's identifier with its provider (on its platform).
 
 :classad-attribute-def:`CloudInterruptible`
-    ``"True"`` if the instance, and ``"False"`` otherwise.
+    ``"True"`` if the instance may be evicted by the cloud system at anytime
+    (e.g. a spot instance), and ``"False"`` otherwise.

@@ -58,9 +58,14 @@ if("${OS_NAME}" MATCHES "^WIN")
 	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
 		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
 	endif()
-	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
-		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
-	endif()
+	# On batlab, we are randomly getting a permission error from msbuild when it 
+	# tries to access the global semaphore which EnforceProcessCountAcrossBuilds uses.
+
+	# Let's try turning off the semaphore, we build /mp:4, and condor controls the
+	# number of builds, so I think we should be ok.  Better than getting red builds
+	#if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+	#	list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	#endif()
 
 endif()
 
@@ -715,20 +720,20 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-# We'll do the installation ourselves, below
-set (FMT_INSTALL false)
-
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
-
 # Remove when we have C++23 everywhere
 include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
 
+# External fmt lib not used anywhere currently and is causing build
+# errors with newer MacOS clang v21.0.0 so comment out (will be in C++23)
+# We'll do the installation ourselves, below
+#set (FMT_INSTALL false)
+#add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 # But don't try to install the header files anywhere
-set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
-install(TARGETS fmt
-	LIBRARY DESTINATION "${C_LIB}"
-	ARCHIVE DESTINATION "${C_LIB}"
-	RUNTIME DESTINATION "${C_LIB}")
+#set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+#install(TARGETS fmt
+#	LIBRARY DESTINATION "${C_LIB}"
+#	ARCHIVE DESTINATION "${C_LIB}"
+#	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)

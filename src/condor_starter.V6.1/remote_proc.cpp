@@ -110,7 +110,7 @@ int RemoteProc::StartJob()
 	return TRUE;
 }
 
-bool RemoteProc::JobReaper( int pid, int status )
+ReapResult RemoteProc::JobReaper( int pid, int status )
 {
 	if( pid == JobPid ) {
 
@@ -166,7 +166,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 		return UserProc::JobReaper( pid, status );
 	}
 
-	return 0;
+	return ReapResult::JobNotFound;
 }
 
 //

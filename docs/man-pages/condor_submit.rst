@@ -796,6 +796,20 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ ^ 40 numbers of bytes.
 
+ :subcom-def:`retry_request_disk` = <quantity> [, <quantity2> [...]]
+    The amount of disk in Kb the job should request if it is evicted from
+    a slot for using more than the original ``request_disk`` value.
+
+    The value can be a single quantity, or a comma separated list of quantities.
+    If more than one quantity is specified, each must be larger than the previous one.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
+
+
  :subcom-def:`request_memory` = <quantity>
     The amount of memory this job needs in Mb. If not specified, the value is set 
     by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
@@ -1125,9 +1139,32 @@ FILE TRANSFER COMMANDS
     the files in the sandbox, except for the standard output and
     standard error files.  By default these two files go back To
     the access point.  To also send these two to the *output_destination*,
-    sent :subcom:`output` and/or :subcom:`error` to the same value
-    as the *output_destination*.  The HTCondor Administrator's manual has full
+    set :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  Only one of this command or :subcom:`output_directory`
+    may be used. The HTCondor Administrator's manual has full
     details.
+
+ :subcom-def:`output_directory` = <dir>
+    When present, defines the directory where the entire output sandbox or a
+    subset of output files as specified by the submit command
+    :subcom:`transfer_output_files` will be transferred to.  Only one of this command
+    or :subcom:`output_destination` may be used.  To specify a separate
+    sub-directory for each job, <dir> can include $() expansions For example:
+
+    .. code-block:: condor-submit
+
+        output_directory = /path/to/output/$INT(ClusterId,%05d)/$(JobId)
+
+    Will transfer the output into a separate directory for each submission,
+    with a separate subdirectory for each job.  :ad-expr:`$INT(ClusterId,%05d)` prints
+    the ClusterId with a minimum of 5 digits using leading 0's, so if the
+    ClusterId of the submission is 95, the output directories will be
+
+    .. code-block:: text
+
+        /path/to/output/00095/95.0/
+        /path/to/output/00095/95.1/
+        ...
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
     The **should_transfer_files**
@@ -2860,7 +2897,7 @@ and comments.
                 <macro_name> = <string>
 
     Several pre-defined macros are supplied by the submit description file
-    parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
+    parser. The ``$(JobListId)``, ``$(ClusterId)`` or ``$(Cluster)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ :ad-attr:`ClusterId` job
@@ -3111,6 +3148,9 @@ will not be modified during :subcom:`queue` processing.
  JobId
     Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
     id of the job.
+ JobListId
+    Set to ``$(ClusterId)`` so that it will expand to the :ad-attr:`ClusterId` attribute
+    of the job. Before version 25.10 it will expand nothing.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is

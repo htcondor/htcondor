@@ -57,10 +57,10 @@ public:
 	const std::string& operator[](LibrarianConfigOptions::str opt) const { return strOpts[static_cast<size_t>(opt)]; }
 
 private:
-	std::array<bool, static_cast<size_t>(LibrarianConfigOptions::b::_SIZE)> boolOpts;
-	std::array<int, static_cast<size_t>(LibrarianConfigOptions::i::_SIZE)> intOpts;
-	std::array<long long, static_cast<size_t>(LibrarianConfigOptions::ll::_SIZE)> longlongOpts;
-	std::array<double, static_cast<size_t>(LibrarianConfigOptions::dbl::_SIZE)> doubleOpts;
-	std::array<std::string, static_cast<size_t>(LibrarianConfigOptions::str::_SIZE)> strOpts;
+	std::array<bool, static_cast<size_t>(LibrarianConfigOptions::b::_SIZE)> boolOpts{};
+	std::array<int, static_cast<size_t>(LibrarianConfigOptions::i::_SIZE)> intOpts{};
+	std::array<long long, static_cast<size_t>(LibrarianConfigOptions::ll::_SIZE)> longlongOpts{};
+	std::array<double, static_cast<size_t>(LibrarianConfigOptions::dbl::_SIZE)> doubleOpts{};
+	std::array<std::string, static_cast<size_t>(LibrarianConfigOptions::str::_SIZE)> strOpts{};
 };
 

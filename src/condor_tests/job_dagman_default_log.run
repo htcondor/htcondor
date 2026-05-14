@@ -30,6 +30,12 @@ use CondorTest;
 use CondorUtils;
 use Data::Dumper;
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	SCHEDULER_UNIVERSE_COOL_DOWN_DURATION = 0
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 $cmd = 'job_dagman_default_log.dag';
 $testdesc =  'Condor submit dag - default log test - scheduler U';
 $testname = "job_dagman_default_log";

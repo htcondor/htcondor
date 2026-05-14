@@ -52,7 +52,7 @@ _param__getitem__( PyObject *, PyObject * args ) {
         } break;
 
         case PARAM_TYPE_LONG: {
-            long long value = param_integer(key);
+            long long value = param_longlong(key);
             return PyLong_FromLongLong(value);
         } break;
 

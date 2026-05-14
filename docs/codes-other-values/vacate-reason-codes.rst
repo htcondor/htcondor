@@ -21,7 +21,7 @@ once for reason code 1023, the :ad-attr:`NumVacatesByReason` attribute will look
         NumVacatesByReason = [ TransferOutputError = 2; JobRemoved = 1 ]
 
 
-.. include:: /codes-other-values/vacate-code-combined-table.rst
+.. include:: /_static/generated/rst/vacate-code-combined-table.rst
 
 .. note::
 

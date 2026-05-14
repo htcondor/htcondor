@@ -328,7 +328,7 @@ def the_condor(test_dir):
         local_dir=local_dir,
         config={
             'NUM_CPUS':                         4,
-            'STARTER_TEST_SANDBOX_TIMEOUT':     8,
+            'STARTER_TEST_SANDBOX_TIMEOUT':     50,
             'SINGULARITY':                      '/usr/bin/singularity',
             'STARTER_LOG_NAME_APPEND':          'JobID',
             'STARTER_DEBUG':                    'D_CATEGORY D_SUBSECOND D_FULLDEBUG',

@@ -66,8 +66,8 @@ jobs:
           su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install"
 
       - name: test
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
-        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40 -E guidance" )
+        # Use su to run as condorauto user inside container
+        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40" )
 
         # Report the memory used by the build & test run, because I'm curious
       - name: memory usage
@@ -86,7 +86,7 @@ jobs:
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-output-for-${{ matrix.instance.abbrev }}
           path: __build/src/condor_tests
@@ -96,7 +96,7 @@ jobs:
       - name: Upload Artifact with Test Results on failure or success
         # Always upload, even if build or tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tests-for-${{ matrix.instance.abbrev }}
           path: __build/test.xml
@@ -186,7 +186,7 @@ jobs:
         run: ./build-on-linux.sh .
 
       - name: Upload .debs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: debs
           path: |
@@ -201,7 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download .debs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           merge-multiple: true
 
@@ -238,12 +238,12 @@ jobs:
           chmod a+rwx /home/runner
 
       - name: Test with rootness
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
+        # Use su to run as condorauto user inside container
         run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: root-output-for-ubuntu
           path: |
@@ -259,7 +259,7 @@ jobs:
     if: always()
     steps:
          - name: Download test xml output artifacts
-           uses: actions/download-artifact@v4
+           uses: actions/download-artifact@v6
            with:
              pattern: tests-for-*
 

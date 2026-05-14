@@ -82,6 +82,8 @@
 #define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
 #define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
 #define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
+#define SUBMIT_KEY_RetryRequestDisk "retry_request_disk"
+
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"

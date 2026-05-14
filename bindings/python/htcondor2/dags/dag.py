@@ -22,7 +22,8 @@ from pathlib import Path
 import collections.abc
 import fnmatch
 
-from . import node, edges, utils, exceptions
+from . import node, utils, exceptions
+from . import edges as edgetype
 from .walk_order import WalkOrder
 
 logger = logging.getLogger(__name__)
@@ -268,7 +269,7 @@ class DAG:
     @property
     def edges(
         self,
-    ) -> Iterator[Tuple[Tuple[node.BaseNode, node.BaseNode], edges.BaseEdge]]:
+    ) -> Iterator[Tuple[Tuple[node.BaseNode, node.BaseNode], edgetype.BaseEdge]]:
         """
         Iterate over ``((parent, child), edge)`` tuples,
         for every edge in the graph.
@@ -419,7 +420,7 @@ class EdgeStore:
     def __init__(self):
         self.edges = {}
 
-    def __iter__(self) -> Iterator[edges.BaseEdge]:
+    def __iter__(self) -> Iterator[edgetype.BaseEdge]:
         yield from self.edges
 
     def __contains__(self, item) -> bool:
@@ -427,12 +428,12 @@ class EdgeStore:
 
     def items(
         self,
-    ) -> Iterator[Tuple[Tuple[node.BaseNode, node.BaseNode], edges.BaseEdge]]:
+    ) -> Iterator[Tuple[Tuple[node.BaseNode, node.BaseNode], edgetype.BaseEdge]]:
         yield from self.edges.items()
 
     def get(
         self, parent: node.BaseNode, child: node.BaseNode
-    ) -> Optional[edges.BaseEdge]:
+    ) -> Optional[edgetype.BaseEdge]:
         try:
             return self.edges[(parent, child)]
         except KeyError:
@@ -442,15 +443,15 @@ class EdgeStore:
         self,
         parent: node.BaseNode,
         child: node.BaseNode,
-        edge: Optional[edges.BaseEdge] = None,
+        edge: Optional[edgetype.BaseEdge] = None,
     ) -> None:
         if edge is None:
-            edge = edges.ManyToMany()
+            edge = edgetype.ManyToMany()
         self.edges[(parent, child)] = edge
 
     def pop(
         self, parent: node.BaseNode, child: node.BaseNode
-    ) -> Optional[edges.BaseEdge]:
+    ) -> Optional[edgetype.BaseEdge]:
         return self.edges.pop((parent, child), None)
 
 

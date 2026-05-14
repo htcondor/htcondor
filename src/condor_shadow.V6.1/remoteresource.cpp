@@ -41,6 +41,9 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
@@ -51,6 +54,11 @@ extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
+
+// To know if the schedd wants us to do common file transfer.  If not, this
+// is where we alter the input list to compensate.
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
 
 // for remote syscalls...
 ReliSock *syscall_sock;
@@ -963,25 +971,40 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// If the starter is too old for common file transfer, fall back on
 	// per-proc file transfer.
 	//
-	CondorVersionInfo cvi( starter_version.c_str() );
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
-	// actually released as part of 25.2.FIXME.
+	// actually released as part of 25.2.x.
 	//
 	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
 	// can successfully do common file transfer if and only if there were no
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+
+	//
+	// If the admin has turned off common file transfer, fall back on
+	// per-proc file transfer.
+	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+
+	//
+	// If the schedd did not specify staging or mapping, fall back on
+	// per-proc file transfer.  (The schedd checks the previous conditions
+	// before deciding to specify staging or mapping, so these checks
+	// ought to be redundant.)
+	//
+	bool required = cxfer_type == CXFER_STATE::INVALID;
+
+    if( impossible || disallowed || required ) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to compute common input file catalogs.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -989,12 +1012,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 		int required_version = 2;
 		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to comput input files.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -1265,10 +1288,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_stime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1285,10 +1308,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_utime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {

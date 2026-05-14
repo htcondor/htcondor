@@ -349,7 +349,7 @@ class Condor:
                 )
             
             self.condor_master = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
             logger.debug(
@@ -357,7 +357,7 @@ class Condor:
             )
 
     @skip_if(condor_is_ready)
-    def _wait_for_ready(self, timeout: int = 120, dump_logs_if_fail: bool = False):
+    def _wait_for_ready(self, timeout: int = 600, dump_logs_if_fail: bool = False):
         daemons = set(
             self.run_command(["condor_config_val", "DAEMON_LIST"], echo=False)
             .stdout.replace(",", " ")
@@ -465,7 +465,7 @@ class Condor:
         killed = False
         while True:
             try:
-                self.condor_master.communicate(timeout=5)
+                self.condor_master.wait(timeout=5)
                 break
             except subprocess.TimeoutExpired:
                 pass

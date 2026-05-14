@@ -2035,7 +2035,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			ClassAd auth_response;
 			m_sock->decode();
 
-			if (!getClassAd(m_sock, auth_response) ||
+			if (!getPODClassAd(m_sock, auth_response) ||
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
@@ -2270,7 +2270,7 @@ SecManStartCommand::authenticate_inner()
 				ClassAd auth_response;
 				m_sock->decode();
 
-				if (!getClassAd(m_sock, auth_response) ||
+				if (!getPODClassAd(m_sock, auth_response) ||
 					!m_sock->end_of_message()) {
 
 					dprintf (D_ALWAYS, "SECMAN: Failed to read resume session response classad from server.\n");
@@ -2468,7 +2468,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session.
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
+			if (!getPODClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
 				std::string errmsg;
 				formatstr(errmsg, "Failed to received post-auth ClassAd");
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
