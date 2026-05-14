@@ -22,6 +22,10 @@
   immediately.
   :jira:`3709`
 
+- Fixed a rare issue where *condor_dagman* would unnecessarily abort during
+  reboot of the host machine due to OS process ID (PID) reuse.
+  :jira:`3739`
+
 - Fixed a bug where the job lease duration was based on when the TCP
   connection to the EP was lost, when it should be based on the last time
   a message was successfully exchanged with the EP.
