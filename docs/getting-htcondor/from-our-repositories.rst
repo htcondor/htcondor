@@ -52,9 +52,9 @@ deb-based Distributions
 -----------------------
 
 We support the following deb-based platforms: Debian 12 (Bookworm) and Debian 13 (Trixie); and
-Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
+Ubuntu 22.04 (Jammy Jellyfish), 24.04 (Noble Numbat), and 26.04 (Resolute Raccoon).
 Binaries are available for ``x86_64`` for all these platforms.
-``arm64`` binaries are available for Ubuntu 24.04 (Noble Numbat).
+``arm64`` binaries are available for Ubuntu 24.04 (Noble Numbat) and 26.04 (Resolute Raccoon).
 These repositories also include the source packages.
 
 Place our `signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-25.0-Key>`_
@@ -71,3 +71,4 @@ Ubuntu 22.04 and 24.04
 
 * Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-jammy.list>`_
 * Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-noble.list>`_
+* Ubuntu 26.04 (resolute raccoon): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-resolute.list>`_

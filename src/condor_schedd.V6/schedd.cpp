@@ -6611,13 +6611,13 @@ struct UpdateGSICredContinuation : Service {
 
 public:
 	UpdateGSICredContinuation(int cmd, const std::string &temp_path,
-		const std::string &final_path, const std::string &job_owner,
+		const std::string &final_path, bool user_priv,
 		PROC_ID jobid, void *state)
 	:
 	  m_cmd(cmd),
+	  m_user_priv(user_priv),
 	  m_temp_path(temp_path),
 	  m_final_path(final_path),
-	  m_job_owner(job_owner),
 	  m_jobid(jobid),
 	  m_state(state)
 	{}
@@ -6627,6 +6627,7 @@ public:
 
 private:
 	int m_cmd;
+	bool m_user_priv;
 	std::string m_temp_path;
 	std::string m_final_path;
 	std::string m_job_owner;  // empty job owner indicates we should use condor_priv.
@@ -6727,7 +6728,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
-	std::string job_owner;
+	bool use_user_priv = false;
 #ifndef WIN32
 		// Check the ownership of the job's spool directory and switch
 		// our priv state if needed.
@@ -6753,17 +6754,16 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			// We should already be in condor priv, but we want to save it
 			// in the 'priv' variable.
 		priv = set_condor_priv();
-			// In UpdateGSICredContinuation below, an empty job_owner
-			// means we should do file access as condor_priv.
-		job_owner.clear();
+		use_user_priv = false;
 	} else {
 		if ( !init_user_ids(jobad->ownerinfo) ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-					 job_owner.c_str() );
+			         jobad->ownerinfo->Name() );
 			refuse(s);
 			return FALSE;
 		}
 		priv = set_user_priv();
+		use_user_priv = true;
 	}
 #endif
 
@@ -6788,7 +6788,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		new UpdateGSICredContinuation(cmd,
 			temp_proxy_path.c_str(),
 			final_proxy_path.c_str(),
-			job_owner,
+			use_user_priv,
 			jobid,
 			state);
 
@@ -6825,11 +6825,11 @@ UpdateGSICredContinuation::finish(Stream *stream)
 	ReliSock *rsock = static_cast<ReliSock*>(stream);
 	priv_state priv;
 #ifndef WIN32
-	if (!m_job_owner.empty()) {
+	if (m_user_priv) {
 		JobQueueJob* jobad = GetJobAd(m_jobid);
 		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
-			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-				m_job_owner.c_str());
+			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for owner of %d.%d!\n",
+			        m_jobid.cluster, m_jobid.proc);
 			delete this;
 			return false;
 		}

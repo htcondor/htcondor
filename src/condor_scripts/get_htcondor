@@ -79,6 +79,7 @@ check_forked() {
             focal) VERSION_ID=20.04;;
             jammy) VERSION_ID=22.04;;
             noble) VERSION_ID=24.04;;
+            resolute) VERSION_ID=26.04;;
         esac
     fi
 
@@ -105,6 +106,7 @@ get_distribution() {
         #     debian 13 trixie
         #     ubuntu 22 jammy
         #     ubuntu 24 noble
+        #     ubuntu 26 resolute
         #     almalinux 8
         #     almalinux 9
         #     rocky 8
@@ -353,7 +355,7 @@ EOF
                 # but for now let's not risk screwing things up by adding them
                 # on the platforms that don't need them.
                 case $ID.$VERSION_CODENAME in
-                    ubuntu.bionic|ubuntu.focal|ubuntu.jammy|ubuntu.noble)
+                    ubuntu.bionic|ubuntu.focal|ubuntu.jammy|ubuntu.noble|ubuntu.resolute)
                         echo -e "\n# Preconfiguring packages for Ubuntu."
                         $sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
                     ;;
