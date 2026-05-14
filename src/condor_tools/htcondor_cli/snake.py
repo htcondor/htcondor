@@ -1,3 +1,4 @@
+import argparse
 import htcondor2 as htcondor
 import shutil
 import subprocess
@@ -23,38 +24,43 @@ class Submit(Verb):
     """
     # command-line argument configurations
     options = {
-        "snakefile": {
-            "args": ("snakefile",), # positional argument
-            "help": "Positional argument to Snakefile. If omitted, Snakefile is assumed to be at the current directory.",
-            "nargs": "?",
-        },
-        "profile": {
-            "args": ("--profile",),
-            "help": "Optional flag to specify the path of Snakemake profile directory. You can also specify this flag after the seperator `--`",
-            "required": False,
-        }, 
         "jobdir": {
             "args": ("--jobdir",),
-            "help": "Optional directory for HTCondor log files. If omitted, a `logs` directory will be created at the current directory. If `--htcondor-jobdir` is not specified for Snakemake's logs, all log files will be placed under `--jobdir` location.",
+            "help": "Optional directory for HTCondor management job log files. If omitted, a `logs` directory will be created at the current directory.",
             "required": False,
         },
-        "executor": {
-            "args": ("--executor",),
-            "help": "Required Snakemake-HTCondor executor plugin to be sent to the execution point (EP). Please install the executor beforehand.",
-            "required": True,
-        }
+        "snakemake_args": {
+            "args": ("snakemake_args",),
+            "nargs": argparse.REMAINDER,
+            "help": "[snakefile] [-- [snakemake args...]]  Optionally specify a Snakefile as the first positional argument. Use -- to pass remaining arguments directly to snakemake.",
+        },
     }
 
-    def __init__(self, logger, snakefile, snakemake_args=None, **options):
+    def __init__(self, logger, snakefile=None, snakemake_args=None, **options):
+        snakemake_args = list(snakemake_args or [])
+
+        # snakefile is only provided when called directly (e.g. from tests).
+        # When invoked via the CLI, everything lands in snakemake_args via REMAINDER.
+        # We split that list here: the first non-flag arg (before any --) is the
+        # snakefile; the -- separator and everything after it go to snakemake.
+        if snakefile is None:
+            if snakemake_args and snakemake_args[0] == '--':
+                # No snakefile given; strip the separator
+                snakemake_args = snakemake_args[1:]
+            else:
+                if snakemake_args and not snakemake_args[0].startswith('-'):
+                    snakefile = snakemake_args.pop(0)
+                # Strip the -- separator that may follow the snakefile
+                if snakemake_args and snakemake_args[0] == '--':
+                    snakemake_args = snakemake_args[1:]
+
         # Basic validations of CLI
         snakefile = self._validate_snakefile(snakefile)
-        profile = self._validate_profile(options) # can be None depends on what users' choices
         jobdir = self._setup_jobdir(options)
-        executor = options.get("executor")
 
         # submit a local universe job
         try:
-            self._submit_local(snakefile, profile, jobdir, executor, snakemake_args or [])
+            self._submit_local(snakefile, jobdir, snakemake_args or [])
         except Exception as e:
             print("Error: Could not submit local universe job.")
             print(f"Exception details:", str(e))
@@ -74,16 +80,6 @@ class Submit(Verb):
             )
         return snakefile
 
-    def _validate_profile(self, options):
-        """Return profile path if it is explicitly provided by user"""
-        profile_specified = options.get("profile")
-        if profile_specified:
-            profile = Path(profile_specified) 
-            if not profile.exists():
-                raise FileNotFoundError(f"Profile directory not found: {profile}")
-            return profile
-        return None
-
     def _setup_jobdir(self, options):
         """Create log directory if needed"""
         if options.get("jobdir"):
@@ -95,7 +91,7 @@ class Submit(Verb):
         return jobdir
 
     # ===== HTCondor SUBMISSION METHODS ===== #
-    def _submit_local(self, snakefile, profile, jobdir, executor, snakemake_args):
+    def _submit_local(self, snakefile, jobdir, snakemake_args):
         """Submit snakemake as an HTCondor local universe job."""
         # Resolve snakemake executable from user's environment
         snakemake_path = shutil.which("snakemake")
@@ -108,18 +104,13 @@ class Submit(Verb):
         # Build arguments for snakemake
         args_list = [
             f"-s {snakefile}",
-            f"--executor {executor}",
-            f"--htcondor-jobdir {jobdir}"
+            f"--htcondor-jobdir {jobdir}",
         ]
 
-        # Add profile if specified
-        if profile:
-            args_list.append(f"--profile {profile}")
-        
-        # Add any additional snakemake args
+        # Append any additional snakemake args passed after the -- separator
         if snakemake_args:
             args_list.extend(snakemake_args)
-        
+
         arguments = " ".join(args_list)
         
         submit_description = htcondor.Submit({
