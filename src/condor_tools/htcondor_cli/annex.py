@@ -13,15 +13,10 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token, annex_add2, annex_create2
+from htcondor_cli.annex_create import annex_add_old, annex_create_old, create_annex_token, annex_add_new, annex_create_new
 from htcondor_cli.annex_validate import SYSTEM_TABLE
 
-class Create(Verb):
-    """
-    Create an HPC annex.
-    """
-
-    options = {
+create_options_old = {
         "annex_name": {
             "args": ("annex_name",),
             "metavar": "annex-name",
@@ -136,20 +131,9 @@ class Create(Verb):
             "type": str,
             "default": None,
         },
-    }
+}
 
-    def __init__(self, logger, **options):
-        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
-            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
-        annex_create(logger, **options)
-
-
-class Create2(Verb):
-    """
-    Create an HPC annex.
-    """
-
-    options = {
+create_options_new = {
         "annex_name": {
             "args": ("annex_name",),
             "metavar": "annex-name",
@@ -201,12 +185,22 @@ class Create2(Verb):
             "type": int,
             "default": None,
         },
-    }
+}
+
+class Create(Verb):
+    """
+    Create an HPC annex.
+    """
+
+    options = create_options_old if htcondor.param.get("ANNEX_USE_OLD_CREATE", False) else create_options_new
 
     def __init__(self, logger, **options):
         if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
             raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
-        annex_create2(logger, **options)
+        if htcondor.param.get("ANNEX_USE_OLD_CREATE", False):
+            annex_create_old(logger, **options)
+        else:
+            annex_create_new(logger, **options)
 
 
 class Setup(Verb):
@@ -276,12 +270,10 @@ class CheckSetup(Verb):
 
 class Add(Create):
     def __init__(self, logger, **options):
-        annex_add(logger, **options)
-
-
-class Add2(Create2):
-    def __init__(self, logger, **options):
-        annex_add2(logger, **options)
+        if htcondor.param.get("ANNEX_USE_OLD_CREATE", False):
+            annex_add_old(logger, **options)
+        else:
+            annex_add_new(logger, **options)
 
 
 class Systems(Verb):
@@ -708,16 +700,8 @@ class Annex(Noun):
     class create(Create):
         pass
 
-    class create2(Create2):
-        pass
-
-
     class add(Add):
         pass
-
-    class add2(Add2):
-        pass
-
 
     class systems(Systems):
         pass
@@ -737,5 +721,5 @@ class Annex(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup, cls.create2, cls.add2]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
 

@@ -4118,6 +4118,10 @@ type=string
 description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
 
+[ANNEX_USE_OLD_CREATE]
+default=False
+type=bool
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe

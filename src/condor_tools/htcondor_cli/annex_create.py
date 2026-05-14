@@ -523,7 +523,7 @@ def invoke_condor_annex(
 
         if proc.returncode == 0:
             # We could join the control flows for EC2 and HPC at the bottom
-            # of annex_inner_func(), instead, once we're sure this'll work.
+            # of annex_inner_func_old(), instead, once we're sure this'll work.
             logger.info(f"{ANSI_BRIGHT}... requested.{ANSI_RESET_ALL}")
             return 0
         else:
@@ -537,7 +537,7 @@ def invoke_condor_annex(
         raise RuntimeError(f"Failed to request AWS EC2 annex in {INITIAL_CONNECTION_TIMEOUT} seconds")
 
 
-def annex_inner_func(
+def annex_inner_func_old(
     logger,
     annex_name,
     nodes,
@@ -1061,7 +1061,7 @@ def annex_inner_func(
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
 
 
-def annex_inner_func2(
+def annex_inner_func_new(
     logger,
     annex_name,
     owners,
@@ -1296,28 +1296,28 @@ def annex_name_exists(annex_name):
     return len(annex_jobs) > 0
 
 
-def annex_create(logger, annex_name, **others):
+def annex_create_old(logger, annex_name, **others):
     if others.get("test") is None:
         if annex_name_exists(annex_name):
             raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
-    return annex_inner_func(logger, annex_name, **others)
+    return annex_inner_func_old(logger, annex_name, **others)
 
 
-def annex_add(logger, annex_name, **others):
+def annex_add_old(logger, annex_name, **others):
     if others.get("test") is None:
         if not annex_name_exists(annex_name):
             raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
-    return annex_inner_func(logger, annex_name, **others)
+    return annex_inner_func_old(logger, annex_name, **others)
 
-def annex_create2(logger, annex_name, **others):
+def annex_create_new(logger, annex_name, **others):
     if others.get("test") is None:
         if annex_name_exists(annex_name):
             raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
-    return annex_inner_func2(logger, annex_name, **others)
+    return annex_inner_func_new(logger, annex_name, **others)
 
 
-def annex_add2(logger, annex_name, **others):
+def annex_add_new(logger, annex_name, **others):
     if others.get("test") is None:
         if not annex_name_exists(annex_name):
             raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
-    return annex_inner_func2(logger, annex_name, **others)
+    return annex_inner_func_new(logger, annex_name, **others)
