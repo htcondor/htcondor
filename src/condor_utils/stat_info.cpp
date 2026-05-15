@@ -262,6 +262,7 @@ StatInfo::init( StatWrapper *statbuf )
 		m_isExecutable = false;
 		m_isSymlink = false;
 		m_isDomainSocket = false;
+		m_isFifo = false;
 		valid = false;
 	}
 	else
@@ -283,7 +284,8 @@ StatInfo::init( StatWrapper *statbuf )
 		// consider it to be executable.
 		m_isExecutable = ((sb->st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
 		m_isSymlink = S_ISLNK(sb->st_mode);
-		m_isDomainSocket = (S_ISSOCK( sb->st_mode ) == 1);
+		m_isDomainSocket = S_ISSOCK( sb->st_mode );
+		m_isFifo = S_ISFIFO( sb->st_mode );
 		owner = sb->st_uid;
 		group = sb->st_gid;
 # else
