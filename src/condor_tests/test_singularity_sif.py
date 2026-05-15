@@ -30,6 +30,12 @@ import shutil
 
 from ornithology import *
 
+from libcontainer import (
+    SingularityIsWorthy,
+    UserNamespacesFunctional,
+    SingularityIsWorking,
+)
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -151,46 +157,6 @@ def completed_test_job_with_xfer(condor_with_td, test_job_hash_with_xfer):
     )
     return ctj_td.query()[0]
 
-# For the test to work, we need a singularity/apptainer which can work with
-# SIF files, which is any version of apptainer, or singularity >= 3
-def SingularityIsWorthy():
-    result = subprocess.run("singularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = result.stdout.decode('utf-8')
-
-    logger.debug(output)
-    if "apptainer" in output:
-        return True
-
-    if "3." in output:
-        return True
-
-    return False
-
-def SingularityIsWorking():
-    if not sif_file():
-        return False
-
-    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr empty.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = result.stdout.decode('utf-8')
-
-    logger.debug(output)
-
-    if result.returncode == 0:
-        return True
-    else:
-        return False
-
-# For the test to work, we need user namespaces to be working
-# and enough of them.  This is a race, but better to try
-# to test first.
-def UserNamespacesFunctional():
-    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
-    if result.returncode == 7:
-        print("unshare seems to work correctly, proceeding with test\n")
-        return True
-    else:
-        print("unshare command failed, test cannot work, skipping test\n")
-        return False
 
 @action
 def ssh_job_hash():
