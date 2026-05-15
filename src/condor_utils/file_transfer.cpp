@@ -7976,9 +7976,9 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #ifndef WIN32
 	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
 	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
+	file_xfer_item.setFifo( S_ISFIFO(st.st_mode) );
 #endif
 
-	file_xfer_item.setFifo( S_ISFIFO(st.st_mode) );
 	file_xfer_item.setDirectory( st.st_mode & S_IFDIR );
 
 		// If this file is a domain socket, we don't want to send it but it's
