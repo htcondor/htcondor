@@ -87,6 +87,10 @@
   slots now also set the attribute ``IsDataSlot`` in their slot ads.
   :jira:`3715`
 
+- The OAuth credmon webserver now respects :macro:`CREDMON_WEB_PREFIX`,
+  useful if the credmon webserver is running under a different hostname.
+  :jira:`3746`
+
 *** 25.11.0 bugs
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
