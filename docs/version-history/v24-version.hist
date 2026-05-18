@@ -1,3 +1,7 @@
+*** 24.12.22 bugs
+
+*** 24.0.22 bugs
+
 *** 24.12.21 bugs
 
 - Fixed a rare bug in the *condor_startd* that would cause it to crash
