@@ -13441,13 +13441,13 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 			if(! other) { continue; }
 			if( * other == srec && (* other)->pid == shadow_pid ) {
 				catalogToShadowMap.erase( catalogName );
+				removedCatalogs.push_back( catalogName );
 
 				// We could reduce code duplication here by calling
 				// mark_catalog_live(), but that would be confusing.
 				if( catalogToTimerMap.contains( catalogName ) ) {
 					daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
 					catalogToTimerMap.erase( catalogName );
-					removedCatalogs.push_back( catalogName );
 				}
 
 				// Unblock the prompting job if necessary; the loop below
