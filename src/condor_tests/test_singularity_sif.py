@@ -49,6 +49,12 @@ def sif_file():
     # which some linuxes have in /usr/sbin
     os.environ["PATH"] = os.environ["PATH"] + ":/usr/sbin"
 
+    # Newer apptainers use "proot" by default, which requires ptrace to
+    # be working.  Systems which disable ptrace (e.g. for security reasons)
+    # then break singularity build. Setting this env turns that off,
+    # and reverts to the old way:
+    os.environ["APPTAINER_IGNORE_PROOT"] = "1"
+
     for count in [0, 1, 2, 3, 4]:
         # rarely we see this failing in batlab with "bad file descriptor"
         # so, just retry.
