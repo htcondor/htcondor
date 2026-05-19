@@ -3932,7 +3932,6 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 									sizeof(cmd) );
 		if(n != sizeof(cmd)) write_failed = true;
 	}
-
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&total_bytes,
@@ -6238,6 +6237,22 @@ FileTransfer::abortActiveTransfer()
 		daemonCore->Kill_Thread(ActiveTransferTid);
 		TransThreadTable.erase(ActiveTransferTid);
 		ActiveTransferTid = -1;
+
+// This conditional makes me sad, but such is the life of bad abstractions.
+#ifndef   WINDOWS
+		// Given that we just shot the forked child in the head, we should
+		// consider splitting FileTransfer::Reap() into the section that
+		// prevents us from hanging and the section that we can/must do
+		// after we receive its SIGCHLD.
+		if( daemonCore && (TransferPipe[0] >= 0) ) {
+			if( registered_xfer_pipe ) {
+				registered_xfer_pipe = false;
+				daemonCore->Cancel_Pipe(TransferPipe[0]);
+			}
+			daemonCore->Close_Pipe(TransferPipe[0]);
+			TransferPipe[1] = -1;
+		}
+#endif /* WINDOWS */
 	}
 }
 
