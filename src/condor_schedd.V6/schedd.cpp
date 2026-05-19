@@ -13488,6 +13488,15 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		// iterating the blocked matches more than once.
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
+				// It is a core design problem that we can't ever be sure
+				// that this is a valid shadow rec, since we neither
+				// reference-count their pointers nor indirect all accesses
+				// to them (through an owning look-up table).
+				//
+				// This came up because I forgot to remove match records
+				// from matchesHeldByBlockedJobs in unlinkMrec(), but it
+				// really does make the code way more fragile than it
+				// needs to be.
 				auto * sr = m->shadowRec;
 				const auto & jobCatalogs = sr->cxfer_catalogs;
 				bool anyJobCatalogInRemovedCatalogs = std::any_of(
@@ -17494,6 +17503,33 @@ Scheduler::unlinkMrec(match_rec* match)
 	matches.erase(match->claim_id.claimId());
 
 	matchesByJobID.erase(jobId);
+
+	// If this match was held by a blocked job, unblock it.
+	if( std::erase( matchesHeldByBlockedJobs, match ) == 1 ) {
+		if( match->shadowRec ) {
+			dprintf( D_ZKM, "Unblocking job %d.%d that was holding a match.\n", match->shadowRec->job_id.cluster, match->shadowRec->job_id.proc );
+			set_job_status(
+				match->shadowRec->job_id.cluster,
+				match->shadowRec->job_id.proc,
+				JOB_STATUS_IDLE
+			);
+		} else {
+			dprintf( D_ALWAYS, "Deleted match record was held by a blocked job but did not point to a shadow record.\n" );
+		}
+	}
+
+	// If this match was running a transfer shadow, it might be a while
+	// before we reap the shadow, but there's no need to wait; go ahead
+	// and unblock the prompting job immediately.
+	if( match->shadowRec ) {
+		if( isTransferShadowProcID( match->shadowRec->job_id.proc ) ) {
+			set_job_status(
+				match->shadowRec->job_id.cluster,
+				transferToPromptingProcID(match->shadowRec->job_id.proc),
+				JOB_STATUS_IDLE
+			);
+		}
+	}
 
 		// fill any authorization hole we made for this match
 	if (match->auth_hole_id != NULL) {
