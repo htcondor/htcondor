@@ -75,6 +75,17 @@ def inline_dag_job(condor, dag_description, dag_dir):
     # Advance the job queue log as well
     condor.job_queue.wait_for_job_completion(dag_job.job_ids)
 
+    # DAGMan exits as soon as it sees the node's JOB_TERMINATED event in
+    # the user log, but the schedd may not yet have committed
+    # SetJobStatus(COMPLETED) for the node job to the job queue log.
+    # Wait for the node job's queue completion too so downstream
+    # assertions see a fully-flushed history.
+    jel = htcondor.JobEventLog(str(dag_dir / "inline.dag.nodes.log"))
+    node_ids = [JobID.from_job_event(e) for e in jel.events(0)
+                if e.type == htcondor.JobEventType.SUBMIT]
+    if node_ids:
+        condor.job_queue.wait_for_job_completion(node_ids)
+
     return dag_job
 
 
