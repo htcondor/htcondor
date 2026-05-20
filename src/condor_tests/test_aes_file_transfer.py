@@ -31,7 +31,8 @@ def strace_is_usable():
     try:
         result = subprocess.run(
             ["strace", "-o", os.devnull, "true"],
-            capture_output=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             timeout=30,
         )
     except (OSError, subprocess.SubprocessError):
