@@ -1,103 +1,113 @@
-.. _classad_eval:
-
 *classad_eval*
-======================
+==============
 
-Evaluate the given ClassAd expression(s) in the context of the given
-ClassAd attributes, and prints the result in ClassAd format.
+Evaluate ClassAd expression(s) in the context of the provided ClassAd attributes.
 
-:index:`classad_eval<single: classad_eval; HTCondor commands>`
-:index:`classad_eval command`
+:index:`classad_eval<double: classad_eval; HTCondor commands>`
 
 Synopsis
 --------
 
-**classad_eval** **-help**
+**classad_eval** [**-help**]
 
-**classad_eval**
-[**-[ad]-file** <*file-name*>]
-[**-target-file** <*file-name*>]
-<*ad* | *assignment* | *expression* | **-quiet**>\+
+**classad_eval** [*options*] *<ad|expr|assignment>* [*<ad|expr|assignment>* ...]
 
 Description
 -----------
 
-**classad_eval** is designed to help you understand and debug ClassAd
-expressions.  You can supply a ClassAd on the command-line, or via a
-file, as context for evaluating the expression.  You may also construct
-a ClassAd one argument at a time, with assignments.
+**classad_eval** tests and/or debugs ClassAd expressions provided via the command
+line when evaluated in a specific contexts of source and target ClassAds.
 
-By default, **classad_eval** will print the ClassAd context used to evaluate
-the expression before printing the result of the first expression, and for
-every expression with a new ClassAd thereafter.  You may suppress this
-behavior with the ``-quiet`` flag, which replaces an ad, assignment,
-or expression, and quiets every expression after it on the command line.
+Options
+-------
+
+**-help**
+  Display tool usage.
+**-quiet**
+  Disable printing of context ClassAds before evaluation results.
+**-debug**
+  Enable tool debugging.
+**-[my-]file** *path*
+  A file containing the source ClassAd context.
+
+  .. warning::
+
+    This option overrides any previous ClassAd context.
+
+**-target-file** *path*
+  A file containing the target ClassAd context.
+*<ad|expr|assignment>*
+  A ClassAd context modification (inline ad ``'[ foo = 5; bar = False ]'``
+  or assignment ``'foo = 10'``) or expression to be evaluated (``'foo * 100'``).
+
+General Remarks
+---------------
+
+Options, flags, and arguments may be freely intermixed, and take effect
+in left to right order.
 
 Attributes specified on the command line, including those specified as part
 of a complete ad, replace attributes in the context ad, which starts empty.
 You can't remove attributes from the context ad, but you can set them to
 ``undefined``.
 
-Options, flags, and arguments may be freely intermixed, and take effect
-in order.
+Use single quotes to denote chunks of ClassAd assignments and expressions
+to prevent issues between shell quoting and ClassAd quoting.
 
-Note that **classad_eval** uses the ``new`` ClassAd syntax: ClassAds
-specified in a file must be surrounded by square brackets and
-attribute-value pairs must be separated by semicolons.  For compability
-with ``condor_q -long:new`` and ``condor_status -long:new``, `classad_eval`
-will use only the first ClassAd if passed a ClassAd list of them.
+By default, the full ClassAd context will be printed out before evaluating
+an expression. This behavior can be disabled by specifying ``-quiet``.
+
+This tool will only digests the first ClassAd in a list of ClassAds
+provided via a file.
+
+.. note::
+
+    This tool uses the new ClassAd syntax denoted by semicolon delimited
+    attribute-value pairs contained in square brackets: ``[ foo = 1; bar = False ]``.
+
+Exit Status
+-----------
+
+0  -  Success
+
+1  -  ClassAd context update failure
+
+255  -  Invalid command line option provided
 
 Examples
 --------
 
-Almost every ad, assignment, or expression will require you to single
-quote them.  There are some exceptions; for instance, the following two
-commands are equivalent:
+Specifying a single attribute assignment for evaluation:
 
 .. code-block:: console
 
     $ classad_eval 'a = 2' 'a * 2'
+
+Specifying a single attribute assignment for evaluation without whitespace quoting:
+
+.. code-block:: console
+
     $ classad_eval a=2 a*2
 
-You can specify attributes for the context ad in three ways:
+Specifying multiple attributes for evaluation:
+
+.. code-block:: console
+
+    $ classad_eval 'a = 2' 'b = 2' 'a + b'
+
+Specifying inline ClassAd from evaluation:
 
 .. code-block:: console
 
     $ classad_eval '[ a = 2; b = 2 ]' 'a + b'
-    $ classad_eval 'a = 2; b = 2' 'a + b'
-    $ classad_eval 'a = 2' 'b = 2' 'a + b'
 
-You need not supply an empty ad for expressions that don't reference attributes:
+Evaluating a ClassAd expression that requires no context ClassAds:
 
 .. code-block:: console
 
     $ classad_eval 'strcat("foo", "bar")'
 
-If you want to evaluate an expression in the context of the job ad, first
-store the job ad in a file:
-
-.. code-block:: console
-
-    $ condor_q -l:new 1227.2 > job.ad
-    $ classad_eval -quiet -file job.ad 'JobUniverse'
-
-You can extract a machine ad in a similar way:
-
-.. code-block:: console
-
-    $ condor_status -l:new slot1@exec-17 > machine.ad
-    $ classad_eval -quiet -file machine.ad 'Rank'
-
-You may evaluate an expression in order to check a match by using the
-``-target-file`` option:
-
-.. code-block:: console
-
-    $ condor_q -l:new 1227.2 > job.ad
-    $ condor_status -l:new exec-17 > machine.ad
-    $ classad_eval -quiet -my-file job.ad -target-ad machine.ad 'MY.requirements' 'TARGET.requirements'
-
-Assignments (including whole ClassAds) are all merged into the context ad:
+Evaluating an expression multiple times while changing the context:
 
 .. code-block:: console
 
@@ -110,7 +120,7 @@ Assignments (including whole ClassAds) are all merged into the context ad:
     6
 
 
-You can suppress printing the context ad partway through:
+Disabling the evaluation context ad echoing part way through evaluations:
 
 .. code-block:: console
 
@@ -120,12 +130,34 @@ You can suppress printing the context ad partway through:
     7
     6
 
-Exit Status
------------
+Evaluating an expression from a saved job ad:
 
-Returns 0 on success.
+.. code-block:: console
 
-Author
-------
+    $ condor_q -l:new 1234.5 > job.ad
+    $ classad_eval -quiet -file job.ad 'JobUniverse'
 
-Center for High Throughput Computing, University of Wisconsin-Madison
+Evaluating an expression from a saved slot ad:
+
+.. code-block:: console
+
+    $ condor_status slot1@ep.host.name -l:new > slot.ad
+    $ classad_eval -quiet -file slot.ad 'Rank'
+
+Evaluating an expression from a saved job ad and saved slot ad:
+
+.. code-block:: console
+
+    $ condor_q -l:new 1234.5 > job.ad
+    $ condor_status slot1@ep.host.name -l:new > slot.ad
+    $ classad_eval -quiet -my-file job.ad -target-ad slot.ad 'MY.requirements' 'TARGET.requirements'
+
+See Also
+--------
+
+None
+
+Availability
+------------
+
+Linux, MacOS, Windows
