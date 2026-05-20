@@ -1180,7 +1180,11 @@ UniShadow::before_common_file_transfer(
 
 bool
 UniShadow::after_common_file_transfer(
-    const ClassAd & request, const std::string & cifName, std::string & stagingDir
+    const ClassAd & request,
+
+    const std::string & cifName,
+    std::string & stagingDir,
+    long long & size
 ) {
 	bool success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
@@ -1212,7 +1216,7 @@ UniShadow::after_common_file_transfer(
 
 	if( success ) {
 		// We'll assume that malformed replies are transients.
-		if(! LookupStringInContext( request, "StagingDir", stagingDir )) {
+		if(! LookupStringInContext( request, ATTR_STAGING_DIR, stagingDir )) {
 			dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common files transfer; aborting job.\n" );
 
 			// We can't just release the cfLock, because that won't do
@@ -1244,6 +1248,9 @@ UniShadow::after_common_file_transfer(
 			this->cfLocks.erase(cifName);
 			delete cfLock;
 		}
+
+		// Starters before 25.12 don't send this.
+		LookupIntInContext( request, ATTR_SIZE, size );
 	} else {
 		dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): common file transfer failed, aborting job.\n" );
 
@@ -1374,7 +1381,7 @@ do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
 
 	guidance.InsertAttr( ATTR_NAME, cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-	guidance.InsertAttr( "StagingDir", stagingDir );
+	guidance.InsertAttr( ATTR_STAGING_DIR, stagingDir );
 
 	return guidance;
 }
@@ -1490,14 +1497,16 @@ UniShadow::start_staging_only_conversation(
 	// in a transfer shadow, we don't need to know which ones weren't
 	// transferred.)
 
+	std::map<std::string, long long> cifNameToSizeMap;
 	std::map<std::string, std::string> cifNameToStagingDirMap;
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
+		long long size = -1;
 		std::string stagingDir;
 		ClassAd guidance = before_common_file_transfer( cifName, commonInputFiles );
 		request = co_yield guidance;
-		success = after_common_file_transfer( request, cifName, stagingDir );
+		success = after_common_file_transfer( request, cifName, stagingDir, size );
 		if(! success) {
 			guidance.Clear();
 			guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
@@ -1505,6 +1514,7 @@ UniShadow::start_staging_only_conversation(
 		}
 
 		cifNameToStagingDirMap[cifName] = stagingDir;
+		cifNameToSizeMap[cifName] = size;
 	}
 
 	//
@@ -1519,7 +1529,7 @@ UniShadow::start_staging_only_conversation(
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
 
 	ClassAd * commonCatalogsAd = new ClassAd();
-	commonCatalogsAd->InsertAttr( ATTR_VERSION, 1 );
+	commonCatalogsAd->InsertAttr( ATTR_VERSION, 2 );
 
 	// Let's avoid worrying about whether or not the internal catalog names
 	// are valid ClassAd attribute names by making those names values and
@@ -1528,11 +1538,16 @@ UniShadow::start_staging_only_conversation(
 	std::vector<ExprTree *> catalogAds;
 	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
 		ClassAd * catalogAd = new ClassAd();
-		catalogAd->InsertAttr( ATTR_NAME, cifName );
-		catalogAd->InsertAttr( "StagingDir", stagingDir );
-		// Arguably, ATTR_NAME should become ATTR_INTERNAL_NAME and
-		// this attribute should become ATTR_NAME.
-		catalogAd->InsertAttr( "SimpleName", externalToSimpleNameMap[cifName] );
+		catalogAd->InsertAttr( ATTR_CATALOG, externalToSimpleNameMap[cifName] );
+		catalogAd->InsertAttr( ATTR_CATALOG_PATH, stagingDir );
+		catalogAd->InsertAttr( ATTR_CATALOG_SIZE, cifNameToSizeMap[cifName] );
+
+		auto r = determineCIFScopeAndType( * jobAd );
+		if(! r) { EXCEPT("Failed to determine CIF scope and type after having staged it."); }
+		auto [scope, type] = * r;
+		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
+		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
+
 		catalogAds.push_back( catalogAd );
 	}
 
@@ -1605,7 +1620,9 @@ UniShadow::start_staging_only_conversation(
 	//
 	std::string user;
 
+/*
 	long long sizeOnDiskInMB = -1;
+
 	if(! LookupIntInContext( request, ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB )) {
 		// It's possible that a different starter would reply properly,
 		// so abort this attempt and leave the job in the queue idle.
@@ -1614,6 +1631,7 @@ UniShadow::start_staging_only_conversation(
 			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply
 		);
 	}
+*/
 
 	// We shouldn't need the address, since we're a shadow.
 	DCSchedd schedd( getScheddAddr() /*, pool */ );
@@ -1634,8 +1652,8 @@ UniShadow::start_staging_only_conversation(
 	resources.emplace_back( claimID, slotAd );
 	int rval = schedd.offerResources(
 		resources, user, timeout,
-		originalClaimID,
-		sizeOnDiskInMB
+		originalClaimID
+		/*, sizeOnDiskInMB */
 	);
 	free( originalClaimID );
 
@@ -1703,6 +1721,7 @@ UniShadow::start_common_input_conversation(
 	ListOfCatalogs common_file_catalogs,
 	bool print_waiting /* = true */
 ) {
+	long long size = -1;
 	ClassAd guidance;
 
 
@@ -1772,7 +1791,7 @@ UniShadow::start_common_input_conversation(
 				// so much so that I want to figure that out right now.
 				guidance = before_common_file_transfer( cifName, commonInputFiles );
 				request = co_yield guidance;
-				success = after_common_file_transfer( request, cifName, stagingDir );
+				success = after_common_file_transfer( request, cifName, stagingDir, size );
 				if(! success) {
 					guidance.Clear();
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
@@ -1873,7 +1892,7 @@ UniShadow::start_common_input_conversation(
 					// so much so that I want to figure that out right now.
 					guidance = before_common_file_transfer( cifName, commonInputFiles );
 					request = co_yield guidance;
-					success = after_common_file_transfer( request, cifName, stagingDir );
+					success = after_common_file_transfer( request, cifName, stagingDir, size );
 					if(! success) {
 						guidance.Clear();
 						guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);

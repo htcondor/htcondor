@@ -254,7 +254,8 @@ class UniShadow : public BaseShadow
 	bool after_common_file_transfer(
 		const ClassAd & request,
 		const std::string & cifName,
-		std::string & stagingDir
+		std::string & stagingDir,
+		long long & size
 	);
 
 	ClassAd handle_wiring_failure();

@@ -535,7 +535,16 @@ Starter::handleJobSetupCommand(
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
-			context.InsertAttr( "StagingDir", staging->path().string() );
+			context.InsertAttr( ATTR_STAGING_DIR, staging->path().string() );
+
+			const bool EXITING = true;
+			auto usage = s->GetDiskUsage(! EXITING);
+			// To avoid over-complicating the WithInResourceLimits and
+			// quantize-disk expressions, the size here is in KiB
+			// (the units of `Disk`).
+			long long sizeOnDisk = (usage.execute_size / 1024) + 1;
+			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
+
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_COLOR_SLOT ) {
@@ -547,25 +556,83 @@ Starter::handleJobSetupCommand(
 			if( colorAd == NULL ) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_COLOR_AD );
 				return false;
-            } else {
-				dPrintAd( D_ALWAYS, * colorAd );
 			}
 
-			ClassAd replyAd;
-			bool success = s->jic->colorSlot( * colorAd, replyAd );
-			if(! success) {
-				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
+			// Why do we insist on doing this to ourselves?
+			classad::ExprTree * f = colorAd->Lookup( "CommonCatalogsAd" );
+			ClassAd * commonCatalogsAd = dynamic_cast<ClassAd *>(f);
+			if( commonCatalogsAd == NULL ) {
+				dprintf( D_ALWAYS, "The color ad was malformed (no %s attribute), carrying on.\n", "CommonCatalogsAd" );
+				return false;
 			}
-			success = false;
-			replyAd.LookupBool( ATTR_RESULT, success );
-			if(! success) {
-				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
+
+			int version = -1;
+			commonCatalogsAd->LookupInteger( ATTR_VERSION, version );
+			if( version == -1 ) {
+				dprintf( D_ALWAYS, "The common catalogs ad was malformed (no %s attribute), carrying on.\n", ATTR_VERSION );
+				return false;
+			}
+
+
+			bool success = false;
+			if( version == 1 ) {
+				ClassAd replyAd;
+				success = s->jic->colorSlot( * colorAd, replyAd );
+				if(! success) {
+					dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
+				}
+
+				success = false;
+				replyAd.LookupBool( ATTR_RESULT, success );
+				if(! success) {
+					dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
+				}
+			} else if( version == 2 ) {
+				//
+				// Create a catalog resource for each ad in
+				// `CommonCatalogsList`.
+				//
+				classad::ExprTree * g = commonCatalogsAd->Lookup( "CommonCatalogsList" );
+				auto * l = dynamic_cast<classad::ExprList *>(g);
+				if( l == NULL ) {
+					dprintf( D_ALWAYS, "Common catalogs ad was malformed (%s was not a list), carrying on.\n", "CommonCatalogsList" );
+					return false;
+				}
+
+				for( auto i = l->begin(); i != l->end(); ++i ) {
+					auto * catalogAd = dynamic_cast<classad::ClassAd *>(* i);
+
+					ClassAd replyAd;
+					success = s->jic->announceCatalog( * catalogAd, replyAd );
+					if(! success) {
+						dprintf( D_ALWAYS, "Unable to announce catalog (following) because of a communications failure; skipping other catalogs.\n" );
+						dPrintAd( D_ALWAYS, * catalogAd );
+						break;
+					}
+
+					success = false;
+					replyAd.LookupBool( ATTR_RESULT, success );
+					if(! success) {
+						// We, obviously, can do better.
+						dprintf( D_ALWAYS, "The startd failed to announce the catalog (following); skipping other catalogs.\n" );
+						dPrintAd( D_ALWAYS, * catalogAd );
+						break;
+					}
+				}
+
+			} else {
+				dprintf( D_ALWAYS, "Unknown version number in guidance; FIXME.\n" );
+				return false;
 			}
 
 
 			//
 			// Construct the reply.
 			//
+
+			ClassAd context;
+			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
+			context.InsertAttr( ATTR_RESULT, success );
 
 			const ClassAd * secretsAd = s->jic->getMachineSecretsAd();
 			// If we're not talking to a shadow, then who's guiding us?
@@ -574,20 +641,21 @@ Starter::handleJobSetupCommand(
 			success = secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID );
 			if(! success) {
 			    dprintf( D_ALWAYS, "The secrets ad did not contain %s, or it wasn't a string.\n", ATTR_SPLIT_CLAIM_ID );
+    			context.InsertAttr( ATTR_RESULT, success );
 			}
 
-
-			// (HTCONDOR-3521)  How much space should be reserved?
-			const bool EXITING = true;
-			auto usage = s->GetDiskUsage(! EXITING);
-			long long sizeOnDiskInMB = (usage.execute_size / 1024 / 1024) + 1;
-
-			ClassAd context;
-			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
-			context.InsertAttr( ATTR_RESULT, success );
+			// For splitting this slot into a data and a job slot.
 			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
-			context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
 			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd()->Copy() );
+
+			if( version == 1 ) {
+				// There's no released version of the shadow which actually
+				// uses this, although both 25.10 and 25.11 complain if it
+				// isn't there.
+				long long sizeOnDiskInMB = -1;
+				context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
+			}
+
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_MAP_COMMON_FILES ) {
@@ -599,8 +667,8 @@ Starter::handleJobSetupCommand(
 
 			// This is a hack: this starter should ask the startd for the cifName.
 			std::string stagingDir;
-			if(! guidance.LookupString( "StagingDir", stagingDir )) {
-				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", "StagingDir" );
+			if(! guidance.LookupString( ATTR_STAGING_DIR, stagingDir )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_STAGING_DIR );
 				return false;
 			}
 

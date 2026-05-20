@@ -3938,7 +3938,7 @@ JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
 
 	m_job_startd_update_sock->encode();
 	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::COLOR)) {
-		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND_COLOR)\n" );
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND::COLOR)\n" );
 		return false;
 	}
 	if(! putClassAd(m_job_startd_update_sock, colorAd)) {
@@ -3958,6 +3958,40 @@ JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
 	}
 	if(! m_job_startd_update_sock->end_of_message()) {
 		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+	return true;
+}
+
+
+// This should share an impl with colorCatalog(), obviously.
+bool
+JICShadow::announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd ) {
+	if(! m_job_startd_update_sock) { return false; }
+
+	m_job_startd_update_sock->encode();
+	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::ANNOUNCE_CATALOG)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to put(STARTER_COMMAND::ANNOUNCE_CATALOG)\n" );
+		return false;
+	}
+	if(! putClassAd(m_job_startd_update_sock, catalogAd)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to put(catalogAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to end message.\n" );
+		return false;
+	}
+
+
+	m_job_startd_update_sock->decode();
+	if(! getClassAd(m_job_startd_update_sock, replyAd)) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to get(replyAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "announceCatalog(): Failed to end message.\n" );
 		return false;
 	}
 

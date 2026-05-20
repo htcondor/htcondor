@@ -116,14 +116,14 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 
 
 std::string
-claim_specific_ad_name( const char * publicClaimID ) {
+claim_specific_ad_name( const char * scope, const char * publicClaimID ) {
 	std::string s( publicClaimID );
 
 	// Dots have special meaning in named ClassAd names.
 	std::replace( s.begin(), s.end(), '.', '_' );
 
 	// For stupid reasons, extra ads must each have a cron job.
-	return COLORING_NAMESPACE "." + s;
+	return scope + ("." + s);
 }
 
 Claim::~Claim()
@@ -138,8 +138,11 @@ Claim::~Claim()
 	// If the starter colored this slot, uncolor it now.
 	const char * publicClaimID = publicClaimId();
 	if( publicClaimID ) {
-		std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
-		resmgr->adlist_delete( claimSpecificAdName.c_str() );
+		std::string coloringName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
+		resmgr->adlist_delete( coloringName.c_str() );
+
+		std::string catalogName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+		resmgr->adlist_delete( catalogName.c_str() );
 	}
 
 
@@ -2817,6 +2820,7 @@ void Claim::receiveUpdateCommand( int c,
 	const ClassAd & payloadAd, ClassAd & replyAd
 ) {
 	STARTER_COMMAND command{c};
+	static unsigned int catalogIndex = 0;
 
 	switch( command ) {
 		case STARTER_COMMAND::UPDATE:
@@ -2827,6 +2831,81 @@ void Claim::receiveUpdateCommand( int c,
 			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
 			break;
 
+		case STARTER_COMMAND::ANNOUNCE_CATALOG: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				const char * reason = "Claim object has NULL resource pointer during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			//
+			// FIXME: Validate that the payload ad is a catalog ad.
+			//
+
+
+			//
+			// Update the list of catalogs.
+			//
+			ClassAd * catalogsAd = NULL;
+			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
+			if( namedCatalogsAd == NULL ) {
+				catalogsAd = new ClassAd();
+			} else {
+				catalogsAd = namedCatalogsAd->GetAd();
+			}
+
+			classad::ExprTree * e = catalogsAd->Lookup( "catalogs" );
+			if( e == NULL ) {
+				catalogsAd->AssignExpr( "catalogs", "{}" );
+				e = catalogsAd->Lookup( "catalogs" );
+			}
+			auto * catalogs = dynamic_cast<classad::ExprList *>(e);
+
+			// What _is_ this catalog's ID?
+			std::string catalog_id;
+			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
+
+			// Should we really have to type AttributeReference twice?
+			auto * ref = classad::AttributeReference::MakeAttributeReference(
+				NULL /* unscoped */, catalog_id, false /* relative */
+			);
+			catalogs->push_back( ref );
+
+
+			//
+			// Insert the catalog ad into the catalogs ad (now that we know
+			// its name).
+			//
+			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			ClassAd * catalogAd = new ClassAd( payloadAd );
+			catalogAd->InsertAttr( "id", catalog_id );
+			catalogsAd->Insert( catalog_id, catalogAd );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
+			replyAd.InsertAttr( ATTR_RESULT, true );
+
+            //
+            // Consider forcing a recomputation (and advertisement?) of all
+            // slot ads here.  If d-slot splitting doesn't return a slot ad
+            // with this new catalog set, doing so becomes necessary.
+            //
+		} break;
+
+
 		case STARTER_COMMAND::COLOR: {
 			const char * publicClaimID = publicClaimId();
 			if(! publicClaimID) {
@@ -2836,7 +2915,7 @@ void Claim::receiveUpdateCommand( int c,
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
-			std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+			std::string claimSpecificAdName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
 
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );

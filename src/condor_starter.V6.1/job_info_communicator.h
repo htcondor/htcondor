@@ -434,6 +434,7 @@ public:
 	virtual ClassAd * getMachineAd() { return mach_ad; }
 
 	virtual bool colorSlot( const ClassAd & /* colorAd */, ClassAd & /* replyAd */ ) { return false; }
+	virtual bool announceCatalog( const ClassAd & /* catalogAd */, ClassAd & /* replyAd */ ) { return false; }
 
 protected:
 

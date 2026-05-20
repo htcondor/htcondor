@@ -9429,15 +9429,17 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
 	}
 
+/*
 	long long disk_held_by_claim_in_mb = -1;
 	if( cmd_ad.LookupInteger( ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb ) ) {
+		// Changing the disk request to reflect the common files availability
+		// and mapping method is best done by the startd, and doing it there
+		// also solves the resource-allocation problem in the negotiator).
 		//
-		// Now what?  We don't want to permanently modify the job ad, because
-		// it might someday have to match against another slot, but the
-		// resource request (claim command) is sent asynchronously and uses
-		// the job ad to as the resource request.
-		//
+		// Because this information isn't catalog-specific, I'm not sure it'll
+		// be useful in the future, so I'm leaving it out for now.
 	}
+*/
 
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
