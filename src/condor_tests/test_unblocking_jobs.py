@@ -16,6 +16,7 @@ from ornithology import (
 )
 
 import os
+import re
 import sys
 import time
 import htcondor2
@@ -147,10 +148,25 @@ def the_startd_jobs(the_startd_condor):
 def the_shadow_jobs(the_shadow_condor):
     job_handle = blocked_jobs_in_queue(the_shadow_condor)
 
-    # kill -9 the transfer shadow
-    # FIXME: grovel the log to find the transfer shadow's PID.
+    # Grovel the shadow log to find the transfer shadow's PID.
+    shadow_log = the_shadow_condor.shadow_log.open()
+    lines = list(filter(
+        lambda line: "-100" in line,
+        shadow_log.read(),
+    ))
 
-    return job_handle
+    pattern = re.compile('\\((\\d+)\\)')
+    for line in lines:
+        matches = re.search(pattern, line.line)
+        if matches:
+            pid = int(matches[1])
+
+            # kill -9 the transfer shadow
+            os.kill( pid, 9 )
+
+            return job_handle
+
+    assert False
 
 
 @action
