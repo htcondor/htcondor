@@ -3,7 +3,7 @@
 *** 25.12.0 bugs
 
 - Improved the interaction between the *condor_schedd* and the
-  *condor_negotiator* when the :macro:`SCHEDD_DURATION` was set
+  *condor_negotiator* when the :macro:`SCHEDD_INTERVAL` was set
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
