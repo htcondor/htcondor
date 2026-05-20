@@ -72,7 +72,7 @@ def blocked_jobs_in_queue(a_condor):
         "log":                      "the_job.log",
         "LeaveInQueue":             True,
         # This is the magic.
-        "MY.CommonINputFiles":      '"debug://sleep/300"',
+        "MY.CommonINputFiles":      '"debug://sleep/3000"',
     }
 
     job_handle = a_condor.submit(
@@ -148,25 +148,29 @@ def the_startd_jobs(the_startd_condor):
 def the_shadow_jobs(the_shadow_condor):
     job_handle = blocked_jobs_in_queue(the_shadow_condor)
 
-    # Grovel the shadow log to find the transfer shadow's PID.
-    shadow_log = the_shadow_condor.shadow_log.open()
-    lines = list(filter(
-        lambda line: "-100" in line,
-        shadow_log.read(),
-    ))
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        # Grovel the shadow log to find the transfer shadow's PID.
+        shadow_log = the_shadow_condor.shadow_log.open()
+        lines = list(filter(
+            lambda line: "-100" in line,
+            shadow_log.read(),
+        ))
 
-    pattern = re.compile('\\((\\d+)\\)')
-    for line in lines:
-        matches = re.search(pattern, line.line)
-        if matches:
-            pid = int(matches[1])
+        pattern = re.compile('\\((\\d+)\\)')
+        for line in lines:
+            matches = re.search(pattern, line.line)
+            if matches:
+                pid = int(matches[1])
 
-            # kill -9 the transfer shadow
-            os.kill( pid, 9 )
+                # kill -9 the transfer shadow
+                os.kill( pid, 9 )
 
-            return job_handle
+                return job_handle
 
-    assert False
+        time.sleep(5)
+
+    assert time.time() < deadline
 
 
 @action
@@ -179,46 +183,45 @@ def the_schedd_jobs(the_schedd_condor):
         echo=False
     )
 
-    # kill -9 the schedd
-    killed_schedd = False
+    # Find the schedd's PID.
+    pid = -1
     for line in cp.stdout.split("\n"):
         if 'Schedd' in line:
             pid = int(line.split()[2])
-            # With a one-second flush delay, this should suffice to ensure
-            # that the jobstatus writes actually make it out to disk.  If
-            # this doesn't work reliably, we can add a D_TEST to the flush
-            # timer handler and wait for that, I guess.
-            time.sleep(3)
-            os.kill( pid, 9 )
-            killed_schedd = True
-    assert killed_schedd
+    assert pid != -1
 
-    # Don't let the master restart it before we're ready.
+    # Verify on-disk queue state.
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        blocked_jobs = 0
+        with the_schedd_condor.job_queue_log.open(mode="r") as jql:
+            for line in jql.readlines():
+                if line.startswith("103 ") and " JobStatus " in line:
+                    (_, jobid, __, status) = line.split()
+                    if jobid.startswith(f"{job_handle.clusterid}."):
+                        if status == "9":
+                            blocked_jobs += 1
+        if blocked_jobs == 7:
+            break
+        time.sleep(5)
+    assert time.time() < deadline
+    assert blocked_jobs == 7
+
+    # Don't let the master restart the schedd before we're ready.
     cp = the_schedd_condor.run_command(
         ['condor_off', '-schedd'],
         timeout=30,
         echo=False,
     )
 
-    # Make sure it's died.
+    # Make sure the schedd died.
     cp = the_schedd_condor.run_command(
         ['condor_who', '-quick', '-wait:30', 'SCHEDD == "Hold"'],
         timeout=30,
         echo=False,
     )
 
-    # Verify on-disk queue state.
-    blocked_jobs = 0
-    with the_schedd_condor.job_queue_log.open(mode="r") as jql:
-        for line in jql.readlines():
-            if line.startswith("103 ") and " JobStatus " in line:
-                (_, jobid, __, status) = line.split()
-                if jobid.startswith(f"{job_handle.clusterid}."):
-                    if status == "9":
-                        blocked_jobs += 1
-    assert blocked_jobs == 7
-
-    # Turn it back on.
+    # Turn the schedd back on.
     cp = the_schedd_condor.run_command(
         ['condor_on', '-schedd'],
         timeout=30,
@@ -235,6 +238,32 @@ def the_schedd_jobs(the_schedd_condor):
     return job_handle
 
 
+def assert_all_jobs_not_blocked(the_condor, the_jobs):
+    schedd = the_condor.get_local_schedd()
+
+    deadline = time.time() + 30
+    while True:
+        time.sleep(5)
+
+        # Unfortunately, Ornithology's ClusterState doesn't know about
+        # BLOCKED yet, so we have to ask the schedd.
+        results = schedd.query(
+            constraint=f'ClusterID == {the_jobs.clusterid}',
+            projection=["ProcID", "JobStatus"],
+        )
+        print(results)
+
+        # None of the jobs may be blocked.
+        statuses = [result.get('JobStatus', 9) != 9 for result in results]
+        if all(statuses):
+            break
+
+        assert time.time() < deadline;
+
+    assert all(statuses)
+    assert len(statuses) == 7
+
+
 class TestBlockedJobs:
 
 
@@ -244,30 +273,7 @@ class TestBlockedJobs:
     # transfer shadow dying, and one that we didn't handle properly.
     #
     def test_off_dash_startd(self, the_startd_condor, the_startd_jobs):
-        schedd = the_startd_condor.get_local_schedd()
-
-        deadline = time.time() + 30
-        while True:
-            time.sleep(5)
-
-
-            # Unfortunately, Ornithology's ClusterState doesn't know about
-            # BLOCKED yet, so we have to ask the schedd.
-            results = schedd.query(
-                constraint=f'ClusterID == {the_startd_jobs.clusterid}',
-                projection=["ProcID", "JobStatus"],
-            )
-            print(results)
-
-            # None of the jobs may be blocked.
-            statuses = [result.get('JobStatus', 9) != 9 for result in results]
-            if all(statuses):
-                break
-
-            assert time.time() < deadline;
-
-        assert all(statuses)
-        assert len(statuses) == 7
+        assert_all_jobs_not_blocked(the_startd_condor, the_startd_jobs)
 
 
     #
@@ -276,29 +282,7 @@ class TestBlockedJobs:
     #
     @pytest.mark.skipif( sys.platform != 'linux', reason="needs kill -9" )
     def test_kill_transfer_shadow(self, the_shadow_condor, the_shadow_jobs):
-        schedd = the_shadow_condor.get_local_schedd()
-
-        deadline = time.time() + 30
-        while True:
-            time.sleep(5)
-
-            # Unfortunately, Ornithology's ClusterState doesn't know about
-            # BLOCKED yet, so we have to ask the schedd.
-            results = schedd.query(
-                constraint=f'ClusterID == {the_shadow_jobs.clusterid}',
-                projection=["ProcID", "JobStatus"],
-            )
-            print(results)
-
-            # None of the jobs may be blocked.
-            statuses = [result.get('JobStatus', 9) != 9 for result in results]
-            if all(statuses):
-                break
-
-            assert time.time() < deadline;
-
-        assert all(statuses)
-        assert len(statuses) == 7
+        assert_all_jobs_not_blocked(the_shadow_condor, the_shadow_jobs)
 
 
     #
@@ -320,24 +304,4 @@ class TestBlockedJobs:
         except htcondor2.HTCondorException:
             pass
 
-        deadline = time.time() + 30
-        while True:
-            time.sleep(5)
-
-            # Unfortunately, Ornithology's ClusterState doesn't know about
-            # BLOCKED yet, so we have to ask the schedd.
-            results = schedd.query(
-                constraint=f'ClusterID == {the_schedd_jobs.clusterid}',
-                projection=["ProcID", "JobStatus"],
-            )
-            print(results)
-
-            # None of the jobs may be blocked.
-            statuses = [result.get('JobStatus', 9) != 9 for result in results]
-            if all(statuses):
-                break
-
-            assert time.time() < deadline;
-
-        assert all(statuses)
-        assert len(statuses) == 7
+        assert_all_jobs_not_blocked(the_schedd_condor, the_schedd_jobs)
