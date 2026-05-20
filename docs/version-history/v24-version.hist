@@ -1,5 +1,9 @@
 *** 24.0.22 bugs
 
+- When using trust-on-first-use (TOFU), tools can go into an infinite
+  loop if they have no valid standard input file to read.
+  :jira:`3754`
+
 *** 24.0.21 bugs
 
 - If a job terminates with a named pipe in the sandbox, it will no
