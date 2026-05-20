@@ -32,8 +32,8 @@ if (WITH_KRB5)
 		set (KRB5_DOWNLOAD_MD5SUM eb51b7724111e1a458a8c9a261d45a31)
 
 		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set (KRB5_DOWNLOAD ${KRB5_VER}-Win64.tar.gz)
-			set (KRB5_DOWNLOAD_MD5SUM 790450614dd517f4d09460ca1bcaa71c)
+			set (KRB5_DOWNLOAD ${KRB5_VER}-Win64-release.tar.gz)
+			set (KRB5_DOWNLOAD_MD5SUM de1aef234f34da1831ea065c9179aee3)
 		endif ()
 
 		set (KRB5_CONFIGURE echo "No configuration necessary")

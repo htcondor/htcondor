@@ -8425,6 +8425,9 @@ int
 MainScheddNegotiate::scheduler_maxJobsToOffer()
 {
 	int maxJobs = scheduler.shadowsSpawnLimit();
+	if (m_jobs_can_offer >= 0 && m_jobs_can_offer < maxJobs) {
+		maxJobs = m_jobs_can_offer;
+	}
 	if (maxJobs > 0)
 	{
 		dprintf(D_FULLDEBUG, "Negotiation cycle will offer at most %d jobs to stay under limits.\n", maxJobs);
@@ -8455,10 +8458,10 @@ MainScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 	// returns false if we should skip this request ad (i.e. and not send it to the negotiator at all)
 	// if return is true, and match_max is not null, match_max will be set to the maximum matches constraint, or MAX_INT
 	// The request constraint expression will be added to the request_ad if it is more complex than a simple boolean literal
-bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max)
+bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * count_max)
 {
-	// TODO: set this to the max matches we can allow for this resource request
-	if (match_max) { *match_max = INT_MAX; }
+	int match_max = INT_MAX;
+	if (count_max) { match_max = *count_max; }
 
 	const OwnerInfo* powni = NULL;
 	int universe = CONDOR_UNIVERSE_MIN;
@@ -8512,9 +8515,9 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 			}
 		}
 	}
-	if (powni && match_max) {
+	if (powni && match_max > 0) {
 		int max_running_per_user = MaxRunningPer(powni) - CurRunningPer(powni);
-		*match_max = MIN(max_running_per_user, *match_max);
+		match_max = MIN(max_running_per_user, match_max);
 	}
 #else
 	if (job_id.cluster < 0 || request_ad.size() < 0) {
@@ -8522,9 +8525,12 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 	}
 #endif
 
-	StartupLimitsAdjustRequest(job_for_limit, request_ad, match_max, getMatchUser(), getRemotePool());
+	StartupLimitsAdjustRequest(job_for_limit, request_ad, &match_max, getMatchUser(), getRemotePool());
 
-	return true;
+	if (match_max < 0) match_max = 0;
+	if (count_max) { *count_max = match_max; }
+
+	return match_max > 0;
 }
 
 
@@ -9149,8 +9155,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		if (at_sign) *at_sign = '\0';
 	}
 	// find owner in the Submitters array
-	SubmitterData * Owner = find_submitter(owner);
-	if ( ! Owner && !scheddsAreSubmitters) {
+	SubmitterData * SubDat = find_submitter(owner);
+	if ( ! SubDat && !scheddsAreSubmitters) {
 		dprintf(D_ALWAYS, "Can't find Submitter %s in Submitters table\n", owner);
 		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
@@ -9161,6 +9167,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	ResourceRequestList *resource_requests = new ResourceRequestList;
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
+	int max_matches_for_this_submitter = INT_MAX;
 
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
@@ -9173,13 +9180,15 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated with
-	// them.  Add them into the resource_requests list now, but only for the owners
-	// that belong to the submitter currently being negotiated.
-	if (Owner) {
-		for (const std::string &owner_name: Owner->owners) {
+	// Special processing per-submitter.
+	if (SubDat) {
+		unsigned int num_in_transfer_queue = 0;
+		for (const std::string &owner_name: SubDat->owners) {
 			OwnerInfo *oi = find_ownerinfo(owner_name.c_str());
 			if (oi) {
+				// OCUs represent requests for match_recs (slots) that have no jobs associated with
+				// them.  Add them into the resource_requests list now, but only for the owners
+				// that belong to the submitter currently being negotiated.
 				for (auto &ocu: oi->ocus) {
 					if (ocu.mrec == nullptr) {
 						int ocu_id = ocu.ocu_id;
@@ -9187,6 +9196,26 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 						resource_requests->add(ocu_id, ocu_request);
 					}
 				}
+
+				// Count the number of jobs this submitter has currently transferring or waiting to transfer.
+				// This code only works when TRANSFER_QUEUE_USER_EXPR is the default, giving us per-user stats.
+				if (EnablePerUserCurbMatchmaking) {
+					unsigned int transferring=0, waiting=0;
+					if (m_xfer_queue_mgr.per_user_activity(true, oi->Name(), transferring, waiting)) {
+						num_in_transfer_queue += transferring;
+						num_in_transfer_queue += waiting;
+					}
+				}
+			}
+		}
+
+		if (EnablePerUserCurbMatchmaking && MaxConcurrentUploadsPerUser > 0) {
+			max_matches_for_this_submitter = MaxConcurrentUploadsPerUser - (int)num_in_transfer_queue;
+			if (max_matches_for_this_submitter <= 0) {
+				dprintf(D_ALWAYS, "Submitter %s has %u jobs in the transfer queue, will not request matches this cycle.\n", SubDat->Name(), num_in_transfer_queue);
+				skip_negotiation = true;
+				// TODO: if we set this here, who would clear it?
+				// SubDat->skipNegotiation = true;
 			}
 		}
 	}
@@ -9257,6 +9286,9 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	sn->setWillMatchClaimedPslots(willMatchClaimedPslots);
 	sn->setMatchCaps(match_caps); // negotiator tells us about diagnostic capabilities
 	sn->setNegotiatorName(negotiator_name); // self-reported negotiator name, for when there are multiple per CM
+	if (max_matches_for_this_submitter < INT_MAX) {
+		sn->setMaxJobsCanOffer(max_matches_for_this_submitter);
+	}
 
 		// handle the rest of the negotiation protocol asynchronously
 	sn->negotiate(sock);
@@ -10426,6 +10458,29 @@ Scheduler::StartJobs( int /* timerID */ )
 }
 
 void
+Scheduler::StartJobFailed( match_rec * rec, PROC_ID id ) {
+	// It would super-cool if we _did_ get another match, but if we don't
+	// rebuild the priorec array, it's entirely possible that we won't
+	// for another twenty minutes.
+	//
+	// However, we don't need to (re)build the priorec array right now --
+	// if it's dirty, it will be rebuilt the next time the negotiator
+	// calls, which -- since we're deleting the match right here -- is
+	// as soon as we could possibly actually need it to be rebuilt.
+	//
+	// TODO: Nonetheless, this is more expensive than we need it to be.
+	// Instead, we should be clear the flag in this job's entry in the
+	// priorec array that causes it to be skipped (because we already
+	// added it to the start-a-shadow queue).
+	DirtyPrioRecArray();
+
+	dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
+			rec->description());
+	DelMrec(rec);
+	mark_job_stopped( id );
+}
+
+void
 Scheduler::StartJob(match_rec *rec)
 {
 	PROC_ID id;
@@ -10491,25 +10546,11 @@ Scheduler::StartJob(match_rec *rec)
 			// functioning and we don't know why. We might as well get another
 			// match.
 
-		// It would super-cool if we _did_ get another match, but if we don't
-		// rebuild the priorec array, it's entirely possible that we won't
-		// for another twenty minutes.
-		//
-		// However, we don't need to (re)build the priorec array right now --
-		// if it's dirty, it will be rebuilt the next time the negotiator
-		// calls, which -- since we're deleting the match right here -- is
-		// as soon as we could possibly actually need it to be rebuilt.
-		//
-		// TODO: Nonetheless, this is more expensive than we need it to be.
-		// Instead, we should be clear the flag in this job's entry in the
-		// priorec array that causes it to be skipped (because we already
-		// added it to the start-a-shadow queue).
-		DirtyPrioRecArray();
-
-		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
-				rec->description());
-		DelMrec(rec);
-		mark_job_stopped( id );
+		// If we tried to start the job asynchronously, we won't find out
+		// about the failure until after this call chain has returned to the
+		// event loop.  We therefore refactor the clean-up code so we can
+		// call it when we find out.
+		StartJobFailed( rec, id );
 
 		// (HTCONDOR-3668)  We don't actually want to send mail to the
 		// administrator if StartJob() failed because the transfer shadow
@@ -10929,6 +10970,12 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 			// on a larger role for the startd in managing the disk resources.
 			ASSERT(catalogs);
 			{
+				JobQueueJob * job = GetJobAd( job_id );
+				if(! job) {
+					dprintf( D_ALWAYS, "Scheduler::StartJob() failed to GetJobAd(), not starting job.\n" );
+					return SJ::DID_NOT_TRY;
+				}
+
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
 
@@ -10967,7 +11014,9 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// it already has a match.
 				SetMrecJobID(mrec, transfer_job_id);
 
-				addRunnableJob( transfer_shadow_rec );
+				// Run the transfer shadow on a data slot created out of
+				// the job slot we matched against.
+				start_command_data_slot( mrec, * job );
 
 
 				//
@@ -14726,7 +14775,14 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 		case JOB_SHOULD_REMOVE:
 		case JOB_SHOULD_REQUEUE:
 
-		// At some point, we should start tracking transient/systemtic
+		// This is intended to indicate that the FTO believes the failure
+		// to transfer is permanent and the user's fault.  It's not presently
+		// used (because the FTO can't presently say that), and it may never
+		// be: if we can get the proper information to the schedd, then it
+		// can (and should) make the decision like it does for hold vs
+		// cool-down vs requeue right now.
+		case JOB_CXFER_FAILED_HOLD:
+		// At some point, we should start tracking transient/systemic
 		// failures and not retrying them indefinitely.
 		case JOB_CXFER_FAILED_REQUEUE:
 		// As above, except in this case, when we stop retrying, we should
@@ -14763,11 +14819,36 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 					DelMrec( srec->match );
 				}
 			} else {
-				// Not brave enough to make this an EXCEPT()ion.
-				dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
+				if( srec == NULL ) {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing.\n" );
+				} else if( srec->match == NULL ) {
+					// If we vacate a transfer shadow's match because its lease
+					// has expired, we don't immediately delete the match; we
+					// may be able to re-use it.  If a transfer shadow's
+					// match hits its exception limit -- maybe because other
+					// jobs have failed to map its common files -- we treat
+					// it like any other exceptional match and delete it
+					// immediately, leading to this case.  I'm not sure that
+					// it wouldn't be better practice in general to just mark
+					// the match for deletion so that we can detect the more-
+					// serious problem where we've incorrectly lost track of
+					// a shadow's match, but the thinking there may have been
+					// more subtle than "if we got a shadow exception, there's
+					// no shadow left to wait for."
+					//
+					// See line Scheduler::HadException() in case you want to
+					// change this logic for (just) the transfer shadow(s).
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing its match, probably because of mapping failures.\n" );
+				} else if( handleNowClaim ) {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record complete, but showed a now claim.\n" );
+				} else {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record complete and not a now claim, so how did we get here?\n" );
+				}
 			}
 			break;
-
 
 		case JOB_SHADOW_USAGE:
 			EXCEPT( "Transfer shadow (%d.%d) exited with incorrect usage!", job_id.cluster, job_id.proc );
@@ -15181,45 +15262,74 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 			break;
 		}
 
+		case JOB_MAPPING_FAILED:
+			dprintf( D_ALWAYS, "Shadow for %d.%d failed to map common files.\n",
+				job_id.cluster, job_id.proc
+			);
+
+			//
+			// Also report this as an exception for the transfer shadow(s).
+			// We can't presently tell which catalog mapping failed -- see
+			// elsewhere for data storage problems -- so just mark an
+			// exception on all of them.
+			//
+			if( srec ) {
+				for( const auto & catalog : srec->cxfer_catalogs ) {
+					auto shadow = getShadowForCatalog( catalog.first );
+					if( shadow ) {
+						HadException((*shadow)->match);
+					}
+				}
+			}
+
+			reportException = true;
+			break;
+
+		case JOB_CXFER_FAILED_REQUEUE:
+		case JOB_CXFER_FAILED_HOLD:
+			dprintf( D_ALWAYS, "A shadow not known to be transferring "
+				"common files exited as if it had failed to do so (%d); "
+				"treating as unknown exception.\n", exit_code
+			);
+
+			reportException = true;
+			break;
+
 		case DPRINTF_ERROR:
 			dprintf( D_ALWAYS,
 					 "ERROR: %s had fatal error writing its log file\n",
 					 daemon_name.c_str() );
 			stats.JobsDebugLogError += 1;
 			OTHER.JobsDebugLogError += 1;
-			// We don't want to break, we want to fall through 
-			// and treat this like a shadow exception for now.
-			//@fallthrough@
-		case JOB_EXCEPTION:
-			if ( exit_code == JOB_EXCEPTION ){
-				dprintf( D_ALWAYS,
-						 "ERROR: %s exited with exception code!\n",
-						 daemon_name.c_str() );
-			}
-			// We don't want to break, we want to fall through 
-			// and treat this like a shadow exception for now.
-			//@fallthrough@
-		default:
-				//
-				// The default case is now a shadow exception in case ANYTHING
-				// goes wrong with the shadow exit status
-				//
-			if ( ( exit_code != DPRINTF_ERROR ) &&
-				 ( exit_code != JOB_EXCEPTION ) ) {
-				dprintf( D_ALWAYS,
-						 "ERROR: %s exited with unknown value %d!\n",
-						 daemon_name.c_str(), exit_code );
-			}
-				// The logic to report a shadow exception has been
-				// moved down below. We just set this flag to 
-				// make sure we hit it
+
 			reportException = true;
-			stats.JobsExitException += 1;
-			OTHER.JobsExitException += 1;
-			is_badput = true;
+			break;
+
+		case JOB_EXCEPTION:
+			dprintf( D_ALWAYS,
+					 "ERROR: %s exited with exception code!\n",
+					 daemon_name.c_str()
+			);
+
+			reportException = true;
+			break;
+
+		default:
+			dprintf( D_ALWAYS,
+					 "ERROR: %s exited with unknown value %d!\n",
+					 daemon_name.c_str(), exit_code
+			);
+
+			reportException = true;
 			break;
 	} // SWITCH
-	
+
+	if( reportException ) {
+		stats.JobsExitException += 1;
+		OTHER.JobsExitException += 1;
+		is_badput = true;
+	}
+
 		// calculate badput and goodput statistics.
 		//
 	if ( ! is_goodput && ! is_badput) {
@@ -15239,6 +15349,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
 			}
+	
 		} else if (is_badput) {
 			stats.JobsAccumChurnTime += job_running_time;
 			OTHER.JobsAccumChurnTime += job_running_time;
@@ -15904,6 +16015,16 @@ Scheduler::Init()
 	param(m_extendedSubmitHelpFile, "EXTENDED_SUBMIT_HELPFILE");
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
+
+	EnablePerUserCurbMatchmaking = param_boolean("SCHEDD_ENABLE_PER_USER_MATCH_LIMITS", true);
+	MaxConcurrentUploadsPerUser = param_integer("MAX_CONCURRENT_UPLOADS_PER_USER", -1);
+	if (MaxConcurrentUploadsPerUser == -1) {
+		// Note MAX_CONCURRENT_UPLOADS of 0 means unlimited. so if the value is < 5,
+		// per-user will be unlimited unless it is set explicitly. Since this limit currently only
+		// curbs matchmaking and will not prevent single user from filling the whole of MAX_CONCURRENT_UPLOADS
+		// if they can get there in a single negotation cycle, this seem acceptable.
+		MaxConcurrentUploadsPerUser = param_integer("MAX_CONCURRENT_UPLOADS", 100) / 5;
+	}
 
 		// Limit number of simultaenous connection attempts to startds.
 		// This avoids the schedd getting so busy authenticating with
@@ -17366,6 +17487,18 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	// release the claim on the startd
 	if( match->needs_release_claim) {
+		// If we're deleting a transfer shadow's mrec, we need to know
+		// both that we shouldn't start another job using its catalogs
+		// and that we shouldn't start another shadow to do the transfer
+		// until the current one dies.
+		if( match->shadowRec ) {
+			if( isTransferShadowProcID(match->shadowRec->job_id.proc ) ) {
+				if( match->shadowRec->cxfer_state != CXFER_STATE::RETIRING ) {
+					dprintf( D_ALWAYS, "Unexpectedly marking transfer shadow %d.%d retiring.\n", match->shadowRec->job_id.cluster,  match->shadowRec->job_id.proc );
+				}
+				match->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
+			}
+		}
 		send_vacate(match, RELEASE_CLAIM);
 	}
 
@@ -17885,9 +18018,15 @@ Scheduler::HadException( match_rec* mrec )
 	}
 	mrec->num_exceptions++;
 	if( mrec->num_exceptions >= MaxExceptions ) {
-		dprintf( D_ERROR, 
-				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
-				 mrec->cluster, mrec->num_exceptions );
+		dprintf( D_ERROR,
+		         "Match for %d.%d has had %d shadow exceptions, relinquishing.\n",
+		         mrec->cluster, mrec->proc, mrec->num_exceptions
+				 );
+		// If we always do this before DelMrec() does, we'll learn about cases
+		// we don't know about that we otherwise couldn't.
+		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id.proc ) ) {
+			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
+		}
 		DelMrec(mrec);
 	}
 }

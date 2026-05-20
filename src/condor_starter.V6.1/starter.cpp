@@ -4161,7 +4161,12 @@ Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move
 
 		if (move_to) {
 			dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
-			rename(execute_dir.GetFullPath(), move_to);
+			int r = rename(execute_dir.GetFullPath(), move_to);
+			if (r != 0) {
+				dprintf(D_ERROR, "Failed to rename %s to %s: %s (errno %d)\n",
+				        execute_dir.GetFullPath(), move_to, strerror(errno), errno);
+				has_failed = true;
+			}
 		} else {
 			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
 			if (!execute_dir.Remove_Current_File()) {

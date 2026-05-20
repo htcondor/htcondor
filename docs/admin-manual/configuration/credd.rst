@@ -40,7 +40,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     getting locked out.
 
 :macro-def:`CREDMON_KRB`
-    The path to the credmon daemon process when using the Kerberos 
+    The path to the credmon daemon process when using the Kerberos
     credentials type.  The default is /usr/sbin/condor_credmon_krb
 
 :macro-def:`CREDMON_OAUTH`
@@ -57,6 +57,14 @@ These macros affect the *condor_credd* and its credmon plugin.
     The time in seconds between renewing OAuth2 tokens.  The default is
     half of :macro:`CREDMON_OAUTH_TOKEN_MINIMUM`.  This is currently implemented
     only in the vault credmon, not the default oauth credmon.
+
+:macro-def:`CREDMON_WEB_PREFIX`
+    The full URL to prepend to the Oauth2 Credmon paths. The default (unset) is
+    the equivalent of setting it to ``https://$(FULL_HOSTNAME)``. If your
+    Credmon OAuth webserver lives under a different path, set it to
+    ``https://<hostname>/<path>``, without the trailing ``/``. The
+    :macro:`<OAuth2ServiceName>_RETURN_URL_SUFFIX` is appended to this prefix
+    before being passed to the OAuth service.
 
 :macro-def:`OAUTH2_CREDMON_PROVIDER_NAMES`
     A comma and/or space separated list of provider names that the OAuth2
@@ -132,7 +140,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     ``read:/user/{username} write:/user/{username}``.
 
 :macro-def:`LOCAL_CREDMON_AUTHZ_TEMPLATE_EXPR`
-    A classad expression evaluated in the context of a ClassAd containing the 
+    A classad expression evaluated in the context of a ClassAd containing the
     submitter's system username in the ``Username`` attribute.  This should
     evaluate to a classad string type that contains the authorization template.
     If specified, this takes precedence over :macro:`LOCAL_CREDMON_AUTHZ_TEMPLATE`.

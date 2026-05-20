@@ -675,9 +675,16 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
 			std::error_code errorCode = staging->map( sandbox );
 
+			bool report_mapping_failure = false;
+			s->jic->getJobAd()->LookupBool( "ReportMappingFailure", report_mapping_failure );
+
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-			context.InsertAttr( ATTR_RESULT, errorCode.value() == 0 );
+			if(! report_mapping_failure) {
+				context.InsertAttr( ATTR_RESULT, errorCode.value() == 0 );
+			} else {
+				context.InsertAttr( ATTR_RESULT, false );
+			}
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_ABORT ) {

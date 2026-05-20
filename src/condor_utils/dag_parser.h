@@ -39,6 +39,8 @@ public:
 		source = src;
 		line = line_no;
 		error = err;
+
+		chomp(error);
 	}
 
 	std::string str() const {
@@ -65,6 +67,10 @@ public:
 	}
 
 	std::string GetError() const { return error; }
+
+	std::string GetLocation() const {
+		return source + ":" + std::to_string(line);
+	}
 
 	// Get example syntax for failed DAG command
 	std::string syntax() const {

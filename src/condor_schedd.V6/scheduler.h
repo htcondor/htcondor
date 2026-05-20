@@ -231,10 +231,11 @@ struct SubmitterData {
   // level.
   int FlockLevel;
   int OldFlockLevel;
-  time_t NegotiationTimestamp;
+  time_t NegotiationTimestamp; // used to grow the flock level because the near negotiators are not finding matches
   time_t lastUpdateTime; // the last time we sent updates to the collector
   bool isOwnerName; // the name of this submitter record is the same as the name of an owner record.
   bool absentUpdateSent;
+  bool skipNegotiation{false};
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
   SubmitterData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
       , lastUpdateTime(0), isOwnerName(false), absentUpdateSent(false)  { }
@@ -538,6 +539,7 @@ class Scheduler : public Service
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
+	void			StartJobFailed(match_rec * rec, PROC_ID id);
 	void			checkClaimLeases( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );
@@ -760,7 +762,6 @@ class Scheduler : public Service
 
 	OCU *getOCU(int ocu_id);
 
-
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
 
@@ -855,6 +856,8 @@ private:
 	bool			EnablePersistentProjectInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
+	bool			EnablePerUserCurbMatchmaking{true};
+	int				MaxConcurrentUploadsPerUser{100}; // curb matchmaking for this user when they exceed this number
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs

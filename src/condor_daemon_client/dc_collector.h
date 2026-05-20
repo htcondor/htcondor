@@ -148,15 +148,15 @@ private:
 	void clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, class UpdateData*& failed);
 	std::deque<class UpdateData*> pending_update_list;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void* miscdata );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
 
-	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata );
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, const StartCommandCallback &callback );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallback callback );
 
 	char* update_destination;
 

@@ -3,10 +3,13 @@
 
 #include "scheduler.h"
 #include "catalog_utils.h"
+#include "dc_coroutines.h"
 #include "cxfer.h"
 
 #include "qmgmt.h"
 #include "condor_qmgr.h"
+
+#include "condor_daemon_client.h"
 
 extern Scheduler scheduler;
 
@@ -162,4 +165,205 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		dprintf( D_ERROR, "cxfer: Inconsistency in common file catalog: all entries were either staging or staged, but the sum of those two states is not the total size.  Falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, common_file_catalogs};
 	}
+}
+
+
+condor::cr::void_coroutine
+command_data_slot_callback(
+	Sock * sock,
+	std::string originaClaimID,
+	ClassAd requestAd
+);
+
+
+void
+call_StartJobFailure( const std::string & claimID ) {
+	match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
+	if( mrec != nullptr ) {
+		PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
+		scheduler.StartJobFailed( mrec, id );
+	}
+}
+
+
+//
+// If this were the coroutine it should be, we'd need to worry about the
+// lifetime of the `mrec` pointer; but see what we're already doing to avoid
+// having to do so.  Likewise, we'd need a copy of the `requestAd`.
+//
+void
+start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
+	// dprintf( D_ALWAYS, "start_command_data_slot(): begin.\n" );
+
+	CondorError errorStack;
+	DCStartd startd( mrec->peer, nullptr );
+
+	std::string originalClaimID = mrec->claim_id.claimId();
+	auto result = startd.startCommand_nonblocking(
+		COMMAND_DATA_SLOT,
+		Sock::reli_sock,
+		20 /* seconds of careful research */,
+		/* & errorStack, */ // We'll figure out the lifetime of this later.
+		nullptr,
+		[originalClaimID, requestAd](
+			bool success, Sock * sock, CondorError * errorStack,
+			const std::string & /* trust_domain */,
+			bool /* should_try_token_request */
+		) -> void {
+			if( success ) {
+				command_data_slot_callback( sock, originalClaimID, requestAd );
+			} else {
+				dprintf( D_ALWAYS,
+					"start_command_data_slot(): startCommand(COMMAND_DATA_SLOT): failed: %s.\n",
+					errorStack == nullptr ? "no error stack" : errorStack->getFullText().c_str()
+				);
+
+				call_StartJobFailure( originalClaimID );
+				return;
+			}
+		}
+	);
+
+	switch (result) {
+		case StartCommandFailed: {
+			dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT) failed.\n" );
+			call_StartJobFailure( originalClaimID );
+			} return;
+		case StartCommandSucceeded:  /* that was quick */
+			break;
+		case StartCommandInProgress: /* as prophesied */
+			break;
+		case StartCommandWouldBlock: /* impossible */
+			break;
+		case StartCommandContinue:   /* impossible */
+			break;
+	}
+
+	// dprintf( D_ALWAYS, "start_command_data_slot(): end.\n" );
+}
+
+
+//
+// The `sock`et needs to live on the heap, and this function needs to control
+// its lifetime.  These requriements appear to be guaranteed by the
+// startCommand_nonblocking() callback API.
+//
+// As always, the (other) parameters are all copies so that we don't have to
+// think about lifetime and ownership.
+//
+condor::cr::void_coroutine
+command_data_slot_callback(
+	Sock * sock,
+	std::string originalClaimID,
+	ClassAd requestAd
+) {
+    auto scope_guard = std::unique_ptr<Sock>(sock);
+
+	ClassAd commandAd;
+	commandAd.InsertAttr( ATTR_CLAIM_ID, originalClaimID );
+	commandAd.InsertAttr( "DesiredSlotPrefix", "data" );
+
+	if(! putClassAd( sock, commandAd )) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(commandAd).\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+	if(! putClassAd( sock, requestAd )) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(requestAd).\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+	if(! sock->end_of_message()) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+
+	//
+	// This is where the magic happens.  We assume that writes don't block
+	// (not sure about how that works with EWOULDBLOCK on connect), so we
+	// only need to return to the event loop before waiting for the reply.
+	//
+	// dprintf( D_ALWAYS, "start_command_data_slot(): waiting for reply.\n" );
+	condor::dc::AwaitableDeadlineSocket ads;
+	const int reply_timeout = 20;
+	ads.deadline( sock, reply_timeout );
+	auto [_, timed_out] = co_await(ads);
+	ASSERT(_ == sock || timed_out);
+
+	if( timed_out ) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): timed out.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+
+	ClassAd replyAd;
+	if(! getClassAd( sock, replyAd )) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(replyAd).\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+	ClassAd newSlotAd;
+	if(! getClassAd( sock, newSlotAd )) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(newSlotAd).\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+	if(! sock->end_of_message()) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+
+	std::string resultString;
+	replyAd.LookupString( ATTR_RESULT, resultString );
+	CAResult result = getCAResultNum( resultString.c_str() );
+	if( result != CA_SUCCESS ) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): result was not success\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+	// We shouldn't ever need this in anger.
+	std::string claimIDString;
+	if(! replyAd.LookupString( ATTR_CLAIM_ID, claimIDString )) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): result did not contain claim ID.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+	if( claimIDString != originalClaimID ) {
+		dprintf( D_ALWAYS, "start_command_data_slot(): startd erroneously returned new claim ID.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+
+	//
+	// The slot is now a data slot; find the corresponding match record,
+	// update it, and start a transfer shadow on it.
+	//
+	match_rec * mrec = scheduler.FindMrecByClaimID( originalClaimID.c_str() );
+	if( mrec == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): startCommand(COMMAND_DATA_SLOT, ...) returned but corresponding match record no longer exists.\n" );
+		call_StartJobFailure( originalClaimID );
+		co_return;
+	}
+
+	// Stolen from Scheduler::claimedStartd(); we should probably refactor.
+	mrec->my_match_ad->CopyFrom(newSlotAd);
+	mrec->my_match_ad->Update(mrec->m_added_attrs);
+	mrec->makeDescription();
+
+	// And -- finally -- schedule the transfer shadow to to be spawned.
+	scheduler.addRunnableJob( mrec->shadowRec );
+
+
+	// dprintf( D_ALWAYS, "start_command_data_slot(): success!\n" );
+	co_return;
 }

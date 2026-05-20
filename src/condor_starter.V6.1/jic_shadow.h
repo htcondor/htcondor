@@ -520,6 +520,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
+	FileTransfer::UserPluginDisableMode m_ft_user_plugin_disable{FileTransfer::UserPluginDisableMode::Allow};
 	bool m_did_output_transfer;
 	bool m_output_transfer_active{false};
 

@@ -4891,6 +4891,12 @@ type=int
 description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
 tags=file_transfer
 
+[STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS]
+default=
+version=25.11
+description=Conditionally disable user-supplied transfer plugins, MY is slot and TARGET is job.
+tags=file_transfer
+
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
 version=7.9.4
@@ -5120,6 +5126,12 @@ range=0,
 default=100
 type=int
 range=0,
+
+[MAX_CONCURRENT_UPLOADS_PER_USER]
+default=$(MAX_CONCURRENT_UPLOADS:100)/5
+type=int
+range=0,
+
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=2.0
@@ -6825,6 +6837,14 @@ default : @fin
 	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
+[$FEATURE.AssignProjectName]
+description=Set the ProjectName of the job by mapping the job's Owner attribute args:(map_name [, map_file])
+default : @fin
+	if ! $(1?)
+	  error : use FEATURE : AssignProjectName requires a map_name argument
+	endif
+	use FEATURE : SetJobAttrFromUsermap(ProjectName, Owner, $(1+))
+@fin
 
 [$FEATURE.SetJobAttrFromUsermap]
 description=Set a job attribute from a usermap of another job attribute args:(dest_attr, src_attr, map_name [, map_file])
@@ -6835,9 +6855,9 @@ default : @fin
 	if $(4?)
 	   use FEATURE : ScheddUsermapFile($(3), $(4))
 	endif
-	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) Set$(1)
-	JOB_TRANSFORM_Set$(1) = [ eval_set_$(1)=usermap("$(3)",$(2),$(1)); ]
-	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) Require$(1)
+	JOB_TRANSFORM_NAMES += Set$(1)
+	JOB_TRANSFORM_Set$(1) = EVALSET $(1) usermap("$(3)",$(2),$(1))
+	SUBMIT_REQUIREMENT_NAMES += Require$(1)
 	SUBMIT_REQUIREMENT_Require$(1) = $(1) isnt undefined
 	SUBMIT_REQUIREMENT_Require$(1)_REASON = strcat("Submit requirement Require$(1) not met - Could not map '", $(2)?:"undefined", "' to a $(1)")
 @fin
@@ -7316,10 +7336,10 @@ default : @end
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_KRB
 	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
 	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
-	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	USE_KEYRING_SESSIONS=True
 @end
 
@@ -7329,7 +7349,7 @@ description=Enable the daemons and features need to support running jobs with OA
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
 	CREDMON_OAUTH_LOG=$(LOG)/CredMonOAuthLog
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
 @end
@@ -7338,7 +7358,7 @@ default : @end
 description=Enable sending of schedd job history ads to unauthenticated Elasticsearch on localhost
 default : @end
 	ADSTASH_SCHEDD_HISTORY=True
-	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
+	DAEMON_LIST=$(DAEMON_LIST) ADSTASH
 @end
 
 [$FEATURE.CommonCloudAttributesGoogle]
@@ -7508,7 +7528,7 @@ default : @fin
 [$FEATURE.GANGLIA]
 description=Enable condor_gangliad daemon
 default : @end
-	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+	DAEMON_LIST=$(DAEMON_LIST) GANGLIAD
 @end
 
 [$FEATURE.DefaultCheckpointDestination]

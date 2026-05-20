@@ -939,10 +939,10 @@ protected:
 	bool checkAddr( void );
 
 		/**
-           Helper method for commands to see if we've already
-           authenticated this socket, and if not, to try to do so.
+		   Helper method for commands to see if we've already
+		   authenticated this socket, and if not, to try to do so.
 		*/
-    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
+	bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
 		/**
 		   Internal function used by public versions of startCommand().

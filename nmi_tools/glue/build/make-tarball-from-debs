@@ -17,6 +17,9 @@ if [ ! -d $debdir ]; then
     exit 1
 fi
 
+# Pin umask so file modes baked into the tarball are reproducible
+umask 022
+
 extract_deb() {
     what=$1
     where=$2
