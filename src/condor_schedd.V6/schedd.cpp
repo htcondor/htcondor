@@ -9426,7 +9426,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
 	if( status == JOB_STATUS_BLOCKED ) {
 		set_job_status( jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
-		// dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
+	} else {
+		dprintf( D_ZKM, "The prompting job (%d.%d) was not blocked (%d) when the transfer shadow notified us that common transfer was complete.\n",
+			jobid.cluster, jobid.proc, status
+		);
 	}
 
 
@@ -9507,7 +9510,15 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					set_job_status( mrec->cluster, mrec->proc, JOB_STATUS_IDLE );
+					int status = -1;
+					GetAttributeInt( mrec->cluster, mrec->proc, ATTR_JOB_STATUS, &status );
+					if( status == JOB_STATUS_BLOCKED ) {
+						set_job_status( mrec->cluster, mrec->proc, JOB_STATUS_IDLE );
+					} else {
+						dprintf( D_ZKM, "A dependent job (%d.%d) was not blocked (%d) when the transfer shadow notified us that common transfer was complete.\n",
+							mrec->cluster, mrec->proc, status
+						);
+					}
 
 					// Why _are_ these two separate commands?
 					mark_serial_job_running( srec->job_id );
@@ -13509,11 +13520,17 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					}
 				);
 				if( anyJobCatalogInRemovedCatalogs ) {
-					dprintf( D_ALWAYS, "Unblocking job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
+					int status = -1;
+					GetAttributeInt( sr->job_id.cluster, sr->job_id.proc, ATTR_JOB_STATUS, &status );
+					if( status == JOB_STATUS_BLOCKED ) {
+						dprintf( D_ALWAYS, "Unblocking job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
 
-                    set_job_status( sr->job_id.cluster, sr->job_id.proc, JOB_STATUS_IDLE );
-					mark_serial_job_running( sr->job_id );
-					addRunnableJob( sr );
+						set_job_status( sr->job_id.cluster, sr->job_id.proc, JOB_STATUS_IDLE );
+						mark_serial_job_running( sr->job_id );
+						addRunnableJob( sr );
+					} else {
+						dprintf( D_ZKM, "unregister_shadow_catalogs(): dependent job (%d.%d) had non-BLOCKED status %d.\n", sr->job_id.cluster, sr->job_id.proc, status );
+					}
 				}
 			}
 		}
@@ -17582,11 +17599,18 @@ Scheduler::unlinkMrec(match_rec* match)
 	if( std::erase( matchesHeldByBlockedJobs, match ) == 1 ) {
 		if( match->shadowRec ) {
 			dprintf( D_ZKM, "Unblocking job %d.%d that was holding a match.\n", match->shadowRec->job_id.cluster, match->shadowRec->job_id.proc );
-			set_job_status(
-				match->shadowRec->job_id.cluster,
-				match->shadowRec->job_id.proc,
-				JOB_STATUS_IDLE
-			);
+			int status = -1;
+			GetAttributeInt( match->shadowRec->job_id.cluster, match->shadowRec->job_id.proc, ATTR_JOB_STATUS, &status );
+			if( status == JOB_STATUS_BLOCKED ) {
+				set_job_status(
+					match->shadowRec->job_id.cluster,
+					match->shadowRec->job_id.proc,
+					JOB_STATUS_IDLE
+				);
+			} else {
+				// This should almost certainly not be the case.
+				dprintf( D_ALWAYS, "A match record in the list of those held by blocked jobs pointed to an unblocked job: %d.%d.\n", match->shadowRec->job_id.cluster, match->shadowRec->job_id.proc );
+			}
 		} else {
 			dprintf( D_ALWAYS, "Deleted match record was held by a blocked job but did not point to a shadow record.\n" );
 		}
@@ -17597,11 +17621,18 @@ Scheduler::unlinkMrec(match_rec* match)
 	// and unblock the prompting job immediately.
 	if( match->shadowRec ) {
 		if( isTransferShadowProcID( match->shadowRec->job_id.proc ) ) {
-			set_job_status(
-				match->shadowRec->job_id.cluster,
-				transferToPromptingProcID(match->shadowRec->job_id.proc),
-				JOB_STATUS_IDLE
-			);
+			int status = -1;
+			GetAttributeInt( match->shadowRec->job_id.cluster, transferToPromptingProcID(match->shadowRec->job_id.proc), ATTR_JOB_STATUS, &status );
+			if( status == JOB_STATUS_BLOCKED ) {
+				set_job_status(
+					match->shadowRec->job_id.cluster,
+					transferToPromptingProcID(match->shadowRec->job_id.proc),
+					JOB_STATUS_IDLE
+				);
+			} else {
+			    // For instance, the prompting job could have finished.
+				dprintf( D_ZKM, "The prompting job (%d.%d) was not blocked when we deleted the transfer shadow's match record.\n", match->shadowRec->job_id.cluster, transferToPromptingProcID(match->shadowRec->job_id.proc) );
+			}
 		}
 	}
 
