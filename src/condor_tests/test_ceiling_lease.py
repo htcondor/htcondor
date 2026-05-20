@@ -114,8 +114,11 @@ class TestCeilingLease:
         )
         assert rv.returncode != 0
         assert "already in effect" in (rv.stderr + rv.stdout)
-        # And the original lease value is still in effect.
-        assert _query_ceiling(condor, SUBMITTER) == 42
+        # And the original lease value is still in effect. Use the polling
+        # helper here -- condor_userprio occasionally returns exit 0 with an
+        # empty body when issued back-to-back with a just-rejected command,
+        # and a single-shot _query_ceiling would see that transient blip.
+        _wait_for_ceiling(condor, SUBMITTER, 42)
 
         # Cancel restores the prior (pre-lease) ceiling.
         rv = _run_userprio_with_retry(

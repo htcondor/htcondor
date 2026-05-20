@@ -1,3 +1,7 @@
+*** 24.12.22 bugs
+
+*** 24.0.22 bugs
+
 *** 24.12.21 bugs
 
 - Fixed a rare bug in the *condor_startd* that would cause it to crash
@@ -9,6 +13,10 @@
   :jira:`3702`
 
 *** 24.0.21 bugs
+
+- If a job terminates with a named pipe in the sandbox, it will no
+  no longer hang transferring output.
+  :jira:`3743`
 
 - When the python bindings are run as user ``root`` and use the FS method
   to authenticate with a daemon, the authenticated identity will be

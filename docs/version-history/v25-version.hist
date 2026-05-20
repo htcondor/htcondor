@@ -1,3 +1,9 @@
+*** 25.12.0 features
+
+*** 25.12.0 bugs
+
+*** 25.0.12 bugs
+
 *** 25.11.0 features
 
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
@@ -86,6 +92,10 @@
   the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
   slots now also set the attribute ``IsDataSlot`` in their slot ads.
   :jira:`3715`
+
+- The OAuth credmon webserver now respects :macro:`CREDMON_WEB_PREFIX`,
+  useful if the credmon webserver is running under a different hostname.
+  :jira:`3746`
 
 *** 25.11.0 bugs
 
