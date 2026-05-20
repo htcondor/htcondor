@@ -1841,7 +1841,9 @@ Scheduler::count_jobs()
 		// This is called at most every 5 seconds, meaning this can cause
 		// up to 300 / 5 * 2 = 120 sessions to be opened at a time per
 		// collector.
-	unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+		// Floor at 60s so very small SCHEDD_INTERVAL values (used in tests)
+		// don't mint a session that expires before the negotiator imports it.
+	unsigned duration = std::max(60u, 2u*static_cast<unsigned>(param_integer( "SCHEDD_INTERVAL", 300 )));
 	std::string capability;
 	if (param_boolean("SEC_ENABLE_IMPERSONATION_TOKENS", false) && SetupCollectorSession(duration, capability)) {
 		cad->InsertAttr(ATTR_CAPABILITY, capability);
@@ -1929,7 +1931,8 @@ Scheduler::count_jobs()
 
 				// Same comment about potentially creating hundreds of sessions applies
 				// here as above for the primary collector...
-			unsigned duration = 2*param_integer( "SCHEDD_INTERVAL", 300 );
+				// See floor rationale above.
+			unsigned duration = std::max(60u, 2u*static_cast<unsigned>(param_integer( "SCHEDD_INTERVAL", 300 )));
 			std::string capability;
 			SetupNegotiatorSession(duration, flock_col->name(), capability);
 
