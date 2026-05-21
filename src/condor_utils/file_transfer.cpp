@@ -6253,7 +6253,7 @@ FileTransfer::abortActiveTransfer()
 				daemonCore->Cancel_Pipe(TransferPipe[0]);
 			}
 			daemonCore->Close_Pipe(TransferPipe[0]);
-			TransferPipe[1] = -1;
+			TransferPipe[0] = -1;
 		}
 #endif /* WINDOWS */
 	}
