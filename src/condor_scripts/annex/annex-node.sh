@@ -7,11 +7,21 @@ ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
 #   from files in $PWD
 PILOT_DIR=$1
 
+# On exit, cleanup the files we've created
+function cleanup() {
+    if [ "$LOCAL_SETUP" == 1 ] ; then
+        echo "$(date) $(hostname) Cleaning up files..."
+        cd ${IWD}
+        rm -rf ${PILOT_DIR}
+    fi
+}
+trap cleanup EXIT
+
 # If we can't see the PILOT_DIR, then assume it's on each node's local disk.
 # Then, we need to run the job setup script now and cleanup at the end.
 if [ ! -d $PILOT_DIR ] ; then
-    LOCAL_SETUP=1
     ${IWD}/annex-job-setup.sh ${PILOT_DIR}
+    LOCAL_SETUP=1
 fi
 
 cd ${PILOT_DIR}/condor-*
@@ -64,9 +74,5 @@ condor_master -f
 rc=$?
 echo "$(date) $(hostname) HTCondor daemons exited with status $rc"
 
-if [ "$LOCAL_SETUP" == 1 ] ; then
-    cd ${IWD}
-    rm -rf ${PILOT_DIR}
-fi
-
+# The EXIT trap will cleanup the $PILOT_DIR if we created it
 exit $rc

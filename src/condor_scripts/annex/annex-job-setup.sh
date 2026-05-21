@@ -3,15 +3,23 @@
 IWD=${PWD}
 ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
 
-echo "$(date) $(hostname) Creating log directory ${ANNEX_LOGDIR}"
-echo "$(date) $(hostname)   Logs will be available here after the Annex job completes"
-mkdir ${ANNEX_LOGDIR}
-
 if [ -z $1 ] ; then
     echo "$(date) $(hostname) Missing PILOT_DIR"
     exit 1
 fi
 PILOT_DIR=$1
+
+# If we abort early, cleanup the files we've created
+function cleanup() {
+    echo "$(date) $(hostname) Setup failed, cleaning up files..."
+    cd ${IWD}
+    rm -rf ${PILOT_DIR}
+}
+trap cleanup EXIT
+
+echo "$(date) $(hostname) Creating log directory ${ANNEX_LOGDIR}"
+echo "$(date) $(hostname)   Logs will be available here after the Annex job completes"
+mkdir ${ANNEX_LOGDIR}
 
 echo "$(date) $(hostname) Creating temporary directory ${PILOT_DIR}"
 mkdir -p ${PILOT_DIR}
@@ -33,3 +41,7 @@ if [ -f ~/.condor/annex_pilot_config ] ; then
 fi
 cp -a ${IWD}/annex.token local/tokens.d
 cp -a ${IWD}/annex.password local/passwords.d
+
+# Reset the EXIT trap so that we don't delete the setup files we've created.
+trap EXIT
+exit 0

@@ -1,12 +1,20 @@
 #!/bin/bash
 
+IWD=${PWD}
+
 function usage() {
     echo "Usage: ${0} [record-file]"
     echo "where record-file is a file containing the annex record data."
     echo "The default filename is 'annex.record'."
 }
 
-IWD=${PWD}
+# If we abort early, cleanup the files we've created
+function cleanup() {
+    echo "Cleaning up files..."
+    rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/10-annex-pilot-instance
+}
+trap cleanup EXIT
+
 if [[ -z $1 ]]; then
     RECORD_FILE=annex.record
 else
@@ -203,8 +211,6 @@ The SLURM job script is hpc.slurm.
 Please edit the #SBATCH options as necessary, then submit with sbatch.
 "
 
-# Reset the EXIT trap so that we don't delete the temporary directory
-# that the SLURM job needs.  (We pass it the temporary directory so that
-# it can clean up after itself.)
+# Reset the EXIT trap so that we don't delete the setup files we've created.
 trap EXIT
 exit 0
