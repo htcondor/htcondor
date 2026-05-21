@@ -28,8 +28,8 @@ def the_startd_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
-            "KILLING_TIMEOUT":      1,
-            "JOB_DEFAULT_LEASE_DURATION": 1,
+            "KILLING_TIMEOUT":                  1,
+            "JOB_DEFAULT_LEASE_DURATION":       1,
             "SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY": 1,
         },
     ) as the_condor:
@@ -42,8 +42,9 @@ def the_shadow_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
-            "KILLING_TIMEOUT":      1,
-            "JOB_DEFAULT_LEASE_DURATION": 1,
+            "KILLING_TIMEOUT":              1,
+            "JOB_DEFAULT_LEASE_DURATION":   1,
+            "SHADOW_DEBUG":                 "D_PID D_CATEGORY D_SUB_SECOND D_FULLDEBUG",
         },
     ) as the_condor:
         yield the_condor
@@ -55,8 +56,8 @@ def the_schedd_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
-            "KILLING_TIMEOUT":      1,
-            "JOB_DEFAULT_LEASE_DURATION": 1,
+            "KILLING_TIMEOUT":              1,
+            "JOB_DEFAULT_LEASE_DURATION":   1,
         },
     ) as the_condor:
         yield the_condor
@@ -152,14 +153,18 @@ def the_shadow_jobs(the_shadow_condor):
     while time.time() < deadline:
         # Grovel the shadow log to find the transfer shadow's PID.
         shadow_log = the_shadow_condor.shadow_log.open()
-        lines = list(filter(
-            lambda line: "-100" in line,
-            shadow_log.read(),
-        ))
+        parsed_lines = list(shadow_log.read())
+        # The `lines` property reflects only previous read() calls,
+        # which is rather annoying when you need the raw log entries.
+        raw_lines = shadow_log.lines
 
-        pattern = re.compile('\\((\\d+)\\)')
-        for line in lines:
-            matches = re.search(pattern, line.line)
+        jobID = f"{job_handle.clusterid}.-1"
+        pattern = re.compile('\\(pid:(\\d+)\\)')
+        for line in raw_lines:
+            if not jobID in line:
+                continue
+            print(f"Extracing PID from log line: '{line}'.")
+            matches = re.search(pattern, line)
             if matches:
                 pid = int(matches[1])
 
