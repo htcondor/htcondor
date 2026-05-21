@@ -21,10 +21,12 @@
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"
+#include "basename.h"
 #include "gangliad.h"
 
 //-------------------------------------------------------------
 
+bool g_legacy_gangliad_mode = false;
 GangliaD *gangliad = NULL;
 
 //-------------------------------------------------------------
@@ -77,7 +79,14 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("GANGLIAD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	const char *progname = condor_basename(argv[0]);
+	if (progname && strstr(progname, "gangliad") != NULL) {
+		g_legacy_gangliad_mode = true;
+		set_mySubSystem("GANGLIAD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	} else {
+		g_legacy_gangliad_mode = false;
+		set_mySubSystem("METRICD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	}
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

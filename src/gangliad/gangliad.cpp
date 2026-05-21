@@ -22,6 +22,7 @@
 #include <condor_daemon_core.h>
 #include "my_popen.h"
 #include "directory.h"
+#include "directory_util.h"
 #include "gangliad.h"
 
 char const *
@@ -191,7 +192,74 @@ GangliaD::initAndReconfig(const char * /*unused */)
 
     m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
 
-	StatsD::initAndReconfig("GANGLIAD");
+	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD");
+
+	{
+		const char *cluster_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_CLUSTER" : "GANGLIA_DEFAULT_CLUSTER";
+		std::string default_cluster_expr;
+		param(default_cluster_expr,cluster_knob);
+		if( !default_cluster_expr.empty() ) {
+			classad::ClassAdParser parser;
+			classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
+			if( !expr ) {
+				EXCEPT("Invalid %s=%s",cluster_knob,default_cluster_expr.c_str());
+			}
+			// The classad takes ownership of expr
+			m_default_metric_ad.Insert("Cluster",expr);
+		}
+
+		const char *machine_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_MACHINE" : "GANGLIA_DEFAULT_MACHINE";
+		std::string default_machine_expr;
+		param(default_machine_expr,machine_knob);
+		if( !default_machine_expr.empty() ) {
+			classad::ClassAdParser parser;
+			classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
+			if( !expr ) {
+				EXCEPT("Invalid %s=%s",machine_knob,default_machine_expr.c_str());
+			}
+			// The classad takes ownership of expr
+			m_default_metric_ad.Insert(ATTR_MACHINE,expr);
+		}
+
+		const char *ip_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_IP" : "GANGLIA_DEFAULT_IP";
+		std::string default_ip_expr;
+		param(default_ip_expr,ip_knob);
+		if( !default_ip_expr.empty() ) {
+			classad::ClassAdParser parser;
+			classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
+			if( !expr ) {
+				EXCEPT("Invalid %s=%s",ip_knob,default_ip_expr.c_str());
+			}
+			// The classad takes ownership of expr
+			m_default_metric_ad.Insert("IP",expr);
+		}
+	}
+
+	m_reset_metrics_filename.clear();
+	{
+		const char *want_reset_knob = g_legacy_gangliad_mode ? "GANGLIAD_WANT_RESET_METRICS" : "GANGLIA_WANT_RESET_METRICS";
+		const char *reset_file_knob = g_legacy_gangliad_mode ? "GANGLIAD_RESET_METRICS_FILE" : "GANGLIA_RESET_METRICS_FILE";
+		bool want_reset_default = !g_legacy_gangliad_mode; // GANGLIA defaults to true; preserve GANGLIAD legacy default of false
+		if (param_boolean(want_reset_knob,want_reset_default)) {
+			param(m_reset_metrics_filename,reset_file_knob);
+
+			if (!m_reset_metrics_filename.empty()) {
+				// If filename from the user is a relative path, stick it in SPOOL dir
+				if ( !IS_ANY_DIR_DELIM_CHAR(m_reset_metrics_filename[0]) ) {
+					std::string fname = m_reset_metrics_filename;
+					std::string dirname;
+					param(dirname,"SPOOL");
+					dircat(dirname.c_str(),fname.c_str(),m_reset_metrics_filename);
+				}
+
+				// If filename from user does not end with the expected suffix,
+				// then append it.  This is required so preen doesn't go removing it.
+				if (!m_reset_metrics_filename.ends_with(".ganglia_metrics")) {
+					m_reset_metrics_filename += ".ganglia_metrics";
+				}
+			}
+		}
+	}
 
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;

@@ -755,73 +755,8 @@ StatsD::initAndReconfig(char const *service_name)
 	formatstr(param_name,"%s_REQUIREMENTS",service_name);
 	param(m_requirements,param_name.c_str());
 
-	m_reset_metrics_filename.clear();
-	formatstr(param_name,"%s_WANT_RESET_METRICS",service_name);
-	if (param_boolean(param_name.c_str(),false)) {
-		formatstr(param_name,"%s_RESET_METRICS_FILE",service_name);
-		param(m_reset_metrics_filename,param_name.c_str());
-		
-		if (!m_reset_metrics_filename.empty()) {
-			// If filename from the user is a relative path, stick it in SPOOL dir
-			if ( !IS_ANY_DIR_DELIM_CHAR(m_reset_metrics_filename[0]) ) {
-				std::string fname = m_reset_metrics_filename;
-				std::string dirname;
-				param(dirname,"SPOOL");
-				dircat(dirname.c_str(),fname.c_str(),m_reset_metrics_filename);
-			}
-
-			// If filename from user does not end with the expected suffix,
-			// then append it.  This is required so preen doesn't go removing it.
-			if (!m_reset_metrics_filename.ends_with(".ganglia_metrics")) {
-				m_reset_metrics_filename += ".ganglia_metrics";
-			}
-		}
-	}
-
 	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
 	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
-
-	formatstr(param_name,"%s_DEFAULT_CLUSTER",service_name);
-	std::string default_cluster_expr;
-	param(default_cluster_expr,param_name.c_str());
-
-	if( !default_cluster_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
-		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_CLUSTER,expr);
-	}
-
-	formatstr(param_name,"%s_DEFAULT_MACHINE",service_name);
-	std::string default_machine_expr;
-	param(default_machine_expr,param_name.c_str());
-
-	if( !default_machine_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
-		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_MACHINE,expr);
-	}
-
-	formatstr(param_name,"%s_DEFAULT_IP",service_name);
-	std::string default_ip_expr;
-	param(default_ip_expr,param_name.c_str());
-
-	if( !default_ip_expr.empty() ) {
-		classad::ClassAdParser parser;
-		classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
-		if( !expr ) {
-			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
-		}
-		// The classad takes ownership of expr
-		m_default_metric_ad.Insert(ATTR_IP,expr);
-	}
 
 	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
 	m_projection_references.clear();

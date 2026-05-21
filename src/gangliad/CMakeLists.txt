@@ -20,12 +20,13 @@ if (WITH_GANGLIA)
 
   set(GANGLIAD
 	gangliad.cpp
-	gangliad_main.cpp
+	metricd_main.cpp
 	ganglia_interaction.cpp
 	statsd.cpp
   )
 
-  condor_exe( condor_gangliad "${GANGLIAD}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+  condor_exe( condor_metricd "${GANGLIAD}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+  clone_install( condor_metricd "${C_LIBEXEC}" condor_gangliad "${C_LIBEXEC}" )
 
   install ( FILES ganglia_default_metrics DESTINATION "${C_GANGLIAD}" RENAME 00_default_metrics)
 

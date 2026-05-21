@@ -29,6 +29,10 @@
 #include <vector>
 #include <string>
 
+// True when the binary was invoked as condor_gangliad (legacy mode);
+// false when invoked as condor_metricd (modern mode). Defined in metricd_main.cpp.
+extern bool g_legacy_gangliad_mode;
+
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
 public:
