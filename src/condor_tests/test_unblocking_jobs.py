@@ -28,6 +28,7 @@ def the_startd_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
+            "NUM_CPUS":                         8,
             "KILLING_TIMEOUT":                  1,
             "JOB_DEFAULT_LEASE_DURATION":       1,
             "SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY": 1,
@@ -42,6 +43,7 @@ def the_shadow_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
+            "NUM_CPUS":                     8,
             "KILLING_TIMEOUT":              1,
             "JOB_DEFAULT_LEASE_DURATION":   1,
             "SHADOW_DEBUG":                 "D_PID D_CATEGORY D_SUB_SECOND D_FULLDEBUG",
@@ -56,6 +58,7 @@ def the_schedd_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
+            "NUM_CPUS":                     8,
             "KILLING_TIMEOUT":              1,
             "JOB_DEFAULT_LEASE_DURATION":   1,
         },
