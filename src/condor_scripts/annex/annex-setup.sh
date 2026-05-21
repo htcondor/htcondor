@@ -79,7 +79,7 @@ mkdir -p "$BINARIES_DIR"
 #
 # Download the binaries.
 #
-echo -e "\rStep 1 of 8: downloading required software..."
+echo -e "\rStep 1 of 3: Downloading HTCondor ${VERSION}..."
 aversion=(${VERSION//./ })
 major_ver=${aversion[0]}
 minor_ver=${aversion[1]}
@@ -109,53 +109,43 @@ ALPHA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/alpha/${BINARIES_FILE}"
 SNAPSHOT_URL="${BINARIES_URL_BASE}${series}/${VERSION}/snapshot/${BINARIES_FILE}"
 
 if [ -f ${BINARIES_DIR}/${BINARIES_FILE} ] ; then
-    echo "Binaries already installed"
+    echo "HTCondor tarball is already downloaded"
 else
     rc=1
     if [ $rc -ne 0 ] ; then
-        curl -fsSL ${RELEASE_URL} -o ${BINARIES_DIR}/${BINARIES_FILE}
+        CURL_LOGGING_1=`curl -fsSL ${RELEASE_URL} -o ${BINARIES_DIR}/${BINARIES_FILE} 2>&1`
         rc=$?
         if [ $rc -ne 0 ] ; then
-            echo "Failed to download release build."
+            echo "Failed to download release build, will try pre-release builds"
         fi
     fi
     if [ $rc -ne 0 ] ; then
-        curl -fsSL ${BETA_URL} -o ${BINARIES_DIR}/${BINARIES_FILE}
+        CURL_LOGGING_2=`curl -fsSL ${BETA_URL} -o ${BINARIES_DIR}/${BINARIES_FILE} 2>&1`
         rc=$?
-        if [ $rc -ne 0 ] ; then
-            echo "Failed to download beta build."
-        fi
     fi
     if [ $rc -ne 0 ] ; then
-        curl -fsSL ${ALPHA_URL} -o ${BINARIES_DIR}/${BINARIES_FILE}
+        CURL_LOGGING_3=`curl -fsSL ${ALPHA_URL} -o ${BINARIES_DIR}/${BINARIES_FILE} 2>&1`
         rc=$?
-        if [ $rc -ne 0 ] ; then
-            echo "Failed to download alpha build."
-        fi
     fi
     if [ $rc -ne 0 ] ; then
-        curl -fsSL ${SNAPSHOT_URL} -o ${BINARIES_DIR}/${BINARIES_FILE}
+        CURL_LOGGING_4=`curl -fsSL ${SNAPSHOT_URL} -o ${BINARIES_DIR}/${BINARIES_FILE} 2>&1`
         rc=$?
-        if [ $rc -ne 0 ] ; then
-            echo "Failed to download snapshot build."
-        fi
     fi
-    #CURL_LOGGING=`curl -fsSL ${RELEASE_URL} -o ${BINARIES_FILE} 2>&1`
-    if [[ $? != 0 ]]; then
+    if [[ $rc != 0 ]]; then
         echo "Failed to download binaries from '${RELEASE_URL}', aborting."
-        #echo ${CURL_LOGGING}
+        echo ${CURL_LOGGING_1}
         exit 2
     fi
-
+    echo "HTCondor tarball has been downloaded to ${BINARIES_DIR}/${BINARIES_FILE}"
 fi
 
 ln -s ${BINARIES_DIR}/${BINARIES_FILE} ${IWD}/condor.tar.gz
 
-echo -e "\rStep 3 of 8: Cleaning old logs..............."
+echo -e "\rStep 2 of 3: Cleaning old logs..."
 find . -maxdepth 1 -name 'annex-logs.*' -mtime +14 -exec rm -rf '{}' ';'
 
 
-echo -e "\rStep 6 of 8: configuring software (part 2)..."
+echo -e "\rStep 3 of 3: configuring software..."
 echo "
 # These are instance-specific settings for an HPC annex EP
 # The ANNEX_PILOT_* parameters are referenced by the 00-annex-pilot-base
@@ -174,15 +164,7 @@ STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
 
 #
-# Unpack the configuration on top.
-#
-
-echo -e "\rStep 7 of 8: configuring software (part 3)..."
-# This step was removed
-
-
-#
-# Write the SLURM job.
+# Write the SLURM job script.
 #
 
 echo '#!/bin/bash' > "${IWD}/hpc.slurm"
