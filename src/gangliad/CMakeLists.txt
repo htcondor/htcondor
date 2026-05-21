@@ -20,8 +20,10 @@ if (WITH_GANGLIA)
 
   set(GANGLIAD
 	gangliad.cpp
+	metricd.cpp
 	metricd_main.cpp
 	ganglia_interaction.cpp
+	prometheusd.cpp
 	statsd.cpp
   )
 

@@ -23,11 +23,13 @@
 #include "subsystem_info.h"
 #include "basename.h"
 #include "gangliad.h"
+#include "metricd.h"
 
 //-------------------------------------------------------------
 
 bool g_legacy_gangliad_mode = false;
 GangliaD *gangliad = NULL;
+MetricD *metricd = NULL;
 
 //-------------------------------------------------------------
 
@@ -35,24 +37,35 @@ void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_FULLDEBUG, "main_init() called\n");
 
-	gangliad = new GangliaD();
-	gangliad->initAndReconfig();
+	if (g_legacy_gangliad_mode) {
+		gangliad = new GangliaD();
+		gangliad->initAndReconfig();
+	} else {
+		metricd = new MetricD();
+		metricd->initAndReconfig();
+	}
 }
 
 //-------------------------------------------------------------
 
-void 
+void
 main_config()
 {
 	dprintf(D_FULLDEBUG, "main_config() called\n");
 
-	gangliad->initAndReconfig();
+	if (g_legacy_gangliad_mode) {
+		gangliad->initAndReconfig();
+	} else {
+		metricd->initAndReconfig();
+	}
 }
 
 static void Stop()
 {
 	delete gangliad;
 	gangliad = NULL;
+	delete metricd;
+	metricd = NULL;
 	DC_Exit(0);
 }
 

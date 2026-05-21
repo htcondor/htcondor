@@ -49,7 +49,7 @@ GangliaMetric::gangliaSlope() const {
 	return derivative ? GANGLIA_SLOPE_DERIVATIVE : GANGLIA_SLOPE_BOTH;
 }
 
-GangliaD::GangliaD():
+GangliaD::GangliaD(bool as_backend):
 	m_tmax(600),
 	m_dmax(86400),
 	m_ganglia_context(NULL),
@@ -58,7 +58,8 @@ GangliaD::GangliaD():
 	m_ganglia_noop(0),
     m_gstat_argv(NULL),
     m_send_data_for_all_hosts(false),
-    m_ganglia_metrics_sent(0)
+    m_ganglia_metrics_sent(0),
+    m_as_backend(as_backend)
 {
 }
 
@@ -192,7 +193,7 @@ GangliaD::initAndReconfig(const char * /*unused */)
 
     m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
 
-	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD");
+	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD", !m_as_backend);
 
 	{
 		const char *cluster_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_CLUSTER" : "GANGLIA_DEFAULT_CLUSTER";
@@ -354,6 +355,10 @@ void
 GangliaD::publishMetric(Metric const &m)
 {
 	GangliaMetric const &metric = *static_cast<GangliaMetric const *>(&m);
+
+	if (!metric.export_systems.empty() && !contains_anycase(metric.export_systems, "ganglia")) {
+		return;
+	}
 
 	if( metric.derivative &&
 		m_derivative_publication_failed &&

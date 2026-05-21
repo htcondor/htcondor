@@ -44,9 +44,13 @@
 #define ATTR_SCALE "Scale"
 #define ATTR_LIFETIME "Lifetime"
 #define ATTR_STASH_COLLECTOR_NAME "_condorColName"
+#define ATTR_EXPORT_METRIC "ExportMetric"
+#define ATTR_PROMETHEUS_LABELS "PrometheusLabels"
+#define ATTR_COUNTER "Counter"
 
 Metric::Metric():
 	derivative(false),
+	prometheus_labels(""),
 	zero_value(false),
 	verbosity(0),
 	lifetime(-1),
@@ -394,9 +398,16 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( !evaluateOptionalString(ATTR_TITLE,title,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_DESC,desc,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_UNITS,units,metric_ad,daemon_ad,regex_groups) ) return false;
+	std::string export_str;
+	if( !evaluateOptionalString(ATTR_EXPORT_METRIC,export_str,metric_ad,daemon_ad,regex_groups) ) return false;
+	export_systems = split(export_str);
+	if( !evaluateOptionalString(ATTR_PROMETHEUS_LABELS,prometheus_labels,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
+	if (!derivative) {
+		metric_ad.EvaluateAttrBool(ATTR_COUNTER, derivative);
+	}
     metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
 
 	std::string type_str;
@@ -541,6 +552,8 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			return false;	
 		}
 	}
+
+	daemon_ad.EvaluateAttrInt(ATTR_LAST_HEARD_FROM, timestamp);
 
 	if( isAggregateMetric() ) {
 		statsd->addToAggregateValue(*this);
@@ -708,7 +721,7 @@ StatsD::~StatsD()
 }
 
 void
-StatsD::initAndReconfig(char const *service_name)
+StatsD::initAndReconfig(char const *service_name, bool register_timer)
 {
 	std::string param_name;
 
@@ -719,34 +732,36 @@ StatsD::initAndReconfig(char const *service_name)
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
 	m_stats_pub_interval = param_integer(param_name.c_str(),60);
-	if( m_stats_pub_interval < 0 ) {
-		dprintf(D_ALWAYS,
-				"%s is less than 0, so no stats publications will be made.\n",
-				param_name.c_str());
-		if( m_stats_pub_timer != -1 ) {
-			daemonCore->Cancel_Timer(m_stats_pub_timer);
-			m_stats_pub_timer = -1;
+	if( register_timer ) {
+		if( m_stats_pub_interval < 0 ) {
+			dprintf(D_ALWAYS,
+					"%s is less than 0, so no stats publications will be made.\n",
+					param_name.c_str());
+			if( m_stats_pub_timer != -1 ) {
+				daemonCore->Cancel_Timer(m_stats_pub_timer);
+				m_stats_pub_timer = -1;
+			}
 		}
-	}
-	else if( m_stats_pub_timer >= 0 ) {
-		if( old_stats_pub_interval != m_stats_pub_interval ) {
-            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
+		else if( m_stats_pub_timer >= 0 ) {
+			if( old_stats_pub_interval != m_stats_pub_interval ) {
+	            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
+			}
 		}
-	}
-	else {
-		m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
-		m_stats_pub_timer = daemonCore->Register_Timer(
-			m_stats_heartbeat_interval,
-			m_stats_heartbeat_interval,
-			(TimerHandlercpp)&StatsD::publishMetrics,
-			"Statsd::publishMetrics",
-			this );
-	}
-	if( old_stats_pub_interval != m_stats_pub_interval && m_stats_pub_interval > 0 )
-	{
-		dprintf(D_ALWAYS,
-				"Will perform stats publication every %s=%d "
-				"seconds.\n", param_name.c_str(),m_stats_pub_interval);
+		else {
+			m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
+			m_stats_pub_timer = daemonCore->Register_Timer(
+				m_stats_heartbeat_interval,
+				m_stats_heartbeat_interval,
+				(TimerHandlercpp)&StatsD::publishMetrics,
+				"Statsd::publishMetrics",
+				this );
+		}
+		if( old_stats_pub_interval != m_stats_pub_interval && m_stats_pub_interval > 0 )
+		{
+			dprintf(D_ALWAYS,
+					"Will perform stats publication every %s=%d "
+					"seconds.\n", param_name.c_str(),m_stats_pub_interval);
+		}
 	}
 
 	formatstr(param_name,"%s_VERBOSITY",service_name);
@@ -757,6 +772,24 @@ StatsD::initAndReconfig(char const *service_name)
 
 	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
 	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
+
+	if (!g_legacy_gangliad_mode) {
+		std::string default_export;
+		param(default_export,"METRICD_DEFAULT_EXPORT_METRIC");
+		if (!default_export.empty()) {
+			std::string expr_str = "\"";
+			for (char c : default_export) {
+				if (c == '\\' || c == '"') expr_str += '\\';
+				expr_str += c;
+			}
+			expr_str += "\"";
+			classad::ClassAdParser parser;
+			classad::ExprTree *expr = parser.ParseExpression(expr_str,true);
+			if (expr) {
+				m_default_metric_ad.Insert(ATTR_EXPORT_METRIC,expr);
+			}
+		}
+	}
 
 	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
 	m_projection_references.clear();
@@ -1177,9 +1210,6 @@ StatsD::publishMetrics( int /* timerID */ )
 
     initializeHostList();
 
-	// reset all aggregate sums, counts, etc.
-	clearAggregateMetrics();
-
 	// Query collector(s) to get daemon ads to process metric upon
 	std::vector<ClassAd> daemon_ads;
 	getDaemonAds(daemon_ads);
@@ -1188,6 +1218,29 @@ StatsD::publishMetrics( int /* timerID */ )
 		// No ads means no more work to do
 		return;
 	}
+
+	publishMetricsFromAds(daemon_ads);
+
+    sendHeartbeats();
+
+	cleanupOldPreviousValues();
+
+	postPublishMetrics();
+
+    // Did we take longer than a heartbeat period?
+    int heartbeats_missed = (int)(condor_gettimestamp_double() - m_start_time) /
+                            m_stats_heartbeat_interval;
+    if (heartbeats_missed) {
+        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
+        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
+    }
+}
+
+void
+StatsD::publishMetricsFromAds(std::vector<ClassAd> &daemon_ads)
+{
+	// reset all aggregate sums, counts, etc.
+	clearAggregateMetrics();
 
 	mapDaemonIPs(daemon_ads);
 
@@ -1200,18 +1253,6 @@ StatsD::publishMetrics( int /* timerID */ )
 	}
 
 	publishAggregateMetrics();
-
-    sendHeartbeats();
-
-	cleanupOldPreviousValues();
-
-    // Did we take longer than a heartbeat period?
-    int heartbeats_missed = (int)(condor_gettimestamp_double() - m_start_time) /
-                            m_stats_heartbeat_interval;
-    if (heartbeats_missed) {
-        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
-        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
-    }
 }
 
 void

@@ -77,6 +77,9 @@ public:
 	std::string ip;
 	std::string cluster;
 	bool derivative;
+	std::vector<std::string> export_systems;
+	std::string prometheus_labels;
+	int64_t timestamp{0};
 	bool zero_value;
 	int verbosity;
 	int lifetime;
@@ -134,7 +137,7 @@ class StatsD: Service {
 	StatsD();
 	~StatsD();
 
-	virtual void initAndReconfig(char const *service_name);
+	virtual void initAndReconfig(char const *service_name, bool register_timer = true);
 
 	// Allocate a new Metric object.
 	// This is done via a virtual function so the class derived from StatsD
@@ -146,6 +149,17 @@ class StatsD: Service {
 
 	// Collect ads from the collector and evaluate all metrics.
 	void publishMetrics( int timerID = -1 );
+
+	// Evaluate the supplied daemon ads against the metric definitions of this
+	// StatsD instance, calling publishMetric()/addToAggregateValue() as needed.
+	virtual void publishMetricsFromAds(std::vector<ClassAd> &daemon_ads);
+
+	// Hook invoked at the end of each publishMetrics() cycle. Backends override
+	// this to flush per-cycle output (e.g. write the Prometheus file).
+	virtual void postPublishMetrics() {}
+
+	// Accessor for the set of collector ad types this StatsD needs.
+	const std::vector<std::string> &getTargetTypes() const { return m_target_types; }
 
 	// Given a machine name or daemon name, return the IP address of it,
 	// using information gathered from the collector.

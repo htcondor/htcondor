@@ -259,18 +259,18 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
 
 ### Steps
 
-- [ ] **2.1** In `src/gangliad/statsd.h`, add to `class Metric` (adjacent to `derivative`):
+- [x] **2.1** In `src/gangliad/statsd.h`, add to `class Metric` (adjacent to `derivative`):
   - `std::vector<std::string> export_systems;`
   - `std::string prometheus_labels;`
   - `int64_t timestamp{0};`
-- [ ] **2.2** In `src/gangliad/statsd.h`, add to `class StatsD`:
+- [x] **2.2** In `src/gangliad/statsd.h`, add to `class StatsD`:
   - Public virtual: `virtual void publishMetricsFromAds(std::vector<ClassAd> &daemon_ads);`
   - Protected virtual (no-op default): `virtual void postPublishMetrics() {}`
   - Change signature: `virtual void initAndReconfig(char const *service_name, bool register_timer = true);` (default preserves existing callers)
   - Public accessor: `const std::vector<std::string> &getTargetTypes() const { return m_target_types; }`
-- [ ] **2.3** In `src/gangliad/statsd.cpp`, add `#define ATTR_EXPORT_METRIC "ExportMetric"`, `#define ATTR_PROMETHEUS_LABELS "PrometheusLabels"`, `#define ATTR_COUNTER "Counter"` adjacent to existing `ATTR_*` defines.
-- [ ] **2.4** In `src/gangliad/statsd.cpp`, `Metric::Metric()`: append `prometheus_labels("")`, `timestamp(0)` to initializer list (adjacent to existing initializers).
-- [ ] **2.5** In `src/gangliad/statsd.cpp`, `Metric::evaluateDaemonAd()`:
+- [x] **2.3** In `src/gangliad/statsd.cpp`, add `#define ATTR_EXPORT_METRIC "ExportMetric"`, `#define ATTR_PROMETHEUS_LABELS "PrometheusLabels"`, `#define ATTR_COUNTER "Counter"` adjacent to existing `ATTR_*` defines.
+- [x] **2.4** In `src/gangliad/statsd.cpp`, `Metric::Metric()`: append `prometheus_labels("")`, `timestamp(0)` to initializer list (adjacent to existing initializers).
+- [x] **2.5** In `src/gangliad/statsd.cpp`, `Metric::evaluateDaemonAd()`:
   - After `metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);`: `if (!derivative) metric_ad.EvaluateAttrBool(ATTR_COUNTER, derivative);`
   - After the `evaluateOptionalString(ATTR_UNITS, …)` call:
     ```cpp
@@ -280,23 +280,23 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
     if (!evaluateOptionalString(ATTR_PROMETHEUS_LABELS, prometheus_labels, metric_ad, daemon_ad, regex_groups)) return false;
     ```
   - Before the publish/aggregate dispatch at the end: `daemon_ad.EvaluateAttrInt(ATTR_LAST_HEARD_FROM, timestamp);` (ensure `condor_attributes.h` is included — likely already)
-- [ ] **2.6** In `src/gangliad/statsd.cpp`, `StatsD::initAndReconfig()`:
+- [x] **2.6** In `src/gangliad/statsd.cpp`, `StatsD::initAndReconfig()`:
   - Wrap the existing timer registration block in `if (register_timer)`.
   - Add a block (only when `!g_legacy_gangliad_mode`) parsing `METRICD_DEFAULT_EXPORT_METRIC`: read string; if non-empty, build a classad string-literal expression and `m_default_metric_ad.Insert(ATTR_EXPORT_METRIC, expr)`.
-- [ ] **2.7** In `src/gangliad/statsd.cpp`, `StatsD::publishMetrics()`:
+- [x] **2.7** In `src/gangliad/statsd.cpp`, `StatsD::publishMetrics()`:
   - **Extract** the block from `clearAggregateMetrics()` through `publishAggregateMetrics()` (inclusive) into a new function `StatsD::publishMetricsFromAds(std::vector<ClassAd> &daemon_ads)`.
   - In `publishMetrics()`, replace the extracted block with `publishMetricsFromAds(daemon_ads);`.
   - Add `postPublishMetrics();` immediately before the timing-skip check at the end.
-- [ ] **2.8** In `src/gangliad/gangliad.cpp`, `GangliaD::initAndReconfig()`:
+- [x] **2.8** In `src/gangliad/gangliad.cpp`, `GangliaD::initAndReconfig()`:
   - In modern mode only, change the `StatsD::initAndReconfig(...)` call to pass `register_timer=false` when this `GangliaD` is being used as a backend (i.e., owned by a `MetricD`). Simplest mechanism: have `GangliaD` learn it's a backend via a constructor flag. Add to `GangliaD`: `GangliaD(bool as_backend = false);` and store `m_as_backend`. In `initAndReconfig`: pass `register_timer = !m_as_backend`. (Legacy mode constructs `GangliaD()` directly → `m_as_backend=false` → register_timer true → unchanged behavior.)
-- [ ] **2.9** In `src/gangliad/gangliad.h`: add the `m_as_backend` field and the constructor parameter (minimal diff).
-- [ ] **2.10** In `src/gangliad/gangliad.cpp`, `GangliaD::publishMetric()`: at the top, add:
+- [x] **2.9** In `src/gangliad/gangliad.h`: add the `m_as_backend` field and the constructor parameter (minimal diff).
+- [x] **2.10** In `src/gangliad/gangliad.cpp`, `GangliaD::publishMetric()`: at the top, add:
   ```cpp
   if (!metric.export_systems.empty() && !contains_anycase(metric.export_systems, "ganglia")) {
       return;
   }
   ```
-- [ ] **2.11** Create `src/gangliad/prometheusd.h`:
+- [x] **2.11** Create `src/gangliad/prometheusd.h`:
   ```cpp
   class PrometheusMetric : public Metric {
   public:
@@ -325,7 +325,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
       static std::string serializeLabels(const std::map<std::string,std::string> &m);
   };
   ```
-- [ ] **2.12** Create `src/gangliad/prometheusd.cpp` implementing:
+- [x] **2.12** Create `src/gangliad/prometheusd.cpp` implementing:
   - `PrometheusMetric::prometheusType()` → `"counter"` if `derivative && aggregate==NO_AGGREGATE`, else `"gauge"`.
   - `PrometheusD::PrometheusD()` (default).
   - `PrometheusD::initAndReconfig()`: calls `StatsD::initAndReconfig("METRICD", false)`; reads `PROMETHEUS_METRICS_FILE` → `m_output_file`; `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` → `m_include_timestamp`; `PROMETHEUS_DEFAULT_LABELS` → `m_default_labels = parseLabels(...)`; `PROMETHEUS_WANT_RESET_METRICS` (default false) / `PROMETHEUS_RESET_METRICS_FILE` → `m_reset_metrics_filename`.
@@ -338,7 +338,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   - `buildEffectiveLabels(m)`: copy `m_default_labels`; `parseLabels(m.prometheus_labels)` overlay; `serializeLabels(merged)`.
   - `parseLabels`: simple parser for `key="value",key2="value2"` (handles backslash-escaped quotes within values).
   - `serializeLabels`: sort by key; output `key="value",…` wrapped in `{…}` (empty map → empty string, not `{}`).
-- [ ] **2.13** Create `src/gangliad/metricd.h`:
+- [x] **2.13** Create `src/gangliad/metricd.h`:
   ```cpp
   #ifndef __METRICD_H__
   #define __METRICD_H__
@@ -361,7 +361,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   };
   #endif
   ```
-- [ ] **2.14** Create `src/gangliad/metricd.cpp`:
+- [x] **2.14** Create `src/gangliad/metricd.cpp`:
   - `MetricD::MetricD() : m_ganglia(true) {}` — passes `as_backend=true` so GangliaD doesn't register its own timer.
   - `MetricD::initAndReconfig()`: `StatsD::initAndReconfig("METRICD", true);` (registers MetricD timer); `m_ganglia.initAndReconfig(); m_prometheus.initAndReconfig();`. After both, merge backends' target types into own:
     ```cpp
@@ -375,14 +375,14 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   - `MetricD::postPublishMetrics()`: `m_prometheus.postPublishMetrics();`
   - `MetricD::initializeHostList()`: `m_ganglia.initializeHostList();`
   - `MetricD::sendHeartbeats()`: `m_ganglia.sendHeartbeats();`
-- [ ] **2.15** In `src/gangliad/metricd_main.cpp`:
+- [x] **2.15** In `src/gangliad/metricd_main.cpp`:
   - Add `#include "metricd.h"`.
   - Add a second global `MetricD *metricd = nullptr;` next to existing `GangliaD *gangliad = nullptr;`.
   - In `main_init()`: branch on `g_legacy_gangliad_mode`. If true: existing `gangliad = new GangliaD(); gangliad->initAndReconfig();`. If false: `metricd = new MetricD(); metricd->initAndReconfig();`.
   - In `main_config()`: same branching.
   - In `Stop()`: delete whichever pointer is non-null.
-- [ ] **2.16** In `src/gangliad/CMakeLists.txt`: add `metricd.cpp`, `prometheusd.cpp` to the source list.
-- [ ] **2.17** Build: `ninja condor_metricd`. Resolve any errors. Zero new warnings.
+- [x] **2.16** In `src/gangliad/CMakeLists.txt`: add `metricd.cpp`, `prometheusd.cpp` to the source list.
+- [x] **2.17** Build: `ninja condor_metricd`. Resolve any errors. Zero new warnings.
 - [ ] **2.18** Smoke test (legacy unchanged): invoke as `condor_gangliad`; verify no `*.prom` file is created even if `PROMETHEUS_METRICS_FILE` is set; verify legacy ganglia logging unchanged.
 - [ ] **2.19** Smoke test (modern): invoke as `condor_metricd` with `PROMETHEUS_METRICS_FILE = /tmp/test.prom`, `GANGLIA_LIB = NOOP`, `PROMETHEUS_DEFAULT_LABELS = pool="testpool"`; after one `METRICD_INTERVAL`, verify file exists with valid Prometheus format, includes `pool="testpool"`, has `# HELP` and `# TYPE`.
 - [ ] **2.20** Smoke test (ExportMetric routing): add `ExportMetric = "prometheus"` to a metric; verify only in `.prom` file, not in noop ganglia log lines (search the MetricdLog).

@@ -31,7 +31,7 @@ class GangliaMetric: public Metric {
 
 class GangliaD: public StatsD {
  public:
-	GangliaD();
+	GangliaD(bool as_backend = false);
 	~GangliaD();
 
 	virtual void initAndReconfig(const char * unused = 0);
@@ -65,6 +65,7 @@ class GangliaD: public StatsD {
     std::set<std::string> m_need_heartbeat;
     bool m_send_data_for_all_hosts;
     int m_ganglia_metrics_sent;
+    bool m_as_backend;
 };
 
 #endif
