@@ -1,5 +1,19 @@
 *** 25.12.0 features
 
+- Introducing *condor_metricd*, a new daemon that publishes HTCondor
+  metrics from the *condor_collector* to multiple monitoring backends.
+  The same binary is also installed as *condor_gangliad* for backwards
+  compatibility, and inspects ``argv[0]`` to select its mode at startup.
+  In addition to the Ganglia backend, *condor_metricd* now supports a
+  Prometheus text-format file export backend controlled by the new
+  :macro:`PROMETHEUS_METRICS_FILE`, :macro:`PROMETHEUS_DEFAULT_LABELS`,
+  :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`,
+  :macro:`PROMETHEUS_WANT_RESET_METRICS`, and
+  :macro:`PROMETHEUS_RESET_METRICS_FILE` knobs. New metric-definition
+  keywords ``ExportMetric``, ``PrometheusLabels``, and ``Counter`` allow
+  per-metric routing and labeling.
+  :jira:`3374`
+
 *** 25.12.0 bugs
 
 *** 25.0.12 bugs

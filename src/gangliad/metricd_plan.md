@@ -393,16 +393,16 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
 
 ## Commit 3 — Implementation Steps (Documentation)
 
-- [ ] **3.1** In `docs/admin-manual/configuration/gangliad.rst`:
+- [x] **3.1** In `docs/admin-manual/configuration/gangliad.rst`:
   - Add a top-level note: "`condor_gangliad` is preserved as a legacy alias of `condor_metricd`; admins not adopting Prometheus need no config changes."
   - Document each `METRICD_*` engine knob as the modern name; explicitly state the `GANGLIAD_*` form is used when invoking the binary as `condor_gangliad`.
   - Document `GANGLIA_DEFAULT_CLUSTER`/`MACHINE`/`IP` for metricd mode; `GANGLIAD_DEFAULT_*` for legacy mode.
   - Document `GANGLIA_WANT_RESET_METRICS` (default true in modern mode) / `GANGLIA_RESET_METRICS_FILE`; legacy mode uses `GANGLIAD_WANT_RESET_METRICS`.
   - Add a "Prometheus Export" section: `PROMETHEUS_METRICS_FILE`, `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`, `PROMETHEUS_DEFAULT_LABELS`, `PROMETHEUS_WANT_RESET_METRICS`, `PROMETHEUS_RESET_METRICS_FILE`.
   - Document new metric-definition keywords: `ExportMetric`, `PrometheusLabels`, `Counter`.
-- [ ] **3.2** In `docs/admin-manual/cm-configuration.rst` Ganglia section: add a brief note that `condor_metricd` supports Prometheus export; cross-link to `gangliad.rst`.
-- [ ] **3.3** Add a version-history entry (find the right path under `docs/version-history/`) noting the addition of `condor_metricd` + Prometheus export + HTCONDOR-3374.
-- [ ] **3.4** Optionally build docs (`cd docs && make html`) to confirm no RST errors.
+- [x] **3.2** In `docs/admin-manual/cm-configuration.rst` Ganglia section: add a brief note that `condor_metricd` supports Prometheus export; cross-link to `gangliad.rst`.
+- [x] **3.3** Add a version-history entry (find the right path under `docs/version-history/`) noting the addition of `condor_metricd` + Prometheus export + HTCONDOR-3374.
+- [x] **3.4** Optionally build docs (`cd docs && make html`) to confirm no RST errors.
 - [ ] **3.5** `git add docs/`. Commit with HEREDOC, `HTCONDOR-3374` in message.
 - [ ] **3.6** `git status` clean.
 

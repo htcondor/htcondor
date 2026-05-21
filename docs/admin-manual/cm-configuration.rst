@@ -1698,9 +1698,12 @@ formats and into third party monitoring, database and visualization systems.
 
 The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
 the *condor_collector* and into the ganglia monitoring system.  It can also be
-used to populate grafana.  :tool:`condor_adstash` is a HTCSS daemon which can copy
-job history information out of the AP's history file and into the Elasticsearch
-database for further querying.
+used to populate grafana.  The same binary is also installed as *condor_metricd*,
+which supports the Ganglia backend plus a Prometheus text-format file export
+backend; see :ref:`gangliad_config_options` for the full set of knobs.
+:tool:`condor_adstash` is a HTCSS daemon which can copy job history information
+out of the AP's history file and into the Elasticsearch database for further
+querying.
 
 Ganglia
 -------
