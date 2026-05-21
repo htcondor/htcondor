@@ -72,7 +72,8 @@ int main(int argc, char** argv)
 
 	Daemon placementd(DT_PLACEMENTD, placementd_name);
 	if (placementd.locate(Daemon::LOCATE_FOR_LOOKUP) == false) {
-		fprintf(stderr, "Failed to locate PlacementD\n");
+		fprintf(stderr, "Failed to locate PlacementD '%s'\n",
+				placementd_name ? placementd_name : "default");
 		exit(1);
 	}
 
