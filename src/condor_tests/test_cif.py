@@ -179,7 +179,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             # This is not test-specific.
             "STARTER_NESTED_SCRATCH":       False,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_VERBOE",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_VERBOSE",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_ZKM",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
