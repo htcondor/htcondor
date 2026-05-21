@@ -70,21 +70,24 @@ def inline_dag_job(condor, dag_description, dag_dir):
     # TODO: Check here if something went wrong and abort
     # dag_job.wait(condition=ClusterState.???)
 
-    # Now wait for the job to complete before returning
+    # Now wait for the DAGMan job itself to leave the queue.
     dag_job.wait(condition=ClusterState.all_terminal)
-    # Advance the job queue log as well
-    condor.job_queue.wait_for_job_completion(dag_job.job_ids)
 
     # DAGMan exits as soon as it sees the node's JOB_TERMINATED event in
     # the user log, but the schedd may not yet have committed
-    # SetJobStatus(COMPLETED) for the node job to the job queue log.
-    # Wait for the node job's queue completion too so downstream
-    # assertions see a fully-flushed history.
+    # SetJobStatus(COMPLETED) for the node job to the job queue log. We
+    # need both the DAGMan job and its node job(s) flushed to the queue
+    # log before downstream assertions run.
+    #
+    # Wait for both in a SINGLE wait_for_events scan. The JobQueue read
+    # cursor only moves forward, and the node job's COMPLETED is written
+    # *before* the DAGMan job's. A second, separate wait for the node job
+    # would start past its already-consumed COMPLETED event and block until
+    # the full timeout. One combined wait catches both in one forward pass.
     jel = htcondor.JobEventLog(str(dag_dir / "inline.dag.nodes.log"))
     node_ids = [JobID.from_job_event(e) for e in jel.events(0)
                 if e.type == htcondor.JobEventType.SUBMIT]
-    if node_ids:
-        condor.job_queue.wait_for_job_completion(node_ids)
+    condor.job_queue.wait_for_job_completion(list(dag_job.job_ids) + node_ids)
 
     return dag_job
 
