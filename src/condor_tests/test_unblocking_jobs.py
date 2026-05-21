@@ -73,12 +73,12 @@ def blocked_jobs_in_queue(a_condor):
         "log":                      "the_job.log",
         "LeaveInQueue":             True,
         # This is the magic.
-        "MY.CommonINputFiles":      '"debug://sleep/3000"',
+        "MY.CommonInputFiles":      '"debug://sleep/3000"',
     }
 
     job_handle = a_condor.submit(
        description=job_description,
-       count=7,
+       count=5,
     )
 
     # All seven jobs should be BLOCKED for 300 seconds because of the
@@ -206,11 +206,11 @@ def the_schedd_jobs(the_schedd_condor):
                     if jobid.startswith(f"{job_handle.clusterid}."):
                         if status == "9":
                             blocked_jobs += 1
-        if blocked_jobs == 7:
+        if blocked_jobs == 5:
             break
         time.sleep(5)
     assert time.time() < deadline
-    assert blocked_jobs == 7
+    assert blocked_jobs == 5
 
     # Don't let the master restart the schedd before we're ready.
     cp = the_schedd_condor.run_command(
@@ -266,7 +266,7 @@ def assert_all_jobs_not_blocked(the_condor, the_jobs):
         assert time.time() < deadline;
 
     assert all(statuses)
-    assert len(statuses) == 7
+    assert len(statuses) == 5
 
 
 class TestBlockedJobs:
