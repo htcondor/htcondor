@@ -38,22 +38,12 @@ if [[ -z $COLLECTOR ]]; then
     exit 1
 fi
 
-if [[ -z $TOKEN_FILE ]]; then
-    usage
-    exit 1
-fi
-
 if [[ -z $OWNERS ]]; then
     usage
     exit 1
 fi
 
 if [[ -z $REQUEST_ID ]]; then
-    usage
-    exit 1
-fi
-
-if [[ -z $PASSWORD_FILE ]]; then
     usage
     exit 1
 fi
@@ -160,9 +150,6 @@ else
 fi
 
 ln -s ${BINARIES_DIR}/${BINARIES_FILE} ${IWD}/condor.tar.gz
-
-mv ${TOKEN_FILE} annex.token
-mv ${PASSWORD_FILE} annex.password
 
 echo -e "\rStep 3 of 8: Cleaning old logs..............."
 find . -maxdepth 1 -name 'annex-logs.*' -mtime +14 -exec rm -rf '{}' ';'

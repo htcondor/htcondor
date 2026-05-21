@@ -1,0 +1,5 @@
+Run the script annex-setup.sh in this directory. It will prepare the Annex
+to run in the local SLURM system.
+If it completes successfully, it will create the SLURM batch script
+hpc.slurm. You can edit this file as needed to add SBATCH options, load
+modules, etc. Then you should submit it using sbatch.

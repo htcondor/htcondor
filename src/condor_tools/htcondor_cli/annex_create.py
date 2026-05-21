@@ -12,6 +12,7 @@ import secrets
 import textwrap
 import subprocess
 from pathlib import Path
+import tarfile
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -1244,42 +1245,24 @@ VERSION={version}
 STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
 JOB_NAME={annex_name}
 COLLECTOR={collector}
-TOKEN_FILE={token_file.name}
 OWNERS={owners}
 REQUEST_ID={request_id}
-PASSWORD_FILE={password_file.name}
 SCHEDD_NAME={schedd_name}
 """)
     atexit.register(lambda: os.remove(record_file))
 
     # Create the setup tarball
     # TODO add a README
-    files = [
-        f"-C {local_script_dir} annex-setup.sh",
-        f"-C {local_script_dir} annex-job-setup.sh",
-        f"-C {local_script_dir} annex-node.sh",
-        f"-C {local_script_dir} 00-annex-pilot-base",
-        f"-C {str(token_file.parent)} {token_file.name}",
-        f"-C {str(password_file.parent)} {password_file.name}",
-        f"-C {str(record_file.parent)} {record_file.name}",
-    ]
-    files = " ".join(files)
     tar_filename = "annex-setup.tar"
-    tar_proc = subprocess.Popen(
-        [ f"tar -c -f {tar_filename} {files}" ],
-        shell=True,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    );
-    try:
-        out, err = tar_proc.communicate(timeout=10)
-        if tar_proc.returncode != 0:
-            logger.error("Failed to create tarfile.")
-            raise RuntimeError("Failed to create tarfile")
-    except subprocess.TimeoutExpired:
-        logger.error("Timed out creating tarfile.")
-        proc.kill()
-        raise RuntimeError("Failed to create tarfill")
+    with tarfile.open(tar_filename, "x") as tar_file:
+        tar_file.add(local_script_dir / "README.annex-setup", "README.annex-setup")
+        tar_file.add(local_script_dir / "annex-setup.sh", "annex-setup.sh")
+        tar_file.add(local_script_dir / "annex-job-setup.sh", "annex-job-setup.sh")
+        tar_file.add(local_script_dir / "annex-node.sh", "annex-node.sh")
+        tar_file.add(local_script_dir / "00-annex-pilot-base", "00-annex-pilot-base")
+        tar_file.add(token_file, "annex.token")
+        tar_file.add(password_file, "annex.password")
+        tar_file.add(record_file, record_file.name)
 
     logger.info(f"\nPlease copy the file {tar_filename} to the HPC system")
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
