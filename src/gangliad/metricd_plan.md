@@ -410,8 +410,8 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
 
 ## Commit 4 — Implementation Steps (Ornithology test)
 
-- [ ] **4.1** Create `src/condor_tests/test_prometheus_metrics.py` following the pattern of `test_activation_metrics.py` / `test_bogus_collector.py`.
-- [ ] **4.2** `@standup` fixture: start a Condor with `condor_metricd` in `DAEMON_LIST`, plus:
+- [x] **4.1** Create `src/condor_tests/test_prometheus_metrics.py` following the pattern of `test_activation_metrics.py` / `test_bogus_collector.py`.
+- [x] **4.2** `@standup` fixture: start a Condor with `condor_metricd` in `DAEMON_LIST`, plus:
   ```python
   config = {
     "DAEMON_LIST":                       "$(DAEMON_LIST) METRICD",
@@ -424,14 +424,14 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
     "METRICD_METRICS_CONFIG_DIR":        str(test_dir / "metrics.d"),
   }
   ```
-- [ ] **4.3** Use `write_file` (from `ornithology`) to create metric definition files in the config dir containing:
+- [x] **4.3** Use `write_file` (from `ornithology`) to create metric definition files in the config dir containing:
   - `ganglia_only_test_jobs` with `ExportMetric = "ganglia"`
   - `prometheus_only_test_jobs` with `ExportMetric = "prometheus"`, `PrometheusLabels = strcat("machine=\"",Machine,"\"")`
   - `test_bytes_transferred` with `Counter = true`, `Units = "bytes"`
   - A metric with an invalid name like `"invalid name!"` (should be skipped)
   - `both_backend_test_metric` with no `ExportMetric`
-- [ ] **4.4** `@action` fixture `prom_file_contents`: poll for up to 30s; returns file contents or `None`.
-- [ ] **4.5** `class TestPrometheusMetrics` with one assertion per behavior:
+- [x] **4.4** `@action` fixture `prom_file_contents`: poll for up to 30s; returns file contents or `None`.
+- [x] **4.5** `class TestPrometheusMetrics` with one assertion per behavior:
   - `test_file_exists`
   - `test_has_help_and_type_lines`
   - `test_ganglia_only_metric_absent`
@@ -444,7 +444,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   - `test_invalid_name_metric_absent`
   - `test_timestamps_present`
   - `test_both_backend_metric_present`
-- [ ] **4.6** Check if `src/condor_tests/CMakeLists.txt` enumerates tests; if test discovery is by `test_*.py` glob, no CMakeLists edit needed.
+- [x] **4.6** Check if `src/condor_tests/CMakeLists.txt` enumerates tests; if test discovery is by `test_*.py` glob, no CMakeLists edit needed. (Tests are enumerated; added `condor_pl_test(test_prometheus_metrics ...)`.)
 - [ ] **4.7** Run locally: `pytest src/condor_tests/test_prometheus_metrics.py -v --log-cli-level INFO`. All asserts pass.
 - [ ] **4.8** `git add` and commit with `HTCONDOR-3374`. `git status` clean; `git log --oneline -4` shows all four commits.
 
