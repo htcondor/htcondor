@@ -78,7 +78,8 @@ int main( int argc, char ** argv ) {
 
 	DCSchedd schedd( name, pool );
 	if( schedd.locate() == false ) {
-		fprintf( stderr, "Unable to locate schedd, aborting.\n" );
+		fprintf( stderr, "Unable to locate schedd '%s' in %s, aborting.\n",
+				 name ? name : "default", pool ? pool : "local pool" );
 		return 1;
 	}
 
