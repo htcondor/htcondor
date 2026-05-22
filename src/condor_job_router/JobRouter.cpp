@@ -1963,6 +1963,16 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 
 	job->state = RoutedJob::SUBMITTED;
 	job->submission_time = time(NULL);
+
+	// Update our mirror(s) of the job queue(s).
+	// Most importantly, this will let us pick up the proper value for
+	// the User attribute on our first check of the job ad.
+	// We need that for some of our commands to the schedd to manipulate
+	// the routed job.
+	m_scheduler->poll();
+	if ( m_scheduler2 ) {
+		m_scheduler2->poll();
+	}
 }
 
 bool
