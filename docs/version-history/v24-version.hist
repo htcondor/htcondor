@@ -2,6 +2,10 @@
 
 *** 24.0.22 bugs
 
+- When using trust-on-first-use (TOFU), tools can go into an infinite
+  loop if they have no valid standard input file to read.
+  :jira:`3754`
+
 *** 24.12.21 bugs
 
 - Fixed a rare bug in the *condor_startd* that would cause it to crash

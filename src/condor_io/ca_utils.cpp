@@ -584,7 +584,7 @@ bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::s
 	do {
 		fprintf(stderr, "Please type 'yes' or 'no':\n");
 		std::getline(std::cin, response);
-	} while (response != "yes" && response != "no");
+	} while (std::cin.good() && response != "yes" && response != "no");
 
 	return response == "yes";
 }
