@@ -9,9 +9,9 @@
 # the full rtd manual is built with a modern python
 
 Sphinx==4.5.0; python_version < '3.7'
-Sphinx==7.4.7; python_version >= '3.7' and python_version < '3.11'
-Sphinx==9.1.0; python_version >= '3.11'
-sphinx-autodoc-typehints==3.10.2; python_version >= '3.11'
+Sphinx==7.4.7; python_version >= '3.7' and python_version < '3.12'
+Sphinx==9.1.0; python_version >= '3.12'
+sphinx-autodoc-typehints==3.10.2; python_version >= '3.12'
 sphinx-rtd-theme==3.1.0; python_version >= '3.7'
 sphinxcontrib-mermaid==2.0.2; python_version >= '3.7'
 sphinx_copybutton==0.5.2; python_version >= '3.7'
