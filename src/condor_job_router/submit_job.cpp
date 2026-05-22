@@ -212,7 +212,7 @@ static Qmgr_connection *open_job(classad::ClassAd const &job,const char *schedd_
 }
 
 
-static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity,classad::ClassAd const &job)
+static ClaimJobResult claim_job_with_current_privs(const char * schedd_name, const char * pool_name, int cluster, int proc, std::string * error_details, const char * my_identity,classad::ClassAd const &job)
 {
 	// Open a qmgr
 	FailObj failobj;
@@ -245,11 +245,11 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	return res;
 }
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * schedd_name, const char * pool_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
+	ClaimJobResult result = claim_job_with_current_privs(schedd_name,pool_name,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
 	uninit_user_ids();
@@ -261,7 +261,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 				if( error_details ) {
 					formatstr(*error_details, "Failed to create/chown source job spool directory to the user.");
 				}
-				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
+				yield_job(ad,schedd_name,pool_name,true,cluster,proc,error_details,my_identity,false);
 				return CJR_ERROR;
 			}
 		}
@@ -361,7 +361,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 
 
 static bool yield_job_with_current_privs(
-	const char * pool_name, const char * schedd_name,
+	const char * schedd_name, const char * pool_name,
 	bool done, int cluster, int proc, std::string * error_details,
 	const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying,
 	classad::ClassAd const &job)
@@ -401,15 +401,15 @@ static bool yield_job_with_current_privs(
 }
 
 
-bool yield_job(classad::ClassAd const &ad,const char * pool_name,
-	const char * schedd_name, bool done, int cluster, int proc,
+bool yield_job(classad::ClassAd const &ad,const char * schedd_name,
+	const char * pool_name, bool done, int cluster, int proc,
 	std::string * error_details, const char * my_identity, bool target_is_sandboxed,
         bool release_on_hold, bool *keep_trying)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
+	success = yield_job_with_current_privs(schedd_name,pool_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
 	uninit_user_ids();
