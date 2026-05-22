@@ -279,6 +279,7 @@ int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(JobQueueJob* ad);
+static bool unblock_if_blocked(int cluster, int proc, const char * context);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -9425,12 +9426,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	// all sorts of weirdness in other functions along the route to launching
 	// whichever shadow is appropriate, however.
 
-	int status = -1;
-	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
-	if( status == JOB_STATUS_BLOCKED ) {
-		set_job_status( jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
-		// dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
-	}
+	unblock_if_blocked(
+		jobid.cluster, jobid.proc,
+		"common transfer notification (prompting job)"
+	);
 
 
 	for (int i = 0; i < num_ads; i++) {
@@ -9510,7 +9509,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					set_job_status( mrec->cluster, mrec->proc, JOB_STATUS_IDLE );
+					unblock_if_blocked(
+						mrec->cluster, mrec->proc,
+						"common transfer notification (dependent job)"
+					);
 
 					// Why _are_ these two separate commands?
 					mark_serial_job_running( srec->job_id );
@@ -13444,13 +13446,13 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 			if(! other) { continue; }
 			if( * other == srec && (* other)->pid == shadow_pid ) {
 				catalogToShadowMap.erase( catalogName );
+				removedCatalogs.push_back( catalogName );
 
 				// We could reduce code duplication here by calling
 				// mark_catalog_live(), but that would be confusing.
 				if( catalogToTimerMap.contains( catalogName ) ) {
 					daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
 					catalogToTimerMap.erase( catalogName );
-					removedCatalogs.push_back( catalogName );
 				}
 
 				// Unblock the prompting job if necessary; the loop below
@@ -13460,16 +13462,13 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				// promping job.
 				if( isTransferShadowProcID( srec->job_id.proc ) ) {
 					int prompting_proc = transferToPromptingProcID( srec->job_id.proc );
-					int status = -1;
-					GetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, &status );
-					if( status == JOB_STATUS_BLOCKED ) {
-						set_job_status( srec->job_id.cluster, prompting_proc, JOB_STATUS_IDLE );
-
+					if( unblock_if_blocked(
+							srec->job_id.cluster, prompting_proc,
+							"shadow catalog unregistered (prompting job)" ) )
+					{
 						// (HTCONDOR-3610)  At this point, we should check
 						// for matches blocked on these catalogs and choose
 						// one to switch from MAPPING to STAGING.
-					} else {
-						dprintf( D_ZKM, "unregister_shadow_catalogs(): prompting job (%d.%d) had status %d.\n", srec->job_id.cluster, prompting_proc, status );
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -13491,6 +13490,15 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		// iterating the blocked matches more than once.
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
+				// It is a core design problem that we can't ever be sure
+				// that this is a valid shadow rec, since we neither
+				// reference-count their pointers nor indirect all accesses
+				// to them (through an owning look-up table).
+				//
+				// This came up because I forgot to remove match records
+				// from matchesHeldByBlockedJobs in unlinkMrec(), but it
+				// really does make the code way more fragile than it
+				// needs to be.
 				auto * sr = m->shadowRec;
 				const auto & jobCatalogs = sr->cxfer_catalogs;
 				bool anyJobCatalogInRemovedCatalogs = std::any_of(
@@ -13503,11 +13511,14 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					}
 				);
 				if( anyJobCatalogInRemovedCatalogs ) {
-					dprintf( D_ALWAYS, "Unblocking job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
-
-                    set_job_status( sr->job_id.cluster, sr->job_id.proc, JOB_STATUS_IDLE );
-					mark_serial_job_running( sr->job_id );
-					addRunnableJob( sr );
+					if( unblock_if_blocked(
+							sr->job_id.cluster, sr->job_id.proc,
+							"catalog was unregistered" ) )
+					{
+						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
+						mark_serial_job_running( sr->job_id );
+						addRunnableJob( sr );
+					}
 				}
 			}
 		}
@@ -14270,8 +14281,28 @@ IsLocalUniverse( shadow_rec* srec )
 }
 
 
+// If job (cluster, proc) is currently JOB_STATUS_BLOCKED, transition it to
+// JOB_STATUS_IDLE and return true.  Otherwise, log at D_FULLDEBUG and return
+// false.  `context` is a short phrase identifying the call site for the log
+// line (e.g. "transfer-shadow match deleted").
+static bool
+unblock_if_blocked(int cluster, int proc, const char * context)
+{
+	int status = -1;
+	GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
+	if (status == JOB_STATUS_BLOCKED) {
+		set_job_status(cluster, proc, JOB_STATUS_IDLE);
+		return true;
+	}
+	dprintf(D_FULLDEBUG,
+		"Not unblocking job %d.%d (%s): status was %d, not BLOCKED.\n",
+		cluster, proc, context, status);
+	return false;
+}
+
+
 /*
-** Wrapper for setting the job status to deal with Parallel jobs, which can 
+** Wrapper for setting the job status to deal with Parallel jobs, which can
 ** contain multiple procs.
 */
 void
@@ -17571,6 +17602,35 @@ Scheduler::unlinkMrec(match_rec* match)
 	matches.erase(match->claim_id.claimId());
 
 	matchesByJobID.erase(jobId);
+
+	// If this match was held by a blocked job, unblock it.  Every match
+	// in matchesHeldByBlockedJobs is supposed to point to a BLOCKED job,
+	// so seeing a non-BLOCKED status here is an invariant violation.
+	if( std::erase( matchesHeldByBlockedJobs, match ) == 1 ) {
+		if( match->shadowRec ) {
+			if(! unblock_if_blocked(
+					match->shadowRec->job_id.cluster,
+					match->shadowRec->job_id.proc,
+					"match held by blocked job" ) )
+			{
+				dprintf( D_ALWAYS, "A match record in the list of those held by blocked jobs pointed to an unblocked job: %d.%d.\n", match->shadowRec->job_id.cluster, match->shadowRec->job_id.proc );
+			}
+		} else {
+			dprintf( D_ALWAYS, "Deleted match record was held by a blocked job but did not point to a shadow record.\n" );
+		}
+	}
+
+	// If this match was running a transfer shadow, it might be a while
+	// before we reap the shadow, but there's no need to wait; go ahead
+	// and unblock the prompting job immediately (if it's still blocked --
+	// on the success path, it's typically already completed).
+	if( match->shadowRec && isTransferShadowProcID( match->shadowRec->job_id.proc ) ) {
+		unblock_if_blocked(
+			match->shadowRec->job_id.cluster,
+			transferToPromptingProcID(match->shadowRec->job_id.proc),
+			"transfer-shadow match deleted"
+		);
+	}
 
 		// fill any authorization hole we made for this match
 	if (match->auth_hole_id != NULL) {

@@ -2584,7 +2584,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				//
 				// I don't have any worthwhile ideas about how to test this.
 				if( job_status == JOB_STATUS_BLOCKED ) {
+					// This doesn't change anything in the job ad, but neither
+					// does ad->SetStatus(), despite the name.
 					job_status = JOB_STATUS_IDLE;
+
+					// This appears to be all that's necessary; I'm
+					// assuming we spit out all the changes in one go later.
+					ad->Assign( ATTR_JOB_STATUS, JOB_STATUS_IDLE );
+					JobQueueDirty = true;
 				}
 
 				if (ad->Status() != job_status) {
