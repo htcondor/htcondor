@@ -150,12 +150,12 @@ Evaluating an expression from a saved job ad and saved slot ad:
 
     $ condor_q -l:new 1234.5 > job.ad
     $ condor_status slot1@ep.host.name -l:new > slot.ad
-    $ classad_eval -quiet -my-file job.ad -target-ad slot.ad 'MY.requirements' 'TARGET.requirements'
+    $ classad_eval -quiet -my-file job.ad -target-file slot.ad 'MY.requirements' 'TARGET.requirements'
 
 See Also
 --------
 
-None
+:tool:`classads`
 
 Availability
 ------------
