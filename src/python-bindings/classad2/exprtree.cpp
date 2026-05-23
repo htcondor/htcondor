@@ -45,6 +45,7 @@ EvaluateLooseExpr( classad::ExprTree * expr,
 
     bool rv = false;
     if( target == my || target == NULL ) {
+        // HTCONDOR-3554: `value` is just wrong after this evaluation.
         rv = expr->Evaluate( value );
     } else {
         classad::MatchClassAd matchAd( my, target );
