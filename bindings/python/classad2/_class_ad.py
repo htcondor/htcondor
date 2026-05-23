@@ -303,9 +303,14 @@ def _convert_local_datetime_to_utc_ts(dt):
 
 
 def _parse_ads_generator(input, parser : Parser = Parser.Auto):
+    seekable = True
     file_offset = 0
     if not isinstance(input, str):
-        file_offset = input.tell()
+        try:
+            file_offset = input.tell()
+        except io.UnsupportedOperation:
+            file_offset = None
+            seekable = False
 
     input_string = "".join(input)
     string_offset = 0
@@ -314,8 +319,9 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
 
         string_offset += offset
         if not isinstance(input, str):
-            file_offset += offset
-            input.seek(file_offset, 0)
+            if seekable:
+                file_offset += offset
+                input.seek(file_offset, 0)
 
         if ad is None or offset == 0:
             return
@@ -335,10 +341,18 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
 #
 def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
     '''
-    Returns a generator which will parse each ad in the input.
+    Returns a generator which will parse each ad in *input*.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
+
+    Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
+    read *input* one ad at a time, but note for some types of :class:`~typing.IO`, you
+    must specify the serialization format.
+
+    Some serializations can represent empty ads, which will be returned by
+    the generator.  You must therefore exhaust the generator to be sure
+    you've read every ad in *input*.
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
@@ -350,27 +364,34 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
     return _parse_ads_generator(input, parser)
 
 
-def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> ClassAd:
+def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses all of the ads in the input, merges them into one, and returns it.
+    Parses all of the ads in *input*, merges them into one, and returns it.  If
+    there are no ads in *input*, returns the empty ad.
 
-    If *input* is a single string,
-    ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
-    ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
+    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
+    Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
-    If *input* is an iterator,
-    each serialized ad must be in its own string.
+    Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
+    read *input* one ad at a time, (and then :func:`update` the previous
+    result),  but note for some types of :class:`~typing.IO`, you must specify the
+    serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
     :param parser:  Which parser to use (serialization format to assume).  If
                     unspecified, attempt to determine if the serialized ads
-                    are in the :const:`ParserType.Old or
+                    are in the :const:`ParserType.Old` or
                     :const:`ParserType.New` formats.
     '''
-    total_offset = 0
+    seekable = True
+    file_offset = 0
     if not isinstance(input, str):
-        total_offset = input.tell()
+        try:
+            file_offset = input.tell()
+        except io.UnsupportedOperation:
+            file_offset = None
+            seekable = False
 
     result = ClassAd()
     input_string = "".join(input)
@@ -386,8 +407,9 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
         string_offset += offset
 
         if not isinstance(input, str):
-            total_offset += offset
-            input.seek(total_offset, 0)
+            if seekable:
+                file_offset += offset
+                input.seek(file_offset, 0)
 
 
 # In version 1, this never actually returned an iterator, and it only
@@ -395,7 +417,9 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
 # to allow strings here at all, actually.
 def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses the first ad in the input and returns it.
+    Reads only the first ad in *input* and returns it.  If there is no ad in
+    *input*, returns the empty ad.  Some serializations can represent the
+    empty ad, so this doesn't necessarily represent the end of *input*.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
@@ -405,13 +429,17 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
-    :param parser:  Which parser to use (serialization format to assume).
+    :param parser:  Which parser to use (serialization format to assume).  If
+                    unspecified, attempt to determine if the serialized ads
+                    are in the :const:`ParserType.Old` or
+                    :const:`ParserType.New` formats.
     :raises ClassAdException:  If ``input`` is not a string and can
-      not be rewound.
+                               not be rewound.
     '''
+    rv = None
+
     if isinstance(input, str):
-        (firstAd, offset) = _classad_parse_next(input, int(parser))
-        return firstAd
+        (rv, offset) = _classad_parse_next(input, int(parser))
     else:
         if parser is Parser.Auto:
             try:
@@ -430,7 +458,12 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
                 input.seek(location)
             except io.UnsupportedOperation as e:
                 raise ClassAdException("Can not look ahead in stream; you must explicitly specify a parser.") from e
-        return _classad_parse_next_fd(input.fileno(), int(parser))
+        rv = _classad_parse_next_fd(input.fileno(), int(parser))
+
+    if rv is None:
+        return ClassAd()
+    else:
+        return rv
 
 
 def _quote(input : str) -> str:
