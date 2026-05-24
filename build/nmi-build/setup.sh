@@ -303,8 +303,6 @@ fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
         libgomp munge-libs pelican pelican-osdf-compat pcre2 scitokens-cpp
-    # pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
-    rm -f "$externals_dir/pelican-osdf-compat-*64.rpm"
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
@@ -320,6 +318,9 @@ fi
 if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
+
+# pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
+rm -f "$externals_dir/pelican-osdf-compat-*64.rpm"
 
 # Clean up package caches
 if [ $ID = 'centos' ]; then
