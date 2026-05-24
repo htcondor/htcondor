@@ -319,6 +319,9 @@ if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
 
+# pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
+rm -f "$externals_dir"/pelican-osdf-compat-*64.rpm
+
 # Clean up package caches
 if [ $ID = 'centos' ]; then
     yum clean all
