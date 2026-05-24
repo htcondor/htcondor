@@ -320,7 +320,7 @@ if [ $ID = 'opensuse-leap' ]; then
 fi
 
 # pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
-rm -f "$externals_dir/pelican-osdf-compat-*64.rpm"
+rm -f "$externals_dir"/pelican-osdf-compat-*64.rpm
 
 # Clean up package caches
 if [ $ID = 'centos' ]; then
