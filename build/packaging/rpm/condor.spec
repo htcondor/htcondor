@@ -109,7 +109,6 @@ BuildRequires: mozilla-nss-devel
 BuildRequires: nss-devel
 %endif
 BuildRequires: openssl-devel
-BuildRequires: libxml2-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
 %else
@@ -285,19 +284,19 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.24.2
+Requires: pelican >= 7.25.0
 %else
-Requires: (pelican >= 7.24.2 or pelican-debug >= 7.24.2)
+Requires: (pelican >= 7.25.0 or pelican-debug >= 7.25.0)
 %endif
-Requires: pelican-osdf-compat >= 7.24.2
+Requires: pelican-osdf-compat >= 7.25.0
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
-Requires: apptainer >= 1.3.6
-%else
 Requires: apptainer >= 1.4.5
+%else
+Requires: apptainer >= 1.5.0
 %endif
 %endif
 
