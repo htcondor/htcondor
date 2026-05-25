@@ -362,13 +362,17 @@ fi
 
 # Install apptainer into externals directory
 if [ "$ID" != 'amzn' ]; then
+    APPTAINER_VERSION='' # use the default (latest version)
+    if [ "$ID" = 'opensuse-leap' ] && [ "$VERSION_ID" -eq 16 ]; then
+        APPTAINER_VERSION='-v 1.4.5'
+    fi
     if [ "$ID" != 'ubuntu' ] || [ "$ARCH" != 'ppc64le' ]; then
         mkdir -p "$externals_dir/apptainer"
         if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
             $INSTALL cpio rpm2cpio
         fi
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
-            bash -s - "$externals_dir/apptainer"
+            bash -s - $APPTAINER_VERSION "$externals_dir/apptainer"
         rm -r "$externals_dir/apptainer/$(arch)/libexec/apptainer/cni"
         # Move apptainer out of the default path
         mv "$externals_dir/apptainer/bin" "$externals_dir/apptainer/libexec"
