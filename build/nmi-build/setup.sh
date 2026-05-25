@@ -375,20 +375,21 @@ if [ "$ID" != 'amzn' ]; then
     fi
 fi
 
-# Install pytest for BaTLab testing
+# Install pytest for BaTLab testing (versions pinned in test-requirements.txt)
 # Install sphinx-mermaid so docs can have images
 # Install scitokens for BaTLab testing
+TEST_REQS=/tmp/test-requirements.txt
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
-        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+        pip3 install -r "$TEST_REQS" scitokens sphinxcontrib-mermaid
     else
-        pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+        pip3 install --break-system-packages -r "$TEST_REQS" scitokens sphinxcontrib-mermaid
     fi
 else
     if [ "$ID" = 'centos' ]; then
-        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install -r "$TEST_REQS" sphinxcontrib-mermaid
     else
-        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+        pip3 install -r "$TEST_REQS" scitokens sphinxcontrib-mermaid
     fi
 fi
 

@@ -114,7 +114,7 @@ jobs:
 
       - name: Install python accessories
         run: |
-          pip install pytest pytest-httpserver
+          pip install -r src/condor_tests/requirements.txt
 
       - name: hack for broken reverse DNS
         run: sudo sed -i -e "s/localhost/localhost $(hostname)/g" /etc/hosts
@@ -235,7 +235,7 @@ jobs:
           sudo useradd -m condor
           sudo apt-get update
           sudo apt-get install uuid-dev libcurl4-openssl-dev
-          sudo pip3 install pytest pytest-httpserver
+          sudo pip3 install -r src/condor_tests/requirements.txt
           mkdir __build && chmod 0777 __build
           cd __build && cmake -GNinja -DWITH_SCITOKENS:bool=false -DWITH_KRB5:bool=false -DWITH_MUNGE:bool=false -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install
           chmod a+rwx /home/runner
