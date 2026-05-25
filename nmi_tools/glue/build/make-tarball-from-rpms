@@ -105,7 +105,7 @@ fi
 mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Extract external RPMs
-for path in $(find /usr/local/condor/externals -name \*.rpm); do
+for path in $(find /usr/local/condor/externals -name \*.rpm | sort); do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt

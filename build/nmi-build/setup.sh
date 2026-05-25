@@ -211,7 +211,9 @@ fi
 # Add useful tools
 $INSTALL gdb git less python3-pip strace sudo vim
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
-    $INSTALL iputils rpmlint
+    $INSTALL iputils
+    # rpmlint not installable on early versions of AlmaLinux 10.2
+    $INSTALL rpmlint || true
 fi
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     $INSTALL lintian net-tools
@@ -281,7 +283,7 @@ if [ "$ID" = 'debian' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.5
+    APPTAINER_VERSION=1.5.0
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
@@ -340,6 +342,9 @@ fi
 if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
+
+# pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
+rm -f "$externals_dir"/pelican-osdf-compat-*64.rpm
 
 # Clean up package caches
 if [ "$ID" = 'centos' ]; then
