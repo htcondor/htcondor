@@ -58,8 +58,11 @@ if [ ! -z $memory_limit ] ; then
 fi
 if [ ! -z $SLURM_JOB_END_TIME ] ; then
     # Give condor 5 minutes to shutdown fast before slurm yanks the cord
-    echo "$(date) $(hostname) Configuring EP to shutdown at $(($SLURM_JOB_END_TIME - 300)) as requested by SLURM"
-    CONDOR_RUNTIME_LINE="MASTER.DAEMON_SHUTDOWN_FAST = time() > ${SLURM_JOB_END_TIME} - 300"
+    shutdown_time=$(($SLURM_JOB_END_TIME - 300))
+    echo "$(date) $(hostname) Configuring EP to shutdown at ${shutdown_time} as requested by SLURM"
+    CONDOR_RUNTIME_LINE="MASTER.DAEMON_SHUTDOWN_FAST = time() > ${shutdown_time}
+DaemonStopTime=${shutdown_time}
+STARTD_ATTRS = \$(STARTD_ATTRS),DaemonStopTime"
 fi
 
 echo "
