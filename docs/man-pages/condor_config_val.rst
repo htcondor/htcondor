@@ -185,7 +185,7 @@ Options
  **-root-config** *file*
     (location option) Read configuration starting from *file* as the
     root configuration file, rather than the configuration file
-    determined from :macro:`CONDOR_CONFIG` or the usual search path. Only
+    determined from the environment variable CONDOR_CONFIG or the usual search path. Only
     applies when *condor_config_val* is reading the configuration from
     files; it is ignored when querying a daemon.
  **use** *category* [*:set name* ] [**-expand** ]
