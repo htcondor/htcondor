@@ -54,7 +54,7 @@ elif [ ! -z $SLURM_MEM_PER_GPU ] ; then
 fi
 if [ ! -z $memory_limit ] ; then
     echo "$(date) $(hostname) Limiting EP to ${memory_limit}GB memory as requested by SLURM"
-    CONDOR_MEMORY_LIMIT="MEMORY=$memory_limit"
+    CONDOR_MEMORY_LINE="MEMORY=$memory_limit"
 fi
 if [ ! -z $SLURM_JOB_END_TIME ] ; then
     # Give condor 5 minutes to shutdown fast before slurm yanks the cord
