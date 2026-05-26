@@ -128,8 +128,6 @@ class LocalJobRec {
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
-int init_user_ids(const JobQueueUserRec * user);
-
 class match_rec;
 
 #include "cxfer_state.h"
