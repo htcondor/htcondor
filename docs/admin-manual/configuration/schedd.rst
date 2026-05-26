@@ -1300,7 +1300,7 @@ These macros control the *condor_schedd*.
     -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
        this provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by :tool:`condor_submit` as if that
-       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
        configuration files.
 
     The following example will add four new submit commands and disable the use of
