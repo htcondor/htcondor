@@ -2353,7 +2353,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
     This requires more network connectivity, and may cause docker hub to 
-    throttle future pull requests.  It is generally recommened to never 
+    throttle future pull requests.  It is generally recommend to never 
     mutate docker image tag name, and avoid needing this option.
 
  :subcom-def:`container_service_names` = <service-name>[, <service-name>]*
