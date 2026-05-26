@@ -18,7 +18,8 @@ from ornithology import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
+# NOTE: make both_backend_test_metric the last metric in the list to ensure it gets published to Ganglia before
+# we check the Ganglia log, since Metricd processes metrics in the order they are defined in the config directory.
 METRIC_DEFS = """
 [
   Name = "ganglia_only_test_jobs";
@@ -71,11 +72,13 @@ def condor_with_metricd(test_dir):
         "DAEMON_LIST":                          "$(DAEMON_LIST) METRICD",
         "METRICD":                              "$(LIBEXEC)/condor_metricd",
         "GANGLIA_LIB":                          "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS":      "true",
         "PROMETHEUS_METRICS_FILE":              str(prom_file),
         "PROMETHEUS_METRICS_INCLUDE_TIMESTAMP": "true",
         "PROMETHEUS_DEFAULT_LABELS":            'pool="testpool"',
         "METRICD_INTERVAL":                     "10",
         "METRICD_METRICS_CONFIG_DIR":           str(metrics_dir),
+        "METRICD_WANT_PROJECTION":              "true",
         "METRICD_DEBUG":                        "D_FULLDEBUG",
     }
 
@@ -92,6 +95,25 @@ def prom_file_contents(test_dir, condor_with_metricd):
         if prom_file.exists():
             text = prom_file.read_text()
             if "prometheus_only_test_jobs" in text:
+                contents = text
+                break
+        time.sleep(2)
+    return contents
+
+
+@action
+def ganglia_log_contents(condor_with_metricd):
+    # In GANGLIA_LIB=NOOP mode, GangliaD::publishMetric() logs a
+    # "noop mode: publishing <name>=<value>, ..." line at D_FULLDEBUG for
+    # every metric routed to the Ganglia backend. Poll the MetricdLog until
+    # at least one such line appears.
+    log_file = condor_with_metricd.log_dir / "MetricdLog"
+    deadline = time.time() + 60
+    contents = None
+    while time.time() < deadline:
+        if log_file.exists():
+            text = log_file.read_text(errors="replace")
+            if "noop mode: publishing both_backend_test_metric=13" in text:
                 contents = text
                 break
         time.sleep(2)
@@ -146,3 +168,15 @@ class TestPrometheusMetrics:
 
     def test_both_backend_metric_present(self, prom_file_contents):
         assert "both_backend_test_metric" in prom_file_contents
+
+    def test_ganglia_log_present(self, ganglia_log_contents):
+        assert ganglia_log_contents is not None
+
+    def test_ganglia_publishes_both_backend_metric(self, ganglia_log_contents):
+        assert "noop mode: publishing both_backend_test_metric=13" in ganglia_log_contents
+
+    def test_ganglia_publishes_ganglia_only_metric(self, ganglia_log_contents):
+        assert "noop mode: publishing ganglia_only_test_jobs=7" in ganglia_log_contents
+
+    def test_ganglia_skips_prometheus_only_metric(self, ganglia_log_contents):
+        assert "publishing prometheus_only_test_jobs" not in ganglia_log_contents
