@@ -3609,7 +3609,9 @@ ResMgr::doRehomeReboot(int /*timerID*/)
 	main_config();
 
 	priv_state priv = set_root_priv();
+#ifndef WIN32
 	sync();
+#endif
 	int status = system(m_reboot_command.c_str());
 	set_priv(priv);
 
