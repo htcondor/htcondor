@@ -900,6 +900,11 @@ def annex_inner_func_old(
     #     undefined -- to make sure it keeps polling.
     #   * The job runs every five minutes because of cron_minute.
     #
+    job_env = []
+    if os.environ.get("PYTHONPATH") is not None:
+        job_env.append(f'PYTHONPATH={os.environ.get("PYTHONPATH")}')
+    if os.environ.get("CONDOR_CONFIG") is not None:
+        job_env.append(f'CONDOR_CONFIG={os.environ.get("CONDOR_CONFIG")}')
     submit_description = htcondor.Submit(
         {
             "universe": "local",
@@ -918,7 +923,7 @@ def annex_inner_func_old(
             # Consider adding a log, an output, and an error file to assist
             # in debugging later.  Problem: where should it go?  How does it
             # get cleaned up?
-            "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
+            "environment": f'"{" ".join(job_env)}"',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
             "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
@@ -1182,6 +1187,11 @@ def annex_inner_func_new(
     #     undefined -- to make sure it keeps polling.
     #   * The job runs every five minutes because of cron_minute.
     #
+    job_env = []
+    if os.environ.get("PYTHONPATH") is not None:
+        job_env.append(f'PYTHONPATH={os.environ.get("PYTHONPATH")}')
+    if os.environ.get("CONDOR_CONFIG") is not None:
+        job_env.append(f'CONDOR_CONFIG={os.environ.get("CONDOR_CONFIG")}')
     submit_description = htcondor.Submit(
         {
             "universe": "local",
@@ -1200,7 +1210,7 @@ def annex_inner_func_new(
             # Consider adding a log, an output, and an error file to assist
             # in debugging later.  Problem: where should it go?  How does it
             # get cleaned up?
-            "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
+            "environment": f'"{" ".join(job_env)}"',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
             "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
