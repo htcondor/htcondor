@@ -1557,7 +1557,7 @@ These macros control the *condor_schedd*.
     This integer duration in seconds defines how long the AP will keep those
     common files on the EP after the last such job exits.  This delay gives
     other jobs using those common files time to be submitted (if necessary)
-    and matched (if no claim can re-used).  It is analogous to
+    and matched (if no claim can be re-used).  It is analogous to
     :subcom:`keep_claim_idle`, but the latency reductions are probably
     larger and reduce overall system overhead.
 
