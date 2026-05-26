@@ -202,9 +202,11 @@ public:
 		// schedd_name: the schedd to rehome to
 		// schedd_pool: the collector pool to use to find the schedd (NULL = use COLLECTOR_HOST)
 		// timeout: timeout for the rehome operation
+		// reboot: if true, reboot the host after evicting jobs (subject to
+		//         the startd's STARTD_REHOME_ALLOW_REBOOT guard expression)
 		// returns: true/false on success/failure
 		// call error() to get a descriptive error message
-	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false);
+	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false, bool reboot = false);
 
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 

@@ -492,6 +492,7 @@ endif()
 			condor_pl_test(test_spool_preserved_relative_paths "Test using preserve_relative_paths and spooled jobs." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_max_releases "Test Max Releases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_direct_connect "Test Direct Connect Startd" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_rehome_reboot "Test rehome --reboot guard and host reboot" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 

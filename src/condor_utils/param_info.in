@@ -1092,6 +1092,12 @@ default=false
 type=bool
 tags=startd
 
+[STARTD_REBOOT_COMMAND]
+# Command the startd runs to reboot the host on "condor_ep rehome --reboot" (gated by STARTD_REHOME_ALLOW_REBOOT)
+default=/sbin/reboot
+type=string
+tags=startd
+
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
