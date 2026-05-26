@@ -1304,7 +1304,7 @@ These macros control the *condor_schedd*.
        configuration files.
 
     The following example will add four new submit commands and disable the use of
-    the ``accounting_group_user`` submit command.
+    the :subcom:`accounting_group_user` submit command.
 
     .. code-block:: condor-config
 
