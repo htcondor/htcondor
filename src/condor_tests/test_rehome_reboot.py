@@ -137,8 +137,10 @@ class TestRehomeReboot:
         assert "STARTD_DIRECT_ATTACH_SCHEDD_NAME" in persisted.read_text()
 
         # ...and once the job is evicted, the startd runs STARTD_REBOOT_COMMAND,
-        # creating the sentinel.
-        deadline = time.time() + 120
+        # creating the sentinel.  The startd calls sync() before invoking the
+        # reboot command, which can block for minutes on a loaded host (e.g.
+        # CI), so be generous with the timeout.
+        deadline = time.time() + 300
         while time.time() < deadline and not sentinel.exists():
             time.sleep(1)
         assert sentinel.exists()
