@@ -2,17 +2,20 @@ import subprocess
 
 def SingularityIsWorthy():
     result = subprocess.run(
-        "singularity --version",
+        "/usr/bin/singularity --version",
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT
     )
     output = result.stdout.decode('utf-8')
 
+
     if "apptainer" in output:
+        print("Singularity version ", output, "is worthy\n")
         return True
 
     if "3." in output:
+        print("Singularity version ", output, "is NOT worthy\n")
         return True
 
     return False
@@ -42,6 +45,8 @@ def SingularityIsWorking():
     output = result.stdout.decode('utf-8')
 
     if result.returncode == 0:
+        print("singularity exec seems to work correctly, proceeding with test\n")
         return True
     else:
+        print("singularity exec failed, skipping test\n")
         return False
