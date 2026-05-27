@@ -756,6 +756,8 @@ We use a HTTP PUT request to perform the upload, so the user is
 responsible for making sure that the destination server accepts PUT
 requests (which is usually disabled by default).
 
+.. _passing_credentials_for_url_transfers:
+
 **Passing a credential for URL file transfers**
 
 Some files served over HTTPS will require a credential in order to

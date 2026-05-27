@@ -5863,6 +5863,11 @@ type=string
 default=
 type=string
 
+[CREDMON_ALLOW_SPECIAL_CHAR_NAMES]
+default=false
+type=bool
+description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names
+
 # Archive librarian configuration options
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
