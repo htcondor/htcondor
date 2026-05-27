@@ -3150,7 +3150,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 		|| !mySock_->code(a) 
 		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(ra_len)
-		|| !(ra_len <= AUTH_PW_KEY_LEN)
+		|| !(ra_len >= 0 && ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->end_of_message()) {
 
