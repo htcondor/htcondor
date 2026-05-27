@@ -1,10 +1,30 @@
-sphinx-autodoc-typehints==1.12.0
-nbsphinx>=0.9.3
-ipython==8.10.0
-Jinja2>=3.0
-htcondor>=25.1.0a0,<=25.999.999post999
-Sphinx>=7.2.0
-sphinx-rtd-theme>=1.2.0
-sphinxcontrib-mermaid>=1.0.0
-sphinx_copybutton>=0.5.0
-sphinx-tabs>=3.4.7
+# HTCondor documentation dependencies
+# All versions pinned for reproducible builds per ReadTheDocs best practices
+# https://docs.readthedocs.com/platform/stable/guides/reproducible-builds.html
+
+# Sphinx and extensions
+# Version depends on Python version due to compatibility requirements
+# When we drop EL8, we can get rid of all the python 3.6 dependencies
+# Note that we only build man-pages on every version of python,
+# the full rtd manual is built with a modern python
+
+Sphinx==4.5.0; python_version < '3.7'
+Sphinx==7.4.7; python_version >= '3.7' and python_version < '3.12'
+Sphinx==9.1.0; python_version >= '3.12'
+sphinx-autodoc-typehints==3.10.2; python_version >= '3.12'
+sphinx-rtd-theme==3.1.0; python_version >= '3.7'
+sphinxcontrib-mermaid==2.0.2; python_version >= '3.7'
+sphinx_copybutton==0.5.2; python_version >= '3.7'
+sphinx-tabs==3.5.0; python_version >= '3.7'
+
+# Notebook support
+nbsphinx==0.9.8; python_version >= '3.7'
+ipython==8.10.0; python_version >= '3.7'
+
+# Template engine
+Jinja2==3.1.6; python_version >= '3.7'
+
+# HTCondor Python bindings (for API doc generation)
+# Range constraint allows docs to build against current development version
+# Not available for Python 3.6 (only very old versions in repository)
+htcondor>=25.1.0a0,<=25.999.999post999; python_version >= '3.7'

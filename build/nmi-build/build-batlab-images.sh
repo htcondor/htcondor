@@ -33,6 +33,7 @@ COPY tmp/ /tmp/
 RUN /tmp/setup.sh $CONDOR_VERSION
 EOF
     cp -pr setup.sh ../packaging/{debian,rpm} "$platform/tmp/"
+    cp -p ../../src/condor_tests/requirements.txt "$platform/tmp/test-requirements.txt"
     docker build "$platform" --platform="$base_docker_platform" --no-cache --network=host --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
     if grep -q 'Successfully tagged htcondor/nmi-build:' "$platform.out"; then
         docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
@@ -69,7 +70,7 @@ else
     buildimage x86_64_AmazonLinux2023 linux/x86_64 amazonlinux:2023 &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &
     buildimage x86_64_Debian13 linux/x86_64 debian:trixie &
-    buildimage x86_64_Fedora43 linux/x86_64 fedora:43 &
+    buildimage x86_64_Fedora44 linux/x86_64 fedora:44 &
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
     buildimage x86_64_openSUSE16 linux/x86_64 opensuse/leap:16.0 &
     buildimage x86_64_SLES15SP5 linux/x86_64 registry.suse.com/suse/sle15:15.5 &
