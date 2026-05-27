@@ -1552,7 +1552,7 @@ Condor_Auth_SSL :: receive_message( bool non_blocking, int &status, int &len, ch
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
-        || !(len <= AUTH_SSL_BUF_SIZE)
+        || !(len >= 0 && len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );

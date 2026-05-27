@@ -16,17 +16,20 @@ EMPTY_SIF_BIND_EXPR = "/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64"
 
 def SingularityIsWorthy():
     result = subprocess.run(
-        "singularity --version",
+        "/usr/bin/singularity --version",
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT
     )
     output = result.stdout.decode('utf-8')
 
+
     if "apptainer" in output:
+        print("Singularity version ", output, "is worthy\n")
         return True
 
     if "3." in output:
+        print("Singularity version ", output, "is NOT worthy\n")
         return True
 
     return False
