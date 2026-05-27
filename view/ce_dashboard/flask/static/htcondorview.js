@@ -245,6 +245,12 @@ HTCondorView.prototype.initialize = function (options) {
 
 HTCondorView.next_graph_id = 0;
 
+// Shared cache keyed by data URL query string. All HTCondorView instances on
+// the same page that request the same URL reuse one HTTP fetch and one
+// AfterQuery parse pass. Safe as long as a pivot (or other step that creates
+// entirely new row arrays) precedes any in-place-mutating transform.
+HTCondorView._dataCache = {};
+
 HTCondorView.prototype.new_graph_id = function () {
     "use strict";
     HTCondorView.next_graph_id++;
@@ -421,7 +427,6 @@ HTCondorView.prototype.add_total_field = function (grid,start,end) {
 };
 
 HTCondorView.prototype.aq_load = function (url, start, end) {
-    const def = $.Deferred();
     const that = this;
 
     let files = [url];
@@ -460,18 +465,24 @@ HTCondorView.prototype.aq_load = function (url, start, end) {
     let query = "url=" + files.join("&url=") + range;
 	query = query.replace("&host=","?host=");
 
-    if (query === this.data_id) {
-        def.resolve(this.data);
-        return def;
-    }
-    else {
-        this.data_id = query;
-        this.aq_graph.load(query, null, function (data) {
+    if (HTCondorView._dataCache[query]) {
+        return HTCondorView._dataCache[query].then(function (data) {
             that.data = data;
-            def.resolve(data);
+            return data;
         });
     }
-    return def.promise();
+
+    const def = $.Deferred();
+    HTCondorView._dataCache[query] = def.promise();
+
+    this.aq_graph.load(query, null, function (data) {
+        def.resolve(data);
+    });
+
+    return def.promise().then(function (data) {
+        that.data = data;
+        return data;
+    });
 };
 
 HTCondorView.prototype.promise_render_viz = function (viz, args) {
