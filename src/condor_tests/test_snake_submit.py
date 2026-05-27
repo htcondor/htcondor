@@ -1,253 +1,447 @@
 import pytest
+import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from htcondor_cli.snake import Submit
 
+
 class TestSnakemakeSubmit:
-    """Test the submit class for snakemake submission"""
+    """Test submission logic with parsed snakefile and args"""
 
-    # TEST 1: Normal working with all flags #
-    def test_submit_with_all_required_flags(self, tmp_path):
-        # temporary Snakefile
-        snakefile = tmp_path/ "my_workflow" / "Snakefile"
-        snakefile.parent.mkdir(parents=True, exist_ok=True)
-        snakefile.write_text("rule all: \n pass")
+    # === INTEGRATION TESTS: Argument parsing through REMAINDER ==="
 
-        # temporary profile directory
-        profile_dir = tmp_path/ "htcondor_profile"
-        profile_dir.mkdir()
-        (profile_dir/"config.yaml").write_text("cores: 4")
+    def test_submit_extract_jobdir_after_snakefile_from_remainder(self, tmp_path):
+        """Integration: --jobdir appears in REMAINDER after snakefile"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "extracted_logs"
 
-        # temporary jobdir
-        jobdir = tmp_path/"logs"
-
-        # Mock shutil.which()
         with patch("shutil.which") as mock_which:
-            mock_which.return_value = '/use/bin/snakemake'
-
-            # Mock htcondor.Schedd() for submission
+            mock_which.return_value = "/usr/bin/snakemake"
             with patch("htcondor2.Schedd") as mock_schedd_class:
                 mock_schedd_instance = MagicMock()
                 mock_schedd_class.return_value = mock_schedd_instance
-
-                # Mock the submit result
                 mock_result = MagicMock()
                 mock_result.cluster.return_value = 12345
                 mock_schedd_instance.submit.return_value = mock_result
 
-                # Submit
+                # Pass snakefile with --jobdir in REMAINDER
+                remainder = [str(snakefile), "--jobdir", str(jobdir), "--", "--profile", "htcondor_profile"]
                 submit = Submit(
                     logger=None,
-                    snakefile=str(snakefile),
-                    profile=str(profile_dir),
-                    snakemake_args=[],
-                    jobdir=str(jobdir),
-                    executor="htcondor"
+                    snakemake_args=remainder,
                 )
 
-                # Assert that submit was called correctly
-                mock_schedd_instance.submit.assert_called_once()
-                submit_call_args = mock_schedd_instance.submit.call_args
-                submit_description = submit_call_args[0][0]
+                # Verify --jobdir was extracted and used
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                arguments = submit_description["arguments"]
+                
+                # Verify the extracted jobdir is used
+                assert f"--htcondor-jobdir {jobdir}" in arguments
+                
+                # Verify --jobdir is not in the arguments passed to snakemake
+                assert "--jobdir" not in arguments
+                
+                # Verify snakefile is there
+                assert f"-s {snakefile}" in arguments
+                
+                # Verify other args made it through
+                assert "--profile" in arguments
 
-                # Check arguments and setting
+    def test_submit_extract_jobdir_before_snakefile_from_remainder(self, tmp_path):
+        """Integration: --jobdir appears in REMAINDER before snakefile"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "extracted_logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                # Pass --jobdir before snakefile in REMAINDER
+                remainder = ["--jobdir", str(jobdir), str(snakefile), "--", "--profile", "htcondor_profile"]
+                submit = Submit(
+                    logger=None,
+                    snakemake_args=remainder,
+                )
+
+                # Verify --jobdir was extracted and used
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                arguments = submit_description["arguments"]
+                
+                # Verify the extracted jobdir is used
+                assert f"--htcondor-jobdir {jobdir}" in arguments
+                
+                # Verify --jobdir is not in the arguments passed to snakemake
+                assert "--jobdir" not in arguments
+                
+                # Verify snakefile is there
+                assert f"-s {snakefile}" in arguments
+
+    def test_submit_extract_multiple_jobdir_last_wins_from_remainder(self, tmp_path):
+        """Integration: multiple --jobdir in REMAINDER, last one should be used"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir_first = tmp_path / "logs1"
+        jobdir_last = tmp_path / "logs_final"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                # Multiple --jobdir in REMAINDER, last should win
+                remainder = [str(snakefile), "--jobdir", str(jobdir_first), "--jobdir", str(jobdir_last), "--", "--profile", "htcondor_profile"]
+                submit = Submit(
+                    logger=None,
+                    snakemake_args=remainder,
+                )
+
+                # Verify last --jobdir was used
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                arguments = submit_description["arguments"]
+                
+                # Verify LAST jobdir is used
+                assert f"--htcondor-jobdir {jobdir_last}" in arguments
+                
+                # Verify first jobdir is NOT used
+                assert str(jobdir_first) not in submit_description["arguments"]
+                
+                # Verify NO --jobdir appears in arguments passed to snakemake
+                assert "--jobdir" not in arguments
+
+    def test_submit_parse_snakefile_only_from_remainder(self, tmp_path):
+        """Integration: specifying with only snakefile, no additional args and separator"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                # Pass snakefile through REMAINDER
+                submit = Submit(
+                    logger=None,
+                    snakemake_args=[str(snakefile)],
+                    jobdir=str(jobdir),
+                )
+
+                # Verify snakefile was extracted and submitted
+                mock_schedd_instance.submit.assert_called_once()
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                
+                # Verify executable and arguments
+                assert submit_description["executable"] == "/usr/bin/snakemake"
                 arguments = submit_description["arguments"]
                 assert f"-s {snakefile}" in arguments
-                assert f"--executor htcondor" in arguments
-                assert f"--profile {profile_dir}" in arguments
                 assert f"--htcondor-jobdir {jobdir}" in arguments
-
+                
+                # Verify universe and environment
                 assert submit_description["universe"] == "local"
                 assert submit_description["getenv"] == "true"
 
-                assert mock_result.cluster.called
+    def test_submit_parse_snakefile_with_separator_and_args(self, tmp_path):
+        """Integration: specifying snakefile with -- separator and additional snakemake args"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
 
-
-    # TEST 2: Both --jobdir and duplicate --htcondor_jobdir provided #
-    def test_jobdir(self, tmp_path):
-        """
-        - detect --htcondor-jobdir in snakemake_args and respect that
-        - create seperate logs if the jobdir is also specified
-        This needs to be paired with actually submitting the jobs because we cannot verify that the end result will create the right logs 
-        """
-        # temporary Snakefile
-        snakefile = tmp_path/ "my_workflow" / "Snakefile"
-        snakefile.parent.mkdir(parents=True, exist_ok=True)
-        snakefile.write_text("rule all: \n pass")
-
-        # temporary profile directory
-        profile_dir = tmp_path/ "htcondor_profile"
-        profile_dir.mkdir()
-        (profile_dir/"config.yaml").write_text("cores: 4")
-
-        # temporary jobdir from --jobdir flag
-        jobdir = tmp_path/"logs"
-
-        # Mock shutil.which()
         with patch("shutil.which") as mock_which:
-            mock_which.return_value = '/use/bin/snakemake'
-
-            # Mock htcondor.Schedd() for submission
+            mock_which.return_value = "/usr/bin/snakemake"
             with patch("htcondor2.Schedd") as mock_schedd_class:
                 mock_schedd_instance = MagicMock()
                 mock_schedd_class.return_value = mock_schedd_instance
-
-                # Mock the submit result
                 mock_result = MagicMock()
                 mock_result.cluster.return_value = 12345
                 mock_schedd_instance.submit.return_value = mock_result
 
-                # Submit
+                # Pass through REMAINDER
+                remainder = [str(snakefile), "--", "--jobs", "6", "--cores", "4", "--dry-run"]
                 submit = Submit(
                     logger=None,
-                    snakefile=str(snakefile),
-                    snakemake_args=["--htcondor-jobdir", "my_logs", "--htcondor-jobdir", "my_actual_logs"],
-                    profile=str(profile_dir),
+                    snakemake_args=remainder,
                     jobdir=str(jobdir),
-                    executor="htcondor"
                 )
 
-                # Assert that submit was called correctly
-                mock_schedd_instance.submit.assert_called_once()
-                submit_call_args = mock_schedd_instance.submit.call_args
-                submit_description = submit_call_args[0][0]
-
-                # Check the arguments present
-                arguments = submit_description["arguments"]
-                #print(f"Arguments: {arguments}")
-                ## check that there is only one htcondor-dir and that should be my_actual_log
-                assert "my_actual_logs" in arguments
-
-                ## check the management job is created at specified --jobdir correctly
-                assert jobdir.exists()
-                assert jobdir.is_dir()
-                assert submit_description["log"] == f"{jobdir}/snakemake-mgmt-$(ClusterId).log"
-                assert submit_description["output"] == f"{jobdir}/snakemake-mgmt-$(ClusterId).out"
-                assert submit_description["error"] == f"{jobdir}/snakemake-mgmt-$(ClusterId).err"
-    
-    # TEST 3: Snakefile not at submit directory #
-    def test_snakefile(self, tmp_path):
-       
-        # temporary profile directory
-        profile_dir = tmp_path/ "htcondor_profile"
-        profile_dir.mkdir()
-        (profile_dir/"config.yaml").write_text("cores: 4")
-
-        # Snakefile in htcondor_jobdir
-        snakefile = tmp_path/ "nested" / "workflow" / "Snakefile"
-        snakefile.parent.mkdir(parents=True, exist_ok=True)
-        snakefile.write_text("rule all: \n pass")
-
-        # temporary jobdir from --jobdir flag
-        jobdir = tmp_path/"logs"
-
-        # Mock shutil.which()
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = '/use/bin/snakemake'
-
-            # Mock htcondor.Schedd() for submission
-            with patch("htcondor2.Schedd") as mock_schedd_class:
-                mock_schedd_instance = MagicMock()
-                mock_schedd_class.return_value = mock_schedd_instance
-
-                # Mock the submit result
-                mock_result = MagicMock()
-                mock_result.cluster.return_value = 12345
-                mock_schedd_instance.submit.return_value = mock_result
-
-                # Submit
-                submit = Submit(
-                    logger=None,
-                    snakefile=str(snakefile),
-                    profile=str(profile_dir),
-                    snakemake_args =[],
-                    jobdir=str(jobdir),
-                    executor="htcondor"
-                )
-
-                # Assert that submit was called correctly
-                mock_schedd_instance.submit.assert_called_once()
-                submit_call_args = mock_schedd_instance.submit.call_args
-                submit_description = submit_call_args[0][0]
-
-                # Verify Snakefile path is parsed
+                # Verify both snakefile and additional args made it to submission
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                
+                # Verify executable and arguments
+                assert submit_description["executable"] == "/usr/bin/snakemake"
                 arguments = submit_description["arguments"]
                 assert f"-s {snakefile}" in arguments
-
-                # Check rules jobdir and htcondor jobdir are the same
-                assert jobdir.exists()
-                assert jobdir.is_dir()
-                assert f"--htcondor-jobdir {jobdir}" in arguments
-
-    # TEST 4: Additional snakemake arguments #
-    def test_snake_args(self, tmp_path):
-        """
-        Testing that additional snakemake_arg in cli after -- are passed successfully
-            - User provides extra args like ["--cores", "16", "--dryrun", "--quiet"]
-            - These should appear in the final HTCondor submit arguments
-        """
-        # temporary Snakefile
-        snakefile = tmp_path/ "my_workflow" / "Snakefile"
-        snakefile.parent.mkdir(parents=True, exist_ok=True)
-        snakefile.write_text("rule all: \n pass")
-
-        # temporary profile directory
-        profile_dir = tmp_path/ "htcondor_profile"
-        profile_dir.mkdir()
-        (profile_dir/"config.yaml").write_text("cores: 4")
-
-        # temporary jobdir from --jobdir flag
-        jobdir = tmp_path/"logs"
-
-        # Mock shutil.which()
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = '/use/bin/snakemake'
-
-            # Mock htcondor.Schedd() for submission
-            with patch("htcondor2.Schedd") as mock_schedd_class:
-                mock_schedd_instance = MagicMock()
-                mock_schedd_class.return_value = mock_schedd_instance
-
-                # Mock the submit result
-                mock_result = MagicMock()
-                mock_result.cluster.return_value = 12345
-                mock_schedd_instance.submit.return_value = mock_result
-
-                # Additionl arguments
-                additional_args = [
-                    "--cores", "16",
-                    "--dryrun",
-                    "--shared-fs-usage", "None",
-                    "--jobs", "6"
-                ]
-
-                # Submit
-                submit = Submit(
-                    logger=None,
-                    snakefile=str(snakefile),
-                    snakemake_args=additional_args,
-                    profile=str(profile_dir),
-                    jobdir=str(jobdir),
-                    executor="htcondor"
-                )
-
-                # Assert that submit was called correctly
-                mock_schedd_instance.submit.assert_called_once()
-                submit_call_args = mock_schedd_instance.submit.call_args
-                submit_description = submit_call_args[0][0]
-
-                # Verify
-                arguments = submit_description["arguments"]
-                assert "--cores" in arguments
-                assert "16" in arguments
-                assert "--dryrun" in arguments
-                assert "--shared-fs-usage" in arguments
-                assert "None" in arguments
                 assert "--jobs" in arguments
                 assert "6" in arguments
+                assert "--cores" in arguments
+                assert "4" in arguments
+                assert "--dry-run" in arguments
+                
+                # Verify universe and environment
+                assert submit_description["universe"] == "local"
+                assert submit_description["getenv"] == "true"
 
+    def test_submit_parse_no_snakefile_with_separator(self, tmp_path):
+        """Integration: specifying only -- separator and args and uses default Snakefile"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_path) # change the current directory to where Snakefile is
+
+            with patch("shutil.which") as mock_which:
+                mock_which.return_value = "/usr/bin/snakemake"
+                with patch("htcondor2.Schedd") as mock_schedd_class:
+                    mock_schedd_instance = MagicMock()
+                    mock_schedd_class.return_value = mock_schedd_instance
+                    mock_result = MagicMock()
+                    mock_result.cluster.return_value = 12345
+                    mock_schedd_instance.submit.return_value = mock_result
+
+                    # Pass through REMAINDER
+                    remainder = ["--", "--jobs", "6"]
+                    submit = Submit(
+                        logger=None,
+                        snakemake_args=remainder,
+                        jobdir=str(jobdir),
+                    )
+
+                
+                    submit_description = mock_schedd_instance.submit.call_args[0][0]
+                    
+                    # Verify executable and arguments
+                    assert submit_description["executable"] == "/usr/bin/snakemake"
+                    arguments = submit_description["arguments"]
+                    assert "-s" in arguments
+                    assert "--jobs" in arguments
+                    assert "6" in arguments
+                    
+                    # Verify universe and environment
+                    assert submit_description["universe"] == "local"
+                    assert submit_description["getenv"] == "true"
+        finally:
+            os.chdir(original_cwd)
+
+    # === ROBUSTNESS TESTS ===
+
+    def test_submit_default_snakefile(self, tmp_path):
+        """Test that code defaults to 'Snakefile' in current directory"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+
+            with patch("shutil.which") as mock_which:
+                mock_which.return_value = "/usr/bin/snakemake"
+                with patch("htcondor2.Schedd") as mock_schedd_class:
+                    mock_schedd_instance = MagicMock()
+                    mock_schedd_class.return_value = mock_schedd_instance
+                    mock_result = MagicMock()
+                    mock_result.cluster.return_value = 12345
+                    mock_schedd_instance.submit.return_value = mock_result
+
+                    # No snakefile provided, no args
+                    submit = Submit(logger=None, snakemake_args=[], jobdir=str(jobdir))
+
+                    mock_schedd_instance.submit.assert_called_once()
+                    submit_description = mock_schedd_instance.submit.call_args[0][0]
+                    
+                    # Verify executable and arguments
+                    assert submit_description["executable"] == "/usr/bin/snakemake"
+                    arguments = submit_description["arguments"]
+                    assert "Snakefile" in arguments
+                    
+                    # Verify universe and environment
+                    assert submit_description["universe"] == "local"
+                    assert submit_description["getenv"] == "true"
+        finally:
+            os.chdir(original_cwd)
+
+    def test_submit_htcondor_submission_error(self, tmp_path):
+        """Test error handling when HTCondor submission fails"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+                # Simulate submission failure
+                mock_schedd_instance.submit.side_effect = RuntimeError("Schedd connection failed")
+
+                with patch("sys.exit") as mock_exit:
+                    with patch("builtins.print"):
+                        submit = Submit(
+                            logger=None,
+                            snakefile=str(snakefile),
+                            snakemake_args=[],
+                            jobdir=str(jobdir),
+                        )
+                    # Verify sys.exit was called
+                    mock_exit.assert_called_once_with(1)
+
+    def test_submit_empty_snakemake_args(self, tmp_path):
+        """Test submission with empty snakemake_args list"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+        jobdir = tmp_path / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                submit = Submit(
+                    logger=None,
+                    snakefile=str(snakefile),
+                    snakemake_args=[],
+                    jobdir=str(jobdir),
+                )
+
+                mock_schedd_instance.submit.assert_called_once()
+                submit_description = mock_schedd_instance.submit.call_args[0][0]
+                
+                # Verify executable and arguments
+                assert submit_description["executable"] == "/usr/bin/snakemake"
+                arguments = submit_description["arguments"]
                 assert f"-s {snakefile}" in arguments
-                assert "--executor htcondor" in arguments
-                assert f"--htcondor-jobdir {jobdir}" in arguments
-                assert f"--profile {profile_dir}" in arguments
+                
+                # Verify universe and environment
+                assert submit_description["universe"] == "local"
+                assert submit_description["getenv"] == "true"
 
+    def test_submit_creates_jobdir(self, tmp_path):
+        """Test that jobdir is created if it doesn't exist"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+
+        jobdir = tmp_path / "nonexistent" / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                submit = Submit(
+                    logger=None,
+                    snakefile=str(snakefile),
+                    snakemake_args=[],
+                    jobdir=str(jobdir),
+                )
+
+                # Verify jobdir was created
+                assert jobdir.exists()
+                assert jobdir.is_dir()
+
+    def test_submit_snakefile_not_found(self, tmp_path):
+        """Test error handling when snakefile doesn't exist"""
+        missing_snakefile = tmp_path / "missing" / "Snakefile"
+        jobdir = tmp_path / "logs"
+
+        with pytest.raises(FileNotFoundError):
+            submit = Submit(
+                logger=None,
+                snakefile=str(missing_snakefile),
+                snakemake_args=[],
+                jobdir=str(jobdir),
+            )
+
+    def test_submit_snakemake_not_found(self, tmp_path):
+        """Test error handling when snakemake executable not found"""
+        snakefile = tmp_path / "Snakefile"
+        snakefile.write_text("rule all:\n    pass")
+
+        jobdir = tmp_path / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = None # simulate snakemake executable cannot be found in the sys
+
+            with patch("sys.exit") as mock_exit:
+                with patch("builtins.print"): 
+                    submit = Submit(
+                        logger=None,
+                        snakefile=str(snakefile),
+                        snakemake_args=[],
+                        jobdir=str(jobdir),
+                    )
+                # Verify that sys.exit was called with exit code 1
+                mock_exit.assert_called_once_with(1)
+
+    def test_submit_nested_snakefile_path(self, tmp_path):
+        """Test submission with nested snakefile path"""
+        snakefile = tmp_path / "nested" / "workflow" / "Snakefile"
+        snakefile.parent.mkdir(parents=True, exist_ok=True)
+        snakefile.write_text("rule all:\n    pass")
+
+        jobdir = tmp_path / "logs"
+
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/bin/snakemake"
+
+            with patch("htcondor2.Schedd") as mock_schedd_class:
+                mock_schedd_instance = MagicMock()
+                mock_schedd_class.return_value = mock_schedd_instance
+
+                mock_result = MagicMock()
+                mock_result.cluster.return_value = 12345
+                mock_schedd_instance.submit.return_value = mock_result
+
+                submit = Submit(
+                    logger=None,
+                    snakefile=str(snakefile),
+                    snakemake_args=[],
+                    jobdir=str(jobdir),
+                )
+
+                # Verify nested path is preserved
+                submit_call_args = mock_schedd_instance.submit.call_args
+                submit_description = submit_call_args[0][0]
+                
+                # Verify executable and arguments
+                assert submit_description["executable"] == "/usr/bin/snakemake"
+                arguments = submit_description["arguments"]
+                assert f"-s {snakefile}" in arguments
+                assert f"--htcondor-jobdir {jobdir}" in arguments
+
+                # Verify universe and environment
+                assert submit_description["universe"] == "local"
+                assert submit_description["getenv"] == "true"
+
+                # Verify logging paths
+                assert f"{jobdir}/snakemake-mgmt-$(ClusterId).log" == submit_description["log"]
+                assert f"{jobdir}/snakemake-mgmt-$(ClusterId).out" == submit_description["output"]
+                assert f"{jobdir}/snakemake-mgmt-$(ClusterId).err" == submit_description["error"]
+
+                # Verify job name
+                assert submit_description["JobBatchName"] == f"snakemake-mgmt-$(ClusterId)"
