@@ -224,8 +224,8 @@ class StatsD: Service {
 	std::unordered_set< std::string > m_unresponsive_collectors;
 
 	// Map that contains previous and current value of each metric for each machine, used to calculate derivatives of aggregate metrics
-	std::map<std::string, double> m_previous_values;
-	std::map<std::string, double> m_current_values;
+	std::unordered_map<std::string, double> m_previous_values;
+	std::unordered_map<std::string, double> m_current_values;
 
 	// Remove entries from m_previous_values whose time doesn't match m_start_time
 	void cleanupOldPreviousValues();
