@@ -15,6 +15,7 @@
 # which exercises the whole command path; the CLI only adds argument parsing on
 # top of this.
 
+import sys
 import time
 import logging
 
@@ -37,10 +38,15 @@ def _setup(test_dir, name, allow_reboot):
     Returns (config, sentinel_path).  The script touches the sentinel file
     (passed as $1) instead of rebooting.
     """
-    script = test_dir / f"fake_reboot_{name}.sh"
     sentinel = test_dir / f"rebooted_{name}.sentinel"
-    script.write_text('#!/bin/sh\ntouch "$1"\n')
-    script.chmod(0o755)
+    if sys.platform == "win32":
+        # cmd.exe can't run a shebang shell script; use a batch file.
+        script = test_dir / f"fake_reboot_{name}.bat"
+        script.write_text('@echo off\r\ntype nul > %1\r\n')
+    else:
+        script = test_dir / f"fake_reboot_{name}.sh"
+        script.write_text('#!/bin/sh\ntouch "$1"\n')
+        script.chmod(0o755)
 
     # rehome persists STARTD_DIRECT_ATTACH_SCHEDD_NAME via the runtime
     # persistent config, which requires these to be enabled and a writable dir.
