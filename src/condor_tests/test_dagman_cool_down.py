@@ -75,7 +75,9 @@ JOB sleep_job @=desc
     HANDLE = default_condor.submit(DAG)
 
     # Rename so the log is accessible for the pre-release check below
-    renamed_dir = work_dir.rename(test_dir / "work_dir_renamed")
+    # (Path.rename only returns the new path on Python 3.8+; compute it ourselves)
+    renamed_dir = test_dir / "work_dir_renamed"
+    work_dir.rename(renamed_dir)
 
     # Recreate the original IWD path but strip all permissions so the schedd
     # cannot enter it, causing CreateProcessNew to fail
