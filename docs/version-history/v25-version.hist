@@ -1,5 +1,15 @@
 *** 25.12.0 features
 
+- The ``htcondor ep rehome`` command directs a *condor_startd* to evict its
+  running jobs and direct-attach to a different *condor_schedd*. The new
+  ``--reboot`` option additionally reboots the execution point host once all
+  jobs have been evicted, persisting the direct-attach configuration so the
+  host comes back attached to the new *condor_schedd*. The reboot is gated
+  by :macro:`STARTD_REHOME_ALLOW_REBOOT` on the EP and uses
+  :macro:`STARTD_REBOOT_COMMAND` (default ``/sbin/reboot``) to perform the
+  reboot.
+  :jira:`3766`
+
 *** 25.12.0 bugs
 
 - Improved the interaction between the *condor_schedd* and the
