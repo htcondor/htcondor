@@ -33,7 +33,11 @@ def is_valid_provider_name(provider_name: str) -> bool:
     Check if a provider name is valid.
     Returns True if the provider name contains only alphanumeric characters
     and hyphens, or if CREDMON_ALLOW_SPECIAL_CHAR_NAMES is set to True.
+    A single "*" is also allowed for the case where a single credmon handles
+    all credentials.
     """
+    if provider_name == "*":
+        return True
     allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
     if allow_special_chars:
         return True
