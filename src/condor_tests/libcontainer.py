@@ -49,4 +49,5 @@ def SingularityIsWorking():
         return True
     else:
         print("singularity exec failed, skipping test\n")
+        print("Output was:\n", output)
         return False
