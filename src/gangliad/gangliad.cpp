@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include <condor_daemon_core.h>
+#include "condor_daemon_core.h"
 #include "my_popen.h"
 #include "directory.h"
 #include "directory_util.h"
@@ -193,7 +193,7 @@ GangliaD::initAndReconfig(const char * /*unused */)
 
     m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
 
-	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD", !m_as_backend);
+	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD", m_as_backend);
 
 	{
 		const char *cluster_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_CLUSTER" : "GANGLIA_DEFAULT_CLUSTER";

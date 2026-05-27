@@ -137,7 +137,7 @@ class StatsD: Service {
 	StatsD();
 	~StatsD();
 
-	virtual void initAndReconfig(char const *service_name, bool register_timer = true);
+	virtual void initAndReconfig(char const *service_name, bool as_backend);
 
 	// Allocate a new Metric object.
 	// This is done via a virtual function so the class derived from StatsD
@@ -160,6 +160,19 @@ class StatsD: Service {
 
 	// Accessor for the set of collector ad types this StatsD needs.
 	const std::vector<std::string> &getTargetTypes() const { return m_target_types; }
+
+	// Backends override this to add attributes they require in the collector
+	// projection (e.g. PrometheusD needs ATTR_LAST_HEARD_FROM when emitting
+	// timestamps). The owning MetricD merges these into its own projection.
+	virtual void extraProjectionRefs(classad::References & /*refs*/) const {}
+
+	// If this StatsD only publishes to a single named backend (e.g. the
+	// Ganglia or Prometheus backend owned by a MetricD), return that backend
+	// name. ParseMetrics() uses it to discard, at parse time, any metric whose
+	// (literal) ExportMetric keyword does not name this backend. Returns
+	// nullptr for instances that must process every metric (MetricD, which
+	// builds the unified collector query, and legacy condor_gangliad).
+	virtual const char *exportFilterName() const { return nullptr; }
 
 	// Given a machine name or daemon name, return the IP address of it,
 	// using information gathered from the collector.
@@ -206,7 +219,7 @@ class StatsD: Service {
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
 	std::vector<std::string> m_target_types;
-	bool m_want_projection;
+	bool m_want_projection = false;
 	classad::References m_projection_references;
 
 

@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "directory_util.h"
 #include "condor_regex.h"
+#include "condor_attributes.h"
 #include "prometheusd.h"
 
 #include <map>
@@ -46,7 +47,7 @@ PrometheusD::initAndReconfig(const char * /*unused*/)
 {
 	// Parse metric definitions and learn target types, but never register a
 	// timer of our own (the owning MetricD runs the cycle).
-	StatsD::initAndReconfig("METRICD", false);
+	StatsD::initAndReconfig("METRICD", true);
 
 	param(m_output_file,"PROMETHEUS_METRICS_FILE");
 	m_include_timestamp = param_boolean("PROMETHEUS_METRICS_INCLUDE_TIMESTAMP", false);
@@ -179,6 +180,17 @@ PrometheusD::postPublishMetrics()
 {
 	writeMetricsFile();
 	m_pending.clear();
+}
+
+void
+PrometheusD::extraProjectionRefs(classad::References &refs) const
+{
+	// When emitting timestamps we need ATTR_LAST_HEARD_FROM. The owning
+	// MetricD merges this into its own projection because MetricD, not this
+	// backend, is the one that issues the collector query.
+	if (!m_output_file.empty() && m_include_timestamp) {
+		refs.insert(ATTR_LAST_HEARD_FROM);
+	}
 }
 
 void

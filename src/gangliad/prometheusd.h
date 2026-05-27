@@ -39,6 +39,8 @@ class PrometheusD: public StatsD {
 	virtual void initializeHostList() {}
 	virtual void sendHeartbeats() {}
 	virtual void postPublishMetrics();
+	virtual void extraProjectionRefs(classad::References &refs) const;
+	virtual const char *exportFilterName() const { return "prometheus"; }
 
  private:
 	struct PendingMetric {

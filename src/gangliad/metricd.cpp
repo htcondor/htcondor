@@ -18,44 +18,42 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_classad.h"
 #include "metricd.h"
 
-#include <set>
-
 MetricD::MetricD() :
-	m_ganglia(true)
+	m_ganglia(true)		// we want to use GangliaD as a backend, as the MetricD will be doing the work of running the publication cycle
 {
 }
 
 void
 MetricD::initAndReconfig(const char * /*unused*/)
 {
-	StatsD::initAndReconfig("METRICD", true);
+	StatsD::initAndReconfig("METRICD", false);
 
 	m_ganglia.initAndReconfig();
 	m_prometheus.initAndReconfig();
 
-	// Merge the backends' collector target types into our own so the unified
-	// collector query covers everything every backend needs.
-	struct caselt {
-		bool operator()(const std::string &l, const std::string &r) const {
-			return strcasecmp(l.c_str(), r.c_str()) < 0;
-		}
-	};
-	std::set<std::string,caselt> all;
-	for (const auto &t : m_target_types) all.insert(t);
-	for (const auto &t : m_ganglia.getTargetTypes()) all.insert(t);
-	for (const auto &t : m_prometheus.getTargetTypes()) all.insert(t);
-	m_target_types.assign(all.begin(), all.end());
+	// MetricD is the only instance that queries the collector, and it parses
+	// every metric definition itself (it applies no ExportMetric filter), so
+	// its own m_target_types and projection already cover everything every
+	// backend needs.  We only need to fold in each backend's extra projection
+	// requirements (e.g. PrometheusD wants ATTR_LAST_HEARD_FROM for timestamps),
+	// which are advertised separately rather than derived from m_metrics.
+	if (m_want_projection) {
+		m_ganglia.extraProjectionRefs(m_projection_references);
+		m_prometheus.extraProjectionRefs(m_projection_references);
+	}
 }
 
 Metric *
-MetricD::newMetric(Metric const *copy_me)
+MetricD::newMetric(Metric const * /*unused*/ )
 {
-	if (copy_me) {
-		return new Metric(*copy_me);
-	}
-	return new Metric();
+	// We should never get here, since MetricD itself doesn't publish any metrics; it just delegates to its backends (ganglia, prometheus, etc).
+	// So if we do get get here, EXCEPT to alert the developer that they forgot to override this function in a backend.
+	EXCEPT("MetricD::newMetric() called, but MetricD doesn't define any metrics. This should have been overridden by a backend (e.g. GangliaD or PrometheusD).");
+	return nullptr;
 }
 
 void

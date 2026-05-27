@@ -721,7 +721,7 @@ StatsD::~StatsD()
 }
 
 void
-StatsD::initAndReconfig(char const *service_name, bool register_timer)
+StatsD::initAndReconfig(char const *service_name, bool as_backend)
 {
 	std::string param_name;
 
@@ -732,7 +732,7 @@ StatsD::initAndReconfig(char const *service_name, bool register_timer)
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
 	m_stats_pub_interval = param_integer(param_name.c_str(),60);
-	if( register_timer ) {
+	if( !as_backend ) {
 		if( m_stats_pub_interval < 0 ) {
 			dprintf(D_ALWAYS,
 					"%s is less than 0, so no stats publications will be made.\n",
@@ -791,7 +791,9 @@ StatsD::initAndReconfig(char const *service_name, bool register_timer)
 		}
 	}
 
-	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
+	formatstr(param_name,"%s_WANT_PROJECTION",service_name);
+	// no need for backends to compute the projection since they won't be talking to the collector
+	m_want_projection = as_backend ? false : param_boolean(param_name.c_str(), false);
 	m_projection_references.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
@@ -833,8 +835,22 @@ StatsD::initAndReconfig(char const *service_name, bool register_timer)
 			collector_projection += it;
 		}
 		dprintf(D_FULLDEBUG,"collector projection = %s\n",collector_projection.c_str());
-	} else {
-		dprintf(D_ALWAYS,"Not using a collector projection\n");
+	}
+
+	if (!as_backend) {
+		if (m_want_projection) {
+			dprintf(D_ALWAYS,"Will publish metrics with collector projection of %lu attributes\n",m_projection_references.size());
+		} else {
+			dprintf(D_ALWAYS,"Will publish metrics without a collector projection\n");
+		}
+	}
+
+	if (!as_backend && !g_legacy_gangliad_mode) {
+		// If we are not a backend, and not in legacy mode, then we may as well clear the metrics definitions from memory since we won't be using them; we only
+		// needed them in the driver class (MetricD) in order to determine the collector projection and backends referenced, but
+		// now that we have that information, we can free up the memory used by the metric definitions since we
+		// won't be using them anymore in this class instance.
+		clearMetricDefinitions();
 	}
 }
 
@@ -923,6 +939,36 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				   ad_str.c_str());
 		}
 
+		// If this StatsD only publishes to a single backend, and this metric's
+		// ExportMetric keyword is a literal string that does not name that
+		// backend, then we will never publish it.  Discard it now so we don't
+		// store it, evaluate it against every daemon ad each cycle, or waste time
+		// computing the collector projection.  We only do this when
+		// ExportMetric is a string literal; if it is an expression that depends
+		// on the daemon ad, we cannot evaluate it here and must keep the metric.
+		const char *backend = exportFilterName();
+		if(backend) {
+			std::string export_literal;
+			if( ExprTreeIsLiteralString(ad->Lookup(ATTR_EXPORT_METRIC),export_literal) ) {
+				std::vector<std::string> export_systems = split(export_literal);
+				if( !export_systems.empty() && !contains_anycase(export_systems,backend) ) {
+					delete ad;
+					continue;
+				}
+			}
+		}
+
+		// Add this metric ad to our list of metrics
+		stats_metrics.push_back(ad);
+
+		if (backend) {
+			// If we are a backend, then we don't need to do any of the below since we won't
+			// be talking to the collector, so just continue to the next metric.
+			continue;
+		}
+
+		// Figure out what types of daemons this metric applies so we can refine our query
+		// to the collector to only fetch ad types needed
 		struct caselt {
 			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) < 0;};
 		};
@@ -937,9 +983,6 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		std::ranges::sort(m_target_types, caselt{});
 		const auto duplicates_range = std::ranges::unique(m_target_types, caseeq{});
 		m_target_types.erase(duplicates_range.begin(), duplicates_range.end());
-
-		// Add this metric ad to our list of metrics
-		stats_metrics.push_back(ad);
 
 		// For even more efficient queries to the collector, keep track of 
 		// which ad attributes we need (attribute projection).

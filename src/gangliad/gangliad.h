@@ -51,6 +51,10 @@ class GangliaD: public StatsD {
     // send heartbeats to hosts not currently monitored by ganglia
     virtual void sendHeartbeats();
 
+    // Filter metrics by ExportMetric only when acting as a backend; legacy
+    // condor_gangliad processes every metric, exactly as it always has.
+    virtual const char *exportFilterName() const { return m_as_backend ? "ganglia" : nullptr; }
+
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated
