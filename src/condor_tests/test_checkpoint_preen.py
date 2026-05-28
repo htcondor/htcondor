@@ -29,6 +29,19 @@ logger.setLevel(logging.DEBUG)
 # obvious reasons.
 #
 
+
+def wait_until_gone(path, timeout=60):
+    # Poll for a path to disappear rather than sleeping a fixed (large)
+    # amount: this returns as soon as the deletion is done (usually well
+    # under a second) while still tolerating a slow runner.
+    deadline = time.monotonic() + timeout
+    while path.exists():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.25)
+    return True
+
+
 @action
 def the_condor(test_dir):
     with Condor(
@@ -655,24 +668,22 @@ def the_job_handle(the_job_pair):
 
 @action
 def the_completed_job(the_condor, the_job_handle):
-    # The job will evict itself part of the way through.  To avoid a long
-    # delay waiting for the schedd to reschedule it, call condor_reschedule.
-    the_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_running,
-        fail_condition=ClusterState.any_held,
-    )
-
-    the_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_idle,
-        fail_condition=ClusterState.any_held,
-    )
-
+    # The job evicts itself part of the way through and resumes from its
+    # checkpoint.  We only care that it eventually completes; wait directly
+    # for that.
+    #
+    # We deliberately do NOT gate on intermediate all_running/all_idle
+    # states.  For multi-proc clusters the procs evict and resume on
+    # staggered timelines, so "all procs idle (or running) at once" may
+    # never be observably true, and waiting for it just burns the full
+    # timeout (~60s each).  The negotiator runs every second in the test
+    # config, so evicted jobs are rescheduled promptly on their own; a
+    # single nudge covers the case where the first proc evicts before this
+    # fixture starts waiting.
     the_condor.run_command(['condor_reschedule'])
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=180,
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
     )
@@ -782,19 +793,13 @@ class TestCheckpointDestination:
                     path = prefix / f"{i:04}"
 
                     # Did we remove the checkpoint destination?
-                    if path.exists():
-                        # Crass empiricism.
-                        time.sleep(20)
-                    assert(not path.exists())
+                    assert wait_until_gone(path)
 
                     # Did we remove the manifest file?
                     manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
-                    assert(not manifest_file.exists())
+                    assert wait_until_gone(manifest_file)
 
                 # Once we've removed all of the manifest files, we should also
                 # remove the directory we used to store them.
                 checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0"
-                if checkpoint_cleanup_subdir.exists():
-                    # Crass empiricism.
-                    time.sleep(20)
-                assert(not checkpoint_cleanup_subdir.exists())
+                assert wait_until_gone(checkpoint_cleanup_subdir)
