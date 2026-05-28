@@ -150,12 +150,9 @@ def get_data_from_ganglia():
                               ['EPsCpuLimited', 'EPsCpuLimited'],
                               ['EPsMemoryLimited', 'EPsMemoryLimited'],
                               ['EPsDiskLimited', 'EPsDiskLimited'],
-<<<<<<< HEAD
                               ['TotalTransferOutputMB', 'TotalTransferOutputMB'],
-                              ['TotalTransferInputMB', 'TotalTransferInputMB']):
-=======
+                              ['TotalTransferInputMB', 'TotalTransferInputMB'],
                               ['GlideinsRunning', 'GlideinsRunning']):
->>>>>>> b4d2621d8f (HTCONDOR-3046: Add 'Glideins Running' bar to EPs reporting chart)
         df['Project'] = df['Project'].str.replace(f'____meta_{oldname}', newname)
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')

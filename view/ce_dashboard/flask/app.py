@@ -89,15 +89,16 @@ app.register_blueprint(landing_bp)
 app.register_blueprint(overview_bp)
 app.register_blueprint(landing_graphs_bp)
 
+_scheduler = BackgroundScheduler()
+_scheduler.add_job(
+    func=refresh_landing_graph_cache,
+    trigger='interval',
+    minutes=10,
+    id='refresh_landing_graph_cache',
+)
+_scheduler.start()
+atexit.register(lambda: _scheduler.shutdown(wait=False))
+
 if __name__ == '__main__':
-    _scheduler = BackgroundScheduler()
-    _scheduler.add_job(
-        func=refresh_landing_graph_cache,
-        trigger='interval',
-        minutes=10,
-        id='refresh_landing_graph_cache',
-    )
-    _scheduler.start()
-    atexit.register(lambda: _scheduler.shutdown(wait=False))
 
     app.run(debug=True)
