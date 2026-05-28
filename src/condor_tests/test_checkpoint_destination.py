@@ -25,6 +25,20 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def wait_until_gone(path, timeout=60):
+    # Checkpoint clean-up is spawned synchronously by the schedd when the job
+    # leaves the queue, but the actual deletion happens in a child process, so
+    # we have to wait for the path to disappear.  Poll frequently rather than
+    # sleeping a fixed (large) amount: this returns as soon as the deletion is
+    # done (usually well under a second) while still tolerating a slow runner.
+    deadline = time.monotonic() + timeout
+    while path.exists():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.25)
+    return True
+
+
 @action
 def the_condor(test_dir):
     local_dir = test_dir / "condor"
@@ -1228,25 +1242,16 @@ class TestCheckpointDestination:
                 path = prefix / f"{i:04}"
 
                 # Did we remove the checkpoint destination?
-                if path.exists():
-                    # Crass empiricism.
-                    time.sleep(20)
-                assert(not path.exists())
+                assert wait_until_gone(path)
 
                 # Did we remove the manifest file?
                 manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / jobAd["Owner"] / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
-                if manifest_file.exists():
-                    # Crass empiricism.
-                    time.sleep(20)
-                assert(not manifest_file.exists())
+                assert wait_until_gone(manifest_file)
 
             # Once we've removed all of the manifest files, we should also
             # remove the directory we used to store them.
             checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / jobAd["Owner"] / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
-            if checkpoint_cleanup_subdir.exists():
-                # Crass empiricism.
-                time.sleep(20)
-            assert(not checkpoint_cleanup_subdir.exists())
+            assert wait_until_gone(checkpoint_cleanup_subdir)
 
 
     def test_checkpoint_upload_failure_causes_job_hold(self, the_condor, hold_job):
