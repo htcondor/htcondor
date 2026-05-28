@@ -1827,7 +1827,7 @@ int DCSchedd::offerResources(
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
 	}
-	if( disk_held_by_claim_in_mb != 0 ) {
+	if( disk_held_by_claim_in_mb != -1 ) {
 		cmd_ad.InsertAttr(
 			ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb
 		);
