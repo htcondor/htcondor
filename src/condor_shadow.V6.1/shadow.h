@@ -208,14 +208,14 @@ class UniShadow : public BaseShadow
 
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
 		ClassAd * jobAd,
-		std::map<std::string, std::string> * externalToSimpleNameMap
+		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
 
 	virtual bool computeCommonInputFiles(
 		ClassAd * jobAd,
 		ListOfCatalogs & commonFileCatalogs,
 		int & required_version,
-		std::map<std::string, std::string> * externalToSimpleNameMap
+		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
@@ -277,12 +277,13 @@ class UniShadow : public BaseShadow
 	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
 		ClassAd request,
 		ListOfCatalogs common_file_catalogs,
-		std::map<std::string, std::string> externalToSimpleNameMap
+		std::map<std::string, std::string> internalToSimpleNameMap
 	);
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(
 		ClassAd request,
-		ListOfCatalogs common_file_catalogs
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> internalToSimpleNameMap
 	);
 
 

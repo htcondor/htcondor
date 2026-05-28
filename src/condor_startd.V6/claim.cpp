@@ -142,6 +142,12 @@ Claim::~Claim()
 		resmgr->adlist_delete( coloringName.c_str() );
 
 		std::string catalogName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+
+		// FIXME: if this claim was declaring a list of catalogs, remove
+		// them from the global list of catalogs.  We can do and determine
+		// this by removing the name of every attribute in our ad from
+		// the list, although this is slightly magical.
+
 		resmgr->adlist_delete( catalogName.c_str() );
 	}
 
@@ -2857,46 +2863,64 @@ void Claim::receiveUpdateCommand( int c,
 
 
 			//
-			// Update the list of catalogs.
+			// Make the announcement.
 			//
-			ClassAd * catalogsAd = NULL;
-			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
-			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
-			if( namedCatalogsAd == NULL ) {
-				catalogsAd = new ClassAd();
-			} else {
-				catalogsAd = namedCatalogsAd->GetAd();
-			}
 
-			classad::ExprTree * e = catalogsAd->Lookup( "catalogs" );
-			if( e == NULL ) {
-				catalogsAd->AssignExpr( "catalogs", "{}" );
-				e = catalogsAd->Lookup( "catalogs" );
-			}
-			auto * catalogs = dynamic_cast<classad::ExprList *>(e);
-
-			// What _is_ this catalog's ID?
+			// Update the global list of catalogs.  (This can't be in the
+			// claim-specific ad because then it collides.)
 			std::string catalog_id;
 			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
 
+// This should probably be refactored.
+			ClassAd * catalogListAd = nullptr;
+			std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+			StartdNamedClassAd * namedCatalogListAd = resmgr->adlist_find( catalog_list_name.c_str() );
+			if( namedCatalogListAd == NULL ) {
+dprintf( D_ALWAYS, "Does this ever happen?\n" );
+				catalogListAd = new ClassAd();
+				resmgr->adlist_replace( catalog_list_name.c_str(), catalogListAd );
+			} else {
+				catalogListAd = namedCatalogListAd->GetAd();
+dprintf( D_ALWAYS, "catalogListAd = %p\n", catalogListAd );
+			}
+
+			classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+			if( e == NULL ) {
+				catalogListAd->AssignExpr( "catalogs", "{}" );
+				e = catalogListAd->Lookup( "catalogs" );
+			}
+
+			auto * catalogList = dynamic_cast<classad::ExprList *>(e);
 			// Should we really have to type AttributeReference twice?
 			auto * ref = classad::AttributeReference::MakeAttributeReference(
 				NULL /* unscoped */, catalog_id, false /* relative */
 			);
-			catalogs->push_back( ref );
+			catalogList->push_back( ref );
 
 
-			//
-			// Insert the catalog ad into the catalogs ad (now that we know
-			// its name).
-			//
-			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			// Update the claim-specific ad.
+			ClassAd * catalogsAd = nullptr;
+			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
+			if( namedCatalogsAd == NULL ) {
+dprintf( D_ALWAYS, "Does this ever happen?\n" );
+				catalogsAd = new ClassAd();
+				resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
+			} else {
+				catalogsAd = namedCatalogsAd->GetAd();
+dprintf( D_ALWAYS, "catalogsAd = %p\n", catalogsAd );
+			}
+
 			ClassAd * catalogAd = new ClassAd( payloadAd );
 			catalogAd->InsertAttr( "id", catalog_id );
 			catalogsAd->Insert( catalog_id, catalogAd );
 
-			resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
+
+			//
+			// Success.
+			//
 			replyAd.InsertAttr( ATTR_RESULT, true );
+
 
             //
             // Consider forcing a recomputation (and advertisement?) of all

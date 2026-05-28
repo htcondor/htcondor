@@ -1488,7 +1488,7 @@ condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_staging_only_conversation(
 	ClassAd request,
 	ListOfCatalogs common_file_catalogs,
-	std::map<std::string, std::string> externalToSimpleNameMap
+	std::map<std::string, std::string> internalToSimpleNameMap
 ) {
 	bool success;
 
@@ -1538,7 +1538,7 @@ UniShadow::start_staging_only_conversation(
 	std::vector<ExprTree *> catalogAds;
 	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
 		ClassAd * catalogAd = new ClassAd();
-		catalogAd->InsertAttr( ATTR_CATALOG, externalToSimpleNameMap[cifName] );
+		catalogAd->InsertAttr( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
 		catalogAd->InsertAttr( ATTR_CATALOG_PATH, stagingDir );
 		catalogAd->InsertAttr( ATTR_CATALOG_SIZE, cifNameToSizeMap[cifName] );
 
@@ -1547,6 +1547,18 @@ UniShadow::start_staging_only_conversation(
 		auto [scope, type] = * r;
 		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
 		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
+
+/*
+		catalogAd->InsertAttr( ATTR_ACCESS_POINT, FIXME );
+*/
+
+		//
+		// If we didn't get a slot ad from the starter, we won't be able to
+		// determine the staging directory from the machine ad ourselves;
+		// but if we don't, then the starter is also too old to be sending
+		// a version 2 common-catalogs ad.  (FIXME, send older starters
+		// a version 1 common-catalogs ad.)
+		//
 
 		catalogAds.push_back( catalogAd );
 	}
@@ -1686,7 +1698,8 @@ UniShadow::start_staging_only_conversation(
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_mapping_only_conversation(
 	ClassAd request,
-	ListOfCatalogs common_file_catalogs
+	ListOfCatalogs common_file_catalogs,
+	std::map<std::string, std::string> internalToSimpleNameMap
 ) {
 	ClassAd guidance;
 
@@ -1695,8 +1708,74 @@ UniShadow::start_mapping_only_conversation(
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
-		std::string message;
-		guidance = do_wiring_up(message, cifName);
+		//
+		// Determine the staging directory from the slot ad.  We don't want
+		// to hard-code this determination in the starter because it may
+		// change.  We could send a list of attribute-value pairs to the
+		// starter to match against the slot ad, instead, but there's no
+		// reason to do that in the starter instead of the shadow, and by
+		// explicitly sending the cifName, we avoid adding more versioned
+		// code to the starter (it won't try to figure it out on its own).
+		//
+		// We are for now ignoring questions about the catalog list itself
+		// varying within the namespace; I think we'd rather not permit it.
+		//
+		std::string stagingDir;
+		ClassAd * slotAd = remRes->getSlotAd();
+dprintf( D_ALWAYS, "slotAd = %p\n", slotAd );
+
+// FIXME: if we don't have a slot ad, skip all this and send the empty string
+
+		// If I were feeling more ambitious, I would refactor the code from
+		// start_staging_only_conversation() and call it here to fill in an
+		// ad to do matching against.
+		std::vector<std::pair<std::string, std::string>> requirements;
+		requirements.emplace_back( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
+
+		auto r = determineCIFScopeAndType( * jobAd );
+		if(! r) { EXCEPT("Failed to determine CIF scope and type before mapping it."); }
+		auto [scope, type] = * r;
+		requirements.emplace_back( ATTR_CATALOG_SCOPE, scope );
+		requirements.emplace_back( ATTR_CATALOG_SCOPE_TYPE, type );
+
+/*
+		requirements.emplace_back( ATTR_ACCESS_POINT, FIXME );
+*/
+
+// FIXME: error-handling, of some kind.
+		classad::ExprTree * e = slotAd->Lookup( "catalogs" );
+dprintf( D_ALWAYS, "e = %p\n", e );
+		classad::ExprList * l = dynamic_cast<classad::ExprList *>(e);
+dprintf( D_ALWAYS, "l = %p\n", l );
+		for( auto i = l->begin(); i != l->end(); ++i ) {
+			auto * ar = dynamic_cast<classad::AttributeReference *>(* i);
+dprintf( D_ALWAYS, "ar = %p\n", ar );
+
+			classad::EvalState state;
+			state.curAd = slotAd;
+			classad::ExprTree * f = nullptr;
+			classad::AttributeReference::Deref( * ar, state, f );
+dprintf( D_ALWAYS, "f = %p\n", f );
+			ClassAd * catalogAd = dynamic_cast<ClassAd *>(f);
+dprintf( D_ALWAYS, "catalogAd = %p\n", catalogAd );
+
+			bool matches = true;
+			for( auto [attribute, value] : requirements ) {
+				std::string catalogValue;
+				catalogAd->LookupString( attribute, catalogValue );
+dprintf( D_ALWAYS, "comparing %s == %s\n", value.c_str(), catalogValue.c_str() );
+				if( value != catalogValue ) { matches = false; break; }
+			}
+
+			if( matches ) {
+				catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
+				dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+				break;
+			}
+		}
+
+dprintf( D_ALWAYS, "do_wiring_up(%s, %s)\n", stagingDir.c_str(), cifName.c_str() );
+		guidance = do_wiring_up(stagingDir, cifName);
 		request = co_yield guidance;
 
 		bool success = false;
@@ -2159,8 +2238,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 
 		int required_version = 2;
-		std::map<std::string, std::string> externalToSimpleNameMap;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & externalToSimpleNameMap );
+		std::map<std::string, std::string> internalToSimpleNameMap;
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & internalToSimpleNameMap );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
@@ -2174,7 +2253,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & externalToSimpleNameMap )) {
+		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & internalToSimpleNameMap )) {
 			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -2240,13 +2319,13 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 				case CXFER_STATE::STAGING:
 					the_coroutine = std::move(
-						this->start_staging_only_conversation(request, *common_file_catalogs, externalToSimpleNameMap)
+						this->start_staging_only_conversation(request, *common_file_catalogs, internalToSimpleNameMap)
 					);
 					break;
 
 				case CXFER_STATE::MAPPING:
 					the_coroutine = std::move(
-						this->start_mapping_only_conversation(request, *common_file_catalogs)
+						this->start_mapping_only_conversation(request, *common_file_catalogs, internalToSimpleNameMap)
 					);
 					break;
 
@@ -2284,11 +2363,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 std::optional<ListOfCatalogs>
 UniShadow::computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
-	std::map<std::string, std::string> * externalToSimpleNameMap
+	std::map<std::string, std::string> * internalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, externalToSimpleNameMap );
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, internalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }
@@ -2299,11 +2378,11 @@ UniShadow::computeCommonInputFiles(
 	ClassAd * jobAd,
 	ListOfCatalogs & commonFileCatalogs,
 	int & required_version,
-	std::map<std::string, std::string> * externalToSimpleNameMap
+	std::map<std::string, std::string> * internalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version, externalToSimpleNameMap );
+	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version, internalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }

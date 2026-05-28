@@ -310,11 +310,12 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     # FIXME: We should test that:
     #
     # 1.  A, B and A, C with *B != *C produce different output.
-    # 2.  A, B and A, B with *B != *C produce different output.
+    # 2.  A, B and A, B with *B != *B produce different output.
+    # [or: is rejected for being invalid]
     # 3.  A, B and A, C with *B == *C produce the same output (but
     #     transfer common files twice).
     # 4.  A, B and A, B with *B == *B produce the same output (but
-    #     transer common files once).
+    #     transfer common files once).
     job_description_a = {
         ** job_description,
         "MY._x_common_input_catalogs":      '"A, B"',
@@ -323,8 +324,8 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
-        "MY._x_catalog_B":                  '"C1.txt, C2.txt"',
+        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
 

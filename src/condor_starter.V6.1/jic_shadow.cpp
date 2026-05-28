@@ -1329,7 +1329,9 @@ JICShadow::registerStarterInfo( void )
 
 	ClassAd starter_info;
 	publishStarterInfo( &starter_info );
+	starter_info.Insert( "SlotAd", getMachineAd() );
 	rval = REMOTE_CONDOR_register_starter_info(starter_info);
+	std::ignore = starter_info.Remove( "SlotAd" );
 
 	if( rval < 0 ) {
 		return false;
