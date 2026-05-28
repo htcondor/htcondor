@@ -32,8 +32,23 @@ MetricD::initAndReconfig(const char * /*unused*/)
 {
 	StatsD::initAndReconfig("METRICD", false);
 
-	m_ganglia.initAndReconfig();
-	m_prometheus.initAndReconfig();
+	// Only initialize a backend if at least one parsed metric could publish
+	// to it. This keeps a Prometheus-only deployment from ever loading
+	// libganglia (whose init EXCEPTs if not installed), and vice versa.
+	// Note: we recompute these on every reconfig, so adding a ganglia or
+	// prometheus metric to metrics.d and reconfiguring will start invoking
+	// the corresponding backend. Once a backend has been activated we leave
+	// it activated for the life of the process; removing the last metric
+	// for an already-loaded backend won't tear it back down.
+	m_ganglia_active    = m_ganglia_active    || hasMetricsForBackend("ganglia");
+	m_prometheus_active = m_prometheus_active || hasMetricsForBackend("prometheus");
+
+	if (m_ganglia_active) {
+		m_ganglia.initAndReconfig();
+	}
+	if (m_prometheus_active) {
+		m_prometheus.initAndReconfig();
+	}
 
 	// MetricD is the only instance that queries the collector, and it parses
 	// every metric definition itself (it applies no ExportMetric filter), so
@@ -42,8 +57,8 @@ MetricD::initAndReconfig(const char * /*unused*/)
 	// requirements (e.g. PrometheusD wants ATTR_LAST_HEARD_FROM for timestamps),
 	// which are advertised separately rather than derived from m_metrics.
 	if (m_want_projection) {
-		m_ganglia.extraProjectionRefs(m_projection_references);
-		m_prometheus.extraProjectionRefs(m_projection_references);
+		if (m_ganglia_active)    m_ganglia.extraProjectionRefs(m_projection_references);
+		if (m_prometheus_active) m_prometheus.extraProjectionRefs(m_projection_references);
 	}
 }
 
@@ -59,25 +74,25 @@ MetricD::newMetric(Metric const * /*unused*/ )
 void
 MetricD::publishMetricsFromAds(std::vector<ClassAd> &daemon_ads)
 {
-	m_ganglia.publishMetricsFromAds(daemon_ads);
-	m_prometheus.publishMetricsFromAds(daemon_ads);
+	if (m_ganglia_active)    m_ganglia.publishMetricsFromAds(daemon_ads);
+	if (m_prometheus_active) m_prometheus.publishMetricsFromAds(daemon_ads);
 }
 
 void
 MetricD::postPublishMetrics()
 {
 	// Ganglia has no per-cycle flush; Prometheus writes its file here.
-	m_prometheus.postPublishMetrics();
+	if (m_prometheus_active) m_prometheus.postPublishMetrics();
 }
 
 void
 MetricD::initializeHostList()
 {
-	m_ganglia.initializeHostList();
+	if (m_ganglia_active) m_ganglia.initializeHostList();
 }
 
 void
 MetricD::sendHeartbeats()
 {
-	m_ganglia.sendHeartbeats();
+	if (m_ganglia_active) m_ganglia.sendHeartbeats();
 }

@@ -43,6 +43,12 @@ class MetricD: public StatsD {
  private:
 	GangliaD    m_ganglia;
 	PrometheusD m_prometheus;
+
+	// Set during initAndReconfig() based on which backends are referenced by
+	// at least one parsed metric. Backends with no metrics are never touched,
+	// so e.g. a Prometheus-only setup never loads libganglia.
+	bool m_ganglia_active{false};
+	bool m_prometheus_active{false};
 };
 
 #endif

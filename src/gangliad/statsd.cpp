@@ -795,6 +795,8 @@ StatsD::initAndReconfig(char const *service_name, bool as_backend)
 	// no need for backends to compute the projection since they won't be talking to the collector
 	m_want_projection = as_backend ? false : param_boolean(param_name.c_str(), false);
 	m_projection_references.clear();
+	m_has_wildcard_backend_metric = false;
+	m_metric_counts_by_backend.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -924,6 +926,32 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		if( verbosity > m_verbosity ) {
 			delete ad;
 			continue;
+		}
+
+		// Classify which backend(s) this metric could publish to, so MetricD
+		// can skip initializing backends that have no metrics. A literal-string
+		// ExportMetric naming one or more backends bumps those counters; an
+		// expression, or a missing/empty value, sets the wildcard flag (meaning
+		// the metric could land in any backend at evaluation time).
+		{
+			classad::ExprTree *export_expr = ad->Lookup(ATTR_EXPORT_METRIC);
+			std::string export_literal;
+			if( !export_expr ) {
+				m_has_wildcard_backend_metric = true;
+			} else if( ExprTreeIsLiteralString(export_expr,export_literal) ) {
+				std::vector<std::string> export_systems = split(export_literal);
+				if( export_systems.empty() ) {
+					m_has_wildcard_backend_metric = true;
+				} else {
+					for( auto &s : export_systems ) {
+						std::string lower = s;
+						for( auto &c : lower ) c = (char)tolower((unsigned char)c);
+						m_metric_counts_by_backend[lower]++;
+					}
+				}
+			} else {
+				m_has_wildcard_backend_metric = true;
+			}
 		}
 
 		// for efficient queries to the collector, keep track of
@@ -1511,6 +1539,17 @@ StatsD::WriteMetricsToReset()
 	}
 
 	return ret_val;
+}
+
+bool
+StatsD::hasMetricsForBackend(const char *backend_name) const
+{
+	if( !backend_name ) return false;
+	if( m_has_wildcard_backend_metric ) return true;
+	std::string lower(backend_name);
+	for( auto &c : lower ) c = (char)tolower((unsigned char)c);
+	auto it = m_metric_counts_by_backend.find(lower);
+	return it != m_metric_counts_by_backend.end() && it->second > 0;
 }
 
 void

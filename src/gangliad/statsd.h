@@ -28,6 +28,7 @@
 #include <list>
 #include <vector>
 #include <string>
+#include <map>
 
 // True when the binary was invoked as condor_gangliad (legacy mode);
 // false when invoked as condor_metricd (modern mode). Defined in metricd_main.cpp.
@@ -166,6 +167,14 @@ class StatsD: Service {
 	// timestamps). The owning MetricD merges these into its own projection.
 	virtual void extraProjectionRefs(classad::References & /*refs*/) const {}
 
+	// Returns true if any parsed metric could publish to the named backend.
+	// Conservative: also returns true if any metric has a non-literal or
+	// empty/missing ExportMetric (which could resolve to any backend at
+	// evaluation time). MetricD uses this to skip initializing backends
+	// that have no metrics, so e.g. a Prometheus-only setup never touches
+	// libganglia. Matching is case-insensitive.
+	bool hasMetricsForBackend(const char *backend_name) const;
+
 	// If this StatsD only publishes to a single named backend (e.g. the
 	// Ganglia or Prometheus backend owned by a MetricD), return that backend
 	// name. ParseMetrics() uses it to discard, at parse time, any metric whose
@@ -221,6 +230,13 @@ class StatsD: Service {
 	std::vector<std::string> m_target_types;
 	bool m_want_projection = false;
 	classad::References m_projection_references;
+
+	// Set true if any parsed metric has a non-literal or empty/missing
+	// ExportMetric (so its target backend(s) cannot be known at parse time).
+	bool m_has_wildcard_backend_metric = false;
+	// Count of parsed metrics whose ExportMetric literally names this backend.
+	// Keys are normalized to lowercase.
+	std::map<std::string,unsigned> m_metric_counts_by_backend;
 
 
 	unsigned m_derivative_publication_failed;

@@ -426,6 +426,7 @@ endif()
 			condor_pl_test(test_htcondor_809 "Additional file-transfer tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_activation_metrics "Test activation metrics" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_prometheus_metrics "Test condor_metricd Prometheus export (HTCONDOR-3374)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_metricd_no_ganglia "Test condor_metricd skips Ganglia when no Ganglia metrics (HTCONDOR-3374)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# HTCONDOR-1365 changed the behavior of output_destination so
 			# that it no longer sends standard output and error to the
 			# destination.  HTCONDOR-955 made output_destination respect

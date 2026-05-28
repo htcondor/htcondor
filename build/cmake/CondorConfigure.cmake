@@ -545,7 +545,7 @@ option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 option(WITH_PLACEMENT "Support for placement tokens and tokens database" ON)
 if (LINUX)
-	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+	option(WITH_GANGLIA "Compiling with support for condor_gangliad and condor_metricd" ON)
 endif(LINUX)
 
 #####################################
