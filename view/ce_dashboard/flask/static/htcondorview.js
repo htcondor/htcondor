@@ -3786,7 +3786,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
        			if (options.chartArea.left === undefined) options.chartArea.left="10%";
             if (options.chartArea.right === undefined) options.chartArea.right = "10%";
             if (options.hAxis === undefined) options.hAxis = {};
-            if (options.hAxis.format === undefined) options.hAxis.format = "MMM dd HH:MM";
+            if (options.hAxis.format === undefined) options.hAxis.format = "MMM dd";
           
         }
         else {

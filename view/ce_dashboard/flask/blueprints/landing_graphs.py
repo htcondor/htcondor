@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, current_app
 import csv
+import os
 import urllib.request
 import functools
 import xml.etree.ElementTree as ET
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
+import utils
 import time
 from blueprints.landing import ce_info_from_topology, ce_info_from_collectors, ce_info_from_ganglia, returnOrAddUnregisteredInfo
 import classad2 as classad
@@ -101,6 +103,22 @@ def get_site_names_with_update_time():
         if info.hosted and info.active
     })
     
+def refresh_landing_graph_cache():
+    """
+    Evict and synchronously repopulate the Ganglia landing graph disk cache
+    for the week view.  Called by the background scheduler so that cached
+    data is never more than one refresh interval stale.
+    """
+    print("Refreshing landing graph cache...")
+    query_string = 'r=week'
+    try:
+        with utils.app.test_request_context(f'/data/landing_graphs?{query_string}'):
+            get_landing_graph_ganglia_data()
+    except Exception as e:
+        print(f'refresh_landing_graph_cache: refresh failed: {e}')
+    print("Done refreshing landing graph cache")
+
+
 #######################
 # Flask routes
 #######################
