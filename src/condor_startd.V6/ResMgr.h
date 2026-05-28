@@ -486,6 +486,10 @@ public:
 		// Called when a starter exits: if a reboot is pending and all
 		// claims are now gone, schedule the reconfig-and-reboot.
 	void checkForRehomeReboot();
+		// True between rebootAfterRehome() and the completion of the
+		// deferred doRehomeReboot timer.  startd_exit_if_idle() honors
+		// this so a fast-shutdown does not race past the pending reboot.
+	bool rehomeRebootPending() const { return m_reboot_after_rehome; }
 
 	time_t getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
@@ -659,8 +663,14 @@ private:
 	time_t total_draining_unclaimed;
 	time_t max_job_retirement_time_override;
 
-		// Pending reboot-on-rehome state
+		// Pending reboot-on-rehome state.  m_reboot_after_rehome is set
+		// when a rehome --reboot request arrives and stays true until the
+		// deferred doRehomeReboot handler has actually invoked the reboot
+		// command, so a concurrent fast-shutdown will not exit out from
+		// under us.  m_reboot_timer_scheduled guards the zero-delay timer
+		// against double registration.
 	bool m_reboot_after_rehome{false};
+	bool m_reboot_timer_scheduled{false};
 	std::string m_reboot_command;
 		// Deferred handler that actually reconfigs and reboots the host,
 		// run from a zero-delay timer to avoid reentrancy with the

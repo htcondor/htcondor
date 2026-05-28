@@ -3577,13 +3577,19 @@ ResMgr::checkForRehomeReboot()
 	if (! m_reboot_after_rehome) {
 		return;
 	}
+	if (m_reboot_timer_scheduled) {
+			// Timer is already queued; doRehomeReboot will run.
+		return;
+	}
 	if (hasAnyClaim()) {
 			// Still waiting for one or more starters to exit.
 		return;
 	}
 
-		// Only fire once.
-	m_reboot_after_rehome = false;
+		// Note: m_reboot_after_rehome stays true until doRehomeReboot
+		// completes, so startd_exit_if_idle defers any concurrent
+		// fast-shutdown until after we have launched the reboot command.
+	m_reboot_timer_scheduled = true;
 
 	dprintf(D_ALWAYS, "rehome: all claims evicted; scheduling host reboot\n");
 
@@ -3609,10 +3615,10 @@ ResMgr::doRehomeReboot(int /*timerID*/)
 	main_config();
 
 	priv_state priv = set_root_priv();
-#ifndef WIN32
-	sync();
-#endif
+	dprintf(D_ALWAYS, "rehome: running reboot command '%s'\n",
+			m_reboot_command.c_str());
 	int status = system(m_reboot_command.c_str());
+	dprintf(D_ALWAYS, "rehome: reboot command returned status %d\n", status);
 	set_priv(priv);
 
 	if (status != 0) {
@@ -3620,6 +3626,13 @@ ResMgr::doRehomeReboot(int /*timerID*/)
 			"rehome: reboot command '%s' returned status %d\n",
 			m_reboot_command.c_str(), status);
 	}
+
+		// Clear the pending flag now that the reboot command has been
+		// launched.  If a fast-shutdown was deferred waiting on us,
+		// re-poke the idle-exit path so the startd can finish exiting.
+	m_reboot_after_rehome = false;
+	m_reboot_timer_scheduled = false;
+	startd_exit_if_idle();
 }
 
 void

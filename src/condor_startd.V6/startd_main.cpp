@@ -1029,6 +1029,12 @@ startd_exit_if_idle(int /* tid */)
 	if ( bench_job_mgr && ( ! bench_job_mgr->ShutdownOk() ) ) {
 		return;
 	}
+	if ( resmgr && resmgr->rehomeRebootPending() ) {
+			// A rehome --reboot is queued or in flight.  Don't exit
+			// until doRehomeReboot has launched the reboot command;
+			// it will call back into us when it finishes.
+		return;
+	}
 	if ( ! resmgr ) {
 		startd_exit();
 	}
