@@ -129,7 +129,7 @@ These macros control the *condor_schedd*.
     refers to constants either directly or via macro substitution. The
     default value is an expression that depends on the total amount of
     memory and the operating system. The default expression requires
-    1MByte of RAM per running job on the access point. In some
+    1 MByte of RAM per running job on the access point. In some
     environments and configurations, this is overly generous and can be
     cut by as much as 50%. On Windows platforms, the number of running
     jobs is capped at 2000. A 64-bit version of Windows is recommended
@@ -1300,11 +1300,11 @@ These macros control the *condor_schedd*.
     -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
        this provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by :tool:`condor_submit` as if that
-       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
        configuration files.
 
-    The following example will add four new submit commands and disable the use of the
-    the ``accounting_group_user`` submit command.
+    The following example will add four new submit commands and disable the use of
+    the :subcom:`accounting_group_user` submit command.
 
     .. code-block:: condor-config
 
@@ -1557,8 +1557,8 @@ These macros control the *condor_schedd*.
     This integer duration in seconds defines how long the AP will keep those
     common files on the EP after the last such job exits.  This delay gives
     other jobs using those common files time to be submitted (if necessary)
-    and matched (if no claim can re-used).  It is analagous to
-    :subcom:`KEEP_CLAIM_IDLE`, but the latency reductions are probably
+    and matched (if no claim can be re-used).  It is analogous to
+    :subcom:`keep_claim_idle`, but the latency reductions are probably
     larger and reduce overall system overhead.
 
     Defaults to 300 seconds.
@@ -1574,6 +1574,6 @@ These macros control the *condor_schedd*.
 
     Defaults to false.  Setting this knob to true will cause HTCondor to
     do common file transfer for every container image that HTCondor transfers
-    (*i.e.*, not Docker images) unless :subcom:`ContainerIsCommon` is set.
+    (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
 
     We expect this knob to default to true in a later version of HTCondor.
