@@ -3,10 +3,10 @@
 # Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-25110001,arm-AL8,ubuntu-24.04-arm,all
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-25110001,arm-AL9,ubuntu-24.04-arm,all
-docker://htcondor/nmi-build:aarch64_AlmaLinux10-25110001,arm-AL10,ubuntu-24.04-arm,all
-docker://htcondor/nmi-build:aarch64_Ubuntu24-25110001,arm-U24,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-25110003,arm-AL8,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-25110003,arm-AL9,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_AlmaLinux10-25110003,arm-AL10,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_Ubuntu24-25110003,arm-U24,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:aarch64_Ubuntu26-25110001,arm-U26,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25110003,ppc-AL8,batlab,batlab
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25110003,x86-AL8,ubuntu-latest,all
