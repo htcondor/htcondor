@@ -6,6 +6,7 @@ import os
 import stat
 import sys
 import time
+import pytest
 from pathlib import Path
 
 DAG_FILE = "test.dag"
