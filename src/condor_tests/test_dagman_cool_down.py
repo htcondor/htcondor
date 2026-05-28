@@ -4,6 +4,7 @@ from ornithology import *
 import htcondor2
 import os
 import stat
+import sys
 import time
 from pathlib import Path
 
@@ -117,6 +118,7 @@ class TestDAGManCoolDown:
         assert len(dag_cool_down) == 1
         assert dag_cool_down[0].get("JobCoolDownExpiration") != None
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Test relies on POSIX directory permissions not available on Windows")
     def test_dag_fail_to_start_cool_down(self, dag_fail_to_start_cool_down):
         """Verify cool down is set when DAGMan fails to start due to missing IWD"""
         assert len(dag_fail_to_start_cool_down) == 1
