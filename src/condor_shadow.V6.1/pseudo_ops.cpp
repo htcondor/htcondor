@@ -1058,7 +1058,7 @@ LookupAdInContext( const ClassAd & ad, const std::string attr, ClassAd * & value
 
 
 bool
-LookupIntInContext( const ClassAd & ad, const std::string & attr, int  & value ) {
+LookupIntInContext( const ClassAd & ad, const std::string & attr, int & value ) {
 	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
 	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
 	if( context ) {
@@ -1548,9 +1548,10 @@ UniShadow::start_staging_only_conversation(
 		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
 		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
 
-/*
-		catalogAd->InsertAttr( ATTR_ACCESS_POINT, FIXME );
-*/
+		std::string access_point;
+		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
+		access_point = split(access_point, "@")[0];
+		catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
 
 		//
 		// If we didn't get a slot ad from the starter, we won't be able to
@@ -1717,14 +1718,7 @@ UniShadow::start_mapping_only_conversation(
 		// explicitly sending the cifName, we avoid adding more versioned
 		// code to the starter (it won't try to figure it out on its own).
 		//
-		// We are for now ignoring questions about the catalog list itself
-		// varying within the namespace; I think we'd rather not permit it.
-		//
 		std::string stagingDir;
-		ClassAd * slotAd = remRes->getSlotAd();
-dprintf( D_ALWAYS, "slotAd = %p\n", slotAd );
-
-// FIXME: if we don't have a slot ad, skip all this and send the empty string
 
 		// If I were feeling more ambitious, I would refactor the code from
 		// start_staging_only_conversation() and call it here to fill in an
@@ -1738,43 +1732,58 @@ dprintf( D_ALWAYS, "slotAd = %p\n", slotAd );
 		requirements.emplace_back( ATTR_CATALOG_SCOPE, scope );
 		requirements.emplace_back( ATTR_CATALOG_SCOPE_TYPE, type );
 
-/*
-		requirements.emplace_back( ATTR_ACCESS_POINT, FIXME );
-*/
+		std::string access_point;
+		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
+		access_point = split(access_point, "@")[0];
+		requirements.emplace_back( ATTR_ACCESS_POINT, access_point );
 
-// FIXME: error-handling, of some kind.
+		ClassAd * slotAd = remRes->getSlotAd();
 		classad::ExprTree * e = slotAd->Lookup( "catalogs" );
-dprintf( D_ALWAYS, "e = %p\n", e );
 		classad::ExprList * l = dynamic_cast<classad::ExprList *>(e);
-dprintf( D_ALWAYS, "l = %p\n", l );
-		for( auto i = l->begin(); i != l->end(); ++i ) {
-			auto * ar = dynamic_cast<classad::AttributeReference *>(* i);
-dprintf( D_ALWAYS, "ar = %p\n", ar );
 
-			classad::EvalState state;
-			state.curAd = slotAd;
-			classad::ExprTree * f = nullptr;
-			classad::AttributeReference::Deref( * ar, state, f );
-dprintf( D_ALWAYS, "f = %p\n", f );
-			ClassAd * catalogAd = dynamic_cast<ClassAd *>(f);
-dprintf( D_ALWAYS, "catalogAd = %p\n", catalogAd );
+		if( slotAd == nullptr ) {
+			dprintf( D_FULLDEBUG, "Starter did not send a slot ad, giving it a chance to find the catalog's path on its own.\n" );
+		} else if( e == nullptr ) {
+			dprintf( D_ALWAYS, "Starter sent a slot ad, but it didn't have a `catalogs` attribute; giving it a chance to find the catalog's path on its own.\n" );
+		} else if( l == nullptr ) {
+			dprintf( D_ALWAYS, "Started sent a slot ad, but its `catalogs` attribute wasn't a list; giving it a chance to find the catalog's path on its own.\n" );
+		} else {
+			for( auto i = l->begin(); i != l->end(); ++i ) {
+				auto * ar = dynamic_cast<classad::AttributeReference *>(* i);
+				if( ar == nullptr ) {
+					dprintf( D_ALWAYS, "Entry in `catalogs` not an attribute reference, ignoring.\n" );
+					continue;
+				}
 
-			bool matches = true;
-			for( auto [attribute, value] : requirements ) {
-				std::string catalogValue;
-				catalogAd->LookupString( attribute, catalogValue );
-dprintf( D_ALWAYS, "comparing %s == %s\n", value.c_str(), catalogValue.c_str() );
-				if( value != catalogValue ) { matches = false; break; }
-			}
+				classad::EvalState state;
+				state.curAd = slotAd;
+				classad::ExprTree * f = nullptr;
+				classad::AttributeReference::Deref( * ar, state, f );
+				if( f == nullptr ) {
+					dprintf( D_ALWAYS, "Attribute reference in `catalogs` could not be dereferenced, ignoring.\n" );
+					continue;
+				}
+				ClassAd * catalogAd = dynamic_cast<ClassAd *>(f);
+				if( catalogAd == nullptr ) {
+					dprintf( D_ALWAYS, "Attribute referenced in `catalogs` was not a ClassAd, ignoring.\n" );
+					continue;
+				}
 
-			if( matches ) {
-				catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
-				dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
-				break;
+				bool matches = true;
+				for( auto [attribute, value] : requirements ) {
+					std::string catalogValue;
+					catalogAd->LookupString( attribute, catalogValue );
+					if( value != catalogValue ) { matches = false; break; }
+				}
+
+				if( matches ) {
+					catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
+					dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+					break;
+				}
 			}
 		}
 
-dprintf( D_ALWAYS, "do_wiring_up(%s, %s)\n", stagingDir.c_str(), cifName.c_str() );
 		guidance = do_wiring_up(stagingDir, cifName);
 		request = co_yield guidance;
 
