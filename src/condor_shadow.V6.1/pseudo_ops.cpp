@@ -1528,53 +1528,57 @@ UniShadow::start_staging_only_conversation(
 	ClassAd guidance;
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
 
-	ClassAd * commonCatalogsAd = new ClassAd();
-	commonCatalogsAd->InsertAttr( ATTR_VERSION, 2 );
 
-	// Let's avoid worrying about whether or not the internal catalog names
-	// are valid ClassAd attribute names by making those names values and
-	// constructing a list of catalog ads.  This should also be more readily
-	// extensible (to say, including the simple name from the job ad).
+	//
+	// Only starter versions >= 25.12 can handle version 2 commands.
+	//
+	unsigned int version_to_send = 1;
+	ClassAd * commonCatalogsAd = new ClassAd();
+	CondorVersionInfo cvi( remRes->starter_version.c_str() );
+	if( cvi.built_since_version( 25, 12, 0 ) ) {
+		commonCatalogsAd->InsertAttr( ATTR_VERSION, 2 );
+		version_to_send = 2;
+	}
+
 	std::vector<ExprTree *> catalogAds;
 	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
 		ClassAd * catalogAd = new ClassAd();
-		catalogAd->InsertAttr( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
-		catalogAd->InsertAttr( ATTR_CATALOG_PATH, stagingDir );
-		catalogAd->InsertAttr( ATTR_CATALOG_SIZE, cifNameToSizeMap[cifName] );
 
-		auto r = determineCIFScopeAndType( * jobAd );
-		if(! r) { EXCEPT("Failed to determine CIF scope and type after having staged it."); }
-		auto [scope, type] = * r;
-		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
-		catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
+		if( version_to_send == 1 ) {
+			catalogAd->InsertAttr( ATTR_NAME, cifName );
+			catalogAd->InsertAttr( "StagingDir", stagingDir );
+			catalogAd->InsertAttr( "SimpleName", internalToSimpleNameMap[cifName] );
+		} else {
+			catalogAd->InsertAttr( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
+			catalogAd->InsertAttr( ATTR_CATALOG_PATH, stagingDir );
+			catalogAd->InsertAttr( ATTR_CATALOG_SIZE, cifNameToSizeMap[cifName] );
 
-		std::string access_point;
-		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
-		access_point = split(access_point, "@")[0];
-		catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
+			auto r = determineCIFScopeAndType( * jobAd );
+			if(! r) { EXCEPT("Failed to determine CIF scope and type after having staged it."); }
+			auto [scope, type] = * r;
+			catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
+			catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
 
-		//
-		// If we didn't get a slot ad from the starter, we won't be able to
-		// determine the staging directory from the machine ad ourselves;
-		// but if we don't, then the starter is also too old to be sending
-		// a version 2 common-catalogs ad.  (FIXME, send older starters
-		// a version 1 common-catalogs ad.)
-		//
+			std::string access_point;
+			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
+			access_point = split(access_point, "@")[0];
+			catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
+		}
 
 		catalogAds.push_back( catalogAd );
+
+		classad::ExprList * ccList = new classad::ExprList( catalogAds );
+		if(! ccList) {
+			EXCEPT( "Shadow unable to allocate memory in UniShadow::start_staging_only_conversation().\n" );
+		} else {
+			commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
+		}
+
+
+		ClassAd * colorAd = new ClassAd();
+		colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
+		guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
 	}
-
-	classad::ExprList * ccList = new classad::ExprList( catalogAds );
-	if(! ccList) {
-		EXCEPT( "Shadow unable to allocate memory in UniShadow::start_staging_only_conversation().\n" );
-	} else {
-		commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
-	}
-
-
-	ClassAd * colorAd = new ClassAd();
-	colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
-	guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
 
 	request = co_yield guidance;
 	success = false;
