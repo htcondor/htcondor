@@ -571,7 +571,7 @@ export CXX=$(which c++)
 %if 0%{?rhel} <= 9
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 %else
-. /usr/bin/gcc-toolset-15-env
+. /usr/lib/gcc-toolset/%{gcctoolset}-env.source
 %endif
 export CC=$(which cc)
 export CXX=$(which c++)
