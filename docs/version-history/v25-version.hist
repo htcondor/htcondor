@@ -1,5 +1,9 @@
 *** 25.12.0 features
 
+- The *condor_schedd* now writes an audit log to ``$(LOG)/SchedAuditLog``
+  by default.  In previous versions of HTCondor this was disabled.
+  :jira:`3770`
+
 - The ``htcondor ep rehome`` command directs a *condor_startd* to evict its
   running jobs and direct-attach to a different *condor_schedd*. The new
   ``--reboot`` option additionally reboots the execution point host once all
