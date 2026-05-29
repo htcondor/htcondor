@@ -121,12 +121,15 @@ BuildRequires: devtoolset-%{devtoolset}-toolchain
 %if 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
+BuildRequires: gcc-toolset-%{gcctoolset}-gcc-plugin-annobin
 %endif
 
 %if 0%{?amzn}
 BuildRequires: which
 BuildRequires: gcc14
 BuildRequires: gcc14-c++
+# Unfortunately, the annobin plugin is not provided for gcc 14 on amzn
+%undefine _annotated_build
 %endif
 
 %if 0%{?suse_version}
