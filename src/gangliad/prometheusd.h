@@ -41,6 +41,7 @@ class PrometheusD: public StatsD {
 	virtual void postPublishMetrics();
 	virtual void extraProjectionRefs(classad::References &refs) const;
 	virtual const char *exportFilterName() const { return "prometheus"; }
+	virtual const char *backendName() const { return "prometheus"; }
 
  private:
 	struct PendingMetric {

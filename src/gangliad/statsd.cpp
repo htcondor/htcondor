@@ -170,7 +170,15 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 {
 	bool retval = true;
 	ExprTree *expr = NULL;
-	if( !(expr=metric_ad.Lookup(attr_name)) ) {
+	// If this metric is being evaluated for a specific backend, a
+	// backend-decorated attribute (e.g. Ganglia_Name) overrides the generic
+	// one (e.g. Name) for that backend only.  Look for the decorated form
+	// first and fall back to the undecorated attribute if it is not present.
+	if( !backend.empty() ) {
+		std::string decorated_attr = backend + "_" + attr_name;
+		expr = metric_ad.Lookup(decorated_attr);
+	}
+	if( !expr && !(expr=metric_ad.Lookup(attr_name)) ) {
 		return true;
 	}
 	classad::ClassAd const *ad = &daemon_ad;
@@ -255,6 +263,12 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 bool
 Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD *statsd,std::vector<std::string> *regex_groups,char const *regex_attr)
 {
+	// Record which backend this metric is being evaluated for, so that
+	// evaluate() can honor backend-decorated attribute overrides such as
+	// Ganglia_Name overriding Name when publishing to ganglia.
+	char const *backend_name = statsd ? statsd->backendName() : nullptr;
+	backend = backend_name ? backend_name : "";
+
 	if( regex_attr ) {
 		name = regex_attr;
 	}

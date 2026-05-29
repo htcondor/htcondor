@@ -55,6 +55,9 @@ class GangliaD: public StatsD {
     // condor_gangliad processes every metric, exactly as it always has.
     virtual const char *exportFilterName() const { return m_as_backend ? "ganglia" : nullptr; }
 
+    // This StatsD always publishes to ganglia, even in legacy mode.
+    virtual const char *backendName() const { return "ganglia"; }
+
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated

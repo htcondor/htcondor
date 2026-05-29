@@ -52,6 +52,14 @@ METRIC_DEFS = """
   ExportMetric = "prometheus";
 ]
 [
+  Name = "override_test_metric";
+  ganglia_name = "override_test_metric_ganglia";
+  Value = 17;
+  Desc = "Default description";
+  Prometheus_Desc = "Prometheus-specific description";
+  TargetType = "Scheduler";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -180,3 +188,31 @@ class TestPrometheusMetrics:
 
     def test_ganglia_skips_prometheus_only_metric(self, ganglia_log_contents):
         assert "publishing prometheus_only_test_jobs" not in ganglia_log_contents
+
+    # --- backend-decorated attribute overrides (e.g. Ganglia_Name) ---
+
+    def test_override_prometheus_uses_default_name(self, prom_file_contents):
+        # No Prometheus_Name override, so Prometheus uses the generic Name.
+        assert "override_test_metric" in prom_file_contents
+
+    def test_override_prometheus_ignores_ganglia_name(self, prom_file_contents):
+        # The Ganglia_Name override must NOT leak into the Prometheus backend.
+        assert "override_test_metric_ganglia" not in prom_file_contents
+
+    def test_override_prometheus_uses_prometheus_desc(self, prom_file_contents):
+        # Prometheus_Desc overrides Desc only for the Prometheus backend.
+        assert "Prometheus-specific description" in prom_file_contents
+
+    def test_override_ganglia_uses_ganglia_name(self, ganglia_log_contents):
+        # Ganglia_Name overrides Name only for the Ganglia backend.
+        assert "noop mode: publishing override_test_metric_ganglia=17" in ganglia_log_contents
+
+    def test_override_ganglia_ignores_default_name(self, ganglia_log_contents):
+        # The generic Name must not be used by Ganglia when an override exists.
+        assert "publishing override_test_metric=17" not in ganglia_log_contents
+
+    def test_override_ganglia_uses_default_desc(self, ganglia_log_contents):
+        # No Ganglia_Desc override, so Ganglia uses the generic Desc, and the
+        # Prometheus-specific Desc must not leak into the Ganglia backend.
+        assert "desc=Default description" in ganglia_log_contents
+        assert "Prometheus-specific description" not in ganglia_log_contents

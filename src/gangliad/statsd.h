@@ -74,6 +74,12 @@ public:
 	std::string desc;
 	std::string units;
 	std::string group;
+	// Name of the backend this metric is being evaluated for (e.g. "ganglia"
+	// or "prometheus"), or empty if not backend-specific.  Set in
+	// evaluateDaemonAd() from the owning StatsD's backendName().  Used by
+	// evaluate() to honor backend-decorated attribute overrides such as
+	// Ganglia_Name overriding Name when publishing to ganglia.
+	std::string backend;
 	std::string machine;
 	std::string ip;
 	std::string cluster;
@@ -182,6 +188,15 @@ class StatsD: Service {
 	// nullptr for instances that must process every metric (MetricD, which
 	// builds the unified collector query, and legacy condor_gangliad).
 	virtual const char *exportFilterName() const { return nullptr; }
+
+	// Returns the name of the backend this StatsD publishes to (e.g.
+	// "ganglia" or "prometheus"), or nullptr for instances that are not tied
+	// to a single backend (the base class and MetricD, which never creates
+	// metrics of its own).  Metric::evaluate() uses this to honor
+	// backend-decorated attribute overrides (e.g. Ganglia_Name).  Unlike
+	// exportFilterName(), this is independent of as-backend filtering: legacy
+	// condor_gangliad still reports "ganglia" here.
+	virtual const char *backendName() const { return nullptr; }
 
 	// Given a machine name or daemon name, return the IP address of it,
 	// using information gathered from the collector.
