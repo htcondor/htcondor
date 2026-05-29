@@ -44,9 +44,9 @@ jobs:
       - name: Build
         run: |
           # Hackery for using toolset gcc instead of default
-          if [ -f "/opt/rh/gcc-toolset-14/root/usr/bin/gcc" ]; then
-            export CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-            export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
+          if [ -f "/opt/rh/gcc-toolset-15/root/usr/bin/gcc" ]; then
+            export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
+            export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
           fi
 
           if [ -f "/usr/bin/gcc-11" ] 
