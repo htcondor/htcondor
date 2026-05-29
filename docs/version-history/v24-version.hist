@@ -4,6 +4,11 @@
   loop if they have no valid standard input file to read.
   :jira:`3754`
 
+- When using the ClassAd function :classad-function:`debug`, comparing a string
+  to a non-string no longer results in the previous (unrelated) error, if any;
+  the message will instead be "strings can only be compared to strings".
+  :jira:`3771`
+
 *** 24.0.21 features
 
 - HTCondor tarballs now contain `Pelican 7.25.0 <https://pelicanplatform.org/releases>`_
