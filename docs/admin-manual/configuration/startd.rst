@@ -1579,3 +1579,18 @@ schedds.
 :macro-def:`STARTD_DIRECT_ATTACH_INTERVAL`
     The number of seconds between attempts by this *condor_startd* to directly
     connect to the *condor_schedd*. The default is 300 seconds (5 minutes).
+
+:macro-def:`STARTD_REHOME_ALLOW_REBOOT`
+    A ClassAd expression, evaluated against the slot ad, that guards the
+    ``--reboot`` option of ``condor_ep rehome``. The *condor_startd* will only
+    reboot its host on rehome if this expression evaluates to ``True`` for every
+    slot. If unset (the default) or it does not evaluate to ``True``, a rehome
+    request that asks to reboot is refused and no jobs are evicted.
+
+:macro-def:`STARTD_REBOOT_COMMAND`
+    The command the *condor_startd* runs to reboot its host after a
+    ``condor_ep rehome --reboot`` request has evicted all jobs (subject to
+    :macro:`STARTD_REHOME_ALLOW_REBOOT`). The command is run as root after the
+    rehome configuration has been persisted to disk, so that the host
+    direct-attaches to the new *condor_schedd* when it comes back up. The
+    default is ``/sbin/reboot``.
