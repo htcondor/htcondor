@@ -48,7 +48,7 @@ def the_lock_dir(test_dir):
 
 @action
 def the_condor(test_dir, the_lock_dir):
-    local_dir = test_dir / "condor"
+    local_dir = test_dir / "one_cif_job.d"
     cred_dir = local_dir / "cred.d"
     # I don't think Ornithology knows about this one yet.
     cred_dir.mkdir(parents=True, exist_ok=True)
@@ -122,9 +122,9 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
-        "log":                      "cif_job.log",
-        "output":                   "cif_job.output",
-        "error":                    "cif_job.error",
+        "log":                      "one_cif_job.log",
+        "output":                   "one_cif_job.output",
+        "error":                    "one_cif_job.error",
 
         "request_cpus":             1,
         "request_memory":           1,
@@ -156,12 +156,12 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
 
 @action
 def the_big_lock_dir(test_dir):
-    return test_dir / "big.lock.d"
+    return test_dir / "many_cif_jobs.lock.d"
 
 
 @action
 def the_big_condor(test_dir, the_big_lock_dir):
-    local_dir = test_dir / "big-condor"
+    local_dir = test_dir / "many_cif_jobs.d"
 
     with Condor(
         submit_user='tlmiller',
@@ -179,8 +179,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
             # This is not test-specific.
             "STARTER_NESTED_SCRATCH":       False,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_VERBOSE",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_ZKM",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_ALLOW_RUNAS_OWNER":    False,
@@ -233,9 +233,9 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         "transfer_executable":      True,
         "should_transfer_files":    True,
 
-        "log":                      "cif_job.log.$(CLUSTER)",
-        "output":                   "cif_job.output.$(CLUSTER).$(PROCESS)",
-        "error":                    "cif_job.error.$(CLUSTER).$(PROCESS)",
+        "log":                      "many_cif_jobs.log.$(CLUSTER)",
+        "output":                   "many_cif_jobs.output.$(CLUSTER).$(PROCESS)",
+        "error":                    "many_cif_jobs.error.$(CLUSTER).$(PROCESS)",
 
         "request_cpus":             1,
         "request_memory":           1,
@@ -329,7 +329,7 @@ def the_multi_lock_dir(test_dir):
 
 @action
 def the_multi_condor(test_dir, the_multi_lock_dir):
-    local_dir = test_dir / "multi-condor"
+    local_dir = test_dir / "multi_cif_jobs.d"
 
     with Condor(
         submit_user='tlmiller',
@@ -402,9 +402,9 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "transfer_executable":      True,
         "should_transfer_files":    True,
 
-        "log":                      "multi_job.log.$(CLUSTER)",
-        "output":                   "multi_job.output.$(CLUSTER).$(PROCESS)",
-        "error":                    "multi_job.error.$(CLUSTER).$(PROCESS)",
+        "log":                      "multi_cif_jobs.log.$(CLUSTER)",
+        "output":                   "multi_cif_jobs.output.$(CLUSTER).$(PROCESS)",
+        "error":                    "multi_cif_jobs.error.$(CLUSTER).$(PROCESS)",
 
         "request_cpus":             1,
         "request_memory":           1,

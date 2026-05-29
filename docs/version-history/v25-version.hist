@@ -9,6 +9,10 @@
   :macro:`STARTD_REBOOT_COMMAND` (default ``/sbin/reboot``) to perform the
   reboot.
   :jira:`3766`
+- Scheduler universe jobs such as DAGMan will now go into cool down
+  for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
+  *condor_schedd* fails to launch the job.
+  :jira:`3769`
 
 *** 25.12.0 bugs
 
@@ -95,7 +99,7 @@
   :jira:`3686`
 
 - Docker universe jobs that also had a credential being refreshed
-  that also exhausted their :subcom:`RequestMemory` would not go
+  that also exhausted their :subcom:`request_memory` would not go
   on hold immediately, but only after a 20 minute delay.
   :jira:`3672`
 

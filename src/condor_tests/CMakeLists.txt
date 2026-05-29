@@ -257,9 +257,11 @@ if (BUILD_TESTING)
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
 		# htcondor.personal test suite
-		if (NOT WINDOWS)
-			condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
-		endif()
+		# No one uses the personal condor bindings, and the rest of the test suite tests starting up HTCondor 
+		# This test is our slowest, so let's not bother
+		#if (NOT WINDOWS)
+		#	condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		#endif()
 
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -315,6 +317,9 @@ if (BUILD_TESTING)
 				condor_pl_test(test_archive_librarian "Test basic librarian functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 
+			# Windows doesn't implement common file transfer yet, so jobs can't
+			# become blocked.
+			condor_pl_test(test_unblocking_jobs "Test unblocking jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -513,7 +518,6 @@ endif()
 			condor_pl_test(test_cif_failures "Test common input files failures" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_shadow_exit_codes "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/busybox.sif;src/condor_tests/libcontainer.py")
 		endif()
-
 
 		# These Ornithology tests only work on linux.
 		# That's expected for some. Others need investigation

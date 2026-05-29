@@ -2829,10 +2829,10 @@ int Condor_Auth_Passwd::server_receive_two(int *server_status,
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a)
 		|| !mySock_->code(rb_len)
-		|| !(rb_len <= AUTH_PW_KEY_LEN)
+		|| !(rb_len >= 0 && rb_len <= AUTH_PW_KEY_LEN)
 		|| !(rb_len == mySock_->get_bytes(rb, rb_len))
 		|| !mySock_->code(hk_len)
-		|| !(hk_len <= EVP_MAX_MD_SIZE)
+		|| !(hk_len >= 0 && hk_len <= EVP_MAX_MD_SIZE)
 		|| !(hk_len == mySock_->get_bytes(hk, hk_len))
 		|| !mySock_->end_of_message()) {
 		dprintf(D_SECURITY, "Error communicating with client.  Aborting...\n");
@@ -3036,13 +3036,13 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 		|| !mySock_->code(b_len)
 		|| !mySock_->get(b,AUTH_PW_MAX_NAME_LEN)
 		|| !mySock_->code(ra_len)
-		|| !(ra_len <= AUTH_PW_KEY_LEN)
+		|| !(ra_len >= 0 && ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len  == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->code(rb_len)
-		|| !(rb_len <= AUTH_PW_KEY_LEN)
+		|| !(rb_len >= 0 && rb_len <= AUTH_PW_KEY_LEN)
 		|| !(rb_len  == mySock_->get_bytes(rb, rb_len))
 		|| !mySock_->code(hkt_len)
-		|| !(hkt_len <= EVP_MAX_MD_SIZE)
+		|| !(hkt_len >= 0 && hkt_len <= EVP_MAX_MD_SIZE)
 		|| !(hkt_len == mySock_->get_bytes(hkt, hkt_len))
 		|| !mySock_->end_of_message()) {
 		dprintf(D_SECURITY, "Error communicating with server.  Aborting...\n");
@@ -3150,7 +3150,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 		|| !mySock_->code(a) 
 		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(ra_len)
-		|| !(ra_len <= AUTH_PW_KEY_LEN)
+		|| !(ra_len >= 0 && ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->end_of_message()) {
 
