@@ -3753,6 +3753,11 @@ type=path
 description=Path to log file for the Schedd
 tags=sched,log
 
+[SCHEDD_AUDIT_LOG]
+default=$(LOG)/SchedAuditLog
+type=path
+tags=sched,log
+
 [SHADOW_LOG]
 default=$(LOG)/ShadowLog
 type=path
@@ -5689,6 +5694,7 @@ default=$(MAX_DEFAULT_LOG)
 [SCHEDD_DEBUG]
 default=D_PID
 description=Debug logging options for the schedd
+
 [MAX_SCHEDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
