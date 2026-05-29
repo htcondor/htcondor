@@ -2922,11 +2922,11 @@ dprintf( D_ALWAYS, "catalogsAd = %p\n", catalogsAd );
 			replyAd.InsertAttr( ATTR_RESULT, true );
 
 
-            //
-            // Consider forcing a recomputation (and advertisement?) of all
-            // slot ads here.  If d-slot splitting doesn't return a slot ad
-            // with this new catalog set, doing so becomes necessary.
-            //
+			//
+			// Successfully-advertised catalogs need to show up immediately
+			// in the internal ads used to determine the size of new slots.
+			//
+			rip->refresh_startd_cron_attrs();
 		} break;
 
 
