@@ -100,7 +100,7 @@ def get_data_from_ganglia():
     metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
 
     # Retrieve any metrics from Ganglia that start with any of the following phrases
-    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','EPs']
+    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','EPs', 'TotalTransfer']
     metric_args = '&'.join([f'mreg[]=%5E{expr}' for expr in metric_exprs])
 
     df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r={r}&hreg[]={host}&{metric_args}&aggregate=1&csv=1',skipfooter=1,engine='python')
@@ -124,6 +124,7 @@ def get_data_from_ganglia():
     df.loc[df['Project'] == '', 'Project'] = "____meta_" + df['Resource']
     # Simplify 'Resource' column by removing specific suffixes
     df['Resource'] = df['Resource'].str.replace('(In|NotIn)$', '', regex=True)
+    # df['Resource'] = df['Resource'].str.replace('(InputMB|OutputMB)$', 'MB', regex=True)
     # Pivot the DataFrame to create a schema with 'Date' and 'Project' as indices
     df = df.pivot(index=['Date', 'Project'], columns='Resource', values='value')
     # Fill missing values with zeros to handle incomplete data
@@ -148,7 +149,9 @@ def get_data_from_ganglia():
                               ['EPsRunning', 'EPsRunning'],
                               ['EPsCpuLimited', 'EPsCpuLimited'],
                               ['EPsMemoryLimited', 'EPsMemoryLimited'],
-                              ['EPsDiskLimited', 'EPsDiskLimited']):
+                              ['EPsDiskLimited', 'EPsDiskLimited'],
+                              ['TotalTransferOutputMB', 'TotalTransferOutputMB'],
+                              ['TotalTransferInputMB', 'TotalTransferInputMB']):
         df['Project'] = df['Project'].str.replace(f'____meta_{oldname}', newname)
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')
