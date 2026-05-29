@@ -143,10 +143,49 @@ Claim::~Claim()
 
 		std::string catalogName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
 
-		// FIXME: if this claim was declaring a list of catalogs, remove
+		// If this claim was declaring a list of catalogs, remove
 		// them from the global list of catalogs.  We can do and determine
 		// this by removing the name of every attribute in our ad from
 		// the list, although this is slightly magical.
+		classad::ExprList * catalogList = nullptr;
+		std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+		StartdNamedClassAd * snca_g = resmgr->adlist_find( catalog_list_name.c_str() );
+		if( snca_g ) {
+			ClassAd * catalogListAd = snca_g->GetAd();
+
+			if( catalogListAd ) {
+				classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+				if( e ) {
+					e = catalogListAd->Lookup( "catalogs" );
+					catalogList = dynamic_cast<classad::ExprList *>(e);
+				}
+			}
+		}
+
+		if( catalogList ) {
+			StartdNamedClassAd * snca_l = resmgr->adlist_find( catalogName.c_str() );
+			if( snca_l ) {
+				ClassAd * catalogsAd = snca_l->GetAd();
+
+				if( catalogsAd ) {
+					for( auto i = catalogsAd->begin(); i != catalogsAd->end(); ++i ) {
+						for( auto j = catalogList->begin(); j != catalogList->end(); ++j ) {
+
+							auto * ar = dynamic_cast<classad::AttributeReference *>(* j);
+							if(! ar) { continue; }
+							ExprTree * e = nullptr; std::string attr; bool abs = false;
+							ar->GetComponents(e, attr, abs);
+
+							if( attr == i->first ) {
+								catalogList->erase(j);
+								// Of course our hand-written iterators aren't erasure-safe.
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
 
 		resmgr->adlist_delete( catalogName.c_str() );
 	}
@@ -2871,17 +2910,17 @@ void Claim::receiveUpdateCommand( int c,
 			std::string catalog_id;
 			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
 
-// This should probably be refactored.
+// FIXME: dprintf()s; is refactoring necessary?
 			ClassAd * catalogListAd = nullptr;
 			std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
 			StartdNamedClassAd * namedCatalogListAd = resmgr->adlist_find( catalog_list_name.c_str() );
 			if( namedCatalogListAd == NULL ) {
-dprintf( D_ALWAYS, "Does this ever happen?\n" );
+dprintf( D_ALWAYS, "Does this ever happen? (1)\n" );
 				catalogListAd = new ClassAd();
 				resmgr->adlist_replace( catalog_list_name.c_str(), catalogListAd );
 			} else {
 				catalogListAd = namedCatalogListAd->GetAd();
-dprintf( D_ALWAYS, "catalogListAd = %p\n", catalogListAd );
+dprintf( D_ALWAYS, "catalogListAd = %p (1)\n", catalogListAd );
 			}
 
 			classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
@@ -2903,12 +2942,12 @@ dprintf( D_ALWAYS, "catalogListAd = %p\n", catalogListAd );
 			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
 			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
 			if( namedCatalogsAd == NULL ) {
-dprintf( D_ALWAYS, "Does this ever happen?\n" );
+dprintf( D_ALWAYS, "Does this ever happen? (2)\n" );
 				catalogsAd = new ClassAd();
 				resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
 			} else {
 				catalogsAd = namedCatalogsAd->GetAd();
-dprintf( D_ALWAYS, "catalogsAd = %p\n", catalogsAd );
+dprintf( D_ALWAYS, "catalogsAd = %p (2)\n", catalogsAd );
 			}
 
 			ClassAd * catalogAd = new ClassAd( payloadAd );
