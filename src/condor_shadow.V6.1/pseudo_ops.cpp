@@ -1561,7 +1561,7 @@ UniShadow::start_staging_only_conversation(
 
 			std::string access_point;
 			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
-			access_point = split(access_point, "@")[0];
+			access_point = split(access_point, "#")[0];
 			catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
 		}
 
@@ -1738,7 +1738,7 @@ UniShadow::start_mapping_only_conversation(
 
 		std::string access_point;
 		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
-		access_point = split(access_point, "@")[0];
+		access_point = split(access_point, "#")[0];
 		requirements.emplace_back( ATTR_ACCESS_POINT, access_point );
 
 		ClassAd * slotAd = remRes->getSlotAd();
@@ -1775,8 +1775,22 @@ UniShadow::start_mapping_only_conversation(
 
 				bool matches = true;
 				for( auto [attribute, value] : requirements ) {
+					classad::Value stringValue;
+					std::string catalogValueProbe;
+					formatstr( catalogValueProbe, "string(%s)", attribute.c_str() );
+					if(! catalogAd->EvaluateExpr( catalogValueProbe, stringValue )) {
+						dprintf( D_ALWAYS, "Could not evaluate %s.\n", catalogValueProbe.c_str() );
+						matches = false;
+						break;
+					}
+
 					std::string catalogValue;
-					catalogAd->LookupString( attribute, catalogValue );
+					if(! stringValue.IsStringValue( catalogValue )) {
+						dprintf( D_ALWAYS, "%s did not evaluate into a string.\n", catalogValueProbe.c_str() );
+						matches = false;
+						break;
+					}
+
 					if( value != catalogValue ) { matches = false; break; }
 				}
 
