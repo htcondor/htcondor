@@ -2910,17 +2910,14 @@ void Claim::receiveUpdateCommand( int c,
 			std::string catalog_id;
 			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
 
-// FIXME: dprintf()s; is refactoring necessary?
 			ClassAd * catalogListAd = nullptr;
 			std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
 			StartdNamedClassAd * namedCatalogListAd = resmgr->adlist_find( catalog_list_name.c_str() );
 			if( namedCatalogListAd == NULL ) {
-dprintf( D_ALWAYS, "Does this ever happen? (1)\n" );
 				catalogListAd = new ClassAd();
 				resmgr->adlist_replace( catalog_list_name.c_str(), catalogListAd );
 			} else {
 				catalogListAd = namedCatalogListAd->GetAd();
-dprintf( D_ALWAYS, "catalogListAd = %p (1)\n", catalogListAd );
 			}
 
 			classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
@@ -2942,12 +2939,10 @@ dprintf( D_ALWAYS, "catalogListAd = %p (1)\n", catalogListAd );
 			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
 			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
 			if( namedCatalogsAd == NULL ) {
-dprintf( D_ALWAYS, "Does this ever happen? (2)\n" );
 				catalogsAd = new ClassAd();
 				resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
 			} else {
 				catalogsAd = namedCatalogsAd->GetAd();
-dprintf( D_ALWAYS, "catalogsAd = %p (2)\n", catalogsAd );
 			}
 
 			ClassAd * catalogAd = new ClassAd( payloadAd );
