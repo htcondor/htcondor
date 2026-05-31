@@ -1532,13 +1532,13 @@ UniShadow::start_staging_only_conversation(
 	//
 	// Only starter versions >= 25.12 can handle version 2 commands.
 	//
-	unsigned int version_to_send = 1;
-	ClassAd * commonCatalogsAd = new ClassAd();
+	int version_to_send = 1;
 	CondorVersionInfo cvi( remRes->starter_version.c_str() );
 	if( cvi.built_since_version( 25, 12, 0 ) ) {
-		commonCatalogsAd->InsertAttr( ATTR_VERSION, 2 );
 		version_to_send = 2;
 	}
+	ClassAd * commonCatalogsAd = new ClassAd();
+	commonCatalogsAd->InsertAttr( ATTR_VERSION, version_to_send );
 
 	std::vector<ExprTree *> catalogAds;
 	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
