@@ -1566,21 +1566,22 @@ UniShadow::start_staging_only_conversation(
 		}
 
 		catalogAds.push_back( catalogAd );
-
-		classad::ExprList * ccList = new classad::ExprList( catalogAds );
-		if(! ccList) {
-			EXCEPT( "Shadow unable to allocate memory in UniShadow::start_staging_only_conversation().\n" );
-		} else {
-			commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
-		}
-
-
-		ClassAd * colorAd = new ClassAd();
-		colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
-		guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
 	}
 
+	classad::ExprList * ccList = new classad::ExprList( catalogAds );
+	if(! ccList) {
+		EXCEPT( "Shadow unable to allocate memory in UniShadow::start_staging_only_conversation().\n" );
+	} else {
+		commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
+	}
+
+
+	ClassAd * colorAd = new ClassAd();
+	colorAd->Insert( "CommonCatalogsAd", commonCatalogsAd );
+	guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
+
 	request = co_yield guidance;
+
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
 	if(! success) {
