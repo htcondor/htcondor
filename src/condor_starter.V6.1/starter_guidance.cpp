@@ -629,7 +629,6 @@ Starter::handleJobSetupCommand(
 			//
 			// Construct the reply.
 			//
-
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
 			context.InsertAttr( ATTR_RESULT, success );
@@ -638,10 +637,9 @@ Starter::handleJobSetupCommand(
 			// If we're not talking to a shadow, then who's guiding us?
 			ASSERT(secretsAd != NULL);
 			std::string splitClaimID;
-			success = secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID );
-			if(! success) {
-			    dprintf( D_ALWAYS, "The secrets ad did not contain %s, or it wasn't a string.\n", ATTR_SPLIT_CLAIM_ID );
-    			context.InsertAttr( ATTR_RESULT, success );
+			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID ) ) {
+				dprintf( D_ALWAYS, "The secrets ad did not contain %s, or it wasn't a string.\n", ATTR_SPLIT_CLAIM_ID );
+				context.InsertAttr( ATTR_RESULT, false );
 			}
 
 			// For splitting this slot into a data and a job slot.
@@ -665,7 +663,31 @@ Starter::handleJobSetupCommand(
 				return false;
 			}
 
-			// This is a hack: this starter should ask the startd for the cifName.
+			// In the initial concurrent-only implementation, the mapping
+			// shadow knew the staging directory because the staging shadow
+			// told it (via the filesystem, using the SingleProviderSyndicate.
+			//
+			// In the initial sequential implemententation, the mapping shadow
+			// didn't know the staging directory because the staging shadow
+			// (now called the transfer shadow) couldn't tell the mapping
+			// shadow; they could only communicate through the schedd.  So the
+			// mapping shadows depended on the starters "coloring" their slots
+			// with the map a map from internal catalog names to staging
+			// directories.  This worked, and made sense -- there's no real
+			// reason for the AP to know what the exact path on disk is --
+			// but because STARTER_COMMAND::COLOR is so (too) general, it
+			// was impossible to use that information in ClassAd expressions,
+			// such as might be used to adjust the size of the job's disk
+			// request to account for how much common files were saving it.
+			//
+			// In HTCONDOR-3732, we added STARTER_COMMAND::ADVERTISE_CATALOG,
+			// which overcomes this limitation with pure special-case magic.
+			// As a result, the shadow -- if given the slot ad -- can determine
+			// just like any other daemon if the required catalog(s) is present,
+			// and if so, where it lives.  We therefore don't have to touch
+			// the look-up code in the starter: it will work regardless of
+			// which era of shadow to which it is talking.
+			//
 			std::string stagingDir;
 			if(! guidance.LookupString( ATTR_STAGING_DIR, stagingDir )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_STAGING_DIR );
