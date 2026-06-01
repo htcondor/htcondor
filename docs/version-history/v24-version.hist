@@ -4,6 +4,11 @@
   loop if they have no valid standard input file to read.
   :jira:`3754`
 
+- Fixed a bug in the *condor_job_router* taht caused routing to failure
+  if the configuration parameters :macro:`JOB_ROUTER_SCHEDD1_NAME` or
+  :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
+  :jira:`3760`
+
 *** 24.0.21 features
 
 - HTCondor tarballs now contain `Pelican 7.25.0 <https://pelicanplatform.org/releases>`_
