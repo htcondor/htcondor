@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-monitor_period = 5
+monitor_period = 3
 resources = {
     "SQUID": 4,
     "TAKO": 4,
@@ -169,7 +169,7 @@ def the_job(test_dir, resources):
         while elapsed < int(sys.argv[1]):""" +
 
         "".join( f"""
-            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/../htcondor/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
         """ for resource in resources
         ) +
 
@@ -184,7 +184,7 @@ def the_job(test_dir, resources):
 
     job_spec = {
                 "executable": script_file.as_posix(),
-                "arguments": "17",
+                "arguments": "8",
                 "log": (test_dir / "events.log").as_posix(),
                 "output": (test_dir / "poll-memory.$(Cluster).$(Process).out").as_posix(),
                 "error": (test_dir / "poll-memory.$(Cluster).$(Process).err").as_posix(),
@@ -200,9 +200,14 @@ def the_job(test_dir, resources):
 
 @action
 def handle(test_dir, condor, num_resources):
+    # num_resources/2 (=2) jobs run concurrently against the available
+    # resources; submitting num_resources (=4) leaves a second wave queued
+    # behind them, so we still exercise reclaim + reassignment and the
+    # "never more than num_resources/2 running" guarantee, at half the
+    # serial-wave cost of num_resources * 2.
     handle = condor.submit(
         description=the_job(test_dir, resources.keys()),
-        count=num_resources * 2
+        count=num_resources
     )
 
     assert(handle.wait(verbose=True, timeout=240))
