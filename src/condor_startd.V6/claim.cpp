@@ -2897,7 +2897,11 @@ void Claim::receiveUpdateCommand( int c,
 
 
 			//
-			// FIXME: Validate that the payload ad is a catalog ad.
+			// We don't need to validate the payload ad; the following code
+			// doesn't depend on the payload ad in any way, so it can't screw
+			// up the startd internals, and the only other thing we do with
+			// it is make in a uniquely-named nested ad, so it can't overwrite
+			// any other values, even if it were malicious.
 			//
 
 
@@ -2934,7 +2938,9 @@ void Claim::receiveUpdateCommand( int c,
 			catalogList->push_back( ref );
 
 
-			// Update the claim-specific ad.
+			// Update the claim-specific ad.  (Strictly speaking, this should
+			// happen first, so that the attribute above is always defined,
+			// but the startd is single-threaded.)
 			ClassAd * catalogsAd = nullptr;
 			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
 			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );

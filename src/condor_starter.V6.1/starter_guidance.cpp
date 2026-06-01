@@ -619,9 +619,8 @@ Starter::handleJobSetupCommand(
 						break;
 					}
 				}
-
 			} else {
-				dprintf( D_ALWAYS, "Unknown version number in guidance; FIXME.\n" );
+				dprintf( D_ALWAYS, "Unknown version number in guidance; carrying on.\n" );
 				return false;
 			}
 
