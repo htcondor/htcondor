@@ -3293,7 +3293,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User OsUser
+default=Owner ClusterId JobUniverse ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -3751,6 +3751,11 @@ tags=negotiator,log
 default=$(LOG)/SchedLog
 type=path
 description=Path to log file for the Schedd
+tags=sched,log
+
+[SCHEDD_AUDIT_LOG]
+default=$(LOG)/SchedAuditLog
+type=path
 tags=sched,log
 
 [SHADOW_LOG]
@@ -5689,6 +5694,7 @@ default=$(MAX_DEFAULT_LOG)
 [SCHEDD_DEBUG]
 default=D_PID
 description=Debug logging options for the schedd
+
 [MAX_SCHEDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
