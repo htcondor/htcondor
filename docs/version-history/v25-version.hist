@@ -9,6 +9,11 @@
   :macro:`STARTD_REBOOT_COMMAND` (default ``/sbin/reboot``) to perform the
   reboot.
   :jira:`3766`
+
+- Honor the :subcom:`transfer_executable` submit command for **batch**
+  grid universe jobs.
+  :jira:`3772`
+
 - Scheduler universe jobs such as DAGMan will now go into cool down
   for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
   *condor_schedd* fails to launch the job.
