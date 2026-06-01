@@ -4040,11 +4040,15 @@ int dc_main( int argc, char** argv )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu", (unsigned long) daemonCore->getpid());
+	// Emit the whole line in a single dprintf so it lands in one atomic
+	// write().  When many daemons (e.g. shadows) share a log file, splitting
+	// this across two dprintf calls lets another process's message interleave
+	// between them, tearing the banner line.
 #ifdef WIN32
-	dprintf(D_ALWAYS | D_NOHEADER,"\n");
+	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
 #else
-	dprintf(D_ALWAYS | D_NOHEADER, " RealUID = %u\n", getuid());
+	dprintf(D_ALWAYS,"** PID = %lu RealUID = %u\n",
+			(unsigned long) daemonCore->getpid(), getuid());
 #endif
 
 	time_t log_last_mod_time = dprintf_last_modification();
