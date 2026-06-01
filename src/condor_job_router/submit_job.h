@@ -60,7 +60,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details,
     The ClassAd is used to set priv state appropriately for manipulating
     the job through qmgmt.
 */
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed);
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * schedd_name, const char * pool_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed);
 
 
 /*
@@ -78,8 +78,8 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		on suggested identity strings.
 */
 bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, std::string * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed=true, bool release_on_hold = true, bool *keep_trying = 0);
-bool yield_job(classad::ClassAd const &ad, const char * pool_name,
-	const char * schedd_name, bool done, int cluster, int proc,
+bool yield_job(classad::ClassAd const &ad, const char * schedd_name,
+	const char * pool_name, bool done, int cluster, int proc,
 	std::string * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed = true,
 	bool release_on_hold = true, bool *keep_trying = 0);
 
