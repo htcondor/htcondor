@@ -4,6 +4,11 @@
   loop if they have no valid standard input file to read.
   :jira:`3754`
 
+- When using the ClassAd function :classad-function:`debug`, comparing a string
+  to a non-string no longer results in the previous (unrelated) error, if any;
+  the message will instead be "strings can only be compared to strings".
+  :jira:`3771`
+
 - Fixed a bug in the *condor_job_router* taht caused routing to failure
   if the configuration parameters :macro:`JOB_ROUTER_SCHEDD1_NAME` or
   :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
