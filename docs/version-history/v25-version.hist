@@ -23,6 +23,12 @@
   *condor_schedd* fails to launch the job.
   :jira:`3769`
 
+- Jobs that transfer input sandboxs now log a file transfer started 
+  event even when there list of files to be transfered is empty.
+  Note that the transfer finished event has always been logged
+  for empty file lists.  
+  :jira:`3777`
+
 *** 25.12.0 bugs
 
 - Improved the interaction between the *condor_schedd* and the
