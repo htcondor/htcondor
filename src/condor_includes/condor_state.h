@@ -32,7 +32,7 @@ enum State { no_state=0, owner_state, unclaimed_state, matched_state,
 			 _state_threshold_, _error_state_ }; 
 
 enum Activity { no_act=0, idle_act, busy_act, retiring_act, vacating_act,
-				suspended_act, benchmarking_act, killing_act,
+				suspended_act, benchmarking_act, killing_act, cleaning_act,
 				_act_threshold_, _error_act_ };
 
 const char* state_to_string(State);

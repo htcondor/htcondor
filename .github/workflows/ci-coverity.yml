@@ -1,0 +1,59 @@
+name: Run static analysis with Coverity
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13 10 * * *'
+
+jobs:
+  resolve-ubunturoot-image:
+    if: github.repository == 'htcondor/htcondor'
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.extract.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Extract ubunturoot image from nmi-build-platforms
+        id: extract
+        run: |
+          IMAGE=$(.github/workflows/scripts/extract_ubunturoot_image.py)
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+  build_and_analyze:
+    if: github.repository == 'htcondor/htcondor'
+    needs: resolve-ubunturoot-image
+    runs-on: ubuntu-latest
+
+    # Use htcondor build containers for the real work
+    container:
+      image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
+      env:
+        OMP_NUM_THREADS: 4
+      options: --cpus 4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Compile with coverity-build
+        env:
+          COVERITY_API_KEY: ${{ secrets.COVERITY_API_KEY }}
+        run: |
+          # Fetch the coverity build binaries
+          wget --quiet https://scan.coverity.com/download/linux64 --post-data "token=${COVERITY_API_KEY}&project=GregThain%2Fhtcondor" -O coverity_tool.tgz
+          tar xzf coverity_tool.tgz
+          chmod 0777 .
+          mkdir __build && chown condorauto __build && chmod 0777 __build
+          su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .."
+          su condorauto -c "cd __build && ninja -j 4"
+          su condorauto -c "cd __build && touch src/condor_includes/config.h"
+          su condorauto -c "cd __build && mkdir cov-int && ../cov-*/bin/cov-build --dir cov-int ninja -j 4"
+          # All the following we can do as root
+          cd __build 
+          tar cvzf cov.tgz cov-int
+          curl -X POST -d version="Version" -d description="Description"  -d email=gthain@cs.wisc.edu -d token=${COVERITY_API_KEY} -d file_name="'cov.tgz'" https://scan.coverity.com/projects/22859/builds/init | tee response
+          upload_url=$(jq -r '.url' response)
+          build_id=$(jq -r '.build_id' response)
+          curl -X PUT --header 'Content-Type: application/json' --upload-file cov.tgz $upload_url
+          curl -X PUT -d token=${COVERITY_API_KEY} https://scan.coverity.com/projects/22859/builds/$build_id/enqueue

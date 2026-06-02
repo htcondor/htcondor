@@ -211,17 +211,22 @@ macros are described in the :doc:`/admin-manual/security` section.
     memory. The default is 3600. If the server and client have different
     configurations, the smaller one will be used.
 
-:macro-def:`SEC_INVALIDATE_SESSIONS_VIA_TCP`
-    Use TCP (if True) or UDP (if False) for responding to attempts to
-    use an invalid security session. This happens, for example, if a
-    daemon restarts and receives incoming commands from other daemons
-    that are still using a previously established security session. The
-    default is True.
+:macro-def:`FS_LOCAL_DIR`
+    The location of a directory visible to both server and client in Local
+    File System authentication. The default when not defined is the
+    directory ``/tmp``.  This directory must be world writable with the
+    sticky bit set (i.e. permissions of 1777) for the FS authentication method to work.
 
 :macro-def:`FS_REMOTE_DIR`
-    The location of a file visible to both server and client in Remote
+    The location of a directory visible to both server and client in Remote
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
+
+:macro-def:`FS_ROOT_TO_CONDOR`
+    When this boolean value is ``True``, when a client authenticates as
+    user ``root`` via the FS or FS_REMOTE method, the server changes the
+    authenticated identity to the Condor user (usually ``condor``).
+    The default value is ``True``.
 
 :macro-def:`DISABLE_EXECUTE_DIRECTORY_ENCRYPTION`
     A boolean value that when set to ``True`` disables the ability for
@@ -533,6 +538,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     expensive authentication negotiation on each network connection. It
     bypasses the security authorization settings. The default value is
     ``True``.
+
+:macro-def:`SEC_USE_LOW_DATA_MODE`
+    When this boolean parameter is set to ``True``, daemons will reject
+    large data messages from unauthenticated clients.
+    The default is ``False``.
 
 :macro-def:`SEC_ENABLE_REMOTE_ADMINISTRATION`
     A boolean parameter that controls whether daemons should include a

@@ -10,6 +10,8 @@ from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import *
 
+from generation import generate_javascript
+
 SPECIAL_CASE_KNOBS = ["<SUBSYS>"]
 TEMPLATE_FILE = "introduction-to-configuration"
 
@@ -25,7 +27,7 @@ def find_conf_knobs(dir: str):
     config_dir = base / "admin-manual" / "configuration"
 
     for path in config_dir.iterdir():
-        if path.suffix != ".rst":
+        if path.suffix != ".rst" or path.name in ["index.rst", "all.rst"]:
             continue
 
         url = path.relative_to(base).with_suffix(".html")
@@ -87,13 +89,8 @@ def find_templates(dir: str):
 
 def generate_old_redirect_page(dir: str):
     """Write javascript to redirect old monolithic configuration macro URLs to new locations"""
-    gen_dir = Path(dir) / "_static" / "generated" / "js"
-    try:
-        gen_dir.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        warn(f"Failed to ensure/create '{gen_dir}': {e}")
 
-    javascript = gen_dir / "config-macro-redirect.js"
+    javascript = generate_javascript(dir, "config-macro-redirect.js")
     with open(javascript, "w") as f:
         f.write("""
 // Map of tag -> URL end

@@ -82,6 +82,8 @@
 #define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
 #define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
 #define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
+#define SUBMIT_KEY_RetryRequestDisk "retry_request_disk"
+
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
@@ -217,6 +219,7 @@
 #define SUBMIT_KEY_DAGManJobId "dagman_job_id"
 #define SUBMIT_KEY_LogNotesCommand "submit_event_notes"
 #define SUBMIT_KEY_UserNotesCommand "submit_event_user_notes"
+#define SUBMIT_KEY_NotesAttrsCommand "submit_event_notes_attrs"
 #define SUBMIT_KEY_JarFiles "jar_files"
 #define SUBMIT_KEY_JavaVMArgs "java_vm_args"
 #define SUBMIT_KEY_JavaVMArguments1 "java_vm_arguments"

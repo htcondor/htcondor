@@ -129,7 +129,7 @@ These macros control the *condor_schedd*.
     refers to constants either directly or via macro substitution. The
     default value is an expression that depends on the total amount of
     memory and the operating system. The default expression requires
-    1MByte of RAM per running job on the access point. In some
+    1 MByte of RAM per running job on the access point. In some
     environments and configurations, this is overly generous and can be
     cut by as much as 50%. On Windows platforms, the number of running
     jobs is capped at 2000. A 64-bit version of Windows is recommended
@@ -251,6 +251,14 @@ These macros control the *condor_schedd*.
     does not apply to grid universe jobs. When
     the limit is reached, additional transfers will queue up and wait
     before proceeding.
+
+:macro-def:`MAX_CONCURRENT_UPLOADS_PER_USER`
+    This specifies the maximum number of simultaneous transfers per user of input
+    files from the access point to execute machines. The limit applies
+    to all jobs submitted by a user from the same *condor_schedd*. The default is
+    ``$(MAX_CONCURRENT_UPLOADS)/5``. A setting of 0 means unlimited transfers. This limit currently
+    does not apply to grid universe jobs. When
+    the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*
 
 :macro-def:`BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER`
     This specifies the minimum size in bytes of a job's file transfer
@@ -593,7 +601,7 @@ These macros control the *condor_schedd*.
     fewer transactions it has to play to figure out what state the job
     queue is really in. This macro determines how often the
     *condor_schedd* should rework this queue to cleaning it up. It is
-    defined in terms of seconds and defaults to 86400 (once a day).
+    defined in terms of seconds and defaults to 28800 (every 8 hours).
 
 :macro-def:`WALL_CLOCK_CKPT_INTERVAL`
     The job queue contains a counter for each job's "wall clock" run
@@ -975,6 +983,11 @@ These macros control the *condor_schedd*.
     cool-down state for that number of seconds. During this time, the
     job will not be run again.
 
+:macro-def:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`
+    An integer representing the time in seconds that a scheduler universe job,
+    such as *condor_dagman*, will be in the cool down state when it exits
+    with a non-zero exit code. The default value is 300 seconds, i.e. 5 minutes.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate
@@ -1287,11 +1300,11 @@ These macros control the *condor_schedd*.
     -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
        this provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by :tool:`condor_submit` as if that
-       attribute is not in this ad. This is intended to aid composibility of this ad across multiple
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
        configuration files.
 
-    The following example will add four new submit commands and disable the use of the
-    the ``accounting_group_user`` submit command.
+    The following example will add four new submit commands and disable the use of
+    the :subcom:`accounting_group_user` submit command.
 
     .. code-block:: condor-config
 
@@ -1537,3 +1550,30 @@ These macros control the *condor_schedd*.
    User security level used to write links to the directory specified by
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:  **<user>**, **<condor>** or **<%username%>**
+
+:macro-def:`KEEP_DATA_CLAIM_IDLE`
+    After an AP stages common files to an EP, it is responsible for keeping
+    those files there for as long as jobs running on that EP require them.
+    This integer duration in seconds defines how long the AP will keep those
+    common files on the EP after the last such job exits.  This delay gives
+    other jobs using those common files time to be submitted (if necessary)
+    and matched (if no claim can be re-used).  It is analogous to
+    :subcom:`keep_claim_idle`, but the latency reductions are probably
+    larger and reduce overall system overhead.
+
+    Defaults to 300 seconds.
+
+:macro-def:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`
+    Container images are definitionally immutable and usually the same for
+    every job in a cluster (and many clusters in a DAG); in addition, they
+    are usually large.  Thus, container images are prime candidates for
+    common file transfer, so that they get transferred to an EP once and
+    can be used many times.  (Because they use the same common file transfer
+    mechanism as any other common file, container images are not presently
+    shared between different job owners.)
+
+    Defaults to false.  Setting this knob to true will cause HTCondor to
+    do common file transfer for every container image that HTCondor transfers
+    (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
+
+    We expect this knob to default to true in a later version of HTCondor.

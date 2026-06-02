@@ -99,8 +99,8 @@ regarding the overall workflow progress under the DAGMan proper job as follows:
     :caption: Example condor_q DAG workflow output (condensed)
 
     $ condor_q
-    $ OWNER   BATCH_NAME          SUBMITTED   DONE  RUN  IDLE  TOTAL  JOB_IDS
-    $ Cole    diamond.dag+1024    1/1 12:34   1     2    -     4      1025.0 ... 1026.0
+      OWNER   BATCH_NAME          SUBMITTED   DONE  RUN  IDLE  TOTAL  JOB_IDS
+      Cole    diamond.dag+1024    1/1 12:34   1     2    -     4      1025.0 ... 1026.0
 
 Using :tool:`condor_q` with the *-dag* and *-nobatch* flags will display information
 about the DAGMan proper job and all jobs currently submitted/running as
@@ -110,10 +110,10 @@ part of the DAGMan workflow as follows:
     :caption: Example condor_q DAG workflow output (uncondensed)
 
     $ condor_q -dag -nobatch
-    $ ID       OWNER/NODENAME  SUBMITTED    RUN_TIME ST PRI SIZE CMD
-    $ 1024.0   Cole            1/1 12:34  0+01:13:19 R  0   0.4  condor_dagman ...
-    $ 1025.0    |-Node_B       1/1 13:44  0+00:03:19 R  0   0.4  diamond.sh ...
-    $ 1026.0    |-Node_C       1/1 13:45  0+00:02:19 R  0   0.4  diamond.sh ...
+      ID       OWNER/NODENAME  SUBMITTED    RUN_TIME ST PRI SIZE CMD
+      1024.0   Cole            1/1 12:34  0+01:13:19 R  0   0.4  condor_dagman ...
+      1025.0    |-Node_B       1/1 13:44  0+00:03:19 R  0   0.4  diamond.sh ...
+      1026.0    |-Node_C       1/1 13:45  0+00:02:19 R  0   0.4  diamond.sh ...
 
 In addition to basic job management, the DAGMan proper job holds a lot of extra
 information within its job ClassAd that can queried with the *-l* or the more
@@ -509,36 +509,46 @@ Throttling at DAG Submission
 
 :index:`editing DAG throttles<single: DAGMan; Editing DAG throttles>`
 
+.. sidebar:: Editing DAG throttles
+
+    .. code-block:: console
+        :caption: Using the htcondor CLI
+
+        $ htcondor dag throttle 298 --nodes 100 --pre 5 --post 10
+
+    .. code-block:: python
+        :caption: Via the Python API
+
+        import htcondor2
+
+        my_dag = htcondor2.DAGMan(298)
+        my_dag.throttle(max_nodes = 100, max_pre = 5, max_post = 10)
+
 Editing DAG Throttles
 '''''''''''''''''''''
 
-The following throttling properties of a running DAG can be changed after the workflow
-has been started. The values of these properties are published in the :tool:`condor_dagman`
-job ad; changing any of these properties using :tool:`condor_qedit` will also update
-the internal DAGMan value.
+A running DAG's throttles can be modified via :tool:`htcondor dag throttle` or :meth:`htcondor2.DAGMan.throttle`.
+All throttles will be constrained to the throttles value configured by the administrator unless
+:macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is set to ``True`` (by the administrator). The
+edited values will persist across crashes but not when rerunning a DAG in rescue mode. The values DAGMan
+is using for throttling can be found in either the ``*.dagman.out`` debug log or the DAGMan job
+record with the following attributes:
 
-.. sidebar:: Edit DAGMan Limits
-
-    To edit one of these properties, use the :tool:`condor_qedit`
-    tool with the job ID of the :tool:`condor_dagman`
-
-    .. code-block:: console
-
-        $ condor_qedit <dagman-job-id> DAGMan_MaxJobs 1000
-
-Currently, you can change the following attributes:
-
-+----------------------------------+-----------------------------------------------------+
-| **Attribute Name**               | **Attribute Description**                           |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxJobs`        | Maximum number of running nodes                     |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxIdle`        | Maximum number of idle jobs                         |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxPreScripts`  | Maximum number of running PRE scripts               |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxPostScripts` | Maximum number of running POST scripts              |
-+----------------------------------+-----------------------------------------------------+
++----------------------------------------+-------------------------------------------------------+
+| **Attribute Name**                     | **Attribute Description**                             |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxJobs`              | Maximum number of running nodes                       |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxIdle`              | Maximum number of idle jobs                           |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxPreScripts`        | Maximum number of running PRE scripts                 |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxHoldScripts`       | Maximum number of running HOLD scripts                |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxPostScripts`       | Maximum number of running POST scripts                |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxSubmitsPerInterval`| Maximum number of job submissions per submit interval |
++----------------------------------------+-------------------------------------------------------+
 
 :index:`throttling nodes by category<single: DAGMan; Throttling nodes by category>`
 

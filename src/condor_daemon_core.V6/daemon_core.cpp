@@ -85,6 +85,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
+#include "condor_random_num.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
 #include "valgrind.h"
@@ -110,6 +111,7 @@ const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
+const int DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP = 666670;
 const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
@@ -289,7 +291,6 @@ DaemonCore::DaemonCore()
 	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ) {
 		m_wants_dc_udp_self = false;
 	}
-	m_invalidate_sessions_via_tcp = true;
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
 #ifdef WIN32
 	m_never_use_kill_for_dc_signals = true;
@@ -3128,8 +3129,6 @@ DaemonCore::reconfig(void) {
 		m_use_clone_to_create_processes = false;
 	}
 #endif /* HAVE CLONE */
-
-	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
 	// DaemonCore::Send_Signal behaviors
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
@@ -8183,11 +8182,28 @@ int DaemonCore::Create_Process(
 				// before writing to the pipe.  So it cannot have
 				// called exec(), because it always writes to the pipe
 				// before calling exec.
-			dprintf(D_ALWAYS,"Error: Create_Process(%s): failed to read child tracking gid: rc=%d, gid=%d, errno=%d %s.\n",
-					executable,tracking_gid_rc,child_tracking_gid,errno,strerror(errno));
 
 			int child_status;
 			waitpid(newpid, &child_status, 0);
+			return_errno = errno;
+
+#ifdef LINUX
+			if (m_proc_family && family_info &&
+				m_proc_family->has_been_oom_killed(newpid, child_status)) {
+				dprintf(D_ALWAYS,
+					"Error: Create_Process(%s): child was OOM killed by "
+					"cgroup memory limit before exec().\n",
+					executable);
+				return_errno = ERRNO_OOM_KILLED_AT_STARTUP;
+			} else
+#endif
+			{
+				dprintf(D_ALWAYS,
+					"Error: Create_Process(%s): child died before exec(): "
+					"child status=%d (0x%x).\n",
+					executable, child_status, child_status);
+			}
+
 			close(errorpipe[0]);
 			newpid = FALSE;
 			goto wrapup;
@@ -10961,13 +10977,13 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 	return true;
 }
 
-bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
+bool DaemonCore :: cookie_is_valid( const unsigned char* data, int len ) {
 
 	if ( data == NULL || _cookie_data == NULL ) {
 		return false;
 	}
 
-	if ( strcmp((const char*)_cookie_data, (const char*)data) == 0 ) {
+	if ( len == _cookie_len && timing_safe_compare(_cookie_data, data, len) ) {
 		// we have a match... trust this command.
 		return true;
 	} else if ( _cookie_data_old != NULL ) {
@@ -10976,7 +10992,7 @@ bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 		// rotated the cookie. So check it with
 		// the old cookie.
 
-		if ( strcmp((const char*)_cookie_data_old, (const char*)data) == 0 ) {
+		if ( len == _cookie_len_old && timing_safe_compare(_cookie_data_old, data, len) ) {
 			return true;
 		} else {
 
@@ -11429,42 +11445,6 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
 	}
 	return 0;
-}
-
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) const {
-	if ( !sinful ) {
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
-		return;
-	}
-
-	std::string the_msg = sessid;
-
-	// If given a non-empty ad, add it to our message.
-	// This extra information is understood in version 8.8.0
-	// and above.
-	if ( info_ad && info_ad->size() > 0 ) {
-		the_msg += "\n";
-		classad::ClassAdUnParser unparser;
-		unparser.Unparse(the_msg, info_ad);
-	}
-
-	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
-
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg(
-		DC_INVALIDATE_KEY,
-		the_msg.c_str() );
-
-	msg->setSuccessDebugLevel(D_SECURITY);
-	msg->setRawProtocol(true);
-
-	if( !daemon->hasUDPCommandPort() || m_invalidate_sessions_via_tcp ) {
-		msg->setStreamType(Stream::reli_sock);
-	}
-	else {
-		msg->setStreamType(Stream::safe_sock);
-	}
-
-	daemon->sendMsg( msg.get() );
 }
 
 

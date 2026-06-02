@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[CHECK_REACTIVATE_AFTER_CHECKPOINT]
+default=true
+type=bool
+
 [STARTER_DIAGNOSTIC_send_ep_logs]
 default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
 
@@ -1088,6 +1092,12 @@ default=false
 type=bool
 tags=startd
 
+[STARTD_REBOOT_COMMAND]
+# Command the startd runs to reboot the host on "condor_ep rehome --reboot" (gated by STARTD_REHOME_ALLOW_REBOOT)
+default=/sbin/reboot
+type=string
+tags=startd
+
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
@@ -1312,11 +1322,6 @@ type=string
 tags=daemon_core
 
 [USE_CLONE_TO_CREATE_PROCESSES]
-default=true
-type=bool
-tags=daemon_core
-
-[SEC_INVALIDATE_SESSIONS_VIA_TCP]
 default=true
 type=bool
 tags=daemon_core
@@ -2772,6 +2777,10 @@ default=false
 type=bool
 tags=io,condor_auth_fs
 
+[FS_ROOT_TO_CONDOR]
+default=true
+type=bool
+
 [KERBEROS_MAP_FILE]
 default=
 type=string
@@ -3284,7 +3293,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User OsUser
+default=Owner ClusterId JobUniverse ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -3365,7 +3374,7 @@ customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [QUEUE_CLEAN_INTERVAL]
-default=86400
+default=28800
 type=int
 tags=Schedd
 
@@ -3483,6 +3492,12 @@ tags=schedd
 default=TotalSchedulerJobsRunning < 500
 description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
+tags=schedd
+
+[SCHEDULER_UNIVERSE_COOL_DOWN_DURATION]
+default=300
+description=Time in seconds to put scheduler universe job in cool down when exited with non-zero exit code.
+type=int
 tags=schedd
 
 [MAX_JOBS_SUBMITTED]
@@ -3708,6 +3723,12 @@ type=path
 description=Path to log file for KBDD
 tags=kbdd,log
 
+[LIBRARIAN_LOG]
+default=$(LOG)/LibrarianLog
+type=path
+description=Path to log file for the archive Librarian
+tags=librarian,log
+
 [MASTER_LOG]
 default=$(LOG)/MasterLog
 type=path
@@ -3730,6 +3751,11 @@ tags=negotiator,log
 default=$(LOG)/SchedLog
 type=path
 description=Path to log file for the Schedd
+tags=sched,log
+
+[SCHEDD_AUDIT_LOG]
+default=$(LOG)/SchedAuditLog
+type=path
 tags=sched,log
 
 [SHADOW_LOG]
@@ -4876,6 +4902,12 @@ type=int
 description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
 tags=file_transfer
 
+[STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS]
+default=
+version=25.11
+description=Conditionally disable user-supplied transfer plugins, MY is slot and TARGET is job.
+tags=file_transfer
+
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
 version=7.9.4
@@ -5105,6 +5137,12 @@ range=0,
 default=100
 type=int
 range=0,
+
+[MAX_CONCURRENT_UPLOADS_PER_USER]
+default=$(MAX_CONCURRENT_UPLOADS:100)/5
+type=int
+range=0,
+
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=2.0
@@ -5638,6 +5676,12 @@ description=Debug logging options for the kbdd
 [MAX_KBDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
+[LIBRARIAN_DEBUG]
+default=
+description=Debug logging options for the archive librarian
+[MAX_LIBRARIAN_LOG]
+default=$(MAX_DEFAULT_LOG)
+
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 description=Debug logging options for the negotiator
@@ -5650,6 +5694,7 @@ default=$(MAX_DEFAULT_LOG)
 [SCHEDD_DEBUG]
 default=D_PID
 description=Debug logging options for the schedd
+
 [MAX_SCHEDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
@@ -5829,6 +5874,69 @@ type=string
 [TRUSTED_VAULT_HOSTS]
 default=
 type=string
+
+# Archive librarian configuration options
+[LIBRARIAN]
+default=$(SBIN)/condor_librarian
+win32_default=$(SBIN)\condor_librarian.exe
+type=path
+customization=devel
+description=Path to the HTCondor archive librarian daemon binary
+tags=master
+
+[LIBRARIAN_UPDATE_INTERVAL]
+default=5
+type=int
+description=Archive librarians update interval in seconds
+tags=librarian
+
+[LIBRARIAN_DATABASE]
+default=$(SPOOL)/library.db
+type=path
+description=Path to the archive librarians SQLite3 database
+tags=librarian
+
+[LIBRARIAN_MAX_JOBS_CACHED]
+default=10000
+type=int
+description=Maximum number of cached job entries within the archive librarian
+tags=librarian
+
+[LIBRARIAN_STATUS_RETENTION_SECONDS]
+default=300
+type=int
+description=Time in seconds per update status rows will stay in the archive librarians database
+tags=librarian
+
+[LIBRARIAN_MAX_UPDATES_PER_CYCLE]
+default=100000
+#type=longlong
+description=The upper limit of records indexed in one update interval for the archive librarian.
+tags=librarian
+
+[LIBRARIAN_MAX_DATABASE_SIZE]
+default=2 * 1024 * 1024 * 1024
+#type=longlong
+description=Maximum size of the archive librarians indexing SQLite3 database
+tags=librarian
+
+[LIBRARIAN_HIGH_WATER_MARK]
+default=0.97
+type=double
+description=The percentage of the database size to use as the upper threshold to trigger garbage collection.
+tags=librarian
+
+[LIBRARIAN_LOW_WATER_MARK]
+default=0.8
+type=double
+description=The percentage of the database size that the librarian aims to reduce to during garbage collection.
+tags=librarian
+
+[USING_LIBRARIAN]
+default=False
+type=bool
+description=Boolean to denote archive librarian indexing in use for tools to utilize for quick reference.
+tags=librarian
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6233,6 +6341,11 @@ type=bool
 [SEC_ACCEPT_CAPABILITY_TOKENS]
 default=false
 type=bool
+
+[KEEP_DATA_CLAIM_IDLE]
+default=300
+type=int
+description=How long should a common object catalog persiste after its last use?
 
 ######
 ## add metaknobs below this banner
@@ -6736,6 +6849,14 @@ default : @fin
 	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
+[$FEATURE.AssignProjectName]
+description=Set the ProjectName of the job by mapping the job's Owner attribute args:(map_name [, map_file])
+default : @fin
+	if ! $(1?)
+	  error : use FEATURE : AssignProjectName requires a map_name argument
+	endif
+	use FEATURE : SetJobAttrFromUsermap(ProjectName, Owner, $(1+))
+@fin
 
 [$FEATURE.SetJobAttrFromUsermap]
 description=Set a job attribute from a usermap of another job attribute args:(dest_attr, src_attr, map_name [, map_file])
@@ -6746,9 +6867,9 @@ default : @fin
 	if $(4?)
 	   use FEATURE : ScheddUsermapFile($(3), $(4))
 	endif
-	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) Set$(1)
-	JOB_TRANSFORM_Set$(1) = [ eval_set_$(1)=usermap("$(3)",$(2),$(1)); ]
-	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) Require$(1)
+	JOB_TRANSFORM_NAMES += Set$(1)
+	JOB_TRANSFORM_Set$(1) = EVALSET $(1) usermap("$(3)",$(2),$(1))
+	SUBMIT_REQUIREMENT_NAMES += Require$(1)
 	SUBMIT_REQUIREMENT_Require$(1) = $(1) isnt undefined
 	SUBMIT_REQUIREMENT_Require$(1)_REASON = strcat("Submit requirement Require$(1) not met - Could not map '", $(2)?:"undefined", "' to a $(1)")
 @fin
@@ -7209,14 +7330,28 @@ win32_default : @end
 @end
 
 
+[$FEATURE.LIBRARIAN]
+description=Enable a database that indexes historical archive records args:(max_size, file_path).
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) LIBRARIAN
+	USING_LIBRARIAN=True
+	if $(1?)
+		LIBRARIAN_MAX_DATABASE_SIZE=$(1)
+	endif
+	if $(2?)
+		LIBRARIAN_DATABASE=$(2)
+	endif
+@end
+
+
 [$FEATURE.KRB]
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_KRB
 	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
 	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
-	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	USE_KEYRING_SESSIONS=True
 @end
 
@@ -7226,7 +7361,7 @@ description=Enable the daemons and features need to support running jobs with OA
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
 	CREDMON_OAUTH_LOG=$(LOG)/CredMonOAuthLog
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
 @end
@@ -7235,7 +7370,7 @@ default : @end
 description=Enable sending of schedd job history ads to unauthenticated Elasticsearch on localhost
 default : @end
 	ADSTASH_SCHEDD_HISTORY=True
-	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
+	DAEMON_LIST=$(DAEMON_LIST) ADSTASH
 @end
 
 [$FEATURE.CommonCloudAttributesGoogle]
@@ -7405,7 +7540,7 @@ default : @fin
 [$FEATURE.GANGLIA]
 description=Enable condor_gangliad daemon
 default : @end
-	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+	DAEMON_LIST=$(DAEMON_LIST) GANGLIAD
 @end
 
 [$FEATURE.DefaultCheckpointDestination]

@@ -25,6 +25,7 @@
 #include <limits>
 #include <regex>
 #include <set>
+#include <algorithm>
 
 #include "stl_string_utils.h"
 

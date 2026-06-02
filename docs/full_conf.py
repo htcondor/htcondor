@@ -57,6 +57,8 @@ extensions = [
     'hidden',
     'flatten-history',
     'fake-definition',
+    'vacate_combined_table',
+    'generate_all_macros',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -80,9 +82,7 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    'display_version': False, # Note: This feature is gone in v3 of sphinx_rtd_theme (produces warning)
-}
+html_theme_options = {}
 
 # Enable Github edits
 html_context = {

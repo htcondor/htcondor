@@ -960,7 +960,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
-	const char *jic_iwd = GetWorkingDir(0);
+	const char *jic_iwd = GetWorkingDir(WD::OUTER);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
 	char real_iwd[MAXPATHLEN+1];
@@ -1447,7 +1447,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.c_str());
-	setup_args.AppendArg(GetWorkingDir(0));
+	setup_args.AppendArg(GetWorkingDir(WD::OUTER));
 	setup_args.AppendArg(ssh_to_job_shell_setup.c_str());
 	setup_args.AppendArg(sshd_config_template.c_str());
 	setup_args.AppendArg(ssh_keygen_cmd.c_str());
@@ -1466,7 +1466,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			.wantCommandPort(FALSE)
 			.wantUDPCommandPort(FALSE)
 			.env(&setup_env)
-			.cwd(GetWorkingDir(0))
+			.cwd(GetWorkingDir(WD::OUTER))
 			.std(setup_std_fds)
 			.jobOptMask(setup_opt_mask));
 
@@ -1940,9 +1940,23 @@ Starter::createTempExecuteDir( void )
 
 #if !defined(WIN32)
 			{
-				// Made it as condor, now chown it to user
-				TemporaryPrivSentry sentry(PRIV_ROOT);
-				r = chown(JobHomeDir.c_str(),get_user_uid(), get_user_gid());
+				// Made it as condor, now chown it to user.
+				// Use safe_open_no_create to avoid a symlink TOCTOU
+				// race between the mkdir above and this chown.
+				int fd = safe_open_no_create(JobHomeDir.c_str(), O_RDONLY | O_DIRECTORY);
+				if (fd >= 0) {
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					r = fchown(fd, get_user_uid(), get_user_gid());
+					if (r < 0) {
+						int fchown_errno = errno;
+						close(fd);
+						errno = fchown_errno;
+					} else {
+						close(fd);
+					}
+				} else {
+					r = -1;
+				}
 			}
 
 			if (r < 0) {
@@ -2419,7 +2433,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 		this->deferral_tid = daemonCore->Register_Timer(
 										deltaT,
-										(TimerHandlercpp)&Starter::SpawnPreScript,
+										(TimerHandlercpp)&Starter::SpawnJobOrPreScript,
 										"deferred job start",
 										this );
 			//
@@ -2513,12 +2527,13 @@ Starter::removeDeferredJobs() {
 }
 
 /**
- * Start the prescript for a job, if one exists
- * If one doesn't, then we will call SpawnJob() directly
+ * Timer callback to Start the job command(s).  If there is a
+ * job pre script and pre-scripts are allowed, it will start that.
+ * Otherwise (the normal case) it will call SpawnJob directly.
  * 
  **/
 void
-Starter::SpawnPreScript( int /* timerID */ )
+Starter::SpawnJobOrPreScript( int /* timerID */ )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -2530,23 +2545,27 @@ Starter::SpawnPreScript( int /* timerID */ )
 	
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
-	char* tmp = NULL;
-	std::string attr;
+	ClassAd * mad = jic->machClassAd();
 
-	attr = "Pre";
-	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr, &tmp) ) {
-		free( tmp );
-		tmp = NULL;
-		pre_script = new ScriptProc( jobAd, "Pre" );
-	}
+	std::string precmd, postcmd;
+	jobAd->LookupString("Pre" ATTR_JOB_CMD, precmd);
+	jobAd->LookupString("Post" ATTR_JOB_CMD, postcmd);
 
-	attr = "Post";
-	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr, &tmp) ) {
-		free( tmp );
-		tmp = NULL;
-		post_script = new ScriptProc( jobAd, "Post" );
+	if ( ! precmd.empty() || ! postcmd.empty()) {
+
+		dprintf(D_ALWAYS, "Job PreCmd: %s\n", precmd.c_str());
+		dprintf(D_ALWAYS, "Job PostCmd: %s\n", postcmd.c_str());
+
+		// job defined PreCmd and PostCmd are obsolete and disabled by default.
+		// If an admin wants to enable them, they can do so with an expression
+		// that references both slot and job.
+		const bool def_allow_pre_post = false;
+		if (param_boolean("STARTER_ALLOW_JOB_PRE_AND_POST_CMD", def_allow_pre_post, false, mad, jobAd)) {
+			if ( ! precmd.empty())  { pre_script = new ScriptProc( jobAd, "Pre" ); }
+			if ( ! postcmd.empty()) { post_script = new ScriptProc( jobAd, "Post" ); }
+		} else {
+			dprintf(D_ALWAYS, "STARTER_ALLOW_JOB_PRE_AND_POST_CMD evaluated to false, PreCmd and PostCmd will be ignored\n");
+		}
 	}
 
 	if( pre_script ) {
@@ -2575,7 +2594,7 @@ Starter::SpawnPreScript( int /* timerID */ )
 
 /**
 * Timer handler to Skip job execution because we failed setup
-* used instead of the deferral timer that executes SpawnPreScript above
+* used instead of the deferral timer that executes SpawnJobOrPreScript above
 * return true if no errors occured
 **/
 void
@@ -3043,7 +3062,7 @@ Starter::Reaper(int pid, int exit_status)
 				 WEXITSTATUS(exit_status) );
 	}
 
-	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {
+	if( pre_script && pre_script->JobReaper(pid, exit_status) == ReapResult::JobDone ) {
 		bool exitStatusSpecified = false;
 		int desiredExitStatus = computeDesiredExitStatus( "Pre", this->jic->jobClassAd(), & exitStatusSpecified );
 		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
@@ -3072,7 +3091,8 @@ Starter::Reaper(int pid, int exit_status)
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
-		pre_script = NULL; // done with pre-script
+		delete pre_script;
+		pre_script = nullptr; // done with pre-script
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
 			main_shutdown_fast();
@@ -3081,7 +3101,7 @@ Starter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
-	if( post_script && post_script->JobReaper(pid, exit_status) ) {
+	if( post_script && post_script->JobReaper(pid, exit_status) == ReapResult::JobDone ) {
 		bool exitStatusSpecified = false;
 		int desiredExitStatus = computeDesiredExitStatus( "Post", this->jic->jobClassAd(), & exitStatusSpecified );
 		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
@@ -3132,14 +3152,21 @@ Starter::Reaper(int pid, int exit_status)
 	copyProcList( m_job_list, stable_job_list );
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
+	bool pid_matched = false;
 	auto listit = stable_job_list.begin();
 	while (listit != stable_job_list.end()) {
 		auto *job = *listit;
 		all_jobs++;
-		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
-			handled_jobs++;
-			listit = stable_job_list.erase(listit);
-			stable_reaped_job_list.emplace_back(job);
+		if( job->GetJobPid() == pid ) {
+			auto result = job->JobReaper(pid, exit_status);
+			pid_matched = true;
+			if( result == ReapResult::JobDone ) {
+				handled_jobs++;
+				listit = stable_job_list.erase(listit);
+				stable_reaped_job_list.emplace_back(job);
+			} else {
+				listit++;
+			}
 		} else {
 			listit++;
 		}
@@ -3151,7 +3178,7 @@ Starter::Reaper(int pid, int exit_status)
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );
 
-	if( handled_jobs == 0 ) {
+	if( !pid_matched ) {
 		dprintf( D_ALWAYS, "unhandled job exit: pid=%d, status=%d\n",
 				 pid, exit_status );
 	}
@@ -3401,9 +3428,9 @@ Starter::OpenManifestFile( const char * filename, bool add_to_output )
 	// so set cwd to the sandbox (but reset the cwd when we return)
 	std::string errMsg;
 	TmpDir tmpDir;
-	if (!tmpDir.Cd2TmpDir(GetWorkingDir(0),errMsg)) {
+	if (!tmpDir.Cd2TmpDir(GetWorkingDir(WD::OUTER),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
-			filename, GetWorkingDir(0));
+			filename, GetWorkingDir(WD::OUTER));
 		return NULL;
 
 	}
@@ -3604,7 +3631,7 @@ Starter::PublishToEnv( Env* proc_env )
 			}
 		}
 
-		const ClassAd * msec = jic->getMachineSecetsAd();
+		const ClassAd * msec = jic->getMachineSecretsAd();
 		if (msec) {
 			// give the job access to the split claim id, (if there is one)
 			// we unparse so that the value will have "" and internal "" will be escaped
@@ -3652,11 +3679,11 @@ Starter::PublishToEnv( Env* proc_env )
 		// job scratch space
 	env_name = base;
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
+	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(WD::INNER) );
 
 		// Apptainer/Singlarity scratch dir
-	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
-	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
+	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(WD::INNER));
+	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(WD::INNER));
 
 		// slot identifier
 	env_name = base;
@@ -3686,7 +3713,7 @@ Starter::PublishToEnv( Env* proc_env )
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	std::string tmpdirenv = this->tmpdir.empty() ? GetWorkingDir(true) : this->tmpdir;
+	std::string tmpdirenv = this->tmpdir.empty() ? GetWorkingDir(WD::INNER) : this->tmpdir;
 	proc_env->SetEnv("TMPDIR", tmpdirenv);
 	proc_env->SetEnv("TEMP",tmpdirenv);
 	proc_env->SetEnv("TMP", tmpdirenv);
@@ -3725,7 +3752,7 @@ Starter::PublishToEnv( Env* proc_env )
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
 			std::string wrapper_err;
-			formatstr(wrapper_err, "%s%c%s", GetWorkingDir(0),
+			formatstr(wrapper_err, "%s%c%s", GetWorkingDir(WD::OUTER),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3738,7 +3765,7 @@ Starter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	std::string path;
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetWorkingDir(WD::INNER),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3751,7 +3778,7 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetWorkingDir(WD::INNER),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3783,7 +3810,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
-	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(true)));
+	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(WD::INNER)));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
@@ -4084,6 +4111,12 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 bool
 Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move_to)
 {
+	int sleep_time = param_integer("STARTER_REMOVE_EXECUTE_DIR_DELAY_TIME", 0);  // Useful for debugging
+	if (sleep_time > 0) {
+		dprintf(D_STATUS, "Sleeping for %d seconds before removing execute directory\n", sleep_time);
+		sleep(sleep_time);
+	}
+
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
 		return true;
@@ -4128,7 +4161,12 @@ Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move
 
 		if (move_to) {
 			dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
-			rename(execute_dir.GetFullPath(), move_to);
+			int r = rename(execute_dir.GetFullPath(), move_to);
+			if (r != 0) {
+				dprintf(D_ERROR, "Failed to rename %s to %s: %s (errno %d)\n",
+				        execute_dir.GetFullPath(), move_to, strerror(errno), errno);
+				has_failed = true;
+			}
 		} else {
 			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
 			if (!execute_dir.Remove_Current_File()) {
@@ -4148,7 +4186,7 @@ Starter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir(0);
+	const char* dir = this->GetWorkingDir(WD::OUTER);
 	std::string filename;
 	FILE* fp;
 	bool ret_val = true;

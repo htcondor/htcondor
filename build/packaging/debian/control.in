@@ -7,7 +7,7 @@ Maintainer: Debian HPC Team <debian-hpc@lists.debian.org>
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
 Priority: optional
-Build-Depends: cmake (>= 3.16),
+Build-Depends: cmake (>= 3.20),
                debhelper,
 #if defined(FOCAL)
                debhelper-compat (= 12),
@@ -76,10 +76,12 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.23.0),
-         pelican-osdf-compat (>= 7.23.0),
+         pelican (>= 7.25.0),
+         pelican-osdf-compat (>= 7.25.0),
 #endif
+#if !defined(JAMMY)
          libjs-bootstrap5,
+#endif
          libjs-jquery,
          jq,
          ${lib:Depends},

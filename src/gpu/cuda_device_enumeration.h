@@ -10,6 +10,7 @@ char * print_uuid( char * buf, int bufsize, const unsigned char uuid[16] );
 #define CUDACALL
 #endif
 
+#include <map>
 #include "BasicProps.h"
 
 //
@@ -130,7 +131,7 @@ extern const int sim_index_max;
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
 nvmlReturn_t enumerateNVMLDevices( std::vector< BasicProps > & devices );
-nvmlReturn_t getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs );
+nvmlReturn_t getMIGParentDeviceUUIDs( std::map< std::string, std::vector<std::string> > & parentDeviceUUIDs );
 
 std::string gpuIDFromUUID( const std::string & uuid, int opt_short_uuid );
 

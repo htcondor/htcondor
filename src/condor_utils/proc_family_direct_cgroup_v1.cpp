@@ -255,6 +255,24 @@ ProcFamilyDirectCgroupV1::cgroupify_myself(const std::string &cgroup_name) {
 		dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1 not setting any cgroup memory limits\n");
 	}
 
+	// Set swap limits, if any
+	if (cgroup_memory_and_swap_limit > 0) {
+		// write memory + swap limits
+		stdfs::path memory_limits_path = cgroup_root_dir / "memory" / cgroup_name / "memory.memsw.limit_in_bytes";
+		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
+		if (fd >= 0) {
+			std::string buf;
+			formatstr(buf, "%lu", cgroup_memory_and_swap_limit);
+			int r = write(fd, buf.c_str(), strlen(buf.c_str()));
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error setting cgroup memsw limit of %s in cgroup %s: %s\n", buf.c_str(), memory_limits_path.c_str(), strerror(errno));
+			}
+			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error setting cgroup memsw limit of %lu in cgroup %s: %s\n", cgroup_memory_and_swap_limit, memory_limits_path.c_str(), strerror(errno));
+		}
+	}
+
 	// Set cpu limits, if any
 	if (cgroup_cpu_shares > 0) {
 		// write CPU limits
@@ -318,6 +336,7 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	std::string cgroup_name   = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
+	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares   = fi->cgroup_cpu_shares;
 	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 

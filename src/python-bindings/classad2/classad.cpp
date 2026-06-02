@@ -564,14 +564,23 @@ isOldAd( const char * in_string ) {
 
 static PyObject *
 _classad_parse_next( PyObject *, PyObject * args ) {
-    // _classad_parse_next(input_string, int(parser))
+    // _classad_parse_next(input_string, int(parser), start_offset=0)
 
     long parser_type = -1;
     const char * from_string = NULL;
-    if(! PyArg_ParseTuple( args, "zl", & from_string, & parser_type )) {
+    Py_ssize_t from_string_length_ssize = 0;
+    long start_offset = 0;
+    if(! PyArg_ParseTuple( args, "z#l|l", & from_string, & from_string_length_ssize, & parser_type, & start_offset )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
+
+    if( start_offset < 0 || start_offset > from_string_length_ssize ) {
+        PyErr_SetString(PyExc_ValueError, "start_offset out of range");
+        return NULL;
+    }
+    from_string += start_offset;
+    from_string_length_ssize -= start_offset;
 
     // The 'auto' type from the ClassAdFileParseType and the 'auto' type
     // from version 1 both have weird, undocumented semantics, and they

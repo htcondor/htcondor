@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <charconv>
 
@@ -191,10 +192,17 @@ int DockerAPI::createContainer(
 #ifdef WIN32
 	// TODO: extra volumes is used for /home/ when not doing file transfer, we can't support this on Windows
 #else
-	// Now any extra volumes
-	for (std::list<std::string>::const_iterator it = extraVolumes.begin(); it != extraVolumes.end(); it++) {
+	// Now any extra volumes.  The list can contain duplicates because mounts
+	// are accumulated from multiple sources (slot dir, iwd, MOUNT_UNDER_SCRATCH,
+	// DOCKER_MOUNT_VOLUMES, etc.).  Drop duplicates while preserving order,
+	// keeping the first occurrence — docker rejects duplicate bind targets.
+	std::unordered_set<std::string> seenVolumes;
+	for (const auto &volume : extraVolumes) {
+		if (!seenVolumes.insert(volume).second) {
+			dprintf(D_FULLDEBUG, "Skipping duplicate docker volume mount %s\n", volume.c_str());
+			continue;
+		}
 		runArgs.AppendArg("--volume");
-		std::string volume = *it;
 		runArgs.AppendArg(volume);
 	}
 #endif
@@ -609,13 +617,14 @@ DockerAPI::execInContainer( const std::string &containerName,
 			    const Env &environment,
 			    int *childFDs,
 			    int reaperid,
-			    int &pid) {
+			    int &pid,
+			    bool interactive) {
 
 	ArgList execArgs;
 	if ( ! add_docker_arg(execArgs))
 		return -1;
 	execArgs.AppendArg("exec");
-	execArgs.AppendArg("-ti");
+	execArgs.AppendArg(interactive ? "-ti" : "-i");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
 		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
@@ -654,51 +663,6 @@ DockerAPI::execInContainer( const std::string &containerName,
 	pid = childPID;
 
 	return 0;
-}
-
-/*static*/ /* docker cp SRC_PATH CONTAINER : CONTAINER_PATH */
-int DockerAPI::copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
-	const std::string & container,       // container to copy into
-	const std::string & containerPath,     // destination path in container
-	const std::vector<std::string>& options)
-{
-	ArgList args;
-	if (! add_docker_arg(args))
-		return -1;
-	args.AppendArg("cp");
-
-	for (auto& opt: options) {
-		args.AppendArg(opt);
-	}
-
-	args.AppendArg(srcPath);
-
-	std::string dest(container);
-	dest += ":";
-	dest += containerPath;
-	args.AppendArg(dest);
-
-	std::string displayString;
-	args.GetArgsStringForLogging(displayString);
-	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
-
-	MyPopenTimer pgm;
-	if (pgm.start_program(args, true, NULL, false) < 0) {
-		dprintf(D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str());
-		return -2;
-	}
-
-	int exitCode;
-	if (! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
-		pgm.close_program(1);
-		std::string line;
-		readLine(line, pgm.output(), false); chomp(line);
-		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n",
-			displayString.c_str(), exitCode, line.c_str());
-		return -3;
-	}
-
-	return pgm.output_size() > 0;
 }
 
 /*static*/ /* docker cp CONTAINER:CONTAINER_PATH DEST_PATH */
@@ -954,6 +918,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
 		} else {
 			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			close(uds);
 			return -1;
 		}
 	}
@@ -1582,7 +1547,7 @@ gc_image(const std::string & image) {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &DockerAPI::ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1681,7 +1646,7 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	{ // Need to remove duplicate sha entries, they only consume one image
-		std::ranges::sort(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		std::ranges::sort(imageInfos, std::less{}, &ImageInfo::sha256);
 		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &ImageInfo::sha256);
 		imageInfos.erase(first, last);
 	}
@@ -1893,6 +1858,9 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 
 		size_t firstSlash = annotatedName.find('/');
 		size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+		if (secondSlash == std::string::npos) {
+			return "";
+		}
 		std::string raw_name = annotatedName.substr(secondSlash + 1);;
 		return raw_name;
 	} else {
@@ -1903,8 +1871,19 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 #ifdef LINUX
 static
 size_t convert_number_with_suffix(std::string size) {
+	if (size.empty()) {
+		dprintf(D_ALWAYS, "Warning: empty size string in convert_number_with_suffix\n");
+		return 0;
+	}
+	
 	size_t result = 0;
-	std::from_chars(&size[0], &size[size.size() - 1], result);
+	auto [ptr, ec] = std::from_chars(size.data(), size.data() + size.size(), result);
+	if (ec != std::errc()) {
+		dprintf(D_ALWAYS, "Warning: failed to parse number in size string: %s\n", size.c_str());
+		return 0;
+	}
+	
+	// Size is like 104Mb
 	char unit = size.size() > 2 ? size[size.size() - 2] : '?';
 	switch (unit) {
 		case 'K':
@@ -1924,7 +1903,7 @@ size_t convert_number_with_suffix(std::string size) {
 			result *= (1024ll * 1024 * 1024 * 1024);
 			break;
 		default:
-			dprintf(D_ALWAYS, "Warning: unknown unit suffix %c in number %sn", unit, size.c_str());
+			dprintf(D_ALWAYS, "Warning: unknown unit suffix %c in number %s\n", unit, size.c_str());
 	}
 	return result;
 }
@@ -1972,19 +1951,25 @@ DockerAPI::getImageInfos() {
 		while (readLine(line, *src, false)) {
 			chomp(line);
 			size_t first_space = line.find(' ');
-			size_t second_space = line.find(' ', first_space + 1);
-			if (first_space != std::string::npos) {
-				std::string imageName = line.substr(0, first_space);
-				if (imageName == "<none>") {
-					// How does this happen?  Don't know, but it does
-					continue;
-				}
-
-				std::string sha       = line.substr(first_space + 1, second_space - first_space - 1);
-				std::string size      = line.substr(second_space + 1);
-				size_t size_in_bytes = convert_number_with_suffix(size);
-				result.emplace_back(imageName, sha, "", size_in_bytes);
+			if (first_space == std::string::npos) {
+				continue;
 			}
+			
+			size_t second_space = line.find(' ', first_space + 1);
+			if (second_space == std::string::npos) {
+				continue;
+			}
+			
+			std::string imageName = line.substr(0, first_space);
+			if (imageName == "<none>") {
+				// How does this happen?  Don't know, but it does
+				continue;
+			}
+
+			std::string sha       = line.substr(first_space + 1, second_space - first_space - 1);
+			std::string size      = line.substr(second_space + 1);
+			size_t size_in_bytes = convert_number_with_suffix(size);
+			result.emplace_back(imageName, sha, "", size_in_bytes);
 		}
 	}
 
@@ -2026,18 +2011,24 @@ DockerAPI::getImageInfos() {
 		while (readLine(line, *src, false)) {
 			chomp(line);
 			size_t space = line.find(' ');
-			if (space != std::string::npos) {
-				// output is sha256:fullshaid lastTagtime
-				size_t colon = line.find(':');
-				std::string shaName     = line.substr(colon + 1, space - colon - 1);
-				std::string lastTagTime = line.substr(space + 1);
+			if (space == std::string::npos) {
+				continue;
+			}
+			
+			// output is sha256:fullshaid lastTagtime
+			size_t colon = line.find(':');
+			if (colon == std::string::npos || colon >= space) {
+				continue;
+			}
+			
+			std::string shaName     = line.substr(colon + 1, space - colon - 1);
+			std::string lastTagTime = line.substr(space + 1);
 
-				// Find the image with this sha, and add the lastTagTime
-				for (auto &imageInfo: result) {
-					//imageInfo.sha256 is the short sha, shaName is the long sha
-					if (shaName.starts_with(imageInfo.sha256)) {
-						imageInfo.lastTagTime = lastTagTime;
-					}
+			// Find the image with this sha, and add the lastTagTime
+			for (auto &imageInfo: result) {
+				//imageInfo.sha256 is the short sha, shaName is the long sha
+				if (shaName.starts_with(imageInfo.sha256)) {
+					imageInfo.lastTagTime = lastTagTime;
 				}
 			}
 		}

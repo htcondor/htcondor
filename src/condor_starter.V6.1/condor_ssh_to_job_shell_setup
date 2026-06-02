@@ -26,6 +26,18 @@ if grep -q '^InteractiveJob = true' "${_CONDOR_SCRATCH_DIR}/.job.ad"; then
 fi
 
 
+if [ -S ${_CONDOR_SCRATCH_DIR}/.docker_sock ]; then
+  CONDOR_CONFIG=/dev/null
+  export CONDOR_CONFIG
+
+  cd $_CONDOR_SCRATCH_DIR
+  if [ "${SSH_ORIGINAL_COMMAND}" != "" ]; then
+    exec "$_CONDOR_BIN"/condor_docker_enter "${SSH_ORIGINAL_COMMAND}"
+  else
+    exec "$_CONDOR_BIN"/condor_docker_enter
+  fi
+fi
+
 if [ "${SSH_ORIGINAL_COMMAND}" != "" ]; then
   # run the command specified by the user
   eval ${SSH_ORIGINAL_COMMAND}
@@ -40,15 +52,6 @@ else
     echo "You will be logged out after ${TMOUT} seconds of inactivity."
   fi
 
-
-  if [ -S ${_CONDOR_SCRATCH_DIR}/.docker_sock ]
-  then
-	CONDOR_CONFIG=/dev/null
-	export CONDOR_CONFIG
-	
-	cd $_CONDOR_SCRATCH_DIR
-	exec "$_CONDOR_BIN"/condor_docker_enter
-  fi
   # start a shell for the user
   if [ "${_CONDOR_SHELL}" != "" ]; then
     # use the shell preferred by the user

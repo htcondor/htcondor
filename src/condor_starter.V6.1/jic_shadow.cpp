@@ -587,7 +587,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 
 	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
 	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-		dprintf_close_logs_in_directory(starter->GetWorkingDir(false), false);
+		dprintf_close_logs_in_directory(starter->GetWorkingDir(WD::OUTER), false);
 	}
 
 	std::string dummy;
@@ -754,7 +754,8 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
-			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
+			std::string buf;
+			dprintf( D_FULLDEBUG, "Sandbox transfer failed.  m_ft_info: %s\n", m_ft_info.dump(buf));
 			// Failed to transfer.
 			// JICShadow::transferOutputMopUp() will figure out what to do
 			// when you call it after JICShadow::transferOutput() returns.
@@ -1218,7 +1219,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
 		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
 		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
-		const char * sandbox_dir = starter->GetWorkingDir(false);
+		const char * sandbox_dir = starter->GetWorkingDir(WD::OUTER);
 		if (sandbox_dir && sandbox_dir[0]) {
 			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 		}
@@ -1262,7 +1263,7 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
 		struct stat si = {};
-		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT &&
+		if (stat(starter->GetWorkingDir(WD::OUTER), &si) != 0 && errno == ENOENT &&
 		    shouldHoldJobBasedOnCodes(hold_reason_code, hold_reason_subcode))
 		{
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
@@ -1350,7 +1351,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	const char * sandbox_dir = starter->GetWorkingDir(false);
+	const char * sandbox_dir = starter->GetWorkingDir(WD::OUTER);
 	if (sandbox_dir && sandbox_dir[0]) {
 		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 	}
@@ -1883,7 +1884,7 @@ JICShadow::initWithFileTransfer()
 
 	wants_file_transfer = true;
 	change_iwd = true;
-	job_iwd = strdup( starter->GetWorkingDir(0) );
+	job_iwd = strdup( starter->GetWorkingDir(WD::OUTER) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 		// now that we've got the iwd we're using and all our
@@ -2307,11 +2308,11 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 
 		std::string updateAdPath;
 		formatstr( updateAdPath, "%s/%s",
-			starter->GetWorkingDir(0), ".update.ad"
+			starter->GetWorkingDir(WD::OUTER), ".update.ad"
 		);
 		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			formatstr( updateAdPath, "%s/%s",
-				starter->GetWorkingDir(0), "../htcondor/.update.ad"
+				starter->GetWorkingDir(WD::OUTER), "../htcondor/.update.ad"
 			);
 		}
 		FILE * updateAdFile = NULL;
@@ -2362,7 +2363,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		// Let's also send the stdout/stderr mtime, as a way for
 		// users to guess if their jobs are hung
 		struct stat buf;
-		const char* scratch_dir_ptr = starter->GetWorkingDir(0);
+		const char* scratch_dir_ptr = starter->GetWorkingDir(WD::OUTER);
 		if (scratch_dir_ptr) {
 			TemporaryPrivSentry p( PRIV_USER );
 
@@ -2682,14 +2683,29 @@ JICShadow::beginInputTransfer( void )
 		}
 
 		std::string job_ad_path, machine_ad_path;
-		formatstr(job_ad_path, "%s%c%s", starter->GetWorkingDir(0),
+		formatstr(job_ad_path, "%s%c%s", starter->GetWorkingDir(WD::OUTER),
 			DIR_DELIM_CHAR,
 			JOB_AD_FILENAME);
-		formatstr(machine_ad_path, "%s%c%s", starter->GetWorkingDir(0),
+		formatstr(machine_ad_path, "%s%c%s", starter->GetWorkingDir(WD::OUTER),
 			DIR_DELIM_CHAR,
 			MACHINE_AD_FILENAME);
 		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
 		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
+
+			// check knob for disabling user supplied transfer plugins
+			// it has 3 states, false = Allow, true = Fail, 2 = Ignore
+		int disable_plugins = FileTransfer::UserPluginDisableMode::Allow;
+		if (param_integer("STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS", disable_plugins,
+			/*use_default*/ true, (int)FileTransfer::UserPluginDisableMode::Allow,
+			/*validate_range*/false, INT_MIN, INT_MAX, mach_ad, job_ad, false))
+		{
+			if (disable_plugins <= 0) { disable_plugins = FileTransfer::UserPluginDisableMode::Allow; }
+			else if (disable_plugins != FileTransfer::UserPluginDisableMode::Ignore) {
+				disable_plugins = FileTransfer::UserPluginDisableMode::Fail;
+			}
+			m_ft_user_plugin_disable = (FileTransfer::UserPluginDisableMode)disable_plugins;
+		}
+		filetrans->setDisableUserSuppliedTransferPlugins(m_ft_user_plugin_disable);
 
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
@@ -2740,7 +2756,7 @@ JICShadow::beginInputTransfer( void )
 	else if ( wants_x509_proxy ) {
 		
 			// Get scratch directory path
-		const char* scratch_dir = starter->GetWorkingDir(0);
+		const char* scratch_dir = starter->GetWorkingDir(WD::OUTER);
 
 			// Get source path to proxy file on the submit machine
 		std::string proxy_source_path;
@@ -2888,7 +2904,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		int checkpointNumber = -1;
 		std::string manifestFileName;
 		const char * currentFile = nullptr;
-		// Should this be starter->getWorkingDir(false)?
+		// Should this be starter->getWorkingDir(WD::OUTER)?
 		Directory sandboxDirectory( "." );
 		while( (currentFile = sandboxDirectory.Next()) ) {
 			checkpointNumber = manifest::getNumberFromFileName( currentFile );
@@ -2975,7 +2991,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		TemporaryPrivSentry _(PRIV_USER);
 
 		std::string cmd_basename = condor_basename(cmd.c_str());
-		std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+		std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(WD::OUTER)) + 
 			DIR_DELIM_CHAR	 + cmd_basename;
 		if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
 			if (errno != ENOENT) {
@@ -3193,23 +3209,25 @@ JICShadow::initIOProxy( void )
 		condor_sockaddr *bindTo = NULL;
 
 		condor_sockaddr dockerInterface;
-		condor_sockaddr dockerInterfaceV6;   // not used;
-		condor_sockaddr dockerInterfaceBest; // also not used;
-		std::string docker_network_name;
-		param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
-		network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest);
-
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
 		std::string dockerImage;
 		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
 		bool hasDockerImage = ! dockerImage.empty();
 		if (wantDocker || hasDockerImage) {
-			bindTo = &dockerInterface;
+			condor_sockaddr dockerInterfaceV6;   // not used;
+			condor_sockaddr dockerInterfaceBest; // also not used;
+			std::string docker_network_name;
+			param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
+			if (network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest)) {
+				bindTo = &dockerInterface;
+			} else {
+				dprintf(D_ERROR, "Failed to find Docker network '%s' for IO Proxy.\n", docker_network_name.c_str());
+			}
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetJobHomeDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
@@ -3444,7 +3462,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 	//
 	// securely copy the cc to sandbox.
 	//
-	sandboxccfilename = dircat(starter->GetWorkingDir(0), user, ".cc", sandboxccfile);
+	sandboxccfilename = dircat(starter->GetWorkingDir(WD::OUTER), user, ".cc", sandboxccfile);
 
 	// as user, write tmp file securely
 	priv = set_user_priv();
@@ -3529,7 +3547,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	std::string sandbox_dir_name;
-	dircat(starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+	dircat(starter->GetWorkingDir(WD::OUTER), ".condor_creds", sandbox_dir_name);
 
 	ShadowCredDirCreator creds(*job_ad, sandbox_dir_name);
 	CondorError err;
@@ -3785,9 +3803,9 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 	// copying from OpenManifestFile(), let's do everything right.
 	std::string errMsg;
 	TmpDir tmpDir;
-	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(WD::OUTER),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
-			filename, starter->GetWorkingDir(0));
+			filename, starter->GetWorkingDir(WD::OUTER));
 		fclose(file);
 		return;
 	}

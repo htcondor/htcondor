@@ -66,7 +66,7 @@ DCMsg::getDeadlineExpired() const
 }
 
 void
-DCMsg::setCallback(classy_counted_ptr<DCMsgCallback> cb)
+DCMsg::setCallback(std::shared_ptr<DCMsgCallback> cb)
 {
 	if( cb.get() ) {
 		cb->setMessage( this );
@@ -78,10 +78,11 @@ void
 DCMsg::doCallback()
 {
 	if( m_cb.get() ) {
-			// get rid of saved reference to callback object now, so it
-			// can be garbage collected
-		classy_counted_ptr<DCMsgCallback> cb = m_cb;
-		m_cb = NULL;
+			// Break the DCMsg <-> DCMsgCallback reference cycle (see
+			// comment on m_cb in dc_message.h).  The local copy keeps
+			// the callback alive for the duration of doCallback().
+		std::shared_ptr<DCMsgCallback> cb = m_cb;
+		m_cb.reset();
 
 		cb->doCallback();
 	}

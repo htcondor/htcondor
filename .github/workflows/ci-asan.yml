@@ -13,7 +13,7 @@ jobs:
       image: ${{ steps.extract.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract ubunturoot image from nmi-build-platforms
         id: extract
@@ -30,10 +30,10 @@ jobs:
       image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
       env:
         OMP_NUM_THREADS: 4
-      options: --cpus 4
+      options: --cpus 4 --hostname build-asan.chtc.wisc.edu
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Compile with Address Sanitizer
         run: |
@@ -57,7 +57,7 @@ jobs:
       - name: Upload Artifact with asan output
         # Always upload, even if build or tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: asan-output
           path: |

@@ -20,7 +20,7 @@ Synopsis
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
 [**-xml**] [**-json**] [**-jsonl**] [**-wide[:N]**]
-[**-extract** *filename*]
+[**-extract** *filename*] [**-no-librarian**]
 
 Description
 -----------
@@ -49,6 +49,9 @@ Options
 **-forwards**
     List ClassAds in chronological order. The ClassAd most recently added to the
     history file is last.
+**-no-librarian**
+    Ignore using the *condor_librarian* record index database regardless of
+    :macro:`USING_LIBRARIAN` being ``True``.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
 *cluster.process*
@@ -216,59 +219,71 @@ By default this tool queries for historical HTCondor Job ClassAds that have comp
 The default listing summarizes in reverse chronological order each ClassAd on a
 single line, and contains the following items:
 
- ID
-    The :ad-attr:`ClusterId`\. :ad-attr:`ProcId` of the job.
- OWNER
-    The :ad-attr:`Owner` of the job.
- SUBMITTED
-    The month, day, hour, and minute the job was submitted to the queue.
- RUN_TIME
-    Remote wall clock time accumulated by the job to date in days,
-    hours, minutes, and seconds, given as the job ClassAd attribute
-    :ad-attr:`RemoteWallClockTime`.
- ST
-    Completion status of the job (C = completed and X = removed).
- COMPLETED
-    The time the job was completed.
- CMD
-    The name of the job's executable.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - ID
+     - The :ad-attr:`ClusterId`\. :ad-attr:`ProcId` of the job.
+   * - OWNER
+     - The :ad-attr:`Owner` of the job.
+   * - SUBMITTED
+     - The month, day, hour, and minute the job was submitted to the queue.
+   * - RUN_TIME
+     - Remote wall clock time accumulated by the job to date in days,
+       hours, minutes, and seconds, given as the job ClassAd attribute
+       :ad-attr:`RemoteWallClockTime`.
+   * - ST
+     - Completion status of the job (C = completed and X = removed).
+   * - COMPLETED
+     - The time the job was completed.
+   * - CMD
+     - The name of the job's executable.
 
 The default information displayed for historical Schedd ClassAds queried from
 the :macro:`SCHEDD_DAEMON_HISTORY` are the following:
 
- TIMESTAMP
-    The UNIX timestamp representing exactly when the record was
-    written to the history file.
- DUTY_CYCLE
-    The Schedd's :ad-attr:`RecentDaemonCoreDutyCycle` at the time
-    the record was written.
- RunningJobs
-    The Schedd's :ad-attr:`TotalRunningJobs` at the time the record
-    was written.
- IdleJobs
-    The Schedd's :ad-attr:`TotalIdleJobs` at the time the record was
-    written.
- HeldJobs
-    The Schedd's :ad-attr:`TotalHeldJobs` at the time the record was
-    written.
- Download
-    The Schedd's :ad-attr:`TransferQueueNumDownloading` at the time
-    the record was written.
- Waiting
-    The Schedd's :ad-attr:`TransferQueueNumWaitingToDownload` at the time
-    the record was written.
- WaitingMB
-    The Schedd's :ad-attr:`FileTransferMBWaitingToDownload` at the time
-    the record was written.
- Upload
-    The Schedd's :ad-attr:`TransferQueueNumUploading` at the time
-    the record was written.
- Waiting
-    The Schedd's :ad-attr:`TransferQueueNumWaitingToUpload` at the time
-    the record was written.
- WaitingMB
-    The Schedd's :ad-attr:`FileTransferMBWaitingToUpload` at the time
-    the record was written.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - TIMESTAMP
+     - The UNIX timestamp representing exactly when the record was
+       written to the history file.
+   * - DUTY_CYCLE
+     - The Schedd's :ad-attr:`RecentDaemonCoreDutyCycle` at the time
+       the record was written.
+   * - RunningJobs
+     - The Schedd's :ad-attr:`TotalRunningJobs` at the time the record
+       was written.
+   * - IdleJobs
+     - The Schedd's :ad-attr:`TotalIdleJobs` at the time the record was
+       written.
+   * - HeldJobs
+     - The Schedd's :ad-attr:`TotalHeldJobs` at the time the record was
+       written.
+   * - Download
+     - The Schedd's :ad-attr:`TransferQueueNumDownloading` at the time
+       the record was written.
+   * - Waiting (download)
+     - The Schedd's :ad-attr:`TransferQueueNumWaitingToDownload` at the time
+       the record was written.
+   * - WaitingMB (download)
+     - The Schedd's :ad-attr:`FileTransferMBWaitingToDownload` at the time
+       the record was written.
+   * - Upload
+     - The Schedd's :ad-attr:`TransferQueueNumUploading` at the time
+       the record was written.
+   * - Waiting (upload)
+     - The Schedd's :ad-attr:`TransferQueueNumWaitingToUpload` at the time
+       the record was written.
+   * - WaitingMB (upload)
+     - The Schedd's :ad-attr:`FileTransferMBWaitingToUpload` at the time
+       the record was written.
 
 Exit Status
 -----------

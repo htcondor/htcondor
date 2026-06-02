@@ -181,7 +181,7 @@ bool _condorPacket::init_MD(const char * keyId)
  *	@return: true, if this packet is the whole message
  *         false, otherwise
  */
-int _condorPacket::getHeader(int /* msgsize */,
+int _condorPacket::getHeader(int msgsize,
                              bool &last,
                              int &seq,
                              int &len,
@@ -196,22 +196,36 @@ int _condorPacket::getHeader(int /* msgsize */,
         md_ = 0;
     }
 
+	// Our caller should treat len==0 as an indicator of an invalid packet
+	// (bad headers). If the headers look good, then we'll set len to the
+	// amount of payload data.
+	len = 0;
+	length = msgsize;
+
+	// A valid packet must be at least 8 bytes long (a bare command integer
+	// with no fragmentation or crypto headers and no additional data).
+	if (msgsize < 8) {
+		return true;
+	}
     if(memcmp(&dataGram[0], SAFE_MSG_MAGIC, 8)) {
-        if(len >= 0) {
-            length = len;
-        }
         dta = data = &dataGram[0];
         checkHeader(len , dta);
         return true;
 	}   
+
+	if (length < SAFE_MSG_HEADER_SIZE) {
+		return true;
+	}
 
 	last = (bool)dataGram[8];
 
 	memcpy(&stemp, &dataGram[9], 2);
 	seq = ntohs(stemp);
 
-	memcpy(&stemp, &dataGram[11], 2);
-	len = length = ntohs(stemp);
+	// dataGram[11-12] contains the size of the data following the
+	// fragmentation header, but we can calculate that ourselves by
+	// substracting the header size from the full UDP packet size.
+	length -= SAFE_MSG_HEADER_SIZE;
 
 	memcpy(&ltemp, &dataGram[13], 4);
 	mID.ip_addr = ntohl(ltemp);
@@ -227,7 +241,7 @@ int _condorPacket::getHeader(int /* msgsize */,
 
     dta = data = &dataGram[25];
     dprintf(D_NETWORK, "Fragmentation Header: last=%d,seq=%d,len=%d,data=[25]\n",
-           last, seq, len); 
+            last, seq, msgsize);
 
     checkHeader(len, dta);    
 
@@ -239,8 +253,16 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
     uint16_t stemp;
     short flags = 0, mdKeyIdLen = 0, encKeyIdLen = 0;
 
+    if (length < 4) {
+        return;
+    }
     if(memcmp(data, THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4) == 0) {
         // We found stuff, go with 6.3 header format
+        if (length < SAFE_MSG_CRYPTO_HEADER_SIZE) {
+            dprintf(D_ALWAYS, "ERROR: Packet too short (%d) for crypto header (%d)\n",
+                    length, SAFE_MSG_CRYPTO_HEADER_SIZE);
+            return;
+        }
         // First six bytes are hash/encryption related
         data += 4;
         memcpy(&stemp, data, 2);
@@ -259,6 +281,11 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
                 mdKeyIdLen, encKeyIdLen);
 
         if ((flags & MD_IS_ON) && (mdKeyIdLen > 0)) {
+            if (mdKeyIdLen + MAC_SIZE > length) {
+                dprintf(D_ALWAYS, "ERROR: MD header lengths (%d + %d) exceed remaining packet size (%d)\n",
+                        mdKeyIdLen, MAC_SIZE, length);
+                return;
+            }
             // Scan for the key
             incomingHashKeyId_ = (char *) malloc(mdKeyIdLen+1);
             memset(incomingHashKeyId_, 0, mdKeyIdLen+1);
@@ -281,6 +308,19 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
         }
 
         if ((flags & ENCRYPTION_IS_ON) && (encKeyIdLen > 0)) {
+            if (encKeyIdLen > length) {
+                dprintf(D_ALWAYS, "ERROR: ENC key length (%d) exceeds remaining packet size (%d)\n",
+                        encKeyIdLen, length);
+                if (incomingHashKeyId_) {
+                    free(incomingHashKeyId_);
+                    incomingHashKeyId_ = nullptr;
+                }
+                if (md_) {
+                    free(md_);
+                    md_ = nullptr;
+                }
+                return;
+            }
             incomingEncKeyId_ = (char *) malloc(encKeyIdLen+1);
             memset(incomingEncKeyId_, 0, encKeyIdLen + 1);
             memcpy(incomingEncKeyId_, data, encKeyIdLen);
@@ -294,9 +334,12 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             }
         }
 
-        len = length;
         dta = data;
     }
+
+    // All of the headers check out. Set len to the size of the payload data,
+    // which will tell our caller that the packet is valid.
+    len = length;
 }
 
 bool _condorPacket::verifyMD(Condor_MD_MAC * mdChecker)

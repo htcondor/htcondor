@@ -36,9 +36,10 @@ void usage()
 
 bool parse_int(const char *s, int &out)
 {
+    if (!s || *s == '\0') { return false; }
     char *end = nullptr;
     long v = strtol(s, &end, 10);
-    if (!s || *s == '\0' || (end && *end)) { return false; }
+    if (end && *end) { return false; }
     out = (int)v;
     return true;
 }

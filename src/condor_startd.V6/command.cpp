@@ -26,6 +26,7 @@
 #include "consumption_policy.h"
 #include "credmon_interface.h"
 #include "condor_holdcodes.h"
+#include "condor_config.h"
 
 #include <map>
 
@@ -2548,6 +2549,160 @@ command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 }
 
 int
+command_rehome(int /*dc_cmd*/, Stream* s)
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !getClassAd(s, ad) ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read classad from %s\n", s->peer_description());
+		return FALSE;
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to read end of message from %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "Processing rehome request from %s\n", s->peer_description());
+	dPrintAd(D_ALWAYS, ad);
+
+	// Extract parameters from the request ad
+	[[maybe_unused]] int timeout = 0;
+	ad.LookupInteger("RehomeTimeout", timeout);
+	// TODO: use timeout to set a deadline for the rehome operation
+
+	bool cancel = false;
+	ad.LookupBool("Cancel", cancel);
+
+	bool reboot = false;
+	ad.LookupBool("Reboot", reboot);
+
+	std::string schedd_name;
+	std::string schedd_pool;
+	if( !ad.LookupString("ScheddName", schedd_name) || schedd_name.empty() ) {
+		dprintf(D_ALWAYS, "command_rehome: ScheddName not specified in request from %s\n", s->peer_description());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "ScheddName not specified");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+	
+	// ScheddPool is optional - if not specified, COLLECTOR_HOST will be used
+	ad.LookupString("ScheddPool", schedd_pool);
+
+	if( cancel ) {
+		// Cancel rehome: unset STARTD_DIRECT_ATTACH_SCHEDD_NAME without evicting jobs
+		int rc = set_persistent_config(strdup("rehome"), strdup(""));
+		if( rc < 0 ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to unset persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+			ClassAd response_ad;
+			response_ad.Assign(ATTR_RESULT, false);
+			response_ad.Assign(ATTR_ERROR_STRING, "Failed to unset persistent config");
+			s->encode();
+			putClassAd(s, response_ad);
+			s->end_of_message();
+			return FALSE;
+		}
+
+		dprintf(D_ALWAYS, "command_rehome: cancelled rehome, unset STARTD_DIRECT_ATTACH_SCHEDD_NAME\n");
+
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, true);
+
+		s->encode();
+		if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+			dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	// Check if already attached to the requested schedd
+	auto_free_ptr current_schedd(param("STARTD_DIRECT_ATTACH_SCHEDD_NAME"));
+	if( current_schedd && schedd_name == current_schedd.ptr() ) {
+		dprintf(D_ALWAYS, "command_rehome: already attached to schedd %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Already attached to this schedd");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	// If the caller asked us to reboot the host after rehoming, the
+	// STARTD_REHOME_ALLOW_REBOOT guard expression must permit it.  Check
+	// before evicting anything so a denied reboot doesn't disrupt jobs.
+	if( reboot && !resmgr->rehomeRebootAllowed() ) {
+		dprintf(D_ALWAYS, "command_rehome: reboot requested but STARTD_REHOME_ALLOW_REBOOT does not permit it\n");
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Reboot on rehome not permitted by STARTD_REHOME_ALLOW_REBOOT");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME and STARTD_DIRECT_ATTACH_SCHEDD_POOL so they survive restarts
+	std::string config_value;
+	formatstr(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		formatstr_cat(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s\n", schedd_pool.c_str());
+	}
+	int rc = set_persistent_config(strdup("rehome"), strdup(config_value.c_str()));
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to set persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Failed to set persistent config");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "command_rehome: set STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		dprintf(D_ALWAYS | D_NOHEADER, ", STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s", schedd_pool.c_str());
+	}
+	dprintf(D_ALWAYS | D_NOHEADER, "\n");
+
+	// Fast-kill all running starters
+	resmgr->killAllClaims("rehome", CONDOR_HOLD_CODE::StartdRehoming, 0);
+
+	// If requested (and permitted above), reboot the host once all claims
+	// have been evicted.  The persistent config written above is already on
+	// disk, so the startd will direct-attach to the schedd after the reboot.
+	if( reboot ) {
+		std::string reboot_command;
+		if( !param(reboot_command, "STARTD_REBOOT_COMMAND") || reboot_command.empty() ) {
+			reboot_command = "/sbin/reboot";
+		}
+		resmgr->rebootAfterRehome(reboot_command);
+	}
+
+	// TODO: use timeout parameter
+	// TODO: report back to schedd when all starters have exited
+	// TODO: determine end state after rehome completes
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT, true);
+
+	s->encode();
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_rehome: failed to send response to %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
 command_coalesce_slots(int, Stream * stream ) {
 	Sock * sock = (Sock *)stream;
 	ClassAd commandAd;
@@ -2712,7 +2867,7 @@ command_coalesce_slots(int, Stream * stream ) {
 		if (r) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
-		// Despite appearances, this also transfers the nonfungible resources.
+			// Despite appearances, this also transfers the nonfungible resources.
 			(r->r_attr)->unbind_DevIds(resmgr->m_attr, r->r_id, r->r_sub_id, 0);
 			*(parent->r_attr) += *(r->r_attr);
 			*(r->r_attr) -= *(r->r_attr);
@@ -2797,5 +2952,136 @@ command_coalesce_slots(int, Stream * stream ) {
 		return FALSE;
 	}
 
+	return TRUE;
+}
+
+
+int
+command_data_slot(int, Stream * stream ) {
+	Sock * sock = (Sock *)stream;
+	// dprintf( D_ALWAYS, "command_data_slot(): begin\n" );
+
+
+	ClassAd commandAd;
+	if(! getClassAd( sock, commandAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get command ad\n" );
+		return FALSE;
+	}
+
+
+	// This becomes owned by the new slot's claim.
+	ClassAd * requestAd = new ClassAd();
+	if(! getClassAd( sock, * requestAd ) || ! sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to get resource request\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+
+	std::string claimID;
+	if(! commandAd.LookupString( ATTR_CLAIM_ID, claimID )) {
+		dprintf( D_ALWAYS, "command_data_slot(): command ad missing claim ID\n" );
+		delete requestAd;
+		return FALSE;
+	}
+
+	//
+	// Confirm that we can use this resource to build a data slot.
+	//
+	std::string errorString;
+	CAResult result = CA_SUCCESS;
+	Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
+
+	if(! r) {
+		formatstr( errorString, "can't find slot with given claim ID" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->state() != claimed_state ) {
+		formatstr( errorString, "given slot is not claimed" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+		formatstr( errorString, "given slot is broken" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->get_parent() == NULL ) {
+		formatstr( errorString, "given slot is not dynamic" );
+		result = CA_INVALID_REQUEST;
+	} else if( r->isDeactivating() ) {
+		formatstr( errorString, "given slot is deactivating, try again later" );
+		// In case we ever decide to implement a delayed retry, make sure
+		// that this result code isn't used anywhere else in this function.
+		result = CA_INVALID_STATE;
+	} else if( r->activity() != idle_act ) {
+		formatstr( errorString, "given slot is not idle" );
+		result = CA_INVALID_REQUEST;
+	}
+
+	sock->encode();
+
+	if( result != CA_SUCCESS ) {
+		dprintf( D_ALWAYS, "command_data_slot(): %s\n", errorString.c_str() );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( result ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, errorString.c_str() );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+	//
+	// Because we only have one slot, it's easy to make a new slot out of the
+	// resources of the old one without invalidating the original claim ID.
+	//
+	std::string nsp;
+	const char * new_slot_prefix = nullptr;
+	if( commandAd.LookupString( "DesiredSlotPrefix", nsp ) ) {
+		new_slot_prefix = nsp.c_str();
+	}
+	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
+	r->change_state( unclaimed_state );
+	data_slot->is_data_slot = true;
+
+	if( data_slot == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+
+	//
+	// Reply with success.
+	//
+	ClassAd replyAd;
+	replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	replyAd.InsertAttr( ATTR_CLAIM_ID, data_slot->r_cur->id() );
+
+	if(! putClassAd( sock, replyAd )) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send reply ad\n" );
+		return FALSE;
+	}
+
+	ClassAd slotAd( * data_slot->r_classad );
+	if(! putClassAd( sock, slotAd ) || !sock->end_of_message()) {
+		dprintf( D_ALWAYS, "command_data_slot(): failed to send slot ad\n" );
+		return FALSE;
+	}
+
+	// dprintf( D_ALWAYS, "command_data_slot(): end\n" );
 	return TRUE;
 }

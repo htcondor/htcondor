@@ -65,6 +65,17 @@ public:
   void  SetCeiling(const std::string& CustomerName, int Ceiling); // set Ceiling for a customer
   void  SetFloor(const std::string& CustomerName, int Floor); // set Floor for a customer
 
+  // Ceiling leases: temporarily override a submitter's ceiling for a bounded
+  // duration, then revert to the prior value. Expiration is an absolute unix
+  // time; an expiration of 0 (or attribute absent) means no lease is active.
+  // Returns true on success; on failure sets err and leaves state unchanged.
+  bool SetCeilingLease(const std::string& CustomerName, int Ceiling,
+                       int DurationSeconds, std::string& err);
+  bool CancelCeilingLease(const std::string& CustomerName, std::string& err);
+  time_t GetCeilingLeaseExpiration(const std::string& CustomerName);
+  // Called once per negotiation cycle: expires any lease whose time has passed.
+  void CheckCeilingLeases();
+
   void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
   void SetLastTime(const std::string& CustomerName, int LastTime); // set Last usage time for a customer

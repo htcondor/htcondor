@@ -33,9 +33,9 @@ def the_condor(test_dir):
             "STARTER_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST D_PID",
             "STARTER_XFER_LAST_ALIVE_DELAY": 5,
             "STARTER_XFER_LAST_ALIVE_INTERVAL": 5,
-            "MY_POPEN_KEEPALIVE_INTERVAL": 15,
-            "STARTER_FILE_XFER_STALL_TIMEOUT": 25,
-            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": 75,
+            "MY_POPEN_KEEPALIVE_INTERVAL": 10,
+            "STARTER_FILE_XFER_STALL_TIMEOUT": 40,
+            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": 90,
         }
     ) as the_condor:
         yield the_condor
@@ -59,7 +59,7 @@ def the_completed_job(the_condor):
     )
 
     assert job_handle.wait(
-        timeout=100,
+        timeout=120,
         condition=ClusterState.all_complete,
     )
 
