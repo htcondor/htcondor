@@ -29,6 +29,10 @@
   for empty file lists.  
   :jira:`3777`
 
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
+
 *** 25.12.0 bugs
 
 - Improved the interaction between the *condor_schedd* and the
@@ -46,19 +50,10 @@
   Point's :macro:`HISTORY` archive.
   :jira:`3143`
 
-- DAGMan will no longer re-attempt placement of jobs to the *condor_schedd*
-  when submission will never work such as when an invalid job description file
-  is provided to a node. Note, this only occurs when DAGMan is in direct
-  submission mode (default).
-  :jira:`3716`
-
-- Scheduler universe jobs no longer have their argv[0] set to
-  ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
-  executable name (``a_out_name``). This means that so-called "multibin"
-  programs, like often created from go or rust source and have many
-  executables linked into one static binary, and dispatch based on argv[0]
-  now work as scheduler universe jobs.
-  :jira:`3711`
+- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
+  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
+  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
+  :jira:`3664`
 
 - Updated :tool:`condor_watch_q` to automatically group jobs by :ad-attr:`JobBatchName`
   correctly for jobs submitted after the tool began executing. The incorrect
@@ -70,31 +65,11 @@
   and validity of node submit submit descriptions, Sub-DAG files, and scripts.
   :jira:`3540`
 
-- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
-  when the pathname of the :macro:`EXECUTE` directory is longer than about 80 characters.
-  :jira:`3729`
-
-- :tool:`condor_status` now accepts a ``-health`` option which displays machines
-  that have less than 100% health, and totals for machines by health.
-  :jira:`3714`
-  
-- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
-  shell inside the container to whatever the job had.
-  :jira:`3741`
-
-- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
-  (8 hours).
-  :jira:`3706`
-
 - Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
   :jira:`3687`
 
-- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
-  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
-  by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
-  :jira:`3664`
 - :tool:`condor_config_val` now accepts a ``-trace`` option which prints the file, line and previous value
   each time a value is replaced as the configuration files are read.
   :jira:`3699`
@@ -105,6 +80,42 @@
   persistent across *condor_negotiator* restarts. A new
   ``-cancelceilinglease`` option cancels an in-effect lease.
   :jira:`3518`
+
+- Scheduler universe jobs no longer have their argv[0] set to
+  ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
+  executable name (``a_out_name``). This means that so-called "multibin"
+  programs, like often created from go or rust source and have many
+  executables linked into one static binary, and dispatch based on argv[0]
+  now work as scheduler universe jobs.
+  :jira:`3711`
+
+- User supplied transfer plugins can now be conditionally disabled in the
+  *condor_starter* using a new configuration variable.
+  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
+  :jira:`3722`
+
+- :tool:`condor_status` now accepts a ``-health`` option which displays machines
+  that have less than 100% health, and totals for machines by health.
+  :jira:`3714`
+  
+- The OAuth credmon webserver now respects :macro:`CREDMON_WEB_PREFIX`,
+  useful if the credmon webserver is running under a different hostname.
+  :jira:`3746`
+
+- Docker universe jobs that also had a credential being refreshed
+  that also exhausted their :subcom:`RequestMemory` would not go
+  on hold immediately, but only after a 20 minute delay.
+  :jira:`3672`
+
+- DAGMan will no longer re-attempt placement of jobs to the *condor_schedd*
+  when submission will never work such as when an invalid job description file
+  is provided to a node. Note, this only occurs when DAGMan is in direct
+  submission mode (default).
+  :jira:`3716`
+
+- Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
+  (8 hours).
+  :jira:`3706`
 
 - The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
   A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
@@ -117,36 +128,26 @@
   time spent in this activity.
   :jira:`3686`
 
-- Docker universe jobs that also had a credential being refreshed
-  that also exhausted their :subcom:`request_memory` would not go
-  on hold immediately, but only after a 20 minute delay.
-  :jira:`3672`
-
-- User supplied transfer plugins can now be conditionally disabled in the
-  *condor_starter* using a new configuration variable.
-  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
-  :jira:`3722`
-
 - Slots used by an AP to transfer (and then store) common files now have
   the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
   slots now also set the attribute ``IsDataSlot`` in their slot ads.
   :jira:`3715`
 
-- The OAuth credmon webserver now respects :macro:`CREDMON_WEB_PREFIX`,
-  useful if the credmon webserver is running under a different hostname.
-  :jira:`3746`
-
 *** 25.11.0 bugs
-
-- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
-  in :tool:`classad_eval` no longer causes a segfault.
-  :jira:`3554`
-
-*** 25.0.11 bugs
 
 - Fix a recently introduced bug where a parallel universe job that cannot activate one
   of its claims can cause the *condor_schedd* to crash.
   :jira:`3704`
+
+- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
+  when the pathname of the :macro:`EXECUTE` directory is longer than about 80 characters.
+  :jira:`3729`
+
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segmentation fault.
+  :jira:`3554`
+
+*** 25.0.11 bugs
 
 *** 25.10.1 features
 
