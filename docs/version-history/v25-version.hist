@@ -67,6 +67,10 @@
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`
   
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
+
 - Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
   (8 hours).
   :jira:`3706`
