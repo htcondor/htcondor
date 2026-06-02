@@ -18,6 +18,36 @@ from ornithology import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
+def _prom_sample_value(prom_text, sample_name):
+    # Return the float value of a Prometheus sample line for sample_name, or None.
+    # With PROMETHEUS_METRICS_INCLUDE_TIMESTAMP=true a sample line looks like:
+    #   name{label="v",...} <value> <timestamp>
+    # so the value is the second-to-last whitespace-separated token.
+    for line in prom_text.splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        name = line.split(" ", 1)[0].split("{", 1)[0]
+        if name == sample_name:
+            parts = line.split()
+            try:
+                return float(parts[-2])
+            except (IndexError, ValueError):
+                return None
+    return None
+
+
+def _ganglia_publish_line(log_text, metric_name):
+    # Return the most recent GANGLIA_LIB=NOOP "publishing <name>=..." log line for
+    # metric_name, or None. That line carries both the value and a
+    # "derivative=<0|1>" field, so callers can check how Ganglia typed the metric.
+    needle = "publishing %s=" % metric_name
+    found = None
+    for line in log_text.splitlines():
+        if needle in line:
+            found = line
+    return found
+
 # NOTE: make both_backend_test_metric the last metric in the list to ensure it gets published to Ganglia before
 # we check the Ganglia log, since Metricd processes metrics in the order they are defined in the config directory.
 METRIC_DEFS = """
@@ -60,6 +90,31 @@ METRIC_DEFS = """
   TargetType = "Scheduler";
 ]
 [
+  Name = "test_aggregate_sum_counter";
+  Value = 5;
+  Desc = "SUM aggregate of a counter";
+  TargetType = "Scheduler";
+  Aggregate = "SUM";
+  Counter = true;
+]
+[
+  Name = "test_aggregate_max_counter";
+  Value = 5;
+  Desc = "MAX aggregate of a counter";
+  TargetType = "Scheduler";
+  Aggregate = "MAX";
+  Counter = true;
+]
+[
+  Name = "test_aggregate_growth_counter";
+  Value = time();
+  Desc = "SUM aggregate of an increasing counter";
+  TargetType = "Scheduler";
+  Aggregate = "SUM";
+  Counter = true;
+  ExportMetric = "prometheus";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -84,7 +139,7 @@ def condor_with_metricd(test_dir):
         "PROMETHEUS_METRICS_FILE":              str(prom_file),
         "PROMETHEUS_METRICS_INCLUDE_TIMESTAMP": "true",
         "PROMETHEUS_DEFAULT_LABELS":            'pool="testpool"',
-        "METRICD_INTERVAL":                     "10",
+        "METRICD_INTERVAL":                     "5",
         "METRICD_METRICS_CONFIG_DIR":           str(metrics_dir),
         "METRICD_WANT_PROJECTION":              "true",
         "METRICD_DEBUG":                        "D_FULLDEBUG",
@@ -126,6 +181,68 @@ def ganglia_log_contents(condor_with_metricd):
                 break
         time.sleep(2)
     return contents
+
+
+@action
+def prom_file_with_aggregate(test_dir, condor_with_metricd):
+    # Aggregate derivative (counter) metrics are NOT published on the first
+    # metricd cycle: computing a per-daemon delta requires a previous value,
+    # so they first appear on the second publication cycle. Poll until the
+    # SUM aggregate counter shows up (its MAX-aggregate sibling is published in
+    # the same cycle, so once one appears both do).
+    prom_file = test_dir / "metrics.prom"
+    deadline = time.time() + 120
+    contents = None
+    while time.time() < deadline:
+        if prom_file.exists():
+            text = prom_file.read_text()
+            if "test_aggregate_sum_counter" in text:
+                contents = text
+                break
+        time.sleep(2)
+    return contents
+
+
+@action
+def ganglia_log_with_aggregate(condor_with_metricd):
+    # Like ganglia_log_contents, but waits for an aggregate counter to be
+    # published to Ganglia. Aggregate derivative metrics first appear on the
+    # second cycle (they need a previous value to compute the per-daemon delta).
+    log_file = condor_with_metricd.log_dir / "MetricdLog"
+    deadline = time.time() + 120
+    contents = None
+    while time.time() < deadline:
+        if log_file.exists():
+            text = log_file.read_text(errors="replace")
+            if "publishing test_aggregate_sum_counter=" in text:
+                contents = text
+                break
+        time.sleep(2)
+    return contents
+
+
+@action
+def growth_counter_samples(test_dir, condor_with_metricd):
+    # test_aggregate_growth_counter uses Value=time(), which advances every
+    # metricd cycle, so its per-daemon delta is positive on every cycle. A
+    # correct cumulative counter therefore strictly increases from one cycle to
+    # the next, whereas a per-interval gauge would just hover near a single
+    # interval's worth. Capture two successive published values so the test can
+    # confirm the running total accumulates.
+    prom_file = test_dir / "metrics.prom"
+    name = "test_aggregate_growth_counter_total"
+    deadline = time.time() + 120
+    first = None
+    while time.time() < deadline:
+        if prom_file.exists():
+            v = _prom_sample_value(prom_file.read_text(), name)
+            if v is not None:
+                if first is None:
+                    first = v
+                elif v > first:
+                    return (first, v)
+        time.sleep(2)
+    return (first, None)
 
 
 class TestPrometheusMetrics:
@@ -216,3 +333,63 @@ class TestPrometheusMetrics:
         # Prometheus-specific Desc must not leak into the Ganglia backend.
         assert "desc=Default description" in ganglia_log_contents
         assert "Prometheus-specific description" not in ganglia_log_contents
+
+    # --- aggregate counters ---
+    #
+    # Only a SUM of a counter is itself a counter; MIN/MAX/AVG of a counter are
+    # rate-like quantities and stay gauges. This decision lives in the
+    # backend-agnostic Metric::convertToNonAggregateValue(), so it must hold for
+    # BOTH the Prometheus and Ganglia backends, and the published values must be
+    # correct (the accumulated delta, not the raw summed value).
+
+    def test_aggregate_counter_present(self, prom_file_with_aggregate):
+        assert prom_file_with_aggregate is not None
+
+    # Prometheus backend
+
+    def test_aggregate_sum_counter_is_prometheus_counter(self, prom_file_with_aggregate):
+        # A SUM of a derivative metric is integrated into a running cumulative
+        # total and published as a Prometheus counter (with the _total suffix),
+        # not as a per-interval gauge.
+        assert "# TYPE test_aggregate_sum_counter_total counter" in prom_file_with_aggregate
+
+    def test_aggregate_sum_counter_prometheus_value(self, prom_file_with_aggregate):
+        # The source value is constant (5), so every per-daemon delta is 0 and
+        # the accumulated counter is exactly 0 -- NOT the raw summed value (5),
+        # which is what would be published if we summed values instead of deltas.
+        assert _prom_sample_value(prom_file_with_aggregate, "test_aggregate_sum_counter_total") == 0
+
+    def test_aggregate_max_counter_stays_prometheus_gauge(self, prom_file_with_aggregate):
+        assert "# TYPE test_aggregate_max_counter gauge" in prom_file_with_aggregate
+        assert "test_aggregate_max_counter_total" not in prom_file_with_aggregate
+
+    # Ganglia backend (GANGLIA_LIB=NOOP logs each published metric, including its
+    # value and a derivative=<0|1> field)
+
+    def test_aggregate_sum_counter_is_ganglia_derivative(self, ganglia_log_with_aggregate):
+        assert ganglia_log_with_aggregate is not None
+        line = _ganglia_publish_line(ganglia_log_with_aggregate, "test_aggregate_sum_counter")
+        assert line is not None
+        # Published as a derivative (counter) ...
+        assert "derivative=1" in line
+        # ... with the correct accumulated value of 0 (constant source -> 0 delta).
+        assert "publishing test_aggregate_sum_counter=0," in line
+
+    def test_aggregate_max_counter_is_ganglia_gauge(self, ganglia_log_with_aggregate):
+        line = _ganglia_publish_line(ganglia_log_with_aggregate, "test_aggregate_max_counter")
+        assert line is not None
+        # MAX of a counter stays a gauge, so Ganglia must NOT mark it derivative.
+        assert "derivative=0" in line
+
+    # Accumulation: an increasing source must yield a strictly increasing counter.
+    # (The accumulation code is shared by both backends, so checking Prometheus
+    # is sufficient; the constant-source cases above already confirm Ganglia and
+    # Prometheus agree on the value.)
+
+    def test_aggregate_counter_accumulates(self, growth_counter_samples):
+        first, second = growth_counter_samples
+        assert first is not None and second is not None
+        # Strictly increasing across cycles confirms the per-interval deltas are
+        # integrated into a running total, rather than each cycle's value simply
+        # replacing the last (which is what a gauge / per-interval value does).
+        assert second > first

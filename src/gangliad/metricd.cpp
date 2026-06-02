@@ -86,6 +86,17 @@ MetricD::postPublishMetrics()
 }
 
 void
+MetricD::cleanupOldPreviousValues()
+{
+	// MetricD itself processes no metrics; the backends do, and each keeps its
+	// own previous-value map for computing aggregate-metric derivatives.  Forward
+	// the end-of-cycle rotation to them so those maps are populated for the next
+	// cycle (otherwise aggregate derivative metrics never see a previous value).
+	if (m_ganglia_active)    m_ganglia.cleanupOldPreviousValues();
+	if (m_prometheus_active) m_prometheus.cleanupOldPreviousValues();
+}
+
+void
 MetricD::initializeHostList()
 {
 	if (m_ganglia_active) m_ganglia.initializeHostList();

@@ -86,7 +86,7 @@ Metric
      - `m_ganglia.publishMetricsFromAds(daemon_ads)`
      - `m_prometheus.publishMetricsFromAds(daemon_ads)`
    - `MetricD::sendHeartbeats()` (delegates to `m_ganglia`)
-   - `cleanupOldPreviousValues()` (inherited)
+   - `this->cleanupOldPreviousValues()` — virtual; `MetricD` overrides to dispatch to `m_ganglia`/`m_prometheus`, because the per-daemon previous-value maps used for aggregate-metric derivatives live in the backend instances (which do the metric processing in step 2), not in `MetricD`
    - `this->postPublishMetrics()` — virtual; `MetricD` overrides to call `m_prometheus.postPublishMetrics()` → writes Prometheus file
 
 2. `StatsD::publishMetricsFromAds(daemon_ads)` (new virtual; default impl used by each backend):

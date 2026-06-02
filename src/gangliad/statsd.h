@@ -66,8 +66,11 @@ public:
 	void addToAggregateValue(Metric const &datapoint);
 
 	// This is called after all ads have been processed.  It finalizes
-	// the aggregate value so it is ready to be published.
-	void convertToNonAggregateValue();
+	// the aggregate value so it is ready to be published.  A SUM of a
+	// derivative (counter) metric is integrated into a persistent running
+	// total via statsd so it can be published as a monotonic counter rather
+	// than a per-interval gauge; see the implementation for details.
+	void convertToNonAggregateValue(class StatsD *statsd);
 
 	std::string name;
 	std::string title;
@@ -225,6 +228,25 @@ class StatsD: Service {
 	// Get a previous value for a metric for use in calculating derivatives of aggregate metrics. Return true if a previous value was found, false otherwise.
 	bool getPreviousValue(std::string const &key, double &value);
 
+	// Called once at the end of each publication cycle to rotate this cycle's
+	// stored values (m_current_values) into m_previous_values so they are
+	// available as the "previous value" on the next cycle.  Virtual so MetricD
+	// can forward it to its backend instances, which do the actual per-metric
+	// processing; without that forwarding the backends' previous-value maps
+	// would never be populated and no aggregate derivative metric would ever be
+	// published in metricd mode.
+	virtual void cleanupOldPreviousValues();
+
+	// For an aggregate (SUM) derivative metric, integrate this publication
+	// cycle's pooled per-daemon delta (increment) into a persistent running
+	// total keyed by the metric's aggregate_group, and return the new
+	// cumulative total.  This lets a summed counter be published as a proper
+	// monotonic counter (so the backend computes the rate itself), consistent
+	// with how non-aggregate counters are published, rather than as a
+	// per-interval gauge.  The total resets to zero if metricd restarts, which
+	// is normal counter-reset behavior handled by the monitoring backend.
+	double accumulateAggregateCounter(std::string const &key, double increment) { return m_aggregate_counter_totals[key] += increment; }
+
  protected:
 	int m_verbosity;
 	std::string m_requirements;
@@ -271,8 +293,12 @@ class StatsD: Service {
 	std::unordered_map<std::string, double> m_previous_values;
 	std::unordered_map<std::string, double> m_current_values;
 
-	// Remove entries from m_previous_values whose time doesn't match m_start_time
-	void cleanupOldPreviousValues();
+	// Running cumulative totals for aggregate (SUM) derivative (counter)
+	// metrics, keyed by aggregate_group.  Persists across publication cycles
+	// (unlike m_aggregate_metrics, which is cleared each cycle) so a summed
+	// counter can be published as a monotonic counter.  See
+	// accumulateAggregateCounter() and Metric::convertToNonAggregateValue().
+	std::unordered_map<std::string, double> m_aggregate_counter_totals;
 
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();

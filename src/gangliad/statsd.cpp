@@ -677,7 +677,14 @@ Metric::addToAggregateValue(Metric const &datapoint) {
 }
 
 void
-Metric::convertToNonAggregateValue() {
+Metric::convertToNonAggregateValue(StatsD *statsd) {
+	// Only a SUM of a derivative metric is itself a counter.  addToAggregateValue()
+	// summed the per-daemon deltas, so for SUM 'sum' holds this interval's pooled
+	// increment across the daemons.  MIN/MAX/AVG of counters are rate-like
+	// quantities (functions of the per-daemon rates), not cumulative counts, so
+	// they remain gauges.  Capture this before we clear the aggregate function.
+	bool is_counter = derivative && (aggregate == SUM);
+
 	switch(aggregate) {
 		case NO_AGGREGATE:
 			break;
@@ -707,9 +714,27 @@ Metric::convertToNonAggregateValue() {
 	}
 	aggregate = NO_AGGREGATE;
 
-	// Set derivative to false since we have already calculated the derivative if needed when we
-	// added datapoints to the aggregate value, and we don't want to calculate the derivative again when we publish this metric.
-	derivative = false;
+	if( is_counter ) {
+		// 'sum' was this interval's pooled per-daemon delta.  Integrate it into a
+		// persistent running total so the summed counter is published as a proper
+		// monotonic counter (Prometheus counter / Ganglia --slope=derivative) and
+		// the backend computes the rate itself, just like a non-aggregate counter,
+		// instead of publishing a per-interval gauge.  Keep derivative=true so the
+		// publisher treats it as a counter.  The total stays monotonic because
+		// negative per-daemon deltas (e.g. a daemon restart) were already dropped
+		// before aggregation in evaluateDaemonAd().
+		double total = statsd->accumulateAggregateCounter(aggregate_group, sum);
+		if (type == FLOAT || type == DOUBLE) {
+			value.SetRealValue(total);
+		} else {
+			value.SetIntegerValue((int)total);
+		}
+	}
+	else {
+		// Set derivative to false since we have already calculated the derivative if needed when we
+		// added datapoints to the aggregate value, and we don't want to calculate the derivative again when we publish this metric.
+		derivative = false;
+	}
 }
 
 StatsD::StatsD():
@@ -1436,10 +1461,17 @@ StatsD::publishAggregateMetrics()
 		 itr++ )
 	{
 		Metric *metric = newMetric(itr->second);
-		metric->convertToNonAggregateValue();
+		metric->convertToNonAggregateValue(this);
 		publishMetric(*metric);
+		// Note: convertToNonAggregateValue() leaves derivative==true only for
+		// aggregate counters (a SUM of a derivative metric).  Such counters must
+		// NOT be reset to zero when they disappear: forcing a counter to zero
+		// looks like a counter reset to the backend and corrupts its rate
+		// calculation.  A counter should simply plateau, which it does because
+		// accumulateAggregateCounter() stops growing when no daemons report.
 		if ( want_reset_metrics &&
-			 metric->type != Metric::MetricTypeEnum::STRING && 
+			 !metric->derivative &&
+			 metric->type != Metric::MetricTypeEnum::STRING &&
 			 metric->type != Metric::MetricTypeEnum::BOOLEAN )
 		{
 			m_previous_aggregate_metrics[itr->first] = metric;

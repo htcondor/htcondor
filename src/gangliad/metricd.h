@@ -39,6 +39,7 @@ class MetricD: public StatsD {
 	virtual void initializeHostList();
 	virtual void sendHeartbeats();
 	virtual void postPublishMetrics();
+	virtual void cleanupOldPreviousValues();
 
  private:
 	GangliaD    m_ganglia;
