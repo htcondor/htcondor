@@ -37,14 +37,29 @@ class Submit(Verb):
     }
 
     def __init__(self, logger, snakefile=None, snakemake_args=None, **options):
-        
-        # snakefile is only provided when called directly (e.g. from tests).
-        # When invoked via the CLI, everything lands in snakemake_args via REMAINDER.
-        # 
-        # Valid usage patterns (-- is a boundary, everything after it goes to snakemake):
-        #   (1) htcondor snake submit --jobdir logs Snakefile -- --args
-        #   (2) htcondor snake submit Snakefile --jobdir logs -- --args
-        #   (3) htcondor snake submit -- --profile htcondor_profile (uses default Snakefile)
+        """
+        Initialize and submit a Snakemake management job.
+
+        This constructor performs CLI-style parsing of the provided arguments,
+        validates inputs, prepares the job directory, and submits a local
+        universe HTCondor job which will run Snakemake with the HTCondor
+        executor.
+
+        Args:
+            logger: Logger object used for logging messages.
+            snakefile (str or pathlib.Path, optional): Path to the Snakefile to run.
+            snakemake_args (list[str], optional): Remaining arguments intended
+                for Snakemake (may include a leading "--" separator or jobdir).
+            **options: Additional options parsed from the CLI. Supported key:
+                - "jobdir": path to a directory where management logs are written.
+
+        Returns:
+            None
+
+        Raises:
+            FileNotFoundError: if the resolved Snakefile does not exist.
+            RuntimeError: if Snakemake executable cannot be found or submission fails.
+        """
 
         if snakefile is None:
             # Extract --jobdir from snakemake_args if present
@@ -65,7 +80,7 @@ class Submit(Verb):
         # Basic validations for Snakefile
         snakefile = self._validate_snakefile(snakefile)
                     
-        # submit a local universe job
+        # Submit a local universe job
         try:
             self._submit_local(snakefile, jobdir, snakemake_args)
         except Exception as e:
@@ -75,12 +90,25 @@ class Submit(Verb):
     
     def _extract_jobdir_from_remainder(self, snakemake_args, options):
         """
-        Scan snakemake_args for all --jobdir occurrences and extract them, but only before the -- separator.
-        The -- separator acts as a boundary so everything after is sent to Snakemake.
-        If multiple --jobdir flags appear, the last one wins
-        Returns filtered snakemake_args without any --jobdir flags and their values.
-        Updates options["jobdir"] if --jobdir was found in REMAINDER.
+        Extract any `--jobdir` occurrences from the remainder `snakemake_args`.
+
+        Only `--jobdir` occurrences appear before the separator `--` are considered. 
+        If multiple `--jobdir` flags are present the last value wins and is written into
+        `options['jobdir']`.
+
+        Args:
+            snakemake_args (list[str] or None): The argument list from the CLI
+                that will be forwarded to Snakemake. May include a leading
+                "--" separator and `--jobdir`.
+            options (dict): Mutable dict of parsed options. Will be updated
+                with a "jobdir" key if a `--jobdir` value is found.
+
+        Returns:
+            list[str] or None: A filtered list of `snakemake_args` with any
+            `--jobdir` flags and their values removed. Returns the original
+            `snakemake_args` if no `--jobdir` was found.
         """
+
         if not snakemake_args:
             return snakemake_args
         
@@ -122,7 +150,22 @@ class Submit(Verb):
         return snakemake_args
     
     def _validate_snakefile(self, snakefile):
-        """Minimal validation: file exists"""
+        """
+        Validate and normalize the given snakefile path.
+
+        If `snakefile` is `None`, this function defaults to the string
+        "Snakefile" and verifies the file exists.
+
+        Args:
+            snakefile (str or path or None): Path or name of the Snakefile.
+
+        Returns:
+            pathlib.Path: Resolved Path object pointing to the Snakefile.
+
+        Raises:
+            FileNotFoundError: If the resolved path does not exist.
+        """
+
         # If snakefile is not provided, use default
         if snakefile is None:
             snakefile = "Snakefile"
@@ -136,18 +179,51 @@ class Submit(Verb):
         return snakefile_path
 
     def _setup_jobdir(self, options):
-        """Create log directory if needed"""
+        """
+        Create or resolve the job directory for management logs.
+
+        Args:
+            options (dict): Parsed CLI options. If the dict contains a
+                "jobdir" key its value will be used as the job directory.
+
+        Returns:
+            pathlib.Path: Path to the created or existing job directory.
+        """
+
         if options.get("jobdir"):
             jobdir = Path(options.get("jobdir"))
         else:
-            jobdir = Path.cwd() / "logs"
+            jobdir = Path.cwd() / "logs" # default name if jobdir is not provided
         
         jobdir.mkdir(parents=True, exist_ok=True)
         return jobdir
 
     # ===== HTCondor SUBMISSION METHODS ===== #
     def _submit_local(self, snakefile, jobdir, snakemake_args):
-        """Submit snakemake as an HTCondor local universe job."""
+        """
+        Submit Snakemake as an HTCondor local-universe management job.
+
+        This method discovers the Snakemake executable, constructs a
+        Submit description for HTCondor, submits the job, writes a pointer
+        file into `.snakemake/htcondor` so other commands (eg. `status`)
+        can locate the workflow job directory, and prints submission info.
+
+        Args:
+            snakefile (pathlib.Path or str): Path to the Snakefile to run.
+            jobdir (pathlib.Path): Directory where management logs should be
+                written and where metadata will be stored.
+            snakemake_args (list[str] or None): Extra arguments to forward to
+                Snakemake when it runs.
+
+        Returns:
+            None
+
+        Raises:
+            RuntimeError: If the Snakemake executable cannot be found.
+            Exception: Any exception raised by HTCondor submission is
+                propagated to the caller.
+        """
+
         # Resolve snakemake executable from user's environment
         snakemake_path = shutil.which("snakemake")
         if snakemake_path is None:
@@ -159,7 +235,7 @@ class Submit(Verb):
         # Build arguments for snakemake
         args_list = [
             f"-s {snakefile}",
-            f"--executor htcondor", # hardcoded as we assume that users have it
+            f"--executor htcondor", # assuming that users have it if this command is used
             f"--htcondor-jobdir {jobdir}",
         ]
 
@@ -209,8 +285,3 @@ class Snake(Noun):
     @classmethod
     def verbs(cls):
         return [cls.submit] 
-
-
-
-
-
