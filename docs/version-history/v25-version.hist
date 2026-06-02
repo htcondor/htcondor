@@ -14,6 +14,10 @@
   reboot.
   :jira:`3766`
 
+- Honor the :subcom:`transfer_executable` submit command for **batch**
+  grid universe jobs.
+  :jira:`3772`
+
 - Scheduler universe jobs such as DAGMan will now go into cool down
   for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
   *condor_schedd* fails to launch the job.
@@ -74,6 +78,10 @@
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`
   
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
+
 - Changed the default value of :macro:`QUEUE_CLEAN_INTERVAL` to 28800
   (8 hours).
   :jira:`3706`

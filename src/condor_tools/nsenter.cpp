@@ -168,7 +168,7 @@ int main( int argc, char *argv[] )
 
 		// supplemental groups, colon separated
 		if(is_arg_prefix(argv[i],"-groups")) {
-			//supp_groups = argv[i + 1];
+			supp_groups = argv[i + 1];
 			i++;
 		}
 	}
@@ -299,18 +299,10 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	// start changing namespaces.  Note that once we do this, things
-	// get funny in this process
-	enter_ns(pid, "user");
-	enter_ns(pid, "uts");
-	enter_ns(pid, "pid");
-	enter_ns(pid, "mnt");
-
-	int r = setgroups(0, nullptr);
-	if (r < 0) {
-		fprintf(stderr, "Can't setgroups to 0: %s\n", strerror(errno));
-	}
-
+	// Set supplementary groups while we are still root in the initial
+	// user namespace.  Once we setns() into a rootless container's user
+	// namespace, /proc/<pid>/setgroups is typically "deny" and any
+	// setgroups(2) call will fail with EPERM regardless of capabilities.
 	if (supp_groups != nullptr) {
 		std::vector<gid_t> setgroups_vec;
 		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
@@ -318,12 +310,25 @@ int main( int argc, char *argv[] )
 		}
 		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
 		if (r < 0) {
-			fprintf(stderr, "warning: cannot set supplemental groups to %s\n", supp_groups);
+			fprintf(stderr, "warning: cannot set supplemental groups to %s: %s\n",
+				supp_groups, strerror(errno));
+		}
+	} else {
+		int r = setgroups(0, nullptr);
+		if (r < 0) {
+			fprintf(stderr, "warning: setgroups(0) failed: %s\n", strerror(errno));
 		}
 	}
 
+	// start changing namespaces.  Note that once we do this, things
+	// get funny in this process
+	enter_ns(pid, "user");
+	enter_ns(pid, "uts");
+	enter_ns(pid, "pid");
+	enter_ns(pid, "mnt");
+
 	// order matters!
-	r = setgid(gid);
+	int r = setgid(gid);
 	if (r < 0) {
 		fprintf(stderr, "Can't setgid to %d\n", gid);
 		exit(1);
