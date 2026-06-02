@@ -33,6 +33,7 @@
 #include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
+#include "set_user_priv_from_ad.h"
 #include "condor_adtypes.h"
 #include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
@@ -6314,7 +6315,7 @@ ReadProxyFileIntoAd( [[maybe_unused]] const char *file, [[maybe_unused]] const O
 	// owner==NULL means don't try to switch our priv state.
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
-		if ( !init_user_ids(owner) ) {
+		if ( !init_user_ids_from_ad(*owner) ) {
 			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner->Name() );
 			return false;
 		}
