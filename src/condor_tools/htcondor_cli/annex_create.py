@@ -13,6 +13,7 @@ import textwrap
 import subprocess
 from pathlib import Path
 import tarfile
+import re
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -1263,16 +1264,18 @@ SCHEDD_NAME={schedd_name}
 
     # Create the setup tarball
     # TODO add a README
-    tar_filename = "annex-setup.tar"
+    sanitized_name = re.sub('[^-a-zA-Z0-9_.]', '_', annex_name)
+    tar_filename = f"annex-{sanitized_name}.tar"
+    tar_dirname = f"annex-{sanitized_name}"
     with tarfile.open(tar_filename, "x") as tar_file:
-        tar_file.add(local_script_dir / "README.annex-setup", "README.annex-setup")
-        tar_file.add(local_script_dir / "annex-setup.sh", "annex-setup.sh")
-        tar_file.add(local_script_dir / "annex-job-setup.sh", "annex-job-setup.sh")
-        tar_file.add(local_script_dir / "annex-node.sh", "annex-node.sh")
-        tar_file.add(local_script_dir / "00-annex-pilot-base", "00-annex-pilot-base")
-        tar_file.add(token_file, "annex.token")
-        tar_file.add(password_file, "annex.password")
-        tar_file.add(record_file, record_file.name)
+        tar_file.add(local_script_dir / "README.annex-setup", f"{tar_dirname}/README.annex-setup")
+        tar_file.add(local_script_dir / "annex-setup.sh", f"{tar_dirname}/annex-setup.sh")
+        tar_file.add(local_script_dir / "annex-job-setup.sh", f"{tar_dirname}/annex-job-setup.sh")
+        tar_file.add(local_script_dir / "annex-node.sh", f"{tar_dirname}/annex-node.sh")
+        tar_file.add(local_script_dir / "00-annex-pilot-base", f"{tar_dirname}/00-annex-pilot-base")
+        tar_file.add(token_file, f"{tar_dirname}/annex.token")
+        tar_file.add(password_file, f"{tar_dirname}/annex.password")
+        tar_file.add(record_file, f"{tar_dirname}/{record_file.name}")
 
     logger.info(f"\nPlease copy the file {tar_filename} to the HPC system")
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
