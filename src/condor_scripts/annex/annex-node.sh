@@ -46,11 +46,11 @@ if [ ! -z $SLURM_CPUS_ON_NODE ] ; then
     CONDOR_CPUS_LINE="NUM_CPUS = ${SLURM_CPUS_ON_NODE}"
 fi
 if [ ! -z $SLURM_MEM_PER_NODE ] ; then
-    memory_limit="MEMORY=${SLURM_MEM_PER_NODE}"
+    memory_limit="${SLURM_MEM_PER_NODE}"
 elif [ ! -z $SLURM_MEM_PER_CPU ] ; then
-    memory_limit="MEMORY=$(($SLURM_MEM_PER_CPU * $SLURM_CPUS_ON_NODE))"
+    memory_limit="$(($SLURM_MEM_PER_CPU * $SLURM_CPUS_ON_NODE))"
 elif [ ! -z $SLURM_MEM_PER_GPU ] ; then
-    memory_limit="MEMORY=$(($SLURM_MEM_PER_GPU * $SLURM_GPUS_ON_NODE))"
+    memory_limit="$(($SLURM_MEM_PER_GPU * $SLURM_GPUS_ON_NODE))"
 fi
 if [ ! -z $memory_limit ] ; then
     echo "$(date) $(hostname) Limiting EP to ${memory_limit}GB memory as requested by SLURM"

@@ -35,7 +35,7 @@ echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)
 LOG = ${ANNEX_LOGDIR}/log.\$(FULL_HOSTNAME)" >> etc/condor_config
 rm local/config.d/00-personal-condor
 cp ${IWD}/00-annex-pilot-base local/config.d/
-cp ${IWD}/10-annex-pilot-instance local/config.d/
+cp ${IWD}/20-annex-pilot-instance local/config.d/
 if [ -f ~/.condor/annex_pilot_config ] ; then
     cp ~/.condor/annex_pilot_config local/config.d/90-annex-pilot-custom
 fi

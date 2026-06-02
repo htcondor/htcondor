@@ -11,7 +11,7 @@ function usage() {
 # If we abort early, cleanup the files we've created
 function cleanup() {
     echo "Cleaning up files..."
-    rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/10-annex-pilot-instance
+    rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/20-annex-pilot-instance
 }
 trap cleanup EXIT
 
@@ -100,15 +100,18 @@ arch=$(uname -m)
 distro_raw=$(. /etc/os-release; echo $ID)
 distro_ver=$(. /etc/os-release; echo $VERSION_ID | cut -d. -f1)
 
-if [[ $distro_raw =~ (rhel|centos|almalinux) ]]; then
-        distro="AlmaLinux${distro_ver}"
+if [[ $distro_raw =~ (rhel|centos|almalinux|rocky) ]]; then
+    distro="AlmaLinux${distro_ver}"
 elif [[ $distro_raw =~ opensuse-leap ]]; then
-        distro="openSUSE${distro_ver}"
+    distro="openSUSE${distro_ver}"
 elif [[ $distro_raw =~ debian ]]; then
-        distro="Debian${distro_ver}"
+    distro="Debian${distro_ver}"
 elif [[ $distro_raw =~ ubuntu ]]; then
-        distro="Ubuntu${distro_ver}"
-fi 
+    distro="Ubuntu${distro_ver}"
+else
+    echo "Unrecognized linux distro '${distro_raw}', aborting setup."
+    exit 1
+fi
 
 BINARIES_FILE="condor-${VERSION}-${arch}_${distro}-stripped.tar.gz"
 RELEASE_URL="${BINARIES_URL_BASE}${series}/${VERSION}/release/${BINARIES_FILE}"
@@ -168,7 +171,7 @@ ANNEX_PILOT_SCHEDD_NAME = ${SCHEDD_NAME}
 
 STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
-" > ${IWD}/10-annex-pilot-instance
+" > ${IWD}/20-annex-pilot-instance
 
 
 #
