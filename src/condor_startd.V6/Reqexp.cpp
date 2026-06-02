@@ -122,7 +122,7 @@ Resource::reqexp_restore()
 	} else {
 		caDeleteThruParent(r_classad, ATTR_RUNNING_COD_JOB );
 	}
-	if (resmgr->isShuttingDown() || isDraining()) {
+	if (resmgr->isShuttingDown() || isDraining() || resmgr->rehomeRebootPending()) {
 		if (r_reqexp.rstate != UNAVAIL_REQ) {
 			reqexp_unavail( isDraining() ? getDrainingExpr() : nullptr );
 			return true;
