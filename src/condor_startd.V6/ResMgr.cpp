@@ -3567,6 +3567,16 @@ ResMgr::rebootAfterRehome(const std::string &reboot_command)
 		"rehome: host will reboot via '%s' once all claims have been evicted\n",
 		reboot_command.c_str());
 
+		// Mark every slot unavailable (Requirements -> False) now that a
+		// reboot is pending -- rehomeRebootPending() drives reqexp_restore()
+		// into the UNAVAIL_REQ state, the same way draining and shutdown do.
+		// Without this the negotiator immediately rematches the jobs we just
+		// evicted back onto this host, "all claims evicted" is never reached,
+		// and the reboot never fires.  update_all() pushes the now-unavailable
+		// slot ads to the collector so the next negotiation cycle skips us.
+	walk([](Resource* rip) { rip->reqexp_restore(); });
+	update_all();
+
 		// If nothing is running we can reboot right away.
 	checkForRehomeReboot();
 }
