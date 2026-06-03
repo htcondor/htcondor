@@ -6,7 +6,8 @@
   :jira:`3143`
 
 - When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
-  stop requesting matches for that user's jobs until the use drops back below 20%. This behavior can be disabled
+  stop requesting matches for that user's jobs until the use drops back below 20%. This prevents a single user
+  from monopolizing the transfer queue and preventing other users' jobs from matching. This behavior can be disabled
   by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
   :jira:`3664`
 
@@ -20,7 +21,7 @@
   and validity of node submit submit descriptions, Sub-DAG files, and scripts.
   :jira:`3540`
 
-- Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of classad attributes. This is useful
+- Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of ClassAd attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
   :jira:`3687`
@@ -36,7 +37,7 @@
   ``-cancelceilinglease`` option cancels an in-effect lease.
   :jira:`3518`
 
-- Scheduler universe jobs no longer have their argv[0] set to
+- Scheduler universe jobs (i.e. local DAGMan jobs) no longer have their argv[0] set to
   ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
   executable name (``a_out_name``). This means that so-called "multibin"
   programs, like often created from go or rust source and have many
@@ -44,18 +45,22 @@
   now work as scheduler universe jobs.
   :jira:`3711`
 
-- User supplied transfer plugins can now be conditionally disabled in the
-  *condor_starter* using a new configuration variable.
-  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
-  :jira:`3722`
-
 - :tool:`condor_status` now accepts a ``-health`` option which displays machines
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`
   
-- The OAuth credmon webserver now respects :macro:`CREDMON_WEB_PREFIX`,
-  useful if the credmon webserver is running under a different hostname.
+- The OAuth credmon web server now respects :macro:`CREDMON_WEB_PREFIX`,
+  useful if the credmon web server is running under a different host name.
   :jira:`3746`
+
+- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
+  when the path-name of the :macro:`EXECUTE` directory is longer than about 80 characters.
+  :jira:`3729`
+
+- User supplied transfer plugins can now be conditionally disabled in the
+  *condor_starter* using a new configuration variable.
+  :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
+  :jira:`3722`
 
 - Docker universe jobs that also had a credential being refreshed
   that also exhausted their :subcom:`RequestMemory` would not go
@@ -93,10 +98,6 @@
 - Fix a recently introduced bug where a parallel universe job that cannot activate one
   of its claims can cause the *condor_schedd* to crash.
   :jira:`3704`
-
-- :tool:`condor_ssh_to_job` now works for docker universe or container universe jobs
-  when the pathname of the :macro:`EXECUTE` directory is longer than about 80 characters.
-  :jira:`3729`
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
   in :tool:`classad_eval` no longer causes a segmentation fault.
