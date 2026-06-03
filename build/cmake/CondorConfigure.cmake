@@ -292,7 +292,7 @@ if (FIPS_BUILD)
     add_definitions(-DFIPS_MODE=1)
 endif()
 
-add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
+add_definitions(-D${OS_NAME}=1)
 if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)

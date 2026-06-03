@@ -2574,6 +2574,9 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 	bool cancel = false;
 	ad.LookupBool("Cancel", cancel);
 
+	bool reboot = false;
+	ad.LookupBool("Reboot", reboot);
+
 	std::string schedd_name;
 	std::string schedd_pool;
 	if( !ad.LookupString("ScheddName", schedd_name) || schedd_name.empty() ) {
@@ -2631,6 +2634,20 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 		return FALSE;
 	}
 
+	// If the caller asked us to reboot the host after rehoming, the
+	// STARTD_REHOME_ALLOW_REBOOT guard expression must permit it.  Check
+	// before evicting anything so a denied reboot doesn't disrupt jobs.
+	if( reboot && !resmgr->rehomeRebootAllowed() ) {
+		dprintf(D_ALWAYS, "command_rehome: reboot requested but STARTD_REHOME_ALLOW_REBOOT does not permit it\n");
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_RESULT, false);
+		response_ad.Assign(ATTR_ERROR_STRING, "Reboot on rehome not permitted by STARTD_REHOME_ALLOW_REBOOT");
+		s->encode();
+		putClassAd(s, response_ad);
+		s->end_of_message();
+		return FALSE;
+	}
+
 	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME and STARTD_DIRECT_ATTACH_SCHEDD_POOL so they survive restarts
 	std::string config_value;
 	formatstr(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
@@ -2657,6 +2674,17 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 
 	// Fast-kill all running starters
 	resmgr->killAllClaims("rehome", CONDOR_HOLD_CODE::StartdRehoming, 0);
+
+	// If requested (and permitted above), reboot the host once all claims
+	// have been evicted.  The persistent config written above is already on
+	// disk, so the startd will direct-attach to the schedd after the reboot.
+	if( reboot ) {
+		std::string reboot_command;
+		if( !param(reboot_command, "STARTD_REBOOT_COMMAND") || reboot_command.empty() ) {
+			reboot_command = "/sbin/reboot";
+		}
+		resmgr->rebootAfterRehome(reboot_command);
+	}
 
 	// TODO: use timeout parameter
 	// TODO: report back to schedd when all starters have exited

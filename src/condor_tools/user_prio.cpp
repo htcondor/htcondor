@@ -618,8 +618,9 @@ main(int argc, const char* argv[])
 	  // Get info on our negotiator
   Daemon negotiator(DT_NEGOTIATOR, neg_name, pool_name);
   if (!negotiator.locate(Daemon::LOCATE_FOR_ADMIN)) {
-	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
-              argv[0], pool_name ? pool_name : "local pool");
+	  fprintf(stderr, "%s: Can't locate negotiator '%s' in %s\n",
+              argv[0], neg_name ? neg_name : "default",
+              pool_name ? pool_name : "local pool");
 	  // If we are getting userprio info from the collector, don't exit,
 	  // as we don't need to talk to the negotiator. If we do, we'll
 	  // exit with an approriate error later.
