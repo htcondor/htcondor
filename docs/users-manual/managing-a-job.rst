@@ -18,7 +18,7 @@ through a small set of states.  :tool:`condor_submit` (or a job submitted
 via the python bindings or via :tool:`htcondor`) places a new job in the
 **Idle** state, where it waits for HTCondor to match it to a machine.  Once
 matched and claimed, the job enters the **Running** state.  Most jobs simply
-run to **Completion**, but a running job can also be evicted back to Idle,
+run to **Completed**, but a running job can also be evicted back to Idle,
 placed on **Hold**, or **Removed** entirely.  The numeric values behind these
 state names are listed in the :doc:`/codes-other-values/job-status-codes`
 section.  Note that the job exit code, which, by convention is 0 for success
