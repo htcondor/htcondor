@@ -1815,7 +1815,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 skip_san:
 	{
 		char cn_fqdn[256];
-		X509_NAME *subj = nullptr;
+		const X509_NAME *subj = nullptr;
 		if (!success && (subj = X509_get_subject_name(cert)) &&
 			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
 		{

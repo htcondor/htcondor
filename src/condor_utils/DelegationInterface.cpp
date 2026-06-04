@@ -636,7 +636,8 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   PROXY_CERT_INFO_EXTENSION proxy_info;
   PROXY_POLICY proxy_policy;
   const EVP_MD *digest = EVP_sha256();
-  X509_NAME *subject = NULL;
+  const X509_NAME *subject = NULL;
+  X509_NAME *dup_subject = NULL;
   char need_ext[] = "critical,digitalSignature,keyEncipherment";
   std::string proxy_cn;
   time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
@@ -797,12 +798,12 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
 
   subject=X509_get_subject_name((X509*)cert_);
   if(!subject) goto err;
-  subject=X509_NAME_dup(subject);
-  if(!subject) goto err;
-  if(!X509_set_issuer_name(cert,subject)) goto err;
-  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char *)const_cast<char *>(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
-  if(!X509_set_subject_name(cert,subject)) goto err;
-  X509_NAME_free(subject); subject=NULL;
+  dup_subject=X509_NAME_dup(subject);
+  if(!dup_subject) goto err;
+  if(!X509_set_issuer_name(cert,dup_subject)) goto err;
+  if(!X509_NAME_add_entry_by_NID(dup_subject,NID_commonName,MBSTRING_ASC,(unsigned char *)const_cast<char *>(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
+  if(!X509_set_subject_name(cert,dup_subject)) goto err;
+  X509_NAME_free(dup_subject); dup_subject=NULL;
   // This was changed from the original to expect only unix epoch time values.
   if(!(restrictions_["validityStart"].empty())) {
     validity_start=atoll(restrictions_["validityStart"].c_str());
@@ -868,7 +869,7 @@ err:
   if(sno) ASN1_INTEGER_free(sno);
   //if(ex) X509_EXTENSION_free(ex);
   if(obj) ASN1_OBJECT_free(obj);
-  if(subject) X509_NAME_free(subject);
+  if(dup_subject) X509_NAME_free(dup_subject);
   if(policy_string) ASN1_OCTET_STRING_free(policy_string);
   return cert;
 }
