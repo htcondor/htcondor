@@ -4473,6 +4473,8 @@ enum {
 	idATTR_DISABLE_REASON,
 	idATTR_USERREC_OPT_CREATE_DEPRECATED,
 	idATTR_USERREC_LIVE,
+	idATTR_COMMON_INPUT_FILES,
+	idATTR_COMMON_INPUT_CATALOGS,
 };
 
 enum {
@@ -4484,21 +4486,22 @@ enum {
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
 	catSubmitterIdent = 0x0040,
-	catNewMaterialize = 0x0080,  // attributes that control the job factory
-	catMaterializeState = 0x0100, // change in state of job factory
-	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
+	catNewMaterialize = 0x0080,     // attributes that control the job factory
+	catMaterializeState = 0x0100,   // change in state of job factory
+	catSpoolingHold = 0x0200,       // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
-	catJobset       = 0x800,     // job membership in a jobset changed or a new jobset should be created
-	catSetUserRec   = 0x1000,    // a UserRec was edited
-	catNewUser      = 0x2000,    // a new job "owner" or "user" was added
-	catSetOwner     = 0x4000,    // the ATTR_OWNER or ATTR_USER of a job or jobset was set/changed
+	catJobset       = 0x800,        // job membership in a jobset changed or a new jobset should be created
+	catSetUserRec   = 0x1000,       // a UserRec was edited
+	catNewUser      = 0x2000,       // a new job "owner" or "user" was added
+	catSetOwner     = 0x4000,       // the ATTR_OWNER or ATTR_USER of a job or jobset was set/changed
 	// catUnusedFlag = 0x8000,
-	catSetProjectRec= 0x10000,    // the ProjectRec was edited
-	catNewProject   = 0x20000,    // a new job project was added
-	catJobProject   = 0x40000,    // the ATTR_PROJECT_NAME of a job was set/changed
+	catSetProjectRec= 0x10000,      // the ProjectRec was edited
+	catNewProject   = 0x20000,      // a new job project was added
+	catJobProject   = 0x40000,      // the ATTR_PROJECT_NAME of a job was set/changed
+	catAdjustments  = 0x80000,      // indicates that an attribute requiring post-transform adjustment has been seen
 	catCategoryMask     =0x0FFFFF,
-	catCallbackTrigger = 0x100000, // indicates that a callback should happen on commit of this attribute
-	catCallbackNow = 0x200000,    // indicates that a callback should happen when setAttribute is called
+	catCallbackTrigger = 0x100000,  // indicates that a callback should happen on commit of this attribute
+	catCallbackNow = 0x200000,      // indicates that a callback should happen when setAttribute is called
 };
 
 typedef struct attr_ident_pair {
@@ -4518,6 +4521,8 @@ typedef struct attr_ident_pair {
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
+	FILL(ATTR_COMMON_INPUT_CATALOGS, catCategoryMask),
+	FILL(ATTR_COMMON_INPUT_FILES, catCategoryMask),
 	FILL(ATTR_CONCURRENCY_LIMITS, catDirtyPrioRec),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
@@ -5392,7 +5397,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing jobset\n");
 				errno = EACCES;
 				return -1;
-			} 
+			}
 			if (job) {
 				// TODO: allow id to be set to existing set owned by this user
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing job\n");
@@ -5490,7 +5495,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			attrNumVacates.append(" ").append(ATTR_NUM_VACATES_PRE_EXECUTION);
 			attrNumVacatesByReason.append(" ").append(ATTR_NUM_VACATES_BY_REASON_PRE_EXECUTION);
 		}
-				
+
 		// Update count in job ad of how many times job was vacated
 		incrementJobAdAttr(cluster_id, proc_id, attrNumVacates.c_str());
 
@@ -6087,13 +6092,16 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 	int triggers = JobQueue->GetTransactionTriggers();
 	bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
 	bool has_job_factory = (triggers & catNewMaterialize) != 0;
+	bool has_adjustments_flag = (triggers & catAdjustments) != 0;
 
 	// If we don't need to perform any submit_requirement checks
 	// and we don't need to perform any job transforms, then we should
 	// bail out now and avoid all the expensive computation below.
 	if ( !scheduler.shouldCheckSubmitRequirements() &&
 		 !scheduler.jobTransforms.shouldTransform() &&
-		 !has_spooling_hold)
+		 !has_spooling_hold &&
+		 !has_adjustments_flag
+	)
 	{
 		return 0;
 	}
@@ -6206,6 +6214,15 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			// but before 8.7.2 it happened after the submit transaction had been committed
 			// so the conservative changes puts it here.
 			rewriteSpooledJobAd(procAd, jid.cluster, jid.proc, false);
+		}
+
+		rval = scheduler.post_transform_adjustments(
+			procAd, jid, errorStack, has_job_factory, project_is_cluster_attr
+		);
+		if( rval < 0 ) {
+			if ( errorStack ) { /* ??? */ }
+			errno = EINVAL;
+			return rval;
 		}
 	}
 

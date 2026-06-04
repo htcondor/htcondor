@@ -171,13 +171,13 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
 
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY.CommonInputCatalogs":      '"A, C"',
         "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
@@ -318,13 +318,13 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     #     transfer common files once).
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY.CommonInputCatalogs":      '"A, C"',
         "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 

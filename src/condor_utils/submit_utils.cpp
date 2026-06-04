@@ -6998,14 +6998,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "_x_common_input_catalogs", xcip );
+			job->LookupString( "CommonInputCatalogs", xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
 			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
 				xcip += "condor_container_image";
-				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+				AssignJobString( "CommonInputCatalogs", xcip.c_str() );
 			}
 		}
 

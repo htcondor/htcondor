@@ -685,7 +685,7 @@ class Scheduler : public Service
 
 	// fsync tracking by user
 	std::map<std::string, stats_entry_probe<double>> FsyncRuntimes;
-	
+
 
 	// the significant attributes that the schedd belives are absolutely required.
 	// This is NOT the effective set of sig attrs we get after we talk to negotiators
@@ -729,7 +729,7 @@ class Scheduler : public Service
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
-	// Class to manage sets of Job 
+	// Class to manage sets of Job
 	JobSets *jobSets;
 
 	std::map<GridUserIdentity, GridJobCounts> GridJobOwners;
@@ -785,6 +785,18 @@ class Scheduler : public Service
 
 	// Stop the timer, if any, waiting to release the claim.
 	bool mark_catalog_live( const std::string & catalogName );
+
+
+	// After obtaining the final form of a job ad (after transforms), there's
+	// some C++ code we'd like to run to fix a few things up.
+	int post_transform_adjustments(
+		ClassAd *ad,
+		const PROC_ID & jid,
+		CondorError * errorStack,
+		bool is_late_mat = false,
+		bool project_is_cluster_attr = false
+	);
+
 
 private:
 
