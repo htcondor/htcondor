@@ -471,9 +471,9 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 				}
 				ASN1_IA5STRING *email_ia5 = gen->d.ia5;
 				// Sanity checks.
-				if (email_ia5->type != V_ASN1_IA5STRING) goto cleanup;
-				if (!email_ia5->data || !email_ia5->length) goto cleanup;
-				email2 = BUF_strdup((char *)email_ia5->data);
+				if (ASN1_STRING_type(email_ia5) != V_ASN1_IA5STRING) goto cleanup;
+				if (!ASN1_STRING_get0_data(email_ia5) || !ASN1_STRING_length(email_ia5)) goto cleanup;
+				email2 = BUF_strdup((const char *)ASN1_STRING_get0_data(email_ia5));
 				// We want to return something we can free(), so make another copy.
 				if (email2) {
 					email = strdup(email2);
