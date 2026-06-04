@@ -43,11 +43,11 @@ PrometheusD::PrometheusD()
 }
 
 void
-PrometheusD::initAndReconfig(const char * /*unused*/)
+PrometheusD::initAndReconfig()
 {
 	// Parse metric definitions and learn target types, but never register a
 	// timer of our own (the owning MetricD runs the cycle).
-	StatsD::initAndReconfig("METRICD", true);
+	StatsD::base_initAndReconfig("METRICD", true);
 
 	param(m_output_file,"PROMETHEUS_METRICS_FILE");
 	m_include_timestamp = param_boolean("PROMETHEUS_METRICS_INCLUDE_TIMESTAMP", false);

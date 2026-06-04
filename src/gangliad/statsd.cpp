@@ -760,7 +760,7 @@ StatsD::~StatsD()
 }
 
 void
-StatsD::initAndReconfig(char const *service_name, bool as_backend)
+StatsD::base_initAndReconfig(char const *service_name, bool as_backend)
 {
 	std::string param_name;
 

@@ -34,7 +34,7 @@ class GangliaD: public StatsD {
 	GangliaD(bool as_backend = false);
 	~GangliaD();
 
-	virtual void initAndReconfig(const char * unused = 0);
+	virtual void initAndReconfig();
 
 	// create a GangliaMetric
 	virtual Metric *newMetric(Metric const *copy_me=NULL);

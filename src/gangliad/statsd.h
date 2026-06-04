@@ -24,15 +24,19 @@
  * This file defines base classes for gathering information from the
  * collector and publishing to some other monitoring system.
  */
-
+#include "condor_common.h"
+#include "condor_daemon_core.h"
 #include <list>
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_set>
 
 // True when the binary was invoked as condor_gangliad (legacy mode);
 // false when invoked as condor_metricd (modern mode). Defined in metricd_main.cpp.
 extern bool g_legacy_gangliad_mode;
+
+class CollectorList; // forward declaration to avoid including collector.h here
 
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
@@ -142,12 +146,18 @@ private:
 /* StatsD: base class for gathering and publishing condor statistics
  */
 
-class StatsD: Service {
+class StatsD: public Service {
  public:
 	StatsD();
 	~StatsD();
 
-	virtual void initAndReconfig(char const *service_name, bool as_backend);
+	void base_initAndReconfig(char const *service_name, bool as_backend);
+
+	// This is called at startup and on each reconfig, allowing each backend
+	// to re-read its configuration and re-initialize itself as needed.
+	// It is expected that backends will put their own
+	// initialization code in initAndReconfig() and call base_initAndReconfig() from there.
+	virtual void initAndReconfig() = 0;
 
 	// Allocate a new Metric object.
 	// This is done via a virtual function so the class derived from StatsD

@@ -100,7 +100,7 @@ locateSharedLib(const std::string& libpath,std::string libname,std::string &resu
 }
 
 void
-GangliaD::initAndReconfig(const char * /*unused */)
+GangliaD::initAndReconfig()
 {
 	std::string libname;
 	std::string gmetric_path;
@@ -193,7 +193,7 @@ GangliaD::initAndReconfig(const char * /*unused */)
 
     m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
 
-	StatsD::initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD", m_as_backend);
+	StatsD::base_initAndReconfig(g_legacy_gangliad_mode ? "GANGLIAD" : "METRICD", m_as_backend);
 
 	{
 		const char *cluster_knob = g_legacy_gangliad_mode ? "GANGLIAD_DEFAULT_CLUSTER" : "GANGLIA_DEFAULT_CLUSTER";

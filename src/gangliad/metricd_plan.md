@@ -305,7 +305,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   class PrometheusD : public StatsD {
   public:
       PrometheusD();
-      virtual void initAndReconfig(const char *unused = nullptr);
+      virtual void initAndReconfig();
       virtual Metric *newMetric(Metric const *copy_me = NULL);
       virtual void publishMetric(Metric const &metric);
       virtual void postPublishMetrics();
@@ -348,7 +348,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   class MetricD : public StatsD {
   public:
       MetricD();
-      virtual void initAndReconfig(const char *unused = nullptr);
+      virtual void initAndReconfig();
       virtual Metric *newMetric(Metric const *copy_me = NULL);
       virtual void publishMetric(Metric const &) {}
       virtual void publishMetricsFromAds(std::vector<ClassAd> &daemon_ads);

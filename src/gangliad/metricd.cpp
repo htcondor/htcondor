@@ -28,9 +28,9 @@ MetricD::MetricD() :
 }
 
 void
-MetricD::initAndReconfig(const char * /*unused*/)
+MetricD::initAndReconfig()
 {
-	StatsD::initAndReconfig("METRICD", false);
+	StatsD::base_initAndReconfig("METRICD", false);
 
 	// Only initialize a backend if at least one parsed metric could publish
 	// to it. This keeps a Prometheus-only deployment from ever loading

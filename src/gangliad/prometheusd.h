@@ -32,7 +32,7 @@ class PrometheusD: public StatsD {
  public:
 	PrometheusD();
 
-	virtual void initAndReconfig(const char *unused = nullptr);
+	virtual void initAndReconfig();
 
 	virtual Metric *newMetric(Metric const *copy_me = NULL);
 	virtual void publishMetric(Metric const &metric);
