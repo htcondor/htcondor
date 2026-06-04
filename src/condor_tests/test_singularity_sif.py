@@ -55,6 +55,16 @@ def sif_file():
     # and reverts to the old way:
     os.environ["APPTAINER_IGNORE_PROOT"] = "1"
 
+    # figure out where condor's LIBEXEC directory is
+    # In batlab, the apptainer binary may be stored there
+    libexec_dir = subprocess.run(
+        ["condor_config_val", "LIBEXEC"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        universal_newlines=True,
+    ).stdout.strip()
+    print(f"libexec_dir = {libexec_dir}")
+    os.environ["PATH"] = libexec_dir + ":" + os.environ["PATH"]
+
     for count in [0, 1, 2, 3, 4]:
         # rarely we see this failing in batlab with "bad file descriptor"
         # so, just retry.
@@ -197,7 +207,7 @@ def ssh_to_container_job(condor, running_ssh_job):
 @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
 @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
 @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
-class TestContainerUni:
+class TestSingularitySIF:
     def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
     def test_container_uni_with_xfer(self, completed_test_job_with_xfer):
