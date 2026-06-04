@@ -7,6 +7,68 @@ the commands are discussed briefly. You are encouraged to look at the
 man pages of the commands referred to (located in :doc:`/man-pages/index`)
 for more information.
 
+The Job Lifecycle
+-----------------
+
+:index:`lifecycle<single: lifecycle; job>`
+:index:`state<single: state; job>`
+
+From the moment it is submitted until it leaves the queue, every job moves
+through a small set of states.  :tool:`condor_submit` (or a job submitted
+via the python bindings or via :tool:`htcondor`) places a new job in the
+**Idle** state, where it waits for HTCondor to match it to a machine.  Once
+matched and claimed, the job enters the **Running** state.  Most jobs simply
+run to **Completed**, but a running job can also be evicted back to Idle,
+placed on **Hold**, or **Removed** entirely.  The numeric values behind these
+state names are listed in the :doc:`/codes-other-values/job-status-codes`
+section.  Note that the job exit code, which, by convention is 0 for success
+and non-zero for error, plays no role in determining the state of a job that
+was not submitted by *condor_dagman*.  See the dagman section (:ref:`DAGMan`)
+for more information about how dagman uses the job exit code.
+
+.. mermaid::
+   :align: center
+
+   stateDiagram-v2
+    [*] --> Idle: condor_submit
+    Idle --> Running: matched and claimed
+    Running --> Completed: job exits (normal or by signal)
+    Running --> Idle: evicted, will retry
+    Running --> Held: evicted, needs attention
+    Idle --> Held: condor_hold
+    Running --> Held: condor_hold
+    Held --> Idle: condor_release
+    Idle --> Removed: condor_rm
+    Running --> Removed: condor_rm
+    Held --> Removed: condor_rm
+    Completed --> [*]: written to job history
+    Removed --> [*]: written to job history
+
+The two most important ways a running job leaves the Running state are
+**completion** and **eviction**:
+
+Completion
+    The job's executable exits, either normally or because it was killed by a
+    signal.  HTCondor removes the job from the queue and records it in the job
+    history file.  See `Job Completion`_ below.
+
+Eviction
+    HTCondor stops a running job before it finishes (for example, because of
+    preemption, a missing output file, or the job exceeding a requested
+    resource).  When a job is evicted, the :ad-attr:`VacateReasonCode` attribute
+    records *why*, and that code also determines *where the job goes next*:
+
+    * A vacate code **>= 1000** indicates a problem with the system, so the job
+      is returned to the **Idle** state and will be retried on another machine.
+    * A vacate code **< 1000** indicates something that needs human attention,
+      so the job is placed on **Hold** instead of being retried.
+
+    The full set of vacate codes is documented in the
+    :ref:`Vacate Reason Codes` table, and the hold codes in the
+    :ref:`Hold Reason Codes` table.  The code that makes this
+    eviction-versus-hold decision is the ``shouldVacateJobBasedOnCodes()``
+    function in ``src/condor_utils/condor_holdcodes.h``.
+
 Checking on the progress of jobs
 --------------------------------
 
