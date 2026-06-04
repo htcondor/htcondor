@@ -57,11 +57,13 @@ def sif_file():
 
     # figure out where condor's LIBEXEC directory is
     # In batlab, the apptainer binary may be stored there
-    libexec_dir = subprocess.run(
+    ccv = subprocess.run(
         ["condor_config_val", "LIBEXEC"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         universal_newlines=True,
-    ).stdout.strip()
+    )
+    assert ccv.returncode == 0
+    libexec_dir = ccv.stdout.strip()
     print(f"libexec_dir = {libexec_dir}")
     os.environ["PATH"] = libexec_dir + ":" + os.environ["PATH"]
 
