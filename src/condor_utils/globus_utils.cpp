@@ -472,13 +472,14 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 				ASN1_IA5STRING *email_ia5 = gen->d.ia5;
 				// Sanity checks.
 				if (ASN1_STRING_type(email_ia5) != V_ASN1_IA5STRING) goto cleanup;
-				if (!ASN1_STRING_get0_data(email_ia5) || !ASN1_STRING_length(email_ia5)) goto cleanup;
-				email2 = BUF_strdup((const char *)ASN1_STRING_get0_data(email_ia5));
-				// We want to return something we can free(), so make another copy.
-				if (email2) {
-					email = strdup(email2);
-					OPENSSL_free(email2);
-				}
+				const unsigned char *email_data = ASN1_STRING_get0_data(email_ia5);
+				int email_data_len = ASN1_STRING_length(email_ia5);
+				if (!email_data || !email_data_len) goto cleanup;
+				if (memchr(email_data, '\0', email_data_len)) goto cleanup;
+				email = (char *)malloc(email_data_len + 1);
+				if (!email) goto cleanup;
+				memcpy(email, email_data, email_data_len);
+				email[email_data_len] = '\0';
 				break;
 			}
 			sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
