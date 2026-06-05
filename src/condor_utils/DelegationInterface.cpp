@@ -636,7 +636,11 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   PROXY_CERT_INFO_EXTENSION proxy_info;
   PROXY_POLICY proxy_policy;
   const EVP_MD *digest = EVP_sha256();
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
+  X509_NAME *subject = NULL;
+#else
   const X509_NAME *subject = NULL;
+#endif
   X509_NAME *dup_subject = NULL;
   char need_ext[] = "critical,digitalSignature,keyEncipherment";
   std::string proxy_cn;
