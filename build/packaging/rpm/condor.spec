@@ -4,9 +4,9 @@
 # UW build includes stuff for testing and tarballs
 %define uw_build 0
 
-%if 0%{?rhel} == 8 || 0%{?rhel} == 9
-# Use gcc-toolset 14 for EL8 and EL9
-%define gcctoolset 14
+%if 0%{?rhel} == 8 || 0%{?rhel} == 9 || 0%{?rhel} == 10
+# Use gcc-toolset 15 for EL 8, 9, and 10
+%define gcctoolset 15
 %endif
 
 Summary: HTCondor: High Throughput Computing
@@ -121,6 +121,15 @@ BuildRequires: devtoolset-%{devtoolset}-toolchain
 %if 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
+BuildRequires: gcc-toolset-%{gcctoolset}-gcc-plugin-annobin
+%endif
+
+%if 0%{?amzn}
+BuildRequires: which
+BuildRequires: gcc14
+BuildRequires: gcc14-c++
+# Unfortunately, the annobin plugin is not provided for gcc 14 on amzn
+%undefine _annotated_build
 %endif
 
 %if 0%{?suse_version}
@@ -242,7 +251,7 @@ Requires: pelican-osdf-compat >= 7.25.0
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
 %if 0%{?suse_version} || 0%{?x86_64_v2}
-# Unfortunately, Apptainer is lagging behind on these platforms
+# Unfortunately, Apptainer is lagging behind in openSUSE and x86_64_v2
 Requires: apptainer >= 1.4.5
 %else
 Requires: apptainer >= 1.5.0
@@ -559,9 +568,18 @@ export CXX=$(which c++)
 %endif
 
 %if 0%{?gcctoolset}
+%if 0%{?rhel} <= 9
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
+%else
+. /usr/lib/gcc-toolset/%{gcctoolset}-env.source
+%endif
 export CC=$(which cc)
 export CXX=$(which c++)
+%endif
+
+%if 0%{?amzn}
+export CC=$(which gcc14-gcc)
+export CXX=$(which gcc14-g++)
 %endif
 
 %if 0%{?x86_64_v2}

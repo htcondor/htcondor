@@ -208,6 +208,12 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
+if [ "$VERSION_CODENAME" = 'noble' ]; then
+    # Upgrade to more recent compiler
+    $INSTALL gcc-14 g++-14
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-14
+fi
+
 # Add useful tools
 $INSTALL gdb git less python3-pip strace sudo vim
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then

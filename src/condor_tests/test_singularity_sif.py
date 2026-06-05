@@ -164,7 +164,7 @@ def ssh_to_container_job(condor, running_ssh_job):
 @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
 @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
 @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
-class TestContainerUni:
+class TestSingularitySIF:
     def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
     def test_container_uni_with_xfer(self, completed_test_job_with_xfer):

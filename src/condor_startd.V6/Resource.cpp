@@ -1155,6 +1155,10 @@ Resource::starterExited( Claim* cur_claim )
 	if( shouldCheckForDrainCompletion ) {
 		resmgr->checkForDrainCompletion();
 	}
+
+		// If a "rehome --reboot" is pending, see if this was the last
+		// claim to exit; if so, the host will reconfig and reboot.
+	resmgr->checkForRehomeReboot();
 }
 
 

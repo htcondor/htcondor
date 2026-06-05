@@ -82,6 +82,18 @@ def make_empty_sif(target_path):
     # and reverts to the old way:
     os.environ["APPTAINER_IGNORE_PROOT"] = "1"
 
+    # figure out where condor's LIBEXEC directory is
+    # In batlab, the apptainer binary may be stored there
+    ccv = subprocess.run(
+        ["condor_config_val", "LIBEXEC"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    assert ccv.returncode == 0
+    libexec_dir = ccv.stdout.strip()
+    print(f"libexec_dir = {libexec_dir}")
+    os.environ["PATH"] = libexec_dir + ":" + os.environ["PATH"]
+
     for _ in range(5):
         # rarely we see this failing in batlab with "bad file descriptor"
         # so, just retry.

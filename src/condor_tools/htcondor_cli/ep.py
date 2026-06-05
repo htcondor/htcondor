@@ -36,6 +36,12 @@ class Rehome(Verb):
             "default": 0,
             "help": "Timeout in seconds for the rehome operation (default: 0)",
         },
+        "reboot": {
+            "args": ("--reboot",),
+            "action": "store_true",
+            "default": False,
+            "help": "Reboot the execution point host after evicting jobs (requires STARTD_REHOME_ALLOW_REBOOT on the EP)",
+        },
     }
 
     def __init__(self, logger, **options):
@@ -44,6 +50,7 @@ class Rehome(Verb):
         schedd_pool = options["schedd_pool"]
         cancel = options["cancel"]
         timeout = options["timeout"]
+        reboot = options["reboot"]
 
         collector = htcondor2.Collector()
 
@@ -73,11 +80,13 @@ class Rehome(Verb):
 
         startd = htcondor2.Startd(location)
         try:
-            startd.rehome(schedd_name=schedd_name, schedd_pool=schedd_pool, timeout=timeout, cancel=cancel)
+            startd.rehome(schedd_name=schedd_name, schedd_pool=schedd_pool, timeout=timeout, cancel=cancel, reboot=reboot)
         except htcondor2.HTCondorException as e:
             raise RuntimeError(str(e))
         if cancel:
             logger.info(f"Sent rehome cancel command to {ep_name}")
+        elif reboot:
+            logger.info(f"Sent rehome command to {ep_name} (host will reboot if permitted)")
         else:
             logger.info(f"Sent rehome command to {ep_name}")
 
