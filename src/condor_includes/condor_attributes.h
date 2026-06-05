@@ -100,6 +100,7 @@
 #define ATTR_REQUEST_RESULT_SUBCODE "RequestResultSubCode"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
 #define ATTR_REQUESTED_CATALOGS  "RequestedCatalogs"
+#define ATTR_REQUESTED_COMMON_DISK "RequestedCommonDisk"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_END_TIME "ClaimEndTime"

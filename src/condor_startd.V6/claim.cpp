@@ -2957,16 +2957,16 @@ void Claim::receiveUpdateCommand( int c,
 
 
 			//
-			// Success.
-			//
-			replyAd.InsertAttr( ATTR_RESULT, true );
-
-
-			//
 			// Successfully-advertised catalogs need to show up immediately
 			// in the internal ads used to determine the size of new slots.
 			//
-			rip->refresh_startd_cron_attrs();
+			resmgr->adlist_updated( NULL, false );
+
+
+			//
+			// Success.
+			//
+			replyAd.InsertAttr( ATTR_RESULT, true );
 		} break;
 
 

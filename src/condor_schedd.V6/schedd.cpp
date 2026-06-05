@@ -21253,6 +21253,59 @@ Scheduler::post_transform_adjustments(
 			if( errorStack ) { /* ??? */ }
 			return -1;
 		}
+
+		// If we set the list of requested catalogs, adjust `RequestDisk` so
+		// that jobs will actually match the smaller amount.  We should be
+		// able to drop this at some point, since all slots enforce this
+		// with `WithinResourceLimits` after 25.0 (allegedly).
+		//
+		// For efficiency reasons, we can later replace this the observed
+		// sizes of the common files, unless we decide we want the flexibility
+		// to run with a partial set of common files.
+		//
+		// We could also try to rewrite the resource requests emitting from
+		// the schedd (to both the negotiator and the startd), but since we'd
+		// also have to modify them for the schedd's own internal checks,
+		// that seems way more complicated than necessary.
+
+		// We do this song and dance because SetAttribute() assumes that
+		// the value is already normalized.  Yes, the normalized form should
+		// be cached somewhere.
+		std::string srcd;
+		param( srcd, "SYSTEM_REQUESTED_COMMON_DISK" );
+		ClassAd dummy;
+		dummy.AssignExpr( "SYSTEM_REQUESTED_COMMON_DISK", srcd.c_str() );
+		ExprTree * e = dummy.Lookup( "SYSTEM_REQUESTED_COMMON_DISK" );
+
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_COMMON_DISK, e
+		);
+		if( rv != 0 ) {
+			if( errorStack ) { /* ??? */ }
+			return -1;
+		}
+
+		ExprTree * rd = ad->Lookup( ATTR_REQUEST_DISK );
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, "ORIGINAL_" ATTR_REQUEST_DISK, rd
+		);
+		if( rv != 0 ) {
+			if( errorStack ) { /* ??? */ }
+			return -1;
+		}
+
+		std::string new_rd;
+		formatstr(
+			new_rd, "%s - %s",
+			"ORIGINAL_" ATTR_REQUEST_DISK, ATTR_REQUESTED_COMMON_DISK
+		);
+		rv = SetAttribute(
+			jid.cluster, jid.proc, ATTR_REQUEST_DISK, new_rd.c_str()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) { /* ??? */ }
+			return -1;
+		}
 	}
 
 	return 0;
