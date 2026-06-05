@@ -4,21 +4,18 @@ Submitting to a Remote AP
 Submitting a job to a remote Access Point
 -----------------------------------------
 
-Usually, when you run the `condor_submit`` command, you are logged into an Access Point (AP)
+Usually, when you run the ``condor_submit`` command, you are logged into an Access Point (AP)
 which is running a *condor_schedd*, and your submit defaults to sending the job to the
 *condor_schedd* running on that same AP.  However, it is possible to have ``condor_submit``
-send the job to a *condor_schedd* running on some other machine.  Maybe you want to run
-``condor_submit`` from your laptop and send the job to an AP on some server.  Maybe
-you are building a web portal, and you want the portal to run on one machine,
-and the *condor_schedd* running on some other machine.
+send the job to a *condor_schedd* running on some other machine.
 
 The first concern is security.  When you submit locally, the *condor_schedd*
 can easily determine who is submitting the job, and thus what system 
 account it should run the *condor_shadow* as.  This is much more difficult
 with a remote, over-the-network submit.  For this to work, some additional
-setup must happen.  While this authentication can be setup with SSL, Kerberos
+setup must happen.  While this authentication can be set up with SSL, Kerberos
 or Windows native methods, for Linux systems, we recommend HTCondor's
-ID tokens, as it is easy for a user to setup, and secure.
+ID tokens, as it is easy for a user to set up, and secure.
 
 .. sidebar:: Why remote submission?
 
@@ -42,7 +39,7 @@ submission, login to the access point and run the command
 
 Note that name_of_your_ap is merely a filename, but if you have more than one
 AP, it is good to name the file containing the token clearly.  When this
-command succeeds, there is no output but the access token is place into the
+command succeeds, there is no output but the access token is placed into the
 file with that name in the tokens.d subdirectory of your personal .condor
 directory in your home directory.
 
@@ -52,17 +49,17 @@ place on the machine you want to submit *from*, then
 ``condor_submit`` can submit remotely.  To do so, you'll
 need to tell ``condor_submit`` the name of the pool (i.e. the 
 name of the machine running the central manager), and the name 
-of the Access Point that you ran `condor_token_fetch` on.  If you
+of the Access Point that you ran ``condor_token_fetch`` on.  If you
 don't know the name of the central manager, running the command
 ``condor_config_val COLLECTOR_HOST`` will tell you.
 
-Then, to submit the job, on the remote machine, simple run
+Then, to submit the job, on the remote machine, simply run
 
 .. code-block:: console
 
    $ condor_submit -name name-of-ap -pool cm-name submit_file
 
-and perhaps any other options you might want to pass to `condor_submit`
+and perhaps any other options you might want to pass to ``condor_submit``
 After ``condor_submit`` reports the cluster id of your new job, it
 has been successfully submitted to the AP, and the AP is responsible
 for the management of the job thereafter.  You can query the
@@ -99,7 +96,7 @@ transferred to the submitting machine, as it may be off, or disconnected
 from the network.  These files are also stored in the spool directory
 of the AP machine.  To indicate that a completed job still has
 spool files it is holding on the AP machine, a remotely submitted
-job remained in the AP's, and is visible with the ``condor_q`` command
+job remains in the AP's queue, and is visible with the ``condor_q`` command
 after completion, and is in the 'C'ompleted state.  Jobs will
 stay in this state for three days by default, or until you have
 fetched the output files off of the machine.
@@ -107,7 +104,7 @@ fetched the output files off of the machine.
 You can fetch the output sandbox from the AP back to your submitting
 machine (or anywhere that has permissions), by running the
 ``condor_transfer_data`` command.  This also takes a ``-name`` and
-``-pool`` option like `condor_submit`.  You can specify a job or jobs
+``-pool`` option like ``condor_submit``.  You can specify a job or jobs
 in the usual way, often just with the cluster.proc syntax.  When run,
 it copies the job's output sandbox from the spool on the AP back to
 the current directory of the machine ``condor_transfer_data`` is run.
