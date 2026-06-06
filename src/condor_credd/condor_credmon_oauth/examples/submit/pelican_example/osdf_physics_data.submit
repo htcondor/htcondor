@@ -1,0 +1,16 @@
+executable = analyze.sh
+arguments  = run42.root
+
+# Request a token for the "physicsdata" Pelican service configured on the
+# access point (see 40-pelican-credmon.conf).  The first time the credential is
+# needed, condor_submit prints a URL to visit and approve in a browser.
+use_oauth_services = physicsdata
+
+# Stage in an object from the /physics-data prefix in the OSDF, using the token
+# fetched above.  The pelican file-transfer plugin reads physicsdata.use from
+# $_CONDOR_CREDS.
+transfer_input_files = osdf:///physics-data/runs/run42.root
+
+# Successful submission will result in run42.root being downloaded to the job
+# sandbox and the token delivered as $_CONDOR_CREDS/physicsdata.use.
+queue
