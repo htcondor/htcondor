@@ -352,6 +352,19 @@ fi
 # pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
 rm -f "$externals_dir"/pelican-osdf-compat-*64.rpm
 
+# Install the Pelican client and server for the Pelican credmon integration
+# test (src/condor_tests/test_pelican_credmon.py), which stands up a POSIXv2
+# federation with the embedded issuer and exercises the device-code flow,
+# RFC 8693 token exchange, and refresh.  The above only *downloads* pelican for
+# bundling into the tarball; the test needs the binaries on PATH.
+#
+# `pelican` (>= 7.25.0) is a normal HTCondor runtime dependency and is present
+# in the HTCondor repositories.  `pelican-server` provides the federation and
+# may not be mirrored in every repository, so its installation is best-effort:
+# when it is absent the integration test simply skips.
+$INSTALL pelican
+$INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
+
 # Clean up package caches
 if [ "$ID" = 'centos' ]; then
     yum clean all
