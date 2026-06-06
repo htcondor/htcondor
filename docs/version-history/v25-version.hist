@@ -3,6 +3,13 @@
 - Add a helpful "how to monitor jobs" tip to stderr after
   :tool:`condor_submit` runs.
   :jira:`3173`
+- The credmon can now obtain and renew OAuth2 access tokens from a
+  `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF), so
+  that jobs can read and write federation objects with ``osdf://`` and
+  ``pelican://`` URLs.  Services are declared with
+  ``PELICAN_CREDMON_PROVIDER_NAMES`` and a set of ``<ServiceName>_PELICAN_*``
+  options; see :ref:`installing_credmon_pelican`.
+  :jira:`3784`
 
 *** 25.13.0 bugs
 
