@@ -831,7 +831,7 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
            * - ``FileName``
              - TEXT
              - —
-             - Base filename of the archive (e.g. ``history`` or ``history.20240101T120000``).
+             - Absolute path of the archive file (e.g. ``/var/lib/condor/history`` or ``/var/lib/condor/history.20240101T120000``).
            * - ``FileInode``
              - INTEGER
              - —

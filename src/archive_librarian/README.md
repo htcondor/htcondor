@@ -89,7 +89,7 @@ In-memory state for one tracked archive file; keyed by full path in `m_archive_f
 | Field | Description |
 |-------|-------------|
 | `reader` | Persistent `ArchiveReader`; held open between cycles; released when `fully_read` |
-| `filename` | Basename only (e.g. `history` or `history.20241215T143022`) |
+| `filename` | Absolute path of the archive file (e.g. `/var/lib/condor/history` or `/var/lib/condor/history.20241215T143022`) |
 | `hash` | FNV-1a hash of the first record — used as a file identity fingerprint |
 | `rotation_time` | Rotation timestamp string; empty while the file is still the active archive |
 | `last_offset` | Byte offset of the next unread byte |
@@ -144,7 +144,7 @@ Schema version is tracked via `PRAGMA user_version` (current: 1).
 
 | Table | Purpose |
 |-------|---------|
-| `Files` | One row per tracked archive file; holds offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
+| `Files` | One row per tracked archive file; holds absolute path, offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
 | `Users` | Unique job owners |
 | `JobLists` | `(ClusterId, UserId)` associations |
 | `Jobs` | One row per `(ClusterId, ProcId)` |
