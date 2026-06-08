@@ -220,7 +220,7 @@ require ``  5 + (5 * MAX_JOBS_RUNNING``) ports. The configuration
 variable :macro:`MAX_JOBS_RUNNING` limits (on
 a per-machine basis, if desired) the maximum number of jobs. Without
 this configuration macro, the maximum number of jobs that could be
-simultaneously executing at one time is a function of the number of
+simultaneously executing is a function of the number of
 reachable execute machines.
 
 Also be aware that :macro:`HIGHPORT` and :macro:`LOWPORT` only impact dynamic port
@@ -539,7 +539,7 @@ to the end of the host name.
 A Client Machine with Multiple Interfaces
 '''''''''''''''''''''''''''''''''''''''''
 
-If client machine has two or more NICs, then there might be a specific
+If a client machine has two or more NICs, then there might be a specific
 network interface on which the client machine desires to communicate
 with the rest of the HTCondor pool. In this case, the local
 configuration file for the client should have
@@ -818,8 +818,7 @@ HTCondor will not start. Likewise, to require IPv6, you may set
 :macro:`ENABLE_IPV6` to true.
 
 If you set :macro:`ENABLE_IPV4` to false, HTCondor
-will not use IPv4, even if it is available; likewise for :macro:`ENABLE_IPV6`
-:macro:`ENABLE_IPV6` and IPv6.
+will not use IPv4, even if it is available; likewise for :macro:`ENABLE_IPV6` and IPv6.
 
 The default setting for :macro:`ENABLE_IPV4` and
 :macro:`ENABLE_IPV6` is ``auto``. If HTCondor does

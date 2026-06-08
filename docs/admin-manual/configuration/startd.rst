@@ -428,7 +428,7 @@ section.
     Allowed values are ``CLEAR``, ``CONTINUE``, and ``ABORT``.
     Beginning with HTCondor version 24.2 by default a *condor_startd* configured to advertise
     a ``StartDaemon`` ad will report slot setup failures in the daemon ad and ``CONTINUE`` on,
-    configuring slots slots fit within the available resources, and marking slots that do not fit as broken.
+    configuring slots that fit within the available resources, and marking slots that do not fit as broken.
     An older *condor_startd* will always abort rather than continue.
     If this configuration value is set to ``CLEAR`` then an error during slot configuration will cause
     the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
@@ -752,7 +752,7 @@ prevent the job from using more scratch space than provisioned.
     An integer value that represents size in Megabytes to be added onto the size
     of a thinly provisioned logical volume for an ephemeral execute directory.
     This option only applies when :macro:`LVM_USE_THIN_PROVISIONING` is ``True``.
-    This extra space over will over provision the backing thin pool while providing
+    This extra space will over-provision the backing thin pool while providing
     a buffer to better catch over use of disk before a job gets ``ENOSPC`` errors.
     The default value is 2000 (2GB).
 
@@ -774,8 +774,7 @@ prevent the job from using more scratch space than provisioned.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT`
     A boolean value that defaults to ``True``. When ``True`` EP slots
-    will be marked as broken if the associated ephemeral logical volume
-    is failed to be cleaned up.
+    will be marked as broken if the associated ephemeral logical volume fails to be cleaned up.
 
 :macro-def:`NO_JOB_NETWORKING`
     Either ``True`` or ``False``. When ``True``, disables access to the 
@@ -870,8 +869,7 @@ section for details.
     created using tools like VMware or Xen, the old virtual machine
     terminology has been changed, and has become the term slot.
     Therefore, the default value of this prefix is now ``slot``. If
-    sites want to continue using ``vm``, or prefer something other
-    ``slot``, this setting enables sites to define what string the
+    sites want to continue using ``vm``, or prefer something other than ``slot``, this setting enables sites to define what string the
     *condor_startd* will use to name the individual resources on a
     multi-core machine.
 
@@ -909,7 +907,7 @@ section for details.
 
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
-    slots on the same machine. This setting was formerly know as
+    slots on the same machine. This setting was formerly known as
     :macro:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
@@ -1160,21 +1158,21 @@ needs.
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestMemory` job ClassAd attribute,
-    before it used to provision a dynamic slot. The default value is
+    before it is used to provision a dynamic slot. The default value is
     given by :ad-expr:`quantize(RequestMemory,{128})`.
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTDISK`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestDisk` job ClassAd attribute,
-    before it used to provision a dynamic slot. The default value is
+    before it is used to provision a dynamic slot. The default value is
     given by :ad-expr:`quantize(RequestDisk,{1024})`
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestCpus` job ClassAd attribute,
-    before it used to provision a dynamic slot. The default value is
+    before it is used to provision a dynamic slot. The default value is
     given by :ad-expr:`quantize(RequestCpus,{1})`
 
 
@@ -1224,8 +1222,7 @@ section details consumption policies.
     Custom resources have no default consumption policy.
 
 :macro-def:`SLOT_WEIGHT`
-    An expression that specifies a slot's weight, used as a multiplier
-    the *condor_negotiator* daemon during matchmaking to assess user
+    An expression that specifies a slot's weight, used as a multiplier by the *condor_negotiator* daemon during matchmaking to assess user
     usage of a slot, which affects user priority. Defaults to :ad-attr:`Cpus`.
 
     In the case of slots with consumption policies, the cost of each
@@ -1304,12 +1301,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
     As a special case, the interval is ignored when the machine has just
     returned from a low power state, excluding ``"SHUTDOWN"``. In order
-    to avoid machines from volleying between a running state and a low
+    to prevent machines from volleying between a running state and a low
     power state, an hour of uptime is enforced after a machine has been
     woken. After the hour has passed, regular checks resume.
 
 :macro-def:`HIBERNATE`
-    A string expression that represents lower power state. When this
+    A string expression that represents a low power state. When this
     state name evaluates to a valid state other than ``"NONE"``, causes
     HTCondor to put the machine into the specified low power state. The
     following names are supported (and are not case sensitive):
@@ -1458,7 +1455,7 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
 :macro-def:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF`
     This is a class ad expression, evaluated in the context of the job ad and the
-    machine ad. Only when it evaluted to TRUE, is the volume named xxx mounted.
+    machine ad. Only when it evaluated to TRUE, is the volume named xxx mounted.
 
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
@@ -1513,7 +1510,7 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     The *condor_startd* periodically advertises how much disk
     space the docker daemon is using to store images into the
     slot attribute DockerCachedImageSize.  This knob, which 
-    defaults to 1200 (seconds), controls how often the start
+    defaults to 1200 (seconds), controls how often the startd
     polls the docker daemon for this information.
 
 :macro-def:`DOCKER_LOG_DRIVER_NONE`
@@ -1566,7 +1563,7 @@ schedds.
 
 :macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_POOL`
     If the *condor_schedd* to which this *condor_startd* should directly connect is
-    in a different HTCondor pool that this *condor_startd* (that is, it reports
+    in a different HTCondor pool than this *condor_startd* (that is, it reports
     to a different collector), then this macro should be set to the name of the
     collector the *condor_schedd* reports to.  If empty, assume that the *condor_schedd*
     reports to the same collector as this *condor_startd*.

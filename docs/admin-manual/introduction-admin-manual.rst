@@ -8,9 +8,9 @@ using HTCondor, see the HTCondor User's Manual.
 An HTCondor pool :index:`pool<single: pool; HTCondor>`\ :index:`pool of
 machines` is comprised of a single machine which serves as the central manager,
 :index:`central manager`\ and an arbitrary number of other machines.  Machines
-intended to run work are called Execution Points (EP)s, also known as worker
+intended to run work are called Execution Points (EPs), also known as worker
 nodes.  Machines that hold a queue of jobs ready to run, or the results of jobs
-that have run are called Access Points (AP)s, also known as submit machines.
+that have run are called Access Points (APs), also known as submit machines.
 The role of HTCondor is to match waiting requests with available resources.
 Every part of HTCondor sends periodic updates to the central manager, the
 centralized repository of information about the state of the pool.
@@ -22,8 +22,7 @@ Each resource has an owner,
 sets the policy for the use of the machine. This person has absolute
 power over the use of the machine, and HTCondor goes out of its way to
 minimize the impact on this owner caused by HTCondor. It is up to the
-resource owner to define a policy for when HTCondor requests will
-serviced and when they will be denied.
+resource owner to define a policy for when HTCondor requests will be serviced and when they will be denied.
 
 Each resource request has an owner as well: the user who submitted the
 job. These people want HTCondor to provide as many CPU cycles as
@@ -81,7 +80,7 @@ Central Manager
    Execution Point (EP) Diagram
 
    .. mermaid::
-      :caption: Daemons for a Execution Point, one *condor_starter* per running job.
+      :caption: Daemons for an Execution Point, one *condor_starter* per running job.
       :align: center
 
       flowchart TD
@@ -139,68 +138,68 @@ Putting it all together
 .. mermaid::
     :caption: HTCondor Process Architecture
     :align: center
- 
-     flowchart TD
-         subgraph Access Point - AP
-         direction LR;
-         
-         subgraph Persistent Services
-             direction TB
-             condor_master
-             condor_schedd
-         end
-             direction TB
-             condor_master -- spawns at boot --> condor_schedd
- 
-             job_queue[(job_queue)]
-             condor_schedd -- spawns for job --> condor_shadow1
-             condor_schedd -- spawns for job --> condor_shadow2
-             condor_schedd -- writes to file --o job_queue
-         end
-     
-         subgraph Central Manager - CM
-         subgraph Persistent Services for CM
-             direction TB
-             cm_master[condor master]
-             condor_collector
-             condor_negotiator
- 
-             cm_master -- spawns at boot --> condor_collector
-             cm_master -- spawns at boot --> condor_negotiator
-            
-         end
-     end
- 
-     subgraph Execution Point - EP
-     subgraph Persistent Services for EP
-             direction TB
-             ep_master[condor_master]
-             condor_startd
-         end
-     direction TB
-         ep_master -- spawns at boot --> condor_startd
-                     
-         condor_startd -- spawns for job --> condor_starter1
-         condor_startd -- spawns for job --> condor_starter2
-         condor_starter1 -- spawns job --> job1
-         condor_starter2 -- spawns job --> job2
-     end
- 
-     condor_shadow1 -- connects to --o condor_starter1
-     condor_shadow2 -- connects to --o condor_starter2
-     condor_schedd  -- claims      --o condor_startd
- 
-     condor_startd  -- updates     --o condor_collector
-     condor_schedd  -- updates     --o condor_collector
-     condor_negotiator -- sends matches --o condor_schedd
- 
-     %%subgraph tools       
-     %%        condor_submit -- connects to --o condor_schedd
-     %%        condor_q      -- connects to --o condor_schedd
-     %%        condor_rm     -- connects to --o condor_schedd
-     %%        condor_status -- queries     --o condor_collector
-     %%        condor_userprio -- queries   --o condor_negotiator
-     %%end
+
+    flowchart TD
+        subgraph Access Point - AP
+        direction LR;
+
+        subgraph Persistent Services
+            direction TB
+            condor_master
+            condor_schedd
+        end
+            direction TB
+            condor_master -- spawns at boot --> condor_schedd
+
+            job_queue[(job_queue)]
+            condor_schedd -- spawns for job --> condor_shadow1
+            condor_schedd -- spawns for job --> condor_shadow2
+            condor_schedd -- writes to file --o job_queue
+        end
+
+        subgraph Central Manager - CM
+        subgraph Persistent Services for CM
+            direction TB
+            cm_master[condor master]
+            condor_collector
+            condor_negotiator
+
+            cm_master -- spawns at boot --> condor_collector
+            cm_master -- spawns at boot --> condor_negotiator
+
+        end
+        end
+
+        subgraph Execution Point - EP
+        subgraph Persistent Services for EP
+            direction TB
+            ep_master[condor_master]
+            condor_startd
+        end
+        direction TB
+        ep_master -- spawns at boot --> condor_startd
+
+        condor_startd -- spawns for job --> condor_starter1
+        condor_startd -- spawns for job --> condor_starter2
+        condor_starter1 -- spawns job --> job1
+        condor_starter2 -- spawns job --> job2
+        end
+
+        condor_shadow1 -- connects to --o condor_starter1
+        condor_shadow2 -- connects to --o condor_starter2
+        condor_schedd  -- claims      --o condor_startd
+
+        condor_startd  -- updates     --o condor_collector
+        condor_schedd  -- updates     --o condor_collector
+        condor_negotiator -- sends matches --o condor_schedd
+
+        %%subgraph tools
+        %%        condor_submit -- connects to --o condor_schedd
+        %%        condor_q      -- connects to --o condor_schedd
+        %%        condor_rm     -- connects to --o condor_schedd
+        %%        condor_status -- queries     --o condor_collector
+        %%        condor_userprio -- queries   --o condor_negotiator
+        %%end
  
 The HTCondor Daemons
 --------------------
@@ -228,8 +227,7 @@ started under HTCondor and what they do:
 
 *condor_startd*
     This daemon represents a given resource to the HTCondor pool, as a
-    machine capable of running jobs. It advertises certain attributes
-    about machine that are used to match it with pending resource
+    machine capable of running jobs. It advertises certain attributes about the machine that are used to match it with pending resource
     requests. The *condor_startd* will run on any machine in the pool
     that is to be able to execute jobs. It is responsible for enforcing
     the policy that the resource owner configures, which determines
@@ -298,7 +296,7 @@ started under HTCondor and what they do:
     .. note::
 
         A higher numerical value of the user priority in HTCondor
-        translate into worse priority for that user. The best priority is
+        translates into worse priority for that user. The best priority is
         0.5, the lowest numerical value, and this priority gets worse as
         this number grows. :index:`condor_kbdd daemon`
 

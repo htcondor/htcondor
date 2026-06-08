@@ -24,7 +24,7 @@ enable historical archive record indexing to a database by setting :macro:`use f
     The archive librarian's debugging level. Default is nothing.
 
 :macro-def:`LIBRARIAN_DATABASE`
-    The path to where the archive librarian's SQLite3 database file. Defaults to
+    The path to the archive librarian's SQLite3 database file. Defaults to
     ``$(SPOOL)/library.db``.
 
 :macro-def:`LIBRARIAN_MAX_DATABASE_SIZE`

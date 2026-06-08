@@ -26,7 +26,7 @@ These macros affect :tool:`condor_preen`.
     considers valid files to find in the ``$(SPOOL)`` directory. The
     default value is all files known by HTCondor to be valid. This
     variable exists such that it can be queried; it should not be
-    changed. :tool:`condor_preen` use it to initialize the list files and
+    changed. :tool:`condor_preen` uses it to initialize the list of files and
     directories that are normally present in the ``$(SPOOL)`` directory.
     A single asterisk (\*) wild card character is permitted in each file
     item within the list.

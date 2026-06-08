@@ -107,7 +107,7 @@ implementation of security in HTCondor.
     Note that this waits indefinitely for the running job to finish,
     before the *condor_startd* daemon exits.
 
-    Th shut down all execution machines within the pool,
+    To shut down all execution machines within the pool,
 
     .. code-block:: console
 

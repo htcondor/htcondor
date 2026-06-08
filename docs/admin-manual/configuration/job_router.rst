@@ -127,7 +127,7 @@ These macros affect the *condor_job_router* daemon.
     ClassAd to a pre-claimed state upon yielding control of the job.
 
 :macro-def:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE`
-    The path to the address file file for the *condor_schedd*
+    The path to the address file for the *condor_schedd*
     serving as the source of jobs for routing.  If specified,
     this must point to the file configured as :macro:`SCHEDD_ADDRESS_FILE`
     of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
@@ -196,7 +196,7 @@ These macros affect the *condor_job_router* daemon.
     matching routes, round robin style.
 
 :macro-def:`JOB_ROUTER_CREATE_IDTOKEN_NAMES`
-    An list of the names of IDTOKENs that the JobRouter should create and refresh.
+    A list of the names of IDTOKENs that the JobRouter should create and refresh.
     IDTOKENS whose names are listed here should each have a :macro:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>`
     configuration variable that specifies the filename, ownership and properties of the IDTOKEN.
 
@@ -205,7 +205,7 @@ These macros affect the *condor_job_router* daemon.
     the IDTOKENS listed by the :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES` configuration variable.
 
 :macro-def:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>`
-    Specification of a single IDTOKEN that will be created an refreshed by the JobRouter.
+    Specification of a single IDTOKEN that will be created and refreshed by the JobRouter.
     ``<NAME>`` should be one of the IDTOKEN names specified in :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES`.
     The filename, ownership and properties of the IDTOKEN are defined by the following attributes.
     Each attribute value must be a classad expression that evaluates to a string, except ``lifetime``
@@ -217,7 +217,7 @@ These macros affect the *condor_job_router* daemon.
 
 :macro-def:`sub`
     The subject or user identity, equivalent to the ``-identity`` argument of :tool:`condor_token_create`
-    and the ``sub`` attribute of :tool:`condor_token_list`. Defaults the token name.
+    and the ``sub`` attribute of :tool:`condor_token_list`. Defaults to the token name.
 
 :macro-def:`scope`
     List of allowed authorizations, equivalent to the ``-authz`` argument of :tool:`condor_token_create`
@@ -235,8 +235,7 @@ These macros affect the *condor_job_router* daemon.
     The directory that the IDTOKEN file will be created and refreshed into. Defaults to ``$(SEC_TOKEN_DIRECTORY)``.
 
 :macro-def:`owner`
-    If specified, the IDTOKEN file will be owned by this user.  If not specified, the IDTOKEN file will be owned
-    by the owner of *condor_job_router* process.  This attribute is optional if the *condor_job_router* is running as an ordinary user
+    If specified, the IDTOKEN file will be owned by this user.  If not specified, the IDTOKEN file will be owned by the owner of the *condor_job_router* process.  This attribute is optional if the *condor_job_router* is running as an ordinary user
     but required if it is running as a Windows service or as the ``root`` or ``condor`` user.  The owner specified here
     should be the same as the :ad-attr:`Owner` attribute of the jobs that this IDTOKEN is intended to be sent to.
 
