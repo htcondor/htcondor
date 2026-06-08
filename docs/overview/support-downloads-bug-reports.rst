@@ -3,8 +3,8 @@ Support, Downloads and Bug Reporting
 
 :index:`contact information<single: contact information; HTCondor>`
 
-The latest software releases, publications/papers regarding HTCondor and
-other High-Throughput Computing research can be found at the official
+You can find the latest software releases, publications, and other
+High-Throughput Computing research at the official
 web site for HTCondor at
 `http://htcondor.org/ <http://htcondor.org/>`_.
 :index:`mailing lists<single: mailing lists; HTCondor>` :index:`mailing lists`
