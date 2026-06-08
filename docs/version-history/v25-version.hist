@@ -1,13 +1,8 @@
 *** 25.11.0 features
 
-- Introducing the :ref:`archive-librarian`. A new daemon that maintains an
-  SQLite3 database of indexes to historical job records located in an Access
-  Point's :macro:`HISTORY` archive.
-  :jira:`3143`
-
-- When a single user is using more than 20% of the input transfer queue on the *condor_schedd*.  The Schedd will
-  stop requesting matches for that user's jobs until the use drops back below 20%. This prevents a single user
-  from monopolizing the transfer queue and preventing other users' jobs from matching. This behavior can be disabled
+- The *condor_schedd* will now prevent a single user from monopolizing the input transfer
+  queue and starving other user jobs from receiving matches by preventing a user from getting
+  new matches when using more than 20% of the input transfer queue. This can be disabled
   by configuring :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` to 0.
   :jira:`3664`
 
@@ -21,7 +16,7 @@
   and validity of node submit submit descriptions, Sub-DAG files, and scripts.
   :jira:`3540`
 
-- Added the ability for the `condor_gangliad` to aggregate the derivatives (deltas) of ClassAd attributes. This is useful
+- Added the ability for the *condor_gangliad* to aggregate the derivatives (deltas) of ClassAd attributes. This is useful
   to monitor numeric attributes that are "counters", i.e. attributes that start at zero and monotonically increase
   throughout the lifetime of a daemon.
   :jira:`3687`
@@ -30,26 +25,23 @@
   each time a value is replaced as the configuration files are read.
   :jira:`3699`
 
-- :tool:`condor_userprio` ``-setceiling`` now accepts a ``-duration`` option
-  to install a time-limited ceiling *lease*: the prior ceiling is
-  automatically restored after the given number of seconds. Leases are
-  persistent across *condor_negotiator* restarts. A new
-  ``-cancelceilinglease`` option cancels an in-effect lease.
+- Added new ``-duration`` option to :tool:`condor_userprio` to create a persistent
+  time-limited *lease* for ceiling values set with ``-setceiling``. The prior
+  ceiling value is automatically restored when after the lease expires or is
+  canceled with the ``-cancelceilinglease`` option.
   :jira:`3518`
 
-- Scheduler universe jobs (i.e. local DAGMan jobs) no longer have their argv[0] set to
-  ``condor_scheduniv_exec.<cluster>.<proc>``, and instead preserve the
-  executable name (``a_out_name``). This means that so-called "multibin"
-  programs, like often created from go or rust source and have many
-  executables linked into one static binary, and dispatch based on argv[0]
-  now work as scheduler universe jobs.
+- Scheduler universe jobs (i.e. *condor_dagman*) no longer have their **argv[0]** set
+  to ``condor_scheduniv_exec.<cluster>.<proc>`` preserving the executable name.
+  This allows 'multibin' programs, common in Golang and Rust, that rely on checking
+  **argv[0]** to function correctly in the scheduler universe.
   :jira:`3711`
 
 - :tool:`condor_status` now accepts a ``-health`` option which displays machines
   that have less than 100% health, and totals for machines by health.
   :jira:`3714`
   
-- The OAuth credmon web server now respects :macro:`CREDMON_WEB_PREFIX`,
+- The OAuth credmon web server now respects :macro:`CREDMON_WEB_PREFIX`. This is
   useful if the credmon web server is running under a different host name.
   :jira:`3746`
 
@@ -62,9 +54,9 @@
   :macro:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`.
   :jira:`3722`
 
-- Docker universe jobs that also had a credential being refreshed
-  that also exhausted their :subcom:`RequestMemory` would not go
-  on hold immediately, but only after a 20 minute delay.
+- Docker universe jobs that require refreshed credentials now immediately
+  go on hold after exceeding their :subcom:`request_memory` requirements
+  rather than being delayed for 20 minutes.
   :jira:`3672`
 
 - DAGMan will no longer re-attempt placement of jobs to the *condor_schedd*
@@ -77,20 +69,17 @@
   (8 hours).
   :jira:`3706`
 
-- The *condor_startd* has a new activity ``"Cleaning"`` on claimed slots.
-  A slot enters ``Claimed/Cleaning`` when the *condor_starter* sends its
-  final job update and exits when the starter process is reaped. While
-  cleaning, the slot will not match new work; :tool:`condor_vacate`
-  and other preempt requests that arrive during cleaning are recorded
-  and applied when the starter is reaped, rather than triggering a
-  second state change while the starter is already exiting. A new
-  :ad-attr:`TotalTimeClaimedCleaning` machine attribute accumulates
-  time spent in this activity.
+- Added new ``"Cleaning"`` activity for claimed slots representing
+  the time between the *condor_starter*\'s final update and actual reaping.
+  During ``Claimed/Cleaning`` the slot will not match new work and all
+  preempting requests are recorded for later application: post Starter
+  reaping. The new :ad-attr:`TotalTimeClaimedCleaning` attribute accumulates
+  the time spent in this activity.
   :jira:`3686`
 
-- Slots used by an AP to transfer (and then store) common files now have
-  the prefix ``data`` rather than ``slot`` (e.g., ``data1_1``).  These
-  slots now also set the attribute ``IsDataSlot`` in their slot ads.
+- Slots used by an AP to transfer and store common files now have
+  the prefix ``data`` rather than ``slot`` (e.g. ``data1_1``).  These
+  slots also set the attribute :ad-attr:`IsDataSlot` in their slot ads.
   :jira:`3715`
 
 *** 25.11.0 bugs
