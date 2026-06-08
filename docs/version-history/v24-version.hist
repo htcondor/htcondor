@@ -27,7 +27,7 @@
 - When the python bindings are run as user ``root`` and use the FS method
   to authenticate with a daemon, the authenticated identity will be
   ``condor`` instead of ``root``.
-  This matches the behavior of all of the commmand line tools.
+  This matches the behavior of all of the command line tools.
   :jira:`3695`
 
 - If a job terminates with a named pipe in the sandbox, it will no
