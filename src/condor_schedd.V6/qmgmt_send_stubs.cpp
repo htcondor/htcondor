@@ -409,12 +409,13 @@ SetAttributeByConstraint( char const *constraint, char const *attr_name, char co
 
 
 int
-SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in, CondorError *)
+SetAttribute( const JOB_ID_KEY & jid, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in, CondorError *)
 {
 	int	rval = 0;
 
 	// only some of the flags can be sent on the wire, the upper bits are private to the schedd
 	SetAttributePublicFlags_t flags = (flags_in & SetAttribute_PublicFlagsMask);
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 		CurrentSysCall = CONDOR_SetAttribute;
 		if( flags ) {
@@ -610,9 +611,10 @@ RemoteCommitTransaction(SetAttributeFlags_t flags_in, CondorError *errstack)
 }
 
 int
-GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
+GetAttributeFloat( const JOB_ID_KEY & jid, char *attr_name, float *value )
 {
 	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 		CurrentSysCall = CONDOR_GetAttributeFloat;
 
@@ -639,9 +641,10 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 
 
 int
-GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long long *value )
+GetAttributeInt( const JOB_ID_KEY & jid, char const *attr_name, long long *value )
 {
 	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 		CurrentSysCall = CONDOR_GetAttributeInt;
 
@@ -666,6 +669,7 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long long *
 	return rval;
 }
 
+#if 0
 int
 GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
 {
@@ -683,11 +687,13 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long *value
 	*value = (long)full_value;
 	return rval;
 }
+#endif
 
 int
-GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char **val )
+GetAttributeStringNew( const JOB_ID_KEY & jid, char const *attr_name, char **val )
 {
 	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 	*val = nullptr;
 
@@ -716,9 +722,10 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 
 
 int
-GetAttributeExprNew( int cluster_id, int proc_id, char const *attr_name, char **value )
+GetAttributeExprNew( const JOB_ID_KEY & jid, char const *attr_name, char **value )
 {
 	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 	CurrentSysCall = CONDOR_GetAttributeExpr;
 
@@ -779,9 +786,10 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 
 
 int
-DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
+DeleteAttribute( const JOB_ID_KEY & jid, char const *attr_name )
 {
 	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
 
 		CurrentSysCall = CONDOR_DeleteAttribute;
 
