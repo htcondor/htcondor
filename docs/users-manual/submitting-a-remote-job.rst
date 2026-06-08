@@ -4,7 +4,7 @@ Submitting to a Remote AP
 Submitting a job to a remote Access Point
 -----------------------------------------
 
-Usually, when you run the ``condor_submit`` command, you are logged into an Access Point (AP)
+Usually, when you run the :tool:`condor_submit` command, you are logged into an Access Point (AP)
 which is running a *condor_schedd*, and your submit defaults to sending the job to the
 *condor_schedd* running on that same AP.  However, it is possible to have ``condor_submit``
 send the job to a *condor_schedd* running on some other machine.
