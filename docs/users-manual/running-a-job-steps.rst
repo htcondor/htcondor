@@ -19,7 +19,7 @@ Here are the basic steps to run a job with HTCondor.
     or hours.  There is overhead in scheduling each job, which is why very short
     jobs (measured in seconds) do not work well.  On the other hand, if a job
     takes many days to run, there is the threat of losing work in progress should
-    the job or the server it runs on crash.
+    the job or the server it runs on crashes.
 
  Prepare the job for batch execution.
     To run under HTCondor a job must be able to run as a background batch
