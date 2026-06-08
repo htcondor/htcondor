@@ -68,8 +68,8 @@ Here are the basic steps to run a job with HTCondor.
      using a log file for the job, the exit status will
      be recorded in there.  Output files will be transferred back to the
      submitting machine, if a shared filesystem is not used.  After the job
-     completes, it will not be visible to the :doc:`/man-pages/condor_q` command,
-     but is queryable with the :doc:`/man-pages/condor_history` command.
+     completes, it will not be visible to the :tool:`condor_q` command,
+     but is queryable with the :tool:`condor_history` command.
 
 :index:`condor_rm<single: condor_rm; HTCondor commands>`
 
