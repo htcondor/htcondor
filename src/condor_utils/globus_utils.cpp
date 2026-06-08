@@ -439,7 +439,7 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 {
 	X509_NAME *email_orig = NULL;
 	GENERAL_NAME *gen;
-	GENERAL_NAMES *gens;
+	GENERAL_NAMES *gens = nullptr;
 	X509 *tmp_cert = NULL;
 	char *email = NULL, *email2 = NULL;
 	int i, j;
@@ -483,6 +483,7 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 				break;
 			}
 			sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+			gens = nullptr;
 		}
 	}
 
@@ -492,6 +493,9 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 	}
 
  cleanup:
+	if (gens) {
+		sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+	}
 	if (email_orig) {
 		X509_NAME_free(email_orig);
 	}
