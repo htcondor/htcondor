@@ -70,8 +70,7 @@ General
 
 .. note::
 
-    This value should rarely be changed, especially by users, since have
-    multiple DAGMan processes executing the same DAG in the same directory
+    This value should rarely be changed, especially by users, since having multiple DAGMan processes executing the same DAG in the same directory
     can lead to strange behavior and issues.
 
 :macro-def:`DAGMAN_USE_SHARED_PORT`
@@ -81,7 +80,7 @@ General
 .. note::
 
     This value should never be changed since it was added to prevent spurious
-    shared port related error messages from appearing the DAGMan debug log.
+    shared port related error messages from appearing in the DAGMan debug log.
 
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
     A boolean value that defaults to ``True``. When ``True``, :tool:`condor_dagman`
@@ -106,15 +105,14 @@ General
 
 :macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
     A boolean value that defaults to ``False``. When ``True``, DAGMan will automatically
-    retry a node with its job submitted on hold if any of the nodes jobs fail. Script
+    retry a node with its job submitted on hold if any of the node's jobs fail. Script
     failures do not cause this behavior. The job is only put on hold if the node has no
     more declared :dag-cmd:`RETRY` attempts.
 
 :macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`
     An integer value representing the number of jobs in a single cluster that can fail
     before DAGMan considers the cluster as failed and removes any remaining jobs. This
-    value is applied to all nodes in the DAG for each execution. The default value is
-    ``0`` meaning no jobs should fail.
+    value is applied to all nodes in the DAG for each execution. The default value is ``0``, meaning no jobs should fail.
 
     .. warning::
 
@@ -144,7 +142,7 @@ General
     +---------------+--------------------+--------------------+--------------------+
     |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
     +---------------+--------------------+--------------------+--------------------+
-    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |                    |
+    |    Scitoken   |    BEARER_TOKEN    | BEARER_TOKEN_FILE  |                    |
     +---------------+--------------------+--------------------+--------------------+
     |     Misc.     |     PEGASUS_*      |                    |                    |
     +---------------+--------------------+--------------------+--------------------+
@@ -157,7 +155,7 @@ General
 :macro-def:`DAGMAN_RECORD_MACHINE_ATTRS`
     A comma separated list of machine attributes that DAGMan will insert into a node jobs
     submit description for :subcom:`job_ad_information_attrs` and :subcom:`job_machine_attrs`.
-    This will result in the listed machine attributes to be injected into the nodes produced
+    This will result in the listed machine attributes being injected into the nodes produced
     job ads and userlog. This knob is not set by default.
 
 :macro-def:`DAGMAN_METRICS_FILE_VERSION`
@@ -258,7 +256,7 @@ Throttling
 
 :macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
     A boolean that determines if after changing some of these throttle limits,
-    :tool:`condor_dagman` should forceably remove jobs to meet the new limit.
+    :tool:`condor_dagman` should forcibly remove jobs to meet the new limit.
     Defaults to ``False``.
 
 :index:`Node Semantics<single: DAGMan Configuration Sections; Node Semantics>`

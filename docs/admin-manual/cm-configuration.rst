@@ -5,7 +5,7 @@ Configuration for Central Managers
 Introduction
 ------------
 
-The Center Manager machine, or CM, is a role that usually runs on one machine
+The Central Manager machine, or CM, is a role that usually runs on one machine
 in your pool.  In some ways, it defines the extent and scope of the pool.  A
 central manager must run at least one *condor_collector* and
 *condor_negotiator* daemon, and most pools run exactly one of each.  Some large
@@ -14,7 +14,7 @@ over a very large pool (say, more than 100,000 slots), or to move the load of
 handling monitoring and reporting queries to a different collector than is
 handling the operational aspects of running a pool, or to improve the
 availability of the pool as a whole.  In the same way, most pools run with a
-single negotiator negotiator daemon, but in some specialized configurations,
+single negotiator daemon, but in some specialized configurations,
 separate negotiators can handle fast matching to a subset of the pool, or break
 the pool accounting into separate shards.
 
@@ -42,7 +42,7 @@ to users according to the policies of the administrators of the CM and the EP.
 Thus, there is a lot of configuration control that you have over this daemon
 and how it works.  Scheduling of jobs is a two-phased process.  The *condor_negotiator*
 tries to balance the allocation of all the slots in the pool in some fair way.
-It then give these allocated slots to the *condor_schedd*'s that hold the jobs
+It then gives these allocated slots to the *condor_schedd*'s that hold the jobs
 of those users, and it is the *condor_schedd* on the AP that is responsible for the
 final selection of which jobs run on which slots.  The *condor_schedd* can re-use a
 match the negotiator has given it to run multiple jobs in succession.  Because of this,
@@ -307,7 +307,7 @@ according to the inverse ratio rule.
 
 Assume two users with no history, named A and B, using a pool with 100 cores. To
 simplify the math, also assume both users have an equal priority factor of 1.0.
-User A submits a very large number of short-running jobs at time t = 0 zero.  User
+User A submits a very large number of short-running jobs at time t = 0.  User
 B waits until 48 hours later, and also submits an infinite number of short jobs.
 At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
 and so user A gets the whole pool.  At the 48 hour mark, both users compete for
@@ -581,7 +581,7 @@ the username selected by setting the submit file option
     accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
-"ishamel", but "ishmael" will not be the operating system id the shadow
+"ishmael", but "ishmael" will not be the operating system id the shadow
 or job uses.  Note that HTCondor trusts the user to set this
 to a valid value.  The administrator can use schedd requirements or transforms
 to validate such settings, if desired.  accounting_group_user is frequently used
@@ -773,7 +773,7 @@ the following example:
 This configuration is the same as above for the chemistry users.
 However, :macro:`GROUP_ACCEPT_SURPLUS` is set to ``False`` globally,
 ``False`` for the physics parent group, and ``True`` for the subgroups
-group_physics.lep and group_physics.lep. This means that
+group_physics.lep and group_physics.hep. This means that
 group_physics.lep and group_physics.hep are allowed to exceed their
 quota of 15 and 5, but their sum cannot exceed 20, for that is their
 parent's quota. If the group_physics had :macro:`GROUP_ACCEPT_SURPLUS` set
@@ -785,7 +785,7 @@ is, any leaf nodes of this tree with excess quota will share it with any
 peers which accept surplus. Any subsequent excess will then be passed up
 to the parent node and over to all of its children, recursively. Any
 node that does not accept surplus implements a hard cap on the number of
-slots that the sum of it's children use.
+slots that the sum of its children use.
 
 After the *condor_negotiator* calculates the quota assigned to each group,
 possibly adding in surplus, it then negotiates with the *condor_schedd* daemons
@@ -1094,7 +1094,7 @@ should use.
 
 Running with multiple negotiators also means you need to be careful with the
 :tool:`condor_userprio` command.  As there is no default negotiator, you should
-always name the specific negotiator you want to :tool:`condor_userprio` to talk to
+always name the specific negotiator you want :tool:`condor_userprio` to talk to
 with the `-name` option.
 
 Defragmenting Dynamic Slots
@@ -1326,7 +1326,7 @@ jobs and allocating new slots. High availability of the
 problem.
 
 Configuration allows one of multiple machines within the pool to
-function as the central manager. While there are may be many active
+function as the central manager. While there may be many active
 *condor_collector* daemons, only a single, active *condor_negotiator*
 daemon will be running. The machine with the *condor_negotiator* daemon
 running is the active central manager. The other potential central
@@ -1372,7 +1372,7 @@ communications between machines when
    running, yet the machine is functioning
 
 The high availability mechanism distinguishes between these two, and it
-operates based only on first (when a central manager machine is down). A
+operates based only on the first (when a central manager machine is down). A
 lack of executing daemons does not cause the protocol to choose or use a
 new active central manager.
 
@@ -1533,8 +1533,7 @@ machines.
     # See note above the length of the negotiation cycle.
     MASTER_HAD_BACKOFF_CONSTANT = 360
 
-The following shared-port configuration is for the machines which that
-will not be central managers.
+The following shared-port configuration is for the machines that will not be central managers.
 
 .. code-block:: condor-config
 
@@ -1715,7 +1714,7 @@ document: complete information is available at the ganglia homepage at
 the subject, or numerous webpages.
 
 Generally speaking, the *condor_gangliad* should be setup to run on the same
-system where the ganglia *gmetad* is running.  Unless the pools is exceptionally
+system where the ganglia *gmetad* is running.  Unless the pool is exceptionally
 large, putting the gmetad and the *condor_gangliad* on the central manager
 machine is a good choice.  To enable the *condor_gangliad*, simply add
 the line
