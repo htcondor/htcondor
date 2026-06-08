@@ -1925,6 +1925,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
+	std::string dest_user;
 	bool rc;
 
 	std::string owner, domain;
@@ -1934,7 +1935,11 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
-	rc = submit_job(owner, domain, job->dest_ad,m_schedd2_name,m_schedd2_pool,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(owner, domain, job->dest_ad, m_schedd2_name, m_schedd2_pool, job->is_sandboxed, dest_cluster_id, dest_proc_id, dest_user);
+
+	if (!dest_user.empty()) {
+		job->dest_ad.Assign(ATTR_USER, dest_user);
+	}
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into
