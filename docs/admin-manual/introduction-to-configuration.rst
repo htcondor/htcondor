@@ -1078,7 +1078,7 @@ determined automatically at run time but which can be overwritten.
     it must run on the same :ad-attr:`Arch` and :ad-attr:`OpSys` of the machine where
     it was submitted, unless the user specifies :ad-attr:`Arch` and/or
     :ad-attr:`OpSys` explicitly in their submit file. See the :tool:`condor_submit`
-    manual page (:doc:`/man-pages/condor_submit`) for details.
+    manual page (:tool:`condor_submit`) for details.
 
 ``$(OPSYS)`` :index:`OPSYS`
     Defines the string used to identify the operating system of the
