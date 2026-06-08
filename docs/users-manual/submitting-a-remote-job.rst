@@ -49,7 +49,7 @@ place on the machine you want to submit *from*, then
 ``condor_submit`` can submit remotely.  To do so, you'll
 need to tell ``condor_submit`` the name of the pool (i.e. the 
 name of the machine running the central manager), and the name 
-of the Access Point that you ran ``condor_token_fetch`` on.  If you
+of the Access Point that you ran :tool:`condor_token_fetch` on.  If you
 don't know the name of the central manager, running the command
 ``condor_config_val COLLECTOR_HOST`` will tell you.
 
