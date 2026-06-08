@@ -455,7 +455,7 @@ doContactSchedd(int /* tid */)
 
 		for (auto& itr: BaseJob::JobsByProcId) {
 			curr_job = itr.second;
-			time_t new_expiration;
+			time_t new_expiration=0;
 
 			rc = GetAttributeInt( curr_job->procID.cluster,
 								  curr_job->procID.proc,
