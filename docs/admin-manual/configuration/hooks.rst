@@ -388,7 +388,7 @@ are probably the most common.
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 :macro-def:`STARTD_CRON_<JobName>_METRICS`
-    A space- or comma-separated list. Each element in the list is a
+    A list separated by commas or spaces. Each element in the list is a
     metric type, either ``SUM`` or ``PEAK``; a colon; and a metric name.
 
     An attribute preceded by ``SUM`` is a metric which accumulates over
