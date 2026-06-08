@@ -72,8 +72,8 @@
 - Added new ``"Cleaning"`` activity for claimed slots representing
   the time between the *condor_starter*\'s final update and actual reaping.
   During ``Claimed/Cleaning`` the slot will not match new work and all
-  preempting requests are recorded for later application: post Starter
-  reaping. The new :ad-attr:`TotalTimeClaimedCleaning` attribute accumulates
+  preempting requests are recorded to be applied after the *condor_starter* is
+  reaped. The new :ad-attr:`TotalTimeClaimedCleaning` attribute accumulates
   the time spent in this activity.
   :jira:`3686`
 
