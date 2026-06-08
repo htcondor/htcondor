@@ -362,7 +362,7 @@ In the Job Event Log File
 :index:`event log file<single: event log file; job>`
 :index:`job event codes and descriptions<single: job event codes and descriptions; log files>`
 
-In a job event log file is a listing of events in chronological order
+A job event log file contains a listing of events in chronological order
 that occurred during the life of one or more jobs. The formatting of the
 events is always the same, so that they may be machine readable. Four
 fields are always present, and they will most often be followed by other
