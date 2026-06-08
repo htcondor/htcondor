@@ -178,10 +178,17 @@ def clusterid_for_itemdata(test_dir, path_to_sleep, condor):
     submit_cmd = condor.run_command(["condor_submit", submit_file])
     clusterid, num_procs = parse_submit_result(submit_cmd)
 
-    jobids = [JobID(clusterid, n) for n in range(num_procs)]
+    # The first itemdata value ("A") lands on the cluster ad (proc -1) and is
+    # inherited by proc 0, so proc 0 never gets its own Foo SetAttribute event.
+    # Waiting on range(num_procs) therefore blocks for proc 0's Foo for the full
+    # wait_for_events timeout (120s) every run. Wait instead for the cluster ad
+    # and procs 1..N-1, which is exactly the set that receives Foo events.
+    foo_jobids = [JobID(clusterid, -1)] + [
+        JobID(clusterid, n) for n in range(1, num_procs)
+    ]
 
     condor.job_queue.wait_for_events(
-        {jobid: [SetAttribute("Foo", None)] for jobid in jobids}
+        {jobid: [SetAttribute("Foo", None)] for jobid in foo_jobids}
     )
 
     yield clusterid
