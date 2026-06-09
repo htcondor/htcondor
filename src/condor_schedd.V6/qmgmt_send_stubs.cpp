@@ -720,6 +720,35 @@ GetAttributeStringNew( const JOB_ID_KEY & jid, char const *attr_name, char **val
 	return rval;
 }
 
+int
+GetAttributeString(const JOB_ID_KEY & jid, char const *attr_name, std::string& val)
+{
+	int	rval = -1;
+	int cluster_id = jid.cluster, proc_id = jid.proc;
+
+	CurrentSysCall = CONDOR_GetAttributeString;
+
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(proc_id) );
+	neg_on_error( qmgmt_sock->put(attr_name) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->code(val) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
 
 int
 GetAttributeExprNew( const JOB_ID_KEY & jid, char const *attr_name, char **value )
