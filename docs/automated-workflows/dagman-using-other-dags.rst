@@ -8,7 +8,7 @@ defined in individual DAG files. This may be beneficial for the following reason
 
 - Easily incorporate pre-existing DAGs
 - Easily reuse a specific DAG sub-structure multiple times within a larger workflow
-- Encapsulate parts of DAG workflow into easier managed sub-parts
+- Encapsulate parts of a DAG workflow into more easily managed sub-parts
 - Dynamically create parts of the workflow (Sub-DAGs Only)
 - Retry multiple nodes as a unit (Sub-DAGs Only)
 - Short-circuit part of the workflow (Sub-DAGs Only)
@@ -23,26 +23,26 @@ There are two ways that DAGs can be nested within other DAGs:
     DAG comprised of hundreds to thousands of Sub-DAGs can overload the
     Access Point and its resources (i.e. memory, disk, cpu, etc.).
 #. **Splices:**
-    A Splice is a DAG that has all of its nodes directly incorporated to
-    its parent DAG. Meaning all splices get merged into a single
-    :tool:`condor_dagman` job reducing the stress and resource consumption
+    A Splice is a DAG that has all of its nodes directly incorporated into
+    its parent DAG, meaning all splices get merged into a single
+    :tool:`condor_dagman` job, reducing the stress and resource consumption
     on the Access Point.
 
 .. note::
 
     Sub-DAGs and Splices can be combined in a single workflow, and to any depth,
-    but be careful to avoid recursion which will cause problems.
+    but be careful to avoid recursion, which will cause problems.
 
 .. sidebar:: Splice Dependencies
 
     When DAGMan incorporates a Splice into its workflow, any :dag-cmd:`PARENT/CHILD`
-    relationships declared on a Splice is passed on to the Splices initial and
+    relationships declared on a Splice are passed on to the Splice's initial and
     terminal nodes (see definitions below).
 
-    For example if the following DAGs Splice sub-workflow (``sub-workflow.dag``)
-    has 1,000 initial nodes and 1,000 terminal nodes then 2,000 dependencies are
+    For example, if the following DAG's Splice sub-workflow (``sub-workflow.dag``)
+    has 1,000 initial nodes and 1,000 terminal nodes, then 2,000 dependencies are
     created when a single :dag-cmd:`PARENT/CHILD` relationship is declared between
-    two instances of this Splice. If :macro:`DAGMAN_USE_JOIN_NODES` = ``False``
+    two instances of this Splice. If :macro:`DAGMAN_USE_JOIN_NODES` = ``False``,
     then 1 million dependencies would be created.
 
     .. code-block:: condor-dagman
@@ -58,9 +58,9 @@ There are two ways that DAGs can be nested within other DAGs:
 
     *Terminal Node*: A node in a DAG with no Child node dependencies
 
-It is recommended to use Splices if the workflow doesn't require special functionality
-because splices don't produce the same scaling issue as Sub-DAGs. When determining how
-to incorporate DAGs into larger workflows consider the following pros and cons list:
+It is recommended to use Splices if the workflow doesn't require special functionality,
+because splices don't produce the same scaling issues as Sub-DAGs. When determining how
+to incorporate DAGs into larger workflows, consider the following pros and cons list:
 
 +----------------------------------------------------------+--------------+-------------+
 |                        Feature                           |   Sub-DAGs   |   Splices   |
@@ -107,8 +107,8 @@ Terminology
 
 .. sidebar:: Terminology Example
 
-    In the common case of DAG A incorporates DAG B, DAG A can be referred to as the
-    top-level, high-level, outer, and/or parent DAG while DAG B is the low-level/inner
+    In the common case of DAG A incorporating DAG B, DAG A can be referred to as the
+    top-level, high-level, outer, and/or parent DAG, while DAG B is the low-level/inner
     DAG.
 
     .. note::
@@ -129,7 +129,7 @@ the following terminology is used:
     A DAG that is abstractly lower in the nest of DAGs. This refers to the DAG
     that is incorporated into another DAG workflow.
 #. **Parent DAG:**
-    The specific DAG that incorporates/declared the current DAG the workflow.
+    The specific DAG that incorporates/declares the current DAG in the workflow.
 
 :index:`DAGs within DAGs<single: DAGMan; DAGs within DAGs>`
 
@@ -146,15 +146,15 @@ To declare a Sub-DAG simply use the following syntax for the :dag-cmd:`SUBDAG[Us
 
 Since a Sub-DAG is run as a separate :tool:`condor_dagman` job, the parent DAG
 views the entire sub-workflow as a single node in its workflow. For this reason,
-the **DIR**, **NOOP**, and **DONE** keywords work exactly the same the regular
-node :dag-cmd:`JOB` command. The main difference is instead of an HTCondor submit
-description the Sub-DAG takes DAG description file.
+the **DIR**, **NOOP**, and **DONE** keywords work exactly the same as for the
+regular node :dag-cmd:`JOB` command. The main difference is that instead of an
+HTCondor submit description, the Sub-DAG takes a DAG description file.
 
 .. note::
 
-    The **EXTERNAL** keyword is required, and represents that the DAG is run
-    externally as its own :tool:`condor_dagman` job. This is the only option
-    for Sub-DAGs currently.
+    The **EXTERNAL** keyword is required, and indicates that the DAG is run
+    externally as its own :tool:`condor_dagman` job. This is currently the only
+    option for Sub-DAGs.
 
 Example SUBDAG
 ^^^^^^^^^^^^^^
@@ -198,22 +198,22 @@ SUBDAG Submit Description Generation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Since a Sub-DAG is another :tool:`condor_dagman` job, a submit description file
-needs to be generated. By default this will get generated at Sub-DAG submission
+needs to be generated. By default this is generated at Sub-DAG submission
 time when DAGMan executes :tool:`condor_submit_dag`. This has the added benefit
-in the fact that the DAG description file can be created/modified dynamically during
-the life of a higher-level DAGs lifetime; although the Sub-DAG description file
+that the DAG description file can be created/modified dynamically during
+a higher-level DAG's lifetime; although the Sub-DAG description file
 needs to be defined at the submission time of the top-level DAG, the inner DAG
 description file only needs to exist just before node submission time.
 
 .. note::
 
     Sub-DAG submit files can be pre-generated before workflow submission via
-    :tool:`condor_submit_dag`\ s options **-no_submit** and **-do_recurse**.
+    :tool:`condor_submit_dag`\ 's options **-no_submit** and **-do_recurse**.
 
 .. sidebar:: Special Case Option Preservation
 
-    If a Sub-DAG submit file is pre-generated then the following
-    :tool:`condor_submit_dag` and **-update_submit** is set then
+    If a Sub-DAG submit file is pre-generated and the
+    :tool:`condor_submit_dag` option **-update_submit** is set, then
     the following are preserved for the specific DAG:
 
     +--------------+--------------+
@@ -262,12 +262,12 @@ SUBDAG Working Directory
 
 Unless the **DIR** keyword is specified when declaring a Sub-DAG, the low-level
 DAG utilizes the current working directory of its parent DAG. Otherwise, the
-specified directory is the Sub-DAGs working directory.
+specified directory is the Sub-DAG's working directory.
 
 .. sidebar:: Nested Splice Node Naming
 
-    Each level of splice is added to the hierarchal scope from highest
-    to lowest level. Meaning node ``TOP+HIGH+MIDDLE+BOTTOM+NODE`` was
+    Each level of splice is added to the hierarchical scope from highest
+    to lowest level, meaning node ``TOP+HIGH+MIDDLE+BOTTOM+NODE`` was
     spliced multiple times as such:
 
     .. mermaid::
@@ -301,7 +301,7 @@ the syntax for the :dag-cmd:`SPLICE[Usage]` command:
 A splice is a named instance of a subgraph which is specified in a
 separate DAG file. The splice is treated as an entity for dependency
 specification in the including DAG. Although a splice can have dependencies,
-it is not required. If no dependencies are specified then the splice
+it is not required. If no dependencies are specified, then the splice
 will become a disjointed graph.
 
 The same DAG file can be reused as differently named splices, each one
@@ -310,7 +310,7 @@ incorporating a copy of the same DAG structure.
 To prevent name collisions of nodes being spliced into a DAG, DAGMan
 adds hierarchical scopes to the name of the node using the splice name.
 This scope is delimited with ``+``. For example, if a DAG containing
-``NodeY`` was spliced into another DAG as ``SpliceX`` then the resulting
+``NodeY`` was spliced into another DAG as ``SpliceX``, then the resulting
 node added to the top-level DAG will be named ``SpliceX+NodeY``.
 
 .. warning::
@@ -344,9 +344,9 @@ Splice DIR Option
 ^^^^^^^^^^^^^^^^^
 
 When the **DIR** keyword is specified for a splice, the splice will be
-parsed from that directory and all nodes in the spliced DAG will be
-submitted from. If the nodes in the spliced DAG specify their own working
-directory as a relative path then DAGMan will use the splice directory as
+parsed from that directory, and all nodes in the spliced DAG will be
+submitted from it. If the nodes in the spliced DAG specify their own working
+directory as a relative path, then DAGMan will use the splice directory as
 a prefix to the node's directory. Absolute paths are untouched.
 
 .. sidebar:: Diamond DAG spliced between two nodes
@@ -544,10 +544,10 @@ Splice Limitations
     Because the nodes of a splice are directly incorporated into the DAG
     containing the :dag-cmd:`SPLICE` command, splices do not generate their own rescue
     DAGs, unlike :dag-cmd:`SUBDAG`\ s. However, all progress for nodes in the splice
-    DAG will be written in the parent DAGs rescue DAG file.
+    DAG will be written in the parent DAG's rescue DAG file.
 #. **Spliced DAGs must exist at submit time**
-    DAG files referenced as splices must exist at the submit time of its parent
-    DAG since DAGMan needs to know the whole DAG structure at parse time.
+    DAG files referenced as splices must exist at the submit time of their parent
+    DAG, since DAGMan needs to know the whole DAG structure at parse time.
 
     .. note::
 
@@ -556,14 +556,14 @@ Splice Limitations
         splice.
 
 #. **Splices and Scripts (PRE/POST)**
-    Although splices are considered an entity in the parent DAG, they do not
-    contain the ability to have PRE and POST scripts applied to the entire
-    sub-workflow . This is because once all the splice nodes are parsed
+    Although splices are considered an entity in the parent DAG, they cannot
+    have PRE and POST scripts applied to the entire
+    sub-workflow. This is because once all the splice nodes are parsed
     and incorporated into the parent DAG, there is no one node that represents
     the entire sub-workflow like a Sub-DAG. Nodes within the spliced DAG can
     contain scripts.
 
-    A work around to this problem is to add *NOOP* nodes with the desired
+    A workaround to this problem is to add *NOOP* nodes with the desired
     PRE/POST scripts before and after the spliced DAG.
 
     .. code-block:: condor-dagman
@@ -587,8 +587,8 @@ Splice Limitations
         PARENT TheSplice CHILD OnlyPostNode
 
 #. **Splices and various DAG commands**
-    For the same reason as why PRE and POST scripts can't be applied to an
-    entire spliced sub-workflow (see above limitation), the following DAG
+    For the same reason that PRE and POST scripts can't be applied to an
+    entire spliced sub-workflow (see the above limitation), the following DAG
     commands can't be applied to a spliced DAG, but the nodes described in a
     splice can use all available commands.
 
@@ -610,7 +610,7 @@ Splice Limitations
     more than one splice. This is done by prefixing the category name
     with a ``+`` to make it a global category. The :dag-cmd:`MAXJOBS` declaration
     using a cross-splice category can be specified in either the parent
-    DAG or the spliced DAG, but is recommended to be put in the parent DAG.
+    DAG or the spliced DAG, but it is recommended to put it in the parent DAG.
 
     Here is an example which applies a single limitation on submitted jobs,
     identifying the category with ``+init``.
@@ -643,9 +643,9 @@ Splice Limitations
         CATEGORY Y +init
 
     For both global and non-global category throttles, settings at a higher
-    level in the DAG overrides settings at a lower level. For example, the
-    following will result in the throttle settings of 2 for the ``+catY``
-    category and 10 for the ``A+catX`` category in splice.
+    level in the DAG override settings at a lower level. For example, the
+    following will result in throttle settings of 2 for the ``+catY``
+    category and 10 for the ``A+catX`` category in the splice.
 
     .. code-block:: condor-dagman
         :caption: Example DAG descriptions setting multiple MAXJOBS throttles for global categories

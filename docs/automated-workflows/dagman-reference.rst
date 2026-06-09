@@ -10,7 +10,7 @@ General
 ^^^^^^^
 
 :dag-cmd-def:`INCLUDE` (see :ref:`Full Description<DAG Include cmd>`)
-    Parse the provided file as if it was inline to the current file.
+    Parse the provided file as if it were inline to the current file.
 
     .. code-block:: condor-dagman
 
@@ -59,14 +59,14 @@ Node Behavior
 ^^^^^^^^^^^^^
 
 :dag-cmd-def:`DONE`
-    Mark a DAG node as done causing neither the associated jobs or scripts to execute.
+    Mark a DAG node as done, causing neither the associated jobs nor scripts to execute.
 
     .. code-block:: condor-dagman
 
         DONE NodeName
 
 :dag-cmd-def:`PRE_SKIP` (see :ref:`Full Description<Node pre skip cmd>`)
-    Inform DAGMan to skip the remaining node execution if that nodes specified PRE
+    Inform DAGMan to skip the remaining node execution if that node's specified PRE
     script exits with a specified code.
 
     .. code-block:: condor-dagman
@@ -146,7 +146,7 @@ Throttling
         CATEGORY <NodeName | ALL_NODES> CategoryName
 
 :dag-cmd-def:`MAXJOBS` (see :ref:`Full Description<DAG throttling cmds>`)
-    Set the max number of submitted list of jobs for a specified :dag-cmd:`CATEGORY`
+    Set the maximum number of submitted jobs for a specified :dag-cmd:`CATEGORY`
 
     .. code-block:: condor-dagman
 
@@ -156,7 +156,7 @@ DAG Control
 ^^^^^^^^^^^
 
 :dag-cmd-def:`ABORT-DAG-ON` (see :ref:`Full Description<abort-dag-on>`)
-    Inform DAGMan to write a rescue file and exit when specified node exits with
+    Inform DAGMan to write a rescue file and exit when the specified node exits with
     the specified value.
 
     .. code-block:: condor-dagman
@@ -164,7 +164,7 @@ DAG Control
         ABORT-DAG-ON <NodeName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
 
 :dag-cmd-def:`CONFIG` (see :ref:`Full Description<Per DAG Config>`)
-    Specify custom DAGMan configuration file for DAGMan.
+    Specify a custom configuration file for DAGMan.
 
     .. code-block:: condor-dagman
 
@@ -172,7 +172,7 @@ DAG Control
 
 :dag-cmd-def:`ENV` (see :ref:`Full Description<DAG ENV cmd>`)
     Modify the DAGMan proper job's environment by explicitly setting environment
-    variables or filtering variables from the :tool:`condor_submit_dag`\ s environment
+    variables or filtering variables from the :tool:`condor_submit_dag`\ 's environment
     at submit time.
 
     .. code-block:: condor-dagman
@@ -231,7 +231,7 @@ Special Files
 Produced Files
 --------------
 
-The following files are always produced automatically by DAGMan on execution. Where the
+The following files are always produced automatically by DAGMan on execution, where the
 primary DAG is the only or first DAG file specified at submit time.
 
 #. :tool:`condor_dagman` scheduler universe job files:
@@ -338,7 +338,7 @@ DAG Submission and Management
     **<DAG Job Id>** should be replaced with the :ad-attr:`ClusterId`
     of the DAGMan proper job.
 
-For more in depth explanation of controlling a DAG see :ref:`DAG controls`
+For a more in-depth explanation of controlling a DAG, see :ref:`DAG controls`
 
 DAG Submission
 ^^^^^^^^^^^^^^
@@ -360,7 +360,7 @@ run, forcibly re-submit the DAG.
 .. note::
 
     Forcibly re-executing a DAG will cause previous DAG informational files
-    to be removed and rename any Rescue Files to ``*.old`` to invalidate them.
+    to be removed and any Rescue Files to be renamed to ``*.old`` to invalidate them.
 
 DAG Monitoring
 ^^^^^^^^^^^^^^
