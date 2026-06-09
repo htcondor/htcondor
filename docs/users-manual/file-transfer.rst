@@ -16,7 +16,7 @@ too-busy shared file servers. These input files are placed into a scratch
 directory on the EP, which is the starting current directory of the
 job.  When the job completes, by default, HTCondor detects any newly-created
 files at the top level of this sandbox directory, and transfers them back to
-the submitting machine.  The input sandbox is what we call the executable and
+the submitting machine.  The input sandbox is the executable and
 all the declared input files of a job.  The set of all files created by the job
 is the output sandbox.
 
@@ -39,7 +39,7 @@ command takes on one of three possible values:
 #. YES: HTCondor transfers the input sandbox from
    the access point to the execute machine.  The output sandbox 
    is transferred back to the access point.  The command
-   :subcom:`when_to_transfer_output[definition]`.
+   :subcom:`when_to_transfer_output[definition]`
    controls when the output sandbox is transferred back, and what directory
    it is stored in.
 
@@ -49,7 +49,7 @@ command takes on one of three possible values:
    should_transfer_files = YES. If the job is matched with a machine
    in the same :ad-attr:`FileSystemDomain` as the submitting machine, HTCondor 
    will not transfer files and relies on the shared file system.
-#. NO: HTCondor's file transfer mechanism is disabled.  In this case is
+#. NO: HTCondor's file transfer mechanism is disabled.  In this case it
    is the responsibility of the user to ensure that all data used by the
    job is accessible on the remote EP.
 
@@ -63,11 +63,11 @@ takes on one of three possible values:
 #. ``ON_EXIT_OR_EVICT``: HTCondor behaves the same as described for the
    value ON_EXIT when the job exits on its own. However, each
    time the job is evicted from a machine, the output sandbox is
-   transferred back to the access point and placed under the **SPOOL** directory.
+   transferred back to the access point and placed under the **SPOOL** directory at
    eviction time. Before the job starts running again, the former output
    sandbox is copied to the job's new remote scratch directory.
 
-   If :subcom:`transfer_output_files[definition]`.
+   If :subcom:`transfer_output_files[definition]`
    is specified, this list governs which files are transferred back at eviction
    time. If a file listed in **transfer_output_files** does not exist
    at eviction time, the job will go on hold.
@@ -160,7 +160,7 @@ to the empty string ("") means no files are to be transferred. When this
 list is defined, automatic detection of output files created by the job
 is disabled. Paths specified in this list refer to locations on the
 execute machine. The naming and placement of files and directories
-relies on the term base name. By example, the path ``a/b/c`` has the
+relies on the term base name. For example, the path ``a/b/c`` has the
 base name ``c``. It is the file name or directory name with all
 directories leading up to that name stripped off. On the access point,
 the transferred files or directories are named using only the base name.
@@ -249,7 +249,7 @@ There are four ways to specify files and paths for
    :subcom:`initialdir[and transfer input]` is
    specified.
 #. Absolute file paths.
-#. As an URL, which should be accessible by the execute machine.
+#. As a URL, which should be accessible by the execute machine.
 
 Before executing the program, HTCondor copies the input sandbox
 into a remote scratch directory on the
@@ -380,7 +380,7 @@ All other files (specified by
 :subcom:`transfer_input_files[example with paths]`,
 as well as files modified or created by the job and automatically
 transferred back) are located relative to the specified
-:subcom:`initialdir`
+:subcom:`initialdir`.
 Therefore, the output file, ``out1``, will be placed in the files
 directory. Note that the ``logs2`` directory exists to make this
 example work correctly.
@@ -578,7 +578,7 @@ detect if it doesn't need to be run again.
   * If the job sets :subcom:`input`, it must be a file that is not a
     symbolic link.
 
-A dataflow job is skipped if only if the oldest file listed in
+A dataflow job is skipped if and only if the oldest file listed in
 :subcom:`transfer_output_files` is younger than:
 
 * the oldest file listed in :subcom:`transfer_input_files`;
@@ -752,7 +752,7 @@ example:
 
     transfer_output_remaps = "myresults.dat = http://destination-server.com/myresults.dat"
 
-We use a HTTP PUT request to perform the upload, so the user is
+We use an HTTP PUT request to perform the upload, so the user is
 responsible for making sure that the destination server accepts PUT
 requests (which is usually disabled by default).
 
@@ -878,7 +878,7 @@ You may (like any other URL) specify an S3 URL in :subcom:`transfer_input_files[
 or as part of a remap in :subcom:`transfer_output_remaps[with S3]`
 However, HTCondor does not currently support transferring entire buckets or directories.  If you
 specify an ``s3://`` URL as the :subcom:`output_destination`, that URL will be
-used a prefix for each output file's location; if you specify a URL ending a
+used as a prefix for each output file's location; if you specify a URL ending in a
 ``/``, it will be treated like a directory.
 
 S3 Transfer Recipes

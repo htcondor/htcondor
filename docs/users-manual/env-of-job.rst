@@ -20,7 +20,7 @@ Environment Variables
 
 :index:`environment variables`
 
-An HTCondor job running on a execution point does not, by default, inherit
+An HTCondor job running on an execution point does not, by default, inherit
 the environment variables from the machine it runs on or the machine it
 was submitted from.  If it did, the environment might change from run 
 to run, or machine to machine, and create non reproducible, difficult 
@@ -118,7 +118,7 @@ executing job that may be useful.
    :macro:`STARTER_NUM_THREADS_ENV_VARS`.
 -  ``BATCH_SYSTEM`` 
    :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<pair: BATCH_SYSTEM; environment variables for jobs>`
-   All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
+   All jobs running under an HTCondor starter have the environment variable BATCH_SYSTEM
    set to the string *HTCondor*.  Inspecting this variable allows a job to
    determine if it is running under HTCondor.
 -  ``HOME`` 
@@ -151,7 +151,7 @@ variables for the GPU runtime to use.
   :index:`_CONDOR_CREDS<pair: _CONDOR_CREDS; environment variables for jobs>`
   _CONDOR_CREDS is an environment variable that is set to the path of a directory
   that contains any transferred tokens or x509 credentials for the job.
-  This directory is create by HTCondor and is unique to the job. If the job
+  This directory is created by HTCondor and is unique to the job. If the job
   uses no credentials, this variable will not be set.
   
 
@@ -213,7 +213,7 @@ Resource Limitations on a Running Job
 Depending on how HTCondor has been configured, the OS platform, and other
 factors, HTCondor may configure the system a job runs on to prevent a job
 from using all the resources on a machine. This protects other jobs that
-may be running on the machine, and the machine itself from being harming
+may be running on the machine, and the machine itself from being harmed
 by a running job.
 
 Jobs may see
@@ -225,7 +225,7 @@ Jobs may see
 - A limit on the amount of memory they can allocate, above which the
   job may be placed on hold or evicted by the system.
 
-- A limit on the amount of CPU cores the may use, above which the 
+- A limit on the number of CPU cores they may use, above which the
   job may be blocked, and will run very slowly.
 
 - A limit on the amount of scratch disk space the job may use, above
@@ -275,9 +275,9 @@ capabilities, your container image might look like
 
    container_image = my_container.$$(GpusCapability).sif
 
-and then condor would select the proper one at job start time.
+and then HTCondor would select the proper one at job start time.
 
-The container image may also be specified with an URL syntax that tells
+The container image may also be specified with a URL syntax that tells
 HTCondor to use a file transfer plugin to transfer the image.  For example
 with
 
@@ -363,7 +363,7 @@ to be volume mounted, and thus visible inside the container. See the
 docker section of the administrator's manual for details.
 
 In Docker universe (as well as vanilla), HTCondor never allows a
-containerized process to run as root inside the container, it always
+containerized process to run as root inside the container; it always
 runs as a non-root user. It will run as the same non-root user that a
 vanilla job will. If a Docker Universe job fails in an obscure way, but
 runs fine in a docker container on a desktop, try running the job as a
@@ -518,9 +518,9 @@ Docker Images
 
 By default, Docker universe assumes that the job uses a public docker
 image hosted on some docker repository, often, the public docker hub.
-Docker hub supports private images, which can only by pulled by authorized
+Docker hub supports private images, which can only be pulled by authorized
 users.  HTCondor supports running jobs from private images, when the
-user is authorized to do so.  To enable this, the user must first Run
+user is authorized to do so.  To enable this, the user must first run
 
 .. code-block:: shell
 
@@ -529,7 +529,7 @@ user is authorized to do so.  To enable this, the user must first Run
 on the Access Point, and provide the appropriate login and password to
 docker.  
 
-If Apptainer in installed on the access point instead 
+If Apptainer is installed on the access point instead
 of Docker, the user should instead run
 
 .. code-block:: shell
@@ -547,7 +547,7 @@ This tells the shadow, at job startup time, to request a read-only
 token on behalf of the user from docker hub.  This token is cached 
 in the users .docker directory in their home directory, so that
 the Access Point doesn't make excessive calls to the docker hub API.
-This token is then send by the shadow to the job, where it is
+This token is then sent by the shadow to the job, where it is
 used to pull the image, and then deleted from the execution point 
 after the image pull has succeeded.
 
@@ -761,7 +761,7 @@ Shut down of a virtual machine occurs from within the virtual machine
 environment. A script, executed with the proper authorization level, is
 the likely source of the shut down commands.
 
-Under a Windows 2000, Windows XP, or Vista virtual machine, an
+Under a Windows virtual machine, an
 administrator issues the command
 
 .. code-block:: doscon
@@ -884,9 +884,6 @@ parallel universe provides machine scheduling, but does not enforce a
 particular programming paradigm for the underlying applications. Thus,
 parallel universe jobs may run under various MPI implementations as well
 as under other programming environments.
-
-The parallel universe supersedes the mpi universe. The mpi universe
-eventually will be removed from HTCondor.
 
 How Parallel Jobs Run
 '''''''''''''''''''''
@@ -1058,7 +1055,7 @@ The machine selection may be further narrowed, instead using the
 
     #############################################
     ##  submit description file for a parallel program
-    ##  targeting RedHat 6 machines
+    ##  targeting RedHat 9 machines
     #############################################
     universe = parallel
     executable = /bin/sleep
@@ -1067,7 +1064,7 @@ The machine selection may be further narrowed, instead using the
     log = log
     should_transfer_files = IF_NEEDED
     when_to_transfer_output = ON_EXIT
-    requirements = (OpSysAndVer == "RedHat6")
+    requirements = (OpSysAndVer == "RedHat9")
     request_cpus   = 1
     request_memory = 1024M
     request_disk   = 10240K
@@ -1216,7 +1213,6 @@ Here is a sample submit description file for an MPICH MPI application:
     ######################################
     ## Example submit description file
     ## for MPICH 1 MPI
-    ## works with MPICH 1.2.4, 1.2.5 and 1.2.6
     ######################################
     universe = parallel
     executable = mp1script
@@ -1276,8 +1272,8 @@ enable password-less remote execution and starts an *sshd* daemon. Use
 of the *sshd.sh* script requires the definition of two HTCondor
 configuration variables. Configuration variable ``CONDOR_SSHD``
 :macro:`CONDOR_SSHD` is an absolute path to an implementation of
-*sshd*. *sshd.sh* has been tested with *openssh* version 3.9, but should
-work with more recent versions. Configuration variable
+*sshd*. *sshd.sh* has been tested with *openssh* and should
+work with current versions. Configuration variable
 :macro:`CONDOR_SSH_KEYGEN` points to the
 corresponding *ssh-keygen* executable.
 
@@ -1647,7 +1643,7 @@ HTCondor's file transfer mechanism, then the Chirp facility may provide
 a solution. Chirp has two advantages over simple, whole-file transfers.
 First, it permits the input files to be decided upon at run-time rather
 than submit time, and second, it permits partial-file I/O with results
-than can be seen as the program executes. However, small changes to the
+that can be seen as the program executes. However, small changes to the
 program are required in order to take advantage of Chirp. Depending on
 the style of the program, use either Chirp I/O streams or UNIX-like I/O
 functions. :index:`ChirpInputStream<single: ChirpInputStream; Chirp>`
@@ -1792,7 +1788,7 @@ description file solves the problem.
 :index:`cache flush on access point<single: cache flush on access point; NFS>`
 :index:`IwdFlushNFSCache<single: IwdFlushNFSCache; ClassAd job attribute>`
 
-HTCondor attempts to flush the NFS cache on a access point in order to
+HTCondor attempts to flush the NFS cache on an access point in order to
 refresh a job's initial working directory. This allows files written by
 the job into an NFS mounted initial working directory to be immediately
 visible on the access point. Since the flush operation can require

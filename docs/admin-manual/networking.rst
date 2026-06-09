@@ -5,13 +5,12 @@ Networking, Port Usage, and CCB
 
 This section on network communication in HTCondor discusses which
 network ports are used, how HTCondor behaves on machines with multiple
-network interfaces and IP addresses, and how to facilitate functionality
-in a pool that spans firewalls and private networks.
+network interfaces and IP addresses, and how to get a pool working
+across firewalls and private networks.
 
-The security section of the manual contains some information that is
-relevant to the discussion of network communication which will not be
-duplicated here, so please see
-the :doc:`/admin-manual/security` section as well.
+The security section covers related material that isn't repeated here,
+so please also see
+the :doc:`/admin-manual/security` section.
 
 Firewalls, private networks, and network address translation (NAT) pose
 special problems for HTCondor. There are currently two main mechanisms
@@ -99,9 +98,8 @@ Using a Non Standard, Fixed Port for the *condor_collector*
 :index:`nonstandard ports for central managers<single: nonstandard ports for central managers; port usage>`
 
 By default, HTCondor uses port 9618 for the *condor_collector* daemon.
-To use a different port number for this daemon, the configuration
-variables that tell HTCondor these communication details are modified.
-Instead of
+To use a different port number for this daemon, modify the configuration
+variables that tell HTCondor where to listen. Instead of
 
 .. code-block:: condor-config
 
@@ -133,11 +131,10 @@ argument can optionally be given a port number. For example:
 Using a Dynamically Assigned Port for the *condor_collector*
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-On single machine pools, it is permitted to configure the
+On single machine pools, you may configure the
 *condor_collector* daemon to use a dynamically assigned port, as given
 out by the operating system. This prevents port conflicts with other
-services on the same machine. However, a dynamically assigned port is
-only to be used on single machine HTCondor pools, and only if the
+services on the same machine. However, this is appropriate only when the
 :macro:`COLLECTOR_ADDRESS_FILE`
 configuration variable has also been defined. This mechanism allows all
 of the HTCondor daemons and tools running on the same machine to find
@@ -165,9 +162,9 @@ Restricting Port Usage to Operate with Firewalls
 
 If an HTCondor pool is completely behind a firewall, then no special
 consideration or port usage is needed. However, if there is a firewall
-between the machines within an HTCondor pool, then configuration
-variables may be set to force the usage of specific ports, and to
-utilize a specific range of ports.
+between the machines within an HTCondor pool, then you can set
+configuration variables to force specific ports and restrict HTCondor
+to a range of ports.
 
 By default, HTCondor uses port 9618 for the *condor_collector* daemon,
 and dynamic (apparently random) ports for everything else. See
@@ -223,7 +220,7 @@ require ``  5 + (5 * MAX_JOBS_RUNNING``) ports. The configuration
 variable :macro:`MAX_JOBS_RUNNING` limits (on
 a per-machine basis, if desired) the maximum number of jobs. Without
 this configuration macro, the maximum number of jobs that could be
-simultaneously executing at one time is a function of the number of
+simultaneously executing is a function of the number of
 reachable execute machines.
 
 Also be aware that :macro:`HIGHPORT` and :macro:`LOWPORT` only impact dynamic port
@@ -286,7 +283,7 @@ case the network topology might look something like this:
     Condor[Condor\nDaemon\n@10.1.2.3]
     end
 
-That, our HTCondor daemon has an addresss of 10.1.2.3, but in order
+Thus, our HTCondor daemon has an address of 10.1.2.3, but in order
 to route IP traffic to it, we need to send packets to address 192.0.2.1
 The configuration parameter :macro:`TCP_FORWARDING_HOST` does just this.
 In this case, on the HTCondor daemon side, setting
@@ -295,7 +292,7 @@ In this case, on the HTCondor daemon side, setting
 
    TCP_FORWARDING_HOST = 192.0.2.1
 
-Will cause this daemon to advertise it's address as 192.0.2.1, and any other
+Will cause this daemon to advertise its address as 192.0.2.1, and any other
 daemon wanting to make a connection to it will use this address.
 
 Reducing Port Usage with the *condor_shared_port* Daemon
@@ -321,7 +318,7 @@ exclusively bound to its port, which means that other non-HTCondor
 processes cannot accidentally bind to that port.
 
 A second benefit of the *condor_shared_port* daemon is that it helps
-address the scalability issues of a access point. Without the
+address the scalability issues of an access point. Without the
 *condor_shared_port* daemon, more than 2 ephemeral ports per running
 job are often required, depending on the rate of job completion. There
 are only 64K ports in total, and most standard Unix installations only
@@ -406,10 +403,8 @@ Configuring HTCondor for Machines With Multiple Network Interfaces
 
 HTCondor can run on machines with multiple network interfaces.
 A multi-homed machine is one that has more than one NIC (Network Interface
-Card). Further improvements to this new functionality will remove the
-need for any special configuration in the common case. For now, care
-must still be given to machines with multiple NICs, even when using this
-configuration variable.
+Card). In the common case, no special configuration is needed; care is
+still required on machines with multiple NICs.
 
 Using BIND_ALL_INTERFACES
 '''''''''''''''''''''''''''
@@ -433,8 +428,7 @@ set to ``False``:
 
     BIND_ALL_INTERFACES = FALSE
 
-This functionality has limitations. Here are descriptions of the
-limitations.
+This functionality has the following limitations:
 
 Using all network interfaces does not work with Kerberos.
     Every Kerberos ticket contains a specific IP address within it.
@@ -473,7 +467,7 @@ Up to two IP addresses will be advertised.
     ports on multiple interfaces, each with their own IP address, there
     is currently no mechanism for that daemon to advertise all of the
     possible IP addresses where it can be contacted. Therefore, HTCondor
-    clients (other HTCondor daemons or tools) will not necessarily able
+    clients (other HTCondor daemons or tools) will not necessarily be able
     to locate and communicate with a given daemon running on a
     multi-homed machine where :macro:`BIND_ALL_INTERFACES` has been enabled.
 
@@ -545,7 +539,7 @@ to the end of the host name.
 A Client Machine with Multiple Interfaces
 '''''''''''''''''''''''''''''''''''''''''
 
-If client machine has two or more NICs, then there might be a specific
+If a client machine has two or more NICs, then there might be a specific
 network interface on which the client machine desires to communicate
 with the rest of the HTCondor pool. In this case, the local
 configuration file for the client should have
@@ -562,18 +556,19 @@ HTCondor Connection Brokering (CCB)
 .. sidebar:: When CCB is needed
 
    .. mermaid::
-      :caption: One process (B) behind firewall, the other (A) not.
+      :caption: EP located behind firewall, the AP is not.
       :align: center
 
-      flowchart LR
-      start((Process A))
-      start -- blocked\nby Firewall --o Firewall
+      flowchart RL
 
       subgraph Firewall
-      Condor((Process B))
+      startd((Execution Point))
       end
 
-      Condor -- can connect to --> start
+      schedd((Access Point))
+      schedd -- blocked\nby Firewall --o Firewall
+
+      startd -- can connect to --> schedd
 
 
 HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
@@ -599,27 +594,22 @@ for the execute node within the private network to connect to the submit
 node, then it is possible for the submit node to run jobs on the execute
 node.
 
-.. sidebar:: CCB Architecture
+.. mermaid::
+   :caption: CCB Sequence of operations (only EP behind firewall)
+   :align: center
 
-   .. mermaid::
-      :caption: CCB Architecture -- Only Process B behind firewall
-      :align: center
-
-      flowchart TB
-
-      start((Process A\ncondor_schedd))
-      CCB((CCB Server))
-
-      subgraph Firewall
-      Condor((Process B\ncondor_startd))
-      end
-      
-      start -- "I want to \ntalk to B" --> CCB
-      Condor -- "Who wants \nto talk to me?" --> CCB
-      Condor -- "CCB said you\nwant to talk to me\n(last step)" --> start
+   sequenceDiagram
+       participant AP as Access Point (condor_schedd)
+       participant CCB as CCB Server
+       participant EP as Execution Point (condor_startd)
+       EP->>CCB: 1. register (CCB_ADDRESS)
+       AP->>CCB: 2. "have EP connect to me"
+       CCB->>EP: 3. "connect to AP"<br/>(using connection from step 1)
+       EP-->>AP: 4. TCP connection opens
+       EP->>AP: 5. TCP open -- data now flows in either direction
 
 
-To effect this CCB solution, the execute node's *condor_startd* within
+With CCB, the execute node's *condor_startd* within
 the private network registers itself with the CCB server by setting the
 configuration variable :macro:`CCB_ADDRESS`. The
 submit node's *condor_schedd* communicates with the CCB server,
@@ -828,8 +818,7 @@ HTCondor will not start. Likewise, to require IPv6, you may set
 :macro:`ENABLE_IPV6` to true.
 
 If you set :macro:`ENABLE_IPV4` to false, HTCondor
-will not use IPv4, even if it is available; likewise for :macro:`ENABLE_IPV6`
-:macro:`ENABLE_IPV6` and IPv6.
+will not use IPv4, even if it is available; likewise for :macro:`ENABLE_IPV6` and IPv6.
 
 The default setting for :macro:`ENABLE_IPV4` and
 :macro:`ENABLE_IPV6` is ``auto``. If HTCondor does

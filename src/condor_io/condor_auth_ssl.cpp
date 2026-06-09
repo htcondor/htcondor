@@ -1552,7 +1552,7 @@ Condor_Auth_SSL :: receive_message( bool non_blocking, int &status, int &len, ch
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
-        || !(len <= AUTH_SSL_BUF_SIZE)
+        || !(len >= 0 && len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
@@ -1815,7 +1815,11 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 skip_san:
 	{
 		char cn_fqdn[256];
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		X509_NAME *subj = nullptr;
+#else
+		const X509_NAME *subj = nullptr;
+#endif
 		if (!success && (subj = X509_get_subject_name(cert)) &&
 			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
 		{

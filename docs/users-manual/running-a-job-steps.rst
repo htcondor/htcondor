@@ -30,11 +30,11 @@ Here are the basic steps to run a job with HTCondor.
     Make certain the program will run correctly with these files.
 
  Create a description file.
-    A submit description file controls the all details of a job submission.
+    A submit description file controls all the details of a job submission.
     This text file tells HTCondor everything it needs to know to run the job
     on a remote machine, e.g. how much memory and how many cpu cores are
     needed, what input files the job needs, and other aspects of
-    machine the job might need.
+    the machine the job might need.
 
     Write a submit description file to go with the job, using the
     examples provided in the :doc:`/users-manual/submitting-a-job` 
@@ -64,12 +64,12 @@ Here are the basic steps to run a job with HTCondor.
  Examine the results of a finished job.
      When your program completes, HTCondor will tell you (by e-mail, if
      preferred) the exit status of your program and various statistics about
-     its performances, including time used and I/O performed. If you are
+     its performance, including time used and I/O performed. If you are
      using a log file for the job, the exit status will
      be recorded in there.  Output files will be transferred back to the
      submitting machine, if a shared filesystem is not used.  After the job
-     completes, it will not be visible to the :doc:`/man-pages/condor_q` command
-     , but is queryable with the :doc:`/man-pages/condor_history` command.
+     completes, it will not be visible to the :tool:`condor_q` command,
+     but is queryable with the :tool:`condor_history` command.
 
 :index:`condor_rm<single: condor_rm; HTCondor commands>`
 
