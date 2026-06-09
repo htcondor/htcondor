@@ -570,7 +570,7 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	return true;
 }
 
-bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out)
 {
 	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
 		schedd_name ? schedd_name : "local",

@@ -418,7 +418,7 @@ bool yield_job(classad::ClassAd const &ad,const char * schedd_name,
 }
 
 
-static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out )
 {
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);
@@ -546,12 +546,19 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		}
 	}
 
-	failobj.SetQmgr(0);
 	CondorError errstack;
-	if( ! DisconnectQ(qmgr, true /* commit */, &errstack)) {
+	if (RemoteCommitTransaction(0, &errstack) < 0) {
 		failobj.fail("Failed to commit job submission : %s\n", errstack.getFullText(true).c_str());
 		return false;
-	} else if ( ! errstack.empty()) {
+	}
+
+	if (GetAttributeString(cluster, proc, ATTR_USER, user_out) == -1) {
+		dprintf(D_ERROR, "Failed to query User attribute of routed job.\n");
+	}
+
+	failobj.SetQmgr(0);
+	DisconnectQ(qmgr, false);
+	if ( ! errstack.empty()) {
 		dprintf(D_ALWAYS, "job submmission warning : %s\n", errstack.getFullText(true).c_str());
 		errstack.clear();
 	}
@@ -567,13 +574,13 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 	schedd.reschedule();
 
-	if(cluster_out) { *cluster_out = cluster; }
-	if(proc_out) { *proc_out = proc; }
+	cluster_out = cluster;
+	proc_out = proc;
 
 	return true;
 }
 
-bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out)
 {
 	bool success;
 
@@ -586,7 +593,7 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	}
 	TemporaryPrivSentry sentry(PRIV_USER);
 
-	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
+	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out,user_out);
 
 	uninit_user_ids();
 

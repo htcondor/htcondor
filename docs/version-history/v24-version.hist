@@ -1,5 +1,9 @@
 *** 24.12.22 bugs
 
+- Fixed a bug where the *condor_job_router* could abort when removing a job
+  that had just been routed.
+  :jira:`3757`
+
 *** 24.0.22 bugs
 
 - When using trust-on-first-use (TOFU), tools can go into an infinite
