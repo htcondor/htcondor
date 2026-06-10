@@ -27,13 +27,13 @@
 *** 24.0.21 bugs
 
 - Fixed a rare issue where *condor_dagman* would unnecessarily abort after
-  reboot of the host machine due to OS process ID (PID) reuse.
+  reboot of the host machine due to operating system process ID (PID) reuse.
   :jira:`3739`
 
 - When the python bindings are run as user ``root`` and use the FS method
   to authenticate with a daemon, the authenticated identity will be
   ``condor`` instead of ``root``.
-  This matches the behavior of all of the commmand line tools.
+  This matches the behavior of all of the command line tools.
   :jira:`3695`
 
 - If a job terminates with a named pipe in the sandbox, it will no
@@ -42,8 +42,7 @@
 
 - Fixed a bug introduced in 24.0.18 where new STARTD_CRON values weren't
   incorporated into the *condor_startd*'s internal slot ads for several
-  minutes, though the ads sent to the *condor_collector* were updated
-  immediately.
+  minutes, though those ads were sent to the *condor_collector* immediately.
   :jira:`3709`
 
 - Fixed a bug where the job lease duration was based on when the TCP

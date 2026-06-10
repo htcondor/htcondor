@@ -1491,6 +1491,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.21-1
+- Fix rare issue where condor_dagman would abort after a system reboot
+- HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
 * Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
 - Fix reporting of RemoteUserCPU in parallel universe
 - condor_ssh_to_job can now execute one-shot commands when using containers
