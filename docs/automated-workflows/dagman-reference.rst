@@ -172,7 +172,7 @@ DAG Control
 
 :dag-cmd-def:`ENV` (see :ref:`Full Description<DAG ENV cmd>`)
     Modify the DAGMan proper job's environment by explicitly setting environment
-    variables or filtering variables from the :tool:`condor_submit_dag`\ 's environment
+    variables or filtering variables from the :tool:`condor_submit_dag`\'s environment
     at submit time.
 
     .. code-block:: condor-dagman
