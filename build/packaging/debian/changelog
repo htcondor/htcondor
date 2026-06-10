@@ -1,3 +1,22 @@
+condor (25.0.11-1) stable; urgency=medium
+
+  * All changes in HTCondor 24.12.21
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 10:08:00 -0500
+
+condor (24.12.21-1) stable; urgency=medium
+
+  * Fix rare EP crash when using a custom docker wrapper script
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 09:41:00 -0500
+
+condor (24.0.21-1) stable; urgency=medium
+
+  * Fix rare issue where condor_dagman would abort after a system reboot
+  * HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 09:35:00 -0500
+
 condor (25.0.10-1) stable; urgency=medium
 
   * Add support for Ubuntu 26.04 (Resolute Raccoon)
