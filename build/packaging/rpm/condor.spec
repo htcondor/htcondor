@@ -1319,6 +1319,26 @@ fi
 # configuration
 
 %changelog
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.11.0-1
+- Prevent one user's many file transfers from halting matches for all users
+- condor_watch_q will gather DAGs that started after it did
+- condor_dag_checker can now check submit files, sub-DAGs, and scripts
+- Gangliad can now aggregate deltas of monotonically increasing values
+- condor_config_val --trace finds a definition in a complex configuration
+- Now able to set a duration to a user's running jobs ceiling
+- Multi-call binaries can now be used with DAGMan
+- Initial support for EP health checks
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.11-1
+- All changes in HTCondor 24.12.21
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.21-1
+- Fix rare EP crash when using a custom docker wrapper script
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.21-1
+- Fix rare issue where condor_dagman would abort after a system reboot
+- HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
 * Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.10.1-1
 - Several improvements to throttle and monitor DAGMan resource usage
 - Can now automatically retry a job with a larger disk request
