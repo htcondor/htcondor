@@ -208,7 +208,7 @@ description file only needs to exist just before node submission time.
 .. note::
 
     Sub-DAG submit files can be pre-generated before workflow submission via
-    :tool:`condor_submit_dag`\ 's options **-no_submit** and **-do_recurse**.
+    :tool:`condor_submit_dag`\'s options **-no_submit** and **-do_recurse**.
 
 .. sidebar:: Special Case Option Preservation
 
