@@ -1295,6 +1295,13 @@ fi
 # configuration
 
 %changelog
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.21-1
+- Fix rare EP crash when using a custom docker wrapper script
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.21-1
+- Fix rare issue where condor_dagman would abort after a system reboot
+- HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
 * Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
 - Fixed Access Point spooled X.509 job proxy refresh
 - All changes in HTCondor 24.0.20
