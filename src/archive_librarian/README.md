@@ -140,7 +140,7 @@ row 2 (pre-reset snapshot).
 
 ## Database Schema (`SavedQueries.h`)
 
-Schema version is tracked via `PRAGMA user_version` (current: 1).
+Schema version is tracked via `PRAGMA user_version` (current: 2).
 
 | Table | Purpose |
 |-------|---------|

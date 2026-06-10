@@ -128,8 +128,14 @@ bool DBHandler::initialize() {
             case 1: {
                 // v1→v2: FileName changed from basename to absolute path.
                 // Prepend the archive directory to all existing basename entries.
-                std::string dir = (fs::path(config[conf::str::ArchiveFile]).parent_path()
+                std::error_code migEc;
+                std::string dir = (fs::absolute(fs::path(config[conf::str::ArchiveFile]).parent_path(), migEc)
                                    / "").string();
+                if (migEc) {
+                    dprintf(D_ERROR, "v1→v2 migration: could not resolve absolute archive dir: %s\n",
+                            migEc.message().c_str());
+                    ROLLBACK_AND_RETURN();
+                }
                 const char* migSql = "UPDATE Files SET FileName = ? || FileName;";
                 sqlite3_stmt* migStmt = nullptr;
                 if (sqlite3_prepare_v2(db_, migSql, -1, &migStmt, nullptr) != SQLITE_OK) {
@@ -833,7 +839,7 @@ bool DBHandler::checkpointWAL() {
 
 /**
  * Recovers in-memory state from the database after a daemon restart.
- * Populates archiveFiles (keyed by full path = directory / filename) and statusData.
+ * Populates archiveFiles (keyed by absolute FileName from the DB) and statusData.
  */
 bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& archiveFiles,
                                            StatusData& statusData)

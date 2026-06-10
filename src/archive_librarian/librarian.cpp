@@ -94,7 +94,13 @@ static std::optional<ArchiveFile> makeArchiveFile(const std::string& path) {
     std::error_code ec;
     std::filesystem::path filePath(path);
 
-    result.filename = std::filesystem::absolute(filePath).string();
+    result.filename = std::filesystem::absolute(filePath, ec).string();
+    if (ec) {
+        dprintf(D_ERROR, "makeArchiveFile: could not resolve absolute path for '%s': %s\n",
+                path.c_str(), ec.message().c_str());
+        return std::nullopt;
+    }
+    ec.clear();
 
     result.size = static_cast<int64_t>(std::filesystem::file_size(filePath, ec));
     if (ec) {
