@@ -94,7 +94,13 @@ static std::optional<ArchiveFile> makeArchiveFile(const std::string& path) {
     std::error_code ec;
     std::filesystem::path filePath(path);
 
-    result.filename = filePath.filename().string();
+    result.filename = std::filesystem::absolute(filePath, ec).string();
+    if (ec) {
+        dprintf(D_ERROR, "makeArchiveFile: could not resolve absolute path for '%s': %s\n",
+                path.c_str(), ec.message().c_str());
+        return std::nullopt;
+    }
+    ec.clear();
 
     result.size = static_cast<int64_t>(std::filesystem::file_size(filePath, ec));
     if (ec) {
@@ -130,7 +136,7 @@ static std::optional<ArchiveFile> makeArchiveFile(const std::string& path) {
         return std::nullopt;
     }
 
-    auto rotTime = extractRotationTime(result.filename);
+    auto rotTime = extractRotationTime(filePath.filename().string());
     if (rotTime) {
         result.rotation_time = *rotTime;
     }
@@ -426,9 +432,9 @@ void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_fi
             // Re-key the active entry to the rotated path.
             auto node = m_archive_files.extract(activePath);
             node.key()                = path;
-            node.mapped().filename    = std::filesystem::path(path).filename().string();
+            node.mapped().filename    = path;
             node.mapped().rotation_time =
-                *extractRotationTime(node.mapped().filename);
+                *extractRotationTime(std::filesystem::path(path).filename().string());
             m_archive_files.insert(std::move(node));
 
             dbHandler_.updateFileInfo(m_archive_files[path]);
@@ -523,8 +529,7 @@ bool Librarian::initialize() {
         return false;
     }
 
-    std::string directory = std::filesystem::path(archive).parent_path().string();
-    dbHandler_.maybeRecoverStatusAndFiles(m_archive_files, statusData_, directory);
+    dbHandler_.maybeRecoverStatusAndFiles(m_archive_files, statusData_);
 
     dprintf(D_FULLDEBUG, "DBHandler initialized.\n");
 

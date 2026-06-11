@@ -201,6 +201,15 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 | **Default choice** | `safe_open_wrapper()` | Smart behavior |
 | User-specified path | `safe_open_wrapper_follow()` | Follows symlinks |
 
+### Code Commit Standards
+
+** Additional best effort standards for creating commits for this code base **
+
+1. Add reference to external JIRA ticket
+  1. Display in the form of `HTCONDOR-####: ` where #### is a ticket number (likely discovered in branch name)
+  2. Display at beginning of commit header line
+  3. Prompt user for ticket information if not discovered or to actively skip
+
 ## Testing
 
 HTCondor uses **Ornithology** test framework (`src/condor_tests/`) - a modern pytest-based system.
