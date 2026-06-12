@@ -2967,6 +2967,9 @@ void Claim::receiveUpdateCommand( int c,
 			// Success.
 			//
 			replyAd.InsertAttr( ATTR_RESULT, true );
+			ClassAd * newSlotAd = new ClassAd();
+			c_rip->publish_single_slot_ad( * newSlotAd, 0, Resource::Purpose::for_update);
+			replyAd.Insert( ATTR_SLOT_AD, newSlotAd );
 		} break;
 
 

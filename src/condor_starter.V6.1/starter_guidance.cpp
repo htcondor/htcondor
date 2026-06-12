@@ -575,8 +575,10 @@ Starter::handleJobSetupCommand(
 
 
 			bool success = false;
+			ClassAd * newSlotAd = nullptr;
 			if( version == 1 ) {
 				ClassAd replyAd;
+
 				success = s->jic->colorSlot( * colorAd, replyAd );
 				if(! success) {
 					dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
@@ -618,6 +620,19 @@ Starter::handleJobSetupCommand(
 						dPrintAd( D_ALWAYS, * catalogAd );
 						break;
 					}
+
+					// This is absurd.
+					ExprTree * e = replyAd.Lookup( ATTR_SLOT_AD );
+					if( e ) {
+						ExprTree * f = e->Copy();
+						ClassAd * c = dynamic_cast<ClassAd *>(f);
+						if( c ) {
+							if( newSlotAd ) { delete newSlotAd; }
+							newSlotAd = c;
+						} else {
+							delete f;
+						}
+					}
 				}
 			} else {
 				dprintf( D_ALWAYS, "Unknown version number in guidance; carrying on.\n" );
@@ -643,7 +658,14 @@ Starter::handleJobSetupCommand(
 
 			// For splitting this slot into a data and a job slot.
 			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
-			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd()->Copy() );
+			// This is _not_ an up-to-date copy of the machine ad.
+			// context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd()->Copy() );
+			if( newSlotAd ) {
+dprintf( D_ALWAYS, "Inserting new slot ad into context.!!\n" );
+dPrintAd( D_ALWAYS, * newSlotAd );
+				context.Insert( ATTR_SLOT_AD, newSlotAd );
+dprintf( D_ALWAYS, "... done\n" );
+			}
 
 			if( version == 1 ) {
 				// There's no released version of the shadow which actually

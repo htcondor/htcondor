@@ -800,6 +800,8 @@ class Scheduler : public Service
 
 private:
 
+	std::string system_requested_common_disk;
+
 	// Managing common transfers.
 	std::unordered_map<std::string, shadow_rec *> catalogToShadowMap;
 

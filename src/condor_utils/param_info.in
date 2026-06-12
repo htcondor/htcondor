@@ -6335,6 +6335,32 @@ default=300
 type=int
 description=How long should a common object catalog persiste after its last use?
 
+[SUM_OF_CATALOGS]
+default : @fin
+			ifthenelse(
+				RequestedCatalogs is undefined || catalogs is undefined,
+				0,
+				sum(
+					evalInEachContext(
+						   member(Catalog, RequestedCatalogs)
+						&& string(TARGET[CatalogScopeType]) == CatalogScope
+						&& split(GlobalJobID, "#")[0] == AccessPoint
+						? CatalogSize : 0,
+						catalogs
+					)
+				)
+			)
+@fin
+
+[SYSTEM_REQUESTED_COMMON_DISK]
+default : @fin
+	ifthenelse(
+		MappingMethod =!= "Copy",
+$(SUM_OF_CATALOGS),
+		0
+	)
+@fin
+
 ######
 ## add metaknobs below this banner
 ##

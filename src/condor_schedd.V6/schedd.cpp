@@ -8653,12 +8653,14 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	const char* because = "";
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
+ dprintf( D_MATCH, "Slot ad:\n" );
+dPrintAd( D_MATCH, match_ad );
 
 	// Maybe it isn't a job at all, but an OCU request
 	bool is_ocu_request = false;
 	if (job == nullptr) {
 		is_ocu_request = job_id.proc == OCU_qkey2;
-	} 
+	}
 
 	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
@@ -16638,13 +16640,21 @@ Scheduler::Init()
 
 	configGenericOsUsers();
 
+	std::string srcd;
+	ASSERT( param( srcd, "SYSTEM_REQUESTED_COMMON_DISK" ) );
+	// Make sure that SYSTEM_REQUESTED_COMMON_DISK is valid.
+	ClassAd dummy;
+	ASSERT( dummy.AssignExpr( "SYSTEM_REQUESTED_COMMON_DISK", srcd.c_str() ) );
+	ExprTree * e = dummy.Lookup( "SYSTEM_REQUESTED_COMMON_DISK" );
+	ASSERT( e != nullptr );
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+	unparser.Unparse( system_requested_common_disk, e );
+
 	first_time_in_init = false;
 }
 
-void
-Scheduler::Register()
-{
-	 // message handlers for schedd commands
+void Scheduler::Register() {
 	 daemonCore->Register_CommandWithPayload( NEGOTIATE, 
 		 "NEGOTIATE", 
 		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
@@ -21271,14 +21281,9 @@ Scheduler::post_transform_adjustments(
 		// We do this song and dance because SetAttribute() assumes that
 		// the value is already normalized.  Yes, the normalized form should
 		// be cached somewhere.
-		std::string srcd;
-		param( srcd, "SYSTEM_REQUESTED_COMMON_DISK" );
-		ClassAd dummy;
-		dummy.AssignExpr( "SYSTEM_REQUESTED_COMMON_DISK", srcd.c_str() );
-		ExprTree * e = dummy.Lookup( "SYSTEM_REQUESTED_COMMON_DISK" );
-
-		rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_COMMON_DISK, e
+		rv = SetAttribute(
+			jid.cluster, jid.proc,
+			ATTR_REQUESTED_COMMON_DISK, system_requested_common_disk.c_str()
 		);
 		if( rv != 0 ) {
 			if( errorStack ) { /* ??? */ }
