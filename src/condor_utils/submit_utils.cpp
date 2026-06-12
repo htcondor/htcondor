@@ -6030,7 +6030,10 @@ int SubmitHash::SetRequirements()
 		if (expr) {
 			double disk = 0;
 			if ( ! ExprTreeIsLiteralNumber(expr, disk) || (disk > 0.0)) {
-				answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				// Sufficiently recent versions of the starter will adjust
+				// RequestDisk to reflect common files usage, so the job
+				// shouldn't try to enforce WithinResourceLimits.
+				answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
@@ -6998,14 +7001,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "_x_common_input_catalogs", xcip );
+			job->LookupString( "CommonInputCatalogs", xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
 			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
 				xcip += "condor_container_image";
-				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+				AssignJobString( "CommonInputCatalogs", xcip.c_str() );
 			}
 		}
 

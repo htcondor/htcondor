@@ -171,13 +171,13 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
 
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY.CommonInputCatalogs":      '"A, C"',
         "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
@@ -310,21 +310,22 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     # FIXME: We should test that:
     #
     # 1.  A, B and A, C with *B != *C produce different output.
-    # 2.  A, B and A, B with *B != *C produce different output.
+    # 2.  A, B and A, B with *B != *B produce different output.
+    # [or: is rejected for being invalid]
     # 3.  A, B and A, C with *B == *C produce the same output (but
     #     transfer common files twice).
     # 4.  A, B and A, B with *B == *B produce the same output (but
-    #     transer common files once).
+    #     transfer common files once).
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
-        "MY._x_catalog_B":                  '"C1.txt, C2.txt"',
+        "MY.CommonInputCatalogs":      '"A, C"',
+        "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
 

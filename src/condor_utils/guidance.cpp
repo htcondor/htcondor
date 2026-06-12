@@ -14,6 +14,23 @@
 #include "AWSv4-impl.h"
 
 
+std::optional< std::tuple< std::string, std::string > >
+determineCIFScopeAndType( const classad::ClassAd & jobAd ) {
+    // Determine the cluster ID.
+    std::string s;
+    int clusterID = -1;
+    if(! jobAd.LookupInteger( ATTR_DAGMAN_JOB_ID, clusterID )) {
+        if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
+            return std::nullopt;
+        }
+        formatstr(s, "%d", clusterID);
+        return {{s, ATTR_CLUSTER_ID}};
+    }
+    formatstr(s, "%d", clusterID );
+    return {{s, ATTR_DAGMAN_JOB_ID}};
+}
+
+
 #define MAX_BASE_NAME_LENGTH 64
 
 //
@@ -64,13 +81,10 @@ makeCIFName(
     //
 
 
-    // Determine the cluster ID.
-    int clusterID = -1;
-    if(! jobAd.LookupInteger( ATTR_DAGMAN_JOB_ID, clusterID )) {
-        if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
-            return std::nullopt;
-        }
-    }
+    // Determine the scope.
+    auto r = determineCIFScopeAndType(jobAd);
+    if(! r) { return std::nullopt; }
+    auto [scope, type] = * r;
 
 
     // Extract the schedd's name.
@@ -104,9 +118,9 @@ makeCIFName(
     // Construct the full internal catalog name.
     std::string fullCIFName;
     // FIXME: Check the maximum base name length at submit time.
-    formatstr( fullCIFName, "%.*s@%s#%d_%s=%s",
+    formatstr( fullCIFName, "%.*s@%s#%s_%s=%s",
         MAX_BASE_NAME_LENGTH, baseName.c_str(),
-        scheddName.c_str(), clusterID, addressHash.c_str(), contentHash.c_str()
+        scheddName.c_str(), scope.c_str(), addressHash.c_str(), contentHash.c_str()
     );
     return fullCIFName;
 }

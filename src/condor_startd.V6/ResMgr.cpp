@@ -873,6 +873,10 @@ ResMgr::init_resources( void )
 	// register the "#coloring" namespace for extra ads for use by Starters
 	auto * coloringBaseAd = new StartdNamedClassAd(COLORING_NAMESPACE, nullptr, nullptr);
 	adlist_register(coloringBaseAd);
+
+	// register the '#catalog' namespace for extra ads for use by Starters
+	auto * catalogBaseAd = new StartdNamedClassAd(CATALOG_NAMESPACE, nullptr, nullptr);
+	adlist_register(catalogBaseAd);
 }
 
 

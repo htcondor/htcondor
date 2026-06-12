@@ -60,7 +60,7 @@ def held_cif_job(the_condor, path_to_sleep):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"debug://error/"',
 
         "leave_in_queue":           True,
