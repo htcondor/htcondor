@@ -1,5 +1,13 @@
 *** 25.12.0 features
 
+- :tool:`condor_userprio` ``-setfloor`` and ``-setfactor`` now accept a
+  ``-duration`` option to install a time-limited *lease* on the floor or
+  priority factor: the prior value is automatically restored after the
+  given number of seconds. Leases are persistent across
+  *condor_negotiator* restarts. New ``-cancelfloorlease`` and
+  ``-cancelfactorlease`` options cancel an in-effect lease. This
+  mirrors the existing ``-setceiling`` lease support.
+  :jira:`3764`
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
   Point's :macro:`HISTORY` archive.
