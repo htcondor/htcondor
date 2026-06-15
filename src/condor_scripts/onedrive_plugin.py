@@ -9,7 +9,7 @@ download. As of 06/2026 the maximum path is 400 characters (as
 determined by a HTTP 409 error message), so uploading something like
 1/2/3/.../117/118/ is possible, but when trying to recursively
 download you can't get deeper than 1/2/.../26. A Microsoft employee
-commented on forum post that the number of '/' chracters seems to be
+commented on forum post that the number of '/' characters seems to be
 limited to around 30, and there are /'s before the API path begins
 that count towards the 30.
 
@@ -67,7 +67,7 @@ Usage: {0} [-upload] -infile <input-filename> -outfile <output-filename>
        {0} -classad
 
 Options:
-  -classad                    Print a ClassAd containing the capablities of
+  -classad                    Print a ClassAd containing the capabilities of
                               this file transfer plugin.
   -infile <input-filename>    Input ClassAd file
   -outfile <output-filename>  Output ClassAd file
@@ -178,7 +178,7 @@ def format_error(error):
 
 
 def get_error_dict(error, url=''):
-    '''Return a ditionary of the failure, including URL and formatted
+    '''Return a dictionary of the failure, including URL and formatted
     error message'''
     error_string = format_error(error)
     error_dict = {
@@ -570,7 +570,7 @@ class OneDrivePlugin:
         return transfer_stats
 
     def upload_file_chunked_helper(self, url, local_file_path):
-        '''The man loop of the chunked file upload. Returns the final
+        '''The main loop of the chunked file upload. Returns the final
         response or throws the HTTP exception'''
 
         file_size = os.stat(local_file_path).st_size
@@ -624,10 +624,7 @@ class OneDrivePlugin:
         connection_start_time = time.time()
 
         # initialize the session
-        try:
-            session = self.api_call(endpoint, 'POST', data=data)
-        except requests.exceptions.HTTPError as e:
-            raise e
+        session = self.api_call(endpoint, 'POST', data=data)
 
         # upload the file in parts defined by the session
         upload_url = session['uploadUrl']
@@ -675,36 +672,45 @@ def main():
 
                 running_plugins = {}
                 for ad in infile_ads:
-                    token_name = get_token_name(ad['Url'])
-                    token_path = get_token_path(token_name)
+                    try:
+                        token_name = get_token_name(ad['Url'])
+                        token_path = get_token_path(token_name)
 
-                    # Use existing plugin objects if possible because they have
-                    # cached object ids, which make path lookups much faster in
-                    # the case of multiple file downloads/uploads.
-                    if token_path in running_plugins:
-                        onedrive = running_plugins[token_path]
-                    else:
-                        onedrive = OneDrivePlugin(token_path)
-                        running_plugins[token_path] = onedrive
+                        # Use existing plugin objects if possible because they
+                        # have cached object ids, which make path lookups much
+                        # faster in the case of multiple file transfers.
+                        if token_path in running_plugins:
+                            onedrive = running_plugins[token_path]
+                        else:
+                            onedrive = OneDrivePlugin(token_path)
+                            running_plugins[token_path] = onedrive
 
-                    if not args['upload']:
-                        outfile_dict = \
-                            onedrive.download_file(ad['Url'],
-                                                   ad['LocalFileName'])
-                    else:
-                        outfile_dict = \
-                            onedrive.upload_file(ad['Url'],
-                                                 ad['LocalFileName'])
+                        if not args['upload']:
+                            outfile_dict = \
+                                onedrive.download_file(ad['Url'],
+                                                       ad['LocalFileName'])
+                        else:
+                            outfile_dict = \
+                                onedrive.upload_file(ad['Url'],
+                                                     ad['LocalFileName'])
 
-                    outfile.write(str(classad.ClassAd(outfile_dict)))
+                        outfile.write(str(classad.ClassAd(outfile_dict)))
 
-    except (OSError, requests.exceptions.RequestException) as err:
-        try:
-            with open(args['outfile'], 'a', encoding='utf8') as outfile:
-                outfile_dict = get_error_dict(err, url=ad['Url'])
-                outfile.write(str(classad.ClassAd(outfile_dict)))
-        finally:
-            sys.exit(1)
+                    except Exception as err:
+                        # Record why this file failed, then exit non-zero per
+                        # the plugin design doc.  Catch broadly so the failure
+                        # is always reported in the outfile.
+                        try:
+                            outfile_dict = get_error_dict(err, url=ad['Url'])
+                            outfile.write(str(classad.ClassAd(outfile_dict)))
+                        except Exception:
+                            pass
+                        sys.exit(1)
+
+    except Exception:
+        # Couldn't open the outfile, parse the infile, etc.  We have no
+        # reliable way to report this, so just exit non-zero.
+        sys.exit(1)
 
 
 if __name__ == '__main__':
