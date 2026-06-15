@@ -20,6 +20,7 @@ Build-Depends: cmake (>= 3.20),
                dh-python,
 #if !defined(BOOKWORM) && !defined(JAMMY)
                dh-sequence-builtusing,
+               dh-sequence-installsysusers,
 #endif
                libc-dev-bin,
                libcurl4-openssl-dev,
@@ -62,8 +63,7 @@ Rules-Requires-Root: no
 
 Package: condor
 Architecture: any
-Depends: adduser,
-         libdate-manip-perl,
+Depends: libdate-manip-perl,
          python3,
          python3-cryptography,
          python3-requests,
