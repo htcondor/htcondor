@@ -490,7 +490,7 @@ IOProcess::stdinPipeHandler()
 				size_t num_commands = 0;
 
 				num_commands = allArcCommands(arc_commands);
-				num_commands += 12;
+				num_commands += 13;
 
 				std::vector<const char *> commands(num_commands);
 				size_t i = 0;
