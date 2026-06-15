@@ -4774,7 +4774,7 @@ default : @fin
 @fin
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1023})
+default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1024})
 version=24.12.18
 type=string
 description=Default modification to a disk resource request
