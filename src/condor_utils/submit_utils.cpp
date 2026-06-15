@@ -6030,10 +6030,14 @@ int SubmitHash::SetRequirements()
 		if (expr) {
 			double disk = 0;
 			if ( ! ExprTreeIsLiteralNumber(expr, disk) || (disk > 0.0)) {
-				// Sufficiently recent versions of the starter will adjust
-				// RequestDisk to reflect common files usage, so the job
-				// shouldn't try to enforce WithinResourceLimits.
-				answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+				if( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+					// Sufficiently recent versions of the starter will adjust
+					// RequestDisk to reflect common files usage, so the job
+					// shouldn't try to enforce WithinResourceLimits.
+					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+				} else {
+					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				}
 			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
