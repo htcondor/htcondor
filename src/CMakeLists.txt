@@ -18,8 +18,8 @@
 
 
 add_subdirectory(annex)
-add_subdirectory(archive_librarian)
 add_subdirectory(arc_gahp)
+add_subdirectory(archive_librarian)
 add_subdirectory(azure_gahp)
 add_subdirectory(bash_completion.d)
 add_subdirectory(blahp)
@@ -73,9 +73,9 @@ add_subdirectory(ec2_gahp)
 add_subdirectory(gangliad)
 add_subdirectory(gce_gahp)
 add_subdirectory(gpu)
+add_subdirectory(placementd)
 add_subdirectory(python-bindings)
 add_subdirectory(rvgahp)
-add_subdirectory(placementd)
 
 #if (BUILD_TESTING AND NOT WINDOWS)
 if (BUILD_TESTING)
