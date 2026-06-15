@@ -1181,7 +1181,6 @@ UniShadow::before_common_file_transfer(
 bool
 UniShadow::after_common_file_transfer(
     const ClassAd & request,
-
     const std::string & cifName,
     std::string & stagingDir,
     long long & size
