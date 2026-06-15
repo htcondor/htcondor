@@ -1836,13 +1836,33 @@ const char * MachAttributes::withinLimitsExpression()
 				;
 
 			// This one assumes job._condor_Request* attributes never present
-			//  and job.Request* is always set to some value.  If 
+			//  and job.Request* is always set to some value.  If
 			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
-			static const char *climit_simple = 
+
+			static const char *climit_part_one =
 				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
 				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
-				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
+				"MY.Disk > 0"
 				;
+			static const char *climit_part_two =
+				"TARGET.RequestDisk <= MY.Disk"
+				;
+			std::string catalog_space = param( "CATALOG_SPACE" );
+
+			static std::string climit_s;
+			if(! catalog_space.empty()) {
+				formatstr(
+				climit_s, "%s && (TARGET.RequestDisk - %s) <= MY.disk",
+				climit_part_one,
+				catalog_space.c_str()
+				);
+			} else {
+				formatstr(
+					climit_s, "%s && %s",
+					climit_part_one,
+					climit_part_two
+				);
+			}
 
 			// We can build the WithinResourceLimits expression with or without the
 			// JOB._condor_request* sub expressions.  We did it with them for many years
@@ -1852,7 +1872,7 @@ const char * MachAttributes::withinLimitsExpression()
 			if (job_has_request_attrs) {
 				m_within_limits_expr_str = climit_full;
 			} else {
-				m_within_limits_expr_str = climit_simple;
+				m_within_limits_expr_str = climit_s.c_str();
 			}
 
 			const auto& resmap = m_machres_map;
