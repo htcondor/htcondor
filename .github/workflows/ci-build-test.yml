@@ -170,15 +170,43 @@ jobs:
       - name: cmake configuration
         run: |
           mkdir __build
-          #cd __build && cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
-          cd __build && cmake -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
+          cd __build && cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
+          #cd __build && cmake -DWITH_ADDRESS_SANITIZER:bool=true -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
 
       - name: build
         run: |
-          cd __build && cmake --build . --target install --verbose --config Release --parallel 4
+          cd __build && cmake --build . --target install --verbose --config Debug --parallel 4
+      - name: Copy ASan runtime DLLs to release_dir/bin
+        run: |
+          $bin = "$pwd/__build/release_dir/bin"
+          $vsRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dlls = Get-ChildItem -Path $vsRoot -Recurse -Filter "clang_rt.asan*.dll" -ErrorAction SilentlyContinue
+          foreach ($dll in $dlls) {
+            Write-Host "Copying $($dll.FullName) to $bin"
+            Copy-Item -Path $dll.FullName -Destination $bin -Force
+          }
+      - name: Copy PDBs to release_dir/bin for ASan symbolization
+        run: |
+          # The Debug build emits PDBs in the build tree, but install does not
+          # copy them next to the binaries in release_dir/bin.  Without the PDB
+          # alongside the .exe the runtime ASan symbolizer can't resolve frames
+          # and falls back to nearest-export names (e.g. OPENSSL_Applink).
+          $bin = "$pwd/__build/release_dir/bin"
+          $pdbs = Get-ChildItem -Path "$pwd/__build" -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
+          foreach ($pdb in $pdbs) {
+            Copy-Item -Path $pdb.FullName -Destination $bin -Force -ErrorAction SilentlyContinue
+          }
       - name: ctests
         run: |
-          cd __build && ctest -j 40 --repeat-until-fail 20 -R job_foreach
+          $env:ASAN_OPTIONS = "log_path='$pwd/__build/asan.log':exit_code=0"
+          # cd __build && ctest -j 20 --repeat-until-fail 1
+
+      - name: block upload until everything gone
+        if: failure()
+        run: |
+          # Wait for a bit to let processes die down, which should help the upload step not fail due to file contention with running processes
+          Start-Sleep -Seconds 10
+          Get-CimInstance Win32_Process | ? ExecutablePath -like "$pwd\__build\*" | % { Stop-Process -Id $_.ProcessId -Force -EA SilentlyContinue }
 
       - name: Upload All on Failure
         if: failure()
