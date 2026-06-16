@@ -8,6 +8,12 @@
   ``-cancelfactorlease`` options cancel an in-effect lease. This
   mirrors the existing ``-setceiling`` lease support.
   :jira:`3764`
+- The OneDrive file transfer plugin now supports uploading files and
+  directories, and downloading entire directories recursively, in
+  addition to downloading individual files. Large files are uploaded in
+  chunks via an upload session. Thanks to Zach McGrew for this contribution.
+  :jira:`3792`
+
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
   Point's :macro:`HISTORY` archive.
