@@ -277,13 +277,20 @@ my $execute = sub {
 
 
 		print( "Waiting for the last long-running job to exceed its retirement time...\n" );
-		sleep( 60 + 5 );
-		for( my $i = 0; $i < 55; $i += 5 ) {
-			sleep( 5 );
+		# Job 2 (the last 'original' job) ignores SIGTERM and only leaves its
+		# slot once its MaxJobRetirementTime expires during draining.  When it
+		# is finally evicted it returns to the queue as Idle (its Requirements
+		# prevent a restart), so poll its JobStatus and stop the moment it is no
+		# longer Running (2) rather than waiting a fixed, worst-case amount of
+		# time.  (The old code slept 65s and then polled for the job to *leave*
+		# the queue -- which never happens for an evicted-but-idle job -- so it
+		# always burned the full ~120s regardless of how fast the startd ran.)
+		for( my $i = 0; $i < 120; ++$i ) {
 			my @output;
 			runCondorToolCarefully( \@output, 2, { emit_output => 0 },
-				undef, 'condor_q', "${clusterID}.2", '-af', 'Cluster' );
-			if( (! defined($output[0])) || $output[0] eq "" ) { last; }
+				undef, 'condor_q', "${clusterID}.2", '-af', 'JobStatus' );
+			if( (! defined($output[0])) || $output[0] eq "" || $output[0] != 2 ) { last; }
+			sleep( 1 );
 		}
 
 		print( "Waiting for job completion notice...\n" );

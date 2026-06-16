@@ -275,10 +275,9 @@ We recommend that you select a single machine within an HTCondor pool to
 act as the dedicated scheduler. This becomes the machine from upon which
 all users submit their parallel universe jobs. The perfect choice for
 the dedicated scheduler is the single, front-end machine for a dedicated
-cluster of compute nodes. For the pool without an obvious choice for a
-access point, choose a machine that all users can log into, as well as
+cluster of compute nodes. For the pool without an obvious choice for an access point, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
-other resource requirements for a access point apply to this machine,
+other resource requirements for an access point apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
 See :ref:`admin-manual/logging:directories` for more information.
 
@@ -571,7 +570,7 @@ to set timing and polling intervals.
 Performance Tuning of the AP
 ----------------------------
 
-Of the three roles (AP, CM, EP) in a HTCondor system, the AP is the most common
+Of the three roles (AP, CM, EP) in an HTCondor system, the AP is the most common
 place performance tuning is done.  The CM is mostly stateless, and can
 typically scale out to very large pools without much additional work.  The EP
 daemons aren't resource intensive.  However, as the AP stores the state of all
@@ -658,7 +657,7 @@ Using third party (url / plugin) transfers when able
 HTCondor can transfer user's sandboxes to the EP in many ways.  The default
 method, called HTCondor file transfer, or "cedar" file transfer, copies files
 from the AP to the EP.  Obviously, this uses cpu, disk and network bandwidth on
-the AP.  To the degree possible, changing large input file file transfers from
+the AP.  To the degree possible, changing large input file transfers from
 cedar, to http transfers from some third party server, moves the load off of
 the AP, and onto an http server.  If one http server isn't sufficient there are
 many methods for scaling http servers to handle additional load.
@@ -740,8 +739,7 @@ In order to conserve storage space, HTCondor defaults to keeping only one
 HTCondor will keep the newly-uploaded checkpoint, the immediately-previous
 checkpoint, and remove (or schedule the removal of) all the rest (of which
 there will normally be only one).  Note that this means self-checkpoint jobs
-which use third-party storage will need there
-three times the storage space of a single checkpoint: one for the current
+which use third-party storage will need three times the storage space of a single checkpoint: one for the current
 checkpoint, one for the previous checkpoint, and one for the checkpoint
 currently being uploaded.  You can adjust the number of checkpoints to keep
 by setting :macro:`DEFAULT_NUM_EXTRA_CHECKPOINTS`.
@@ -749,7 +747,7 @@ by setting :macro:`DEFAULT_NUM_EXTRA_CHECKPOINTS`.
 HTCondor stores this extra checkpoint by default to guard against corrupted
 checkpoints: it computes and records the checksum of every file uploaded as
 part of a checkpoint and computes and compares the checksum of every file
-download from a checkpoint; if any don't match, the checkpoint is considered
+downloaded from a checkpoint; if any don't match, the checkpoint is considered
 invalid and deleted, and the job is rescheduled (and will resume from the
 "extra" checkpoint(s), if one remains available).
 
@@ -759,11 +757,11 @@ Archive Librarian
 -----------------
 
 The archive librarian is a daemon that makes an SQLite3 database indexing
-historical job records stored within an Access Points :macro:`HISTORY` file.
-The purpose of the librarian's database are:
+historical job records stored within an Access Point's :macro:`HISTORY` file.
+The purpose of the librarian's database is:
 
-1. Keep a smaller amount metadata about what jobs have completed for longer.
-2. To allow clients tools to quickly locate a full archived record assuming
+1. Keep a smaller amount of metadata about what jobs have completed for longer.
+2. To allow client tools to quickly locate a full archived record assuming
    the associated file has not been rotated out.
 
 The following tools will automatically utilize the librarian in certain cases
@@ -785,7 +783,7 @@ when the Access Point is configured with :config:`USING_LIBRARIAN = True`
 
     The **Disable** section denotes how to disable the use of the librarian
     database even when enabled. This may be useful for cases of jobs that have
-    recently finished but are not index yet and thus appear to not exist in
+    recently finished but are not indexed yet and thus appear to not exist in
     the history.
 
 Update Process
@@ -833,7 +831,7 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
            * - ``FileName``
              - TEXT
              - —
-             - Base filename of the archive (e.g. ``history`` or ``history.20240101T120000``).
+             - Absolute path of the archive file (e.g. ``/var/lib/condor/history`` or ``/var/lib/condor/history.20240101T120000``).
            * - ``FileInode``
              - INTEGER
              - —

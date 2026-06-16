@@ -464,12 +464,12 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
 
     # Wait for them all to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
@@ -485,11 +485,11 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
     # Wait for them to finish.  Container jobs (Singularity startup/teardown)
     # need more headroom than plain shell jobs.
     assert job_handle_a.wait(
-        timeout=120,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
     assert job_handle_b.wait(
-        timeout=120,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
 

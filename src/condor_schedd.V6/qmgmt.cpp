@@ -4574,6 +4574,7 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=nullptr)
 }
 
 
+#if 0
 int
 SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
 {
@@ -4589,6 +4590,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 
 	return 0;
 }
+#endif
 
 int
 SetSecureAttributeInt(const JobQueueKey & key, const char *attr_name, long long int_value, SetAttributeFlags_t flags)
@@ -4746,7 +4748,7 @@ int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const 
 // return >0 : accept, apply change and return success to client
 // TODO formalize the return type with an enum?
 int
-ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags, CondorError *err)
+ModifyAttrCheck(const JOB_ID_KEY &key, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags, CondorError *err)
 {
 	JobQueueJob    *job = nullptr;
 
@@ -4948,7 +4950,7 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 }
 
 int
-SetAttribute(int cluster_id, int proc_id, const char *attr_name,
+SetAttribute(const JOB_ID_KEY & jid, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags,
 			 CondorError *err)
 {
@@ -4959,6 +4961,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	std::string err_str;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
+	int cluster_id = jid.cluster;
+	int proc_id = jid.proc;
 	IdToKey(cluster_id,proc_id,key);
 
 	int rc = ModifyAttrCheck(key, attr_name, attr_value, flags, err);
@@ -7583,13 +7587,10 @@ AbortTransactionAndRecomputeClusters()
 
 
 int
-GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *val)
+GetAttributeFloat(const JOB_ID_KEY & key, const char *attr_name, double *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf	key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7614,13 +7615,10 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *va
 
 
 int
-GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long long *val)
+GetAttributeInt(const JOB_ID_KEY & key, const char *attr_name, long long *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7643,11 +7641,12 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long long *v
 	return -1;
 }
 
+#if 0
 int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long *val)
 {
 	long long ll_val = *val;
-	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	int rc = GetAttributeInt({cluster_id, proc_id}, attr_name, &ll_val);
 	if (rc >= 0) {
 		*val = (long)ll_val;
 	}
@@ -7658,21 +7657,19 @@ int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	long long ll_val = *val;
-	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	int rc = GetAttributeInt({cluster_id, proc_id}, attr_name, &ll_val);
 	if (rc >= 0) {
 		*val = (int)ll_val;
 	}
 	return rc;
 }
+#endif
 
 int
-GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, bool *val)
+GetAttributeBool(const JOB_ID_KEY & key, const char *attr_name, bool *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7700,16 +7697,12 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, bool *val)
 // AttrList::LookupString() which allocates a new string. This is a good
 // thing, since it doesn't require a buffer that we could easily overflow.
 int
-GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
-					   char **val )
+GetAttributeStringNew( const JOB_ID_KEY & key, const char *attr_name, char **val )
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
 
 	*val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7738,14 +7731,10 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 // the lookup succeeds in the job queue, 1 if it succeeds in the current
 // transaction; val is set to the empty string on failure
 int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
-                    std::string &val )
+GetAttributeString( const JOB_ID_KEY & key, const char *attr_name, std::string &val )
 {
 	ClassAd	*ad = nullptr;
 	char	*attr_val = nullptr;
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7774,16 +7763,13 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
-GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
+GetAttributeExprNew(const JOB_ID_KEY & key, const char *attr_name, char **val)
 {
 	ClassAd		*ad = nullptr;
 	ExprTree	*tree = nullptr;
 	char		*attr_val = nullptr;
 
 	*val = nullptr;
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		*val = attr_val;
@@ -7807,6 +7793,7 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 }
 
 
+// this is only used by qmgr_job_updater
 int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
@@ -7815,8 +7802,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	const char	*name = nullptr;
 	ExprTree 	*expr = nullptr;
 
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
+	JOB_ID_KEY key{cluster_id,proc_id};
 
 	if(!JobQueue->LookupClassAd(key, ad)) {
 		errno = ENOENT;
@@ -7847,11 +7833,8 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 
 
 int
-DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
+DeleteAttribute(const JOB_ID_KEY & key, const char *attr_name)
 {
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
-
 	int rc = ModifyAttrCheck(key, attr_name, nullptr, SetAttribute_Delete, nullptr);
 	if ( rc <= 0 ) {
 		return rc;

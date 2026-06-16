@@ -115,7 +115,7 @@ bool DBHandler::initialize() {
         ROLLBACK_AND_RETURN();
     }
 
-    constexpr int SCHEMA_VERSION = 1;
+    constexpr int SCHEMA_VERSION = 2;
 
     if (version > SCHEMA_VERSION) {
         dprintf(D_ALWAYS, "Database schema version (%d) is newer than my version (%d).\n",
@@ -125,6 +125,33 @@ bool DBHandler::initialize() {
         std::string version_stmt;
         formatstr(version_stmt, "PRAGMA user_version = %d;", SCHEMA_VERSION);
         switch (version) {
+            case 1: {
+                // v1→v2: FileName changed from basename to absolute path.
+                // Prepend the archive directory to all existing basename entries.
+                std::error_code migEc;
+                std::string dir = (fs::absolute(fs::path(config[conf::str::ArchiveFile]).parent_path(), migEc)
+                                   / "").string();
+                if (migEc) {
+                    dprintf(D_ERROR, "v1→v2 migration: could not resolve absolute archive dir: %s\n",
+                            migEc.message().c_str());
+                    ROLLBACK_AND_RETURN();
+                }
+                const char* migSql = "UPDATE Files SET FileName = ? || FileName;";
+                sqlite3_stmt* migStmt = nullptr;
+                if (sqlite3_prepare_v2(db_, migSql, -1, &migStmt, nullptr) != SQLITE_OK) {
+                    dprintf(D_ERROR, "v1→v2 migration prepare failed: %s\n", sqlite3_errmsg(db_));
+                    ROLLBACK_AND_RETURN();
+                }
+                std::ignore = sqlite3_bind_text(migStmt, 1, dir.c_str(), -1, SQLITE_TRANSIENT);
+                if (sqlite3_step(migStmt) != SQLITE_DONE) {
+                    dprintf(D_ERROR, "v1→v2 migration failed: %s\n", sqlite3_errmsg(db_));
+                    std::ignore = sqlite3_finalize(migStmt);
+                    ROLLBACK_AND_RETURN();
+                }
+                std::ignore = sqlite3_finalize(migStmt);
+                dprintf(D_ALWAYS, "Database migrated from schema v1 to v2 (FileName → absolute path).\n");
+                [[fallthrough]];
+            }
             case 0: [[fallthrough]];
             default:
                 if (sqlite3_exec(db_, version_stmt.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
@@ -812,11 +839,10 @@ bool DBHandler::checkpointWAL() {
 
 /**
  * Recovers in-memory state from the database after a daemon restart.
- * Populates archiveFiles (keyed by full path = directory / filename) and statusData.
+ * Populates archiveFiles (keyed by absolute FileName from the DB) and statusData.
  */
 bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& archiveFiles,
-                                           StatusData& statusData,
-                                           const std::string& directory)
+                                           StatusData& statusData)
 {
     const char* checkSql = "SELECT COUNT(*) FROM (SELECT 1 FROM Files LIMIT 1);";
     sqlite3_stmt* stmt = nullptr;
@@ -915,8 +941,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         file.size            = -1;
         file.last_modified   = 0;
 
-        std::string path = (fs::path(directory) / file.filename).string();
-        archiveFiles[path] = std::move(file);
+        archiveFiles[file.filename] = std::move(file);
     }
     std::ignore = sqlite3_finalize(stmtF);
 

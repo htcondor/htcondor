@@ -12341,6 +12341,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	std::string cmd_secret;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
+	bool success = false;
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
@@ -12767,11 +12768,18 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 
 	retval =  add_shadow_rec(pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1, cmd_secret.empty() ? nullptr : cmd_secret.c_str());
 
+	if (retval) { success = true; }
+
 wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
 	}
+
+	if ( ! success) {
+		setJobCoolDown(job_id, SchedUniverseCoolDownDuration);
+	}
+
 	// now close those open fds - we don't want to leak them if there was an error
 	for (i=0 ; i < 3; i++ ) {
 		if (inouterr[i] != -1) {

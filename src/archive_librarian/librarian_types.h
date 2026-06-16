@@ -9,7 +9,7 @@
 
 struct ArchiveFile {
     std::unique_ptr<ArchiveReader> reader{};   // Forward reader; open until fully read then reset
-    std::string filename{};                    // Basename only (e.g. "history" or "history.20241215T143022")
+    std::string filename{};                    // Absolute path of the archive file (e.g. "/var/lib/condor/history")
     std::string hash{};                        // FNV-1a hash of first record — file identity fingerprint
     std::string rotation_time{};               // Rotation timestamp string (empty when file is still active)
     int64_t     size{-1};                      // File size in bytes at discovery time

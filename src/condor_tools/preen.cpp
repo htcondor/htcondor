@@ -495,12 +495,22 @@ check_spool_dir()
 		"SCHEDD_DAEMON_HISTORY",
 		"COLLECTOR_PERSISTENT_AD_LOG",
 		"LVM_BACKING_FILE",
+		"LIBRARIAN_DATABASE",
 	};
 	//Param the knobs for the file name and add to data structure
 	std::deque<std::string> config_defined_files;
 	for(const auto &knob : valid_knobs) {
 		auto_free_ptr option(param(knob.c_str()));
-		if (option) { config_defined_files.push_back(condor_basename(option)); }
+		if (option) {
+			std::string file = condor_basename(option);
+			config_defined_files.push_back(file);
+
+			if (knob == "LIBRARIAN_DATABASE") {
+				// Extra librarian files for write ahead logging
+				config_defined_files.push_back(file + "-wal");
+				config_defined_files.push_back(file + "-shm");
+			}
+		}
 	}
 
 	well_known_list = split(ValidSpoolFiles);

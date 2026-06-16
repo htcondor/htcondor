@@ -260,8 +260,7 @@ These macros control the :tool:`condor_master`.
 
     ``$(MASTER_<name>_BACKOFF_CONSTANT)`` is the daemon-specific form of
     :macro:`MASTER_BACKOFF_CONSTANT`; if this daemon-specific macro is not
-    defined for a specific daemon, the non-daemon-specific value will
-    used.
+    defined for a specific daemon, the non-daemon-specific value will be used.
 
 :macro-def:`MASTER_BACKOFF_FACTOR`
     .. faux-definition::
@@ -276,8 +275,7 @@ These macros control the :tool:`condor_master`.
 
     ``$(MASTER_<name>_BACKOFF_FACTOR)`` is the daemon-specific form of
     :macro:`MASTER_BACKOFF_FACTOR`; if this daemon-specific macro is not
-    defined for a specific daemon, the non-daemon-specific value will
-    used.
+    defined for a specific daemon, the non-daemon-specific value will be used.
 
 :macro-def:`MASTER_BACKOFF_CEILING`
     .. faux-definition::
@@ -294,8 +292,7 @@ These macros control the :tool:`condor_master`.
 
     ``$(MASTER_<name>_BACKOFF_CEILING)`` is the daemon-specific form of
     :macro:`MASTER_BACKOFF_CEILING`; if this daemon-specific macro is not
-    defined for a specific daemon, the non-daemon-specific value will
-    used.
+    defined for a specific daemon, the non-daemon-specific value will be used.
 
 :macro-def:`MASTER_RECOVER_FACTOR`
     .. faux-definition::
@@ -309,12 +306,11 @@ These macros control the :tool:`condor_master`.
 
     ``$(MASTER_<name>_RECOVER_FACTOR)`` is the daemon-specific form of
     :macro:`MASTER_RECOVER_FACTOR`; if this daemon-specific macro is not
-    defined for a specific daemon, the non-daemon-specific value will
-    used.
+    defined for a specific daemon, the non-daemon-specific value will be used.
 
 When a daemon crashes, :tool:`condor_master` will restart the daemon after a
 delay (a back off). The length of this delay is based on how many times
-it has been restarted, and gets larger after each crashes. The equation
+it has been restarted, and gets larger after each crash. The equation
 for calculating this backoff time is given by:
 
 .. math::
@@ -458,7 +454,7 @@ probably will not want to change them for any reason.
     HTCondor is run under another job execution system.
 
 :macro-def:`CGROUP_ALL_DAEMONS`
-    A boolean that default to false.  When true, each daemon will
+    A boolean that defaults to false.  When true, each daemon will
     be put into its own cgroup. This knob requires a restart to take
     effect.
 

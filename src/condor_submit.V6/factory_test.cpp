@@ -22,11 +22,12 @@
 #include "condor_debug.h"
 
 #define FACTORY_TEST 1
-#define SetAttributeInt FakeSetAttrInt
-#define GetAttributeInt FakeGetAttrInt
-#define SetSecureAttributeInt FakeSetAttrInt
-int FakeSetAttrInt(int cluster_id, int proc_id, const char *attr, int value, unsigned int flags);
-int FakeGetAttrInt(int cluster_id, int proc_id, char const *attr, int *value);
+struct JOB_ID_KEY;
+int FakeSetAttrInt(const JOB_ID_KEY & jid, const char *attr, int64_t value, unsigned int flags);
+int FakeGetAttrInt(const JOB_ID_KEY & jid, char const *attr, int *value);
+// these defines intercept Get and SetAttributeInt calls used by qmgmt_factory.cpp
+#define HookSetAttrInt FakeSetAttrInt
+#define HookGetAttrInt FakeGetAttrInt
 #include "../condor_schedd.V6/qmgmt_factory.cpp"
 
 #include "subsystem_info.h"
@@ -48,18 +49,18 @@ int FakeGetAttrInt(int cluster_id, int proc_id, char const *attr, int *value);
 
 class JobQueueCluster * ClusterObj = nullptr;
 
-int FakeSetAttrInt(int cluster_id, int /*proc_id*/, const char *attr, int value, unsigned int /*flags*/)
+int FakeSetAttrInt(const JOB_ID_KEY & jid, const char *attr, int64_t value, unsigned int /*flags*/)
 {
-	if (ClusterObj && (cluster_id == ClusterObj->jid.cluster)) {
+	if (ClusterObj && (jid.cluster == ClusterObj->jid.cluster)) {
 		ClusterObj->Assign(attr, value);
 		return 0;
 	}
 	return -1;
 }
 
-int FakeGetAttrInt(int cluster_id, int /*proc_id*/, char const *attr, int *value)
+int FakeGetAttrInt(const JOB_ID_KEY & jid, char const *attr, int *value)
 {
-	if (ClusterObj && (cluster_id == ClusterObj->jid.cluster)) {
+	if (ClusterObj && (jid.cluster == ClusterObj->jid.cluster)) {
 		ClusterObj->LookupInteger(attr, *value);
 		return 0;
 	}

@@ -18,13 +18,13 @@ has.
     The integer number of seconds between consecutive sending of metrics
     to Ganglia. Daemons update the *condor_collector* every 300
     seconds, and the Ganglia heartbeat interval is 20 seconds.
-    Therefore, multiples of 20 between 20 and 300 makes sense for this
+    Therefore, multiples of 20 between 20 and 300 make sense for this
     value. Negative values inhibit sending data to Ganglia. The default
     value is 60.
 
 :macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
     An integer value representing the minimum DMAX value for all metrics.
-    Where DMAX is the number number of seconds without updating that
+    Where DMAX is the number of seconds without updating that
     a metric will be kept before deletion. This value defaults to ``86400``
     which is equivalent to 1 day. This value will be overridden by a
     specific metric defined ``Lifetime`` value.
@@ -56,7 +56,7 @@ has.
     A boolean value that, when ``False``, causes metrics from execute
     node daemons to not be published. Aggregate values from these
     machines will still be published. The default value is ``True``.
-    This option is useful for pools such that use glidein, in which it
+    This option is useful for pools that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
 
 :macro-def:`MONITOR_MULTIPLE_COLLECTORS`

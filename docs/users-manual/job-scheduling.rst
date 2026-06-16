@@ -7,7 +7,7 @@ Priorities and Preemption
 HTCondor has two independent priority controls: job priorities and user
 priorities.
 
-The HTCondor system calculate a "fair share" of machine slots to allocate to each user.
+The HTCondor system calculates a "fair share" of machine slots to allocate to each user.
 Whether each user can use all of these slots depends on a number of factors. For example,
 if the user's jobs only match to a small number of machines, perhaps
 the user will be running fewer jobs than allocated.  This fair share is based on the
@@ -19,9 +19,9 @@ should be matched and run on the fair share, this is based on the *job priority*
 Job Priority
 ''''''''''''
 
-Job priorities allow a user to sort their own jobs to determine which are
-tried to be run first.  A job priority can be any integer: larger values 
-denote better priority.  So, 0 is a better job priority than -3, and 6 is a better than 5.
+Job priorities allow a user to sort their own jobs to determine which
+should be tried first.  A job priority can be any integer: larger values
+denote better priority.  So, 0 is a better job priority than -3, and 6 is better than 5.
 :index:`condor_prio<single: condor_prio; HTCondor commands>`
 
 .. note::
@@ -43,7 +43,7 @@ If no priority is set, the default is 0. See the Dagman section for ways that da
 can automatically set the priority of any or all jobs in a dag.
 
 Each job can be given a distinct priority. For an
-already queued job, its priority may be changed with the :tool:`condor_prio`.
+already queued job, its priority may be changed with the :tool:`condor_prio`
 command.  This sets the value
 of job ClassAd attribute :ad-attr:`JobPrio`.  :tool:`condor_prio` can be called on a running
 job, but lowering a job priority will not trigger eviction of the running 
@@ -61,8 +61,8 @@ User priority
 :index:`of a user<single: of a user; priority>`
 
 Slots are allocated to users based upon user priority. A lower
-numerical value for user priority means proportionally better priority, 
-so a user with priority 5 will be allocated 10 times the resources as
+numerical value for user priority means proportionally better priority,
+so a user with priority 5 will be allocated 10 times as many resources as
 someone with user priority 50. User priorities in HTCondor can be 
 examined with the :tool:`condor_userprio` command.  HTCondor
 administrators can set and change individual user priorities with the
@@ -76,13 +76,13 @@ priority of each individual user changes according to the number of
 resources the individual is using. Each user starts out with the best
 possible priority: 0.5. If the number of machines a user currently has
 is greater than the user priority, the user priority will worsen by
-numerically increasing over time. If the number of machines is less then
+numerically increasing over time. If the number of machines is less than
 the priority, the priority will improve by numerically decreasing over
 time. The long-term result is fair-share access across all users. The
 speed at which HTCondor adjusts the priorities is controlled with the
 configuration variable :macro:`PRIORITY_HALFLIFE[definition]`.
 The default is one day. A user running 100 cores of jobs for a long
-time will have their real user priority exponential grow to 100. 
+time will have their real user priority exponentially grow to 100.
 If all the jobs are removed, one day later that user's real priority 
 will be 50, and two days later it will shrink to 25.
 
@@ -367,7 +367,7 @@ Submit Commands Usage Examples
 ''''''''''''''''''''''''''''''
 
 Here are some examples of the submit commands necessary to schedule jobs
-to run at multifarious times. Please note that it is not necessary to
+to run at various times. Please note that it is not necessary to
 explicitly define each attribute; the default value is \*.
 
 Run 23 minutes after every two hours, every day of the week:
@@ -514,7 +514,7 @@ When a job defines a deferral time far in the future and then is matched
 to an execution machine, potential computation cycles are lost because
 the deferred job has claimed the machine, but is not actually executing.
 Other jobs could execute during the interval when the job waits for its
-deferral time. To make use of the wasted time,a job defines a
+deferral time. To make use of the wasted time, a job defines a
 :subcom:`deferral_prep_time[definition]`
 with an integer expression that evaluates to a number of seconds. At
 this number of seconds before the deferral time, the job may be matched
@@ -622,12 +622,12 @@ higher than a different offer of $25. In HTCondor, users submitting jobs
 can be thought of as buyers of compute resources and machine owners are
 sellers.
 
-All machines in a HTCondor pool advertise their attributes,
+All machines in an HTCondor pool advertise their attributes,
 :index:`attributes<single: attributes; ClassAd>` such as available memory, CPU type
 and speed, virtual memory size, current load average, along with other
 static and dynamic properties. This machine ClassAd
 :index:`machine<single: machine; ClassAd>` also advertises under what conditions it
-is willing to run a HTCondor job and what type of job it would prefer.
+is willing to run an HTCondor job and what type of job it would prefer.
 These policy attributes can reflect the individual terms and preferences
 by which all the different owners have graciously allowed their machine
 to be part of the HTCondor pool. You may advertise that your machine is
@@ -699,28 +699,28 @@ location attribute to your machine ClassAds.
 .. code-block:: condor-classad
 
     Machine = "turunmaa.cs.wisc.edu"
-    FileSystemDomain = "cs.wisc.edu"
     Name = "turunmaa.cs.wisc.edu"
-    CondorPlatform = "$CondorPlatform: x86_rhap_5 $"
-    Cpus = 1
-    CondorVersion = "$CondorVersion: 7.6.3 Aug 18 2011 BuildID: 361356 $"
-    Requirements = START
-    EnteredCurrentActivity = 1316094896
-    MyAddress = "<192.0.2.125:58026>"
-    EnteredCurrentState = 1316094896
-    Memory = 1897
-    CkptServer = "pitcher.cs.wisc.edu"
+    CondorPlatform = "$CondorPlatform: X86_64-AlmaLinux_9 $"
+    CondorVersion = "$CondorVersion: 24.0.5 Feb 14 2025 BuildID: 740101 $"
+    Arch = "X86_64"
     OpSys = "LINUX"
-    State = "Owner"
-    START = true
-    Arch = "INTEL"
-    Mips = 2634
-    Activity = "Idle"
-    StartdIpAddr = "<192.0.2.125:58026>"
-    TargetType = "Job"
-    LoadAvg = 0.210000
-    Disk = 92309744
-    VirtualMemory = 2069476
+    OpSysAndVer = "AlmaLinux9"
+    Cpus = 16
+    Memory = 64336
+    Disk = 1048576000
+    DetectedCpus = 16
+    DetectedMemory = 64336
     TotalSlots = 1
+    SlotType = "Partitionable"
+    State = "Unclaimed"
+    Activity = "Idle"
+    LoadAvg = 0.020000
+    Requirements = START
+    START = true
+    EnteredCurrentActivity = 1739534400
+    EnteredCurrentState = 1739534400
+    MyAddress = "<192.0.2.125:9618?addrs=192.0.2.125-9618>"
+    StartdIpAddr = "<192.0.2.125:9618?addrs=192.0.2.125-9618>"
     UidDomain = "cs.wisc.edu"
+    FileSystemDomain = "cs.wisc.edu"
     MyType = "Machine"

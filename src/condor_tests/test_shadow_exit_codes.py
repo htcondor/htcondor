@@ -91,7 +91,11 @@ def the_completed_jobs(the_condor, the_container_image):
     )
 
     job_handle.wait(
-        timeout=120,
+        # Each successful start runs a per-job Singularity pre-flight test
+        # that takes ~40-55s on a loaded host, and the deliberate
+        # relinquish/restart cycle replays the common-files SIF transfer.
+        # 120s left no headroom and timed out intermittently in CI.
+        timeout=300,
         condition=ClusterState.all_terminal,
     )
 

@@ -1,10 +1,37 @@
 *** 24.12.22 bugs
 
+- Fixed a bug where the *condor_job_router* could abort when removing a job
+  that had just been routed.
+  :jira:`3757`
+
 *** 24.0.22 bugs
 
 - When using trust-on-first-use (TOFU), tools can go into an infinite
   loop if they have no valid standard input file to read.
   :jira:`3754`
+
+- When using the ClassAd function :classad-function:`debug`, comparing a string
+  to a non-string no longer results in the previous (unrelated) error, if any;
+  the message will instead be "strings can only be compared to strings".
+  :jira:`3771`
+
+- Fixed a bug in the *condor_job_router* taht caused routing to failure
+  if the configuration parameters :macro:`JOB_ROUTER_SCHEDD1_NAME` or
+  :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
+  :jira:`3760`
+
+- Fixed a bug that can cause the *arc_gahp* to crash.
+  :jira:`3789`
+
+*** 24.12.21 bugs
+
+- Fixed an infrequent crash in the *condor_startd* that occurred
+  when users installed a custom docker wrapper script.
+  :jira:`3691`
+
+- It was possible for docker universe jobs to generate duplicate volume mounts.
+  We now remove duplicates before invoking docker.
+  :jira:`3702`
 
 *** 24.0.21 features
 
@@ -16,37 +43,26 @@
 
 - The condor RPM package now requires at least apptainer version 1.5.0.
 
-*** 24.12.21 bugs
-
-- Fixed a rare bug in the *condor_startd* that would cause it to crash
-  when users installed a custom docker wrapper script.
-  :jira:`3691`
-
-- It was possible for docker universe jobs to generate duplicate volume mounts.
-  We now remove duplicates before invoking docker.
-  :jira:`3702`
-
 *** 24.0.21 bugs
+
+- Fixed a rare issue where *condor_dagman* would unnecessarily abort after
+  reboot of the host machine due to operating system process ID (PID) reuse.
+  :jira:`3739`
+
+- When the python bindings are run as user ``root`` and use the FS method
+  to authenticate with a daemon, the authenticated identity will be
+  ``condor`` instead of ``root``.
+  This matches the behavior of all of the command line tools.
+  :jira:`3695`
 
 - If a job terminates with a named pipe in the sandbox, it will no
   no longer hang transferring output.
   :jira:`3743`
 
-- When the python bindings are run as user ``root`` and use the FS method
-  to authenticate with a daemon, the authenticated identity will be
-  ``condor`` instead of ``root``.
-  This matches the behavior of all of the commmand line tools.
-  :jira:`3695`
-
 - Fixed a bug introduced in 24.0.18 where new STARTD_CRON values weren't
   incorporated into the *condor_startd*'s internal slot ads for several
-  minutes, though the ads sent to the *condor_collector* were updated
-  immediately.
+  minutes, though those ads were sent to the *condor_collector* immediately.
   :jira:`3709`
-
-- Fixed a rare issue where *condor_dagman* would unnecessarily abort during
-  reboot of the host machine due to OS process ID (PID) reuse.
-  :jira:`3739`
 
 - Fixed a bug where the job lease duration was based on when the TCP
   connection to the EP was lost, when it should be based on the last time
