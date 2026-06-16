@@ -86,6 +86,7 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <ctype.h>
+#include <pwd.h>
 
 #if defined(HAVE_GLOBUS)
 #include "globus_gsi_credential.h"
@@ -183,6 +184,7 @@ pthread_attr_t cmd_threads_attr;
 
 sem_t sem_total_commands;
 
+char *my_username = NULL;
 char *blah_script_location;
 char *blah_version;
 static char lrmslist[MAX_LRMS_NUMBER][MAX_LRMS_NAME_SIZE];
@@ -340,6 +342,14 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	char **attr;
 	int n_attrs;
 	int write_result;
+
+	/* Some of our threaded command handlers need this */
+	if (my_username == NULL) {
+		struct passwd* pwbuf = getpwuid(geteuid());
+		if (pwbuf) {
+			my_username = strdup(pwbuf->pw_name);
+		}
+	}
 
 	blah_config_handle = config_read(NULL);
 	if (blah_config_handle == NULL)
