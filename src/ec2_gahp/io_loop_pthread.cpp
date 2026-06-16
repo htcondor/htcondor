@@ -475,26 +475,22 @@ IOProcess::stdinPipeHandler()
 				fflush( stdout );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
 				std::vector<std::string> amazon_commands;
-				size_t num_commands = 0;
+				allAmazonCommands(amazon_commands);
 
-				num_commands = allAmazonCommands(amazon_commands);
-				num_commands += 7;
-
-				std::vector<const char *> commands(num_commands);
-				size_t i = 0;
-				commands[i++] = GAHP_RESULT_SUCCESS;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
-				commands[i++] = GAHP_COMMAND_RESULTS;
-				commands[i++] = GAHP_COMMAND_QUIT;
-				commands[i++] = GAHP_COMMAND_VERSION;
-				commands[i++] = GAHP_COMMAND_COMMANDS;
+				std::vector<const char *> commands;
+				commands.push_back(GAHP_RESULT_SUCCESS);
+				commands.push_back(GAHP_COMMAND_ASYNC_MODE_ON);
+				commands.push_back(GAHP_COMMAND_ASYNC_MODE_OFF);
+				commands.push_back(GAHP_COMMAND_RESULTS);
+				commands.push_back(GAHP_COMMAND_QUIT);
+				commands.push_back(GAHP_COMMAND_VERSION);
+				commands.push_back(GAHP_COMMAND_COMMANDS);
 
 				for (const auto& one_command : amazon_commands) {
-					commands[i++] = one_command.c_str();
+					commands.push_back(one_command.c_str());
 				}
 
-				gahp_output_return (commands.data(), i);
+				gahp_output_return (commands.data(), commands.size());
 			} else {
 				// got new command
 				if( !addNewRequest(command) ) {

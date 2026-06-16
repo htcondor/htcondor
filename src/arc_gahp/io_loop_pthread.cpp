@@ -487,32 +487,28 @@ IOProcess::stdinPipeHandler()
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
 				std::vector<std::string> arc_commands;
-				size_t num_commands = 0;
+				allArcCommands(arc_commands);
 
-				num_commands = allArcCommands(arc_commands);
-				num_commands += 13;
-
-				std::vector<const char *> commands(num_commands);
-				size_t i = 0;
-				commands[i++] = GAHP_RESULT_SUCCESS;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
-				commands[i++] = GAHP_COMMAND_RESULTS;
-				commands[i++] = GAHP_COMMAND_QUIT;
-				commands[i++] = GAHP_COMMAND_VERSION;
-				commands[i++] = GAHP_COMMAND_COMMANDS;
-				commands[i++] = GAHP_COMMAND_INITIALIZE_FROM_FILE;
-				commands[i++] = GAHP_COMMAND_REFRESH_PROXY_FROM_FILE;
-				commands[i++] = GAHP_COMMAND_CACHE_PROXY_FROM_FILE;
-				commands[i++] = GAHP_COMMAND_USE_CACHED_PROXY;
-				commands[i++] = GAHP_COMMAND_UNCACHE_PROXY;
-				commands[i++] = GAHP_COMMAND_UPDATE_TOKEN;
+				std::vector<const char *> commands;
+				commands.push_back(GAHP_RESULT_SUCCESS);
+				commands.push_back(GAHP_COMMAND_ASYNC_MODE_ON);
+				commands.push_back(GAHP_COMMAND_ASYNC_MODE_OFF);
+				commands.push_back(GAHP_COMMAND_RESULTS);
+				commands.push_back(GAHP_COMMAND_QUIT);
+				commands.push_back(GAHP_COMMAND_VERSION);
+				commands.push_back(GAHP_COMMAND_COMMANDS);
+				commands.push_back(GAHP_COMMAND_INITIALIZE_FROM_FILE);
+				commands.push_back(GAHP_COMMAND_REFRESH_PROXY_FROM_FILE);
+				commands.push_back(GAHP_COMMAND_CACHE_PROXY_FROM_FILE);
+				commands.push_back(GAHP_COMMAND_USE_CACHED_PROXY);
+				commands.push_back(GAHP_COMMAND_UNCACHE_PROXY);
+				commands.push_back(GAHP_COMMAND_UPDATE_TOKEN);
 
 				for(const auto& one_arc_command : arc_commands) {
-					commands[i++] = one_arc_command.c_str();
+					commands.push_back(one_arc_command.c_str());
 				}
 
-				gahp_output_return (commands.data(), i);
+				gahp_output_return (commands.data(), commands.size());
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
 				m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
 				m_active_proxy = DEFAULT_PROXY_NAME;
