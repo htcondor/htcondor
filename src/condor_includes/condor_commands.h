@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 208> makeCommandTable() {
+std::array<std::pair<int, const char *>, 210> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -368,6 +368,12 @@ std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 		{SET_FLOOR, "SET_FLOOR"},
 #define DIRECT_ATTACH (SCHED_VERS+131) // Provide slot ads to the schedd (not from the negotiator)
 		{DIRECT_ATTACH, "DIRECT_ATTACH"},
+		// Manage temporary ceiling leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, Ceiling?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+		// Additional actions can be added without a new command.
+#define MANAGE_CEILING (SCHED_VERS+132)
+		{MANAGE_CEILING, "MANAGE_CEILING"},
 // command ids from +140 to +149 reserved for Schedd UserRec commands
 #define QUERY_USERREC_ADS (SCHED_VERS+140)
 		{QUERY_USERREC_ADS, "QUERY_USERREC_ADS"},
@@ -406,6 +412,11 @@ std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
 #define DEACTIVATE_CLAIM_FINAL_XFER	(SCHED_VERS+161)  	// deactivate claim and do final transfer
 		{DEACTIVATE_CLAIM_FINAL_XFER, "DEACTIVATE_CLAIM_FINAL_XFER"},
+#define REHOME	(SCHED_VERS+162)
+		{REHOME, "REHOME"},
+#define COMMAND_DATA_SLOT (SCHED_VERS+163)
+		{COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT"},
+
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},
@@ -536,8 +547,8 @@ std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 		{DC_RECONFIG_FULL, "DC_RECONFIG_FULL"},
 #define DC_FETCH_LOG        (DC_BASE+13)
 		{DC_FETCH_LOG, "DC_FETCH_LOG"},
-#define DC_INVALIDATE_KEY   (DC_BASE+14)
-		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
+//#define DC_INVALIDATE_KEY   (DC_BASE+14) /* not used */
+//		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
 #define DC_OFF_PEACEFUL     (DC_BASE+15)
 		{DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL"},
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)

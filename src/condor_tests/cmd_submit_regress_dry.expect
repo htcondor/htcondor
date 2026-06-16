@@ -342,6 +342,23 @@ JobMaxRetries=2
 JobSuccessExitCode=5
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
 
+==retry_disk1.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestDisk 20480"$/
+
+==retry_disk2.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+RetryRequestDisk={ 20480,81920 }
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestDisk RetryRequestDisk\[RetryRequestDiskIndex\?:0\]\x1eEVALSET RetryRequestDiskIndex .*"$/
+
+==retry_disk3.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+RetryRequestDisk={ 20480,81920 }
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestDisk RetryRequestDisk\[RetryRequestDiskIndex\?:0\]\x1eEVALSET RetryRequestDiskIndex .*"$/
+
 ==retry_mem1.sub
 RequestMemory=1024
 TransformOnEvict="RequestMemory"

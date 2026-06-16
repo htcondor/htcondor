@@ -38,6 +38,7 @@ bool	refuseX( Stream*, CONDOR_HOLD_CODE code, const char * reason, bool retry_ok
 inline bool refuse(Stream* s, bool send_failure_ad, CONDOR_HOLD_CODE code, const char * reason) {
 	return refuseX(s, code, send_failure_ad ? reason : nullptr, false);
 }
+bool	caCopyIfDefined(ClassAd& target, ClassAd& source, const char * attr, bool if_not_in_target=false);
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  const char* prefix = NULL );
 bool	caRevertToParent(ClassAd* target, const char * attr);

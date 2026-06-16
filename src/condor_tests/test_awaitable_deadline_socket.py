@@ -37,13 +37,22 @@ def the_hot_log(the_condor):
     with the_condor.use_config():
         libexec = htcondor2.param['LIBEXEC']
     the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
-    for line in the_log.open().read():
+    log_stream = the_log.open()
+    for line in log_stream.read():
         if line.message.startswith('DaemonCore: command socket at '):
             [prefix, sinful] = line.message.split('DaemonCore: command socket at ')
             result = the_condor.run_command(
                 [f'{libexec}/test_awaitable_deadline_socket_client', '-hot', sinful]
             )
             assert result.returncode == 0
+            # The client exits as soon as it has sent its data, but the
+            # daemon logs "[hot] Exchange complete." only after its reactor
+            # wakes up and finishes the read. Wait for that line before
+            # returning so the test body can assume it is present.
+            assert log_stream.wait(
+                condition=lambda m: m.message == "[hot] Exchange complete.",
+                timeout=30,
+            )
             return the_log
     assert False
 

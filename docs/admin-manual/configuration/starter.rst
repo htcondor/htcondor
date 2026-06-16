@@ -8,8 +8,7 @@ Starter Daemon Configuration Options
 These settings affect the *condor_starter*.
 
 :macro-def:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS`
-    All multi-file file transfer plug-ins read from ClassAd-formatted input
-    file, and are expected to both parse any valid ClassAd and ignore any
+    All multi-file file transfer plug-ins read from a ClassAd-formatted input file, and are expected to both parse any valid ClassAd and ignore any
     attributes it doesn't recognize.  To allow plug-ins which don't meet this
     expectation to continue to work while they're being fixed, you may set
     this macro to false.
@@ -44,6 +43,20 @@ These settings affect the *condor_starter*.
     values outside this range, a Windows machine ignores the value and
     uses the default instead. The default value is 0, on Unix, and the
     idle priority class on a Windows machine.
+
+:macro-def:`STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS`
+    This macro can be used to disable transfer plugins supplied by
+    the user as part of the job description. The expression is evaluated in the context
+    of both the machine and job ClassAds, where the machine ClassAd is
+    the ``MY.`` ClassAd, and the job ClassAd is the ``TARGET.`` ClassAd.
+    The macro should evaluate to ``true``, ``false``, or the special value ``2``.
+    ``False`` will allow plugins, ``True`` or ``2`` will disable plugins. The
+    difference between ``true`` and ``2`` is how plugins are disabled. When
+    set to ``2``, the job attributes that define supplied transfer plugins
+    will be ignored and the job will only fail if a built-in plugin does not
+    handle the transfer. When set to any other value that evaluates
+    as ``True`` any transfer that tries to use that method will fail.
+    There is no default value, which will allow user supplied transfer plugins.
 
 :macro-def:`STARTER_LOCAL_LOGGING`
     This macro determines whether the starter should do local logging to
@@ -193,8 +206,7 @@ These settings affect the *condor_starter*.
     A string with possible values of ``hard``, ``custom`` and ``none``.
     The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
-    an appropriate message.  Also, the cgroup soft limit will set to
-    90% of the hard limit to encourage the kernel to lower 
+    an appropriate message.  Also, the cgroup soft limit will be set to 90% of the hard limit to encourage the kernel to lower 
     cacheable memory the job is using.  If set to ``none``, no limit will be enforced, 
     but the memory usage of the job will be accurately measured by a cgroup.
     When set to custom, the additional knob CGROUP_HARD_MEMORY_LIMIT_EXPR
@@ -206,7 +218,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`CGROUP_LOW_MEMORY_LIMIT`
     A classad expression, evaluated in the context of the slot and job ad.
-    When it evaluated to a number, that number is written to the job's
+    When it evaluates to a number, that number is written to the job's
     cgroup memory.low limit.  This is only implemented on Linux systems
     where HTCondor controls the jobs' cgroups.  When the job exceeds this 
     limit, the kernel will aggressively evict read-only pages (often disk cache)
@@ -230,8 +242,7 @@ These settings affect the *condor_starter*.
     swap space configured by the operating system.
 
 :macro-def:`STARTER_ALWAYS_HOLD_ON_OOM`
-    A boolean that defaults to true.  When false, if a job exits With
-    an Out Of Memory signal from the kernel, instead of always putting
+    A boolean that defaults to true.  When false, if a job exits with an Out Of Memory signal from the kernel, instead of always putting
     the job on hold, HTCondor will check the last memory usage of the
     job, and if less than 90% of the limit, it will assume the Out Of
     Memory was because the system as a whole was out of memory, and the
@@ -461,6 +472,12 @@ These settings affect the *condor_starter*.
     than 2047 have no real meaning on 32-bit platforms, values larger
     than 2047 result in no limit set on 32-bit platforms.
 
+:macro-def:`STARTER_ALLOW_JOB_PRE_AND_POST_CMD`
+    A boolean classad expression that determines whether any job-defined pre and post scripts will be run. Pre and post scripts run outside
+    of the VM or container of the job and are seldom used because of that.
+    This expression is evaluated in the context of both machine
+    and job ClassAds. Defaults to ``False``.
+
 :macro-def:`USE_PID_NAMESPACES`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to
@@ -571,6 +588,14 @@ These settings affect the *condor_starter*.
     or apptainer contained job, the HTCondor starter will run apptainer test your_image.
     Only if that succeeds will HTCondor then run your job proper.
 
+:macro-def:`SINGULARITY_TEST_TIMEOUT`
+    An integer number of seconds, defaulting to 30, that bounds how long the
+    HTCondor starter will wait for the ``singularity test`` (or ``apptainer test``)
+    of the image to complete before giving up.  If the test does not finish within
+    this many seconds, it is terminated and the test is considered to have failed.
+    This prevents a hung container runtime or an unresponsive image registry from
+    wedging the starter indefinitely.
+
 :macro-def:`SINGULARITY_VERBOSITY`
     A string value that defaults to -q.  This string is placed immediately after the
     singularity or apptainer command, intended to control debugging verbosity, but
@@ -594,6 +619,7 @@ These settings affect the *condor_starter*.
     image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
     an exploded directory for singularity/apptainer to run.
 
-:macro-def:`REACTIVATE_ON_RESTART`
+:macro-def:`CHECK_REACTIVATE_AFTER_CHECKPOINT`
     A boolean value.  If true, self-checkpointing jobs will not restart after
     uploading a checkpoint if the slot would not otherwise be reactivatable.
+    Defaults to true.

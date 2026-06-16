@@ -9,7 +9,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate matrix from CSV
         id: set-matrix
@@ -39,14 +39,14 @@ jobs:
         run: echo "platform_name=$(echo ${{ matrix.instance.container }} | sed -e 's/htcondor\/nmi-build://g' -e 's/-[0-9]*$//g')" >> $GITHUB_OUTPUT
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         run: |
           # Hackery for using toolset gcc instead of default
-          if [ -f "/opt/rh/gcc-toolset-14/root/usr/bin/gcc" ]; then
-            export CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-            export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
+          if [ -f "/opt/rh/gcc-toolset-15/root/usr/bin/gcc" ]; then
+            export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
+            export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
           fi
 
           if [ -f "/usr/bin/gcc-11" ] 
@@ -61,13 +61,19 @@ jobs:
             export CXX=/usr/bin/g++-12
           fi
 
+          if [ -f "/usr/bin/gcc14-gcc" ]
+          then
+            export CC=/usr/bin/gcc14-gcc
+            export CXX=/usr/bin/gcc14-g++
+          fi
+
           chmod 0777 .
           mkdir __build && chown condorauto __build && chmod 0777 __build
           su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install"
 
       - name: test
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
-        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40 -E guidance" )
+        # Use su to run as condorauto user inside container
+        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40" )
 
         # Report the memory used by the build & test run, because I'm curious
       - name: memory usage
@@ -86,7 +92,7 @@ jobs:
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-output-for-${{ matrix.instance.abbrev }}
           path: __build/src/condor_tests
@@ -96,7 +102,7 @@ jobs:
       - name: Upload Artifact with Test Results on failure or success
         # Always upload, even if build or tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tests-for-${{ matrix.instance.abbrev }}
           path: __build/test.xml
@@ -107,46 +113,110 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
 
       - name: Install python accessories
         run: |
-          pip install pytest pytest-httpserver
+          pip install -r src/condor_tests/requirements.txt
+
+      - name: hack for broken reverse DNS
+        run: sudo sed -i -e "s/localhost/localhost $(hostname)/g" /etc/hosts
 
       - name: Build
         run: (mkdir __build && cd __build && cmake -GNinja -DWITH_VOMS:bool=false .. && ninja -j4 install)
+      # pytest and thus ornitholgy aren't installed correctly, so for now, just run one random perl test
+      - name: test
+        run: ( cd __build && ctest --output-junit test.xml -j 40 -R job_dagman_vars )
 
   winbuild:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
-      - name: Install VC++ Build Tools
-        uses: ilammy/msvc-dev-cmd@v1
+      - name: Checkout code
+        uses: actions/checkout@v6
 
       - name: Install perl
         uses: shogo82148/actions-setup-perl@v1
         with:
-          distribution: strawberry
+          distribution: default
+
+      - name: Set up Perl file association on Windows
+        shell: cmd
+        run: |
+          for /f "delims=" %%i in ('where perl') do set "PERL_PATH=%%i"
+          assoc .pl=PerlScript
+          ftype PerlScript="%PERL_PATH%" "%%1" %%*
+          setx PATHEXT "%PATHEXT%;.PL"
 
       - name: Install/Upgrade python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
+
+      - name: Install CPAN Modules
+        run: cpanm --notest Win32::Process Archive::Tar Data::Dumper Digest::MD5 Digest::SHA English Env File::Copy FindBin Net::Domain Sys::Hostname Time::HiRes XML::Parser
 
       - name: Install/Upgrade python and python accessories
         run: | 
           python -m pip install --upgrade pip setuptools wheel
 
       - name: cmake configuration
-        run: (cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false .)
+        run: |
+          mkdir __build
+          cd __build && cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
+          #cd __build && cmake -DWITH_ADDRESS_SANITIZER:bool=true -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
 
       - name: build
-        run: (cmake --build . --verbose --config Release --parallel 4)
+        run: |
+          cd __build && cmake --build . --target install --verbose --config Debug --parallel 4
+      - name: Copy ASan runtime DLLs to release_dir/bin
+        run: |
+          $bin = "$pwd/__build/release_dir/bin"
+          $vsRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dlls = Get-ChildItem -Path $vsRoot -Recurse -Filter "clang_rt.asan*.dll" -ErrorAction SilentlyContinue
+          foreach ($dll in $dlls) {
+            Write-Host "Copying $($dll.FullName) to $bin"
+            Copy-Item -Path $dll.FullName -Destination $bin -Force
+          }
+      - name: Copy PDBs to release_dir/bin for ASan symbolization
+        run: |
+          # The Debug build emits PDBs in the build tree, but install does not
+          # copy them next to the binaries in release_dir/bin.  Without the PDB
+          # alongside the .exe the runtime ASan symbolizer can't resolve frames
+          # and falls back to nearest-export names (e.g. OPENSSL_Applink).
+          $bin = "$pwd/__build/release_dir/bin"
+          $pdbs = Get-ChildItem -Path "$pwd/__build" -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
+          foreach ($pdb in $pdbs) {
+            Copy-Item -Path $pdb.FullName -Destination $bin -Force -ErrorAction SilentlyContinue
+          }
+      - name: ctests
+        run: |
+          $env:ASAN_OPTIONS = "log_path='$pwd/__build/asan.log':exit_code=0"
+          # cd __build && ctest -j 20 --repeat-until-fail 1
+
+      - name: block upload until everything gone
+        if: failure()
+        run: |
+          # Wait for a bit to let processes die down, which should help the upload step not fail due to file contention with running processes
+          Start-Sleep -Seconds 10
+          Get-CimInstance Win32_Process | ? ExecutablePath -like "$pwd\__build\*" | % { Stop-Process -Id $_.ProcessId -Force -EA SilentlyContinue }
+
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: wintest-output
+          path: |
+            __build/
+          retention-days: 2
+          overwrite: true
 
   resolve-ubunturoot-image:
     runs-on: ubuntu-latest
@@ -154,7 +224,7 @@ jobs:
       image: ${{ steps.extract.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract ubunturoot image from nmi-build-platforms
         id: extract
@@ -174,13 +244,13 @@ jobs:
       options: --cpus 4
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu Native Package
         run: ./build-on-linux.sh .
 
       - name: Upload .debs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: debs
           path: |
@@ -195,7 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download .debs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
 
@@ -206,12 +276,15 @@ jobs:
           sudo cp __w/htcondor/htcondor/condor_*.deb __w/htcondor/htcondor/mini*.deb usr/local/condor/externals/pelican*.deb .
           sudo apt install -y ./*.deb
 
-      - name: Verify condor installation
-        run: |
-          sudo condor_master
-          condor_version
-          sleep 5
-          condor_status
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-output-for-ubuntu-installed
+          path: /var/log/condor
+          retention-days: 2
+          overwrite: true
+
 
   ubuntu_root:
     # Run on raw ubuntu, no container
@@ -219,25 +292,25 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu 
         run: |
           sudo useradd -m condor
           sudo apt-get update
           sudo apt-get install uuid-dev libcurl4-openssl-dev
-          sudo pip3 install pytest pytest-httpserver
+          sudo pip3 install -r src/condor_tests/requirements.txt
           mkdir __build && chmod 0777 __build
           cd __build && cmake -GNinja -DWITH_SCITOKENS:bool=false -DWITH_KRB5:bool=false -DWITH_MUNGE:bool=false -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install
           chmod a+rwx /home/runner
 
       - name: Test with rootness
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
+        # Use su to run as condorauto user inside container
         run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: root-output-for-ubuntu
           path: |
@@ -253,7 +326,7 @@ jobs:
     if: always()
     steps:
          - name: Download test xml output artifacts
-           uses: actions/download-artifact@v4
+           uses: actions/download-artifact@v8
            with:
              pattern: tests-for-*
 

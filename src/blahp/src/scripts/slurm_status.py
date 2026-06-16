@@ -244,7 +244,7 @@ def call_squeue(jobid="", cluster=""):
     else:
         uid = os.geteuid()
         username = pwd.getpwuid(uid).pw_name
-        command += ('-u', username)
+        command += ('-a', '-u', username)
     squeue_proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     squeue_out, _ = squeue_proc.communicate()
 
@@ -444,7 +444,7 @@ def parse_squeue(output):
         cur_job_id = fields[0];
         cur_job_info = {}
         job_info[cur_job_id] = cur_job_info
-        cur_job_info["BatchJobId"] = cur_job_id
+        cur_job_info["BatchJobId"] = '"%s"' % cur_job_id
         status = status_mapping.get(fields[1], 0)
         if status != 0:
             cur_job_info["JobStatus"] = str(status)
@@ -457,6 +457,8 @@ def job_dict_to_string(info):
     return "[" + " ".join(result) + " ]"
 
 def fill_cache(cache_location, cluster):
+    # Note: The blahpd reads this cache file and looks at the first and
+    # third fields of each line.
     log("Starting query to fill cache.")
     results = call_squeue("", cluster)
     log("Finished query to fill cache.")
@@ -471,7 +473,8 @@ def fill_cache(cache_location, cluster):
                 str_val = binascii.b2a_hex(pickle.dumps(val))
                 if str is not bytes:
                     str_val = str_val.decode()
-                writer.writerow([key, str_val])
+                status = val.get("JobStatus", 0)
+                writer.writerow([key, str_val, status])
             os.fsync(fd)
         except:
             os.unlink(filename)

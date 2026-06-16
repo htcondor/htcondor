@@ -640,21 +640,6 @@ sub SetupPythonPath {
     my $relpy = "$reldir/lib/python3";
     if ($iswindows) { $relpy = "$reldir\\lib\\python"; $pathsep = ';'; }
 
-    # debug code, show what is in release dir and lib and lib/python
-    # on windows, also interrogate the bitness of the python bindings
-    if ($iswindows) {
-        system("dir $reldir");
-        system("dir $reldir\\lib");
-        print "contents of $relpy:\n";
-        system("dir $relpy");
-        $relpy .= ";$reldir\\bin";
-    } else {
-        system("ls -lL $reldir");
-        system("ls -lL $reldir/lib");
-        print "contents of $relpy:\n";
-        system("ls -lL $relpy");
-    }
-
     my $pythonpath = "";
     if (exists($ENV{PYTHONPATH})) {
         $pythonpath = $ENV{PYTHONPATH};

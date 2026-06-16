@@ -26,6 +26,12 @@ use CondorTest;
 use CondorUtils;
 use Data::Dumper;
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	SCHEDULER_UNIVERSE_COOL_DOWN_DURATION = 0
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 # Set up a directory to contain all of the files in this test.
 $dir = "job_dagman_large_dag_files";
 if (!-e $dir) {

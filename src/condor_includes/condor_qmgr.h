@@ -202,39 +202,81 @@ int SetAttributeExprByConstraint(const char *constraint, const char *attr,
 	quotes)
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0, CondorError *err=nullptr );
+#else
+int SetAttribute(const JOB_ID_KEY & jid, const char *attr, const char *value, SetAttributeFlags_t flags=0, CondorError *err=nullptr);
+inline int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0, CondorError *err=nullptr ) {
+	return SetAttribute({cluster,proc},attr,value,flags,err);
+}
+#endif
 
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int SetAttributeInt(int cluster, int proc, const char *attr, int64_t value, SetAttributeFlags_t flags = 0 );
+#else
+int SetAttributeInt(const JOB_ID_KEY & jid, const char *attr, int64_t value, SetAttributeFlags_t flags = 0 );
+inline int SetAttributeInt(int cluster, int proc, const char *attr, int64_t value, SetAttributeFlags_t flags = 0 ) {
+  #ifdef HookSetAttrInt
+	return HookSetAttrInt({cluster,proc},attr,value,flags);
+  #else
+	return SetAttributeInt({cluster,proc},attr,value,flags);
+  #endif
+}
+#endif
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int SetAttributeFloat(int cluster, int proc, const char *attr, double value, SetAttributeFlags_t flags = 0);
+#else
+int SetAttributeFloat(const JOB_ID_KEY & jid, const char *attr, double value, SetAttributeFlags_t flags = 0);
+inline int SetAttributeFloat(int cluster, int proc, const char *attr, double value, SetAttributeFlags_t flags = 0) {
+	return SetAttributeFloat({cluster,proc},attr,value,flags);
+}
+#endif
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
 */
-int SetAttributeString(int cluster, int proc, const char *attr,
-					   const char *value, SetAttributeFlags_t flags = 0);
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
+int SetAttributeString(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags = 0);
+#else
+int SetAttributeString(const JOB_ID_KEY & jid, const char *attr, std::string_view value, SetAttributeFlags_t flags = 0);
+inline int SetAttributeString(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags = 0) {
+	return SetAttributeString({cluster,proc},attr,value,flags);
+}
+#endif
 /** Set attr = value for job with specified cluster and proc.  The value
 	expression is set as-is (unevaluated).
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int SetAttributeExpr(int cluster, int proc, const char *attr,
-                     const ExprTree *value, SetAttributeFlags_t flags = 0);
+	const ExprTree *value, SetAttributeFlags_t flags = 0);
+#else
+int SetAttributeExpr(const JOB_ID_KEY & jid, const char *attr, const ExprTree *value, SetAttributeFlags_t flags = 0);
+inline int SetAttributeExpr(int cluster, int proc, const char *attr, const ExprTree *value, SetAttributeFlags_t flags = 0) {
+	return SetAttributeExpr({cluster,proc},attr,value,flags);
+}
+#endif
 
 // Internal SetSecure functions for only the schedd to use.
 // These functions are defined in qmgmt.cpp.
-int SetSecureAttributeInt(int cluster_id, int proc_id,
-                         const char *attr_name, int attr_value,
-                         SetAttributeFlags_t flags = 0);
 int SetSecureAttributeInt(const JOB_ID_KEY & key,
                          const char *attr_name, long long int_value,
                          SetAttributeFlags_t flags = 0);
+inline int SetSecureAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0) {
+  #ifdef HookSetAttrInt
+	return HookSetAttrInt({cluster,proc},attr,(int64_t)value,flags);
+  #else
+	return SetSecureAttributeInt({cluster,proc},attr,value,flags);
+  #endif
+}
 int SetSecureAttribute(int cluster_id, int proc_id,
                          const char *attr_name, const char *attr_value,
                          SetAttributeFlags_t flags = 0);
@@ -302,32 +344,96 @@ void AbortTransactionAndRecomputeClusters();
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeFloat(int cluster, int proc, const char *attr, double *value);
+#else
+int GetAttributeFloat(const JOB_ID_KEY & jid, const char *attr, double *value);
+inline int GetAttributeFloat(int cluster, int proc, const char *attr, double *value) {
+	return GetAttributeFloat({cluster,proc},attr,value);
+}
+#endif
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
 int GetAttributeInt(int cluster, int proc, const char *attr, long *value);
 int GetAttributeInt(int cluster, int proc, const char *attr, long long *value);
+#else
+int GetAttributeInt(const JOB_ID_KEY & jid, const char *attr, long long *value);
+inline int GetAttributeInt(const JOB_ID_KEY & jid, const char *attr, int *value) {
+	long long full_value = *value;
+	int rc = GetAttributeInt(jid,attr,&full_value);
+	if (rc >= 0) { *value = (int)full_value; }
+	return rc;
+}
+inline int GetAttributeInt(const JOB_ID_KEY & jid, const char *attr, long *value) {
+	long long full_value = *value;
+	int rc = GetAttributeInt(jid,attr,&full_value);
+	if (rc >= 0) { *value = (long)full_value; }
+	return rc;
+}
+inline int GetAttributeInt(int cluster, int proc, const char *attr, int *value) {
+#ifdef HookGetAttrInt
+	return HookGetAttrInt({cluster,proc},attr,value);
+#else
+	return GetAttributeInt({cluster,proc},attr,value);
+#endif
+}
+inline int GetAttributeInt(int cluster, int proc, const char *attr, long *value) {
+	return GetAttributeInt({cluster,proc},attr,value);
+}
+inline int GetAttributeInt(int cluster, int proc, const char *attr, long long *value) {
+	return GetAttributeInt({cluster,proc},attr,value);
+}
+#endif
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeBool(int cluster, int proc, const char *attr, bool *value);
+#else
+int GetAttributeBool(const JOB_ID_KEY & jid, const char *attr, bool *value);
+inline int GetAttributeBool(int cluster, int proc, const char *attr, bool *value) {
+	return GetAttributeBool({cluster,proc},attr,value);
+}
+#endif
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success. Allocates new copy of the string.
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
 					   char **val );
+#else
+int GetAttributeStringNew(const JOB_ID_KEY & jid, const char *attr_name, char **val );
+inline int GetAttributeStringNew(int cluster, int proc, const char *attr_name, char **val ) {
+	return GetAttributeStringNew({cluster,proc},attr_name,val);
+}
+#endif
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success.
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
                         std::string &val );
+#else
+int GetAttributeString( const JOB_ID_KEY & jid, char const *attr_name, std::string &val );
+inline int GetAttributeString( int cluster, int proc, char const *attr_name, std::string &val ) {
+	return GetAttributeString({cluster,proc},attr_name,val);
+}
+#endif
 /** Get value of attr for job with specified cluster and proc.
 	Allocates new copy of the unparsed expression string.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int GetAttributeExprNew(int cluster, int proc, const char *attr, char **value);
+#else
+int GetAttributeExprNew(const JOB_ID_KEY & jid, const char *attr, char **value);
+inline int GetAttributeExprNew(int cluster, int proc, const char *attr, char **value) {
+	return GetAttributeExprNew({cluster,proc},attr,value);
+}
+#endif
 
 /** Retrieves a classad of attributes that are marked as dirty, then clears
 	the dirty list
@@ -337,7 +443,12 @@ int GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs);
 /** Delete specified attribute for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
+#if 0 //def SCHEDD_EXTERNAL_DECLARATIONS
 int DeleteAttribute(int cluster, int proc, const char *attr);
+#else
+int DeleteAttribute(const JOB_ID_KEY & jid, const char *attr);
+inline int DeleteAttribute(int cluster, int proc, const char *attr) { return DeleteAttribute({cluster,proc}, attr); }
+#endif
 
 #ifdef SCHEDD_INTERNAL_DECLARATIONS
 //we DON'T want to see the external qmanager's definitions of GetJob*** because schedds internal implemtation is different

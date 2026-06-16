@@ -34,7 +34,6 @@
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
 
-      1) ~/.condor/     # if not started as root
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/
@@ -1332,6 +1331,10 @@ get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files )
 	return true;
 }
 
+void enable_config_tracing(macro_meta_tracer * tracer) {
+	ConfigMacroSet.tracer = tracer;
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( const char* dirlist, const char* host )
@@ -2319,6 +2322,17 @@ param_integer( const char *name, int default_value,
 	int result;
 
 	param_integer( name, result, true, default_value,
+				   true, min_value, max_value, NULL, NULL, use_param_table );
+	return result;
+}
+
+long long
+param_longlong( const char *name, long long default_value,
+			    long long min_value, long long max_value, bool use_param_table )
+{
+	long long result;
+
+	param_longlong( name, result, true, default_value,
 				   true, min_value, max_value, NULL, NULL, use_param_table );
 	return result;
 }

@@ -13,7 +13,7 @@
 #
 # 26-Oct-2012  Created 
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 if(CONDOR_PACKAGE_NAME)
     set(BIN_DIR "${C_BIN}")

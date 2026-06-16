@@ -574,7 +574,7 @@ INCOMPATIBILITY_CHECKS = [
                  using obsolete configuration syntax. This syntax is
                  the same as the old job router syntax.
                  """,
-        version=(24, 10, 2),
+        version=(25, 8, 0),
         daemons=["SCHEDD"]
     ),
     Check(

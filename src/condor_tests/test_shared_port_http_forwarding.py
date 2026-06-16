@@ -1,16 +1,18 @@
 #!/usr/bin/env pytest
 
 import queue
+import re
 import socket
 import ssl
 import struct
 import subprocess
 import threading
 import time
-from contextlib import closing
 from pathlib import Path
 import shutil
 import tempfile
+
+import classad2 as classad
 
 from ornithology import action, standup, Condor
 
@@ -155,10 +157,22 @@ class DomainSocketHTTPServer:
             client_sock.close()
 
 
-def _pick_ephemeral_port() -> int:
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+def _read_shared_port(condor: Condor, timeout: float = 30.0) -> int:
+    ad_file = condor.lock_dir / "shared_port_ad"
+    deadline = time.monotonic() + timeout
+    last_err = None
+    while time.monotonic() < deadline:
+        try:
+            with ad_file.open("r") as f:
+                ad = classad.parseOne(f.read())
+            sinful = ad["MyAddress"]
+            m = re.search(r":(\d+)[?>]", sinful)
+            if m:
+                return int(m.group(1))
+        except (FileNotFoundError, KeyError, TypeError) as e:
+            last_err = e
+        time.sleep(0.25)
+    raise RuntimeError(f"Could not read shared port from {ad_file}: {last_err}")
 
 
 def _create_self_signed_cert(target_dir: Path):
@@ -202,11 +216,9 @@ def shared_port_socket_dir():
 def condor(test_dir, shared_port_socket_dir):
     shared_port_socket_dir.mkdir(parents=True, exist_ok=True)
 
-    shared_port_port = _pick_ephemeral_port()
-
     config = {
         "DAEMON_LIST": "MASTER SHARED_PORT",
-        "SHARED_PORT_PORT": str(shared_port_port),
+        "SHARED_PORT_PORT": "0",
         "USE_SHARED_PORT": True,
         "DAEMON_SOCKET_DIR": shared_port_socket_dir.as_posix(),
         "COLLECTOR_USES_SHARED_PORT": False,
@@ -237,7 +249,7 @@ def domain_socket_server(shared_port_socket_dir, ssl_context):
 
 @action
 def shared_port_port(condor):
-    return int(condor.run_command(["condor_config_val", "SHARED_PORT_PORT"], echo=False, suppress=True).stdout)
+    return _read_shared_port(condor)
 
 
 class TestSharedPortHTTPForwarding:

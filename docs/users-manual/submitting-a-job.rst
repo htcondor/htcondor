@@ -313,7 +313,7 @@ file.
     When the machine is matched to this job for it to run on, any
     dollar-dollar expressions are looked up from the machine ad, and then
     expanded.  This lets you put the value of some machine ad attribute
-    into your job.  For example, if you to pass the actual amount of
+    into your job.  For example, if you want to pass the actual amount of
     memory a slot has provisioned as an argument to the job, you
     could add ``arguments = --mem $$(Memory)``
 
@@ -331,14 +331,14 @@ file.
 ``$$([ an_evaluated_classad_expression ])``
     This dollar-dollar-bracket syntax is useful when you need to
     perform some math on a value before passing it to your job.
-    For example, if want to pass 90% of the allocated memory as an
+    For example, if you want to pass 90% of the allocated memory as an
     argument to your job, the submit file can have
 
     .. code-block:: condor-submit
 
         arguments = --mem $$([ Memory * 0.9 ])
 
-    and when the job is matched to a machine, condor will evaluate
+    and when the job is matched to a machine, HTCondor will evaluate
     this expression in the context of both the job and machine ad
 
 ``$(ARCH)``
@@ -511,26 +511,26 @@ character (!) to represent the not operation, followed by
    x.y.z or x.y. The version of the daemon or tool is compared to the
    specified version number. The comparison operators are
 
-   -  == for equality. Current version 8.2.3 is equal to 8.2.
+   -  == for equality. Current version 24.0.3 is equal to 24.0.
    -  >= to see if the current version number is greater than or equal
-      to. Current version 8.2.3 is greater than 8.2.2, and current
-      version 8.2.3 is greater than or equal to 8.2.
+      to. Current version 24.0.3 is greater than 24.0.2, and current
+      version 24.0.3 is greater than or equal to 24.0.
    -  <= to see if the current version number is less than or equal to.
-      Current version 8.2.0 is less than 8.2.2, and current version
-      8.2.3 is less than or equal to 8.2.
+      Current version 24.0.0 is less than 24.0.2, and current version
+      24.0.3 is less than or equal to 24.0.
 
    As an example,
 
    .. code-block:: condor-submit
 
-         if version >= 8.1.6
+         if version >= 24.0.6
             DO_X = True
          else
             DO_Y = True
          endif
 
    results in defining ``DO_X`` as ``True`` if the current version of
-   the daemon or tool reading this if statement is 8.1.6 or a more
+   the daemon or tool reading this if statement is 24.0.6 or a more
    recent version.
 
 -  True or yes or the value 1. The statement(s) are incorporated.
@@ -916,7 +916,7 @@ the machine of 0.0. The :subcom:`rank` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a :subcom:`rank` expression to    check if the
+So, it is wise when writing a :subcom:`rank` expression to check if the
 expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the :tool:`condor_status` command
 with the *-constraint* argument. This allows the user to see a list of
@@ -1272,18 +1272,18 @@ Interactive Jobs
 
 :index:`interactive<single: interactive; job>` :index:`interactive jobs`
 
-An interactive job is a Condor job that is provisioned and scheduled
-like any other vanilla universe Condor job onto an execute machine
+An interactive job is an HTCondor job that is provisioned and scheduled
+like any other vanilla universe HTCondor job onto an execute machine
 within the pool. The result of a running interactive job is a shell
 prompt issued on the execute machine where the job runs. The user that
 submitted the interactive job may then use the shell as desired, perhaps
-to interactively run an instance of what is to become a Condor job. This
+to interactively run an instance of what is to become an HTCondor job. This
 might aid in checking that the set up and execution environment are
 correct, or it might provide information on the RAM or disk space
 needed. This job (shell) continues until the user logs out or any other
 policy implementation causes the job to stop running. A useful feature
 of the interactive job is that the users and jobs are accounted for
-within Condor's scheduling and priority system.
+within HTCondor's scheduling and priority system.
 
 Neither the submit nor the execute host for interactive jobs may be on
 Windows platforms.
@@ -1329,7 +1329,7 @@ benefit.
    interactive job. Where input or output cannot be captured in a file
    and the executable may not be modified, the interactive nature of the
    job may still be run on a pool machine, and within the purview of
-   Condor.
+   HTCondor.
 -  A pool machine with specialized hardware that requires interactive
    handling can be scheduled with an interactive job that utilizes the
    hardware.
@@ -1339,7 +1339,7 @@ benefit.
    identified, they can be corrected on the spot.
 -  Development may have an interactive nature, and proceed more quickly
    when done on a pool machine. It may also be that the development
-   platforms required reside within Condor's purview as execute hosts.
+   platforms required reside within HTCondor's purview as execute hosts.
 
 
 Submitting Lots of Jobs
@@ -1449,7 +1449,7 @@ The following limitations apply:
 Displaying the Factory
 ''''''''''''''''''''''
 
-:tool:`condor_q` can be use to show late materialization job factories in the *condor_schedd* by
+:tool:`condor_q` can be used to show late materialization job factories in the *condor_schedd* by
 using the ``-factory`` option.
 
 .. code-block:: console
@@ -1476,7 +1476,7 @@ and the ``JobMaterializePauseReason`` attribute.
 Removing a Factory
 ''''''''''''''''''
 
-The Late materialization job factory will be remove from the schedd automatically once all of the
+The Late materialization job factory will be removed from the schedd automatically once all of the
 jobs have materialized and completed.  To remove the factory without first completing all of the jobs
 use :tool:`condor_rm` with the ClusterId of the factory as the argument.
 
@@ -1484,7 +1484,7 @@ Editing a Factory
 '''''''''''''''''
 
 The *submit digest* for a Late Materialization job factory cannot be changed after submission, but the Cluster ad
-for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as a edit
+for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as an edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.
 
@@ -1504,13 +1504,13 @@ A simplified example is a cross submission. An executable is available
 for one platform, but the submission is done from a different platform.
 Given the correct executable, the :subcom:`requirements` command in the submit
 description file specifies the target architecture. For example, an
-executable compiled for a 32-bit Intel processor running Windows Vista,
-submitted from an Intel architecture running Linux would add the
+executable compiled for 64-bit Windows,
+submitted from a machine running Linux, would add the
 ``requirement``
 
 .. code-block:: condor-submit
 
-      requirements = Arch == "INTEL" && OpSys == "WINDOWS"
+      requirements = Arch == "X86_64" && OpSys == "WINDOWS"
 
 Without this :subcom:`requirements` command, :tool:`condor_submit` will assume that the
 program is to be executed on a machine with the same platform as the
@@ -1537,9 +1537,9 @@ The $$() informs HTCondor to substitute the requested
 ``MachineAdAttribute`` from the machine where the job will be executed.
 
 An example of the heterogeneous job submission has executables available
-for two platforms: RHEL 3 on both 32-bit and 64-bit Intel processors.
-This example uses *povray* to render images using a popular free
-rendering engine.
+for two platforms: Linux on X86_64 (Intel/AMD) processors and Linux on
+aarch64 (ARM) processors. This example uses *povray* to render images
+using a popular free rendering engine.
 
 The substitution macro chooses a specific executable after a platform
 for running the job is chosen. These executables must therefore be named
@@ -1548,8 +1548,8 @@ executables named
 
 .. code-block:: text
 
-      povray.LINUX.INTEL
       povray.LINUX.X86_64
+      povray.LINUX.aarch64
 
 will work correctly for the macro
 
@@ -1575,8 +1575,8 @@ submit description file that queues three jobs for this example:
       request_memory          = 512M
       request_disk            = 1G
 
-      requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
-                     (Arch == "X86_64" && OpSys =="LINUX")
+      requirements = (Arch == "X86_64" && OpSys == "LINUX") || \
+                     (Arch == "aarch64" && OpSys == "LINUX")
 
       arguments    = +W1024 +H768 +Iimage1.pov
       queue
@@ -1625,7 +1625,7 @@ specific operating systems and versions in heterogeneous pools.
 
 .. code-block:: condor-submit
 
-      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      # Example targeting RedHat 9 platforms in a heterogeneous Linux pool
 
       universe     = vanilla
       executable   = /bin/date
@@ -1633,7 +1633,7 @@ specific operating systems and versions in heterogeneous pools.
       output       = distro.out
       error        = distro.err
 
-      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
+      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 9 )
 
       request_cpus            = 1
       request_memory          = 512M
@@ -1641,11 +1641,11 @@ specific operating systems and versions in heterogeneous pools.
 
       queue
 
-Here is a more compact way to specify a RedHat 6 platform.
+Here is a more compact way to specify a RedHat 9 platform.
 
 .. code-block:: condor-submit
 
-      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+      # Example targeting RedHat 9 platforms in a heterogeneous Linux pool
 
       universe     = vanilla
       executable   = /bin/date
@@ -1657,7 +1657,7 @@ Here is a more compact way to specify a RedHat 6 platform.
       request_memory          = 512M
       request_disk            = 1G
 
-      requirements = (OpSysAndVer == "RedHat6")
+      requirements = (OpSysAndVer == "RedHat9")
 
       queue
 

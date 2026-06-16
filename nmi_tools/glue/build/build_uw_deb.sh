@@ -4,6 +4,9 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
+# Pin umask so file modes baked into the package are reproducible
+umask 022
+
 # build_uw_deb
 
 usage () {
@@ -85,12 +88,16 @@ elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
     SYS99='deb12'
 elif [ "$VERSION_CODENAME" = 'trixie' ]; then
     SYS99='deb13'
+elif [ "$VERSION_CODENAME" = 'forky' ]; then
+    SYS99='deb14'
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
     SYS99='ubu20'
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     SYS99='ubu22'
 elif [ "$VERSION_CODENAME" = 'noble' ]; then
     SYS99='ubu24'
+elif [ "$VERSION_CODENAME" = 'resolute' ]; then
+    SYS99='ubu26'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
     SYS99='dev04'
 else

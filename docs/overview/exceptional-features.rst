@@ -16,11 +16,11 @@ Exceptional Features
     The HTCondor execution point node scratch directories can be encrypted,
     so that if a node is stolen or broken into, scratch files are unreadable.
  Parallelization without Reimplementation or Redesign
-    HTCondor is able to run most programs which researchers can run on their
+    HTCondor can run most programs which researchers can run on their
     laptop or their desktop, in any programming language, such as C, Fortran,
-    Python, Julia, Matlab, R or others, without changing the code. HTCondor 
-    will do the work of running your code as parallel jobs, so it is 
-    not necessary to implement parallelism in your code.
+    Python, Julia, Matlab, R or others, without changing the code. HTCondor
+    will do the work of running your code as parallel jobs, so you don't
+    need to implement parallelism in your code.
  Portability and Heterogeneity 
     HTCondor runs on most Linux distributions and on Windows.  A single HTCondor
     pool can support machines of different OSes. Worker nodes need not be identically
@@ -31,11 +31,10 @@ Exceptional Features
     Flocking allows jobs submitted from one pool of HTCondor machines 
     to execute on another authorized pool.
  Jobs Can Be Ordered
-    A set of jobs where the output of one or more jobs becomes the input of
-    one or more other jobs, can be defined, such that HTCondor will run
-    the jobs in the proper order, and organize the inputs and outputs properly.
-    This is accomplished with a directed acyclic graph, where each job is a 
-    node in the graph. 
+    You can define a set of jobs where the output of some jobs becomes the
+    input of others; HTCondor runs them in the proper order and organizes
+    the inputs and outputs. HTCondor does this with a directed acyclic graph
+    (DAG), where each job is a node in the graph.
  HTCondor Can Use Remote Resources, from a Cloud, a Supercomputer Allocation, or a Grid
     Glidein allows jobs submitted to HTCondor to be
     executed on machines in remote pools in various locations worldwide. These remote

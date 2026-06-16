@@ -1145,17 +1145,19 @@ WriteUserLog::doRotation( const char *path, [[maybe_unused]] int &fd,
 		for( int i=max_rotations;  i>1;  i--) {
 			std::string old1( path );
 			formatstr_cat(old1, ".%d", i-1 );
+			std::string old2( path );
+			formatstr_cat(old2, ".%d", i );
 
-			struct stat s;
-			if ( 0 == stat(old1.c_str(), &s) ) {
-				std::string old2( path );
-				formatstr_cat(old2, ".%d", i );
-				if (rename( old1.c_str(), old2.c_str() )) {
+			if (rename(old1.c_str(), old2.c_str()) < 0) {
+				if (errno == ENOENT) {
+					// old1 doesn't exist, so don't increment num_rotations
+					continue;
+				} else {
 					dprintf(D_FULLDEBUG, "WriteUserLog failed to rotate old log from '%s' to '%s' errno=%d\n",
-							old1.c_str(), old2.c_str(), errno);
+					        old1.c_str(), old2.c_str(), errno);
 				}
-				num_rotations++;
 			}
+			num_rotations++;
 		}
 	}
 

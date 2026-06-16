@@ -271,6 +271,11 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.c_str());
 	}
 
+	auto_free_ptr disable_user_plugins(param("STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS"));
+	if (disable_user_plugins && IsValidClassAdExpression(disable_user_plugins)) {
+		printf("HasDisableUserTransferPlugins = %s\n", disable_user_plugins.ptr());
+	}
+
 	// even if we have no transfer plugin methods, we may want to
 	// advertise plugin extra attributes
 	if ( ! ft.getPlugins().empty()) {

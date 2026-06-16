@@ -81,7 +81,7 @@ It provides the functionality required in the plugin, except for
 the transfer logic itself, which is clearly indicated in the comments.
 
 The interface between HTCondor and a file-transfer plug-in is detailed
-:doc:`elsewere <../apis/file-transfer-plugins/index>`.
+:doc:`elsewhere <../apis/file-transfer-plugins/index>`.
 
 Sending File Transfer Plug-Ins With Your Job
 ''''''''''''''''''''''''''''''''''''''''''''
@@ -166,12 +166,11 @@ functionality to work:
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:
 
-   #. **<user>**: Links will be written as user who submitted the job.
+   #. **<user>**: Links will be written as the user who submitted the job.
    #. **<condor>**: Links will be written as user running condor
       daemons. By default this is the user condor unless you have
       changed this by setting the configuration parameter CONDOR_IDS.
-   #. **<%username%>**: Links will be written as the user %username% (ie. httpd,
-      nobody) If using this option, make sure the directory is writable
+   #. **<%username%>**: Links will be written as the user %username% (i.e., httpd, nobody) If using this option, make sure the directory is writable
       by this particular user.
 
    The default setting is <condor>.
@@ -233,7 +232,7 @@ Checkpoint Destinations with a Filesystem Mounted on the AP
 
 HTCondor ships with a clean-up plugin (``cleanup_locally_mounted_checkpoint``) that deletes
 checkpoints from a filesystem mounted on the AP.  This is more useful than
-it sounds, because the mounted filesystem could the remote backing store
+it sounds, because the mounted filesystem could be the remote backing store
 for files available through some other service, perhaps on a different
 machine.  The plug-in needs to be told how to map from the destination URL to
 the corresponding location in the filesystem.  For instance, if you’ve mounted
@@ -278,7 +277,7 @@ up, so this timeout need only be long enough to complete a single checkpoint's
 worth of clean-up in order to make progress.
 
 (On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
-the job whose checkpoints are being cleaned-up; this is both safer and easier,
+the job whose checkpoints are being cleaned up; this is both safer and easier,
 since that user may have useful privileges (for example, filesystems may be
 mounted "root-squash").)
 
@@ -297,7 +296,7 @@ of the job ad, in case the clean-up plug-in needs to know, for example, which
 credentials were used to upload the checkpoint(s).
 
 The plug-in will *not* be explicitly instructed to remove
-directories, not even the directories the HTCondor created to make sure that
+directories, not even the directories HTCondor created to make sure that
 different checkpoints are written to different places.  The plug-in can
 determine which directories HTCondor created by comparing the registered
 prefix to the ``<BASE>`` argument described above, if it wishes to remove
@@ -629,7 +628,7 @@ Other service providers will require searching through API documentation to find
 which then must be added to the HTCondor configuration.
 For example, if you search the Box.com API documentation,
 you should find the following authorization and token URLs,
-and these URLs could be added them to the HTCondor config as below:
+and these URLs could be added to the HTCondor config as below:
 
 .. code-block:: condor-config
 
@@ -728,7 +727,7 @@ directory. The condor_master will find the program specified in the
 condor_config as :macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one
 command line flag to that program is “<directory_to_monitor>”. If the
 Credential Monitor exits for any reason, it will be restarted by the
-condor_master after a short delay. The exit status of the Credenital Monitor is
+condor_master after a short delay. The exit status of the Credential Monitor is
 logged but is otherwise ignored. The Credential Monitor must handle a SIGHUP
 signal which informs it that the contents of the directory it is monitoring
 have changed and it should rescan the directory and perform whatever actions
@@ -763,7 +762,7 @@ condor_master will find the program specified in the condor_config as
 :macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one command line
 flag to that program is “<directory_to_monitor>”. If the Credential Monitor
 exits for any reason, it will be restarted by the condor_master after a short
-delay. The exit status of the Credenital Monitor is logged but is otherwise
+delay. The exit status of the Credential Monitor is logged but is otherwise
 ignored. The Credential Monitor must handle a SIGHUP signal which informs it
 that the contents of the directory it is monitoring have changed and it should
 rescan the directory and perform whatever actions are necessary.

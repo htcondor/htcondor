@@ -884,7 +884,7 @@ IpVerify::lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const 
 
 #if defined(HAVE_INNETGR)
     std::string canonical(user);
-    std::string::size_type atpos = canonical.find_first_of('@');
+    std::string::size_type atpos = canonical.find_last_of('@');
     std::string username = canonical.substr(0, atpos);
     std::string domain = canonical.substr(1+atpos);
     std::string host = hostname?hostname:ip;

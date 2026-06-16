@@ -4,6 +4,7 @@
 #include <string>
 #include <string.h>
 #include <sys/types.h>
+#include <cstdint>
 
 
 /* This is the driver for the classad fuzz tester.

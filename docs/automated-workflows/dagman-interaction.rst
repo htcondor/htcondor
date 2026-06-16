@@ -1,11 +1,11 @@
 Running and Managing DAGMan
 ===========================
 
-Once once a workflow has been setup in a ``.dag`` file, all that
+Once a workflow has been set up in a ``.dag`` file, all that
 is left is to submit the prepared workflow. A key concept to understand
 regarding the submission and management of a DAGMan workflow is
-that the DAGMan process itself is ran as a HTCondor Scheduler universe
-job that runs under the schedd on the AP (often referred to as the
+that the DAGMan process itself runs as an HTCondor Scheduler universe
+job under the schedd on the AP (often referred to as the
 DAGMan proper job) that will in turn manage and submit all the various
 jobs and scripts defined in the workflow.
 
@@ -27,7 +27,7 @@ DAG Submission
         $ condor_submit_dag diamond.dag
 
 To submit a DAG simply use :tool:`condor_submit_dag` or :tool:`htcondor dag submit`
-with the DAG description file from the current working directory that the DAG description file
+with the DAG description file from the current working directory where the DAG description file
 is stored. This will automatically generate an HTCondor scheduler universe job
 submit file to execute :tool:`condor_dagman` and submit this job to HTCondor. The
 generated DAG submit file is named ``<DAG Description File>.condor.sub``. If desired,
@@ -42,8 +42,8 @@ by doing the following:
     $ condor_submit diamond.dag.condor.sub
 
 Since the :tool:`condor_dagman` process is an actual HTCondor job, all jobs
-managed by DAGMan are marked with the DAGMan proper jobs :ad-attr:`ClusterId`.
-This value is set to the managed jobs ClassAd attribute :ad-attr:`DAGManJobId`.
+managed by DAGMan are marked with the DAGMan proper job's :ad-attr:`ClusterId`.
+This value is set in the managed job's ClassAd attribute :ad-attr:`DAGManJobId`.
 
 .. warning::
 
@@ -73,7 +73,7 @@ DAGMan renames all the nodes. The renaming of nodes is controlled by
 :macro:`DAGMAN_MUNGE_NODE_NAMES`.
 
 When multiple DAGs are submitted like this, DAGMan sets the first DAG description
-file provided on the command line as it's primary DAG file, and uses the primary
+file provided on the command line as its primary DAG file, and uses the primary
 DAG file when writing various files such as the ``*.dagman.out``. In the case of
 failure, DAGMan will produce a rescue file named ``<Primary DAG>_multi.rescue<XXX>``.
 See :ref:`Rescue DAG` section for more information.
@@ -99,8 +99,8 @@ regarding the overall workflow progress under the DAGMan proper job as follows:
     :caption: Example condor_q DAG workflow output (condensed)
 
     $ condor_q
-    $ OWNER   BATCH_NAME          SUBMITTED   DONE  RUN  IDLE  TOTAL  JOB_IDS
-    $ Cole    diamond.dag+1024    1/1 12:34   1     2    -     4      1025.0 ... 1026.0
+      OWNER   BATCH_NAME          SUBMITTED   DONE  RUN  IDLE  TOTAL  JOB_IDS
+      Cole    diamond.dag+1024    1/1 12:34   1     2    -     4      1025.0 ... 1026.0
 
 Using :tool:`condor_q` with the *-dag* and *-nobatch* flags will display information
 about the DAGMan proper job and all jobs currently submitted/running as
@@ -110,13 +110,13 @@ part of the DAGMan workflow as follows:
     :caption: Example condor_q DAG workflow output (uncondensed)
 
     $ condor_q -dag -nobatch
-    $ ID       OWNER/NODENAME  SUBMITTED    RUN_TIME ST PRI SIZE CMD
-    $ 1024.0   Cole            1/1 12:34  0+01:13:19 R  0   0.4  condor_dagman ...
-    $ 1025.0    |-Node_B       1/1 13:44  0+00:03:19 R  0   0.4  diamond.sh ...
-    $ 1026.0    |-Node_C       1/1 13:45  0+00:02:19 R  0   0.4  diamond.sh ...
+      ID       OWNER/NODENAME  SUBMITTED    RUN_TIME ST PRI SIZE CMD
+      1024.0   Cole            1/1 12:34  0+01:13:19 R  0   0.4  condor_dagman ...
+      1025.0    |-Node_B       1/1 13:44  0+00:03:19 R  0   0.4  diamond.sh ...
+      1026.0    |-Node_C       1/1 13:45  0+00:02:19 R  0   0.4  diamond.sh ...
 
 In addition to basic job management, the DAGMan proper job holds a lot of extra
-information within its job ClassAd that can queried with the *-l* or the more
+information within its job ClassAd that can be queried with the *-l* or the more
 recommended *-af* *<Attributes>* flags for :tool:`condor_q` in association with the
 DAGMan proper Job Id.
 
@@ -128,8 +128,8 @@ DAGMan proper Job Id.
 
 A large amount of information about DAG progress and errors can be found in
 the debug log file named ``<DAG Description File>.dagman.out``. This file should
-be saved if errors occur. This file also doesn't get removed between DAG
-new executions, and all logged messages are appended to the file.
+be saved if errors occur. This file also doesn't get removed between new DAG
+executions, and all logged messages are appended to the file.
 
 :index:`DAG status in a job ClassAd<single: DAGMan; DAG status in a job ClassAd>`
 
@@ -255,9 +255,9 @@ There are two ways to suspend (and resume) a running DAG.
 
 .. warning::
 
-    Neither :tool:`condor_hold` nor a DAG halt is propagated to sub-DAGS. In
-    other word if a parent DAG is held or halted, any sub-DAGs will continue
-    to submit node jobs. However, these effects are applied to DAG splices
+    Neither :tool:`condor_hold` nor a DAG halt is propagated to sub-DAGs. In
+    other words, if a parent DAG is held or halted, any sub-DAGs will continue
+    to submit node jobs. However, these effects do apply to DAG splices
     since they are merged into the parent DAG and are controlled by a single
     :tool:`condor_dagman` instance.
 
@@ -269,7 +269,7 @@ File Paths in DAGs
 .. sidebar:: Example File Paths with DAGMan
 
     A DAG and its node submit description file in the
-    same ``example`` directory. Once ran, ``A.out``
+    same ``example`` directory. Once run, ``A.out``
     and ``A.log`` are expected in the directory.
 
     .. code-block:: condor-dagman
@@ -298,13 +298,13 @@ File Paths in DAGs
 
 :tool:`condor_dagman` assumes all relative paths in a DAG description file and its
 node job submit descriptions are relative to the current working directory
-where :tool:`condor_submit_dag` was ran. Meaning all files declared in a DAG
-or its jobs are expected to be found or will be written relative to the DAGs
-working directory. All jobs will be submitted and all scripts will be ran
-from the DAGs working directory.
+where :tool:`condor_submit_dag` was run, meaning that all files declared in a DAG
+or its jobs are expected to be found or will be written relative to the DAG's
+working directory. All jobs will be submitted and all scripts will be run
+from the DAG's working directory.
 
-For simple DAG structures this may be alright, but not for complex DAGs.
-To help reduce confusion of where things run or files are written, the :dag-cmd:`JOB`
+For simple DAG structures this may be fine, but not for complex DAGs.
+To help reduce confusion about where things run or files are written, the :dag-cmd:`JOB`
 command takes an optional keyword **DIR <path>**. This will cause DAGMan to submit
 the node's job(s) and run the node scripts from the directory specified.
 
@@ -324,7 +324,7 @@ the node's job(s) and run the node scripts from the directory specified.
         └── programA
 
 If dealing with multiple independent DAGs separated into different directories
-as described below then a single :tool:`condor_submit_dag` submission from the
+as described below, then a single :tool:`condor_submit_dag` submission from the
 parent directory will fail to successfully execute since all paths are now relative
 to the parent directory.
 
@@ -362,7 +362,7 @@ to the parent directory.
         └── two.dag
 
 Use the :tool:`condor_submit_dag` *-UseDagDir* flag to execute each individual
-DAG in their relative directories. For this example, ``one.dag`` would run from
+DAG in its relative directory. For this example, ``one.dag`` would run from
 the ``dag1`` directory and ``two.dag`` would run from ``dag2``. All produced
 DAGMan files will be relative to the primary DAG (first DAG specified on the
 command line).
@@ -407,10 +407,10 @@ dependencies or just a bag of loose jobs. Notable features of DAGMan are:
         request_disk   = 10240K
         queue
 
-It is common for a large grouping of similar jobs to ran under a DAG. It
+It is common for a large grouping of similar jobs to run under a DAG. It
 is also very common for some external program or script to produce these
 large DAGs and needed files. There are generally two ways of organizing
-DAGs with large number of jobs to manage:
+DAGs with a large number of jobs to manage:
 
 #. Using a unique submit description for each node in the DAG
     In this setup, a single DAG description file containing ``n`` nodes with
@@ -447,9 +447,9 @@ DAGs with large number of jobs to manage:
         queue
 
 #. Using a shared submit description file and :ref:`DAGMan VARS`
-    In this setup, a single DAG description file containing ``n`` nodes share
-    a single submit description (see right) and utilize custom macros
-    added to each job for variance by DAGMan is described such as:
+    In this setup, a single DAG description file containing ``n`` nodes shares
+    a single submit description (see right) and uses custom macros
+    added to each job for variance by DAGMan, described such as:
 
     .. code-block:: condor-dagman
         :caption: Example large DAG using shared job description file for all nodes
@@ -465,16 +465,16 @@ DAGs with large number of jobs to manage:
         JOB job999 common.sub
         VARS job999 runnumber="999"
 
-    The benefit to this method is that less files need to be produced,
-    stored, and managed at the cost of more complexity and a double in
-    size to the DAG description file.
+    The benefit of this method is that fewer files need to be produced,
+    stored, and managed, at the cost of more complexity and a doubling in
+    size of the DAG description file.
 
 .. note::
 
-    Even though DAGMan can assist with the management of large number of jobs,
-    DAGs managing several thousands worth of jobs will produce lots of various
-    files making directory traversal difficult. Consider how the directory structure
-    should look for large DAGs prior to creating and running.
+    Even though DAGMan can assist with the management of a large number of jobs,
+    DAGs managing several thousand jobs will produce lots of various
+    files, making directory traversal difficult. Consider how the directory structure
+    should look for large DAGs prior to creating and running them.
 
 .. _DAGMan throttling:
 
@@ -482,8 +482,8 @@ DAGMan Throttling
 ^^^^^^^^^^^^^^^^^
 
 To prevent possible overloading of the *condor_schedd* and resources on the
-Access Point that :tool:`condor_dagman` executes on, DAGMan comes with built
-in capabilities to help throttle/limit the load on the Access Point.
+Access Point that :tool:`condor_dagman` executes on, DAGMan comes with built-in
+capabilities to help throttle/limit the load on the Access Point.
 
 :index:`throttling<single: DAGMan; Throttling>`
 
@@ -509,36 +509,46 @@ Throttling at DAG Submission
 
 :index:`editing DAG throttles<single: DAGMan; Editing DAG throttles>`
 
+.. sidebar:: Editing DAG throttles
+
+    .. code-block:: console
+        :caption: Using the htcondor CLI
+
+        $ htcondor dag throttle 298 --nodes 100 --pre 5 --post 10
+
+    .. code-block:: python
+        :caption: Via the Python API
+
+        import htcondor2
+
+        my_dag = htcondor2.DAGMan(298)
+        my_dag.throttle(max_nodes = 100, max_pre = 5, max_post = 10)
+
 Editing DAG Throttles
 '''''''''''''''''''''
 
-The following throttling properties of a running DAG can be changed after the workflow
-has been started. The values of these properties are published in the :tool:`condor_dagman`
-job ad; changing any of these properties using :tool:`condor_qedit` will also update
-the internal DAGMan value.
+A running DAG's throttles can be modified via :tool:`htcondor dag throttle` or :meth:`htcondor2.DAGMan.throttle`.
+All throttles will be constrained to the throttle values configured by the administrator unless
+:macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is set to ``True`` (by the administrator). The
+edited values will persist across crashes but not when rerunning a DAG in rescue mode. The values DAGMan
+is using for throttling can be found in either the ``*.dagman.out`` debug log or the DAGMan job
+record with the following attributes:
 
-.. sidebar:: Edit DAGMan Limits
-
-    To edit one of these properties, use the :tool:`condor_qedit`
-    tool with the job ID of the :tool:`condor_dagman`
-
-    .. code-block:: console
-
-        $ condor_qedit <dagman-job-id> DAGMan_MaxJobs 1000
-
-Currently, you can change the following attributes:
-
-+----------------------------------+-----------------------------------------------------+
-| **Attribute Name**               | **Attribute Description**                           |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxJobs`        | Maximum number of running nodes                     |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxIdle`        | Maximum number of idle jobs                         |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxPreScripts`  | Maximum number of running PRE scripts               |
-+----------------------------------+-----------------------------------------------------+
-| :ad-attr:`DAGMan_MaxPostScripts` | Maximum number of running POST scripts              |
-+----------------------------------+-----------------------------------------------------+
++----------------------------------------+-------------------------------------------------------+
+| **Attribute Name**                     | **Attribute Description**                             |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxJobs`              | Maximum number of running nodes                       |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxIdle`              | Maximum number of idle jobs                           |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxPreScripts`        | Maximum number of running PRE scripts                 |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxHoldScripts`       | Maximum number of running HOLD scripts                |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxPostScripts`       | Maximum number of running POST scripts                |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxSubmitsPerInterval`| Maximum number of job submissions per submit interval |
++----------------------------------------+-------------------------------------------------------+
 
 :index:`throttling nodes by category<single: DAGMan; Throttling nodes by category>`
 
@@ -565,10 +575,10 @@ Throttling Nodes by Category
         Please see :ref:`DAG Splice Limitations` in association with categories.
 
 DAGMan also allows the limiting of the number of running nodes (submitted job
-clusters) within a DAG at a finer grained control with the :dag-cmd:`CATEGORY[Usage]` and
+clusters) within a DAG at a finer-grained control with the :dag-cmd:`CATEGORY[Usage]` and
 :dag-cmd:`MAXJOBS[Usage]` commands. The :dag-cmd:`CATEGORY` command will assign a DAG node to a
 category that can be referenced by the :dag-cmd:`MAXJOBS` command to limit the number
-of submitted job clusters on a per category basis.
+of submitted job clusters on a per-category basis.
 
 If the number of submitted job clusters for a given category reaches the
 limit, no further job clusters in that category will be submitted until

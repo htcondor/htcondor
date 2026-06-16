@@ -15,8 +15,13 @@ if ($ARGV[1]) {
 		sleep(1);
 	}
 
+	# DAGMan writes the status file atomically (write temp + rename), so
+	# its inode can be replaced at any moment. A read/write copy races
+	# that rename -- GNU cp >= 9 detects the inode swap and aborts with
+	# "skipping file ..., as it was replaced while being copied", leaving
+	# no output. rename(2) is a single atomic syscall, so it cannot race.
 	print "  Saving $infile to $outfile\n";
-	system("cp $infile $outfile");
+	rename($infile, $outfile) or die "rename $infile -> $outfile failed: $!\n";
 } else {
 	print "  Just sleeping...\n";
 	sleep(1);

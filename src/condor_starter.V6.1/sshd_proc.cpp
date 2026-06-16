@@ -60,7 +60,7 @@ SSHDProc::PublishUpdateAd( ClassAd* ad)
 }
 
 
-bool
+ReapResult
 SSHDProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in SSHDProc::JobReaper()\n");
@@ -82,7 +82,7 @@ SSHDProc::JobReaper(int pid, int status)
 		starter->RemoteRemove(0);
 		VanillaProc::JobReaper(pid, status);
 		starter->ShutdownFast();
-		return true;
+		return ReapResult::JobDone;
 	}
 
 	return VanillaProc::JobReaper( pid, status );

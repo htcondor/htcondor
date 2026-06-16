@@ -109,7 +109,7 @@ OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *jo
 		}
 		else if ( starter->jic->usingFileTransfer() && transfer_exe ) {
 			formatstr( JobName, "%s%c%s",
-					starter->GetWorkingDir(0),
+					starter->GetWorkingDir(WD::OUTER),
 					DIR_DELIM_CHAR,
 					condor_basename(JobName.c_str()) );
 		}
@@ -467,7 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
 				launcher = htcondor::Singularity::USE_LAUNCHER;
 			}
-			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(0), job_env, launcher);
+			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(WD::OUTER), job_env, launcher);
 		} else {
 			sing_result = htcondor::Singularity::DISABLE;
 		}
@@ -683,20 +683,31 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			std::string err_msg = "Failed to execute '";
-			err_msg += JobName;
-			err_msg += "'";
-			if(!args_string.empty()) {
-				err_msg += " with arguments ";
-				err_msg += args_string;
-			}
-			err_msg += ": ";
-			err_msg += create_process_err_msg;
-			if( !ThisProcRunsAlongsideMainProc() ) {
-				starter->jic->notifyStarterError( err_msg.c_str(),
-			    	                              true,
-			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
-			            	                      create_process_errno );
+			if (create_process_errno == DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP) {
+				std::string err_msg = "Job was OOM killed by cgroup memory limit "
+					"before it could start. Consider requesting more memory.";
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
+			} else {
+				std::string err_msg = "Failed to execute '";
+				err_msg += JobName;
+				err_msg += "'";
+				if(!args_string.empty()) {
+					err_msg += " with arguments ";
+					err_msg += args_string;
+				}
+				err_msg += ": ";
+				err_msg += create_process_err_msg;
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
 			}
 		}
 
@@ -718,7 +729,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-bool
+ReapResult
 OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
@@ -734,7 +745,7 @@ OsProc::JobReaper( int pid, int status )
 			if (droppedContainerLaunched) {
 				TemporaryPrivSentry sentry(PRIV_USER);
 				
-				std::string launchFilePath = starter->GetWorkingDir(0);
+				std::string launchFilePath = starter->GetWorkingDir(WD::OUTER);
 				launchFilePath += "/.condor_container_launched";
 				struct stat unused;
 				int r = stat(launchFilePath.c_str(), &unused);
@@ -1093,16 +1104,48 @@ OsProc::SetupSingularitySsh() {
 	sshListener.close();
 	sshListener.assignDomainSocket(uds);
 
-	// and bind it to a filename in the scratch directory
+	// Bind the socket to .docker_sock in the scratch directory.
+	//
+	// AF_UNIX sun_path is only 108 bytes on Linux, but HTCondor's execute
+	// directory path can be longer than that, so the naive
+	// "workingDir + /.docker_sock" overflows sun_path and bind() returns
+	// ENAMETOOLONG.
+	//
+	// Workaround: open the working directory as a fd and bind() through
+	// /proc/self/fd/<N>/.docker_sock.  /proc/self/fd/<N> is a magic
+	// symlink to whatever the fd points at, so the kernel resolves the
+	// lookup starting from our dirfd and creates the socket inode in the
+	// real (long-path) directory.  The string we actually copy into
+	// sun_path is short -- a small fixed prefix plus an int and the
+	// filename -- so it always fits.  See the matching comment in
+	// docker_proc.cpp::SetupDockerSsh for more detail.
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	// O_PATH suffices: the fd is only used as a directory reference for
+	// /proc/self/fd lookup, never read or written through.
+	int dirfd = -1;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	dirfd = open(workingDir.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+	}
+	if (dirfd < 0) {
+		dprintf(D_ALWAYS, "Cannot open working dir %s for singularity ssh_to_job: %d\n", workingDir.c_str(), errno);
+		return;
+	}
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		dprintf(D_ALWAYS, "Cannot format /proc/self/fd path for singularity ssh_to_job\n");
+		close(dirfd);
+		return;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	{
@@ -1110,9 +1153,11 @@ OsProc::SetupSingularitySsh() {
 	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
 	if (rc < 0) {
 		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for singularity ssh_to_job: %d\n", pipeName.c_str(), errno);
+		close(dirfd);
 		return;
 	}
 	}
+	close(dirfd);
 
 	listen(uds, 50);
 	sshListener._state = Sock::sock_special;
@@ -1158,6 +1203,25 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
+
+	// Read the length-prefixed command string from docker_enter.
+	// Length 0 means interactive shell; otherwise run the command.
+	std::string ssh_command;
+	uint32_t cmd_len = 0;
+	int cmd_fd = sns->get_file_desc();
+	if (read(cmd_fd, &cmd_len, sizeof(cmd_len)) == sizeof(cmd_len)) {
+		cmd_len = ntohl(cmd_len);
+		if (cmd_len > 0) {
+			ssh_command.resize(cmd_len);
+			int bytes_read = 0;
+			while (bytes_read < (int)cmd_len) {
+				int r = read(cmd_fd, &ssh_command[bytes_read], cmd_len - bytes_read);
+				if (r <= 0) break;
+				bytes_read += r;
+			}
+			ssh_command.resize(bytes_read);
+		}
+	}
 
 	// we have the pid of the singularity process, need pid of the job
 	// sometimes this is the direct child of singularity, sometimes singularity
@@ -1223,21 +1287,6 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		free(user_name);
 	}
 
-	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
-	if (setuid) {
-		// The default case where singularity is using a setuid wrapper
-		args.AppendArg("-m"); // mount namespace
-		args.AppendArg("-i"); // ipc namespace
-		args.AppendArg("-p"); // pid namespace
-		args.AppendArg("-r"); // root directory
-		args.AppendArg("-w"); // cwd is container's
-
-	} else {
-		args.AppendArg("-U"); // enter only the User namespace
-		args.AppendArg("-r"); // chroot
-		args.AppendArg("-preserve-credentials");
-	}
-
 	Env env;
 	std::string env_errors;
 	if (!starter->GetJobEnv(JobAd,&env, env_errors)) {
@@ -1260,6 +1309,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
 	}
 
+	if (!ssh_command.empty()) {
+		args.AppendArg("--");
+		args.AppendArg("/bin/sh");
+		args.AppendArg("-c");
+		args.AppendArg(ssh_command);
+	}
+
 	std::string bin_dir;
 	param(bin_dir, "BIN");
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
@@ -1272,11 +1328,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
     std::string create_process_err_msg;
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
-		 cpArgs.priv(setuid ? PRIV_ROOT: PRIV_USER)
+		 cpArgs.priv(PRIV_ROOT)
 		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+
+	// Close the ssh session fds in the starter; the child has inherited them.
+	// If we keep them open, sshd won't detect the command has finished.
+	for (int i = 0; i <= 2; i++) {
+		if (fds[i] >= 0) {
+			close(fds[i]);
+		}
+	}
 
 #else
 		(void)stream;	// shut the compiler up

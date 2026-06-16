@@ -26,13 +26,17 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+enum class WD : bool {
+	INNER = true,
+	OUTER = false,
+};
+
 #if defined(LINUX) || defined(DARWIN)
     // We don't test on BSD, so don't claim the hardlink code works there.
     #define CFT_VERSION 2
 #else
     #define CFT_VERSION 0
 #endif
-
 
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
@@ -149,7 +153,7 @@ public:
 		/**
 		 * Before a job is spawned, this method checks whether
 		 * a job has a deferrral time, which means we will need
-		 * to register timer to call SpawnPreScript()
+		 * to register timer to call SpawnJobOrPreScript()
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
@@ -181,7 +185,7 @@ public:
 		 *
 		 *
 		 **/
-	virtual void SpawnPreScript( int timerID = -1 );
+	virtual void SpawnJobOrPreScript( int timerID = -1 );
 
 		/* timer to handle unwinding to pump while skipping job spawn */
 	virtual void SkipJobs( int timerID = -1 );
@@ -226,8 +230,8 @@ public:
 		/** Return the temporary directory under Execute for this job.
 		 *  If file transfer is used, this will also be the job's IWD.
 		 */
-	const char *GetWorkingDir(bool inner) const {
-		if (inner && ! InnerWorkingDir.empty()) {
+	const char *GetWorkingDir(WD which) const {
+		if (which == WD::INNER && ! InnerWorkingDir.empty()) {
 			return InnerWorkingDir.c_str();
 		}
 		return WorkingDir.c_str();
@@ -235,6 +239,13 @@ public:
 
 	const char *GetSlotDir() const {
 		return SlotDir.c_str();
+	}
+
+		/** Return the user's home directory for this job.
+		 *  Owned by the job user; same as WorkingDir when nested scratch is off.
+		 */
+	const char *GetJobHomeDir() const {
+		return JobHomeDir.c_str();
 	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?

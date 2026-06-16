@@ -34,7 +34,7 @@ machine within the pool. They specify items related to the
 
 :macro-def:`VM_MAX_NUMBER[Virtual Machines]`
     An integer limit on the number of executing virtual machines. When
-    not defined, the default value is the same :macro:`NUM_CPUS`. When it
+    not defined, the default value is the same as :macro:`NUM_CPUS`. When it
     evaluates to ``Undefined``, as is the case when not defined with a
     numeric value, no meaningful limit is imposed.
 

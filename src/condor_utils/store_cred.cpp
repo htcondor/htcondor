@@ -93,7 +93,7 @@ bool store_cred_failed(long long ret, int mode, const char ** errstring /*=NULL*
 static bool username_is_pool_password(const char *user, int * domain_pos = NULL)
 {
 	const int pool_name_len = sizeof(POOL_PASSWORD_USERNAME) - 1;
-	const char *at = strchr(user, '@');
+	const char *at = strrchr(user, '@');
 	int len;
 	if (at) {
 		len = (int)(at - user);
@@ -1113,7 +1113,7 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				if ( !pw_wc ) {
 					answer = FAILURE_NOT_FOUND;
 				} else {
-					sprintf(passw, "%S", pw_wc);
+					snprintf(passw, MAX_PASSWORD_LENGTH, "%S", pw_wc);
 					SecureZeroMemory(pw_wc, wcslen(pw_wc));
 					delete[] pw_wc;
 					
@@ -1156,7 +1156,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
-	dom = strchr(user, '@');
+	dom = strrchr(user, '@');
 
 	if ( dom ) {
 		*dom = '\0';
@@ -1555,8 +1555,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		if ( ! sock->get(credlen)) {
 			got_message = false;
 		} else if (credlen) {
-			if (credlen > 0x1000000 * 100) {
-				dprintf(D_ALWAYS, "store_cred: ERROR cred too large (%d). possible protocol mismatch\n", credlen);
+			if (credlen < 0 || credlen > 100 * 1024 * 1024) {
+				dprintf(D_ALWAYS, "store_cred: ERROR cred size invalid (%d). possible protocol mismatch\n", credlen);
 				got_message = false;
 			} else {
 				cred.set((char*)malloc(credlen));
@@ -1602,7 +1602,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
-		size_t ix_at = fulluser.find('@');
+		size_t ix_at = fulluser.find_last_of('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
 			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;

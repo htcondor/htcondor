@@ -194,7 +194,7 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 		20 /* years of careful research */,
 		(TimerHandlercpp) & pcccStopCallback::callback, "pcccStop", pcs );
 	pcccTimerSelfMap[ nowJob ] = pcs;
-	cMsg->setCallback( new DCMsgCallback( (DCMsgCallback::CppFunction) & pcccStopCallback::dcMessageCallback, pcs ) );
+	cMsg->setCallback( std::make_shared<DCMsgCallback>( (DCMsgCallback::CppFunction) & pcccStopCallback::dcMessageCallback, pcs ) );
 	cMsg->setDeadlineTimeout( 20 /* years of careful research */ );
 	startd->sendMsg( cMsg.get() );
 }

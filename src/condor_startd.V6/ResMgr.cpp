@@ -256,6 +256,11 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
 	configInsert( config_classad, ATTR_MACHINE_MAX_VACATE_TIME, true );
 
+		// Guard expression for "condor_ep rehome --reboot".  Evaluated
+		// against the slot ad; the startd will only reboot the host on
+		// rehome if this evaluates to true.  Defaults to false (refuse).
+	configInsert( config_classad, "STARTD_REHOME_ALLOW_REBOOT", false );
+
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
 	configInsert( config_classad, "RunBenchmarks", false );
@@ -305,6 +310,55 @@ ResMgr::init_config_classad( void )
 		}
 	}
 	
+	// insert admin-defined requirements clauses that are STARTD wide
+	// and have STARTD wide expressions into the resmgr config ad.
+	// we will handle slot_type definitions for these knobs later.
+	classad::References clauses;
+	param_and_insert_attrs("SLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("PSLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("DSLOT_REQUIREMENTS_CLAUSES", clauses);
+	clauses.erase(ATTR_WITHIN_RESOURCE_LIMITS); // default for this is generated per-slot
+	clauses.erase(ATTR_START); // handled above with default value
+	for (auto & attr : clauses) {
+		configInsert(config_classad, attr.c_str(), false, nullptr);
+	}
+
+	// if there is a STARTD_HEALTH_EXPRS knob, then use it to set the Healthy expression
+	// If there is more than one expression, also set HealthExprs and HealthFactor
+	auto_free_ptr health_exprs(param("STARTD_HEALTH_EXPRS"));
+	if (health_exprs) {
+		std::string exprstr;
+		formatstr(exprstr, "{%s}", health_exprs.ptr());
+		ExprTree * tree = nullptr;
+		if (0 != ParseClassAdRvalExpr(exprstr.c_str(), tree) && 0 != ParseClassAdRvalExpr(health_exprs, tree)) {
+			dprintf(D_ERROR, "Parse error in STARTD_HEALTH_EXPRS: %s\n", exprstr.c_str());
+		} else {
+			classad::ExprList * health_checks = dynamic_cast<classad::ExprList*>(tree);
+			if ( ! health_checks) {
+				dprintf(D_ERROR, "STARTD_HEALTH_EXPRS: %s is not a list\n", exprstr.c_str());
+			} else {
+				if (health_checks->size() < 1) {
+					delete health_checks;
+					if ( ! config_classad->Lookup(ATTR_HEALTHY)) { config_classad->Assign(ATTR_HEALTHY, true); }
+				} else {
+					// append a literal 1 to the list of health expressions, so that when passed to min
+					// it will evaluate to true when all of the health expressions evaluate to undefined.
+					// then insert that as the argument list for a min function call. In effect, this becomes
+					// Healthy = min({$(STARTD_HEALTH_EXPRS),1})
+					// when STARTD_HEALTH_EXPRS is a valid list of classad expressions.
+					if (health_checks->size() > 0) {
+						config_classad->Insert(ATTR_HEALTH_EXPRS, health_checks->Copy());
+						formatstr(exprstr, "sum(" ATTR_HEALTH_EXPRS ") / %u.0", (unsigned int)health_checks->size());
+						config_classad->AssignExpr("HealthFactor", exprstr.c_str());
+					}
+					health_checks->push_back(classad::Literal::MakeInteger(1));
+					classad::ArgumentList args; args.push_back(health_checks);
+					config_classad->Insert(ATTR_HEALTHY, classad::FunctionCall::MakeFunctionCall("min", args));
+				}
+			}
+		}
+	}
+
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
@@ -493,16 +547,13 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	if ( ! broken_reasons.empty()) {
 		broken_reasons.insert(0,"{");
 		broken_reasons.push_back('}');
-		ad.AssignExpr("BrokenReasons", broken_reasons.c_str());
-		// for backward compat, assign a BrokenSlots attribute that just refs the new BrokenReasons attribute
-		// TODO: add add for compat with 24.2,  remove someday
-		ad.AssignExpr("BrokenSlots", "BrokenReasons");
+		ad.AssignExpr(ATTR_BROKEN_REASONS, broken_reasons.c_str());
 	}
 
 	if ( ! broken_contexts.empty()) {
 		broken_contexts.insert(0,"{");
 		broken_contexts.push_back('}');
-		ad.AssignExpr("BrokenContextAds", broken_contexts.c_str());
+		ad.AssignExpr(ATTR_BROKEN_CONTEXT_ADS, broken_contexts.c_str());
 	}
 
 	// static information about custom resources
@@ -511,7 +562,11 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 
 	// gloal dynamic information. offline resources, WINREG values
 	m_attr->publish_common_dynamic(&ad, true);
-	
+
+	// We want ATTR_HEALTHY and related attributes in the daemon ad
+	caCopyIfDefined(ad, *config_classad, ATTR_HEALTHY);
+	caCopyIfDefined(ad, *config_classad, "HealthExprs");
+	caCopyIfDefined(ad, *config_classad, "HealthFactor");
 
 	//PRAGMA_REMIND("TJ: write this")
 	// m_attr->publish_EP_dynamic(&ad);
@@ -767,7 +822,7 @@ ResMgr::init_resources( void )
 		for( i=0; i<num_res; i++ ) {
 			CpuAttributes * cpu_attrs = new_cpu_attrs[i];
 			if (cpu_attrs) {
-				Resource * rip = new Resource(cpu_attrs, i+1);
+				Resource * rip = new Resource(cpu_attrs, i+1, nullptr);
 				// create a broken_things record for each resource that is born broken
 				// TODO: maybe these things should not be added to the slots array?
 				if (cpu_attrs->is_broken()) {
@@ -1684,6 +1739,7 @@ void ResMgr::compute_static()
 	long long virt_mem = m_attr->virt_mem();
 #else
 #endif
+
 	for(Resource* rip : slots) {
 		if (rip) {
 		#ifdef PROVISION_FRACTIONAL_DISK
@@ -3480,6 +3536,113 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	releaseAllClaimsReversibly("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
+}
+
+bool
+ResMgr::rehomeRebootAllowed() const
+{
+		// Evaluate the STARTD_REHOME_ALLOW_REBOOT guard expression (inserted
+		// into each slot's config ad) against a slot.  A reboot affects the
+		// whole host, so be conservative: require at least one slot and that
+		// every slot's expression evaluate to true.  Undefined/error counts
+		// as "not allowed".
+	bool any_slot = false;
+	for (Resource * rip : slots) {
+		if (! rip) { continue; }
+		any_slot = true;
+		bool val = false;
+		if (! EvalBool("STARTD_REHOME_ALLOW_REBOOT", rip->r_classad, nullptr, val) || ! val) {
+			return false;
+		}
+	}
+	return any_slot;
+}
+
+void
+ResMgr::rebootAfterRehome(const std::string &reboot_command)
+{
+	m_reboot_after_rehome = true;
+	m_reboot_command = reboot_command;
+	dprintf(D_ALWAYS,
+		"rehome: host will reboot via '%s' once all claims have been evicted\n",
+		reboot_command.c_str());
+
+		// Mark every slot unavailable (Requirements -> False) now that a
+		// reboot is pending -- rehomeRebootPending() drives reqexp_restore()
+		// into the UNAVAIL_REQ state, the same way draining and shutdown do.
+		// Without this the negotiator immediately rematches the jobs we just
+		// evicted back onto this host, "all claims evicted" is never reached,
+		// and the reboot never fires.  update_all() pushes the now-unavailable
+		// slot ads to the collector so the next negotiation cycle skips us.
+	walk([](Resource* rip) { rip->reqexp_restore(); });
+	update_all();
+
+		// If nothing is running we can reboot right away.
+	checkForRehomeReboot();
+}
+
+void
+ResMgr::checkForRehomeReboot()
+{
+	if (! m_reboot_after_rehome) {
+		return;
+	}
+	if (m_reboot_timer_scheduled) {
+			// Timer is already queued; doRehomeReboot will run.
+		return;
+	}
+	if (hasAnyClaim()) {
+			// Still waiting for one or more starters to exit.
+		return;
+	}
+
+		// Note: m_reboot_after_rehome stays true until doRehomeReboot
+		// completes, so startd_exit_if_idle defers any concurrent
+		// fast-shutdown until after we have launched the reboot command.
+	m_reboot_timer_scheduled = true;
+
+	dprintf(D_ALWAYS, "rehome: all claims evicted; scheduling host reboot\n");
+
+		// Defer to a zero-delay timer: we are called from inside the
+		// starter-exit state-change callback, and the reconfig below can
+		// rebuild slot objects, which would invalidate the caller's state.
+	daemonCore->Register_Timer(0,
+		(TimerHandlercpp)&ResMgr::doRehomeReboot,
+		"ResMgr::doRehomeReboot", this);
+}
+
+void
+ResMgr::doRehomeReboot(int /*timerID*/)
+{
+	dprintf(D_ALWAYS,
+		"rehome: reconfiguring and rebooting host via '%s'\n",
+		m_reboot_command.c_str());
+
+		// Re-read configuration so the just-persisted direct-attach settings
+		// (e.g. STARTD_DIRECT_ATTACH_SCHEDD_NAME) are validated and in effect,
+		// then flush filesystem buffers so they survive the reboot and we come
+		// back attached to the right schedd.
+	main_config();
+
+	priv_state priv = set_root_priv();
+	dprintf(D_ALWAYS, "rehome: running reboot command '%s'\n",
+			m_reboot_command.c_str());
+	int status = system(m_reboot_command.c_str());
+	dprintf(D_ALWAYS, "rehome: reboot command returned status %d\n", status);
+	set_priv(priv);
+
+	if (status != 0) {
+		dprintf(D_ERROR,
+			"rehome: reboot command '%s' returned status %d\n",
+			m_reboot_command.c_str(), status);
+	}
+
+		// Clear the pending flag now that the reboot command has been
+		// launched.  If a fast-shutdown was deferred waiting on us,
+		// re-poke the idle-exit path so the startd can finish exiting.
+	m_reboot_after_rehome = false;
+	m_reboot_timer_scheduled = false;
+	startd_exit_if_idle();
 }
 
 void

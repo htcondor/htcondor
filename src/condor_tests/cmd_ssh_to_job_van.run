@@ -45,8 +45,10 @@ $execute = sub {
     my $scratch_dir = `condor_ssh_to_job -debug -auto-retry $cluster "pwd;echo \$_CONDOR_SCRATCH_DIR"`;
     print "_CONDOR_SCRATCH_DIR: $scratch_dir\n";
     
-    # check if simple command works
-    my $cmd = "condor_ssh_to_job -auto-retry $cluster \"echo ssh_to_job_success > ./$temp_file\"";
+    # check if simple command works.  Write via temp+rename so the file
+    # never appears empty to the polling job (the shell creates the
+    # redirect target before `echo` writes, which races the job's `-e` poll).
+    my $cmd = "condor_ssh_to_job -auto-retry $cluster \"echo ssh_to_job_success > ./$temp_file.tmp && mv ./$temp_file.tmp ./$temp_file\"";
     if(system($cmd)) {
         my $rc=$?;
 

@@ -27,6 +27,7 @@
 #include <memory>
 #include <limits>
 #include <assert.h>
+#include <cstdint> // for uint64_t
 
 #include "stl_string_utils.h"
 

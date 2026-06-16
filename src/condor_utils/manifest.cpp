@@ -205,6 +205,7 @@ deleteFilesStoredAt(
 	std::string argl;
 	if(! fetchCheckpointDestinationCleanup( checkpointDestination, argl, error )) {
 		// fetchCheckpointDestinationCleanup() set error for us already.
+		fclose(fp);
 		return false;
 	}
 
@@ -223,6 +224,7 @@ deleteFilesStoredAt(
 		    "Clean-up plug-in for '%s' (%s) does not exist, aborting",
 		    checkpointDestination.c_str(), pluginFileName.c_str()
 		);
+		fclose(fp);
 		return false;
 	}
 
@@ -266,6 +268,7 @@ deleteFilesStoredAt(
 
 		if( rc != 0 ) {
 			formatstr( error, "Failed to run '%s': %d (%s), aborting.", argStr.c_str(), rc, subprocess.error_str() );
+			fclose(fp);
 			return false;
 		}
 
@@ -281,6 +284,7 @@ deleteFilesStoredAt(
 				formatstr_cat( error, "(Partial output: '%s')\n", output );
 			}
 
+			fclose(fp);
 			return false;
 		}
 
@@ -292,6 +296,7 @@ deleteFilesStoredAt(
 				formatstr_cat( error, "(Output: '%s')\n", output );
 			}
 
+			fclose(fp);
 			return false;
 		}
 

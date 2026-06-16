@@ -59,7 +59,7 @@
 const char* digest_state_and_activity (char * sa, State st, Activity ac)
 {
 	const char state_letters[] = "~OUMCPSXFD#?";
-	const char act_letters[] = "0ibrvsek#?";
+	const char act_letters[] = "0ibrvsekc#?";
 
 	sa[1] = sa[0] = ' ';
 	sa[2] = 0;
@@ -502,13 +502,12 @@ const char * format_job_factory_mode (const classad::Value &val, Formatter &)
 
 bool render_job_id (std::string & result, ClassAd* ad, Formatter &)
 {
-	char str[PROC_ID_STR_BUFLEN];
-	int cluster_id=0, proc_id=0;
-	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id))
-		return false;
-	ad->LookupInteger(ATTR_PROC_ID,proc_id);
-	ProcIdToStr(cluster_id, proc_id, str);
-	result = str;
+	JOB_ID_KEY jid{0,-1};
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster)) {
+		return ad->LookupString(ATTR_JOB_ID, result);
+	}
+	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
+	jid.sprint(result);
 	return true;
 }
 
@@ -839,6 +838,56 @@ bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 	return true;
 }
 
+bool render_failed_health_exprs ( classad::Value & value, ClassAd* ad, Formatter & fmt )
+{
+	std::string buf;
+	std::string unhealth;
+	if( ! value.IsListValue() ) {
+		// if unhealthy is not supported, look for a slot broken string
+		// or a Startd broken reasons list of strings.
+		if (ad->LookupString(ATTR_SLOT_BROKEN_REASON, unhealth)) {
+			value.SetStringValue(unhealth);
+			return true;
+		} else if (ad->EvaluateAttr(ATTR_BROKEN_REASONS, value)) {
+			return render_unique_strings(value, ad, fmt);
+		}
+		return false;
+	}
+	const classad::ExprList * list = NULL;
+	if( ! value.IsListValue( list ) ) {
+		value.SetStringValue("[Attribute not a list.]");
+		return true;
+	}
+
+	classad::Value itemval;
+	classad::ExprList::const_iterator item = list->begin();
+	for( ; item != list->end(); ++item ) {
+		ExprTree * expr = *item /*, * sig = nullptr*/;
+		expr->SetParentScope(ad);
+		bool bval = true;
+		if (ad->EvaluateExpr(expr, itemval) && itemval.IsBooleanValueEquiv(bval)) {
+			if (bval) {
+				// health ok, skip this one.
+			} else {
+				if ( ! unhealth.empty()) unhealth += ", ";
+				buf.clear();
+				unhealth += ExprTreeToString(expr, buf);
+			}
+		} else if (itemval.IsUndefinedValue()) {
+			// undefined, skip this one.
+			//if ( ! unhealth.empty()) unhealth += ",";
+			//unhealth += "undef";
+		} else if (itemval.IsErrorValue()) {
+			if ( ! unhealth.empty()) unhealth += ",";
+			unhealth += "error";
+		}
+	}
+
+	value.SetStringValue(unhealth);
+	return true;
+}
+
+
 //=================================Format Table======================================
 //          !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!!
 const CustomFormatFnTableItem GlobalPrintFormats[] = {
@@ -863,7 +912,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_FACTORY_MODE",ATTR_JOB_MATERIALIZE_PAUSED, 0, format_job_factory_mode, NULL },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" ATTR_JOB_ID "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 #if 0
 	//This was a collision between queue table and history table
@@ -892,6 +941,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
 	{ "STRINGS_FROM_LIST", NULL, 0, render_strings_from_list, NULL },
 	{ "TIME",            ATTR_KEYBOARD_IDLE, 0, format_real_time, NULL },
+	{ "UNHEALTH",        ATTR_HEALTH_EXPRS, 0, render_failed_health_exprs, ATTR_HEALTHY "\0" ATTR_BROKEN_REASONS "\0" ATTR_SLOT_BROKEN_REASON "\0" },
 	{ "UNIQUE",          NULL, 0, render_unique_strings, NULL },
 };
 

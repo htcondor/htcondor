@@ -566,6 +566,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora41'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora42'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora43'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora44'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	'nmi-build:x86_64_openSUSE15'   => 'x86_64_Fedora',
 	'nmi-build:x86_64_openSUSE16'   => 'x86_64_Fedora',
@@ -683,6 +684,8 @@ our %submit_info = (
 	'nmi-build:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
 	'nmi-build:x86_64_Ubuntu24'	=> 'x86_64_Ubuntu18',
 	'nmi-build:aarch64_Ubuntu24'	=> 'x86_64_Ubuntu18',
+	'nmi-build:x86_64_Ubuntu26'	=> 'x86_64_Ubuntu18',
+	'nmi-build:aarch64_Ubuntu26'	=> 'x86_64_Ubuntu18',
 	'nmi-build:ppc64le_Ubuntu20'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name

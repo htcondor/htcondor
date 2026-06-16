@@ -43,10 +43,13 @@
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
 #include <utility> // for std::move
+#include <map>
 
 #include "classad_helpers.h"
 #include "history_utils.h"
 #include "backward_file_reader.h"
+#include "archive_reader.h"
+#include "librarian_client.h"
 #include <fcntl.h>  // for O_BINARY
 
 void Usage(const char* name, int iExitCode=1);
@@ -110,6 +113,7 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
 		"\t-extract <file>\t\tCopy historical ClassAd entries into the specified file\n"
+		"\t-no-librarian\t\tDisable librarian index lookups\n"
 		, name);
   exit(iExitCode);
 }
@@ -120,6 +124,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr, const std::vector<std::pair<int,int>>& job_ids);
 static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
@@ -304,6 +309,7 @@ main(int argc, const char* argv[])
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool noLibrarian = false;
   bool transferAds = false;
   bool limitSet = false;
 
@@ -729,6 +735,9 @@ main(int argc, const char* argv[])
           // dprintf to console
           diagnostic = true;
     }
+    else if (is_dash_arg_prefix(argv[i], "no-librarian", 12)) {
+          noLibrarian = true;
+    }
     else if (is_dash_arg_prefix(argv[i], "name", 1)) {
         i++;
         if (argc <= i)
@@ -822,6 +831,29 @@ main(int argc, const char* argv[])
 	if ( ! limitSet && specifiedMatch < 0) { specifiedMatch = 100'000; }
   }
 
+  // When only cluster IDs or usernames are specified (no cluster.proc pairs),
+  // use the librarian DB record count as the match limit so we stop early.
+  if ( ! limitSet && readfromfile && recordSrc == HRS_SCHEDD_JOB_HIST
+	   && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
+	bool hasProc = false;
+	for (const auto& item : jobIdFilterInfo) {
+		if (item.jid.proc >= 0) { hasProc = true; break; }
+	}
+	if ( ! hasProc && ( ! jobIdFilterInfo.empty() || ! ownersList.empty())) {
+		LibrarianClient librarian;
+		if (librarian.IsValid()) {
+			int count = 0;
+			for (const auto& item : jobIdFilterInfo) {
+				count += librarian.CountByCluster(item.jid.cluster);
+			}
+			for (const auto& name : ownersList) {
+				count += librarian.CountByUser(name);
+			}
+			if (count > 0) { specifiedMatch = count; }
+		}
+	}
+  }
+
   if (writetosocket && streamresults) {
 	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
@@ -864,7 +896,24 @@ main(int argc, const char* argv[])
           }
       }
 
+      // Direct-seek path: when the user specifies only cluster.proc job IDs, use the
+      // librarian DB to find exact file offsets and seek directly to each record.
+      bool tookDirectPath = false;
+      if (ownersList.empty() && ! jobIdFilterInfo.empty() && recordSrc == HRS_SCHEDD_JOB_HIST
+          && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
+          bool allHaveProc = true;
+          std::vector<std::pair<int,int>> ids;
+          for (const auto& item : jobIdFilterInfo) {
+              if (item.jid.proc < 0) { allHaveProc = false; break; }
+              ids.emplace_back(item.jid.cluster, item.jid.proc);
+          }
+          if (allHaveProc) {
+              tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr, ids);
+          }
+      }
+
       // Read from single file, matching files, or a directory (if valid option)
+    if ( ! tookDirectPath) {
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
       } else if (readFromDir) { //Searching for files in a directory
@@ -872,6 +921,7 @@ main(int argc, const char* argv[])
       } else { //Normal search with files
       readHistoryFromFiles(searchPath ? searchPath : matchFileName, my_constraint.c_str(), constraintExpr);
       }
+    }
   }
   else {
       readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
@@ -1175,7 +1225,7 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 }
 
 // Read the history from the specified history file, or from all the history files.
-// There are multiple history files because we do rotation. 
+// There are multiple history files because we do rotation.
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	ASSERT(recordSrc != HRS_AUTO);
@@ -1339,6 +1389,58 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 }
 
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+
+// Use the librarian DB index to seek directly to each requested job record.
+// Groups records by archive file and reuses one ArchiveReader per file.
+// Returns false if the librarian is unavailable or has no records for these jobs,
+// allowing the caller to fall back to the normal file-scan path.
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr,
+                                     const std::vector<std::pair<int,int>>& job_ids)
+{
+	LibrarianClient librarian;
+	if ( ! librarian.IsValid()) { return false; }
+
+	printHeader();
+
+	auto records = librarian.GetRecords(job_ids);
+	if (records.size()) {
+		std::map<std::string, std::vector<int64_t>> file_offsets;
+		for (const auto& rec : records) {
+			file_offsets[rec.file_path].push_back(rec.offset);
+		}
+
+		for (auto& [file_path, offsets] : file_offsets) {
+			std::ranges::sort(offsets);
+
+			// Open reader for archive file
+			ArchiveReader reader(file_path, ArchiveReader::Direction::Forward);
+			if ( ! reader.IsOpen()) { continue; }
+
+			// For each offset of specified jobid found in this archive file
+			for (int64_t offset : offsets) {
+				if ( ! reader.SeekForward(offset)) { continue; }
+
+				// Read record
+				ArchiveRecord arec;
+				if ( ! reader.Next(arec)) { continue; }
+
+				// Turn record into ClassAd
+				ClassAd* ad = arec.GetAd();
+				if ( ! ad) { continue; }
+
+				// Print ClassAd
+				BannerInfo info;
+				parseBanner(info, arec.GetRawBanner());
+				printJobIfConstraint(*ad, constraint, constraintExpr, info);
+
+				delete ad;
+			}
+		}
+	}
+
+	printFooter();
+	return true;
+}
 
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
