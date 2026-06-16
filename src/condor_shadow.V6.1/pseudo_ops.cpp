@@ -1730,11 +1730,13 @@ UniShadow::start_mapping_only_conversation(
 		std::vector<std::pair<std::string, std::string>> requirements;
 		requirements.emplace_back( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
 
-		auto r = determineCIFScopeAndType( * jobAd );
-		if(! r) { EXCEPT("Failed to determine CIF scope and type before mapping it."); }
-		auto [scope, type] = * r;
-		requirements.emplace_back( ATTR_CATALOG_SCOPE, scope );
-		requirements.emplace_back( ATTR_CATALOG_SCOPE_TYPE, type );
+		{
+			auto r = determineCIFScopeAndType( * jobAd );
+			if(! r) { EXCEPT("Failed to determine CIF scope and type before mapping it."); }
+			auto [scope, type] = * r;
+			requirements.emplace_back( ATTR_CATALOG_SCOPE, scope );
+			requirements.emplace_back( ATTR_CATALOG_SCOPE_TYPE, type );
+		}
 
 		std::string access_point;
 		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
