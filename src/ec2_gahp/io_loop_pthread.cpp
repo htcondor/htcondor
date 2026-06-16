@@ -477,14 +477,15 @@ IOProcess::stdinPipeHandler()
 				std::vector<std::string> amazon_commands;
 				allAmazonCommands(amazon_commands);
 
-				std::vector<const char *> commands;
-				commands.push_back(GAHP_RESULT_SUCCESS);
-				commands.push_back(GAHP_COMMAND_ASYNC_MODE_ON);
-				commands.push_back(GAHP_COMMAND_ASYNC_MODE_OFF);
-				commands.push_back(GAHP_COMMAND_RESULTS);
-				commands.push_back(GAHP_COMMAND_QUIT);
-				commands.push_back(GAHP_COMMAND_VERSION);
-				commands.push_back(GAHP_COMMAND_COMMANDS);
+				std::vector<const char *> commands = {
+					GAHP_RESULT_SUCCESS,
+					GAHP_COMMAND_ASYNC_MODE_ON,
+					GAHP_COMMAND_ASYNC_MODE_OFF,
+					GAHP_COMMAND_RESULTS,
+					GAHP_COMMAND_QUIT,
+					GAHP_COMMAND_VERSION,
+					GAHP_COMMAND_COMMANDS,
+				};
 
 				for (const auto& one_command : amazon_commands) {
 					commands.push_back(one_command.c_str());

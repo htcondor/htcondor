@@ -489,20 +489,21 @@ IOProcess::stdinPipeHandler()
 				std::vector<std::string> arc_commands;
 				allArcCommands(arc_commands);
 
-				std::vector<const char *> commands;
-				commands.push_back(GAHP_RESULT_SUCCESS);
-				commands.push_back(GAHP_COMMAND_ASYNC_MODE_ON);
-				commands.push_back(GAHP_COMMAND_ASYNC_MODE_OFF);
-				commands.push_back(GAHP_COMMAND_RESULTS);
-				commands.push_back(GAHP_COMMAND_QUIT);
-				commands.push_back(GAHP_COMMAND_VERSION);
-				commands.push_back(GAHP_COMMAND_COMMANDS);
-				commands.push_back(GAHP_COMMAND_INITIALIZE_FROM_FILE);
-				commands.push_back(GAHP_COMMAND_REFRESH_PROXY_FROM_FILE);
-				commands.push_back(GAHP_COMMAND_CACHE_PROXY_FROM_FILE);
-				commands.push_back(GAHP_COMMAND_USE_CACHED_PROXY);
-				commands.push_back(GAHP_COMMAND_UNCACHE_PROXY);
-				commands.push_back(GAHP_COMMAND_UPDATE_TOKEN);
+				std::vector<const char *> commands = {
+					GAHP_RESULT_SUCCESS,
+					GAHP_COMMAND_ASYNC_MODE_ON,
+					GAHP_COMMAND_ASYNC_MODE_OFF,
+					GAHP_COMMAND_RESULTS,
+					GAHP_COMMAND_QUIT,
+					GAHP_COMMAND_VERSION,
+					GAHP_COMMAND_COMMANDS,
+					GAHP_COMMAND_INITIALIZE_FROM_FILE,
+					GAHP_COMMAND_REFRESH_PROXY_FROM_FILE,
+					GAHP_COMMAND_CACHE_PROXY_FROM_FILE,
+					GAHP_COMMAND_USE_CACHED_PROXY,
+					GAHP_COMMAND_UNCACHE_PROXY,
+					GAHP_COMMAND_UPDATE_TOKEN,
+				};
 
 				for(const auto& one_arc_command : arc_commands) {
 					commands.push_back(one_arc_command.c_str());
