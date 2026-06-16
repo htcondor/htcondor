@@ -1007,11 +1007,32 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				uint32_t token_length = 0;
 				m_auth_state->m_ssl_status = SSL_peek_ptr(m_auth_state->m_ssl,
 					static_cast<void*>(&token_length), sizeof(token_length));
-				if (m_auth_state->m_ssl_status >= 1) {
-					m_auth_state->m_token_length = ntohl(token_length);
+				if (m_auth_state->m_ssl_status == sizeof(token_length)) {
+					// The length is sent by an as-yet-unauthenticated peer, so
+					// validate it before we use it to size or index a buffer.
+					// Reject zero and anything implausibly large (a SciToken is
+					// at most a few KB).  Note ntohl() yields a uint32_t.
+					// value with the high bit set would otherwise become a
+					// negative int32_t and slip past the >0 check below, leaving
+					// token_contents empty while the indexing at the bottom of
+					// the loop reads far out of bounds.
+					uint32_t net_token_length = ntohl(token_length);
+					if (net_token_length == 0 || net_token_length > AUTH_SSL_BUF_SIZE) {
+						dprintf(D_SECURITY, "Received SciToken with invalid "
+							"length %u: quitting.\n", net_token_length);
+						m_auth_state->m_done = 1;
+						m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+						break;
+					}
+					m_auth_state->m_token_length = net_token_length;
 					dprintf(D_SECURITY|D_FULLDEBUG, "Peeked at the sent token; "
-						"%u bytes long; SSL status %d.\n",
+						"%d bytes long; SSL status %d.\n",
 						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
+				} else if (m_auth_state->m_ssl_status >= 1) {
+					dprintf(D_SECURITY, "Received incomplete SciToken length, quitting.\n");
+					m_auth_state->m_done = 1;
+					m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+					break;
 				}
 			}
 			if (m_auth_state->m_token_length == 0) {
