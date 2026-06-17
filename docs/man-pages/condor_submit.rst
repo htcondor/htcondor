@@ -2293,11 +2293,11 @@ COMMANDS FOR THE VM UNIVERSE
     used if a vm universe job uses a checkpoint in order to continue
     execution after migration to another machine.
 
- :subcom-def:`vm_networking_type` = <nat | bridge >
+ :subcom-def:`vm_networking_type` = <nat | bridge | user>
     When
     **vm_networking** is ``True``, this definition augments the job's requirements to
     match only machines with the specified networking. If not specified,
-    then either networking type matches.
+    then any available networking type matches.
 
  :subcom-def:`vm_no_output_vm` = <True | False>
     When ``True``, prevents HTCondor from transferring output files back
