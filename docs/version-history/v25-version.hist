@@ -1,3 +1,12 @@
+*** 25.11.1 bugs
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.10.1.
+  :jira:`XXXX`
+
 *** 25.11.0 features
 
 - The *condor_schedd* will now prevent a single user from monopolizing the input transfer
