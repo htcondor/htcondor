@@ -71,20 +71,21 @@ add_library(libblahp STATIC
 # a warning.  Turn off that warning
 set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-stringop-truncation")
 
-# programs for 'sbin'
-add_executable(blahpd_daemon main_daemon.c)
-target_link_libraries(blahpd_daemon libblahp)
-install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
-
-if(NOT CONDOR_PACKAGE_NAME)
-    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
-endif()
-target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
-
 add_library(libbfunctions STATIC Bfunctions.c)
-add_executable(blah_check_config blah_check_config.c)
-target_link_libraries(blah_check_config libbfunctions libblahp)
-install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+
+# programs for 'sbin'
+if(NOT CONDOR_PACKAGE_NAME)
+    add_executable(blahpd_daemon main_daemon.c)
+    target_link_libraries(blahpd_daemon libblahp)
+    install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
+
+    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
+    target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
+
+    add_executable(blah_check_config blah_check_config.c)
+    target_link_libraries(blah_check_config libbfunctions libblahp)
+    install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+endif()
 
 # These binaries aren't needed by OSG, so let's not build them
 if(WITH_FULL_BLAHP)
