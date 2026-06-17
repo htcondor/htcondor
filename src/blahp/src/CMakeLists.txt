@@ -20,7 +20,7 @@ if(CONDOR_PACKAGE_NAME)
     set(SBIN_DIR "${C_SBIN}")
     set(LIBEXEC_DIR "${C_LIBEXEC_BLAHP}")
 
-    set(ClassAd_LIBRARY "classads")
+    set(ClassAd_LIBRARY "classad")
 else()
     set(BIN_DIR "bin")
     set(SBIN_DIR "sbin")
