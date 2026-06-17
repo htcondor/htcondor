@@ -76,6 +76,20 @@ public:
   // Called once per negotiation cycle: expires any lease whose time has passed.
   void CheckCeilingLeases();
 
+  // Floor leases: same shape as ceiling leases above.
+  bool SetFloorLease(const std::string& CustomerName, int Floor,
+                     int DurationSeconds, std::string& err);
+  bool CancelFloorLease(const std::string& CustomerName, std::string& err);
+  time_t GetFloorLeaseExpiration(const std::string& CustomerName);
+  void CheckFloorLeases();
+
+  // Priority-factor leases: same shape, but the leased value is a double.
+  bool SetPriorityFactorLease(const std::string& CustomerName, double PriorityFactor,
+                              int DurationSeconds, std::string& err);
+  bool CancelPriorityFactorLease(const std::string& CustomerName, std::string& err);
+  time_t GetPriorityFactorLeaseExpiration(const std::string& CustomerName);
+  void CheckPriorityFactorLeases();
+
   void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
   void SetLastTime(const std::string& CustomerName, int LastTime); // set Last usage time for a customer
