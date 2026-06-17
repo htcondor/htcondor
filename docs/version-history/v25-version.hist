@@ -64,6 +64,9 @@
   could cause very long delays in communications.
   :jira:`3751`
 
+- Fixed a bug that could cause file descriptor leaks in *blahpd*.
+  :jira:`3786`
+
 *** 25.0.12 bugs
 
 *** 25.11.0 features
