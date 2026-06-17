@@ -64,6 +64,13 @@
   could cause very long delays in communications.
   :jira:`3751`
 
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.10.1.
+  :jira:`XXXX`
+
 *** 25.0.12 bugs
 
 *** 25.11.0 features
