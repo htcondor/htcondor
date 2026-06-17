@@ -1082,6 +1082,39 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     }
   }
 
+  // Reap garbage resource records.  Usage is recomputed from scratch each
+  // cycle (the zeroing below, plus the AddMatch() loop), so this pass only
+  // *deletes* stale records -- it deliberately does not touch any per-customer
+  //
+  // This runs before the AddMatch() loop so that AddMatch() rebuilds the
+  // current records (and restarts the per-cycle NumCpMatches counter on each
+  // consumption-policy p-slot) from a clean slate.  Names are collected first
+  // and deleted afterward to avoid mutating the table while iterating it.
+
+  std::vector<std::string> stale_resources;
+  db->ForEachInTable(AccountantTable::Resource, [&](const std::string& resName, ClassAd* resAd) -> bool {
+    auto itr = resource_hash.find(resName);
+    if (itr == resource_hash.end()) {
+      stale_resources.push_back(resName);
+      return true;
+    }
+    std::string recordedUser;
+    if (resAd->LookupString(RemoteUserAttr, recordedUser) == 0 ||
+        !CheckClaimedOrMatched(itr->second, recordedUser)) {
+      stale_resources.push_back(resName);
+    }
+    return true;
+  });
+
+  if (!stale_resources.empty()) {
+    db->BeginTransaction();
+    for (const std::string& resName : stale_resources) {
+      dprintf(D_ACCOUNTANT, "(Accountant) Reaping stale resource record %s\n", resName.c_str());
+      db->DeleteClassAd(AccountantTable::Resource, resName);
+    }
+    db->CommitNondurableTransaction();
+  }
+
     //
     // Reset all usage to zero.  The matchmaker calls this _after_ adjusting
     // priorities, so this is probably OK, but it might be wiser to expose
