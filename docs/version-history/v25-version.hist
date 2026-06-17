@@ -4,8 +4,10 @@
   (``Accountantnew.log``) to grow without bound.  Records for slots that
   were no longer claimed were no longer being removed during each
   negotiation cycle, so they accumulated indefinitely.  This bug was
-  introduced in HTCondor 25.10.1.
-  :jira:`XXXX`
+  introduced in HTCondor 25.11.0.
+  :jira:`3795`
+
+*** 25.0.12 bugs
 
 *** 25.11.0 features
 
