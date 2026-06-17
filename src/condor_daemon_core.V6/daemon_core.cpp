@@ -9810,16 +9810,26 @@ pidWatcherThread( void* arg )
 	// which exited.
 	if ( (result < numentries) && (result >= 0) ) {
 
+		// Cache the PidEntry we are processing.  For a pipe that becomes
+		// ready, we must signal the PipeEnd's watched-event (watcher_done())
+		// as the very last thing we do, because that signal is what releases
+		// a concurrent Cancel_Pipe to delete this PidEntry.  post_wait() used
+		// to signal it directly, but the watcher then went on to write the
+		// PidEntry's pipeReady/watcherEvent fields, racing with that delete
+		// (a use-after-free seen at daemon/starter shutdown).
+		DaemonCore::PidEntry *pidentry = entry->pidentries[result];
+		bool signal_watcher_done = false;
+
 		last_pidentry_exited = result;
-		InterlockedExchange(&(entry->pidentries[result]->process_exited), true);
+		InterlockedExchange(&(pidentry->process_exited), true);
 
 		// notify our main thread which process exited
 		// note: if it was a thread which exited, the entry's
 		// pid contains the tid.  if we are talking about a pipe,
 		// set the exited_pid to be zero.
-		if ( entry->pidentries[result]->pipeEnd ) {
+		if ( pidentry->pipeEnd ) {
 			exited_pid = 0;
-			if (entry->pidentries[result]->deallocate) {
+			if (pidentry->deallocate) {
 				// this entry should be deallocated.  set things up so
 				// it will be done at the top of the loop; no need to send
 				// a signal to break out of select in the main thread, so we
@@ -9827,10 +9837,14 @@ pidWatcherThread( void* arg )
 				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 			} else {
 				// pipe is ready and has not been deallocated.
-				if (entry->pidentries[result]->pipeEnd->post_wait()) {
+				if (pidentry->pipeEnd->post_wait()) {
 					// the handler is ready to be fired
-					InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
+					InterlockedExchange(&(pidentry->pipeReady),1L);
 					must_send_signal = true;
+					// post_wait() reported ready but (unlike before) did not
+					// signal the watched-event; we must do that via
+					// watcher_done() once we are done with the PidEntry.
+					signal_watcher_done = true;
 				}
 				else {
 					// not ready yet...
@@ -9838,12 +9852,12 @@ pidWatcherThread( void* arg )
 				}
 			}
 		} else {
-			exited_pid = entry->pidentries[result]->pid;
+			exited_pid = pidentry->pid;
 		}
 
 		if ( exited_pid ) {
 			// a pid exited.  add it to MyExitedQueue, which is a queue of
-			// exited pids local to our thread that are waiting to be 
+			// exited pids local to our thread that are waiting to be
 			// added to the main thread WaitpidQueue.
 			wait_entry.child_pid = exited_pid;
 			wait_entry.exit_status = 0;  // we'll get the status later
@@ -9853,7 +9867,15 @@ pidWatcherThread( void* arg )
 
 		// we will no longer be watching this PidEntry, so detach
 		// it from our watcherEvent
-		entry->pidentries[result]->watcherEvent = NULL;
+		pidentry->watcherEvent = NULL;
+
+		// If the pipe became ready, this is the last point at which we touch
+		// the PidEntry.  Signal the watched-event now so that a concurrent
+		// Cancel_Pipe (blocked in PipeEnd::cancel()) may safely delete it.
+		// WARNING: after this call we must not reference pidentry again.
+		if ( signal_watcher_done ) {
+			pidentry->pipeEnd->watcher_done();
+		}
 
 	} else {
 		// no pid/thread/pipe was signaled; we were signaled because our
