@@ -7,6 +7,10 @@
   using both LVM and SELinux.
   :jira:`3337`
 
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
+
 *** 25.0.15 bugs
 
 *** 25.0.14 features
