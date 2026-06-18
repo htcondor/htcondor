@@ -1931,7 +1931,7 @@ const char * MachAttributes::withinLimitsExpression()
 			static std::string climit_s;
 			if(! catalog_space.empty()) {
 				formatstr(
-				climit_s, "%s && (TARGET.RequestDisk - %s) <= MY.disk",
+				climit_s, "%s && (TARGET.RequestDisk - %s) <= MY.Disk",
 				climit_part_one,
 				catalog_space.c_str()
 				);
