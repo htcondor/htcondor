@@ -11,9 +11,11 @@ leak:test_log_writer
 
 # Can't fix perl
 leak:/usr/bin/perl
+leak:Perl_call_list
 
 #  Python leaks
 leak:AllocNoTrack
+leak:pymain_init
 
 # Java
 leak:os::malloc
