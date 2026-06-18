@@ -308,6 +308,16 @@ Example: **:tool:\`htcondor job status\`** -- will make a reference link as *htc
 
 ---
 
+**:docman:** creates a cross-reference to another HTCondor manual page that works correctly for both HTML and man-page builds. In an HTML build it emits a **:doc:** link to the target page; in a man-page build it emits a **:manpage:** reference with the correct section number. The man page section defaults to `1` if not specified. An explicit display title can be given with the standard Sphinx `title <target>` syntax.
+
+Example: **:docman:\`condor_submit\`** -- links to the condor_submit HTML page or renders as `condor_submit(1)` in a man page.
+
+Example: **:docman:\`htcondor-jdl(7)\`** -- links to the htcondor-jdl HTML page or renders as `htcondor-jdl(7)` in a man page.
+
+Example: **:docman:\`the JDL reference \<htcondor-jdl(7)\>\`** -- uses "the JDL reference" as the display title in HTML and renders as `htcondor-jdl(7)` in a man page.
+
+---
+
 **:ad-attr:** references ClassAd attributes to the that have been defined by **:classad-attribute-def:**. **:ad-attr:**
 creates a reference (link) from the existing position to the appropriate ClassAd Type documentation page. This extension
 can be given addition details via *key=value* information separated by semi-colons in brackets.

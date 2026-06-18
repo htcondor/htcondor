@@ -40,6 +40,7 @@ extensions = [
     'macro-def',
     'subcom',
     'subcom-def',
+    'docman',
     'index',
     'jira',
     'tool',

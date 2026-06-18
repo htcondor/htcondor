@@ -208,7 +208,7 @@ Submit Description File Commands
 ---------------------------------
 
 For the full list of submit description file commands, see
-:doc:`htcondor-jdl`.
+:docman:`htcondor-jdl(7)`.
 
 .. Redirect old URL JDL command references to new location
 
@@ -332,5 +332,5 @@ General Remarks
 See Also
 --------
 
-:doc:`htcondor-jdl`
+:docman:`htcondor-jdl(7)`
 
