@@ -1925,7 +1925,8 @@ const char * MachAttributes::withinLimitsExpression()
 			static const char *climit_part_two =
 				"TARGET.RequestDisk <= MY.Disk"
 				;
-			std::string catalog_space = param( "CATALOG_SPACE" );
+			std::string catalog_space;
+			param( catalog_space, "CATALOG_SPACE" );
 
 			static std::string climit_s;
 			if(! catalog_space.empty()) {

@@ -21243,7 +21243,7 @@ Scheduler::post_transform_adjustments(
 	}
 
 	if( requested_catalogs.size() > 0 ) {
-		classad::ExprList * rc = new classad::ExprList();
+		auto rc = std::make_unique<classad::ExprList>();
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
@@ -21254,8 +21254,10 @@ Scheduler::post_transform_adjustments(
 		// with set_dirty_attributes() refactored so that it can be used
 		// without a transform object.
 		// ad->Insert( ATTR_REQUESTED_CATALOGS, rc );
+		// SetAttributeExpr() unparses the expression and does not take
+		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
 		);
 		if( rv != 0 ) {
 			if( errorStack ) { /* ??? */ }
