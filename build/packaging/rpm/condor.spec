@@ -985,6 +985,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_now.1.gz
 %_mandir/man1/classad_eval.1.gz
 %_mandir/man1/classads.1.gz
+%_mandir/man1/htcondor-jdl.1.gz
 %_mandir/man1/condor_adstash.1.gz
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz

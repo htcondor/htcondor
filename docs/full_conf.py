@@ -45,6 +45,7 @@ extensions = [
     'macro-def',
     'subcom',
     'subcom-def',
+    'docman',
     'dag-cmd-def',
     'dag-cmd',
     'index',
