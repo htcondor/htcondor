@@ -14,6 +14,11 @@
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
 
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
+  and :ad-attr:`JobBatchName` of job records into the library database.
+  This allows database queries at a DAG workflow level to be executed.
+  :jira:`3799`
+
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
   Point's :macro:`HISTORY` archive.
