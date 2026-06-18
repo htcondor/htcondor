@@ -237,6 +237,9 @@ set(blah_scripts
 	scripts/flux_cancel.sh scripts/flux_hold.sh
 	scripts/flux_ping.sh scripts/flux_resume.sh scripts/flux_status.sh
 	scripts/flux_submit.sh scripts/flux_utils.sh
+    scripts/sfapi_cancel.sh scripts/sfapi_helpers.py
+    scripts/sfapi_ping.sh scripts/sfapi_setup.sh
+    scripts/sfapi_status.sh scripts/sfapi_submit.sh
    )
 
 install(FILES
@@ -251,6 +254,7 @@ set(local_attr_scripts
     pbs_local_submit_attributes.sh
     lsf_local_submit_attributes.sh
     sge_local_submit_attributes.sh
+    sfapi_local_submit_attributes.sh
     slurm_local_submit_attributes.sh
     nqs_local_submit_attributes.sh
     kubernetes_local_submit_attributes.sh
