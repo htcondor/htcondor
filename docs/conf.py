@@ -157,7 +157,7 @@ pygments_style = 'colorful'
 # Short list of man pages to build which is used to add generice info
 MAN_PAGES = [
         ('classad_eval', 1),
-        ('classads', 7),
+        ('classads', 1),
         ('condor_adstash', 1),
         ('condor_advertise', 1),
         ('condor_check_password', 1),
@@ -241,7 +241,7 @@ MAN_PAGES = [
         ('get_htcondor', 1),
         ('gidd_alloc', 1),
         ('htcondor', 1),
-        ('htcondor-jdl', 7),
+        ('htcondor-jdl', 1),
         ('procd_ctl', 1)
 ]
 
