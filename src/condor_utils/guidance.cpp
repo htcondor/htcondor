@@ -34,19 +34,16 @@ determineCIFScopeAndType( const classad::ClassAd & jobAd ) {
 #define MAX_BASE_NAME_LENGTH 64
 
 //
-// The EP needs to distinguish between common filesets.  For the moment,
-// we're only sharing common files within the same cluster, so we just need
-// the job's cluster ID and the schedd to which that cluster ID is unique.
+// This function generates "internal" names which will ideally never become
+// user-visible.  These names _more_ specific than required by the scope-
+// matching rules used for matchmaking because the identity of the EP is
+// implicit in the match ad, but otherwise compatible.  We use them internally
+// for simplicity (so that we have a single string rather than a tuple of
+// values).
 //
-// (The global job ID is proc-specific, and also includes a date that may
-// not be the same for all procs in some cases, so we can't use that.
-// There's no (globally-unique) schedd identifier in the job ad, so we'll
-// just use the first part of the global job ID.  We're not presently
-// worried about cluster ID re-use because of a schedd reinstallation
-// confusing anything.)
-//
-// Arguably, it should be the shadow's responsibility to combine the CIF
-// name with the startd's address to generate the key for shadow IPC.
+// The schedd uses them to determine if it needs to stage a catalog to a
+// particular EP; the starter uses them to create a unique/specific directory
+// for the catalog in its staging area.
 //
 
 std::optional<std::string>
@@ -67,13 +64,20 @@ makeCIFName(
     //
     // The internal name therefore ends with a hash of the startd address.
     //
-    // The internal name therefore includes the name of the schedd.
+    // The internal name therefore includes the name of the schedd.  (Which
+    // is not readily available in the job ClassAd, and is therefore derived
+    // from the global job ID.)
     //
     // The internal name therefore includes a cluster ID, which may be
-    // the DAGMan job ID.
+    // the DAGMan job ID.  We call determineCIFScopeAndType() to (a) make
+    // sure we make the same determination as the matchmaking code and (b) so
+    // that if we start using other attributes for the scope, this function
+    // doesn't have to change.
     //
     // The internal name therefore includes the base name.
     //
+    // [FIXME: We've decided this shouldn't be used, because it doesn't
+    //  make conceptual sense.]
     // If the cluster ID is a DAGMan job ID, then a particular name could
     // refer to different contents in the different job submit files.  To
     // distinguish between catalogs in this scenario, we must include the
