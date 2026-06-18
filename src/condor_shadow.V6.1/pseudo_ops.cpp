@@ -1744,7 +1744,7 @@ UniShadow::start_mapping_only_conversation(
 		requirements.emplace_back( ATTR_ACCESS_POINT, access_point );
 
 		ClassAd * slotAd = remRes->getSlotAd();
-		classad::ExprTree * e = slotAd->Lookup( "catalogs" );
+		classad::ExprTree * e = slotAd ? slotAd->Lookup( "catalogs" ) : nullptr;
 		classad::ExprList * l = dynamic_cast<classad::ExprList *>(e);
 
 		if( slotAd == nullptr ) {
