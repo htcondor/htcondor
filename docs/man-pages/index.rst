@@ -93,6 +93,7 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
     :glob:
 
     classads
+    htcondor-jdl
 
 Job Management Commands
 -----------------------
