@@ -77,7 +77,7 @@ def the_running_jobs( the_condor, the_common_file ):
     return job_handle
 
 
-class TestCIFDiskDize:
+class TestCIFDiskSize:
 
     def test_disk_size(self, the_condor, the_running_jobs):
         results = the_condor.status(
