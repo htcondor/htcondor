@@ -679,7 +679,7 @@ Starter::handleJobSetupCommand(
 			// such as might be used to adjust the size of the job's disk
 			// request to account for how much common files were saving it.
 			//
-			// In HTCONDOR-3732, we added STARTER_COMMAND::ADVERTISE_CATALOG,
+			// In HTCONDOR-3732, we added STARTER_COMMAND::ANNOUNCE_CATALOG,
 			// which overcomes this limitation with pure special-case magic.
 			// As a result, the shadow -- if given the slot ad -- can determine
 			// just like any other daemon if the required catalog(s) is present,
