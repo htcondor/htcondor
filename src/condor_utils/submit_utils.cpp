@@ -7640,6 +7640,7 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {
@@ -7654,6 +7655,7 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	this->clusterAd = ad;
 	// Force the cluster IWD to be computed, so we can safely call getIWD and full_path
 	ComputeIWD();
+	// Force Year,Month,Day, etc to be stored in the submit hash
 	return 0;
 }
 

@@ -1,5 +1,10 @@
 *** 25.0.12 bugs
 
+- Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
+  that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
+  submit file.
+  :jira:`3800`
+
 *** 25.0.11 bugs
 
 *** 25.0.10 features
