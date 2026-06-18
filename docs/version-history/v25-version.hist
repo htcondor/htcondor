@@ -1,5 +1,13 @@
 *** 25.12.0 features
 
+- :tool:`condor_userprio` ``-setfloor`` and ``-setfactor`` now accept a
+  ``-duration`` option to install a time-limited *lease* on the floor or
+  priority factor: the prior value is automatically restored after the
+  given number of seconds. Leases are persistent across
+  *condor_negotiator* restarts. New ``-cancelfloorlease`` and
+  ``-cancelfactorlease`` options cancel an in-effect lease. This
+  mirrors the existing ``-setceiling`` lease support.
+  :jira:`3764`
 - The OneDrive file transfer plugin now supports uploading files and
   directories, and downloading entire directories recursively, in
   addition to downloading individual files. Large files are uploaded in
@@ -55,6 +63,9 @@
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
+
+- Fixed a bug that could cause file descriptor leaks in *blahpd*.
+  :jira:`3786`
 
 *** 25.0.12 bugs
 

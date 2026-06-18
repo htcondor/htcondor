@@ -39,7 +39,6 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <pthread.h>
-#include <pwd.h>
 #include <sys/stat.h>
 
 #include "classad_c_helper.h"
@@ -51,6 +50,7 @@
 #define MAX_TEMP_ARRAY_SIZE              1000
 #define CAD_LEN                          1024
 
+extern char *my_username;
 extern char *blah_script_location;
 extern job_registry_handle *blah_jr_handle;
 extern pthread_mutex_t blah_jr_lock;
@@ -130,7 +130,6 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 	}
 
 	char* filename = NULL;
-	struct passwd* pwbuf = getpwuid(getuid());
 	char cached_jobid[64];
 	int cached_status = -1;
 	int found = 0;
@@ -139,12 +138,12 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 	 * job ids written in the file.
 	 */
 	char* at_pos = strchr(spid->proxy_id, '@');
-	if (pwbuf) {
+	if (my_username) {
 		if (at_pos) {
 			*at_pos = '\0';
-			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache-%s", spid->lrms, pwbuf->pw_name, at_pos+1);
+			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache-%s", spid->lrms, my_username, at_pos+1);
 		} else {
-			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache", spid->lrms, pwbuf->pw_name);
+			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache", spid->lrms, my_username);
 		}
 	}
 	struct stat stbuf;

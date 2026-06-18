@@ -26,6 +26,8 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
+    EMPTY_SIF_BIND_EXPR,
 )
 
 
@@ -379,13 +381,10 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
 
 @action
-def the_container_image(test_dir, pytestconfig):
-    # This is a gross hack.
-    ctest_path = test_dir / ".." / "busybox.sif"
-    if ctest_path.exists():
-        return ctest_path
-    else:
-        return Path(pytestconfig.rootdir) / "busybox.sif"
+def the_container_image(test_dir):
+    sif = make_empty_sif(test_dir / "empty.sif")
+    assert sif is not None
+    return sif
 
 
 @action
@@ -435,7 +434,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "NUM_CPUS":                 4,
             "SINGULARITY":              "/usr/bin/singularity",
             "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
-            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
+            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()} {EMPTY_SIF_BIND_EXPR}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
