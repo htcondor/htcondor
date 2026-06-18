@@ -347,6 +347,16 @@ sge_pe_policy=*
 #path to the flux executable (default is to use PATH)
 #flux_binpath=
 
+#SFAPI
+
+# Path to a Python virtual environment that includes package sfapi_client
+# You can create it with these commands:
+#   python3 -m venv ~/superfacility-env
+#   ~/superfacility-env/bin/pip install sfapi_client
+# If this variable is unset, assume the package can be found without
+# activating a virtual environment.
+sfapi_venv=${HOME}/superfacility-env
+
 ##
 #####BNotifier subsection
 ##
