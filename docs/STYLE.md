@@ -312,9 +312,9 @@ Example: **:tool:\`htcondor job status\`** -- will make a reference link as *htc
 
 Example: **:docman:\`condor_submit\`** -- links to the condor_submit HTML page or renders as `condor_submit(1)` in a man page.
 
-Example: **:docman:\`htcondor-jdl(7)\`** -- links to the htcondor-jdl HTML page or renders as `htcondor-jdl(7)` in a man page.
+Example: **:docman:\`htcondor-jdl(1)\`** -- links to the htcondor-jdl HTML page or renders as `htcondor-jdl(1)` in a man page.
 
-Example: **:docman:\`the JDL reference \<htcondor-jdl(7)\>\`** -- uses "the JDL reference" as the display title in HTML and renders as `htcondor-jdl(7)` in a man page.
+Example: **:docman:\`the JDL reference \<htcondor-jdl(1)\>\`** -- uses "the JDL reference" as the display title in HTML and renders as `htcondor-jdl(1)` in a man page.
 
 ---
 

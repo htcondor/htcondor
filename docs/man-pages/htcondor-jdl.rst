@@ -269,7 +269,7 @@ BASIC COMMANDS
     as the *condor_submit* command is issued.
 
  :subcom-def:`shell` = <shell command to run>
-    On Unix systems, instead of specifing *executable* and *args*, the
+    On Unix systems, instead of specifying *executable* and *args*, the
     shell command can give a full shell command to be run under /bin/sh,
     including shell special characters like pipes and redirects. Note that
     if any executables run by this shell need to be transferred to the job,
@@ -781,7 +781,7 @@ COMMANDS FOR MATCHMAKING
     A single version number of 1000 or higher is assumed to be the
     integer-coded version number (``major * 1000 + (minor % 100)``).
 
-    This command has been superceeded by :subcom:`gpus_minimum_runtime`,
+    This command has been superseded by :subcom:`gpus_minimum_runtime`,
     but it will still work if machines advertise the ``CUDAMaxSupportedVersion`` attribute.
     This does *not* arrange for the CUDA runtime to be present, only for
     the job to run on a machine whose driver supports the specified version.
@@ -1145,7 +1145,7 @@ FILE TRANSFER COMMANDS
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured
     HTTP server on the AP to transfer. These files will not be encrypted,
-    and will be publically fetchable by anyone who knows their name.
+    and will be publicly fetchable by anyone who knows their name.
 
  :subcom-def:`transfer_output_files` = < file1,file2,file... >
     This command forms an explicit list of output files and directories
@@ -2186,7 +2186,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     (see `docker run <https://docs.docker.com/engine/reference/run/#default-command-and-options>`_):
 
         * Without entrypoint, executable runs as main PID
-        * With entrypoint, it is launched with the excutable as first argument
+        * With entrypoint, it is launched with the executable as first argument
     
     Any additional **arguments** will follow the executable.
 
