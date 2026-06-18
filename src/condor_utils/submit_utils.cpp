@@ -7002,16 +7002,30 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		} else {
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
-			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			// To avoid colliding inside a DAG when container images are
+			// common by default, make the implicit catalog name depend on
+			// the container image name.
+			std::string catalogName;
+			std::string baseName = condor_basename(container_image.ptr());
+			if( baseName.empty() ) {
+				baseName = condor_dirname(container_image.ptr());
+			}
+			cleanStringForUseAsAttr( baseName, '_', false );
+			formatstr( catalogName, "condor_%s", baseName.c_str() );
+
+			std::string attributeName;
+			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
+			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
 			job->LookupString( "CommonInputCatalogs", xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
-			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+			if( xcip.find( catalogName ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
-				xcip += "condor_container_image";
+				xcip += catalogName;
 				AssignJobString( "CommonInputCatalogs", xcip.c_str() );
 			}
 		}
