@@ -23,6 +23,11 @@
 - Fixed a bug that can cause the *arc_gahp* to crash.
   :jira:`3789`
 
+- Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
+  that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
+  submit file.
+  :jira:`3800`
+
 *** 24.12.21 bugs
 
 - Fixed an infrequent crash in the *condor_startd* that occurred
