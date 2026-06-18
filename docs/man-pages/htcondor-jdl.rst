@@ -34,10 +34,12 @@ The submit description file must contain at least one *executable*
 command and at least one *queue* command. All of the other commands have
 default actions.
 
-**Note that a submit file that contains more than one executable command
-will produce multiple clusters when submitted. This is not generally
-recommended, and is not allowed for submit files that are run as DAG node
-jobs by condor_dagman.**
+.. note::
+
+    A submit file that contains more than one executable command
+    will produce multiple clusters when submitted. This is not generally
+    recommended, and is not allowed for submit files that are run as DAG node
+    jobs by condor_dagman.
 
 The commands which can appear in the submit description file are
 numerous. They are listed here in alphabetical order by category.
@@ -362,16 +364,29 @@ BASIC COMMANDS
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
  :subcom-def:`notification` = <Always | Complete | Start | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
-    occur. If defined by *Always* or *Complete*,
-    the owner will be notified when the job
-    terminates. If defined by *Error*, the owner will only be notified
-    if the job terminates abnormally, (as defined by
-    ``JobSuccessExitCode``, if defined) or if the job is placed on hold
-    because of a failure, and not by user request. If defined by *Never*
-    (the default), the owner will not receive e-mail, regardless to what
-    happens to the job. When the value is *Start*, an email will
-    be sent on first job start. The HTCondor User's manual documents statistics
-    included in the e-mail.
+    occur, according to the value of this command:
+
+    .. list-table::
+       :header-rows: 1
+       :widths: 20 80
+
+       * - Value
+         - When e-mail is sent
+       * - ``Always``
+         - When the job terminates.
+       * - ``Complete``
+         - When the job terminates.
+       * - ``Start``
+         - On first job start.
+       * - ``Error``
+         - Only if the job terminates abnormally (as defined by
+           ``JobSuccessExitCode``, if defined), or if the job is placed on
+           hold because of a failure and not by user request.
+       * - ``Never``
+         - Never (the default); the owner will not receive e-mail
+           regardless of what happens to the job.
+
+    The HTCondor User's manual documents statistics included in the e-mail.
 
  :subcom-def:`notify_user` = <email-address>
     Used to specify the e-mail address to use when HTCondor sends e-mail
@@ -502,33 +517,37 @@ BASIC COMMANDS
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
-    The **vanilla** universe is the default (except where the
-    configuration variable :macro:`DEFAULT_UNIVERSE` defines it otherwise).
+    .. list-table::
+       :header-rows: 1
+       :widths: 15 85
 
-    The **scheduler** universe is for a job that is to run on the
-    machine where the job is submitted. This universe is intended for a
-    job that acts as a metascheduler and will not be preempted.
-
-    The **local** universe is for a job that is to run on the machine
-    where the job is submitted. This universe runs the job immediately
-    and will not preempt the job.
-
-    The **grid** universe forwards the job to an external job management
-    system. Further specification of the **grid** universe is done with
-    the **grid_resource** command.
-
-    The **java** universe is for programs written to the Java Virtual
-    Machine.
-
-    The **vm** universe facilitates the execution of a virtual machine.
-
-    The **parallel** universe is for parallel jobs (e.g. MPI) that
-    require multiple machines in order to run.
-
-    The **docker** universe runs a docker container as an HTCondor job.
-
-    The **container** universe runs a container as an HTCondor job
-    using a supported container runtime system on the Execution Point.
+       * - Universe
+         - Description
+       * - ``vanilla``
+         - The default (except where the configuration variable
+           :macro:`DEFAULT_UNIVERSE` defines it otherwise).
+       * - ``scheduler``
+         - For a job that is to run on the machine where the job is
+           submitted. Intended for a job that acts as a metascheduler and
+           will not be preempted.
+       * - ``local``
+         - For a job that is to run on the machine where the job is
+           submitted. Runs the job immediately and will not preempt the job.
+       * - ``grid``
+         - Forwards the job to an external job management system. Further
+           specification is done with the **grid_resource** command.
+       * - ``java``
+         - For programs written to the Java Virtual Machine.
+       * - ``vm``
+         - Facilitates the execution of a virtual machine.
+       * - ``parallel``
+         - For parallel jobs (e.g. MPI) that require multiple machines in
+           order to run.
+       * - ``docker``
+         - Runs a docker container as an HTCondor job.
+       * - ``container``
+         - Runs a container as an HTCondor job using a supported container
+           runtime system on the Execution Point.
 
  :subcom-def:`max_materialize` = <limit>
     Submit jobs as a late materialization factory and instruct the *condor_schedd*
@@ -979,20 +998,33 @@ FILE TRANSFER COMMANDS
     mechanism is used to run jobs on
     machines which do not have a shared file system with the submit
     machine.
-    **should_transfer_files** equal to *YES* will cause HTCondor to always transfer files for the
-    job. *NO* disables HTCondor's file transfer mechanism. *IF_NEEDED*
-    will not transfer files for the job if it is matched with a resource
-    in the same :ad-attr:`FileSystemDomain` as the access point (and
-    therefore, on a machine with the same shared file system). If the
-    job is matched with a remote resource in a different
-    :ad-attr:`FileSystemDomain`, HTCondor will transfer the necessary files.
+
+    .. list-table::
+       :header-rows: 1
+       :widths: 15 85
+
+       * - Value
+         - Behavior
+       * - ``YES``
+         - Always transfer files for the job.
+       * - ``NO``
+         - Disables HTCondor's file transfer mechanism.
+       * - ``IF_NEEDED``
+         - Does not transfer files for the job if it is matched with a
+           resource in the same :ad-attr:`FileSystemDomain` as the access
+           point (and therefore, on a machine with the same shared file
+           system). If the job is matched with a remote resource in a
+           different :ad-attr:`FileSystemDomain`, HTCondor will transfer the
+           necessary files.
 
     For more information about this and other settings related to
     transferring files, see the HTCondor User's manual section on the
     file transfer mechanism.
 
-    Note that **should_transfer_files**
-    is not supported for jobs submitted to the grid universe.
+    .. note::
+
+        **should_transfer_files** is not supported for jobs submitted to
+        the grid universe.
 
  :subcom-def:`skip_filechecks` = <True | False>
     When ``True``, file permission checks for the submitted job are
@@ -1267,26 +1299,30 @@ FILE TRANSFER COMMANDS
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
 
  :subcom-def:`when_to_transfer_output` = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
-    Setting ``when_to_transfer_output`` to ``ON_EXIT`` will cause HTCondor
-    to transfer the job's output files back to the submitting machine when
-    the job completes (exits on its own).  If a job is evicted and started
-    again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.
+    .. list-table::
+       :header-rows: 1
+       :widths: 22 78
 
-    Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
-    HTCondor to transfer the job's output files when the job completes
-    (exits on its own) and when the job is evicted.  When the job is evicted,
-    HTCondor will transfer the output files to a temporary directory on the
-    submit node (determined by the :macro:`SPOOL` configuration variable).  When
-    the job restarts, these files will be transferred instead of the input
-    files.
+       * - Value
+         - When output files are transferred
+       * - ``ON_EXIT``
+         - When the job completes (exits on its own). If a job is evicted
+           and started again, the subsequent execution will start with only
+           the executable and input files in the scratch directory sandbox.
+       * - ``ON_EXIT_OR_EVICT``
+         - When the job completes (exits on its own) and when the job is
+           evicted. When the job is evicted, HTCondor will transfer the
+           output files to a temporary directory on the submit node
+           (determined by the :macro:`SPOOL` configuration variable). When
+           the job restarts, these files will be transferred instead of the
+           input files.
+       * - ``ON_SUCCESS``
+         - Only when the job completes successfully. Success is defined by
+           the ``success_exit_code`` command, which must be set, even if the
+           successful value is the default ``0``. This prevents the job from
+           going on hold if it does not produce all of the output files when
+           it fails.
 
-    Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files only when the job completes successfully.
-    Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  This prevents the
-    job from going on hold if it does not produce all of the output files when it fails.
-    
     If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
