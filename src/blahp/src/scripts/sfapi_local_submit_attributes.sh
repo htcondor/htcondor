@@ -1,44 +1,28 @@
 #!/bin/bash
 
-strip_quotes() {
-    echo ${1//\"/}
-}
+# This file is sourced by blahp before submitting the job to slurm
+# Anything printed to stdout is included in the submit file.
+# For example, to set a default walltime of 24 hours, you
+# could uncomment this line:
 
-if [ -n "${NODES}" ]; then
-    nodes="#SBATCH  --nodes=$(strip_quotes $NODES)"
-    echo $nodes
-fi
+# echo "#SBATCH --time=24:00:00"
 
-if [ -n "${CORES}" ]; then
-    echo "#SBATCH --ntasks=$(strip_quotes $CORES)"
-fi
+# blahp allows arbitrary attributes to be passed to this script on a per-job
+# basis.  If you add the following to your HTCondor submit file:
 
-if [ -n "${GPUS}" ]; then
-    echo "#SBATCH --gpus=$(strip_quotes $GPUS)"
-fi
+#+CERequirements = NumJobs == 100 && foo = 5
 
-if [ -n "${WALLTIME}" ]; then
-    echo "#SBATCH --time=$(strip_quotes $WALLTIME)"
-fi
+# Then an environment variable, NumJobs, will be exported prior to calling this
+# script and set to a value of 100.  The variable foo will be set to 5.
 
-if [ -n "${PER_PROCESS_MEMORY}" ]; then
-    echo "#SBATCH --mem-per-cpu=$(strip_quotes $PER_PROCESS_MEMORY)"
-fi
+# You could allow users to set the walltime for the job with the following
+# customization (slurm syntax given; adjust for the appropriate batch system):
 
-if [ -n "${TOTAL_MEMORY}" ]; then
-    echo "#SBATCH --mem=$(strip_quotes $TOTAL_MEMORY)"
-fi
-
-if [ -n "${JOBNAME}" ]; then
-    echo "#SBATCH --job-name ${JOBNAME}"
-fi
-
-if [ -n "${PROJECT}" ]; then
-    echo "#SBATCH --account ${PROJECT}"
-fi
-
-# if a user passed any extra arguments set them in the end
-# for example "-N testjob -l walltime=01:23:45 -l nodes=2"
-if [ -n "${EXTRA_ARGUMENTS}" ]; then
-    echo "#SBATCH $(strip_quotes "$EXTRA_ARGUMENTS")"
+# Uncomment the else block to default to 24 hours of runtime; otherwise, the queue
+# default is used.
+if [ -n "$Walltime" ]; then
+    let Walltime=Walltime/60
+    echo "#SBATCH --time=$Walltime"
+# else
+#     echo "#SBATCH --time=24:00:00"
 fi
