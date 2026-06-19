@@ -547,6 +547,7 @@ static int64_t convertRotationStringToTimestamp(const std::string& rotationStr) 
     std::tm tm = {};
     std::istringstream ss(rotationStr);
     ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
+    tm.tm_isdst = -1;
     return static_cast<int64_t>(std::mktime(&tm));
 }
 
