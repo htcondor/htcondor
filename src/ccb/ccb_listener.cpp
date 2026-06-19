@@ -247,7 +247,6 @@ CCBListener::Disconnected()
 
 	if( m_waiting_for_connect ) {
 		m_waiting_for_connect = false;
-		decRefCount();
 	}
 
 	m_waiting_for_registration = false;
