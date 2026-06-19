@@ -2,7 +2,6 @@
 # It assumes the following instance-specific parameters will be set in
 # a separate configuration file:
 #   ANNEX_PILOT_COLLECTOR
-#   ANNEX_PILOT_LIFETIME
 #   ANNEX_PILOT_OWNERS
 #   ANNEX_PILOT_JOB_NAME
 #   ANNEX_PILOT_REQUEST_ID
@@ -43,11 +42,6 @@ STARTD_NOCLAIM_SHUTDOWN = 300
 #
 UPDATE_INTERVAL = 137
 
-
-#
-# Don't run for more than two hours, to make sure we have time to clean up.
-#
-MASTER.DAEMON_SHUTDOWN_FAST = (time() - DaemonStartTime) > ($(ANNEX_PILOT_LIFETIME) - 300)
 
 # Only start jobs from the specified owner.
 START = $(START) && stringListMember( Owner, "$(ANNEX_PILOT_OWNERS)" )
