@@ -10,10 +10,12 @@ function usage() {
 
 # If we abort early, cleanup the files we've created
 function cleanup() {
-    echo "Cleaning up files..."
+    echo "Setup failed, cleaning up files..."
     rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/20-annex-pilot-instance
 }
 trap cleanup EXIT
+
+set -o errexit
 
 if [[ -z $1 ]]; then
     RECORD_FILE=annex.record
@@ -119,6 +121,10 @@ BETA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/beta/${BINARIES_FILE}"
 ALPHA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/alpha/${BINARIES_FILE}"
 SNAPSHOT_URL="${BINARIES_URL_BASE}${series}/${VERSION}/snapshot/${BINARIES_FILE}"
 
+# Some of these downloads may fail, which is not fatal.
+# We'll exit explicitly on a fatal failure.
+set +o errexit
+
 if [ -f ${BINARIES_DIR}/${BINARIES_FILE} ] ; then
     echo "HTCondor tarball is already downloaded"
 else
@@ -149,6 +155,9 @@ else
     fi
     echo "HTCondor tarball has been downloaded to ${BINARIES_DIR}/${BINARIES_FILE}"
 fi
+
+# Re-enable errexit
+set -o errexit
 
 ln -s ${BINARIES_DIR}/${BINARIES_FILE} ${IWD}/condor.tar.gz
 

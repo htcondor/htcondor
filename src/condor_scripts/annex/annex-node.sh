@@ -9,6 +9,9 @@ PILOT_DIR=$1
 
 # On exit, cleanup the files we've created
 function cleanup() {
+    if [ $? != 0 ] ; then
+	echo "$(date) $(hostname) Encountered an error, aborting!"
+    fi
     if [ "$LOCAL_SETUP" == 1 ] ; then
         echo "$(date) $(hostname) Cleaning up files..."
         cd ${IWD}
@@ -16,6 +19,8 @@ function cleanup() {
     fi
 }
 trap cleanup EXIT
+
+set -o errexit
 
 # If we can't see the PILOT_DIR, then assume it's on each node's local disk.
 # Then, we need to run the job setup script now and cleanup at the end.

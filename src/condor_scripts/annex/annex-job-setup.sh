@@ -17,9 +17,11 @@ function cleanup() {
 }
 trap cleanup EXIT
 
+set -o errexit
+
 echo "$(date) $(hostname) Creating log directory ${ANNEX_LOGDIR}"
 echo "$(date) $(hostname)   Logs will be available here after the Annex job completes"
-mkdir ${ANNEX_LOGDIR}
+mkdir -p ${ANNEX_LOGDIR}
 
 echo "$(date) $(hostname) Creating temporary directory ${PILOT_DIR}"
 mkdir -p ${PILOT_DIR}
