@@ -2067,7 +2067,8 @@ do_store_cred (
 
 	if ( is_root() && d == NULL ) {
 		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
-		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
+		bool is_pool_pwd = username_is_pool_password(user) && ((mode & CRED_TYPE_MASK) == STORE_CRED_USER_PWD);
+		if (is_pool_pwd || (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE)) {
 			std::string pw;
 			if (cred) pw.assign((const char *)cred, credlen);
 			return_val = store_cred_password(user, pw.c_str(), mode);
