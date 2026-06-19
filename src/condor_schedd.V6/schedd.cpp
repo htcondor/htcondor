@@ -9602,7 +9602,9 @@ bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
 {
 	classad::EvalState state;
 	state.SetScopes(this);
-	return expr->Evaluate(state , val);
+	auto r = expr->Evaluate(state , val);
+	val.MakeSelfContained(state);
+	return r;
 }
 
 bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
