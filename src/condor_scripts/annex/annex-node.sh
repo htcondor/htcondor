@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IWD=${PWD}
-ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
+ANNEX_LOGDIR=${IWD}/annex-logs.${ANNEX_JOBID}
 
 # TODO Handle a PILOT_DIR that's local to the node and needs to be set up
 #   from files in $PWD
@@ -70,12 +70,12 @@ DaemonStopTime=${shutdown_time}
 STARTD_ATTRS = \$(STARTD_ATTRS),DaemonStopTime"
 fi
 
-echo "
+cat << EOF > ${FULL_HOSTNAME}/config.d/30-annex-node
 # These are resource limits detected on an individual node of the slurm job
 $CONDOR_CPUS_LINE
 $CONDOR_MEMORY_LINE
 $CONDOR_RUNTIME_LINE
-" >${FULL_HOSTNAME}/config.d/30-annex-node
+EOF
 
 echo "$(date) $(hostname) Starting HTCondor..."
 condor_master -f

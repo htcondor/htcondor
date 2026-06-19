@@ -166,7 +166,8 @@ find . -maxdepth 1 -name 'annex-logs.*' -mtime +14 -exec rm -rf '{}' ';'
 
 
 echo -e "\rStep 3 of 3: configuring software..."
-echo "
+
+cat << EOF > ${IWD}/20-annex-pilot-instance
 # These are instance-specific settings for an HPC annex EP
 # The ANNEX_PILOT_* parameters are referenced by the 00-annex-pilot-base
 # configuration file.
@@ -179,42 +180,50 @@ ANNEX_PILOT_SCHEDD_NAME = ${SCHEDD_NAME}
 
 STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
-" > ${IWD}/20-annex-pilot-instance
-
+EOF
 
 #
 # Write the SLURM job script.
 #
 
-echo '#!/bin/bash' > "${IWD}/hpc.slurm"
-echo "
+cat << EOF > ${IWD}/hpc.slurm
+#!/bin/bash
+
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o %j.out
-#SBATCH -e %j.err" >>${IWD}/hpc.slurm
+#SBATCH -e %j.err
+EOF
 
 if [ -f ~/.condor/annex_slurm_args ] ; then
     cat ~/.condor/annex_slurm_args >>${IWD}/hpc.slurm
 fi
 
-echo "
-echo \$(date) \$(hostname) Annex job starting
-SCRATCH=\${PWD}
+# Don't do shell macro expansion here
+cat << 'EOF' >> ${IWD}/hpc.slurm
+
+echo "$(date) $(hostname) Annex job starting"
+export ANNEX_JOBID=${SLURM_JOBID:-pid-$$}
+SCRATCH=${PWD}
 if [ -f ~/.condor/annex_config ] ; then
     . ~/.condor/annex_config
 fi
-PILOT_DIR=\${SCRATCH}/pilot.\${SLURM_JOBID}
+PILOT_DIR=${SCRATCH}/pilot.${ANNEX_JOBID}
 
-echo \$(date) \$(hostname) Performing setup tasks
-./annex-job-setup.sh \$PILOT_DIR
+echo "$(date) $(hostname) Performing setup tasks"
+./annex-job-setup.sh $PILOT_DIR
 
 # This will block until all of the pilots terminate.
-echo \$(date) \$(hostname) Launching EPs
-srun -K0 -W0 annex-node.sh \${PILOT_DIR}
-echo \$(date) \$(hostname) All EPs have exited, performing cleanup
-echo \$(date) \$(hostname) Removing temporary directory \${PILOT_DIR}
-rm -fr \${PILOT_DIR}
-echo \$(date) \$(hostname) Annex job complete, exiting
-" >>${IWD}/hpc.slurm
+echo "$(date) $(hostname) Launching EPs"
+if [ -z "$SLURM_JOBID" ] ; then
+    ./annex-node.sh ${PILOT_DIR}
+else
+    srun -K0 -W0 annex-node.sh ${PILOT_DIR}
+fi
+echo "$(date) $(hostname) All EPs have exited, performing cleanup"
+echo "$(date) $(hostname) Removing temporary directory ${PILOT_DIR}"
+rm -fr ${PILOT_DIR}
+echo "$(date) $(hostname) Annex job complete, exiting"
+EOF
 
 
 echo "Setup is complete.

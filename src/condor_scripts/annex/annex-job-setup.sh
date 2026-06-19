@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IWD=${PWD}
-ANNEX_LOGDIR=${IWD}/annex-logs.${SLURM_JOBID}
+ANNEX_LOGDIR=${IWD}/annex-logs.${ANNEX_JOBID}
 
 if [ -z $1 ] ; then
     echo "$(date) $(hostname) Missing PILOT_DIR"
@@ -32,9 +32,15 @@ tar xf ${IWD}/condor.tar.gz
 cd condor-*
 echo "$(date) $(hostname) Configuring HTCondor EP"
 bin/make-personal-from-tarball
-# annex-node.sh will create the alternate local and log directories on each node
-echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)
-LOG = ${ANNEX_LOGDIR}/log.\$(FULL_HOSTNAME)" >> etc/condor_config
+
+# Set per-node LOCAL_DIR and LOG directories based on each node's hostname.
+# annex-node.sh will create the alternate directories on each node.
+cat << EOF >> etc/condor_config
+LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)
+LOG = ${ANNEX_LOGDIR}/log.\$(FULL_HOSTNAME)
+EOF
+
+# Replace the Personal Condor config with an Annex-specific config
 rm local/config.d/00-personal-condor
 cp ${IWD}/00-annex-pilot-base local/config.d/
 cp ${IWD}/20-annex-pilot-instance local/config.d/
