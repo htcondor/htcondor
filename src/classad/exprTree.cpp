@@ -207,7 +207,9 @@ Evaluate( Value& val ) const
 	EvalState 	state;
 
 	state.SetScopes( GetParentScope() );
-	return( Evaluate( state, val ) );
+	auto r = Evaluate( state, val );
+	val.MakeSelfContained( state );
+    return r;
 }
 
 
@@ -217,7 +219,9 @@ Evaluate( Value& val, ExprTree*& sig ) const
 	EvalState 	state;
 
 	state.SetScopes( GetParentScope() );
-	return( Evaluate( state, val, sig  ) );
+	auto r = Evaluate( state, val, sig  );
+	val.MakeSelfContained( state );
+	return r;
 }
 
 
@@ -227,7 +231,9 @@ Flatten( Value& val, ExprTree *&tree ) const
 	EvalState state;
 
 	state.SetScopes( GetParentScope() );
-	return( Flatten( state, val, tree ) );
+	auto r = Flatten( state, val, tree );
+	val.MakeSelfContained( state );
+	return r;
 }
 
 
