@@ -22,7 +22,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "container_is_common = true",
-        "expected": "_x_catalog_condor_container_image",
+        "expected": "_x_catalog_condor_busybox_sif",
     },
     "on_and_off": {
         "env": {
@@ -36,7 +36,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "",
-        "expected": "_x_catalog_condor_container_image",
+        "expected": "_x_catalog_condor_busybox_sif",
     },
 
     "off_and_on": {
@@ -44,7 +44,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "container_is_common = true",
-        "expected": "_x_catalog_condor_container_image",
+        "expected": "_x_catalog_condor_busybox_sif",
     },
     "off_and_off": {
         "env": {
