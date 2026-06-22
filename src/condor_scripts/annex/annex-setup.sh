@@ -11,7 +11,7 @@ function usage() {
 # If we abort early, cleanup the files we've created
 function cleanup() {
     echo "Setup failed, cleaning up files..."
-    rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/20-annex-pilot-instance
+    rm -f ${IWD}/condor.tar.gz ${IWD}/hpc.slurm ${IWD}/20-annex-pilot-instance ${CLEANUP_TARBALL}
 }
 trap cleanup EXIT
 
@@ -128,6 +128,7 @@ set +o errexit
 if [ -f ${BINARIES_DIR}/${BINARIES_FILE} ] ; then
     echo "HTCondor tarball is already downloaded"
 else
+    CLEANUP_TARBALL=${BINARIES_DIR}/${BINARIES_FILE}
     rc=1
     if [ $rc -ne 0 ] ; then
         CURL_LOGGING_1=`curl -fsSL ${RELEASE_URL} -o ${BINARIES_DIR}/${BINARIES_FILE} 2>&1`
@@ -154,6 +155,7 @@ else
         exit 2
     fi
     echo "HTCondor tarball has been downloaded to ${BINARIES_DIR}/${BINARIES_FILE}"
+    CLEANUP_TARBALL=""
 fi
 
 # Re-enable errexit
