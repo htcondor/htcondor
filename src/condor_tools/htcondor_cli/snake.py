@@ -2,6 +2,7 @@ import argparse
 import htcondor2 as htcondor
 import shutil
 import subprocess
+import importlib.util
 import sys
 import time
 from datetime import datetime, timedelta
@@ -74,6 +75,13 @@ class Submit(Verb):
                 # Strip the -- separator that may follow the snakefile
                 if snakemake_args and snakemake_args[0] == '--':
                     snakemake_args = snakemake_args[1:]
+
+        # Check for the presence of the executor plugin
+        if importlib.util.find_spec("snakemake_executor_plugin_htcondor") is None:
+            raise RuntimeError(
+                "The 'snakemake-executor-plugin-htcondor' plugin is required but not yet installed.\n"
+                "Install it with: pip install snakemake-executor-plugin-htcondor"
+            )
 
         jobdir = self._setup_jobdir(options)
 
@@ -235,7 +243,7 @@ class Submit(Verb):
         # Build arguments for snakemake
         args_list = [
             f"-s {snakefile}",
-            f"--executor htcondor", # assuming that users have it if this command is used
+            f"--executor htcondor",
             f"--htcondor-jobdir {jobdir}",
         ]
 
