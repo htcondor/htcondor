@@ -5,7 +5,6 @@ import tempfile
 import time
 from pathlib import Path
 
-
 # The bind expression tests should pass to singularity (or set as
 # SINGULARITY_BIND_EXPR in HTCondor config) when running jobs against
 # the empty .sif built by make_empty_sif().  These mount the host's
@@ -25,11 +24,11 @@ def SingularityIsWorthy():
 
 
     if "apptainer" in output:
-        print("Singularity version ", output, "is worthy\n")
+        print(f"Singularity version `{output.strip()}` is worthy")
         return True
 
     if "3." in output:
-        print("Singularity version ", output, "is NOT worthy\n")
+        print(f"Singularity version `{output.strip()}` is NOT worthy")
         return True
 
     return False
@@ -44,10 +43,10 @@ def UserNamespacesFunctional():
     except FileNotFoundError:
         return False
     if result.returncode == 7:
-        print("unshare seems to work correctly, proceeding with test\n")
+        print("unshare seems to work correctly, proceeding with test")
         return True
     else:
-        print("unshare command failed, test cannot work, skipping test\n")
+        print("unshare command failed, test cannot work, skipping test")
         return False
 
 
@@ -102,9 +101,11 @@ def make_empty_sif(target_path):
         except FileNotFoundError:
             pass
 
+        # This should have a time-out.
         r = os.system(f"singularity -s build {target_path} {image_root}")
         if r == 0:
             return target_path
+
         time.sleep(5)
 
     return None
