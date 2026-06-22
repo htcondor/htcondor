@@ -77,6 +77,33 @@ $CONDOR_MEMORY_LINE
 $CONDOR_RUNTIME_LINE
 EOF
 
+# We expect these apptainer calls to exit non-zero, don't fail when they do.
+set +o errexit
+
+echo "$(date) $(hostname) Testing if our copy of apptainer works"
+./libexec/apptainer exec --contain --ipc --cleanenv libexec/exit_37.sif /exit_37
+
+if [ $? == 37 ] ; then
+    echo "$(date) $(hostname) Our apptainer works"
+else
+    echo "$(date) $(hostname) Our apptainer doesn't work"
+    sys_apptainer=$(which apptainer)
+    if [ ! -z "${sys_apptainer}" ] ; then
+       echo "$(date) $(hostname) Testing system's apptainer: ${sys_apptainer}"
+       ${sys_apptainer} exec --contain --ipc --cleanenv libexec/exit_37.sif /exit_37
+       if [ $? == 37 ] ; then
+	   echo "$(date) $(hostname) System's apptainer works, we'll use it"
+	   cat << EOF >> ${FULL_HOSTNAME}/config.d/30-annex-node
+
+# Use system-provided apptainer
+SINGULARITY=${sys_apptainer}
+EOF
+       else
+           echo "$(date) $(hostname) System's apptainer doesn't work"
+       fi
+    fi
+fi
+
 echo "$(date) $(hostname) Starting HTCondor..."
 condor_master -f
 rc=$?
