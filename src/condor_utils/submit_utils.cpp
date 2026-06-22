@@ -7012,7 +7012,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 				baseName = condor_dirname(container_image.ptr());
 			}
 			cleanStringForUseAsAttr( baseName, '_', false );
-			formatstr( catalogName, "condor_%s", baseName.c_str() );
+			formatstr( catalogName, "container_%s", baseName.c_str() );
 
 			std::string attributeName;
 			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
