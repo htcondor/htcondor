@@ -28,8 +28,8 @@ import htcondor2
 
 
 @action
-def the_container_image(test_dir):
-    sif = make_empty_sif(test_dir / "empty.sif")
+def the_container_image(test_dir, pytestconfig):
+    sif = make_empty_sif(test_dir / "busybox.sif")
     assert sif is not None
     return sif
 
@@ -112,7 +112,7 @@ TEST_CASES = {
             {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_condor_busybox_sif', 'CommonInputFiles'},
             {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_condor_busybox_sif', 'CommonInputFiles'},
         ],
-        'expected_cts_output': 'Cluster {clusterID}: required 6357200 total bytes in common files (as 794650 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 794650 bytes, skipping 5562550 bytes, or 87% of the total.',
+        'expected_cts_output': 'Cluster {clusterID}: required 360656 total bytes in common files (as 45082 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 45082 bytes, skipping 315574 bytes, or 87% of the total.',
     },
 }
 
@@ -337,8 +337,8 @@ def the_condor(test_dir):
             'SINGULARITY':                      '/usr/bin/singularity',
             'SINGULARITY_BIND_EXPR':            f'"{EMPTY_SIF_BIND_EXPR}"',
             'STARTER_LOG_NAME_APPEND':          'JobID',
-            'STARTER_DEBUG':                    'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
-            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
+            'STARTER_DEBUG':                    'D_CATEGORY D_SUBSECOND D_FULLDEBUG D_ZKM D_TEST',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG D_ZKM D_TEST',
             'SCHEDD_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
         },
     ) as the_condor:
