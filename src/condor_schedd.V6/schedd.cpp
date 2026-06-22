@@ -246,15 +246,6 @@ static bool isOCUSuperUser(ReliSock* sock) {
 	return false;
 }
 
-int init_user_ids(const JobQueueUserRec * user) {
-	if ( ! user || ! user->OsUser()) {
-		return 0;
-	}
-	std::string buf;
-	const char * owner = name_of_user(user->OsUser(), buf);
-	return init_user_ids(owner, domain_of_user(user->OsUser(), nullptr));
-}
-
 // priority records
 #ifdef PRIO_REC_IS_VECTOR
  extern std::vector<prio_rec> PrioRec;
@@ -5151,8 +5142,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
                      job_id.cluster, job_id.proc);
             
 			const OwnerInfo * owni = job_ad->ownerinfo;
-			if (! init_user_ids(owni) ) {
-				const char* os_user = (owni && owni->OsUser()) ? owni->OsUser() : "";
+			if (! init_user_ids_from_ad(*owni) ) {
+				const char* os_user = (owni->OsUser()) ? owni->OsUser() : "";
 				std::string msg;
 				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", os_user);
 #ifdef WIN32
@@ -5701,7 +5692,7 @@ jobIsFinished( int cluster, int proc, void* )
 		dprintf( D_FULLDEBUG, "(%d.%d) Forcing NFS sync of Iwd\n", cluster,
 				 proc );
 
-		if ( !init_user_ids(job_ad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*job_ad->ownerinfo) ) {
 			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
 					 job_ad->ownerinfo->Name() );
 		} else {
@@ -6561,7 +6552,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
 			}
-			if ( !init_user_ids(ad->ownerinfo) ) {
+			if ( !init_user_ids_from_ad(*ad->ownerinfo) ) {
 				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 						 "failed to initialize user id for job %d.%d\n",
 						 cluster, proc );
@@ -7138,7 +7129,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		priv = set_condor_priv();
 		use_user_priv = false;
 	} else {
-		if ( !init_user_ids(jobad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 			         jobad->ownerinfo->Name() );
 			refuse(s);
@@ -7209,7 +7200,7 @@ UpdateGSICredContinuation::finish(Stream *stream)
 #ifndef WIN32
 	if (m_user_priv) {
 		JobQueueJob* jobad = GetJobAd(m_jobid);
-		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
+		if ( !jobad || !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for owner of %d.%d!\n",
 			        m_jobid.cluster, m_jobid.proc);
 			delete this;
@@ -11335,7 +11326,9 @@ bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
 {
 	classad::EvalState state;
 	state.SetScopes(this);
-	return expr->Evaluate(state , val);
+	auto r = expr->Evaluate(state , val);
+	val.MakeSelfContained(state);
+	return r;
 }
 
 bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
@@ -12392,7 +12385,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(userJob->ownerinfo) ) {
+	if (! init_user_ids_from_ad(*userJob->ownerinfo) ) {
 		std::string tmpstr;
 #ifdef WIN32
 		formatstr(tmpstr, "Bad or missing credential for user: %s", userJob->ownerinfo->Name());
@@ -20701,7 +20694,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	}
 
 	TemporaryPrivSentry tps(true);
-	if ( ! jqc->ownerinfo || !init_user_ids(jqc->ownerinfo) ) {
+	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc->ownerinfo) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
@@ -20897,7 +20890,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	TemporaryPrivSentry tps(true);
-	if ( ! init_user_ids(user) ) {
+	if ( ! init_user_ids_from_ad(*user) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
 		return false;
@@ -21263,7 +21256,7 @@ Scheduler::post_transform_adjustments(
 	}
 
 	if( requested_catalogs.size() > 0 ) {
-		classad::ExprList * rc = new classad::ExprList();
+		auto rc = std::make_unique<classad::ExprList>();
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
@@ -21274,8 +21267,10 @@ Scheduler::post_transform_adjustments(
 		// with set_dirty_attributes() refactored so that it can be used
 		// without a transform object.
 		// ad->Insert( ATTR_REQUESTED_CATALOGS, rc );
+		// SetAttributeExpr() unparses the expression and does not take
+		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
 		);
 		if( rv != 0 ) {
 			if( errorStack ) { /* ??? */ }

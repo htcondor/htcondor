@@ -23,7 +23,7 @@ computeCommonInputFileCatalogs(
 	// Which common files, if any, were we asked for?
 	//
 	std::string commonInputCatalogs;
-	jobAd->LookupString("CommonInputCatalogs", commonInputCatalogs);
+	jobAd->LookupString(ATTR_COMMON_INPUT_CATALOGS, commonInputCatalogs);
 	for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
 		std::string commonInputFiles;
 		jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );

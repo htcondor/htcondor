@@ -6,6 +6,10 @@
 
 *** 24.0.22 bugs
 
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segfault.
+  :jira:`3554`
+
 - When using trust-on-first-use (TOFU), tools can go into an infinite
   loop if they have no valid standard input file to read.
   :jira:`3754`
@@ -22,6 +26,11 @@
 
 - Fixed a bug that can cause the *arc_gahp* to crash.
   :jira:`3789`
+
+- Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
+  that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
+  submit file.
+  :jira:`3800`
 
 *** 24.12.21 bugs
 

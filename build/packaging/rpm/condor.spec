@@ -985,6 +985,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_now.1.gz
 %_mandir/man1/classad_eval.1.gz
 %_mandir/man1/classads.1.gz
+%_mandir/man1/htcondor-jdl.1.gz
 %_mandir/man1/condor_adstash.1.gz
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
@@ -1126,8 +1127,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/sge_local_submit_attributes.sh
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
 

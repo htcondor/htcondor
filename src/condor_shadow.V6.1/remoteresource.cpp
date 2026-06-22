@@ -144,6 +144,7 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
 	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
+	if ( slotAd ) { delete slotAd; slotAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;

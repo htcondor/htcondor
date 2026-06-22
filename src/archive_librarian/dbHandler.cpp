@@ -115,7 +115,7 @@ bool DBHandler::initialize() {
         ROLLBACK_AND_RETURN();
     }
 
-    constexpr int SCHEMA_VERSION = 2;
+    constexpr int SCHEMA_VERSION = 3;
 
     if (version > SCHEMA_VERSION) {
         dprintf(D_ALWAYS, "Database schema version (%d) is newer than my version (%d).\n",
@@ -152,7 +152,21 @@ bool DBHandler::initialize() {
                 dprintf(D_ALWAYS, "Database migrated from schema v1 to v2 (FileName → absolute path).\n");
                 [[fallthrough]];
             }
-            case 0: [[fallthrough]];
+            case 2: {
+                // v2→v3: Add DAGManJobId, JobBatchId, JobBatchName to JobRecords.
+                // Existing rows default to NULL (attributes may not have existed).
+                const char* alters =
+                    "ALTER TABLE JobRecords ADD COLUMN DAGManJobId INTEGER;"
+                    "ALTER TABLE JobRecords ADD COLUMN JobBatchId TEXT;"
+                    "ALTER TABLE JobRecords ADD COLUMN JobBatchName TEXT;";
+                if (sqlite3_exec(db_, alters, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+                    dprintf(D_ERROR, "v2→v3 migration failed: %s\n", errMsg ? errMsg : "Unknown");
+                    sqlite3_free(errMsg);
+                    ROLLBACK_AND_RETURN();
+                }
+                dprintf(D_ALWAYS, "Database migrated from schema v2 to v3 (JobRecords DAG/batch columns).\n");
+                [[fallthrough]];
+            }
             default:
                 if (sqlite3_exec(db_, version_stmt.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
                     dprintf(D_ERROR, "Failed to set new schema version: %s\n", errMsg ? errMsg : "Unknown");
@@ -451,8 +465,9 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
     }
 
     const char* sql = R"(
-        INSERT INTO JobRecords (Offset, CompletionDate, JobId, FileId, JobListId)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO JobRecords (Offset, CompletionDate, JobId, FileId, JobListId,
+                                DAGManJobId, JobBatchId, JobBatchName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -490,6 +505,28 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
         std::ignore = sqlite3_bind_int64(stmt, 4, fileId);
         std::ignore = sqlite3_bind_int(stmt,  5, jobListId);
 
+        std::unique_ptr<ClassAd> ad(rec.GetAd());
+        int dagmanJobId = 0;
+        std::string jobBatchId, jobBatchName;
+
+        if (ad && ad->LookupInteger(ATTR_DAGMAN_JOB_ID, dagmanJobId)) {
+            std::ignore = sqlite3_bind_int(stmt, 6, dagmanJobId);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 6);
+        }
+
+        if (ad && ad->LookupString(ATTR_JOB_BATCH_ID, jobBatchId)) {
+            std::ignore = sqlite3_bind_text(stmt, 7, jobBatchId.c_str(), -1, SQLITE_TRANSIENT);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 7);
+        }
+
+        if (ad && ad->LookupString(ATTR_JOB_BATCH_NAME, jobBatchName)) {
+            std::ignore = sqlite3_bind_text(stmt, 8, jobBatchName.c_str(), -1, SQLITE_TRANSIENT);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 8);
+        }
+
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
             dprintf(D_ERROR, "Failed to insert record at offset %lld for %d.%d: %s\n",
@@ -510,6 +547,7 @@ static int64_t convertRotationStringToTimestamp(const std::string& rotationStr) 
     std::tm tm = {};
     std::istringstream ss(rotationStr);
     ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
+    tm.tm_isdst = -1;
     return static_cast<int64_t>(std::mktime(&tm));
 }
 

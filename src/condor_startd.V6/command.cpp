@@ -3063,6 +3063,10 @@ command_data_slot(int, Stream * stream ) {
 		return FALSE;
 	}
 
+	// Hand the request ad to the new slot's claim, which now owns it and
+	// will delete it when the claim is destroyed.
+	data_slot->r_cur->setjobad( requestAd );
+
 
 	//
 	// Reply with success.

@@ -23,10 +23,7 @@
 import logging
 import os,sys
 import pytest
-import subprocess
-import time
 from pathlib import Path
-import shutil
 
 from ornithology import *
 
@@ -34,57 +31,15 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
 )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Make a tiny sif file
-def sif_file():
-    os.mkdir("image_root")
-    os.mkdir("image_root/etc")
-    shutil.copyfile("/etc/passwd", "image_root/etc/passwd")
-
-    # some singularities need mksquashfs in path
-    # which some linuxes have in /usr/sbin
-    os.environ["PATH"] = os.environ["PATH"] + ":/usr/sbin"
-
-    # Newer apptainers use "proot" by default, which requires ptrace to
-    # be working.  Systems which disable ptrace (e.g. for security reasons)
-    # then break singularity build. Setting this env turns that off,
-    # and reverts to the old way:
-    os.environ["APPTAINER_IGNORE_PROOT"] = "1"
-
-    # figure out where condor's LIBEXEC directory is
-    # In batlab, the apptainer binary may be stored there
-    ccv = subprocess.run(
-        ["condor_config_val", "LIBEXEC"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    assert ccv.returncode == 0
-    libexec_dir = ccv.stdout.strip()
-    print(f"libexec_dir = {libexec_dir}")
-    os.environ["PATH"] = libexec_dir + ":" + os.environ["PATH"]
-
-    for count in [0, 1, 2, 3, 4]:
-        # rarely we see this failing in batlab with "bad file descriptor"
-        # so, just retry.
-        try:
-            Path("empty.sif").unlink
-        except FileNotFoundError:
-            pass
-
-        r = os.system("singularity -s build empty.sif image_root")
-        if (r == 0):
-            return "empty.sif"
-        time.sleep(5)
-
-    return False
-
 @standup
 def sif_file_fixture():
-    return sif_file()
+    return make_empty_sif("empty.sif")
 
 # Setup a personal condor 
 @standup

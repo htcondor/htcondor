@@ -7019,14 +7019,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "CommonInputCatalogs", xcip );
+			job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
 			if( xcip.find( catalogName ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
 				xcip += catalogName;
-				AssignJobString( "CommonInputCatalogs", xcip.c_str() );
+				AssignJobString( ATTR_COMMON_INPUT_CATALOGS, xcip.c_str() );
 			}
 		}
 
@@ -8064,6 +8064,8 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	// Force Year,Month,Day, etc to be stored in the submit hash
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {
