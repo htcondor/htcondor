@@ -33,6 +33,10 @@ try:
     from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
 except ImportError:
     VaultCredmon = None
+try:
+    from credmon.CredentialMonitors.PelicanCredmon import PelicanCredmon
+except ImportError:
+    PelicanCredmon = None
 
 from credmon.utils import parse_args, setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials
 
@@ -126,6 +130,9 @@ def start_credmon_process(q, cred_dir, args):
         local_provider_names = {htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")}
     oauth2_provider_names = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "*"))))
     client_provider_names = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))))
+    # Pelican services are explicitly enumerated by the administrator; there is
+    # no wildcard fallback because the Vault credmon claims unlisted services.
+    pelican_provider_names = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("PELICAN_CREDMON_PROVIDER_NAMES", ""))))
 
 
     credmons = []
@@ -137,6 +144,8 @@ def start_credmon_process(q, cred_dir, args):
     if ClientCredmon is not None:
         for provider in client_provider_names:
             credmons.append(ClientCredmon(provider=provider, cred_dir=cred_dir, args=args))
+    if PelicanCredmon is not None and pelican_provider_names:
+        credmons.append(PelicanCredmon(providers=pelican_provider_names, cred_dir=cred_dir, args=args))
 
     vault_provider_names = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", "*"))))
     if VaultCredmon is None and vault_provider_names and vault_provider_names != {"*"}:
@@ -150,6 +159,7 @@ def start_credmon_process(q, cred_dir, args):
         "local": local_provider_names,
         "oauth2": oauth2_provider_names,
         "client": client_provider_names,
+        "pelican": pelican_provider_names,
         "vault": vault_provider_names,
     }
     checked_credmon_provider_names = {}
