@@ -663,7 +663,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
-	bool            FindRunnableJobForClaim(match_rec* mrec);
+	bool            FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id);
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
