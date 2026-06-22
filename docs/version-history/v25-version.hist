@@ -70,6 +70,7 @@
   negotiation cycle, so they accumulated indefinitely.  This bug was
   introduced in HTCondor 25.11.
   :jira:`3795`
+
 - Fixed a bug that could cause file descriptor leaks in *blahpd*.
   :jira:`3786`
 
