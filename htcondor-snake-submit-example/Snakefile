@@ -1,0 +1,38 @@
+#!/user/bin/env python3.12
+
+import os
+import glob
+
+# Get all files from the inputs directory
+INPUT_FILES = glob.glob("inputs/*")
+# Extract just the filename and remove the extension
+SAMPLES = [os.path.splitext(os.path.basename(f))[0] for f in INPUT_FILES]
+
+# The "all" rule specifies the final targets of the workflow.
+rule all:
+    input:
+        expand("outputs/output_{sample}.txt", sample=SAMPLES)
+
+# Each other rule specifies how to take a named input file and produce a named output file.
+# The {sample} wildcard allows Snakemake to substitute in the sample name from the list above.
+rule make_intermediary:
+    input:
+        "inputs/{sample}.txt"
+    output:
+        "outputs/intermediary_{sample}.txt"
+    shell:
+        """
+        cat {input} > {output}
+        echo "foo" >> {output}
+        """
+
+rule make_output:
+    input:
+        "outputs/intermediary_{sample}.txt"
+    output:
+        "outputs/output_{sample}.txt"
+    shell:
+        """
+        cat {input} > {output}
+        echo "bar" >> {output}
+        """

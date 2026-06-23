@@ -1,0 +1,10 @@
+jobs: 6
+shared-fs-usage: none
+retries: 3
+default-resources:
+  job_wrapper: wrapper.sh
+  htcondor_transfer_input_files: snakemake-env.tar.gz
+  preserve_relative_paths: true
+  request_disk: 4GB
+  request_memory: 1GB
+  threads: 1
