@@ -40,6 +40,7 @@ extensions = [
     'macro-def',
     'subcom',
     'subcom-def',
+    'docman',
     'index',
     'jira',
     'tool',
@@ -142,6 +143,17 @@ pygments_style = 'colorful'
 
 # -- Options for manual page output ---------------------------------------
 
+# Man Page Number Guide: https://man7.org/linux/man-pages/man1/man.1.html
+# 1: Executable programs or shell commands
+# 2: System calls (functions provided by the kernel)
+# 3: Library calls (functions within program libraries)
+# 4: Special files (usually found in /dev)
+# 5: File formats and conventions, e.g. /etc/passwd
+# 6: Games
+# 7: Miscellaneous (including macro packages and conventions), e.g. man(7), groff(7), man-pages(7)
+# 8: System administration commands (usually only for root)
+# 9: Kernel routines [Non standard]
+
 # Short list of man pages to build which is used to add generice info
 MAN_PAGES = [
         ('classad_eval', 1),
@@ -229,6 +241,7 @@ MAN_PAGES = [
         ('get_htcondor', 1),
         ('gidd_alloc', 1),
         ('htcondor', 1),
+        ('htcondor-jdl', 1),
         ('procd_ctl', 1)
 ]
 

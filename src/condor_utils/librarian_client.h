@@ -62,7 +62,10 @@ public:
 	int CountByUser(const std::string& username, FileFilter filter = FileFilter::OnlyExisting) const;
 
 	// Return the file offset and file path for each (cluster, proc) pair.
-	std::vector<LibrarianRecord> GetRecords(const std::vector<std::pair<int,int>>& job_ids) const;
+	// With OnlyExisting (default), excludes records in files that have been
+	// marked deleted (DateOfDeletion IS NOT NULL).
+	std::vector<LibrarianRecord> GetRecords(const std::vector<std::pair<int,int>>& job_ids,
+	                                        FileFilter filter = FileFilter::OnlyExisting) const;
 
 private:
 	struct Impl;

@@ -52,4 +52,7 @@ std::optional<std::string> makeCIFName(
     const std::string & content
 );
 
+std::optional< std::tuple< std::string, std::string > >
+determineCIFScopeAndType( const classad::ClassAd & jobAd );
+
 #endif /* defined(_CONDOR_GUIDANCE_H) */

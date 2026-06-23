@@ -144,6 +144,7 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
 	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
+	if ( slotAd ) { delete slotAd; slotAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -898,6 +899,13 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// If we're talking to a newer starter, it's sent its slot ad along.
+	ClassAd * tSlotAd = dynamic_cast<ClassAd *>(ad->Lookup( "SlotAd" ));
+	if( tSlotAd ) {
+		if( slotAd ) { delete slotAd; }
+		slotAd = new ClassAd(* tSlotAd);
+	}
+
 	// This seems like the obvious place to change the job ad so that we
 	// can properly initialize the FTO if the starter we're talking to is too
 	// old to handle common file transfer.  However, the FTO is actually

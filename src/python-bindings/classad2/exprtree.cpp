@@ -68,7 +68,9 @@ evaluate( classad::ExprTree * expr, classad::ClassAd * scope,
         return expr->Evaluate( value );
     } else {
         classad::EvalState state;
-        return expr->Evaluate( state, value );
+        auto r = expr->Evaluate( state, value );
+        value.MakeSelfContained( state );
+        return r;
     }
 }
 

@@ -4,7 +4,17 @@
   that had just been routed.
   :jira:`3757`
 
+*** 24.0.22 features
+
+- HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.1.
+
 *** 24.0.22 bugs
+
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segfault.
+  :jira:`3554`
 
 - When using trust-on-first-use (TOFU), tools can go into an infinite
   loop if they have no valid standard input file to read.
@@ -22,6 +32,11 @@
 
 - Fixed a bug that can cause the *arc_gahp* to crash.
   :jira:`3789`
+
+- Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
+  that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
+  submit file.
+  :jira:`3800`
 
 *** 24.12.21 bugs
 

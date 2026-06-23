@@ -4758,8 +4758,34 @@ type=string
 description=Default modification to a memory resource request
 tags=startd
 
+[SUM_OF_CATALOGS]
+default : @fin
+    ifthenelse(
+        RequestedCatalogs is undefined || catalogs is undefined,
+        0,
+        sum(
+            evalInEachContext(
+                   member(Catalog, RequestedCatalogs)
+                && string(TARGET[CatalogScopeType]) == CatalogScope
+                && split(GlobalJobID, "#")[0] == AccessPoint
+                ? CatalogSize : 0,
+                catalogs
+            )
+        )
+    )
+@fin
+
+[CATALOG_SPACE]
+default : @fin
+    ifthenelse(
+        MappingMethod ?: "" != "Copy",
+        $(SUM_OF_CATALOGS),
+        0
+)
+@fin
+
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk,{Target.DiskQuantum?:1024})
+default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1024})
 version=24.12.18
 type=string
 description=Default modification to a disk resource request
