@@ -9,3 +9,5 @@ __pycache__
 
 # vscode files
 .vscode/
+htcondor-snake-submit-example/Miniforge3-Linux-x86_64.sh
+htcondor-snake-submit-example/snakemake-env.tar.gz
