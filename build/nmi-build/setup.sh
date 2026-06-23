@@ -57,6 +57,8 @@ elif [ "$ID" = 'centos' ]; then
 elif [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     zypper --non-interactive update
     INSTALL='zypper --non-interactive install'
+    # Work around for broken openSUSE 16.0 Docker image
+    # $INSTALL --oldpackage libsqlite3-0=3.51.3-160000.1.1
     $INSTALL system-group-wheel system-user-mail
 elif [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
     dnf upgrade --assumeyes
