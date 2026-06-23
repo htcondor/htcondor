@@ -247,11 +247,11 @@ Requires: pelican-osdf-compat >= 7.25.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
-%if 0%{?suse_version} || 0%{?x86_64_v2}
-# Unfortunately, Apptainer is lagging behind in openSUSE and x86_64_v2
+%if 0%{?suse_version} == 1500
+# Unfortunately, Apptainer is lagging behind on openSUSE 15
 Requires: apptainer >= 1.4.5
 %else
-Requires: apptainer >= 1.5.0
+Requires: apptainer >= 1.5.1
 %endif
 %endif
 

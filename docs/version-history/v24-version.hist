@@ -4,6 +4,12 @@
   that had just been routed.
   :jira:`3757`
 
+*** 24.0.22 features
+
+- HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.1.
+
 *** 24.0.22 bugs
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
