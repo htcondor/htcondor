@@ -247,7 +247,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
         $INSTALL procps-ng
     fi
     if [ $ID != 'amzn' ]; then
-        $INSTALL apptainer
+        $INSTALL apptainer fuse-overlayfs
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
@@ -261,17 +261,18 @@ if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.5.0
+    APPTAINER_VERSION=1.5.1
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL fuse-overlayfs
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL software-properties-common
     add-apt-repository -y ppa:apptainer/ppa
     apt-get update
-    $INSTALL apptainer
+    $INSTALL apptainer fuse-overlayfs
 fi
 
 
