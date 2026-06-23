@@ -8321,6 +8321,12 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			return 0;
 		}
 
+		ClaimIdParser claim(claim_id.c_str());
+		if (claim.secSessionInfo()[0] == '\0') {
+			dprintf(D_ERROR, "DIRECT_ATTACH claim doesn't have security session,  ignoring\n");
+			continue;
+		}
+
 			// TODO allow trusted users to match all jobs
 			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
 		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
