@@ -99,6 +99,13 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( ccb_proxy_bench
+        "ccb_proxy_bench.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
     condor_exe( test_awaitable_deadline_socketd
         "test_awaitable_deadline_socketd.cpp"
         "${C_LIBEXEC}"
@@ -268,6 +275,9 @@ if (BUILD_TESTING)
 
 		# CCB streaming/proxy (private-to-private) connections
 		condor_pl_test (test_ccb_streaming "Test CCB streaming/proxy mode for private-to-private connections" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+		# CCB streaming/proxy relay throughput benchmark
+		condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
