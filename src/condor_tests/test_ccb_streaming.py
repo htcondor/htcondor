@@ -1,20 +1,30 @@
 #!/usr/bin/env pytest
 
-# Test CCB streaming/proxy mode, in which a connection between two daemons that
-# are both behind a Condor Connection Broker is relayed (spliced) through the
-# broker rather than made directly.
+# Test CCB streaming/proxy mode, in which a connection that the standard CCB
+# connection-reversal scheme cannot make is instead relayed (spliced) through
+# the broker.  Two scenarios are covered:
 #
-# Every daemon registers with the collector-acting-as-CCB, but only the shadow
-# is placed on a separate private network (NET_B). The long-running daemons stay
-# on the PUBLIC network so the pool stands up normally (local tools such as
-# condor_who can reach them directly). When the shadow connects to the startd /
-# starter to run the job, it cannot use their addresses (different private
-# network) and, being itself CCB-routed, the broker proxies the connection in
-# streaming mode. A job that runs to completion therefore proves the
-# private-to-private path worked, and we additionally confirm the broker logged
-# that it established a streaming relay.
+#   * Daemon-to-daemon (TestCCBStreaming): the submit side (schedd/shadow) and
+#     the execute side (startd) are placed on different CCB-routed private
+#     networks, so the shadow->startd connection that carries the job is
+#     private-to-private and the broker must proxy it.  A job that runs to
+#     completion proves the path worked, and the broker logs the relay.
+#
+#   * Firewalled tool (TestCCBStreamingTool): a command-line tool that cannot
+#     accept a reverse connection -- TOOLS_ASSUME_FIREWALLS is set and it has no
+#     writable daemon socket directory for shared port -- reaches a CCB-routed
+#     schedd by asking the broker to proxy on its own request socket.
+#
+# CCB is forced between processes on a single host with the same mechanism as
+# the existing lib_ccb_* tests: a mismatch in PRIVATE_NETWORK_NAME keeps the CCB
+# contact (daemon.cpp New_addr), and special_connect() then reverse-connects via
+# the broker -- it does not depend on address reachability.
 
 import logging
+import os
+import tempfile
+
+import pytest
 
 from ornithology import (
     action,
@@ -139,3 +149,65 @@ class TestCCBStreaming:
         # syscall socket -- completed over the private-to-private relay.
         out = (test_dir / "ccb_xfer_job.out").read_text()
         assert TRANSFER_SENTINEL in out
+
+
+@action
+def ccb_tool_condor(test_dir):
+    # A minimal pool whose schedd is CCB-routed on a private network, so a client
+    # on the default network must reach it through the collector-acting-as-CCB.
+    with Condor(
+        local_dir=test_dir / "tool_condor",
+        config={
+            "ENABLE_IPV6": "FALSE",
+            "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
+            "SCHEDD.PRIVATE_NETWORK_NAME": "NET_SUBMIT",
+            "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
+            "USE_SHARED_PORT": "FALSE",
+            "DAEMON_LIST": "MASTER COLLECTOR SCHEDD",
+            "COLLECTOR_DEBUG": "D_FULLDEBUG",
+        },
+    ) as condor:
+        yield condor
+
+
+class TestCCBStreamingTool:
+    def test_firewalled_tool_reaches_schedd_via_streaming(
+        self, ccb_tool_condor, monkeypatch
+    ):
+        # The trick below makes the tool's shared-port writability check fail via
+        # access(W_OK), which root bypasses.  This scenario is specifically about
+        # an unprivileged client, so skip when running as root.
+        if getattr(os, "geteuid", lambda: 1)() == 0:
+            pytest.skip("simulating a tool that cannot use shared port requires non-root")
+
+        condor = ccb_tool_condor
+
+        # Point the tool's DAEMON_SOCKET_DIR at an existing read-only directory so
+        # its shared-port writability check fails with "cannot write".  Combined
+        # with TOOLS_ASSUME_FIREWALLS, that leaves the tool unable to accept a
+        # direct reverse connection, so to reach the CCB-routed schedd it must ask
+        # the broker to proxy (stream) the connection on its request socket.  The
+        # directory must be short: the daemon socket path it stands in for has to
+        # fit in a unix-domain sockaddr (~108 chars), and the per-test directory
+        # is already long, so use a brief /tmp path.
+        ro_dir = tempfile.mkdtemp(prefix="ccbro", dir="/tmp")
+        os.chmod(ro_dir, 0o555)
+        try:
+            monkeypatch.setenv("_CONDOR_TOOLS_ASSUME_FIREWALLS", "TRUE")
+            monkeypatch.setenv("_CONDOR_USE_SHARED_PORT", "TRUE")
+            monkeypatch.setenv("_CONDOR_DAEMON_SOCKET_DIR", ro_dir)
+
+            # condor_q connects to the (CCB-routed) schedd to read its queue.
+            p = condor.run_command(["condor_q"], timeout=60)
+            assert p.returncode == 0
+
+            # The broker must have logged that it proxied the tool's connection;
+            # had the tool instead reached the schedd directly, no relay appears.
+            collector_log = condor.collector_log.open()
+            assert collector_log.wait(
+                condition=lambda line: "streaming (proxy)" in line,
+                timeout=60,
+            )
+        finally:
+            os.chmod(ro_dir, 0o755)
+            os.rmdir(ro_dir)

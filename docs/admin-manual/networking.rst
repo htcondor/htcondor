@@ -649,6 +649,13 @@ requester only attempts a proxied connection after confirming (from the
 version exchanged during the security handshake) that the CCB server supports
 it, so streaming mode is safe to leave enabled in a mixed-version pool.
 
+The same proxying also helps a client that cannot accept a reverse connection
+at all, such as an unprivileged command-line tool behind a firewall or NAT.
+When ``TOOLS_ASSUME_FIREWALLS`` is set and such a client would otherwise be
+unable to open a reachable port to listen for the reverse connection, it
+requests a proxied connection through the CCB server instead of giving up,
+provided the server supports streaming.
+
 Any *condor_collector* may be used as a CCB server. There is no
 requirement that the *condor_collector* acting as the CCB server be the
 same *condor_collector* that a daemon advertises itself to (as with

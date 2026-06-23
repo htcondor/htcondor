@@ -560,7 +560,36 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 				return false;
 			}
-		} else if( starts_with(reason, "cannot write") && toolsAssumeFirewalls ) {
+		} else if( toolsAssumeFirewalls ) {
+			// We are not using the shared port (reason: <reason> -- either it is
+			// disabled or its socket directory is not writable) and
+			// TOOLS_ASSUME_FIREWALLS says a random listen port would likely be
+			// firewalled.  So we must not open a plain listen socket and offer its
+			// (unreachable) address: we cannot accept a direct reverse connection.
+			// An unprivileged client behind a firewall or NAT generally cannot, so
+			// rather than hang waiting for a reverse connection that never arrives,
+			// fall back to streaming if it is enabled: ask the broker to proxy the
+			// connection on our existing request socket, so the target never has
+			// to reach us.  Our advertised address need not be reachable -- in
+			// proxy mode the broker splices the target onto the request socket and
+			// never dials it.  ProxyConnect_blocking version-gates each broker, so
+			// against an older broker that cannot stream we fall through and give
+			// up as before.
+			if( param_boolean("CCB_CLIENT_STREAMING", true) ) {
+				char const *my_addr =
+					daemonCore ? daemonCore->publicNetworkIpAddr() : NULL;
+				dprintf( D_NETWORK|D_FULLDEBUG,
+						 "CCBClient: cannot accept a direct reverse connection "
+						 "(assuming firewall); requesting a streaming (proxied) "
+						 "connection to %s instead.\n",
+						 m_target_peer_description.c_str() );
+				m_target_sock->enter_reverse_connecting_state();
+				if( ProxyConnect_blocking( error, my_addr ? my_addr : "" ) ) {
+					return true;
+				}
+				m_target_sock->exit_reverse_connecting_state(NULL);
+			}
+
 			std::string errmsg = reason;
 
 			if( error ) {
