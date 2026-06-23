@@ -38,6 +38,15 @@ struct CCBStats {
 	stats_entry_recent<int> CCBRequestsNotFound;
 	stats_entry_recent<int> CCBRequestsSucceeded;
 	stats_entry_recent<int> CCBRequestsFailed;
+	// Streaming/proxy mode: proxy requests received; sessions the broker
+	// successfully spliced; relays that failed *after* the splice was established
+	// (a clean shutdown / EOF is not counted as a failure); how many are relaying
+	// right now; and the total bytes relayed (summed over both directions).
+	stats_entry_recent<int> CCBStreamingRequests;
+	stats_entry_recent<int> CCBStreamingSessions;
+	stats_entry_recent<int> CCBStreamingFailed;
+	stats_entry_abs<int> CCBStreamingActive;
+	stats_entry_recent<int64_t> CCBStreamingBytes;
 
 	void AddStatsToPool(StatisticsPool& pool, int publevel)
 	{
@@ -48,6 +57,11 @@ struct CCBStats {
 		STATS_POOL_ADD(pool, "", CCBRequestsNotFound, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsSucceeded, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsFailed, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingRequests, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingSessions, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingFailed, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingActive, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingBytes, publevel);
 	}
 };
 
@@ -934,9 +948,7 @@ CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const 
 // When the requester is itself behind a CCB it cannot accept a direct reverse
 // connection.  Instead the broker keeps the requester's CCB_REQUEST socket,
 // tells the target to reverse-connect to the broker, and then splices the two
-// sockets together as a transparent TCP relay.  The end-to-end CEDAR handshake
-// between the two real peers rides opaquely over the relay, so security is
-// preserved end-to-end and the broker never needs to decrypt the data.
+// sockets together as a transparent TCP relay.
 // ---------------------------------------------------------------------------
 
 class CCBProxySession {
@@ -1003,6 +1015,8 @@ CCBServer::RequestNeedsProxy( ClassAd &msg, char const *return_addr )
 void
 CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const *connect_id, char const *name )
 {
+	ccb_stats.CCBStreamingRequests += 1;
+
 		// Enforce the configured limits before committing any resources: an
 		// overall cap on concurrent proxy sessions, and a tighter cap on sessions
 		// still in the handshake (the more easily abused, never-completing kind).
@@ -1044,6 +1058,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 		// id is a fresh random token, so this should not normally happen).
 	if( m_proxy_sessions.find(session->connect_id) != m_proxy_sessions.end() ) {
 		RequestReply( requester, false, "duplicate connect id", 0, target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
 		delete session;
 		delete requester;
 		return;
@@ -1069,6 +1084,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 				"CCB: failed to forward proxy request to target ccbid %lu\n",
 				target->getCCBID());
 		RequestReply( requester, false, "failed to forward proxy request to target", 0, target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session );
 		return;
 	}
@@ -1120,6 +1136,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	if( !putClassAd( session->requester, reply ) || !session->requester->end_of_message() ) {
 		dprintf(D_ALWAYS,"CCB: failed to send proxy reply to requester %s\n",
 				session->requester->peer_description());
+		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session );
 		return KEEP_STREAM; // we took ownership of sock via session->target
 	}
@@ -1133,6 +1150,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 		!session->requester->end_of_message() )
 	{
 		dprintf(D_ALWAYS,"CCB: failed to replay reverse-connect hello to requester\n");
+		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session );
 		return KEEP_STREAM;
 	}
@@ -1148,6 +1166,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 		!ccbSetNonBlocking(session->target->get_file_desc()) )
 	{
 		dprintf(D_ALWAYS,"CCB: failed to set proxy sockets non-blocking\n");
+		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session );
 		return KEEP_STREAM;
 	}
@@ -1175,6 +1194,12 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 		relay_handler,
 		"CCBServer::ProxyRelayData" );
 	ASSERT( rc >= 0 );
+
+		// The broker's job -- connecting the two peers -- is done; the splice is
+		// live.  Count it as a succeeded request and as an active relay.
+	ccb_stats.CCBStreamingSessions += 1;
+	ccb_stats.CCBStreamingActive += 1;
+	ccb_stats.CCBRequestsSucceeded += 1;
 
 	dprintf(D_FULLDEBUG|D_NETWORK,
 			"CCB: established streaming (proxy) relay for request id %s\n",
@@ -1292,6 +1317,7 @@ static bool ccbPumpDirection( CCBProxySession::Dir &d, ReliSock *src, ReliSock *
 		int cap = (int)d.buf.size();
 		ssize_t n = recv( srcfd, d.buf.data(), cap, 0 );
 		if( n > 0 ) {
+			ccb_stats.CCBStreamingBytes += (int64_t)n;
 			d.len = (int)n;
 			d.off = 0;
 			if( !ccbFlush( d, dstfd ) ) {
@@ -1345,6 +1371,10 @@ CCBServer::ProxyRelayData( CCBProxySession *s )
 	if( !ccbPumpDirection( s->a_to_b, s->requester, s->target, "req->tgt" ) ||
 		!ccbPumpDirection( s->b_to_a, s->target, s->requester, "tgt->req" ) )
 	{
+		// A hard send/recv error after the splice was established (a clean
+		// shutdown / EOF does not get here -- it sets src_eof and is handled
+		// below as an orderly close).
+		ccb_stats.CCBStreamingFailed += 1;
 		dprintf(D_NETWORK,"CCB RELAY: tearing down session (request id %s) on pump error\n",
 				s->request_id.c_str());
 		DestroyProxySession( s );
@@ -1420,6 +1450,9 @@ CCBServer::DestroyProxySession( CCBProxySession *session )
 	}
 		// Idempotent: a no-op if the session already started relaying.
 	m_pending_handshakes.erase( session->connect_id );
+	if( session->relaying ) {
+		ccb_stats.CCBStreamingActive -= 1;
+	}
 	if( session->requester ) {
 		if( session->relaying ) {
 			daemonCore->Cancel_Socket( session->requester );

@@ -16,13 +16,12 @@
 #     schedd by asking the broker to proxy on its own request socket.
 #
 # CCB is forced between processes on a single host with the same mechanism as
-# the existing lib_ccb_* tests: a mismatch in PRIVATE_NETWORK_NAME keeps the CCB
-# contact (daemon.cpp New_addr), and special_connect() then reverse-connects via
-# the broker -- it does not depend on address reachability.
+# the existing lib_ccb_* tests: a mismatch in PRIVATE_NETWORK_NAME.
 
 import logging
 import os
 import tempfile
+import time
 
 import pytest
 
@@ -35,6 +34,14 @@ from ornithology import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def proxy_session_count(condor):
+    # The broker logs one "started streaming (proxy) session" per connection it
+    # relays; counting them is an immediate, reliable streaming-usage signal.
+    return condor.collector_log.path.read_text().count(
+        "started streaming (proxy) session"
+    )
 
 # A unique payload the job must receive via HTCondor file transfer and echo back.
 TRANSFER_SENTINEL = "ccb-streaming-file-transfer-payload-2f9c1a7b"
@@ -118,9 +125,6 @@ def completed_job(condor, test_dir, transfer_job_executable, transfer_input_file
         },
         count=1,
     )
-    # The job can only run if the shadow (NET_SUBMIT) successfully reaches the
-    # startd/starter (NET_EXEC) through the streaming proxy -- the two sit on
-    # different CCB-routed private networks.
     assert handle.wait(
         condition=ClusterState.all_complete,
         timeout=240,
@@ -171,43 +175,162 @@ def ccb_tool_condor(test_dir):
 
 
 class TestCCBStreamingTool:
+    # A firewalled client can be unable to accept a reverse connection in two
+    # distinct ways, exercising different client code paths -- both must fall
+    # back to asking the broker to stream the connection:
+    #
+    #   * shared_port=True : the client tries to receive the reverse connection on
+    #     a shared-port endpoint, but creating it fails (its DAEMON_SOCKET_DIR is
+    #     not writable -- the access(W_OK) check root bypasses).
+    #   * shared_port=False: the client would open a plain listen socket, but
+    #     TOOLS_ASSUME_FIREWALLS says it cannot accept inbound connections at all.
+    @pytest.mark.parametrize("tool_uses_shared_port", [True, False])
     def test_firewalled_tool_reaches_schedd_via_streaming(
-        self, ccb_tool_condor, monkeypatch
+        self, ccb_tool_condor, monkeypatch, tool_uses_shared_port
     ):
-        # The trick below makes the tool's shared-port writability check fail via
-        # access(W_OK), which root bypasses.  This scenario is specifically about
-        # an unprivileged client, so skip when running as root.
+        # The shared-port variant relies on access(W_OK) failing, which root
+        # bypasses, so this unprivileged-client scenario must skip as root.
         if getattr(os, "geteuid", lambda: 1)() == 0:
             pytest.skip("simulating a tool that cannot use shared port requires non-root")
 
         condor = ccb_tool_condor
 
-        # Point the tool's DAEMON_SOCKET_DIR at an existing read-only directory so
-        # its shared-port writability check fails with "cannot write".  Combined
-        # with TOOLS_ASSUME_FIREWALLS, that leaves the tool unable to accept a
-        # direct reverse connection, so to reach the CCB-routed schedd it must ask
-        # the broker to proxy (stream) the connection on its request socket.  The
-        # directory must be short: the daemon socket path it stands in for has to
-        # fit in a unix-domain sockaddr (~108 chars), and the per-test directory
-        # is already long, so use a brief /tmp path.
-        ro_dir = tempfile.mkdtemp(prefix="ccbro", dir="/tmp")
-        os.chmod(ro_dir, 0o555)
-        try:
-            monkeypatch.setenv("_CONDOR_TOOLS_ASSUME_FIREWALLS", "TRUE")
+        monkeypatch.setenv("_CONDOR_TOOLS_ASSUME_FIREWALLS", "TRUE")
+        ro_dir = None
+        if tool_uses_shared_port:
+            # Point the tool's DAEMON_SOCKET_DIR at an existing read-only directory
+            # so its shared-port writability check fails with "cannot write".  The
+            # directory must be short: the daemon socket path it stands in for has
+            # to fit in a unix-domain sockaddr (~108 chars), and the per-test
+            # directory is already long, so use a brief /tmp path.
+            ro_dir = tempfile.mkdtemp(prefix="ccbro", dir="/tmp")
+            os.chmod(ro_dir, 0o555)
             monkeypatch.setenv("_CONDOR_USE_SHARED_PORT", "TRUE")
             monkeypatch.setenv("_CONDOR_DAEMON_SOCKET_DIR", ro_dir)
+        else:
+            monkeypatch.setenv("_CONDOR_USE_SHARED_PORT", "FALSE")
+
+        try:
+            before = proxy_session_count(condor)
 
             # condor_q connects to the (CCB-routed) schedd to read its queue.
             p = condor.run_command(["condor_q"], timeout=60)
-            assert p.returncode == 0
+            assert p.returncode == 0, "condor_q failed: %s" % p.stderr
 
-            # The broker must have logged that it proxied the tool's connection;
-            # had the tool instead reached the schedd directly, no relay appears.
-            collector_log = condor.collector_log.open()
-            assert collector_log.wait(
-                condition=lambda line: "streaming (proxy)" in line,
-                timeout=60,
+            # A new relay appeared for this run: had the tool instead reached the
+            # schedd directly, the broker would log no streaming session.
+            deadline = time.time() + 60
+            while time.time() < deadline and proxy_session_count(condor) <= before:
+                time.sleep(1)
+            assert proxy_session_count(condor) > before, (
+                "firewalled condor_q (tool_uses_shared_port=%s) was not streamed"
+                % tool_uses_shared_port
             )
+
+            # The broker's streaming statistics (published in its collector ad)
+            # should account for the session and the bytes it relayed.
+            sessions = condor.run_command(
+                ["condor_status", "-collector", "-af", "CCBStreamingSessions"]
+            )
+            assert sessions.returncode == 0
+            assert sessions.stdout.strip() not in ("", "undefined"), (
+                "CCBStreamingSessions not published: %r" % sessions.stdout
+            )
+            assert int(sessions.stdout.strip()) >= 1
+
+            num_bytes = condor.run_command(
+                ["condor_status", "-collector", "-af", "CCBStreamingBytes"]
+            )
+            assert int(num_bytes.stdout.strip()) > 0
+
+            # The request that produced the session is counted, and an orderly
+            # close (EOF) is not counted as a relay failure.
+            requests = condor.run_command(
+                ["condor_status", "-collector", "-af", "CCBStreamingRequests"]
+            )
+            assert int(requests.stdout.strip()) >= 1
+            failed = condor.run_command(
+                ["condor_status", "-collector", "-af", "CCBStreamingFailed"]
+            )
+            assert int(failed.stdout.strip()) == 0
         finally:
-            os.chmod(ro_dir, 0o755)
-            os.rmdir(ro_dir)
+            if ro_dir is not None:
+                os.chmod(ro_dir, 0o755)
+                os.rmdir(ro_dir)
+
+
+@action
+def no_streaming_condor(test_dir):
+    # The same private-to-private topology as TestCCBStreaming, but with
+    # streaming disabled on the broker.  A CCB-routed requester is refused
+    # streaming and then falls back to a plain reverse connection (preserving the
+    # pre-streaming behavior); on a single host the endpoints are actually
+    # mutually reachable, so the fallback recovers the connection.
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            "ENABLE_IPV6": "FALSE",
+            # The case under test.
+            "CCB_SERVER_STREAMING": "FALSE",
+            "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
+            "SCHEDD.PRIVATE_NETWORK_NAME": "NET_SUBMIT",
+            "SHADOW.PRIVATE_NETWORK_NAME": "NET_SUBMIT",
+            "STARTD.PRIVATE_NETWORK_NAME": "NET_EXEC",
+            "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
+            "SHADOW.CCB_ADDRESS": "$(COLLECTOR_HOST)",
+            "STARTD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
+            "USE_SHARED_PORT": "FALSE",
+            "DAEMON_LIST": "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
+            "COLLECTOR_DEBUG": "D_FULLDEBUG",
+        },
+    ) as condor:
+        yield condor
+
+
+class TestCCBStreamingDisabled:
+    # Backward compatibility / graceful degradation: a requester that is itself
+    # CCB-routed asks a broker that will not proxy because CCB_SERVER_STREAMING is
+    # false.  The broker must refuse the streaming request with a clear message
+    # and not crash; the requester then falls back to a plain reverse connection,
+    # which succeeds here because the single-host endpoints are mutually
+    # reachable.  (A genuinely old broker that predates streaming is caught
+    # earlier by the requester's pre-send version gate, and falls back the same
+    # way.)
+    def test_streaming_refused_then_direct_fallback(
+        self, no_streaming_condor, path_to_sleep
+    ):
+        condor = no_streaming_condor
+        handle = condor.submit(
+            description={
+                "executable": path_to_sleep,
+                "arguments": "1",
+                "request_memory": "16MB",
+                "request_disk": "16MB",
+                "log": "test_ccb_streaming_disabled.log",
+            },
+            count=1,
+        )
+
+        # The requester is refused streaming and falls back to a direct reverse
+        # connection, which recovers the connection here (reachable endpoints),
+        # so the job still runs to completion.
+        assert handle.wait(
+            condition=ClusterState.all_complete,
+            timeout=240,
+            verbose=True,
+        )
+
+        # The broker refused the streaming attempt along the way with a clear
+        # message (rather than forwarding a doomed request or faulting).  Read the
+        # full log rather than tailing it: the refusal happens early, during the
+        # claim, and may be written before we would start watching.
+        assert "requires CCB streaming mode" in condor.collector_log.path.read_text()
+
+        # No daemon crashed handling the refused streaming request.
+        for daemon_log in (
+            condor.collector_log,
+            condor.schedd_log,
+            condor.startd_log,
+            condor.negotiator_log,
+        ):
+            assert "Stack dump" not in daemon_log.path.read_text()
