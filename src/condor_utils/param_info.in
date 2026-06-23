@@ -4352,6 +4352,41 @@ type=int
 description=Interval between CCB protocol heartbeats
 tags=ccb
 
+[CCB_SERVER_STREAMING]
+default=true
+version=25.12.0
+type=bool
+description=When true, a CCB server (broker) will proxy private-to-private connections: if a requester that is itself behind a CCB asks to reach another CCB-routed daemon, the broker has the target reverse-connect to the broker and splices the two sockets into a transparent relay.
+tags=ccb
+
+[CCB_SERVER_STREAMING_HANDSHAKE_TIMEOUT]
+default=300
+version=25.12.0
+type=int
+description=How long (in seconds) a CCB server (broker) waits for the target of a streaming (proxy) request to connect back and be spliced before abandoning the half-open session, freeing the requester's socket, and reporting a failure. This bounds only the handshake; once the relay is established it has no idle timeout. Set to 0 to disable handshake reaping.
+tags=ccb
+
+[CCB_SERVER_MAX_STREAMING_SESSIONS]
+default=0
+version=25.12.0
+type=int
+description=The maximum number of concurrent CCB streaming (proxy) sessions a broker will maintain, counting both in-progress handshakes and established relays. Requests beyond the limit are rejected with a clear failure. The default of 0 means unlimited.
+tags=ccb
+
+[CCB_SERVER_MAX_STREAMING_HANDSHAKES]
+default=0
+version=25.12.0
+type=int
+description=The maximum number of CCB streaming (proxy) sessions a broker will keep in the handshake state (waiting for the target to connect back) at once. This bounds the more easily abused, never-completing requests separately from established relays; requests beyond the limit are rejected. The default of 0 means unlimited.
+tags=ccb
+
+[CCB_CLIENT_STREAMING]
+default=true
+version=25.12.0
+type=bool
+description=When true, a daemon that is itself behind a CCB will attempt to reach another CCB-routed (private) peer by asking a streaming-capable broker to proxy the connection, instead of giving up. The attempt is only made when the broker advertises support, so this is safe to leave enabled.
+tags=ccb
+
 [ROOSTER_INTERVAL]
 default=300
 version=7.4.0

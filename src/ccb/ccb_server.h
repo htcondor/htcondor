@@ -30,16 +30,21 @@
 
 #include "dc_service.h"
 #include <map>
+#include <string>
+#include <unordered_set>
 
 class StatisticsPool;
 void AddCCBStatsToPool(StatisticsPool& pool, int publevel);
 
 class Sock;
+class ReliSock;
 class Stream;
+namespace classad { class ClassAd; }
 
 class CCBTarget;
 class CCBServerRequest;
 class CCBReconnectInfo;
+class CCBProxySession;
 
 typedef unsigned long CCBID;
 
@@ -74,6 +79,16 @@ class CCBServer: Service {
 		// to them if things go wrong
 	std::map<CCBID,CCBServerRequest *> m_requests;// request_id --> req
 
+		// streaming/proxy sessions (private-to-private), keyed by connect id
+	std::map<std::string,CCBProxySession *> m_proxy_sessions;
+		// connect ids of the sessions in m_proxy_sessions that are still in the
+		// handshake (not yet relaying), so CCB_SERVER_MAX_STREAMING_HANDSHAKES can
+		// be enforced in O(1) on the connection path.  A session is erased here
+		// when it starts relaying and (idempotently) when it is destroyed; because
+		// erase-of-absent is a no-op, a missed transition self-heals at teardown
+		// rather than wedging the count forever the way a bare counter would.
+	std::unordered_set<std::string> m_pending_handshakes;
+
 	int m_polling_timer;
 		// The epoll file descriptor.  Only used on platforms where
 		// epoll is available.
@@ -92,6 +107,23 @@ class CCBServer: Service {
 
 	void ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target );
 	void RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid );
+
+		// --- streaming/proxy mode (CCB_STREAMING) ---
+		// True if the requester is itself behind a CCB (its return address is
+		// CCB-routed), so it cannot accept a direct reverse connection.
+	bool RequestNeedsProxy( classad::ClassAd &msg, char const *return_addr );
+		// Begin a proxy session: register a rendezvous keyed by connect_id and
+		// ask the target to reverse-connect to this broker.
+	void StartProxyRequest( ReliSock *requester, CCBTarget *target, char const *connect_id, char const *name );
+		// Raw command handler for the target's inbound reverse connection.
+	int HandleReverseConnect( int cmd, Stream *stream );
+		// daemonCore socket handler that relays bytes for an active proxy.
+	int ProxyRelayData( CCBProxySession *session );
+		// Tear down and free a proxy session, closing both sockets.
+	void DestroyProxySession( CCBProxySession *session );
+		// Periodic maintenance: reap proxy sessions whose handshake never
+		// completed (called from PollSockets, the existing CCB poll timer).
+	void SweepProxySessions();
 
 	void RequestFinished( CCBServerRequest *request, bool success, char const *error_msg );
 
