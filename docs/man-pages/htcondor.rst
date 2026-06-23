@@ -52,8 +52,10 @@ Synopsis
 
 | **htcondor** **ap** *status* [**hostname** ...]
 | **htcondor** **ap** *claims* [**-\-name** *ap-name*]
+| **htcondor** **ap** *controlled* [**-\-name** *ap-name*]
 
 | **htcondor** **ep** *rehome* [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+| **htcondor** **ep** *controller* [**-\-ap** *ap-name*] [**-\-pool** *pool*] [**-\-clear**] *ep-name*
 | **htcondor** **ep** *status* *ep-name*
 
 | **htcondor** **cm** *status*
@@ -464,6 +466,23 @@ Access Point Verbs
         Name or address of the access point to query.  If not specified,
         the local access point is queried.
 
+.. _htcondor ap controlled:
+
+  **htcondor ap controlled** [**-\-name** *ap-name*]
+
+    Displays the execution points that an access point *controls*, as
+    established by :ref:`htcondor ep controller<htcondor ep controller>`.
+    Being an EP's controller is distinct from holding a claim on it (see
+    **htcondor ap claims**): the controller may evict any claim on the EP
+    but need not have a claim -- or a job -- there itself.  This list is
+    kept in memory by the access point and is rebuilt as controllers are
+    set and cleared; it is not persisted across a restart of the
+    *condor_schedd*.
+
+    **-\-name** *ap-name*
+        Name or address of the access point to query.  If not specified,
+        the local access point is queried.
+
 Execution Point Verbs
 ---------------------
 
@@ -496,6 +515,45 @@ Execution Point Verbs
         otherwise the request is refused and no jobs are evicted. The
         reboot itself is performed by :macro:`STARTD_REBOOT_COMMAND`
         (default ``/sbin/reboot``).
+
+.. _htcondor ep controller:
+
+  **htcondor ep controller** [**-\-ap** *ap-name*] [**-\-pool** *pool*] [**-\-clear**] *ep-name*
+
+    Designates an access point (AP) as the *controller* of the execution
+    point *ep-name*. The controller is permitted to evict any claim on that
+    EP, regardless of which AP owns the claim. An EP may have at most one
+    controller.
+
+    Setting a controller is a two-step operation that this command performs
+    automatically: it first asks the AP named by **-\-ap** to mint an
+    AP-signed capability token (the caller must be authorized with
+    ``WRITE`` or ``ADMINISTRATOR`` on the AP), then delivers that token to
+    *ep-name*. The EP records the controlling AP and begins advertising it
+    in the :ad-attr:`Controller` slot attribute. The relationship is
+    persisted via the runtime persistent config, so it survives a restart of
+    the *condor_startd*. The request is refused if the EP already has a
+    controller; clear it first.
+
+    After the EP accepts the relationship, the command also informs the AP
+    that it now controls *ep-name*, so the EP appears in
+    :ref:`htcondor ap controlled<htcondor ap controlled>`. Clearing a
+    controller likewise informs the former controller. This AP-side
+    bookkeeping is best-effort: if the AP cannot be reached to update its
+    list, the EP-side change still takes effect and a warning is printed.
+
+    **-\-ap** *ap-name*
+        Name of the access point (*condor_schedd*) to make the controller.
+        Required unless **-\-clear** is given.
+
+    **-\-pool** *pool*
+        Collector pool to use when locating *ap-name*. Defaults to
+        :macro:`COLLECTOR_HOST`.
+
+    **-\-clear**
+        Remove the execution point's controller instead of setting one.
+        This is a no-op if no controller is set. Clearing is permitted for
+        the current controller or for a local startd administrator.
 
   **htcondor ep status** *ep-name*
 

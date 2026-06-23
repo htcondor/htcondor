@@ -1591,3 +1591,39 @@ schedds.
     rehome configuration has been persisted to disk, so that the host
     direct-attaches to the new *condor_schedd* when it comes back up. The
     default is ``/sbin/reboot``.
+
+Controller Configuration File Macros
+------------------------------------
+
+These macros control the *controller* relationship: an access point (AP) that
+has been granted the privilege to evict any claim on this execution point (EP).
+The relationship is normally established with the *htcondor ep controller*
+command rather than by editing these macros directly; the command persists the
+values via the runtime persistent config so they survive a restart. An EP has
+at most one controller.
+
+:macro-def:`STARTD_CONTROLLER_NAME`
+    The name of the access point (*condor_schedd*) that is this execution
+    point's controller. When set, the *condor_startd* advertises it in the
+    :ad-attr:`Controller` slot attribute. If empty (the default), the EP has no
+    controller.
+
+:macro-def:`STARTD_CONTROLLER_IDENTITY`
+    The authenticated security identity (of the form ``user@domain``) that the
+    controller presents when it connects to evict claims on this EP. This
+    identity is granted authorization to evict here. It is normally bound at
+    set time from the controller token and defaults to the value of
+    :macro:`STARTD_CONTROLLER_NAME` if not separately specified.
+
+:macro-def:`STARTD_CONTROLLER_POOL`
+    The collector pool used to reach the controller, when the controlling AP is
+    in a different HTCondor pool than this *condor_startd*. If empty, assume the
+    controller reports to the same collector as this *condor_startd*.
+
+:macro-def:`SCHEDD_CONTROLLER_IDENTITY`
+    Set on the *condor_schedd* (the AP). The security identity that this AP
+    will authenticate as when it later connects to an EP to evict claims as its
+    controller. This is the identity recorded in the controller token minted by
+    ``condor_ep controller``, and must match the AP's real daemon identity as
+    the EP sees it. Defaults to ``condor@<TRUST_DOMAIN>`` (the usual pooled
+    daemon identity); override it for pools that map daemons differently.

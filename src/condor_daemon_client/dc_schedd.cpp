@@ -593,7 +593,157 @@ DCSchedd::reschedule()
 	return sendCommand(RESCHEDULE, hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock, 0);
 }
 
-bool 
+bool
+DCSchedd::requestControllerToken(std::string &token, std::string &controller_name,
+	std::string &controller_identity, std::string &controller_pool,
+	CondorError &errstack)
+{
+	ReliSock sock;
+
+	if (!connectSock(&sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to connect to schedd");
+		return false;
+	}
+	if (!startCommand(REQUEST_CONTROLLER_TOKEN, &sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to start REQUEST_CONTROLLER_TOKEN command");
+		return false;
+	}
+	if (!forceAuthentication(&sock, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to authenticate");
+		return false;
+	}
+
+	ClassAd request_ad;
+	sock.encode();
+	if (!putClassAd(&sock, request_ad) || !sock.end_of_message()) {
+		errstack.push("DCSchedd", 1, "failed to send controller token request");
+		return false;
+	}
+
+	sock.decode();
+	ClassAd reply_ad;
+	if (!getClassAd(&sock, reply_ad) || !sock.end_of_message()) {
+		errstack.push("DCSchedd", 1, "failed to read controller token reply");
+		return false;
+	}
+
+	int error_code = -1;
+	reply_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+	if (error_code != 0) {
+		std::string error_string;
+		reply_ad.LookupString(ATTR_ERROR_STRING, error_string);
+		errstack.push("DCSchedd", error_code,
+			error_string.empty() ? "schedd refused to issue controller token" : error_string.c_str());
+		return false;
+	}
+
+	if (!reply_ad.LookupString(ATTR_SEC_TOKEN, token) || token.empty()) {
+		errstack.push("DCSchedd", 1, "schedd reply did not contain a controller token");
+		return false;
+	}
+	reply_ad.LookupString("ControllerName", controller_name);
+	reply_ad.LookupString("ControllerIdentity", controller_identity);
+	reply_ad.LookupString("ControllerPool", controller_pool);
+
+	return true;
+}
+
+bool
+DCSchedd::registerControlledEP(const char *ep_name, const char *ep_pool,
+	bool remove, CondorError &errstack)
+{
+	ReliSock sock;
+
+	if (!connectSock(&sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to connect to schedd");
+		return false;
+	}
+	if (!startCommand(REGISTER_CONTROLLED_EP, &sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to start REGISTER_CONTROLLED_EP command");
+		return false;
+	}
+	if (!forceAuthentication(&sock, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to authenticate");
+		return false;
+	}
+
+	ClassAd request_ad;
+	if (ep_name) {
+		request_ad.Assign("EPName", ep_name);
+	}
+	if (ep_pool) {
+		request_ad.Assign("EPPool", ep_pool);
+	}
+	if (remove) {
+		request_ad.Assign("Remove", true);
+	}
+
+	sock.encode();
+	if (!putClassAd(&sock, request_ad) || !sock.end_of_message()) {
+		errstack.push("DCSchedd", 1, "failed to send controlled EP registration");
+		return false;
+	}
+
+	sock.decode();
+	ClassAd reply_ad;
+	if (!getClassAd(&sock, reply_ad) || !sock.end_of_message()) {
+		errstack.push("DCSchedd", 1, "failed to read controlled EP registration reply");
+		return false;
+	}
+
+	bool result = false;
+	reply_ad.LookupBool(ATTR_RESULT, result);
+	if (!result) {
+		std::string error_string;
+		reply_ad.LookupString(ATTR_ERROR_STRING, error_string);
+		errstack.push("DCSchedd", 1,
+			error_string.empty() ? "schedd refused controlled EP registration" : error_string.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+bool
+DCSchedd::getControlledEPs(std::vector<std::unique_ptr<ClassAd>> &eps,
+	CondorError &errstack)
+{
+	ReliSock sock;
+
+	if (!connectSock(&sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to connect to schedd");
+		return false;
+	}
+	if (!startCommand(QUERY_CONTROLLED_EPS, &sock, 20, &errstack)) {
+		errstack.push("DCSchedd", 1, "failed to start QUERY_CONTROLLED_EPS command");
+		return false;
+	}
+
+	ClassAd query_ad;
+	sock.encode();
+	if (!putClassAd(&sock, query_ad) || !sock.end_of_message()) {
+		errstack.push("DCSchedd", 1, "failed to send controlled EP query");
+		return false;
+	}
+
+	sock.decode();
+	int more_flag = 0;
+	sock.code(more_flag);
+	while (more_flag) {
+		auto result_ad = std::make_unique<ClassAd>();
+		if (!getClassAd(&sock, *result_ad)) {
+			errstack.push("DCSchedd", 1, "failed to read controlled EP ad");
+			return false;
+		}
+		eps.emplace_back(std::move(result_ad));
+		sock.code(more_flag);
+	}
+	sock.end_of_message();
+
+	return true;
+}
+
+bool
 DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone /*=0*/)
 {
 	if(numdone) { *numdone = 0; }

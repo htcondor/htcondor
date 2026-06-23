@@ -1,5 +1,15 @@
 *** 25.13.0 features
 
+- The new ``htcondor ep controller`` command designates an access point as the
+  *controller* of an execution point: the AP permitted to evict any claim on
+  that EP, regardless of which AP owns the claim. The EP advertises its
+  controller in the :ad-attr:`Controller` slot attribute, and the relationship
+  persists across an EP restart. The command also informs the controlling AP,
+  which lists the EPs it controls via the new ``htcondor ap controlled``
+  command. See :macro:`STARTD_CONTROLLER_NAME` and
+  :macro:`SCHEDD_CONTROLLER_IDENTITY`.
+  :jira:`3823`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs
@@ -81,6 +91,25 @@
   :macro:`STARTD_REBOOT_COMMAND` (default ``/sbin/reboot``) to perform the
   reboot.
   :jira:`3766`
+
+- Honor the :subcom:`transfer_executable` submit command for **batch**
+  grid universe jobs.
+  :jira:`3772`
+
+- Scheduler universe jobs such as DAGMan will now go into cool down
+  for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
+  *condor_schedd* fails to launch the job.
+  :jira:`3769`
+
+- Jobs that transfer input sandboxs now log a file transfer started 
+  event even when there list of files to be transfered is empty.
+  Note that the transfer finished event has always been logged
+  for empty file lists.  
+  :jira:`3777`
+
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
 
 *** 25.12.0 bugs
 
