@@ -62,6 +62,12 @@ static bool test_contains_withwildcard_return_true_mid_and_end(void);
 static bool test_contains_withwildcard_return_true_start_and_end(void);
 static bool test_contains_withwildcard_return_false_mid_and_end(void);
 static bool test_contains_withwildcard_return_false_start_and_end(void);
+static bool test_contains_withwildcard_return_false_start_anchor(void);
+static bool test_contains_withwildcard_return_true_start_anchor(void);
+static bool test_contains_withwildcard_return_false_mid_anchor(void);
+static bool test_contains_withwildcard_return_true_mid_anchor(void);
+static bool test_contains_withwildcard_return_true_mid_anchor_repeat(void);
+static bool test_contains_withwildcard_return_false_host(void);
 static bool test_contains_withwildcard_return_true_end(void);
 static bool test_contains_withwildcard_return_true_same_wild(void);
 static bool test_contains_withwildcard_return_true_multiple(void);
@@ -74,6 +80,8 @@ static bool test_contains_anycase_wwc_return_true_only_wild(void);
 static bool test_contains_anycase_wwc_return_true_start(void);
 static bool test_contains_anycase_wwc_return_true_mid(void);
 static bool test_contains_anycase_wwc_return_true_end(void);
+static bool test_contains_anycase_wwc_return_false_start_anchor(void);
+static bool test_contains_anycase_wwc_return_true_mid_anchor(void);
 static bool test_contains_anycase_wwc_return_true_same_wild(void);
 static bool test_contains_anycase_wwc_return_true_multiple(void);
 static bool test_contains_anycase_wwc_return_true_many(void);
@@ -122,6 +130,12 @@ bool FTEST_string_vector(void) {
 	driver.register_function(test_contains_withwildcard_return_true_start_and_end);
 	driver.register_function(test_contains_withwildcard_return_false_mid_and_end);
 	driver.register_function(test_contains_withwildcard_return_false_start_and_end);
+	driver.register_function(test_contains_withwildcard_return_false_start_anchor);
+	driver.register_function(test_contains_withwildcard_return_true_start_anchor);
+	driver.register_function(test_contains_withwildcard_return_false_mid_anchor);
+	driver.register_function(test_contains_withwildcard_return_true_mid_anchor);
+	driver.register_function(test_contains_withwildcard_return_true_mid_anchor_repeat);
+	driver.register_function(test_contains_withwildcard_return_false_host);
 	driver.register_function(test_contains_withwildcard_return_true_end);
 	driver.register_function(test_contains_withwildcard_return_true_same_wild);
 	driver.register_function(test_contains_withwildcard_return_true_multiple);
@@ -134,6 +148,8 @@ bool FTEST_string_vector(void) {
 	driver.register_function(test_contains_anycase_wwc_return_true_start);
 	driver.register_function(test_contains_anycase_wwc_return_true_mid);
 	driver.register_function(test_contains_anycase_wwc_return_true_end);
+	driver.register_function(test_contains_anycase_wwc_return_false_start_anchor);
+	driver.register_function(test_contains_anycase_wwc_return_true_mid_anchor);
 	driver.register_function(test_contains_anycase_wwc_return_true_same_wild);
 	driver.register_function(test_contains_anycase_wwc_return_true_multiple);
 	driver.register_function(test_contains_anycase_wwc_return_true_many);
@@ -815,6 +831,132 @@ static bool test_contains_withwildcard_return_false_start_and_end() {
 }
 
 
+static bool test_contains_withwildcard_return_false_start_anchor() {
+	emit_test("Does contains_withwildcard() return false when the pattern has a "
+		"leading wildcard and the trailing literal appears in the string but NOT "
+		"at the end (e.g. '*bar' should not match 'barbaz')?");
+	std::vector<std::string> sl = split("a;*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "barbaz";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_true_start_anchor() {
+	emit_test("Does contains_withwildcard() return true when the pattern has a "
+		"leading wildcard and the string ends with the trailing literal "
+		"(e.g. '*bar' should match 'xxxbar')?");
+	std::vector<std::string> sl = split("a;*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "xxxbar";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(!retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_false_mid_anchor() {
+	emit_test("Does contains_withwildcard() return false when the pattern has a "
+		"mid wildcard and the trailing literal appears in the string but NOT at "
+		"the end (e.g. 'foo*bar' should not match 'fooXbarZ')?");
+	std::vector<std::string> sl = split("a;foo*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "fooXbarZ";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_true_mid_anchor() {
+	emit_test("Does contains_withwildcard() return true when the pattern has a "
+		"mid wildcard and the string starts with the leading literal and ends "
+		"with the trailing literal (e.g. 'foo*bar' should match 'fooXbar')?");
+	std::vector<std::string> sl = split("a;foo*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "fooXbar";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(!retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_true_mid_anchor_repeat() {
+	emit_test("Does contains_withwildcard() return true when the trailing literal "
+		"appears more than once and the LAST occurrence is at the end of the "
+		"string (e.g. 'foo*bar' should match 'fooxbarybar')?");
+	std::vector<std::string> sl = split("a;foo*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "fooxbarybar";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(!retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_false_host() {
+	emit_test("Does contains_withwildcard() correctly reject a host that merely "
+		"contains the domain glob's suffix but does not end with it "
+		"(e.g. '*.cs.wisc.edu' should not match 'evil.cs.wisc.edu.attacker.com')?");
+	std::vector<std::string> sl = split("*.cs.wisc.edu", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "evil.cs.wisc.edu.attacker.com";
+	bool retVal = contains_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
 static bool test_contains_withwildcard_return_true_end() {
 	emit_test("Does contains_withwildcard() return true when list "
 		"contains the string with a wildcard at the end of the string?");
@@ -1049,6 +1191,48 @@ static bool test_contains_anycase_wwc_return_true_end() {
 	std::vector<std::string> sl = split("a;b*;c", ";");
 	std::string orig = join(sl, ",");
 	const char* check = "BAR";
+	bool retVal = contains_anycase_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(!retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_anycase_wwc_return_false_start_anchor() {
+	emit_test("Does contains_anycase_withwildcard() return false when the "
+		"pattern has a leading wildcard and the trailing literal appears in the "
+		"string but NOT at the end (e.g. '*bar' should not match 'BARbaz')?");
+	std::vector<std::string> sl = split("a;*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "BARbaz";
+	bool retVal = contains_anycase_withwildcard(sl, check);
+	emit_input_header();
+	emit_param("list", orig.c_str());
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if(retVal) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_contains_anycase_wwc_return_true_mid_anchor() {
+	emit_test("Does contains_anycase_withwildcard() return true when the pattern "
+		"has a mid wildcard and the string starts/ends with the literals, "
+		"ignoring case (e.g. 'foo*bar' should match 'FOOxBAR')?");
+	std::vector<std::string> sl = split("a;foo*bar;c", ";");
+	std::string orig = join(sl, ",");
+	const char* check = "FOOxBAR";
 	bool retVal = contains_anycase_withwildcard(sl, check);
 	emit_input_header();
 	emit_param("list", orig.c_str());
