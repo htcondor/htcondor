@@ -34,6 +34,11 @@
   submit file.
   :jira:`3800`
 
+- Fixed a bug in wildcard string matching where a pattern ending in a literal
+  was not anchored to the end of the candidate string, so it could match
+  strings with extra trailing characters.
+  :jira:`3809`
+
 *** 24.0.21 features
 
 - HTCondor tarballs now contain `Pelican 7.25.0 <https://pelicanplatform.org/releases>`_
