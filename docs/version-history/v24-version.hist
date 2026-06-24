@@ -2,6 +2,11 @@
 
 *** 24.0.23 bugs
 
+- Fixed a bug in wildcard string matching where a pattern ending in a literal
+  was not anchored to the end of the candidate string, so it could match
+  strings with extra trailing characters.
+  :jira:`3809`
+
 *** 24.12.22 bugs
 
 - Fixed a bug where the *condor_job_router* could abort when removing a job
