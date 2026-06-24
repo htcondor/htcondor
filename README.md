@@ -110,7 +110,8 @@ If you see `invalid choice: 'snake'...`, the PYTHONPATH is not set correctly. Ma
 
 ### Step 4: Using Wrapper Script 
 
-Due to the current setup of the AP, we need to strip the `apptainer-prefix` from the arguments at the EP. 
+Due to the current setup of the AP, we need to strip the `apptainer-prefix` from the arguments at the EP.
+Do this if your workflow do not use Apptainer. However, if it uses it, you can skip this step. Make sure to specify the relative path for your Apptainer accordinly when submitting the job(s). 
 You can follow this wrapper script:
 ```bash
 #!/bin/bash

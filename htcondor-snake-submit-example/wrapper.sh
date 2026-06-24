@@ -33,30 +33,31 @@ echo "---"
 # and with which parameters. Those args must be passed back to Snakemake here to run
 # that step.
 
-# Strip --apptainer-prefix (absolute AP paths that don't apply on the execute node 
-# args=()
-# skip_next=false
-# for arg in "$@"; do
-#     if $skip_next; then
-#         skip_next=false
-#         continue
-#     fi
-#     case "$arg" in
-#         --apptainer-prefix)
-#             skip_next=true
-#             ;;
-#         --apptainer-prefix=*)
-#             ;;
-#         *)
-#             args+=("$arg")
-#             ;;
-#     esac
-# done
+# Strip --apptainer-prefix (absolute AP paths that don't apply on the execute node)
+# This is for when your workflow do not need apptainer. Set your apptainer path accordingly if your workflow needs it. 
+# This will not be needed with the upcoming change in the snakemake-executor-plugin-htcondor
+args=()
+skip_next=false
+for arg in "$@"; do
+    if $skip_next; then
+        skip_next=false
+        continue
+    fi
+    case "$arg" in
+        --apptainer-prefix)
+            skip_next=true
+            ;;
+        --apptainer-prefix=*)
+            ;;
+        *)
+            args+=("$arg")
+            ;;
+    esac
+done
 
-# echo "Starting Snakemake job..."
-# echo "Stripped args count: ${#args[@]}"
-# snakemake "${args[@]}"
-snakemake "$@"
+echo "Starting Snakemake job..."
+echo "Stripped args count: ${#args[@]}"
+snakemake "${args[@]}"
 
 
 
