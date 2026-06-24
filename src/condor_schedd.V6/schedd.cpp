@@ -15776,7 +15776,7 @@ bool locate_and_advertise_local_credd(bool force) {
 	Daemon local_credd(DT_CREDD);
 	local_credd.locate_local();
 
-	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+	if (local_credd.addr() && param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
 		std::string names;
 		new_check_creds = param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES") ||
 		                  param(names, "LOCAL_CREDMON_PROVIDER_NAMES") ||
@@ -15800,7 +15800,7 @@ bool locate_and_advertise_local_credd(bool force) {
 		// check if SubmitAlwaysCheckCreds has changed
 		bool old_check_creds = false;
 		daemonCore->ContactInfoExtra().LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, old_check_creds);
-		update_info |= old_check_creds != new_check_creds;
+		update_info |= (old_check_creds != new_check_creds);
 	}
 
 	if (!update_info) {
