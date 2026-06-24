@@ -612,10 +612,7 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	}
 	gman_node->ownerinfo = userident.m_ownerinfo;
 	gman_node->pid = pid;
-	gman_node->user[0] = '\0';
-	if ( user ) {
-		strcpy(gman_node->user, user);
-	}
+	gman_node->user = user ? user : "";
 	std::string user_key(user);
 	if(attr_value && *attr_value){
 		user_key += '#';
