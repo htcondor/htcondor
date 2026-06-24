@@ -1607,16 +1607,16 @@ int submit_jobs (
 		if(! sent_credential_to_credd) {
 			std::string URL;
 			std::string error_string;
-			int cred_result = process_job_credentials(
+			bool cred_result = process_job_credentials(
 				submit_hash,
 				DashDryRun,
 				MySchedd,
 				URL,
 				error_string
 			);
-			if( cred_result != 0 ) {
+			if( cred_result == false ) {
 				// what is the best way to bail out / abort the submit process?
-				printf( "Failed to process job credential requests (%d): '%s'; BAILING OUT.\n", cred_result, error_string.c_str() );
+				printf( "Failed to process job credential requests: '%s'; BAILING OUT.\n", error_string.c_str() );
 				exit(1);
 			}
 			if(! URL.empty()) {

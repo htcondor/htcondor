@@ -7899,7 +7899,7 @@ bool SubmitHash::NeedsOAuthServices(
 // fill out token request ads for the needed oauth services
 // returns -1 and fills out error if the SubmitHash is missing a required field
 // returns 0 on success
-int SubmitHash::build_oauth_service_ads (
+bool SubmitHash::build_oauth_service_ads (
 	classad::References & unique_names,
 	std::vector<ClassAd> & requests,
 	std::string & error) const
@@ -7944,7 +7944,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_SCOPES", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7964,7 +7964,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_AUDIENCE", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7984,7 +7984,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_OPTIONS", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -8007,7 +8007,7 @@ int SubmitHash::build_oauth_service_ads (
 		// request_ad->Assign("Username", "<username>");
 	}
 
-	return 0;
+	return true;
 }
 
 
@@ -9962,7 +9962,7 @@ credd_has_tokens(
 }
 
 
-int
+bool
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
@@ -10028,10 +10028,10 @@ process_job_credentials(
 			int rc = my_system(storer_args);
 			if (rc < 0) {
 				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
-				return 1;
+				return false;
 			} else if (rc > 0) {
 				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
-				return 1;
+				return false;
 			}
 		}
 	}
@@ -10072,12 +10072,8 @@ process_job_credentials(
 	}
 
 	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
-		if (error_string.empty()) {
-				// does this need to be in SubmitHash?
-			submit_hash.build_oauth_service_ads(token_names, token_ads, error_string);
-		}
-		if ( !error_string.empty()) {
-			return 1;
+		if (!submit_hash.build_oauth_service_ads(token_names, token_ads, error_string)) {
+			return false;
 		}
 	}
 
@@ -10092,21 +10088,21 @@ process_job_credentials(
 		//    are unavailable.
 		if (!credd.locate()) {
 			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-			return 1;
+			return false;
 		}
 		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
-					return 0;
+					return true;
 				} else {
 					formatstr(error_string, "OAuth error: %s\n\n", URL.c_str() );
-					return 1;
+					return false;
 				}
 			}
 			dprintf(D_ALWAYS, "CRED: CredD says we have everything\n");
 
 		} else if(! error_string.empty()) {
-			return 1;
+			return false;
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
@@ -10117,7 +10113,7 @@ process_job_credentials(
 	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
 		// nothing to do
-		return 0;
+		return true;
 	}
 
 	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
@@ -10137,7 +10133,7 @@ process_job_credentials(
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
 			formatstr( error_string, "ERROR: (%i) invoking %s\n", errno, producer.c_str() );
-			return 1;
+			return false;
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
 			ASSERT(uber_ticket);
@@ -10147,7 +10143,7 @@ process_job_credentials(
 
 			if(bytes_read == 0) {
 				formatstr( error_string, "ERROR: failed to read any data from %s!\n", producer.c_str() );
-				return 1;
+				return false;
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
@@ -10167,16 +10163,16 @@ process_job_credentials(
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
 						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
-						return 1;
+						return false;
 					}
 				} else {
 					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", credd.version());
-					return 1;
+					return false;
 				}
 			} else {
 				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-				return 1;
+				return false;
 			}
 		}
 	}  // end of block to run a credential producer
@@ -10190,7 +10186,7 @@ process_job_credentials(
 	// it is also available to the submit file parser itself (i.e. can be used in If statements)
 	submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 
-	return 0;
+	return true;
 }
 
 

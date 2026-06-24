@@ -769,7 +769,7 @@ public:
 	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
 	void detachTransferMap() { protectedUrlMap = nullptr; }
 
-	int build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
+	bool build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
 
 protected:
 	MACRO_SET SubmitMacroSet;
@@ -1233,7 +1233,7 @@ const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
 
 #define PJC_NOT_DRY_RUN 0
 
-int process_job_credentials(
+bool process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,
