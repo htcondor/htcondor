@@ -2899,7 +2899,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 	}
 
 	struct stat si = {};
-	stat(proxy_path.c_str(), &si);
+	if( stat(proxy_path.c_str(), &si) != 0 ) {
+		dprintf(D_FULLDEBUG, "checkX509Proxy() failed to stat proxy '%s': %s\n",
+				proxy_path.c_str(), strerror(errno));
+	}
 	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
