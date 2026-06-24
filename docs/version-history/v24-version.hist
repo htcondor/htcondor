@@ -1,3 +1,5 @@
+*** 24.0.23 bugs
+
 *** 24.0.22 features
 
 - HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
