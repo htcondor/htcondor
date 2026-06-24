@@ -443,6 +443,12 @@ parseExprList( ExprList *&list, bool full )
 	Lexer::TokenType 	tt;
 	ExprTree	*tree = NULL;
 	vector<ExprTree*>	loe;
+		// loe owns the ExprTrees pushed into it until they are
+		// handed off to the ExprList below. If we bail out early,
+		// we must free them ourselves or they leak.
+	auto freeVector = [&loe]() {
+		for( ExprTree *e : loe ) { delete e; }
+	};
 
 	if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_OPEN_BOX ) {
 		CondorErrno = ERR_PARSE_ERROR;
@@ -459,11 +465,7 @@ parseExprList( ExprList *&list, bool full )
 			CondorErrMsg = "while parsing expression list:  expected "
 				"LEX_CLOSE_BOX or LEX_COMMA but got "+
 				string(Lexer::strLexToken(tt));
-			vector<ExprTree*>::iterator i = loe.begin( );
-			while(i != loe.end()) {
-				delete *i;
-				i++;
-			}
+			freeVector();
 			return false;
 		}
 
@@ -480,11 +482,7 @@ parseExprList( ExprList *&list, bool full )
 			CondorErrMsg = "while parsing expression list:  expected "
 				"LEX_CLOSE_BOX or LEX_COMMA but got "+
 				string(Lexer::strLexToken(tt));
-			vector<ExprTree*>::iterator i = loe.begin( );
-			while(i != loe.end()) {
-				delete *i;
-				i++;
-			}
+			freeVector();
 			return false;
 		}
 	}
@@ -492,6 +490,7 @@ parseExprList( ExprList *&list, bool full )
 	lexer.ConsumeToken();
 
 	if( !( list = ExprList::MakeExprList( loe ) ) ) {
+		freeVector();
 		return( false );
 	}
 

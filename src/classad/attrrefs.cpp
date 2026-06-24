@@ -398,10 +398,17 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 
 		if( val.IsListValue( ) ) {
 			std::vector< ExprTree *> eVector;
+				// eVector owns the ExprTrees pushed into it until they are
+				// handed off to the ExprList (and deletion cache) below. If we
+				// bail out early, we must free them ourselves or they leak.
+			auto freeVector = [&eVector]() {
+				for( ExprTree *e : eVector ) { delete e; }
+			};
 				// iterate through exprList and apply attribute reference
 				// to each exprTree
 			for (const auto currExpr: *adList) { 
 				if( currExpr == NULL ) {
+					freeVector();
 					return( EVAL_FAIL );
 				} else {
 					AttributeReference *attrRef = NULL;
@@ -423,6 +430,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 						: attrRef->Evaluate( tstate, val );
 					if( !rval ) {
 						delete attrRef;
+						freeVector();
 						return( EVAL_FAIL );
 					}
 
@@ -438,6 +446,11 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 						if (!tstate.TakeFromDeletionCache(evaledList)) { item = evaledList->Copy(); }
 					} else {
 						item = Literal::MakeLiteral(val);
+						if (!item) {
+							delete attrRef;
+							freeVector();
+							return( EVAL_FAIL );
+						}
 					}
 					eVector.push_back(item);
 					delete attrRef;
