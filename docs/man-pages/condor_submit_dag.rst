@@ -23,7 +23,7 @@ Synopsis
 [**-DoRescueFrom** *N*] [**-load_save** *filename*] [**-DoRecovery**]
 [**-AllowVersionMismatch**] [**-no_recurse** | **-do_recurse**]
 [**-update_submit**] [**-import_env**] [**-include_env** *variable[,variable...]*]
-[**-insert_env** *key=value[;key=value...]*] [**-DumpRescue**] [**-valgrind**]
+[**-insert_env** *key=value[;key=value...]*] [**-valgrind**]
 [**-DontAlwaysRunPost** | **-AlwaysRunPost**] [**-priority** *N*]
 [**-r/-remote** *schedd_name*] [**-schedd-daemon-ad-file** *filename*]
 [**-schedd-address-file** *filename*] [**-RescueFile** *filename*]
@@ -186,9 +186,6 @@ Options
         .. code-block:: console
 
             $ condor_submit_dag -insert_env |foo=0|bar=1|baz=2
- **-DumpRescue**
-    Inform DAGMan to produce a full rescue DAG file and exit before
-    executing the DAG.
  **-valgrind**
     Run DAGMan under *valgrind*.
 

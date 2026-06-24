@@ -24,6 +24,8 @@ def condor(test_dir):
             "COLLECTOR.ALLOW_ADMINISTRATOR": "$(ALLOW_ADMINISTRATOR) joe@here",
             "MASTER_NAME": "test@here",
             "STARTD_NAME": "test@here",
+            "MASTER.SEC_READ_AUTHENTICATION": "REQUIRED",
+            "MASTER.ALLOW_READ": "$(ALLOW_DAEMON)",
         },
     ) as condor:
         yield condor
@@ -48,9 +50,12 @@ class TestAdminCapability:
         #   have access to the POOL signing key.
         # Override SEC_CLIENT_AUTHENTICATION_METHODS so that our special
         #   IDToken is used for authentication.
+        # Override MASTER_ADDRESS_FILE so that condor_config_val has to
+        #   query the collector to locate the master.
         rv = condor.run_command(
             ["env", "_condor_SEC_PASSWORD_DIRECTORY=/nothere",
                 "_condor_SEC_CLIENT_AUTHENTICATION_METHODS=IDTOKEN",
+                "_condor_MASTER_ADDRESS_FILE=/nothere",
                 "condor_reconfig", "-name", "test@here"]
         )
         assert rv.returncode == 0
@@ -67,5 +72,26 @@ class TestAdminCapability:
                 "_condor_SEC_CLIENT_AUTHENTICATION_METHODS=IDTOKEN",
                 "_condor_STARTD_ADDRESS_FILE=/nothere",
                 "condor_drain", "-debug", "slot1@test@here"]
+        )
+        assert rv.returncode == 0
+
+    def test_config_val(self, condor, token):
+        # Ugh. The master waits for 5 seconds before sending its ad to
+        # the collector, and Ornithology doesn't wait for the master ad
+        # to appear before assuming the installation is up and ready for
+        # use.
+        time.sleep(5)
+
+        # Override SEC_PASSWORD_DIRECTORY so that condor_reconfig doesn't
+        #   have access to the POOL signing key.
+        # Override SEC_CLIENT_AUTHENTICATION_METHODS so that our special
+        #   IDToken is used for authentication.
+        # Override MASTER_ADDRESS_FILE so that condor_config_val has to
+        #   query the collector to locate the master.
+        rv = condor.run_command(
+            ["env", "_condor_SEC_PASSWORD_DIRECTORY=/nothere",
+                "_condor_SEC_CLIENT_AUTHENTICATION_METHODS=IDTOKEN",
+                "_condor_MASTER_ADDRESS_FILE=/nothere",
+                "condor_config_val", "-name", "test@here", "LOG"]
         )
         assert rv.returncode == 0

@@ -34,6 +34,8 @@
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
 #include "dag_commands.h"
+#include "dagman_submit.h"
+#include "throttles.hpp"
 #include <ranges>
 #include <filesystem>
 
@@ -43,6 +45,11 @@
 enum SpliceLayer {
 	SELF,
 	DESCENDENTS,
+};
+
+enum class RescueFileType {
+	DEFAULT = 0,          // Regular rescue file i.e. no more forward progress + clean exit
+	SAVE_POINT = 1,       // Save point file (which is rescue file format)
 };
 
 
@@ -322,10 +329,7 @@ public:
 
 	void CheckAllJobs(); // Verify all job events good once DAG is finished
 
-	void Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool overwrite,
-	            bool parseFailed = false, bool isPartial = false);
-	void WriteRescue(const char * rescue_file, const char * headerInfo, bool parseFailed = false,
-	                 bool isPartial = false, bool isSavePoint = false);
+	void Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum) const;
 
 	// Print various node information
 	void PrintNodeList() const;
@@ -388,6 +392,7 @@ public:
 
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
+	const Throttles& throttles; // DAGMan configured throttles
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
@@ -397,12 +402,6 @@ protected:
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
-	typedef enum {
-		SUBMIT_RESULT_OK,
-		SUBMIT_RESULT_FAILED,
-		SUBMIT_RESULT_NO_SUBMIT,
-	} submit_result_t;
-
 	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
@@ -431,7 +430,7 @@ private:
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
+	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -465,8 +464,6 @@ private:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void WriteSavePoint(Node* node); // Write a node save point file
-	void WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial);
-	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 	void PrintDagFiles(const std::list<std::string> &dagFiles);
 	void PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bool recovery);
@@ -486,6 +483,8 @@ private:
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(std::string &dot_file_name);
 
+	// Internal actual writing of rescue file
+	void WriteRescue(const std::string& rescue_file, const std::string& headerInfo, RescueFileType rescue_type) const;
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
@@ -517,7 +516,8 @@ private:
 	ScriptQ* _postScriptQ{nullptr};
 	ScriptQ* _holdScriptQ{nullptr};
 
-	DagmanMetrics* _metrics{nullptr};
+	DagSubmit* submitter{nullptr}; // This does not own this pointer
+	DagmanMetrics* _metrics{nullptr}; // This does not own this pointer
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access

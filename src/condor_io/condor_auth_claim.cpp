@@ -156,7 +156,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 				// the given component. if not present (older clients),
 				// use UID_DOMAIN from our config
 				char* tmpDomain = NULL;
-				char* at = strchr(tmpUser, '@');
+				char* at = strrchr(tmpUser, '@');
 				if ( at ) {
 					*at = '\0';
 					if (*(at + 1) != '\0') {

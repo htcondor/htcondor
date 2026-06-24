@@ -126,6 +126,8 @@ public:
 	// This is suitable for putting into the FamilyInfo.cgroup
 	static std::string make_full_cgroup_name(const std::string &cgroup_name);
 
+	// Can we enforce memory limits with cgroups?
+	virtual bool cgroup_enforceable() const { return true;}
 private:
 
 	bool cgroupify_myself(const std::string &cgroup_name);

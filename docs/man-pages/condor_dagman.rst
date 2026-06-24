@@ -17,7 +17,7 @@ Synopsis
 **condor_dagman** **-p 0** **-f** **-l .** [**-WaitForDebug**]
 [**-CsdVersion** *VersionString*] [**-AllowVersionMismatch**]
 [**-Batch-Name** *name*] [**-Dag** *DAG_file*] [**-Debug** *level*]
-[**-Dot**] [**-DryRun**] [**-DumpRescue**] [**-Lockfile** *filename*]
+[**-Dot**] [**-DryRun**] [**-Lockfile** *filename*]
 [**-Priority** *priority*] [**-SubmitMethod** *value*]
 [**-UseDagDir**] [**-AlwaysRunPost** | **-DontAlwaysRunPost**]
 [**-suppress_notification** | **-dont_suppress_notification**]
@@ -71,9 +71,6 @@ Options
  **-DryRun**
     Inform *condor_dagman* to execute the DAG without actually placing any
     jobs to the AP.
- **-DumpRescue**
-    Inform *condor_dagman* to produce a full rescue DAG file and exit before
-    executing the DAG.
  **-Lockfile** *filename*
     Path to a file to write *condor_dagman* process information. This prevents
     other *condor_dagman* executing the same DAG(s) from being executed in the

@@ -25,6 +25,7 @@
 #include "KeyCache.h"
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
+#include <functional>
 #include <map>
 
 // For AES (and newer).
@@ -34,6 +35,12 @@
 #define SEC_SESSION_KEY_LENGTH_OLD 24
 
 typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
+
+// std::function replacement for StartCommandCallbackType. Caller state that the
+// legacy API passed via void *misc_data lives in the closure instead.
+using StartCommandCallback = std::function<void(bool success, Sock *sock, CondorError *errstack,
+                                                const std::string &trust_domain,
+                                                bool should_try_token_request)>;
 
 extern char const *USE_TMP_SEC_SESSION;
 
@@ -114,12 +121,11 @@ public:
 		int m_cmd{-1};
 		Sock *m_sock{nullptr};
 		bool m_raw_protocol{false};
-		bool m_force_auth{false};
+		bool m_request_auth{false};
 		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};
-		StartCommandCallbackType *m_callback_fn{nullptr};
-		void *m_misc_data{nullptr};
+		StartCommandCallback m_callback;
 		bool m_nonblocking{false};
 		const char *m_cmd_description{nullptr};
 		const char *m_sec_session_id{nullptr};
@@ -205,13 +211,13 @@ public:
 									ClassAd* ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
-									bool force_authentication=false);
+									sec_req request_authentication=SEC_REQ_UNDEFINED);
 
 	bool	FillInSecurityPolicyAdFromCache( DCpermission auth_level,
 									ClassAd* &ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
-									bool force_authentication=false);
+									sec_req request_authentication=SEC_REQ_UNDEFINED);
 
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
@@ -354,7 +360,7 @@ public:
 	DCpermission m_cached_auth_level;
 	bool m_cached_raw_protocol;
 	bool m_cached_use_tmp_sec_session;
-	bool m_cached_force_authentication;
+	sec_req m_cached_request_authentication;
 	ClassAd m_cached_policy_ad;
 	bool m_cached_return_value;
 

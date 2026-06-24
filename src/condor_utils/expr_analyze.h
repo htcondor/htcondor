@@ -99,7 +99,7 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 
 const char * PrintNumberedExprTreeClauses(
 	std::string & out,
-	ClassAd* ad, ExprTree *tree,
+	ClassAd* ad, const char * attrRequirements,
 	classad::References & inline_attrs,
 	anaFormattingOptions & fmt);
 
@@ -107,7 +107,7 @@ class AnalSubExpr;
 int AnalyzeThisSubExpr(
 	ClassAd *myad,
 	classad::ExprTree* expr,
-	classad::References & inline_attrs, // expand attrs with these names inline
+	const classad::References * inline_attrs, // expand attrs with these names inline
 	std::vector<AnalSubExpr> & clauses, // out: clauses are appended to this list as analysis proceeds.
 	bool & varres, bool must_store,
 	int depth,

@@ -82,6 +82,8 @@
 #define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
 #define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
 #define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
+#define SUBMIT_KEY_RetryRequestDisk "retry_request_disk"
+
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
@@ -217,6 +219,7 @@
 #define SUBMIT_KEY_DAGManJobId "dagman_job_id"
 #define SUBMIT_KEY_LogNotesCommand "submit_event_notes"
 #define SUBMIT_KEY_UserNotesCommand "submit_event_user_notes"
+#define SUBMIT_KEY_NotesAttrsCommand "submit_event_notes_attrs"
 #define SUBMIT_KEY_JarFiles "jar_files"
 #define SUBMIT_KEY_JavaVMArgs "java_vm_args"
 #define SUBMIT_KEY_JavaVMArguments1 "java_vm_arguments"
@@ -537,6 +540,8 @@ public:
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
+	bool setFileChecksAreWarnings(bool value) { bool old = FileChecksAreWarnings; FileChecksAreWarnings = value; return old; }
+	bool getFileChecksAreWarnings() { return FileChecksAreWarnings; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
 	void clearExtendedCommands() { extendedCmds.Clear(); }
@@ -797,6 +802,7 @@ protected:
 	void *CheckFileArg;
 
 	bool CheckProxyFile;
+	bool FileChecksAreWarnings{false}; // when true, file checks are ERROR messages (and fatal)
 
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables
@@ -921,7 +927,7 @@ protected:
 
 	// private helper functions
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
-	void fixup_rhs_for_digest(const char * key, std::string & rhs);
+	void fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions);
 	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);

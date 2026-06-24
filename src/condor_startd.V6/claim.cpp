@@ -40,6 +40,9 @@
 // for starter exit codes
 #include "exit.h"
 
+// for the STARTER_COMMAND enumeration
+#include "starter_commands.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -112,6 +115,17 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 }
 
 
+std::string
+claim_specific_ad_name( const char * publicClaimID ) {
+	std::string s( publicClaimID );
+
+	// Dots have special meaning in named ClassAd names.
+	std::replace( s.begin(), s.end(), '.', '_' );
+
+	// For stupid reasons, extra ads must each have a cron job.
+	return COLORING_NAMESPACE "." + s;
+}
+
 Claim::~Claim()
 {
 	if( c_type == CLAIM_COD ) {
@@ -119,6 +133,15 @@ Claim::~Claim()
 				 c_id->id(),
 				 c_client->c_owner.c_str() );
 	}
+
+
+	// If the starter colored this slot, uncolor it now.
+	const char * publicClaimID = publicClaimId();
+	if( publicClaimID ) {
+		std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+		resmgr->adlist_delete( claimSpecificAdName.c_str() );
+	}
+
 
 	// The resources assigned to this claim must have been freed by now.
 	// TODO: this should not happen on *every* claim delete
@@ -152,7 +175,7 @@ Claim::~Claim()
 
 			// if we have a pending deactivate reply, send it now.
 			sendDeactivateReply(false);
-	
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -172,7 +195,7 @@ Claim::~Claim()
 	setRequestStream( NULL );
 	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
-	if( c_global_job_id ) { 
+	if( c_global_job_id ) {
 		free( c_global_job_id );
 	}
 	if( c_cod_keyword ) {
@@ -263,7 +286,7 @@ Claim::publish( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -417,7 +440,7 @@ Claim::publishPreemptingClaim( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -1699,6 +1722,7 @@ Claim::starterExited( Starter* starter, int status)
 	int orphanedJob = 0;
 	bool still_broken = true;
 	CleanupReminder* reminder = nullptr;
+	c_reaping = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -1979,6 +2003,18 @@ Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 		}
 	}
 		// not active, so nothing to do
+	return true;
+}
+
+
+bool
+Claim::deactivateClaimFinalXfer( void )
+{
+	if( isActive()) {
+		starterVacateJob("Claim deactivated with final transfer",
+			CONDOR_HOLD_CODE::ClaimDeactivated,
+			HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE, true);
+	}
 	return true;
 }
 
@@ -2426,6 +2462,7 @@ Claim::resetClaim( void )
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
 	c_schedd_reported_job_done = false;
+	c_reaping = false;
 }
 
 
@@ -2761,13 +2798,90 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
 			resmgr->startd_stats.bytes_recvd += bytes_recvd;
 		}
+
+		// Job is done running on the EP. Move the slot into Claimed/Cleaning
+		// so it stops matching new work and absorbs preempts while the
+		// starter winds down. Skip if we're already being reaped (the
+		// upcoming starter reap will handle the post-run transition
+		// directly) or if the slot is no longer in a running activity.
+		if (c_rip && !c_reaping && c_rip->state() == claimed_state) {
+			Activity a = c_rip->activity();
+			if (a == busy_act || a == retiring_act || a == suspended_act) {
+				c_rip->change_state(cleaning_act);
+			}
+		}
 	}
 }
 
-void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
-{
-	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+void Claim::receiveUpdateCommand( int c,
+	const ClassAd & payloadAd, ClassAd & replyAd
+) {
+	STARTER_COMMAND command{c};
 
+	switch( command ) {
+		case STARTER_COMMAND::UPDATE:
+			ASSERT(command != STARTER_COMMAND::UPDATE);
+			break;
+
+		case STARTER_COMMAND::FINAL_UPDATE:
+			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
+			break;
+
+		case STARTER_COMMAND::COLOR: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+			std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+
+			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			ClassAd * copy = new ClassAd( payloadAd );
+
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				delete copy;
+
+				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			formatstr( assignment, "SlotMergeConstraint = SlotID == %d", rip->r_id );
+
+			// Presumably this is actually insert-or-update.
+			copy->Insert( assignment );
+
+
+			// It's not enough to give this coloring ad its own name in the
+			// table of extra ads; we need to make sure that the coloring
+			// attributes from different starters don't collide with each
+			// other in the resulting machine ads.
+			ClassAd * shim = new ClassAd();
+			// This is awful.
+			std::string slot_name = rip->r_name;
+			slot_name = "colors_of_" + slot_name.substr( 0, slot_name.find("@") );
+			shim->Insert( slot_name.c_str(), copy );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), shim );
+			replyAd.InsertAttr( ATTR_RESULT, true );
+			} break;
+
+		default:
+			dprintf( D_ALWAYS, "Ignoring unknown starter command %d\n", c );
+			break;
+	}
 }
 
 bool

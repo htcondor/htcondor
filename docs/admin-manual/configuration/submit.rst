@@ -52,7 +52,7 @@ Job Submission Configuration Options
     The number of CPUs to acquire for a job, if the job does not specify
     how many it needs using the :subcom:`request_cpus[and JOB_DEFAULT_REQUESTCPUS]`
     submit command. If the job defines the value, then that value takes
-    precedence. If not set, then then the default is 1.
+    precedence. If not set, then the default is 1.
 
 :macro-def:`DEFAULT_JOB_MAX_RETRIES`
     The default value for the maximum number of job retries, if the
@@ -71,7 +71,15 @@ site use the following macros:
     Expression to be appended to vanilla job requirements.
 
 :macro-def:`APPEND_REQUIREMENTS`
-    Expression to be appended to any type of universe jobs. However, if
+    Expression to be appended to any type of universe jobs.
+    This is a *submit side* change. That is, when 
+    :tool:`condor_submit` submits to a remote *condor_schedd*, 
+    the value of :macro:`APPEND_REQUIREMENTS` on the submit machine,
+    not the schedd machine, is used.  HTCondor wraps this expression
+    in parentheses and ands (&&) it to the end of the job's 
+    Requirements expression.
+   
+    However, if
     :macro:`APPEND_REQ_VANILLA` is defined, then
     ignore the :macro:`APPEND_REQUIREMENTS` for that universe.
 
@@ -99,8 +107,7 @@ do not specify their own with:
 :macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`
     If ``True``, :tool:`condor_submit` will treat any attribute in the job
     ClassAd that begins with ``Request`` as a request for a custom resource
-    and will ad a clause to the Requirements expression ensuring that
-    on slots that have that resource will match the job.
+    and will add a clause to the Requirements expression ensuring that only slots that have that resource will match the job.
     The default value is ``True``.
 
 :macro-def:`SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS`
@@ -145,7 +152,7 @@ do not specify their own with:
     If set to the string ``error``, it is an error to submit a job with a 
     :subcom:`request_memory` or :subcom:`request_disk` with a unitless
     value.  If set to ``warn``, a warning is printed to the screen, but
-    submit continues. Default value is unset (neither warn or error).
+    submit continues. Default value is unset (neither warn nor error).
     :jira:`1837`
     
 :macro-def:`SUBMIT_SEND_RESCHEDULE`
@@ -163,8 +170,8 @@ do not specify their own with:
     A boolean that defaults to false.  When true, which was the default
     before 24.0, a container or docker universe job whose Executable
     was an absolute path was assumed to be located within the container
-    image, and thus never transfered.  When false, we assume it on the AP
-    and thus transfered, when file transfer is enabled.
+    image, and thus never transferred.  When false, we assume it on the AP
+    and thus transferred, when file transfer is enabled.
 
 :macro-def:`SUBMIT_ATTRS`
     A comma-separated and/or space-separated list of ClassAd attribute

@@ -126,6 +126,10 @@ class TestAllowedJobDuration:
                 test_job_held = event.timestamp
 
         test_job_duration = test_job_held - test_job_started
-        # Allow seven seconds of slop for rounding of seconds on each side
-        assert test_job_duration <= ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL + 7
+        # Slop covers the chain from a periodic check firing the hold to the
+        # JOB_HELD event being written: enqueueActOnJobMyself -> handler ->
+        # signal delivery -> reaper -> check_zombie -> WriteHoldToUserLog.
+        # This is bounded but non-zero, and on slow/oversubscribed CI agents
+        # has been observed to take ~8 seconds for the scheduler universe.
+        assert test_job_duration <= ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL + 15
         assert test_job_duration > PERIODIC_EXPR_INTERVAL

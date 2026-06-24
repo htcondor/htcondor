@@ -1,15 +1,15 @@
-#! /usr/bin/env perl
+#!/usr/bin/env python3
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,21 +18,26 @@
 ##
 ##**************************************************************
 
-use warnings;
-use strict;
-use Getopt::Long;
-use Date::Manip;
-use File::Path;
-use FindBin qw($RealBin $RealScript);
+import argparse
+import getpass
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
 
-# contains parsed arguments from ARGV
-my %args;
-my @original_argv;
 
-sub usage
-{
-	print<<EOF;
-Usage: $0 --jobid <CLUSTER.PROC> [ OPTIONS ]
+# Global state
+args = {}
+original_argv = []
+script_path = Path(__file__).resolve()
+
+
+def usage():
+	print(f"""Usage: {sys.argv[0]} --jobid <CLUSTER.PROC> [ OPTIONS ]
 --jobid      The jobid
 --scratch    Scratch directory used by the program, defaults to /tmp/cbd-<PID>
 
@@ -40,536 +45,427 @@ Usage: $0 --jobid <CLUSTER.PROC> [ OPTIONS ]
 --sdate      A Unix date corresponding to the start of the search time
 --edate      A Unix date corresponding to the end of the search time
 --pool       The pool to query (local pool if not defined)
---schedd     The schedd to query (local schedd if not defined)
-EOF
-
-	exit(1);
-}
-
-sub parse_command_line
-{
-	my $rc;
-	my $tmp;
-
-	@original_argv = @ARGV;
-
-	$rc = GetOptions( \%args,
-			'help',
-			'jobid=s',
-			'sdate=s',
-			'edate=s',
-			'pool=s',
-			'schedd=s'
-			);
-	
-	if (!$rc) {
-		usage();
-	}
-
-	if (defined($args{'help'})) {
-		usage();
-	}
+--schedd     The schedd to query (local schedd if not defined)""")
+	sys.exit(1)
 
 
-	if (!defined($args{'jobid'})) {
-            my $file = "condor-profile.txt";
-            acquire_identity($file);
-            print "Information is in $file\n";
-            exit 0;
-	}
+def run_cmd(cmd):
+	"""Run a shell command and return its output, stripping trailing newline."""
+	result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+	return result.stdout.rstrip('\n')
 
-	# ######
-	# Reparse the start time into a Date::Manip form.
-	# ######
-	if (exists($args{'sdate'})) {
-		if ($args{'sdate'} =~ m/^\d+$/) {
-			$args{'sdate'} = ParseDateString("epoch $args{'sdate'}");
-		} else {
-			$args{'sdate'} = ParseDate($args{'sdate'});
-		}
-	} else {
-		# start of epoch seconds
-		$args{'sdate'} = ParseDate("Jan 1, 1970  00:00:00 GMT");
-	}
 
-	# ######
-	# Reparse the end time into a Date::Manip form.
-	# ######
-	if (exists($args{'edate'})) {
-		if ($args{'edate'} =~ m/^\d+$/) {
-			$args{'edate'} = ParseDateString("epoch $args{'edate'}");
-		} else {
-			$args{'edate'} = ParseDate($args{'edate'});
-		}
-	} else {
-		# end of epoch seconds-ish
-		$args{'edate'} = ParseDate("Jan 19, 2038  00:00:00 GMT");
-	}
+def run_cmd_to_file(cmd, output_file):
+	"""Run a shell command, redirecting stdout and stderr to output_file."""
+	with open(output_file, 'w') as f:
+		subprocess.run(cmd, shell=True, stdout=f, stderr=subprocess.STDOUT)
 
-	# ######
-	# set up the scratch space
-	# ######
 
-	# This stupid date format is because tar does insanely stupid things when
-	# there is a colon in the archive name.
-	$tmp = `date +%F-%I_%M_%S%p-%Z`;
-	chomp $tmp;
-	$tmp = getpwuid($<) . "-jid$args{'jobid'}-$tmp";
+def parse_command_line():
+	global args, original_argv
 
-	# The _scratch for is the parent of the inner scratch directory.
-	if (!exists($args{'scratch'})) {
-		$args{'scratch'} = "/tmp/cgi-$$/cgi-$tmp";
-		$args{'_scratch'} = "/tmp/cgi-$$";
-	} else {
-		$args{'scratch'} .= "/cgi-$$/cgi-$tmp";
-		$args{'_scratch'} = "$args{'scratch'}/cgi-$$";
-	}
+	original_argv = sys.argv[1:]
 
-	if (-d $args{'_scratch'}) {
-		die "I'm not going to remove /. Sorry." 
-			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
-		rmtree($args{'_scratch'}, {'keep_root' => 1});
-	}
+	parser = argparse.ArgumentParser(add_help=False)
+	parser.add_argument('--help', action='store_true', default=False, dest='show_help')
+	parser.add_argument('--jobid', type=str, default=None)
+	parser.add_argument('--sdate', type=str, default=None)
+	parser.add_argument('--edate', type=str, default=None)
+	parser.add_argument('--pool', type=str, default=None)
+	parser.add_argument('--schedd', type=str, default=None)
+	parser.add_argument('--scratch', type=str, default=None)
 
-	# make the scratch space.
-	mkpath($args{'scratch'});
+	parsed = parser.parse_args()
 
-	# fix my self up to clean it up on INT
-	$SIG{'INT'} = 'sigint';
-}
+	if parsed.show_help:
+		usage()
 
-# XXX fixme.
-sub cleanup
-{
-	# remove the scratch dir, sanity check too
-	if (-d $args{'_scratch'}) {
-		die "I'm not going to remove /. Sorry." 
-			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
-		# also remove the scratch dir itself...
-		rmtree($args{'_scratch'});
-	}
-}
+	if parsed.jobid is None:
+		output_file = "condor-profile.txt"
+		acquire_identity(output_file)
+		print(f"Information is in {output_file}")
+		sys.exit(0)
 
-sub sigint
-{
-	print "Got INT. Quitting.\n";
-	cleanup();
-	exit(1);
-}
+	args['jobid'] = parsed.jobid
+	args['pool'] = parsed.pool
+	args['schedd'] = parsed.schedd
 
-# Return the start date in epoch seconds from the arguments. If you pass
-# in a single argument of a format string, the date will be returned as that
-# instead.
-sub sdate
-{
-	my $cmd = shift;
-	if (!defined($cmd)) {
-		$cmd = "%s";
-	}
-	return UnixDate($args{'sdate'}, $cmd);
-}
+	# Parse start date
+	if parsed.sdate is not None:
+		if parsed.sdate.isdigit():
+			args['sdate'] = datetime.fromtimestamp(int(parsed.sdate), tz=timezone.utc)
+		else:
+			args['sdate'] = datetime.fromisoformat(parsed.sdate)
+	else:
+		args['sdate'] = datetime.fromtimestamp(0, tz=timezone.utc)
 
-# Return the end date in epoch seconds from the arguments. If you pass
-# in a single argument of a format string, the date will be returned as that
-# instead.
-sub edate
-{
-	my $cmd = shift;
-	if (!defined($cmd)) {
-		$cmd = "%s";
-	}
-	return UnixDate($args{'edate'}, $cmd);
-}
+	# Parse end date
+	if parsed.edate is not None:
+		if parsed.edate.isdigit():
+			args['edate'] = datetime.fromtimestamp(int(parsed.edate), tz=timezone.utc)
+		else:
+			args['edate'] = datetime.fromisoformat(parsed.edate)
+	else:
+		args['edate'] = datetime(2038, 1, 19, tzinfo=timezone.utc)
 
-sub condor_history
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
-	my $cmd;
-	die "No jobid for which to condor_history!" if !defined($jobid);
+	# Set up scratch space
+	# Date format avoids colons (tar doesn't handle them well in archive names)
+	date_str = time.strftime("%F-%I_%M_%S%p-%Z")
+	username = getpass.getuser()
+	tmp = f"{username}-jid{args['jobid']}-{date_str}"
 
-	$cmd = "condor_history " . join(" ", @cqargs) . " $jobid " . 
-			"> $output_file 2>&1";
+	pid = os.getpid()
+	if parsed.scratch is None:
+		args['scratch'] = f"/tmp/cgi-{pid}/cgi-{tmp}"
+		args['_scratch'] = f"/tmp/cgi-{pid}"
+	else:
+		args['scratch'] = f"{parsed.scratch}/cgi-{pid}/cgi-{tmp}"
+		args['_scratch'] = f"{parsed.scratch}/cgi-{pid}"
 
-	return system("$cmd");
-}
+	if os.path.isdir(args['_scratch']):
+		# Safety check: don't remove /
+		if args['_scratch'].strip('/').strip().replace('/', '').isdigit():
+			sys.exit("I'm not going to remove /. Sorry.")
+		# Remove contents but keep root
+		for item in Path(args['_scratch']).iterdir():
+			if item.is_dir():
+				shutil.rmtree(item)
+			else:
+				item.unlink()
 
-sub condor_q
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
-	my $cmd;
-	die "No jobid for which to condor_q!" if !defined($jobid);
+	# Make the scratch space
+	os.makedirs(args['scratch'], exist_ok=True)
 
-	# XXX deal with --pool and --schedd
-	$cmd = "condor_q " . join(" ", @cqargs) . " $jobid " . 
-			"> $output_file 2>&1";
+	# Set up signal handler for INT
+	signal.signal(signal.SIGINT, sigint_handler)
 
-	return system("$cmd");
-}
 
-sub acquire_identity
-{
-	my $output_file = shift; # Fully qualified when passed in...
+def cleanup():
+	"""Remove the scratch directory."""
+	if '_scratch' in args and os.path.isdir(args['_scratch']):
+		# Safety check: don't remove /
+		if args['_scratch'].strip('/').strip().replace('/', '').isdigit():
+			sys.exit("I'm not going to remove /. Sorry.")
+		shutil.rmtree(args['_scratch'])
 
-	open(FOUT, '>', $output_file) || 
-		die "acquire_identity: Can't open identity file '$output_file': $!";
-	
-	print "Gathering Condor and machine information...\n";
 
-	print FOUT<<EOF;
-################################
+def sigint_handler(signum, frame):
+	print("Got INT. Quitting.")
+	cleanup()
+	sys.exit(1)
+
+
+def condor_history(jobid, output_file, *extra_args):
+	cmd = "condor_history " + " ".join(extra_args) + f" {jobid}"
+	run_cmd_to_file(cmd, output_file)
+
+
+def condor_q(jobid, output_file, *extra_args):
+	cmd = "condor_q " + " ".join(extra_args) + f" {jobid}"
+	run_cmd_to_file(cmd, output_file)
+
+
+def acquire_identity(output_file):
+	print("Gathering Condor and machine information...")
+
+	username = getpass.getuser()
+	hostname = run_cmd("/bin/hostname 2>&1")
+	date_str = run_cmd("/bin/date 2>&1")
+	uname = run_cmd("/bin/uname -a 2>&1")
+	os_release = run_cmd("/bin/cat /etc/os-release 2>&1")
+	etc_issue = run_cmd("/bin/cat /etc/issue 2>&1")
+	redhat_release = run_cmd("/bin/cat /etc/redhat-release 2>&1")
+	debian_version = run_cmd("/bin/cat /etc/debian_version 2>&1")
+	etc_hosts = run_cmd("/bin/cat /etc/hosts 2>&1")
+	nsswitch = run_cmd("/bin/cat /etc/nsswitch.conf 2>&1")
+	ulimit = run_cmd('/bin/sh -c "ulimit -a 2>&1"')
+	ifconfig = run_cmd("/sbin/ifconfig 2>&1")
+	ps_output = run_cmd("ps auxww --forest 2>&1")
+	df_output = run_cmd("df -h 2>&1")
+	iptables = run_cmd("/sbin/iptables -L 2>&1")
+	log_dir_contents = run_cmd("ls `condor_config_val LOG`")
+	condor_ver = run_cmd("condor_version 2>&1")
+	condor_config = run_cmd("condor_config_val -config 2>&1")
+	condor_dump = run_cmd("condor_config_val -v -dump 2>&1")
+	ldd_schedd = run_cmd("ldd `condor_config_val SBIN`/condor_schedd")
+	uptime_str = run_cmd("uptime")
+	free_str = run_cmd("free")
+
+	argv_str = " ".join(original_argv)
+
+	with open(output_file, 'w') as f:
+		f.write(f"""################################
 # User who created this report #
 ################################
- ${\(getpwuid($<) . "\n")}
+ {username}
 ####################################################
 # Script invocation and on what machine was it run #
 ####################################################
- Script: $RealBin/$RealScript @original_argv
- Machine: @{[`/bin/hostname 2>&1`]}
+ Script: {script_path} {argv_str}
+ Machine: {hostname}
 ###########################
 # Date of Report Creation #
 ###########################
- @{[`/bin/date 2>&1`]}
+ {date_str}
 ############
 # uname -a #
 ############
- @{[`/bin/uname -a 2>&1`]}
+ {uname}
 ##############
 # /etc/os-release #
 ##############
- @{[`/bin/cat /etc/os-release 2>&1`]}
+ {os_release}
 ##############
 # /etc/issue #
 ##############
- @{[`/bin/cat /etc/issue 2>&1`]}
+ {etc_issue}
 #######################
 # /etc/redhat-release #
 #######################
- @{[`/bin/cat /etc/redhat-release 2>&1`]}
+ {redhat_release}
 #######################
 # /etc/debian_version #
 #######################
- @{[`/bin/cat /etc/debian_version 2>&1`]}
+ {debian_version}
 ##############
 # /etc/hosts #
 ##############
- @{[`/bin/cat /etc/hosts 2>&1`]}
+ {etc_hosts}
 ######################
 # /etc/nsswitch.conf #
 ######################
- @{[`/bin/cat /etc/nsswitch.conf 2>&1`]}
+ {nsswitch}
 #############
 # ulimit -a #
 #############
- @{[`/bin/sh -c "ulimit -a 2>&1"`]}
+ {ulimit}
 ###########################
 # Interface configuration #
 ###########################
- @{[`/sbin/ifconfig 2>&1`]}
+ {ifconfig}
 #####################
 # ps auxww --forest #
 #####################
-@{[`ps auxww --forest 2>&1`]}
+{ps_output}
 #########
 # df -h #
 #########
-@{[`df -h 2>&1`]}
+{df_output}
 ############
 # iptables #
 ############
-@{[`/sbin/iptables -L 2>&1`]}
+{iptables}
 ###########################
 # Condor log dir contents #
 ###########################
-@{[`ls \`condor_config_val LOG\``]}
+{log_dir_contents}
 ##################
 # Condor Version #
 ##################
- @{[`condor_version 2>&1`]}
+ {condor_ver}
 ###################################
 # Location of Condor Config Files #
 ###################################
- @{[`condor_config_val -config 2>&1`]}
+ {condor_config}
 ###########################
 # Condor Config Variables #
 ###########################
- @{[`condor_config_val -v -dump 2>&1`]}
+ {condor_dump}
 #####################
 # ldd condor_schedd #
 #####################
- @{[`ldd \`condor_config_val SBIN\`/condor_schedd`]}
+ {ldd_schedd}
 #####################
 # uptime #
 #####################
- @{[`uptime`]}
+ {uptime_str}
 #####################
 # free #
 #####################
- @{[`free`]}
-EOF
+ {free_str}
+""")
 
-	close(FOUT);
-}
 
-sub acquire_job_q
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
-	die "acquire_job_q: Error. No jobid!" if !defined($jobid);
+def acquire_job_q(jobid, output_file, *extra_args):
+	print(f"acquire_job_q: Getting job q for job {jobid}")
+	condor_q(jobid, output_file, *extra_args)
 
-	print "acquire_job_q: Getting job q for job $jobid\n";
-	return condor_q($jobid, $output_file, @cqargs);
-}
 
-sub acquire_job_ad
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
-	die "acquire_job_ad: Error. No jobid!" if !defined($jobid);
+def acquire_job_ad(jobid, output_file, *extra_args):
+	print(f"acquire_job_ad: Getting job ad for job {jobid}")
+	condor_q(jobid, output_file, *extra_args)
 
-	print "acquire_job_ad: Getting job ad for job $jobid\n";
-	return condor_q($jobid, $output_file, @cqargs);
-}
 
-sub acquire_job_analysis
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
+def acquire_job_analysis(jobid, output_file, *extra_args):
+	print(f"acquire_job_analysis: Getting job analysis for job {jobid}")
+	condor_q(jobid, output_file, *extra_args)
 
-	die "acquire_job_analysis: Error. No jobid!" if !defined($jobid);
 
-	print "acquire_job_analysis: Getting job analysis for job $jobid\n";
-	return condor_q($jobid, $output_file, @cqargs);
-}
+def acquire_job_userlog_lines(jobid, output_file):
+	print(f"acquire_job_userlog_lines: Getting job log entries for job {jobid}")
 
-sub acquire_job_userlog_lines
-{
-	my $jobid = shift; # Must exist
-	my $output_file = shift; # Fully qualified when passed in...
-	my @cqargs = @_;
-	my $tmpfile = "$output_file.query";
-	my @lines;
-	my ($junk, $ulogfile);
-	my ($cluster, $proc);
-	my $line;
+	tmpfile = f"{output_file}.query"
 
-	die "acquire_job_userlog_lines: Error. No jobid!" if !defined($jobid);
+	# Get the path of the user log file
+	condor_q(jobid, tmpfile, '-format "logfile: %s\\n"', 'UserLog')
 
-	print "acquire_job_userlog_lines: Getting job log entries for job $jobid\n";
+	# Bail if no logfile or otherwise empty
+	if not os.path.exists(tmpfile) or os.path.getsize(tmpfile) == 0:
+		with open(output_file, 'w') as f:
+			f.write("No log file specified in job ad.\n")
+		print("Trying condor_history instead")
+		condor_history(jobid, tmpfile, '-format "logfile: %s\\n"', 'UserLog')
+		if not os.path.exists(tmpfile) or os.path.getsize(tmpfile) == 0:
+			print("Not in condor_history either, giving up on looking for logfile in all the wrong places")
+			if os.path.exists(tmpfile):
+				os.remove(tmpfile)
+			return
 
-	# #######
-	# get the path of the user log file
-	# #######
-	condor_q($jobid, $tmpfile, '-format "logfile: %s\n"', 'UserLog');
+	# See if the log file is well formed
+	with open(tmpfile) as f:
+		lines = [line for line in f if "logfile:" in line]
 
-	# #######
-	# bail if no logfile or otherwise empty
-	# #######
-	if (-z $tmpfile) {
-		system("echo No log file specified in job ad. > $output_file 2>&1");
-		print "Trying condor_history instead\n";
-		condor_history($jobid, $tmpfile, '-format "logfile: %s\n"', 'UserLog');
-		if (-z $tmpfile) {
-			print "Not in condor_history either, giving up on looking for logfile in all the wrong places\n";
-			rmtree("$tmpfile");
-			return;
-		}
-	}
-	
-	# #######
-	# see if the log file is well formed.
-	# #######
-	@lines = `grep "logfile:" $tmpfile`;
-	if (scalar(@lines) > 1) {
-		system("echo Unexpected condor_q problem. See query file. " .
-					"> $output_file 2>&1");
-		return;
-	}
+	if len(lines) > 1:
+		with open(output_file, 'w') as f:
+			f.write("Unexpected condor_q problem. See query file.\n")
+		return
 
-	($junk, $ulogfile) = ($lines[0] =~ m/(^logfile: )(.*)/);
+	if not lines:
+		with open(output_file, 'w') as f:
+			f.write("No logfile found in query output.\n")
+		return
 
-print "ulog file is $ulogfile\n";
+	# Parse out the logfile path
+	match = lines[0].strip()
+	if not match.startswith("logfile: "):
+		with open(output_file, 'w') as f:
+			f.write("Unexpected userlog path problem. See query file.\n")
+		return
 
-	if ($junk !~ /logfile: / || !defined($ulogfile)) {
-		system("echo Unexpected userlog path problem. See query file. " .
-					"> $output_file 2>&1");
-		return;
-	}
+	ulogfile = match[len("logfile: "):]
+	print(f"ulog file is {ulogfile}")
 
-	if (! -f $ulogfile) {
-		system("echo Userlog file does not exist. See query file. " .
-					"> $output_file 2>&1");
-		return;
-	}
+	if not ulogfile:
+		with open(output_file, 'w') as f:
+			f.write("Unexpected userlog path problem. See query file.\n")
+		return
 
-	# #######
-	# Process the ulog file, saving all lines out of it pertaining to the jobid.
-	# You know, this is really a stupid piece of code. condor_userlog should
-	# have this functionality built into it.
-	# #######
-	open(FIN, "$ulogfile") || 
-		die "Could not open user log file $ulogfile: $!";
-	open(FOUT, ">$output_file") || 
-		die "Could not open log trace file $output_file: $!";
+	if not os.path.isfile(ulogfile):
+		with open(output_file, 'w') as f:
+			f.write("Userlog file does not exist. See query file.\n")
+		return
 
-	# Just copy the whole job user log even if it has other jobs in it
-	while(defined($line = <FIN>)) {
-		print FOUT "$line";
-	}
-	close(FOUT);
-	close(FIN);
+	# Copy the whole job user log
+	shutil.copy2(ulogfile, output_file)
 
-	# Don't ned this anymore since I did a valid query of the data.
-	rmtree("$tmpfile");
-}
+	# Clean up temp file
+	if os.path.exists(tmpfile):
+		os.remove(tmpfile)
 
-# This is the main function which gathers all information for a single job
-# specified by the passed in jobid.
-sub acquire_all_info_for_jobid
-{
-	my $jobid = shift;
-	my $jdir;
 
-	die "No jobid for which to gather jobid info!" if !defined($jobid);
+def acquire_all_info_for_jobid(jobid):
+	scratch = args['scratch']
 
-	# The place to store everything for this job id.
-	$jdir = "$args{'scratch'}/$jobid";
-	mkpath($jdir);
+	# Directory for this job
+	jdir = f"{scratch}/{jobid}"
+	os.makedirs(jdir, exist_ok=True)
 
-	# ##########
-	# Get the job q.
-	# ##########
-	acquire_job_q($jobid, "$jdir/job_q");
+	# Get the job q
+	acquire_job_q(jobid, f"{jdir}/job_q")
 
-	# ##########
-	# Get the job ad.
-	# ##########
-	acquire_job_ad($jobid, "$jdir/job_ad", '-l');
+	# Get the job ad
+	acquire_job_ad(jobid, f"{jdir}/job_ad", '-l')
 
-	# If condor_q -l output does not contain ^ClusterId, our job is missing, check history
-	open(CQF, "$jdir/job_ad") || die("Can't open $jdir/job_ad which I just created...\n");
-	my @cql = <CQF>;
-	close(CQF);
+	# If condor_q -l output is too small, check history
+	job_ad_path = Path(f"{jdir}/job_ad")
+	with open(job_ad_path) as f:
+		lines = f.readlines()
 
-	if ($#cql < 5) {
-		print "Job $jobid does not appear in condor_q output, looking in condor_history.\n";
-		condor_history($jobid, "$jdir/job_ad", '-l');
-		if ((-s "$jdir/job_ad") == 0) {
-			print "Job $jobid does not appear in condor_history either.\n";
-		} else {
-			print "Job $jobid is in condor_history output, using it.\n";
-		}
-	}
+	if len(lines) < 6:
+		print(f"Job {jobid} does not appear in condor_q output, looking in condor_history.")
+		condor_history(jobid, f"{jdir}/job_ad", '-l')
+		if os.path.getsize(f"{jdir}/job_ad") == 0:
+			print(f"Job {jobid} does not appear in condor_history either.")
+		else:
+			print(f"Job {jobid} is in condor_history output, using it.")
 
-	# ##########
 	# Do the analysis for the job
-	# ##########
-	acquire_job_analysis($jobid, "$jdir/job_ad_analysis", '-better-analyze');
+	acquire_job_analysis(jobid, f"{jdir}/job_ad_analysis", '-better-analyze')
 
-	# ##########
-	# Grab all log entries for the jobid from the job log file
-	# associated with the job if defined.
-	# ##########
-	acquire_job_userlog_lines($jobid, "$jdir/job_userlog_lines");
+	# Grab log entries for the jobid from the job log file
+	acquire_job_userlog_lines(jobid, f"{jdir}/job_userlog_lines")
 
-	#######
-	# Copy the system log files, assuming we're on the submit side
-	######
-	system("cp `condor_config_val LOG`/MasterLog $args{'scratch'}/MasterLog");
-	system("cp `condor_config_val LOG`/MasterLog.old $args{'scratch'}/MasterLog.old");
-	system("cp `condor_config_val LOG`/ShadowLog $args{'scratch'}/ShadowLog");
-	system("cp `condor_config_val LOG`/ShadowLog.old $args{'scratch'}/ShadowLog.old");
-	system("cp `condor_config_val LOG`/SchedLog.old $args{'scratch'}/SchedLog.old");
+	# Copy system log files (assuming submit side)
+	log_dir = run_cmd("condor_config_val LOG")
+	for log_name in ["MasterLog", "MasterLog.old", "ShadowLog", "ShadowLog.old", "SchedLog.old"]:
+		src = f"{log_dir}/{log_name}"
+		if os.path.exists(src):
+			shutil.copy2(src, f"{scratch}/{log_name}")
 
-	open(ADF, "$jdir/job_ad") || die("Can't open $jdir/job_ad which was just created\n");
-	my $RemoteHost;
-	while(<ADF>) {
-		if (/^RemoteHost /) {
-			$RemoteHost = $_;
-		}
+	# Look for RemoteHost / LastRemoteHost in the job ad
+	remote_host = None
+	with open(f"{jdir}/job_ad") as f:
+		for line in f:
+			if line.startswith("RemoteHost "):
+				remote_host = line.strip()
+			if line.startswith("LastRemoteHost "):
+				remote_host = line.strip()
 
-		if (/^LastRemoteHost /) {
-			$RemoteHost = $_;
-		}
-	}
-	chomp($RemoteHost);
-	close(ADF);
+	if remote_host and len(remote_host) > 0:
+		# Parse: "RemoteHost = \"slot1@machine\""
+		parts = remote_host.split()
+		if len(parts) >= 3:
+			remote_host = parts[2].replace('"', '')
+		print(f"The execute machine for this job is {remote_host}")
+		slot_parts = remote_host.split('@')
+		slot = slot_parts[0]
+		if len(slot) > 2:
+			machine = slot_parts[1] if len(slot_parts) > 1 else remote_host
+		else:
+			machine = remote_host
 
-	if (length($RemoteHost) > 0) {
-		$RemoteHost = (split(/ /, $RemoteHost))[2];
-		$RemoteHost =~ s/\"//g;
-		print "The execute machine for this job is $RemoteHost";
-		my $slot = (split(/@/, $RemoteHost))[0];
-		if (length($slot) > 2) {
-			$RemoteHost = (split(/@/, $RemoteHost))[1];
-		}
-		system("condor_fetchlog $RemoteHost MASTER > $args{'scratch'}/MasterLog.$RemoteHost");
-		system("condor_fetchlog $RemoteHost STARTD > $args{'scratch'}/StartLog");
-		system("condor_fetchlog $RemoteHost STARTER.$slot > $args{'scratch'}/StarterLog.$slot");
-	} else {
-		print "No Remote host found in job ad -- perhaps job this never ran?\n";
-	}
-}
-
-sub acquire_all_info
-{
-	my $jobid = shift;
-	die "No jobid for which to all info!" if !defined($jobid);
-
-	# ##########
-	# Identify myself (condor version, who ran this script, where, when, etc)
-	# ##########
-	acquire_identity("$args{'scratch'}/condor-profile.txt");
-
-	# ##########
-	# datamine extensive information about the jobid.
-	# ##########
-	acquire_all_info_for_jobid($jobid);
-}
-
-sub package_payload
-{
-	my $pwd;
-	my $dir;
-
-	$pwd = `pwd`;
-	chomp $pwd;
-	chdir("$args{'scratch'}");
-	chdir("..");
-	# grab the only directory there.
-	$dir = `ls -1`;
-	chomp $dir;
-	print "\nCreating output file with all results in $dir.tar.gz\n";
-	system("tar czf $dir.tar.gz $dir > /dev/null 2>&1");
-	chdir($pwd);
-	system("mv $args{'scratch'}/../*.tar.gz .");
-}
-
-sub main
-{
-	FindBin::again();
-
-	parse_command_line();
-
-	# get all of the info on the invocation machine, the user, and for the
-	# specified jobid.
-	acquire_all_info($args{'jobid'});
-
-	# package up the scratch directory appropriately and move it to `pwd`.
-	package_payload();
-
-	# get rid of all of my on disk resources I used;
-	cleanup();
-	return 0;
-}
-
-exit main();
+		run_cmd_to_file(f"condor_fetchlog {machine} MASTER", f"{scratch}/MasterLog.{machine}")
+		run_cmd_to_file(f"condor_fetchlog {machine} STARTD", f"{scratch}/StartLog")
+		run_cmd_to_file(f"condor_fetchlog {machine} STARTER.{slot}", f"{scratch}/StarterLog.{slot}")
+	else:
+		print("No Remote host found in job ad -- perhaps job this never ran?")
 
 
+def acquire_all_info(jobid):
+	# Identify myself
+	acquire_identity(f"{args['scratch']}/condor-profile.txt")
+	# Datamine extensive information about the jobid
+	acquire_all_info_for_jobid(jobid)
 
+
+def package_payload():
+	saved_dir = os.getcwd()
+	parent = str(Path(args['scratch']).parent)
+	os.chdir(parent)
+	# Grab the only directory there
+	dir_name = os.listdir('.')[0]
+	print(f"\nCreating output file with all results in {dir_name}.tar.gz")
+	subprocess.run(f"tar czf {dir_name}.tar.gz {dir_name}", shell=True,
+	               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	os.chdir(saved_dir)
+	# Move tarball to current directory
+	for gz in Path(parent).glob("*.tar.gz"):
+		shutil.move(str(gz), ".")
+
+
+def main():
+	parse_command_line()
+
+	# Get all info for the specified jobid
+	acquire_all_info(args['jobid'])
+
+	# Package up results and move to cwd
+	package_payload()
+
+	# Clean up scratch space
+	cleanup()
+	return 0
+
+
+if __name__ == '__main__':
+	sys.exit(main())

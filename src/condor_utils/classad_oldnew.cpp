@@ -25,6 +25,7 @@
 #include "my_hostname.h"
 
 #include "classad/classad_distribution.h"
+#include "classad/lexer.h"
 #include "classad_oldnew.h"
 #include "compat_classad.h"
 
@@ -48,6 +49,10 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	if( !sock->code( numExprs ) ) {
 		dprintf(D_FULLDEBUG, "FAILED to get number of expressions.\n");
  		return false;
+	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAd: invalid numExprs %d\n", numExprs);
+		return false;
 	}
 
 	// at least numExprs are coming, but we may add
@@ -96,6 +101,97 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 
 	if (!sock->get(inputLine)) {
 		 dprintf(D_FULLDEBUG, "FAILED to get(inputLine) 2\n" );
+		return false;
+	}
+
+	return true;
+}
+
+// Restricted ClassAd reader for pre-authentication security negotiation.
+// Only allows "attribute = literal" forms, rejects expressions, lists,
+// nested classads, and function calls. Limits the number of attributes
+// to prevent resource exhaustion.
+bool getPODClassAd(Stream *sock, classad::ClassAd &ad)
+{
+	static const int MAX_POD_ATTRS = 100;
+
+	ad.Clear();
+
+	sock->decode();
+
+	int numExprs;
+	if (!sock->code(numExprs)) {
+		dprintf(D_FULLDEBUG, "getPODClassAd: FAILED to get number of expressions.\n");
+		return false;
+	}
+
+	if (numExprs > MAX_POD_ATTRS) {
+		dprintf(D_ALWAYS, "getPODClassAd: too many attributes (%d > %d), rejecting.\n",
+			numExprs, MAX_POD_ATTRS);
+		return false;
+	}
+
+	if (numExprs < 0) {
+		dprintf(D_ALWAYS, "getPODClassAd: Negative number of expressions (%d), rejecting.\n",
+			numExprs);
+		return false;
+	}
+
+
+	ad.rehash(numExprs + 5);
+
+	for (int i = 0; i < numExprs; i++) {
+		const char *strptr = nullptr;
+		if (!sock->get_string_ptr(strptr) || !strptr) {
+			dprintf(D_FULLDEBUG, "getPODClassAd: FAILED to get expression string.\n");
+			return false;
+		}
+
+		// Split "attr = value" into attribute name and RHS
+		// This also naturally rejects the ZKM marker (no '=' sign)
+		std::string attr;
+		const char *rhs;
+		if (!SplitLongFormAttrValue(strptr, attr, rhs)) {
+			dprintf(D_ALWAYS, "getPODClassAd: FAILED to split expression, rejecting.\n");
+			return false;
+		}
+
+		// Use a fresh classad lexer to tokenize the RHS and verify it is
+		// a single literal value (no expressions, functions, or references)
+		classad::Lexer lexer;
+		lexer.SetOldClassAdLex(true);
+		lexer.Initialize(rhs);
+		auto token = lexer.ConsumeToken();
+
+		if (!classad::Literal::IsLiteralToken(token.type)) {
+			dprintf(D_ALWAYS, "getPODClassAd: non-literal expression rejected for attr %s\n",
+				attr.c_str());
+			return false;
+		}
+
+		// Verify nothing follows the literal (reject "1 + 2", etc.)
+		if (lexer.PeekTokenType() != classad::Lexer::LEX_END_OF_INPUT) {
+			dprintf(D_ALWAYS, "getPODClassAd: trailing tokens after literal for attr %s\n",
+				attr.c_str());
+			return false;
+		}
+
+		classad::Literal *lit = classad::Literal::MakeLiteral(token);
+		if (!lit || !ad.InsertLiteral(attr, lit)) {
+			dprintf(D_ALWAYS, "getPODClassAd: FAILED to insert attr %s\n", attr.c_str());
+			delete lit;
+			return false;
+		}
+	}
+
+	// Read and discard the trailing MyType/TargetType strings
+	std::string inputLine;
+	if (!sock->get(inputLine)) {
+		dprintf(D_FULLDEBUG, "getPODClassAd: FAILED to get MyType\n");
+		return false;
+	}
+	if (!sock->get(inputLine)) {
+		dprintf(D_FULLDEBUG, "getPODClassAd: FAILED to get TargetType\n");
 		return false;
 	}
 
@@ -226,6 +322,10 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 	if( !sock->code( numExprs ) ) {
 		return false;
 	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAdEx: invalid numExprs %d\n", numExprs);
+		return false;
+	}
 
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
@@ -274,7 +374,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		//
 		bool inserted = false;
 		IF_PROFILE_GETCLASSAD(int subtype = 0);
-		size_t cbrhs = cb - (rhs - strptr);
+		size_t cbrhs = (cb > 0 && (rhs - strptr) < cb) ? (size_t)(cb - (rhs - strptr)) : 0;
 		if (fast_tricks) {
 			char ch = rhs[0];
 			if (cbrhs == 5 && (ch&~0x20) == 'T' && (rhs[1]&~0x20) == 'R' && (rhs[2]&~0x20) == 'U' && (rhs[3]&~0x20) == 'E') {
@@ -395,6 +495,10 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
+	}
+	if (numExprs < 0 || numExprs > 1'000'000) {
+		dprintf(D_ALWAYS, "getClassAdNoTypes: invalid numExprs %d\n", numExprs);
+		return false;
 	}
 
 		// pack exprs into classad

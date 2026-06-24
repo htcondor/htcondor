@@ -10,9 +10,9 @@ Synopsis
 
 **condor_rm** [**-help** | **-version**]
 
-**condor_rm** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
+**condor_rm** [**-transfer**] [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
-**condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-constraint** *expression*]
+**condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-transfer**] [**-constraint** *expression*]
 [**-forcex**][**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
 
 Description
@@ -48,6 +48,9 @@ Options
  **-forcex**
     Force the immediate local removal of jobs in the ``X`` state. This only
     affects jobs already being removed.
+ **-transfer**
+    If the job is running, ask the job to transfer any output files to the
+    submitter before the job is removed.
  **-constraint** *expression*
     Remove all jobs which match the job ClassAd expression constraint.
  **-all**

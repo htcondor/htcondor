@@ -94,8 +94,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-	m_vacate_job_soft_cb = nullptr;
-	m_vacate_job_hard_cb = nullptr;
+	m_vacate_job_soft_cb.reset();
+	m_vacate_job_hard_cb.reset();
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -136,10 +136,10 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_vacate_job_soft_cb ) {
+	if (m_vacate_job_soft_cb) {
 		m_vacate_job_soft_cb->cancelCallback();
 	}
-	if( m_vacate_job_hard_cb ) {
+	if (m_vacate_job_hard_cb) {
 		m_vacate_job_hard_cb->cancelCallback();
 	}
 }
@@ -224,6 +224,18 @@ Starter::publish( ClassAd* ad )
 
 	if (!s_ad) {
 		return;
+	}
+
+	// LVM setting disk quantum does not get set by intial static ad
+	// Check if not set and using LVM to get actual value
+	const auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+	long long disk_quantum = 0;
+	if (volman_setup && (!s_ad->LookupInteger(ATTR_STARTD_DISK_QUANTUM, disk_quantum) || disk_quantum <= 0)) {
+		disk_quantum = volman->GetDiskQuantum();
+		if (disk_quantum > 0) {
+			s_ad->Assign(ATTR_STARTD_DISK_QUANTUM, disk_quantum);
+		}
 	}
 
 	ExprTree *tree, *pCopy;
@@ -1377,7 +1389,7 @@ Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode,soft);
 
-	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
+	auto msg_cb = std::make_shared<DCMsgCallback>( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
 
 	msg->setCallback( msg_cb );
 
@@ -1405,12 +1417,12 @@ void
 Starter::vacateJobCallback(DCMsgCallback *cb)
 {
 	bool soft = false;
-	if (cb == m_vacate_job_soft_cb) {
+	if (cb == m_vacate_job_soft_cb.get()) {
 		soft = true;
-		m_vacate_job_soft_cb = nullptr;
-	} else if (cb == m_vacate_job_hard_cb) {
+		m_vacate_job_soft_cb.reset();
+	} else if (cb == m_vacate_job_hard_cb.get()) {
 		soft = false;
-		m_vacate_job_hard_cb = nullptr;
+		m_vacate_job_hard_cb.reset();
 	} else {
 		EXCEPT("Unexpected starter vacate callback!");
 	}

@@ -114,9 +114,11 @@ class RemoteResource : public Service {
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?
+			@param final_transfer If true, request final file transfer before vacating
+			       (used by condor_rm -transfer)
 			@return true on success, false if a problem occurred.
 		*/
-	virtual bool killStarter( bool graceful = false );
+	virtual bool killStarter( bool graceful = false, bool final_transfer = false );
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 

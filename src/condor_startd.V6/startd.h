@@ -186,6 +186,6 @@ void	startd_exit_if_idle(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
 
-
+#define COLORING_NAMESPACE "#coloring"
 
 #endif /* _CONDOR_STARTD_H */

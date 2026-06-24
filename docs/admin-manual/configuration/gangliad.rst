@@ -18,13 +18,13 @@ has.
     The integer number of seconds between consecutive sending of metrics
     to Ganglia. Daemons update the *condor_collector* every 300
     seconds, and the Ganglia heartbeat interval is 20 seconds.
-    Therefore, multiples of 20 between 20 and 300 makes sense for this
+    Therefore, multiples of 20 between 20 and 300 make sense for this
     value. Negative values inhibit sending data to Ganglia. The default
     value is 60.
 
 :macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
     An integer value representing the minimum DMAX value for all metrics.
-    Where DMAX is the number number of seconds without updating that
+    Where DMAX is the number of seconds without updating that
     a metric will be kept before deletion. This value defaults to ``86400``
     which is equivalent to 1 day. This value will be overridden by a
     specific metric defined ``Lifetime`` value.
@@ -56,8 +56,53 @@ has.
     A boolean value that, when ``False``, causes metrics from execute
     node daemons to not be published. Aggregate values from these
     machines will still be published. The default value is ``True``.
-    This option is useful for pools such that use glidein, in which it
+    This option is useful for pools that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
+
+:macro-def:`MONITOR_MULTIPLE_COLLECTORS`
+    An optional comma-separated list of HTCondor collectors to monitor,
+    specified as ``name/address`` pairs. Each entry consists of a descriptive
+    name for the collector followed by a slash and the collector's address
+    (as would be passed to the ``-pool`` option of :tool:`condor_status`).
+    When set, *condor_gangliad* will query each of the specified collectors
+    instead of the default pool collector. For example:
+    
+    .. code-block:: condor-config
+    
+        MONITOR_MULTIPLE_COLLECTORS = ce1.wisc.edu/ce1.wisc.edu:9619, ce2.wisc.edu/ce2.wisc.edu:9619
+    
+    When monitoring multiple collectors, aggregate metrics are automatically
+    grouped by collector name to distinguish metrics from different pools.
+    If a collector becomes unresponsive, it will be temporarily skipped and
+    retried after 30 minutes. This configuration parameter has no default value.
+
+:macro-def:`MONITOR_COLLECTOR`
+    An optional collector address to query for dynamically generating the list
+    of collectors to monitor. When set, *condor_gangliad* will query this
+    collector for daemon ads matching the criteria specified by
+    :macro:`MONITOR_COLLECTOR_CONSTRAINT` and :macro:`MONITOR_COLLECTOR_AD_TYPE`,
+    and automatically populate :macro:`MONITOR_MULTIPLE_COLLECTORS` with the
+    results. The list of collectors is refreshed every 30 minutes.
+    This is useful when you need to monitor a dynamic set of collectors
+    that may change over time. This configuration parameter has no default value.
+
+:macro-def:`MONITOR_COLLECTOR_NAME_ATTR`
+    When using :macro:`MONITOR_COLLECTOR`, this specifies the ClassAd attribute
+    name to use for the collector's name. The default value is ``Name``.
+
+:macro-def:`MONITOR_COLLECTOR_ADDR_ATTR`
+    When using :macro:`MONITOR_COLLECTOR`, this specifies the ClassAd attribute
+    name to use for the collector's address. The default value is ``CollectorHost``.
+
+:macro-def:`MONITOR_COLLECTOR_CONSTRAINT`
+    When using :macro:`MONITOR_COLLECTOR`, this specifies a ClassAd constraint
+    expression to filter which daemon ads should be considered as collectors to
+    monitor. The default value is ``True`` (no filtering).
+
+:macro-def:`MONITOR_COLLECTOR_AD_TYPE`
+    When using :macro:`MONITOR_COLLECTOR`, this specifies the type of daemon ads
+    to query. Valid values are standard HTCondor ad types such as ``Schedd``,
+    ``Startd``, ``Collector``, etc. The default value is ``Schedd``.
 
 :macro-def:`GANGLIAD_WANT_PROJECTION`
     A boolean value that, when ``True``, causes the *condor_gangliad* to

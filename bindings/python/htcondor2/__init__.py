@@ -16,15 +16,16 @@ def _set_null_config():
 
     if _platform.system() in ["Linux", "Darwin"]:
         condor_config_paths = (
-            _os.path.expanduser("~/.condor/condor_config"),
+            # This list comes from condor_config.cpp's find_global(); see
+            # also the list in the manual (
+            #      https://htcondor.readthedocs.io/en/latest/admin-manual/introduction-to-configuration.html
+            # ) which mentions the environment variable above.
             "/etc/condor/condor_config",
             "/usr/local/etc/condor_config",
             _os.path.expanduser("~condor/condor_config"),
         )
 
         if not any(_os.path.isfile(path) for path in condor_config_paths):
-            message = "The environment variable CONDOR_CONFIG is unset and none of the default locations contain a condor_config file.  Using /dev/null, instead."
-            _warnings.warn(message)
             _os.environ["CONDOR_CONFIG"] = "/dev/null"
 
 
@@ -67,7 +68,6 @@ with _add_dll_dir():
     from .htcondor2_impl import _version as version
     from .htcondor2_impl import _platform as platform
     from .htcondor2_impl import _set_subsystem as set_subsystem
-    from .htcondor2_impl import _reload_config as reload_config
     from .htcondor2_impl import _reload_config_usermaps as reload_config_usermaps
     from .htcondor2_impl import _load_a_config_usermap_file as load_a_config_usermap_file
 
@@ -77,8 +77,9 @@ with _add_dll_dir():
     from ._loose_functions import ping
     from ._loose_functions import send_alive
     from ._loose_functions import set_ready_state
+    from ._loose_functions import reload_config
+    from ._loose_functions import enable_debug
 
-    from .htcondor2_impl import _enable_debug as enable_debug
     from .htcondor2_impl import _disable_debug as disable_debug
     from .htcondor2_impl import _enable_log as enable_log
     from ._logging import _log as log

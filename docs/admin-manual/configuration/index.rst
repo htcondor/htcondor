@@ -51,6 +51,7 @@ Central Manager Configuration
     credd.rst
     defrag.rst
     gangliad.rst
+    adstash.rst
 
 Access Point Configuration
 --------------------------
@@ -61,6 +62,7 @@ Access Point Configuration
 
     schedd.rst
     shadow.rst
+    librarian.rst
     submit.rst
     dagman.rst
     gridmanager.rst
@@ -93,3 +95,11 @@ Other Configuration
     windows.rst
     annex.rst
 
+All Options
+-----------
+
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    all.rst

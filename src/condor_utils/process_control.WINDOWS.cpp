@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "process_control.WINDOWS.h"
 #include "ntsysinfo.WINDOWS.h"
-#include "HashTable.h"
 #include "condor_softkill.h"
 
 static char* soft_kill_binary = NULL;
@@ -182,12 +181,12 @@ struct SuspendedThread {
 // for each suspended process we keep a hash table of its
 // SuspendedThread structures (keyed on thread id)
 //
-typedef HashTable<DWORD, SuspendedThread*> SuspendedProcess;
+typedef std::map<DWORD, SuspendedThread> SuspendedProcess;
 
 // we keep track of all suspended processes via a hash table
 // keyed on process id
 //
-static HashTable<DWORD, SuspendedProcess*> suspended_processes(hash_func);
+static std::map<DWORD, SuspendedProcess> suspended_processes;
 
 bool
 windows_suspend(DWORD pid)
@@ -202,13 +201,9 @@ windows_suspend(DWORD pid)
 	// make sure we haven't already suspended this process, then allocate
 	// a SuspendedProcess object and add it to the hash table
 	//
-	SuspendedProcess* sp;
-	int ret = suspended_processes.lookup(pid, sp);
-	ASSERT(ret == -1);
-	sp = new SuspendedProcess(hash_func);
-	ASSERT(sp != NULL);
-	ret = suspended_processes.insert(pid, sp);
-	ASSERT(ret != -1);
+	auto [it_pid, success_pid] = suspended_processes.emplace(pid, SuspendedProcess());
+	ASSERT(success_pid == true);
+	SuspendedProcess* sp = &(it_pid->second);
 
 	// we need to loop until iterating through the thread list for this
 	// process shows that all threads are suspended
@@ -227,9 +222,8 @@ windows_suspend(DWORD pid)
 
 			// see if we already have a record for this thread
 			//
-			SuspendedThread* st;
-			ret = sp->lookup(tid_array[i], st);
-			if (ret == -1) {
+			auto it_tid = sp->find(tid_array[i]);
+			if (it_tid == sp->end()) {
 
 				// no record yet; open up this thread's handle
 				//
@@ -248,13 +242,12 @@ windows_suspend(DWORD pid)
 
 				// now that we have a handle, create a record for this thread
 				//
-				st = new SuspendedThread;
-				ASSERT(st != NULL);
-				st->handle = handle;
-				st->num_suspends = 0;
-				ret = sp->insert(tid_array[i], st);
-				ASSERT(ret != -1);
+				SuspendedThread new_st{handle, 0};
+				auto [it_tmp, success_tid] = sp->emplace(tid_array[i], new_st);
+				ASSERT(success_tid == true);
+				it_tid = it_tmp;
 			}
+			SuspendedThread* st = &(it_tid->second);
 
 			// now suspend the thread
 			//
@@ -292,24 +285,21 @@ windows_continue(DWORD pid)
 {
 	// we should have a record from when we suspended this process
 	//
-	SuspendedProcess* sp;
-	int ret = suspended_processes.lookup(pid, sp);
-
 	// NOTE: In testing windows continuation the 
 	// procd can at times pass invalid pid's to this function 
 	// as a result, exit gracefully vs. assert.
-	if (ret == -1)
-	   return false;
+	auto it = suspended_processes.find(pid);
+	if (it == suspended_processes.end()) {
+		return false;
+	}
 
-	SuspendedThread* st;
-	sp->startIterations();
-	while (sp->iterate(st)) {
+	for (const auto& [tid, st]: it->second) {
 
 		// call ResumeThread as many times as we called SuspendThread
 		// for this thread above
 		//
-		for (int i = 0; i < st->num_suspends; i++) {
-			if (ResumeThread(st->handle) == (DWORD)-1) {
+		for (int i = 0; i < st.num_suspends; i++) {
+			if (ResumeThread(st.handle) == (DWORD)-1) {
 				dprintf(D_FULLDEBUG,
 				        "windows_continue_process: ResumeThread error: %u\n",
 				        GetLastError());
@@ -318,23 +308,17 @@ windows_continue(DWORD pid)
 
 		// close our handle to this thread
 		//
-		if (CloseHandle(st->handle) == FALSE) {
+		if (CloseHandle(st.handle) == FALSE) {
 			dprintf(D_FULLDEBUG,
 			        "windows_continue_process: CloseHandle error: %u\n",
 			        GetLastError());
 		}
-
-		// clean up this SuspendedThread object
-		//
-		delete st;
 	}
 
 	// clean up the SuspendedProcess object and remove it from the
 	// hash table of processes
 	//
-	delete sp;
-	ret = suspended_processes.remove(pid);
-	ASSERT(ret != -1);
+	suspended_processes.erase(it);
 
 	return true;
 }

@@ -33,6 +33,7 @@ COPY tmp/ /tmp/
 RUN /tmp/setup.sh $CONDOR_VERSION
 EOF
     cp -pr setup.sh ../packaging/{debian,rpm} "$platform/tmp/"
+    cp -p ../../src/condor_tests/requirements.txt "$platform/tmp/test-requirements.txt"
     docker build "$platform" --platform="$base_docker_platform" --no-cache --network=host --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
     if grep -q 'Successfully tagged htcondor/nmi-build:' "$platform.out"; then
         docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
@@ -59,6 +60,7 @@ if [ "$ARCH" = 'aarch64' ]; then
     buildimage aarch64_AlmaLinux9 linux/arm64 arm64v8/almalinux:9 &
     buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10 &
     buildimage aarch64_Ubuntu24 linux/arm64 arm64v8/ubuntu:noble &
+    buildimage aarch64_Ubuntu26 linux/arm64 arm64v8/ubuntu:resolute &
 else
     buildimage ppc64le_AlmaLinux8 linux/ppc64le ppc64le/almalinux:8 &
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
@@ -68,12 +70,13 @@ else
     buildimage x86_64_AmazonLinux2023 linux/x86_64 amazonlinux:2023 &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &
     buildimage x86_64_Debian13 linux/x86_64 debian:trixie &
-    buildimage x86_64_Fedora43 linux/x86_64 fedora:43 &
+    buildimage x86_64_Fedora44 linux/x86_64 fedora:44 &
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
     buildimage x86_64_openSUSE16 linux/x86_64 opensuse/leap:16.0 &
     buildimage x86_64_SLES15SP5 linux/x86_64 registry.suse.com/suse/sle15:15.5 &
     buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &
     buildimage x86_64_Ubuntu24 linux/x86_64 ubuntu:noble &
+    buildimage x86_64_Ubuntu26 linux/x86_64 ubuntu:resolute &
 fi
 wait
 tail -n 2 ./*.out

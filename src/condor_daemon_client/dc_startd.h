@@ -91,7 +91,7 @@ public:
 			// TODO: add resource sharing info here??
 		};
 
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -101,7 +101,7 @@ public:
 			       it should restart a job after uploading its checkpoint.
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning);
+	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning, bool final_transfer=false);
 
 		/** Send the command to this startd to ask if claim_is_closing would be returned if we deactivated.
 			Used by starter to check if it should restart a job after uploading its checkpoint.
@@ -197,6 +197,16 @@ public:
 		// returns: true/false on success/failure
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
+
+		// Send REHOME command to startd
+		// schedd_name: the schedd to rehome to
+		// schedd_pool: the collector pool to use to find the schedd (NULL = use COLLECTOR_HOST)
+		// timeout: timeout for the rehome operation
+		// reboot: if true, reboot the host after evicting jobs (subject to
+		//         the startd's STARTD_REHOME_ALLOW_REBOOT guard expression)
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false, bool reboot = false);
 
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 

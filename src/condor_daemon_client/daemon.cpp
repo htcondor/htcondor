@@ -580,7 +580,7 @@ Daemon::startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout,
 
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
-	ASSERT(!req.m_nonblocking || req.m_callback_fn || req.m_sock->type() == Stream::safe_sock);
+	ASSERT(!req.m_nonblocking || req.m_callback || req.m_sock->type() == Stream::safe_sock);
 
 	// set up the timeout
 	if( timeout ) {
@@ -646,15 +646,19 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
-	req.m_callback_fn = callback_fn;
-	req.m_misc_data = misc_data;
+	if( callback_fn ) {
+		req.m_callback = [callback_fn, misc_data](bool success, Sock *s, CondorError *e,
+				const std::string &trust_domain, bool should_try_token_request) {
+			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, misc_data);
+		};
+	}
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	return startCommand_internal( req, timeout, &_sec_man );
 }
@@ -670,8 +674,6 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
-	req.m_callback_fn = nullptr;
-	req.m_misc_data = nullptr;
 	// This is a blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
@@ -679,7 +681,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	auto rc = startCommand_internal(req, timeout, &_sec_man);
 
@@ -761,6 +763,42 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeou
 StartCommandResult
 Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
+	StartCommandCallback cb;
+	if( callback_fn ) {
+		cb = [callback_fn, misc_data](bool success, Sock *s, CondorError *e,
+				const std::string &trust_domain, bool should_try_token_request) {
+			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, misc_data);
+		};
+	}
+	return startCommand_nonblocking(cmd, sock, timeout, errstack, std::move(cb),
+		cmd_description, raw_protocol, sec_session_id, resume_response);
+}
+
+StartCommandResult
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+{
+	// Nonblocking version of startCommand that owns its callback state via
+	// the std::function closure (no paired void *misc_data).
+	ASSERT(callback);
+
+	if (IsDebugLevel(D_COMMAND)) {
+		const char * addr = this->addr();
+		dprintf (D_COMMAND, "Daemon::startCommand_nonblocking(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
+	}
+
+	Sock *sock = makeConnectedSocket(st, timeout, 0, errstack, /*non_blocking=*/true);
+	if( !sock ) {
+		callback(false, nullptr, errstack, "", false);
+		return StartCommandSucceeded;
+	}
+
+	return startCommand_nonblocking(cmd, sock, timeout, errstack, std::move(callback),
+		cmd_description, raw_protocol, sec_session_id, resume_response);
+}
+
+StartCommandResult
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+{
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
 	req.m_sock = sock;
@@ -768,8 +806,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
-	req.m_callback_fn = callback_fn;
-	req.m_misc_data = misc_data;
+	req.m_callback = std::move(callback);
 	// This is the nonblocking version of startCommand().
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
@@ -777,7 +814,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	return startCommand_internal(req, timeout, &_sec_man);
 }
@@ -792,8 +829,6 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
-	req.m_callback_fn = nullptr;
-	req.m_misc_data = nullptr;
 	// This is the blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
@@ -801,7 +836,7 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
@@ -1340,7 +1375,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// the collector for the address.
 		CondorQuery			query(adtype);
 		ClassAd*			scan;
-		ClassAdList			ads;
+		std::vector<ClassAd> ads;
 
 		if( (_type == DT_STARTD && ! strchr(_name.c_str(), '@')) ||
 			_type == DT_HAD ) { 
@@ -1395,16 +1430,14 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// We need to query the collector
 		CollectorList * collectors = CollectorList::create(_pool.c_str());
 		CondorError errstack;
-		if (collectors->query (query, ads) != Q_OK) {
+		if (collectors->query (query, ads, &errstack) != Q_OK) {
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;
 		};
 		delete collectors;
 
-		ads.Open();
-		scan = ads.Next();
-		if(!scan) {
+		if (ads.empty()) {
 			dprintf( D_ALWAYS, "Can't find address for %s %s\n",
 			         daemonString(_type), _name.c_str() );
 			formatstr( buf, "Can't find address for %s %s", 
@@ -1412,6 +1445,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			return false; 
 		}
+		scan = &ads[0];
 
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;

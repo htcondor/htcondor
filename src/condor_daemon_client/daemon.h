@@ -483,6 +483,12 @@ public:
 		  */
 	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
+		/** Same as above, but the callback is a std::function whose
+			closure owns any caller state that the legacy overload
+			passed via void *misc_data. Must not be empty.
+		 */
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
 			uses nonblocking connects; everything else is blocking.
@@ -513,6 +519,12 @@ public:
 			@return see definition of StartCommandResult enumeration.
 		*/
 	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+
+		/** Same as above, but the callback is a std::function whose
+			closure owns any caller state that the legacy overload
+			passed via void *misc_data.
+		 */
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -694,8 +706,8 @@ public:
 	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
 	const std::string& getPreferredToken() { return m_preferred_token; }
 
-	void setForceAuthentication(bool force) { m_force_auth = force; }
-	bool getForceAuthentication() { return m_force_auth; }
+	void setRequestAuthentication(bool request) { m_request_auth = request; }
+	bool getRequestAuthentication() { return m_request_auth; }
 
 protected:
 	// Data members
@@ -723,7 +735,7 @@ protected:
 	bool _is_configured;
 	bool _locate_local_only{false};
 	bool m_should_try_token_request{false};
-	bool m_force_auth{false};
+	bool m_request_auth{false};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
@@ -927,10 +939,10 @@ protected:
 	bool checkAddr( void );
 
 		/**
-           Helper method for commands to see if we've already
-           authenticated this socket, and if not, to try to do so.
+		   Helper method for commands to see if we've already
+		   authenticated this socket, and if not, to try to do so.
 		*/
-    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
+	bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
 		/**
 		   Internal function used by public versions of startCommand().

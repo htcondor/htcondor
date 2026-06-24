@@ -58,9 +58,14 @@ if("${OS_NAME}" MATCHES "^WIN")
 	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
 		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
 	endif()
-	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
-		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
-	endif()
+	# On batlab, we are randomly getting a permission error from msbuild when it 
+	# tries to access the global semaphore which EnforceProcessCountAcrossBuilds uses.
+
+	# Let's try turning off the semaphore, we build /mp:4, and condor controls the
+	# number of builds, so I think we should be ok.  Better than getting red builds
+	#if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+	#	list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	#endif()
 
 endif()
 
@@ -287,7 +292,7 @@ if (FIPS_BUILD)
     add_definitions(-DFIPS_MODE=1)
 endif()
 
-add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
+add_definitions(-D${OS_NAME}=1)
 if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
@@ -538,7 +543,7 @@ option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
-option(WITH_PLACEMENT "Support for placement tokens and tokens database" OFF)
+option(WITH_PLACEMENT "Support for placement tokens and tokens database" ON)
 if (LINUX)
 	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
 endif(LINUX)
@@ -692,7 +697,7 @@ endif()
 
 # Common externals
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.46)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.22.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
@@ -715,20 +720,20 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-# We'll do the installation ourselves, below
-set (FMT_INSTALL false)
-
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
-
 # Remove when we have C++23 everywhere
 include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
 
+# External fmt lib not used anywhere currently and is causing build
+# errors with newer MacOS clang v21.0.0 so comment out (will be in C++23)
+# We'll do the installation ourselves, below
+#set (FMT_INSTALL false)
+#add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 # But don't try to install the header files anywhere
-set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
-install(TARGETS fmt
-	LIBRARY DESTINATION "${C_LIB}"
-	ARCHIVE DESTINATION "${C_LIB}"
-	RUNTIME DESTINATION "${C_LIB}")
+#set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+#install(TARGETS fmt
+#	LIBRARY DESTINATION "${C_LIB}"
+#	ARCHIVE DESTINATION "${C_LIB}"
+#	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -819,6 +824,7 @@ endif()
 set (CONDOR_LIBS "condor_utils")
 set (CONDOR_TOOL_LIBS "condor_utils")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+set (CONDOR_FILE_PERMS   OWNER_READ OWNER_WRITE                GROUP_READ                WORLD_READ                )
 if (LINUX)
 	set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s")
 else ()

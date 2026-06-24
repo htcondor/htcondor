@@ -21,6 +21,8 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
+#include "authentication.h"
+#include "condor_claimid_parser.h"
 #include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"
@@ -35,6 +37,8 @@
 #include "dagman_metrics.h"
 #include "dagman_commands.h"
 #include "directory.h"
+
+#include <filesystem>
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -66,6 +70,26 @@ static void Usage() {
 	DC_Exit(EXIT_ERROR);
 }
 
+void Dagman::SetThrottles(Throttles userThrottles) {
+	int oldMaxNodes = throttles[Throttle::MAX_NODES];
+
+	throttles = adminThrottles | userThrottles;
+
+	_dagmanClassad->AdvertiseThrottles(throttles);
+
+	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
+		std::string padded(THROTTLE_DISPLAY[i]);
+		if (padded.length() < 30) { padded.append(30 - padded.length(), '-'); }
+		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[i]);
+	}
+
+	int limit = throttles[Throttle::MAX_NODES];
+	if (config[conf::b::EnforceNewJobLimits] && limit && limit != oldMaxNodes) {
+		if (dag) { dag->EnforceNewJobsLimit(); }
+	}
+}
+
 // In Config() we get DAGMan-related configuration values.  This
 // is a three-step process:
 // 1. Get the name of the DAGMan-specific config file (if any).
@@ -75,6 +99,22 @@ static void Usage() {
 bool Dagman::Config() {
 	// Note: debug_printfs are DEBUG_NORMAL here because when we
 	// get here we haven't processed command-line arguments yet.
+
+	int admin_min_scan_int = -1;
+
+	// Check/set admin controlled throttle limits before processing user configuration
+	if ( ! param_boolean("DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING", false)) {
+		debug_printf(DEBUG_NORMAL, "Administrator set throttle limits enabled\n");
+		// Allow admin to set min for scan interval since this can increase CPU usage
+		admin_min_scan_int = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+
+		adminThrottles[Throttle::MAX_IDLE] = param_integer("DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_NODES] = param_integer("DAGMAN_MAX_JOBS_SUBMITTED", 0, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_PRE] = param_integer("DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_HOLD] = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_POST] = param_integer("DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_INT_SUBMITS] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", 1000, 1, INT_MAX);
+	}
 
 	// Get and process the DAGMan-specific config file (if any)
 	// before getting any of the other parameters.
@@ -121,13 +161,18 @@ bool Dagman::Config() {
 	config[conf::b::ReportGraphMetrics] = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REPORT_GRAPH_METRICS setting: %s\n", config[conf::b::ReportGraphMetrics] ? "True" : "False");
 
-	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
+	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
 
 	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", config[conf::b::AggressiveSubmit] ? "True" : "False");
 
 	config[conf::i::LogScanInterval] = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+	if (admin_min_scan_int > 0 && config[conf::i::LogScanInterval] < admin_min_scan_int) {
+		debug_printf(DEBUG_NORMAL, "Warning: Specified scan interval %d is less than administrator limit\n",
+		             config[conf::i::LogScanInterval]);
+		config[conf::i::LogScanInterval] = admin_min_scan_int;
+	}
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n", config[conf::i::LogScanInterval]);
 
 	config[conf::dbl::ScheddUpdateInterval] = param_double("DAGMAN_QUEUE_UPDATE_INTERVAL", 120, 1, std::numeric_limits<double>::max());
@@ -274,13 +319,6 @@ bool Dagman::Config() {
 	config[conf::i::MaxRescueNum] = param_integer("DAGMAN_MAX_RESCUE_NUM", MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n", config[conf::i::MaxRescueNum]);
 
-	config[conf::b::PartialRescue] = param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true);
-	if ( ! config[conf::b::PartialRescue]) {
-		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
-		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
-	}
-	debug_printf(DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n", config[conf::b::PartialRescue] ? "True" : "False");
-
 	config[conf::b::RescueResetRetry] = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_RESET_RETRIES_UPON_RESCUE setting: %s\n", config[conf::b::RescueResetRetry] ? "True" : "False");
 
@@ -337,6 +375,11 @@ bool Dagman::Config() {
 		debug_cache_enable();
 	}
 
+	// Reconfigure debug logging levels for two reasons:
+	//      1. Initial configuration done in pre_dc_init (doesn't respect set ALL_DEBUG or DAGMAN_DEBUG)
+	//      2. All user defined ALL_DEBUG and DAGMAN_DEBUG values to take effect
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, dagman.debugLog.c_str());
+
 	return true;
 }
 
@@ -347,6 +390,28 @@ void Dagman::LocateSchedd() {
 		debug_printf(DEBUG_QUIET, "WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
 		             errMsg );
 		check_warning_strictness(DAG_STRICT_3);
+	} else {
+		bool sec_session_setup = false;
+		// Setup security session with schedd with provided sec session (note this is also our command secret string)
+		if ( ! dagman.commandSecret.empty()) {
+			ClaimIdParser claimId(dagman.commandSecret.c_str());
+			sec_session_setup = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				WRITE,
+				claimId.secSessionId(),
+				claimId.secSessionKey(),
+				claimId.secSessionInfo(),
+				AUTH_METHOD_FAMILY,
+				CONDOR_PARENT_FQU,
+				_schedd->addr(),
+				0,
+				nullptr,
+				false
+			);
+		}
+
+		if ( ! sec_session_setup) { // This is fine... just means DAGMan will do lots of authentication
+			debug_printf(DEBUG_NORMAL, "Failed to create non-negotiated security session with schedd %s\n", _schedd->addr());
+		}
 	}
 }
 
@@ -377,6 +442,14 @@ void Dagman::RemoveRunningJobs(const std::string& reason, const bool rm_all) {
 		debug_printf(DEBUG_NORMAL, "ERROR: Failed to remove HTCondor jobs\n");
 	}
 }
+
+void Dagman::RemoveLock() {
+	// Note: This is call the FileLock::release() not the std::unique_ptr::release()
+	if (lock) { lock->release(); }
+	if (dagman.m_lock_fd >= 0) { close(dagman.m_lock_fd); }
+	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+}
+
 
 // NOTE: this is only called on reconfig, not at startup
 void main_config() {
@@ -429,9 +502,6 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 	inShutdownRescue = true;
 
 	debug_printf(DEBUG_QUIET, "Aborting DAG...\n");
-	// Avoid writing two different rescue DAGs if the "main" DAG and
-	// the final node (if any) both fail.
-	static bool wroteRescue = false;
 	// If statement here in case failure occurred during parsing
 	if (dagman.dag) {
 		dagman.dag->SetStatus(dagStatus, true);
@@ -441,10 +511,8 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		// unrecoverable state...
 		if (exitVal != EXIT_OKAY) {
 			if (dagman.config[conf::i::MaxRescueNum] > 0) {
-				dagman.dag->Rescue(dagman.options.primaryDag().c_str(), dagman.options.isMultiDag(),
-				                   dagman.config[conf::i::MaxRescueNum], wroteRescue, false,
-				                   dagman.config[conf::b::PartialRescue]);
-				wroteRescue = true;
+				dagman.dag->Rescue(dagman.options.primaryDag(), dagman.options.isMultiDag(),
+				                   dagman.config[conf::i::MaxRescueNum]);
 			} else {
 				debug_printf(DEBUG_QUIET, "No rescue DAG written because DAGMAN_MAX_RESCUE_NUM is 0\n");
 			}
@@ -489,7 +557,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 	}
 
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+	dagman.RemoveLock();
 	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit(exitVal);
@@ -512,7 +580,7 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_OKAY);
 	dagman.ReportMetrics(EXIT_OKAY);
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
+	dagman.RemoveLock();
 	dagman.CleanUp();
 	DC_Exit(EXIT_OKAY);
 }
@@ -673,7 +741,9 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
-	dagman.CreateMetrics(); // Must be created post argument parsing
+	// Must be created post argument parsing
+	dagman.CreateMetrics();
+	dagman.CreateSubmitter();
 
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
 	int parentDAGid = dagman._dagmanClassad->Initialize(dagOpts);
@@ -849,6 +919,18 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
+	// Wait for all configuration and arg parsing/checking to be done before setting throttles
+	Throttles user_throttles;
+	user_throttles[Throttle::MAX_IDLE] = dagOpts[shallow::i::MaxIdle];
+	user_throttles[Throttle::MAX_NODES] = dagOpts[shallow::i::MaxJobs];
+	user_throttles[Throttle::MAX_PRE] = dagOpts[shallow::i::MaxPre];
+	user_throttles[Throttle::MAX_HOLD] = dagOpts[shallow::i::MaxHold];
+	user_throttles[Throttle::MAX_POST] = dagOpts[shallow::i::MaxPost];
+	user_throttles[Throttle::MAX_INT_SUBMITS] = dagman.config[conf::i::SubmitsPerInterval];
+
+	dagman._dagmanClassad->RecoverThrottles(user_throttles);
+	dagman.SetThrottles(user_throttles);
+
 	// ...done checking arguments.
 
 	debug_printf(DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
@@ -932,13 +1014,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_VERBOSE, "Parsing %s ...\n", file.c_str());
 
 		if ( ! dp.process(dagman, *(dagman.dag), file, dag_id++)) {
-			if (dagman.options[shallow::b::DumpRescueDag]) {
-				// Dump the rescue DAG so we can see what we got
-				// in the failed parse attempt.
-				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, true, false);
-			}
-			
 			// I guess we're setting bForce to true here in case we're
 			// in recovery mode and we have any leftover jobs from
 			// before (e.g., user did condor_hold, modified DAG file
@@ -1010,13 +1085,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_QUIET, "USING RESCUE DAG %s\n", dagman.rescueFileToRun.c_str());
 
 		if ( ! dp.process(dagman, *(dagman.dag), dagman.rescueFileToRun)) {
-			if (dagOpts[shallow::b::DumpRescueDag]) {
-				// Dump the rescue DAG so we can see what we got
-				// in the failed parse attempt.
-				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], true, false);
-			}
-			
 			// I guess we're setting bForce to true here in case we're
 			// in recovery mode and we have any leftover jobs from
 			// before (e.g., user did condor_hold, modified DAG (or
@@ -1072,74 +1140,67 @@ void main_init(int argc, char ** const argv) {
 		ExitSuccess();
 	}
 
-	if (dagOpts[shallow::b::DumpRescueDag]) {
-		debug_printf(DEBUG_QUIET, "Dumping rescue DAG and exiting because of -DumpRescue flag\n");
-		dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, false, false);
-		ExitSuccess();
-		return;
-	}
-
 	//------------------------------------------------------------------------
 	// Bootstrap and Recovery
 	//
-	// If the Lockfile exists, this indicates a premature termination
-	// of a previous run of Dagman. If condor log is also present,
-	// we run in recovery mode
+	// Check if lock file exists to automatically enter recovery mode
+	// Before doing any actual work acquire file lock to ensure we are the only
+	// DAGMan process executing on this DAG in this directory
 
-	// If the Daglog is not present, then we do not run in recovery
-	// mode
-	// I don't know what this comment means.  wenger 2013-09-11
+	const std::string& lock_file = dagOpts[shallow::str::LockFile];
+	bool recovery = std::filesystem::exists(lock_file);
 
-	{
-		const std::string &lockFile = dagOpts[shallow::str::LockFile];
-		bool recovery = access(lockFile.c_str(), F_OK) == 0;
-
-		if (recovery) {
-			debug_printf(DEBUG_VERBOSE, "Lock file %s detected,\n", lockFile.c_str());
-			if (dagman.config[conf::b::AbortDuplicates]) {
-				if (dagmanUtils.check_lock_file(lockFile.c_str()) == 1) {
-					debug_printf(DEBUG_QUIET,
-					             "Aborting because it looks like another instance of DAGMan is "
-					             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
-					             "and re-submit the DAG.\n", lockFile.c_str());
-					dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_RESTART);
-					dagman.CleanUp();
-					DC_Exit(EXIT_ERROR);
-					// We should never get to here!
-				}
-			}
-
-		} else if (dagOpts[shallow::b::DoRecovery]) {
-			debug_printf(DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n");
-			recovery = true;
-		}
-
-		int recoveryStatus = -1;
-		if (recovery) {
-			recoveryStatus = dagman._dagmanClassad->GetStatus();
-		}
-
-		// If this DAGMan continues, it should overwrite the lock file if it exists.
-		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.config[conf::b::AbortDuplicates]);
-
-		debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
-		if( ! dagman.dag->Bootstrap(recovery)) {
-			dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
-			debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
-		}
-
-		// During recovery we need to restore some states manually
-		switch (recoveryStatus) {
-			case DAG_STATUS_HALTED:
-				debug_printf(DEBUG_NORMAL, "Restoring halted state.\n");
-				dagman.dag->Halt();
-				break;
-			default:
-				break;
-		}
-
-		print_status(true);
+	if (recovery) {
+		debug_printf(DEBUG_VERBOSE, "Lock file %s detected\n", lock_file.c_str());
+	} else if (dagOpts[shallow::b::DoRecovery]) {
+		debug_printf(DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n");
+		recovery = true;
 	}
+
+	int recoveryStatus = -1;
+	if (recovery) {
+		recoveryStatus = dagman._dagmanClassad->GetStatus();
+	}
+
+	dagman.m_lock_fd = safe_open_wrapper_follow(lock_file.c_str(), O_CREAT | O_RDWR, 0600);
+	if (dagman.m_lock_fd < 0) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to create lock file %s (%d): %s\n",
+		             lock_file.c_str(), errno, strerror(errno));
+		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		dagman.CleanUp();
+		DC_Exit(EXIT_ERROR);
+	}
+
+	dagman.lock = std::make_unique<FileLock>(dagman.m_lock_fd, nullptr, lock_file.c_str());
+	dagman.lock->setBlocking(false);
+
+	if ( ! dagman.lock->obtain(WRITE_LOCK)) { // NOTE: Windows mutex lock will take up to 10s to fail
+		debug_printf(DEBUG_QUIET,
+		             "Aborting because it looks like another instance of DAGMan is "
+		             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
+		             "and re-submit the DAG.\n", lock_file.c_str());
+		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		dagman.CleanUp();
+		DC_Exit(EXIT_ERROR);
+	}
+
+	debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
+	if ( ! dagman.dag->Bootstrap(recovery)) {
+		dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
+		debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
+	}
+
+	// During recovery we need to restore some states manually
+	switch (recoveryStatus) {
+		case DAG_STATUS_HALTED:
+			debug_printf(DEBUG_NORMAL, "Restoring halted state.\n");
+			dagman.dag->Halt();
+			break;
+		default:
+			break;
+	}
+
+	print_status(true);
 
 	debug_printf(DEBUG_VERBOSE, "Registering condor_event_timer...\n");
 	daemonCore->Register_Timer(1, dagman.config[conf::i::LogScanInterval], condor_event_timer, "condor_event_timer");
@@ -1514,20 +1575,19 @@ void main_pre_dc_init (int, char*[]) {
 #endif
 
 	// Convert the DAGMan log file name to an absolute path if it's not one already
-	std::string fullLogFile;
 	const char* logFile = GetEnv("_CONDOR_DAGMAN_LOG");
 	if (logFile) {
 		if ( ! fullpath(logFile)) {
-			dircat(dagman.workingDir.c_str(), logFile, fullLogFile);
-			SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
-		} else { fullLogFile = logFile; }
+			dircat(dagman.workingDir.c_str(), logFile, dagman.debugLog);
+			SetEnv("_CONDOR_DAGMAN_LOG", dagman.debugLog.c_str());
+		} else { dagman.debugLog = logFile; }
 	} else {
-		dircat(dagman.workingDir.c_str(), "default.dagman.out", fullLogFile);
-		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
+		dircat(dagman.workingDir.c_str(), "default.dagman.out", dagman.debugLog);
+		SetEnv("_CONDOR_DAGMAN_LOG", dagman.debugLog.c_str());
 	}
 
-	// Manually setup debugging file since default log is disabled
-	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, fullLogFile.c_str());
+	// Manually setup debugging file since default log is disabled (once here to enable initial logging)
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, dagman.debugLog.c_str());
 }
 
 void main_pre_command_sock_init() {
@@ -1544,9 +1604,8 @@ int main(int argc, char **argv) {
 		return EXIT_ERROR;
 	}
 
-	// Get and remove command authorization secret from environment
-	GetEnv(ENV_CONDOR_SECRET, dagman.commandSecret);
-	if ( ! dagman.commandSecret.empty()) { UnsetEnv(ENV_CONDOR_SECRET); }
+	// DAGMan uses the scheduler universe security session as the command secret
+	GetEnv(ENV_CONDOR_SEC_SESSION, dagman.commandSecret);
 
 	debug_level = DEBUG_VERBOSE; // Default debug level is verbose output
 

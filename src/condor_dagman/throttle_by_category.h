@@ -94,11 +94,6 @@ public:
 	*/
 	void PrefixAllCategoryNames( const std::string &prefix );
 
-	/** Print the throttle info.
-		@param the FILE to print to
-	*/
-	void		PrintThrottles( FILE *fp ) /* const */;
-
 private:
 	std::map<std::string, ThrottleInfo *>	_throttles;
 };

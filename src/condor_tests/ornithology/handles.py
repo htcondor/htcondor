@@ -463,6 +463,14 @@ class ClusterState:
             if new_status is not None:
                 key = event.proc - self._offset
 
+                # Skip events whose proc is outside this cluster's range.
+                # Transfer-shadow events (cxfer, common-files) have ProcID
+                # <= -1000 in the user log, which the python bindings surface
+                # as event.proc == -1; without this guard, negative indexing
+                # would silently overwrite a real job's state.
+                if key < 0 or key >= len(self._data):
+                    continue
+
                 # update counts
                 old_status = self._data[key]
                 self._counts[old_status] -= 1

@@ -64,7 +64,7 @@ TEST_CASES = {
             # This can't be completely unset because it inherits from places.
             "CHECK_REACTIVATE_AFTER_CHECKPOINT":    "",
         },
-        "expected": False,
+        "expected": True,
     }
 }
 

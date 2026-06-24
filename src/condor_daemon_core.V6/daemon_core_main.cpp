@@ -435,15 +435,15 @@ private:
 
 		std::string subsys_name = get_mySubSystemName();
 
-		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
-			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
-			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_ERROR, "Logic error!  Token request without associated daemon.\n");
 			req.m_client_id = "";
 			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
 		}
+		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
+			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
+			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		std::string token;
 		if (req.m_client_id.empty()) {
 			req.m_request_id = "";
@@ -2867,51 +2867,6 @@ handle_nop(int, Stream* stream)
 
 
 int
-handle_invalidate_key(int, Stream* stream)
-{
-	int result = 0;
-	std::string key_id;
-	std::string their_sinful;
-	size_t id_end_idx;
-
-	stream->decode();
-	if ( ! stream->code(key_id) ) {
-		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive key id!.\n");
-		return FALSE;
-	}
-
-	if ( ! stream->end_of_message() ) {
-		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive EOM on key %s.\n", key_id.c_str());
-		return FALSE;
-	}
-
-	id_end_idx = key_id.find('\n');
-	if (id_end_idx != std::string::npos) {
-		ClassAd info_ad;
-		int info_ad_idx = id_end_idx + 1;
-		classad::ClassAdParser parser;
-		if (!parser.ParseClassAd(key_id, info_ad, info_ad_idx)) {
-			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
-			return FALSE;
-		}
-		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
-		key_id.erase(id_end_idx);
-	}
-
-	if (key_id == daemonCore->m_family_session_id) {
-		dprintf(D_FULLDEBUG, "DC_INVALIDATE_KEY: Refusing to invalidate family session\n");
-		if (!their_sinful.empty()) {
-			dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
-			dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
-			daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
-		}
-	} else {
-		result = daemonCore->getSecMan()->invalidateKey(key_id.c_str());
-	}
-	return result;
-}
-
-int
 handle_config_val(int idCmd, Stream* stream ) 
 {
 	char *param_name = NULL, *tmp;
@@ -4085,11 +4040,15 @@ int dc_main( int argc, char** argv )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu", (unsigned long) daemonCore->getpid());
+	// Emit the whole line in a single dprintf so it lands in one atomic
+	// write().  When many daemons (e.g. shadows) share a log file, splitting
+	// this across two dprintf calls lets another process's message interleave
+	// between them, tearing the banner line.
 #ifdef WIN32
-	dprintf(D_ALWAYS | D_NOHEADER,"\n");
+	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
 #else
-	dprintf(D_ALWAYS | D_NOHEADER, " RealUID = %u\n", getuid());
+	dprintf(D_ALWAYS,"** PID = %lu RealUID = %u\n",
+			(unsigned long) daemonCore->getpid(), getuid());
 #endif
 
 	time_t log_last_mod_time = dprintf_last_modification();
@@ -4441,10 +4400,6 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
 								  handle_fetch_log,
 								  "handle_fetch_log_history_purge()", ADMINISTRATOR );
-
-	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
-								  handle_invalidate_key,
-								  "handle_invalidate_key()", ALLOW );
 
 		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
 		// There is no need for security here, the use case is a lambda function in AWS which won't have

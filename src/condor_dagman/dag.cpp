@@ -53,7 +53,9 @@ const CondorID Dag::_defaultCondorId;
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
 	config                 (dm.config),
+	throttles              (dm.throttles),
 	_schedd                (dm._schedd),
+	submitter              (dm.submitter),
 	_metrics               (dm.metrics),
 	_DAGManJobId           (&dm.DAGManJobId),
 	_spliceScope           (spliceScope),
@@ -90,7 +92,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	}
 
 	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
-	             dagOpts[shallow::i::MaxJobs], dagOpts[shallow::i::MaxPre], dagOpts[shallow::i::MaxPost]);
+	             dm.throttles[Throttle::MAX_NODES], dm.throttles[Throttle::MAX_PRE], dm.throttles[Throttle::MAX_POST]);
 }
 
 //-------------------------------------------------------------------------
@@ -221,7 +223,7 @@ bool Dag::Bootstrap(bool recovery)
 			}
 		}
 
-		set_fake_condorID(_recoveryMaxfakeID);
+		submitter->SetFakeId(_recoveryMaxfakeID);
 
 		debug_cache_stop_caching();
 
@@ -830,6 +832,12 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 	// This function should never be called when the dag object is
 	// being used to parse a splice.
 	ASSERT (_isSplice == false);
+
+	// If the provisioner node job exits before it gave the DAG
+	// a go ahead then fail here
+	if (node->GetType() == PROVISIONER && !_provisioner_ready) {
+		debug_error(1, DEBUG_QUIET, "ERROR: Provisioner node %s job exited before giving DAGMan the go ahead!\n", node->GetNodeName());
+	}
 
 	// If not late materialization (handled else where) do final node processing
 	// once all jobs have left the queue - Cole Bollig 2025-04-16
@@ -1540,25 +1548,22 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 		}
 	}
 
-	int maxJobs = dagOpts[shallow::i::MaxJobs];
-	int maxIdle = dagOpts[shallow::i::MaxIdle];
-
-	while (numSubmitsThisCycle < config[conf::i::SubmitsPerInterval]) {
+	while (dm.throttles.WithinLimit(Throttle::MAX_INT_SUBMITS, numSubmitsThisCycle)) {
 
 		// no nodes ready to submit
 		if (_readyQ->empty()) { break; }
 
 		// max jobs already submitted
-		if (maxJobs && _numNodesSubmitted >= maxJobs) {
+		if ( ! dm.throttles.WithinLimit(Throttle::MAX_NODES, _numNodesSubmitted)) {
 			debug_printf(DEBUG_DEBUG_1, "Max jobs (%d) already running; deferring submission of %d ready node%s.\n",
-			             maxJobs, _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_NODES], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
 
-		if (maxIdle && _numIdleJobProcs >= maxIdle) {
+		if ( ! dm.throttles.WithinLimit(Throttle::MAX_IDLE, _numIdleJobProcs)) {
 			debug_printf(DEBUG_DEBUG_1, "Hit max number of idle DAG nodes (%d); deferring submission of %d ready node%s.\n",
-			             maxIdle, _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_IDLE], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
@@ -1603,20 +1608,25 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 			// constructor here.  wenger 2015-09-25
 			CondorID condorID(0, 0, 0);
 			std::string error;
-			submit_result_t submit_result = SubmitNodeJob(dm, node, condorID, error);
-	
-			// Note: if instead of switch here so we can use break
-			// to break out of while loop.
-			if (submit_result == SUBMIT_RESULT_OK) {
-				ProcessSuccessfulSubmit(node, condorID);
-				numSubmitsThisCycle++;
+			bool break_loop = false;
+			int max_attempts = config[conf::i::MaxSubmitAttempts];
 
-			} else if (submit_result == SUBMIT_RESULT_FAILED || submit_result == SUBMIT_RESULT_NO_SUBMIT) {
-				ProcessFailedSubmit(node, config[conf::i::MaxSubmitAttempts], error);
-				break; // break out of while loop
-			} else {
-				EXCEPT("Illegal submit_result_t value: %d", submit_result);
+			SubmitResult result = SubmitNodeJob(dm, node, condorID, error);
+			switch (result) {
+				case SubmitResult::SUCCESS:
+					ProcessSuccessfulSubmit(node, condorID);
+					numSubmitsThisCycle++;
+					break;
+				case SubmitResult::FAILURE:
+					max_attempts = 0; // Short circuit ProcessFailedSubmit to fail node now
+					[[fallthrough]];
+				case SubmitResult::RETRY:
+					ProcessFailedSubmit(node, max_attempts, error);
+					break_loop = true;
+					break;
 			}
+
+			if (break_loop) { break; }
 		}
 	}
 
@@ -1625,7 +1635,9 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun]) {
 		// If DAGMan submitted jobs without error invalidate state for queue checking
 		_validatedState = false;
-		send_reschedule(dm);
+		if ( ! submitter->Reschedule()) {
+			debug_printf(DEBUG_NORMAL, "Warning: Failed to send reschedule to schedd\n");
+		}
 	}
 
 	// Put any deferred nodes back into the ready queue for next time.
@@ -1684,9 +1696,7 @@ Dag::PreScriptReaper(Node *node, int status)
 			             node->GetReturnValue(), node->GetNodeName() );
 
 			// Mark the node as a skipped node.
-			CondorID id;
-			std::string logFile = DefaultNodeLog();
-			if ( ! writePreSkipEvent(id, node, node->GetNodeName(), node->GetDirectory(), logFile.c_str())) {
+			if ( ! submitter->PreSkipSubmit(*node, DefaultNodeLog())) {
 				debug_printf(DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
 				             node->GetNodeName());
 				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
@@ -2011,32 +2021,26 @@ void Dag::RemoveRunningScripts() const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool overwrite, bool parseFailed, bool isPartial) /* const */
-{
-	std::string rescueDagFile;
+void Dag::Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum) const {
+	static std::string rescue_dag = ""; // Only one rescue DAG per execution (i.e. overwrite if DAG failure then execute final)
 	std::string headerInfo;
-	if (parseFailed) {
-		rescueDagFile = dagFile;
-		rescueDagFile += ".parse_failed";
-		formatstr(headerInfo,"# \"Rescue\" DAG file, created after failure parsing\n#   the %s DAG file\n", dagFile);
-	} else {
+
+	if (rescue_dag.empty()) {
 		int nextRescue = dagmanUtils.FindLastRescueDagNum(dagFile, multiDags, maxRescueDagNum) + 1;
-		if (overwrite && nextRescue > 1) {
-			nextRescue--;
-		}
 		if (nextRescue > maxRescueDagNum) {
 			nextRescue = maxRescueDagNum;
 		}
-		rescueDagFile = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
-		formatstr(headerInfo,"# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile);
+		rescue_dag = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
 	}
+
+	formatstr(headerInfo, "# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile.c_str());
 
 	// Note: there could possibly be a race condition here if two
 	// DAGMans are running on the same DAG at the same time.  That
 	// should be avoided by the lock file, though, so I'm not doing
 	// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue(rescueDagFile.c_str(), headerInfo.c_str(), parseFailed, isPartial);
+	WriteRescue(rescue_dag, headerInfo, RescueFileType::DEFAULT);
 }
 
 //-----------------------------------------------------------------------------
@@ -2072,7 +2076,7 @@ void Dag::WriteSavePoint(Node* node) {
 	//Write save file
 	std::string headerInfo;
 	formatstr(headerInfo, "# Save file written at Start Node %s\n", node->GetNodeName());
-	WriteRescue(saveFile.c_str(), headerInfo.c_str(), false, true, true);
+	WriteRescue(saveFile, headerInfo, RescueFileType::SAVE_POINT);
 	if (dagOpts[deep::b::UseDagDir]) {
 		if ( ! tmpDir.Cd2MainDir(errMsg)) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to change back to original directory: %s\n", errMsg.c_str());
@@ -2080,31 +2084,43 @@ void Dag::WriteSavePoint(Node* node) {
 	}
 }
 
-static const char *RESCUE_DAG_VERSION = "2.0.1";
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool parseFailed, bool isPartial, bool isSavePoint) /* const */
-{
-	debug_printf(DEBUG_NORMAL, "Writing %s to %s...\n", isSavePoint ? "Save File" : "Rescue DAG", rescue_file);
+void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerInfo, RescueFileType rescue_type) const {
+	static const char *RESCUE_DAG_VERSION = "2.1.0";
 
-	FILE *fp = safe_fopen_wrapper_follow(rescue_file, "w");
+	bool reset_retries = true;
+	const char* rescue_file_type = "Rescue DAG";
+
+	// Set type specific information (i.e. retry rescues and type name)
+	switch (rescue_type) {
+		case RescueFileType::SAVE_POINT:
+			rescue_file_type = "Save File";
+			break;
+		case RescueFileType::DEFAULT:
+			reset_retries = config[conf::b::RescueResetRetry];
+			[[fallthrough]];
+		default:
+			break;
+	}
+
+	debug_printf(DEBUG_NORMAL, "Writing %s to %s...\n", rescue_file_type, rescue_file.c_str());
+
+	FILE *fp = safe_fopen_wrapper_follow(rescue_file.c_str(), "w");
 	if ( ! fp) {
-		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", rescue_file);
+		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", rescue_file.c_str());
 		return;
 	}
 
-	bool reset_retries_upon_rescue = isSavePoint ? true : config[conf::b::RescueResetRetry];
+	fprintf(fp, "%s", headerInfo.c_str());
 
-	fprintf(fp,"%s",headerInfo);
+	time_t timestamp = time(nullptr);
+	const struct tm *tm = gmtime(&timestamp);
 
-	time_t timestamp;
-	(void)time(&timestamp);
-	const struct tm *tm;
-	tm = gmtime(&timestamp);
-	fprintf(fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1, tm->tm_mday,
-	        tm->tm_year + 1900, tm->tm_hour, tm->tm_min, tm->tm_sec);
-	fprintf(fp, "# Rescue DAG version: %s (%s)\n", RESCUE_DAG_VERSION, isPartial ? "partial" : "full");
-
+	fprintf(fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n",
+	        tm->tm_mon + 1, tm->tm_mday, tm->tm_year + 1900,
+	        tm->tm_hour, tm->tm_min, tm->tm_sec);
+	fprintf(fp, "# Rescue DAG version: %s\n", RESCUE_DAG_VERSION);
 	fprintf(fp, "#\n");
 	fprintf(fp, "# Total number of Nodes: %d\n", NumNodes(true));
 	fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
@@ -2112,158 +2128,41 @@ void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool pa
 
 	// Print the names of failed nodes
 	fprintf(fp, "#   ");
-	for (auto & node : _nodes) {
+	for (const auto& node : _nodes) {
 		if (node->GetStatus() == Node::STATUS_ERROR) {
 			fprintf(fp, "%s,", node->GetNodeName());
 		}
 	}
 	fprintf(fp, "<ENDLIST>\n\n");
 
-	// REJECT tells DAGMan to reject this DAG if we try to run it (which we shouldn't).
-	if (parseFailed && !isPartial) {
-		fprintf(fp, "REJECT\n\n");
-	}
-
-	// Print the CONFIG file, if any.
-	if (!config[conf::str::DagConfig].empty() && !isPartial) {
-		fprintf(fp, "CONFIG %s\n\n", config[conf::str::DagConfig].c_str());
-	}
-
-	// Print the node status file, if any.
-	if (_statusFileName && !isPartial) {
-		fprintf(fp, "NODE_STATUS_FILE %s\n\n", _statusFileName);
-	}
-
-	// Print the jobstate.log file, if any.
-	if (_jobstateLog.LogFile() && !isPartial) {
-		fprintf(fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile());
-	}
-
 	// Print per-node information.
-	for (auto & node : _nodes) {
-		WriteNodeToRescue(fp, node, reset_retries_upon_rescue, isPartial);
-	}
-
-	// Print Dependency Section
-	if ( ! isPartial) {
-		fprintf(fp, "\n");
-		for (auto & node : _nodes) {
-			if ( ! node->NoChildren()) {
-				fprintf(fp, "PARENT %s CHILD ", node->GetNodeName());
-
-				node->VisitChildren(*this, [](Dag&, Node*, Node* child, void* pv) -> int {
-						fprintf((FILE*)pv, " %s", child->GetNodeName());
-						return 1;
-					}, fp);
-				fprintf(fp, "\n");
-			}
-		}
-	}
-
-	// Print "throttle by node category" settings.
-	if ( ! isPartial) {
-		_catThrottles.PrintThrottles(fp);
-	}
-
-	fclose(fp);
-}
-
-//-----------------------------------------------------------------------------
-void
-Dag::WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial)
-{
-		// Print the JOB/DATA line.
-	const char *keyword = "";
-	if (node->GetType() == NodeType::FINAL) {
-		keyword = "FINAL";
-	} else {
-		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
-	}
-
-	if ( ! isPartial) {
-		fprintf(fp, "\n%s %s %s ", keyword, node->GetNodeName(), node->GetDagFile() ? node->GetDagFile() : node->GetCmdFile());
-		if (strcmp(node->GetDirectory(), "")) {
-			fprintf(fp, "DIR %s ", node->GetDirectory());
-		}
-		if (node->GetNoop()) {
-			fprintf(fp, "NOOP ");
-		}
-		fprintf(fp, "\n");
-
-		// Print the SCRIPT PRE line, if any.
-		if (node->_scriptPre != nullptr) {
-			WriteScriptToRescue(fp, node->_scriptPre);
+	for (const auto& node : _nodes) {
+		// Never mark a FINAL node as done.
+		// Also avoid a possible race condition where the node
+		// has been skipped but is not yet marked as DONE.
+		if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
+			fprintf(fp, "DONE %s\n", node->GetNodeName());
 		}
 
-		// Print the PRE_SKIP line, if any.
-		if (node->HasPreSkip() != 0) {
-			fprintf(fp, "PRE_SKIP %s %d\n", node->GetNodeName(), node->GetPreSkip());
-		}
+		if (node->GetRetryMax() > 0 && !reset_retries) {
+			int max = node->GetRetryMax();
+			int curr = node->GetRetries();
+			ASSERT(curr <= max);
 
-		// Print the SCRIPT POST line, if any.
-		if (node->_scriptPost != nullptr) {
-			WriteScriptToRescue(fp, node->_scriptPost);
-		}
+			int remaining = max - curr;
+			int retry_abort_val = std::numeric_limits<int>::max();
+			fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
+			        curr, max, remaining);
 
-		// Print the VARS line, if any.
-		if (node->HasVars()) {
-			std::string vars;
-			vars.reserve(500);
-			vars = "";
-			node->PrintVars(vars);
-			fprintf(fp, "VARS %s", node->GetNodeName());
-			fprintf(fp, "%s\n", vars.c_str());
-		}
-
-		// Print the ABORT-DAG-ON line, if any.
-		if (node->HasAbortCode()) {
-			fprintf(fp, "ABORT-DAG-ON %s %d", node->GetNodeName(), node->GetAbortCode());
-			if (node->HasAbortReturnValue()) {
-				fprintf(fp, " RETURN %d", node->GetAbortReturnValue());
+			fprintf(fp, "RETRY %s %d", node->GetNodeName(), remaining);
+			if (node->HasAbortRetry(retry_abort_val)) {
+				fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
 			}
 			fprintf(fp, "\n");
 		}
-
-		// Print the PRIORITY line, if any.
-		// Note: when gittrac #2167 gets merged, we need to think
-		// about how this code will interact with that code.
-		// wenger/nwp 2011-08-24
-		if (node->GetExplicitPrio() != 0) {
-			fprintf(fp, "PRIORITY %s %d\n", node->GetNodeName(), node->GetExplicitPrio());
-		}
-
-		// Print the CATEGORY line, if any.
-		if (node->GetThrottleInfo()) {
-			fprintf(fp, "CATEGORY %s %s\n", node->GetNodeName(), node->GetThrottleInfo()->_category->c_str());
-		}
 	}
 
-	// Never mark a FINAL node as done.
-	// Also avoid a possible race condition where the node
-	// has been skipped but is not yet marked as DONE.
-	if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
-		fprintf(fp, "DONE %s\n", node->GetNodeName());
-	}
-
-	// Print the RETRY line, if any.
-	node->WriteRetriesToRescue(fp, reset_retries_upon_rescue);
-}
-
-//-----------------------------------------------------------------------------
-void
-Dag::WriteScriptToRescue(FILE *fp, Script *script)
-{
-	const char *type = nullptr;
-	switch(script->GetType()) {
-		case ScriptType::PRE: type = "PRE"; break;
-		case ScriptType::POST: type = "POST"; break;
-		case ScriptType::HOLD: type = "HOLD"; break;
-	}
-	fprintf(fp, "SCRIPT ");
-	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE) {
-		fprintf(fp, "DEFER %d %lld ", script->_deferStatus, (long long)script->_deferTime);
-	}
-	fprintf(fp, "%s %s %s\n", type, script->GetNode()->GetNodeName(), script->GetCmd());
+	fclose(fp);
 }
 
 //-------------------------------------------------------------------------
@@ -2948,7 +2847,7 @@ Dag::EnforceNewJobsLimit() {
 	for (auto & node : _nodes) {
 		if (node->GetStatus() == Node::STATUS_SUBMITTED) {
 			submittedJobsCount++;
-			if (submittedJobsCount > dagOpts[shallow::i::MaxJobs]) {
+			if ( ! throttles.WithinLimit(Throttle::MAX_NODES, submittedJobsCount)) {
 				node->AddRetry();
 				std::string rm_reason = "DAG Limit: Max number of submitted nodes was reached.";
 				RemoveBatchJob(node, rm_reason);
@@ -3064,12 +2963,12 @@ Dag::PrintDeferrals(debug_level_t level, bool force) const
 
 	if (_maxJobsDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxJobs limit (%d)\n",
-		             _maxJobsDeferredCount, dagOpts[shallow::i::MaxJobs]);
+		             _maxJobsDeferredCount, throttles[Throttle::MAX_NODES]);
 	}
 
 	if (_maxIdleDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxIdle limit (%d)\n",
-		             _maxIdleDeferredCount, dagOpts[shallow::i::MaxIdle]);
+		             _maxIdleDeferredCount, throttles[Throttle::MAX_IDLE]);
 	}
 
 	if (_catThrottleDeferredCount > 0 || force) {
@@ -3078,17 +2977,17 @@ Dag::PrintDeferrals(debug_level_t level, bool force) const
 
 	if (_preScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total PRE script deferrals because of -MaxPre limit (%d) or DEFER\n",
-		             _preScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxPre]);
+		             _preScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_PRE]);
 	}
 
 	if (_postScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total POST script deferrals because of -MaxPost limit (%d) or DEFER\n",
-		             _postScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxPost]);
+		             _postScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_POST]);
 	}
 
 	if (_holdScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total HOLD script deferrals because of -MaxHold limit (%d) or DEFER\n",
-		             _holdScriptQ->GetScriptDeferredCount(), dagOpts[shallow::i::MaxHold]);
+		             _holdScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_HOLD]);
 	}
 }
 
@@ -3120,6 +3019,7 @@ Dag::CheckThrottleCats()
 {
 	for (const auto& throttle: *_catThrottles.GetThrottles()) {
 		ThrottleByCategory::ThrottleInfo *info = throttle.second;
+		debug_dprintf(D_TEST, DEBUG_NORMAL, "CHECK CATEGORY %s %d %d\n", info->_category->c_str(), info->_totalJobs, info->_maxJobs);
 		debug_printf(DEBUG_DEBUG_1, "Category %s has %d jobs, throttle setting of %d\n",
 		             info->_category->c_str(), info->_totalJobs, info->_maxJobs);
 		ASSERT(info->_totalJobs >= 0);
@@ -3350,37 +3250,49 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 	// a submit event.
 	if (event->eventNumber == ULOG_SUBMIT) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
-		if ( ! submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID(condorID);
+		std::string nodeName;
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in submit event notes: <%s>\n",
-				             submit_event->submitEventLogNotes.c_str());
+		if (submit_event->hasStructuredNotes()) {
+			submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method (We need this for fake condor submits i.e. no-ops)
+		if (nodeName.empty() && ! submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 
@@ -3423,39 +3335,50 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 
 	if (event->eventNumber == ULOG_CLUSTER_SUBMIT) {
 		const ClusterSubmitEvent* cluster_submit_event = (const ClusterSubmitEvent*)event;
-		if ( ! cluster_submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID( condorID );
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					// std::map::find() returns an iterator pointing to the desired element, or end() if not found
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						// std::map::insert() returns a pair, second element is the success bool
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in cluster submit event notes: <%s>\n",
-				             cluster_submit_event->submitEventLogNotes.c_str());
+		std::string nodeName;
+
+		if (cluster_submit_event->hasStructuredNotes()) {
+			cluster_submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method
+		if (nodeName.empty() && ! cluster_submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in cluster submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 	return node;
@@ -3584,11 +3507,9 @@ Dag::GetEventIDHash(bool isNoop) const
 }
 
 //---------------------------------------------------------------------------
-Dag::submit_result_t
+SubmitResult
 Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err)
 {
-	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
-
 	// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if (node->GetCluster() != _defaultCondorId._cluster) {
 		// Remove the "previous" HTCondor ID for this node from
@@ -3615,28 +3536,21 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string
 		if (dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->GetEffectivePrio(), isRetry) != 0) {
 			node->AttemptedSubmit();
 			debug_printf(DEBUG_QUIET, "ERROR: condor_submit_dag -no_submit failed for node %s.\n", node->GetNodeName());
-			// Hmm -- should this be a node failure, since it probably
-			// won't work on retry?  wenger 2010-03-26
 			err = "Failed to submit Sub-DAG";
-			return SUBMIT_RESULT_NO_SUBMIT;
+			return SubmitResult::FAILURE;
 		}
 	}
 
 	debug_printf(DEBUG_NORMAL, "Submitting HTCondor Node %s job(s)...\n", node->GetNodeName());
 
-	bool submit_success = false;
-	std::string logFile = DefaultNodeLog();
-
 	node->AttemptedSubmit();
+
+	std::string logFile;
 	if (node->GetNoop()) {
-		submit_success = fake_condor_submit(condorID, 0, node->GetNodeName(), node->GetDirectory(), logFile.c_str());
-	} else {
-		submit_success = condor_submit(dm, node, condorID, err);
+		logFile = DefaultNodeLog();
 	}
 
-	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
-
-	return result;
+	return submitter->Submit(*node, condorID, err, logFile);
 }
 
 //---------------------------------------------------------------------------
@@ -3748,8 +3662,9 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err)
 		//If no post script ran then set all descendants to Futile
 		if ( ! ranPostScript) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
 	} else {
-		// We have more submit attempts left, put this node back into the
-		// ready queue.
+		// We have more submit attempts left, put this node back into the ready queue.
+		dprintf(D_TEST, "Node %s submit failed %d/%d. RETRYING NODE SUBMISSION\n",
+		        node->GetNodeName(), node->GetSubmitAttempts(), max_submit_attempts);
 		debug_printf(DEBUG_NORMAL, "Job submit try %d/%d failed, will try again in >= %d second%s.\n",
 		             node->GetSubmitAttempts(), max_submit_attempts, thisSubmitDelay, thisSubmitDelay == 1 ? "" : "s");
 
@@ -4099,7 +4014,6 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintNodeList();
-	OwnedMaterials *om = nullptr;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
 	if (layer == DESCENDENTS && _splices.size() == 0) {
@@ -4109,7 +4023,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& [splice_name, splice]: _splices) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
-		om = splice->LiftSplices(DESCENDENTS);
+		OwnedMaterials *om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice_name, om);
 		delete om;

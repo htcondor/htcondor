@@ -754,7 +754,7 @@ main( int argc, const char** argv)
 
 	// We're doing it this way so that we can share the device-enumeration
 	// logic between condor_gpu_discovery and condor_gpu_utilization.
-	std::set< std::string > migDevices;
+	std::map< std::string, std::vector<std::string> > migDevices;
 	std::map< std::string, int > cudaDevices;
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
@@ -819,8 +819,90 @@ main( int argc, const char** argv)
 				return 1;
 			}
 
-			for( auto parentUUID : migDevices ) {
-				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s\n", parentUUID.c_str());
+			for( auto& parentChildPair : migDevices ) {
+				const std::string& parentUUID = parentChildPair.first;
+				const std::vector<std::string>& childUUIDs = parentChildPair.second;
+				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s, children:", parentUUID.c_str());
+				for( size_t i = 0; i < childUUIDs.size(); ++i ) {
+					print_error(MODE_DIAGNOSTIC_MSG, " %s", childUUIDs[i].c_str());
+				}
+				print_error(MODE_DIAGNOSTIC_MSG, "\n");
+			}
+
+			// Build the inverse map of migDevices, that maps child uuids to parent uuids
+			std::map<std::string, std::string> childToParentMap;
+			for (auto& parentChildPair : migDevices) {
+				const std::string& parentUUID = parentChildPair.first;
+				const std::vector<std::string>& childUUIDs = parentChildPair.second;
+				for (const std::string& childUUID : childUUIDs) {
+					childToParentMap[childUUID] = parentUUID;
+				}
+			}
+
+			// Inherit missing properties from parent devices for MIG devices
+			// MIG devices often have missing/invalid values for compute capability, driver info, etc,
+			// so we inherit these from their parent GPU
+			for (auto& bp : nvmlDevices) {
+				auto parentIt = childToParentMap.find(bp.uuid);
+				if (parentIt != childToParentMap.end()) {
+					const std::string& parentUUID = parentIt->second;
+
+					// Convert parent UUID from "GPU-<uuid>" format to "<uuid>"
+					std::string cudaParentUUID = parentUUID;
+					if (cudaParentUUID.find("GPU-") == 0) {
+						cudaParentUUID = cudaParentUUID.substr(4);
+					}
+
+					auto cudaParentIt = cudaDevices.find(cudaParentUUID);
+					if (cudaParentIt != cudaDevices.end()) {
+						int parentIndex = cudaParentIt->second;
+						if (parentIndex >= 0 && parentIndex < (int)enumeratedDevices.size()) {
+							const BasicProps& parentProps = enumeratedDevices[parentIndex];
+							if (bp.ccMajor == -1 || bp.ccMinor == -1) {
+								bp.ccMajor = parentProps.ccMajor;
+								bp.ccMinor = parentProps.ccMinor;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited compute capability %d.%d for MIG device %s from parent\n",
+									bp.ccMajor, bp.ccMinor, bp.uuid.c_str());
+							}
+							if (bp.clockRate == -1) {
+								bp.clockRate = parentProps.clockRate;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited clock rate %d for MIG device %s from parent\n",
+									bp.clockRate, bp.uuid.c_str());
+							}
+							if (bp.ECCEnabled == -1) {
+								bp.ECCEnabled = parentProps.ECCEnabled;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited ECC enabled %s for MIG device %s from parent\n",
+									bp.ECCEnabled ? "true" : "false", bp.uuid.c_str());
+							}
+							if (bp.driverVersion == -1) {
+								bp.driverVersion = parentProps.driverVersion;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited driver version %d for MIG device %s from parent\n",
+									bp.driverVersion, bp.uuid.c_str());
+							}
+							if (bp.driver.empty()) {
+								bp.driver = parentProps.driver;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited driver '%s' for MIG device %s from parent\n",
+									bp.driver.c_str(), bp.uuid.c_str());
+							}
+							if (bp.pciId[0] == '\0') {
+								memcpy(bp.pciId, parentProps.pciId, sizeof(bp.pciId));
+								bp.pciId[sizeof(bp.pciId) - 1] = '\0';
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited PCI ID %s for MIG device %s from parent\n",
+									bp.pciId, bp.uuid.c_str());
+							}
+							if (bp.xNACK == -1) {
+								bp.xNACK = parentProps.xNACK;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited xNACK %d for MIG device %s from parent\n",
+									bp.xNACK, bp.uuid.c_str());
+							}
+							if (bp.warpSize == -1) {
+								bp.warpSize = parentProps.warpSize;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited warp size %d for MIG device %s from parent\n",
+									bp.warpSize, bp.uuid.c_str());
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -1255,4 +1337,3 @@ void usage(FILE* out, const char * argv0)
 		"\n"
 	);
 }
-

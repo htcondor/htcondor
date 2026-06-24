@@ -445,7 +445,7 @@ bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req request_authentication )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -468,8 +468,11 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// respect the old restrictions and is only checked by newer servers,
 	// which will prefer its value.
 
-	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
-		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication = sec_req_param(
+		"SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	if (request_authentication > sec_authentication) {
+		sec_authentication = request_authentication;
+	}
 	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
@@ -494,8 +497,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	sec_req sec_negotiation = sec_req_param ("SEC_%s_NEGOTIATION", auth_level, SEC_REQ_PREFERRED);
 
 	// The ALLOW authorization level shouldn't require authentication,
-	// but we'll allow a specific command handler or the client to force it.
-	if (auth_level == ALLOW_PERM && !force_authentication) {
+	// but we'll allow a specific command handler or the client to request it.
+	if (auth_level == ALLOW_PERM && !request_authentication) {
 		sec_authentication_new = SEC_REQ_OPTIONAL;
 	}
 
@@ -658,12 +661,12 @@ bool
 SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req request_authentication )
 {
 	if ((m_cached_auth_level == auth_level) &&
 		(m_cached_raw_protocol == raw_protocol) &&
 		(m_cached_use_tmp_sec_session == use_tmp_sec_session) &&
-		(m_cached_force_authentication == force_authentication)) {
+		(m_cached_request_authentication == request_authentication)) {
 
 			// A Hit!
 		if (m_cached_return_value) {
@@ -677,10 +680,10 @@ SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad,
 	m_cached_auth_level = auth_level;
 	m_cached_raw_protocol = raw_protocol;
 	m_cached_use_tmp_sec_session = use_tmp_sec_session;
-	m_cached_force_authentication = force_authentication;
+	m_cached_request_authentication = request_authentication;
 	
 	m_cached_policy_ad.Clear(); 
-	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, force_authentication);
+	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, request_authentication);
 	ad = & m_cached_policy_ad;
 	return m_cached_return_value;
 }
@@ -972,9 +975,9 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol, bool force_auth, bool resume_response,
-		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
-		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
+		int cmd,Sock *sock,bool raw_protocol, bool request_auth, bool resume_response,
+		CondorError *errstack,int subcmd,StartCommandCallback callback,
+		bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string& context_tag, const std::string& preferred_token,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
 
@@ -982,10 +985,9 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_subcmd(subcmd),
 		m_sock(sock),
 		m_raw_protocol(raw_protocol),
-		m_force_auth(force_auth),
+		m_request_auth(request_auth),
 		m_errstack(errstack),
-		m_callback_fn(callback_fn),
-		m_misc_data(misc_data),
+		m_callback(std::move(callback)),
 		m_nonblocking(nonblocking),
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
@@ -1046,8 +1048,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 			daemonCore->decrementPendingSockets();
 		}
 			// The callback function _must_ have been called
-			// (and set to NULL) by now.
-		ASSERT( !m_callback_fn );
+			// (and reset) by now.
+		ASSERT( !m_callback );
 	}
 
 		// This function starts a command, as specified by the data
@@ -1073,11 +1075,10 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	std::string m_cmd_description;
 	Sock *m_sock;
 	bool m_raw_protocol;
-	bool m_force_auth;
+	bool m_request_auth;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
 	CondorError m_internal_errstack;
-	StartCommandCallbackType *m_callback_fn;
-	void *m_misc_data;
+	StartCommandCallback m_callback;
 	bool m_nonblocking;
 	bool m_pending_socket_registered;
 	SecMan m_sec_man; // We create a copy of the original sec_man, so we
@@ -1144,10 +1145,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	StartCommandResult authenticate_inner_finish();
 	StartCommandResult receivePostAuthInfo_inner();
 
-		// This is called when the TCP auth attempt completes.
-	static void TCPAuthCallback(bool success,Sock *sock,CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
-
-		// This is the _inner() function for TCPAuthCallback().
+		// This is called when the TCP auth attempt completes. A lambda
+		// wrapping this is installed as the TCP sub-command's callback.
 	StartCommandResult TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock );
 
 		// This is called when we were waiting for another
@@ -1184,12 +1183,11 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
-		req.m_force_auth,
+		req.m_request_auth,
 		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
-		req.m_callback_fn,
-		req.m_misc_data,
+		req.m_callback,
 		req.m_nonblocking,
 		req.m_cmd_description,
 		req.m_sec_session_id,
@@ -1264,22 +1262,24 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			// We will (MUST) be called again in the future
 			// once the final result is known.
 
-		if(!m_callback_fn) {
+		if(!m_callback) {
 				// Caller wants us to go ahead and get a session key,
 				// but caller will try sending the UDP command later,
 				// rather than dealing with a callback.
 			result = StartCommandWouldBlock;
 		}
 	}
-	else if(m_callback_fn) {
+	else if(m_callback) {
 		bool success = result == StartCommandSucceeded;
 		CondorError *cb_errstack = m_errstack == &m_internal_errstack ?
 		                           NULL : m_errstack;
-		(*m_callback_fn)(success,m_sock,cb_errstack, m_sock->getTrustDomain(),
-			m_sock->shouldTryTokenRequest(), m_misc_data);
-
-		m_callback_fn = NULL;
-		m_misc_data = NULL;
+			// Move the callback to a local so that clearing m_callback
+			// and releasing captured state happens on a predictable
+			// schedule (after the callback has returned).
+		auto cb = std::move(m_callback);
+		m_callback = nullptr;
+		cb(success,m_sock,cb_errstack, m_sock->getTrustDomain(),
+			m_sock->shouldTryTokenRequest());
 
 			// Caller is responsible for deallocating the following
 			// in the callback, so do not point to them anymore.
@@ -1318,7 +1318,7 @@ StartCommandResult
 SecManStartCommand::startCommand_inner()
 {
 	// NOTE: like all _inner() functions, the caller of this function
-	// must ensure that the m_callback_fn is called (if there is one).
+	// must ensure that m_callback is called (if there is one).
 	std::string old_tag;
 		// Reset tag on function exit.
 	std::shared_ptr<int> x(nullptr,
@@ -1619,7 +1619,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	} else {
 		if( !m_sec_man.FillInSecurityPolicyAd(
 				CLIENT_PERM, &m_auth_info,
-				m_raw_protocol,	m_use_tmp_sec_session, m_force_auth) )
+				m_raw_protocol,	m_use_tmp_sec_session, m_request_auth ? SecMan::SEC_REQ_PREFERRED : SecMan::SEC_REQ_UNDEFINED) )
 		{
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
@@ -2032,7 +2032,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			ClassAd auth_response;
 			m_sock->decode();
 
-			if (!getClassAd(m_sock, auth_response) ||
+			if (!getPODClassAd(m_sock, auth_response) ||
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
@@ -2267,7 +2267,7 @@ SecManStartCommand::authenticate_inner()
 				ClassAd auth_response;
 				m_sock->decode();
 
-				if (!getClassAd(m_sock, auth_response) ||
+				if (!getPODClassAd(m_sock, auth_response) ||
 					!m_sock->end_of_message()) {
 
 					dprintf (D_ALWAYS, "SECMAN: Failed to read resume session response classad from server.\n");
@@ -2465,7 +2465,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session.
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
+			if (!getPODClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
 				std::string errmsg;
 				formatstr(errmsg, "Failed to received post-auth ClassAd");
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
@@ -2702,7 +2702,7 @@ SecManStartCommand::DoTCPAuth_inner()
 				// of things waiting for the pending session to be
 				// ready for use.
 
-			if(m_nonblocking && !m_callback_fn) {
+			if(m_nonblocking && !m_callback) {
 					// Caller wanted us to get a session key but did
 					// not want to bother about handling a
 					// callback. Since somebody else is already
@@ -2753,16 +2753,27 @@ SecManStartCommand::DoTCPAuth_inner()
 		// wanting the same session key can wait for it.
 	SecMan::tcp_auth_in_progress.emplace(m_session_key, this);
 
+	StartCommandCallback tcp_auth_cb;
+	if( m_nonblocking ) {
+			// Keep ourselves alive until the TCP auth sub-command finishes
+			// and our doCallback has run. The classy_counted_ptr capture
+			// replaces the old (SecManStartCommand *)misc_data handoff.
+		classy_counted_ptr<SecManStartCommand> self(this);
+		tcp_auth_cb = [self](bool success, Sock *sock, CondorError * /*errstack*/,
+				const std::string & /*trust_domain*/, bool /*should_try_token_request*/) {
+			self->doCallback( self->TCPAuthCallback_inner(success, sock) );
+		};
+	}
+
 	m_tcp_auth_command = new SecManStartCommand(
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
-		m_force_auth,
+		m_request_auth,
 		m_want_resume_response,
 		m_errstack,
 		m_cmd,
-		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
-		m_nonblocking ? this : NULL,
+		std::move(tcp_auth_cb),
 		m_nonblocking,
 		m_cmd_description.c_str(),
 		m_sec_session_id_hint.c_str(),
@@ -2787,14 +2798,6 @@ SecManStartCommand::DoTCPAuth_inner()
 	return StartCommandInProgress;
 }
 
-void
-SecManStartCommand::TCPAuthCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /* trust_domain */, bool /* should_try_token_request */, void * misc_data)
-{
-	classy_counted_ptr<SecManStartCommand> self = (SecManStartCommand *)misc_data;
-
-	self->doCallback( self->TCPAuthCallback_inner(success,sock) );
-}
-
 StartCommandResult
 SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_sock )
 {
@@ -2808,7 +2811,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 
 	StartCommandResult rc;
 
-	if(m_nonblocking && !m_callback_fn) {
+	if(m_nonblocking && !m_callback) {
 		// Caller wanted us to get a session key but did not
 		// want to bother about handling a callback.  Therefore,
 		// we are done.  No need to start the command again.
@@ -3152,7 +3155,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 	auto itr = session_cache.find(key_id);
 	if (itr == session_cache.end()) {
 		dprintf( D_SECURITY,
-				 "DC_INVALIDATE_KEY: security session %s not found in cache.\n",
+				 "SECMAN: security session %s not found in cache.\n",
 				 key_id);
 		return false;
 	}
@@ -3160,7 +3163,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 
 	if ( keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
-				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
+				 "SECMAN: security session %s %s expired.\n",
 				 key_id, keyEntry->expirationType() );
 	}
 
@@ -3168,12 +3171,12 @@ bool SecMan :: invalidateKey(const char * key_id)
 
 	// Now, remove session id
 	if (daemonCore && !strcmp(daemonCore->m_family_session_id.c_str(), key_id) ) {
-		dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate family security key.\n" );
+		dprintf ( D_SECURITY, "SECMAN: ignoring request to invalidate family security key.\n" );
 		return false;
 	} else {
 		session_cache.erase(itr);
 		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: removed key id %s.\n",
+				  "SECMAN: removed key id %s.\n",
 				  key_id);
 	}
 
@@ -3307,7 +3310,7 @@ SecMan::SecMan() :
 	m_cached_auth_level(UNSET_PERM),
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
-	m_cached_force_authentication(false),
+	m_cached_request_authentication(SEC_REQ_UNDEFINED),
 	m_cached_return_value(false) {
 
 	// the list of ClassAd attributes we need to resume a session
@@ -3336,7 +3339,7 @@ SecMan::SecMan(const SecMan & rhs/* copy */) :
 	m_cached_auth_level(rhs.m_cached_auth_level), 
 	m_cached_raw_protocol(rhs.m_cached_raw_protocol), 
 	m_cached_use_tmp_sec_session(rhs.m_cached_use_tmp_sec_session), 
-	m_cached_force_authentication(rhs.m_cached_force_authentication),
+	m_cached_request_authentication(rhs.m_cached_request_authentication),
 	m_cached_return_value(rhs.m_cached_return_value) {
 
 	sec_man_ref_count++;
@@ -3351,7 +3354,7 @@ SecMan::operator=(SecMan && rhs)  noexcept {
 	this->m_cached_auth_level   = rhs.m_cached_auth_level;
 	this->m_cached_raw_protocol = rhs.m_cached_raw_protocol;
 	this->m_cached_use_tmp_sec_session = rhs.m_cached_use_tmp_sec_session;
-	this->m_cached_force_authentication = rhs.m_cached_force_authentication;
+	this->m_cached_request_authentication = rhs.m_cached_request_authentication;
 	this->m_cached_policy_ad = std::move(rhs.m_cached_policy_ad);
 	this->m_cached_return_value = rhs.m_cached_return_value;
 	return *this;

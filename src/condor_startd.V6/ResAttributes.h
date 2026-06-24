@@ -198,6 +198,22 @@ public:
 		}
 		return 0;
 	}
+
+	// same as is_owned, but returns true for p-slots when owner is either the pslot or child d-slot. (i.e. Assigned)
+	// And also returns a bool to indicate whether the NFR is currently Available to the slot (subid matches exactly)
+	int is_assigned_and_available(int slot_id, int sub_id, bool & available) const {
+		if (owner.id == slot_id) {
+			if (owner.dyn_id == sub_id) { available = true; return 1; } // owned by this slot
+			if ( ! sub_id) { available = false; return 1; } // owned by a child d-slot, so inherited, not owned
+		}
+		if (bkowner.id == slot_id && (sub_id == 0 || bkowner.dyn_id == sub_id)) {
+			available = (bkowner.dyn_id == sub_id);
+			// if the NFR is backfill owned by the given slot, and *also* by any active slot
+			if (owner.dyn_id > 0 || owner.active) return 3;
+			return 2;
+		}
+		return 0;
+	}
 };
 
 class NonFungibleType
@@ -539,7 +555,7 @@ public:
 	// release non-fungable resource ids back to parent
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
 	// check for offline changes for non-fungible resource ids
-	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
+	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot);
 	// Add broken non-fungible resource ids to this objects mapping
 	void claim_broken_DevIds(MachAttributes* map, int broken_sub_id);
 

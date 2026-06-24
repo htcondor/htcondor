@@ -364,7 +364,7 @@ StatusReply::operator() () {
 			}
 			q.addANDConstraint( constraint.c_str() );
 
-			ClassAdList cal;
+			std::vector<ClassAd> cal;
 			CondorError errStack;
 			CollectorList * collectors = CollectorList::create();
 			QueryResult qr = collectors->query( q, cal, & errStack );
@@ -373,13 +373,11 @@ StatusReply::operator() () {
 			}
 			delete collectors;
 
-			cal.Rewind();
-			ClassAd * cad = NULL;
-			while( (cad = cal.Next()) != NULL ) {
+			for (auto& cad: cal) {
 				std::string name, instanceID, aName;
-				cad->LookupString( ATTR_NAME, name );
-				cad->LookupString( "EC2InstanceID", instanceID );
-				cad->LookupString( ATTR_ANNEX_NAME, aName );
+				cad.LookupString( ATTR_NAME, name );
+				cad.LookupString( "EC2InstanceID", instanceID );
+				cad.LookupString( ATTR_ANNEX_NAME, aName );
 
 				instances[ instanceID ] = "in-pool";
 			}

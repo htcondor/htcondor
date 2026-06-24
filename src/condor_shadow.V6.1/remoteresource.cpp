@@ -41,16 +41,22 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
 #include "shadow.h"
+#include "pseudo_ops.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
-// for remote syscalls, this is currently in NTreceivers.C.
-extern int do_REMOTE_syscall();
+// To know if the schedd wants us to do common file transfer.  If not, this
+// is where we alter the input list to compensate.
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
 
 // for remote syscalls...
 ReliSock *syscall_sock;
@@ -209,6 +215,13 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 			         machineName ? machineName:"", dc_startd->addr() );
 			// Record the activation start time (HTCONDOR-861).
 			activation.StartTime = time(NULL);
+			shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+			{
+				int ld = 0;
+				if (jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, ld)) {
+					shadow->m_reconnect_record.m_lease_duration = ld;
+				}
+			}
 				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
@@ -292,7 +305,7 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -323,10 +336,11 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		dprintf(D_STATUS, "Sending %s to startd\n",
-			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
 		still_cleaning = false;
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();
@@ -534,12 +548,21 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
-	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+	switch(do_REMOTE_syscall()) {
+	case RemoteSyscallResult::ExpectedClose:
+		// The socket closed at the expected time. Start shutdown.
+		dprintf(D_SYSCALLS,"do_REMOTE_syscall returned ExpectedClose, assume starter is exiting after job exit\n");
 		attemptShutdown();
-		return KEEP_STREAM;
+		break;
+	case RemoteSyscallResult::UnexpectedClose:
+		// Unexpected network trouble. We'll be in reconnect mode now.
+		dprintf(D_SYSCALLS, "do_REMOTE_syscall returned UnexpectedClose, assume starter may still be alive\n");
+		break;
+	case RemoteSyscallResult::SyscallOK:
+		// Normal RPC, note contact from starter
+		hadContact();
+		break;
 	}
-	hadContact();
 	return KEEP_STREAM;
 }
 
@@ -955,25 +978,40 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// If the starter is too old for common file transfer, fall back on
 	// per-proc file transfer.
 	//
-	CondorVersionInfo cvi( starter_version.c_str() );
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
-	// actually released as part of 25.2.FIXME.
+	// actually released as part of 25.2.x.
 	//
 	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
 	// can successfully do common file transfer if and only if there were no
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+
+	//
+	// If the admin has turned off common file transfer, fall back on
+	// per-proc file transfer.
+	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+
+	//
+	// If the schedd did not specify staging or mapping, fall back on
+	// per-proc file transfer.  (The schedd checks the previous conditions
+	// before deciding to specify staging or mapping, so these checks
+	// ought to be redundant.)
+	//
+	bool required = cxfer_type == CXFER_STATE::INVALID;
+
+    if( impossible || disallowed || required ) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to compute common input file catalogs.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -981,12 +1019,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 		int required_version = 2;
 		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to comput input files.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -1257,10 +1295,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_stime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1277,10 +1315,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_utime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -2125,6 +2163,7 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
+	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2157,7 +2196,16 @@ RemoteResource::reconnect( void )
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
 	}
-	if( lease_duration < 0 ) { 
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
+		shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+	}
+	if( lease_duration < 0 ) {
 			// if it's our first time, figure out what we've got to
 			// work with...
 		dprintf( D_FULLDEBUG, "Trying to reconnect job %s\n", gjid );
@@ -2166,6 +2214,7 @@ RemoteResource::reconnect( void )
 			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 					ATTR_JOB_LEASE_DURATION );
 		}
+		shadow->m_reconnect_record.m_lease_duration = lease_duration;
 		if( ! last_job_lease_renewal ) {
 				// if we were spawned in reconnect mode, this should
 				// be set.  if we're just trying a reconnect because
@@ -2307,7 +2356,7 @@ RemoteResource::locateReconnectStarter( void )
 			// found.  either way, we know the job is gone, and can
 			// safely give up and restart.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed( "Job not found at execution machine" );
+		shadow->reconnectFailed( "Job not found at execution machine", true );
 		break;
 
 	case CA_NOT_AUTHENTICATED:
@@ -2315,7 +2364,7 @@ RemoteResource::locateReconnectStarter( void )
 			// other daemon is now listening on the port. Either
 			// way, our claim, and thus the job, is dead.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed("Claim not found at execution machine");
+		shadow->reconnectFailed("Claim not found at execution machine", true);
 		break;
 
 	case CA_CONNECT_FAILED:

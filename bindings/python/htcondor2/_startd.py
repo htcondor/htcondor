@@ -19,6 +19,7 @@ from .htcondor2_impl import (
     _startd_drain_jobs,
     _startd_vacate_slots,
     _startd_cancel_drain_jobs,
+    _startd_rehome,
     _history_query,
 )
 
@@ -29,7 +30,7 @@ class Startd():
     `draining <https://htcondor.readthedocs.io/en/latest/admin-manual/cm-configuration.html#defragmenting-dynamic-slots>`_.
     """
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         """
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the
@@ -81,7 +82,7 @@ class Startd():
           int(drain_type), int(on_completion), check_expr, start_expr, reason
         )
 
-    def vacateSlot(self, slot_name : str = None, vacate_fast : VacateType = VacateType.Graceful) -> None:
+    def vacateSlot(self, slot_name : Optional[str] = None, vacate_fast : VacateType = VacateType.Graceful) -> None:
         """
         Evict the job running on an active slot. Eviction is graceful unless
         vacate_fast is set to VacateType.Fast.
@@ -103,7 +104,23 @@ class Startd():
         _startd_vacate_slots(self._addr, None, vacate_fast)
 
 
-    def cancelDrainJobs(self, request_id : str = None) -> None:
+    def rehome(self, schedd_name : Optional[str] = None, schedd_pool : Optional[str] = None, timeout : int = 0, cancel : bool = False, reboot : bool = False) -> None:
+        """
+        Send a rehome command to this startd, killing all running jobs.
+
+        :param schedd_name:  The name of the schedd to rehome to.
+        :param schedd_pool:  The collector pool used to find the schedd.
+            If :py:obj:`None`, ``COLLECTOR_HOST`` is used.
+        :param timeout:  Timeout for the rehome operation.
+        :param cancel:  If True, cancel a previous rehome by unsetting
+            STARTD_DIRECT_ATTACH_SCHEDD without evicting jobs.
+        :param reboot:  If True, reboot the host after evicting jobs.  The
+            startd only honors this if its ``STARTD_REHOME_ALLOW_REBOOT``
+            guard expression evaluates to true.
+        """
+        _startd_rehome(self._addr, schedd_name, schedd_pool, timeout, cancel, reboot)
+
+    def cancelDrainJobs(self, request_id : Optional[str] = None) -> None:
         """
         Cancel a draining request.
 

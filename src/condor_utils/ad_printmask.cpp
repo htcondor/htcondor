@@ -167,7 +167,14 @@ walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const ch
 	return ret;
 }
 
-
+void AttrListPrintMask::set_heading(std::string_view heading)
+{
+	if ( ! heading.empty()) {
+		headings.emplace_back(stringpool.insert(heading));
+	} else {
+		headings.emplace_back("");
+	}
+}
 
 void AttrListPrintMask::set_heading(const char * heading)
 {
@@ -325,10 +332,9 @@ static void appendFieldofChar(std::string & buf, int width, char ch = '?')
 		buf += ch;
 	} else {
 		buf.reserve(buf.length() + cq+1);
-		buf += '[';
-		--cq;
+		if (ch == '?') { buf += '['; --cq; }
 		while (--cq) buf += ch;
-		buf += ']';
+		if (ch == '?') { buf += ']'; } else { buf += ch; }
 	}
 }
 
@@ -926,6 +932,25 @@ display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 	return display(out, rov);
 }
 
+static const char * kind_name(CustomFormatFn::FormatKind kind) {
+	constexpr const char * akind[]{
+		"PRF",
+		"INTF",
+		"FLTF",
+		"STRF",
+		"VALF",
+		"INTR",
+		"FLTR",
+		"STRR",
+		"VALR"
+	};
+	if (kind >= CustomFormatFn::FormatKind::PRINTF_FMT && kind <= CustomFormatFn::FormatKind::VALUE_CUSTOM_RENDER) {
+		return akind[kind];
+	}
+	return "???";
+}
+
+
 
 void AttrListPrintMask::
 dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const char *> * pheadings /*=NULL*/)
@@ -938,6 +963,7 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 
 	std::string item;
 	std::string scratch;
+	char fhlat[6] = {0,0,0,0,0,0};
 
 	// for each item registered in the print mask
 	for (auto *fmt: formats) {
@@ -966,8 +992,21 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 			}
 		}
 
-		formatstr(item, "FMT: %4d %05x %d %d %d %d %s %s\n",
-			fmt->width, fmt->options, fmt->fmt_letter, fmt->fmt_type, fmt->fmtKind, fmt->altKind,
+		fhlat[0] = (fmt->options & FormatOptionFitToData) ? 'f' : '.';
+		fhlat[1] = (fmt->options & FormatOptionHideMe) ? 'h' : '.';
+		fhlat[2] = (fmt->options & FormatOptionLeftAlign) ? 'l' : '.';
+		fhlat[3] = (fmt->options & FormatOptionAutoWidth) ? 'a' : '.';
+		fhlat[4] = (fmt->options & FormatOptionNoTruncate) ? '.' : 't';
+
+		// fmt_letter should be a printf format char, a custom char like V or 0
+		char letter = fmt->fmt_letter;
+		if (letter < ' ') { letter = '.'; }
+		char ftype = ".ifcspvrTY"[(fmt->fmt_type>=0 && fmt->fmt_type<=PFT_DATE) ? fmt->fmt_type : 0];
+
+		const char * kind = kind_name(CustomFormatFn::FormatKind(fmt->fmtKind));
+
+		formatstr(item, "FMT:      %4d %s[%05x]   %c   %c %4s %x %s %s\n",
+			fmt->width, fhlat, fmt->options, letter, ftype, kind, fmt->altKind,
 			fmt->printfFmt ? fmt->printfFmt : "", fnName);
 		out += item;
 	}
@@ -1036,11 +1075,16 @@ int parse_autoformat_args (
 	const char *popts,
 	AttrListPrintMask & print_mask,
 	classad::References & attr_refs,
-	bool diagnostic)
+	bool diagnostic,
+	bool append /* = false */,
+	const CustomAutoformatColumns * custom_cols /* = nullptr */
+	)
 {
 	bool flabel = false;
 	bool fCapV  = false;
 	bool fRaw = false;
+	bool fTime = false;
+	bool fDate = false;
 	bool fheadings = false;
 	bool fJobId = false;
 	const char * prowpre = NULL;
@@ -1057,32 +1101,103 @@ int parse_autoformat_args (
 				case 'l': flabel = true; break;
 				case 'V': fCapV = true; break;
 				case 'r': case 'o': fRaw = true; break;
+				case 'T': fTime = true; break;
+				case 'Y': fDate = true; break;
 				case 'h': fheadings = true; break;
 				case 'j': fJobId = true; break;
 			}
 			++popts;
 		}
 	}
-	print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+	if ( ! append) {
+		print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+	}
+
+	const CustomFormatFnTable* FnTable = custom_cols ? custom_cols->FnTable : nullptr;
+	int aalr_options = 0;
+	if (fheadings || print_mask.has_headings()) aalr_options |= AddAttrListRow_AddHeading;
 
 	if (fJobId) {
-		if (fheadings || print_mask.has_headings()) {
-			print_mask.set_heading(" ID");
-			print_mask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-			print_mask.set_heading(" ");
-			print_mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-		} else {
-			print_mask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-			print_mask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
+		const auto * pcffi = getGlobalPrintFormatTable().lookup("JOB_ID");
+		if (pcffi) {
+			int flags = FormatOptionNoTruncate | FormatOptionLeftAlign;
+			if (fheadings || print_mask.has_headings()) {
+				print_mask.set_heading(" ID");
+				flags |= FormatOptionAutoWidth;
+			}
+			print_mask.registerFormat(flabel ? "ID = %v" : "%v", 0, flags, pcffi->cust, ATTR_CLUSTER_ID);
+			if (diagnostic) {
+				auto colinfo = print_mask.back();
+				if (colinfo.fmt) {
+					const char * pf = colinfo.fmt->printfFmt ? colinfo.fmt->printfFmt : "v";
+					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
+						ixArg, pf, colinfo.fmt->width, colinfo.fmt->options, colinfo.attr);
+				}
+			}
+		} else if (diagnostic) {
+			printf("Arg %d -- option j cannot be added because JOB_ID formatting function was not found\n", ixArg);
 		}
 	}
 
+	// setup def format char flags
+	if (fRaw) aalr_options |= AddAttrListRow_DefFmtRaw;
+	else if (fCapV) aalr_options |= AddAttrListRow_DefFmtCapV;
+	else if (fDate) aalr_options |= AddAttrListRow_DefFmtDate;
+	else if (fTime) aalr_options |= AddAttrListRow_DefFmtTime;
+
 	while (argv[ixArg] && *(argv[ixArg]) != '-') {
 
+		bool parse_as_print_format = append;
 		const char * parg = argv[ixArg];
-		const char * pattr = parg;
 
-		if ( ! IsValidClassAdExpression(pattr, &attr_refs, NULL)) {
+		// if there are custom columns, the user selects them by using -af #<Name>
+		// the tool will supply a map of #<Name> to a custom print format line
+		if (custom_cols && *parg == '#') {
+			auto found = custom_cols->ColFormatByName.find(parg+1);
+			if (found != custom_cols->ColFormatByName.end()) {
+				parg = found->second.c_str();
+				parse_as_print_format = true;
+			}
+		}
+
+		if (parse_as_print_format) {
+			tokener toke(parg);
+			std::string error_message;
+			auto exprstr = AddAttrListRow(toke, ixArg, FnTable, getGlobalPrintFormatTable(), print_mask,
+				flabel ? " = " : nullptr, attr_refs, error_message, aalr_options);
+			if (exprstr.empty() || exprstr.front() == '#') {
+				if (diagnostic) {
+					printf("Arg %d --- skipping %s\n", ixArg, exprstr.c_str());
+				}
+				++ixArg;
+				continue;
+			}
+			if ( ! IsValidClassAdExpression(exprstr.c_str(), &attr_refs)) {
+				formatstr_cat(error_message, "attribute or expression is not valid: %s\n", exprstr.c_str());
+			}
+			if ( ! error_message.empty()) {
+				if (diagnostic) {
+					printf("Arg %d --- %s", ixArg, error_message.c_str());
+				}
+				return -ixArg;
+			} else if (diagnostic) {
+				auto colinfo = print_mask.back();
+				if (colinfo.fmt) {
+					// TODO: reverse map custom format function to name
+					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
+						ixArg, colinfo.fmt->printfFmt, colinfo.fmt->width, colinfo.fmt->options, colinfo.attr);
+				}
+			}
+			++ixArg;
+			continue;
+		}
+
+		const char * pattr = parg;
+		std::string_view hd(parg);
+
+		// not parsing as a custom print format line.. do the -af style parsing.
+		ExpressionKind kind = IsValidClassAdExpression(pattr, &attr_refs, NULL);
+		if ( ! kind) {
 			if (diagnostic) {
 				printf ("Arg %d --- quitting on invalid expression: [%s]\n", ixArg, pattr);
 			}
@@ -1093,14 +1208,19 @@ int parse_autoformat_args (
 		int wid = 0;
 		int opts = FormatOptionNoTruncate;
 		if (fheadings || print_mask.has_headings()) {
-			const char * hd = fheadings ? parg : "(expr)";
-			wid = 0 - (int)strlen(hd);
+			// if the expression is not a literal or Attribute, and is longer than 16 chars
+			// and we are using implicit headings use "(expr)" instead.
+			if (kind > ExpressionKind::Attr && ! fheadings && hd.size() > 16) {
+				// maybe this instead ??
+				// hd = hd.substr(0,16);
+				hd = "(expr)";
+			}
+			wid = 0 - (int)hd.size();
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 			print_mask.set_heading(hd);
-		}
-		else if (flabel) { formatstr(lbl, "%s = ", parg); wid = 0; opts = 0; }
+		} else if (flabel) { lbl = hd; lbl += " = "; wid = 0; opts = 0; }
 
-		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
+		lbl += AddAttrListRow_DefFmtTable[(aalr_options & AddAttrListRow_DefFmtMask)>>4];
 		if (diagnostic) {
 			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
 				ixArg, lbl.c_str(), wid, opts, pattr);

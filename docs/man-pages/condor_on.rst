@@ -1,15 +1,13 @@
-      
 
 *condor_on*
 ============
 
 Start up HTCondor daemons
-:index:`condor_on<single: condor_on; HTCondor commands>`\ :index:`condor_on command`
 
 Synopsis
 --------
 
-**condor_on** [**-help | -version** ]
+**condor_on** [**-help** | **-version** ]
 
 **condor_on** [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
@@ -65,12 +63,6 @@ Options
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor_master* daemon.
 
-Exit Status
------------
-
-*condor_on* will exit with a status value of 0 (zero) upon success, and
-it will exit with the value 1 (one) upon failure.
-
 Examples
 --------
 
@@ -99,3 +91,20 @@ central manager:
 
     $ condor_on -pool condor.cae.wisc.edu -name cae17 -daemon schedd
 
+
+Exit Status
+-----------
+
+0  -  Success
+
+1  -  Failure
+
+See Also
+--------
+
+:tool:`condor_off`, :tool:`condor_restart`, :tool:`condor_reconfig`, :tool:`condor_vacate`
+
+Availability
+------------
+
+Linux, MacOS, Windows

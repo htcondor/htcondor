@@ -221,7 +221,7 @@ void UpdateJobAd(int cluster, int proc, int old_prio)
 void ProcArg(const char* arg)
 {
 	PROC_ID job_id;
-	int old_prio;
+	int old_prio = 0;
 	char	*tmp;
 	std::string proj = ATTR_CLUSTER_ID;
 	proj += ',';

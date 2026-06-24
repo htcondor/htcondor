@@ -250,3 +250,7 @@ Other
         :caption: Internal
 
         condor_dagman
+
+.. raw:: html
+
+	<script src="../_static/js/tool-mindmap.js" defer></script>

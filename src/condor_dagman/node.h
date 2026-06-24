@@ -202,6 +202,7 @@ public:
 	bool DoRetry() const { return ! DoAbort() && GetRetries() < GetRetryMax(); }
 	// Abort doing retry of node -> faliure
 	bool AbortRetry() const { return have_retry_abort_val && retval == retry_abort_val; }
+	bool HasAbortRetry(int& val) const { val = retry_abort_val; return have_retry_abort_val; }
 	// Set parsed retry information
 	void SetMaxRetries(int max, int unless_exit) {
 		retry_max = max;
@@ -333,7 +334,6 @@ public:
 	const std::vector<NodeVar>& GetVars() const { return varsFromDag; }
 	bool AddVar(const std::string& name, const std::string& value, bool prepend);
 	bool HasVars() const { return ! varsFromDag.empty(); }
-	int PrintVars(std::string &vars);
 
 	void SetPrio(int prio) { _explicitPriority = _effectivePriority = prio; }
 	void AddDagPrio(int prio) { _effectivePriority += prio; }
@@ -396,8 +396,6 @@ public:
 	Script* _scriptPre{nullptr};
 	Script* _scriptPost{nullptr};
 	Script* _scriptHold{nullptr};
-
-	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
 private:
 	// private methods for use by AdjustEdges

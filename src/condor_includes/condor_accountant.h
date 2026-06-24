@@ -25,6 +25,7 @@
 
 #include "condor_state.h"
 
+#include <memory>
 #include <vector>
 #include <map>
 #include <set>
@@ -38,18 +39,9 @@ static const double PriorityDelta = 0.5;
 // request matched against them
 #define CP_MATCH_COST "_cp_match_cost"
 
-template <typename K, typename AD> class ClassAdLog;
-struct GroupEntry;
+#include "AccountantDB.h"
 
-// The three logical tables stored in the Accountant database.
-// Used as the first argument to Set/GetAttribute* to identify
-// which table a record belongs to, replacing the old string-prefix
-// concatenation pattern.
-enum class AccountantTable {
-	Acct,       // Singleton global state (e.g. LastUpdateTime)
-	Customer,   // Per-customer/group accounting records
-	Resource    // Per-resource match records
-};
+struct GroupEntry;
 
 class Accountant {
 
@@ -72,6 +64,17 @@ public:
   void  SetPriority(const std::string& CustomerName, double Priority); // set priority for a customer
   void  SetCeiling(const std::string& CustomerName, int Ceiling); // set Ceiling for a customer
   void  SetFloor(const std::string& CustomerName, int Floor); // set Floor for a customer
+
+  // Ceiling leases: temporarily override a submitter's ceiling for a bounded
+  // duration, then revert to the prior value. Expiration is an absolute unix
+  // time; an expiration of 0 (or attribute absent) means no lease is active.
+  // Returns true on success; on failure sets err and leaves state unchanged.
+  bool SetCeilingLease(const std::string& CustomerName, int Ceiling,
+                       int DurationSeconds, std::string& err);
+  bool CancelCeilingLease(const std::string& CustomerName, std::string& err);
+  time_t GetCeilingLeaseExpiration(const std::string& CustomerName);
+  // Called once per negotiation cycle: expires any lease whose time has passed.
+  void CheckCeilingLeases();
 
   void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
@@ -162,7 +165,7 @@ private:
   // Data members
   //--------------------------------------------------------
 
-  ClassAdLog<std::string, ClassAd*> * AcctLog;
+  std::unique_ptr<AccountantDB> db;
   time_t LastUpdateTime;
 
   std::map<std::string, double> concurrencyLimits;
@@ -179,26 +182,6 @@ private:
   int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
   static std::string GetDomain(const std::string& CustomerName);
-
-  bool DeleteClassAd(AccountantTable table, const std::string& Key);
-
-  void SetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, int64_t AttrValue);
-  void SetAttributeFloat(AccountantTable table, const std::string& Key, const std::string& AttrName, double AttrValue);
-  void SetAttributeString(AccountantTable table, const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
-
-  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, int& AttrValue);
-  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, long& AttrValue);
-  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, long long& AttrValue);
-  bool GetAttributeFloat(AccountantTable table, const std::string& Key, const std::string& AttrName, double& AttrValue);
-  bool GetAttributeString(AccountantTable table, const std::string& Key, const std::string& AttrName, std::string& AttrValue);
-
-  static std::string MakeKey(AccountantTable table, const std::string& key);
-
-  // Iterate over all records in a specific table, calling the callback
-  // with the entity key (prefix stripped) and the ClassAd.
-  // Callback returns true to continue, false to stop early.
-  template<typename Fn>
-  void ForEachInTable(AccountantTable table, Fn&& callback);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<std::string, int>& gnmap);
 };

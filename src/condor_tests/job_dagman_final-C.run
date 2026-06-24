@@ -75,7 +75,7 @@ $rescuefile = "job_dagman_final-C.dag.rescue001";
 @rescuelines = ('# Rescue DAG file, created after running',
 			'#   the job_dagman_final-C.dag DAG file',
 			'# Created .*/.*/.* .*:.*:.* UTC',
-			'# Rescue DAG version: \d*\.\d*\.\d* \(partial\)',
+			'# Rescue DAG version: \d*\.\d*\.\d*',
 			'#',
 			'# Total number of Nodes: 3',
 			'# Nodes premarked DONE: 2',
@@ -83,7 +83,6 @@ $rescuefile = "job_dagman_final-C.dag.rescue001";
 			'#   C_C,<ENDLIST>',
 			'^',
 			'DONE C_A',
-			'RETRY C_A 1',
 			'DONE C_B');
 
 my $killedchosen = 0;

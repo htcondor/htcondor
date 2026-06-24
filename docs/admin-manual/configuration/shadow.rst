@@ -30,8 +30,7 @@ These settings affect the *condor_shadow*.
     counters) or if it should wait and only update the job queue on the
     next periodic update. There is a trade-off between performance and
     the semantics of these attributes, which is why the behavior is
-    controlled by a configuration macro. If the *condor_shadow* do not
-    use a lazy update, and immediately ensures the changes to the job
+    controlled by a configuration macro. If the *condor_shadow* does not use a lazy update, and immediately ensures the changes to the job
     attributes are written to the job queue on disk, the semantics for
     the attributes are very solid (there's only a tiny chance that the
     counters will be out of sync with reality), but this introduces a
@@ -100,6 +99,40 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as :macro:`MAX_DEFAULT_LOG`.
 
+:macro-def:`SHADOW_LOG_RECONNECT`
+    A boolean that defaults to ``True``. When ``True``, the
+    *condor_shadow* appends a CSV record to the file specified by
+    :macro:`SHADOW_RECONNECT_LOG` each time it successfully reconnects
+    to a disconnected starter, or when it gives up trying to reconnect
+    because the job lease expired. Each record contains the following
+    comma-separated fields: The cluster.proc of the job id,
+    the epoch time the job was activated, the last epoch time the 
+    shadow heard from the starter, whether the reconnect succeeded, 
+    the epoch time of the reconnect attempt, the configured lease 
+    duration in seconds, a timeout version identifier, and whether the 
+    starter process is known to be dead.
+
+:macro-def:`SHADOW_RECONNECT_LOG`
+    The full path and file name of the CSV file where the
+    *condor_shadow* writes reconnect records when
+    :macro:`SHADOW_LOG_RECONNECT` is ``True``. Defaults to
+    ``$(LOG)/ShadowReconnectLog``.
+
+:macro-def:`SHADOW_RECONNECT_LOG_MAX`
+    The maximum size in bytes of the ``ShadowReconnectLog`` file
+    before it is rotated. Defaults to 10485760 (10 MiB).
+
+:macro-def:`SHADOW_RECONNECT_LOG_MAX_NUM`
+    The maximum number of rotated ``ShadowReconnectLog`` files to
+    keep. When more than this many rotated files exist, the oldest
+    are removed. Defaults to 4.
+
+:macro-def:`SHADOW_RECONNECT_TIMEOUT_VERSION`
+    An optional string identifier that is included in each reconnect
+    log record. This can be used to tag records with a version when
+    experimenting with different reconnect timeout values. Defaults
+    to an empty string.
+
 :macro-def:`ALLOW_TRANSFER_REMAP_TO_MKDIR`
     A boolean value that when ``True`` allows the *condor_shadow* to
     create directories in a transfer output remap path when the directory
@@ -137,14 +170,13 @@ These settings affect the *condor_shadow*.
     ``job.runs.X.Y.ads``. Where ``X`` is the jobs cluster id and ``Y`` is
     the jobs process id. For example, job 35.2 would write a job ad for each run
     to the file ``job.runs.35.2.ads``. These files can be read through :tool:`condor_history`
-    when ran with the -epochs and -directory options.
+    when run with the -epochs and -directory options.
 
     .. code-block:: console
 
         $ condor_history -epochs -directory
 
-    HTCondor does not automatically  delete these files, so unchecked the
-    directory can grow very large. Either an external entity needs to clean
+    HTCondor does not automatically  delete these files, so if unchecked, the directory can grow very large. Either an external entity needs to clean
     up or :tool:`condor_history` can use the -epochs options optional ``:d``
     extension to read and delete the files.
 

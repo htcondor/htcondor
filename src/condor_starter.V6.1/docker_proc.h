@@ -14,7 +14,7 @@ class DockerProc : public VanillaProc {
 		virtual int StartJob();
 		virtual int LaunchContainer();
 		virtual int PullImage();
-		virtual bool JobReaper( int pid, int status );
+		virtual ReapResult JobReaper( int pid, int status );
 		virtual int ExecReaper( int pid, int status );
 		virtual int PullReaper( int pid, int status );
 		virtual bool JobExit();
@@ -44,8 +44,8 @@ class DockerProc : public VanillaProc {
 		static bool Detect();
 		static bool Version( std::string & version );
 
-		std::string DockerErrorFile() { 
-			return std::string(starter->GetWorkingDir(0)) + "/.docker_stderror";
+		std::string DockerErrorFile() {
+			return std::string(starter->GetWorkingDir(WD::OUTER)) + "/.docker_stderror";
 		}
 	protected:
 		virtual bool restartCheckpointedJob();

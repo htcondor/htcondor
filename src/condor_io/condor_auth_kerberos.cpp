@@ -1203,7 +1203,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 		dprintf( D_SECURITY, "KERBEROS: krb5_unparse_name: %s\n", client );
 
 		char * user = 0;
-		char * at_sign = strchr(client, '@');
+		char * at_sign = strrchr(client, '@');
 
 		// first, see if the principal up to the @ sign is the same as
 		// STR_KERBEROS_SERVER_PRINCIPAL

@@ -10,5 +10,5 @@ Old Configuration Macros Page
 
 .. raw:: html
 
-    <script src="../_static/js/config-macro-redirect.js" defer></script>
+    <script src="../_static/generated/js/config-macro-redirect.js" defer></script>
     <h2>Redirecting to correct configuration page...</h2>

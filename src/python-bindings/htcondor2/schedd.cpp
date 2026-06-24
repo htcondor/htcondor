@@ -192,8 +192,9 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
             results = nullptr;
         }
         switch (rv) {
-            case 0: break;  // should never get here on success, this is just for clarity.
-            case -1: break; // error already set by python (in callback)
+            case 0:   // should never get here on success, this is just for clarity.
+            case -1:  // error already set by python (in callback)
+                break;
 
             case Q_UNSUPPORTED_OPTION_ERROR:
                 // This was HTCondorIOError in version 1.
@@ -449,7 +450,7 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
         if (list_of_ads) {
             PyErr_SetString(PyExc_HTCondorException, "Disable mixed users and projects not implemented.");
         } else if (is_project) {
-            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+            result = schedd.disableProjects(&name_vec[0], num_names, reason_string, &errstack);
         } else {
             result = schedd.disableUsers(&name_vec[0], num_names, reason_string, &errstack);
         }

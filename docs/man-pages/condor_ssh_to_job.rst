@@ -1,22 +1,18 @@
-      
-
 *condor_ssh_to_job*
-======================
+===================
 
-create an ssh session to a running job
-:index:`condor_ssh_to_job<single: condor_ssh_to_job; HTCondor commands>`\ :index:`condor_ssh_to_job command`
+Create an SSH session to a running job.
+
+:index:`condor_ssh_to_job<double: condor_ssh_to_job; HTCondor commands>`
 
 Synopsis
 --------
 
-**condor_ssh_to_job** [**-help** ]
+**condor_ssh_to_job** [**-help**]
 
-**condor_ssh_to_job** [**-debug** ] [**-name** *schedd-name*]
-[**-pool** *pool-name*] [**-ssh** *ssh-command*]
-[**-keygen-options** *ssh-keygen-options*]
-[**-shells** *shell1,shell2,...*] [**-auto-retry** ]
-[**-remove-on-interrupt** ] *cluster | cluster.process |
-cluster.process.node* [*remote-command* ]
+**condor_ssh_to_job** [**-debug**] [**-name** *schedd-name*] [**-pool** *pool-name*] [**-ssh** *ssh-command*]
+[**-keygen-options** *ssh-keygen-options*] [**-shells** *shell1,shell2,...*] [**-auto-retry**]
+[**-remove-on-interrupt**] [**-X** | **-x**] *cluster* | *cluster.proc* | *cluster.proc.node* [*remote-command*]
 
 Description
 -----------
@@ -237,3 +233,13 @@ Exit Status
 fails to set up an ssh session. If it succeeds, it will exit with the
 status value of the remote command or shell.
 
+
+See Also
+--------
+
+:tool:`condor_submit`, :tool:`condor_q`, :tool:`condor_tail`, :tool:`condor_transfer_data`
+
+Availability
+------------
+
+Linux, MacOS

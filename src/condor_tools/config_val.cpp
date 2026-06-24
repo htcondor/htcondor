@@ -116,6 +116,7 @@ usage(int retval = 1)
 		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
 		"\t-verbose\tPrint source, raw, expanded, and default values\n"
+		"\t-trace\t\tPrint source and value for all config files that set <var>\n"
 		//"\t-info\t\tPrint help and usage info for variables\n" // TODO: tj uncomment this for 8.7
 		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
 		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
@@ -499,6 +500,59 @@ static const char * RemotePrintValue(const char * val, const char * indent, std:
 	return buf.c_str();
 }
 
+class ConfigMetaTracer : public macro_meta_tracer {
+public:
+	ConfigMetaTracer(std::vector<std::string> & params, FILE* _out, bool _verbose=false, bool _dump=false)
+		: names(params.begin(), params.end())
+		, out(_out)
+		, verbose(_verbose)
+		, dump(_dump)
+	{
+		if (dump) {
+			// since we know that the names collection cannot change
+			// we can just use a static vector of Regex for the compiled part
+			patterns.resize(names.size()); // resize to make sure that we don't try and move any Regex
+			int ix = 0;
+			for (const auto &restr : names) {
+				auto & re = patterns[ix++];
+				int errcode, errindex;
+				if (! re.compile(restr.c_str(), &errcode, &errindex, PCRE2_CASELESS)) {
+					fprintf(stderr, "warning: failed to compile trace pattern '%s' (PCRE2 error %d at offset %d); ignoring it.\n",
+						restr.c_str(), errcode, errindex);
+					// re is left uninitialized; match() already skips
+					// patterns where re.isInitialized() is false.
+				}
+			}
+		}
+	}
+	~ConfigMetaTracer() {
+		// Tie the global tracer registration to this object's lifetime, so
+		// the global doesn't outlive the wrapped state.
+		enable_config_tracing(nullptr);
+	}
+	std::set<std::string, CaseIgnLTYourString> names;
+	std::vector<Regex> patterns;
+	FILE* out{nullptr};
+	bool verbose{false};
+	bool dump{false};
+	virtual bool match(const char * name) {
+		if (dump) {
+			for (auto &re : patterns) {
+				if (re.isInitialized() && re.match(name)) return true;
+			}
+		}
+		return names.count(name);
+	}
+	virtual void log(const char * name, const char * old_value, [[maybe_unused]] const char * new_value, MACRO_META & meta) {
+		std::string location;
+		fprintf(out, " # trace: %s\n", name?name:"");
+		if (old_value) fprintf(out, "  # was: %s\n", old_value);
+		param_get_location(&meta, location);
+		fprintf(out, "  # set at: %s\n", location.c_str());
+		//if (verbose) fprintf(out, "  # now: %s\n", new_value?new_value:"");
+	}
+};
+
 int
 main( int argc, const char* argv[] )
 {
@@ -507,6 +561,7 @@ main( int argc, const char* argv[] )
 	const char * pcolon;
 	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
+	auto_free_ptr name_storage;  // owns the strdup'd result from get_daemon_name
 	const char *name = NULL;     // cooked -name argument after get_daemon_name lookup
 	const char *pool = NULL;
 	const char *local_name = NULL;
@@ -518,6 +573,8 @@ main( int argc, const char* argv[] )
 	bool    dash_usage = false;
 	bool    dash_dump_both = false;
 	bool    dump_all_variables = false;
+	bool    trace_config_changes = false; // log file and line for self-substitution while loading config
+	std::unique_ptr<ConfigMetaTracer> config_tracer{nullptr}; // param names that should be traced
 	bool    dump_stats = false;
 	bool    show_param_info = false; // show info from param table
 	bool    expand_dumped_variables = false;
@@ -637,12 +694,20 @@ main( int argc, const char* argv[] )
 		} else if (is_arg_prefix(arg, "raw", 3)) {
 			dash_raw = true;
 		} else if (is_arg_prefix(arg, "default", 3)) {
+			if (verbose) {
+				fprintf(stderr, "-default cannot be used with -verbose\n");
+				usage();
+			}
 			dash_default = true;
 		} else if (is_arg_prefix(arg, "config", 2)) {
 			print_config_sources = true;
 		} else if (is_arg_prefix(arg, "reconfig", 5)) {
 			reconfig_source = use_next_arg("reconfig", argv, i);
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
+			if (dash_default) {
+				fprintf(stderr, "-verbose cannot be used with -default\n");
+				usage();
+			}
 			verbose = true;
 			if (pcolon) {
 				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
@@ -680,6 +745,8 @@ main( int argc, const char* argv[] )
 			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
+		} else if (is_arg_prefix(arg, "trace", 2)) {
+			trace_config_changes = true;
 		} else if (is_arg_colon_prefix(arg, "stats", &pcolon, 4)) {
 			dump_stats = true;
 			if (pcolon && is_arg_prefix(pcolon+1, "keep_defaults", 2)) {
@@ -827,7 +894,13 @@ main( int argc, const char* argv[] )
 					 "condor's home directory\n" );
 			my_exit( 1 );
 		}
-	}		
+	}
+
+		// if -trace was passed, give the config system a tracer before we load config.
+	if (trace_config_changes) {
+		config_tracer.reset(new ConfigMetaTracer(params, stdout, verbose, dump_all_variables));
+		enable_config_tracing(config_tracer.get());
+	}
 
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
@@ -863,8 +936,6 @@ main( int argc, const char* argv[] )
 		dprintf_set_tool_debug("TOOL", debug_flags);
 	}
 
-	// temporary, to get rid of build warning.
-	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
 	// handle check-if to valididate config's if/else parsing and help users to write
 	// valid if conditions.
@@ -901,7 +972,8 @@ main( int argc, const char* argv[] )
 	
 	// now that we have loaded config, we can safely get do daemon name lookup
 	if (name_arg) {
-		name = get_daemon_name(name_arg);
+		name_storage.set(get_daemon_name(name_arg));
+		name = name_storage.ptr();
 		if ( ! name || ! name[0]) {
 			fprintf(stderr, "%s: unknown host %s\n", MyName, get_host_part(name_arg));
 			my_exit(1);
@@ -981,7 +1053,14 @@ main( int argc, const char* argv[] )
 							const char * equal_begin = is_herefile ? "@=end" : "= ";
 							const char * equal_end = is_herefile ? "\n@end" : "";
 
-							if (expand_dumped_variables) {
+							if (dash_default) {
+								std::string upname = name;
+								bool def_is_herefile = def_val && strchr(def_val, '\n');
+								const char * eq_begin = def_is_herefile ? "@=end" : "= ";
+								const char * eq_end = def_is_herefile ? "\n@end" : "";
+								const char * tval = def_is_herefile ? indent_herefile(def_val, "   ", rawvalbuf) : def_val;
+								fprintf(stdout, "%s %s%s%s\n", upname.c_str(), eq_begin, tval ? tval : "", eq_end);
+							} else if (expand_dumped_variables) {
 								std::string upname = name; //upname.upper_case();
 								auto_free_ptr val(param(name));
 								const char * tval = is_herefile ? indent_herefile(val, "   ", rawvalbuf) : val.ptr();
@@ -1081,9 +1160,10 @@ main( int argc, const char* argv[] )
 		} else {
 			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
-		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
-			fprintf( stderr, "Can't find address for this %s\n", 
-					 daemonString(dt) );
+		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_ADMIN) ) {
+			fprintf( stderr, "Can't find address for %s '%s' in %s\n",
+					 daemonString(dt), name ? name : "default",
+					 pool ? pool : "local pool" );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
@@ -1180,7 +1260,9 @@ main( int argc, const char* argv[] )
 								continue;
 
 							name_used = names[ii];
-							if (expand_dumped_variables || ! raw_supported) {
+							if (dash_default && !def_value.empty()) {
+								printf("%s %s\n", name_used.c_str(), RemotePrintValue(def_value.c_str(), "   ", herevalbuf, "end"));
+							} else if (expand_dumped_variables || ! raw_supported) {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(value, "   ", herevalbuf, "end"));
 							} else {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(RemoteRawValuePart(raw_value), "   ", herevalbuf, "end"));
@@ -1236,13 +1318,21 @@ main( int argc, const char* argv[] )
 						}
 					}
 					continue;
-				} else if (dash_raw || verbose) {
+				} else if (dash_raw || dash_default || verbose) {
 					name_used = tmp;
 					upper_case(name_used);
 					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
-					if ( ! verbose && ! raw_value.empty()) {
+					if ( ! verbose) {
+						if (dash_default) {
+							free(value);
+							value = def_value.empty() ? NULL : strdup(def_value.c_str());
+						} else if ( ! raw_value.empty()) {
+							free(value);
+							value = strdup(RemoteRawValuePart(raw_value));
+						}
+					} else if (dash_default) {
 						free(value);
-						value = strdup(RemoteRawValuePart(raw_value));
+						value = def_value.empty() ? NULL : strdup(def_value.c_str());
 					}
 					if (verbose && show_param_info) {
 						param_id = param_default_get_id(tmp, NULL);
@@ -1288,7 +1378,9 @@ main( int argc, const char* argv[] )
 				}
 				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					if (dash_raw) {
+					if (dash_default) {
+						value = def_val ? strdup(def_val) : NULL;
+					} else if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {
 						value = param(name_used.c_str());
@@ -1308,7 +1400,12 @@ main( int argc, const char* argv[] )
 				} else {
 					name_used = tmp;
 					upper_case(name_used);
-					value = NULL;
+					if (dash_default) {
+						const char * dval = param_default_string(tmp, subsys);
+						value = dval ? strdup(dval) : NULL;
+					} else {
+						value = NULL;
+					}
 				}
 			}
 			if( value == NULL ) {

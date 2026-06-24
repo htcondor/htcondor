@@ -323,10 +323,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
-				// but first, we should be nice and send a message back to
-				// the people who sent us the wrong session id.
-				daemonCore->send_invalidate_session ( return_address_ss, sess_id );
-
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -417,9 +413,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
-
-				// but first, send a message to whoever provided us with incorrect session id
-				daemonCore->send_invalidate_session( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -598,6 +591,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		}
 	}
 
+	// If we don't know who this client is, limit them to single-packet
+	// CEDAR messages.
+	if (m_is_tcp && !m_sock->isMappedFQU() && param_boolean("SEC_USE_LOW_DATA_MODE", false)) {
+		((ReliSock*)m_sock)->SetLowDataMode(true);
+	}
+
 	m_state = CommandProtocolReadCommand;
 	return CommandProtocolContinue;
 }
@@ -655,7 +654,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", m_sock->peer_description());
 
-		if( !getClassAd(m_sock, m_auth_info)) {
+		if( !getPODClassAd(m_sock, m_auth_info)) {
 			dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 					 "receive auth_info from %s!\n", m_sock->peer_description());
 			m_result = FALSE;
@@ -722,7 +721,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str());
+			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str(), (int)incoming_cookie.size());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.
@@ -781,22 +780,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
 						}
 					} else {
-						// Old client (pre-9.9.0), send out-of-band
+						// Old client (pre-9.9.0), can't send
 						// notification of invalid session.
-						std::string our_sinful;
-						m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						ClassAd info_ad;
-						// Presence of the ConnectSinful attribute indicates
-						// that the client understands and wants the
-						// extended information ad in the
-						// DC_INVALIDATE_KEY message.
-						if ( !our_sinful.empty() ) {
-							info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						}
-
-						if( !return_addr.empty() ) {
-							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid.c_str(), &info_ad );
-						}
 
 						// consume the rejected message
 						m_sock->decode();
@@ -936,7 +921,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
@@ -1495,7 +1480,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 					dprintf( D_ERROR, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
@@ -1940,6 +1925,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// successfully abort before actually calling any command handler.
 		m_result = TRUE;
 		return CommandProtocolFinished;
+	}
+
+	// If we know who the client is, turn off CEDAR low-data mode, if it
+	// was enabled.
+	if (m_is_tcp && m_sock->isMappedFQU()) {
+		((ReliSock*)m_sock)->SetLowDataMode(false);
 	}
 
 	if ( m_reqFound == TRUE ) {

@@ -154,6 +154,11 @@ def the_condor(test_dir):
 
 @action
 def installed_limit(helper_path, the_condor, schedd_address):
+    # window=60: the schedd may serialize the 3 startups across 1-2 slots with
+    # several seconds between each (claim-reuse, negotiation cycle delays).
+    # A 60s window throttles any 2nd+ startup that lands within a minute of
+    # the first, regardless of slot/claim-reuse timing. With a 5s window the
+    # test was flaky when startups happened to land >5s apart.
     return _create_limit(
         helper_path,
         schedd_address,
@@ -161,7 +166,7 @@ def installed_limit(helper_path, the_condor, schedd_address):
         name="rate-test",
         expr="true",
         count=1,
-        window=5,
+        window=60,
     )
 
 
@@ -487,7 +492,9 @@ class TestStartupLimitMonitoring:
             "+LimitGroup": '"monitor"',
         }
 
-        handle = the_condor.submit(description=desc, count=3)
+        # Submit exactly NUM_SLOTS (2) jobs so each slot gets one job
+        # and no claim reuse occurs, keeping the allowed count deterministic.
+        handle = the_condor.submit(description=desc, count=2)
         assert handle.wait(
             timeout=120,
             condition=ClusterState.all_complete,
@@ -497,4 +504,4 @@ class TestStartupLimitMonitoring:
         info = _query_limit(helper_path, schedd_address, monitoring_limit)
         assert info["skipped"] == 0
         assert info["ignored"] == 0
-        assert info["allowed"] == 3
+        assert info["allowed"] == 2

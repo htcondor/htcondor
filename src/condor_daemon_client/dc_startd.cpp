@@ -300,7 +300,7 @@ DCStartd::asyncRequestOpportunisticClaim(
 	char const *scheduler_addr,
 	int alive_interval,
 	requestClaimOptions & opts,
-	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+	int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -355,7 +355,7 @@ DCStartd::reactivateClaimCheck(bool & claim_is_closing)
 }
 
 bool
-DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning, bool final_transfer )
 {
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
@@ -366,7 +366,14 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 
 	setCmdStr( "deactivateClaim" );
 
-	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+	int cmd;
+	if (final_transfer) {
+		cmd = DEACTIVATE_CLAIM_FINAL_XFER;
+	} else if (graceful) {
+		cmd = DEACTIVATE_CLAIM;
+	} else {
+		cmd = DEACTIVATE_CLAIM_FORCIBLY;
+	}
 
 	return deactivateClaim(cmd, got_job_done, claim_is_closing, still_cleaning);
 }
@@ -388,7 +395,7 @@ DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bo
 
 	ClaimIdParser cidp(claim_id.c_str());
 
-	if (got_job_done && (cmd != REACTIVATE_CLAIM_CHECK)) {
+	if (got_job_done && (cmd != REACTIVATE_CLAIM_CHECK) && (cmd != DEACTIVATE_CLAIM_FINAL_XFER)) {
 		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
 		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
 		if (cvi.getMajorVer() <= 0) {
@@ -927,7 +934,12 @@ DCStartd::vacateClaim( const char* name_vacate, bool fast /*=false*/ )
 {
 	setCmdStr( "vacateClaim" );
 
-	int cmd = fast ? VACATE_CLAIM_FAST : VACATE_CLAIM;
+	int cmd;
+	if (fast) {
+		cmd = VACATE_CLAIM_FAST;
+	} else {
+		cmd = VACATE_CLAIM;
+	}
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
@@ -1238,6 +1250,67 @@ DCStartd::drainJobs(int how_fast,const char * reason,int on_completion,char cons
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
 		formatstr(error_msg,
 				"Received failure from %s in response to DRAIN_JOBS request: error code %d: %s",
+				name(),error_code,remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}
+
+bool
+DCStartd::rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel, bool reboot)
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( REHOME, Sock::reli_sock, 20 );
+	if( !sock ) {
+		formatstr(error_msg,"Failed to start REHOME command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	if( schedd_name ) {
+		request_ad.Assign("ScheddName", schedd_name);
+	}
+	if( schedd_pool ) {
+		request_ad.Assign("ScheddPool", schedd_pool);
+	}
+	request_ad.Assign("RehomeTimeout", timeout);
+	if( cancel ) {
+		request_ad.Assign("Cancel", true);
+	}
+	if( reboot ) {
+		request_ad.Assign("Reboot", true);
+	}
+
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to compose REHOME request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to get response to REHOME request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	bool result = false;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		int error_code = 0;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
+		formatstr(error_msg,
+				"Received failure from %s in response to REHOME request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;

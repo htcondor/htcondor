@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 from .htcondor2_impl import _handle as handle_t
 
@@ -37,7 +38,7 @@ class JobEventLog():
         _job_event_log_init(self, self._handle, filename)
 
 
-    def events(self, stop_after : int = None) -> 'JobEventLog':
+    def events(self, stop_after : Optional[int] = None) -> 'JobEventLog':
         """
         Returns an iterator over events in the log.
 

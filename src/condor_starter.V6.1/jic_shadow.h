@@ -268,9 +268,11 @@ public:
 
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
+	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+
 private:
 
-    void _remove_files_from_output();
+	void _remove_files_from_output();
 
 	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
@@ -518,6 +520,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
+	FileTransfer::UserPluginDisableMode m_ft_user_plugin_disable{FileTransfer::UserPluginDisableMode::Allow};
 	bool m_did_output_transfer;
 	bool m_output_transfer_active{false};
 

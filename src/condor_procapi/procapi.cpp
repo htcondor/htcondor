@@ -410,7 +410,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	unsigned long u;
 	unsigned long long imgsize_bytes;
 	char c;
-	char s[256];
 	int num_attempts = 5;
 
 		// assume success
@@ -492,18 +491,18 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 			// fill the raw structure from the proc file
 			// ensure I read the right number of arguments....
-		if ( sscanf( line, "%d %s %c %d "
+		if ( sscanf( line, "%d %*s %c %d "
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
 			"%lu %lu %llu %llu %lu %lu %lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %lu",
-			&procRaw.pid, s, &c, &procRaw.ppid, 
+			&procRaw.pid, /* skip exec name */ &c, &procRaw.ppid,
 			&i, &i, &i, &i, 
 			&procRaw.proc_flags, &procRaw.minfault, &u, &procRaw.majfault, &u, 
 			&procRaw.user_time_1, &procRaw.sys_time_1, &i, &i, &i, &i, 
 			&u, &u, &procRaw.creation_time, &imgsize_bytes, &procRaw.rssize, &u, &u, &u, 
-			&u, &u, &u, &i, &i, &i, &i, &u ) != 35 )
+			&u, &u, &u, &i, &i, &i, &i, &u ) != 34 )
 		{
 			// couldn't read the right number of entries.
 			status = PROCAPI_UNSPECIFIED;
@@ -701,7 +700,7 @@ ProcAPI::checkBootTime(long now)
 		// and use whichever measure of boot-time is older.
 
 		FILE *fp;
-		char s[256], junk[16];
+		char s[256];
 		unsigned long stat_boottime = 0;
 		unsigned long uptime_boottime = 0;
 
@@ -724,7 +723,7 @@ ProcAPI::checkBootTime(long now)
 			while( r && strstr(s, "btime") == NULL ) {
 				r = fgets( s, 256, fp );
 			}
-			(void) sscanf( s, "%s %lu", junk, &stat_boottime );
+			(void) sscanf( s, "%*s %lu", &stat_boottime );
 			fclose( fp );
 		}
 

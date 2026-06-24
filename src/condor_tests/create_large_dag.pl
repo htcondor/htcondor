@@ -178,7 +178,7 @@ sub WriteSubmit
 		print SUBMITFILE "arguments = JOB $nodename\n";
 		# print SUBMITFILE "events = sub exec term\n";
 	}
-	print SUBMITFILE "universe = scheduler\n";
+	print SUBMITFILE "universe = local\n";
 	my $logfile;
 	if ($unique_logs) {
 		$logfile = $nodename . ".log";

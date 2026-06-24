@@ -95,6 +95,22 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
+DCSchedd::transferAndRemoveJobs( const char* constraint, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::transferAndRemoveJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, constraint, NULL,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
@@ -157,6 +173,17 @@ DCSchedd::removeXJobs( const std::vector<std::string>& ids, const char* reason,
 					   action_result_type_t result_type )
 {
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, &ids,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
+DCSchedd::transferAndRemoveJobs( const std::vector<std::string>& ids, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -1367,6 +1394,7 @@ JobActionResults::JobActionResults( action_result_type_t res_type )
 	ar_bad_status = 0;
 	ar_already_done = 0;
 	ar_error = 0;
+	ar_limit_exceeded = 0;
 	action = JA_ERROR;
 }
 
@@ -1449,6 +1477,7 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_HOLD_JOBS:
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 		case JA_RELEASE_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
@@ -1576,6 +1605,8 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
 				 (action==JA_REMOVE_X_JOBS)?
 				 "removed locally (remote state unknown)":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?
+				 "marked for removal after file transfer":
 				 (action==JA_HOLD_JOBS)?"held":
 				 (action==JA_RELEASE_JOBS)?"released":
 				 (action==JA_SUSPEND_JOBS)?"suspended":
@@ -1595,10 +1626,11 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 job_id.proc ); 
 		break;
 
-	case AR_PERMISSION_DENIED: 
+	case AR_PERMISSION_DENIED:
 		formatstr( buf, "Permission denied to %s job %d.%d",
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?"transfer and remove":
 				 (action==JA_HOLD_JOBS)?"hold":
 				 (action==JA_RELEASE_JOBS)?"release":
 				 (action==JA_VACATE_JOBS)?"vacate":
@@ -1638,16 +1670,16 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		if( action == JA_HOLD_JOBS ) {
 			formatstr( buf, "Job %d.%d already held",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_JOBS ) { 
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
 			formatstr( buf, "Job %d.%d already marked for removal",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_SUSPEND_JOBS ) { 
+		}else if( action == JA_SUSPEND_JOBS ) {
 			formatstr( buf, "Job %d.%d already suspended",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_CONTINUE_JOBS ) { 
+		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d already running",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_X_JOBS ) { 
+		} else if( action == JA_REMOVE_X_JOBS ) {
 				// pfc: due to the immediate nature of a forced
 				// remove, i'm not sure this should ever happen, but
 				// just in case...
@@ -1762,11 +1794,12 @@ bool DCSchedd::getJobConnectInfo(
 int DCSchedd::offerResources(
 	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
 	const std::string & submitter_name,
-	int timeout)
+	int timeout,
+	const char * claimID)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
-		return -1; 
+		return -1;
 	}
 
 	if (submitter_name.empty()) {
@@ -1792,6 +1825,10 @@ int DCSchedd::offerResources(
 	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if( claimID != NULL ) {
+	    // The CEDAR machinery (in _putClassAd()) encrypts this attribute.
+	    cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());
@@ -1999,7 +2036,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 }
 
 
-class ImpersonationTokenContinuation : Service {
+class ImpersonationTokenContinuation : public Service {
 
 public:
 	ImpersonationTokenContinuation(const std::string &identity,
@@ -2015,13 +2052,8 @@ public:
 	  m_misc_data(misc_data)
 	{}
 
-	static void startCommandCallback(bool success, Sock *sock, CondorError *errstack,
-		const std::string & /*trust_domain*/, bool /*should_try_token_request*/,
-		void *misc_data);
-
 	int finish(Stream*);
 
-private:
 	std::string m_identity;
 	std::vector<std::string> m_authz_bounding_set;
 	int m_lifetime{-1};
@@ -2065,69 +2097,6 @@ int ImpersonationTokenContinuation::finish(Stream *stream)
 }
 
 
-void
-ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, CondorError *errstack,
-	const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
-{
-		// Automatically free our callback data at function exit.
-	std::unique_ptr<class ImpersonationTokenContinuation> callback_ptr(
-		static_cast<class ImpersonationTokenContinuation*>(misc_data));
-	ImpersonationTokenContinuation &callback_data = *callback_ptr;
-
-	if (!success) {
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-		// Ok, we have successfully established a connection.  Let's build the request ad
-		// and shoot it off.
-	classad::ClassAd request_ad;
-	if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
-		!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
-	{
-		errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-	if (!callback_data.m_authz_bounding_set.empty()) {
-		std::string authz_bounding_set_str =
-			join(callback_data.m_authz_bounding_set, ",");
-
-		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_bounding_set_str))
-		{
-			errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
-			callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-			return;
-		}
-	}
-
-	sock->encode();
-	if (!putClassAd(sock, request_ad) ||
-		!sock->end_of_message())
-	{
-		errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
-			" to remote schedd.");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-
-		// Now, we must register a callback to wait for a response.
-	auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
-		(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
-		"Finish impersonation token request",
-		callback_ptr.get(), HANDLE_READ);
-	if (rc < 0) {
-		errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
-		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
-		return;
-	}
-
-		// At this point, the callback has been registered and DaemonCore owns the
-		// memory; release the unique_ptr to prevent it from deleting the callback
-		// object at exit.
-	callback_ptr.release();
-}
-
-
 bool
 DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	const std::vector<std::string> &authz_bounding_set, int lifetime,
@@ -2156,11 +2125,70 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	}
 
 		// Connect to the schedd (if necessary) and start a non-blocking command.
-		// The continuation object holds the state needed to make the request ad later.
-	auto continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
+		// The continuation object holds the state needed to make the request ad
+		// later. The lambda captures a raw pointer and re-wraps it in a unique_ptr
+		// on entry: the continuation is either freed when the lambda returns, or
+		// released to DaemonCore when Register_Socket succeeds.
+	auto *continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
 		lifetime, callback, misc_data);
 	auto result = startCommand_nonblocking(COLLECTOR_TOKEN_REQUEST, Stream::reli_sock, 20, &err,
-		ImpersonationTokenContinuation::startCommandCallback, continuation,
+		[continuation](bool success, Sock *sock, CondorError *errstack,
+				const std::string & /*trust_domain*/, bool /*should_try_token_request*/) {
+			std::unique_ptr<ImpersonationTokenContinuation> callback_ptr(continuation);
+			ImpersonationTokenContinuation &callback_data = *callback_ptr;
+
+			if (!success) {
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+				// Ok, we have successfully established a connection.  Let's build the request ad
+				// and shoot it off.
+			classad::ClassAd request_ad;
+			if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
+				!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
+			{
+				errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+			if (!callback_data.m_authz_bounding_set.empty()) {
+				std::string authz_bounding_set_str =
+					join(callback_data.m_authz_bounding_set, ",");
+
+				if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, authz_bounding_set_str))
+				{
+					errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+					callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+					return;
+				}
+			}
+
+			sock->encode();
+			if (!putClassAd(sock, request_ad) ||
+				!sock->end_of_message())
+			{
+				errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
+					" to remote schedd.");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+
+				// Now, we must register a callback to wait for a response.
+			auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
+				(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
+				"Finish impersonation token request",
+				callback_ptr.get(), HANDLE_READ);
+			if (rc < 0) {
+				errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
+				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+				return;
+			}
+
+				// At this point, the callback has been registered and DaemonCore owns the
+				// memory; release the unique_ptr to prevent it from deleting the callback
+				// object at exit.
+			callback_ptr.release();
+		},
 		"requestImpersonationToken");
 
 	if (result == StartCommandFailed) {
@@ -2582,7 +2610,7 @@ DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
 int DCSchedd::queryUsers(
 	const classad::ClassAd & query_ad,
 	// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
-	int (*process_func)(void*, ClassAd *ad),
+	std::function<int (void*data, ClassAd *ad)> process_func,
 	void * process_func_data,
 	int connect_timeout,
 	CondorError *errstack,
@@ -2874,17 +2902,19 @@ ClassAd * DCSchedd::removeUsers(
 }
 
 ClassAd * DCSchedd::updateUserAds(
-	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	std::vector<ClassAd> & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
 	CondorError * errstack)
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (user_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(user_ads.Length());
-	user_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(user_ads.size());
+	for (auto& cmdAd: user_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -2894,6 +2924,10 @@ ClassAd * DCSchedd::updateUserAds(
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
@@ -2992,17 +3026,19 @@ ClassAd * DCSchedd::removeProjects(
 }
 
 ClassAd * DCSchedd::updateProjectAds(
-	ClassAdList & project_ads, // ads must have ATTR_NAME attribute at a minimum
+	std::vector<ClassAd> & project_ads, // ads must have ATTR_NAME attribute at a minimum
 	CondorError *errstack)
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (project_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(project_ads.Length());
-	project_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(project_ads.size());
+	for (auto& cmdAd: project_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3012,6 +3048,10 @@ ClassAd * DCSchedd::updateProjectAds(
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3019,15 +3059,17 @@ ClassAd * DCSchedd::updateProjectAds(
 ClassAd * DCSchedd::generalUpdateUserRecs(
 	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 	bool is_project,           // set to true if ads are project ads or mixed user and project ads
-	ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	std::vector<ClassAd> & userrec_ads, // ads must have ATTR_USER or ATTR_NAME
 	CondorError *errstack)
 {
 	int connect_timeout = 20;
+	if (userrec_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::generalUpdateUserRecs", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	std::vector<const ClassAd*> ads;
-	ads.reserve(userrec_ads.Length());
-	userrec_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = userrec_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(userrec_ads.size());
+	for (auto& cmdAd: userrec_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (cmd, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 

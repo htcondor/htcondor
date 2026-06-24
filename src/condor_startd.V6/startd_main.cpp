@@ -397,6 +397,10 @@ main_init( int, char* argv[] )
 								  command_coalesce_slots,
 								  "command_coalesce_slots", DAEMON );
 
+	daemonCore->Register_Command( COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT",
+								  command_data_slot,
+								  "command_data_slot", DAEMON );
+
 		// ex-OWNER permission commands, now ADMINISTRATOR
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
@@ -414,6 +418,10 @@ main_init( int, char* argv[] )
 								  "VACATE_CLAIM_FAST",
 								  command_name_handler,
 								  "command_name_handler", ADMINISTRATOR );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FINAL_XFER,
+								  "DEACTIVATE_CLAIM_FINAL_XFER",
+								  command_handler,
+								  "command_handler", DAEMON );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
@@ -450,6 +458,10 @@ main_init( int, char* argv[] )
 								  "DRAIN_JOBS",
 								  command_drain_jobs,
 											 "command_drain_jobs", ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( REHOME,
+								  "REHOME",
+								  command_rehome,
+											 "command_rehome", ADMINISTRATOR);
 	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
 								  "CANCEL_DRAIN_JOBS",
 								  command_cancel_drain_jobs,
@@ -546,6 +558,11 @@ init_params( int first_time)
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
+	} else {
+		if (ep_eventlog.isEnabled()) {
+			/* auto & reconfigEvent = */ ep_eventlog.composeEvent(ULOG_EP_RECONFIG,nullptr);
+			ep_eventlog.flush();
+		}
 	}
 
 	resmgr->init_config_classad();
@@ -1010,6 +1027,12 @@ startd_exit_if_idle(int /* tid */)
 		return;
 	}
 	if ( bench_job_mgr && ( ! bench_job_mgr->ShutdownOk() ) ) {
+		return;
+	}
+	if ( resmgr && resmgr->rehomeRebootPending() ) {
+			// A rehome --reboot is queued or in flight.  Don't exit
+			// until doRehomeReboot has launched the reboot command;
+			// it will call back into us when it finishes.
 		return;
 	}
 	if ( ! resmgr ) {

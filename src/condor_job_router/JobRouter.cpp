@@ -1494,7 +1494,7 @@ JobRouter::GetCandidateJobs() {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	JobRoute *route;
 
-	HashTable<std::string,std::string> constraint_list(hashFunction);
+	std::set<std::string> constraint_set;
 	std::string umbrella_constraint;
 
 	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
@@ -1538,14 +1538,13 @@ JobRouter::GetCandidateJobs() {
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		if(route->AcceptingMoreJobs()) {
-			std::string existing_constraint;
 			std::string this_constraint = route->RouteRequirementsString();
 			if(this_constraint.empty()) {
 				this_constraint = "True";
 			}
-			if(constraint_list.lookup(this_constraint,existing_constraint)==-1)
+			if(!constraint_set.contains(this_constraint))
 			{
-				constraint_list.insert(this_constraint,this_constraint);
+				constraint_set.emplace(this_constraint);
 				if(!route_constraints.empty()) route_constraints += " || ";
 				route_constraints += "(";
 				route_constraints += this_constraint;
@@ -1929,6 +1928,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
+	std::string dest_user;
 	bool rc;
 
 	std::string owner, domain;
@@ -1938,7 +1938,11 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
-	rc = submit_job(owner, domain, job->dest_ad,m_schedd2,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(owner, domain, job->dest_ad, m_schedd2, job->is_sandboxed, dest_cluster_id, dest_proc_id, dest_user);
+
+	if (!dest_user.empty()) {
+		job->dest_ad.Assign(ATTR_USER, dest_user);
+	}
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into

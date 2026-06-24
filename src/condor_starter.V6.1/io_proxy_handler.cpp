@@ -109,6 +109,7 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 	char check_cookie[CHIRP_LINE_MAX];
 	check_cookie[0] = 0;
 
+	// line won't be longer than CHIRP_LINE_MAX
 	if(sscanf(line,"cookie %s",check_cookie)==1) {
 		if(!strcmp(check_cookie,cookie)) {
 			dprintf( D_FULLDEBUG, 

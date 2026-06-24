@@ -1455,6 +1455,7 @@ class DaemonCore : public Service
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
+	static const int ERRNO_OOM_KILLED_AT_STARTUP;
 
 	const static char* DEFAULT_INDENT;
 
@@ -1632,6 +1633,7 @@ class DaemonCore : public Service
 	bool CheckConfigSecurity( const char* config, Sock* sock );
 	bool CheckConfigAttrSecurity( const char* attr, Sock* sock );
 
+	std::string GetCommandsInAuthLevel(DCpermission perm, bool is_authenticated);
 
     /** Invalidate all session related cache since the configuration
      */
@@ -1640,7 +1642,7 @@ class DaemonCore : public Service
 	/* manage the secret cookie data */
 	bool set_cookie( int len, const unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
-	bool cookie_is_valid( const unsigned char* data );
+	bool cookie_is_valid( const unsigned char* data, int len );
 
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
@@ -1873,7 +1875,6 @@ class DaemonCore : public Service
 	bool m_never_use_kill_for_dc_signals;
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
-	bool m_invalidate_sessions_via_tcp;
 
 	// This pairing should representing the "same" socket, just on UDP and TCP.
 	// It's okay for parts to be NULL.  Safe to copy, although all of the
@@ -2016,8 +2017,6 @@ class DaemonCore : public Service
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
-
-	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,
@@ -2364,14 +2363,6 @@ class DaemonCore : public Service
 		   themselves.
 		*/
 	void initCollectorList(void);
-
-	// Inform a client that they attempted to resume a session that
-	// we don't have.
-	// If the client is version 8.8.0 or later, extended information
-	// can be provided in the info_ad. Older clients will assume the
-	// ad is part of the session id to invalidate.
-	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const ClassAd* info_ad = NULL ) const;
 
 	bool m_wants_restart{true};
 	bool m_in_shutdown_peaceful{false};

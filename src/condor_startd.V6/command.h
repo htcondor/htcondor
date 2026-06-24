@@ -123,7 +123,13 @@ int command_drain_jobs(int dc_cmd, Stream* s );
 // Cancel prior request to drain jobs
 int command_cancel_drain_jobs(int dc_cmd, Stream* s );
 
+// Rehome: kill all claims and prepare for new work
+int command_rehome(int dc_cmd, Stream* s );
+
 // ...
 int command_coalesce_slots(int, Stream * stream );
+
+// ...
+int command_data_slot(int, Stream * stream );
 
 #endif /* _STARTD_COMMAND_H */

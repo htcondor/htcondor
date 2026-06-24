@@ -293,6 +293,11 @@ static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 static char jid[] = "$(ClusterId).$(ProcId)";
 static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
+// a convenience so you can use $(JobListId) in your submit description
+static char jid_cluster[] = "$(ClusterId)";
+static condor_params::string_value JobListIdMacroDef = { jid_cluster, 0 };
+
+
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
 	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
@@ -348,6 +353,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
 	{ "JobId",     &JobIdMacroDef },
+	{ "JobListId", &JobListIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
@@ -2120,13 +2126,13 @@ int SubmitHash::SetLeaveInQueue()
 				 */
 				formatstr(
 					buffer,
-					"%s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
+					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) < %s",
 					ATTR_JOB_STATUS,
 					COMPLETED,
 					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					60 * 60 * 24 * 10
+					60 * 60 * 24 * 10,
+					ATTR_STAGE_OUT_FINISH,
+					ATTR_ENTERED_CURRENT_STATUS
 				);
 				AssignJobExpr(ATTR_JOB_LEAVE_IN_QUEUE, buffer.c_str());
 			}
@@ -4846,6 +4852,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserNotes
 	{SUBMIT_KEY_UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_NotesAttrsCommand, ATTR_SUBMIT_EVENT_NOTES_ATTRS, SimpleSubmitKeyword::f_as_string},
 	// formerly SetStackSize
 	{SUBMIT_KEY_StackSize, ATTR_STACK_SIZE, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJarFiles
@@ -5417,6 +5424,12 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
 				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
+			} else {
+				// check for retry_request_disk
+				auto_free_ptr rrd(submit_param(SUBMIT_KEY_RetryRequestDisk));
+				if (rrd) {
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, rrd);
+				}
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
@@ -5851,10 +5864,18 @@ int SubmitHash::SetRequirements()
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
 		// get classified as external references.
-	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
+	req_ad.Assign(ATTR_REQUEST_MEMORY,0); // for use by checks_reqmem below
 	req_ad.Assign(ATTR_VM_CKPT_MAC, "");
+	req_ad.Assign(ATTR_REQUIREMENTS, true); // so we can detect circular Requirements
 
-	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
+	if ( ! answer.empty() && ! GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs)) {
+		// could not get references, if it is because Requirements references Requirements
+		push_warning(stderr, "Could not get attribute references from Requirements: %s\n", answer.c_str());
+	}
+	if (job_refs.count(ATTR_REQUIREMENTS) || machine_refs.count(ATTR_REQUIREMENTS)) {
+		push_error(stderr, ATTR_REQUIREMENTS " = %s\nIs Circular. Did you intend to use $(Requirements) ?\n", answer.c_str());
+		ABORT_AND_RETURN(1);
+	}
 
 	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
@@ -8145,7 +8166,14 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	}
 	
 	/* Insert the version into the ClassAd */
-	baseJob.Assign( ATTR_VERSION, CondorVersion() );
+	const char *schedd_version = getScheddVersion();
+	
+	// Schedd version is "" for dry-run
+	if (schedd_version && *schedd_version) {
+		baseJob.Assign( ATTR_VERSION, getScheddVersion());
+	}
+
+	baseJob.Assign( ATTR_SUBMIT_VERSION, CondorVersion() );
 	baseJob.Assign( ATTR_PLATFORM, CondorPlatform() );
 #endif
 
@@ -8273,7 +8301,16 @@ ClassAd* SubmitHash::make_job_ad (
 	job = new DeltaClassAd(*procAd);
 
 	// really a command, needs to happen before any calls to check_open
-	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
+	JobDisableFileChecks = false;
+	auto_free_ptr filechecks(submit_param(SUBMIT_CMD_skip_filechecks));
+	if (filechecks) {
+		if (YourStringNoCase("warn") == filechecks.ptr()) {
+			FileChecksAreWarnings = true;
+		} else if ( ! string_is_boolean_param(filechecks, JobDisableFileChecks)) {
+			push_error(stderr, "SUBMIT_CMD_skip_filechecks=%s is invalid, must be 'warn' or a boolean\n", filechecks.ptr());
+			abort_code = 1;
+		}
+	}
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
 	SetIWD();		// must be called very early
@@ -8437,7 +8474,8 @@ bool SubmitHash::is_dag_command(const char * line) {
 	};
 
 	StringTokenIterator l(line, " \t");
-	return dag_commands.contains(l.first());
+	const char * first = l.first();
+	return first && dag_commands.contains(first);
 }
 
 
@@ -9600,7 +9638,7 @@ static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
 
 // while building a submit digest, fixup right hand side for certain key=rhs pairs
 // for now this is mostly used to promote some paths to fully qualified paths.
-void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
+void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions)
 {
 	const DIGEST_FIXUP_KEY* found = NULL;
 	found = BinaryLookup<DIGEST_FIXUP_KEY>(aDigestFixupAttrs, COUNTOF(aDigestFixupAttrs), key, strcasecmp);
@@ -9626,7 +9664,10 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	if (found->id == idKeyUniverse && topping) { rhs = topping; }
 
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
-	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
+	// HTCONDOR-3546 TJ : I don't see why we fixup idKeyExecutable at all here since
+	// SetExecutable calls full_path which uses FACTORY.IWD.  I'm doing the conservative
+	// change by checking has_pending_expansions, but we can probably remove the idKeyExecutable case entirely
+	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo && !has_pending_expansions)) {
 		if (rhs.empty()) return;
 		const char * path = rhs.c_str();
 		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
@@ -9816,7 +9857,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 			if (iret > 0) {
 				has_pending_expansions = true;
 			}
-			fixup_rhs_for_digest(key, rhs);
+			fixup_rhs_for_digest(key, rhs, has_pending_expansions);
 		} else {
 			rhs = "";
 		}

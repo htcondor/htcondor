@@ -29,9 +29,12 @@
 #define	INTERFACE_VERSION	"1"
 
 // ClassAd Cron Job parameters methods
-ClassAdCronJobParams::ClassAdCronJobParams( const char *job_name,
-											const CronJobMgr &mgr )
-		: CronJobParams( job_name, mgr )
+ClassAdCronJobParams::ClassAdCronJobParams(
+	const char *job_name,
+	const char *param_base,
+	const char * mgr_name)
+	: CronJobParams( job_name, param_base )
+	, m_mgr_name_uc(mgr_name)
 {
 }
 
@@ -42,7 +45,7 @@ ClassAdCronJobParams::Initialize( void )
 		return false;
 	}
 
-	const char *mgr_name = GetMgr().GetName( );
+	const char *mgr_name = m_mgr_name_uc.c_str();
 	if ( mgr_name && (*mgr_name) ) {
 		char	*name_uc = strdup( mgr_name );
 		char	*name_ptr;
@@ -91,7 +94,7 @@ ClassAdCronJob::Initialize( void )
 
 		env_name = get_mySubSystem()->getName( );
 		env_name += "_CRON_NAME";
-		m_classad_env.SetEnv( env_name, Mgr().GetName() );
+		m_classad_env.SetEnv( env_name, mgr_name_uc.c_str() );
 	}
 
 	if (  Params().GetConfigValProg().length() && mgr_name_uc.length()  ) {

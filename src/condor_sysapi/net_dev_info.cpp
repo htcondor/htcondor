@@ -48,7 +48,6 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 	int iterations = 0;
 
 	char ipbuf[IP_STRING_BUF_SIZE+1];
-	dprintf(D_ALWAYS, "Win32 sysapi_get_network_device_info_raw()\n");
 
 	do {
 		ASSERT(addrbuf.ptr())

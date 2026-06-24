@@ -168,13 +168,13 @@ int ppCropNameWidth(void*pv, int /*index*/, Formatter * fmt, const char * /*attr
 	if (fmt->options & FormatOptionSpecial001) {
 		if (pi->name_width) {
 			fmt->width = pi->name_width;
-			fmt->options &= ~FormatOptionAutoWidth;
+			fmt->options &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
 		}
 	}
 	if (fmt->options & FormatOptionSpecial002) {
 		if (pi->machine_width) {
 			fmt->width = pi->machine_width;
-			fmt->options &= ~FormatOptionAutoWidth;
+			fmt->options &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
 		}
 	}
 	return 0;
@@ -392,7 +392,7 @@ const char * const startdPFV_Normal[] = { "SELECT",
 	ATTR_STATE                      " WIDTH AUTO OR ??",
 	ATTR_ACTIVITY                   " WIDTH  -8 PRINTAS ACTIVITY_OR_OCU OR ??",
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??",
-	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??",
+	ATTR_MEMORY          " AS Mem     WIDTH   6 PRINTF %6d OR ??",
 	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -",
 	"SUMMARY STANDARD"
 };
@@ -971,6 +971,29 @@ void PrettyPrinter::ppSetSlotLvUsageCols( int /*width*/, const char * & constr )
 	}
 }
 
+const char * const startdHealth_PrintFormat = "SELECT\n"
+ATTR_NAME "                                                   AS HOST_NAME  FIT\n"
+"int(HealthFactor*100) AS HEALTH PRINTF %5d%% OR ?\n"
+"HealthExprs AS FAILED_HEALTH_CHECKS RENDERAS UNHEALTH OR ?\n"
+//"WHERE " PMODE_STARTD_HEALTH_CONSTRAINT "\n"
+"SUMMARY STANDARD\n";
+
+const char * const slotsHealth_PrintFormat = "SELECT\n"
+ATTR_NAME "                                                   AS SLOT_NAME  FIT\n"
+"int(HealthFactor*100) AS Health PRINTF %5d%% OR ?\n"
+"HealthExprs AS FAILED_HEALTH_CHECKS RENDERAS UNHEALTH OR ?\n"
+//"WHERE " PMODE_SLOT_HEALTH_CONSTRAINT "\n"
+"SUMMARY STANDARD\n";
+
+void PrettyPrinter::ppSetEPHealthCols( int /*width*/, bool daemon_ad, const char * & constr )
+{
+	const char * tag = "Health";
+	const char * fmt = daemon_ad ? startdHealth_PrintFormat : slotsHealth_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
 const char * const ckptServer_PrintFormat = "SELECT FROM CkptServer\n"
 	ATTR_NAME        "        WIDTH -34 FIT OR ??\n"
 	ATTR_DISK " AS AvailDisk  WIDTH    9 PRINTF %-9s OR ??\n"
@@ -1228,6 +1251,8 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 					fmt->width = pi->name_width;
 					if ( ! pi->wide_display) fmt->options &= ~FormatOptionAutoWidth;
 					fmt->options |= (pi->name_flags & FormatOptionAutoWidth);
+				} else if (pi->name_flags & FormatOptionAutoWidth) {
+					fmt->options |= FormatOptionAutoWidth;
 				}
 			}
 		}
@@ -1312,7 +1337,7 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 		} else {
 			ppSetStartdNormalCols(display_width, constr);
 			name_flags = FormatOptionAutoWidth;
-			width_of_fixed_cols = 61;
+			width_of_fixed_cols = 65;
 		}
 		break;
 
@@ -1351,6 +1376,12 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 		case PP_STARTD_BROKEN:
 		case PP_SLOTS_BROKEN:
 		ppSetBrokenCols(display_width, (pps==PP_STARTD_BROKEN), constr);
+		break;
+
+		case PP_STARTD_HEALTH:
+		case PP_SLOTS_HEALTH:
+		ppSetEPHealthCols(display_width, (pps==PP_STARTD_HEALTH), constr);
+		name_flags = FormatOptionAutoWidth;
 		break;
 
 		case PP_SCHEDD_NORMAL:

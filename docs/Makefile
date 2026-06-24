@@ -49,10 +49,12 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
-	rm -f _static/js/config-macro-redirect.js
+	rm -rf _static/generated/js/*
+	rm -rf _static/generated/rst/*
 
 auto:
-	sphinx-autobuild -E . _build/html
+	# Ignore sphinx build generated static files to prevent infinite build recursion
+	sphinx-autobuild --ignore '_static/generated' --ignore '*.DS_Store' -E . _build/html
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

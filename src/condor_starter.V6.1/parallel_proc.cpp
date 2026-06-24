@@ -174,7 +174,7 @@ ParallelProc::addEnvVars()
 }
 
 
-bool
+ReapResult
 ParallelProc::JobReaper( int pid, int status )
 { 
 	return VanillaProc::JobReaper( pid, status );

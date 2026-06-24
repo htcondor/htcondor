@@ -14,3 +14,6 @@ usr/libexec/condor/test_generator
 usr/libexec/condor/memory_exerciser_dinner
 usr/libexec/condor/test_starter_guidance.exe
 usr/bin/common_transfer_savings.py
+# Experimental - not for wider deployment
+usr/bin/condor_login
+usr/sbin/condor_placementd
