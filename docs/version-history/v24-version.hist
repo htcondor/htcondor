@@ -1,5 +1,10 @@
 *** 24.0.23 bugs
 
+- Fixed a bug in wildcard string matching where a pattern ending in a literal
+  was not anchored to the end of the candidate string, so it could match
+  strings with extra trailing characters.
+  :jira:`3809`
+
 *** 24.0.22 features
 
 - HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
@@ -33,11 +38,6 @@
   that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
   submit file.
   :jira:`3800`
-
-- Fixed a bug in wildcard string matching where a pattern ending in a literal
-  was not anchored to the end of the candidate string, so it could match
-  strings with extra trailing characters.
-  :jira:`3809`
 
 *** 24.0.21 features
 
