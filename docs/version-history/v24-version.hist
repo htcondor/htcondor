@@ -1,3 +1,7 @@
+*** 24.12.23 bugs
+
+*** 24.0.23 bugs
+
 *** 24.12.22 bugs
 
 - Fixed a bug where the *condor_job_router* could abort when removing a job
