@@ -32,6 +32,10 @@
   submit file.
   :jira:`3800`
 
+- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
+  when executing the ``add-pwd`` option as a privileged user (i.e. root).
+  :jira:`3804`
+
 *** 24.0.21 features
 
 - HTCondor tarballs now contain `Pelican 7.25.0 <https://pelicanplatform.org/releases>`_
