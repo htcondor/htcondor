@@ -3044,7 +3044,6 @@ command_data_slot(int, Stream * stream ) {
 	}
 	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
 	r->change_state( unclaimed_state );
-	data_slot->is_data_slot = true;
 
 	if( data_slot == nullptr ) {
 		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed\n" );
@@ -3062,6 +3061,7 @@ command_data_slot(int, Stream * stream ) {
 
 		return FALSE;
 	}
+	data_slot->is_data_slot = true;
 
 	// Hand the request ad to the new slot's claim, which now owns it and
 	// will delete it when the claim is destroyed.

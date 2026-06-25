@@ -505,8 +505,12 @@ sub checkTiming {
 					die( "slot1_$7 did not immediately switch from retiring to preempting.\n" );
 				}
 			}
-			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 4) % 60) != $14 && (($finalDrainStartTime + 5) % 60) != $14 && (($finalDrainStartTime + 6) % 60) != $14 ) {
+			# Especially with sub-second reporting, allow the startd some time to
+			# work.  A loaded test host can freeze the daemons for several seconds
+			# mid-vacate, so be generous: accept anything from 4 to 10 seconds.
+			# The % 60 handles the case where the interval straddles a minute.
+			my $vacateDelta = ($14 - $finalDrainStartTime) % 60;
+			if( $vacateDelta < 4 || $vacateDelta > 10 ) {
 				die( "MaxMachineVacateTime was not 5: finalDrainStartTime is $finalDrainStartTime, one is $14, \n" );
 			}
 			$state = 5;

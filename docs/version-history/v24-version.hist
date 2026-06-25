@@ -1,8 +1,23 @@
+*** 24.12.23 bugs
+
+*** 24.0.23 bugs
+
+- Fixed a bug in wildcard string matching where a pattern ending in a literal
+  was not anchored to the end of the candidate string, so it could match
+  strings with extra trailing characters.
+  :jira:`3809`
+
 *** 24.12.22 bugs
 
 - Fixed a bug where the *condor_job_router* could abort when removing a job
   that had just been routed.
   :jira:`3757`
+
+*** 24.0.22 features
+
+- HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.1.
 
 *** 24.0.22 bugs
 
