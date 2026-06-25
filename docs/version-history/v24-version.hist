@@ -27,14 +27,14 @@
   :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
   :jira:`3760`
 
+- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
+  when executing the ``add-pwd`` option as a privileged user (i.e. root).
+  :jira:`3804`
+
 - Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
   that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
   submit file.
   :jira:`3800`
-
-- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
-  when executing the ``add-pwd`` option as a privileged user (i.e. root).
-  :jira:`3804`
 
 *** 24.0.21 features
 
