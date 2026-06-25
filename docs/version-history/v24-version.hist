@@ -21,7 +21,7 @@
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
   in :tool:`classad_eval` no longer causes a segmentation fault.
-  :jira:`3554`
+  :jira:`3796`
 
 - When using the ClassAd function :classad-function:`debug`, comparing a string
   to a non-string no longer results in the previous (unrelated) error, if any;
@@ -32,6 +32,10 @@
   if the configuration parameters :macro:`JOB_ROUTER_SCHEDD1_NAME` or
   :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
   :jira:`3760`
+
+- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
+  when executing the ``add-pwd`` option as a privileged user (i.e. root).
+  :jira:`3804`
 
 - Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
   that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
