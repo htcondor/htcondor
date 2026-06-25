@@ -9503,7 +9503,16 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		std::erase_if(
 			matchesHeldByBlockedJobs,
 			[this] (match_rec * mrec) -> bool {
+				if( mrec == nullptr ) {
+					dprintf( D_ALWAYS, "Match in the list of those held by blocked job is null, which is definitely wrong.\n" );
+					return false;
+				}
+
 				shadow_rec * srec = mrec->shadowRec;
+				if( srec == nullptr ) {
+					dprintf( D_ALWAYS, "Match held by blocked job does not have a shadow rec, which seems wrong.\n" );
+					return false;
+				}
 
 				size_t found = 0;
 				for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
