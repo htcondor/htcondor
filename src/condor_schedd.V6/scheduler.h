@@ -128,8 +128,6 @@ class LocalJobRec {
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
-int init_user_ids(const JobQueueUserRec * user);
-
 class match_rec;
 
 #include "cxfer_state.h"
@@ -665,7 +663,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
-	bool            FindRunnableJobForClaim(match_rec* mrec);
+	bool            FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id);
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 

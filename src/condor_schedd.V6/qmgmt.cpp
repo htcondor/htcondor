@@ -33,6 +33,7 @@
 #include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
+#include "set_user_priv_from_ad.h"
 #include "condor_adtypes.h"
 #include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
@@ -6335,7 +6336,7 @@ ReadProxyFileIntoAd( [[maybe_unused]] const char *file, [[maybe_unused]] const O
 	// owner==NULL means don't try to switch our priv state.
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
-		if ( !init_user_ids(owner) ) {
+		if ( !init_user_ids_from_ad(*owner) ) {
 			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner->Name() );
 			return false;
 		}
@@ -6503,7 +6504,7 @@ static bool MakeUserRec(JobQueueKey & key,
 	const ClassAd * defaults)
 {
 	std::string obuf;
-	const char* owner = name_of_user(user, obuf);
+	const char* owner = user ? name_of_user(user, obuf) : nullptr;
 	const char* uid_domain = nullptr;
 	if (user) {
 		uid_domain = domain_of_user(user, nullptr);
@@ -9081,35 +9082,29 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	const char * powner = job->submitterdata->Name();
 #else
 	// TODO: use scheduler.get_submitter code above instead of this..
-	char    owner[100];
-	owner[0] = 0;
-	char * powner = owner;
-	int cremain = sizeof(owner);
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
 		// don't want for this purpose...
-	job->LookupString(ATTR_ACCOUNTING_GROUP, powner, cremain);  // TODDCORE
-	if (*powner == '\0') {
+	std::string owner;
+	job->LookupString(ATTR_ACCOUNTING_GROUP, owner);  // TODDCORE
+	if (owner.empty()) {
 		std::string job_user;
 		job->LookupString(attr_JobUser, job_user);
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
 		if (user_is_the_new_owner && last_at != std::string::npos && !accounting_domain.empty()) {
-			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
-			cremain -= last_at;
-			strncat(powner, "@", cremain); cremain--;
-			strncat(powner, accounting_domain.c_str(), cremain);
+			owner = job_user.substr(0, last_at) + "@" + accounting_domain;
 		} else {
-			strncat(powner, job_user.c_str(), cremain - 1);
+			owner = job_user;
 		}
 	} else if (user_is_the_new_owner) {
 		// AccountingGroup does not include a domain, but it needs to for this code
 		auto accounting_domain = scheduler.accountingDomain();
 		if (!accounting_domain.empty()) {
-			strncat(powner, "@", cremain); cremain--;
-			strncat(powner, accounting_domain.c_str(), cremain);
+			owner += "@" + accounting_domain;
 		}
 	}
+	const char * powner = owner.c_str();
 #endif
 
 	auto & rec = PrioRec.emplace_back();

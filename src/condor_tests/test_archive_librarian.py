@@ -415,3 +415,28 @@ class TestLibrarianIngestion:
         total = post_rotation_db.execute(r"SELECT SUM(RecordsRead) FROM Files").fetchone()[0] or 0
         assert total >= NUM_JOBS + 1, \
             f"Expected SUM(RecordsRead) >= {NUM_JOBS + 1}, got {total}"
+
+    # --- Schema v3 checks ---
+
+    def test_schema_version(self, librarian_db):
+        """Database must be at schema version 3."""
+        version = librarian_db.execute("PRAGMA user_version").fetchone()[0]
+        assert version == 3, f"Expected schema version 3, got {version}"
+
+    def test_dag_batch_columns_exist(self, librarian_db):
+        """JobRecords must have DAGManJobId, JobBatchId, and JobBatchName columns (schema v3)."""
+        cols = {row[1] for row in librarian_db.execute("PRAGMA table_info(JobRecords)").fetchall()}
+        assert "DAGManJobId"  in cols, "DAGManJobId column missing from JobRecords"
+        assert "JobBatchId"   in cols, "JobBatchId column missing from JobRecords"
+        assert "JobBatchName" in cols, "JobBatchName column missing from JobRecords"
+
+    def test_dag_batch_columns_null_for_plain_jobs(self, librarian_db):
+        """Plain vanilla jobs are not part of a DAG, so all three metadata columns must be NULL."""
+        non_null = librarian_db.execute(
+            r"SELECT COUNT(*) FROM JobRecords "
+            r"WHERE DAGManJobId IS NOT NULL OR JobBatchId IS NOT NULL OR JobBatchName IS NOT NULL"
+        ).fetchone()[0]
+        assert non_null == 0, (
+            f"Expected all DAG/batch columns to be NULL for plain jobs, "
+            f"but {non_null} row(s) had a non-NULL value"
+        )

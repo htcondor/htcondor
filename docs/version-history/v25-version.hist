@@ -1,3 +1,9 @@
+*** 25.13.0 features
+
+*** 25.13.0 bugs
+
+*** 25.0.13 bugs
+
 *** 25.12.0 features
 
 - :tool:`condor_userprio` ``-setfloor`` and ``-setfactor`` now accept a
@@ -14,6 +20,11 @@
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
 
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
+  and :ad-attr:`JobBatchName` of job records into the library database.
+  This allows database queries at a DAG workflow level to be executed.
+  :jira:`3799`
+
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
   Point's :macro:`HISTORY` archive.
@@ -26,6 +37,10 @@
 - The headers printed out by the :tool:`condor_top` are now multi-row
   and should be clearer to understand.
   :jira:`3247`
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3735`
 
 - The ``htcondor ep rehome`` command directs a *condor_startd* to evict its
   running jobs and direct-attach to a different *condor_schedd*. The new
@@ -63,6 +78,13 @@
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.11.
+  :jira:`3795`
 
 - Fixed a bug that could cause file descriptor leaks in *blahpd*.
   :jira:`3786`

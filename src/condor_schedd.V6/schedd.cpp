@@ -246,15 +246,6 @@ static bool isOCUSuperUser(ReliSock* sock) {
 	return false;
 }
 
-int init_user_ids(const JobQueueUserRec * user) {
-	if ( ! user || ! user->OsUser()) {
-		return 0;
-	}
-	std::string buf;
-	const char * owner = name_of_user(user->OsUser(), buf);
-	return init_user_ids(owner, domain_of_user(user->OsUser(), nullptr));
-}
-
 // priority records
 #ifdef PRIO_REC_IS_VECTOR
  extern std::vector<prio_rec> PrioRec;
@@ -5151,8 +5142,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
                      job_id.cluster, job_id.proc);
             
 			const OwnerInfo * owni = job_ad->ownerinfo;
-			if (! init_user_ids(owni) ) {
-				const char* os_user = (owni && owni->OsUser()) ? owni->OsUser() : "";
+			if (! init_user_ids_from_ad(*owni) ) {
+				const char* os_user = (owni->OsUser()) ? owni->OsUser() : "";
 				std::string msg;
 				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", os_user);
 #ifdef WIN32
@@ -5249,7 +5240,10 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	}
 	if( mrec ) {
 		// NOTE: this might delete the mrec...
-		scheduler.FindRunnableJobForClaim( mrec );
+		PROC_ID new_job_id;
+		if( scheduler.FindRunnableJobForClaim( mrec, new_job_id ) ) {
+			scheduler.SetMrecJobID(mrec, new_job_id);
+		}
 	}
 
 	if( mode == REMOVED ) {
@@ -5698,7 +5692,7 @@ jobIsFinished( int cluster, int proc, void* )
 		dprintf( D_FULLDEBUG, "(%d.%d) Forcing NFS sync of Iwd\n", cluster,
 				 proc );
 
-		if ( !init_user_ids(job_ad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*job_ad->ownerinfo) ) {
 			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
 					 job_ad->ownerinfo->Name() );
 		} else {
@@ -6558,7 +6552,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
 			}
-			if ( !init_user_ids(ad->ownerinfo) ) {
+			if ( !init_user_ids_from_ad(*ad->ownerinfo) ) {
 				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 						 "failed to initialize user id for job %d.%d\n",
 						 cluster, proc );
@@ -7135,7 +7129,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		priv = set_condor_priv();
 		use_user_priv = false;
 	} else {
-		if ( !init_user_ids(jobad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 			         jobad->ownerinfo->Name() );
 			refuse(s);
@@ -7206,7 +7200,7 @@ UpdateGSICredContinuation::finish(Stream *stream)
 #ifndef WIN32
 	if (m_user_priv) {
 		JobQueueJob* jobad = GetJobAd(m_jobid);
-		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
+		if ( !jobad || !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for owner of %d.%d!\n",
 			        m_jobid.cluster, m_jobid.proc);
 			delete this;
@@ -10537,9 +10531,12 @@ Scheduler::StartJob(match_rec *rec)
 
 			// find the job with the highest priority
 			// if no job found, rec might be deleted (or may not be because of keep claim idle)
-		if( !FindRunnableJobForClaim(rec) ) {
+		PROC_ID new_job_id;
+		if(! FindRunnableJobForClaim(rec, new_job_id)) {
 			// rec was probably deleted, don't try and use it again...
 			return;
+		} else {
+			SetMrecJobID(rec, new_job_id);
 		}
 		id.cluster = rec->cluster;
 		id.proc = rec->proc;
@@ -10611,11 +10608,10 @@ Scheduler::StartJob(match_rec *rec)
 }
 
 bool
-Scheduler::FindRunnableJobForClaim(match_rec* mrec)
+Scheduler::FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id)
 {
 	ASSERT( mrec );
 
-	PROC_ID new_job_id;
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
 
@@ -10648,7 +10644,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 			"match (%s) switching to job %d.%d\n",
 			mrec->description(), new_job_id.cluster, new_job_id.proc );
 
-	SetMrecJobID(mrec,new_job_id);
 	return true;
 }
 
@@ -11331,7 +11326,9 @@ bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
 {
 	classad::EvalState state;
 	state.SetScopes(this);
-	return expr->Evaluate(state , val);
+	auto r = expr->Evaluate(state , val);
+	val.MakeSelfContained(state);
+	return r;
 }
 
 bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
@@ -12388,7 +12385,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(userJob->ownerinfo) ) {
+	if (! init_user_ids_from_ad(*userJob->ownerinfo) ) {
 		std::string tmpstr;
 #ifdef WIN32
 		formatstr(tmpstr, "Bad or missing credential for user: %s", userJob->ownerinfo->Name());
@@ -19875,7 +19872,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	shadow_rec *srec;
 	match_rec *mrec;
 	PROC_ID prev_job_id;
-	PROC_ID new_job_id;
 	Sock *sock = (Sock *)stream;
 
 		// force authentication
@@ -19966,7 +19962,8 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
 	}
 
-	if( !FindRunnableJobForClaim(mrec) ) {
+	PROC_ID new_job_id;
+	if(! FindRunnableJobForClaim(mrec, new_job_id)) {
 		dprintf(D_FULLDEBUG,
 			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
 			shadow_pid, prev_job_id.cluster, prev_job_id.proc);
@@ -19974,10 +19971,26 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;
+	} else {
+		//
+		// The common-files transfer handling is currently done in `StartJob()`,
+		// because it should be named `StartShadow()`.  Rather than rewrite the
+		// the whole control flow (again) right before the code freeze, let's
+		// just not re-use shadows for common file jobs.
+		//
+		auto [cxfer_type, catalogs] = determine_cxfer_type(mrec, new_job_id);
+		if( cxfer_type == CXFER_TYPE::NONE ) {
+			SetMrecJobID(mrec, new_job_id);
+		} else {
+			dprintf(D_FULLDEBUG,
+				"Next job for shadow pid %d (was running job %d.%d) transfers common files; shadow will exit.\n",
+				shadow_pid, prev_job_id.cluster, prev_job_id.proc);
+			stream->encode();
+			stream->put((int)0);
+			stream->end_of_message();
+			return TRUE;
+		}
 	}
-
-	new_job_id.cluster = mrec->cluster;
-	new_job_id.proc = mrec->proc;
 
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
@@ -20681,7 +20694,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	}
 
 	TemporaryPrivSentry tps(true);
-	if ( ! jqc->ownerinfo || !init_user_ids(jqc->ownerinfo) ) {
+	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc->ownerinfo) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
@@ -20877,7 +20890,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	TemporaryPrivSentry tps(true);
-	if ( ! init_user_ids(user) ) {
+	if ( ! init_user_ids_from_ad(*user) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
 		return false;
