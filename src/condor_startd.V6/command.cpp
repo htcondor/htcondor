@@ -3043,6 +3043,10 @@ command_data_slot(int, Stream * stream ) {
 		new_slot_prefix = nsp.c_str();
 	}
 	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
+	// It's not clear what's logically consistent here, especially if turns
+	// out (below) that the data slot was created but doesn't have a claim.
+	//
+	// For now, we'll just try to avoid the immediate segfault.
 	r->change_state( unclaimed_state );
 
 	if( data_slot == nullptr ) {
@@ -3062,6 +3066,24 @@ command_data_slot(int, Stream * stream ) {
 		return FALSE;
 	}
 	data_slot->is_data_slot = true;
+
+
+	if( data_slot->r_cur == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed to set a claim\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed to set a claim" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
 
 	// Hand the request ad to the new slot's claim, which now owns it and
 	// will delete it when the claim is destroyed.
