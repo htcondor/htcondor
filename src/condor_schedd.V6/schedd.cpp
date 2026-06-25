@@ -13528,7 +13528,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				const auto & jobCatalogs = sr->cxfer_catalogs;
 				bool anyJobCatalogInRemovedCatalogs = std::any_of(
 					removedCatalogs.begin(), removedCatalogs.end(),
-					[jobCatalogs](const std::string & e) -> bool {
+					[& jobCatalogs](const std::string & e) -> bool {
 						return jobCatalogs.end() != std::find_if(
 							jobCatalogs.begin(), jobCatalogs.end(),
 							[e](const auto & f) { return f.first == e; }
