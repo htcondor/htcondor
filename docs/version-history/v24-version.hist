@@ -15,7 +15,7 @@
 
 - Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
   in :tool:`classad_eval` no longer causes a segmentation fault.
-  :jira:`3554`
+  :jira:`3796`
 
 - When using the ClassAd function :classad-function:`debug`, comparing a string
   to a non-string no longer results in the previous (unrelated) error, if any;
