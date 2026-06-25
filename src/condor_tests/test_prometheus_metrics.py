@@ -5,8 +5,17 @@
 # Prometheus text-format file containing only the metrics configured for
 # the Prometheus backend.
 #
+# Also covers HTTP serving of /metrics via DaemonCore's HTTP command
+# handler, including unauthenticated access, HTTP Basic auth via an
+# htpasswd file, and rejection of invalid credentials / unknown paths.
+#
 
+import base64
+import hashlib
+import http.client
 import logging
+import re
+import socket
 import time
 
 from ornithology import (
@@ -393,3 +402,309 @@ class TestPrometheusMetrics:
         # integrated into a running total, rather than each cycle's value simply
         # replacing the last (which is what a gauge / per-interval value does).
         assert second > first
+
+
+# ---------------------------------------------------------------------------
+# HTTP serving tests
+# ---------------------------------------------------------------------------
+
+def _metricd_http_port(condor):
+    """
+    Extract the MetricD command-socket port from MetricdLog.
+    DaemonCore logs a line like:
+        DaemonCore: command socket at <127.0.0.1:PORT?...>
+    or (when shared-port is not used):
+        DaemonCore: non-shared command socket at <127.0.0.1:PORT?...>
+    Returns (host, port) or raises RuntimeError if not found within 30 s.
+    """
+    log_file = condor.log_dir / "MetricdLog"
+    pattern = re.compile(r"DaemonCore:.*command socket at <([^:>]+):(\d+)[?]")
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        if log_file.exists():
+            for line in log_file.read_text(errors="replace").splitlines():
+                m = pattern.search(line)
+                if m:
+                    return m.group(1), int(m.group(2))
+        time.sleep(0.5)
+    raise RuntimeError("Could not determine MetricD HTTP port from log")
+
+
+def _http_get(host, port, path, headers=None, timeout=10):
+    """
+    Perform a plain HTTP/1.0 GET and return (status_code, body_text).
+    """
+    conn = http.client.HTTPConnection(host, port, timeout=timeout)
+    conn.request("GET", path, headers=headers or {})
+    resp = conn.getresponse()
+    body = resp.read().decode(errors="replace")
+    conn.close()
+    return resp.status, body
+
+
+def _make_htpasswd_sha1(path, user, password):
+    """
+    Write an Apache-compatible {SHA} htpasswd entry.
+    {SHA} is SHA-1 of the password, base64-encoded.
+    """
+    digest = hashlib.sha1(password.encode()).digest()
+    encoded = base64.b64encode(digest).decode()
+    path.write_text(f"{user}:{{SHA}}{encoded}\n")
+
+
+def _basic_auth_header(user, password):
+    token = base64.b64encode(f"{user}:{password}".encode()).decode()
+    return {"Authorization": f"Basic {token}"}
+
+
+# --- Standup: metricd with HTTP serving, no auth ----------------------------
+
+@standup
+def condor_with_http(test_dir):
+    metrics_dir = test_dir / "http_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_http_test_metrics",
+        """
+[
+  Name = "http_test_gauge";
+  Value = 42;
+  Desc = "HTTP test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file = test_dir / "http_metrics.prom"
+
+    cfg = {
+        "DAEMON_LIST":                 "$(DAEMON_LIST) METRICD",
+        "METRICD":                     "$(LIBEXEC)/condor_metricd",
+        "GANGLIA_LIB":                 "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+        "PROMETHEUS_METRICS_FILE":     str(prom_file),
+        "METRICD_INTERVAL":            "5",
+        "METRICD_METRICS_CONFIG_DIR":  str(metrics_dir),
+        "METRICD_DEBUG":               "D_FULLDEBUG D_COMMAND",
+        # Give metricd a stable shared-port socket name so that
+        # condor_shared_port can forward HTTP connections to it.
+        "METRICD_ARGS":                "-sock metricd",
+        "SHARED_PORT_HTTP_FORWARDING_ID": "metricd",
+        # No PROMETHEUS_HTTP_AUTH_FILE → unauthenticated access allowed.
+    }
+    with Condor(test_dir / "condor_http", config=cfg) as condor:
+        yield condor
+
+
+@action
+def http_host_port(test_dir, condor_with_http):
+    return _metricd_http_port(condor_with_http)
+
+
+@action
+def http_metrics_ready(test_dir, condor_with_http):
+    """Wait until metricd has written the prom file at least once."""
+    prom_file = test_dir / "http_metrics.prom"
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        if prom_file.exists() and "http_test_gauge" in prom_file.read_text():
+            return True
+        time.sleep(2)
+    return False
+
+
+# --- Standup: metricd with HTTP Basic auth ----------------------------------
+
+@standup
+def condor_with_http_auth(test_dir):
+    metrics_dir = test_dir / "auth_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_auth_test_metrics",
+        """
+[
+  Name = "auth_test_gauge";
+  Value = 7;
+  Desc = "Auth HTTP test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file  = test_dir / "auth_metrics.prom"
+    passwd_file = test_dir / "test.htpasswd"
+    _make_htpasswd_sha1(passwd_file, "prometheus", "s3cr3t")
+
+    cfg = {
+        "DAEMON_LIST":                     "$(DAEMON_LIST) METRICD",
+        "METRICD":                         "$(LIBEXEC)/condor_metricd",
+        "GANGLIA_LIB":                     "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+        "PROMETHEUS_METRICS_FILE":         str(prom_file),
+        "PROMETHEUS_HTTP_AUTH_FILE":       str(passwd_file),
+        "METRICD_INTERVAL":                "5",
+        "METRICD_METRICS_CONFIG_DIR":      str(metrics_dir),
+        "METRICD_DEBUG":                   "D_FULLDEBUG D_COMMAND",
+        # Give metricd a stable shared-port socket name so that
+        # condor_shared_port can forward HTTP connections to it.
+        "METRICD_ARGS":                    "-sock metricd",
+        "SHARED_PORT_HTTP_FORWARDING_ID":  "metricd",
+    }
+    with Condor(test_dir / "condor_auth", config=cfg) as condor:
+        yield condor
+
+
+@action
+def auth_host_port(test_dir, condor_with_http_auth):
+    return _metricd_http_port(condor_with_http_auth)
+
+
+@action
+def auth_metrics_ready(test_dir, condor_with_http_auth):
+    prom_file = test_dir / "auth_metrics.prom"
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        if prom_file.exists() and "auth_test_gauge" in prom_file.read_text():
+            return True
+        time.sleep(2)
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Test classes
+# ---------------------------------------------------------------------------
+
+class TestPrometheusHTTP:
+    """Verify that the metricd HTTP command handler serves /metrics correctly
+    when no password file is configured (open access)."""
+
+    def test_port_found(self, http_host_port):
+        host, port = http_host_port
+        assert host and port > 0
+
+    def test_metrics_file_written(self, http_metrics_ready):
+        assert http_metrics_ready
+
+    def test_get_metrics_returns_200(self, http_host_port, http_metrics_ready):
+        host, port = http_host_port
+        status, _ = _http_get(host, port, "/metrics")
+        assert status == 200
+
+    def test_get_metrics_content_type(self, http_host_port, http_metrics_ready):
+        # A plain HTTP/1.0 response should carry the Prometheus content-type.
+        # http.client doesn't expose headers easily for 1.0, so we check via
+        # a raw socket to avoid version negotiation surprises.
+        host, port = http_host_port
+        raw = socket.create_connection((host, port), timeout=10)
+        raw.sendall(b"GET /metrics HTTP/1.0\r\nHost: localhost\r\n\r\n")
+        response = b""
+        while True:
+            chunk = raw.recv(4096)
+            if not chunk:
+                break
+            response += chunk
+        raw.close()
+        header_block = response.split(b"\r\n\r\n", 1)[0].decode(errors="replace")
+        assert "text/plain" in header_block
+        assert "0.0.4" in header_block
+
+    def test_get_metrics_body_contains_metric(self, http_host_port, http_metrics_ready):
+        host, port = http_host_port
+        _, body = _http_get(host, port, "/metrics")
+        assert "http_test_gauge" in body
+
+    def test_get_metrics_body_has_help_and_type(self, http_host_port, http_metrics_ready):
+        host, port = http_host_port
+        _, body = _http_get(host, port, "/metrics")
+        assert "# HELP http_test_gauge" in body
+        assert "# TYPE http_test_gauge" in body
+
+    def test_unknown_path_returns_404(self, http_host_port):
+        host, port = http_host_port
+        status, _ = _http_get(host, port, "/notfound")
+        assert status == 404
+
+    def test_root_path_returns_404(self, http_host_port):
+        host, port = http_host_port
+        status, _ = _http_get(host, port, "/")
+        assert status == 404
+
+    def test_multiple_requests_served(self, http_host_port, http_metrics_ready):
+        """The handler must be able to serve more than one request."""
+        host, port = http_host_port
+        for _ in range(3):
+            status, body = _http_get(host, port, "/metrics")
+            assert status == 200
+            assert "http_test_gauge" in body
+
+
+class TestPrometheusHTTPAuth:
+    """Verify HTTP Basic auth enforcement via PROMETHEUS_HTTP_AUTH_FILE."""
+
+    def test_port_found(self, auth_host_port):
+        host, port = auth_host_port
+        assert host and port > 0
+
+    def test_metrics_file_written(self, auth_metrics_ready):
+        assert auth_metrics_ready
+
+    def test_no_credentials_returns_401(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, _ = _http_get(host, port, "/metrics")
+        assert status == 401
+
+    def test_no_credentials_has_www_authenticate(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        raw = socket.create_connection((host, port), timeout=10)
+        raw.sendall(b"GET /metrics HTTP/1.0\r\nHost: localhost\r\n\r\n")
+        response = b""
+        while True:
+            chunk = raw.recv(4096)
+            if not chunk:
+                break
+            response += chunk
+        raw.close()
+        header_block = response.split(b"\r\n\r\n", 1)[0].decode(errors="replace")
+        assert "WWW-Authenticate" in header_block
+        assert "Basic" in header_block
+
+    def test_valid_credentials_returns_200(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, body = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prometheus", "s3cr3t"),
+        )
+        assert status == 200
+        assert "auth_test_gauge" in body
+
+    def test_wrong_password_returns_401(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, _ = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prometheus", "wrongpassword"),
+        )
+        assert status == 401
+
+    def test_wrong_user_returns_401(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, _ = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("baduser", "s3cr3t"),
+        )
+        assert status == 401
+
+    def test_valid_credentials_body_has_metric(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        _, body = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prometheus", "s3cr3t"),
+        )
+        assert "# HELP auth_test_gauge" in body
+        assert "# TYPE auth_test_gauge gauge" in body
+
+    def test_404_path_does_not_leak_on_auth(self, auth_host_port, auth_metrics_ready):
+        """A 404 on an unknown path should not require credentials."""
+        host, port = auth_host_port
+        status, _ = _http_get(host, port, "/notfound")
+        assert status == 404
+

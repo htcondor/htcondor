@@ -23,11 +23,142 @@
 #include "directory_util.h"
 #include "condor_regex.h"
 #include "condor_attributes.h"
+#include "condor_auth_ssl.h"   // AUTH_SSL_SERVER_CERTFILE_STR / KEYFILE_STR, OpenSSL types
+#include "condor_base64.h"
+#include "safe_fopen.h"
+#include "safe_open.h"
 #include "prometheusd.h"
+
+#if !defined(WIN32)
+#include <unistd.h>
+#include <crypt.h>
+#endif
 
 #include <map>
 #include <unordered_map>
 #include <algorithm>
+#include <sys/socket.h>
+#include <sys/time.h>
+
+#if defined(DLOPEN_SECURITY_LIBS)
+#include <dlfcn.h>
+#endif
+
+// ---------------------------------------------------------------------------
+// Minimal OpenSSL function-pointer layer used only by the Prometheus HTTP
+// server.  We follow the same DLOPEN_SECURITY_LIBS pattern used elsewhere in
+// the codebase so that the binary degrades gracefully when libssl is absent.
+// ---------------------------------------------------------------------------
+namespace {
+
+// Function pointer types and storage
+static decltype(&SSL_CTX_new)                       g_SSL_CTX_new                       = nullptr;
+static decltype(&SSL_CTX_free)                      g_SSL_CTX_free                      = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+static decltype(&SSLv23_server_method)              g_TLS_server_method                 = nullptr;
+#else
+static decltype(&TLS_server_method)                 g_TLS_server_method                 = nullptr;
+#endif
+static decltype(&SSL_CTX_use_certificate_chain_file) g_SSL_CTX_use_certificate_chain_file = nullptr;
+static decltype(&SSL_CTX_use_PrivateKey_file)       g_SSL_CTX_use_PrivateKey_file       = nullptr;
+static decltype(&SSL_CTX_check_private_key)         g_SSL_CTX_check_private_key         = nullptr;
+static decltype(&SSL_CTX_set_verify)                g_SSL_CTX_set_verify                = nullptr;
+static decltype(&SSL_new)                           g_SSL_new                           = nullptr;
+static decltype(&SSL_free)                          g_SSL_free                          = nullptr;
+static decltype(&SSL_set_fd)                        g_SSL_set_fd                        = nullptr;
+static decltype(&SSL_accept)                        g_SSL_accept                        = nullptr;
+static decltype(&SSL_read)                          g_SSL_read                          = nullptr;
+static decltype(&SSL_write)                         g_SSL_write                         = nullptr;
+static decltype(&SSL_shutdown)                      g_SSL_shutdown                      = nullptr;
+static decltype(&SSL_get_error)                     g_SSL_get_error                     = nullptr;
+static decltype(&SHA1)                              g_SHA1                              = nullptr;
+
+// Load all function pointers.  Returns true if SSL is available.
+static bool prom_ssl_initialize()
+{
+	static bool tried = false;
+	static bool ok    = false;
+	if (tried) return ok;
+	tried = true;
+
+#if defined(DLOPEN_SECURITY_LIBS)
+	void *hdl = dlopen(LIBSSL_SO, RTLD_LAZY | RTLD_NOLOAD);
+	if (!hdl) hdl = dlopen(LIBSSL_SO, RTLD_LAZY);
+	if (!hdl) {
+		dprintf(D_FULLDEBUG, "PrometheusD: libssl not available (%s); HTTPS disabled\n",
+		        dlerror());
+		return false;
+	}
+
+	// libcrypto (SHA1) – loaded transitively; get a handle via NOLOAD
+	void *crypto_hdl = dlopen("libcrypto.so", RTLD_LAZY | RTLD_NOLOAD);
+	if (!crypto_hdl) crypto_hdl = dlopen("libcrypto.so.3", RTLD_LAZY | RTLD_NOLOAD);
+	if (!crypto_hdl) crypto_hdl = dlopen("libcrypto.so.1.1", RTLD_LAZY | RTLD_NOLOAD);
+	if (crypto_hdl) {
+		g_SHA1 = reinterpret_cast<decltype(g_SHA1)>(dlsym(crypto_hdl, "SHA1"));
+	}
+
+#define LOAD(hdl, sym) \
+	!(g_##sym = reinterpret_cast<decltype(g_##sym)>(dlsym(hdl, #sym)))
+
+	if (LOAD(hdl, SSL_CTX_new)                        ||
+	    LOAD(hdl, SSL_CTX_free)                        ||
+	    LOAD(hdl, SSL_CTX_use_certificate_chain_file)  ||
+	    LOAD(hdl, SSL_CTX_use_PrivateKey_file)         ||
+	    LOAD(hdl, SSL_CTX_check_private_key)           ||
+	    LOAD(hdl, SSL_CTX_set_verify)                  ||
+	    LOAD(hdl, SSL_new)                             ||
+	    LOAD(hdl, SSL_free)                            ||
+	    LOAD(hdl, SSL_set_fd)                          ||
+	    LOAD(hdl, SSL_accept)                          ||
+	    LOAD(hdl, SSL_read)                            ||
+	    LOAD(hdl, SSL_write)                           ||
+	    LOAD(hdl, SSL_shutdown)                        ||
+	    LOAD(hdl, SSL_get_error)) {
+		dprintf(D_ERROR, "PrometheusD: failed to load SSL symbol: %s\n", dlerror());
+		return false;
+	}
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	if (LOAD(hdl, SSLv23_server_method)) {
+		dprintf(D_ERROR, "PrometheusD: failed to load SSLv23_server_method: %s\n", dlerror());
+		return false;
+	}
+#else
+	if (LOAD(hdl, TLS_server_method)) {
+		dprintf(D_ERROR, "PrometheusD: failed to load TLS_server_method: %s\n", dlerror());
+		return false;
+	}
+#endif
+#undef LOAD
+
+#else // not DLOPEN – functions are linked directly
+	g_SSL_CTX_new                       = SSL_CTX_new;
+	g_SSL_CTX_free                      = SSL_CTX_free;
+	g_SSL_CTX_use_certificate_chain_file = SSL_CTX_use_certificate_chain_file;
+	g_SSL_CTX_use_PrivateKey_file        = SSL_CTX_use_PrivateKey_file;
+	g_SSL_CTX_check_private_key          = SSL_CTX_check_private_key;
+	g_SSL_CTX_set_verify                 = SSL_CTX_set_verify;
+	g_SSL_new                            = SSL_new;
+	g_SSL_free                           = SSL_free;
+	g_SSL_set_fd                         = SSL_set_fd;
+	g_SSL_accept                         = SSL_accept;
+	g_SSL_read                           = SSL_read;
+	g_SSL_write                          = SSL_write;
+	g_SSL_shutdown                       = SSL_shutdown;
+	g_SSL_get_error                      = SSL_get_error;
+	g_SHA1                               = SHA1;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	g_TLS_server_method                  = SSLv23_server_method;
+#else
+	g_TLS_server_method                  = TLS_server_method;
+#endif
+#endif
+
+	ok = true;
+	return true;
+}
+
+} // anonymous namespace
 
 std::string
 PrometheusMetric::prometheusType() const
@@ -40,6 +171,94 @@ PrometheusMetric::prometheusType() const
 
 PrometheusD::PrometheusD()
 {
+}
+
+PrometheusD::~PrometheusD()
+{
+	if (m_ssl_ctx && g_SSL_CTX_free) {
+		g_SSL_CTX_free(static_cast<SSL_CTX*>(m_ssl_ctx));
+		m_ssl_ctx = nullptr;
+	}
+}
+
+void
+PrometheusD::buildSslCtx()
+{
+	// Free any previous context
+	if (m_ssl_ctx) {
+		if (g_SSL_CTX_free) {
+			g_SSL_CTX_free(static_cast<SSL_CTX*>(m_ssl_ctx));
+		}
+		m_ssl_ctx = nullptr;
+	}
+
+	if (!prom_ssl_initialize()) {
+		return;  // libssl not available
+	}
+
+	std::string certfile, keyfile;
+	if (!param(certfile, AUTH_SSL_SERVER_CERTFILE_STR) ||
+	    !param(keyfile,  AUTH_SSL_SERVER_KEYFILE_STR)) {
+		dprintf(D_FULLDEBUG,
+		        "PrometheusD: AUTH_SSL_SERVER_CERTFILE or AUTH_SSL_SERVER_KEYFILE"
+		        " not set; Prometheus HTTPS disabled\n");
+		return;
+	}
+
+	// Verify the files are readable before bothering to build a context
+	{
+		auto fd = safe_open_no_create(certfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			dprintf(D_ERROR,
+			        "PrometheusD: cannot read cert file '%s': %s; HTTPS disabled\n",
+			        certfile.c_str(), strerror(errno));
+			return;
+		}
+		close(fd);
+		fd = safe_open_no_create(keyfile.c_str(), O_RDONLY);
+		if (fd < 0) {
+			dprintf(D_ERROR,
+			        "PrometheusD: cannot read key file '%s': %s; HTTPS disabled\n",
+			        keyfile.c_str(), strerror(errno));
+			return;
+		}
+		close(fd);
+	}
+
+	SSL_CTX *ctx = g_SSL_CTX_new(g_TLS_server_method());
+	if (!ctx) {
+		dprintf(D_ERROR, "PrometheusD: SSL_CTX_new failed; HTTPS disabled\n");
+		return;
+	}
+
+	// No client certificate required
+	g_SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+
+	if (g_SSL_CTX_use_certificate_chain_file(ctx, certfile.c_str()) != 1) {
+		dprintf(D_ERROR,
+		        "PrometheusD: SSL_CTX_use_certificate_chain_file('%s') failed;"
+		        " HTTPS disabled\n", certfile.c_str());
+		g_SSL_CTX_free(ctx);
+		return;
+	}
+	if (g_SSL_CTX_use_PrivateKey_file(ctx, keyfile.c_str(), SSL_FILETYPE_PEM) != 1) {
+		dprintf(D_ERROR,
+		        "PrometheusD: SSL_CTX_use_PrivateKey_file('%s') failed;"
+		        " HTTPS disabled\n", keyfile.c_str());
+		g_SSL_CTX_free(ctx);
+		return;
+	}
+	if (g_SSL_CTX_check_private_key(ctx) != 1) {
+		dprintf(D_ERROR,
+		        "PrometheusD: SSL_CTX_check_private_key failed (cert/key mismatch);"
+		        " HTTPS disabled\n");
+		g_SSL_CTX_free(ctx);
+		return;
+	}
+
+	m_ssl_ctx = ctx;
+	dprintf(D_ALWAYS,
+	        "PrometheusD: HTTPS enabled (cert=%s)\n", certfile.c_str());
 }
 
 void
@@ -69,6 +288,29 @@ PrometheusD::initAndReconfig()
 			if (!m_reset_metrics_filename.ends_with(".prometheus_metrics")) {
 				m_reset_metrics_filename += ".prometheus_metrics";
 			}
+		}
+	}
+
+	// HTTP Basic auth password file (Apache htpasswd format).
+	// If empty, the /metrics endpoint is unauthenticated.
+	param(m_http_auth_file, "PROMETHEUS_HTTP_AUTH_FILE");
+
+	// (Re)build the TLS context whenever config changes.
+	buildSslCtx();
+
+	// Register the HTTP command handler exactly once per process lifetime.
+	// DaemonCore only allows a single HTTP handler so we guard with a flag.
+	if (!m_http_handler_registered && !m_output_file.empty()) {
+		int rc = daemonCore->Register_HTTP_CommandHandler(
+			[this](int cmd, Stream *s) { return this->handleHttpCommand(cmd, s); },
+			"PrometheusD::handleHttpCommand");
+		if (rc >= 0) {
+			m_http_handler_registered = true;
+			dprintf(D_ALWAYS,
+			        "PrometheusD: registered HTTP handler for /metrics endpoint\n");
+		} else {
+			dprintf(D_ERROR,
+			        "PrometheusD: Register_HTTP_CommandHandler failed (rc=%d)\n", rc);
 		}
 	}
 }
@@ -324,4 +566,393 @@ PrometheusD::serializeLabels(const std::map<std::string,std::string> &labels)
 	}
 	result += "}";
 	return result;
+}
+
+// ---------------------------------------------------------------------------
+// HTTP / HTTPS serving
+// ---------------------------------------------------------------------------
+
+// Helper: write all bytes to a plain fd or through SSL.
+bool
+PrometheusD::writeFully(int fd, void *ssl, const void *buf, size_t len)
+{
+	const char *p = static_cast<const char*>(buf);
+	while (len > 0) {
+		ssize_t n;
+		if (ssl) {
+			n = g_SSL_write(static_cast<SSL*>(ssl), p, static_cast<int>(len));
+			if (n <= 0) return false;
+		} else {
+			n = write(fd, p, len);
+			if (n < 0 && (errno == EINTR)) continue;
+			if (n <= 0) return false;
+		}
+		p   += n;
+		len -= n;
+	}
+	return true;
+}
+
+// Helper: send a minimal HTTP error response and log it.
+void
+PrometheusD::sendHttpError(int fd, void *ssl, int code, const char *reason)
+{
+	char buf[256];
+	snprintf(buf, sizeof(buf),
+	         "HTTP/1.0 %d %s\r\nContent-Length: 0\r\n\r\n", code, reason);
+	writeFully(fd, ssl, buf, strlen(buf));
+}
+
+// ---------------------------------------------------------------------------
+// checkHtpasswd – validate user:password against an Apache-style htpasswd file.
+//
+// Supported hash formats (in order of preference / prevalence):
+//   {SHA}base64  – SHA-1 (base64-encoded digest)
+//   $apr1$...    – Apache's MD5-crypt variant (via system crypt())
+//   $2y$/2b$...  – bcrypt (via system crypt())
+//   $5$/$6$...   – SHA-256/SHA-512 crypt (via system crypt())
+//   anything else  – assumed DES crypt (via system crypt())
+// ---------------------------------------------------------------------------
+bool
+PrometheusD::checkHtpasswd(const std::string &path,
+                            const std::string &user,
+                            const std::string &pass)
+{
+	FILE *fp = safe_fopen_no_create(path.c_str(), "r");
+	if (!fp) {
+		dprintf(D_ERROR,
+		        "PrometheusD: cannot open htpasswd file '%s': %s\n",
+		        path.c_str(), strerror(errno));
+		return false;
+	}
+
+	bool found = false;
+	char line[1024];
+	while (fgets(line, sizeof(line), fp)) {
+		// Strip trailing newline/CR
+		size_t linelen = strlen(line);
+		while (linelen > 0 &&
+		       (line[linelen-1] == '\n' || line[linelen-1] == '\r')) {
+			line[--linelen] = '\0';
+		}
+		// Skip blank lines and comments
+		if (linelen == 0 || line[0] == '#') continue;
+
+		// Split on first ':'
+		char *colon = strchr(line, ':');
+		if (!colon) continue;
+		*colon = '\0';
+		const char *file_user = line;
+		const char *file_hash = colon + 1;
+
+		if (user != file_user) continue;
+
+		// --- {SHA} format: SHA1 of password, base64-encoded ---
+		if (strncmp(file_hash, "{SHA}", 5) == 0) {
+			bool sha1_ok = false;
+			if (g_SHA1) {
+				unsigned char digest[20];
+				g_SHA1(reinterpret_cast<const unsigned char*>(pass.c_str()),
+				       pass.size(), digest);
+				char *b64 = condor_base64_encode(digest, sizeof(digest), false);
+				if (b64) {
+					sha1_ok = (strcmp(b64, file_hash + 5) == 0);
+					free(b64);
+				}
+			} else {
+				dprintf(D_ERROR,
+				        "PrometheusD: SHA1 function unavailable;"
+				        " cannot validate {SHA} htpasswd entry\n");
+			}
+			found = sha1_ok;
+			break;
+		}
+
+		// --- All other formats: delegate to system crypt() ---
+		// This covers $apr1$ (Apache MD5), $2y$/$2b$ (bcrypt),
+		// $5$ (SHA-256 crypt), $6$ (SHA-512 crypt), and DES.
+#if !defined(WIN32)
+		errno = 0;
+		const char *hashed = crypt(pass.c_str(), file_hash);
+		if (hashed) {
+			found = (strcmp(hashed, file_hash) == 0);
+		} else {
+			dprintf(D_ERROR,
+			        "PrometheusD: crypt() failed for htpasswd entry"
+			        " (unsupported format?): %s\n",
+			        strerror(errno));
+		}
+#endif
+		break;
+	}
+	fclose(fp);
+	return found;
+}
+
+// ---------------------------------------------------------------------------
+// processHttpRequest – parse a complete HTTP request (headers through
+// \r\n\r\n) and send the /metrics response.
+// ---------------------------------------------------------------------------
+void
+PrometheusD::processHttpRequest(int fd, std::shared_ptr<PromHttpConn> conn)
+{
+	void       *ssl     = conn->ssl;
+	const std::string &request = conn->request_buf;
+
+	// Validate the request line
+	size_t line_end = request.find("\r\n");
+	if (line_end == std::string::npos) {
+		sendHttpError(fd, ssl, 400, "Bad Request");
+		return;
+	}
+	std::string req_line = request.substr(0, line_end);
+
+	// Only serve GET /metrics (with or without a query string / HTTP version)
+	bool valid_path = (req_line.rfind("GET /metrics ", 0) == 0 ||
+	                   req_line == "GET /metrics");
+	if (!valid_path) {
+		sendHttpError(fd, ssl, 404, "Not Found");
+		return;
+	}
+
+	// Check HTTP Basic auth if a password file is configured
+	if (!m_http_auth_file.empty()) {
+		bool authed = false;
+		size_t pos = 0;
+		// Walk headers looking for Authorization
+		while (true) {
+			size_t eol = request.find("\r\n", pos);
+			if (eol == std::string::npos || eol == pos) break;
+			std::string hdr = request.substr(pos, eol - pos);
+			pos = eol + 2;
+			static const char prefix[] = "Authorization: Basic ";
+			if (strncasecmp(hdr.c_str(), prefix, sizeof(prefix)-1) == 0) {
+				std::string b64 = hdr.substr(sizeof(prefix)-1);
+				unsigned char *decoded = nullptr;
+				int decoded_len = 0;
+				condor_base64_decode(b64.c_str(), &decoded, &decoded_len, false);
+				if (decoded && decoded_len > 0) {
+					// decoded is "user:password"
+					char *sep = static_cast<char*>(
+					    memchr(decoded, ':', decoded_len));
+					if (sep) {
+						std::string u(reinterpret_cast<char*>(decoded),
+						              sep - reinterpret_cast<char*>(decoded));
+						std::string p(sep + 1,
+						              reinterpret_cast<char*>(decoded) +
+						              decoded_len);
+						authed = checkHtpasswd(m_http_auth_file, u, p);
+					}
+					free(decoded);
+				}
+				break;
+			}
+		}
+		if (!authed) {
+			const char resp[] =
+			    "HTTP/1.0 401 Unauthorized\r\n"
+			    "WWW-Authenticate: Basic realm=\"metrics\"\r\n"
+			    "Content-Length: 0\r\n\r\n";
+			writeFully(fd, ssl, resp, sizeof(resp) - 1);
+			return;
+		}
+	}
+
+	// Read the metrics file
+	if (m_output_file.empty()) {
+		sendHttpError(fd, ssl, 503, "Service Unavailable");
+		return;
+	}
+	FILE *fp = safe_fopen_no_create(m_output_file.c_str(), "r");
+	if (!fp) {
+		sendHttpError(fd, ssl, 503, "Service Unavailable");
+		return;
+	}
+	std::string body;
+	char ibuf[4096];
+	size_t n;
+	while ((n = fread(ibuf, 1, sizeof(ibuf), fp)) > 0) {
+		body.append(ibuf, n);
+	}
+	fclose(fp);
+
+	// Send 200 OK
+	char hdr[256];
+	snprintf(hdr, sizeof(hdr),
+	         "HTTP/1.0 200 OK\r\n"
+	         "Content-Type: text/plain; version=0.0.4\r\n"
+	         "Content-Length: %zu\r\n"
+	         "\r\n",
+	         body.size());
+	writeFully(fd, ssl, hdr, strlen(hdr));
+	writeFully(fd, ssl, body.data(), body.size());
+}
+
+// ---------------------------------------------------------------------------
+// continueHttpRead – socket-ready callback.  Accumulate more request data
+// until the header block is complete, then process.  Returns KEEP_STREAM
+// to stay registered when more data is still needed, FALSE otherwise
+// (which causes DaemonCore to cancel the registration and delete the stream).
+// ---------------------------------------------------------------------------
+int
+PrometheusD::continueHttpRead(Stream *s, std::shared_ptr<PromHttpConn> conn)
+{
+	Sock *sock = static_cast<Sock*>(s);
+	int   fd   = sock->get_file_desc();
+
+	char buf[4096];
+	ssize_t n = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
+	if (n > 0) {
+		conn->request_buf.append(buf, n);
+	} else if (n == 0) {
+		// Peer closed connection before sending a complete request
+		return FALSE;
+	} else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+		dprintf(D_FULLDEBUG,
+		        "PrometheusD: read error from %s: %s\n",
+		        sock->peer_description(), strerror(errno));
+		return FALSE;
+	}
+
+	if (conn->request_buf.size() > 65536) {
+		sendHttpError(fd, nullptr, 413, "Request Too Large");
+		return FALSE;
+	}
+
+	if (conn->request_buf.find("\r\n\r\n") == std::string::npos) {
+		// Still waiting for the end of headers – stay registered
+		return KEEP_STREAM;
+	}
+
+	processHttpRequest(fd, conn);
+	return FALSE;
+}
+
+// ---------------------------------------------------------------------------
+// handleHttpCommand – the DaemonCore HTTP command handler entry point.
+//
+// For TLS connections: performs a blocking SSL_accept (bounded by a short
+// SO_RCVTIMEO / SO_SNDTIMEO) then reads the full HTTP request synchronously.
+// The SSL handshake is a fast machine-to-machine operation so a brief block
+// is acceptable here.
+//
+// For plain HTTP connections: attempts a non-blocking recv.  If insufficient
+// data has arrived yet the socket is registered with DaemonCore and the
+// handler returns KEEP_STREAM so the event loop is not blocked.
+// ---------------------------------------------------------------------------
+int
+PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
+{
+	Sock *sock = static_cast<Sock*>(s);
+	int   fd   = sock->get_file_desc();
+
+	// Peek at the first 3 bytes to decide plain HTTP vs TLS.
+	// DaemonCore already confirmed these bytes are available (it peeked them
+	// before routing here), so MSG_PEEK|MSG_DONTWAIT should succeed immediately.
+	unsigned char peek[3] = {0, 0, 0};
+	recv(fd, peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT);
+	// TLS ClientHello: record type 0x16, legacy version 0x03 0x00–0x04
+	bool is_tls = (peek[0] == 0x16 && peek[1] == 0x03 && peek[2] <= 0x04);
+
+	if (is_tls) {
+		// ---- TLS path -------------------------------------------------------
+		if (!m_ssl_ctx) {
+			dprintf(D_ERROR,
+			        "PrometheusD: received TLS connection from %s but"
+			        " no SSL context configured; closing\n",
+			        sock->peer_description());
+			return FALSE;
+		}
+
+		// Bound the handshake and subsequent I/O with a 10-second timeout.
+		struct timeval tv = {10, 0};
+		setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+		           &tv, static_cast<socklen_t>(sizeof(tv)));
+		setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+		           &tv, static_cast<socklen_t>(sizeof(tv)));
+
+		SSL *ssl = g_SSL_new(static_cast<SSL_CTX*>(m_ssl_ctx));
+		if (!ssl) {
+			dprintf(D_ERROR, "PrometheusD: SSL_new failed\n");
+			return FALSE;
+		}
+		g_SSL_set_fd(ssl, fd);
+
+		if (g_SSL_accept(ssl) != 1) {
+			int err = g_SSL_get_error(ssl, -1);
+			dprintf(D_FULLDEBUG,
+			        "PrometheusD: SSL_accept failed (error %d) from %s\n",
+			        err, sock->peer_description());
+			g_SSL_free(ssl);
+			return FALSE;
+		}
+
+		// Read HTTP request through SSL with the timeout already set above.
+		auto conn = std::make_shared<PromHttpConn>();
+		conn->ssl = ssl;
+
+		char buf[4096];
+		while (conn->request_buf.find("\r\n\r\n") == std::string::npos) {
+			int n = g_SSL_read(ssl, buf, sizeof(buf) - 1);
+			if (n <= 0) {
+				int err = g_SSL_get_error(ssl, n);
+				dprintf(D_FULLDEBUG,
+				        "PrometheusD: SSL_read error %d from %s\n",
+				        err, sock->peer_description());
+				g_SSL_shutdown(ssl);
+				g_SSL_free(ssl);
+				return FALSE;
+			}
+			conn->request_buf.append(buf, n);
+			if (conn->request_buf.size() > 65536) {
+				sendHttpError(fd, ssl, 413, "Request Too Large");
+				g_SSL_shutdown(ssl);
+				g_SSL_free(ssl);
+				return FALSE;
+			}
+		}
+
+		processHttpRequest(fd, conn);
+
+		g_SSL_shutdown(ssl);
+		g_SSL_free(ssl);
+		return FALSE;   // done; DaemonCore will delete the stream
+	}
+
+	// ---- Plain HTTP path ----------------------------------------------------
+	auto conn = std::make_shared<PromHttpConn>();
+
+	char buf[4096];
+	ssize_t n = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
+	if (n > 0) {
+		conn->request_buf.append(buf, n);
+	} else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+		dprintf(D_FULLDEBUG,
+		        "PrometheusD: initial recv error from %s: %s\n",
+		        sock->peer_description(), strerror(errno));
+		return FALSE;
+	}
+
+	if (conn->request_buf.find("\r\n\r\n") != std::string::npos) {
+		// Already have the full header block – process immediately.
+		processHttpRequest(fd, conn);
+		return FALSE;
+	}
+
+	// Need more data.  Register the socket and yield to the event loop.
+	int rc = daemonCore->Register_Socket(
+		s,
+		"PrometheusD HTTP /metrics",
+		[this, conn](Stream *s2) -> int {
+			return this->continueHttpRead(s2, conn);
+		},
+		"PrometheusD::continueHttpRead");
+
+	if (rc < 0) {
+		dprintf(D_ERROR,
+		        "PrometheusD: Register_Socket failed (rc=%d); closing connection\n", rc);
+		return FALSE;
+	}
+
+	return KEEP_STREAM;
 }

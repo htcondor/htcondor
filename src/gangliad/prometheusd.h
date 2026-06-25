@@ -22,6 +22,7 @@
 
 #include "statsd.h"
 #include <map>
+#include <memory>
 
 class PrometheusMetric: public Metric {
  public:
@@ -31,6 +32,7 @@ class PrometheusMetric: public Metric {
 class PrometheusD: public StatsD {
  public:
 	PrometheusD();
+	virtual ~PrometheusD();
 
 	virtual void initAndReconfig();
 
@@ -53,10 +55,22 @@ class PrometheusD: public StatsD {
 		int64_t timestamp{0};
 	};
 
+	// Per-connection state for the non-blocking HTTP read loop.
+	struct PromHttpConn {
+		std::string request_buf;
+		void       *ssl{nullptr};   // SSL* if TLS, nullptr for plain HTTP
+	};
+
 	std::string m_output_file;
 	bool m_include_timestamp{false};
 	std::map<std::string,std::string> m_default_labels;
 	std::vector<PendingMetric> m_pending;
+	std::string m_reset_metrics_filename;
+
+	// HTTP / HTTPS serving
+	bool  m_http_handler_registered{false};
+	std::string m_http_auth_file;
+	void *m_ssl_ctx{nullptr};       // SSL_CTX* when TLS is configured
 
 	std::string buildPrometheusName(const Metric &m) const;
 	std::string buildPrometheusHelp(const Metric &m) const;
@@ -64,6 +78,30 @@ class PrometheusD: public StatsD {
 	void writeMetricsFile();
 	static std::map<std::string,std::string> parseLabels(const std::string &s);
 	static std::string serializeLabels(const std::map<std::string,std::string> &labels);
+
+	// HTTP command handler registered with DaemonCore.
+	int handleHttpCommand(int cmd, Stream *s);
+
+	// Socket-ready callback used when the first recv returns EAGAIN.
+	int continueHttpRead(Stream *s, std::shared_ptr<PromHttpConn> conn);
+
+	// Parse a complete HTTP request and send the metrics response.
+	void processHttpRequest(int fd, std::shared_ptr<PromHttpConn> conn);
+
+	// Write all bytes to fd (plain) or ssl (TLS).  Returns false on error.
+	static bool writeFully(int fd, void *ssl, const void *buf, size_t len);
+
+	// Send a minimal HTTP error response.
+	static void sendHttpError(int fd, void *ssl, int code, const char *reason);
+
+	// Validate user:password against an Apache-style htpasswd file.
+	// Supports {SHA}, $apr1$, bcrypt ($2y$/$2b$), and standard crypt().
+	static bool checkHtpasswd(const std::string &path,
+	                          const std::string &user,
+	                          const std::string &pass);
+
+	// (Re)build m_ssl_ctx from AUTH_SSL_SERVER_CERTFILE / AUTH_SSL_SERVER_KEYFILE.
+	void buildSslCtx();
 };
 
 #endif

@@ -28,6 +28,15 @@ if (WITH_GANGLIA)
   )
 
   condor_exe( condor_metricd "${GANGLIAD}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+
+  # crypt() is in glibc on older systems but in a separate libcrypt on
+  # glibc 2.28+ (RHEL8+, Fedora 30+).  Link it if the library is present.
+  if (NOT WINDOWS)
+    find_library(CRYPT_LIB crypt)
+    if (CRYPT_LIB)
+      target_link_libraries(condor_metricd PRIVATE ${CRYPT_LIB})
+    endif()
+  endif()
   clone_install( condor_metricd "${C_LIBEXEC}" condor_gangliad "${C_LIBEXEC}" )
 
   # Install the default metrics file to metrics.d (new primary location).
