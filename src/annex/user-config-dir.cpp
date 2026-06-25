@@ -21,7 +21,10 @@ createUserConfigDir( std::string & directory ) {
 			std::string dir, file;
 			filename_split( userConfigSource.c_str(), dir, file );
 			if(! IsDirectory( dir.c_str() )) {
-				mkdir( dir.c_str(), 0755 );
+				if( mkdir( dir.c_str(), 0755 ) != 0 && errno != EEXIST ) {
+					fprintf( stderr, "Unable to create your user configuration directory '%s': %s.  ", dir.c_str(), strerror(errno) );
+					return false;
+				}
 			}
 
 			directory = dir;
