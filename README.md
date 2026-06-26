@@ -23,7 +23,7 @@ where the HTCondor community asks and answers questions about the installation,
 use, or tuning of HTCondor.  If you have a question, encounter a surprise about
 HTCondor, or a potential bug, these public email lists are the first place to go.
 
-We welcome github pull requests for code fixes or documentation improvements, but if
+We welcome GitHub pull requests for code fixes or documentation improvements, but if
 you have ideas for a big feature change, please talk with us first. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for a guide to building from source, our
 development and pull request process, code conventions, and how to run the test
