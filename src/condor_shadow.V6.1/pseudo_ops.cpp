@@ -61,10 +61,10 @@ extern RemoteResource *parallelMasterResource;
 extern CXFER_STATE cxfer_type;
 
 static void append_buffer_info( std::string &url, const char *method, char const *path );
-static int use_append( const char *method, const char *path );
-static int use_compress( const char *method, const char *path );
-static int use_fetch( const char *method, const char *path );
-static int use_local_access( const char *file );
+static int use_append( const char *method, const std::string &path );
+static int use_compress( const char *method, const std::string &path );
+static int use_fetch( const char *method, const std::string &path );
+static int use_local_access( const std::string &file );
 
 int
 pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
@@ -348,23 +348,23 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
 
-	if( use_local_access(full_path.c_str()) ) {
+	if( use_local_access(full_path) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	if( use_fetch(method,full_path.c_str()) ) {
+	if( use_fetch(method,full_path) ) {
 		urlbuf += "fetch:";
 	}
 
-	if( use_compress(method,full_path.c_str()) ) {
+	if( use_compress(method,full_path) ) {
 		urlbuf += "compress:";
 	}
 
 	append_buffer_info(urlbuf,method,full_path.c_str());
 
-	if( use_append(method,full_path.c_str()) ) {
+	if( use_append(method,full_path) ) {
 		urlbuf += "append:";
 	}
 
@@ -425,12 +425,11 @@ static void append_buffer_info( std::string &url, const char *method, char const
 
 /* Return true if this JobAd attribute contains this path */
 
-static int attr_list_has_file( const char *attr, const char *path )
+static int attr_list_has_file( const char *attr, const std::string &path )
 {
-	char const *file;
 	std::string str;
 
-	file = condor_basename(path);
+	const char *file = condor_basename(path.c_str());
 
 	Shadow->getJobAd()->LookupString(attr,str);
 	std::vector<std::string> list = split(str);
@@ -442,17 +441,17 @@ static int attr_list_has_file( const char *attr, const char *path )
 	}
 }
 
-static int use_append( const char * /* method */, const char *path )
+static int use_append( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-static int use_compress( const char * /* method */, const char *path )
+static int use_compress( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-static int use_fetch( const char * /* method */, const char *path )
+static int use_fetch( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
@@ -482,11 +481,11 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
-static int use_local_access( const char *file )
+static int use_local_access( const std::string &file )
 {
 	return
-		!strcmp(file,"/dev/null") ||
-		!strcmp(file,"/dev/zero") ||
+		file == "/dev/null" ||
+		file == "/dev/zero" ||
 		attr_list_has_file( ATTR_LOCAL_FILES, file );
 }
 

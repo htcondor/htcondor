@@ -659,19 +659,9 @@ matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bo
 	return result;
 }
 
-bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, false);});
-}
-
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, false);});
-}
-
-bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
@@ -679,19 +669,9 @@ bool contains_anycase_withwildcard(const std::vector<std::string> &list, const s
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, false);});
 }
 
-bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, true);});
-}
-
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
 	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, true);});
-}
-
-bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
-{
-	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
