@@ -4522,8 +4522,8 @@ typedef struct attr_ident_pair {
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
-	FILL(ATTR_COMMON_INPUT_CATALOGS, catCategoryMask),
-	FILL(ATTR_COMMON_INPUT_FILES, catCategoryMask),
+	FILL(ATTR_COMMON_INPUT_CATALOGS, catAdjustments),
+	FILL(ATTR_COMMON_INPUT_FILES, catAdjustments),
 	FILL(ATTR_CONCURRENCY_LIMITS, catDirtyPrioRec),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),

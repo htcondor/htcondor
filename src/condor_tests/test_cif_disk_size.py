@@ -13,8 +13,13 @@ from ornithology import (
     JobStatus,
 )
 
-# In this test, we submit a four-job cluster with a 128 kB common input file
-# to a startd which has 500 KB of space.
+# In this test, we submit a six-job cluster; each job requests 256 KiB and a
+# 128 KiB common input file.  Since the startd only has 500 KiB of disk, the
+# only way it can run more than one job is through common-files sharing.
+#
+# We submit six jobs, knowing that only three will fit, because at some point
+# we'll probably want to make sure that the running total caps out at three
+# and that the second set of three runs without the negotiator.
 # -----------------------------------------------------------------------------
 
 @action

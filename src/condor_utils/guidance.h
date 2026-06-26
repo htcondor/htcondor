@@ -2,6 +2,9 @@
 #define _CONDOR_GUIDANCE_H
 
 // #include <optional>
+// #include <tuple>
+// #include <string>
+// #include "classad/classad.h"
 // #include "guidance.h"
 
 enum class GuidanceResult : int {
