@@ -1,5 +1,9 @@
 *** 24.0.23 bugs
 
+- When file transfer is off, we now log a file transfer start and end
+  messages to the log, not just the start message.
+  :jira:`3813`
+
 - Fixed a bug in wildcard string matching where a pattern ending in a literal
   was not anchored to the end of the candidate string, so it could match
   strings with extra trailing characters.
