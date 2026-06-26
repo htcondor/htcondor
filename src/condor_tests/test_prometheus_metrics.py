@@ -16,6 +16,8 @@ import http.client
 import logging
 import re
 import socket
+import ssl
+import subprocess
 import time
 
 from ornithology import (
@@ -457,6 +459,39 @@ def _basic_auth_header(user, password):
     return {"Authorization": f"Basic {token}"}
 
 
+def _make_self_signed_cert(cert_path, key_path):
+    """
+    Generate a self-signed PEM certificate/key pair for CN=localhost using the
+    openssl CLI. metricd enables HTTPS when AUTH_SSL_SERVER_CERTFILE and
+    AUTH_SSL_SERVER_KEYFILE point at a valid cert/key.
+    """
+    subprocess.run(
+        [
+            "openssl", "req", "-x509", "-newkey", "rsa:2048",
+            "-keyout", str(key_path), "-out", str(cert_path),
+            "-days", "1", "-nodes", "-subj", "/CN=localhost",
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+
+def _https_get(host, port, path, headers=None, timeout=10):
+    """
+    Perform an HTTPS GET and return (status_code, body_text). The metricd cert
+    is self-signed, so certificate verification is disabled.
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=ctx)
+    conn.request("GET", path, headers=headers or {})
+    resp = conn.getresponse()
+    body = resp.read().decode(errors="replace")
+    conn.close()
+    return resp.status, body
+
+
 # --- Standup: metricd with HTTP serving, no auth ----------------------------
 
 @standup
@@ -565,6 +600,68 @@ def auth_metrics_ready(test_dir, condor_with_http_auth):
     deadline = time.time() + 60
     while time.time() < deadline:
         if prom_file.exists() and "auth_test_gauge" in prom_file.read_text():
+            return True
+        time.sleep(2)
+    return False
+
+
+# --- Standup: metricd with HTTPS (TLS) serving ------------------------------
+
+@standup
+def condor_with_https(test_dir):
+    metrics_dir = test_dir / "https_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_https_test_metrics",
+        """
+[
+  Name = "https_test_gauge";
+  Value = 99;
+  Desc = "HTTPS test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file = test_dir / "https_metrics.prom"
+    cert_file = test_dir / "metricd_cert.pem"
+    key_file  = test_dir / "metricd_key.pem"
+    _make_self_signed_cert(cert_file, key_file)
+
+    cfg = {
+        "DAEMON_LIST":                     "$(DAEMON_LIST) METRICD",
+        "METRICD":                         "$(LIBEXEC)/condor_metricd",
+        "GANGLIA_LIB":                     "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+        "PROMETHEUS_METRICS_FILE":         str(prom_file),
+        # Presence of a readable cert/key pair enables HTTPS on the command port.
+        "AUTH_SSL_SERVER_CERTFILE":        str(cert_file),
+        "AUTH_SSL_SERVER_KEYFILE":         str(key_file),
+        "METRICD_INTERVAL":                "5",
+        "METRICD_METRICS_CONFIG_DIR":      str(metrics_dir),
+        "METRICD_DEBUG":                   "D_FULLDEBUG D_COMMAND",
+        # Give metricd a stable shared-port socket name so that
+        # condor_shared_port can forward HTTP(S) connections to it.
+        "METRICD_ARGS":                    "-sock metricd",
+        "SHARED_PORT_HTTP_FORWARDING_ID":  "metricd",
+        # No PROMETHEUS_HTTP_AUTH_FILE → unauthenticated access allowed.
+    }
+    with Condor(test_dir / "condor_https", config=cfg) as condor:
+        yield condor
+
+
+@action
+def https_host_port(test_dir, condor_with_https):
+    return _metricd_http_port(condor_with_https)
+
+
+@action
+def https_metrics_ready(test_dir, condor_with_https):
+    """Wait until metricd has written the prom file at least once."""
+    prom_file = test_dir / "https_metrics.prom"
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        if prom_file.exists() and "https_test_gauge" in prom_file.read_text():
             return True
         time.sleep(2)
     return False
@@ -707,4 +804,59 @@ class TestPrometheusHTTPAuth:
         host, port = auth_host_port
         status, _ = _http_get(host, port, "/notfound")
         assert status == 404
+
+
+class TestPrometheusHTTPS:
+    """Verify that metricd serves /metrics over HTTPS when AUTH_SSL_SERVER_CERTFILE
+    and AUTH_SSL_SERVER_KEYFILE are configured.
+
+    HTTP and HTTPS share the same command port: the handler peeks the first few
+    bytes of each connection and routes a TLS ClientHello through OpenSSL while
+    serving everything else as plain HTTP. These tests therefore also confirm
+    plain HTTP still works on the same port when TLS is enabled (dual mode)."""
+
+    def test_port_found(self, https_host_port):
+        host, port = https_host_port
+        assert host and port > 0
+
+    def test_metrics_file_written(self, https_metrics_ready):
+        assert https_metrics_ready
+
+    def test_https_get_returns_200(self, https_host_port, https_metrics_ready):
+        host, port = https_host_port
+        status, _ = _https_get(host, port, "/metrics")
+        assert status == 200
+
+    def test_https_body_contains_metric(self, https_host_port, https_metrics_ready):
+        host, port = https_host_port
+        _, body = _https_get(host, port, "/metrics")
+        assert "https_test_gauge" in body
+
+    def test_https_body_has_help_and_type(self, https_host_port, https_metrics_ready):
+        host, port = https_host_port
+        _, body = _https_get(host, port, "/metrics")
+        assert "# HELP https_test_gauge" in body
+        assert "# TYPE https_test_gauge gauge" in body
+
+    def test_https_unknown_path_returns_404(self, https_host_port, https_metrics_ready):
+        host, port = https_host_port
+        status, _ = _https_get(host, port, "/notfound")
+        assert status == 404
+
+    def test_https_multiple_requests_served(self, https_host_port, https_metrics_ready):
+        """Each HTTPS request gets its own TLS handshake; the handler must
+        serve more than one in a row."""
+        host, port = https_host_port
+        for _ in range(3):
+            status, body = _https_get(host, port, "/metrics")
+            assert status == 200
+            assert "https_test_gauge" in body
+
+    def test_plain_http_still_served_on_same_port(self, https_host_port, https_metrics_ready):
+        """With TLS enabled, a plain (non-TLS) HTTP request to the same port is
+        detected by the byte-peek and still served as ordinary HTTP."""
+        host, port = https_host_port
+        status, body = _http_get(host, port, "/metrics")
+        assert status == 200
+        assert "https_test_gauge" in body
 
