@@ -120,6 +120,7 @@
 #define ATTR_AUTO_CLUSTER_ATTRS  "AutoClusterAttrs"
 #define ATTR_EDITED_CLUSTER_ATTRS "EditedClusterAttrs"
 #define ATTR_COMPLETION_DATE  "CompletionDate"
+#define ATTR_MAPPING_METHOD  "MappingMethod"
 #define ATTR_MATCHED_CONCURRENCY_LIMITS  "MatchedConcurrencyLimits"
 #define ATTR_MATCHED_PSG  "Matched_PSG"
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"

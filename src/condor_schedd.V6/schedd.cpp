@@ -19971,6 +19971,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
 	}
 
+	dprintf( D_TEST, "RecycleShadow(): will recycle if runnable job found for claim.\n" );
 	PROC_ID new_job_id;
 	if(! FindRunnableJobForClaim(mrec, new_job_id)) {
 		dprintf(D_FULLDEBUG,

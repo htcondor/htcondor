@@ -519,6 +519,8 @@ endif()
 			condor_pl_test(test_cif_failures "Test common input files failures" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_disk_size "Do common files actually save space" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_shadow_exit_codes "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
+			condor_pl_test(test_dagman_multiple_common_containers "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
+			condor_pl_test(test_cif_shadow_recycle "Test shadow recycling with CIF jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 		endif()
 
 		# These Ornithology tests only work on linux.
