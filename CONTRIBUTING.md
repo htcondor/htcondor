@@ -48,7 +48,7 @@ in a direction we cannot merge.
 HTCondor is written in **C++20** and depends on a large number of external
 libraries, so setting up a build environment from scratch can be involved. By
 far the easiest way to get a working build is to use one of the HTCondor build
-containers, which come with all of the required dependencies preinstalled. These
+containers, which come with all of the required dependencies pre-installed. These
 are the same images we use for our own builds; they are listed in
 [`nmi_tools/nmi-build-platforms`](nmi_tools/nmi-build-platforms) (the
 `htcondor/nmi-build:*` images, available on Docker Hub). Pick one matching the
