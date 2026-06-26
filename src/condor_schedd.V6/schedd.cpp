@@ -15821,6 +15821,10 @@ bool locate_and_advertise_local_credd(bool force) {
 	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
 	daemonCore->ContactInfoExtra().Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
 	DC_Enable_And_Drop_Addr_File();
+	if (scheduler.getScheddAd()) {
+		scheduler.getScheddAd()->Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
+		scheduler.update_local_ad_file();
+	}
 	return true;
 }
 
@@ -17052,7 +17056,9 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_adSchedd);
+	if (m_adSchedd) {
+		daemonCore->UpdateLocalAd(m_adSchedd);
+	}
 	return;
 }
 
