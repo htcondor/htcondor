@@ -4963,6 +4963,16 @@ FileTransfer::uploadFileList(
 	// in the first place, but that's scary for other reasons.)
 	//
 
+	// If the file list is empty, the loop below never runs and we would
+	// never report XFER_STATUS_ACTIVE.  The shadow logs a transfer-started
+	// userlog event when it first sees the transfer become active, so an
+	// empty transfer would otherwise log a finished event with no matching
+	// started event.  Report active here so that an empty transfer still
+	// logs its start.
+	if( filelist.empty() ) {
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+	}
+
 	for (auto &fileitem : filelist)
 	{
 		if( fileitem.isDirectory() && (! fileitem.destUrl().empty()) ) {
