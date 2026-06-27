@@ -15,6 +15,10 @@
 - Fixed a bug that can cause the *arc_gahp* to crash.
   :jira:`3789`
 
+- Reduced the size of the Python wheels to one sixth of their previous size
+  by stripping out the debug symbols.
+  :jira:`3803`
+
 - When using trust-on-first-use (TOFU), tools can go into an infinite
   loop if they have no valid standard input file to read.
   :jira:`3754`
