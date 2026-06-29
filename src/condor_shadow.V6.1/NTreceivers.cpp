@@ -1434,8 +1434,7 @@ case CONDOR_putfile:
 			dprintf(D_SYSCALLS, "Unable to put file %s\n", path);
 		}
 		free((char*)path);
-		close(fd);
-		
+		if (fd >= 0) { close(fd); }
 		syscall_sock->encode();
 		result = ( syscall_sock->code(num) );
 		ASSERT( result );
