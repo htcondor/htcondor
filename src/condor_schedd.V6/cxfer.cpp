@@ -190,6 +190,11 @@ call_StartJobFailure( const std::string & claimID ) {
 	if( mrec != nullptr ) {
 		PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
 		scheduler.StartJobFailed( mrec, id );
+
+		if( mrec->shadowRec != nullptr ) {
+			dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
+			scheduler.delete_shadow_rec( mrec->shadowRec );
+		}
 	}
 }
 
