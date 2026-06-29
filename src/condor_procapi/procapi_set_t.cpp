@@ -99,7 +99,7 @@ int getProcSetInfo_test(bool verbose) {
   if(pi_s->rssize < temp - temp * SET_INFO_RSS_MARGIN||
      pi_s->rssize > temp + temp * SET_INFO_RSS_MARGIN){
     printf("Error:\n");
-    printf("set info rss %d does not equal family info rss %d\n", pi_s->rssize, pi_f->rssize);
+    printf("set info rss %lu does not equal family info rss %lu\n", pi_s->rssize, pi_f->rssize);
     success = -1;
   }
 
@@ -108,7 +108,7 @@ int getProcSetInfo_test(bool verbose) {
   if(pi_s->pssize < temp - temp * SET_INFO_RSS_MARGIN||
      pi_s->pssize > temp + temp * SET_INFO_RSS_MARGIN){
     printf("Error:\n");
-    printf("set info pss %d does not equal family info pss %d\n", pi_s->pssize, pi_f->pssize);
+    printf("set info pss %lu does not equal family info pss %lu\n", pi_s->pssize, pi_f->pssize);
     success = -1;
   }
 #endif
@@ -117,7 +117,7 @@ int getProcSetInfo_test(bool verbose) {
   if(pi_s->imgsize < temp - temp * SET_INFO_IMG_MARGIN||
      pi_s->imgsize > temp + temp * SET_INFO_IMG_MARGIN){
     printf("Error:\n");
-    printf("set info image %d does not equal family info image %d\n", pi_s->imgsize, pi_f->imgsize);
+    printf("set info image %lu does not equal family info image %lu\n", pi_s->imgsize, pi_f->imgsize);
     success = -1;
   }
   
@@ -126,24 +126,24 @@ int getProcSetInfo_test(bool verbose) {
   temp = pi_f->minfault;
   if(pi_f->minfault < pi_s->minfault) {
     printf("Error:\n");
-    printf("set info minfault %d does not equal family info minfault %d\n", pi_s->minfault, pi_f->minfault);
+    printf("set info minfault %lu does not equal family info minfault %lu\n", pi_s->minfault, pi_f->minfault);
     success = -1;
   }
   if(pi_s->minfault < temp - temp * SET_INFO_MIN_MARGIN) {
     printf("Error:\n");
-    printf("set info minfault %d does not equal family info minfault %d\n", pi_s->minfault, pi_f->minfault);
+    printf("set info minfault %lu does not equal family info minfault %lu\n", pi_s->minfault, pi_f->minfault);
     success = -1;
   }
 
   temp = pi_f->majfault;
   if(pi_f->majfault < pi_s->majfault) {
     printf("Error:\n");
-    printf("set info majfault %d does not equal family info majfault %d\n", pi_s->majfault, pi_f->majfault);
+    printf("set info majfault %lu does not equal family info majfault %lu\n", pi_s->majfault, pi_f->majfault);
     success = -1;
   }
   if(pi_s->majfault < temp - temp * SET_INFO_MAJ_MARGIN) {
     printf("Error:\n");
-    printf("set info majfault %d does not equal family info majfault %d\n", pi_s->majfault, pi_f->majfault);
+    printf("set info majfault %lu does not equal family info majfault %lu\n", pi_s->majfault, pi_f->majfault);
     success = -1;
   }
  
@@ -151,17 +151,17 @@ int getProcSetInfo_test(bool verbose) {
   // since the set info is gptten first times can only go up
   if(pi_s->user_time > pi_f->user_time){
     printf("Error:\n");
-    printf("set info user time %d does not equal family info user time %d\n", pi_s->user_time, pi_f->user_time);
+    printf("set info user time %ld does not equal family info user time %ld\n", pi_s->user_time, pi_f->user_time);
     success = -1;
   }
   if(pi_s->sys_time > pi_f->sys_time){
     printf("Error:\n");
-    printf("set info sys time %d does not equal family info sys time %d\n", pi_s->sys_time, pi_f->sys_time);
+    printf("set info sys time %ld does not equal family info sys time %ld\n", pi_s->sys_time, pi_f->sys_time);
     success = -1;
   }
   if(pi_s->age > pi_f->age){
     printf("Error:\n");
-    printf("set info age %d does not equal family info age %d\n", pi_s->age, pi_f->age);
+    printf("set info age %ld does not equal family info age %ld\n", pi_s->age, pi_f->age);
     success = -1;
   }
     
