@@ -79,8 +79,11 @@ class CCBServer: Service {
 		// to them if things go wrong
 	std::map<CCBID,CCBServerRequest *> m_requests;// request_id --> req
 
-		// streaming/proxy sessions (private-to-private), keyed by connect id
-	std::map<std::string,CCBProxySession *> m_proxy_sessions;
+		// streaming/proxy sessions (private-to-private), keyed by connect id.
+		// Held by shared_ptr: once relaying, each of the two relay sockets' handlers
+		// also captures a shared_ptr, so the session lives until both the map entry
+		// is detached (BeginRelayTeardown) and both relay sockets are gone.
+	std::map<std::string,std::shared_ptr<CCBProxySession>> m_proxy_sessions;
 		// connect ids of the sessions in m_proxy_sessions that are still in the
 		// handshake (not yet relaying), so CCB_SERVER_MAX_STREAMING_HANDSHAKES can
 		// be enforced in O(1) on the connection path.  A session is erased here
@@ -119,8 +122,15 @@ class CCBServer: Service {
 	int HandleReverseConnect( int cmd, Stream *stream );
 		// daemonCore socket handler that relays bytes for an active proxy.
 	int ProxyRelayData( CCBProxySession *session );
-		// Tear down and free a proxy session, closing both sockets.
+		// Tear down a proxy session that is not yet relaying (handshake phase):
+		// no relay sockets are registered, so this frees it synchronously.
 	void DestroyProxySession( CCBProxySession *session );
+		// Begin tearing down a *relaying* session: detach it from m_proxy_sessions
+		// (dropping that shared_ptr) and shut down both relay sockets so each wakes,
+		// returns non-KEEP_STREAM, and is cancelled+deleted by DaemonCore.  The
+		// session is freed once the last relay handler (holding a shared_ptr) is
+		// destroyed.  Idempotent.
+	void BeginRelayTeardown( CCBProxySession *session );
 		// Periodic maintenance: reap proxy sessions whose handshake never
 		// completed (called from PollSockets, the existing CCB poll timer).
 	void SweepProxySessions();

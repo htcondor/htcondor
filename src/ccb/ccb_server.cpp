@@ -979,6 +979,17 @@ public:
 	ReliSock *requester;  // endpoint "A"
 	ReliSock *target;     // endpoint "B"
 	bool relaying;
+	// Set once a relaying session is being torn down.  Both relay sockets share a
+	// handler that captures a shared_ptr to this session; the first to fail flips
+	// this flag and wakes the other, and every relay callback that sees it simply
+	// returns non-KEEP_STREAM so DaemonCore cancels+deletes its socket (see
+	// ProxyRelayData / BeginRelayTeardown).  The session itself is owned by the
+	// shared_ptrs captured in the two relay handlers (plus the m_proxy_sessions
+	// entry until teardown detaches it), so it is freed automatically once the
+	// last relay socket -- and thus its handler -- is gone.  This guarantees the
+	// session outlives every still-pending sibling callback without a manual
+	// reference count.
+	bool dying;
 	// When the session was created (request forwarded to the target).  The
 	// periodic maintenance sweep reaps a session that is still not relaying after
 	// the handshake timeout, so a target that never connects back cannot pin the
@@ -987,7 +998,7 @@ public:
 	Dir a_to_b;   // bytes read from the requester, to be written to the target
 	Dir b_to_a;   // bytes read from the target, to be written to the requester
 
-	CCBProxySession() : requester(nullptr), target(nullptr), relaying(false), created(0) {}
+	CCBProxySession() : requester(nullptr), target(nullptr), relaying(false), dying(false), created(0) {}
 };
 
 // Relay helpers (defined below; forward-declared for use in HandleReverseConnect).
@@ -1048,7 +1059,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 		return;
 	}
 
-	CCBProxySession *session = new CCBProxySession();
+	auto session = std::make_shared<CCBProxySession>();
 	session->connect_id = connect_id;
 	session->requester = requester;
 	session->created = time(nullptr);  // handshake deadline is relative to this
@@ -1059,8 +1070,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 	if( m_proxy_sessions.find(session->connect_id) != m_proxy_sessions.end() ) {
 		RequestReply( requester, false, "duplicate connect id", 0, target->getCCBID() );
 		ccb_stats.CCBRequestsFailed += 1;
-		delete session;
-		delete requester;
+		delete requester;  // session (shared_ptr) is freed on return; it never owns the socket
 		return;
 	}
 	m_proxy_sessions[session->connect_id] = session;
@@ -1085,7 +1095,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 				target->getCCBID());
 		RequestReply( requester, false, "failed to forward proxy request to target", 0, target->getCCBID() );
 		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session );
+		DestroyProxySession( session.get() );
 		return;
 	}
 
@@ -1121,7 +1131,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 				sock->peer_description());
 		return FALSE;
 	}
-	CCBProxySession *session = it->second;
+	std::shared_ptr<CCBProxySession> session = it->second;
 	if( session->target ) {
 			// already satisfied; reject the duplicate
 		return FALSE;
@@ -1137,7 +1147,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 		dprintf(D_ALWAYS,"CCB: failed to send proxy reply to requester %s\n",
 				session->requester->peer_description());
 		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session );
+		DestroyProxySession( session.get() );
 		return KEEP_STREAM; // we took ownership of sock via session->target
 	}
 
@@ -1151,7 +1161,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	{
 		dprintf(D_ALWAYS,"CCB: failed to replay reverse-connect hello to requester\n");
 		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session );
+		DestroyProxySession( session.get() );
 		return KEEP_STREAM;
 	}
 
@@ -1167,19 +1177,21 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	{
 		dprintf(D_ALWAYS,"CCB: failed to set proxy sockets non-blocking\n");
 		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session );
+		DestroyProxySession( session.get() );
 		return KEEP_STREAM;
 	}
 
-		// Begin the non-blocking byte relay.  Both sockets share one handler (a
-		// std::function that carries the session) which attempts non-blocking
-		// I/O in both directions and adjusts each socket's read/write interest
-		// to avoid triggering reads when we cannot write.
+		// Begin the non-blocking byte relay.  Both sockets share one handler that
+		// captures a shared_ptr to the session (so the session stays alive as long
+		// as either relay socket -- and thus its handler -- is registered).  The
+		// handler attempts non-blocking I/O in both directions and adjusts each
+		// socket's read/write interest to avoid triggering reads when we cannot
+		// write.
 	session->relaying = true;
 	m_pending_handshakes.erase( session->connect_id );  // handshake done -> relaying
 
 	StdSocketHandler relay_handler =
-		[this, session](Stream *) { return ProxyRelayData( session ); };
+		[this, session](Stream *) { return ProxyRelayData( session.get() ); };
 
 	int rc = daemonCore->Register_Socket(
 		session->requester,
@@ -1209,6 +1221,9 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 
 #ifndef SHUT_WR
 #define SHUT_WR SD_SEND   // POSIX name for Winsock's "stop sending" shutdown
+#endif
+#ifndef SHUT_RDWR
+#define SHUT_RDWR SD_BOTH // POSIX name for Winsock's "stop both" shutdown
 #endif
 
 // ccbSetNonBlocking puts a socket fd into non-blocking mode.
@@ -1364,6 +1379,14 @@ CCBServer::ProxyRelayData( CCBProxySession *s )
 	if( !s ) {
 		return KEEP_STREAM;
 	}
+	if( s->dying ) {
+		// The session is already being torn down: the other socket's callback (or
+		// this socket's own teardown) flipped it dying and woke us only so that we
+		// retire this socket.  Do not touch the splice; returning non-KEEP_STREAM
+		// makes DaemonCore cancel+delete this socket, which drops this handler's
+		// shared_ptr and frees the session once the other socket is gone too.
+		return FALSE;
+	}
 
 	// Non-blocking I/O makes it safe to attempt both directions on every
 	// callback regardless of which socket woke us; an unready socket simply
@@ -1377,14 +1400,14 @@ CCBServer::ProxyRelayData( CCBProxySession *s )
 		ccb_stats.CCBStreamingFailed += 1;
 		dprintf(D_NETWORK,"CCB RELAY: tearing down session (request id %s) on pump error\n",
 				s->request_id.c_str());
-		DestroyProxySession( s );
-		return KEEP_STREAM;
+		BeginRelayTeardown( s );
+		return FALSE;
 	}
 
 	// Both directions fully closed: tear down.
 	if( s->a_to_b.dst_shutdown && s->b_to_a.dst_shutdown ) {
-		DestroyProxySession( s );
-		return KEEP_STREAM;
+		BeginRelayTeardown( s );
+		return FALSE;
 	}
 
 	// Re-evaluate each socket's read/write interest.  A socket is the source of
@@ -1421,7 +1444,7 @@ CCBServer::SweepProxySessions()
 			// DestroyProxySession erases the current element, so advance first.
 		auto next_it = it;
 		++next_it;
-		CCBProxySession *session = it->second;
+		CCBProxySession *session = it->second.get();
 		if( !session->relaying && now - session->created >= handshake_timeout ) {
 			dprintf(D_ALWAYS,
 					"CCB: streaming (proxy) handshake for request id %s timed out "
@@ -1444,30 +1467,64 @@ CCBServer::DestroyProxySession( CCBProxySession *session )
 	if( !session ) {
 		return;
 	}
+		// This path is only for a session that has not begun relaying (it is still
+		// in the handshake).  No relay sockets are registered with DaemonCore yet,
+		// so there is no sibling callback to race and everything can be freed
+		// synchronously.  A relaying session is torn down via BeginRelayTeardown,
+		// which lets each socket retire itself from its own callback.
+	ASSERT( !session->relaying );
+
+		// We still own these sockets (DaemonCore only takes ownership once they are
+		// registered for relaying), so delete them here.  delete on nullptr is fine.
+	delete session->requester;
+	delete session->target;
+	session->requester = nullptr;
+	session->target = nullptr;
+
+		// Dropping the m_proxy_sessions entry releases the only shared_ptr to a
+		// pre-relaying session (no relay handler holds one yet), so this frees it.
+	m_pending_handshakes.erase( session->connect_id );
 	auto it = m_proxy_sessions.find( session->connect_id );
-	if( it != m_proxy_sessions.end() && it->second == session ) {
+	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
 		m_proxy_sessions.erase( it );
 	}
-		// Idempotent: a no-op if the session already started relaying.
-	m_pending_handshakes.erase( session->connect_id );
-	if( session->relaying ) {
-		ccb_stats.CCBStreamingActive -= 1;
+}
+
+void
+CCBServer::BeginRelayTeardown( CCBProxySession *session )
+{
+	if( !session || session->dying ) {
+		return;  // idempotent: the other socket may have started this already
 	}
+	session->dying = true;
+	ccb_stats.CCBStreamingActive -= 1;
+
+		// Wake both relay sockets so that each retires itself from its own callback
+		// -- the only context in which DaemonCore can safely cancel and delete a
+		// socket that may currently be in service.  shutdown() forces an EOF/error
+		// wakeup even on a socket with no pending I/O, and selecting it for read
+		// guarantees it lands in the next select() set.  Each woken callback returns
+		// non-KEEP_STREAM, so DaemonCore cancels+deletes its socket and destroys its
+		// copy of the relay handler; the session is freed once the last such handler
+		// (its shared_ptr) is gone.
 	if( session->requester ) {
-		if( session->relaying ) {
-			daemonCore->Cancel_Socket( session->requester );
-		}
-		delete session->requester;
-		session->requester = nullptr;
+		daemonCore->Set_Socket_Handler_Type( session->requester, HANDLE_READ );
+		shutdown( session->requester->get_file_desc(), SHUT_RDWR );
 	}
 	if( session->target ) {
-		if( session->relaying ) {
-			daemonCore->Cancel_Socket( session->target );
-		}
-		delete session->target;
-		session->target = nullptr;
+		daemonCore->Set_Socket_Handler_Type( session->target, HANDLE_READ );
+		shutdown( session->target->get_file_desc(), SHUT_RDWR );
 	}
-	delete session;
+
+		// Detach from the lookup tables so no new request can match this session and
+		// so the shared_ptr the map held is released (the relay handlers keep the
+		// session alive until their sockets are gone).  Do this last: the shutdown
+		// calls above still need session->requester / session->target.
+	m_pending_handshakes.erase( session->connect_id );  // a no-op once relaying
+	auto it = m_proxy_sessions.find( session->connect_id );
+	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
+		m_proxy_sessions.erase( it );
+	}
 }
 
 CCBServerRequest *
