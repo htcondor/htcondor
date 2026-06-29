@@ -138,6 +138,14 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {
+	// Cumulative work budget: never restored on unwind, so it bounds total
+	// evaluations regardless of tree shape. Stops exponential re-evaluation
+	// of shared sub-expressions that depth_remaining cannot catch.
+	if( --state.eval_steps_remaining < 0 ) {
+		val.SetErrorValue();
+		return false;
+	}
+
 	double diff = 0;
 #ifndef WIN32
 	struct timeval begin, end;
@@ -166,6 +174,14 @@ Evaluate (EvalState &state, Value &val) const
 bool ExprTree::
 Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 {
+	// See the Evaluate(state,val) overload above: cumulative, non-restored
+	// work budget that bounds total evaluations regardless of tree shape.
+	if( --state.eval_steps_remaining < 0 ) {
+		val.SetErrorValue();
+		sig = nullptr;
+		return false;
+	}
+
 	double diff = 0;
 #ifndef WIN32
 	struct timeval begin, end;
