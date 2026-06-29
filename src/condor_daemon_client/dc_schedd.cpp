@@ -1919,7 +1919,10 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 	sock.decode();
 
 	int found_new_job = 0;
-	sock.get( found_new_job );
+	if( !sock.get( found_new_job ) ) {
+		error_msg = "Failed to receive new job indicator";
+		return false;
+	}
 
 	if( found_new_job ) {
 		*new_job_ad = new ClassAd();

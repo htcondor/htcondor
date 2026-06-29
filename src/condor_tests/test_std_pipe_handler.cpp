@@ -45,7 +45,7 @@ main_init( int, char * [] ) {
         [=](int /* pipeID? */) {
             static int count = 0;
             static unsigned char v[20];
-            daemonCore->Read_Pipe( read_end, (void *)(v + count), 1 );
+            (void) daemonCore->Read_Pipe( read_end, (void *)(v + count), 1 );
             ++count;
 
             std::string the_bytes;
