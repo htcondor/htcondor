@@ -1405,7 +1405,7 @@ case CONDOR_putfile:
 		}
 		result = ( syscall_sock->end_of_message() );
 		if (result == 0) {
-			free(path);
+			free((char*)path);
 			if (fd >= 0) { close(fd); }
 			dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__);
 			thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
