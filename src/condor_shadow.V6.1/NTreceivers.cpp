@@ -1405,9 +1405,9 @@ case CONDOR_putfile:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
-		free((char*)path);
 
         if (length <= 0) {
+			free((char*)path);
 			if (fd >= 0) close(fd);
 			return RemoteSyscallResult::SyscallOK;
 		}
@@ -1427,6 +1427,7 @@ case CONDOR_putfile:
 		else {
 			dprintf(D_SYSCALLS, "Unable to put file %s\n", path);
 		}
+		free((char*)path);
 		close(fd);
 		
 		syscall_sock->encode();
