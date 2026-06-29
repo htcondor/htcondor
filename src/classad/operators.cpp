@@ -31,6 +31,22 @@ using std::pair;
 #include <algorithm>
 namespace classad {
 
+namespace {
+// RAII helper that bounds evaluation recursion depth. Operator evaluation
+// recurses through child expressions, so a deeply-nested expression (e.g. a
+// long "a-b-c-..." chain) would otherwise overflow the stack. This mirrors the
+// state.depth_remaining accounting already used in attrrefs.cpp, classad.cpp,
+// exprList.cpp and fnCall.cpp.
+class RecursionGuard {
+public:
+	explicit RecursionGuard( EvalState &state ) : m_state( state ) { m_state.depth_remaining--; }
+	~RecursionGuard() { m_state.depth_remaining++; }
+	bool exceeded() const { return m_state.depth_remaining < 0; }
+private:
+	EvalState &m_state;
+};
+} // anonymous namespace
+
 Operation::
 ~Operation ()
 {
@@ -488,6 +504,11 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 bool OperationParens::
 _Evaluate (EvalState &state, Value &result) const
 {
+		RecursionGuard guard( state );
+		if( guard.exceeded() ) {
+			result.SetErrorValue( );
+			return( false );
+		}
 		if( !child1->Evaluate (state, result) ) {
 			result.SetErrorValue( );
 			return( false );
@@ -498,6 +519,12 @@ _Evaluate (EvalState &state, Value &result) const
 bool Operation::
 _Evaluate (EvalState &state, Value &result) const
 {
+	RecursionGuard guard( state );
+	if( guard.exceeded() ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
 	Value	val1, val2, val3;
 	bool	valid1, valid2, valid3;
 	int		rval;
@@ -594,12 +621,23 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 			if( child3  && child2) {
 				return child3->Evaluate(state,result);
 			}
-				
+
 			if (!child2 && child1) {
 				// if middle is empty and lhs is defined, return it
 				return child1->Evaluate(state, result);
 			}
 		}
+	} else if( arg1.IsErrorValue() ) {
+		// "error ? a : b" is error regardless of the branches: short-circuit
+		// without evaluating either one. Otherwise the caller falls through
+		// and evaluates both branches, which is exponential when they are
+		// themselves error-conditioned ternaries.
+		result.SetErrorValue();
+		return true;
+	} else if( arg1.IsUndefinedValue() ) {
+		// "undefined ? a : b" is undefined regardless of the branches.
+		result.SetUndefinedValue();
+		return true;
 	}
 	return false;
 }
@@ -607,6 +645,13 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 bool Operation::
 _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 {
+	RecursionGuard guard( state );
+	if( guard.exceeded() ) {
+		result.SetErrorValue( );
+		tree = NULL;
+		return( false );
+	}
+
 	int			sig;
 	Value		val1, val2, val3;
 	ExprTree 	*t1=NULL, *t2=NULL, *t3=NULL;
