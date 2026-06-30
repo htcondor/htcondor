@@ -61,6 +61,13 @@ class Submit(Verb):
             FileNotFoundError: if the resolved Snakefile does not exist.
             RuntimeError: if Snakemake executable cannot be found or submission fails.
         """
+        # Check for the presence of the executor plugin
+        if importlib.util.find_spec("snakemake_executor_plugin_htcondor") is None:
+            raise RuntimeError(
+                "The 'snakemake-executor-plugin-htcondor' plugin is required but not yet installed.\n"
+                "Install it with: pip install snakemake-executor-plugin-htcondor"
+            )
+            
 
         if snakefile is None:
             # Extract --jobdir from snakemake_args if present
@@ -76,12 +83,6 @@ class Submit(Verb):
                 if snakemake_args and snakemake_args[0] == '--':
                     snakemake_args = snakemake_args[1:]
 
-        # Check for the presence of the executor plugin
-        if importlib.util.find_spec("snakemake_executor_plugin_htcondor") is None:
-            raise RuntimeError(
-                "The 'snakemake-executor-plugin-htcondor' plugin is required but not yet installed.\n"
-                "Install it with: pip install snakemake-executor-plugin-htcondor"
-            )
 
         jobdir = self._setup_jobdir(options)
 
