@@ -39,6 +39,7 @@
 #include "directory.h"
 
 #include <filesystem>
+#include "profiling.hpp"
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -160,6 +161,9 @@ bool Dagman::Config() {
 
 	config[conf::b::ReportGraphMetrics] = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REPORT_GRAPH_METRICS setting: %s\n", config[conf::b::ReportGraphMetrics] ? "True" : "False");
+
+	// Undocumented on purpose: enables parse/edge-processing timing and memory diagnostics
+	config[conf::b::ParseTimingDebug] = param_boolean("DAGMAN_DEBUG_PARSE_TIMING", false);
 
 	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
@@ -1007,6 +1011,17 @@ void main_init(int argc, char ** const argv) {
 	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
+	const bool parse_timing = dagman.config[conf::b::ParseTimingDebug];
+
+	using namespace Profiling;
+	TimePoint t_parse_start, t_parse_end, t_process_end;
+	long rss_before_parse{0}, rss_after_parse{0}, rss_after_process{0};
+
+	if (parse_timing) {
+		t_parse_start    = Clock::now();
+		rss_before_parse = peak_rss_kb();
+	}
+
 	DagProcessor dp(dagman);
 	int dag_id = 0;
 
@@ -1025,10 +1040,15 @@ void main_init(int argc, char ** const argv) {
 			dagman.RemoveRunningJobs(rm_reason, true);
 			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
-			
+
 				// Note: debug_error calls DC_Exit().
 			debug_error(1, DEBUG_QUIET, "Failed to parse %s\n", file.c_str());
 		}
+	}
+
+	if (parse_timing) {
+		t_parse_end    = Clock::now();
+		rss_after_parse = peak_rss_kb();
 	}
 
 	if (dagOpts[shallow::i::Priority] != 0) {
@@ -1043,6 +1063,27 @@ void main_init(int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
+
+	if (parse_timing) {
+		t_process_end      = Clock::now();
+		rss_after_process  = peak_rss_kb();
+		double t_parse   = elapsed_s(t_parse_start, t_parse_end);
+		double t_process = elapsed_s(t_parse_end,   t_process_end);
+		double t_total   = elapsed_s(t_parse_start, t_process_end);
+		debug_printf(DEBUG_NORMAL,
+		    "DAGMAN_DEBUG_PARSE_TIMING (%zu DAG file(s)):\n"
+		    "  %-28s  %10s  %14s\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10s  %14ld\n",
+		    dagOpts.numDagFiles(),
+		    "Phase",                    "Wall (s)",  "Peak RSS (KiB)",
+		    "DAG file parsing",          t_parse,     rss_after_parse,
+		    "LiftSplices + AdjustEdges", t_process,   rss_after_process,
+		    "Total",                     t_total,     rss_after_process,
+		    "RSS before parse",          "",          rss_before_parse);
+	}
 
 	dagman.metrics->CountNodes(dagman.dag);
 
@@ -1201,6 +1242,13 @@ void main_init(int argc, char ** const argv) {
 	}
 
 	print_status(true);
+
+	// Undocumented on purpose: exit cleanly after full setup (parse, process, rescue, recover)
+	// without entering the execution loop.
+	if (dagOpts[shallow::b::SetupOnly]) {
+		debug_printf(DEBUG_NORMAL, "Exiting after DAG setup (-SetupOnly).\n");
+		ExitSuccess();
+	}
 
 	debug_printf(DEBUG_VERBOSE, "Registering condor_event_timer...\n");
 	daemonCore->Register_Timer(1, dagman.config[conf::i::LogScanInterval], condor_event_timer, "condor_event_timer");
