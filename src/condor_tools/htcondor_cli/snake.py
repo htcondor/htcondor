@@ -122,41 +122,36 @@ class Submit(Verb):
             return snakemake_args
         
         # Find the position of -- separator
-        separator_index = None
         try:
             separator_index = snakemake_args.index('--')
         except ValueError:
-            pass  # No separator found
+            separator_index = None
         
         # Scan and extract all --jobdir occurrences from before the separator
         scan_range = separator_index if separator_index is not None else len(snakemake_args)
         
         # Collect all --jobdir values (last one will be used)
+        filtered_args = []
         jobdir_value_in_remainder = None
-        indices_to_skip = set()
-        
         i = 0
-        while i < len(snakemake_args):
-            if i < scan_range and snakemake_args[i] == '--jobdir' and i + 1 < scan_range:
-                # Found --jobdir before the separator
-                # Unintended behavior if value of --jobdir is not specified
-                jobdir_value_in_remainder = snakemake_args[i + 1]  # Update to latest value
-                indices_to_skip.add(i)      # Mark --jobdir for removal
-                indices_to_skip.add(i + 1)  # Mark its value for removal
+
+        # For repeated specifications of --jobdir, the last one wins
+        while i < scan_range:
+            if snakemake_args[i] == '--jobdir':
+                if i + 1 >= scan_range or snakemake_args[i+1].startswith("-"):
+                    raise ValueError("--jobdir requires a valid directory string value")
+                jobdir_value_in_remainder = snakemake_args[i+1]
                 i += 2
             else:
+                filtered_args.append(snakemake_args[i])
                 i += 1
         
-        # If we found any --jobdir in REMAINDER, rebuild filtered args
-        if indices_to_skip:
-            options["jobdir"] = jobdir_value_in_remainder
-            filtered_args = []
-            for i in range(len(snakemake_args)):
-                if i not in indices_to_skip:
-                    filtered_args.append(snakemake_args[i])
-            return filtered_args
-        
-        return snakemake_args
+        if jobdir_value_in_remainder is None:
+            return snakemake_args
+
+        options["jobdir"] = jobdir_value_in_remainder
+        filtered_args.extend(snakemake_args[scan_range:])
+        return filtered_args
     
     def _validate_snakefile(self, snakefile):
         """
