@@ -35,6 +35,11 @@
   when executing the ``add-pwd`` option as a privileged user (i.e. root).
   :jira:`3804`
 
+- VM Universe jobs now use ``virtio`` for networking.
+  The previously used ``Intel e1000`` card did not work on ARM hosts.
+  ``virtio`` has been supported since Red Hat Enterprise Linux 6.
+  :jira:`3817`
+
 - Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
   that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
   submit file.
