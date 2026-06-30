@@ -247,11 +247,15 @@ Requires: pelican-osdf-compat >= 7.25.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
-%if 0%{?suse_version} || 0%{?x86_64_v2}
-# Unfortunately, Apptainer is lagging behind in openSUSE and x86_64_v2
+%if 0%{?suse_version} == 1500
+# Unfortunately, Apptainer is lagging behind on openSUSE 15
 Requires: apptainer >= 1.4.5
 %else
+%if 0%{?rhel} == 10
 Requires: apptainer >= 1.5.0
+%else
+Requires: apptainer >= 1.5.1
+%endif
 %endif
 %endif
 
@@ -985,6 +989,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_now.1.gz
 %_mandir/man1/classad_eval.1.gz
 %_mandir/man1/classads.1.gz
+%_mandir/man1/htcondor-jdl.1.gz
 %_mandir/man1/condor_adstash.1.gz
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
@@ -1126,8 +1131,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/sge_local_submit_attributes.sh
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
 

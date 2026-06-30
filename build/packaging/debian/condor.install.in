@@ -133,8 +133,6 @@ usr/libexec/condor/singularity_test_sandbox
 usr/libexec/condor/sshd.sh
 usr/sbin/AzureGAHPServer
 usr/sbin/arc_gahp
-usr/sbin/blah_check_config
-usr/sbin/blahpd_daemon
 usr/sbin/condor_advertise
 usr/sbin/condor_aklog
 usr/sbin/condor_c-gahp

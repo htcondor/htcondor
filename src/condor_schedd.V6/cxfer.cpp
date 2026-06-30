@@ -19,11 +19,45 @@ std::tuple<
 	std::optional<ListOfCatalogs>
 >
 determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
+	//
+	// We'd like to start looking at the job _after_ we check the FORBIDDN
+	// and CANT conditions, but until I can prove that falling back works
+	// properly when re-using a shadow, we have to check the NONE condition
+	// first to avoid not recycling a shadow when we otherwise could.
+	//
+
+	// Now we start looking at the job ad.
+	ClassAd * jobAd = GetJobAd(jobID);
+	if( jobAd == NULL ) {
+		dprintf( D_ERROR, "cxfer: Failed to obtain job ad, falling back to uncommon transfer.\n" );
+		return {CXFER_TYPE::CANT, {}};
+	}
+
+	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
+	if(! common_file_catalogs) {
+		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );
+		return {CXFER_TYPE::CANT, {}};
+	}
+	// Even though we don't (presently) care if the common files could be
+	// transferred by a slightly older version of the starter, we still need
+	// call this function to add `MY.CommonFiles` to the list of catalogs.
+	int required_version = 2;
+	if(! computeCommonInputFiles( jobAd, m_rec->peer, * common_file_catalogs, required_version )) {
+		dprintf( D_ERROR, "cxfer: Failed to construct unique name for " ATTR_COMMON_INPUT_FILES " catalog, falling back to uncommon transfer.\n" );
+		return {CXFER_TYPE::CANT, {}};
+	}
+	// If we don't find any common file catalogs, return CXFER_TYPE::None.
+	if( common_file_catalogs->size() == 0 ) {
+		return {CXFER_TYPE::NONE, {}};
+	}
+
+
 	// Admins can disable all common file transfers.
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
 	if( disallowed ) {
 		return {CXFER_TYPE::FORBIDDEN, {}};
 	}
+
 
 	//
 	// We don't coalesce OCUs, so we shouldn't split them, either.
@@ -86,32 +120,6 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	GetAttributeInt( clusterID, -1, "CommonTransferFailed", & commonTransferFailed );
 	if( commonTransferFailed ) {
 		return {CXFER_TYPE::CANT, {}};
-	}
-
-
-	// Now we start looking at the job ad.
-	ClassAd * jobAd = GetJobAd(jobID);
-	if( jobAd == NULL ) {
-		dprintf( D_ERROR, "cxfer: Failed to obtain job ad, falling back to uncommon transfer.\n" );
-		return {CXFER_TYPE::CANT, {}};
-	}
-
-	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
-	if(! common_file_catalogs) {
-		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );
-		return {CXFER_TYPE::CANT, {}};
-	}
-	// Even though we don't (presently) care if the common files could be
-	// transferred by a slightly older version of the starter, we still need
-	// call this function to add `MY.CommonFiles` to the list of catalogs.
-	int required_version = 2;
-	if(! computeCommonInputFiles( jobAd, m_rec->peer, * common_file_catalogs, required_version )) {
-		dprintf( D_ERROR, "cxfer: Failed to construct unique name for " ATTR_COMMON_INPUT_FILES " catalog, falling back to uncommon transfer.\n" );
-		return {CXFER_TYPE::CANT, {}};
-	}
-	// If we don't find any common file catalogs, return CXFER_TYPE::None.
-	if( common_file_catalogs->size() == 0 ) {
-		return {CXFER_TYPE::NONE, {}};
 	}
 
 

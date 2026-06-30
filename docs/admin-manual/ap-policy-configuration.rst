@@ -1006,6 +1006,18 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
              - INTEGER
              - —
              - Foreign key → ``JobLists.JobListId``; denormalized here to speed up cluster-count queries without joining through ``Jobs``.
+           * - ``DAGManJobId``
+             - INTEGER
+             - NULL
+             - The ``DAGManJobId`` ClassAd attribute from the job ad. ``NULL`` when the job was not submitted as part of a DAG.
+           * - ``JobBatchId``
+             - TEXT
+             - NULL
+             - The ``JobBatchId`` ClassAd attribute from the job ad. ``NULL`` when not present in the record.
+           * - ``JobBatchName``
+             - TEXT
+             - NULL
+             - The ``JobBatchName`` ClassAd attribute from the job ad. ``NULL`` when not present in the record.
 
         **Indexes**
 

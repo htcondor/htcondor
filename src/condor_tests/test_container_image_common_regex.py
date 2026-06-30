@@ -90,6 +90,6 @@ class TestCIC_Regex():
 
     def test_container_commonality_is_as_expected(self, the_cluster_ads):
         for name, ad in the_cluster_ads.items():
-            common = ad.get('_x_catalog_condor_container_image') is not None
+            common = ad.get('_x_catalog_container_busybox_sif') is not None
             print(f"{name} -> {common}")
             assert TEST_CASES[name]['expected'] == common

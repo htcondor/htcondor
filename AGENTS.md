@@ -56,7 +56,7 @@ All daemons are built on **DaemonCore** (`src/condor_daemon_core.V6/condor_daemo
 - **Process spawning**: `daemonCore->Create_Process(...)`
 - **Socket/stream management**: Inter-daemon communication primitives
 
-**Golden Rule**: In daemon code, ALWAYS use DaemonCore for timers/signals/sockets. Never use raw POSIX calls (`timer_create()`, `signal()`, etc.) as they bypass the event loop.
+**Golden Rule**: In daemon code, ALWAYS use DaemonCore for timers/signals/sockets. Never use raw POSIX calls (`timer_create()`, `signal()`, etc.) as they bypass the event loop. Note that the Register_* functions have a std::function overload for their callback.  Prefer the std::function overload for all new code, and refactoring of old code where possible.
 
 ### ClassAd System
 
@@ -179,12 +179,13 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 
 **Type Deduction & Inference:**
 **Smart Pointers (Ownership):**
-**Ranges & Algorithms (C++20):**
+**Ranges & Algorithms (C++20):** Prefer `<algorithm>` and `<ranges>` over manual loops for transformations, filtering, and searching, but avoid range views where possible.
 **String Views (Non-owning):**
 **Lambda Expressions:**
 **Designated Initializers (C++20):**
 **Constexpr & Consteval:**
 **std::filesystem** Please never use the std::filesystem overloads that throw excecptions, always prefer the non-throwing overloads and check the error codes.
+**Value semantics**: Prefer value semantics over raw pointers for ownership and lifetime management.
 
 ### Safe File I/O (SECURITY-CRITICAL)
 
