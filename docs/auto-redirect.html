@@ -82,7 +82,7 @@ function redirect() {
 	// UhOh: error happend so update page display with the found issue
 	if (errmsg !== "") {
 		document.getElementById("doc-link").href = url_root;
-		document.getElementById("fail-reason").innerHTML = errmsg;
+		document.getElementById("fail-reason").textContent = errmsg;
 	}
 }
 </script>
