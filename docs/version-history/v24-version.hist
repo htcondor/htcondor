@@ -36,7 +36,7 @@
   :jira:`3804`
 
 - VM Universe jobs now use ``virtio`` for networking.
-  The previous used ``Intel e1000`` card did not work on ARM hosts.
+  The previously used ``Intel e1000`` card did not work on ARM hosts.
   ``virtio`` has been supported since Red Hat Enterprise Linux 6.
   :jira:`3817`
 
