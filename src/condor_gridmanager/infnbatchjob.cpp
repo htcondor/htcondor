@@ -1423,7 +1423,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			ExprTree *new_cereq = NULL;
 			for (auto & next_attr : *cereq_ad) {
 				classad::Value val;
-				next_attr.second->Evaluate( val );
+				cereq_ad->EvaluateExpr( next_attr.second, val );
 				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
 				if ( new_literal == NULL ) {
 					continue;

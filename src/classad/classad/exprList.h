@@ -29,7 +29,7 @@ namespace classad {
 class ExprList : public ExprTree
 {
 	public:
-		ExprList() :parentScope(nullptr) {};
+		ExprList() {};
 		ExprList(const std::vector<ExprTree*>& exprs);
 
         /// Copy Constructor
@@ -81,17 +81,12 @@ class ExprList : public ExprTree
 		void erase(iterator it);
 		void erase(iterator f, iterator l);
 	
-		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-
     	bool GetValueAt(int location, Value& v, EvalState *es=nullptr) const;
 
 	private:
-		const ClassAd   *parentScope;
-
 		std::vector<ExprTree*> exprList;
 
 		void Clear (void);
-		virtual void _SetParentScope( const ClassAd* p );
 		virtual bool _Evaluate (EvalState &, Value &) const;
 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
