@@ -1829,9 +1829,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
-	if (handler_f) {
-		sockTable[i].std_handler = *handler_f;
-	}
+		// Always (re)assign std_handler -- including clearing it when this
+		// registration does not supply one.  Cancel_Socket does not clear a slot's
+		// std_handler, so a slot freed by a std::function-handler socket keeps that
+		// std::function until the slot is reused.  If the slot is then reused by a
+		// registration with only a C/C++ handler (or none, e.g. a command socket via
+		// Register_Command_Socket), the stale std_handler would otherwise linger and,
+		// because CallSocketHandler_worker dispatches std_handler when handler and
+		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
+		// of whatever the stale std::function captured.
+	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
@@ -2708,6 +2715,19 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 		}
 	}
 	return -1;
+}
+
+bool DaemonCore::Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type )
+{
+	int i = Lookup_Socket( iosock );
+	if ( i < 0 ) {
+		return false;
+	}
+	sockTable[i].handler_type = handler_type;
+	// Wake up the main select loop so the new interest takes effect promptly
+	// rather than waiting for the current timeout to expire.
+	Wake_up_select();
+	return true;
 }
 
 int DaemonCore::Cancel_Reaper( int rid )
@@ -3603,6 +3623,10 @@ void DaemonCore::Driver()
 				} else {
 					int sockfd = sockEnt.iosock->get_file_desc();
 					switch( sockEnt.handler_type ) {
+					case HANDLE_NONE:
+						// registered but not currently polled (e.g. a relay
+						// pausing reads to apply backpressure)
+						break;
 					case HANDLE_READ:
 						selector.add_fd( sockfd, Selector::IO_READ );
 						break;
@@ -3642,6 +3666,8 @@ void DaemonCore::Driver()
 			if ( pipeTable[i].index != -1 ) {	// if a valid entry....
 				int pipefd = pipeHandleTable[pipeTable[i].index];
 				switch( pipeTable[i].handler_type ) {
+				case HANDLE_NONE:
+					break;
 				case HANDLE_READ:
 					selector.add_fd( pipefd, Selector::IO_READ );
 					break;
@@ -3857,17 +3883,25 @@ void DaemonCore::Driver()
 								sockEnt.call_handler = true;
 							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+					} else {
+						// NOTE: read and write interest are checked with
+						// independent ifs (not else-if) so that a
+						// HANDLE_READ_WRITE socket fires its handler on EITHER
+						// read or write readiness.  (As an else-if chain the
+						// write check would be unreachable for READ_WRITE.)
+						if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+						if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
 					}
 				}	// end of if valid sock entry

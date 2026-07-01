@@ -1944,6 +1944,42 @@ More information about networking in HTCondor can be found in
     need to go through CCB. For more information about CCB, see
     :ref:`admin-manual/networking:htcondor connection brokering (ccb)`.
 
+:macro-def:`CCB_SERVER_STREAMING[Networking]`
+    A boolean value that controls whether a CCB server (broker) will proxy
+    private-to-private connections (CCB streaming mode). When ``True`` (the
+    default), if a daemon that is itself behind a CCB asks to reach another
+    CCB-routed daemon, the broker has the target reverse-connect to the broker
+    and then splices the two connections into a transparent TCP relay. The
+    end-to-end security handshake between the two daemons rides over the relay,
+    so the broker never decrypts the traffic. See
+    :ref:`admin-manual/networking:htcondor connection brokering (ccb)`.
+
+:macro-def:`CCB_SERVER_STREAMING_HANDSHAKE_TIMEOUT[Networking]`
+    The number of seconds a CCB server (broker) waits for the target of a
+    streaming request to connect back before canceling the connection reporting
+    a failure. The default is 300 (5 minutes). Set to 0 to disable handshake
+    reaping.
+
+:macro-def:`CCB_SERVER_MAX_STREAMING_SESSIONS[Networking]`
+    The maximum number of concurrent CCB streaming (proxy) sessions a broker will
+    maintain, counting both in-progress handshakes and established relays.
+    Requests beyond the limit are rejected with a clear failure. The default of
+    0 means unlimited.
+
+:macro-def:`CCB_SERVER_MAX_STREAMING_HANDSHAKES[Networking]`
+    The maximum number of CCB streaming (proxy) sessions a broker will keep in
+    the handshake state (waiting for the target to connect back) at once. This
+    bounds the more easily abused, never-completing requests separately from
+    established relays. The default of 0 means unlimited.
+
+:macro-def:`CCB_CLIENT_STREAMING[Networking]`
+    A boolean value that controls whether a daemon that is itself behind a CCB
+    will attempt to reach another CCB-routed (private) daemon by asking a
+    streaming-capable broker to proxy the connection, rather than giving up.
+    When ``True`` (the default), the attempt is only made when the broker
+    advertises support for streaming, so it is safe to leave enabled even in a
+    mixed-version pool.
+
 :macro-def:`CCB_HEARTBEAT_INTERVAL[Networking]`
     This is the maximum number of seconds of silence on a daemon's
     connection to the CCB server after which it will ping the server to
