@@ -1829,9 +1829,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
-	if (handler_f) {
-		sockTable[i].std_handler = *handler_f;
-	}
+		// Always (re)assign std_handler -- including clearing it when this
+		// registration does not supply one.  Cancel_Socket does not clear a slot's
+		// std_handler, so a slot freed by a std::function-handler socket keeps that
+		// std::function until the slot is reused.  If the slot is then reused by a
+		// registration with only a C/C++ handler (or none, e.g. a command socket via
+		// Register_Command_Socket), the stale std_handler would otherwise linger and,
+		// because CallSocketHandler_worker dispatches std_handler when handler and
+		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
+		// of whatever the stale std::function captured.
+	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
