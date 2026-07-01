@@ -172,17 +172,14 @@ class Operation : public ExprTree
 
         friend bool operator==(const Operation &op1, const Operation &op2);
 
-		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-
 	protected:
 		/// Constructor
-		Operation() : parentScope(NULL) {};
+		Operation() {};
 
   	private:
         static bool SameChild(const ExprTree *tree1, const ExprTree *tree2);
         static bool SameChildren(const Operation * op1, const Operation * op2);
 
-		virtual void _SetParentScope( const ClassAd* );
 		virtual bool _Evaluate( EvalState &, Value &) const;
 		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
@@ -216,8 +213,6 @@ class Operation : public ExprTree
 		static void compareIntegers		(OpKind, Value&, Value&, Value&);
 		static void compareAbsoluteTimes(OpKind, Value&, Value&, Value&);
 		static void compareRelativeTimes(OpKind, Value&, Value&, Value&);
-
-		const ClassAd *parentScope;
 
 		// No Operation-specific data members.
 		// Everything is in child classes

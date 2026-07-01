@@ -1191,21 +1191,20 @@ userHome_func(const char *                 name,
 }
 
 
-bool
+static bool
 is_in_tree( const classad::ClassAd * member,
-            const classad::ClassAd * leaf ) {
+            const classad::ClassAd * leaf,
+            const classad::EvalState & state ) {
 	if( member == leaf ) { return true; }
 	if( leaf == NULL ) { return false; }
 
-	// We can't just walk the parent scope pointers, because the parent
-	// scope pointer for the LEFT and RIGHT ads is temporarily replaced
-	// by the corresponding context ad when the match ad is created.
-
 	const classad::ClassAd * chainedParent = leaf->GetChainedParentAd();
-	if( chainedParent != NULL && is_in_tree(member, chainedParent) ) { return true; }
+	if( chainedParent != NULL && is_in_tree(member, chainedParent, state) ) { return true; }
 
-	const classad::ClassAd * parentScope = leaf->GetParentScope();
-	if( parentScope != NULL && is_in_tree(member, parentScope) ) { return true; }
+	// Walk up to leaf's lexical parent scope, recorded in the EvalState's
+	// parentMap during evaluation.
+	auto it = state.parentMap.find(leaf);
+	if (it != state.parentMap.end() && is_in_tree(member, it->second, state)) { return true; }
 
 	return false;
 }
@@ -1213,7 +1212,8 @@ is_in_tree( const classad::ClassAd * member,
 classad::Value
 evaluateInContext( classad::ExprTree * expr,
 				   classad::EvalState & state,
-				   classad::ExprTree * nested_ad_reference ) {
+				   classad::ExprTree * nested_ad_reference,
+				   const classad::ClassAd * list_scope ) {
 	classad::Value rv;
 
 	classad::Value cav;
@@ -1234,34 +1234,33 @@ evaluateInContext( classad::ExprTree * expr,
 		return rv;
 	}
 
-	// AttributeReference::FindExpr() doesn't recursively check the parent
-	// scope's alternate scope, so set it by hand.  This allows attribute
-	// references to work correctly (if confusingly) if this function is
-	// called (as it is intended to be) during a match.
-	//
-	// If the target ad is a chained ad, as it is in the startd, then the
-	// nested ad's parent won't (usually) have an alternate scope pointer
-	// set.  Instead, we need to figure out if the nested ad's parent is
-	// on the RIGHT or LEFT side, and use the corresponding alternate scope
-	// pointer.  (We don't check for the nested ad itself because the
-	// nested ad isn't a chained parent or parent scope of RIGHT or LEFT.)
-	//
-	// The confusing part is that MY and TARGET will be reversed during the
-	// evaluation of attr if, as intended, the nested ad's parent is not the
-	// parent of the expression containing function call.  (We intend for
-	// the former to be the slot ad and the latter the job ad.)
+	// The nested ad obtained from the list is just a ClassAd value; in the
+	// parentMap scope model it carries no back-pointer to its lexical parent.
+	// Its lexical parent is the ad that actually holds the list (list_scope),
+	// which is what GetParentScope() used to return for the nested ad. This is
+	// not necessarily state.curAd: when the list is referenced from the other
+	// side of a match (e.g. the startd evaluating an unscoped 'catalogs' that
+	// lives on the machine ad while curAd is the job ad), curAd is the wrong
+	// ad and would make MY/TARGET resolve backwards inside the nested ad.
+	const classad::ClassAd * nested_parent = list_scope ? list_scope : state.curAd;
+
+	// Figure out which side of the match the nested ad's parent is on, so we
+	// can borrow that side's alternate scope. This allows the (confusingly
+	// MY/TARGET-reversed) attribute references in the predicate to resolve
+	// correctly when this function is called during a match, including when
+	// the target ad is a chained ad (as in the startd) whose nested ad's
+	// parent has no alternate scope pointer of its own.
 	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
 
-	// This is awful, but I don't want to change the ClassAd API to fix it.
 	classad::MatchClassAd * matchAd =
 		const_cast<classad::MatchClassAd *>(dynamic_cast<const classad::MatchClassAd *>(state.rootAd));
 	if( matchAd != NULL ) {
 		const classad::ClassAd * left = matchAd->GetLeftAd();
 		const classad::ClassAd * right = matchAd->GetRightAd();
 
-		if( is_in_tree( nested_ad->GetParentScope(), left ) ) {
+		if( is_in_tree( nested_parent, left, state ) ) {
 			nested_ad->alternateScope = left->alternateScope;
-		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
+		} else if( is_in_tree( nested_parent, right, state ) ) {
 			nested_ad->alternateScope = right->alternateScope;
 		} else {
 			//dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
@@ -1269,7 +1268,14 @@ evaluateInContext( classad::ExprTree * expr,
 		}
 	}
 
+	// Copy parentMap from outer state so the scope chain above the nested ad
+	// is preserved, and record the nested ad's parent so that unscoped
+	// references (e.g. GlobalJobID) and TARGET references resolve up the chain.
 	classad::EvalState temporary_state;
+	temporary_state.parentMap = state.parentMap;
+	if (nested_parent) {
+		temporary_state.parentMap[nested_ad] = nested_parent;
+	}
 	temporary_state.SetScopes(nested_ad);
 	if(! expr->Evaluate(temporary_state, rv)) {
 		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
@@ -1366,6 +1372,28 @@ bool evalInEachContext_func( const char * name,
 		return true;
 	}
 
+	// Determine the ClassAd that lexically holds the nested-ad list, so that the
+	// nested ads can be evaluated relative to their true parent scope.  When the
+	// list argument is an attribute reference (e.g. 'catalogs' or
+	// 'TARGET.AvailableGPUs'), the holder is the ad in which that attribute is
+	// defined, which may be on the far side of a match from state.curAd.  We use
+	// Deref (rather than Evaluate) because it leaves state.curAd pointing at the
+	// defining scope instead of restoring it.  For an inline list literal the
+	// holder is just the current ad.
+	const classad::ClassAd * list_scope = state.curAd;
+	if( arg_list[1]->GetKind() == ExprTree::NodeKind::ATTRREF_NODE ) {
+		classad::AttributeReference * lref =
+			dynamic_cast<classad::AttributeReference *>(arg_list[1]);
+		if( lref != NULL ) {
+			const classad::ClassAd * saved_curAd = state.curAd;
+			classad::ExprTree * dummy = NULL;
+			if( classad::AttributeReference::Deref( *lref, state, dummy ) == 1 /*EVAL_OK*/ ) {
+				list_scope = state.curAd;
+			}
+			state.curAd = saved_curAd;
+		}
+	}
+
 	if (is_evalInEach) {
 
 		// for evalInEachContext we will return a list of evaluation results
@@ -1375,7 +1403,7 @@ bool evalInEachContext_func( const char * name,
 		for (auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i) {
 			auto nested_ad = *i;
 
-			classad::Value cav = evaluateInContext(expr, state, nested_ad);
+			classad::Value cav = evaluateInContext(expr, state, nested_ad, list_scope);
 			if (cav.IsListValue()) {
 				classad::ExprList * elv = nullptr;
 				cav.IsListValue(elv);
@@ -1406,7 +1434,7 @@ bool evalInEachContext_func( const char * name,
 		for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
 			auto nested_ad = *i;
 
-			classad::Value r = evaluateInContext( expr, state, nested_ad );
+			classad::Value r = evaluateInContext( expr, state, nested_ad, list_scope );
 			// not that we do *not* propagate undefined or error here because we want to use this function in matchmaking
 			bool matched = false;
 			if( r.IsBooleanValueEquiv(matched) && matched ) {

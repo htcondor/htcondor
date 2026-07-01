@@ -91,12 +91,9 @@ public:
 	ExprTree * get() const;
 	const std::string & get_unparsed_str() const;
 
-	virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-
 protected:
-	
-	virtual void _SetParentScope( const ClassAd* parent) { parentScope = parent; }
-	CachedExprEnvelope() : parentScope(NULL) {};
+
+	CachedExprEnvelope() {};
 	
 	/**
 	 * SameAs() - determines if two elements are the same.
@@ -112,8 +109,6 @@ protected:
 	virtual bool _Evaluate( EvalState& st, Value& v , ExprTree*& t) const;
 	virtual bool _Flatten( EvalState& st, Value& v, ExprTree*& t, int* i )const;
 	
-	const ClassAd *parentScope;
-
 	pCacheData  m_pLetter; ///< Pointer to the actual element refrenced
 	
 };

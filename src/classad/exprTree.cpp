@@ -209,9 +209,9 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 
 
 void ExprTree::
-SetParentScope( const ClassAd* scope ) 
+SetParentScope( const ClassAd* )
 {
-	_SetParentScope( scope );
+	// No-op: parent scope is now tracked dynamically in EvalState::parentMap
 }
 
 
@@ -219,11 +219,11 @@ bool ExprTree::
 Evaluate( Value& val ) const
 {
 	EvalState 	state;
-
-	state.SetScopes( GetParentScope() );
+	// No parent scope to set; this only works for top-level expressions.
+	// Use ClassAd::EvaluateExpr() for proper scope handling.
 	auto r = Evaluate( state, val );
 	val.MakeSelfContained( state );
-    return r;
+	return r;
 }
 
 
@@ -231,8 +231,6 @@ bool ExprTree::
 Evaluate( Value& val, ExprTree*& sig ) const
 {
 	EvalState 	state;
-
-	state.SetScopes( GetParentScope() );
 	auto r = Evaluate( state, val, sig  );
 	val.MakeSelfContained( state );
 	return r;
@@ -243,8 +241,6 @@ bool ExprTree::
 Flatten( Value& val, ExprTree *&tree ) const
 {
 	EvalState state;
-
-	state.SetScopes( GetParentScope() );
 	auto r = Flatten( state, val, tree );
 	val.MakeSelfContained( state );
 	return r;
@@ -315,6 +311,7 @@ void EvalState::
 SetScopes( const ClassAd *curScope )
 {
 	curAd = curScope;
+	if (curScope) curScope->PopulateScopeMap(*this);
 	SetRootScope( );
 }
 
@@ -322,24 +319,22 @@ SetScopes( const ClassAd *curScope )
 void EvalState::
 SetRootScope( )
 {
-	const ClassAd *prevScope = curAd;
-    if (curAd == NULL) {
-        rootAd = NULL;
-    } else {
-        const ClassAd *curScope = curAd->GetParentScope();
-        
-        while( curScope ) {
-            if( curScope == curAd ) {	// NAC - loop detection
-                rootAd = NULL;
-                return;					// NAC
-            }							// NAC
-            prevScope = curScope;
-            curScope  = curScope->GetParentScope();
-        }
-        
-        rootAd = prevScope;
-    }
-    return;
+	if (curAd == NULL) {
+		rootAd = NULL;
+		return;
+	}
+	// Walk the parentMap to find the topmost ad in the scope chain
+	const ClassAd *prev = curAd;
+	auto it = parentMap.find(curAd);
+	while (it != parentMap.end()) {
+		if (it->second == curAd) {	// loop detection
+			rootAd = NULL;
+			return;
+		}
+		prev = it->second;
+		it = parentMap.find(prev);
+	}
+	rootAd = prev;
 }
 
 // add an ExprTree to the cache of things to delete after evaluation is complete
