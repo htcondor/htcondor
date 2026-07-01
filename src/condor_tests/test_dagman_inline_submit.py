@@ -133,7 +133,6 @@ class TestDagmanInlineSubmit:
         assert in_order(
             job_queue_events_for_inline_job,
             [
-                SetJobStatus(JobStatus.IDLE),
                 SetJobStatus(JobStatus.RUNNING),
                 SetJobStatus(JobStatus.COMPLETED),
             ],
