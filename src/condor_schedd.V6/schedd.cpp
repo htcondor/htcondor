@@ -21341,6 +21341,16 @@ Scheduler::post_transform_adjustments(
 			if( errorStack ) { /* ??? */ }
 			return -1;
 		}
+
+		// If the job requests a catalog, insert the catalog namespace ID;
+		rv = SetAttributeString(
+			jid.cluster, jid.proc, ATTR_CATALOG_NAMESPACE_ID,
+			Name /* random global, not my fault */
+		);
+		if( rv != 0 ) {
+			if( errorStack ) { /* ??? */ }
+			return -1;
+		}
 	}
 
 	return 0;
