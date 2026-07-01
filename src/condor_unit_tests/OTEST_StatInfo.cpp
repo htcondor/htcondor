@@ -1275,7 +1275,7 @@ static bool test_get_file_size_file() {
 	formatstr(file, "%s%s", full_dir.c_str(), "full_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(full_dir.c_str(), "full_file");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1314,7 +1314,7 @@ static bool test_get_file_size_dir() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "full_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "full_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1336,7 +1336,7 @@ static bool test_get_file_size_dir_empty() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "empty_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "empty_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1358,7 +1358,7 @@ static bool test_get_file_size_symlink_file() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "symlink_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "symlink_file");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1380,7 +1380,7 @@ static bool test_get_file_size_symlink_dir() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "symlink_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "symlink_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
