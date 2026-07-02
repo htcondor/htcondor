@@ -38,6 +38,7 @@ class Dag;
 // Local DAGMan includes
 #include "debug.h"
 #include "script.h"
+#include "edge.h"
 
 // Node Type
 enum NodeType {
@@ -46,12 +47,6 @@ enum NodeType {
 	PROVISIONER,
 	SERVICE
 };
-
-using NodeID_t = int;
-using EdgeID_t = int;
-
-const NodeID_t NO_ID = -1;
-const EdgeID_t NO_EDGE_ID = -1;
 
 // Job proc event masks
 const int EXEC_MASK = (1 << 0);
@@ -114,34 +109,42 @@ public:
 	bool SanityCheck() const;
 
 	// Get this nodes unique ID number
-	inline NodeID_t GetNodeID() const { return _nodeID; }
+	inline node_id_t GetNodeID() const { return _nodeID; }
+	// Get this nodes edge ID reference number
+	inline edge_id_t GetEdgeID() const { return m_children; }
+	// Set this nodes Edge ID reference number
+	inline void SetEdgeID(edge_id_t id) { m_children = id; }
+	// Returns true if node has exactly one parent (stored inline)
+	inline bool HasSingleParent() const { return !m_multiple_parents && m_parents != NO_ID; }
+	// Returns true if node has more than one parent (wait edge allocated)
+	inline bool HasMultipleParents() const { return m_multiple_parents; }
+	// Get raw parents ID (node_id_t when single parent, edge_id_t when multiple)
+	inline connect_id_t GetParentsID() const { return m_parents; }
+	// Set single parent node ID (clears multiple-parents flag)
+	inline void SetSingleParent(node_id_t id) { m_parents = id; m_multiple_parents = false; }
+	// Set wait edge ID (sets multiple-parents flag)
+	inline void SetWaitEdge(edge_id_t id) { m_parents = id; m_multiple_parents = true; }
 	// Set Type of Node
 	void SetType(NodeType type) { _type = type; }
 	// Get Type of Node
 	NodeType GetType() const { return _type; }
 
 	// Check that this node can have a parent node(s)
-	bool CanAddParent(const Node* parent, std::string &whynot);
+	bool CanAddParent(std::string &whynot);
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(const std::vector<Node*>& children, std::string &whynot);
-	// Add SORTED list of UNIQUE children (caller responsible for sort & unique).
-	bool AddChildren(const std::vector<Node*>& children, std::string &whynot);
+	bool CanAddChildren(std::string &whynot);
 
 	// Node has no parent nodes
-	bool NoParents() const { return _parent == NO_ID && _numparents == 0; }
+	bool NoParents() const { return !m_multiple_parents && m_parents == NO_ID; }
 	// Node has no children nodes
-	bool NoChildren() const { return _child == NO_ID; }
+	bool NoChildren() const { return m_children == NO_EDGE_ID; }
 
-	// Returns the number of children.  NOTE: this is not guaranteed to be fast!
-	int CountChildren() const;
 	// returns true if the job is waiting for other jobs to finish
-	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
-	// remove this parent from the waiting collection, and ! IsWaiting
-	bool ParentComplete(const Node* parent);
+	bool IsWaiting() const { return (m_multiple_parents || m_parents != NO_ID) && !_parents_done; };
 	// visit child nodes calling the given function for each
 	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
 	// notify children of parent completion, and call the optional callback for each child that is no longer waiting
-	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
+	void NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
 	// Recursively set all descendant nodes to status FUTILE & return the number of nodes set to status
 	int SetDescendantsToFutile(Dag& dag);
 
@@ -149,11 +152,6 @@ public:
 	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
 	// append child node names into the given buffer using the given printf format string
 	int PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
-
-	// called after the DAG has been parsed to build the parent and waiting edge lists
-	void BeginAdjustEdges(Dag* dag);
-	void AdjustEdges(Dag* dag);
-	void FinalizeAdjustEdges(Dag* dag);
 
 	//Mark that the node is set to preDone meaning user defined done node
 	inline void SetPreDone() { _preDone = true; }
@@ -398,8 +396,6 @@ public:
 	Script* _scriptHold{nullptr};
 
 private:
-	// private methods for use by AdjustEdges
-	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 	// Print the list of which procs are idle/not idle for this node
 	void PrintProcIsIdle();
 	// Set last state change time
@@ -414,7 +410,7 @@ private:
 		}
 	}
 
-	static NodeID_t _nodeID_counter; // Counter to give nodes unique ID's
+	static node_id_t _nodeID_counter; // Counter to give nodes unique ID's
 	static int _nextJobstateSeqNum; // The next jobstate log sequnce number
 	static time_t lastStateChangeTime; // Last time a node had a state change
 
@@ -444,11 +440,9 @@ private:
 	NodeType _type{NodeType::JOB}; // Node type (job, final, provisioner...)
 	status_t _Status{STATUS_READY}; // Current node status
 
-	NodeID_t _nodeID{-1}; // This node's unique node ID
-	NodeID_t _parent{NO_ID}; // Either the single parent nodes ID or associated edge ID
-	NodeID_t _child{NO_ID}; // Either the single child nodes ID or associated edge ID
-
-	int _numparents{0}; // Count of parent nodes (counted as child edges are added)
+	node_id_t _nodeID{NO_ID}; // This node's unique node ID
+	edge_id_t m_children{NO_EDGE_ID}; // Reference to children Edge/Arc
+	connect_id_t m_parents{NO_ID};   // single parent: node_id_t; multiple parents: edge_id_t into m_wait_edges
 
 	int retry_max{0}; // Maximum number of retry attempts
 	int retries{0}; // Current number of retries
@@ -486,160 +480,13 @@ private:
 	bool readFirstProc{false}; // DAG has already read a job event (submit) for this node
 	bool missingJobs{false}; // Node counts found missing jobs during verifying state with AP
 
-	bool _multiple_parents{false}; // true when _parent is a EdgeID rather than a NodeID
-	bool _multiple_children{false}; // true when _child is an EdgeID rather than a NodeID
 	bool _parents_done{false}; // set to true when all of the parents of this node are done
+	bool m_multiple_parents{false};  // disambiguates m_parents interpretation
 
 	bool _preDone{false}; // true when user defines node as done in *.dag file
 	bool _isSavePoint{false}; // Indicates that this node is going to write a save point file.
 	bool _noop{false}; // Indicate this is a noop node (job list is not placed to AP)
 	bool _hold{false}; // Indicate this node should place jobs on hold
 };
-
-
-// This class holds multiple NodeId entries in a sorted vector, use it to hold
-// either the parent or child list for a Node.
-//
-// The collection of all Edge data structures is owned by the static _edgeTable
-// member of this class, which can be used to lookup a Edge by id;
-// An EdgeID is essentially an index into this table.
-//
-// An edge cannot be freed individually once allocated, but it can be resized.
-//
-class Edge {
-protected:
-	Edge() {};
-	Edge(std::vector<NodeID_t> & in) : _ary(in) {};
-public:
-	virtual ~Edge() {};
-
-	std::vector<NodeID_t> _ary; // sorted array  of jobid's, either parent or child edge list
-	//std::set<NodeID_t> _check; // used to double check the correctness of the edge list.
-	bool Add(NodeID_t id) {
-		//_check.insert(id);
-		auto it = std::lower_bound(_ary.begin(), _ary.end(), id);
-		if ((it != _ary.end()) && (*it == id)) {
-			return false;
-		}
-		_ary.insert(it, id);
-		return true;
-	}
-	inline size_t size() const {
-		return _ary.size();
-	}
-	inline bool empty() const {
-		return _ary.empty();
-	}
-
-	// this table holds all of the allocated edges, stored by EdgeId (which is the index into the table)
-	static std::deque<std::unique_ptr<Edge>> _edgeTable;
-
-	static Edge * ById(EdgeID_t id) {
-		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return _edgeTable.at(id).get();
-		return NULL;
-	}
-	// create a new, empty edge returning it's ID
-	static EdgeID_t NewEdge(Edge* & edge) {
-		EdgeID_t id = (EdgeID_t)_edgeTable.size();
-		edge = new Edge();
-		_edgeTable.push_back(std::unique_ptr<Edge>(edge));
-		return id;
-	}
-	// create an edge as a copy of an existing edge, returning the new EdgeID
-	static EdgeID_t NewCopy(EdgeID_t id) {
-		Edge* from = ById(id);
-		if ( ! from) return NO_ID;
-		id = (EdgeID_t)_edgeTable.size();
-		_edgeTable.push_back(std::unique_ptr<Edge>(new Edge(from->_ary)));
-		return id;
-	}
-
-	// helper method for job methods. When called this will look at incoming multi flag
-	// and id flag.  If multi is true, then id is actually an EdgeID.  If it is false
-	// then it is a NodeID and an Edge needs to be allocated. 
-	// 
-	// On exit, multi will be true.  id will be the Id of the Edge (possibly newly created)
-	// and first_id will be the former value of id IFF it was a NodeID and not an EdgeID.
-	// in most cases the caller will want to insert first_id into the Edge if it is not NO_ID
-	//
-	static Edge* PromoteToMultiple(NodeID_t & id, bool & multi, NodeID_t & first_id) {
-		Edge* edge = NULL;
-		if (multi && (id != NO_ID)) {
-			first_id = NO_ID; // already multiple so no need to save id as first_id
-			edge = ById(id);
-		} else {
-			first_id = id; // we are promoting so save id as first id
-			id = NewEdge(edge);
-			multi = true;
-		}
-		return edge;
-	}
-};
-
-// Add a waiting count and bit array to the Edge array.
-// The _wait bit array should be the same size as the Edge::_ary
-// it's entries correspond to the entries in the Edge:_ary
-// because of this. inserting or appending entries in the _ary will
-// invalidate both the _wait and _num_waiting fields.
-// this structure should only be initialized after the _ary is fully populated
-//
-class WaitEdge : public Edge {
-protected:
-	WaitEdge(int num) : Edge() {
-		_ary.reserve(num);
-		_wait.resize(num, true);
-		_num_waiting = num;
-	};
-	std::vector<bool> _wait;  // a bit vector where true=waiting, the same size and order as _ary
-	int _num_waiting;         // the number of true bits in the _wait vector
-public:
-	virtual ~WaitEdge() {};
-
-	static EdgeID_t NewWaitEdge(int num) {
-		EdgeID_t id = (EdgeID_t)_edgeTable.size();
-		_edgeTable.push_back(std::unique_ptr<Edge>(new WaitEdge(num)));
-		return id;
-	}
-
-	static WaitEdge * ById(EdgeID_t id) {
-		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return static_cast<WaitEdge*>(_edgeTable.at(id).get());
-		return NULL;
-	}
-
-	int Waiting() const { return _num_waiting; }
-
-	void MarkAllWaiting() {
-		_num_waiting = (int)_wait.size();
-		_wait.clear();
-		_wait.resize(_num_waiting, true);
-	}
-
-	bool MarkDone(NodeID_t id, bool & already_done) {
-		auto it = std::lower_bound(_ary.begin(), _ary.end(), id);
-		if ((it != _ary.end()) && (*it == id)) {
-			size_t index = it - _ary.begin();
-			already_done = true;
-			if (_wait[index]) {
-				_wait[index] = false;
-				already_done = false;
-				_num_waiting -= 1;
-			}
-			return true;
-		}
-		return false;
-	}
-
-};
-
-
-// return true if a collection has more than a single item in it
-template<class T> bool more_than_one(T & lst)
-{
-	auto it = lst.cbegin();
-	return (it != lst.cend()) && (++it != lst.cend());
-}
-
 
 #endif /* ifndef NODE_H */

@@ -1186,7 +1186,7 @@ parse_parent(
 		return false;
 	}
 
-	const auto GetID = [](const Node* n) -> NodeID_t { return n->GetNodeID(); };
+	const auto GetID = [](const Node* n) -> node_id_t { return n->GetNodeID(); };
 
 	std::ranges::sort(parents, std::less{}, GetID);
 	const auto duplicate_parents = std::ranges::unique(parents, std::equal_to{}, GetID);
@@ -1260,13 +1260,11 @@ parse_parent(
 	//
 	
 	static int numJoinNodes = 0;
-	const char * parent_type = "parent";
-
 
 	// If this statement has multiple parent nodes and multiple child nodes, we
 	// can optimize the dag structure by creating an intermediate "join node"
 	// connecting the two sets.
-	if (useJoinNodes && more_than_one(parents) && more_than_one(children)) {
+	if (useJoinNodes && parents.size() > 1 && children.size() > 1) {
 		// First create the join node and add it
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
@@ -1275,35 +1273,27 @@ parse_parent(
 		if (!joinNode) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
 				" add join node\n", failReason.c_str(), lineNumber);
+			return false;
 		}
-		// Now connect all parents and children to the join node
-		for (auto parent : parents) {
-				std::vector<Node*> lst = { joinNode };
-			if (!parent->AddChildren(lst, failReason)) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-					" to add dependency between parent"
-					" node \"%s\" and join node \"%s\"\n",
-					filename, lineNumber,
-					parent->GetNodeName(), joinNode ? joinNode->GetNodeName() : "unknown");
-				return false;
-			}
+
+		std::vector<Node*> join = { joinNode };
+		if ( ! dag->Connect(parents, join)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to join node %s\n",
+			             filename, lineNumber, joinNode ? joinNode->GetNodeName() : "unknown");
+			return false;
 		}
+
 		// reset parent list to the join node and fall through to build the child edges
 		parents.clear();
 		parents.push_back(joinNode);
-		parent_type = "join";
 	}
 
-	for (auto parent : parents) {
-			if ( ! parent->AddChildren(children, failReason)) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed"
-				" to add dependencies between %s"
-				" node \"%s\" and child nodes : %s\n",
-				filename, lineNumber, parent_type,
-				parent->GetNodeName(), failReason.c_str());
-			return false;
-		}
+	if ( ! dag->Connect(parents, children)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to between nodes\n",
+		             filename, lineNumber);
+		return false;
 	}
+
 	return true;
 }
 
@@ -3336,7 +3326,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		}
 	}
 
-	const auto GetID = [](const Node* n) -> NodeID_t { return n->GetNodeID(); };
+	const auto GetID = [](const Node* n) -> node_id_t { return n->GetNodeID(); };
 
 	std::ranges::sort(parents, std::less{}, GetID);
 	const auto duplicate_parents = std::ranges::unique(parents, std::equal_to{}, GetID);
@@ -3346,13 +3336,10 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
 	children.erase(duplicate_children.begin(), duplicate_children.end());
 
-	std::string error;
-	const char* parent_type = "parent";
-
 	// If this statement has multiple parent nodes and multiple child nodes, we
 	// can optimize the dag structure by creating an intermediate "join node"
 	// connecting the two sets.
-	if (config[conf::b::UseJoinNodes] && more_than_one(parents) && more_than_one(children)) {
+	if (config[conf::b::UseJoinNodes] && parents.size() > 1 && children.size() > 1) {
 		std::string name = "_condor_join_node" + std::to_string(join_node_id++);
 		if (dag.NodeExists(name.c_str()) || dag.LookupSplice(name)) {
 			debug_printf(DEBUG_QUIET, "ERROR: Join node name %s already in use in DAG!!!\n", name.c_str());
@@ -3371,28 +3358,22 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 
 		Node* join = dag.FindNodeByName(name.c_str());
 
-		// Now connect all parents and children to the join node
-		for (auto parent : parents) {
-			std::vector<Node*> lst = { join };
-			if ( ! parent->AddChildren(lst, error)) {
-				debug_printf(DEBUG_QUIET, "ERROR: Failed to make join node %s a child of %s: %s\n",
-				             name.c_str(), parent->GetNodeName(), error.c_str());
-				return false;
-			}
+		// Connect parents to child job node
+		std::vector<Node*> lst = { join };
+		if ( ! dag.Connect(parents, lst)) {
+			debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency to join node %s\n",
+			             join ? join->GetNodeName() : "unknown");
+			return false;
 		}
 
 		// reset parent list to the join node and fall through to build the child edges
 		parents.clear();
 		parents.push_back(join);
-		parent_type = "join";
 	}
 
-	for (auto parent : parents) {
-			if ( ! parent->AddChildren(children, error)) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to add dependencies between %s node %s and children nodes: %s\n",
-			             parent_type, parent->GetNodeName(), error.c_str());
-			return false;
-		}
+	if ( ! dag.Connect(parents, children)) {
+		debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency between nodes\n");
+		return false;
 	}
 
 	return true;

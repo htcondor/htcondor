@@ -28,9 +28,8 @@ static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 int Node::_nextJobstateSeqNum = 1;
 
-NodeID_t Node::_nodeID_counter = 0;
+node_id_t Node::_nodeID_counter = 0;
 int Node::NOOP_NODE_PROCID = INT_MAX;
-std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
 
 time_t Node::lastStateChangeTime;
 
@@ -205,78 +204,26 @@ Node::PrintProcIsIdle() {
 
 //---------------------------------------------------------------------------
 int
-Node::CountChildren() const {
-	int count = 0;
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			count = (int)edge->size();
-		} else {
-			count = 1;
-		}
-	}
-	return count;
-}
-
-//---------------------------------------------------------------------------
-bool
-Node::ParentComplete(const Node* parent) {
-	bool fail = true;
-	int num_waiting = 0;
-
-	bool already_done = _parents_done;
-	if (_parent != NO_ID) {
-		if (_multiple_parents) {
-			WaitEdge * edge = WaitEdge::ById(_parent);
-			fail = ! edge->MarkDone(parent->GetNodeID(), already_done);
-			num_waiting = edge->Waiting();
-			_parents_done = (num_waiting == 0);
-		} else {
-			num_waiting = _parents_done ? 0 : 1;
-			if (parent->GetNodeID() == _parent) {
-				fail = false;
-				_parents_done = true;
-				num_waiting = 0;
-			}
-		}
-	}
-
-	if (fail) {
-		debug_printf(DEBUG_QUIET, "ERROR: ParentComplete(%s) failed for child node %s: num_waiting=%d\n",
-		             parent ? parent->GetNodeName() : "nullptr", this->GetNodeName(), num_waiting);
-	}
-	return ! IsWaiting();
-}
-
-//---------------------------------------------------------------------------
-int
 Node::PrintParents(std::string& buf, size_t bufmax, const Dag* dag, const char* sep) const {
 	int count = 0;
-	if (_parent != NO_ID) {
-		if (_multiple_parents) {
-			Edge * edge = Edge::ById(_parent);
-			ASSERT(edge);
-			if ( ! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					if (buf.size() >= bufmax)
-						break;
 
-					Node * parent = dag->FindNodeByNodeID(it);
-					ASSERT(parent != nullptr);
-
-					if (count > 0) buf += sep;
-					buf += parent->GetNodeName();
-					++count;
-				}
-			}
-		} else {
-			Node* parent = dag->FindNodeByNodeID(_parent);
+	if (HasSingleParent()) {
+		Node* parent = dag->FindNodeByNodeID(m_parents);
+		ASSERT(parent != nullptr);
+		buf += parent->GetNodeName();
+		count = 1;
+	} else if (HasMultipleParents()) {
+		for (auto& [id, _] : dag->edge_table.GetWaitEdge(m_parents)) {
+			Node* parent = dag->FindNodeByNodeID(id);
 			ASSERT(parent != nullptr);
+
+			if (buf.size() >= bufmax) { break; }
+			if (count > 0) { buf += sep; }
 			buf += parent->GetNodeName();
 			++count;
 		}
 	}
+
 	return count;
 }
 
@@ -284,60 +231,74 @@ Node::PrintParents(std::string& buf, size_t bufmax, const Dag* dag, const char* 
 int
 Node::PrintChildren(std::string& buf, size_t bufmax, const Dag* dag, const char* sep) const {
 	int count = 0;
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			if ( ! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					if (buf.size() >= bufmax)
-						break;
 
-					Node * child = dag->FindNodeByNodeID(it);
-					ASSERT(child != nullptr);
-
-					if (count > 0) buf += sep;
-					buf += child->GetNodeName();
-					++count;
-				}
-			}
-		} else {
-			Node* child = dag->FindNodeByNodeID(_child);
+	if (m_children != NO_EDGE_ID) {
+		if (EdgeTable::IsDirect(m_children)) {
+			Arc& direct = dag->edge_table.GetDirectArc(m_children);
+			ASSERT(direct.id != NO_ID);
+			Node* child = dag->FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
+
 			buf += child->GetNodeName();
 			++count;
+		} else {
+			for (auto& [id, _] : dag->edge_table[m_children]) {
+				Node * child = dag->FindNodeByNodeID(id);
+				ASSERT(child != nullptr);
+
+				if (buf.size() >= bufmax) { break; }
+				if (count > 0) { buf += sep; }
+				buf += child->GetNodeName();
+				++count;
+			}
 		}
 	}
+
 	return count;
 }
 
 //---------------------------------------------------------------------------
 // tell children that the parent is complete, and call the given function
 // for children that have no more incomplete parents
-int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
-	int count = 0;
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			if ( ! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != nullptr);
-					if (child->ParentComplete(this)) {
-						if (pfn) pfn(dag, child);
-					}
-				}
+void
+Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
+	auto notify = [&dag](Node* child, node_id_t parent) -> bool {
+		ASSERT(child != nullptr);
+
+		if ( ! child->HasMultipleParents()) {
+			ASSERT(child->HasSingleParent());
+			ASSERT(child->GetParentsID() == parent); // notifier must be the recorded parent
+			child->_parents_done = true;
+			return true;
+		}
+
+		bool done = dag.edge_table.GetWaitEdge(child->GetParentsID()).MarkDone(parent);
+		if (done) { child->_parents_done = true; }
+
+		return done;
+	};
+
+	if (m_children != NO_EDGE_ID) {
+		if (EdgeTable::IsDirect(m_children)) {
+			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			ASSERT(direct.id != NO_ID);
+			Node* child = dag.FindNodeByNodeID(direct.id);
+			ASSERT(child != nullptr);
+
+			if (notify(child, this->GetNodeID())) {
+				if (pfn) { pfn(dag, child); }
 			}
 		} else {
-			Node* child = dag.FindNodeByNodeID(_child);
-			ASSERT(child != nullptr);
-			if (child->ParentComplete(this)) {
-				if (pfn) pfn(dag, child);
+			for (auto& [id, _] : dag.edge_table[m_children]) {
+				Node * child = dag.FindNodeByNodeID(id);
+				ASSERT(child != nullptr);
+
+				if (notify(child, this->GetNodeID())) {
+					if (pfn) { pfn(dag, child); }
+				}
 			}
 		}
 	}
-	return count;
 }
 
 //---------------------------------------------------------------------------
@@ -346,32 +307,14 @@ int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 int
 Node::SetDescendantsToFutile(Dag& dag) {
 	int count = 0;
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			if ( ! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != nullptr);
-					//If Status is already futile or the node is preDone don't try
-					//to set status and update counts
-					if (child->GetStatus() == Node::STATUS_FUTILE) {
-						continue;
-					} else if ( ! child->IsPreDone()) {
-						ASSERT( ! child->CanSubmit());
-						if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
-						else {
-							debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
-							             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
-						}
-					}
-					count += child->SetDescendantsToFutile(dag);
-				}
-			}
-		} else {
-			Node* child = dag.FindNodeByNodeID(_child);
+
+	if (m_children != NO_EDGE_ID) {
+		if (EdgeTable::IsDirect(m_children)) {
+			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			ASSERT(direct.id != NO_ID);
+			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
+
 			//If Status is already futile or the node is preDone don't try
 			//to set status and update counts
 			if (child->GetStatus() == Node::STATUS_FUTILE) {
@@ -384,9 +327,31 @@ Node::SetDescendantsToFutile(Dag& dag) {
 					             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
 				}
 			}
+
 			count += child->SetDescendantsToFutile(dag);
+		} else {
+			for (auto& [id, _] : dag.edge_table[m_children]) {
+				Node * child = dag.FindNodeByNodeID(id);
+				ASSERT(child != nullptr);
+
+				//If Status is already futile or the node is preDone don't try
+				//to set status and update counts
+				if (child->GetStatus() == Node::STATUS_FUTILE) {
+					continue;
+				} else if ( ! child->IsPreDone()) {
+					ASSERT( ! child->CanSubmit());
+					if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
+					else {
+						debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
+						             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
+					}
+				}
+
+				count += child->SetDescendantsToFutile(dag);
+			}
 		}
 	}
+
 	return count;
 }
 
@@ -395,34 +360,29 @@ Node::SetDescendantsToFutile(Dag& dag) {
 int
 Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, void* args), void* args) {
 	int retval = 0;
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			if (! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != nullptr);
-					retval += pfn(dag, this, child, args);
-				}
-			}
-		} else {
-			Node* child = dag.FindNodeByNodeID(_child);
+
+	if (m_children != NO_EDGE_ID) {
+		if (EdgeTable::IsDirect(m_children)) {
+			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			ASSERT(direct.id != NO_ID);
+			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
 			retval += pfn(dag, this, child, args);
+		} else {
+			for (auto& [id, _] : dag.edge_table[m_children]) {
+				Node* child = dag.FindNodeByNodeID(id);
+				ASSERT(child != nullptr);
+				retval += pfn(dag, this, child, args);
+			}
 		}
 	}
+
 	return retval;
 }
 
 //---------------------------------------------------------------------------
 bool
-Node::CanAddParent(const Node* parent, std::string &whynot) {
-	if ( ! parent) {
-		whynot = "parent == nullptr";
-		return false;
-	}
-
+Node::CanAddParent(std::string &whynot) {
 	switch(GetType()) {
 		case NodeType::FINAL:
 			whynot = "Tried to add a parent to a Final node";
@@ -437,24 +397,12 @@ Node::CanAddParent(const Node* parent, std::string &whynot) {
 			break;
 	}
 
-		// we don't currently allow a new parent to be added to a
-		// child that has already been started (unless the parent is
-		// already marked STATUS_DONE, e.g., when rebuilding from a
-		// rescue DAG) -- but this restriction might be lifted in the
-		// future once we figure out the right way for the DAG to
-		// respond...
-	if (_Status != STATUS_READY && parent->GetStatus() != STATUS_DONE) {
-		formatstr(whynot, "%s child may not be given a new %s parent",
-		          GetStatusName(), parent->GetStatusName());
-		return false;
-	}
-	whynot = "n/a";
 	return true;
 }
 
 //---------------------------------------------------------------------------
 bool
-Node::CanAddChildren(const std::vector<Node*>& children, std::string &whynot) {
+Node::CanAddChildren(std::string &whynot) {
 	switch(GetType()) {
 		case NodeType::FINAL:
 			whynot = "Tried to add a child to a Final node";
@@ -467,12 +415,6 @@ Node::CanAddChildren(const std::vector<Node*>& children, std::string &whynot) {
 			return false;
 		default:
 			break;
-	}
-
-	for (auto child : children) {
-			if ( ! child->CanAddParent(this, whynot)) {
-			return false;
-		}
 	}
 
 	return true;
@@ -500,145 +442,6 @@ Node::AddVar(const std::string& name, const std::string& value, bool prepend) {
 	return true;
 }
 
-//---------------------------------------------------------------------------
-bool
-Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
-	// check if all of this can be our child, and if all are ok being our children
-	if ( ! CanAddChildren(children, whynot)) {
-		return false;
-	}
-
-	// optimize the insertion case for more than a single child
-	// into current a single or empty edge
-	if (more_than_one(children) && ! _multiple_children) {
-		NodeID_t id = _child;
-		Edge * edge = Edge::PromoteToMultiple(_child, _multiple_children, id);
-
-		// Reserve space in the edge array for children. Add one for current child node (even if we don't have one)
-		edge->_ary.reserve(children.size() + 1);
-
-		// populate the edge array, since we know that children is sorted we can just push_back here.
-		for (auto child : children) {
-				edge->_ary.push_back(child->GetNodeID());
-			// count the parents of the children so that we can allocate space in AdjustEdges
-			child->_numparents += 1;
-		}
-		if (id != NO_ID) { edge->Add(id); }
-		return true;
-	}
-
-	for (auto child : children) {
-		// if we have no children, add this as a direct child
-		if (_child == NO_ID) {
-			_multiple_children = false;
-			_child = child->GetNodeID();
-			// count the parents of the children so that we can allocate space in AdjustEdges
-			child->_numparents += 1;
-			continue;
-		}
-
-		NodeID_t id = NO_ID;
-		Edge * edge = Edge::PromoteToMultiple(_child, _multiple_children, id);
-		if (id != NO_ID) {
-			// insert the old _child id as the first id in the collection
-			edge->Add(id);
-		}
-		if ( ! edge->Add(child->GetNodeID())) {
-			debug_printf(DEBUG_NORMAL,
-				"Warning: parent %s already has child %s\n",
-				GetNodeName(), child->GetNodeName());
-			check_warning_strictness(DAG_STRICT_3);
-		} else {
-			// count parents - used by AdjustEdges to reserve space
-			child->_numparents += 1;
-		}
-	}
-	return true;
-}
-
-//---------------------------------------------------------------------------
-void
-Node::BeginAdjustEdges(Dag* /*dag*/) {
-	// resize parents to fit _numparents
-	if (_numparents > 1 && _parent == NO_ID) {
-		_parent = WaitEdge::NewWaitEdge(_numparents);
-		_multiple_parents = true;
-	}
-	// clearout the parent lists and done flags, we will set them in AdjustEdges
-	if (_multiple_parents) {
-		WaitEdge * wedge = WaitEdge::ById(_parent);
-		wedge->MarkAllWaiting();
-	} else {
-		ASSERT(_numparents <= 1);
-		_parent = NO_ID; // this will set set to the single parent by AdjustEdges
-	}
-	_parents_done = false;
-}
-
-//---------------------------------------------------------------------------
-// helper for AdjustEdges, assumes that _parent has been resized by BeginAdjustEdges
-// we can't mark parents done here, that can only happen after we built all of the parents
-void
-Node::AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent) {
-	NodeID_t parent_id = parent->GetNodeID();
-	Node * child = dag->FindNodeByNodeID(child_id);
-	ASSERT(child != nullptr);
-	if (child->_parent == NO_ID) {
-		child->_parent = parent_id;
-	} else if ( ! child->_multiple_parents) {
-		if (child->_parent == parent_id) {
-			debug_printf(DEBUG_QUIET, "notice : parent %d already added to single-parent child %d\n", parent_id, child_id);
-		} else {
-			debug_printf(DEBUG_QUIET, "WARNING : attempted to add parent %d to single-parent child %d that already has parent %d\n",
-			             parent_id, child_id, child->_parent);
-		}
-	} else {
-		ASSERT(child->_numparents > 1);
-		ASSERT(child->_multiple_parents);
-		WaitEdge* wedge = WaitEdge::ById(child->_parent);
-		wedge->Add(parent_id);
-	}
-}
-
-//---------------------------------------------------------------------------
-// update the waiting edges to contain the unfinished parents
-void
-Node::AdjustEdges(Dag* dag) {
-	// build parents from children
-	if (_child != NO_ID) {
-		if (_multiple_children) {
-			Edge * edge = Edge::ById(_child);
-			ASSERT(edge);
-			if ( ! edge->_ary.empty()) {
-				for (int & it : edge->_ary) {
-					AdjustEdges_AddParentToChild(dag, it, this);
-				}
-			}
-		} else {
-			AdjustEdges_AddParentToChild(dag, _child, this);
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-void
-Node::FinalizeAdjustEdges(Dag* /*dag*/) {
-	// check _numparents against number of edges
-	if (_numparents == 0) {
-		ASSERT(_parent == NO_ID);
-		_parents_done = true;
-	}
-	if (_numparents == 1) {
-		ASSERT(!_multiple_parents);
-	}
-	if (_numparents > 1) {
-		WaitEdge * wedge = WaitEdge::ById(_parent);
-		ASSERT(wedge);
-		ASSERT(_numparents == (int)wedge->size());
-	}
-
-	ASSERT(GetStatus() != STATUS_DONE);
-}
 
 //---------------------------------------------------------------------------
 bool

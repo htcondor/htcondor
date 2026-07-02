@@ -36,6 +36,7 @@
 #include "dag_commands.h"
 #include "dagman_submit.h"
 #include "throttles.hpp"
+#include "edge.h"
 #include <ranges>
 #include <filesystem>
 
@@ -175,6 +176,8 @@ public:
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
+	// Make Edge/Arc connections between parent and child nodes
+	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children);
 	// Remove duplicate edges between nodes
 	void AdjustEdges();
 	// Prepare DAG for initial run. ONLY CALL FUNCTION ONCE!
@@ -206,7 +209,7 @@ public:
 	const char *GetStatusName() const { return DAG_STATUS_NAMES[_dagStatus]; }
 
 	// Functions to find Nodes
-	Node* FindNodeByNodeID(const NodeID_t nodeID) const;
+	Node* FindNodeByNodeID(const node_id_t nodeID) const;
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
@@ -390,6 +393,10 @@ public:
 		return desc;
 	}
 
+	// NOTE: Has to be static global across DAG instances
+	//       as long as splices exist as they do
+	static EdgeTable edge_table; // Global edge table to connect nodes
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
 	const Throttles& throttles; // DAGMan configured throttles
@@ -496,7 +503,7 @@ private:
 	std::vector<int> _graph_widths{};
 
 	std::map<std::string, Node*> _nodeNameHash{};
-	std::map<NodeID_t, Node*> _nodeIDHash{};
+	std::map<node_id_t, Node*> _nodeIDHash{};
 	std::map<int, Node*> _condorIDHash{};
 	std::map<int, Node*> _noopIDHash{};
 
