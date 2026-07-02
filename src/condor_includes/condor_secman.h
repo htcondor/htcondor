@@ -328,7 +328,9 @@ public:
 	static Protocol getCryptProtocolNameToEnum(char const *name);
 	static const char *getCryptProtocolEnumToName(Protocol proto);
 
-	static std::string getPreferredOldCryptProtocol(const std::string &name);
+	// Pick the crypto method a non-negotiated/family session should use from a
+	// comma-separated list, always preferring AES-GCM when it is offered.
+	static std::string getPreferredCryptProtocol(const std::string &name);
 
  private:
 	static  std::string		filterAuthenticationMethods(DCpermission perm, const std::string &input_methods);

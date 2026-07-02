@@ -3735,28 +3735,32 @@ SecMan::getCryptProtocolEnumToName(Protocol proto)
 }
 
 std::string
-SecMan::getPreferredOldCryptProtocol(const std::string &name)
+SecMan::getPreferredCryptProtocol(const std::string &name)
 {
-	std::string answer;
+	// Choose which single crypto method a non-negotiated or family session
+	// should use, always preferring AES-GCM when the peer offers it. Blowfish
+	// and 3DES remain available as fallbacks (in FIPS mode or for a peer that
+	// predates AES), but we no longer prefer those antiquated ciphers over AES.
+	std::string fallback;
 	for (auto& tmp : StringTokenIterator(name)) {
 		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp.c_str());
-		if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
-			return "BLOWFISH";
-		} else if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
-			return "3DES";
-		} else if (!strcasecmp(tmp.c_str(), "AES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
-			answer = tmp;
+		if (!strcasecmp(tmp.c_str(), "AES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol AES.\n");
+			return "AES";
+		} else if (fallback.empty()) {
+			if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
+				fallback = "3DES";
+			} else if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
+				fallback = "BLOWFISH";
+			}
 		}
 	}
-	if (answer.empty()) {
+	if (fallback.empty()) {
 		dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCOL.\n", name.c_str());
 	} else {
-		dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", answer.c_str());
+		dprintf(D_NETWORK|D_VERBOSE, "No AES offered; falling back to crypto protocol %s.\n", fallback.c_str());
 	}
-	return answer;
+	return fallback;
 }
 
 bool
@@ -4075,16 +4079,21 @@ SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
 	policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
 	size_t pos = crypto_methods.find(',');
 	if( pos != std::string::npos ) {
-		std::string preferred = getPreferredOldCryptProtocol(crypto_methods);
-		if (preferred.empty()) {
-			preferred = crypto_methods.substr(0, pos);
-		}
-		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, preferred);
+		// Always prefer AES for the exported (non-negotiated / family) session.
+		// Move AES to the front of the method list so that the peer importing
+		// this session derives its preferred key as AES-GCM -- KeyCacheEntry
+		// takes the first method as the session's preferred protocol -- and
+		// advertise AES as the single (legacy) CryptoMethods value read by
+		// peers that don't understand CryptoMethodsList. The full ordered list
+		// still travels so a peer may fall back to Blowfish or 3DES.
+		std::vector<std::string> methods = split(crypto_methods);
+		std::stable_partition(methods.begin(), methods.end(),
+			[](const std::string &m) { return !strcasecmp(m.c_str(), "AES"); });
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, methods.front());
 
-		// ',' is not a permissible character in claim IDs.
-		// Convert it to a different delimiter...
-		std::replace(crypto_methods.begin(), crypto_methods.end(), ',', '.');
-		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
+		// ',' is not a permissible character in claim IDs, so join the list
+		// with a different delimiter...
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, join(methods, "."));
 	} else if (!crypto_methods.empty()) {
 		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
 	}

@@ -1,5 +1,11 @@
 *** 25.13.0 features
 
+- Non-negotiated and family security sessions now always prefer ``AES``
+  (AES-GCM) when both peers support it, rather than falling back to the
+  antiquated ``BLOWFISH`` cipher. ``BLOWFISH`` and ``3DES`` remain available
+  for FIPS mode and for interoperating with peers that predate AES support.
+  :jira:`3821`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs

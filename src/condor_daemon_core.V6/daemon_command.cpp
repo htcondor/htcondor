@@ -832,8 +832,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				// figure out which one to use.
 				// If the client's resume session ad gives a crypto method
 				// list, use the first entry in it.
-				// Otherwise, the client is 8.9, so if we have a list, use
-				// the first entry that's BLOWFISH or 3DES.
+				// Otherwise, the client predates the crypto-method list
+				// (pre-9.9.0), so pick from the session's list, always
+				// preferring AES-GCM when it is available.
 				// Whichever one we use, set it as the preferred method
 				// for the session, in case we need to connect to our
 				// peer in the future.
@@ -846,7 +847,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						active_crypto = SecMan::getCryptProtocolNameToEnum(client_crypto_methods.c_str());
 					} else {
 						std::string pick_crypto;
-						pick_crypto = SecMan::getPreferredOldCryptProtocol(session_crypto_methods);
+						pick_crypto = SecMan::getPreferredCryptProtocol(session_crypto_methods);
 						active_crypto = SecMan::getCryptProtocolNameToEnum(pick_crypto.c_str());
 					}
 					session->setPreferredProtocol(active_crypto);
