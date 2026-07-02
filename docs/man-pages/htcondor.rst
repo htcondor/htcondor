@@ -426,7 +426,13 @@ DAG Verbs
 Snake Verbs
 -----------
 
- **htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
+.. warning::
+     Snakemake is not packaged with HTCondor and must be installed seperately.
+     See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
+     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`_
+     for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
+
+**htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
 
      Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
      job.  That management job runs Snakemake with the
