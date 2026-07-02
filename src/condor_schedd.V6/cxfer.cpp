@@ -232,6 +232,10 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 	CondorError errorStack;
 	DCStartd startd( mrec->peer, nullptr );
 
+	ClaimIdParser cidp( mrec->claim_id.claimId() );
+	char const * sessionID = cidp.secSessionId();
+	// dprintf( D_ALWAYS, "start_command_data_slot(): using sessionID %s\n", sessionID );
+
 	std::string originalClaimID = mrec->claim_id.claimId();
 	auto result = startd.startCommand_nonblocking(
 		COMMAND_DATA_SLOT,
@@ -255,7 +259,10 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 				call_StartJobFailure( originalClaimID );
 				return;
 			}
-		}
+		},
+		"description: COMMAND_DATA_LOST",
+		false /* not raw protocol */,
+		sessionID
 	);
 
 	switch (result) {
