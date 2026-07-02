@@ -260,7 +260,7 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 				return;
 			}
 		},
-		"description: COMMAND_DATA_LOST",
+		"description: COMMAND_DATA_SLOT",
 		false /* not raw protocol */,
 		sessionID
 	);
