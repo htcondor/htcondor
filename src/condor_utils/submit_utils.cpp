@@ -10014,26 +10014,27 @@ process_job_credentials(
 		// SEC_CREDENTIAL_STORER is a script to run that calls
 		// condor_store_cred when it has new credentials to store.
 		// Pass it parameters of the service requests needed as
-		// defined in the submit file.
-		// It's used for Vault-managed tokens, so ignore other token
-		// types.
-		bool call_storer = false;
-		ArgList storer_args;
-
-		storer_args.AppendArg(storer);
+		// defined in the submit file.  A single storer handles credentials
+		// of several kinds (Vault, Pelican, ...); group the requests by kind
+		// and invoke the storer once per kind, telling it which mode to run in
+		// via the CONDOR_CREDENTIAL_STORER_MODE environment variable.  Older or
+		// custom storers ignore that variable and detect the kind themselves,
+		// so this remains backward compatible.  Services owned by the
+		// local/oauth2/client credmons are not handled by the storer.
+		std::map<std::string, std::vector<std::string>> requests_by_mode;
 
 		for (const auto& request: token_ads) {
-			std::string request_arg;
 			std::string str;
 			request.LookupString("Service", str);
 			if (str.empty()) {
 				continue;
 			}
-			if (sorter.Sort(str) != CredSorter::VaultType) {
+			const char *mode = CredSorter::StorerMode(sorter.Sort(str));
+			if (!mode) {
 				continue;
 			}
 
-			request_arg = str;
+			std::string request_arg = str;
 			std::string keys[] = { "handle", "scopes", "audience", "options" };
 			for (const auto& key : keys) {
 				if (!request.LookupString(key, str) || str.empty()) {
@@ -10052,12 +10053,24 @@ process_job_credentials(
 				}
 				request_arg += "&" + key + "=" + str;
 			}
-			call_storer = true;
-			storer_args.AppendArg(request_arg);
+			requests_by_mode[mode].push_back(request_arg);
 		}
 
-		if (call_storer) {
-			int rc = my_system(storer_args);
+		for (const auto& mode_requests : requests_by_mode) {
+			const std::string& mode = mode_requests.first;
+			ArgList storer_args;
+			storer_args.AppendArg(storer);
+			for (const auto& request_arg : mode_requests.second) {
+				storer_args.AppendArg(request_arg);
+			}
+
+			// Tell the storer which kind of credential these services are.
+			// Old/custom storers ignore this and fall back to self-detection.
+			Env storer_env;
+			storer_env.Import();
+			storer_env.SetEnv("CONDOR_CREDENTIAL_STORER_MODE", mode.c_str());
+
+			int rc = my_system(storer_args, &storer_env);
 			if (rc < 0) {
 				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
 				return 1;
