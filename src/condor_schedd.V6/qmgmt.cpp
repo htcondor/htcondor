@@ -6225,7 +6225,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			procAd, jid, errorStack, has_job_factory, project_is_cluster_attr
 		);
 		if( rval < 0 ) {
-			if ( errorStack ) { /* ??? */ }
+			// post_transform_adjustemnts() has set errorStack for us.
 			errno = EINVAL;
 			return rval;
 		}
