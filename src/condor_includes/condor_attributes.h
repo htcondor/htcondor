@@ -76,7 +76,6 @@
 #define ATTR_CAN_HIBERNATE  "CanHibernate"
 #define ATTR_CAPABILITY  "Capability"
 #define ATTR_CATALOG  "Catalog"
-#define ATTR_CATALOG_NAMESPACE_ID "CatalogNamespaceID"
 #define ATTR_CATALOG_PATH  "CatalogPath"
 #define ATTR_CATALOG_SCOPE  "CatalogScope"
 #define ATTR_CATALOG_SCOPE_TYPE  "CatalogScopeType"

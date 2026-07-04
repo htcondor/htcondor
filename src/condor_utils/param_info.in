@@ -4767,7 +4767,7 @@ default : @fin
             evalInEachContext(
                    member(Catalog, RequestedCatalogs)
                 && string(TARGET[CatalogScopeType]) == CatalogScope
-                && CatalogNamespaceID == AccessPoint
+                && split(GlobalJobID, "#")[0] == AccessPoint
                 ? CatalogSize : 0,
                 catalogs
             )
