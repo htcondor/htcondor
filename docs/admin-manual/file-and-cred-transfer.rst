@@ -667,8 +667,10 @@ to see how to set up and configure the Vault server.
 Note that, when using the ``condor-credmon-multi`` package,
 in order to signal ``condor_submit`` to request *any* credentials via Vault,
 you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
-and point it to the location of ``condor_vault_storer`` (usually
-``/usr/bin/condor_vault_storer``).
+and point it to the location of ``condor_credential_storer`` (usually
+``/usr/bin/condor_credential_storer``).  This script was previously named
+``condor_vault_storer``; that name is still installed as a symlink, so existing
+configurations that reference it continue to work unchanged.
 To help HTCondor distinguish which credentials should be provided by
 Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
 Vault-managed credential names.
@@ -691,7 +693,7 @@ long as the user has jobs in the queue.
 
 To enable it, install the ``condor-credmon-oauth`` RPM -- which provides the
 *condor_credmon_oauth* daemon, the *condor_credd*, and the
-``condor_vault_storer`` -- as well as the ``pelican`` client, then enable the
+``condor_credential_storer`` -- as well as the ``pelican`` client, then enable the
 credd and credmon with the ``use feature: oauth`` configuration template.
 
 Next, register an OAuth2 client for the access point with the federation's token
@@ -703,7 +705,7 @@ the secret in a file readable only by root.
 
 For each Pelican "service" you wish to offer, add its name to
 ``PELICAN_CREDMON_PROVIDER_NAMES``, point :macro:`SEC_CREDENTIAL_STORER` at
-``condor_vault_storer`` so that :tool:`condor_submit` routes the request through
+``condor_credential_storer`` so that :tool:`condor_submit` routes the request through
 the storer, and describe the service with the ``<ServiceName>_PELICAN_*``
 options.  The following example defines a service named ``physicsdata`` that
 grants read access to the ``/physics-data`` prefix in the OSDF:
@@ -711,7 +713,7 @@ grants read access to the ``/physics-data`` prefix in the OSDF:
 .. code-block:: condor-config
 
     # Route credential requests for Pelican services through the storer.
-    SEC_CREDENTIAL_STORER = /usr/bin/condor_vault_storer
+    SEC_CREDENTIAL_STORER = /usr/bin/condor_credential_storer
     PELICAN_CREDMON_PROVIDER_NAMES = physicsdata
 
     # What the tokens are good for: the federation and the namespace prefix.

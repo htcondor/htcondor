@@ -11,6 +11,13 @@
   options; see :ref:`installing_credmon_pelican`.
   :jira:`3784`
 
+- The ``condor_vault_storer`` credential storer has been renamed to the
+  mode-neutral ``condor_credential_storer``, since it now services Vault and
+  Pelican credentials (and can be extended to others).  The old name is still
+  installed as a symlink, so existing :macro:`SEC_CREDENTIAL_STORER`
+  configurations continue to work.
+  :jira:`3784`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs

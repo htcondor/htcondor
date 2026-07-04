@@ -198,11 +198,11 @@ These macros affect the *condor_credd* and its credmon plugin.
     A comma or space separated list of provider names that the Pelican
     credential monitor should handle.  When a job requests OAuth credentials
     with a provider name in this list, the Pelican credmon obtains an initial
-    token (via the device-code flow run by ``condor_vault_storer``), exchanges
+    token (via the device-code flow run by ``condor_credential_storer``), exchanges
     it for a refreshable token using the credmon's own client, and keeps it
     renewed.  There is no default value; Pelican services must be enumerated
     explicitly.  :macro:`SEC_CREDENTIAL_STORER` must also be configured to point
-    to ``condor_vault_storer``.  See :ref:`installing_credmon_pelican`.
+    to ``condor_credential_storer``.  See :ref:`installing_credmon_pelican`.
 
 :macro-def:`<PelicanServiceName>_PELICAN_URL`
     For a Pelican service (one named in :macro:`PELICAN_CREDMON_PROVIDER_NAMES`),

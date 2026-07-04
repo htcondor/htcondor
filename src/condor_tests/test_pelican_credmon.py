@@ -10,7 +10,7 @@
 #   2. Create the credmon's OAuth2 client (with the token-exchange grant) via the
 #      issuer's admin REST API.
 #   3. Submit a job whose credentials are obtained by the merged
-#      condor_vault_storer, which detects the Pelican service and runs the
+#      condor_credential_storer, which detects the Pelican service and runs the
 #      Pelican client's device-code flow.  The test scrapes the verification URL
 #      from condor_submit's output and approves it over HTTP.
 #   4. The PelicanCredmon performs the RFC 8693 token exchange; the job stages in
@@ -25,7 +25,7 @@
 # refreshed token's jti differs from the exchanged token's.
 #
 # This test ships as part of the credmon, so the PelicanCredmon and the merged
-# condor_vault_storer are always present when it runs.  It SKIPS only when the
+# condor_credential_storer are always present when it runs.  It SKIPS only when the
 # external Pelican binaries it needs to stand up a federation are unavailable:
 # `pelican` or `pelican-server` not in PATH (a POSIXv2 federation cannot be
 # started), or the `requests` module / a bcrypt implementation is missing.
@@ -70,22 +70,29 @@ PELICAN_SERVER = shutil.which("pelican-server")
 
 
 # ---------------------------------------------------------------------------
-# Locate the condor_vault_storer that ships in the credmon package.  (The
-# credmon daemon is found via the default CREDMON_OAUTH config knob and loads
-# its Python package from LIBEXEC automatically -- no extra wiring needed.)
+# Locate the condor_credential_storer that ships in the credmon package.  (It
+# was formerly named condor_vault_storer, still installed as a symlink, so
+# accept either name.  The credmon daemon is found via the default CREDMON_OAUTH
+# config knob and loads its Python package from LIBEXEC automatically -- no extra
+# wiring needed.)
 # ---------------------------------------------------------------------------
+STORER_NAMES = ("condor_credential_storer", "condor_vault_storer")
+
+
 def find_storer():
-    storer = shutil.which("condor_vault_storer")
-    if storer:
-        return storer
+    for name in STORER_NAMES:
+        storer = shutil.which(name)
+        if storer:
+            return storer
     try:
         out = subprocess.run(
             ["condor_config_val", "BIN"], capture_output=True, text=True
         )
         if out.returncode == 0:
-            candidate = Path(out.stdout.strip()) / "condor_vault_storer"
-            if candidate.exists():
-                return str(candidate)
+            for name in STORER_NAMES:
+                candidate = Path(out.stdout.strip()) / name
+                if candidate.exists():
+                    return str(candidate)
     except Exception:
         pass
     return None
@@ -336,7 +343,7 @@ def the_condor(test_dir, federation, credmon_client):
     cred_dir.chmod(0o2770)
 
     storer = find_storer()
-    assert storer, "condor_vault_storer (shipped with the credmon) was not found"
+    assert storer, "condor_credential_storer (shipped with the credmon) was not found"
 
     plugin_path = test_dir / "pelican_plugin"
     shutil.copyfile(PELICAN, plugin_path)

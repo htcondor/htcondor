@@ -4,7 +4,7 @@ PelicanCredmon -- an HTCondor credential monitor for Pelican federations.
 This credmon mirrors the Vault credmon's division of labor but speaks to a
 Pelican federation's embedded OAuth2 issuer instead of HashiCorp Vault:
 
-  * A SEC_CREDENTIAL_STORER script (pelican_credential_storer) runs the Pelican
+  * A SEC_CREDENTIAL_STORER script (condor_credential_storer) runs the Pelican
     client's device-code flow at submit time and stores the resulting *subject*
     access token (which carries `offline_access` and storage scopes) into the
     credmon directory as `<service>.top`.
