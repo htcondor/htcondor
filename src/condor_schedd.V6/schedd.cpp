@@ -100,6 +100,7 @@
 #include "catalog_utils.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
+#include "guidance.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -21322,9 +21323,25 @@ Scheduler::post_transform_adjustments(
 
 	if( requested_catalogs.size() > 0 ) {
 		auto rc = std::make_unique<classad::ExprList>();
+		auto rcid = std::make_unique<classad::ExprList>();
+
+		std::string empty;
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
+
+
+			auto catalogID = computeCatalogID( * ad, catalog );
+			if( ! catalogID ) {
+				if( errorStack ) {
+					errorStack->push( "CXFER", 1, "Failed to compute catalog ID,"
+						" which is required for common file transfer." );
+				}
+				return -1;
+			}
+
+			classad::ExprTree * m = classad::Literal::MakeString( * catalogID );
+			rcid->push_back( m );
 		}
 
 		// This should be reimplemented to do what the job transforms do
@@ -21338,7 +21355,23 @@ Scheduler::post_transform_adjustments(
 			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
 		);
 		if( rv != 0 ) {
-			if( errorStack ) { /* ??? */ }
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOGS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
+			return -1;
+		}
+
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOG_IDS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
 			return -1;
 		}
 	}
