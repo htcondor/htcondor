@@ -100,6 +100,7 @@
 #include "catalog_utils.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
+#include "guidance.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -10064,7 +10065,7 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 {
 	 startdContactQueue.push(args);
 	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
-			  args->sinful() );  
+			  args->sinful() );
 
 	 rescheduleContactQueue();
 
@@ -10113,7 +10114,7 @@ Scheduler::checkContactQueue( int /* timerID */ )
 		args = startdContactQueue.front();
 		startdContactQueue.pop();
 		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %p, "
-				 "host=%s\n", args, args->sinful() ); 
+				 "host=%s\n", args, args->sinful() );
 		contactStartd( args );
 		delete args;
 	}
@@ -13509,10 +13510,14 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		// StartJob() will reblock them, or start a new transfer
 		// shadow, as appropriate.
 		//
+		// FIXME: the above is a lie; StartJob() will never be called
+		// again for these jobs (I think because they have matches).
+		//
 		// Doing things this way makes a single pass over the blocked
 		// matches, with each pass doing a set intersection; we could
 		// only one catalog at a time in the main loop, at the cost of
 		// iterating the blocked matches more than once.
+		std::vector< match_rec *> matches;
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
 				// It is a core design problem that we can't ever be sure
@@ -13541,11 +13546,63 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 							"catalog was unregistered" ) )
 					{
 						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
-						mark_serial_job_running( sr->job_id );
-						addRunnableJob( sr );
+
+						//
+						// The job is now idle and holding a claimed resource,
+						// but we can't start a shadow for it.  We can't call
+						// mark_serial_job_running() because we're not starting
+						// a shadow, and if we call addRunnableJob(), we'll
+						// skip StartJob(mrec, job_id) [which is normally
+						// responsible for calling addRunnableJob() via
+						// start_std()].
+						//
+						// If we delete this match record, we should probably
+						// also delete its (this) shadow record; it will leak,
+						// otherwise -- or worse, prevent a new shadow record
+						// for the transfer shadow's job ID from being created
+						// when it's time to try again.
+						//
+						// Conveniently, this makes it equally difficult to
+						// delete the match record as to try to use it again.
+						// For now, we'll delete the match record; it seems
+						// safer.  In the future, we should probably do what
+						// we do when we get a d-slot back from the startd;
+						// that will probably end up with the same job, but
+						// at least that way we (a) don't call StartJob()
+						// from a weird place and (b) anything we do to prevent
+						// too many common-transfer retries will work generally.
+						//
+						// See above about HTCONDOR-3610.
+						//
+
+						// auto jobID = sr->job_id;
+						delete_shadow_rec( sr );
+						// This removes `m` from `matchesHeldByBlockedJobs`.
+						// We could rewrite the loop and assign the return
+						// value of erase or manually iterate as appropriate,
+						// but that means explicitly removing m, rather than
+						// letting DelMrec() handle it, which seems wrong.
+						// DelMrec( m );
+						matches.push_back( m );
+
+/* This code passes the tests locally, except test_unblocking_jobs.py,
+ * which fails `test_kill_transfer_shadow`, because the jobs all immediately
+ * reblock trying the transfer again.
+						// Stolen from StartJob( mrec ); should refactor.
+						auto result = StartJob( m, jobID );
+						if( result != SJ::SUCCEEDED ) {
+							StartJobFailed( m, jobID );
+
+							// (Skip the e-mail for now.)
+						}
+*/
 					}
 				}
 			}
+		}
+
+		for( match_rec * n : matches ) {
+		    DelMrec( n );
 		}
 	}
 }
@@ -21267,9 +21324,25 @@ Scheduler::post_transform_adjustments(
 
 	if( requested_catalogs.size() > 0 ) {
 		auto rc = std::make_unique<classad::ExprList>();
+		auto rcid = std::make_unique<classad::ExprList>();
+
+		std::string empty;
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
+
+
+			auto catalogID = computeCatalogID( * ad, catalog );
+			if( ! catalogID ) {
+				if( errorStack ) {
+					errorStack->push( "CXFER", 1, "Failed to compute catalog ID,"
+						" which is required for common file transfer." );
+				}
+				return -1;
+			}
+
+			classad::ExprTree * m = classad::Literal::MakeString( * catalogID );
+			rcid->push_back( m );
 		}
 
 		// This should be reimplemented to do what the job transforms do
@@ -21283,7 +21356,23 @@ Scheduler::post_transform_adjustments(
 			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
 		);
 		if( rv != 0 ) {
-			if( errorStack ) { /* ??? */ }
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOGS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
+			return -1;
+		}
+
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOG_IDS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
 			return -1;
 		}
 	}

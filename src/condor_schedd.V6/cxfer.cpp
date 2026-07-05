@@ -186,11 +186,37 @@ command_data_slot_callback(
 
 void
 call_StartJobFailure( const std::string & claimID ) {
-	match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
-	if( mrec != nullptr ) {
-		PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
-		scheduler.StartJobFailed( mrec, id );
-	}
+	//
+	// There's a race condition here.  StartJobFailed() call del_mrec(),
+	// which calls unlink_mrec(), which calls send_vacate().  This can
+	// return resources to the startd before it replies to (or is contacted
+	// by?) a REQUEST_CLAIM command issued against its partitionable slot
+	// left-overs... which can put the schedd into a busy loop of requesting
+	// a d-slot, vacating it, and then requesting it again.
+	//
+	// Instead, let's wait a few seconds before vacating the claim.
+	//
+
+	auto lambda = [claimID](int /* timerID */) -> void {
+		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
+		if( mrec != nullptr ) {
+			PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
+			scheduler.StartJobFailed( mrec, id );
+
+			if( mrec->shadowRec != nullptr ) {
+				dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
+				scheduler.delete_shadow_rec( mrec->shadowRec );
+			}
+		}
+	};
+
+	std::ignore = daemonCore->Register_Timer(
+		3,              // delay
+		TIMER_NEVER,    // repeat
+		lambda,
+		"call_startJobFailure"
+	);
+
 }
 
 
@@ -205,6 +231,10 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 
 	CondorError errorStack;
 	DCStartd startd( mrec->peer, nullptr );
+
+	ClaimIdParser cidp( mrec->claim_id.claimId() );
+	char const * sessionID = cidp.secSessionId();
+	// dprintf( D_ALWAYS, "start_command_data_slot(): using sessionID %s\n", sessionID );
 
 	std::string originalClaimID = mrec->claim_id.claimId();
 	auto result = startd.startCommand_nonblocking(
@@ -229,7 +259,10 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 				call_StartJobFailure( originalClaimID );
 				return;
 			}
-		}
+		},
+		"description: COMMAND_DATA_SLOT",
+		false /* not raw protocol */,
+		sessionID
 	);
 
 	switch (result) {

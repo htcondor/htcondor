@@ -386,14 +386,14 @@ command_give_totals_classad( int, Stream* stream )
 
 
 int
-command_request_claim(int cmd, Stream* stream ) 
+command_request_claim(int cmd, Stream* stream )
 {
 	Resource* rip;
 	int rval;
 
 	std::string secret;
 	if( ! stream->get_secret(secret) ) {
-		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		dprintf( D_ALWAYS, "command_request_claim(): Can't read ClaimId\n" );
 		reply(stream, NOT_OK);
 		return FALSE;
 	}
