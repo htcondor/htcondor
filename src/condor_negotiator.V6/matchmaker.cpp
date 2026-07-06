@@ -3356,7 +3356,7 @@ obtainAdsFromCollector (
 				if (replace) {
 					if(oldSequence >= 0) {
 						delete(oldAdEntry->oldAd);
-						delete(oldAdEntry->remoteHost);
+						free(oldAdEntry->remoteHost);
 						delete(oldAdEntry);
 						stashedAds.erase(adID);
 					}

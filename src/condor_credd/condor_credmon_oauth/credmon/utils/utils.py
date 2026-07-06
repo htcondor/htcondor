@@ -301,6 +301,10 @@ def generate_secret_key():
     Return a secret key that is common across all sessions
     """
 
+    # Note: the sys.stderr.write() calls below emit only the keyfile path and
+    # exception text for diagnostics; the actual key bytes (current_key/new_key)
+    # are never logged. The `# lgtm[...]` tags suppress CodeQL's name-based
+    # clear-text-logging false positives on those lines.
     cred_dir = htcondor.param.get("SEC_CREDENTIAL_DIRECTORY_OAUTH",
                     htcondor.param.get("SEC_CREDENTIAL_DIRECTORY",
                         "/var/lib/condor/oauth_credentials"))
@@ -312,7 +316,7 @@ def generate_secret_key():
     except OSError as os_error:
         # An exception will be thrown if the file already exists, and that's fine and good.
         if os_error.errno != errno.EEXIST:
-            sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(os_error)))
+            sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(os_error)))  # lgtm[py/clear-text-logging-sensitive-data]
             return os.urandom(16)
 
     # Open the secret key file.
@@ -320,7 +324,7 @@ def generate_secret_key():
         with open(keyfile, 'rb') as f:
             current_key = f.read(24)
     except IOError as e:
-        sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(e)))
+        sys.stderr.write("Unable to access WSGI session key at {0} ({1}); will use a non-persistent key.\n".format(keyfile, str(e)))  # lgtm[py/clear-text-logging-sensitive-data]
         return os.urandom(16)
 
     # Make sure the key string isn't empty or truncated.
@@ -333,8 +337,8 @@ def generate_secret_key():
     try:
         # Use atomic output so the file is only ever read-only
         atomic_output(new_key, keyfile, stat.S_IRUSR)
-        sys.stderr.write("Successfully created a new persistent WSGI session key for scitokens-credmon application at {0}.\n".format(keyfile))
+        sys.stderr.write("Successfully created a new persistent WSGI session key for scitokens-credmon application at {0}.\n".format(keyfile))  # lgtm[py/clear-text-logging-sensitive-data]
     except Exception as e:
-        sys.stderr.write("Failed to atomically create a new persistent WSGI session key at {0} ({1}); will use a transient one.\n".format(keyfile, str(e)))
+        sys.stderr.write("Failed to atomically create a new persistent WSGI session key at {0} ({1}); will use a transient one.\n".format(keyfile, str(e)))  # lgtm[py/clear-text-logging-sensitive-data]
         return new_key
     return new_key

@@ -4,6 +4,9 @@
   meaning a child node only requires its parent(s) to finish executing
   rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
   :jira:`2690`
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
 
 *** 25.13.0 bugs
 
@@ -60,6 +63,16 @@
   addition to downloading individual files. Large files are uploaded in
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
+- HTCondor Connection Brokering (CCB) now supports a streaming mode that
+  brokers connections between two daemons that are *both* behind a CCB,
+  without opening any incoming ports. When the requesting daemon is itself
+  CCB-routed, the CCB server has the target daemon connect back to the CCB
+  server and then relays bytes between the two connections; the end-to-end
+  security handshake is still performed directly between the two daemons, so
+  the CCB server never decrypts their traffic. Streaming mode is enabled by
+  default and controlled by the new configuration knobs
+  :macro:`CCB_SERVER_STREAMING` and :macro:`CCB_CLIENT_STREAMING`.
+  :jira:`3805`
 
 - Jobs that transfer input sandboxes now log a file transfer started 
   event even when there list of files to be transferred is empty.

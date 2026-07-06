@@ -369,6 +369,9 @@ Summary: HTCondor's VM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: libvirt
+%if 0%{?fedora} >= 35 || 0%{?rhel} >= 9 || 0%{?suse_version} >= 1600
+Requires: passt
+%endif
 
 %description vm-gahp
 The condor_vm-gahp enables the Virtual Machine Universe feature of
@@ -915,7 +918,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
-%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
@@ -1014,7 +1016,6 @@ rm -rf %{buildroot}
 %_bindir/condor_config_val
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
-%_bindir/condor_check_password
 %_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_dag_checker
@@ -1224,6 +1225,7 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
+%_libexecdir/condor/ccb_proxy_bench
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
