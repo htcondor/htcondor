@@ -6,9 +6,13 @@
 
 *** 24.0.22 features
 
-- HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
 
-- The condor RPM package now requires at least apptainer version 1.5.1.
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
+
+  :jira:`3808`
+
+- HTCondor tarballs now contain `Apptainer 1.5.2 <https://github.com/apptainer/apptainer/releases/tag/v1.5.2>`_
 
 *** 24.0.22 bugs
 
