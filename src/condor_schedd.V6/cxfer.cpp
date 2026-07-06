@@ -200,13 +200,19 @@ call_StartJobFailure( const std::string & claimID ) {
 	auto lambda = [claimID](int /* timerID */) -> void {
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
 		if( mrec != nullptr ) {
+			// StartJobFailed() indirectly deletes mrec.  We don't want to
+			// delete the shadow record first, because a lot of special case
+			// handling depends on knowing if the match record being deleted
+			// is a transfer shadow's.
+			auto * shadow_record = mrec->shadowRec;
 			PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
 			scheduler.StartJobFailed( mrec, id );
 
-			if( mrec->shadowRec != nullptr ) {
+			if( shadow_record != nullptr ) {
 				dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
 				scheduler.delete_shadow_rec( mrec->shadowRec );
 			}
+
 		}
 	};
 
@@ -317,7 +323,7 @@ command_data_slot_callback(
 	}
 
 	if(! sock->end_of_message()) {
-		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message (put).\n" );
 		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
@@ -356,7 +362,7 @@ command_data_slot_callback(
 		co_return;
 	}
 	if(! sock->end_of_message()) {
-		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message.\n" );
+		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message (get).\n" );
 		call_StartJobFailure( originalClaimID );
 		co_return;
 	}
