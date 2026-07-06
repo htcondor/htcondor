@@ -328,7 +328,7 @@ public:
 		if (err.empty()) {
 			auto perr = ParseError();
 			if (perr.has_value()) {
-				err = perr.value().str();
+				err = perr->str();
 			}
 		}
 		return err;
