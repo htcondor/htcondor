@@ -210,7 +210,7 @@ call_StartJobFailure( const std::string & claimID ) {
 
 			if( shadow_record != nullptr ) {
 				dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
-				scheduler.delete_shadow_rec( mrec->shadowRec );
+				scheduler.delete_shadow_rec( shadow_record );
 			}
 
 		}
