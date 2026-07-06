@@ -258,26 +258,53 @@ Node::PrintChildren(std::string& buf, size_t bufmax, const Dag* dag, const char*
 }
 
 //---------------------------------------------------------------------------
+// Record that `parent` has finished (regardless of outcome); returns true once
+// this was the last outstanding parent, i.e. the child is fully unblocked.
+bool
+Node::MarkParentDone(Dag& dag, Node* child, node_id_t parent) {
+	ASSERT(child != nullptr);
+
+	if ( ! child->HasMultipleParents()) {
+		ASSERT(child->HasSingleParent());
+		ASSERT(child->GetParentsID() == parent); // notifier must be the recorded parent
+		child->_parents_done = true;
+		return true;
+	}
+
+	bool done = dag.edge_table.GetWaitEdge(child->GetParentsID()).MarkDone(parent);
+	if (done) { child->_parents_done = true; }
+
+	return done;
+}
+
+//---------------------------------------------------------------------------
+// Set `child` to STATUS_FUTILE unless already FUTILE/preDone; increments count on change.
+// Returns false only when child was already FUTILE (caller should stop recursing that branch).
+bool
+Node::InvalidateChild(Node* child, int& count) {
+	ASSERT(child != nullptr);
+
+	//If Status is already futile or the node is preDone don't try
+	//to set status and update counts
+	if (child->GetStatus() == Node::STATUS_FUTILE) {
+		return false;
+	} else if ( ! child->IsPreDone()) {
+		ASSERT( ! child->CanSubmit());
+		if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
+		else {
+			debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
+			             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
+		}
+	}
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
 // tell children that the parent is complete, and call the given function
 // for children that have no more incomplete parents
 void
-Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
-	auto notify = [&dag](Node* child, node_id_t parent) -> bool {
-		ASSERT(child != nullptr);
-
-		if ( ! child->HasMultipleParents()) {
-			ASSERT(child->HasSingleParent());
-			ASSERT(child->GetParentsID() == parent); // notifier must be the recorded parent
-			child->_parents_done = true;
-			return true;
-		}
-
-		bool done = dag.edge_table.GetWaitEdge(child->GetParentsID()).MarkDone(parent);
-		if (done) { child->_parents_done = true; }
-
-		return done;
-	};
-
+Node::NotifyChildren(Dag& dag, const std::function<bool(Dag& dag, Node* child)>& fn) {
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
 			Arc& direct = dag.edge_table.GetDirectArc(m_children);
@@ -285,16 +312,16 @@ Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
 
-			if (notify(child, this->GetNodeID())) {
-				if (pfn) { pfn(dag, child); }
+			if (MarkParentDone(dag, child, GetNodeID())) {
+				if (fn) { fn(dag, child); }
 			}
 		} else {
 			for (auto& [id, _] : dag.edge_table[m_children]) {
 				Node * child = dag.FindNodeByNodeID(id);
 				ASSERT(child != nullptr);
 
-				if (notify(child, this->GetNodeID())) {
-					if (pfn) { pfn(dag, child); }
+				if (MarkParentDone(dag, child, GetNodeID())) {
+					if (fn) { fn(dag, child); }
 				}
 			}
 		}
@@ -302,52 +329,40 @@ Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 }
 
 //---------------------------------------------------------------------------
-//Recursively visit all descendant nodes and set to status FUTILE
-//Return the number of jobs set to FUTILE
+// Recursively set descendants to status FUTILE (strong deps), or -- for a direct
+// child reached via a weak dependency -- treat this exactly like a normal
+// parent-completion notification instead of cascading FUTILE.
+// Return the number of nodes newly set to FUTILE.
 int
-Node::SetDescendantsToFutile(Dag& dag) {
+Node::SetDescendantsToFutile(Dag& dag, const std::function<bool(Dag& dag, Node* child)>& on_weak_unblocked) {
 	int count = 0;
+
+	auto weak_complete = [this, &dag, &on_weak_unblocked](Node* child) {
+		if (MarkParentDone(dag, child, GetNodeID()) && on_weak_unblocked) {
+			on_weak_unblocked(dag, child);
+		}
+	};
 
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
 			Arc& direct = dag.edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
-			ASSERT(child != nullptr);
 
-			//If Status is already futile or the node is preDone don't try
-			//to set status and update counts
-			if (child->GetStatus() == Node::STATUS_FUTILE) {
-				return 0;
-			} else if ( ! child->IsPreDone()) {
-				ASSERT( ! child->CanSubmit());
-				if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
-				else {
-					debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
-					             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
-				}
+			if (direct.IsWeak()) {
+				weak_complete(child);
+			} else if (InvalidateChild(child, count)) {
+				count += child->CascadeFutile(dag);
 			}
-
-			count += child->SetDescendantsToFutile(dag);
 		} else {
-			for (auto& [id, _] : dag.edge_table[m_children]) {
-				Node * child = dag.FindNodeByNodeID(id);
-				ASSERT(child != nullptr);
+			for (auto& arc : dag.edge_table[m_children]) {
+				Node * child = dag.FindNodeByNodeID(arc.id);
 
-				//If Status is already futile or the node is preDone don't try
-				//to set status and update counts
-				if (child->GetStatus() == Node::STATUS_FUTILE) {
-					continue;
-				} else if ( ! child->IsPreDone()) {
-					ASSERT( ! child->CanSubmit());
-					if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
-					else {
-						debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
-						             child->GetNodeName(), status_t_names[Node::STATUS_FUTILE]);
-					}
+				if (arc.IsWeak()) {
+					weak_complete(child);
+				} else if (InvalidateChild(child, count)) {
+					count += child->CascadeFutile(dag);
 				}
-
-				count += child->SetDescendantsToFutile(dag);
 			}
 		}
 	}
@@ -356,9 +371,52 @@ Node::SetDescendantsToFutile(Dag& dag) {
 }
 
 //---------------------------------------------------------------------------
+// Non-transitive cascade: this node never executed, so none of its children --
+// weak or strong -- can be considered satisfied.
+int
+Node::CascadeFutile(Dag& dag) {
+	int count = 0;
+
+	if (m_children != NO_EDGE_ID) {
+		if (EdgeTable::IsDirect(m_children)) {
+			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			ASSERT(direct.id != NO_ID);
+			Node* child = dag.FindNodeByNodeID(direct.id);
+
+			if ( ! InvalidateChild(child, count)) { return 0; }
+
+			count += child->CascadeFutile(dag);
+		} else {
+			for (auto& [id, _] : dag.edge_table[m_children]) {
+				Node * child = dag.FindNodeByNodeID(id);
+
+				if ( ! InvalidateChild(child, count)) { continue; }
+
+				count += child->CascadeFutile(dag);
+			}
+		}
+	}
+
+	return count;
+}
+
+//---------------------------------------------------------------------------
+// True if this node has at least one child and every child dependency is weak.
+bool
+Node::AllChildrenWeak(const Dag* dag) const {
+	if (m_children == NO_EDGE_ID) { return false; }
+
+	if (EdgeTable::IsDirect(m_children)) {
+		return dag->edge_table.GetDirectArc(m_children).IsWeak();
+	}
+
+	return std::ranges::all_of(dag->edge_table[m_children], &Arc::IsWeak);
+}
+
+//---------------------------------------------------------------------------
 // visit all of the children, either marking them, or checking for cycles
 int
-Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, void* args), void* args) {
+Node::VisitChildren(Dag& dag, const std::function<int(Dag& dag, Node* parent, Node* child)>& fn) {
 	int retval = 0;
 
 	if (m_children != NO_EDGE_ID) {
@@ -367,12 +425,12 @@ Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, voi
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
-			retval += pfn(dag, this, child, args);
+			retval += fn(dag, this, child);
 		} else {
 			for (auto& [id, _] : dag.edge_table[m_children]) {
 				Node* child = dag.FindNodeByNodeID(id);
 				ASSERT(child != nullptr);
-				retval += pfn(dag, this, child, args);
+				retval += fn(dag, this, child);
 			}
 		}
 	}

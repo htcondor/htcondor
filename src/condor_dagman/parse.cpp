@@ -3336,6 +3336,10 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
 	children.erase(duplicate_children.begin(), duplicate_children.end());
 
+	// Arc metadata for the requested dependency strength, passed straight through
+	// to Dag::Connect() -- ARC_WEAK is only meaningful on children-edge arcs.
+	unsigned int meta = cmd->IsWeak() ? ARC_WEAK : 0;
+
 	// If this statement has multiple parent nodes and multiple child nodes, we
 	// can optimize the dag structure by creating an intermediate "join node"
 	// connecting the two sets.
@@ -3358,9 +3362,11 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 
 		Node* join = dag.FindNodeByName(name.c_str());
 
-		// Connect parents to child job node
+		// Connect parents to the join node -- this is where the requested dependency
+		// strength actually applies. The join node is a NOOP that can't itself fail
+		// once unblocked, so join -> children below always stays strong.
 		std::vector<Node*> lst = { join };
-		if ( ! dag.Connect(parents, lst)) {
+		if ( ! dag.Connect(parents, lst, meta)) {
 			debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency to join node %s\n",
 			             join ? join->GetNodeName() : "unknown");
 			return false;
@@ -3369,9 +3375,10 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		// reset parent list to the join node and fall through to build the child edges
 		parents.clear();
 		parents.push_back(join);
+		meta = 0;
 	}
 
-	if ( ! dag.Connect(parents, children)) {
+	if ( ! dag.Connect(parents, children, meta)) {
 		debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency between nodes\n");
 		return false;
 	}

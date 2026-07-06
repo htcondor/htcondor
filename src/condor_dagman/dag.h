@@ -176,8 +176,10 @@ public:
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
-	// Make Edge/Arc connections between parent and child nodes
-	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children);
+	// Make Edge/Arc connections between parent and child nodes. `meta` is the
+	// Arc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
+	// callers are responsible for translating dependency strength into this bitmask.
+	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta = 0);
 	// Remove duplicate edges between nodes
 	void AdjustEdges();
 	// Prepare DAG for initial run. ONLY CALL FUNCTION ONCE!
@@ -436,6 +438,7 @@ private:
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
+	bool StartIfReady(Node *node); // Start `node` iff it's now STATUS_READY; used as a parent-completion callback
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
 	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully

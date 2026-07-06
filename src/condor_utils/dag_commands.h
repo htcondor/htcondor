@@ -350,7 +350,7 @@ public:
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PARENT_CHILD; }
 	virtual std::string _getDetails() const {
-		std::string ret = "[ ";
+		std::string ret = weak ? "WEAK [ " : "[ ";
 		for (const auto& p : parents) { ret += ToStr(p) + " "; }
 		ret += "] --> [ ";
 		for (const auto& c : children) { ret += ToStr(c) + " "; }
@@ -368,9 +368,12 @@ public:
 	const std::set<std::string_view>& GetParents() const { return parents; }
 	const std::set<std::string_view>& GetChildren() const { return children; }
 
+	void SetIsWeak() { weak = true; }
+	bool IsWeak() const { return weak; }
 private:
 	std::set<std::string_view> parents{}; // List of parent nodes
 	std::set<std::string_view> children{}; // List of child nodes
+	bool weak{false}; // Is weak dependency declaration
 };
 
 // Abstract class to modify some behavior of a node type

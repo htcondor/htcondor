@@ -42,6 +42,12 @@ Edge::AddArc(const node_id_t id, const unsigned int meta) {
 		return m_arcs.size() - 1;
 	}
 
+	// Strongest-wins: a strong (re-)declaration upgrades an existing weak arc.
+	// A weak (re-)declaration never downgrades an existing strong arc.
+	if ( ! (meta & ARC_WEAK) && (it->metadata & ARC_WEAK)) {
+		it->metadata &= ~ARC_WEAK;
+	}
+
 	return static_cast<size_t>(it - m_arcs.begin());
 }
 

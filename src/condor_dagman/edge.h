@@ -30,6 +30,7 @@ constexpr edge_id_t NO_EDGE_ID = 0;
 
 // Arc metadata bitmasks
 constexpr unsigned int ARC_DONE = (1u << 0); // Parent has completed (wait arcs only)
+constexpr unsigned int ARC_WEAK = (1u << 1); // Child only needs parent to execute, not succeed (children edges only)
 
 // Individual connection between Parent -> Child Node
 struct Arc {
@@ -38,6 +39,8 @@ struct Arc {
 
 	node_id_t id{NO_ID};
 	unsigned int metadata{0};
+
+	bool IsWeak() const { return metadata & ARC_WEAK; }
 };
 
 // Collection of shared arcs from Parent(s) to Child(ren)

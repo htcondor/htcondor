@@ -30,6 +30,7 @@
 
 #include <deque>
 #include <algorithm>
+#include <functional>
 #include <set>
 
 class ThrottleByCategory;
@@ -142,11 +143,16 @@ public:
 	// returns true if the job is waiting for other jobs to finish
 	bool IsWaiting() const { return (m_multiple_parents || m_parents != NO_ID) && !_parents_done; };
 	// visit child nodes calling the given function for each
-	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
+	int VisitChildren(Dag& dag, const std::function<int(Dag& dag, Node* me, Node* child)>& fn);
 	// notify children of parent completion, and call the optional callback for each child that is no longer waiting
-	void NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
-	// Recursively set all descendant nodes to status FUTILE & return the number of nodes set to status
-	int SetDescendantsToFutile(Dag& dag);
+	void NotifyChildren(Dag& dag, const std::function<bool(Dag& dag, Node* child)>& fn);
+	// Recursively set descendants to status FUTILE (strong deps), or -- for a direct child
+	// reached via a weak dependency -- treat this exactly like a normal parent-completion
+	// notification instead. Returns the number of nodes newly set to FUTILE.
+	int SetDescendantsToFutile(Dag& dag, const std::function<bool(Dag& dag, Node* child)>& on_weak_unblocked = nullptr);
+	// True if this node has at least one child and every child dependency is weak
+	// (used by Dag::WriteRescue to skip re-running a failed node on rescue).
+	bool AllChildrenWeak(const Dag* dag) const;
 
 	// append parent node names into the given buffer using the given printf format string
 	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
@@ -402,6 +408,15 @@ private:
 	static void SetStateChangeTime() { time(&lastStateChangeTime); }
 	// Cleanup node memory (Note: does not invalidate node)
 	void Cleanup();
+	// Record that `parent` has finished (regardless of outcome); returns true once
+	// this was the last outstanding parent, i.e. the child is fully unblocked.
+	static bool MarkParentDone(Dag& dag, Node* child, node_id_t parent);
+	// Set `child` to STATUS_FUTILE unless already FUTILE/preDone; increments count on change.
+	// Returns false only when child was already FUTILE (caller should stop recursing that branch).
+	static bool InvalidateChild(Node* child, int& count);
+	// Unconditionally cascade FUTILE to all descendants -- used once a node itself
+	// never executed, so even its weak children can't be satisfied (non-transitive).
+	int CascadeFutile(Dag& dag);
 	// Check if a proc is already being tracked if not start (also translate NOOP proc id -> 0)
 	void CheckTrackingJob(int& proc) {
 		if (GetNoop()) { proc = 0; }

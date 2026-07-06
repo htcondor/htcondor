@@ -411,10 +411,14 @@ DagParser::ParseSplice(DagLexer& details) {
 }
 
 std::string
-DagParser::ParseParentChild(DagLexer& details) {
+DagParser::ParseParentChild(DagLexer& details, const std::string& keyword) {
 	data.reset(new ParentChildCommand);
 	ParentChildCommand* cmd = (ParentChildCommand*)data.get();
 	assert(cmd != nullptr);
+
+	if (keyword == "WEAK") {
+		cmd->SetIsWeak();
+	}
 
 	bool parsing_children = false;
 	std::string token = details.next();
@@ -937,7 +941,14 @@ DagParser::next() {
 					parse_error = ParseSubmitDesc(details);
 					break;
 				case DAG::CMD::PARENT_CHILD:
-					parse_error = ParseParentChild(details);
+					if (it->first == "WEAK") {
+						check = details.next();
+						if (check.empty() || strcasecmp(check.c_str(), "PARENT") != 0) {
+							parse_error = "WEAK dependency missing PARENT keyword";
+							break;
+						}
+					}
+					parse_error = ParseParentChild(details, it->first);
 					break;
 				case DAG::CMD::SCRIPT:
 					parse_error = ParseScript(details);

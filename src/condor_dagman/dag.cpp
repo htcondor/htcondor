@@ -881,8 +881,11 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 				node->TerminateFailure();
 				SetStatus(DAG_STATUS_NODE_FAILED);
 
-				// Set descendants to Futile
-				_numNodesFutile += node->SetDescendantsToFutile(*this);
+				// Set descendants to Futile; weak-dep children are notified/started
+				// instead (StartIfReady no-ops on its own during recovery)
+				_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+						return dag.StartIfReady(child);
+					});
 			}
 		} else if (node->GetStatus() != Node::STATUS_ERROR) { // Terminate node if successful
 			TerminateNode(node, recovery);
@@ -949,7 +952,9 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 			} else {
 				// no more retries -- node failed
 				if (node->GetType() != NodeType::SERVICE) {
-					_numNodesFutile += node->SetDescendantsToFutile(*this);
+					_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+							return dag.StartIfReady(child);
+						});
 					_numNodesFailed++;
 					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 				} else {
@@ -1723,7 +1728,9 @@ Dag::PreScriptReaper(Node *node, int status)
 			node->MarkFailed();
 			node->TerminateFailure();
 			if (node->GetType() != NodeType::SERVICE) {
-				_numNodesFutile += node->SetDescendantsToFutile(*this);
+				_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+						return dag.StartIfReady(child);
+					});
 				_numNodesFailed++;
 				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 			} else {
@@ -2141,8 +2148,13 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 		// Never mark a FINAL node as done.
 		// Also avoid a possible race condition where the node
 		// has been skipped but is not yet marked as DONE.
-		if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
-			fprintf(fp, "DONE %s\n", node->GetNodeName());
+		if (node->GetType() != NodeType::FINAL) {
+			if (node->GetStatus() == Node::STATUS_DONE) {
+				fprintf(fp, "DONE %s\n", node->GetNodeName());
+			} else if (node->GetStatus() == Node::STATUS_ERROR && node->AllChildrenWeak(this)) {
+				fprintf(fp, "# Failed node with only weak child dependencies:\n");
+				fprintf(fp, "DONE %s\n", node->GetNodeName());
+			}
 		}
 
 		if (node->GetRetryMax() > 0 && !reset_retries) {
@@ -2164,6 +2176,23 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 	}
 
 	fclose(fp);
+}
+
+//-------------------------------------------------------------------------
+// Start `node` iff it's now STATUS_READY. Used as the parent-completion
+// callback for both normal (success) and weak-dependency-on-failure notification.
+// Never starts anything during recovery -- normal processing restarts nodes
+// once recovery finishes; the caller's NotifyChildren/SetDescendantsToFutile
+// bookkeeping still needs to run either way, so callers pass this unconditionally.
+bool
+Dag::StartIfReady(Node *node) {
+	if (Recovery()) { return false; }
+
+	if (node->GetStatus() == Node::STATUS_READY) {
+		return StartNode(node, false);
+	}
+
+	return false;
 }
 
 //-------------------------------------------------------------------------
@@ -2203,18 +2232,14 @@ Dag::TerminateNode(Node* node, bool recovery, bool bootstrap)
 
 	// Report termination to all child nodes by removing parent's ID from
 	// each child's waiting queue.
-	if (bootstrap || recovery) {
+	if (bootstrap) {
 		// notify children of parent completion, but don't start any nodes
 		node->NotifyChildren(*this, nullptr);
 	} else {
 		// notify children of parent completion, and start any nodes that are no longer idle
+		// (StartIfReady no-ops on its own during recovery)
 		node->NotifyChildren(*this, [](Dag& dag, Node* child) -> bool {
-				// this is invoked after child->ParentComplete(node) returns true
-				if (child->GetStatus() == Node::STATUS_READY) {
-					return dag.StartNode(child, false);
-				} else {
-					return false;
-				}
+				return dag.StartIfReady(child);
 			});
 	}
 }
@@ -2331,11 +2356,10 @@ Dag::DFSVisit(Node * node, int depth)
 		int plus_one = depth + 1;
 		while ((int)_graph_widths.size() <= plus_one) { _graph_widths.push_back(0); }
 
-		node->VisitChildren(*this, [](Dag& dag, Node* /*parent*/, Node* child, void* pv) -> int {
-				dag.DFSVisit(child, *(int*)pv);
+		std::ignore = node->VisitChildren(*this, [plus_one](Dag& dag, Node* /*parent*/, Node* child) -> int {
+				dag.DFSVisit(child, plus_one);
 				return 1;
-			},
-			&plus_one);
+			});
 	}
 
 	node->SetDfsOrder(++DFS_ORDER);
@@ -2364,7 +2388,7 @@ Dag::isCycle ()
 
 	//Detect cycle
 	for (auto & node : _nodes) {
-		if (node->VisitChildren(*this, [](Dag&, Node* parent, Node* child, void*) -> int {
+		if (node->VisitChildren(*this, [](Dag&, Node* parent, Node* child) -> int {
 				if (child->GetDfsOrder() >= parent->GetDfsOrder()) {
 		#ifdef REPORT_CYCLE
 					debug_printf(DEBUG_QUIET, "Cycle in the graph possibly involving nodes %s and %s\n",
@@ -2373,7 +2397,7 @@ Dag::isCycle ()
 					return 1; // increment the cycle count
 				}
 				return 0;
-			}, nullptr)) {
+			})) {
 			// the return value of VisitChildren is the number of children with _dfsOrder
 			// greater that that of their parents.  If *any* have this, then we have a cycle.
 			cycle = true;
@@ -3122,15 +3146,13 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 {
 	for (auto & node : _nodes) {
 		if (node->GetNodeName()) {
-			node->VisitChildren(*this, [](Dag&, Node* parent, Node* child, void* pv) -> int {
-					FILE* fp = (FILE*)pv;
+			node->VisitChildren(*this, [temp_dot_file](Dag&, Node* parent, Node* child) -> int {
 					const char * child_name = child->GetNodeName();
 					if (child_name) {
-						fprintf(fp, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name);
+						fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name);
 					}
 					return 1;
-				},
-				temp_dot_file);
+				});
 		}
 	}
 	
@@ -3661,7 +3683,11 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err)
 			SetStatus(DAG_STATUS_NODE_FAILED);
 		}
 		//If no post script ran then set all descendants to Futile
-		if ( ! ranPostScript) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
+		if ( ! ranPostScript) {
+			_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+					return dag.StartIfReady(child);
+				});
+		}
 	} else {
 		// We have more submit attempts left, put this node back into the ready queue.
 		dprintf(D_TEST, "Node %s submit failed %d/%d. RETRYING NODE SUBMISSION\n",
@@ -4205,7 +4231,7 @@ void Dag::SetNodePriorities()
 
 
 bool
-Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
+Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta) {
 	// Verify we have parent(s)/child(ren) to make dependencies
 	if (parents.empty() || children.empty()) {
 		debug_printf(DEBUG_NORMAL, "ERROR: No %s%s%s nodes provided for dependency creation\n",
@@ -4309,15 +4335,20 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 		});
 
 		if (share_edge) {
-			// Collect only children not already present in the shared edge
+			// Collect children not yet present, and (only when this declaration is
+			// strong) children already present via a weak arc that needs upgrading.
 			std::vector<Node*> new_children;
+			std::vector<Node*> upgrade_children;
 			for (auto c : children) {
 				if ( ! edge_table[check_edge_id].Contains(c->GetNodeID())) {
 					new_children.push_back(c);
+				} else if ( ! (meta & ARC_WEAK) &&
+				           edge_table[check_edge_id].GetArc(c->GetNodeID()).IsWeak()) {
+					upgrade_children.push_back(c);
 				}
 			}
 
-			if (new_children.empty()) { return true; }
+			if (new_children.empty() && upgrade_children.empty()) { return true; }
 
 			// Single COW if other nodes also hold a reference; otherwise extend in-place
 			ASSERT(edge_table[check_edge_id].GetRefCount() >= parents.size());
@@ -4333,14 +4364,23 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 				}
 			}
 
-			// new_children only holds ids not already in target (Contains() filtered above)
-			// and has no internal duplicates (subset of the parser-deduplicated children
-			// list), so appending here needs no further dedupe scan.
 			Edge& target = edge_table[id];
-			target.Reserve(target.size() + new_children.size());
-			for (auto c : new_children) {
-				std::ignore = target.AppendArc(c->GetNodeID());
-				update_parents(c, parents);
+
+			if ( ! upgrade_children.empty()) {
+				for (auto c : upgrade_children) {
+					target.GetArc(c->GetNodeID()).metadata &= ~ARC_WEAK;
+				}
+			}
+
+			if ( ! new_children.empty()) {
+				// new_children only holds ids not already in target (Contains() filtered above)
+				// and has no internal duplicates (subset of the parser-deduplicated children
+				// list), so appending here needs no further dedupe scan.
+				target.Reserve(target.size() + new_children.size());
+				for (auto c : new_children) {
+					std::ignore = target.AppendArc(c->GetNodeID(), meta);
+					update_parents(c, parents);
+				}
 			}
 
 			return true;
@@ -4357,7 +4397,7 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 			// edge is brand-new and children is already deduplicated, so no dedupe scan needed
 			edge.Reserve(children.size());
 			for (auto c : children) {
-				std::ignore = edge.AppendArc(c->GetNodeID());
+				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
 				update_parents(c, parents);
 			}
 
@@ -4374,7 +4414,7 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 		if (curr == NO_EDGE_ID) {
 			if (children.size() == 1) {
 				Node* child = children[0];
-				id = edge_table.AddDirectArc(child->GetNodeID());
+				id = edge_table.AddDirectArc(child->GetNodeID(), meta);
 				ASSERT(EdgeTable::IsDirect(id));
 				p->SetEdgeID(id);
 				update_parent(child, p->GetNodeID());
@@ -4389,19 +4429,21 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 				Arc& direct = edge_table.GetDirectArc(curr);
 				// Do manual updates if same child is specified and don't promote to multiple
 				if (direct.id == children[0]->GetNodeID()) {
+					// Strongest-wins: a strong re-declaration upgrades an existing weak arc.
+					if ( ! (meta & ARC_WEAK) && direct.IsWeak()) { direct.metadata &= ~ARC_WEAK; }
 					continue;
 				}
 			}
 
 			id = edge_table.PromoteDirect(curr);
 			ASSERT(id > 0); // promoted arc must become a multi-child edge
-		} else {
-			if (edge_table[curr].GetRefCount() > 1) {
+		} else if (edge_table[curr].GetRefCount() > 1) {
 				// Copy-On-Write (COW) edge (i.e. other nodes reference this edge)
 				Edge copy = edge_table[curr]; // local copy — stable after emplace_back
 				--edge_table[curr];
 				id = edge_table.NewEdge(&copy);
-			} else { id = curr; }
+		} else {
+			id = curr;
 		}
 
 		ASSERT(id != NO_EDGE_ID);
@@ -4415,9 +4457,9 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children) {
 		node_id_t pid = p->GetNodeID();
 		for (auto c : children) {
 			if (fresh_edge) {
-				std::ignore = edge.AppendArc(c->GetNodeID());
+				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
 			} else {
-				std::ignore = edge.AddArc(c->GetNodeID());
+				std::ignore = edge.AddArc(c->GetNodeID(), meta); // strongest-wins handled inside AddArc
 			}
 			update_parent(c, pid);
 		}
