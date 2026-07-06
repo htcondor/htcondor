@@ -397,9 +397,13 @@ main_init( int, char* argv[] )
 								  command_coalesce_slots,
 								  "command_coalesce_slots", DAEMON );
 
+	auto level = DAEMON;
+	if( param_boolean( "COMMAND_DATA_SLOT_IS_ADMINISTRATOR", false ) ) {
+		level = ADMINISTRATOR;
+	}
 	daemonCore->Register_Command( COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT",
 								  command_data_slot,
-								  "command_data_slot", DAEMON );
+								  "command_data_slot", level );
 
 		// ex-OWNER permission commands, now ADMINISTRATOR
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
