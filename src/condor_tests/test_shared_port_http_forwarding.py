@@ -272,6 +272,7 @@ class TestSharedPortHTTPForwarding:
 
     def test_https_is_forwarded(self, shared_port_port, domain_socket_server, ssl_context):
         client_ctx = ssl.create_default_context()
+        client_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         client_ctx.check_hostname = False
         client_ctx.verify_mode = ssl.CERT_NONE
 
