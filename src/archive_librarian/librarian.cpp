@@ -6,6 +6,7 @@
 
 #include "librarian.h"
 #include "SavedQueries.h"
+#include "to_string_si_units.h"
 
 #include <algorithm>
 #include <chrono>
@@ -472,7 +473,14 @@ void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_fi
 static std::uintmax_t get_database_size(const std::string& db_path) {
     std::error_code ec;
     auto size = std::filesystem::file_size(db_path, ec);
-    return ec ? 0 : size;
+
+    if (ec) {
+        dprintf(D_ERROR, "ERROR: Failed to get database size: %s\n",
+                ec.message().c_str());
+        return 0;
+    }
+
+    return size;
 }
 
 bool Librarian::cleanupDatabaseIfNeeded() {
@@ -482,21 +490,65 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     long long sizeLimit = config[conf::ll::DBMaxSizeBytes];
     size_t highWatermark = static_cast<size_t>(sizeLimit * config[conf::dbl::DBHighWaterMark]);
 
-    if (currentSize > highWatermark) {
-        size_t lowWatermark   = static_cast<size_t>(sizeLimit * config[conf::dbl::DBLowWaterMark]);
-        size_t bytesToDelete  = currentSize - lowWatermark;
-        int numJobsToDelete   = static_cast<int>(
-            std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
-        int numFilesToDelete = 1;
-        if (EstimatedJobsPerFileInArchive_ > 0) {
-            numFilesToDelete = static_cast<int>(
-                std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
-        }
+    dprintf(D_FULLDEBUG, "cleanupDatabaseIfNeeded: size=%s, high water mark=%s (limit=%s, fraction=%.2f)\n",
+            to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
+            to_string_byte_units(sizeLimit).c_str(), config[conf::dbl::DBHighWaterMark]);
 
-        garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
-        if ( ! garbageCollected) {
-            dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
-        }
+    if (currentSize <= highWatermark) {
+        return false;
+    }
+
+    auto now = std::chrono::steady_clock::now();
+    if (now < nextGCAttempt_) {
+        auto remaining = std::chrono::duration_cast<std::chrono::seconds>(nextGCAttempt_ - now).count();
+        dprintf(D_FULLDEBUG, "Database over the high water mark (%s > %s), but skipping garbage "
+                "collection; a prior pass didn't shrink the file, backing off for another "
+                "%lld more second(s).\n",
+                to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
+                (long long)remaining);
+        return false;
+    }
+
+    size_t lowWatermark   = static_cast<size_t>(sizeLimit * config[conf::dbl::DBLowWaterMark]);
+    size_t bytesToDelete  = currentSize - lowWatermark;
+    int numJobsToDelete   = static_cast<int>(
+        std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
+    int numFilesToDelete = 1;
+    if (EstimatedJobsPerFileInArchive_ > 0) {
+        numFilesToDelete = static_cast<int>(
+            std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
+    }
+
+    dprintf(D_STATUS, "Database over high water mark (%s > %s); starting garbage collection. "
+            "Target: shrink to %s (~%d job(s) across ~%d file(s), est. %.1f bytes/job, "
+            "%d job(s)/file).\n",
+            to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
+            to_string_byte_units(lowWatermark).c_str(), numJobsToDelete, numFilesToDelete,
+            EstimatedBytesPerJobInDatabase_, EstimatedJobsPerFileInArchive_);
+
+    garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
+    if ( ! garbageCollected) {
+        dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
+    }
+
+    // Judge success by whether the file actually got smaller, not just whether the
+    // delete transaction committed -- a GC pass can "succeed" with zero eligible rows
+    // (nothing marked deleted yet) or with rows deleted but no space reclaimed (e.g.
+    // incremental_vacuum unavailable). Either way, retrying every single cycle just
+    // burns CPU and writes for no benefit, so back off until it's worth trying again.
+    size_t sizeAfter = get_database_size(config[conf::str::DBPath]);
+    if (sizeAfter >= currentSize) {
+        auto backoff = std::chrono::seconds(config[conf::i::GCBackoffSeconds]);
+        nextGCAttempt_ = now + backoff;
+        dprintf(D_STATUS, "Garbage collection did not reduce database size (%s -> %s); backing "
+                "off further attempts for %lld second(s) (LIBRARIAN_GC_BACKOFF_SECONDS).\n",
+                to_string_byte_units(currentSize).c_str(), to_string_byte_units(sizeAfter).c_str(),
+                (long long)backoff.count());
+    } else {
+        dprintf(D_STATUS, "Garbage collection reduced database size: %s -> %s (%s reclaimed).\n",
+                to_string_byte_units(currentSize).c_str(), to_string_byte_units(sizeAfter).c_str(),
+                to_string_byte_units(currentSize - sizeAfter).c_str());
+        nextGCAttempt_ = {};
     }
 
     return garbageCollected;
@@ -691,6 +743,7 @@ void Librarian::reconfig(bool startup) {
 
     config[i::DBMaxJobCacheSize]          = param_integer("LIBRARIAN_MAX_JOBS_CACHED", 10'000);
     config[i::StatusRetentionSeconds]     = param_integer("LIBRARIAN_STATUS_RETENTION_SECONDS", 300);
+    config[i::GCBackoffSeconds]           = param_integer("LIBRARIAN_GC_BACKOFF_SECONDS", 1800);
 
     param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", config[ll::MaxRecordsPerUpdate], true,
                    100'000);

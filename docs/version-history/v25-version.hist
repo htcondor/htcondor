@@ -4,6 +4,10 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- The Archive Librarian now properly reduces the database size
+  during garbage collection.
+  :jira:`3826`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs
