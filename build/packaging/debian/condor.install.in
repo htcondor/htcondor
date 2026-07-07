@@ -6,7 +6,6 @@ usr/bin/classad_functional_tester
 usr/bin/classad_version
 usr/bin/condor_adstash
 usr/bin/condor_check_config
-usr/bin/condor_check_password
 usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue

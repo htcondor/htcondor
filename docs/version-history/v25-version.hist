@@ -1,5 +1,9 @@
 *** 25.13.0 features
 
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs
