@@ -1337,6 +1337,12 @@ fi
 # configuration
 
 %changelog
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.12-1
+- All changes in 24.12.22
+
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.22-1
+- Fix rare job router crash when removing a recently routed job
+
 * Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.22-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
