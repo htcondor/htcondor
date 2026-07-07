@@ -764,6 +764,16 @@ The purpose of the librarian's database is:
 2. To allow client tools to quickly locate a full archived record assuming
    the associated file has not been rotated out.
 
+To enable simply set the following in the configuration
+
+.. code-block:: condor-config
+
+    # Version conditional to prevent older versions from failing
+    # to read configuration
+    if version >= 25.11.0
+        use feature:librarian
+    endif
+
 The following tools will automatically utilize the librarian in certain cases
 when the Access Point is configured with :config:`USING_LIBRARIAN = True`
 

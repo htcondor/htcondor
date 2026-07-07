@@ -44,6 +44,18 @@ enable historical archive record indexing to a database by setting :macro:`use f
     reduce the database size to or below ``1GB`` during garbage collection. Default is
     ``0.8``.
 
+    The database file uses SQLite's incremental auto-vacuum mode so that garbage
+    collection actually shrinks the file on disk, rather than only freeing internal
+    space for reuse. The first time the archive librarian starts against an existing
+    database that predates this mode, it performs a one-time full ``VACUUM`` to convert
+    it; this copies the entire database and can take a while for a large file, but only
+    happens once.
+
+:macro-def:`LIBRARIAN_GC_BACKOFF_SECONDS`
+    An integer value representing how long, in seconds, to wait before retrying garbage
+    collection after a pass that did not reduce the database's file size. Defaults to
+    ``1800`` (30 minutes).
+
 :macro-def:`LIBRARIAN_MAX_JOBS_CACHED`
     An integer value representing the maximum number of job id information to database
     reference id's to cache in memory. Defaults to ``10,000``.
