@@ -1293,6 +1293,15 @@ fi
 # configuration
 
 %changelog
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.22-1
+- Fix rare job router crash when removing a recently routed job
+
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.22-1
+- Fix a bug that could cause the arc_gahp to crash
+- Reduce the size of Python wheels by 84% by removing debug symbols
+- Fix issue when tools could infinitely loop when using trust on first use
+- HTCondor tarballs now contain Apptainer 1.5.2
+
 * Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.21-1
 - Fix rare EP crash when using a custom docker wrapper script
 
