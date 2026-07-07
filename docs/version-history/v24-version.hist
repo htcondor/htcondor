@@ -1,14 +1,14 @@
 *** 24.0.22 features
 
+- HTCondor tarballs now contain `Apptainer 1.5.2 <https://github.com/apptainer/apptainer/releases/tag/v1.5.2>`_
+
+*** 24.0.22 bugs
+
 - *Security Item*: This release of HTCondor fixes a security-related bug described at
 
   - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
 
   :jira:`3808`
-
-- HTCondor tarballs now contain `Apptainer 1.5.2 <https://github.com/apptainer/apptainer/releases/tag/v1.5.2>`_
-
-*** 24.0.22 bugs
 
 - Fixed a bug that can cause the *arc_gahp* to crash.
   :jira:`3789`
