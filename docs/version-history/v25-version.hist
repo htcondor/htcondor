@@ -1,4 +1,4 @@
-*** 25.12.1 features
+*** 25.12.2 features
 
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
@@ -66,7 +66,7 @@
   reboot.
   :jira:`3766`
 
-*** 25.12.1 bugs
+*** 25.12.2 bugs
 
 - Fixed a bug that could cause file descriptor leaks in *blahpd*.
   :jira:`3786`
