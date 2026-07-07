@@ -1562,6 +1562,13 @@ UniShadow::start_staging_only_conversation(
 			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
 			access_point = split(access_point, "#")[0];
 			catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
+
+			// This is kind of a hack, since the schedd already computed
+			// the catalog ID, but I'm not sure we want the simple-to-ID
+			// map in every job ad.
+			auto c = computeCatalogID( * jobAd, internalToSimpleNameMap[cifName] );
+			if(! c) { EXCEPT("Failed to compute catalog ID."); }
+			catalogAd->InsertAttr( ATTR_CATALOG_ID, * c );
 		}
 
 		catalogAds.push_back( catalogAd );

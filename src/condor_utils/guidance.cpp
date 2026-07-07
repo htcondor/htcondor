@@ -128,3 +128,38 @@ makeCIFName(
     );
     return fullCIFName;
 }
+
+
+std::optional< std::string >
+computeCatalogID(
+	const classad::ClassAd & jobAd, const std::string & catalogName
+) {
+	static const std::string empty;
+
+	//
+	// The catalog ID has exactly the same contraints as the internal
+	// name produced by makeCIFName(), except that we _don't_ want the
+	// address of the startd (or the content-hash (see FIXME in that
+	// function)).
+	//
+	auto internalName = makeCIFName( jobAd, catalogName, empty, empty );
+	if(! internalName) {
+		return std::nullopt;
+	}
+
+	// The internal name is rather long and contains two hashes
+	// that will always be the same.  Hash it again; this both
+	// compresses it and renders it perfectly opaque, which
+	// removes an attractive nuisance.
+
+	unsigned int mdLength = 0;
+	unsigned char messageDigest[EVP_MAX_MD_SIZE];
+	if(! AWSv4Impl::doSha256( * internalName, messageDigest, & mdLength )) {
+		return std::nullopt;
+	}
+
+	std::string catalogID;
+	AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, catalogID );
+
+	return catalogID;
+}
