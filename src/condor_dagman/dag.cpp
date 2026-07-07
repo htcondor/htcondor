@@ -4426,7 +4426,7 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, un
 			fresh_edge = true;
 		} else if (EdgeTable::IsDirect(curr)) {
 			if (children.size() == 1) {
-				Arc& direct = edge_table.GetDirectArc(curr);
+				DagArc& direct = edge_table.GetDirectArc(curr);
 				// Do manual updates if same child is specified and don't promote to multiple
 				if (direct.id == children[0]->GetNodeID()) {
 					// Strongest-wins: a strong re-declaration upgrades an existing weak arc.

@@ -176,8 +176,8 @@ public:
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
-	// Make Edge/Arc connections between parent and child nodes. `meta` is the
-	// Arc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
+	// Make Edge/DagArc connections between parent and child nodes. `meta` is the
+	// DagArc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
 	// callers are responsible for translating dependency strength into this bitmask.
 	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta = 0);
 	// Remove duplicate edges between nodes

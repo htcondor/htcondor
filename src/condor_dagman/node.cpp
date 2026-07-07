@@ -234,7 +234,7 @@ Node::PrintChildren(std::string& buf, size_t bufmax, const Dag* dag, const char*
 
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
-			Arc& direct = dag->edge_table.GetDirectArc(m_children);
+			DagArc& direct = dag->edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag->FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
@@ -307,7 +307,7 @@ void
 Node::NotifyChildren(Dag& dag, const std::function<bool(Dag& dag, Node* child)>& fn) {
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
-			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			DagArc& direct = dag.edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);
@@ -345,7 +345,7 @@ Node::SetDescendantsToFutile(Dag& dag, const std::function<bool(Dag& dag, Node* 
 
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
-			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			DagArc& direct = dag.edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 
@@ -379,7 +379,7 @@ Node::CascadeFutile(Dag& dag) {
 
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
-			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			DagArc& direct = dag.edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 
@@ -410,7 +410,7 @@ Node::AllChildrenWeak(const Dag* dag) const {
 		return dag->edge_table.GetDirectArc(m_children).IsWeak();
 	}
 
-	return std::ranges::all_of(dag->edge_table[m_children], &Arc::IsWeak);
+	return std::ranges::all_of(dag->edge_table[m_children], &DagArc::IsWeak);
 }
 
 //---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ Node::VisitChildren(Dag& dag, const std::function<int(Dag& dag, Node* parent, No
 
 	if (m_children != NO_EDGE_ID) {
 		if (EdgeTable::IsDirect(m_children)) {
-			Arc& direct = dag.edge_table.GetDirectArc(m_children);
+			DagArc& direct = dag.edge_table.GetDirectArc(m_children);
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 			ASSERT(child != nullptr);

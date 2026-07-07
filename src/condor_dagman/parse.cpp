@@ -3336,7 +3336,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
 	children.erase(duplicate_children.begin(), duplicate_children.end());
 
-	// Arc metadata for the requested dependency strength, passed straight through
+	// DagArc metadata for the requested dependency strength, passed straight through
 	// to Dag::Connect() -- ARC_WEAK is only meaningful on children-edge arcs.
 	unsigned int meta = cmd->IsWeak() ? ARC_WEAK : 0;
 

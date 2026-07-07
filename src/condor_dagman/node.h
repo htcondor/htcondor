@@ -456,7 +456,7 @@ private:
 	status_t _Status{STATUS_READY}; // Current node status
 
 	node_id_t _nodeID{NO_ID}; // This node's unique node ID
-	edge_id_t m_children{NO_EDGE_ID}; // Reference to children Edge/Arc
+	edge_id_t m_children{NO_EDGE_ID}; // Reference to children Edge/DagArc
 	connect_id_t m_parents{NO_ID};   // single parent: node_id_t; multiple parents: edge_id_t into m_wait_edges
 
 	int retry_max{0}; // Maximum number of retry attempts

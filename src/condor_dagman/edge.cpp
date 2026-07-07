@@ -27,7 +27,7 @@
 #include <numeric>
 
 size_t
-Edge::AddArc(const Arc& arc) {
+Edge::AddArc(const DagArc& arc) {
 	return AddArc(arc.id, arc.metadata);
 }
 
@@ -35,7 +35,7 @@ Edge::AddArc(const Arc& arc) {
 size_t
 Edge::AddArc(const node_id_t id, const unsigned int meta) {
 	ASSERT(id != NO_ID);
-	auto it = std::ranges::find(m_arcs, id, &Arc::id);
+	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 
 	if (it == m_arcs.end()) {
 		m_arcs.emplace_back(id, meta);
@@ -60,9 +60,9 @@ Edge::AppendArc(const node_id_t id, const unsigned int meta) {
 }
 
 
-Arc&
+DagArc&
 Edge::GetArc(const node_id_t id) {
-	auto it = std::ranges::find(m_arcs, id, &Arc::id);
+	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 
 	if (it != m_arcs.end()) {
 		return *it;
@@ -74,14 +74,14 @@ Edge::GetArc(const node_id_t id) {
 
 bool
 Edge::Contains(const node_id_t id) {
-	auto it = std::ranges::find(m_arcs, id, &Arc::id);
+	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 	return it != m_arcs.end();
 }
 
 
 bool
 Edge::MarkDone(node_id_t parent_id) {
-	auto it = std::ranges::find(m_arcs, parent_id, &Arc::id);
+	auto it = std::ranges::find(m_arcs, parent_id, &DagArc::id);
 	if (it == m_arcs.end()) { return false; }
 	if ( ! (it->metadata & ARC_DONE)) {
 		it->metadata |= ARC_DONE;
@@ -154,7 +154,7 @@ EdgeTable::AddDirectArc(const node_id_t id, const unsigned int meta) {
 }
 
 
-Arc&
+DagArc&
 EdgeTable::GetDirectArc(const edge_id_t id) {
 	ASSERT(EdgeTable::IsDirect(id));
 	size_t idx = EdgeTable::DirectIdToOffset(id);
@@ -180,7 +180,7 @@ EdgeTable::GetWaitEdge(const edge_id_t id) {
 std::vector<size_t>
 Edge::CompactPool() {
 	std::vector<size_t> mapping(m_arcs.size(), SIZE_MAX);
-	std::vector<Arc> compacted;
+	std::vector<DagArc> compacted;
 	for (size_t i = 0; i < m_arcs.size(); ++i) {
 		if (m_arcs[i].id != NO_ID) {
 			mapping[i] = compacted.size();
@@ -206,7 +206,7 @@ EdgeTable::ResetWaitEdges() {
 
 edge_id_t
 EdgeTable::PromoteDirect(const edge_id_t id) {
-	Arc& direct = GetDirectArc(id);
+	DagArc& direct = GetDirectArc(id);
 	edge_id_t new_eid = NewEdge();
 	Edge& edge = GetEdge(new_eid);
 	std::ignore = edge.AddArc(direct);
