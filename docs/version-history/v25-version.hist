@@ -4,6 +4,11 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
+  off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
+  there was nowhere else to mount it.
+  :jira:`3768`
+
 *** 25.13.0 bugs
 
 *** 25.0.13 bugs
