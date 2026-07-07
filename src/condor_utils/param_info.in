@@ -4800,9 +4800,7 @@ default : @fin
         0,
         sum(
             evalInEachContext(
-                   member(Catalog, RequestedCatalogs)
-                && string(TARGET[CatalogScopeType]) == CatalogScope
-                && split(GlobalJobID, "#")[0] == AccessPoint
+                member(CatalogID, RequestedCatalogIDs)
                 ? CatalogSize : 0,
                 catalogs
             )
