@@ -299,6 +299,10 @@ Singularity::setup(ClassAd &machineAd,
 		if (job_iwd != execute_dir) {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(target_dir);
+
+			sing_args.AppendArg("-B");
+			sing_args.AppendArg(slot_dir + ":" + "/condor_scratch");
+			job_env.SetEnv("_CONDOR_SCRATCH_DIR", "/condor_scratch/scratch");
 		} else {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(pwd);
