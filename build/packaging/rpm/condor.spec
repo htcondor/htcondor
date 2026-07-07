@@ -1319,6 +1319,11 @@ fi
 # configuration
 
 %changelog
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 25.11.1-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
+- Fixed bug where the negotiator's accountant log grows without bound
+
 * Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.11.0-1
 - Prevent one user's many file transfers from halting matches for all users
 - condor_watch_q will gather DAGs that started after it did

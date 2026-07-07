@@ -1,13 +1,17 @@
 *** 25.11.1 bugs
 
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
+
+  :jira:`3808`
+
 - Fixed a bug that could cause the *condor_negotiator* accountant log
   (``Accountantnew.log``) to grow without bound.  Records for slots that
   were no longer claimed were no longer being removed during each
   negotiation cycle, so they accumulated indefinitely.  This bug was
   introduced in HTCondor 25.11.0.
   :jira:`3795`
-
-*** 25.0.12 bugs
 
 *** 25.11.0 features
 
