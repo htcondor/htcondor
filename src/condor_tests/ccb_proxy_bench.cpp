@@ -25,6 +25,7 @@
 #include "reli_sock.h"
 #include "classad_oldnew.h"
 #include "condor_classad.h"
+#include <tuple>
 
 #ifdef WIN32
 
@@ -52,7 +53,7 @@ static const int BLAST_BUF = 256 * 1024;
 static double blast( int fd, int seconds )
 {
 	int flags = fcntl(fd, F_GETFL, 0);
-	if( flags >= 0 ) { fcntl(fd, F_SETFL, flags | O_NONBLOCK); }
+	if( flags >= 0 ) { std::ignore = fcntl(fd, F_SETFL, flags | O_NONBLOCK); }
 
 	std::vector<char> out(BLAST_BUF, 'x');
 	std::vector<char> in(BLAST_BUF);
