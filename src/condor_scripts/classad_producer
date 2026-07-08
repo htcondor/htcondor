@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+# To start a local RabbitMQ broker for testing:
+#   docker run -d --name rabbitmq -p 5672:5672 rabbitmq:4
+# Access at localhost:5672 with login guest:guest
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import logging
+import socket
+import sys
+import time
+from collections.abc import Iterator
+
+DEFAULT_ENCODING = "utf-8"
+
+try:
+    import classad2 as classad
+except ImportError:
+    print("Failed to find HTCondor Python bindings (classad2).", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    import pika
+except ImportError:
+    print("Failed to find pika.", file=sys.stderr)
+    sys.exit(1)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Read a ClassAd from a file and send it to a RabbitMQ queue."
+    )
+    parser.add_argument(
+        "--input", required=True, metavar="FILE", help="Path to ClassAd file to read"
+    )
+    parser.add_argument(
+        "--queue", required=True, metavar="NAME", help="RabbitMQ queue name"
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        metavar="HOST",
+        help="RabbitMQ host (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5672,
+        metavar="PORT",
+        help="RabbitMQ port (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--username",
+        default="guest",
+        metavar="USER",
+        help="RabbitMQ username (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--password",
+        default="guest",
+        metavar="PASS",
+        help="RabbitMQ password (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--expiration",
+        type=int,
+        default=None,
+        metavar="MS",
+        help="Message TTL in milliseconds (default: no expiration)",
+    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    return parser.parse_args()
+
+
+# TODO: Query ads
+def read_classad(path: str) -> classad.ClassAd:
+    with open(path) as f:
+        return classad.parseOne(f)
+
+
+@contextlib.contextmanager
+def open_mq_channel(
+    host: str, port: int, username: str, password: str
+) -> Iterator[pika.adapters.blocking_connection.BlockingChannel]:
+    # PlainCredentials uses username/password (PLAIN mechanism). For production
+    # deployments consider ExternalCredentials with TLS client certificates
+    # or reading and passing a token as the password.
+    # See: https://pika.readthedocs.io/en/stable/modules/credentials.html
+    credentials = pika.PlainCredentials(username, password)
+    params = pika.ConnectionParameters(host=host, port=port, credentials=credentials)
+    connection = pika.BlockingConnection(params)
+    try:
+        yield connection.channel()
+    finally:
+        connection.close()
+
+
+def main() -> None:
+    args = parse_args()
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.WARNING,
+        format="%(levelname)s: %(message)s",
+    )
+
+    try:
+        ad = read_classad(args.input)
+    except OSError:
+        logging.exception("Could not read input file")
+        sys.exit(1)
+    except classad.ClassAdException:
+        logging.exception("Could not parse ClassAd")
+        sys.exit(1)
+
+    try:
+        with open_mq_channel(
+            args.host, args.port, args.username, args.password
+        ) as channel:
+            # Create the queue if it doesn't already exist.
+            # durable=False (the default) means the queue does not survive a broker restart.
+            channel.queue_declare(queue=args.queue)
+
+            # Enable publisher confirms so that basic_publish raises
+            # UnroutableError if the broker cannot deliver the message.
+            channel.confirm_delivery()
+
+            properties = pika.BasicProperties(
+                content_type="text/plain",
+                content_encoding=DEFAULT_ENCODING,
+                timestamp=int(time.time()),
+                expiration=str(args.expiration)
+                if args.expiration is not None
+                else None,
+                # x-source-host identifies the sender. To route to a specific
+                # consumer, consider adding an x-intended-recipient header and
+                # having consumers filter on it (requires a headers exchange).
+                headers={"x-source-host": socket.gethostname()},
+            )
+            # reply_to can be also be set in the properties to a callback
+            # queue name to enable an RPC pattern: the consumer sends an
+            # acknowledgement back to that queue, allowing the producer to
+            # confirm the ad was received and processed.
+
+            channel.basic_publish(
+                exchange="",
+                routing_key=args.queue,
+                body=str(ad).encode(DEFAULT_ENCODING),
+                properties=properties,
+                mandatory=True,
+            )
+    except pika.exceptions.UnroutableError:
+        logging.error("Message could not be routed to queue '%s'", args.queue)
+        sys.exit(1)
+    except pika.exceptions.AMQPConnectionError:
+        logging.exception(
+            "Could not connect to RabbitMQ at %s:%d", args.host, args.port
+        )
+        sys.exit(1)
+
+    print(f"Sent ClassAd to queue '{args.queue}' on {args.host}:{args.port}.")
+
+
+if __name__ == "__main__":
+    main()

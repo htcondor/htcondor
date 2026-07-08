@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+
+# To start a local RabbitMQ broker for testing:
+#   docker run -d --name rabbitmq -p 5672:5672 rabbitmq:4
+# Access at localhost:5672 with login guest:guest
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import logging
+import sys
+import time
+from collections.abc import Iterator
+
+DEFAULT_ENCODING = "utf-8"
+
+try:
+    import classad2 as classad
+except ImportError:
+    print("Failed to find HTCondor Python bindings (classad2).", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    import pika
+except ImportError:
+    print("Failed to find pika.", file=sys.stderr)
+    sys.exit(1)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Continuously consume ClassAds from a RabbitMQ queue and print them."
+    )
+    parser.add_argument(
+        "--queue", required=True, metavar="NAME", help="RabbitMQ queue name"
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        metavar="HOST",
+        help="RabbitMQ host (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5672,
+        metavar="PORT",
+        help="RabbitMQ port (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--username",
+        default="guest",
+        metavar="USER",
+        help="RabbitMQ username (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--password",
+        default="guest",
+        metavar="PASS",
+        help="RabbitMQ password (default: %(default)s)",
+    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    return parser.parse_args()
+
+
+@contextlib.contextmanager
+def open_mq_channel(
+    host: str, port: int, username: str, password: str
+) -> Iterator[pika.adapters.blocking_connection.BlockingChannel]:
+    # PlainCredentials uses username/password (PLAIN mechanism). For production
+    # deployments consider ExternalCredentials with TLS client certificates
+    # or reading and passing a token as the password.
+    # See: https://pika.readthedocs.io/en/stable/modules/credentials.html
+    credentials = pika.PlainCredentials(username, password)
+    params = pika.ConnectionParameters(host=host, port=port, credentials=credentials)
+    connection = pika.BlockingConnection(params)
+    try:
+        yield connection.channel()
+    finally:
+        connection.close()
+
+
+def main() -> None:
+    args = parse_args()
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.WARNING,
+        format="%(levelname)s: %(message)s",
+    )
+
+    def on_message(
+        channel: pika.adapters.blocking_connection.BlockingChannel,
+        method_frame: pika.spec.Basic.Deliver,
+        properties: pika.spec.BasicProperties,
+        body: bytes,
+    ) -> None:
+        logging.debug("Raw message body: %r", body)
+        logging.debug("Message properties: %r", properties)
+
+        # properties.headers could carry an x-intended-recipient set by the
+        # producer. If consumer-side filtering is needed in the future, check
+        # that header here before processing.
+
+        if properties.timestamp is not None and properties.expiration is not None:
+            if time.time() > properties.timestamp + int(properties.expiration) / 1000:
+                logging.warning("Received expired message, discarding")
+                channel.basic_ack(method_frame.delivery_tag)
+                return
+
+        # On failure to decode, tell the broker:
+        # - we failed to process this message, and
+        # - do not requeue it (would lead to infinite loop of failure)
+        try:
+            encoding = properties.content_encoding or DEFAULT_ENCODING
+            body = body.decode(encoding)
+            ad = classad.ClassAd(body)
+        except (UnicodeDecodeError, LookupError):
+            channel.basic_nack(method_frame.delivery_tag, requeue=False)
+            logging.exception(
+                "Could not decode message body with encoding %r",
+                encoding,
+            )
+            return
+        except classad.ClassAdException:
+            channel.basic_nack(method_frame.delivery_tag, requeue=False)
+            logging.exception("Could not parse ClassAd:\n%s", body)
+            return
+        channel.basic_ack(method_frame.delivery_tag)
+
+        # TODO: Advertise ads
+        print(ad)
+
+    try:
+        with open_mq_channel(
+            args.host, args.port, args.username, args.password
+        ) as channel:
+            # Create the queue if it doesn't already exist.
+            # durable=False (the default) means the queue does not survive a broker restart.
+            channel.queue_declare(queue=args.queue)
+
+            channel.basic_consume(queue=args.queue, on_message_callback=on_message)
+            try:
+                channel.start_consuming()
+            except KeyboardInterrupt:
+                print("\nCaught Ctrl-C, exiting...")
+                channel.stop_consuming()
+    except pika.exceptions.AMQPConnectionError:
+        logging.exception(
+            "Could not connect to RabbitMQ at %s:%d", args.host, args.port
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
