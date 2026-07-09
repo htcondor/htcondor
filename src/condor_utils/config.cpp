@@ -3530,10 +3530,20 @@ static const char * evaluate_macro_func (
 				*fmt++ = 0;
 				const char * tmp_fmt = fmt;
 				printf_fmt_info fmt_info;
+				printf_fmt_info extra_info;
+				// The format string can come from untrusted config/environment,
+				// so it must be strictly validated before being handed to
+				// snprintf() as the format argument.  Reject anything that is
+				// not a single conversion of the expected numeric type.  In
+				// particular reject '%n' (which can write to memory) and any
+				// format with a second conversion specifier (which would consume
+				// an argument we don't pass).
 				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
 					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
 					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
 					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
+					|| (fmt_info.fmt_letter == 'n')
+					|| parsePrintfFormat(&tmp_fmt, &extra_info)
 					) {
 					EXCEPT( "%s macro: '%s' is not a valid format specifier!",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
@@ -3586,7 +3596,13 @@ static const char * evaluate_macro_func (
 				*fmt++ = 0;
 				const char * tmp_fmt = fmt;
 				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				printf_fmt_info extra_info;
+				// The format string can come from untrusted config/environment.
+				// Require exactly one string conversion and reject a second
+				// conversion specifier, which would consume an argument we
+				// don't pass (a trailing '%n' could even write to memory).
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING
+					|| parsePrintfFormat(&tmp_fmt, &extra_info)) {
 					EXCEPT( "$STRING macro: '%s' is not a valid format specifier!", fmt);
 				}
 			}
@@ -4250,10 +4266,20 @@ static ptrdiff_t evaluate_macro_func (
 			if (fmt) {
 				const char * tmp_fmt = fmt;
 				printf_fmt_info fmt_info;
+				printf_fmt_info extra_info;
+				// The format string can come from untrusted config/environment,
+				// so it must be strictly validated before being handed to
+				// formatstr() as the format argument.  Reject anything that is
+				// not a single conversion of the expected numeric type.  In
+				// particular reject '%n' (which can write to memory) and any
+				// format with a second conversion specifier (which would consume
+				// an argument we don't pass).
 				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
 					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
 					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
 					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
+					|| (fmt_info.fmt_letter == 'n')
+					|| parsePrintfFormat(&tmp_fmt, &extra_info)
 					) {
 					formatstr(errmsg, "%s error: '%s' is not a valid format specifier",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
@@ -4300,7 +4326,13 @@ static ptrdiff_t evaluate_macro_func (
 			if (fmt) {
 				const char * tmp_fmt = fmt;
 				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				printf_fmt_info extra_info;
+				// The format string can come from untrusted config/environment.
+				// Require exactly one string conversion and reject a second
+				// conversion specifier, which would consume an argument we
+				// don't pass (a trailing '%n' could even write to memory).
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING
+					|| parsePrintfFormat(&tmp_fmt, &extra_info)) {
 					formatstr(errmsg, "$STRING() error: '%s' is not a valid format specifier", fmt);
 					return -1;
 				}
