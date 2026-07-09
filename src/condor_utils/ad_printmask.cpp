@@ -273,7 +273,8 @@ display (FILE *file, ClassAd *al, ClassAd *target /* =NULL */)
 	display(temp, al, target);
 
 	if ( ! temp.empty()) {
-		fputs(temp.c_str(), file);
+		// a write failure here is not actionable from a display routine
+		std::ignore = fputs(temp.c_str(), file);
 		return 0;
 	}
 	return 1;

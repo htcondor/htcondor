@@ -7018,7 +7018,8 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
+			// if the attribute is absent, xcip stays empty (handled below)
+			std::ignore = job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).

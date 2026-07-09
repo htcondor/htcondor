@@ -784,7 +784,8 @@ int GetSchedulerCapabilities(int mask, ClassAd & reply)
 		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
 		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
 			std::string contents;
-			htcondor::readShortFile(helpfile, contents);
+			// on failure contents is empty, which we simply pass along
+			std::ignore = htcondor::readShortFile(helpfile, contents);
 			reply.Assign("ExtendedSubmitHelp", contents);
 		} else {
 			reply.Assign("ExtendedSubmitHelpFile", helpfile);
@@ -4971,7 +4972,8 @@ SetAttribute(const JOB_ID_KEY & jid, const char *attr_name,
 		return rc;
 	}
 
-	JobQueue->Lookup(key, job);
+	// job stays nullptr on a lookup miss, which is handled by the checks below
+	std::ignore = JobQueue->Lookup(key, job);
 	if (job && job->IsJobSet()) {
 		jobset = dynamic_cast<JobQueueJobSet *>(static_cast<JobQueueBase*>(job));
 		job = nullptr; // make sure we don't try and edit this as a JobQueueJob

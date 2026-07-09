@@ -430,7 +430,7 @@ ClassAd * BrokenItem::new_context_ad() const
 		for (auto const & attr : attrs) {
 			classad::Value val;
 			if (b_context->EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
-				ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
+				std::ignore = ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
 			}
 		}
 	}
