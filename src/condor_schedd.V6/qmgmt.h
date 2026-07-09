@@ -700,6 +700,7 @@ public:
 	ConstructClassAdLogTableEntry(class Scheduler * _schedd) : schedd(_schedd) {}
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
 	virtual void Delete(ClassAd* &val) const;
+	virtual LogRecord * NewLogRec(int optype) const;
 	class Scheduler* schedd = nullptr;
 };
 

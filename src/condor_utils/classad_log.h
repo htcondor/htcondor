@@ -49,6 +49,8 @@
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
 
+LogRecord* MakeLogRecord(int optype, const ConstructLogEntry & ctor);
+
 // This class is used to abstract creation and destruction of 
 // members of he ClassAdLog hashtable so that types derived from ClassAd
 // but that that are not known to this header file can be used. 
@@ -58,6 +60,7 @@ class ConstructClassAdLogTableEntry : public ConstructLogEntry
 public:
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new AD(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
+	virtual LogRecord * NewLogRec(int optype) const { return MakeLogRecord(optype, *this); }
 };
 
 template <>
@@ -67,6 +70,7 @@ public:
 	ConstructClassAdLogTableEntry() {}
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new ClassAd(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
+	virtual LogRecord * NewLogRec(int optype) const { return MakeLogRecord(optype, *this); }
 };
 
 // declare a default ClassAdLog table entry maker for the normal case
