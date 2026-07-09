@@ -612,30 +612,20 @@ Daemon::makeConnectedSocket( Stream::stream_type st,
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
-	// This function may be either blocking or non-blocking, depending on
-	// the flag that was passed in.
-
-	// If caller wants non-blocking with no callback function and we're
-	// creating the Sock, there's no way for the caller to finish the
-	// command (since it doesn't have the Sock), which makes no sense.
-	// Also, there's no one to delete the Sock.
-	ASSERT(!nonblocking || callback_fn);
+	// This is the blocking helper used by the public blocking versions of
+	// startCommand().  It creates a socket of the specified type, connects
+	// it, and runs the command to completion.
 
 	if (IsDebugLevel(D_COMMAND)) {
 		const char * addr = this->addr();
 		dprintf (D_COMMAND, "Daemon::startCommand(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
 	}
 
-	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
+	*sock = makeConnectedSocket(st,timeout,0,errstack,/*non_blocking=*/false);
 	if( ! *sock ) {
-		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
-			return StartCommandSucceeded;
-		} else {
-			return StartCommandFailed;
-		}
+		return StartCommandFailed;
 	}
 
 	// Prepare the request.
@@ -646,13 +636,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
-	if( callback_fn ) {
-		req.m_callback = [callback_fn, misc_data](bool success, Sock *s, CondorError *e,
-				const std::string &trust_domain, bool should_try_token_request) {
-			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, misc_data);
-		};
-	}
-	req.m_nonblocking = nonblocking;
+	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_preferred_token = m_preferred_token;
@@ -704,9 +688,8 @@ Sock*
 Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
-	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -729,9 +712,8 @@ Sock*
 Daemon::startCommand( int cmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
-	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -747,31 +729,6 @@ Daemon::startCommand( int cmd, Stream::stream_type st, time_t timeout, CondorErr
 	}
 	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d",rc);
 	return NULL;
-}
-
-StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
-{
-	// This is a nonblocking version of startCommand.
-	const int nonblocking = true;
-	Sock *sock = NULL;
-	// We require that callback_fn be non-NULL. The startCommand() we call
-	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
-}
-
-StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
-{
-	StartCommandCallback cb;
-	if( callback_fn ) {
-		cb = [callback_fn, misc_data](bool success, Sock *s, CondorError *e,
-				const std::string &trust_domain, bool should_try_token_request) {
-			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, misc_data);
-		};
-	}
-	return startCommand_nonblocking(cmd, sock, timeout, errstack, std::move(cb),
-		cmd_description, raw_protocol, sec_session_id, resume_response);
 }
 
 StartCommandResult
