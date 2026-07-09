@@ -1386,7 +1386,11 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 			DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 			// NOTE: This is cleaned up in callback function (if allocated)
 			FlockUpdateDetails* details = new FlockUpdateDetails(FlockCollectors.size(), flock_level, &SubDat);
-			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true, flockCommunicationCheck, details);
+			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true,
+				[details](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					flockCommunicationCheck(success, sock, errstack, trust_domain, should_try_token_request, details);
+				});
 		} else {
 			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 			SubDat.lastUpdateTime = time_now;
@@ -1862,7 +1866,11 @@ Scheduler::count_jobs()
 					m_token_requester.createCallbackData(col.name(),
 					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
 				: nullptr;
-			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true,
+				[data](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+				});
 		}
 	}
 
@@ -1996,7 +2004,11 @@ Scheduler::count_jobs()
 						"owner %s\n", iter->second->name(),
 						SubDat.owners.begin()->c_str());
 					iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq,
-						NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+						NULL, true,
+						[data](bool success, Sock* sock, CondorError* errstack,
+							const std::string& trust_domain, bool should_try_token_request) {
+							DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+						});
 				}
 			}
 		}
