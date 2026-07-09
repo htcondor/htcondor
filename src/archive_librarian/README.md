@@ -166,6 +166,14 @@ Failure to convert (e.g. insufficient free disk space, ~1.1x current file size r
 logged but non-fatal and retried on the next restart. After that, each GC pass runs a cheap
 `PRAGMA incremental_vacuum` to keep reclaiming space incrementally.
 
+The DB connection's `sqlite3_busy_timeout` (`LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS`, default `30000`
+ms) governs how long these operations, plus `checkpointWAL()`'s `SQLITE_CHECKPOINT_RESTART`, will
+retry against `SQLITE_BUSY` before giving up. Since the DB runs in WAL mode, ordinary
+reads/writes are unaffected by this setting — a read-only client (e.g. `librarian_client.cpp`,
+opened `SQLITE_OPEN_READONLY`) never contends for the write lock — but a lingering reader
+snapshot can still delay the checkpoint or vacuum operations, which run serially on the
+librarian's own connection.
+
 ---
 
 ## Configuration
@@ -192,6 +200,8 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 | `LIBRARIAN_HIGH_WATER_MARK` | `0.97` | Fraction of size limit that triggers GC |
 | `LIBRARIAN_LOW_WATER_MARK` | `0.80` | Fraction of size limit GC targets |
 | `LIBRARIAN_GC_BACKOFF_SECONDS` | `1800` | Seconds to wait before retrying GC after a pass that didn't shrink the DB file |
+| `LIBRARIAN_STATUS_RETENTION_SECONDS` | `300` | Seconds to retain `Status` table rows |
+| `LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS` | `30000` | `sqlite3_busy_timeout` (ms); only affects WAL checkpointing and VACUUM/`incremental_vacuum`, not normal reads/writes |
 
 ---
 

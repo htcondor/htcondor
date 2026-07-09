@@ -60,11 +60,11 @@ bool DBHandler::initialize() {
         return false;
     }
 
-    // Retry on lock contention (e.g. a concurrent read-only reader, like a monitoring
-    // script) instead of failing immediately -- matters most for VACUUM below, which
-    // needs exclusive-ish access and would otherwise abort the whole daemon's startup
-    // on a transient conflict.
-    sqlite3_busy_timeout(db_, 30000);
+    // Retry on lock contention instead of failing immediately. Normal reads/writes are
+    // unaffected by this (WAL mode isolates readers from writers), but WAL checkpointing
+    // (checkpointWAL()) and the VACUUM / incremental_vacuum below can still hit
+    // SQLITE_BUSY against a lingering reader snapshot; this timeout matters most there.
+    sqlite3_busy_timeout(db_, config[conf::i::DBBusyTimeoutMs]);
 
 #ifndef _WIN32
     // Best effort set database file permissions (readable by all, writable by librarian).

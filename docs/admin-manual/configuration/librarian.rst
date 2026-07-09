@@ -72,3 +72,12 @@ enable historical archive record indexing to a database by setting :macro:`use f
     An integer value representing the time interval in seconds between the archive
     librarians main actions of scanning archive files for new records and updating
     the database with indexes. Defaults to ``5``.
+
+:macro-def:`LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS`
+    An integer value representing how long, in milliseconds, the archive librarian
+    will wait on a locked SQLite3 database before giving up. Since the database runs
+    in WAL mode, ordinary reads and writes are not affected by this setting; it only
+    comes into play for the periodic WAL checkpoint and for the ``VACUUM`` /
+    ``incremental_vacuum`` operations used to reclaim disk space, where a lingering
+    reader can transiently hold a lock. Must be ``0`` or greater. Defaults to
+    ``30000`` (30 seconds).
