@@ -4771,7 +4771,13 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	StringLiteralInputStream stream(sumyformat.c_str());
 	dummySettings.reset();
 	app.sumymask.clearFormats();
-	SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	// These summary formats are compiled-in constants, so any parse failure is
+	// a programming bug.  The return value is always 0; errors (if any) are
+	// reported via the messages string, so EXCEPT on that instead.
+	std::ignore = SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	if ( ! messages.empty()) {
+		EXCEPT("Failed to parse built-in summary format: %s", messages.c_str());
+	}
 
 	// dont' actually want to display headings for the summary lines when using standard_summary2 or standard_summary3
 	app.sumymask.clear_headings();

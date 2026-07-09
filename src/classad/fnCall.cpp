@@ -1688,7 +1688,8 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-    convertValueToRealValue(arg, result);
+    // on failure result is set to an error value, which is the desired outcome
+    std::ignore = convertValueToRealValue(arg, result);
     return true;
 }
 

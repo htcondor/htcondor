@@ -211,7 +211,8 @@ JobHookClientMgr::initialize(classad::ClassAd* job_ad)
 			auto h = static_cast<HookType>(i);
 			if (getHookTypeString(h) == nullptr) break;  // iterated thru all hook types
 			std::string tmp;
-			getHookPath(h, tmp);
+			// failure leaves tmp empty, which is handled by the check below
+			std::ignore = getHookPath(h, tmp);
 			if (!tmp.empty()) {
 				config_has_this_hook = true;
 				break;
