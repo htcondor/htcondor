@@ -442,7 +442,14 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if (strcasecmp(token, "PARENT") == 0) {
 			parsed_line_successfully = parse_parent(dag, filename, lineNumber);
 		}
-			
+
+		// WEAK node dependencies explicitly not supported with old parse mode due to deprecation
+		else if (strcasecmp(token, "WEAK") == 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s:%d Weak node dependencies are not supported in deprecated parse mode (DAGMAN_USE_OLD_FILE_PARSER=True)\n",
+			             filename, lineNumber);
+			parsed_line_successfully = false;
+		}
+
 		// Handle a Retry spec
 		// Example Syntax is:  Retry NodeName 3 UNLESS-EXIT 42
 		else if( strcasecmp( token, "RETRY" ) == 0 ) {
