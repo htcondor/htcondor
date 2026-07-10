@@ -279,7 +279,7 @@ public:
 			int64_t pos = ftell_64b(efp);
 			fseek_64b(efp, 0, SEEK_END);
 			e.iNext = ftell_64b(efp);
-			fseek_64b(efp, pos, SEEK_SET);
+			(void)fseek_64b(efp, pos, SEEK_SET);
 			e.eof = true;
 			return e;
 		}
@@ -328,7 +328,7 @@ public:
 		if (err.empty()) {
 			auto perr = ParseError();
 			if (perr.has_value()) {
-				err = perr.value().str();
+				err = perr->str();
 			}
 		}
 		return err;

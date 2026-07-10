@@ -247,11 +247,15 @@ Requires: pelican-osdf-compat >= 7.25.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
-%if 0%{?suse_version} || 0%{?x86_64_v2}
-# Unfortunately, Apptainer is lagging behind in openSUSE and x86_64_v2
+%if 0%{?suse_version} == 1500
+# Unfortunately, Apptainer is lagging behind on openSUSE 15
 Requires: apptainer >= 1.4.5
 %else
+%if 0%{?rhel} == 10
 Requires: apptainer >= 1.5.0
+%else
+Requires: apptainer >= 1.5.1
+%endif
 %endif
 %endif
 
@@ -365,6 +369,9 @@ Summary: HTCondor's VM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: libvirt
+%if 0%{?fedora} >= 35 || 0%{?rhel} >= 9 || 0%{?suse_version} >= 1600
+Requires: passt
+%endif
 
 %description vm-gahp
 The condor_vm-gahp enables the Virtual Machine Universe feature of
@@ -911,7 +918,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
-%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
@@ -985,6 +991,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_now.1.gz
 %_mandir/man1/classad_eval.1.gz
 %_mandir/man1/classads.1.gz
+%_mandir/man1/htcondor-jdl.1.gz
 %_mandir/man1/condor_adstash.1.gz
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
@@ -1009,7 +1016,6 @@ rm -rf %{buildroot}
 %_bindir/condor_config_val
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
-%_bindir/condor_check_password
 %_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_dag_checker
@@ -1126,8 +1132,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/sge_local_submit_attributes.sh
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
 
@@ -1221,6 +1225,7 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
+%_libexecdir/condor/ccb_proxy_bench
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping

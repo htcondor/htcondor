@@ -1,27 +1,68 @@
+*** 24.12.23 bugs
+
+*** 24.0.23 bugs
+
+- When file transfer is off, we now log a file transfer start and end
+  messages to the log, not just the start message.
+  :jira:`3813`
+
+- Fixed a bug in wildcard string matching where a pattern ending in a literal
+  was not anchored to the end of the candidate string, so it could match
+  strings with extra trailing characters.
+  :jira:`3809`
+
 *** 24.12.22 bugs
 
 - Fixed a bug where the *condor_job_router* could abort when removing a job
   that had just been routed.
   :jira:`3757`
 
+*** 24.0.22 features
+
+- HTCondor tarballs now contain `Apptainer 1.5.1 <https://github.com/apptainer/apptainer/releases/tag/v1.5.1>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.1.
+
 *** 24.0.22 bugs
+
+- Fixed a bug that can cause the *arc_gahp* to crash.
+  :jira:`3789`
+
+- Reduced the size of the Python wheels to one sixth of their previous size
+  by stripping out the debug symbols.
+  :jira:`3803`
 
 - When using trust-on-first-use (TOFU), tools can go into an infinite
   loop if they have no valid standard input file to read.
   :jira:`3754`
+
+- Evaluating ClassAd expressions of the form ``list_of_ads.attribute_name``
+  in :tool:`classad_eval` no longer causes a segmentation fault.
+  :jira:`3796`
 
 - When using the ClassAd function :classad-function:`debug`, comparing a string
   to a non-string no longer results in the previous (unrelated) error, if any;
   the message will instead be "strings can only be compared to strings".
   :jira:`3771`
 
-- Fixed a bug in the *condor_job_router* taht caused routing to failure
+- Fixed a bug in the *condor_job_router* that caused routing to fail
   if the configuration parameters :macro:`JOB_ROUTER_SCHEDD1_NAME` or
   :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
   :jira:`3760`
 
-- Fixed a bug that can cause the *arc_gahp* to crash.
-  :jira:`3789`
+- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
+  when executing the ``add-pwd`` option as a privileged user (i.e. root).
+  :jira:`3804`
+
+- VM Universe jobs now use ``virtio`` for networking.
+  The previously used ``Intel e1000`` card did not work on ARM hosts.
+  ``virtio`` has been supported since Red Hat Enterprise Linux 6.
+  :jira:`3817`
+
+- Fixed a bug where the *condor_schedd* would abort when sent a late materialization job
+  that referenced ``$(YEAR)``, ``$(MONTH)``, ``$(DAY)`` or ``$(SUBMIT_TIME)`` in the
+  submit file.
+  :jira:`3800`
 
 *** 24.12.21 bugs
 

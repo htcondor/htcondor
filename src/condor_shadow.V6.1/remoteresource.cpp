@@ -144,6 +144,7 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
 	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
+	if ( slotAd ) { delete slotAd; slotAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -898,6 +899,19 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// If we're talking to a newer starter, it's sent its slot ad along.
+	ClassAd * tSlotAd = dynamic_cast<ClassAd *>(ad->Lookup( "SlotAd" ));
+	if( tSlotAd ) {
+		if( slotAd ) { delete slotAd; }
+		slotAd = new ClassAd(* tSlotAd);
+		// The copy constructor also copies parentScope, which points at the
+		// (soon to be destroyed) ClassAd that tSlotAd was nested in.  We're
+		// keeping this copy long after that scope is gone, so detach it to
+		// avoid a dangling scope pointer when expressions in slotAd (or ads
+		// nested within it) are later evaluated.
+		slotAd->SetParentScope( nullptr );
+	}
+
 	// This seems like the obvious place to change the job ad so that we
 	// can properly initialize the FTO if the starter we're talking to is too
 	// old to handle common file transfer.  However, the FTO is actually
@@ -2891,7 +2905,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 	}
 
 	struct stat si = {};
-	stat(proxy_path.c_str(), &si);
+	if( stat(proxy_path.c_str(), &si) != 0 ) {
+		dprintf(D_FULLDEBUG, "checkX509Proxy() failed to stat proxy '%s': %s\n",
+				proxy_path.c_str(), strerror(errno));
+	}
 	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);

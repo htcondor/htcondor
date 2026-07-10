@@ -958,7 +958,7 @@ def main():
     format_print(
         """
         To ask any questions regarding incompatibilities email:
-            htcondor-users@cs.wisc.edu
+            htcondor-users@g-groups.wisc.edu
         """,
         newline=True,
     )

@@ -720,6 +720,9 @@ tokenizePunctOperator (void)
 		case '?':	
 			tokenType = LEX_QMARK;
 			fetch();
+			while (isspace(ch)) {
+				wind();
+			}
 			if (ch == ':') {
 				tokenType = LEX_ELVIS;
 				wind (false);

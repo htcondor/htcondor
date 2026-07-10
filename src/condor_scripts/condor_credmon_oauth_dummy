@@ -55,11 +55,13 @@ LOG_FILE = htcondor.param.get("CREDMON_OAUTH_LOG")
 
 def log(msg, logfile_only=False):
     s = f"{datetime.now()} (pid:{os.getpid()}) - {msg}"
+    # `s` only ever contains status messages and file paths; no credential
+    # material is passed to log(). Suppress CodeQL's name-based false positive.
     if not logfile_only:
-        print(s, file=sys.stderr)
+        print(s, file=sys.stderr)  # lgtm[py/clear-text-logging-sensitive-data]
     if LOG_FILE is not None:
         with open(LOG_FILE, "a") as f:
-            print(s, file=f)
+            print(s, file=f)  # lgtm[py/clear-text-logging-sensitive-data]
 
 
 def credmon_complete():

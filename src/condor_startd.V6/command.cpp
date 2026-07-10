@@ -386,14 +386,14 @@ command_give_totals_classad( int, Stream* stream )
 
 
 int
-command_request_claim(int cmd, Stream* stream ) 
+command_request_claim(int cmd, Stream* stream )
 {
 	Resource* rip;
 	int rval;
 
 	std::string secret;
 	if( ! stream->get_secret(secret) ) {
-		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		dprintf( D_ALWAYS, "command_request_claim(): Can't read ClaimId\n" );
 		reply(stream, NOT_OK);
 		return FALSE;
 	}
@@ -3043,8 +3043,11 @@ command_data_slot(int, Stream * stream ) {
 		new_slot_prefix = nsp.c_str();
 	}
 	Resource * data_slot = create_dslot( r, requestAd, true, new_slot_prefix, true );
+	// It's not clear what's logically consistent here, especially if turns
+	// out (below) that the data slot was created but doesn't have a claim.
+	//
+	// For now, we'll just try to avoid the immediate segfault.
 	r->change_state( unclaimed_state );
-	data_slot->is_data_slot = true;
 
 	if( data_slot == nullptr ) {
 		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed\n" );
@@ -3062,6 +3065,29 @@ command_data_slot(int, Stream * stream ) {
 
 		return FALSE;
 	}
+	data_slot->is_data_slot = true;
+
+
+	if( data_slot->r_cur == nullptr ) {
+		dprintf( D_ALWAYS, "command_data_slot(): create_dslot() failed to set a claim\n" );
+		delete requestAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "command_data_slot(): create_dslot() failed to set a claim" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
+
+		return FALSE;
+	}
+
+	// Hand the request ad to the new slot's claim, which now owns it and
+	// will delete it when the claim is destroyed.
+	data_slot->r_cur->setjobad( requestAd );
 
 
 	//

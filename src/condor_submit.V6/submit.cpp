@@ -1009,6 +1009,7 @@ main( int argc, const char *argv[] )
 			}
 		} else {
 			int this_cluster = -1, job_count=0;
+			std::vector<int> submitted_clusters;
 			for (size_t ix=0; ix < SubmitInfo.size(); ix++) {
 				if (SubmitInfo[ix].cluster != this_cluster) {
 					if (this_cluster != -1) {
@@ -1016,11 +1017,26 @@ main( int argc, const char *argv[] )
 						job_count = 0;
 					}
 					this_cluster = SubmitInfo[ix].cluster;
+					if (this_cluster != -1) {
+						submitted_clusters.push_back(this_cluster);
+					}
 				}
 				job_count += SubmitInfo[ix].lastjob - SubmitInfo[ix].firstjob + 1;
 			}
 			if (this_cluster != -1) {
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
+			}
+
+			// Offer a hint on how to follow the just-submitted job(s), unless this
+			// was only a dry-run (in which case nothing was actually queued).
+			if ( ! DashDryRun && ! submitted_clusters.empty()) {
+				std::string cluster_list;
+				for (int cluster : submitted_clusters) {
+					if ( ! cluster_list.empty()) { cluster_list += ' '; }
+					cluster_list += std::to_string(cluster);
+				}
+				fprintf(stderr, "To monitor your job(s), run: condor_watch_q -clusters %s\n",
+					cluster_list.c_str());
 			}
 		}
 	}

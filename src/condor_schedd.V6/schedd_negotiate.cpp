@@ -313,7 +313,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	int64_t cpus = 0, memory = 0, disk = 0;
 
 	cpus = 1;
-	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
+	// if RequestCpus is not set, cpus keeps its default of 1
+	std::ignore = EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
 	match_ad->Assign(ATTR_CPUS, cpus);
 
 	memory = -1;

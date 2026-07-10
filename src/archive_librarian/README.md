@@ -140,7 +140,7 @@ row 2 (pre-reset snapshot).
 
 ## Database Schema (`SavedQueries.h`)
 
-Schema version is tracked via `PRAGMA user_version` (current: 2).
+Schema version is tracked via `PRAGMA user_version` (current: 3).
 
 | Table | Purpose |
 |-------|---------|
@@ -148,7 +148,7 @@ Schema version is tracked via `PRAGMA user_version` (current: 2).
 | `Users` | Unique job owners |
 | `JobLists` | `(ClusterId, UserId)` associations |
 | `Jobs` | One row per `(ClusterId, ProcId)` |
-| `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId` |
+| `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId`; optional DAG/batch metadata: `DAGManJobId`, `JobBatchId`, `JobBatchName` (NULL when not present in the record) |
 | `Status` | Per-cycle metrics; rows older than `LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle |
 | `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
 

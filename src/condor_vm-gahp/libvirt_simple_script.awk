@@ -144,7 +144,23 @@ END {
             {
 		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
             }
-	    print "<model type='e1000'/>" ;
+	    print "<model type='virtio'/>" ;
+	    print "</interface>" ;
+	}
+	else if(index(tolower(attrs["JobVMNetworkingType"]),"user") != 0)
+	{
+	    # virtio is required: e1000 + QEMU stream backend (used by passt) causes
+	    # ~60s carrier detection delay before DHCP fires. virtio has no carrier
+	    # detection emulation so link-up is immediate.
+	    # No <alias> element: it is libvirt output-only and breaks connectivity
+	    # if included in input XML.
+	    print "<interface type='user'>" ;
+	    print "<model type='virtio'/>" ;
+            if(attrs["JobVM_MACADDR"] != "")
+            {
+		print "<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
+            }
+	    print "<backend type='passt'/>" ;
 	    print "</interface>" ;
 	}
 	else
@@ -158,7 +174,7 @@ END {
 	    {
 		print "<source bridge='" attrs["VMPARAM_Bridge_Interface"] "'/>" ;
 	    }
-	    print "<model type='e1000'/>" ;
+	    print "<model type='virtio'/>" ;
 	    print "</interface>" ;
 	}
     }

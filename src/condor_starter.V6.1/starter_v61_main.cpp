@@ -41,6 +41,7 @@
 #include "singularity.h"
 #include "which.h"
 #include "../condor_startd.V6/VolumeManager.h"
+#include "staging_directory.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -104,6 +105,9 @@ printClassAd( void )
 	// that therefore always also evaluates to boolean true.
 	if( CFT_VERSION != 0 ) {
 		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
+
+		StagingDirectoryFactory sdf;
+		printf( "%s = \"%s\"\n", ATTR_MAPPING_METHOD, sdf.type().c_str() );
 	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {

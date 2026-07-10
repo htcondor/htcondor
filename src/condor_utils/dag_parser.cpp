@@ -325,8 +325,9 @@ DagParser::ParseNodeTypes(DagLexer& details, DAG::CMD type) {
 			data.reset(new ServiceCommand(node_name));
 			break;
 		default:
-			// This is a developer error so throw exception
-			throw std::invalid_argument("Invalid DAG Command: Not a node type");
+			// This should never happen: ParseNodeTypes() was called with a
+			// command that is not a node type.
+			return "Invalid DAG Command: Not a node type";
 	}
 
 	NodeCommand* nodeCmd = (NodeCommand*)data.get();

@@ -386,7 +386,13 @@ bool HttpRequest::SendRequest()
 			}
 
 			struct stat stw = {};
-			stat(this->requestBodyFilename.c_str(), &stw);
+			if( stat(this->requestBodyFilename.c_str(), &stw) != 0 ) {
+				this->errorCode = "499";
+				this->errorMessage = "stat() of request body file failed.";
+				dprintf( D_ALWAYS, "stat(%s) failed (%d): '%s', failing.\n",
+				         this->requestBodyFilename.c_str(), errno, strerror( errno ) );
+				goto error_return;
+			}
 			filesize = stw.st_size;
 		} else {
 			rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, & CurlReadCb );

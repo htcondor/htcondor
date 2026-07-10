@@ -56,8 +56,41 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	std::shared_ptr<DCMsgCallback> m_ccb_cb; // callback object for async CCB request
 	int m_deadline_timer;
 
+	// Non-blocking streaming/proxy connect state (see ProxyConnect_nonblocking).
+	enum ProxyConnectState { PROXY_NONE, PROXY_WAIT_REPLY, PROXY_WAIT_HELLO };
+	ProxyConnectState m_proxy_state;
+	Sock *m_proxy_sock;        // broker socket during the proxy exchange
+	bool m_proxy_registered;   // m_proxy_sock is registered with DaemonCore
+	std::string m_proxy_ccbid; // target ccbid for the current broker
+	std::string m_proxy_return;// our CCB-routed return address
+	// True while try_next_ccb is still attempting streaming (proxy) mode; once
+	// every broker has been tried it flips to false and the brokers are retried
+	// with a plain reverse connection (CCB contact stripped) as a last resort.
+	bool m_streaming_phase;
+
 	bool ReverseConnect_blocking( CondorError *error );
 	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error );
+
+	// Streaming/proxy mode (CCB_STREAMING): used when this client is itself
+	// behind a CCB (i.e. our own return address is CCB-routed), so the target
+	// cannot reverse-connect to us directly.  Instead we ask the broker to
+	// proxy: the target reverse-connects to the broker, the broker splices the
+	// two sockets, and we read the reverse-connect hello on the request socket
+	// itself.  Returns true and adopts the proxied socket into m_target_sock.
+	bool ProxyConnect_blocking( CondorError *error, char const *my_ccb_return );
+	// Non-blocking version of the streaming/proxy connect, used from the
+	// non-blocking try_next_ccb path.  Drives the broker exchange (connect+auth,
+	// request, reply, proxied hello) asynchronously via DaemonCore callbacks and
+	// then adopts the proxied socket into m_target_sock, without blocking the
+	// DaemonCore main loop.  Returns true if the async operation was initiated.
+	bool ProxyConnect_nonblocking( char const *ccbid, char const *my_ccb_return );
+	void ProxyConnectCallback( bool success, Sock *sock, CondorError *errstack );
+	int ProxyMsgHandler( Stream *stream );
+	void ProxyConnectFailed();
+	void CleanupProxySock();
+	// Returns our own CCB-routed return address if streaming is enabled and we
+	// are behind a CCB, else empty string.
+	std::string streamingReturnAddr();
 
 	bool AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener);
 	bool HandleReversedConnectionRequestReply(CondorError *error);
