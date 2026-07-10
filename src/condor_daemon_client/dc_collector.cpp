@@ -285,6 +285,12 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 {
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
+			// Still fire the callback so any storage it owns (e.g. the
+			// misc_data captured by the lambda) is reclaimed; every other
+			// return path from sendUpdate invokes the callback exactly once.
+		if (callback) {
+			callback(true, nullptr, nullptr, "", false);
+		}
 		return true;
 	}
 
