@@ -216,8 +216,6 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
 	{"-Dot",           {"OnlyDumpDot", "True", "Have DAGMan dump DOT file and exit", DAG_OPT_DISP_DAGMAN}},
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
-	// Undocumented on purpose: fully set up DAG (parse, process, rescue, recover) then exit before execution
-	{"-SetupOnly",     {"SetupOnly", "True", "Set up DAG and exit before execution", 0}},
 	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
 	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
@@ -241,6 +239,8 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-RescueFile",    {"RescueFile", "<filename>", "Run DAG from specified rescue file", DAG_OPT_DISP_ALL}},
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	// -SetupOnly: Undocumented on purpose: fully set up DAG (parse, process, rescue, recover) then exit before execution
+	{"-SetupOnly",     {"SetupOnly", "True", "Set up DAG and exit before execution", 0}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
 	{"-SubmitMethod",  {"SubmitMethod", "<value>", "Specify how DAGMan submits jobs for execution (0=condor_submit|1=DirectSubmit)", DAG_OPT_DISP_ALL}},
 	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
