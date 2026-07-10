@@ -36,6 +36,7 @@ typedef enum {
 } printf_fmt_t;
 
 
+#define PRINTF_FMT_STAR_WIDTH -42 // ASCII 42 is *
 struct printf_fmt_info {
 		/* What kind of format string are we? */
 	char fmt_letter;		/* actual letter in the % escape */
@@ -44,7 +45,7 @@ struct printf_fmt_info {
 		/* standard modifiers */
 	int width;
 	int precision;
-	bool unsafe() const { return (type == PFT_CRASH || width == -42 || precision == -42); }
+	bool unsafe() const { return (type == PFT_CRASH || width == PRINTF_FMT_STAR_WIDTH || precision == PRINTF_FMT_STAR_WIDTH); }
 
 		/* special-case modifiers */
 	int is_short;		/* if the 'h' flag is set */

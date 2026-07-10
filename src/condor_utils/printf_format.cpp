@@ -185,7 +185,7 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		/* Now, find the width, if any */
 	if( **fmt_p == '*' ) {
 			/* Width is given in an argument, we don't support this yet */
-		info->width = -42;
+		info->width = PRINTF_FMT_STAR_WIDTH;
     } else if( isdigit(**fmt_p) ) {
 			/* Width is a constant */
 		info->width = consumeInt( fmt_p );
@@ -207,7 +207,7 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		if( **fmt_p == '*') {
 				/* Precision is set as is an argument, we don't
 				   support this yet, either.  */
-			info->precision = -42;
+			info->precision = PRINTF_FMT_STAR_WIDTH;
 		} else if( isdigit(**fmt_p) ) {
 			info->precision = consumeInt( fmt_p );
 		}
