@@ -15776,7 +15776,7 @@ bool locate_and_advertise_local_credd(bool force) {
 	Daemon local_credd(DT_CREDD);
 	local_credd.locate_local();
 
-	if (local_credd.addr() && param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
 		std::string names;
 		new_check_creds = param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES") ||
 		                  param(names, "LOCAL_CREDMON_PROVIDER_NAMES") ||
