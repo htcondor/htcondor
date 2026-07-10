@@ -9942,16 +9942,16 @@ credd_has_tokens(
 		// do_check_oauth_creds will also dprintf the same(ish) messages
 		switch (rv) {
 		case -1:
-			formatstr( error_string, "CRED: invalid request to credd!\n");
+			formatstr( error_string, "CRED: invalid request to credd!");
 			break;
 		case -2: // could not locate
-			formatstr( error_string, "CRED: locate(credd) failed!\n");
+			formatstr( error_string, "CRED: locate(credd) failed!");
 			break;
 		case -3: // start command failed
-			formatstr( error_string, "CRED: startCommand to CredD failed!\n");
+			formatstr( error_string, "CRED: startCommand to CredD failed!");
 			break;
 		case -4: // communication failure (timeout of protocol mismatch)
-			formatstr( error_string, "CRED: communication failure!\n");
+			formatstr( error_string, "CRED: communication failure!");
 			break;
 		}
 
@@ -10027,10 +10027,10 @@ process_job_credentials(
 		if (call_storer) {
 			int rc = my_system(storer_args);
 			if (rc < 0) {
-				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
+				formatstr(error_string, "Failed to run '%s': errno %d (%s)", storer.c_str(), errno, strerror(errno));
 				return false;
 			} else if (rc > 0) {
-				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
+				formatstr(error_string, "'%s' failed: exit code %d", storer.c_str(), rc);
 				return false;
 			}
 		}
@@ -10087,7 +10087,7 @@ process_job_credentials(
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
 		if (!credd.locate()) {
-			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
+			formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
 			return false;
 		}
 		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
@@ -10095,7 +10095,7 @@ process_job_credentials(
 				if (IsUrl(URL.c_str())) {
 					return true;
 				} else {
-					formatstr(error_string, "OAuth error: %s\n\n", URL.c_str() );
+					formatstr(error_string, "OAuth error: %s", URL.c_str() );
 					return false;
 				}
 			}
@@ -10132,7 +10132,7 @@ process_job_credentials(
 		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
-			formatstr( error_string, "ERROR: (%i) invoking %s\n", errno, producer.c_str() );
+			formatstr( error_string, "Failed to launch %s: %s", producer.c_str(), strerror(errno) );
 			return false;
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
@@ -10142,7 +10142,7 @@ process_job_credentials(
 			my_pclose(uber_file);
 
 			if(bytes_read == 0) {
-				formatstr( error_string, "ERROR: failed to read any data from %s!\n", producer.c_str() );
+				formatstr( error_string, "Failed to read any data from %s!", producer.c_str() );
 				return false;
 			}
 
@@ -10162,16 +10162,16 @@ process_job_credentials(
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
-						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
+						formatstr( error_string, "store_cred of Kerberos credential failed - %s", err ? err : "" );
 						return false;
 					}
 				} else {
-					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
+					formatstr( error_string, "Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", credd.version());
 					return false;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
+				formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
 				return false;
 			}
 		}
