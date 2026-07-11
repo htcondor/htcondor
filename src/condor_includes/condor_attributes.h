@@ -1228,6 +1228,16 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_DOWNLOADING  "Downloading"
 #define ATTR_TIMEOUT  "Timeout"
 #define ATTR_CCBID  "CCBID"
+#define ATTR_CCB_ADDRESS  "CCBAddress"
+#define ATTR_CCB_TTL  "CCBTTL"
+	// Inbound tunnel routing/audit: the remaining downstream CCBIDs to reach after
+	// this hop (space-separated; empty/absent at the final hop), and the audit
+	// trail -- the original (end) requester and the immediately-prior forwarding
+	// hop -- carried along each recursive rendezvous so inner CCBs can log who a
+	// tunneled connection is really for without authenticating the client.
+#define ATTR_CCB_ROUTE  "CCBRoute"
+#define ATTR_CCB_ORIGINAL_REQUESTER  "CCBOriginalRequester"
+#define ATTR_CCB_PRIOR_HOP  "CCBPriorHop"
 #define ATTR_REQUEST_ID  "RequestID"
 #define ATTR_SESSION_INFO  "SessionInfo"
 #define ATTR_SSH_PUBLIC_SERVER_KEY  "SSHPublicServerKey"
