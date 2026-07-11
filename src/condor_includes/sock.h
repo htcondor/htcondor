@@ -351,6 +351,11 @@ public:
 		// address one would use to actually connect to the peer.
 		// Returns NULL if connect was never called.
 	char const *get_connect_addr() const;
+		// Override the connect address.  Normally set by connect(), but a caller
+		// that has adopted an already-connected socket (e.g. a CCB relay pipe) may
+		// need to re-point it at the logical peer so the security layer keys the
+		// session correctly.
+	void set_connect_addr(char const *addr);
 
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
 	virtual char const *default_peer_description() const;
@@ -459,6 +464,14 @@ public:
 	bool set_inheritable(bool) { return true;}
 #endif
 
+	// Outbound-CCB (tunneling) mode: when OUTBOUND_CCB_ADDRESS is set,
+	// special_connect() routes this socket's outbound connection through that
+	// broker instead of dialing directly.  Setting this flag suppresses that
+	// interception for a single socket; the control connection to the broker and
+	// the broker's own exit dial must set it to avoid infinite recursion.
+	void set_bypass_outbound_ccb(bool b) { m_bypass_outbound_ccb = b; }
+	bool bypass_outbound_ccb() const { return m_bypass_outbound_ccb; }
+
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
@@ -511,11 +524,19 @@ protected:
 	*/
 	int special_connect(char const *host,int port,bool nonblocking,CondorError * errorStack);
 
+		// True if the connection to `target_sinful` should be made directly rather
+		// than routed through `outbound_ccb` even when OUTBOUND_CCB_ADDRESS is set:
+		// the target is loopback/same-host, the target IS the broker, or this
+		// daemon itself is the broker.
+	bool bypassOutboundCCBForTarget( char const *target_sinful, char const *outbound_ccb );
+
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack) = 0;
 	virtual void cancel_reverse_connect() = 0;
 	virtual int do_shared_port_local_connect( char const *shared_port_id,bool nonblocking,char const *sharedPortIP ) = 0;
-
-	void set_connect_addr(char const *addr);
+		// Route this outbound connection through an outbound CCB broker: ask the
+		// broker to dial `target` and splice the connection.  Overridden by
+		// ReliSock; a no-op (CEDAR_ENOCCB) for datagram sockets.
+	virtual int do_outbound_ccb_connect(char const * /*ccb_addr*/, char const * /*target*/, bool /*nonblocking*/, CondorError * /*errorStack*/, int /*ttl*/ = -1) { return CEDAR_ENOCCB; }
 
 	inline SOCKET get_socket (void) const { return _sock; }
 	const char * deserialize(const char *);
@@ -609,6 +630,10 @@ private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, const char *buf, int sz, int timeout);
 	int bindWithin(condor_protocol proto, const int low, const int high);
+
+	// See set_bypass_outbound_ccb(): when true, special_connect() does not route
+	// this socket through OUTBOUND_CCB_ADDRESS.
+	bool m_bypass_outbound_ccb{false};
 	///
 	// Buffer to hold the string version of our peer's IP address. 
 	mutable char _peer_ip_buf[IP_STRING_BUF_SIZE];

@@ -21,7 +21,15 @@
 #include "condor_config.h"
 #include <condor_daemon_core.h>
 #include "ccb_server.h"
+#include "ccb_listener.h"
 #include "condor_sinful.h"
+#include "condor_netaddr.h"
+#include "condor_sockaddr.h"
+#include "condor_crypt.h"
+#include "daemon.h"
+#include "dc_message.h"
+#include "subsystem_info.h"
+#include "stl_string_utils.h"
 #include "util_lib_proto.h"
 #include "condor_open.h"
 #include "generic_stats.h"
@@ -47,6 +55,27 @@ struct CCBStats {
 	stats_entry_recent<int> CCBStreamingFailed;
 	stats_entry_abs<int> CCBStreamingActive;
 	stats_entry_recent<int64_t> CCBStreamingBytes;
+	// Proxy sessions still in the handshake (asked the target to connect back, not
+	// yet relaying).  An absolute gauge, so it also publishes its peak -- the
+	// high-water mark of concurrent handshakes, useful for sizing
+	// CCB_SERVER_MAX_STREAMING_HANDSHAKES.
+	stats_entry_abs<int> CCBStreamingHandshakesActive;
+	// Outbound-proxy mode (CCB_PROXY_CONNECT): requests received; how many this
+	// broker forwarded to a next-hop broker (rather than dialing the target itself,
+	// i.e. this broker is an inside hop of an outbound tunnel); and requests that
+	// failed.  The spliced relay itself is counted by the CCBStreaming* stats above,
+	// shared with the inbound streaming path.
+	stats_entry_recent<int> CCBOutboundRequests;
+	stats_entry_recent<int> CCBOutboundForwarded;
+	stats_entry_recent<int> CCBOutboundFailed;
+	// Inbound tunnel: intermediate relay hops this broker set up on behalf of an
+	// upstream broker (StartInboundRelay) -- i.e. how often this broker acted as a
+	// middle hop of an inbound tunnel rather than the endpoint broker.  ...Failed
+	// counts relays we could not begin because the next hop was unreachable (its
+	// ccbid is not registered here); a relay that fails *after* the splice is
+	// counted by CCBStreamingFailed, shared with the streaming path.
+	stats_entry_recent<int> CCBTunnelRelays;
+	stats_entry_recent<int> CCBTunnelRelaysFailed;
 
 	void AddStatsToPool(StatisticsPool& pool, int publevel)
 	{
@@ -61,7 +90,13 @@ struct CCBStats {
 		STATS_POOL_ADD(pool, "", CCBStreamingSessions, publevel);
 		STATS_POOL_ADD(pool, "", CCBStreamingFailed, publevel);
 		STATS_POOL_ADD(pool, "", CCBStreamingActive, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingHandshakesActive, publevel);
 		STATS_POOL_ADD(pool, "", CCBStreamingBytes, publevel);
+		STATS_POOL_ADD(pool, "", CCBOutboundRequests, publevel);
+		STATS_POOL_ADD(pool, "", CCBOutboundForwarded, publevel);
+		STATS_POOL_ADD(pool, "", CCBOutboundFailed, publevel);
+		STATS_POOL_ADD(pool, "", CCBTunnelRelays, publevel);
+		STATS_POOL_ADD(pool, "", CCBTunnelRelaysFailed, publevel);
 	}
 };
 
@@ -75,9 +110,27 @@ void AddCCBStatsToPool(StatisticsPool& pool, int publevel)
 bool
 CCBServer::CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 {
-	if( sscanf(ccbid_str,"%lu",&ccbid)!=1 ) {
+		// A CCBID is a bare unsigned integer.  Require a pure run of decimal digits:
+		// reject an empty string, a leading sign/whitespace, and any trailing junk
+		// (e.g. "42#17" from a malformed nested contact, or "42x"), so a bad value is
+		// not silently accepted as its numeric prefix.  This strictness belongs in
+		// the parser, so every entry point (registration, reconnect, request, and
+		// nested-contact splitting) is protected, not just individual call sites.
+	if( !ccbid_str || *ccbid_str == '\0' ) {
 		return false;
 	}
+	for( char const *p = ccbid_str; *p; ++p ) {
+		if( *p < '0' || *p > '9' ) {
+			return false;
+		}
+	}
+	errno = 0;
+	char *endptr = nullptr;
+	unsigned long val = strtoul( ccbid_str, &endptr, 10 );
+	if( errno != 0 || *endptr != '\0' ) {
+		return false;   // overflow or (already excluded) trailing junk
+	}
+	ccbid = val;
 	return true;
 }
 
@@ -91,8 +144,9 @@ CCBIDToString(CCBID ccbid,std::string &ccbid_str)
 static bool
 CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 {
-	// format is "IPAddress#CCBID"
-	ccb_contact = strchr(ccb_contact,'#');
+	// Format is "<address>#CCBID"; for a tunneled (nested) contact the address is
+	// itself a contact, so split on the LAST '#' to get this daemon's own id.
+	ccb_contact = strrchr(ccb_contact,'#');
 	if( !ccb_contact ) {
 		return false;
 	}
@@ -102,11 +156,84 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 void
 CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,std::string &ccb_contact)
 {
-	formatstr(ccb_contact,"%s#%lu",my_address,ccbid);
+		// my_address may be a space-separated list of (possibly nested) broker
+		// addresses -- one per tunnel path when this is a tunneling inside CCB
+		// registered through several next hops.  Stamp the ccbid onto each, so the
+		// registrant advertises the whole list of nested contacts and is reachable via
+		// any path.  A single address is just the one-element case.
+	ccb_contact.clear();
+	for( const auto &addr : StringTokenIterator( my_address, " " ) ) {
+		if( !ccb_contact.empty() ) {
+			ccb_contact += " ";
+		}
+		formatstr_cat( ccb_contact, "%s#%lu", addr.c_str(), ccbid );
+	}
+}
+
+	// Upper bound on inbound-tunnel route length (registration-channel recursion),
+	// mirroring the outbound hop cap; bounds a misconfigured or looping nested
+	// contact so a single request cannot fan out through an unbounded chain.
+static const int CCB_MAX_INBOUND_HOPS = 8;
+
+	// An inbound tunnel route is a whitespace-separated list of bare CCBIDs (the
+	// remaining downstream hops after this one).  Valid if empty, or every token is
+	// a bare unsigned integer and the chain is within the depth bound.
+static bool
+ValidRoute( const std::string &route )
+{
+	int n = 0;
+	for( const auto &tok : StringTokenIterator( route, " " ) ) {
+		CCBID id;
+		if( !CCBServer::CCBIDFromString( id, tok.c_str() ) ) {
+			return false;
+		}
+		if( ++n > CCB_MAX_INBOUND_HOPS ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+	// Split a route "id0 id1 ... idN" into its head (id0) and tail ("id1 ... idN").
+	// Returns false if the route is empty.
+static bool
+SplitRoute( const std::string &route, std::string &head, std::string &tail )
+{
+	StringTokenIterator it( route, " " );
+	const char *first = it.next();
+	if( !first ) {
+		return false;
+	}
+	head = first;
+	tail.clear();
+	for( const char *t = it.next(); t; t = it.next() ) {
+		if( !tail.empty() ) { tail += " "; }
+		tail += t;
+	}
+	return true;
+}
+
+	// Build an audit identity for a requester we authenticated: "<user> at <addr>"
+	// (or just the address when unauthenticated).  Stamped as the original requester
+	// at the entry CCB and propagated (for logging only) to inner CCBs.
+static std::string
+RequesterIdentity( Sock *sock )
+{
+	char const *fqu = sock->getFullyQualifiedUser();
+	char const *addr = sock->get_sinful_peer();
+	if( !addr || !*addr ) { addr = sock->peer_description(); }
+	std::string id;
+	if( fqu && *fqu ) {
+		formatstr( id, "%s at %s", fqu, addr ? addr : "unknown" );
+	} else {
+		id = addr ? addr : "unknown";
+	}
+	return id;
 }
 
 CCBServer::CCBServer():
 	m_registered_handlers(false),
+	m_upstream_ccb(nullptr),
 	m_reconnect_fp(NULL),
 	m_last_reconnect_info_sweep(0),
 	m_reconnect_info_sweep_interval(0),
@@ -131,6 +258,10 @@ CCBServer::~CCBServer()
 	if( m_polling_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_polling_timer );
 		m_polling_timer = -1;
+	}
+	if( m_upstream_ccb ) {
+		delete m_upstream_ccb;
+		m_upstream_ccb = nullptr;
 	}
 	while (!m_targets.empty()) {
 		RemoveTarget(m_targets.begin()->second);
@@ -196,6 +327,33 @@ CCBServer::RegisterHandlers()
 			ALLOW);
 		ASSERT( rc >= 0 );
 	}
+
+		// An "inside" CCB (one with a next hop) is by definition a forwarding
+		// outbound proxy: it forwards CCB_PROXY_CONNECT to its next hop rather than
+		// dialing.  So enable outbound-proxy mode whenever CCB_OUTBOUND_PROXY is set
+		// OR a next hop is configured -- otherwise a tunneling inside CCB would
+		// register upstream for inbound but silently reject the outbound requests its
+		// own node's daemons send it.  This is safe: a forwarding broker only ever
+		// reaches its single configured next hop (not arbitrary targets), and the
+		// command stays DAEMON-authorized; the SSRF-sensitive allow-list is enforced
+		// by whichever broker finally dials.
+	std::string outbound_next_hop;
+	bool is_inside_ccb = param( outbound_next_hop, "CCB_OUTBOUND_NEXT_HOP" )
+		&& !outbound_next_hop.empty();
+	if( param_boolean("CCB_OUTBOUND_PROXY",false) || is_inside_ccb ) {
+			// Outbound-proxy mode: a requester asks us to dial a target on its
+			// behalf.  Unlike CCB_REVERSE_CONNECT (a raw rendezvous), this is an
+			// authenticated, authorized command -- registered at DAEMON, never
+			// ALLOW -- because it makes this broker an outbound proxy.
+		rc = daemonCore->Register_CommandWithPayload(
+			CCB_PROXY_CONNECT,
+			"CCB_PROXY_CONNECT",
+			(CommandHandlercpp)&CCBServer::HandleProxyConnect,
+			"CCBServer::HandleProxyConnect",
+			this,
+			DAEMON);
+		ASSERT( rc >= 0 );
+	}
 }
 
 void
@@ -211,6 +369,14 @@ CCBServer::InitAndReconfig()
 		// in the first place, but we can't change that without
 		// breaking backwards compabitility.
 	m_address = sinful.getCCBAddressString();
+
+		// Tunneling: if a next-hop broker is configured, register with it and, once
+		// that completes, derive m_tunnel_contacts so the CCBIDs this broker hands
+		// out are reachable through the tunnel.
+	std::string next_hop;
+	if( param( next_hop, "CCB_OUTBOUND_NEXT_HOP" ) && !next_hop.empty() ) {
+		RegisterUpstream( next_hop );
+	}
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
@@ -343,6 +509,126 @@ CCBServer::InitAndReconfig()
 		this);
 
 	RegisterHandlers();
+}
+
+void
+CCBServer::RegisterUpstream( const std::string &next_hop )
+{
+		// Register with the next-hop ("outside") broker, reusing the standard CCB
+		// client machinery, so this "inside" broker is itself reachable through the
+		// tunnel.  Driven directly here (not via the daemon's CCB_ADDRESS) so it is
+		// not suppressed under USE_SHARED_PORT.
+	if( !m_upstream_ccb ) {
+		m_upstream_ccb = new CCBListeners;
+	}
+		// Let the upstream listener hand routed (tunneled) reverse-connect requests
+		// back to us so we can set up the next hop and relay (StartInboundRelay).
+	m_upstream_ccb->SetCCBServer( this );
+		// Learn when registration completes via a callback; it fires again on each
+		// reconnect, so a changed ccbid is picked up too.  (Set before Configure so
+		// the listener it creates inherits the callback.)
+	m_upstream_ccb->SetRegistrationCallback( [this]() { OnUpstreamRegistered(); } );
+	m_upstream_ccb->Configure( next_hop.c_str() );
+		// Register non-blocking so a slow or unreachable next hop does not stall this
+		// collector's startup.  The CCB listener drives the connect and retries it
+		// (CCB_RECONNECT_TIME) on its own until it succeeds; OnUpstreamRegistered
+		// then derives the tunnel address from the ccbid it is assigned.
+	m_upstream_ccb->RegisterWithCCBServer( false /*non-blocking*/ );
+
+	dprintf(D_ALWAYS,
+			"CCB: registering with next-hop CCB %s (non-blocking); the inbound "
+			"tunnel path becomes available once it completes.\n", next_hop.c_str());
+}
+
+void
+CCBServer::OnUpstreamRegistered()
+{
+	if( !m_upstream_ccb ) {
+		return;
+	}
+
+		// CCB_OUTBOUND_NEXT_HOP may be a list of brokers, so we may register upstream
+		// through several of them; GetCCBContactString space-joins one contact per
+		// listener.  Each such contact is "<next_hop>#<inside_id>", where <next_hop>
+		// may itself be nested if that upstream broker is in turn tunneled -- so the
+		// list of paths grows recursively at every layer.  Turn each contact into the
+		// bracket-stripped "<addr>#<id>" convention the CCBIDs we hand out stamp, and
+		// keep them all: a local registrant then advertises the whole list of nested
+		// contacts ("nextA#idA#local_id nextB#idB#local_id ..."), reachable via any
+		// path.
+	std::string contacts;
+	m_upstream_ccb->GetCCBContactString( contacts );
+	std::string tunnel_list;
+	for( const auto &contact : StringTokenIterator( contacts, " " ) ) {
+		std::string c = contact;
+		size_t hash = c.rfind('#');
+		if( hash == std::string::npos ) {
+			continue;   // this listener has no ccbid yet
+		}
+		std::string broker = c.substr(0, hash);       // "<next_hop>" (maybe nested)
+		std::string ids    = c.substr(hash + 1);      // "inside_id"
+		Sinful bsin( broker.c_str() );
+		if( !bsin.valid() ) {
+			dprintf(D_ALWAYS,"CCB: next-hop contact %s is not a valid Sinful; skipping "
+					"that tunnel path.\n", c.c_str());
+			continue;
+		}
+		if( !tunnel_list.empty() ) {
+			tunnel_list += " ";
+		}
+		tunnel_list += bsin.getCCBAddressString() + "#" + ids;
+	}
+	if( tunnel_list.empty() ) {
+			// No upstream ccbid yet (should not happen from this callback, but be safe).
+		return;
+	}
+	m_tunnel_contacts = tunnel_list;
+
+	dprintf(D_ALWAYS,
+			"CCB: registered with next-hop CCB(s); tunnel address(es) for local "
+			"registrants: %s\n", m_tunnel_contacts.c_str());
+
+		// Flush any registrations we deferred while the tunnel was coming up: now
+		// their replies carry a reachable, nested contact.  (A registrant that
+		// disconnected in the meantime has been removed, so skip a stale ccbid.)
+	if( !m_pending_registration_replies.empty() ) {
+		std::vector<CCBID> pending;
+		pending.swap( m_pending_registration_replies );
+		for( CCBID ccbid : pending ) {
+			if( CCBTarget *t = GetTarget( ccbid ) ) {
+				SendRegistrationReply( t );
+			}
+		}
+		dprintf(D_FULLDEBUG,
+				"CCB: flushed %zu deferred registration reply(ies) after upstream "
+				"registration completed.\n", pending.size());
+	}
+
+		// Tell the master the inbound tunnel is ready so it can start the daemons
+		// that depend on it.  We signal readiness with DC_SET_READY: the master gates
+		// those daemons on this collector signalling ready (see
+		// WaitBeforeStartingOtherDaemons), and readiness clears automatically if we
+		// later restart/re-register.
+	NotifyMasterTunnelReady();
+}
+
+void
+CCBServer::NotifyMasterTunnelReady()
+{
+	char const *master_sinful = daemonCore->InfoCommandSinfulString(-2);
+	if( !master_sinful ) {
+			// Not started by a master (e.g. a standalone collector); nothing to do.
+		return;
+	}
+	ClassAd readyAd;
+	readyAd.Assign("DaemonPID", (int)getpid());
+	readyAd.Assign("DaemonName", get_mySubSystem()->getName());
+	readyAd.Assign("DaemonState", "Ready");
+	classy_counted_ptr<Daemon> dmn = new Daemon( DT_ANY, master_sinful );
+	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg( DC_SET_READY, readyAd );
+	dmn->sendMsg( msg.get() );
+	dprintf(D_ALWAYS,"CCB: notified master (%s) that the inbound tunnel is ready.\n",
+			master_sinful);
 }
 
 
@@ -521,21 +807,42 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 		AddTarget( target );
 	}
 
+		// A tunneling inside CCB that has not yet completed its own upstream
+		// registration would stamp a bare (non-tunnel, unreachable) contact into the
+		// reply.  Defer the reply until then: OnUpstreamRegistered flushes these once
+		// m_tunnel_contacts is derived, so a registrant only ever learns a reachable,
+		// nested contact.  This is what lets the master learn a daemon's tunnel
+		// address from ordinary registration, with no separate tunnel-address query.
+	if( m_upstream_ccb && m_tunnel_contacts.empty() ) {
+		m_pending_registration_replies.push_back( target->getCCBID() );
+		dprintf(D_FULLDEBUG,
+				"CCB: deferring registration reply to %s until this inside CCB has "
+				"registered upstream.\n", sock->peer_description());
+		return KEEP_STREAM;
+	}
+
+	SendRegistrationReply( target );
+	return KEEP_STREAM;
+}
+
+void
+CCBServer::SendRegistrationReply( CCBTarget *target )
+{
 	CCBReconnectInfo *reconnect_info = GetReconnectInfo( target->getCCBID() );
 	ASSERT( reconnect_info );
 
+	Sock *sock = target->getSock();
 	sock->encode();
 
 	ClassAd reply_msg;
-	std::string ccb_contact;
-
+	std::string ccb_contact, reconnect_cookie_str;
 
 		// We send our address as part of the CCB contact string, rather
 		// than letting the target daemon fill it in.  This is to give us
 		// potential flexibility on the CCB server side to do things like
 		// assign different targets to different CCB server sub-processes,
 		// each with their own command port.
-	CCBIDToContactString( m_address.c_str(), target->getCCBID(), ccb_contact );
+	CCBIDToContactString( StampAddresses().c_str(), target->getCCBID(), ccb_contact );
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
@@ -549,10 +856,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 				"to %s.\n", sock->peer_description() );
 
 		RemoveTarget( target );
-		return KEEP_STREAM; // we have already closed this socket
 	}
-
-	return KEEP_STREAM;
 }
 
 void
@@ -613,10 +917,28 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 				sock->peer_description(), ad_str.c_str() );
 		return FALSE;
 	}
-	if( !CCBIDFromString(target_ccbid,target_ccbid_str.c_str()) ) {
+		// A requested CCBID must be a bare unsigned integer.  CCBIDFromString rejects
+		// anything with extra characters -- in particular a nested/chained id such as
+		// "42#17", which is what an old client produces when it mis-splits a tunneled
+		// (nested) contact on the first '#'.  A new client resolves the nested contact
+		// itself and sends the bare id (plus a CCBRoute) for each hop.
+	if( !CCBIDFromString(target_ccbid,target_ccbid_str.c_str()) )
+	{
+			// An old, non-tunneling client that cannot relay (did not ask for
+			// streaming) but IS directly reachable: reverse-connect to it ourselves
+			// and relay that connection down the tunnel (see
+			// HandleOldClientTunnelRequest).  A malformed id with no '#', or a
+			// streaming client that still sent a chained id, is a real error.
+		bool streaming = false;
+		msg.LookupBool( "CCBStreamingRequired", streaming );
+		if( !streaming && target_ccbid_str.find('#') != std::string::npos ) {
+			HandleOldClientTunnelRequest( sock, target_ccbid_str, return_addr, connect_id );
+			return KEEP_STREAM;
+		}
 		dprintf(D_ALWAYS,
 				"CCB: request from %s contains invalid CCBID %s\n",
 				sock->peer_description(), target_ccbid_str.c_str() );
+		RequestReply( sock, false, "invalid CCBID", 0, 0 );
 		return FALSE;
 	}
 
@@ -650,7 +972,28 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 		// connection, so it should keep the (autotuned / inherited) socket
 		// buffers rather than the tiny control-plane size.
 	if( RequestNeedsProxy( msg, return_addr.c_str() ) ) {
-		StartProxyRequest( sock, target, connect_id.c_str(), sock->peer_description() );
+		CCBRouteContext route_ctx;
+			// The client may hand us a route: the remaining CCBIDs to reach after
+			// this target (a nested/tunneled contact).  When present, `target` is a
+			// downstream CCB and we ask it to recurse; when absent, `target` is the
+			// real endpoint.
+		msg.LookupString( ATTR_CCB_ROUTE, route_ctx.route );
+		if( !ValidRoute( route_ctx.route ) ) {
+			dprintf(D_ALWAYS,
+					"CCB: rejecting request from %s: invalid or too-deep tunnel route "
+					"'%s'.\n", sock->peer_description(), route_ctx.route.c_str());
+			RequestReply( sock, false, "invalid tunnel route", 0, target_ccbid );
+			return FALSE;
+		}
+			// We authenticated the client, so we -- not the (spoofable) request ad --
+			// stamp the audit trail: the original requester is this authenticated
+			// peer, and each hop we forward to records us as the prior hop.  Inner
+			// CCBs cannot authenticate the client, so they trust and propagate this
+			// for logging only (never for authorization).
+		route_ctx.original_requester = RequesterIdentity( sock );
+		route_ctx.prior_hop = m_address;
+		route_ctx.reply_to_requester = true;
+		StartProxyRequest( sock, target, connect_id.c_str(), sock->peer_description(), route_ctx );
 		return KEEP_STREAM;
 	}
 
@@ -978,7 +1321,17 @@ public:
 	std::string request_id;
 	ReliSock *requester;  // endpoint "A"
 	ReliSock *target;     // endpoint "B"
+	// Outbound-proxy only: the socket dialing the target while the connect is still
+	// in progress.  It becomes `target` once connected; until then DaemonCore has
+	// not taken ownership, so DestroyProxySession deletes it.
+	ReliSock *connecting;
 	bool relaying;
+	// True on the client-facing (outermost) hop: when the target reverse-connects
+	// we answer the requester ({Result,ProxyMode} + replayed hello) before relaying.
+	// False on an intermediate relay hop (StartInboundRelay), whose requester is the
+	// raw upstream pipe to the outer broker -- that broker already answered the
+	// client, so we must NOT send a second reply; we only splice.
+	bool reply_to_requester;
 	// Set once a relaying session is being torn down.  Both relay sockets share a
 	// handler that captures a shared_ptr to this session; the first to fail flips
 	// this flag and wakes the other, and every relay callback that sees it simply
@@ -998,11 +1351,25 @@ public:
 	Dir a_to_b;   // bytes read from the requester, to be written to the target
 	Dir b_to_a;   // bytes read from the target, to be written to the requester
 
-	CCBProxySession() : requester(nullptr), target(nullptr), relaying(false), dying(false), created(0) {}
+	CCBProxySession() : requester(nullptr), target(nullptr), connecting(nullptr), relaying(false), reply_to_requester(true), dying(false), created(0) {}
 };
 
 // Relay helpers (defined below; forward-declared for use in HandleReverseConnect).
 static bool ccbSetNonBlocking( int fd );
+
+void
+CCBServer::pendingHandshakeInsert( const std::string &connect_id )
+{
+	m_pending_handshakes.insert( connect_id );
+	ccb_stats.CCBStreamingHandshakesActive = (int)m_pending_handshakes.size();
+}
+
+void
+CCBServer::pendingHandshakeErase( const std::string &connect_id )
+{
+	m_pending_handshakes.erase( connect_id );
+	ccb_stats.CCBStreamingHandshakesActive = (int)m_pending_handshakes.size();
+}
 
 bool
 CCBServer::RequestNeedsProxy( ClassAd &msg, char const *return_addr )
@@ -1024,9 +1391,19 @@ CCBServer::RequestNeedsProxy( ClassAd &msg, char const *return_addr )
 }
 
 void
-CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const *connect_id, char const *name )
+CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const *connect_id, char const *name, const CCBRouteContext &route_ctx )
 {
 	ccb_stats.CCBStreamingRequests += 1;
+
+		// On an intermediate relay hop the requester is the raw upstream pipe -- the
+		// outer broker already answered the client -- so a CEDAR failure reply would
+		// corrupt the relay; just let the caller tear the pipe down (the client then
+		// sees the connection fail).  Only the client-facing hop replies.
+	auto failReply = [&]( char const *errmsg ) {
+		if( route_ctx.reply_to_requester ) {
+			RequestReply( requester, false, errmsg, 0, target->getCCBID() );
+		}
+	};
 
 		// Enforce the configured limits before committing any resources: an
 		// overall cap on concurrent proxy sessions, and a tighter cap on sessions
@@ -1038,9 +1415,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 				"CCB: refusing streaming request from %s: at the streaming "
 				"session limit (CCB_SERVER_MAX_STREAMING_SESSIONS=%d).\n",
 				requester->peer_description(), max_sessions);
-		RequestReply( requester, false,
-				"CCB streaming session limit reached on the broker", 0,
-				target->getCCBID() );
+		failReply( "CCB streaming session limit reached on the broker" );
 		ccb_stats.CCBRequestsFailed += 1;
 		delete requester;
 		return;
@@ -1051,9 +1426,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 				"CCB: refusing streaming request from %s: at the streaming "
 				"handshake limit (CCB_SERVER_MAX_STREAMING_HANDSHAKES=%d).\n",
 				requester->peer_description(), max_handshakes);
-		RequestReply( requester, false,
-				"CCB streaming handshake limit reached on the broker", 0,
-				target->getCCBID() );
+		failReply( "CCB streaming handshake limit reached on the broker" );
 		ccb_stats.CCBRequestsFailed += 1;
 		delete requester;
 		return;
@@ -1068,15 +1441,20 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 		// If a session with this connect id already exists, reject (the connect
 		// id is a fresh random token, so this should not normally happen).
 	if( m_proxy_sessions.find(session->connect_id) != m_proxy_sessions.end() ) {
-		RequestReply( requester, false, "duplicate connect id", 0, target->getCCBID() );
+		failReply( "duplicate connect id" );
 		ccb_stats.CCBRequestsFailed += 1;
 		delete requester;  // session (shared_ptr) is freed on return; it never owns the socket
 		return;
 	}
 	m_proxy_sessions[session->connect_id] = session;
-	m_pending_handshakes.insert( session->connect_id );  // pending until relaying
+	pendingHandshakeInsert( session->connect_id );  // pending until relaying
 
-		// Ask the target to reverse-connect to *this broker*.
+	session->reply_to_requester = route_ctx.reply_to_requester;
+
+		// Ask the target to reverse-connect to *this broker* directly.  Use our
+		// direct address (m_address), never the tunnel contact: a local target must
+		// dial us directly rather than route back out through the next-hop broker to
+		// reach us.
 	ClassAd msg;
 	msg.Assign( ATTR_COMMAND, CCB_REQUEST );
 	std::string myaddr = "<" + m_address + ">";
@@ -1086,6 +1464,18 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 	if( name ) {
 		msg.Assign( ATTR_NAME, name );
 	}
+		// Recursive inbound tunnel: when there are more hops beyond this target, tell
+		// it the remaining route so it recurses (sets up the next hop and relays);
+		// carry the audit trail so it can log who this connection is really for.
+	if( !route_ctx.route.empty() ) {
+		msg.Assign( ATTR_CCB_ROUTE, route_ctx.route );
+	}
+	if( !route_ctx.original_requester.empty() ) {
+		msg.Assign( ATTR_CCB_ORIGINAL_REQUESTER, route_ctx.original_requester );
+	}
+	if( !route_ctx.prior_hop.empty() ) {
+		msg.Assign( ATTR_CCB_PRIOR_HOP, route_ctx.prior_hop );
+	}
 
 	Sock *tsock = target->getSock();
 	tsock->encode();
@@ -1093,7 +1483,7 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 		dprintf(D_ALWAYS,
 				"CCB: failed to forward proxy request to target ccbid %lu\n",
 				target->getCCBID());
-		RequestReply( requester, false, "failed to forward proxy request to target", 0, target->getCCBID() );
+		failReply( "failed to forward proxy request to target" );
 		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session.get() );
 		return;
@@ -1103,6 +1493,234 @@ CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const
 			"CCB: started streaming (proxy) session for target ccbid %lu, "
 			"request id %s\n",
 			target->getCCBID(), session->request_id.c_str());
+}
+
+void
+CCBServer::StartInboundRelay( ReliSock *upstream, const CCBRouteContext &route_ctx )
+{
+		// We (an intermediate CCB) were asked -- over our upstream registration, so
+		// implicitly trusted -- to relay a tunneled connection.  `upstream` is our
+		// just-established reverse connection to the requesting (outer) broker.  Set
+		// up the next hop toward the route head and splice it to `upstream`.  The
+		// outer broker already answered the client, so this hop only relays; it never
+		// replies (reply_to_requester = false).
+	std::string head, tail;
+	if( !SplitRoute( route_ctx.route, head, tail ) ) {
+			// Should not happen: the listener only routes us here for a non-empty
+			// route.  Drop the pipe so the client sees the failure.
+		dprintf(D_ALWAYS,"CCB: inbound relay handed an empty route; dropping.\n");
+		ccb_stats.CCBTunnelRelaysFailed += 1;
+		delete upstream;
+		return;
+	}
+	CCBID target_ccbid;
+	CCBTarget *target = nullptr;
+	if( CCBIDFromString( target_ccbid, head.c_str() ) ) {
+		target = GetTarget( target_ccbid );
+	}
+	if( !target ) {
+		dprintf(D_ALWAYS,
+				"CCB: inbound relay cannot continue: no daemon registered as next-hop "
+				"ccbid %s (original requester %s); dropping.\n",
+				head.c_str(), route_ctx.original_requester.c_str());
+		ccb_stats.CCBTunnelRelaysFailed += 1;
+		delete upstream;
+		return;
+	}
+
+		// Fresh secret for the downstream rendezvous: the next hop presents it back
+		// when it reverse-connects, so we can match it to this relay session.
+	char *cid = Condor_Crypt_Base::randomHexKey(20);
+	std::string connect_id = cid ? cid : "";
+	free( cid );
+
+	std::string name;
+	formatstr( name, "inbound tunnel relay for %s",
+			   route_ctx.original_requester.empty() ? "(unknown)"
+			   : route_ctx.original_requester.c_str() );
+
+		// Audit trail: log who this tunneled connection is really for (the original,
+		// authenticated-at-the-entry requester) and which broker handed it to us,
+		// even though we never authenticate the client ourselves.
+	dprintf(D_FULLDEBUG,
+			"CCB: relaying inbound tunnel to next-hop ccbid %s (remaining route '%s') "
+			"for original requester %s via prior hop %s.\n",
+			head.c_str(), tail.c_str(),
+			route_ctx.original_requester.c_str(), route_ctx.prior_hop.c_str());
+
+	ccb_stats.CCBTunnelRelays += 1;
+
+	CCBRouteContext next;
+	next.route = tail;                                      // hops beyond this target
+	next.original_requester = route_ctx.original_requester; // propagate unchanged
+	next.prior_hop = m_address;                             // we are now the prior hop
+	next.reply_to_requester = false;                        // relay hop: only splice
+	StartProxyRequest( upstream, target, connect_id.c_str(), name.c_str(), next );
+}
+
+// State carried across the non-blocking reverse dial to an old (non-tunneling)
+// client.  We own request_sock until we answer it and delete it; client_sock (the
+// dialed connection) is passed to StartProxyRequest once the dial completes.
+struct OldClientRelay {
+	ReliSock *request_sock{nullptr};   // the client's CCB_REQUEST socket
+	std::string connect_id;            // secret the client matches on its reverse connect
+	CCBID target_ccbid{0};             // entry hop toward the tunnel (route head)
+	std::string route;                 // remaining hops after target (space-separated)
+	std::string original_requester;    // audit: who this is really for
+	std::string prior_hop;             // audit: the broker that set up the next hop (us)
+};
+
+	// Split a chained CCBID "42#17#99" into the entry hop "42" and the remaining
+	// route "17 99" (the space-separated form the relay path expects).  Returns
+	// false if there is no non-empty head.
+static bool
+SplitNestedCCBID( const std::string &nested, std::string &head, std::string &route )
+{
+	size_t h = nested.find('#');
+	if( h == std::string::npos ) {
+		head = nested;
+		route.clear();
+	} else {
+		head = nested.substr(0, h);
+		route = nested.substr(h + 1);
+		for( char &c : route ) { if( c == '#' ) c = ' '; }
+	}
+	return !head.empty();
+}
+
+void
+CCBServer::HandleOldClientTunnelRequest( ReliSock *request_sock,
+		const std::string &nested_id, const std::string &client_addr,
+		const std::string &connect_id )
+{
+	std::string head, route;
+	CCBID target_ccbid = 0;
+	CCBTarget *target = nullptr;
+	if( SplitNestedCCBID( nested_id, head, route ) &&
+		CCBIDFromString( target_ccbid, head.c_str() ) &&
+		ValidRoute( route ) )
+	{
+		target = GetTarget( target_ccbid );
+	}
+	if( !target ) {
+		dprintf(D_ALWAYS,
+				"CCB: old client %s requested tunneled contact %s, but its entry hop "
+				"is not registered here (or the id is malformed); refusing.\n",
+				request_sock->peer_description(), nested_id.c_str());
+		RequestReply( request_sock, false, "no route to tunneled target", 0, target_ccbid );
+		delete request_sock;
+		return;
+	}
+
+		// Reverse-connect to the client ourselves, as if we were the target: dial it
+		// back non-blocking so the CCB main loop is never stalled.  Completion is
+		// delivered to OldClientReverseConnected, which sends the reverse-connect hello
+		// and relays the socket down the tunnel.
+	Daemon client( DT_ANY, client_addr.c_str() );
+	CondorError errstack;
+	int ccb_timeout = param_integer("CCB_TIMEOUT", 300);
+	Sock *client_sock = client.makeConnectedSocket(
+			Stream::reli_sock, ccb_timeout, 0, &errstack, true /*nonblocking*/ );
+	if( !client_sock ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to initiate reverse connection to old client %s: %s\n",
+				client_addr.c_str(), errstack.getFullText().c_str());
+		RequestReply( request_sock, false, "failed to reverse-connect to requester",
+				0, target_ccbid );
+		delete request_sock;
+		return;
+	}
+
+	auto ctx = std::make_shared<OldClientRelay>();
+	ctx->request_sock = request_sock;
+	ctx->connect_id = connect_id;
+	ctx->target_ccbid = target_ccbid;
+	ctx->route = route;
+	ctx->original_requester = RequesterIdentity( request_sock );
+	ctx->prior_hop = m_address;
+
+	int rc = daemonCore->Register_Socket(
+			client_sock, "ccb old-client reverse dial",
+			[this, ctx](Stream *s){ return OldClientReverseConnected( ctx, (ReliSock *)s ); },
+			"CCBServer::OldClientReverseConnected" );
+	if( rc < 0 ) {
+		RequestReply( request_sock, false, "failed to register reverse connection",
+				0, target_ccbid );
+		delete request_sock;
+		delete client_sock;
+		return;
+	}
+	dprintf(D_FULLDEBUG,
+			"CCB: reverse-connecting to old client %s to relay it down the tunnel to "
+			"ccbid %s (route '%s').\n", client_addr.c_str(), head.c_str(), route.c_str());
+}
+
+int
+CCBServer::OldClientReverseConnected( std::shared_ptr<OldClientRelay> ctx, ReliSock *client_sock )
+{
+	if( client_sock ) {
+		daemonCore->Cancel_Socket( client_sock );
+	}
+	if( !client_sock || !client_sock->is_connected() ) {
+		dprintf(D_ALWAYS,"CCB: reverse connection to old client failed to connect.\n");
+		RequestReply( ctx->request_sock, false, "failed to reverse-connect to requester",
+				0, ctx->target_ccbid );
+		delete ctx->request_sock;
+		delete client_sock;   // delete of nullptr is a no-op
+		return KEEP_STREAM;
+	}
+
+		// Send the reverse-connect hello (a raw command, so it looks like a normal
+		// CEDAR command socket to the client).  The client's accept logic checks
+		// cmd==CCB_REVERSE_CONNECT && ClaimId==connect_id, then runs its end-to-end
+		// handshake over this socket -- which we relay to the real endpoint.
+	client_sock->encode();
+	int cmd = CCB_REVERSE_CONNECT;
+	ClassAd hello;
+	hello.Assign( ATTR_CLAIM_ID, ctx->connect_id );
+	hello.Assign( ATTR_MY_ADDRESS, std::string("<") + m_address + ">" );
+	if( !client_sock->put(cmd) || !putClassAd( client_sock, hello ) ||
+		!client_sock->end_of_message() )
+	{
+		dprintf(D_ALWAYS,"CCB: failed to send reverse-connect hello to old client.\n");
+		RequestReply( ctx->request_sock, false, "failed to send reverse-connect",
+				0, ctx->target_ccbid );
+		delete ctx->request_sock;
+		delete client_sock;
+		return KEEP_STREAM;
+	}
+	client_sock->isClient(false);
+	client_sock->resetHeaderMD();
+
+		// The entry hop may have deregistered during the dial; re-look it up.
+	CCBTarget *target = GetTarget( ctx->target_ccbid );
+	if( !target ) {
+		RequestReply( ctx->request_sock, false, "tunneled target deregistered",
+				0, ctx->target_ccbid );
+		delete ctx->request_sock;
+		delete client_sock;
+		return KEEP_STREAM;
+	}
+
+		// Tell the client its request succeeded (traditional-style), then relay the
+		// client-facing socket down the tunnel.  A fresh downstream connect id keys
+		// the next hop's rendezvous; the client keeps using its own connect id on the
+		// reverse connection we just handed it.
+	RequestReply( ctx->request_sock, true, nullptr, 0, ctx->target_ccbid );
+	delete ctx->request_sock;
+
+	char *cid = Condor_Crypt_Base::randomHexKey(20);
+	std::string down_connect_id = cid ? cid : "";
+	free( cid );
+
+	CCBRouteContext rctx;
+	rctx.route = ctx->route;
+	rctx.original_requester = ctx->original_requester;
+	rctx.prior_hop = ctx->prior_hop;
+	rctx.reply_to_requester = false;   // client_sock is a raw relay endpoint, not a request socket
+	StartProxyRequest( client_sock, target, down_connect_id.c_str(),
+			client_sock->peer_description(), rctx );
+	return KEEP_STREAM;
 }
 
 int
@@ -1138,47 +1756,66 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	}
 	session->target = sock;
 
-		// Tell the requester its connection will be proxied on this socket.
-	ClassAd reply;
-	reply.Assign( ATTR_RESULT, true );
-	reply.Assign( "ProxyMode", true );
-	session->requester->encode();
-	if( !putClassAd( session->requester, reply ) || !session->requester->end_of_message() ) {
-		dprintf(D_ALWAYS,"CCB: failed to send proxy reply to requester %s\n",
-				session->requester->peer_description());
-		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session.get() );
-		return KEEP_STREAM; // we took ownership of sock via session->target
+		// On the client-facing (outermost) hop, answer the requester before relaying;
+		// on an intermediate relay hop the requester is the raw upstream pipe and the
+		// outer broker already answered the client, so we skip straight to splicing.
+	if( session->reply_to_requester ) {
+			// Tell the requester its connection will be proxied on this socket.
+		ClassAd reply;
+		reply.Assign( ATTR_RESULT, true );
+		reply.Assign( "ProxyMode", true );
+		session->requester->encode();
+		if( !putClassAd( session->requester, reply ) || !session->requester->end_of_message() ) {
+			dprintf(D_ALWAYS,"CCB: failed to send proxy reply to requester %s\n",
+					session->requester->peer_description());
+			ccb_stats.CCBRequestsFailed += 1;
+			DestroyProxySession( session.get() );
+			return KEEP_STREAM; // we took ownership of sock via session->target
+		}
+
+			// Replay the target's reverse-connect hello to the requester so its
+			// accept logic (cmd==CCB_REVERSE_CONNECT && ClaimId==connect_id) passes.
+		session->requester->encode();
+		int rcmd = CCB_REVERSE_CONNECT;
+		if( !session->requester->put(rcmd) ||
+			!putClassAd( session->requester, hello ) ||
+			!session->requester->end_of_message() )
+		{
+			dprintf(D_ALWAYS,"CCB: failed to replay reverse-connect hello to requester\n");
+			ccb_stats.CCBRequestsFailed += 1;
+			DestroyProxySession( session.get() );
+			return KEEP_STREAM;
+		}
 	}
 
-		// Replay the target's reverse-connect hello to the requester so its
-		// accept logic (cmd==CCB_REVERSE_CONNECT && ClaimId==connect_id) passes.
-	session->requester->encode();
-	int rcmd = CCB_REVERSE_CONNECT;
-	if( !session->requester->put(rcmd) ||
-		!putClassAd( session->requester, hello ) ||
-		!session->requester->end_of_message() )
-	{
-		dprintf(D_ALWAYS,"CCB: failed to replay reverse-connect hello to requester\n");
-		ccb_stats.CCBRequestsFailed += 1;
-		DestroyProxySession( session.get() );
-		return KEEP_STREAM;
-	}
+		// Both ends are in hand; disable crypto, go non-blocking, and start the
+		// byte relay (the tail shared with the outbound-proxy path).
+	StartRelay( session );
+	return KEEP_STREAM;
+}
 
-		// From here on, both sockets carry opaque end-to-end bytes.  Disable
-		// any broker-session crypto on the requester socket so the relay reads
-		// the raw bytes the requester sends after it adopts the connection.
+bool
+CCBServer::StartRelay( std::shared_ptr<CCBProxySession> session )
+{
+		// Both the inbound-streaming and outbound-proxy paths hand us the connected
+		// peer already in session->target (the outbound path adopts its dialed
+		// socket there and clears session->connecting before calling us).
+	ReliSock *target = session->target;
+
+		// From here on, both sockets carry opaque end-to-end bytes.  Disable any
+		// broker-session crypto so the relay reads the raw bytes each peer sends
+		// after it adopts the connection.
 	session->requester->set_crypto_key( false, NULL );
-	session->target->set_crypto_key( false, NULL );
+	target->set_crypto_key( false, NULL );
 
 		// Put both sockets in non-blocking mode for the relay.
 	if( !ccbSetNonBlocking(session->requester->get_file_desc()) ||
-		!ccbSetNonBlocking(session->target->get_file_desc()) )
+		!ccbSetNonBlocking(target->get_file_desc()) )
 	{
 		dprintf(D_ALWAYS,"CCB: failed to set proxy sockets non-blocking\n");
 		ccb_stats.CCBRequestsFailed += 1;
 		DestroyProxySession( session.get() );
-		return KEEP_STREAM;
+		return false;
 	}
 
 		// Begin the non-blocking byte relay.  Both sockets share one handler that
@@ -1188,7 +1825,7 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 		// socket's read/write interest to avoid triggering reads when we cannot
 		// write.
 	session->relaying = true;
-	m_pending_handshakes.erase( session->connect_id );  // handshake done -> relaying
+	pendingHandshakeErase( session->connect_id );  // handshake done -> relaying
 
 	StdSocketHandler relay_handler =
 		[this, session](Stream *) { return ProxyRelayData( session.get() ); };
@@ -1201,11 +1838,22 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	ASSERT( rc >= 0 );
 
 	rc = daemonCore->Register_Socket(
-		session->target,
+		target,
 		"ccb proxy (target)",
 		relay_handler,
 		"CCBServer::ProxyRelayData" );
 	ASSERT( rc >= 0 );
+
+		// The relay now owns the target socket.
+	session->target = target;
+	session->connecting = nullptr;
+
+		// Start both sockets watching for readable data.  In the outbound path the
+		// target arrived here from a connect-completion callback (interest was
+		// HANDLE_WRITE while the connect was pending), so make its read interest
+		// explicit; ProxyRelayData re-evaluates both on the first event.
+	daemonCore->Set_Socket_Handler_Type( session->requester, HANDLE_READ );
+	daemonCore->Set_Socket_Handler_Type( session->target, HANDLE_READ );
 
 		// The broker's job -- connecting the two peers -- is done; the splice is
 		// live.  Count it as a succeeded request and as an active relay.
@@ -1214,8 +1862,298 @@ CCBServer::HandleReverseConnect( int cmd, Stream *stream )
 	ccb_stats.CCBRequestsSucceeded += 1;
 
 	dprintf(D_FULLDEBUG|D_NETWORK,
-			"CCB: established streaming (proxy) relay for request id %s\n",
+			"CCB: established relay for request id %s\n",
 			session->request_id.c_str());
+	return true;
+}
+
+// ---- outbound-CCB / tunneling mode (CCB_OUTBOUND_PROXY) ----------------------
+
+// Send a ClassAd {Result[, ErrorString]} reply to an outbound-proxy requester.
+static bool
+ccbProxyConnectReply( ReliSock *sock, bool result, char const *errmsg )
+{
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, result );
+	if( errmsg ) {
+		reply.Assign( ATTR_ERROR_STRING, errmsg );
+	}
+	sock->encode();
+	return putClassAd( sock, reply ) && sock->end_of_message();
+}
+
+	// Does host/addr match any entry in `list` (a space/comma-separated set)?  An
+	// IP target matches a CIDR/network entry; any target matches a hostname entry by
+	// case-insensitive wildcard via matches_anycase_withwildcard -- the same matcher
+	// HTCondor's ALLOW/DENY host authorization uses, so "*.example.com" works.
+static bool
+ccbTargetMatchesList( const std::string &list, char const *host,
+                      const condor_sockaddr &addr, bool is_ip )
+{
+	for( const auto &entry : StringTokenIterator( list ) ) {
+		if( is_ip ) {
+			condor_netaddr net;
+			if( net.from_net_string( entry.c_str() ) && net.match( addr ) ) {
+				return true;
+			}
+		}
+		if( matches_anycase_withwildcard( entry.c_str(), host ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+CCBServer::OutboundTargetAllowed( const std::string &target )
+{
+	Sinful s( target.c_str() );
+	char const *host = s.getHost();
+	if( !s.valid() || !host ) {
+		return false;
+	}
+
+	condor_sockaddr addr;
+	bool is_ip = addr.from_ip_string( host );
+
+		// Deny-list wins: a target matching CCB_OUTBOUND_TARGET_DENYLIST is refused
+		// even when the allow-list would permit it.  Its default is the
+		// loopback/link-local set, so by default the broker refuses to be used to
+		// reach services bound to its own host (an SSRF guard) -- but that refusal is
+		// now a visible, overridable config value rather than hard-coded.
+	std::string denylist;
+	if( param( denylist, "CCB_OUTBOUND_TARGET_DENYLIST" ) && !denylist.empty() &&
+		ccbTargetMatchesList( denylist, host, addr, is_ip ) )
+	{
+		return false;
+	}
+
+		// Allow-list: its default is "*" (permit everything not denied above); an
+		// empty list permits nothing.
+	std::string allowlist;
+	if( !param( allowlist, "CCB_OUTBOUND_TARGET_ALLOWLIST" ) ) {
+		return false;
+	}
+	return ccbTargetMatchesList( allowlist, host, addr, is_ip );
+}
+
+int
+CCBServer::HandleProxyConnect( int cmd, Stream *stream )
+{
+	ASSERT( cmd == CCB_PROXY_CONNECT );
+	ReliSock *sock = (ReliSock *)stream;
+	sock->timeout(1);
+
+	ccb_stats.CCBOutboundRequests += 1;
+
+	ClassAd msg;
+	sock->decode();
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,"CCB: failed to read proxy-connect request from %s\n",
+				sock->peer_description());
+		return FALSE;
+	}
+
+	std::string target, connect_id;
+	msg.LookupString( ATTR_MY_ADDRESS, target );
+	msg.LookupString( ATTR_CLAIM_ID, connect_id );
+		// Decrementing TTL (like TCP): the originator set it; we only decrement and
+		// refuse at 0 when forwarding, so the chain length is bounded by the endpoint
+		// rather than any intermediate broker's own maximum.  Default to the local
+		// originator TTL if the request carries none.
+	int ttl = param_integer("CCB_OUTBOUND_TTL", 8, 1);
+	msg.LookupInteger( ATTR_CCB_TTL, ttl );
+	if( target.empty() || connect_id.empty() ) {
+		ccbProxyConnectReply( sock, false, "missing target address or connect id" );
+		return FALSE;
+	}
+
+	if( !OutboundTargetAllowed( target ) ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing proxy-connect from %s to disallowed target %s\n",
+				sock->peer_description(), target.c_str());
+		ccbProxyConnectReply( sock, false, "target not permitted by this broker" );
+		return FALSE;
+	}
+
+	StartOutgoingProxyRequest( sock, target, connect_id, ttl );
+	return KEEP_STREAM;   // we took ownership of the requester socket
+}
+
+void
+CCBServer::StartOutgoingProxyRequest( ReliSock *requester,
+		const std::string &target, const std::string &connect_id,
+		int ttl )
+{
+		// The request itself is counted in HandleProxyConnect (CCBOutboundRequests);
+		// here we only track the outbound-specific outcomes below.
+
+		// Same caps as the inbound streaming path (shared session tables).
+	int max_sessions = param_integer("CCB_SERVER_MAX_STREAMING_SESSIONS", 0, 0);
+	if( max_sessions > 0 && (int)m_proxy_sessions.size() >= max_sessions ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing proxy-connect from %s: at the session limit "
+				"(CCB_SERVER_MAX_STREAMING_SESSIONS=%d).\n",
+				requester->peer_description(), max_sessions);
+		ccbProxyConnectReply( requester, false, "CCB session limit reached on the broker" );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;
+		return;
+	}
+	int max_handshakes = param_integer("CCB_SERVER_MAX_STREAMING_HANDSHAKES", 0, 0);
+	if( max_handshakes > 0 && (int)m_pending_handshakes.size() >= max_handshakes ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing proxy-connect from %s: at the handshake limit "
+				"(CCB_SERVER_MAX_STREAMING_HANDSHAKES=%d).\n",
+				requester->peer_description(), max_handshakes);
+		ccbProxyConnectReply( requester, false, "CCB handshake limit reached on the broker" );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;
+		return;
+	}
+
+	auto session = std::make_shared<CCBProxySession>();
+	session->connect_id = connect_id;
+	session->requester = requester;
+	session->created = time(nullptr);  // handshake deadline is relative to this
+	CCBIDToString( m_next_request_id++, session->request_id );
+
+	if( m_proxy_sessions.find(session->connect_id) != m_proxy_sessions.end() ) {
+		ccbProxyConnectReply( requester, false, "duplicate connect id" );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;
+		return;
+	}
+	m_proxy_sessions[session->connect_id] = session;
+	pendingHandshakeInsert( session->connect_id );  // pending until relaying
+
+		// Obtain a connection to the target on the requester's behalf, non-blocking
+		// so the CCB main loop is never stalled.  Either we are the exit point and
+		// dial the target directly, or -- if a next-hop broker is configured -- we
+		// forward the proxy request to it (which dials the target, or forwards
+		// again), composing the outbound tunnel across brokers.  Either way `out`
+		// becomes a transparent pipe to the target and completion is delivered to
+		// OutgoingConnectComplete.
+	ReliSock *out = new ReliSock;
+	int rc;
+	std::string next_hop;
+	bool forward = param( next_hop, "CCB_OUTBOUND_NEXT_HOP" ) && !next_hop.empty();
+	if( forward && ttl <= 0 ) {
+			// The originator's TTL is exhausted: forwarding again would exceed the
+			// chain length it allowed (or indicates a next-hop loop).  Refuse.
+		dprintf(D_ALWAYS,
+				"CCB: refusing to forward proxy-connect from %s to %s: outbound TTL "
+				"expired (possible next-hop loop).\n",
+				requester->peer_description(), target.c_str());
+		delete out;
+		ccbProxyConnectReply( requester, false, "outbound proxy TTL expired" );
+		ccb_stats.CCBRequestsFailed += 1;
+		ccb_stats.CCBOutboundFailed += 1;
+		DestroyProxySession( session.get() );
+		return;
+	}
+	if( forward ) {
+			// Reach the target through the next-hop broker using the outbound-proxy
+			// client exchange; on success it adopts the spliced pipe into `out`.
+			// Pass the decremented TTL so the next hop refuses once the originator's
+			// budget runs out.
+		ccb_stats.CCBOutboundForwarded += 1;
+		rc = out->do_outbound_ccb_connect( next_hop.c_str(), target.c_str(),
+				true /*non_blocking*/, NULL, ttl - 1 );
+	} else {
+			// Dial directly.  The standard connect path (so the target may itself be
+			// direct / shared-port / CCB-routed) but bypass any outbound-CCB
+			// interception on this broker -- we are the exit point.
+		out->set_bypass_outbound_ccb( true );
+		rc = out->connect( target.c_str(), 0, true /*non_blocking*/ );
+	}
+
+	if( rc == CEDAR_EWOULDBLOCK ) {
+			// The dial is in progress; finish in OutgoingConnectComplete.
+		session->connecting = out;
+		int reg = daemonCore->Register_Socket(
+			out,
+			"ccb outbound proxy dial",
+			[this, session](Stream *s){ return OutgoingConnectComplete( session, (ReliSock *)s ); },
+			"CCBServer::OutgoingConnectComplete" );
+		ASSERT( reg >= 0 );
+
+		dprintf(D_FULLDEBUG,
+				"CCB: %s target %s for outbound proxy request id %s\n",
+				forward ? "forwarding to next hop for" : "dialing",
+				target.c_str(), session->request_id.c_str());
+		return;
+	}
+
+	if( rc == TRUE ) {
+			// The direct dial completed synchronously (a fast local target can
+			// connect immediately even in non-blocking mode).  Adopt `out` and relay
+			// now, mirroring OutgoingConnectComplete's success tail -- but with no
+			// Cancel_Socket, since `out` was never registered for a connect callback.
+			// (The forward path never returns TRUE; it is inherently asynchronous.)
+		session->target = out;
+		if( !ccbProxyConnectReply( session->requester, true, nullptr ) ) {
+			dprintf(D_ALWAYS,"CCB: failed to send proxy-connect reply to requester %s\n",
+					session->requester->peer_description());
+			ccb_stats.CCBRequestsFailed += 1;
+			DestroyProxySession( session.get() );
+			return;
+		}
+		dprintf(D_FULLDEBUG,
+				"CCB: dialed target %s (immediately) for outbound proxy request id %s\n",
+				target.c_str(), session->request_id.c_str());
+		StartRelay( session );
+		return;
+	}
+
+		// rc == FALSE: immediate failure to even start the dial.
+	dprintf(D_ALWAYS,"CCB: outbound proxy connection to %s failed to start\n",
+			target.c_str());
+	delete out;
+	ccbProxyConnectReply( requester, false, "outbound connection to target failed" );
+	ccb_stats.CCBRequestsFailed += 1;
+	ccb_stats.CCBOutboundFailed += 1;
+	DestroyProxySession( session.get() );
+	return;
+}
+
+int
+CCBServer::OutgoingConnectComplete( std::shared_ptr<CCBProxySession> session, ReliSock *out )
+{
+		// DaemonCore drives do_connect_finish() to completion before invoking us
+		// (see the is_connect_pending path in DaemonCore::Driver), so the dial has
+		// resolved -- we only check the outcome.
+	if( !out->is_connected() ) {
+		dprintf(D_ALWAYS,"CCB: outbound proxy dial to %s failed\n",
+				out->peer_description());
+		ccbProxyConnectReply( session->requester, false, "outbound connection to target failed" );
+		ccb_stats.CCBRequestsFailed += 1;
+		ccb_stats.CCBOutboundFailed += 1;
+			// DestroyProxySession cancels and frees `out` via session->connecting.
+		DestroyProxySession( session.get() );
+		return KEEP_STREAM;
+	}
+
+		// Connected.  Detach `out` from its connect-completion registration and
+		// adopt it as the target.  Cancelling + letting StartRelay re-register it is
+		// required to clear DaemonCore's connect-pending state on the socket (a
+		// lingering connect-pending entry keeps DaemonCore driving do_connect_finish
+		// and the relay would send to a socket it still thinks is connecting).
+	daemonCore->Cancel_Socket( out );
+	session->connecting = nullptr;
+	session->target = out;
+
+		// Reply {Result:true} to the requester BEFORE StartRelay disables crypto,
+		// matching the ordering of the inbound streaming reply.
+	if( !ccbProxyConnectReply( session->requester, true, nullptr ) ) {
+		dprintf(D_ALWAYS,"CCB: failed to send proxy-connect reply to requester %s\n",
+				session->requester->peer_description());
+		ccb_stats.CCBRequestsFailed += 1;
+		DestroyProxySession( session.get() );
+		return KEEP_STREAM;
+	}
+
+	StartRelay( session );
 	return KEEP_STREAM;
 }
 
@@ -1476,6 +2414,17 @@ CCBServer::DestroyProxySession( CCBProxySession *session )
 
 		// We still own these sockets (DaemonCore only takes ownership once they are
 		// registered for relaying), so delete them here.  delete on nullptr is fine.
+		// A `connecting` socket (outbound proxy, dial still in progress) may be
+		// registered with DaemonCore for the connect callback; cancel it first.
+		// If the dial is a forward through a next-hop broker, `connecting` also holds
+		// an in-flight CCBClient (reverse-connect pending state); deleting it runs
+		// ~ReliSock -> Sock::close(), which cancels that CCBClient and nulls its
+		// back-pointer, so no later broker callback can touch this freed socket.
+	if( session->connecting ) {
+		daemonCore->Cancel_Socket( session->connecting );
+		delete session->connecting;
+		session->connecting = nullptr;
+	}
 	delete session->requester;
 	delete session->target;
 	session->requester = nullptr;
@@ -1483,7 +2432,7 @@ CCBServer::DestroyProxySession( CCBProxySession *session )
 
 		// Dropping the m_proxy_sessions entry releases the only shared_ptr to a
 		// pre-relaying session (no relay handler holds one yet), so this frees it.
-	m_pending_handshakes.erase( session->connect_id );
+	pendingHandshakeErase( session->connect_id );
 	auto it = m_proxy_sessions.find( session->connect_id );
 	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
 		m_proxy_sessions.erase( it );
@@ -1520,7 +2469,7 @@ CCBServer::BeginRelayTeardown( CCBProxySession *session )
 		// so the shared_ptr the map held is released (the relay handlers keep the
 		// session alive until their sockets are gone).  Do this last: the shutdown
 		// calls above still need session->requester / session->target.
-	m_pending_handshakes.erase( session->connect_id );  // a no-op once relaying
+	pendingHandshakeErase( session->connect_id );  // a no-op once relaying
 	auto it = m_proxy_sessions.find( session->connect_id );
 	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
 		m_proxy_sessions.erase( it );
