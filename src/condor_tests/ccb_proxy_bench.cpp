@@ -25,6 +25,8 @@
 #include "reli_sock.h"
 #include "classad_oldnew.h"
 #include "condor_classad.h"
+#include "ipv6_hostname.h"
+#include "condor_sockaddr.h"
 #include <tuple>
 
 #ifdef WIN32
@@ -41,6 +43,10 @@ int main( int, char ** )
 
 #include <poll.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include <chrono>
 #include <memory>
 #include <vector>
@@ -376,19 +382,125 @@ static int capTest( const char *broker )
 	return 0;
 }
 
+// targetRole_listener: open a plain TCP listener, advertise its address to the
+// parent, accept the connection the broker dials in on our behalf, and blast.
+// Used by outbound-proxy (CCB_PROXY_CONNECT) mode: unlike streaming, the target
+// does not register or reverse-connect -- the broker dials THIS listener directly.
+static int targetRole_listener( int seconds, FILE *to_parent )
+{
+	int lfd = socket(AF_INET, SOCK_STREAM, 0);
+	if( lfd < 0 ) { fprintf(stderr, "listener: socket() failed\n"); return 1; }
+	int one = 1;
+	setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = 0;   // ephemeral
+	if( bind(lfd, (struct sockaddr *)&sin, sizeof(sin)) != 0 ) {
+		fprintf(stderr, "listener: bind() failed\n"); return 1;
+	}
+	socklen_t slen = sizeof(sin);
+	if( getsockname(lfd, (struct sockaddr *)&sin, &slen) != 0 ) {
+		fprintf(stderr, "listener: getsockname() failed\n"); return 1;
+	}
+	int port = ntohs(sin.sin_port);
+	if( listen(lfd, 1) != 0 ) { fprintf(stderr, "listener: listen() failed\n"); return 1; }
+
+	// Advertise a sinful the broker can dial (its primary local IPv4 address).
+	std::string ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+	fprintf(to_parent, "<%s:%d>\n", ip.c_str(), port);
+	fflush(to_parent);
+
+	int cfd = accept(lfd, NULL, NULL);
+	if( cfd < 0 ) { fprintf(stderr, "listener: accept() failed\n"); return 1; }
+	close(lfd);
+		// Match the TCP_NODELAY that CEDAR sockets set; without it Nagle on this
+		// raw socket throttles our sends and makes the bidirectional measurement
+		// lopsided.
+	int nodelay = 1;
+	setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+	double rate = blast(cfd, seconds);   // requester -> target
+	fprintf(to_parent, "%.6f\n", rate);
+	fflush(to_parent);
+	close(cfd);
+	return 0;
+}
+
+// requesterRole_outbound: ask the broker to dial the listener on our behalf
+// (CCB_PROXY_CONNECT) and blast over the spliced socket, reporting throughput.
+static int requesterRole_outbound( const char *broker, int seconds, FILE *from_target, int ttl )
+{
+	char line[256];
+	if( !fgets(line, sizeof(line), from_target) ) {
+		fprintf(stderr, "requester: listener failed before advertising\n"); return 1;
+	}
+	std::string target(line);
+	while( !target.empty() && (target.back()=='\n' || target.back()=='\r') ) { target.pop_back(); }
+
+	Daemon ccb(DT_COLLECTOR, broker, NULL);
+	Sock *req = ccb.startCommand(CCB_PROXY_CONNECT, Stream::reli_sock, 20, NULL);
+	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_PROXY_CONNECT) failed\n"); return 1; }
+
+	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
+	ClassAd reqad;
+	reqad.Assign(ATTR_MY_ADDRESS, target);   // the address the broker should dial
+	reqad.Assign(ATTR_CLAIM_ID, connect_id);
+	reqad.Assign(ATTR_NAME, "ccb_proxy_bench-outbound-requester");
+	if( ttl >= 0 ) { reqad.Assign(ATTR_CCB_TTL, ttl); }   // let tests exercise TTL exhaustion
+	free(connect_id);
+	req->encode();
+	if( !putClassAd(req, reqad) || !req->end_of_message() ) {
+		fprintf(stderr, "requester: failed to send proxy-connect request\n"); return 1;
+	}
+
+	ClassAd reply;
+	req->decode();
+	if( !getClassAd(req, reply) || !req->end_of_message() ) {
+		fprintf(stderr, "requester: failed to read reply\n"); return 1;
+	}
+	bool result = false;
+	reply.LookupBool(ATTR_RESULT, result);
+	if( !result ) {
+		std::string err; reply.LookupString(ATTR_ERROR_STRING, err);
+		fprintf(stderr, "requester: broker refused: %s\n", err.c_str()); return 1;
+	}
+
+	// Unlike streaming, there is no reverse-connect hello in outbound mode: after
+	// {Result:true} the socket is a raw pipe to the target.
+	double tgt_to_req = blast(req->get_file_desc(), seconds);
+
+	double req_to_tgt = 0.0;
+	if( fgets(line, sizeof(line), from_target) ) { req_to_tgt = atof(line); }
+
+	auto gbits = [](double bps){ return bps * 8.0 / 1e9; };
+	auto mib   = [](double bps){ return bps / (1024.0*1024.0); };
+	printf("CCB outbound-proxy relay throughput over %ds:\n", seconds);
+	printf("  requester -> target : %8.1f MiB/s  (%.2f Gbps)\n", mib(req_to_tgt), gbits(req_to_tgt));
+	printf("  target -> requester : %8.1f MiB/s  (%.2f Gbps)\n", mib(tgt_to_req), gbits(tgt_to_req));
+	printf("  aggregate           : %8.1f MiB/s  (%.2f Gbps)\n",
+		   mib(req_to_tgt+tgt_to_req), gbits(req_to_tgt+tgt_to_req));
+	return 0;
+}
+
 int main( int argc, char **argv )
 {
 	if( argc < 2 ) {
-		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test]\n", argv[0]);
+		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test | --outbound [--ttl N]]\n", argv[0]);
 		return 2;
 	}
 	const char *broker = argv[1];
 	bool reaper_mode = false;
 	bool cap_mode = false;
+	bool outbound_mode = false;
+	int outbound_ttl = -1;   // -1 => let the broker apply its own default
 	int seconds = 5;
 	for( int i = 2; i < argc; i++ ) {
 		if( std::string(argv[i]) == "--no-reverse-connect" ) { reaper_mode = true; }
 		else if( std::string(argv[i]) == "--cap-test" ) { cap_mode = true; }
+		else if( std::string(argv[i]) == "--outbound" ) { outbound_mode = true; }
+		else if( std::string(argv[i]) == "--ttl" && i+1 < argc ) { outbound_ttl = atoi(argv[++i]); }
 		else { seconds = atoi(argv[i]); }
 	}
 
@@ -415,6 +527,8 @@ int main( int argc, char **argv )
 		FILE *to_parent = fdopen(fds[1], "w");
 		int rc = reaper_mode
 			? (to_parent ? targetRole_deadbeat(broker, to_parent) : 1)
+			: outbound_mode
+			? (to_parent ? targetRole_listener(seconds, to_parent) : 1)
 			: (to_parent ? targetRole(broker, seconds, to_parent) : 1);
 		if( to_parent ) { fclose(to_parent); }
 		_exit(rc);
@@ -423,6 +537,19 @@ int main( int argc, char **argv )
 	// Parent: the requester.
 	close(fds[1]);
 	FILE *from_target = fdopen(fds[0], "r");
+
+	if( outbound_mode ) {
+		int rc = from_target ? requesterRole_outbound(broker, seconds, from_target, outbound_ttl) : 1;
+		if( from_target ) { fclose(from_target); }
+			// If the broker refused (e.g. TTL exhausted or target not allow-listed),
+			// the listener child is still blocked in accept(); release it so waitpid
+			// does not hang.
+		if( rc != 0 ) { kill(pid, SIGTERM); }
+		int status = 0;
+		waitpid(pid, &status, 0);
+		if( rc == 0 && !(WIFEXITED(status) && WEXITSTATUS(status) == 0) ) { rc = 1; }
+		return rc;
+	}
 
 	if( reaper_mode ) {
 		int rc = from_target ? requesterRole_expectReap(broker, from_target) : 1;
