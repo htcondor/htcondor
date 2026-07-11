@@ -762,6 +762,69 @@ server class machine should be able to handle CCB service plus normal
 *condor_collector* service for a pool containing a few thousand slots
 without much trouble.
 
+CCB Tunneling
+-------------
+
+:index:`CCB tunneling<single: CCB tunneling; CCB>`
+
+Ordinary CCB (above) guarantees that *inbound* connections to a daemon can be
+made even when the daemon is behind a firewall or NAT, but it assumes the daemon
+can still make *outbound* TCP connections directly. Some hosts cannot: an HPC
+worker node may forbid outbound TCP entirely, or throttle the number of live
+sockets. CCB tunneling removes that assumption by routing *both* directions of a
+daemon's connections through a Connection Broker.
+
+There are two independent pieces, which may be used together or separately:
+
+Outbound proxying
+    A daemon or tool that sets :macro:`OUTBOUND_CCB_ADDRESS` does not dial its
+    targets directly. Instead it asks the named broker to dial the target on its
+    behalf and splice the two connections into a transparent relay, over which the
+    normal end-to-end CEDAR security handshake proceeds. The broker must opt in to
+    this role with :macro:`CCB_OUTBOUND_PROXY`, is subject to ``DAEMON``
+    authorization, and restricts which targets it will dial with
+    :macro:`CCB_OUTBOUND_TARGET_ALLOWLIST`. Loopback and same-host targets are
+    always connected directly. A request carries a decrementing time-to-live
+    (:macro:`CCB_OUTBOUND_TTL`) so a misconfigured chain of brokers cannot loop.
+
+Inbound tunneling
+    To also be *reachable*, a restricted host registers a nearby "inside" CCB with
+    a further-out "outside" CCB using :macro:`CCB_OUTBOUND_NEXT_HOP`. The inside
+    CCB is then reachable through the outside CCB, and it stamps that tunnel address
+    into the contacts it hands out to its own registrants, so those daemons
+    advertise a nested contact that routes inbound through both brokers. A client
+    reaching such a daemon sends one request to the outermost broker with the whole
+    route; each broker asks the next hop to reverse-connect and splices the two,
+    recursing inward. The client authenticates only to the outermost broker; the
+    end-to-end CEDAR session with the real target is preserved throughout, so
+    intermediate brokers relay opaque bytes and never hold the connection's keys.
+
+Because the inside CCB's tunnel address is not known until it has registered
+upstream, the :tool:`condor_master` can run and orchestrate a local inside CCB for
+you. Setting :macro:`USE_OUTBOUND_CCB` to ``True`` makes the master add a
+*condor_collector* to the front of the daemon list to act as the inside CCB, wait
+for it to become tunnel-ready, and then point the other daemons it starts at that
+inside CCB for *both* directions -- as their :macro:`CCB_ADDRESS` (inbound) and
+their :macro:`OUTBOUND_CCB_ADDRESS` (outbound) -- so this single knob fully tunnels
+a node that cannot dial out directly (analogous to :macro:`USE_SHARED_PORT`). When
+the inside CCB is off-host and shared by several nodes, set only
+:macro:`OUTBOUND_CCB_ADDRESS` on each node; the master learns the tunnel address
+by querying that CCB before starting its daemons. In both cases
+:macro:`CCB_OUTBOUND_NEXT_HOP` is normally configured automatically and rarely
+needs to be set by hand.
+
+A daemon started without the master self-configures the same way: if
+:macro:`OUTBOUND_CCB_ADDRESS` is set but :macro:`CCB_ADDRESS` is not, it defaults
+its inbound CCB to the same broker, since a host that cannot dial out directly
+usually cannot be dialed either. Set :macro:`CCB_ADDRESS` explicitly to override.
+
+.. note::
+
+   Only daemons and tools that understand CCB tunneling can *reach* a tunneled
+   daemon (they must follow the nested contact). An outbound-tunneled daemon can,
+   however, connect out to an unmodified pool: the exit broker makes an ordinary
+   inbound connection to the target, which need not know anything about tunneling.
+
 Using TCP to Send Updates to the *condor_collector*
 ----------------------------------------------------
 
