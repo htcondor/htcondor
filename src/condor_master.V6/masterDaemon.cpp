@@ -448,9 +448,23 @@ daemon::DoConfig( bool init )
 	}
 
 	if( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-			// if a collector address file is configured, don't start any
-			// other daemons until the collector has written this file
-		param(m_after_startup_wait_for_file,"COLLECTOR_ADDRESS_FILE");
+		std::string next_hop;
+		if( param_boolean("USE_OUTBOUND_CCB", false) &&
+			param(next_hop,"CCB_OUTBOUND_NEXT_HOP") && !next_hop.empty() )
+		{
+				// This collector is a tunneling "inside" CCB.  The other daemons'
+				// CCB_ADDRESS is its derived tunnel address, which is not known until
+				// it has registered with the next-hop broker -- later than the plain
+				// address file.  So wait for the collector to *signal readiness*
+				// (DC_SET_READY), which it does only after upstream registration
+				// completes.
+			m_after_startup_wait_for_ready = true;
+		}
+		else {
+				// if a collector address file is configured, don't start any
+				// other daemons until the collector has written this file
+			param(m_after_startup_wait_for_file,"COLLECTOR_ADDRESS_FILE");
+		}
 	}
 }
 
@@ -925,6 +939,63 @@ int daemon::RealStart( )
 	if( daemon_is_shared_port ) {
 		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
+
+		// Outbound-CCB tunneling (USE_OUTBOUND_CCB): the daemons behind the inside
+		// CCB must register with it as their CCB so their advertised contacts are
+		// nested (tunnel-routable).  The inside CCB is this node's local collector,
+		// so point their CCB_ADDRESS at its local address; the *nesting* is added
+		// by the inside CCB itself (it stamps its derived tunnel address into the
+		// CCBIDs it hands out), not by this value.  Registering locally -- rather
+		// than through the tunnel address, which would route a local registration
+		// absurdly out through the next-hop broker -- is what makes this work on a
+		// node that cannot dial out directly.  The startup barrier on the collector
+		// (it signals ready only after upstream registration) guarantees the inside
+		// CCB has derived its tunnel address before we start these daemons, so their
+		// contacts are stamped correctly.  The inside CCB itself and the shared-port
+		// server are excluded.
+	std::string outbound_ccb;
+	if( param_boolean("USE_OUTBOUND_CCB", false) && !daemon_is_collector && !daemon_is_shared_port ) {
+			// Locate the local inside CCB (our collector) via the standard address-file
+			// machinery, which understands comment/blank lines and the keyed
+			// (MyAddress=...) address-file format -- unlike a raw first-line read.
+		Daemon collector( DT_COLLECTOR, NULL, NULL );
+		if( collector.locate() && collector.addr() ) {
+			env.SetEnv("_condor_CCB_ADDRESS", collector.addr());
+			dprintf(D_ALWAYS,
+					"Injecting CCB_ADDRESS=%s (local inside CCB, outbound-CCB tunnel) for %s\n",
+					collector.addr(), name_in_config_file);
+				// Also route these daemons' *outbound* connections through the same
+				// local inside CCB, so a node that cannot dial out directly is fully
+				// tunneled -- both directions -- from the single USE_OUTBOUND_CCB knob.
+				// The inside CCB (the collector, excluded here) reaches its next hop via
+				// CCB_OUTBOUND_NEXT_HOP and must not route through itself.
+			env.SetEnv("_condor_OUTBOUND_CCB_ADDRESS", collector.addr());
+			dprintf(D_ALWAYS,
+					"Injecting OUTBOUND_CCB_ADDRESS=%s (local inside CCB, outbound-CCB tunnel) for %s\n",
+					collector.addr(), name_in_config_file);
+		} else {
+			dprintf(D_ALWAYS,
+					"USE_OUTBOUND_CCB: could not locate the local collector to set "
+					"CCB_ADDRESS for %s\n",
+					name_in_config_file);
+		}
+	}
+		// Off-host inside CCB: no local inside CCB -- this node tunnels through an
+		// off-host CCB (OUTBOUND_CCB_ADDRESS), which is also the CCB its daemons
+		// register with.  Point CCB_ADDRESS at that CCB's *direct* address and let it
+		// stamp the tunnel nesting into the CCBIDs it hands out (just as the local
+		// inside CCB does above) -- do NOT inject its derived nested contact, which
+		// the daemons' CCBListener cannot register through.  The off-host CCB defers
+		// each registration reply until it is itself tunnel-ready, so the contact a
+		// daemon learns is already nested (no master-side readiness query needed).
+	else if( !daemon_is_collector && !daemon_is_shared_port
+			&& param(outbound_ccb,"OUTBOUND_CCB_ADDRESS") && !outbound_ccb.empty() ) {
+		env.SetEnv("_condor_CCB_ADDRESS", outbound_ccb.c_str());
+		dprintf(D_ALWAYS,
+				"Injecting CCB_ADDRESS=%s (off-host inside CCB, outbound-CCB tunnel) for %s\n",
+				outbound_ccb.c_str(), name_in_config_file);
+	}
+
 	#ifdef WIN32
 	// tell the shared port and collector (via the environment) to use "collector_<master-pid>"
 	// as the default shared port id.
@@ -1086,6 +1157,17 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 			dprintf(D_ALWAYS,"Found %s.\n",
 					m_after_startup_wait_for_file.c_str() );
 		}
+	}
+	if( m_after_startup_wait_for_ready && ready_state == NULL ) {
+			// The daemon has not yet signalled readiness (DC_SET_READY).
+		wait = true;
+		dprintf(D_ALWAYS,"Waiting for %s to signal it is ready.\n", name_in_config_file);
+		if( DaemonStartFastPoll ) {
+			Sleep(100);
+		}
+	}
+	else if( m_after_startup_wait_for_ready && !first_time ) {
+		dprintf(D_ALWAYS,"%s signalled ready.\n", name_in_config_file);
 	}
 
 	if( !wait && m_waiting_for_startup ) {
@@ -2433,11 +2515,15 @@ Daemons::DaemonsOffPeaceful( )
 }
 
 void
-Daemons::ScheduleRetryStartAllDaemons()
+Daemons::ScheduleRetryStartAllDaemons( int min_delay )
 {
 	if( m_retry_start_all_daemons_tid == -1 ) {
+		int delay = DaemonStartFastPoll ? 0 : 1;
+		if( min_delay > delay ) {
+			delay = min_delay;
+		}
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
-			DaemonStartFastPoll ? 0 : 1,
+			delay,
 			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
 			"Daemons::RetryStartAllDaemons",
 			this);
@@ -2460,6 +2546,7 @@ Daemons::RetryStartAllDaemons( int /* timerID */ )
 	m_retry_start_all_daemons_tid = -1;
 	StartAllDaemons();
 }
+
 
 void
 Daemons::StartAllDaemons()
