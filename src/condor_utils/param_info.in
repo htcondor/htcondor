@@ -3632,6 +3632,12 @@ type=int
 description=Maximum number of schedd forked workers
 tags=schedd
 
+[SCHEDD_NOW_JOB_VACATE_TIMEOUT]
+default=20
+type=int
+description=Number of seconds the schedd will wait for the targeted job(s) of a condor_now (coalesce) request to vacate before giving up on the now job
+tags=schedd
+
 [HA_LOCK_URL]
 default=
 type=string
