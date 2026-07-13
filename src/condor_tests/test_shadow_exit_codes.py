@@ -20,17 +20,16 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
+    EMPTY_SIF_BIND_EXPR,
 )
 
 
 @action
-def the_container_image(test_dir, pytestconfig):
-    # This is a gross hack.
-    ctest_path = test_dir / ".." / "busybox.sif"
-    if ctest_path.exists():
-        return ctest_path
-    else:
-        return Path(pytestconfig.rootdir) / "busybox.sif"
+def the_container_image(test_dir):
+    sif = make_empty_sif(test_dir / "empty.sif")
+    assert sif is not None
+    return sif
 
 
 @action
@@ -58,6 +57,7 @@ def the_condor(test_dir, lock_dir):
             "LOCK":                         lock_dir.as_posix(),
 
             "SINGULARITY":                          "/usr/bin/singularity",
+            "SINGULARITY_BIND_EXPR":                f'"{EMPTY_SIF_BIND_EXPR}"',
             "SINGULARITY_TEST_SANDBOX_TIMEOUT":      "50",
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   False,
 

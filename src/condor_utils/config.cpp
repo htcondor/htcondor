@@ -3528,13 +3528,8 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
 					EXCEPT( "%s macro: '%s' is not a valid format specifier!",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
 				}
@@ -3584,9 +3579,7 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
 					EXCEPT( "$STRING macro: '%s' is not a valid format specifier!", fmt);
 				}
 			}
@@ -4248,13 +4241,8 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
 					formatstr(errmsg, "%s error: '%s' is not a valid format specifier",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
 					return -1;
@@ -4298,9 +4286,7 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
 					formatstr(errmsg, "$STRING() error: '%s' is not a valid format specifier", fmt);
 					return -1;
 				}

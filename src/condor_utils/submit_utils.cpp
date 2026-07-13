@@ -1409,7 +1409,7 @@ int SubmitHash::SetJavaVMArgs()
 }
 
 
-int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
+int SubmitHash::check_open(_submit_file_role role,  const std::string &name, int flags )
 {
 	std::string strPathname;
 
@@ -1419,19 +1419,18 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 	if ( JobDisableFileChecks ) return 0;
 
 	/* No need to check for existence of the Null file. */
-	if( strcmp(name, NULL_FILE) == MATCH ) {
+	if( name == NULL_FILE ) {
 		return 0;
 	}
 
-	if ( IsUrl( name ) || strstr(name, "$$(") ) {
+	if ( IsUrl( name.c_str() ) || name.find("$$(") != std::string::npos ) {
 		return 0;
 	}
 
-	strPathname = full_path(name);
+	strPathname = full_path(name.c_str());
 
 	// is the last character a path separator?
-	int namelen = (int)strlen(name);
-	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+	bool trailing_slash = !name.empty() && IS_ANY_DIR_DELIM_CHAR(name.back());
 
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
@@ -1524,7 +1523,7 @@ int SubmitHash::CheckStdFile(
 		}
 
 		if (transfer_it && ! JobDisableFileChecks) {
-			check_open(role, file.c_str(), access);
+			check_open(role, file, access);
 			RETURN_IF_ABORT();
 		}
 	}
@@ -6030,7 +6029,14 @@ int SubmitHash::SetRequirements()
 		if (expr) {
 			double disk = 0;
 			if ( ! ExprTreeIsLiteralNumber(expr, disk) || (disk > 0.0)) {
-				answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				if( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+					// Sufficiently recent versions of the starter will adjust
+					// RequestDisk to reflect common files usage, so the job
+					// shouldn't try to enforce WithinResourceLimits.
+					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+				} else {
+					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				}
 			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
@@ -6995,17 +7001,32 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		} else {
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
-			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			// To avoid colliding inside a DAG when container images are
+			// common by default, make the implicit catalog name depend on
+			// the container image name.
+			std::string catalogName;
+			std::string baseName = condor_basename(container_image.ptr());
+			if( baseName.empty() ) {
+				baseName = condor_dirname(container_image.ptr());
+			}
+			cleanStringForUseAsAttr( baseName, '_', false );
+			formatstr( catalogName, "container_%s", baseName.c_str() );
+
+			std::string attributeName;
+			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
+			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "_x_common_input_catalogs", xcip );
+			// if the attribute is absent, xcip stays empty (handled below)
+			std::ignore = job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
-			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+			if( xcip.find( catalogName ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
-				xcip += "condor_container_image";
-				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+				xcip += catalogName;
+				AssignJobString( ATTR_COMMON_INPUT_CATALOGS, xcip.c_str() );
 			}
 		}
 
@@ -7043,7 +7064,7 @@ int SubmitHash::process_input_file_list(std::vector<std::string>& input_list, lo
 	for (auto& tmp: input_list) {
 		count++;
 		check_and_universalize_path(tmp);
-		check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+		check_open(SFR_INPUT, tmp, O_RDONLY);
 		// get file size, but only if the caller requests it.
 		// in practice, we will check the sizes of files here in submit
 		// but not when doing late materialization
@@ -7409,7 +7430,7 @@ int SubmitHash::SetTransferFiles()
 		if (job->LookupString(ATTR_JOB_CMD, tmp) && tmp != "java") {
 			if ( ! contains(input_file_list, tmp)) {
 				input_file_list.emplace_back(tmp);
-				check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, tmp, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
 				}
@@ -7422,7 +7443,7 @@ int SubmitHash::SetTransferFiles()
 				filepath = file;
 				check_and_universalize_path(filepath);
 				input_file_list.emplace_back(filepath);
-				check_open(SFR_INPUT, filepath.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, filepath, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(filepath.c_str());
 				}
@@ -8043,6 +8064,8 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	// Force Year,Month,Day, etc to be stored in the submit hash
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {

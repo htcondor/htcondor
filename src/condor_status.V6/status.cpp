@@ -1023,7 +1023,8 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 
 			if (diagnose && gpulist) {
 				const char * machine = "";
-				aa.rov.Column(0)->IsStringValue(machine);
+				// diagnostic output only; machine stays "" if not a string
+				std::ignore = aa.rov.Column(0)->IsStringValue(machine);
 				fprintf(stderr, "fixup gpu cap for %s %s : %s\n", machine, aa.label.c_str(), gpulist);
 			}
 			// TODO: what if column is no longer the default width?

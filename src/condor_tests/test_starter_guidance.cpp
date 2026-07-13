@@ -147,7 +147,7 @@ class MockStarter : public Starter {
 
         virtual void prepareJobHookDone();
 
-        // The "carry on" action if the job environmet is unready.
+        // The "carry on" action if the job environment is unready.
         virtual bool skipJobImmediately();
 
         bool jwuet_called = false;
@@ -390,6 +390,8 @@ bool Starter::transferOutput() { EXCEPT("MOCK"); return false; }
 bool Starter::cleanupJobs() { EXCEPT("MOCK"); return false; }
 void Starter::RecordJobExitStatus(int) { EXCEPT("MOCK"); }
 bool Starter::removeTempExecuteDir(int&,const char*) { EXCEPT("MOCK"); return false; }
+DiskUsage Starter::GetDiskUsage(bool) const { EXCEPT("MOCK"); return {0,0}; }
+
 
 #if       defined(LINUX)
 VolumeManager::Handle::~Handle() { }

@@ -181,18 +181,35 @@ _Evaluate (EvalState &state, Value &val) const
 			state.curAd = curAd;
 			return true;
 
-		case EVAL_OK: 
+		case EVAL_OK:
 		{
 			if( state.depth_remaining <= 0 ) {
 				val.SetErrorValue();
 				state.curAd = curAd;
 				return false;
 			}
+
+			// Circular-reference detection. If we are already evaluating
+			// this same target expression further up the stack, then the
+			// attribute refers (directly or transitively) to itself. Treat
+			// that as undefined rather than recursing into it again -- a
+			// cycle reachable through more than one operand would otherwise
+			// blow up exponentially before depth_remaining is exhausted.
+			for( const ExprTree *active : state.eval_stack ) {
+				if( active == tree ) {
+					val.SetUndefinedValue();
+					state.curAd = curAd;
+					return true;
+				}
+			}
+
+			state.eval_stack.push_back( tree );
 			state.depth_remaining--;
 
 			rval = tree->Evaluate( state, val );
 
 			state.depth_remaining++;
+			state.eval_stack.pop_back();
 
 			state.curAd = curAd;
 
@@ -380,8 +397,17 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 	} else {
 		Value	val;
 
-		// "expr.attr"
+		// "expr.attr" -- expr can itself be an "expr.attr", so a long
+		// left-nested chain (a.b.c.d...) recurses here through expr->Evaluate.
+		// _Evaluate only decrements depth_remaining when evaluating the
+		// *resolved* target, which happens as this descent unwinds -- too late
+		// to keep the descent from overflowing the stack. Bound it explicitly.
+		if( state.depth_remaining <= 0 ) {
+			return EVAL_ERROR;
+		}
+		state.depth_remaining--;
 		rval=wantSig?expr->Evaluate(state,val,sig):expr->Evaluate(state,val);
+		state.depth_remaining++;
 		if( !rval ) {
 			return( EVAL_FAIL );
 		}
@@ -398,16 +424,27 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 
 		if( val.IsListValue( ) ) {
 			std::vector< ExprTree *> eVector;
+				// eVector owns the ExprTrees pushed into it until they are
+				// handed off to the ExprList (and deletion cache) below. If we
+				// bail out early, we must free them ourselves or they leak.
+			auto freeVector = [&eVector]() {
+				for( ExprTree *e : eVector ) { delete e; }
+			};
 				// iterate through exprList and apply attribute reference
 				// to each exprTree
 			for (const auto currExpr: *adList) { 
 				if( currExpr == NULL ) {
+					freeVector();
 					return( EVAL_FAIL );
 				} else {
-					AttributeReference *attrRef = NULL;
-					attrRef = MakeAttributeReference( currExpr->Copy( ),
-												  attributeStr,
-												  false );
+						// Build a temporary "element.attr" reference over the
+						// list element. We *borrow* currExpr rather than deep-
+						// copying it (the old code copied every element, which
+						// is O(element size) per element and turns nested list
+						// projections into exponential work). attrRef.expr is
+						// released below before attrRef is destroyed so the
+						// borrowed element -- owned by adList -- is not deleted.
+					AttributeReference attrRef( currExpr, attributeStr, false );
 					val.Clear( );
 						// Create new EvalState, within this scope, because
 						// attrRef is only temporary, so we do not want to
@@ -418,11 +455,30 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 					// recursion depth counter to prevent infinite regress.
 					tstate.depth_remaining = state.depth_remaining;
 
+					// Propagate the cumulative work budget so this fresh
+					// EvalState can't reset it and escape the bound; carry
+					// what's left back out after each element is evaluated.
+					tstate.eval_steps_remaining = state.eval_steps_remaining;
+
+					// Propagate the in-flight evaluation stack so circular
+					// references are still detected across list projection.
+					// Otherwise a self-referential ad (e.g. a list that
+					// contains a reference to its own attribute) hides the
+					// cycle behind this fresh EvalState and re-evaluates until
+					// the work budget is exhausted instead of erroring out.
+					tstate.eval_stack = state.eval_stack;
+
 					tstate.SetScopes(state.curAd);
-					rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
-						: attrRef->Evaluate( tstate, val );
+					rval = wantSig ? attrRef.Evaluate( tstate, val, sig )
+						: attrRef.Evaluate( tstate, val );
+					// Carry the consumed budget back so it accumulates across
+					// list elements instead of resetting per iteration.
+					state.eval_steps_remaining = tstate.eval_steps_remaining;
+					// Release the borrowed element so ~AttributeReference does
+					// not delete it (it belongs to adList).
+					attrRef.expr = nullptr;
 					if( !rval ) {
-						delete attrRef;
+						freeVector();
 						return( EVAL_FAIL );
 					}
 
@@ -438,9 +494,12 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 						if (!tstate.TakeFromDeletionCache(evaledList)) { item = evaledList->Copy(); }
 					} else {
 						item = Literal::MakeLiteral(val);
+						if (!item) {
+							freeVector();
+							return( EVAL_FAIL );
+						}
 					}
 					eVector.push_back(item);
-					delete attrRef;
 				}
 			}
 			tree = ExprList::MakeExprList( eVector );

@@ -1,23 +1,80 @@
-*** 25.12.0 features
+*** 25.13.0 features
 
-- The OneDrive file transfer plugin now supports uploading files and
-  directories, and downloading entire directories recursively, in
-  addition to downloading individual files. Large files are uploaded in
-  chunks via an upload session. Thanks to Zach McGrew for this contribution.
-  :jira:`3792`
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
+
+*** 25.13.0 bugs
+
+*** 25.0.13 bugs
+
+*** 25.12.0 features
 
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
   Point's :macro:`HISTORY` archive.
   :jira:`3143`
 
-- The *condor_schedd* now writes an audit log to ``$(LOG)/SchedAuditLog``
-  by default.  In previous versions of HTCondor this was disabled.
-  :jira:`3770`
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
+  and :ad-attr:`JobBatchName` of job records into the library database.
+  This allows database queries at a DAG workflow level to be executed.
+  :jira:`3799`
+
+- :tool:`condor_userprio` ``-setfloor`` and ``-setfactor`` now accept a
+  ``-duration`` option to install a time-limited *lease* on the floor or
+  priority factor: the prior value is automatically restored after the
+  given number of seconds. Leases are persistent across
+  *condor_negotiator* restarts. New ``-cancelfloorlease`` and
+  ``-cancelfactorlease`` options cancel an in-effect lease. This
+  mirrors the existing ``-setceiling`` lease support.
+  :jira:`3764`
+
+- Scheduler universe jobs such as DAGMan will now go into cool down
+  for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
+  *condor_schedd* fails to launch the job.
+  :jira:`3769`
 
 - The headers printed out by the :tool:`condor_top` are now multi-row
   and should be clearer to understand.
   :jira:`3247`
+
+- The *condor_schedd* now writes an audit log to ``$(LOG)/SchedAuditLog``
+  by default.  In previous versions of HTCondor this was disabled.
+  :jira:`3770`
+
+- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
+  shell inside the container to whatever the job had.
+  :jira:`3741`
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3735`
+
+- Honor the :subcom:`transfer_executable` submit command for **batch**
+  grid universe jobs.
+  :jira:`3772`
+
+- The OneDrive file transfer plugin now supports uploading files and
+  directories, and downloading entire directories recursively, in
+  addition to downloading individual files. Large files are uploaded in
+  chunks via an upload session. Thanks to Zach McGrew for this contribution.
+  :jira:`3792`
+- HTCondor Connection Brokering (CCB) now supports a streaming mode that
+  brokers connections between two daemons that are *both* behind a CCB,
+  without opening any incoming ports. When the requesting daemon is itself
+  CCB-routed, the CCB server has the target daemon connect back to the CCB
+  server and then relays bytes between the two connections; the end-to-end
+  security handshake is still performed directly between the two daemons, so
+  the CCB server never decrypts their traffic. Streaming mode is enabled by
+  default and controlled by the new configuration knobs
+  :macro:`CCB_SERVER_STREAMING` and :macro:`CCB_CLIENT_STREAMING`.
+  :jira:`3805`
+
+- Jobs that transfer input sandboxes now log a file transfer started 
+  event even when there list of files to be transferred is empty.
+  Note that the transfer finished event has always been logged
+  for empty file lists.  
+  :jira:`3777`
 
 - The ``htcondor ep rehome`` command directs a *condor_startd* to evict its
   running jobs and direct-attach to a different *condor_schedd*. The new
@@ -29,26 +86,17 @@
   reboot.
   :jira:`3766`
 
-- Honor the :subcom:`transfer_executable` submit command for **batch**
-  grid universe jobs.
-  :jira:`3772`
-
-- Scheduler universe jobs such as DAGMan will now go into cool down
-  for :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION` seconds when the
-  *condor_schedd* fails to launch the job.
-  :jira:`3769`
-
-- Jobs that transfer input sandboxs now log a file transfer started 
-  event even when there list of files to be transfered is empty.
-  Note that the transfer finished event has always been logged
-  for empty file lists.  
-  :jira:`3777`
-
-- :tool:`condor_ssh_to_job` now also sets the supplementary groups of the
-  shell inside the container to whatever the job had.
-  :jira:`3741`
-
 *** 25.12.0 bugs
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.11.
+  :jira:`3795`
+
+- Fixed a bug that could cause file descriptor leaks in *blahpd*.
+  :jira:`3786`
 
 - Improved the interaction between the *condor_schedd* and the
   *condor_negotiator* when the :macro:`SCHEDD_INTERVAL` was set

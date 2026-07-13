@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '13 10 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   resolve-ubunturoot-image:
     if: github.repository == 'htcondor/htcondor'

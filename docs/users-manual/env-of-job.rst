@@ -612,11 +612,14 @@ as **bridge** matches the job only with a machine that is configured to
 use bridge networking. A definition of
 :subcom:`vm_networking_type`
 as **nat** matches the job only with a machine that is configured to use
-NAT networking. When no definition of
+NAT networking. A definition of
+:subcom:`vm_networking_type`
+as **user** matches the job only with a machine that is configured to use
+user-mode networking. When no definition of
 :subcom:`vm_networking_type`
 is given, HTCondor may match the job with a machine that enables
-networking, and further, the choice of bridge or NAT networking is
-determined by the machine's configuration.
+networking, and further, the choice of networking type is determined by
+the machine's configuration.
 
 Modified disk images are transferred back to the machine from which the
 job was submitted as the **vm** universe job completes. Job completion

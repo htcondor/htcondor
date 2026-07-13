@@ -269,6 +269,7 @@ public:
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
 	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+	virtual bool announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd );
 
 private:
 

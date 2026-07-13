@@ -265,8 +265,8 @@ std::unique_ptr<FILE, fcloser> get_known_hosts()
 			fname.c_str(), strerror(errno), errno);
 	} else {
 		// We want to read from beginning of the file; since we open in append mode,
-		// we will write to the end.
-		fseek(fp.get(), 0, SEEK_SET);
+		// we will write to the end.  A seek failure is not actionable here.
+		std::ignore = fseek(fp.get(), 0, SEEK_SET);
 	}
 
 	return fp;

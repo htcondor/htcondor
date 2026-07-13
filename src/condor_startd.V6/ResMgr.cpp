@@ -430,7 +430,7 @@ ClassAd * BrokenItem::new_context_ad() const
 		for (auto const & attr : attrs) {
 			classad::Value val;
 			if (b_context->EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
-				ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
+				std::ignore = ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
 			}
 		}
 	}
@@ -873,6 +873,10 @@ ResMgr::init_resources( void )
 	// register the "#coloring" namespace for extra ads for use by Starters
 	auto * coloringBaseAd = new StartdNamedClassAd(COLORING_NAMESPACE, nullptr, nullptr);
 	adlist_register(coloringBaseAd);
+
+	// register the '#catalog' namespace for extra ads for use by Starters
+	auto * catalogBaseAd = new StartdNamedClassAd(CATALOG_NAMESPACE, nullptr, nullptr);
+	adlist_register(catalogBaseAd);
 }
 
 

@@ -27,7 +27,7 @@ Mailing Lists
 '''''''''''''
 
 Our users support each other on a community unmoderated mailing list
-(htcondor-users@cs.wisc.edu) targeted at solving problems with
+(htcondor-users@g-groups.wisc.edu) targeted at solving problems with
 HTCondor. HTCondor team members attempt to monitor traffic to
 htcondor-users, responding as they can. Follow the instructions at
 http://htcondor.org/mail-lists.

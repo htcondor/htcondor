@@ -75,12 +75,23 @@ class DaemonLogStream:
             If you do not consume the iterator, no lines will be read!
 
         """
-        for line in self.file:
+        while True:
+            # Read a line at a time rather than iterating self.file directly:
+            # the file iterator will return a partial final line if we happen
+            # to read while the daemon is mid-write (i.e. before the trailing
+            # newline is flushed).  A complete line always ends in "\n"; if the
+            # line we read doesn't, rewind so we re-read it in full on the next
+            # pass, once the daemon has finished writing it.
+            pos = self.file.tell()
+            line = self.file.readline()
+            if not line.endswith("\n"):
+                self.file.seek(pos)
+                break
             line = line.strip()
             if line == "":
                 continue
             try:
-                msg = DaemonLogMessage(line.strip(), self.file.name, self.line_number)
+                msg = DaemonLogMessage(line, self.file.name, self.line_number)
                 self.messages.append(msg)
                 yield msg
             except exceptions.DaemonLogParsingFailed as e:
