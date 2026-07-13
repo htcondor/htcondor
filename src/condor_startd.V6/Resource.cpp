@@ -1684,7 +1684,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 
 			classad::Value v;
 			double uptimeValue;
-			value->Evaluate( v );
+			public_ad.EvaluateExpr( value, v );
 			if(! v.IsNumber( uptimeValue )) {
 				dprintf( D_ALWAYS, "Metric %s is not a number, ignoring.\n", name.c_str() );
 				continue;
