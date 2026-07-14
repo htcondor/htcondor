@@ -6,6 +6,15 @@
 
 *** 25.13.0 bugs
 
+- Fixed a bug where the *condor_credmon_oauth* would not create and/or
+  refresh credentials containing a user-supplied handle. Consequently,
+  underscores (and other special characters) are no longer allowed in
+  credential provider names by default. This behavior change can be
+  reverted by setting :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` to true,
+  though this will disable the use of user-supplied handles.
+  See :ref:`provider_name_restrictions` for details.
+  :jira:`2860`
+
 *** 25.0.13 bugs
 
 *** 25.12.0 features

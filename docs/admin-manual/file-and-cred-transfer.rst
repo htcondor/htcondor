@@ -668,6 +668,8 @@ To help HTCondor distinguish which credentials should be provided by
 Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
 Vault-managed credential names.
 
+.. _provider_name_restrictions:
+
 Provider name restrictions and user-supplied credential handles
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
