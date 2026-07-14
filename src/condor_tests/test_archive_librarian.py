@@ -25,8 +25,8 @@ NUM_JOBS = 10
 
 DB_POLL_INTERVAL         = 2    # seconds between DB polls
 DB_POLL_TIMEOUT          = 120  # seconds before giving up
-UPDATE_INTERVAL          = 5    # seconds — matches LIBRARIAN_UPDATE_INTERVAL
-STATUS_RETENTION_SECONDS = 10   # seconds — short window to exercise Status pruning in tests
+UPDATE_INTERVAL          = 2    # seconds — matches LIBRARIAN_UPDATE_INTERVAL
+STATUS_RETENTION_SECONDS = 4    # seconds — short window to exercise Status pruning in tests
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,6 +66,44 @@ def _safe_job_count(db_path):
         return count
     except sqlite3.OperationalError:
         return 0
+
+
+def _restart_pool_and_wait_for_new_schedd(condor, timeout=60):
+    """
+    Restart every daemon under condor_master (including LIBRARIAN, since it's
+    in DAEMON_LIST) and block until a new SCHEDD process is confirmed alive.
+    SCHEDD's pid is used as the restart signal since condor_who reports it
+    reliably; LIBRARIAN restarts as part of the same condor_restart call.
+    """
+    who = condor.run_command(["condor_who", "-quick"])
+    assert who.returncode == 0, "Failed to query daemon information with condor_who"
+    old_pid = None
+    for line in who.stdout.split("\n"):
+        if line.startswith("SCHEDD_PID"):
+            old_pid = line.split("=")[1]
+            break
+    assert old_pid is not None, "Failed to get schedd pid before restart"
+
+    condor.run_command(["condor_restart", "-fast"])
+
+    start = time.time()
+    while True:
+        assert time.time() - start <= timeout, "Failed to restart condor"
+
+        who = condor.run_command(["condor_who", "-quick"])
+        if who.returncode == 0:
+            alive = False
+            pid = None
+            for line in who.stdout.split("\n"):
+                if line.startswith("SCHEDD_PID"):
+                    pid = line.split("=")[1]
+                elif line.startswith("SCHEDD =") and '"alive"' in line.lower():
+                    alive = True
+
+            if alive and pid is not None and pid != old_pid:
+                return
+
+        time.sleep(1)
 
 
 def _submit_and_wait(condor, log_path, path_to_sleep, count):
@@ -179,39 +217,9 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
 
     os.utime(str(rotated_path), None)
 
-    who = condor.run_command(["condor_who", "-quick"])
-    old_pid = None
-    assert who.returncode == 0, "Failed to query daemon information with condor_who"
-
-    for line in who.stdout.split("\n"):
-        if line.startswith("SCHEDD_PID"):
-            old_pid = line.split("=")[1]
-            break
-
-    assert old_pid is not None, "Failed to get schedd pid before restart"
-
-    # Restart the schedd to close file handle to rotated file
-    p = condor.run_command(["condor_restart", "-fast"])
-
-    # Wait for schedd to restart
-    start = time.time()
-    while True:
-        assert time.time() - start <= 60, "Failed to restart condor"
-
-        who = condor.run_command(["condor_who", "-quick"])
-        if who.returncode == 0:
-            alive = False
-            pid = None
-            for line in who.stdout.split("\n"):
-                if line.startswith("SCHEDD_PID"):
-                    pid = line.split("=")[1]
-                elif line.startswith("SCHEDD =") and '"alive"' in line.lower():
-                    alive = True
-
-            if alive and pid is not None and pid != old_pid:
-                break
-
-        time.sleep(1)
+    # Restart the schedd (and, incidentally, every other daemon in DAEMON_LIST)
+    # to close its file handle to the rotated file.
+    _restart_pool_and_wait_for_new_schedd(condor)
 
     handle = _submit_and_wait(condor, test_dir / "job_post_rotation.log", path_to_sleep, 1)
 

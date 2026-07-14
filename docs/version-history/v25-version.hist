@@ -6,6 +6,14 @@
 
 *** 25.13.0 bugs
 
+- Fixed a bug where the archive librarian could mistake a rotated history
+  file for the still-active one after a daemon restart, if the restart
+  landed before that file was fully read. This caused the file to never be
+  marked as fully read, and if it was later removed from disk, it would be
+  incorrectly renamed with a ``.REMOVED`` suffix and lose its recorded
+  rotation date.
+  :jira:`3830`
+
 *** 25.0.13 bugs
 
 *** 25.12.0 features
