@@ -4,6 +4,17 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- Improve how an AP administrator can automatically provide OAuth
+  credentials for all jobs.
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` specifies
+  whether the AP is providing credentials for all jobs (default is true).
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+  specifies which credential names are being provided for all jobs
+  (default is all credentials that the AP can generate by itself).
+  Remote submitters no longer need to alter their configuration files to
+  submit to an AP that provides credentials for all jobs.
+  :jira:`3391`
+
 *** 25.13.0 bugs
 
 - Fixed a bug where the archive librarian could mistake a rotated history
@@ -13,6 +24,15 @@
   incorrectly renamed with a ``.REMOVED`` suffix and lose its recorded
   rotation date.
   :jira:`3830`
+
+- Fixed a bug where the *condor_credmon_oauth* would not create and/or
+  refresh credentials containing a user-supplied handle. Consequently,
+  underscores (and other special characters) are no longer allowed in
+  credential provider names by default. This behavior change can be
+  reverted by setting :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` to true,
+  though this will disable the use of user-supplied handles.
+  See :ref:`provider_name_restrictions` for details.
+  :jira:`2860`
 
 *** 25.0.13 bugs
 
