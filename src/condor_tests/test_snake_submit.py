@@ -19,14 +19,9 @@ class TestSnakemakeSubmit:
         """
         with patch("htcondor_cli.snake.importlib.util.find_spec", return_value=MagicMock()):
             yield
+
             
     # === INTEGRATION TESTS: Argument parsing through REMAINDER ==="
-    # TEST 1: Normal working with all flags #
-    def test_submit_with_all_required_flags(self, tmp_path):
-        # temporary Snakefile
-        snakefile = tmp_path/ "my_workflow" / "Snakefile"
-        snakefile.parent.mkdir(parents=True, exist_ok=True)
-        snakefile.write_text("rule all: \n pass")
 
     def test_submit_extract_jobdir_after_snakefile_from_remainder(self, tmp_path):
         """Integration: --jobdir appears in REMAINDER after snakefile"""
