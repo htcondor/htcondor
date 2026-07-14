@@ -257,9 +257,7 @@ class LocalCredmon(OAuthCredmon):
         Scan the credential directory for new credential requests.
 
         The LocalCredmon will look for files of the form `<username>/<provider>[_<handle>].top`
-        and create the corresponding access token files, then invoke the parent OAuthCredmon
-        method.
-        """
+        and create the corresponding access token files.
 
         provider_files = glob.glob(os.path.join(self.cred_dir, "*", f"{self.provider}.top"))
         if not self.allow_special_chars:  # then we can pick up tokens with handles, too
