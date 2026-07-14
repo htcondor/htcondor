@@ -5,9 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-from getpass import getuser
-from socket import gethostname
-
 from ornithology import (
     Condor,
     action,
@@ -24,8 +21,7 @@ from ornithology import (
 def the_condor( test_dir ):
     local_dir = test_dir / "the_condor.d"
 
-    user_at_host = f"{getuser()}@{gethostname()}"
-    print(user_at_host)
+    user_at_host = "$(authuser)@$(UID_DOMAIN)"
 
     with Condor(
         local_dir=local_dir,
