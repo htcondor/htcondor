@@ -1276,6 +1276,7 @@ rm -rf %{buildroot}
 %files credmon-vault
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_vault
+%_bindir/condor_credential_storer
 %_bindir/condor_vault_storer
 %_libexecdir/condor/credmon
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
@@ -1283,6 +1284,7 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/pid
 
 %files credmon-multi
+%_bindir/condor_credential_storer
 %_bindir/condor_vault_storer
 
 %files -n minicondor

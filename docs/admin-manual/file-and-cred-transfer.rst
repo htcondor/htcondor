@@ -315,7 +315,7 @@ and used by file transfer plugins and/or users' executables.
 The types of credentials that can be managed in this way by HTCondor
 depend on which credential monitors ("credmons") have been configured.
 
-HTCondor currently has three credmon options:
+HTCondor currently has four credmon options:
 
 #. The local SciTokens issuer credmon,
    which generates and renews SciTokens credentials
@@ -325,10 +325,15 @@ HTCondor currently has three credmon options:
    which sends users to a local webserver
    to go through OAuth2 authorization code flow
    in order to fetch refresh and access tokens
-   from configured credential issuers, and
+   from configured credential issuers,
 #. The Vault credmon,
    which fetches arbitrary credentials from a configured `HashiCorp Vault <https://www.vaultproject.io/>`_ service
-   by authenticating to the service with users' long-lived Vault credentials.
+   by authenticating to the service with users' long-lived Vault credentials, and
+#. The Pelican credmon,
+   which obtains and renews access tokens from a
+   `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF)
+   by running the OAuth2 device-code flow and then exchanging the result for a
+   refreshable token using the credmon's own registered client credentials.
 
 As long as a user has jobs in the queue
 (and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once the user has no jobs in the queue),
@@ -662,11 +667,98 @@ to see how to set up and configure the Vault server.
 Note that, when using the ``condor-credmon-multi`` package,
 in order to signal ``condor_submit`` to request *any* credentials via Vault,
 you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
-and point it to the location of ``condor_vault_storer`` (usually
-``/usr/bin/condor_vault_storer``).
+and point it to the location of ``condor_credential_storer`` (usually
+``/usr/bin/condor_credential_storer``).  This script was previously named
+``condor_vault_storer``; that name is still installed as a symlink, so existing
+configurations that reference it continue to work unchanged.
 To help HTCondor distinguish which credentials should be provided by
 Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
 Vault-managed credential names.
+
+.. _installing_credmon_pelican:
+
+Allowing users to fetch credentials from a Pelican federation such as the OSDF
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor can natively obtain and renew access tokens for a
+`Pelican <https://pelicanplatform.org/>`_ federation -- for example the
+`OSDF <https://osg-htc.org/services/osdf/>`_ -- so that jobs can read and write
+federation objects using ``osdf://`` or ``pelican://`` URLs. At submit time the
+``pelican`` client runs the OAuth2 device-code flow against the federation's
+token issuer to obtain an initial *subject* token; the credmon then uses its own
+registered client credentials to perform an
+`RFC 8693 <https://www.rfc-editor.org/rfc/rfc8693>`_ token exchange, receiving an
+access token and a refresh token that it keeps renewed on the access point for as
+long as the user has jobs in the queue.
+
+To enable it, install the ``condor-credmon-oauth`` RPM -- which provides the
+*condor_credmon_oauth* daemon, the *condor_credd*, and the
+``condor_credential_storer`` -- as well as the ``pelican`` client, then enable the
+credd and credmon with the ``use feature: oauth`` configuration template.
+
+Next, register an OAuth2 client for the access point with the federation's token
+issuer.  The client must be permitted the ``refresh_token`` and
+``urn:ietf:params:oauth:grant-type:token-exchange`` grant types, and must be
+allowed the scopes the service will hand out (for example ``offline_access`` and
+``storage.read:/``).  The issuer returns a client ID and a client secret; store
+the secret in a file readable only by root.
+
+For each Pelican "service" you wish to offer, add its name to
+``PELICAN_CREDMON_PROVIDER_NAMES``, point :macro:`SEC_CREDENTIAL_STORER` at
+``condor_credential_storer`` so that :tool:`condor_submit` routes the request through
+the storer, and describe the service with the ``<ServiceName>_PELICAN_*``
+options.  The following example defines a service named ``physicsdata`` that
+grants read access to the ``/physics-data`` prefix in the OSDF:
+
+.. code-block:: condor-config
+
+    # Route credential requests for Pelican services through the storer.
+    SEC_CREDENTIAL_STORER = /usr/bin/condor_credential_storer
+    PELICAN_CREDMON_PROVIDER_NAMES = physicsdata
+
+    # What the tokens are good for: the federation and the namespace prefix.
+    PHYSICSDATA_PELICAN_URL         = pelican://osg-htc.org
+    PHYSICSDATA_PELICAN_PREFIX      = /physics-data
+    PHYSICSDATA_PELICAN_PERMISSIONS = read
+
+    PHYSICSDATA_PELICAN_CLIENT_ID          = ex4mpl3cl13nt1d
+    PHYSICSDATA_PELICAN_CLIENT_SECRET_FILE = /etc/condor/secrets/physicsdata_client_secret
+
+.. code-block:: console
+
+    # ls -l /etc/condor/.secrets/physicsdata_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/secrets/physicsdata_client_secret
+
+``<ServiceName>_PELICAN_PERMISSIONS`` is a list of one or more of ``read``,
+``write``, and ``modify`` (whitespace and/or comma separated); the token is
+granted every listed capability.  Because these capabilities do not imply one
+another (in particular ``modify`` does not imply ``read``), a service that needs
+to both read and overwrite objects should request, for example,
+``PHYSICSDATA_PELICAN_PERMISSIONS = read, modify``.
+If the ``pelican`` client is not on the system ``PATH``, set the ``PELICAN_BIN``
+environment variable so the storer can find it.
+
+To use the service, a submitter lists its name under ``use_oauth_services`` and
+refers to federation objects with ``osdf://`` (or ``pelican://``) URLs.  For
+example:
+
+.. code-block:: condor-submit
+
+    executable = analyze.sh
+
+    # Request a token for the "physicsdata" service.
+    use_oauth_services = physicsdata
+
+    # Stage in an input object from /physics-data using that token.
+    transfer_input_files = osdf:///physics-data/runs/run42.root
+
+    queue
+
+The first time the credential is needed, :tool:`condor_submit` prints a URL that
+the user must visit in a browser and approve.  Once approved, the credmon
+performs the token exchange and the job's access token (delivered as
+``physicsdata.use`` in the job's ``_CONDOR_CREDS`` directory) is kept refreshed
+automatically.
 
 
 Using HTCondor with Kerberos and AFS
