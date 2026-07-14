@@ -5,12 +5,15 @@
 #
 # Scenario:
 #   1. Submit ROTATION_RECOVERY_NUM_JOBS jobs into the active history file,
-#      capping the librarian to 1 record/cycle so it can't drain them all
-#      before we rotate.
-#   2. Rotate the history file while records are still unread, and confirm
-#      the librarian recorded the rotation (DateOfRotation set) but hasn't
-#      finished draining it.
-#   3. Restart the whole pool (including LIBRARIAN) in that exact window.
+#      with the librarian's per-cycle record cap pinned to 0 so it cannot
+#      drain any of them yet.
+#   2. Rotate the history file and confirm the librarian recorded the
+#      rotation (DateOfRotation set) without draining it. This is a stable
+#      fixed point, not a timing window: Phase 3 of update() reads zero
+#      records per cycle no matter how many cycles run while the cap is 0,
+#      so there's nothing to race against.
+#   3. Raise the cap back up and restart the whole pool (including
+#      LIBRARIAN) while the rotated file is still fully undrained.
 #   4. Confirm the file eventually reaches FullyRead with no duplicated or
 #      lost records, and that removing it from disk afterwards doesn't
 #      corrupt its recorded name/rotation date.
@@ -42,34 +45,32 @@ def _get_db_path(condor):
         return Path(htcondor2.param["LIBRARIAN_DATABASE"])
 
 
-def _wait_for_db_job_count(condor, expected_count, timeout=DB_POLL_TIMEOUT):
+def _wait_for_active_file_registered(condor, expected_name, timeout=DB_POLL_TIMEOUT):
     """
-    Poll the librarian DB until JobRecords has at least `expected_count` rows,
-    or raise AssertionError on timeout.  Opens a fresh connection each poll so
-    we never observe a stale SQLite cache while the daemon is writing.
+    Poll until a Files row exists for `expected_name` with DateOfRotation
+    still NULL -- i.e. the librarian has run a reconcile cycle and adopted it
+    as the active file. Deliberately does not wait on any JobRecords being
+    read: with LIBRARIAN_MAX_UPDATES_PER_CYCLE pinned to 0, none ever will be
+    before we rotate below.
     """
     db_path = _get_db_path(condor)
     start = time.time()
     while True:
         assert time.time() - start <= timeout, (
-            f"Timed out after {timeout}s waiting for {expected_count} "
-            f"JobRecord(s) in librarian DB (last seen: {_safe_job_count(db_path)})"
+            f"Timed out after {timeout}s waiting for the librarian to "
+            f"register {expected_name!r} as the active archive file"
         )
-        count = _safe_job_count(db_path)
-        if count >= expected_count:
+        try:
+            conn = sqlite3.connect(str(db_path))
+            rows = conn.execute(
+                "SELECT FileName FROM Files WHERE DateOfRotation IS NULL"
+            ).fetchall()
+            conn.close()
+        except sqlite3.OperationalError:
+            rows = []
+        if any(Path(row[0]).name == expected_name for row in rows):
             return
         time.sleep(DB_POLL_INTERVAL)
-
-
-def _safe_job_count(db_path):
-    """Return current JobRecords row count, or 0 if the DB does not yet exist."""
-    try:
-        conn = sqlite3.connect(str(db_path))
-        count = conn.execute("SELECT COUNT(*) FROM JobRecords").fetchone()[0]
-        conn.close()
-        return count
-    except sqlite3.OperationalError:
-        return 0
 
 
 def _restart_pool_and_wait_for_new_schedd(condor, timeout=60):
@@ -172,9 +173,16 @@ def rotation_recovery_config():
         "config": {
             "DAEMON_LIST": "$(DAEMON_LIST) LIBRARIAN",
             "LIBRARIAN_UPDATE_INTERVAL": ROTATION_RECOVERY_UPDATE_INTERVAL,
-            # Cap ingestion to 1 record/cycle so the rotated file below
-            # reliably still has unread records at the moment we restart.
-            "LIBRARIAN_MAX_UPDATES_PER_CYCLE": 1,
+            # Pin ingestion to 0 records/cycle up front. This makes "rotated
+            # but not yet drained" a stable fixed point instead of a narrow
+            # window we'd otherwise have to catch mid-drain: with the cap at
+            # 0, Phase 3 of update() never reads a single record no matter how
+            # many cycles run, so FullyRead is guaranteed to stay 0 until we
+            # deliberately raise the cap back up (see
+            # rotated_file_after_restart). File discovery and rotation
+            # detection (Phase 1/1.5) aren't gated by this cap and keep
+            # running every cycle regardless.
+            "LIBRARIAN_MAX_UPDATES_PER_CYCLE": 0,
         }
     }
 
@@ -188,21 +196,23 @@ def rotation_recovery_condor(rotation_recovery_config, test_dir):
 @action
 def rotated_file_mid_drain(rotation_recovery_condor, test_dir, path_to_sleep):
     """
-    Rotate the active history file while it still has unread records, and
-    confirm the librarian has recorded the rotation (DateOfRotation set) but
-    has not yet finished draining it -- the DB state that must survive a
-    daemon restart intact.
+    Rotate the active history file while ingestion is capped at 0
+    records/cycle, and confirm the librarian recorded the rotation
+    (DateOfRotation set) without draining it -- the DB state that must
+    survive a daemon restart intact. With the cap at 0 this is a stable
+    fixed point rather than a narrow timing window, so there's nothing to
+    race against.
     """
     _submit_and_wait(
         rotation_recovery_condor, test_dir / "rr_job.log", path_to_sleep, ROTATION_RECOVERY_NUM_JOBS
     )
 
-    # Only wait for the *first* record: the 1-record/cycle cap means most of
-    # ROTATION_RECOVERY_NUM_JOBS are still unread by the time we rotate below.
-    _wait_for_db_job_count(rotation_recovery_condor, 1)
-
     with rotation_recovery_condor.use_config():
         history_path = Path(htcondor2.param["HISTORY"])
+
+    # Confirms the librarian has run a reconcile cycle and adopted "history"
+    # as the active file -- not that it has read anything from it.
+    _wait_for_active_file_registered(rotation_recovery_condor, history_path.name)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
     rotated_path = history_path.parent / f"{history_path.name}.{timestamp}"
@@ -228,6 +238,15 @@ def rotated_file_after_restart(rotated_file_mid_drain, rotation_recovery_condor)
     librarian to finish draining it post-restart. Returns the file's final
     Files row: (FileName, DateOfRotation, FullyRead, RecordsRead, DateOfDeletion).
     """
+    # Ingestion was pinned to 0/cycle purely to land rotation in a
+    # deterministically undrained state; raise it back up so the post-restart
+    # librarian actually drains the backlog instead of holding at 0 forever.
+    # condor_restart re-reads the on-disk config file, so editing it here
+    # (rather than e.g. `condor_config_val -rset`, which wouldn't survive a
+    # full daemon restart) is what actually takes effect.
+    with rotation_recovery_condor.config_file.open("a") as f:
+        f.write("\nLIBRARIAN_MAX_UPDATES_PER_CYCLE = 100000\n")
+
     _restart_pool_and_wait_for_new_schedd(rotation_recovery_condor)
 
     db_path = _get_db_path(rotation_recovery_condor)
