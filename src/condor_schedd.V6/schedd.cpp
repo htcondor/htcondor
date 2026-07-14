@@ -1386,7 +1386,11 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 			DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 			// NOTE: This is cleaned up in callback function (if allocated)
 			FlockUpdateDetails* details = new FlockUpdateDetails(FlockCollectors.size(), flock_level, &SubDat);
-			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true, flockCommunicationCheck, details);
+			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true,
+				[details](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					flockCommunicationCheck(success, sock, errstack, trust_domain, should_try_token_request, details);
+				});
 		} else {
 			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 			SubDat.lastUpdateTime = time_now;
@@ -1862,7 +1866,11 @@ Scheduler::count_jobs()
 					m_token_requester.createCallbackData(col.name(),
 					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
 				: nullptr;
-			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true,
+				[data](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+				});
 		}
 	}
 
@@ -1996,7 +2004,11 @@ Scheduler::count_jobs()
 						"owner %s\n", iter->second->name(),
 						SubDat.owners.begin()->c_str());
 					iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq,
-						NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+						NULL, true,
+						[data](bool success, Sock* sock, CondorError* errstack,
+							const std::string& trust_domain, bool should_try_token_request) {
+							DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+						});
 				}
 			}
 		}
@@ -5540,7 +5552,15 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 }
 
 
-void
+// Returns true if srec is still valid after the call, false if it was deleted.
+// In the synchronous (non-threaded) case aboutToSpawnJobHandlerDone() runs
+// inline and may delete srec -- when the job is no longer runnable, or when
+// spawnJobHandler() finds no match -- and it returns 0 exactly in those cases.
+// Callers that reuse srec after this call (notably the MPI/parallel per-proc
+// loop, where the whole cluster shares the procid-0 srec) must stop touching
+// srec once this returns false.  In the threaded case any deletion is deferred
+// to the reaper, so srec is still valid when this returns.
+bool
 callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
 	if( jobPrepNeedsThread(cluster, proc) ) {
@@ -5550,12 +5570,13 @@ callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		Create_Thread_With_Data( aboutToSpawnJobHandler,
 								 aboutToSpawnJobHandlerDone,
 								 cluster, proc, srec );
+		return true;
 	} else {
 		dprintf( D_FULLDEBUG, "Job prep for %d.%d will not block, "
 				 "calling aboutToSpawnJobHandler() directly\n",
 				 cluster, proc );
 		aboutToSpawnJobHandler( cluster, proc, srec );
-		aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 );
+		return aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 ) != 0;
 	}
 }
 
@@ -9744,10 +9765,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     // some attributes coming out of negotiator's matching process that need to
     // make a subway transfer from slot/match ad to job/request ad, on their way
     // to the claim, and then eventually back around to the negotiator for use in
-    // preemption policies:
-    CopyAttribute(ATTR_REMOTE_GROUP, *jobAd, *mrec->my_match_ad);
-    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
-    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
+    // preemption policies.  A match record built without a match ad has a null
+    // my_match_ad (see the match_rec constructor), so guard before dereferencing.
+    if ( mrec->my_match_ad ) {
+        CopyAttribute(ATTR_REMOTE_GROUP, *jobAd, *mrec->my_match_ad);
+        CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
+        CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
+    }
 
 	// CRUFT Starting in 25.3, the startd assumes true if these
 	//   attributes aren't set.
@@ -11296,26 +11320,30 @@ Scheduler::StartJobHandler( int /* timerID */ )
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
 		int universe = srec->universe;
-		callAboutToSpawnJobHandler( cluster, proc, srec );
+		bool srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec );
 
 		bool wantPS = 0;
 		if(job_ad) { job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS); }
 
-		if( (universe == CONDOR_UNIVERSE_MPI) || 
+		if( (universe == CONDOR_UNIVERSE_MPI) ||
 			(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
-			
+
 			if (proc != 0) {
 				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
 					   "non-zero procid for job (%d.%d)\n", cluster, proc);
 
 				continue;
 			}
-			
+
 				// We've just called callAboutToSpawnJobHandler on procid 0,
-				// now call it on the rest of them
+				// now call it on the rest of them.  All procs of an MPI/parallel
+				// cluster share this single procid-0 srec; if a per-proc call
+				// finds the job no longer runnable it deletes that shared srec,
+				// so stop as soon as srec is gone rather than pass a freed
+				// pointer back into callAboutToSpawnJobHandler.
 			proc = 1;
-			while( GetJobAd(cluster, proc) ) {
-				callAboutToSpawnJobHandler( cluster, proc, srec);
+			while( srec_valid && GetJobAd(cluster, proc) ) {
+				srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec);
 				proc++;
 			}
 		}
@@ -15844,8 +15872,20 @@ size_t pidHash(const int &pid)
 //
 bool locate_and_advertise_local_credd(bool force) {
 
+	bool update_info = true;
+	bool new_check_creds = false;
+
 	Daemon local_credd(DT_CREDD);
 	local_credd.locate_local();
+
+	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+		std::string names;
+		new_check_creds = param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAME") ||
+		                  param(names, "CLIENT_CREDMON_PROVIDER_NAMES");
+	}
+
 	if ( ! force) {
 		// look to see if the credd address has changed
 		// if it has not then we are done
@@ -15853,11 +15893,20 @@ bool locate_and_advertise_local_credd(bool force) {
 		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
 		if ( ! local_credd.addr()) {
 			if (credd_addr.empty())
-				return false;
+				update_info = false;
 		} else {
 			if (credd_addr == local_credd.addr())
-				return false;
+				update_info = false;
 		}
+
+		// check if SubmitAlwaysCheckCreds has changed
+		bool old_check_creds = false;
+		daemonCore->ContactInfoExtra().LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, old_check_creds);
+		update_info |= (old_check_creds != new_check_creds);
+	}
+
+	if (!update_info) {
+		return false;
 	}
 
 	// update the extra contact info, and tell daemon core to write a new address file.
@@ -15872,7 +15921,12 @@ bool locate_and_advertise_local_credd(bool force) {
 	}
 	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
 	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	daemonCore->ContactInfoExtra().Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
 	DC_Enable_And_Drop_Addr_File();
+	if (scheduler.getScheddAd()) {
+		scheduler.getScheddAd()->Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
+		scheduler.update_local_ad_file();
+	}
 	return true;
 }
 
@@ -16463,6 +16517,7 @@ Scheduler::Init()
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
 	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
+	CopyAttribute(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
@@ -17103,7 +17158,9 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_adSchedd);
+	if (m_adSchedd) {
+		daemonCore->UpdateLocalAd(m_adSchedd);
+	}
 	return;
 }
 
@@ -20724,6 +20781,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 {
 	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
 	OwnerInfo * owner = nullptr;
+	JobQueueCluster * first_jqc = nullptr;
 
 	// verify that all of the jobs have the same owner and get the owner
 	//
@@ -20736,6 +20794,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		}
 		if ( ! owner) {
 			owner = jqc->ownerinfo;
+			first_jqc = jqc;
 		} else if ( owner != jqc->ownerinfo ) {
 			result.Assign(ATTR_ERROR_STRING, "Cannot export for more than one user");
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
@@ -20751,7 +20810,17 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		return false;
 	}
 
-	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
+	// Use the first cluster that actually resolved above.  The requested id
+	// set can be non-empty yet contain only missing cluster ids (the loop
+	// above skips those), in which case there is nothing to export.  Do not
+	// re-fetch GetClusterAd(*clusters.begin()) here: that id may be one of the
+	// missing ones and would hand back a null pointer we then dereference.
+	JobQueueCluster * jqc = first_jqc;
+	if ( ! jqc ) {
+		result.Assign(ATTR_ERROR_STRING, "No valid clusters to export");
+		dprintf(D_ALWAYS, "ExportJobs(): No valid clusters to export\n");
+		return false;
+	}
 
 	// verify the user is authorized to edit these jobs
 	if ( ! UserCheck2(jqc, user) ) {

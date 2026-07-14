@@ -474,19 +474,12 @@ public:
 			@param st The type of the Sock you want to use.
 			@param sec The timeout you want to use on your Sock.
 			@param errstack NULL or error stack to dump errors into.
-			@param callback_fn function to call when finished
-			                   Must be non-NULL
-			@param misc_data any data caller wants passed to callback_fn
+			@param callback the std::function to call when finished; its
+			                closure owns any caller state.  Must not be empty.
 			@param raw_protocol to bypass all security negotiation, set to true
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
-
-		/** Same as above, but the callback is a std::function whose
-			closure owns any caller state that the legacy overload
-			passed via void *misc_data. Must not be empty.
-		 */
 	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/** Start sending the given command to the daemon.  This
@@ -509,21 +502,14 @@ public:
 			@param sock The	Sock you want to use.
 			@param timeout The number of seconds you want to use on your Sock.
 			@param errstack NULL or errstack to dump errors into
-			@param callback_fn NULL or function to call when finished
-			                   If NULL and sock is UDP, will return
-							   StartCommandWouldBlock if TCP session key
-							   setup is in progress.
-			@param misc_data any data caller wants passed to callback_fn
+			@param callback the std::function to call when finished; its
+			                closure owns any caller state.  If empty and
+			                sock is UDP, will return StartCommandWouldBlock
+			                if TCP session key setup is in progress.
 			@param raw_protocol to bypass all security negotiation, set to true
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
-
-		/** Same as above, but the callback is a std::function whose
-			closure owns any caller state that the legacy overload
-			passed via void *misc_data.
-		 */
 	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
@@ -959,17 +945,11 @@ protected:
 
 		/**
 		   Internal function used by public versions of startCommand().
-		   It may be either blocking or nonblocking, depending on the
-		   nonblocking flag.  This version creates a socket of the
-		   specified type and connects it.
+		   This blocking version creates a socket of the specified type
+		   and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
-		/**
-		   Class used internally to handle non-blocking connects for
-		   startCommand().
-		*/
-	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
 
 private:

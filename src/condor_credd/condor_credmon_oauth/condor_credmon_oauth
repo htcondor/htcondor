@@ -34,7 +34,7 @@ try:
 except ImportError:
     VaultCredmon = None
 
-from credmon.utils import parse_args, setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials
+from credmon.utils import parse_args, setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials, is_valid_provider_name
 
 
 def signal_handler(logger, send_queue, signum, frame):
@@ -145,7 +145,7 @@ def start_credmon_process(q, cred_dir, args):
     elif VaultCredmon is not None:
         credmons.append(VaultCredmon(providers=vault_provider_names, cred_dir=cred_dir, args=args))
 
-    # Check for overlapping credmons
+    # Check for overlapping credmons and invalid provider names
     credmons_provider_names = {
         "local": local_provider_names,
         "oauth2": oauth2_provider_names,
@@ -155,6 +155,9 @@ def start_credmon_process(q, cred_dir, args):
     checked_credmon_provider_names = {}
     for credmon, provider_names in credmons_provider_names.items():
         for provider_name in provider_names:
+            if not is_valid_provider_name(provider_name):
+                logger.error(f"""Credential provider "{provider_name}" in the {credmon} provider names list contains disallowed characters and CREDMON_ALLOW_SPECIAL_CHAR_NAMES is False""")
+                sys.exit(99)  # DAEMON_NO_RESTART from src/condor_includes/exit.h - condor_master will not restart the credmon
             existing_credmon = checked_credmon_provider_names.get(provider_name)
             if existing_credmon is None:
                 checked_credmon_provider_names[provider_name] = credmon

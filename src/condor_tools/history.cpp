@@ -1709,7 +1709,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 				if (valueNum <= INT_MAX && valueNum >= 0)
 					newInfo.runId = static_cast<int>(valueNum);
 		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
-			ExprTreeIsLiteralString(tree,newInfo.owner);
+			// on failure owner is left unchanged, which is acceptable here
+			std::ignore = ExprTreeIsLiteralString(tree,newInfo.owner);
 		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;

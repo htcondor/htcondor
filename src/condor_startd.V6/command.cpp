@@ -2960,6 +2960,11 @@ int
 command_data_slot(int, Stream * stream ) {
 	Sock * sock = (Sock *)stream;
 	// dprintf( D_ALWAYS, "command_data_slot(): begin\n" );
+	const char * auth_method = sock->getAuthenticationMethodUsed();
+	dprintf( D_TEST,
+		"command_data_slot(): authenticated via %s.\n",
+		auth_method ? auth_method : "(none)"
+	);
 
 
 	ClassAd commandAd;

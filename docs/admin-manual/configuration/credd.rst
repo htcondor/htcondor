@@ -193,3 +193,12 @@ These macros affect the *condor_credd* and its credmon plugin.
     all providers not claimed by other credmon types.  This knob is only
     meaningful when :macro:`SEC_CREDENTIAL_STORER` is also configured to point
     to the Vault credential storer.
+
+:macro-def:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES`
+    A boolean value that defaults to ``False``. When ``False``, provider
+    names may only contain alphanumeric characters and hyphens, and
+    underscores in credential file names are treated as separators between
+    a provider name and a user-supplied handle (e.g. ``box_readonly``
+    matches provider ``box``). When ``True``, underscores are permitted
+    in provider names and credential files are matched exactly, disabling
+    handle support.

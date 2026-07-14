@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import stat
 import sys
@@ -13,6 +14,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 
 
+# Non-special characters are alphanumerics and hyphen
+VALID_PROVIDER_NAME_CHARS_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+
+
 def camelize(snake):
     """
     Convert a SNAKE_CASE string (e.g. DAEMON_NAME) to CamelCase (e.g. DaemonName).
@@ -21,6 +26,22 @@ def camelize(snake):
     :param snake: snake_cased string
     :return: CamelCased string"""
     return "".join([x.capitalize() for x in snake.split("_")])
+
+
+def is_valid_provider_name(provider_name: str) -> bool:
+    """
+    Check if a provider name is valid.
+    Returns True if the provider name contains only alphanumeric characters
+    and hyphens, or if CREDMON_ALLOW_SPECIAL_CHAR_NAMES is set to True.
+    A single "*" is also allowed for the case where a single credmon handles
+    all credentials.
+    """
+    if provider_name == "*":
+        return True
+    allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
+    if allow_special_chars:
+        return True
+    return VALID_PROVIDER_NAME_CHARS_RE.match(provider_name) is not None
 
 
 def parse_args(daemon_name="CREDMON_OAUTH"):
