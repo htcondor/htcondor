@@ -33,6 +33,7 @@
 #include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
+#include "set_user_priv_from_ad.h"
 #include "condor_adtypes.h"
 #include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
@@ -4473,6 +4474,8 @@ enum {
 	idATTR_DISABLE_REASON,
 	idATTR_USERREC_OPT_CREATE_DEPRECATED,
 	idATTR_USERREC_LIVE,
+	idATTR_COMMON_INPUT_FILES,
+	idATTR_COMMON_INPUT_CATALOGS,
 };
 
 enum {
@@ -4484,21 +4487,22 @@ enum {
 	catDirtyPrioRec = 0x0010,
 	catTargetScope  = 0x0020,
 	catSubmitterIdent = 0x0040,
-	catNewMaterialize = 0x0080,  // attributes that control the job factory
-	catMaterializeState = 0x0100, // change in state of job factory
-	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
+	catNewMaterialize = 0x0080,     // attributes that control the job factory
+	catMaterializeState = 0x0100,   // change in state of job factory
+	catSpoolingHold = 0x0200,       // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
-	catJobset       = 0x800,     // job membership in a jobset changed or a new jobset should be created
-	catSetUserRec   = 0x1000,    // a UserRec was edited
-	catNewUser      = 0x2000,    // a new job "owner" or "user" was added
-	catSetOwner     = 0x4000,    // the ATTR_OWNER or ATTR_USER of a job or jobset was set/changed
+	catJobset       = 0x800,        // job membership in a jobset changed or a new jobset should be created
+	catSetUserRec   = 0x1000,       // a UserRec was edited
+	catNewUser      = 0x2000,       // a new job "owner" or "user" was added
+	catSetOwner     = 0x4000,       // the ATTR_OWNER or ATTR_USER of a job or jobset was set/changed
 	// catUnusedFlag = 0x8000,
-	catSetProjectRec= 0x10000,    // the ProjectRec was edited
-	catNewProject   = 0x20000,    // a new job project was added
-	catJobProject   = 0x40000,    // the ATTR_PROJECT_NAME of a job was set/changed
+	catSetProjectRec= 0x10000,      // the ProjectRec was edited
+	catNewProject   = 0x20000,      // a new job project was added
+	catJobProject   = 0x40000,      // the ATTR_PROJECT_NAME of a job was set/changed
+	catAdjustments  = 0x80000,      // indicates that an attribute requiring post-transform adjustment has been seen
 	catCategoryMask     =0x0FFFFF,
-	catCallbackTrigger = 0x100000, // indicates that a callback should happen on commit of this attribute
-	catCallbackNow = 0x200000,    // indicates that a callback should happen when setAttribute is called
+	catCallbackTrigger = 0x100000,  // indicates that a callback should happen on commit of this attribute
+	catCallbackNow = 0x200000,      // indicates that a callback should happen when setAttribute is called
 };
 
 typedef struct attr_ident_pair {
@@ -4518,6 +4522,8 @@ typedef struct attr_ident_pair {
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
+	FILL(ATTR_COMMON_INPUT_CATALOGS, catAdjustments),
+	FILL(ATTR_COMMON_INPUT_FILES, catAdjustments),
 	FILL(ATTR_CONCURRENCY_LIMITS, catDirtyPrioRec),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
@@ -4569,6 +4575,7 @@ static int IsSpecialSetAttribute(const char *attr, int* set_cat=nullptr)
 }
 
 
+#if 0
 int
 SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags)
 {
@@ -4584,6 +4591,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 
 	return 0;
 }
+#endif
 
 int
 SetSecureAttributeInt(const JobQueueKey & key, const char *attr_name, long long int_value, SetAttributeFlags_t flags)
@@ -4741,7 +4749,7 @@ int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const 
 // return >0 : accept, apply change and return success to client
 // TODO formalize the return type with an enum?
 int
-ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags, CondorError *err)
+ModifyAttrCheck(const JOB_ID_KEY &key, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags, CondorError *err)
 {
 	JobQueueJob    *job = nullptr;
 
@@ -4943,7 +4951,7 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 }
 
 int
-SetAttribute(int cluster_id, int proc_id, const char *attr_name,
+SetAttribute(const JOB_ID_KEY & jid, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags,
 			 CondorError *err)
 {
@@ -4954,6 +4962,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	std::string err_str;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
+	int cluster_id = jid.cluster;
+	int proc_id = jid.proc;
 	IdToKey(cluster_id,proc_id,key);
 
 	int rc = ModifyAttrCheck(key, attr_name, attr_value, flags, err);
@@ -5392,7 +5402,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing jobset\n");
 				errno = EACCES;
 				return -1;
-			} 
+			}
 			if (job) {
 				// TODO: allow id to be set to existing set owned by this user
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing job\n");
@@ -5490,7 +5500,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			attrNumVacates.append(" ").append(ATTR_NUM_VACATES_PRE_EXECUTION);
 			attrNumVacatesByReason.append(" ").append(ATTR_NUM_VACATES_BY_REASON_PRE_EXECUTION);
 		}
-				
+
 		// Update count in job ad of how many times job was vacated
 		incrementJobAdAttr(cluster_id, proc_id, attrNumVacates.c_str());
 
@@ -6087,13 +6097,16 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 	int triggers = JobQueue->GetTransactionTriggers();
 	bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
 	bool has_job_factory = (triggers & catNewMaterialize) != 0;
+	bool has_adjustments_flag = (triggers & catAdjustments) != 0;
 
 	// If we don't need to perform any submit_requirement checks
 	// and we don't need to perform any job transforms, then we should
 	// bail out now and avoid all the expensive computation below.
 	if ( !scheduler.shouldCheckSubmitRequirements() &&
 		 !scheduler.jobTransforms.shouldTransform() &&
-		 !has_spooling_hold)
+		 !has_spooling_hold &&
+		 !has_adjustments_flag
+	)
 	{
 		return 0;
 	}
@@ -6207,6 +6220,15 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			// so the conservative changes puts it here.
 			rewriteSpooledJobAd(procAd, jid.cluster, jid.proc, false);
 		}
+
+		rval = scheduler.post_transform_adjustments(
+			procAd, jid, errorStack, has_job_factory, project_is_cluster_attr
+		);
+		if( rval < 0 ) {
+			// post_transform_adjustments() has set errorStack for us.
+			errno = EINVAL;
+			return rval;
+		}
 	}
 
 	return 0;
@@ -6314,7 +6336,7 @@ ReadProxyFileIntoAd( [[maybe_unused]] const char *file, [[maybe_unused]] const O
 	// owner==NULL means don't try to switch our priv state.
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
-		if ( !init_user_ids(owner) ) {
+		if ( !init_user_ids_from_ad(*owner) ) {
 			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner->Name() );
 			return false;
 		}
@@ -6482,7 +6504,7 @@ static bool MakeUserRec(JobQueueKey & key,
 	const ClassAd * defaults)
 {
 	std::string obuf;
-	const char* owner = name_of_user(user, obuf);
+	const char* owner = user ? name_of_user(user, obuf) : nullptr;
 	const char* uid_domain = nullptr;
 	if (user) {
 		uid_domain = domain_of_user(user, nullptr);
@@ -7566,13 +7588,10 @@ AbortTransactionAndRecomputeClusters()
 
 
 int
-GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *val)
+GetAttributeFloat(const JOB_ID_KEY & key, const char *attr_name, double *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf	key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7597,13 +7616,10 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *va
 
 
 int
-GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long long *val)
+GetAttributeInt(const JOB_ID_KEY & key, const char *attr_name, long long *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7626,11 +7642,12 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long long *v
 	return -1;
 }
 
+#if 0
 int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long *val)
 {
 	long long ll_val = *val;
-	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	int rc = GetAttributeInt({cluster_id, proc_id}, attr_name, &ll_val);
 	if (rc >= 0) {
 		*val = (long)ll_val;
 	}
@@ -7641,21 +7658,19 @@ int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	long long ll_val = *val;
-	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	int rc = GetAttributeInt({cluster_id, proc_id}, attr_name, &ll_val);
 	if (rc >= 0) {
 		*val = (int)ll_val;
 	}
 	return rc;
 }
+#endif
 
 int
-GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, bool *val)
+GetAttributeBool(const JOB_ID_KEY & key, const char *attr_name, bool *val)
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7683,16 +7698,12 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, bool *val)
 // AttrList::LookupString() which allocates a new string. This is a good
 // thing, since it doesn't require a buffer that we could easily overflow.
 int
-GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
-					   char **val )
+GetAttributeStringNew( const JOB_ID_KEY & key, const char *attr_name, char **val )
 {
 	ClassAd	*ad = nullptr;
-	JobQueueKeyBuf key;
 	char	*attr_val = nullptr;
 
 	*val = nullptr;
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7721,14 +7732,10 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 // the lookup succeeds in the job queue, 1 if it succeeds in the current
 // transaction; val is set to the empty string on failure
 int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
-                    std::string &val )
+GetAttributeString( const JOB_ID_KEY & key, const char *attr_name, std::string &val )
 {
 	ClassAd	*ad = nullptr;
 	char	*attr_val = nullptr;
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
@@ -7757,16 +7764,13 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 int
-GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
+GetAttributeExprNew(const JOB_ID_KEY & key, const char *attr_name, char **val)
 {
 	ClassAd		*ad = nullptr;
 	ExprTree	*tree = nullptr;
 	char		*attr_val = nullptr;
 
 	*val = nullptr;
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		*val = attr_val;
@@ -7790,6 +7794,7 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 }
 
 
+// this is only used by qmgr_job_updater
 int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
@@ -7798,8 +7803,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	const char	*name = nullptr;
 	ExprTree 	*expr = nullptr;
 
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
+	JOB_ID_KEY key{cluster_id,proc_id};
 
 	if(!JobQueue->LookupClassAd(key, ad)) {
 		errno = ENOENT;
@@ -7830,11 +7834,8 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 
 
 int
-DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
+DeleteAttribute(const JOB_ID_KEY & key, const char *attr_name)
 {
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
-
 	int rc = ModifyAttrCheck(key, attr_name, nullptr, SetAttribute_Delete, nullptr);
 	if ( rc <= 0 ) {
 		return rc;
@@ -9081,35 +9082,29 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	const char * powner = job->submitterdata->Name();
 #else
 	// TODO: use scheduler.get_submitter code above instead of this..
-	char    owner[100];
-	owner[0] = 0;
-	char * powner = owner;
-	int cremain = sizeof(owner);
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
 		// don't want for this purpose...
-	job->LookupString(ATTR_ACCOUNTING_GROUP, powner, cremain);  // TODDCORE
-	if (*powner == '\0') {
+	std::string owner;
+	job->LookupString(ATTR_ACCOUNTING_GROUP, owner);  // TODDCORE
+	if (owner.empty()) {
 		std::string job_user;
 		job->LookupString(attr_JobUser, job_user);
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
 		if (user_is_the_new_owner && last_at != std::string::npos && !accounting_domain.empty()) {
-			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
-			cremain -= last_at;
-			strncat(powner, "@", cremain); cremain--;
-			strncat(powner, accounting_domain.c_str(), cremain);
+			owner = job_user.substr(0, last_at) + "@" + accounting_domain;
 		} else {
-			strncat(powner, job_user.c_str(), cremain - 1);
+			owner = job_user;
 		}
 	} else if (user_is_the_new_owner) {
 		// AccountingGroup does not include a domain, but it needs to for this code
 		auto accounting_domain = scheduler.accountingDomain();
 		if (!accounting_domain.empty()) {
-			strncat(powner, "@", cremain); cremain--;
-			strncat(powner, accounting_domain.c_str(), cremain);
+			owner += "@" + accounting_domain;
 		}
 	}
+	const char * powner = owner.c_str();
 #endif
 
 	auto & rec = PrioRec.emplace_back();

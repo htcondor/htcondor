@@ -872,7 +872,7 @@ static bool test_get_access_time_not_exist() {
 	StatInfo info("DoesNotExist", "DoesNotExist");
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != 0) {
 		FAIL;
 	}
@@ -890,11 +890,11 @@ static bool test_get_access_time_file() {
 	formatstr(file, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	StatInfo info(full_dir.c_str(), "empty_file");
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != st.st_atime) {
 		FAIL;
 	}
@@ -912,11 +912,11 @@ static bool test_get_access_time_file_old() {
 	formatstr(file, "%s%c%s", original_dir.c_str(), DIR_DELIM_CHAR, readme);
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	StatInfo info(original_dir.c_str(), readme);
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != st.st_atime) {
 		FAIL;
 	}
@@ -934,11 +934,11 @@ static bool test_get_access_time_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	StatInfo info(tmp_dir.c_str(), "full_dir");
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != st.st_atime) {
 		FAIL;
 	}
@@ -956,11 +956,11 @@ static bool test_get_access_time_symlink_file() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	StatInfo info(tmp_dir.c_str(), "symlink_file");
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != st.st_atime) {
 		FAIL;
 	}
@@ -978,11 +978,11 @@ static bool test_get_access_time_symlink_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	StatInfo info(tmp_dir.c_str(), "symlink_dir");
 	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != st.st_atime) {
 		FAIL;
 	}
@@ -1000,7 +1000,7 @@ static bool test_get_modify_time_not_exist() {
 	StatInfo info("DoesNotExist", "DoesNotExist");
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != 0) {
 		FAIL;
 	}
@@ -1018,11 +1018,11 @@ static bool test_get_modify_time_file() {
 	formatstr(file, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	StatInfo info(full_dir.c_str(), "empty_file");
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != st.st_mtime) {
 		FAIL;
 	}
@@ -1040,11 +1040,11 @@ static bool test_get_modify_time_file_old() {
 	formatstr(file, "%s%c%s", original_dir.c_str(), DIR_DELIM_CHAR, readme);
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	StatInfo info(original_dir.c_str(), readme);
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != st.st_mtime) {
 		FAIL;
 	}
@@ -1062,11 +1062,11 @@ static bool test_get_modify_time_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	StatInfo info(tmp_dir.c_str(), "full_dir");
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != st.st_mtime) {
 		FAIL;
 	}
@@ -1084,11 +1084,11 @@ static bool test_get_modify_time_symlink_file() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	StatInfo info(tmp_dir.c_str(), "symlink_file");
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != st.st_mtime) {
 		FAIL;
 	}
@@ -1106,11 +1106,11 @@ static bool test_get_modify_time_symlink_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	StatInfo info(tmp_dir.c_str(), "symlink_dir");
 	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != st.st_mtime) {
 		FAIL;
 	}
@@ -1128,7 +1128,7 @@ static bool test_get_create_time_not_exist() {
 	StatInfo info("DoesNotExist", "DoesNotExist");
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != 0) {
 		FAIL;
 	}
@@ -1146,11 +1146,11 @@ static bool test_get_create_time_file() {
 	formatstr(file, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	StatInfo info(full_dir.c_str(), "empty_file");
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != st.st_ctime) {
 		FAIL;
 	}
@@ -1168,11 +1168,11 @@ static bool test_get_create_time_file_old() {
 	formatstr(file, "%s%c%s", original_dir.c_str(), DIR_DELIM_CHAR, readme);
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	StatInfo info(original_dir.c_str(), readme);
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != st.st_ctime) {
 		FAIL;
 	}
@@ -1190,11 +1190,11 @@ static bool test_get_create_time_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	StatInfo info(tmp_dir.c_str(), "full_dir");
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != st.st_ctime) {
 		FAIL;
 	}
@@ -1212,11 +1212,11 @@ static bool test_get_create_time_symlink_file() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	StatInfo info(tmp_dir.c_str(), "symlink_file");
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != st.st_ctime) {
 		FAIL;
 	}
@@ -1234,11 +1234,11 @@ static bool test_get_create_time_symlink_dir() {
 	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	StatInfo info(tmp_dir.c_str(), "symlink_dir");
 	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != st.st_ctime) {
 		FAIL;
 	}
@@ -1275,7 +1275,7 @@ static bool test_get_file_size_file() {
 	formatstr(file, "%s%s", full_dir.c_str(), "full_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(full_dir.c_str(), "full_file");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1314,7 +1314,7 @@ static bool test_get_file_size_dir() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "full_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "full_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1336,7 +1336,7 @@ static bool test_get_file_size_dir_empty() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "empty_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "empty_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1358,7 +1358,7 @@ static bool test_get_file_size_symlink_file() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "symlink_file");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "symlink_file");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();
@@ -1380,7 +1380,7 @@ static bool test_get_file_size_symlink_dir() {
 	formatstr(file, "%s%s", tmp_dir.c_str(), "symlink_dir");
 	stat(file.c_str(), &st);
 	emit_output_expected_header();
-	emit_retval("%u", st.st_size);
+	emit_retval(FILESIZE_T_FORMAT, (filesize_t)st.st_size);
 	StatInfo info(tmp_dir.c_str(), "symlink_dir");
 	filesize_t size = info.GetFileSize();
 	emit_output_actual_header();

@@ -474,6 +474,23 @@ public:
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
+
+		// "condor_ep rehome --reboot" support.  Returns true if the
+		// STARTD_REHOME_ALLOW_REBOOT guard expression permits rebooting
+		// the host on rehome.
+	bool rehomeRebootAllowed() const;
+		// Arrange for the host to reboot (via reboot_command) once all
+		// claims have been evicted.  Safe to call when there are no claims;
+		// in that case the reboot is initiated immediately.
+	void rebootAfterRehome(const std::string &reboot_command);
+		// Called when a starter exits: if a reboot is pending and all
+		// claims are now gone, schedule the reconfig-and-reboot.
+	void checkForRehomeReboot();
+		// True between rebootAfterRehome() and the completion of the
+		// deferred doRehomeReboot timer.  startd_exit_if_idle() honors
+		// this so a fast-shutdown does not race past the pending reboot.
+	bool rehomeRebootPending() const { return m_reboot_after_rehome; }
+
 	time_t getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 	void setLastDrainStopTime() {
@@ -645,6 +662,20 @@ private:
 	time_t total_draining_badput;
 	time_t total_draining_unclaimed;
 	time_t max_job_retirement_time_override;
+
+		// Pending reboot-on-rehome state.  m_reboot_after_rehome is set
+		// when a rehome --reboot request arrives and stays true until the
+		// deferred doRehomeReboot handler has actually invoked the reboot
+		// command, so a concurrent fast-shutdown will not exit out from
+		// under us.  m_reboot_timer_scheduled guards the zero-delay timer
+		// against double registration.
+	bool m_reboot_after_rehome{false};
+	bool m_reboot_timer_scheduled{false};
+	std::string m_reboot_command;
+		// Deferred handler that actually reconfigs and reboots the host,
+		// run from a zero-delay timer to avoid reentrancy with the
+		// starter-exit callback that detects "all claims evicted".
+	void doRehomeReboot(int timerID);
 
 	std::unique_ptr<VolumeManager> m_volume_mgr;
 };

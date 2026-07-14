@@ -167,7 +167,8 @@ typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
 typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
 //@}
 
-typedef enum { 
+typedef enum {
+	HANDLE_NONE=0,	// registered but not polled for read or write
 	HANDLE_READ=1,
 	HANDLE_WRITE,
 	HANDLE_READ_WRITE
@@ -1057,6 +1058,18 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Lookup_Socket ( Stream * iosock );
+
+    /** Change the I/O interest of an already-registered socket without
+        re-registering it. This lets a byte relay (e.g. CCB streaming) implement
+        backpressure: pause reads on the source while the destination is
+        congested (HANDLE_WRITE or HANDLE_NONE), and watch the destination for
+        writability while bytes are buffered. The socket keeps its existing
+        handler and registration.
+        @param iosock        the registered socket to adjust
+        @param handler_type  the new interest (HANDLE_NONE/READ/WRITE/READ_WRITE)
+        @return true if the socket was found and updated, false otherwise
+    */
+    bool Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type );
 	//@}
 
 	/** @name Pipe events.

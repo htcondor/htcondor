@@ -115,7 +115,7 @@ bool DBHandler::initialize() {
         ROLLBACK_AND_RETURN();
     }
 
-    constexpr int SCHEMA_VERSION = 1;
+    constexpr int SCHEMA_VERSION = 3;
 
     if (version > SCHEMA_VERSION) {
         dprintf(D_ALWAYS, "Database schema version (%d) is newer than my version (%d).\n",
@@ -125,7 +125,48 @@ bool DBHandler::initialize() {
         std::string version_stmt;
         formatstr(version_stmt, "PRAGMA user_version = %d;", SCHEMA_VERSION);
         switch (version) {
-            case 0: [[fallthrough]];
+            case 1: {
+                // v1→v2: FileName changed from basename to absolute path.
+                // Prepend the archive directory to all existing basename entries.
+                std::error_code migEc;
+                std::string dir = (fs::absolute(fs::path(config[conf::str::ArchiveFile]).parent_path(), migEc)
+                                   / "").string();
+                if (migEc) {
+                    dprintf(D_ERROR, "v1→v2 migration: could not resolve absolute archive dir: %s\n",
+                            migEc.message().c_str());
+                    ROLLBACK_AND_RETURN();
+                }
+                const char* migSql = "UPDATE Files SET FileName = ? || FileName;";
+                sqlite3_stmt* migStmt = nullptr;
+                if (sqlite3_prepare_v2(db_, migSql, -1, &migStmt, nullptr) != SQLITE_OK) {
+                    dprintf(D_ERROR, "v1→v2 migration prepare failed: %s\n", sqlite3_errmsg(db_));
+                    ROLLBACK_AND_RETURN();
+                }
+                std::ignore = sqlite3_bind_text(migStmt, 1, dir.c_str(), -1, SQLITE_TRANSIENT);
+                if (sqlite3_step(migStmt) != SQLITE_DONE) {
+                    dprintf(D_ERROR, "v1→v2 migration failed: %s\n", sqlite3_errmsg(db_));
+                    std::ignore = sqlite3_finalize(migStmt);
+                    ROLLBACK_AND_RETURN();
+                }
+                std::ignore = sqlite3_finalize(migStmt);
+                dprintf(D_ALWAYS, "Database migrated from schema v1 to v2 (FileName → absolute path).\n");
+                [[fallthrough]];
+            }
+            case 2: {
+                // v2→v3: Add DAGManJobId, JobBatchId, JobBatchName to JobRecords.
+                // Existing rows default to NULL (attributes may not have existed).
+                const char* alters =
+                    "ALTER TABLE JobRecords ADD COLUMN DAGManJobId INTEGER;"
+                    "ALTER TABLE JobRecords ADD COLUMN JobBatchId TEXT;"
+                    "ALTER TABLE JobRecords ADD COLUMN JobBatchName TEXT;";
+                if (sqlite3_exec(db_, alters, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+                    dprintf(D_ERROR, "v2→v3 migration failed: %s\n", errMsg ? errMsg : "Unknown");
+                    sqlite3_free(errMsg);
+                    ROLLBACK_AND_RETURN();
+                }
+                dprintf(D_ALWAYS, "Database migrated from schema v2 to v3 (JobRecords DAG/batch columns).\n");
+                [[fallthrough]];
+            }
             default:
                 if (sqlite3_exec(db_, version_stmt.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
                     dprintf(D_ERROR, "Failed to set new schema version: %s\n", errMsg ? errMsg : "Unknown");
@@ -424,8 +465,9 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
     }
 
     const char* sql = R"(
-        INSERT INTO JobRecords (Offset, CompletionDate, JobId, FileId, JobListId)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO JobRecords (Offset, CompletionDate, JobId, FileId, JobListId,
+                                DAGManJobId, JobBatchId, JobBatchName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     sqlite3_stmt* stmt = nullptr;
@@ -463,6 +505,28 @@ bool DBHandler::batchInsertJobRecords(const std::vector<ArchiveRecord>& records,
         std::ignore = sqlite3_bind_int64(stmt, 4, fileId);
         std::ignore = sqlite3_bind_int(stmt,  5, jobListId);
 
+        std::unique_ptr<ClassAd> ad(rec.GetAd());
+        int dagmanJobId = 0;
+        std::string jobBatchId, jobBatchName;
+
+        if (ad && ad->LookupInteger(ATTR_DAGMAN_JOB_ID, dagmanJobId)) {
+            std::ignore = sqlite3_bind_int(stmt, 6, dagmanJobId);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 6);
+        }
+
+        if (ad && ad->LookupString(ATTR_JOB_BATCH_ID, jobBatchId)) {
+            std::ignore = sqlite3_bind_text(stmt, 7, jobBatchId.c_str(), -1, SQLITE_TRANSIENT);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 7);
+        }
+
+        if (ad && ad->LookupString(ATTR_JOB_BATCH_NAME, jobBatchName)) {
+            std::ignore = sqlite3_bind_text(stmt, 8, jobBatchName.c_str(), -1, SQLITE_TRANSIENT);
+        } else {
+            std::ignore = sqlite3_bind_null(stmt, 8);
+        }
+
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
             dprintf(D_ERROR, "Failed to insert record at offset %lld for %d.%d: %s\n",
@@ -483,6 +547,7 @@ static int64_t convertRotationStringToTimestamp(const std::string& rotationStr) 
     std::tm tm = {};
     std::istringstream ss(rotationStr);
     ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
+    tm.tm_isdst = -1;
     return static_cast<int64_t>(std::mktime(&tm));
 }
 
@@ -812,11 +877,10 @@ bool DBHandler::checkpointWAL() {
 
 /**
  * Recovers in-memory state from the database after a daemon restart.
- * Populates archiveFiles (keyed by full path = directory / filename) and statusData.
+ * Populates archiveFiles (keyed by absolute FileName from the DB) and statusData.
  */
 bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& archiveFiles,
-                                           StatusData& statusData,
-                                           const std::string& directory)
+                                           StatusData& statusData)
 {
     const char* checkSql = "SELECT COUNT(*) FROM (SELECT 1 FROM Files LIMIT 1);";
     sqlite3_stmt* stmt = nullptr;
@@ -915,8 +979,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         file.size            = -1;
         file.last_modified   = 0;
 
-        std::string path = (fs::path(directory) / file.filename).string();
-        archiveFiles[path] = std::move(file);
+        archiveFiles[file.filename] = std::move(file);
     }
     std::ignore = sqlite3_finalize(stmtF);
 

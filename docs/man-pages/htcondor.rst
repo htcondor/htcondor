@@ -53,6 +53,9 @@ Synopsis
 | **htcondor** **ap** *status* [**hostname** ...]
 | **htcondor** **ap** *claims* [**-\-name** *ap-name*]
 
+| **htcondor** **ep** *rehome* [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+| **htcondor** **ep** *status* *ep-name*
+
 | **htcondor** **cm** *status*
 
 Description
@@ -460,6 +463,45 @@ Access Point Verbs
     **-\-name** *ap-name*
         Name or address of the access point to query.  If not specified,
         the local access point is queried.
+
+Execution Point Verbs
+---------------------
+
+  **htcondor ep rehome** [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+
+    Directs the *condor_startd* on *ep-name* to evict all running jobs and
+    direct-attach to the *condor_schedd* identified by *schedd-name*. The
+    direct-attach configuration is persisted via the runtime persistent
+    config so it survives a restart of the *condor_startd*.
+
+    **-\-schedd-pool** *pool*
+        Collector pool to use when locating *schedd-name*. Defaults to
+        :macro:`COLLECTOR_HOST`.
+
+    **-\-cancel**
+        Cancel a prior rehome by unsetting
+        :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME` from the persistent
+        config. No jobs are evicted.
+
+    **-\-timeout** *seconds*
+        Timeout in seconds for the rehome operation. ``0`` (the default)
+        means no timeout.
+
+    **-\-reboot**
+        After evicting all running jobs, reboot the execution point host.
+        The persisted direct-attach configuration causes the host to
+        re-attach to *schedd-name* when it comes back up. This option is
+        only honored if :macro:`STARTD_REHOME_ALLOW_REBOOT` is set to an
+        expression that evaluates to ``True`` on every slot of the EP;
+        otherwise the request is refused and no jobs are evicted. The
+        reboot itself is performed by :macro:`STARTD_REBOOT_COMMAND`
+        (default ``/sbin/reboot``).
+
+  **htcondor ep status** *ep-name*
+
+    Lists every slot on the execution point *ep-name* together with its
+    slot type, state, activity, CPUs, and memory, followed by the total
+    slot count.
 
 Central Manager Verbs
 ---------------------

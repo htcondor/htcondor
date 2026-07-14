@@ -67,8 +67,7 @@ tool, and how the *ssh* programs are invoked. The manual page for
     inetd mode. Enclose the entire arguments string in double quote
     marks. Individual arguments may be quoted with single quotes, using
     the same syntax as for arguments in an HTCondor submit description
-    file. Within the arguments, the characters %f are replaced by the
-    path to the *sshd* configuration file the characters %% are replaced
+    file. Within the arguments, the characters %f are replaced by the path to the *sshd* configuration file, and the characters %% are replaced
     by a single percent character. The default value is the string
     "-i -e -f %f".
 

@@ -100,6 +100,7 @@
 #include "catalog_utils.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
+#include "guidance.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -244,15 +245,6 @@ static bool isOCUSuperUser(ReliSock* sock) {
 		return true;
 	}
 	return false;
-}
-
-int init_user_ids(const JobQueueUserRec * user) {
-	if ( ! user || ! user->OsUser()) {
-		return 0;
-	}
-	std::string buf;
-	const char * owner = name_of_user(user->OsUser(), buf);
-	return init_user_ids(owner, domain_of_user(user->OsUser(), nullptr));
 }
 
 // priority records
@@ -5151,8 +5143,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
                      job_id.cluster, job_id.proc);
             
 			const OwnerInfo * owni = job_ad->ownerinfo;
-			if (! init_user_ids(owni) ) {
-				const char* os_user = (owni && owni->OsUser()) ? owni->OsUser() : "";
+			if (! init_user_ids_from_ad(*owni) ) {
+				const char* os_user = (owni->OsUser()) ? owni->OsUser() : "";
 				std::string msg;
 				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", os_user);
 #ifdef WIN32
@@ -5249,7 +5241,10 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	}
 	if( mrec ) {
 		// NOTE: this might delete the mrec...
-		scheduler.FindRunnableJobForClaim( mrec );
+		PROC_ID new_job_id;
+		if( scheduler.FindRunnableJobForClaim( mrec, new_job_id ) ) {
+			scheduler.SetMrecJobID(mrec, new_job_id);
+		}
 	}
 
 	if( mode == REMOVED ) {
@@ -5698,7 +5693,7 @@ jobIsFinished( int cluster, int proc, void* )
 		dprintf( D_FULLDEBUG, "(%d.%d) Forcing NFS sync of Iwd\n", cluster,
 				 proc );
 
-		if ( !init_user_ids(job_ad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*job_ad->ownerinfo) ) {
 			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
 					 job_ad->ownerinfo->Name() );
 		} else {
@@ -6558,7 +6553,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
 			}
-			if ( !init_user_ids(ad->ownerinfo) ) {
+			if ( !init_user_ids_from_ad(*ad->ownerinfo) ) {
 				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 						 "failed to initialize user id for job %d.%d\n",
 						 cluster, proc );
@@ -7135,7 +7130,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		priv = set_condor_priv();
 		use_user_priv = false;
 	} else {
-		if ( !init_user_ids(jobad->ownerinfo) ) {
+		if ( !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 			         jobad->ownerinfo->Name() );
 			refuse(s);
@@ -7206,7 +7201,7 @@ UpdateGSICredContinuation::finish(Stream *stream)
 #ifndef WIN32
 	if (m_user_priv) {
 		JobQueueJob* jobad = GetJobAd(m_jobid);
-		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
+		if ( !jobad || !init_user_ids_from_ad(*jobad->ownerinfo) ) {
 			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for owner of %d.%d!\n",
 			        m_jobid.cluster, m_jobid.proc);
 			delete this;
@@ -9431,6 +9426,17 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		"common transfer notification (prompting job)"
 	);
 
+/*
+	long long disk_held_by_claim_in_mb = -1;
+	if( cmd_ad.LookupInteger( ATTR_DISK_HELD_BY_CLAIM_IN_MB, disk_held_by_claim_in_mb ) ) {
+		// Changing the disk request to reflect the common files availability
+		// and mapping method is best done by the startd, and doing it there
+		// also solves the resource-allocation problem in the negotiator).
+		//
+		// Because this information isn't catalog-specific, I'm not sure it'll
+		// be useful in the future, so I'm leaving it out for now.
+	}
+*/
 
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
@@ -9498,7 +9504,16 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		std::erase_if(
 			matchesHeldByBlockedJobs,
 			[this] (match_rec * mrec) -> bool {
+				if( mrec == nullptr ) {
+					dprintf( D_ALWAYS, "Match in the list of those held by blocked job is null, which is definitely wrong.\n" );
+					return false;
+				}
+
 				shadow_rec * srec = mrec->shadowRec;
+				if( srec == nullptr ) {
+					dprintf( D_ALWAYS, "Match held by blocked job does not have a shadow rec, which seems wrong.\n" );
+					return false;
+				}
 
 				size_t found = 0;
 				for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
@@ -10050,7 +10065,7 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 {
 	 startdContactQueue.push(args);
 	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
-			  args->sinful() );  
+			  args->sinful() );
 
 	 rescheduleContactQueue();
 
@@ -10099,7 +10114,7 @@ Scheduler::checkContactQueue( int /* timerID */ )
 		args = startdContactQueue.front();
 		startdContactQueue.pop();
 		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %p, "
-				 "host=%s\n", args, args->sinful() ); 
+				 "host=%s\n", args, args->sinful() );
 		contactStartd( args );
 		delete args;
 	}
@@ -10526,9 +10541,12 @@ Scheduler::StartJob(match_rec *rec)
 
 			// find the job with the highest priority
 			// if no job found, rec might be deleted (or may not be because of keep claim idle)
-		if( !FindRunnableJobForClaim(rec) ) {
+		PROC_ID new_job_id;
+		if(! FindRunnableJobForClaim(rec, new_job_id)) {
 			// rec was probably deleted, don't try and use it again...
 			return;
+		} else {
+			SetMrecJobID(rec, new_job_id);
 		}
 		id.cluster = rec->cluster;
 		id.proc = rec->proc;
@@ -10600,11 +10618,10 @@ Scheduler::StartJob(match_rec *rec)
 }
 
 bool
-Scheduler::FindRunnableJobForClaim(match_rec* mrec)
+Scheduler::FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id)
 {
 	ASSERT( mrec );
 
-	PROC_ID new_job_id;
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
 
@@ -10637,7 +10654,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 			"match (%s) switching to job %d.%d\n",
 			mrec->description(), new_job_id.cluster, new_job_id.proc );
 
-	SetMrecJobID(mrec,new_job_id);
 	return true;
 }
 
@@ -11320,7 +11336,9 @@ bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
 {
 	classad::EvalState state;
 	state.SetScopes(this);
-	return expr->Evaluate(state , val);
+	auto r = expr->Evaluate(state , val);
+	val.MakeSelfContained(state);
+	return r;
 }
 
 bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
@@ -12330,6 +12348,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	std::string cmd_secret;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
+	bool success = false;
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
@@ -12376,7 +12395,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(userJob->ownerinfo) ) {
+	if (! init_user_ids_from_ad(*userJob->ownerinfo) ) {
 		std::string tmpstr;
 #ifdef WIN32
 		formatstr(tmpstr, "Bad or missing credential for user: %s", userJob->ownerinfo->Name());
@@ -12756,11 +12775,18 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 
 	retval =  add_shadow_rec(pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1, cmd_secret.empty() ? nullptr : cmd_secret.c_str());
 
+	if (retval) { success = true; }
+
 wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
 	}
+
+	if ( ! success) {
+		setJobCoolDown(job_id, SchedUniverseCoolDownDuration);
+	}
+
 	// now close those open fds - we don't want to leak them if there was an error
 	for (i=0 ; i < 3; i++ ) {
 		if (inouterr[i] != -1) {
@@ -13484,10 +13510,14 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		// StartJob() will reblock them, or start a new transfer
 		// shadow, as appropriate.
 		//
+		// FIXME: the above is a lie; StartJob() will never be called
+		// again for these jobs (I think because they have matches).
+		//
 		// Doing things this way makes a single pass over the blocked
 		// matches, with each pass doing a set intersection; we could
 		// only one catalog at a time in the main loop, at the cost of
 		// iterating the blocked matches more than once.
+		std::vector< match_rec *> matches;
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
 				// It is a core design problem that we can't ever be sure
@@ -13516,11 +13546,63 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 							"catalog was unregistered" ) )
 					{
 						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
-						mark_serial_job_running( sr->job_id );
-						addRunnableJob( sr );
+
+						//
+						// The job is now idle and holding a claimed resource,
+						// but we can't start a shadow for it.  We can't call
+						// mark_serial_job_running() because we're not starting
+						// a shadow, and if we call addRunnableJob(), we'll
+						// skip StartJob(mrec, job_id) [which is normally
+						// responsible for calling addRunnableJob() via
+						// start_std()].
+						//
+						// If we delete this match record, we should probably
+						// also delete its (this) shadow record; it will leak,
+						// otherwise -- or worse, prevent a new shadow record
+						// for the transfer shadow's job ID from being created
+						// when it's time to try again.
+						//
+						// Conveniently, this makes it equally difficult to
+						// delete the match record as to try to use it again.
+						// For now, we'll delete the match record; it seems
+						// safer.  In the future, we should probably do what
+						// we do when we get a d-slot back from the startd;
+						// that will probably end up with the same job, but
+						// at least that way we (a) don't call StartJob()
+						// from a weird place and (b) anything we do to prevent
+						// too many common-transfer retries will work generally.
+						//
+						// See above about HTCONDOR-3610.
+						//
+
+						// auto jobID = sr->job_id;
+						delete_shadow_rec( sr );
+						// This removes `m` from `matchesHeldByBlockedJobs`.
+						// We could rewrite the loop and assign the return
+						// value of erase or manually iterate as appropriate,
+						// but that means explicitly removing m, rather than
+						// letting DelMrec() handle it, which seems wrong.
+						// DelMrec( m );
+						matches.push_back( m );
+
+/* This code passes the tests locally, except test_unblocking_jobs.py,
+ * which fails `test_kill_transfer_shadow`, because the jobs all immediately
+ * reblock trying the transfer again.
+						// Stolen from StartJob( mrec ); should refactor.
+						auto result = StartJob( m, jobID );
+						if( result != SJ::SUCCEEDED ) {
+							StartJobFailed( m, jobID );
+
+							// (Skip the e-mail for now.)
+						}
+*/
 					}
 				}
 			}
+		}
+
+		for( match_rec * n : matches ) {
+		    DelMrec( n );
 		}
 	}
 }
@@ -19856,7 +19938,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	shadow_rec *srec;
 	match_rec *mrec;
 	PROC_ID prev_job_id;
-	PROC_ID new_job_id;
 	Sock *sock = (Sock *)stream;
 
 		// force authentication
@@ -19947,7 +20028,9 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
 	}
 
-	if( !FindRunnableJobForClaim(mrec) ) {
+	dprintf( D_TEST, "RecycleShadow(): will recycle if runnable job found for claim.\n" );
+	PROC_ID new_job_id;
+	if(! FindRunnableJobForClaim(mrec, new_job_id)) {
 		dprintf(D_FULLDEBUG,
 			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
 			shadow_pid, prev_job_id.cluster, prev_job_id.proc);
@@ -19955,10 +20038,26 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;
+	} else {
+		//
+		// The common-files transfer handling is currently done in `StartJob()`,
+		// because it should be named `StartShadow()`.  Rather than rewrite the
+		// the whole control flow (again) right before the code freeze, let's
+		// just not re-use shadows for common file jobs.
+		//
+		auto [cxfer_type, catalogs] = determine_cxfer_type(mrec, new_job_id);
+		if( cxfer_type == CXFER_TYPE::NONE ) {
+			SetMrecJobID(mrec, new_job_id);
+		} else {
+			dprintf(D_FULLDEBUG,
+				"Next job for shadow pid %d (was running job %d.%d) transfers common files; shadow will exit.\n",
+				shadow_pid, prev_job_id.cluster, prev_job_id.proc);
+			stream->encode();
+			stream->put((int)0);
+			stream->end_of_message();
+			return TRUE;
+		}
 	}
-
-	new_job_id.cluster = mrec->cluster;
-	new_job_id.proc = mrec->proc;
 
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
@@ -20662,7 +20761,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	}
 
 	TemporaryPrivSentry tps(true);
-	if ( ! jqc->ownerinfo || !init_user_ids(jqc->ownerinfo) ) {
+	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc->ownerinfo) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
@@ -20858,7 +20957,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	TemporaryPrivSentry tps(true);
-	if ( ! init_user_ids(user) ) {
+	if ( ! init_user_ids_from_ad(*user) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
 		return false;
@@ -21194,3 +21293,89 @@ Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
 	history_ad.Unchain();
 }
 
+
+int
+Scheduler::post_transform_adjustments(
+	ClassAd * ad,
+	const PROC_ID & jid,
+	CondorError * errorStack,
+	bool /* is_late_mat */,
+	bool /* project_is_cluster_attr */
+) {
+	// Combine ATTR_COMMON_INPUT_FILES (if any) with
+	// ATTR_COMMON_INPUT_CATALOGS (if any) to produce ATTR_REQUESTED_CATALOGS,
+	// a ClassAd list of catalog (simple) name strings.
+	std::vector<std::string> requested_catalogs;
+
+	if( ad->Lookup( ATTR_COMMON_INPUT_FILES ) ) {
+		// This is pure magic and should be explicitly coordinated with (the
+		// name generated by) computeCommonInputFiles().
+		std::string default_name;
+		formatstr( default_name, "clusterID_%d", jid.cluster );
+		requested_catalogs.push_back( default_name );
+	}
+
+	std::string commonInputCatalogs;
+	if( ad->LookupString( ATTR_COMMON_INPUT_CATALOGS, commonInputCatalogs ) ) {
+		for( const auto & catalog : StringTokenIterator(commonInputCatalogs) ) {
+			requested_catalogs.push_back( catalog );
+		}
+	}
+
+	if( requested_catalogs.size() > 0 ) {
+		auto rc = std::make_unique<classad::ExprList>();
+		auto rcid = std::make_unique<classad::ExprList>();
+
+		std::string empty;
+		for( const auto & catalog : requested_catalogs ) {
+			classad::ExprTree * l = classad::Literal::MakeString( catalog );
+			rc->push_back( l );
+
+
+			auto catalogID = computeCatalogID( * ad, catalog );
+			if( ! catalogID ) {
+				if( errorStack ) {
+					errorStack->push( "CXFER", 1, "Failed to compute catalog ID,"
+						" which is required for common file transfer." );
+				}
+				return -1;
+			}
+
+			classad::ExprTree * m = classad::Literal::MakeString( * catalogID );
+			rcid->push_back( m );
+		}
+
+		// This should be reimplemented to do what the job transforms do
+		// (turn on dirty tracking and call set_dirty_attributes()), only
+		// with set_dirty_attributes() refactored so that it can be used
+		// without a transform object.
+		// ad->Insert( ATTR_REQUESTED_CATALOGS, rc );
+		// SetAttributeExpr() unparses the expression and does not take
+		// ownership, so rc is freed when it goes out of scope.
+		int rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOGS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
+			return -1;
+		}
+
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOG_IDS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
+			return -1;
+		}
+	}
+
+	return 0;
+}

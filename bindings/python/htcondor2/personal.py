@@ -404,7 +404,10 @@ class PersonalPool:
         param_lines += textwrap.dedent(self._raw_config).splitlines()
 
         params = "\n".join(param_lines + [""])
-        self.config_file.write_text(params)
+        # Writing the pool's config file is this method's purpose; the "sensitive"
+        # values CodeQL sees (SEC_PASSWORD_DIRECTORY, SEC_TOKEN_DIRECTORY, ...) are
+        # directory paths, not credentials. Suppress the name-based false positive.
+        self.config_file.write_text(params)  # lgtm[py/clear-text-logging-sensitive-data]
 
     @_skip_if(PersonalPoolState.STARTING, PersonalPoolState.READY)
     def _start_condor(self):

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 210> makeCommandTable() {
+std::array<std::pair<int, const char *>, 212> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -374,6 +374,16 @@ std::array<std::pair<int, const char *>, 210> makeCommandTable() {
 		// Additional actions can be added without a new command.
 #define MANAGE_CEILING (SCHED_VERS+132)
 		{MANAGE_CEILING, "MANAGE_CEILING"},
+		// Manage temporary floor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, Floor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_FLOOR (SCHED_VERS+133)
+		{MANAGE_FLOOR, "MANAGE_FLOOR"},
+		// Manage temporary priority-factor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, PriorityFactor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_PRIORITY_FACTOR (SCHED_VERS+134)
+		{MANAGE_PRIORITY_FACTOR, "MANAGE_PRIORITY_FACTOR"},
 // command ids from +140 to +149 reserved for Schedd UserRec commands
 #define QUERY_USERREC_ADS (SCHED_VERS+140)
 		{QUERY_USERREC_ADS, "QUERY_USERREC_ADS"},

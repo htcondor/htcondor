@@ -30,8 +30,7 @@ These settings affect the *condor_shadow*.
     counters) or if it should wait and only update the job queue on the
     next periodic update. There is a trade-off between performance and
     the semantics of these attributes, which is why the behavior is
-    controlled by a configuration macro. If the *condor_shadow* do not
-    use a lazy update, and immediately ensures the changes to the job
+    controlled by a configuration macro. If the *condor_shadow* does not use a lazy update, and immediately ensures the changes to the job
     attributes are written to the job queue on disk, the semantics for
     the attributes are very solid (there's only a tiny chance that the
     counters will be out of sync with reality), but this introduces a
@@ -171,14 +170,13 @@ These settings affect the *condor_shadow*.
     ``job.runs.X.Y.ads``. Where ``X`` is the jobs cluster id and ``Y`` is
     the jobs process id. For example, job 35.2 would write a job ad for each run
     to the file ``job.runs.35.2.ads``. These files can be read through :tool:`condor_history`
-    when ran with the -epochs and -directory options.
+    when run with the -epochs and -directory options.
 
     .. code-block:: console
 
         $ condor_history -epochs -directory
 
-    HTCondor does not automatically  delete these files, so unchecked the
-    directory can grow very large. Either an external entity needs to clean
+    HTCondor does not automatically  delete these files, so if unchecked, the directory can grow very large. Either an external entity needs to clean
     up or :tool:`condor_history` can use the -epochs options optional ``:d``
     extension to read and delete the files.
 

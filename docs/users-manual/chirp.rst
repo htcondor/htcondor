@@ -32,15 +32,15 @@ with the :tool:`condor_qedit` command, you will need to use chirp:
     
 As always with passing classad expressions or values through the shell, be
 careful with quoting.  Also note that these commands don't need to, and
-indeed can not pass the job cluster or proc id as an argument -- the job
+indeed cannot pass the job cluster or proc id as an argument -- the job
 is implicitly the one that is running, and chirp cannot write to any other
 job.
 
 As there is some cost to writing to the instance of the job ad inside the
 schedd, chirp also supports delayed job ad updates.  This is on by default, and
 any job ad attribute whose name begins with "Chirp" is considered a delayed
-updated.  Any updates to these attributes will be batched together and send
-when the starter needs to send another update to the shadow, for any reasons,
+update.  Any updates to these attributes will be batched together and sent
+when the starter needs to send another update to the shadow, for any reason,
 or when there are 100 (by default) pending delayed updates.
 
 Chirp may be used from a command line tool, see the

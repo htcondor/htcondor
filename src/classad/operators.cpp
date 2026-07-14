@@ -31,6 +31,22 @@ using std::pair;
 #include <algorithm>
 namespace classad {
 
+namespace {
+// RAII helper that bounds evaluation recursion depth. Operator evaluation
+// recurses through child expressions, so a deeply-nested expression (e.g. a
+// long "a-b-c-..." chain) would otherwise overflow the stack. This mirrors the
+// state.depth_remaining accounting already used in attrrefs.cpp, classad.cpp,
+// exprList.cpp and fnCall.cpp.
+class RecursionGuard {
+public:
+	explicit RecursionGuard( EvalState &state ) : m_state( state ) { m_state.depth_remaining--; }
+	~RecursionGuard() { m_state.depth_remaining++; }
+	bool exceeded() const { return m_state.depth_remaining < 0; }
+private:
+	EvalState &m_state;
+};
+} // anonymous namespace
+
 Operation::
 ~Operation ()
 {
@@ -403,23 +419,9 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		bool b;
 
 		// if the selector is UNDEFINED, the result is undefined
-		// unless the middle is empty
-		if ((vt1==Value::UNDEFINED_VALUE) && valid2) {
+		if (vt1==Value::UNDEFINED_VALUE) {
 			result.SetUndefinedValue();
 			return SIG_CHLD1;
-		}
-
-			// if middle is empty
-		if (!valid2) {
-				// and selector is undefined, return rhs
-			if (vt1 == Value::UNDEFINED_VALUE) {
-				result.CopyFrom( val3 );
-				return( SIG_CHLD3 );
-			} else {
-				// if select not undefined, return it
-				result.CopyFrom(val1);
-				return (SIG_CHLD1);
-			}
 		}
 
 		if( !val1.IsBooleanValueEquiv(b) ) {
@@ -488,6 +490,11 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 bool OperationParens::
 _Evaluate (EvalState &state, Value &result) const
 {
+		RecursionGuard guard( state );
+		if( guard.exceeded() ) {
+			result.SetErrorValue( );
+			return( false );
+		}
 		if( !child1->Evaluate (state, result) ) {
 			result.SetErrorValue( );
 			return( false );
@@ -498,9 +505,16 @@ _Evaluate (EvalState &state, Value &result) const
 bool Operation::
 _Evaluate (EvalState &state, Value &result) const
 {
+	RecursionGuard guard( state );
+	if( guard.exceeded() ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
 	Value	val1, val2, val3;
 	bool	valid1, valid2, valid3;
 	int		rval;
+	int sig = SIG_CHLD2 | SIG_CHLD3;
 
 	valid1 = false;
 	valid2 = false;
@@ -520,19 +534,20 @@ _Evaluate (EvalState &state, Value &result) const
 		}
 		valid1 = true;
 
-		if( shortCircuit( state, val1, result ) ) {
+		sig = shortCircuit(operation, val1, result);
+		if (sig == SIG_CHLD1) {
 			return true;
 		}
 	}
 
-	if (child2) {
+	if (child2 && (sig & SIG_CHLD2)) {
 		if( !child2->Evaluate (state, val2) ) {
 			result.SetErrorValue( );
 			return( false );
 		}
 		valid2 = true;
 	}
-	if (child3) {
+	if (child3 && (sig & SIG_CHLD3)) {
 		if( !child3->Evaluate (state, val3) ) {
 			result.SetErrorValue( );
 			return( false );
@@ -546,68 +561,71 @@ _Evaluate (EvalState &state, Value &result) const
 	return( rval != SIG_NONE );
 }
 
-bool Operation::
-shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
+int Operation::
+shortCircuit(OpKind op, Value const &arg1, Value &result)
 {
 	bool arg1_bool;
+	int rv = SIG_CHLD2 | SIG_CHLD3;
 
-	switch( this->GetOpKind() ) {
+	switch( op ) {
 	case LOGICAL_OR_OP:
 		if( arg1.IsBooleanValueEquiv(arg1_bool) && arg1_bool ) {
 			result.SetBooleanValue( true );
-			return true;
+			rv = SIG_CHLD1;
+		} else if (arg1.IsErrorValue()) {
+			result.SetErrorValue();
+			rv = SIG_CHLD1;
 		}
 		break;
 	case LOGICAL_AND_OP:
 		if( arg1.IsBooleanValueEquiv(arg1_bool) && !arg1_bool ) {
 			result.SetBooleanValue( false );
-			return true;
+			rv = SIG_CHLD1;
+		} else if (arg1.IsErrorValue()) {
+			result.SetErrorValue();
+			rv = SIG_CHLD1;
 		}
 		break;
 	case ELVIS_OP:
 		if ( ! arg1.IsUndefinedValue()) {
 			result = arg1; // if arg1 is defined, the result is arg1
-			return true;
+			rv = SIG_CHLD1;
 		}
 		break;
 	case TERNARY_OP:
-		return ((const Operation3*)this)->shortCircuit(state, arg1, result);
+		if( arg1.IsBooleanValueEquiv(arg1_bool) ) {
+			rv = arg1_bool ? SIG_CHLD2 : SIG_CHLD3;
+		} else if( arg1.IsErrorValue() ) {
+			// "error ? a : b" is error regardless of the branches: short-circuit
+			// without evaluating either one. Otherwise the caller falls through
+			// and evaluates both branches, which is exponential when they are
+			// themselves error-conditioned ternaries.
+			result.SetErrorValue();
+			rv = SIG_CHLD1;
+		} else if( arg1.IsUndefinedValue() ) {
+			// "undefined ? a : b" is undefined regardless of the branches.
+			result.SetUndefinedValue();
+			rv = SIG_CHLD1;
+		}
 		break;
 	default:
 		// no-op
 		break;
 	}
-	return false;
-}
-
-bool Operation3::
-shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
-{
-	bool arg1_bool;
-	if( arg1.IsBooleanValueEquiv(arg1_bool) ) {
-		if( arg1_bool ) {
-			if( child2 ) {
-				return child2->Evaluate(state,result);
-			}
-		}
-		else {
-			if( child3  && child2) {
-				return child3->Evaluate(state,result);
-			}
-				
-			if (!child2 && child1) {
-				// if middle is empty and lhs is defined, return it
-				return child1->Evaluate(state, result);
-			}
-		}
-	}
-	return false;
+	return rv;
 }
 
 bool Operation::
 _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 {
-	int			sig;
+	RecursionGuard guard( state );
+	if( guard.exceeded() ) {
+		result.SetErrorValue( );
+		tree = NULL;
+		return( false );
+	}
+
+	int			sig = SIG_CHLD2 | SIG_CHLD3;
 	Value		val1, val2, val3;
 	ExprTree 	*t1=NULL, *t2=NULL, *t3=NULL;
 	bool		valid1=false, valid2=false, valid3=false;
@@ -626,16 +644,18 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 			return( false );
 		}
 		valid1 = true;
+
+		sig = shortCircuit(operation, val1, result);
 	}
 
-	if (child2) {
+	if (child2 && (sig & SIG_CHLD2)) {
 		if( !child2->Evaluate (state, val2, t2) ) {
 			result.SetErrorValue( );
 			return( false );
 		}
 		valid2 = true;
 	}
-	if (child3) {
+	if (child3 && (sig & SIG_CHLD3)) {
 		if( !child3->Evaluate (state, val3, t3) ) {
 			result.SetErrorValue( );
 			return( false );
@@ -643,9 +663,11 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 		valid3 = true;
 	}
 
-	// do evaluation
-	sig = _doOperation( operation,val1,val2,val3,valid1,valid2,valid3,result,
+	// do evaluation, unless shortCircuit() said we already have a result
+	if (sig != SIG_CHLD1) {
+		sig = _doOperation( operation,val1,val2,val3,valid1,valid2,valid3,result,
 			&state );
+	}
 
 	// delete trees which were not significant
 	if( valid1 && !( sig & SIG_CHLD1 )) { delete t1; t1 = NULL; }
@@ -1047,9 +1069,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		case Value::STRING_VALUE:
 			// check if both are strings
 			if (vt1 != Value::STRING_VALUE || vt2 != Value::STRING_VALUE) {
-				// comparison between strings and non-exceptional non-string 
+				// comparison between strings and non-exceptional non-string
 				// values is error
 				result.SetErrorValue();
+				classad::CondorErrMsg = "strings can only be compared to strings";
 				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 			compareStrings (op, v1, v2, result);
@@ -2024,17 +2047,13 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 
 		// eval1 is either a real or an integer
 		if (bval) {
-			if (child2) {
-				return child2->Flatten( state, val, tree );
-			} else {
-				return false;
-			}
+			return child2->Flatten( state, val, tree );
 		} else {
 			return child3->Flatten( state, val, tree );
 		}
 	} else {
 		// Flatten arms of the if expression
-		if ((child2 && !child2->Flatten( state, eval2, fChild2)) ||
+		if ( !child2->Flatten(state, eval2, fChild2) ||
 			!child3->Flatten( state, eval3, fChild3)) {
 			// clean up
 			if( fChild1 ) delete fChild1;

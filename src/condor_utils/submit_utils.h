@@ -638,7 +638,7 @@ public:
 	int  process_q_line(MACRO_SOURCE & source, char* line, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv);
 
 	void warn_unused(FILE* out, const char *app=NULL);
-	int check_open( _submit_file_role role, const char *name, int flags );
+	int check_open( _submit_file_role role, const std::string &name, int flags );
 
 	// stuff value into the submit's hashtable and mark 'name' as a used param
 	// this function is intended for use during queue iteration to stuff changing values like $(Cluster) and $(Process)

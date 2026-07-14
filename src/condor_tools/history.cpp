@@ -1953,8 +1953,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		exit(1);
 	} else {
 		struct stat si = {};
-		stat(searchDirectory, &si);
-		if ( !(si.st_mode & S_IFDIR) ) {
+		if ( stat(searchDirectory, &si) != 0 || !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}

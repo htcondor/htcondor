@@ -2,6 +2,9 @@ name: CI Build and Test
 
 on: [pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
@@ -44,9 +47,9 @@ jobs:
       - name: Build
         run: |
           # Hackery for using toolset gcc instead of default
-          if [ -f "/opt/rh/gcc-toolset-14/root/usr/bin/gcc" ]; then
-            export CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-            export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
+          if [ -f "/opt/rh/gcc-toolset-15/root/usr/bin/gcc" ]; then
+            export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
+            export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
           fi
 
           if [ -f "/usr/bin/gcc-11" ] 
@@ -59,6 +62,12 @@ jobs:
           then
             export CC=/usr/bin/gcc-12
             export CXX=/usr/bin/g++-12
+          fi
+
+          if [ -f "/usr/bin/gcc14-gcc" ]
+          then
+            export CC=/usr/bin/gcc14-gcc
+            export CXX=/usr/bin/gcc14-g++
           fi
 
           chmod 0777 .
@@ -128,28 +137,89 @@ jobs:
   winbuild:
     runs-on: windows-2022
     steps:
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Install perl
         uses: shogo82148/actions-setup-perl@v1
         with:
-          distribution: strawberry
+          distribution: default
+
+      - name: Set up Perl file association on Windows
+        shell: cmd
+        run: |
+          for /f "delims=" %%i in ('where perl') do set "PERL_PATH=%%i"
+          assoc .pl=PerlScript
+          ftype PerlScript="%PERL_PATH%" "%%1" %%*
+          setx PATHEXT "%PATHEXT%;.PL"
 
       - name: Install/Upgrade python
         uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
+      - name: Install CPAN Modules
+        run: cpanm --notest Win32::Process Archive::Tar Data::Dumper Digest::MD5 Digest::SHA English Env File::Copy FindBin Net::Domain Sys::Hostname Time::HiRes XML::Parser
+
       - name: Install/Upgrade python and python accessories
         run: | 
           python -m pip install --upgrade pip setuptools wheel
 
       - name: cmake configuration
-        run: (cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false .)
+        run: |
+          mkdir __build
+          cd __build && cmake -G "Visual Studio 17 2022" -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
+          #cd __build && cmake -DWITH_ADDRESS_SANITIZER:bool=true -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" -DWITH_KRB5:bool=false ..
 
       - name: build
-        run: (cmake --build . --verbose --config Release --parallel 4)
+        run: |
+          cd __build && cmake --build . --target install --verbose --config Debug --parallel 4
+      - name: Copy ASan runtime DLLs to release_dir/bin
+        run: |
+          $bin = "$pwd/__build/release_dir/bin"
+          $vsRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dlls = Get-ChildItem -Path $vsRoot -Recurse -Filter "clang_rt.asan*.dll" -ErrorAction SilentlyContinue
+          foreach ($dll in $dlls) {
+            Write-Host "Copying $($dll.FullName) to $bin"
+            Copy-Item -Path $dll.FullName -Destination $bin -Force
+          }
+      - name: Copy PDBs to release_dir/bin for ASan symbolization
+        run: |
+          # The Debug build emits PDBs in the build tree, but install does not
+          # copy them next to the binaries in release_dir/bin.  Without the PDB
+          # alongside the .exe the runtime ASan symbolizer can't resolve frames
+          # and falls back to nearest-export names (e.g. OPENSSL_Applink).
+          $bin = "$pwd/__build/release_dir/bin"
+          $pdbs = Get-ChildItem -Path "$pwd/__build" -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
+          foreach ($pdb in $pdbs) {
+            Copy-Item -Path $pdb.FullName -Destination $bin -Force -ErrorAction SilentlyContinue
+          }
+      - name: ctests
+        run: |
+          $env:ASAN_OPTIONS = "log_path='$pwd/__build/asan.log':exit_code=0"
+          cd __build && ctest -j 20 --repeat-until-fail 1 -R job_foreach
+
+      - name: block upload until everything gone
+        if: failure()
+        run: |
+          # Wait for a bit to let processes die down, which should help the upload step not fail due to file contention with running processes
+          Start-Sleep -Seconds 10
+          Get-CimInstance Win32_Process | ? ExecutablePath -like "$pwd\__build\*" | % { Stop-Process -Id $_.ProcessId -Force -EA SilentlyContinue }
+
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: wintest-output
+          path: |
+            __build/
+          retention-days: 2
+          overwrite: true
 
   resolve-ubunturoot-image:
     runs-on: ubuntu-latest

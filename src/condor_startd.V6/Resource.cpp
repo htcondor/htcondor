@@ -1155,6 +1155,10 @@ Resource::starterExited( Claim* cur_claim )
 	if( shouldCheckForDrainCompletion ) {
 		resmgr->checkForDrainCompletion();
 	}
+
+		// If a "rehome --reboot" is pending, see if this was the last
+		// claim to exit; if so, the host will reconfig and reboot.
+	resmgr->checkForRehomeReboot();
 }
 
 
@@ -4437,10 +4441,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap)
 	attrs.insert(ATTR_MEMORY);
 	attrs.insert(ATTR_DISK);
 
-	MachAttributes::slotres_map_t machres_map = resmgr->m_attr->machres();
-    for (auto j(machres_map.begin());  j != machres_map.end();  j++) {
-        attrs.insert(j->first);
-    }
+	for (const auto &[tag,_] : resmgr->m_attr->machres()) { attrs.insert(tag); }
 
 	// The admin can add additional ones
 	param_and_insert_attrs("STARTD_PARTITIONABLE_SLOT_ATTRS", attrs);

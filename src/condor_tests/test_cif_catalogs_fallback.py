@@ -24,6 +24,8 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
+    EMPTY_SIF_BIND_EXPR,
 )
 
 import htcondor2
@@ -152,13 +154,13 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
 
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY.CommonInputCatalogs":      '"A, C"',
         "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
@@ -287,13 +289,13 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     #     transer common files once).
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"C1.txt, C2.txt"',
     }
 
@@ -348,13 +350,10 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
 
 @action
-def the_container_image(test_dir, pytestconfig):
-    # This is a gross hack.
-    ctest_path = test_dir / ".." / "busybox.sif"
-    if ctest_path.exists():
-        return ctest_path
-    else:
-        return Path(pytestconfig.rootdir) / "busybox.sif"
+def the_container_image(test_dir):
+    sif = make_empty_sif(test_dir / "empty.sif")
+    assert sif is not None
+    return sif
 
 
 @action
@@ -395,7 +394,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "STARTER_NESTED_SCRATCH":   True,
             "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
-            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
+            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()} {EMPTY_SIF_BIND_EXPR}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
@@ -464,12 +463,12 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
 
     # Wait for them all to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
@@ -485,11 +484,11 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
     # Wait for them to finish.  Container jobs (Singularity startup/teardown)
     # need more headroom than plain shell jobs.
     assert job_handle_a.wait(
-        timeout=120,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
     assert job_handle_b.wait(
-        timeout=120,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
 

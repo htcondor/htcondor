@@ -1829,9 +1829,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
-	if (handler_f) {
-		sockTable[i].std_handler = *handler_f;
-	}
+		// Always (re)assign std_handler -- including clearing it when this
+		// registration does not supply one.  Cancel_Socket does not clear a slot's
+		// std_handler, so a slot freed by a std::function-handler socket keeps that
+		// std::function until the slot is reused.  If the slot is then reused by a
+		// registration with only a C/C++ handler (or none, e.g. a command socket via
+		// Register_Command_Socket), the stale std_handler would otherwise linger and,
+		// because CallSocketHandler_worker dispatches std_handler when handler and
+		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
+		// of whatever the stale std::function captured.
+	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
@@ -2240,9 +2247,11 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
 	pipeTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		pipeTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally: this slot may be reused from a
+	// prior registration that installed a std::function, and Cancel_Pipe
+	// does not reset it.  Leaving a stale std_handler here would let dispatch
+	// call a dead captured object (heap-use-after-free).
+	pipeTable[i].std_handler = handler_f ? *handler_f : StdPipeHandler();
 	pipeTable[i].is_cpp = (bool)is_cpp;
 	pipeTable[i].service = s;
 	pipeTable[i].data_ptr = NULL;
@@ -2673,9 +2682,12 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		reapTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally.  Besides the reuse-of-cancelled-slot
+	// case, this path also replaces a live entry in place (rid > 0), and the
+	// reaper table explicitly permits all-null handlers (use the default
+	// reaper).  Leaving a stale std_handler here would let dispatch call a
+	// dead captured object (heap-use-after-free) instead of the default reaper.
+	reapTable[i].std_handler = handler_f ? *handler_f : StdReaperHandler();
 	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = nullptr;
@@ -2708,6 +2720,19 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 		}
 	}
 	return -1;
+}
+
+bool DaemonCore::Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type )
+{
+	int i = Lookup_Socket( iosock );
+	if ( i < 0 ) {
+		return false;
+	}
+	sockTable[i].handler_type = handler_type;
+	// Wake up the main select loop so the new interest takes effect promptly
+	// rather than waiting for the current timeout to expire.
+	Wake_up_select();
+	return true;
 }
 
 int DaemonCore::Cancel_Reaper( int rid )
@@ -3603,6 +3628,10 @@ void DaemonCore::Driver()
 				} else {
 					int sockfd = sockEnt.iosock->get_file_desc();
 					switch( sockEnt.handler_type ) {
+					case HANDLE_NONE:
+						// registered but not currently polled (e.g. a relay
+						// pausing reads to apply backpressure)
+						break;
 					case HANDLE_READ:
 						selector.add_fd( sockfd, Selector::IO_READ );
 						break;
@@ -3642,6 +3671,8 @@ void DaemonCore::Driver()
 			if ( pipeTable[i].index != -1 ) {	// if a valid entry....
 				int pipefd = pipeHandleTable[pipeTable[i].index];
 				switch( pipeTable[i].handler_type ) {
+				case HANDLE_NONE:
+					break;
 				case HANDLE_READ:
 					selector.add_fd( pipefd, Selector::IO_READ );
 					break;
@@ -3857,17 +3888,25 @@ void DaemonCore::Driver()
 								sockEnt.call_handler = true;
 							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+					} else {
+						// NOTE: read and write interest are checked with
+						// independent ifs (not else-if) so that a
+						// HANDLE_READ_WRITE socket fires its handler on EITHER
+						// read or write readiness.  (As an else-if chain the
+						// write check would be unreachable for READ_WRITE.)
+						if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+						if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
 					}
 				}	// end of if valid sock entry
@@ -9810,16 +9849,26 @@ pidWatcherThread( void* arg )
 	// which exited.
 	if ( (result < numentries) && (result >= 0) ) {
 
+		// Cache the PidEntry we are processing.  For a pipe that becomes
+		// ready, we must signal the PipeEnd's watched-event (watcher_done())
+		// as the very last thing we do, because that signal is what releases
+		// a concurrent Cancel_Pipe to delete this PidEntry.  post_wait() used
+		// to signal it directly, but the watcher then went on to write the
+		// PidEntry's pipeReady/watcherEvent fields, racing with that delete
+		// (a use-after-free seen at daemon/starter shutdown).
+		DaemonCore::PidEntry *pidentry = entry->pidentries[result];
+		bool signal_watcher_done = false;
+
 		last_pidentry_exited = result;
-		InterlockedExchange(&(entry->pidentries[result]->process_exited), true);
+		InterlockedExchange(&(pidentry->process_exited), true);
 
 		// notify our main thread which process exited
 		// note: if it was a thread which exited, the entry's
 		// pid contains the tid.  if we are talking about a pipe,
 		// set the exited_pid to be zero.
-		if ( entry->pidentries[result]->pipeEnd ) {
+		if ( pidentry->pipeEnd ) {
 			exited_pid = 0;
-			if (entry->pidentries[result]->deallocate) {
+			if (pidentry->deallocate) {
 				// this entry should be deallocated.  set things up so
 				// it will be done at the top of the loop; no need to send
 				// a signal to break out of select in the main thread, so we
@@ -9827,10 +9876,14 @@ pidWatcherThread( void* arg )
 				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 			} else {
 				// pipe is ready and has not been deallocated.
-				if (entry->pidentries[result]->pipeEnd->post_wait()) {
+				if (pidentry->pipeEnd->post_wait()) {
 					// the handler is ready to be fired
-					InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
+					InterlockedExchange(&(pidentry->pipeReady),1L);
 					must_send_signal = true;
+					// post_wait() reported ready but (unlike before) did not
+					// signal the watched-event; we must do that via
+					// watcher_done() once we are done with the PidEntry.
+					signal_watcher_done = true;
 				}
 				else {
 					// not ready yet...
@@ -9838,12 +9891,12 @@ pidWatcherThread( void* arg )
 				}
 			}
 		} else {
-			exited_pid = entry->pidentries[result]->pid;
+			exited_pid = pidentry->pid;
 		}
 
 		if ( exited_pid ) {
 			// a pid exited.  add it to MyExitedQueue, which is a queue of
-			// exited pids local to our thread that are waiting to be 
+			// exited pids local to our thread that are waiting to be
 			// added to the main thread WaitpidQueue.
 			wait_entry.child_pid = exited_pid;
 			wait_entry.exit_status = 0;  // we'll get the status later
@@ -9853,7 +9906,15 @@ pidWatcherThread( void* arg )
 
 		// we will no longer be watching this PidEntry, so detach
 		// it from our watcherEvent
-		entry->pidentries[result]->watcherEvent = NULL;
+		pidentry->watcherEvent = NULL;
+
+		// If the pipe became ready, this is the last point at which we touch
+		// the PidEntry.  Signal the watched-event now so that a concurrent
+		// Cancel_Pipe (blocked in PipeEnd::cancel()) may safely delete it.
+		// WARNING: after this call we must not reference pidentry again.
+		if ( signal_watcher_done ) {
+			pidentry->pipeEnd->watcher_done();
+		}
 
 	} else {
 		// no pid/thread/pipe was signaled; we were signaled because our

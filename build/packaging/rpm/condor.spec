@@ -4,9 +4,9 @@
 # UW build includes stuff for testing and tarballs
 %define uw_build 0
 
-%if 0%{?rhel} == 8 || 0%{?rhel} == 9
-# Use gcc-toolset 14 for EL8 and EL9
-%define gcctoolset 14
+%if 0%{?rhel} == 8 || 0%{?rhel} == 9 || 0%{?rhel} == 10
+# Use gcc-toolset 15 for EL 8, 9, and 10
+%define gcctoolset 15
 %endif
 
 Summary: HTCondor: High Throughput Computing
@@ -42,9 +42,6 @@ URL: https://htcondor.org/
 
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
-
-# # Do not provide libfmt
-# %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 Source1: %{name}.sysusers.conf
@@ -121,6 +118,15 @@ BuildRequires: devtoolset-%{devtoolset}-toolchain
 %if 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
+BuildRequires: gcc-toolset-%{gcctoolset}-gcc-plugin-annobin
+%endif
+
+%if 0%{?amzn}
+BuildRequires: which
+BuildRequires: gcc14
+BuildRequires: gcc14-c++
+# Unfortunately, the annobin plugin is not provided for gcc 14 on amzn
+%undefine _annotated_build
 %endif
 
 %if 0%{?suse_version}
@@ -241,11 +247,15 @@ Requires: pelican-osdf-compat >= 7.25.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
-%if 0%{?suse_version}
-# Unfortunately, Apptainer is lagging behind in openSUSE
+%if 0%{?suse_version} == 1500
+# Unfortunately, Apptainer is lagging behind on openSUSE 15
 Requires: apptainer >= 1.4.5
 %else
+%if 0%{?rhel} == 10
 Requires: apptainer >= 1.5.0
+%else
+Requires: apptainer >= 1.5.1
+%endif
 %endif
 %endif
 
@@ -359,6 +369,9 @@ Summary: HTCondor's VM Gahp
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: libvirt
+%if 0%{?fedora} >= 35 || 0%{?rhel} >= 9 || 0%{?suse_version} >= 1600
+Requires: passt
+%endif
 
 %description vm-gahp
 The condor_vm-gahp enables the Virtual Machine Universe feature of
@@ -559,9 +572,18 @@ export CXX=$(which c++)
 %endif
 
 %if 0%{?gcctoolset}
+%if 0%{?rhel} <= 9
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
+%else
+. /usr/lib/gcc-toolset/%{gcctoolset}-env.source
+%endif
 export CC=$(which cc)
 export CXX=$(which c++)
+%endif
+
+%if 0%{?amzn}
+export CC=$(which gcc14-gcc)
+export CXX=$(which gcc14-g++)
 %endif
 
 %if 0%{?x86_64_v2}
@@ -824,9 +846,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-# %_libdir/condor/libfmt.so
-# %_libdir/condor/libfmt.so.10
-# %_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
@@ -899,7 +918,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
-%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
@@ -973,6 +991,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_now.1.gz
 %_mandir/man1/classad_eval.1.gz
 %_mandir/man1/classads.1.gz
+%_mandir/man1/htcondor-jdl.1.gz
 %_mandir/man1/condor_adstash.1.gz
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
@@ -997,7 +1016,6 @@ rm -rf %{buildroot}
 %_bindir/condor_config_val
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
-%_bindir/condor_check_password
 %_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_dag_checker
@@ -1114,8 +1132,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/sge_local_submit_attributes.sh
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
 
@@ -1209,6 +1225,7 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
+%_libexecdir/condor/ccb_proxy_bench
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
@@ -1319,6 +1336,26 @@ fi
 # configuration
 
 %changelog
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.11.0-1
+- Prevent one user's many file transfers from halting matches for all users
+- condor_watch_q will gather DAGs that started after it did
+- condor_dag_checker can now check submit files, sub-DAGs, and scripts
+- Gangliad can now aggregate deltas of monotonically increasing values
+- condor_config_val --trace finds a definition in a complex configuration
+- Now able to set a duration to a user's running jobs ceiling
+- Multi-call binaries can now be used with DAGMan
+- Initial support for EP health checks
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.11-1
+- All changes in HTCondor 24.12.21
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.21-1
+- Fix rare EP crash when using a custom docker wrapper script
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.21-1
+- Fix rare issue where condor_dagman would abort after a system reboot
+- HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
 * Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.10.1-1
 - Several improvements to throttle and monitor DAGMan resource usage
 - Can now automatically retry a job with a larger disk request

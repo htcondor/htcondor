@@ -140,7 +140,7 @@ def the_job(test_dir, resources):
         while elapsed < int(sys.argv[1]):""" +
 
         "".join( f"""
-            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/../htcondor/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
         """ for resource in resources
         ) +
 

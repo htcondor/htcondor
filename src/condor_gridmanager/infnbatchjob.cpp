@@ -1246,22 +1246,21 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 {
 	if ( sandbox_id != remoteSandboxId ) {
+		// strdup before free, in case sandbox_id aliases the old buffer
+		char *new_sandbox_id = sandbox_id ? strdup( sandbox_id ) : NULL;
 		free( remoteSandboxId );
-		if ( sandbox_id ) {
-			remoteSandboxId = strdup( sandbox_id );
-		} else {
-			remoteSandboxId = NULL;
-		}
+		remoteSandboxId = new_sandbox_id;
 	}
 
 	if ( job_id != remoteJobId ) {
-		free( remoteJobId );
+		// strdup before free, in case job_id aliases the old buffer
+		char *new_job_id = NULL;
 		if ( job_id ) {
 			ASSERT( remoteSandboxId );
-			remoteJobId = strdup( job_id );
-		} else {
-			remoteJobId = NULL;
+			new_job_id = strdup( job_id );
 		}
+		free( remoteJobId );
+		remoteJobId = new_job_id;
 	}
 
 	std::string full_job_id;
@@ -1359,6 +1358,7 @@ BaseResource *INFNBatchJob::GetResource()
 
 ClassAd *INFNBatchJob::buildSubmitAd()
 {
+	bool xfer_exec = true;
 	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
@@ -1491,6 +1491,11 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	GetJobExecutable( jobAd, expr );
 	submit_ad->Assign( ATTR_JOB_CMD, expr );
 
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+	if (xfer_exec == false) {
+		submit_ad->Assign("StageCmd", false);
+	}
+
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
 	if ( jobAd->LookupString( ATTR_X509_USER_PROXY, expr ) ) {
@@ -1579,14 +1584,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// Rewrite ad so that everything is relative to m_sandboxPath
 		std::string old_value;
 		std::string new_value;
-		bool xfer_exec = true;
 		bool xfer_stdin = true;
 		bool xfer_stdout = true;
 		bool xfer_stderr = true;
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
-		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+		// This was looked up earlier
 		if ( xfer_exec ) {
 			submit_ad->LookupString( ATTR_JOB_CMD, old_value );
 			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
@@ -1675,8 +1679,6 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	//   ATTR_OWNER
 	//   ATTR_NT_DOMAIN
 	//   ATTR_ULOG_FILE
-	//   ATTR_CLUSTER_ID
-	//   ATTR_PROC_ID
 	//   ATTR_SPOOLED_OUTPUT_FILES
 	//   ATTR_STREAM_OUTPUT
 	//   ATTR_STREAM_ERROR

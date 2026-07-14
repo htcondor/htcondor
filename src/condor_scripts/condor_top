@@ -123,7 +123,9 @@ if (NAME is None) and (POOL is None):
 # determine if we should do direct queries
 DIRECT = DAEMON in ['Schedd', 'Startd']
 
-# column names
+# column names. These are the stable identifiers used internally and
+# accepted by the -s/--sort option; the human-readable headers actually
+# printed are defined in COL_LABELS below.
 COL_NAMES = [
     'TotalRt',  # 0. Total Runtime
     'InstRt',   # 1. Runtime between ads
@@ -141,6 +143,32 @@ COL_NAMES = [
     'CtPctAvg', # 13. InstRate / AvgRate ("percent of mean count rate")
     'Item'      # 14. Attribute name
 ]
+
+# Human-readable, three-row headers for each column: (scope, metric, units).
+# The scope row names the time window (Recent = between the two ClassAds,
+# Lifetime/Total = since daemon start); the metric row names the quantity;
+# the units row gives its units (s = seconds, # = count, /s = count per
+# second, % = percentage). Stacking the words keeps each column only as
+# wide as its longest single word, so we get real words and units without
+# the cryptic abbreviations.
+COL_LABELS = {
+    #            scope        metric     units
+    'TotalRt':  ('Total',    'Runtime', '(s)'),
+    'InstRt':   ('Recent',   'Runtime', '(s)'),
+    'InstAvg':  ('Recent',   'Avg',     '(s)'),
+    'TotAvg':   ('Lifetime', 'Avg',     '(s)'),
+    'TotMax':   ('Lifetime', 'Max',     '(s)'),
+    'TotMin':   ('Lifetime', 'Min',     '(s)'),
+    'RtPctAvg': ('Pct of',   'Avg',     '(%)'),
+    'RtPctMax': ('Pct of',   'Max',     '(%)'),
+    'RtSigmas': ('Std',      'Devs',    ''),
+    'TotalCt':  ('Total',    'Count',   '(#)'),
+    'InstCt':   ('Recent',   'Count',   '(#)'),
+    'InstRate': ('Recent',   'Rate',    '(/s)'),
+    'AvgRate':  ('Lifetime', 'Rate',    '(/s)'),
+    'CtPctAvg': ('Pct of',   'Rate',    '(%)'),
+    'Item':     ('',         'Name',    ''),
+}
 
 # column sets
 COL_SETS = {
@@ -541,9 +569,10 @@ def getRuntimeColFmts(col_name, table, fmt_type):
     if fmt_type == 'str':
         return (column_fmt, number_fmt)
 
-    # for numerical data, compare the length of the column name
-    # to the length of the largest (in characters) number.
-    name_width = len(col_name)
+    # for numerical data, compare the width of the (multi-row) header
+    # to the length of the largest (in characters) number. The header
+    # width is the longest single word stacked in the column.
+    name_width = max(len(part) for part in COL_LABELS[col_name])
 
     # the "largest" number could be negative, so check both max and min
     i = COL_NAMES.index(col_name)
@@ -747,16 +776,31 @@ def printRuntimeTable(old, new, col_set = COL_SET, sort_col = SORT_COL, lines = 
     sys.stdout.write('Runtime stats from {0} to {1}:\n'.format(t_old, t_new))
     lines += 1
     
-    # print the header
-    cols = []
-    for col_name in col_names:
-        cols.append(col_fmts[col_name][0].format(col_name))
-    col_string = ' '.join(cols)
+    # print the multi-row header: scope, then metric, then units
+    for header_row in (0, 1, 2):
+        cols = []
+        for col_name in col_names:
+            label = COL_LABELS[col_name][header_row]
+            cols.append(col_fmts[col_name][0].format(label))
+        col_string = ' '.join(cols).rstrip()
 
-    # crop the header to the terminal window if needed
-    if (not PIPE) and (len(col_string) > width):
-        col_string = col_string[:width]
-    sys.stdout.write(col_string + '\n')
+        # crop the header to the terminal window if needed
+        if (not PIPE) and (len(col_string) > width):
+            col_string = col_string[:width]
+        sys.stdout.write(col_string + '\n')
+        lines += 1
+
+    # print a rule separating the header from the data, underlining each
+    # column to its own width
+    rule_cols = []
+    for col_name in col_names:
+        col_width = max(len(col_fmts[col_name][0].format(part))
+                            for part in COL_LABELS[col_name])
+        rule_cols.append('-' * col_width)
+    rule_string = ' '.join(rule_cols).rstrip()
+    if (not PIPE) and (len(rule_string) > width):
+        rule_string = rule_string[:width]
+    sys.stdout.write(rule_string + '\n')
     lines += 1
 
     # print the rows

@@ -57,6 +57,8 @@ elif [ "$ID" = 'centos' ]; then
 elif [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     zypper --non-interactive update
     INSTALL='zypper --non-interactive install'
+    # Work around for broken openSUSE 16.0 Docker image
+    # $INSTALL --oldpackage libsqlite3-0=3.51.3-160000.1.1
     $INSTALL system-group-wheel system-user-mail
 elif [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
     dnf upgrade --assumeyes
@@ -208,6 +210,12 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
+if [ "$VERSION_CODENAME" = 'noble' ]; then
+    # Upgrade to more recent compiler
+    $INSTALL gcc-14 g++-14
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-14
+fi
+
 # Add useful tools
 $INSTALL gdb git less python3-pip strace sudo vim
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
@@ -269,7 +277,7 @@ if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$
         $INSTALL procps-ng
     fi
     if [ "$ID" != 'amzn' ] && [ "$ID" != 'sles' ]; then
-        $INSTALL apptainer
+        $INSTALL apptainer fuse-overlayfs
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
@@ -283,10 +291,11 @@ if [ "$ID" = 'debian' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.5.0
+    APPTAINER_VERSION=1.5.1
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL fuse-overlayfs
 fi
 
 if [ "$ID" = 'ubuntu' ]; then
@@ -296,7 +305,7 @@ if [ "$ID" = 'ubuntu' ]; then
         add-apt-repository -y ppa:apptainer/ppa
         apt-get update
     fi
-    $INSTALL apptainer
+    $INSTALL apptainer fuse-overlayfs
 fi
 
 

@@ -23,10 +23,7 @@
 import logging
 import os,sys
 import pytest
-import subprocess
-import time
 from pathlib import Path
-import shutil
 
 from ornithology import *
 
@@ -34,45 +31,15 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
 )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Make a tiny sif file
-def sif_file():
-    os.mkdir("image_root")
-    os.mkdir("image_root/etc")
-    shutil.copyfile("/etc/passwd", "image_root/etc/passwd")
-
-    # some singularities need mksquashfs in path
-    # which some linuxes have in /usr/sbin
-    os.environ["PATH"] = os.environ["PATH"] + ":/usr/sbin"
-
-    # Newer apptainers use "proot" by default, which requires ptrace to
-    # be working.  Systems which disable ptrace (e.g. for security reasons)
-    # then break singularity build. Setting this env turns that off,
-    # and reverts to the old way:
-    os.environ["APPTAINER_IGNORE_PROOT"] = "1"
-
-    for count in [0, 1, 2, 3, 4]:
-        # rarely we see this failing in batlab with "bad file descriptor"
-        # so, just retry.
-        try:
-            Path("empty.sif").unlink
-        except FileNotFoundError:
-            pass
-
-        r = os.system("singularity -s build empty.sif image_root")
-        if (r == 0):
-            return "empty.sif"
-        time.sleep(5)
-
-    return False
-
 @standup
 def sif_file_fixture():
-    return sif_file()
+    return make_empty_sif("empty.sif")
 
 # Setup a personal condor 
 @standup
@@ -197,7 +164,7 @@ def ssh_to_container_job(condor, running_ssh_job):
 @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
 @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
 @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
-class TestContainerUni:
+class TestSingularitySIF:
     def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
     def test_container_uni_with_xfer(self, completed_test_job_with_xfer):
