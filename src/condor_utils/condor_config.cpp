@@ -336,7 +336,7 @@ bool _allocation_pool::contains(const char * pb)
 
 		// if this address is within the allocation of this hunk, then
 		// the pool contains this pointer.
-		if (pb >= ph->pb && (int)(pb - ph->pb) < ph->ixFree)
+		if (pb >= ph->pb && pb < ph->pb + ph->ixFree)
 			return true;
 	}
 	return false;
