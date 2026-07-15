@@ -670,10 +670,9 @@ void Librarian::reconfig(bool startup) {
     config[i::DBMaxJobCacheSize]          = param_integer("LIBRARIAN_MAX_JOBS_CACHED", 10'000);
     config[i::StatusRetentionSeconds]     = param_integer("LIBRARIAN_STATUS_RETENTION_SECONDS", 300);
 
-    param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", config[ll::MaxRecordsPerUpdate], true,
-                   100'000);
-    param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[ll::DBMaxSizeBytes], true,
-                   2LL * 1024 * 1024 * 1024);
+    config[ll::MaxRecordsPerUpdate] = param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 100'000);
+    config[ll::DBMaxSizeBytes] = param_longlong("LIBRARIAN_MAX_DATABASE_SIZE",
+                                                 2LL * 1024 * 1024 * 1024);
 
     config[dbl::DBHighWaterMark] = param_double("LIBRARIAN_HIGH_WATER_MARK", 0.97, 0, 1);
     config[dbl::DBLowWaterMark] = param_double("LIBRARIAN_LOW_WATER_MARK", 0.80, 0, 1);
