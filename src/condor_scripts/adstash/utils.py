@@ -24,6 +24,7 @@ import tempfile
 import logging.handlers
 
 import htcondor2 as htcondor
+import classad2 as classad
 
 from pathlib import Path
 
@@ -52,6 +53,8 @@ def get_schedds(args):
 
         for schedd in schedds:
             if args.schedds and not (schedd["Name"] in args.schedds.split(",")):
+                continue
+            if args.ignore_schedds and schedd["Name"] in args.ignore_schedds.split(","):
                 continue
             schedd["MyPool"] = host
             try:
@@ -93,6 +96,8 @@ def get_startds(args=None):
             for slot_ad in slot_ads:
                 machine = slot_ad["Machine"]
                 if machine in startd_ads or (startd_allow_list is not None and machine not in startd_allow_list):
+                    continue
+                if args.ignore_startds and machine in args.ignore_startds.split(","):
                     continue
 
                 # Remote history bindings only exist in startds running 8.9.7+
@@ -149,28 +154,42 @@ def set_up_logging(args):
     if args.log_file is not None:
         log_path = Path(args.log_file)
 
-        # Make sure the parent directory exists
-        if not log_path.parent.exists():
-            logging.debug(f"Attempting to create {log_path.parent}")
-            try:
-                log_path.parent.mkdir(parents=True)
-            except Exception:
-                logging.exception(
-                    f"Error while creating log file directory {log_path.parent}"
-                )
-                sys.exit(1)
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            logging.exception(
+                f"Could not create log file directory {log_path.parent}"
+            )
+            logging.error(
+                "Try setting the log directory with --log_file or the ADSTASH_LOG config knob"
+            )
+            sys.exit(1)
 
-        filehandler = logging.handlers.RotatingFileHandler(
-            args.log_file, maxBytes=100000
-        )
+        try:
+            filehandler = logging.handlers.RotatingFileHandler(
+                args.log_file, maxBytes=100000
+            )
+        except Exception:
+            logging.exception(
+                f"Could not open log file {log_path}"
+            )
+            logging.error(
+                "Try setting the log file with --log_file or the ADSTASH_LOG config knob"
+            )
+            sys.exit(1)
+
         filehandler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
         logger.addHandler(filehandler)
 
-    # Check if logging to stdout is worthwhile
-    if os.isatty(sys.stdout.fileno()):
-        streamhandler = logging.StreamHandler(stream=sys.stdout)
-        streamhandler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
-        logger.addHandler(streamhandler)
+    # Log to stdout unless suppressed by --quiet.
+    # Guard against stdout objects that don't support fileno() (e.g. StringIO in tests).
+    if not getattr(args, "quiet", False):
+        try:
+            streamhandler = logging.StreamHandler(stream=sys.stdout)
+            streamhandler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
+            logger.addHandler(streamhandler)
+        except Exception:
+            pass
 
 
 def collect_process_metadata():
@@ -216,3 +235,25 @@ def atomic_write(data, filepath):
             os.unlink(tmpfile.name)
         except Exception:
             pass
+
+
+def classad_json_serializer(obj):
+    # convert ClassAds to dict
+    if isinstance(obj, classad.ClassAd):
+        out = {}
+        for k in obj:
+            # explicitly convert Error and Undefined to None
+            # (otherwise they will get serialized to ints)
+            v = obj.eval(k)
+            if isinstance(obj.eval(k), classad.Value):
+                out[k] = None
+            else:
+                out[k] = v
+        return out
+    # convert ExprTrees to their string repr
+    if isinstance(obj, classad.ExprTree):
+        return str(obj)
+    # convert Error and Undefined to None
+    if isinstance(obj, classad.Value):
+        return None
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
