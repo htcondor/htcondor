@@ -20,7 +20,9 @@ import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
-from adstash.convert import to_json, unique_doc_id, REQUIRED_ATTRS
+from adstash.ad_converters.job import REQUIRED_ATTRS
+from adstash.ad_converters.generic import GenericClassAdConverter
+from adstash.interfaces.generic import GenericInterface
 
 
 class ScheddHistorySource(GenericAdSource):
@@ -45,14 +47,14 @@ class ScheddHistorySource(GenericAdSource):
         return schedd.history(constraint=True, projection=list(projection), **history_kwargs)
 
 
-    def process_ads(self, interface, ads, schedd_ad, metadata={}, chunk_size=0, **kwargs):
+    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, schedd_ad, metadata={}, chunk_size=0, **kwargs):
         starttime = time.time()
         chunk = []
         schedd_checkpoint = None
         ads_posted = 0
         for ad in ads:
             try:
-                dict_ad = to_json(ad, return_dict=True)
+                dict_ad = converter.convert_ad_to_doc(ad)
             except Exception as e:
                 message = f"Failure when converting document in {schedd_ad['name']} history: {str(e)}"
                 exc = traceback.format_exc()
@@ -68,7 +70,7 @@ class ScheddHistorySource(GenericAdSource):
 
             if schedd_checkpoint is None:  # set checkpoint based on first parseable ad
                 schedd_checkpoint = {"ClusterId": ad["ClusterId"], "ProcId": ad["ProcId"]}
-            chunk.append((unique_doc_id(dict_ad), dict_ad,))
+            chunk.append((converter.get_unique_doc_id(dict_ad), dict_ad,))
 
             if (chunk_size > 0) and (len(chunk) >= chunk_size):
                 logging.debug(f"Posting {len(chunk)} ads from {schedd_ad['Name']}.")

@@ -29,7 +29,7 @@ import htcondor2 as htcondor
 
 # adstash library in libexec
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
-from adstash.adstash import adstash
+from adstash.main import adstash
 from adstash.utils import set_up_logging
 from adstash.config import get_config
 
@@ -68,6 +68,12 @@ def main():
 
     # custom ad file implies standalone mode
     args.standalone = args.standalone or (args.read_ad_file is not None)
+
+    # Handle --init_index mode: write JSON files and exit
+    if args.init_index:
+        from adstash.index_setup import init_index
+        init_index(ad_type=args.init_ad_type, args=args)
+        sys.exit(0)
 
     # set up logging
     set_up_logging(args)
