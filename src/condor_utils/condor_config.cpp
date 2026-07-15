@@ -2011,10 +2011,11 @@ clear_config_table(MACRO_SET & mset)
 	return;
 }
 
-template<class T> void myswap(T & a, T & b) { T c = b; a = b; b = c; }
+template<class T> void myswap(T & a, T & b) { T c = a; a = b; b = c; }
 void swap_config_tables(MACRO_SET & msetA, MACRO_SET & msetB)
 {
-#define SWAP(tag) myswap(msetA.tag, msetB.tag)
+#define SWAP(tag) std::swap(msetA.tag, msetB.tag)
+//#define SWAP(tag) myswap(msetA.tag, msetB.tag)
 	SWAP(size);
 	SWAP(allocation_size);
 	SWAP(options);
