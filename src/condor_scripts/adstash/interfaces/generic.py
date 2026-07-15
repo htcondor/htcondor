@@ -13,38 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class GenericInterface(object):
-    """This is an example of an interface that requires some type of
-    handle to a remote server and requires setting up an index.
-    Suitable as a base class for search engine type interfaces."""
+from pathlib import Path
+
+
+class GenericInterface():
+    """
+    Generic base class for consuming converted ClassAds
+    """
+
+    # Search engine interfaces should implement methods for handling reading
+    # and setting index mappings and settings.
+    is_search_engine = False
 
 
     def __init__(self, **kwargs):
-        self.handle = None
+        pass
 
 
-    def get_handle(self, **kwargs):
-        if self.handle is not None:
-            return self.handle
-        print("Initializing up dummy client")
-        self.handle = object()
-        return self.handle
-
-
-    def setup_index(self, **kwargs):
-        print("Setting up dummy index")
-        client = self.get_handle()
-
-
-    def post_ads(self, ads, metadata={}, **kwargs):
-        print("Printing ads to screen")
-        client = self.get_handle()
-        errors = 0
-        successes = 0
-        for ad in ads:
-            try:
-                print(ad)
-                successes += 1
-            except Exception:
-                errors += 1
-        return {"success": successes, "error": errors}
+    def post_ads(self, ads: list, **kwargs) -> dict:
+        """
+        Do nothing but consume the list of ads and
+        return success.
+        """
+        n = 0
+        for _ in ads:  # consume ads
+            n += 1
+        return {"success": n, "error": 0}
