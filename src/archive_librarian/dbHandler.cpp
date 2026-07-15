@@ -13,7 +13,9 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "to_string_si_units.h"
 
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
@@ -58,6 +60,12 @@ bool DBHandler::initialize() {
         return false;
     }
 
+    // Retry on lock contention instead of failing immediately. Normal reads/writes are
+    // unaffected by this (WAL mode isolates readers from writers), but WAL checkpointing
+    // (checkpointWAL()) and the VACUUM / incremental_vacuum below can still hit
+    // SQLITE_BUSY against a lingering reader snapshot; this timeout matters most there.
+    sqlite3_busy_timeout(db_, config[conf::i::DBBusyTimeoutMs]);
+
 #ifndef _WIN32
     // Best effort set database file permissions (readable by all, writable by librarian).
     // Open with O_NOFOLLOW (safe_open_wrapper, no _follow) so that if the path has been
@@ -91,6 +99,77 @@ bool DBHandler::initialize() {
         dprintf(D_ERROR, "Failed to enable foreign keys: %s\n", errMsg ? errMsg : "Unknown");
         sqlite3_free(errMsg);
         return false;
+    }
+
+    // Lets garbage collection actually shrink the file (see runGarbageCollection()).
+    // The pragma below is a silent no-op on a database that already has rows and a
+    // different auto_vacuum mode -- SQLite only lets auto_vacuum change take effect on
+    // an empty database or immediately after a VACUUM. So detect the current mode and,
+    // if it isn't already INCREMENTAL, do the one-time VACUUM ourselves.
+    constexpr int AUTO_VACUUM_INCREMENTAL = 2;
+    int currentAutoVacuum = -1;
+    {
+        sqlite3_stmt* avStmt = nullptr;
+        if (sqlite3_prepare_v2(db_, "PRAGMA auto_vacuum;", -1, &avStmt, nullptr) == SQLITE_OK
+                && sqlite3_step(avStmt) == SQLITE_ROW) {
+            currentAutoVacuum = sqlite3_column_int(avStmt, 0);
+        }
+        sqlite3_finalize(avStmt);
+    }
+
+    if (currentAutoVacuum != AUTO_VACUUM_INCREMENTAL) {
+        std::error_code spaceEc, sizeEc;
+        auto space  = fs::space(fs::path(config[conf::str::DBPath]).parent_path(), spaceEc);
+        auto dbSize = fs::file_size(config[conf::str::DBPath], sizeEc);
+        if (sizeEc) dbSize = 0;
+        // 1.1x: VACUUM's copy is never larger than dbSize; +10% covers temp overhead.
+        if ( ! spaceEc && space.available < dbSize * 1.1) {
+            dprintf(D_ERROR, "Not enough free disk space to convert database to incremental "
+                    "auto-vacuum (need ~%s, have %s free). Leaving auto_vacuum as-is; "
+                    "garbage collection will not shrink the file until this is resolved.\n",
+                    to_string_byte_units(static_cast<filesize_t>(dbSize * 1.1)).c_str(),
+                    to_string_byte_units(static_cast<filesize_t>(space.available)).c_str());
+        } else {
+            dprintf(D_ALWAYS, "auto_vacuum is not INCREMENTAL (mode %d); converting via a "
+                    "one-time VACUUM. This may take a while for a large database.\n",
+                    currentAutoVacuum);
+
+            // Neither step here is fatal to startup on failure -- worst case we just
+            // retry this conversion on the next restart, same as the insufficient-disk-
+            // space case above. Blocking the whole daemon from starting over a one-time
+            // maintenance operation (e.g. transient lock contention despite the busy
+            // timeout, or a mid-VACUUM disk issue) would be worse than leaving auto_vacuum
+            // as-is for now.
+            rc = sqlite3_exec(db_, "PRAGMA auto_vacuum = INCREMENTAL;", nullptr, nullptr, &errMsg);
+            if (rc != SQLITE_OK) {
+                dprintf(D_ERROR, "Failed to set auto_vacuum pragma: %s. Leaving auto_vacuum as-is; "
+                        "will retry on next restart.\n", errMsg ? errMsg : "Unknown");
+                sqlite3_free(errMsg);
+            } else {
+                auto vacuumStart = std::chrono::steady_clock::now();
+                rc = sqlite3_exec(db_, "VACUUM;", nullptr, nullptr, &errMsg);
+                auto vacuumMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::steady_clock::now() - vacuumStart).count();
+                if (rc != SQLITE_OK) {
+                    dprintf(D_ERROR, "One-time VACUUM to enable incremental auto-vacuum failed "
+                            "after %lld ms: %s. Leaving auto_vacuum as-is; will retry on next "
+                            "restart.\n", (long long)vacuumMs, errMsg ? errMsg : "Unknown");
+                    sqlite3_free(errMsg);
+                } else {
+                    dprintf(D_ALWAYS, "Database converted to auto_vacuum=INCREMENTAL in %lld ms.\n",
+                            (long long)vacuumMs);
+
+                    // Belt-and-suspenders: re-assert WAL mode in case VACUUM reset it.
+                    rc = sqlite3_exec(db_, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg);
+                    if (rc != SQLITE_OK) {
+                        dprintf(D_ERROR, "Failed to re-enable WAL journal mode after VACUUM: %s\n",
+                                errMsg ? errMsg : "Unknown");
+                        sqlite3_free(errMsg);
+                        return false;
+                    }
+                }
+            }
+        }
     }
 
     int version = getSchemaVersion();
@@ -998,8 +1077,29 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
 // Garbage Collection
 // -------------------------
 
+// Runs a single "SELECT COUNT(*) FROM <table>"-shaped query and returns the scalar
+// result, or -1 if the query couldn't be prepared/stepped.
+static int queryRowCount(sqlite3* db, const char* countSql) {
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, countSql, -1, &stmt, nullptr) != SQLITE_OK) {
+        dprintf(D_ERROR, "queryRowCount: prepare failed for '%s': %s\n", countSql, sqlite3_errmsg(db));
+        return -1;
+    }
+    int result = -1;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        result = sqlite3_column_int(stmt, 0);
+    } else {
+        dprintf(D_ERROR, "queryRowCount: step failed for '%s': %s\n", countSql, sqlite3_errmsg(db));
+    }
+    sqlite3_finalize(stmt);
+    return result;
+}
+
 bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimit) {
     if ( ! db_) return false;
+
+    dprintf(D_STATUS, "runGarbageCollection: starting; requested file limit=%d\n", fileLimit);
+    auto gcStart = std::chrono::steady_clock::now();
 
     char* errMsg = nullptr;
     if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
@@ -1008,18 +1108,19 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         return false;
     }
 
-    size_t pos = gcQuerySQL.find(';');
-    if (pos == std::string::npos) {
+    // Statement 1: pick the oldest `fileLimit` files that are eligible for deletion
+    // (DateOfDeletion IS NOT NULL, i.e. already gone from disk -- see markFileDeleted()).
+    size_t pos1 = gcQuerySQL.find(';');
+    if (pos1 == std::string::npos) {
         dprintf(D_ERROR, "Invalid Garbage Collection SQL — no statement terminator\n");
         ROLLBACK_AND_RETURN();
     }
-
-    std::string step1Sql = gcQuerySQL.substr(0, pos + 1);
-    std::string step2Sql = gcQuerySQL.substr(pos + 1);
+    std::string step1Sql = gcQuerySQL.substr(0, pos1 + 1);
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, step1Sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-        dprintf(D_ERROR, "Garbage collection prepare step1 failed: %s\n", sqlite3_errmsg(db_));
+        dprintf(D_ERROR, "Garbage collection prepare step1 (select files to delete) failed: %s\n",
+                sqlite3_errmsg(db_));
         ROLLBACK_AND_RETURN();
     }
     if (sqlite3_bind_int(stmt, 1, fileLimit) != SQLITE_OK) {
@@ -1028,17 +1129,60 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         ROLLBACK_AND_RETURN();
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-        dprintf(D_ERROR, "Garbage collection execute step1 failed: %s\n", sqlite3_errmsg(db_));
+        dprintf(D_ERROR, "Garbage collection execute step1 (select files to delete) failed: %s\n",
+                sqlite3_errmsg(db_));
         std::ignore = sqlite3_finalize(stmt);
         ROLLBACK_AND_RETURN();
     }
     sqlite3_finalize(stmt);
 
+    int filesMatched = queryRowCount(db_, "SELECT COUNT(*) FROM FilesToDelete;");
+    dprintf(D_STATUS, "Garbage collection: %d of %d requested file(s) are eligible for deletion "
+            "(i.e. already marked deleted from disk).\n", filesMatched, fileLimit);
+
+    if (filesMatched <= 0) {
+        // Nothing eligible right now -- drop the temp table we just created so a future
+        // run's "CREATE TEMP TABLE IF NOT EXISTS" doesn't silently reuse this stale,
+        // empty one instead of recomputing against then-current data.
+        sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
+        if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            dprintf(D_ERROR, "Garbage collection commit (no-op pass) failed: %s\n", errMsg);
+            sqlite3_free(errMsg);
+            ROLLBACK_AND_RETURN();
+        }
+        dprintf(D_STATUS, "Garbage collection: no files currently eligible for deletion; "
+                "nothing to do this pass.\n");
+        return true;
+    }
+
+    // Statement 2: how many distinct jobs live in those files (informational only --
+    // the cascade delete below recomputes this itself inside the same transaction).
+    size_t pos2 = gcQuerySQL.find(';', pos1 + 1);
+    if (pos2 == std::string::npos) {
+        dprintf(D_ERROR, "Invalid Garbage Collection SQL — missing second statement terminator\n");
+        ROLLBACK_AND_RETURN();
+    }
+    std::string step2Sql = gcQuerySQL.substr(pos1 + 1, pos2 - pos1);
     if (sqlite3_exec(db_, step2Sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        dprintf(D_ERROR, "Garbage collection execute step2 failed: %s\n", errMsg);
+        dprintf(D_ERROR, "Garbage collection execute step2 (collect job ids) failed: %s\n", errMsg);
         sqlite3_free(errMsg);
         ROLLBACK_AND_RETURN();
     }
+    int jobsMatched = queryRowCount(db_, "SELECT COUNT(*) FROM JobsToDelete;");
+    dprintf(D_STATUS, "Garbage collection: %d job(s) found across the %d file(s) to be deleted.\n",
+            jobsMatched, filesMatched);
+
+    // Remaining statements: JobListsToCheck, the cascading DELETEs, and the DROP TABLEs.
+    std::string step3Sql = gcQuerySQL.substr(pos2 + 1);
+    if (sqlite3_exec(db_, step3Sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "Garbage collection execute step3 (cascade delete) failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        ROLLBACK_AND_RETURN();
+    }
+    // sqlite3_changes() reflects the most recently completed INSERT/UPDATE/DELETE --
+    // DDL (the DROP TABLEs at the end of step3Sql) doesn't touch it, so this is the
+    // row count from "DELETE FROM Files ...", i.e. files actually removed.
+    int filesDeleted = sqlite3_changes(db_);
 
     if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
         dprintf(D_ERROR, "Garbage collection commit failed: %s\n", errMsg);
@@ -1046,6 +1190,20 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         ROLLBACK_AND_RETURN();
     }
 
-    dprintf(D_FULLDEBUG, "Garbage collection successful.\n");
+    // Return the pages just freed by the deletes above to the OS so the file actually
+    // shrinks. Requires auto_vacuum=INCREMENTAL (see initialize()); on a database that
+    // hasn't been VACUUMed since that pragma was added, this is a harmless no-op.
+    // Not fatal on failure -- the row deletions above already committed successfully.
+    if (sqlite3_exec(db_, "PRAGMA incremental_vacuum;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "Incremental vacuum after garbage collection failed: %s\n",
+                errMsg ? errMsg : "Unknown");
+        sqlite3_free(errMsg);
+    }
+
+    auto gcMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - gcStart).count();
+    dprintf(D_STATUS, "Garbage collection successful: deleted %d file(s) (expected %d), "
+            "%d associated job(s), in %lld ms.\n",
+            filesDeleted, filesMatched, jobsMatched, (long long)gcMs);
     return true;
 }
