@@ -28,6 +28,8 @@ import os
 import sys
 import getpass
 import socket
+import enum
+import signal
 
 from .try_os_set import (
     try_os_setegid,
@@ -98,6 +100,35 @@ def skip_if(condition):
         return wrapper
 
     return decorator
+
+
+class RestartMode(enum.Enum):
+    """How ``Condor.restart()``/``Condor.restart_daemon()`` should interrupt daemons."""
+
+    #: Clean shutdown and restart (``condor_restart``/``condor_off -daemon``).
+    GRACEFUL = "graceful"
+    #: Abrupt but signaled shutdown and restart (``-fast``).
+    FAST = "fast"
+    #: SIGKILL the daemon process(es) directly, with no cleanup at all.
+    #: POSIX-only (needs real ``kill -9`` semantics); not supported on Windows.
+    CRASH = "crash"
+
+
+def _who_quick_field(who_quick_stdout: str, key: str) -> Optional[str]:
+    """Pull a ``KEY=value`` field (e.g. ``SCHEDD_PID``) out of ``condor_who -quick`` output."""
+    for line in who_quick_stdout.split("\n"):
+        if line.startswith(key):
+            return line.split("=", 1)[1].strip()
+    return None
+
+
+def _who_quick_is_alive(who_quick_stdout: str, subsystem: str) -> bool:
+    """Check whether ``condor_who -quick`` reports ``<SUBSYSTEM> = "alive"``."""
+    prefix = "{} =".format(subsystem.upper())
+    for line in who_quick_stdout.split("\n"):
+        if line.startswith(prefix) and '"alive"' in line.lower():
+            return True
+    return False
 
 
 class Condor:
@@ -514,6 +545,138 @@ class Condor:
         logger.debug(
             "Sent kill signal to condor_master (pid {})".format(self.condor_master.pid)
         )
+
+    def restart(self, mode: RestartMode = RestartMode.GRACEFUL, timeout: int = 120):
+        """
+        Restart every daemon in the pool (a full Access Point reboot/restart).
+
+        - :attr:`RestartMode.GRACEFUL`: ``condor_restart`` (clean shutdown/restart).
+        - :attr:`RestartMode.FAST`: ``condor_restart -fast`` (abrupt but signaled).
+        - :attr:`RestartMode.CRASH`: SIGKILL every daemon's process directly
+          (no cleanup at all), then relaunch ``condor_master`` in place.
+        """
+        self._restart(daemon_name=None, mode=mode, timeout=timeout)
+
+    def restart_daemon(
+        self, daemon_name: str, mode: RestartMode = RestartMode.GRACEFUL, timeout: int = 60
+    ):
+        """
+        Restart a single named daemon (e.g. ``"schedd"``) without disturbing
+        the rest of the pool. See :meth:`restart` for what each ``mode`` does;
+        for :attr:`RestartMode.CRASH`, the daemon (and its whole process
+        tree -- see :meth:`_crash`) is SIGKILLed directly and left for
+        ``condor_master``'s own child-monitoring to relaunch.
+        """
+        self._restart(daemon_name=daemon_name, mode=mode, timeout=timeout)
+
+    def _restart(self, daemon_name: Optional[str], mode: RestartMode, timeout: int):
+        # The daemon we watch to confirm a restart actually happened: for a
+        # whole-pool restart, condor_master commonly re-execs itself (same
+        # pid), so watching schedd -- which always gets a genuinely new pid
+        # when relaunched -- is the reliable signal, same as is done for a
+        # schedd-only restart.
+        watch_daemon = (daemon_name or "schedd").lower()
+
+        who = self.run_command(["condor_who", "-quick"], timeout=30, echo=False)
+        old_pid = _who_quick_field(who.stdout, "{}_PID".format(watch_daemon.upper()))
+
+        if mode is RestartMode.CRASH:
+            self._crash(daemon_name)
+        else:
+            args = ["condor_restart"]
+
+            if mode is RestartMode.FAST:
+                args.append("-fast")
+
+            if daemon_name:
+                args += ["-daemon", daemon_name]
+
+            self.run_command(args, timeout=30, echo=False)
+
+        # Require the same "new pid, alive" result on two consecutive
+        # checks (a short beat apart) before declaring the restart done --
+        # condor_who reporting a daemon alive doesn't guarantee it's done
+        # with its own internal startup (job-queue reload, security-session
+        # setup, etc.), just that it answered a query. A single, possibly
+        # premature "yes" here is exactly the kind of race that can bite a
+        # caller that immediately fires another restart or submission on
+        # the strength of it (see submit_with_retry() for the same class
+        # of race on the submission side).
+        start = time.time()
+        last_seen_pid = None
+        while True:
+            if time.time() - start > timeout:
+                raise TimeoutError(
+                    "{} did not come back (mode={}) within {}s".format(
+                        daemon_name or "pool", mode, timeout
+                    )
+                )
+
+            who = self.run_command(["condor_who", "-quick"], timeout=30, echo=False)
+            new_pid = _who_quick_field(who.stdout, "{}_PID".format(watch_daemon.upper()))
+            if (
+                new_pid is not None
+                and new_pid != old_pid
+                and _who_quick_is_alive(who.stdout, watch_daemon)
+            ):
+                if last_seen_pid == new_pid:
+                    break
+                last_seen_pid = new_pid
+            else:
+                last_seen_pid = None
+
+            time.sleep(0.5)
+
+    def _crash(self, daemon_name: Optional[str]):
+        """
+        SIGKILL either one named daemon or every daemon in the pool.
+
+        Deliberately does *not* also kill schedd's job-process children
+        (e.g. DAGMan, or a local-universe node's starter): every
+        DaemonCore process except the master already polls its own
+        parent's pid and self-shuts-down (SIGQUIT) if it's gone --
+        check_parent()/daemon_core_main.cpp -- so an orphan of a crashed
+        schedd is expected to clean itself up within about 135s by
+        default (a 15s first check, then every 120s -- tunable via
+        PARENT_CHECK_FIRST_INTERVAL/PARENT_CHECK_INTERVAL, including
+        per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL) on its own,
+        the same as it would on a real machine. Killing it ourselves
+        would just mask that real self-healing path instead of
+        exercising it.
+        """
+        if sys.platform == "win32":
+            raise NotImplementedError(
+                "RestartMode.CRASH needs real kill -9 semantics; not supported on Windows"
+            )
+
+        targets = (
+            {daemon_name.lower()}
+            if daemon_name is not None
+            else {"master", "collector", "negotiator", "schedd", "startd"}
+        )
+
+        daemons_who = self.run_command(["condor_who", "-daemons"], timeout=30, echo=False)
+        for line in daemons_who.stdout.split("\n"):
+            fields = line.split()
+            if len(fields) < 3 or fields[0].lower() not in targets:
+                continue
+            os.kill(int(fields[2]), signal.SIGKILL)
+
+        if daemon_name is None:
+            self._kill_condor_master()
+            if self.condor_master is not None:
+                self.condor_master.wait(timeout=60)
+
+            # _start_condor()/_wait_for_ready() both no-op if they think a
+            # master is already up and ready (condor_master_was_started /
+            # condor_is_ready) -- true after the *original* standup, and
+            # never cleared just because that master got killed. Clear both
+            # so the relaunch below isn't silently skipped.
+            self.condor_master = None
+            self.condor_is_ready = False
+
+            self._start_condor()
+            self._wait_for_ready()
 
     def read_config(self) -> str:
         return self.config_file.read_text()
