@@ -49,6 +49,7 @@ namespace DagmanConfigOptions {
 		CacheDebug,                    // Cache DAGMan debugging
 		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
 		UseOldDagParser,               // Use old DAG file parser and processing
+		ParseTimingDebug,              // Undocumented: report wall-clock time and peak RSS for DAG parse and edge-processing phases
 		_SIZE // MUST BE FINAL ITEM
 	};
 

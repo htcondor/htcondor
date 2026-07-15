@@ -1,5 +1,9 @@
 *** 25.13.0 features
 
+- DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
+  meaning a child node only requires its parent(s) to finish executing
+  rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
+  :jira:`2690`
 - Add a helpful "how to monitor jobs" tip to stderr after
   :tool:`condor_submit` runs.
   :jira:`3173`
