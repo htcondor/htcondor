@@ -6335,7 +6335,7 @@ default=250
 [ADSTASH_SE_INDEX_NAME]
 description=What search engine index should condor_adstash push ads to
 type=string
-default=htcondor-000001
+default=htcondor
 [ADSTASH_SE_LOG_MAPPINGS]
 description=Should condor_adstash log mappings used with search engine interfaces
 type=bool
