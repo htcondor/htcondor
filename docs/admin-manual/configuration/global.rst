@@ -1673,6 +1673,19 @@ that DaemonCore uses which affect all HTCondor daemons.
     Determines how long HTCondor will allow daemons to try their graceful shutdown methods before they do a hard shutdown. It is defined in
     terms of seconds. The default is 1800 (30 minutes).
 
+:macro-def:`PARENT_CHECK_FIRST_INTERVAL`
+    Every HTCondor daemon that uses DaemonCore, other than
+    *condor_master*, periodically checks whether its parent process
+    is still alive, and shuts itself down if not. This macro
+    determines how many seconds after startup a daemon waits before
+    its first such check. The default is 15.
+
+:macro-def:`PARENT_CHECK_INTERVAL`
+    The number of seconds between each of a daemon's checks of
+    whether its parent process is still alive, after the first check
+    controlled by :macro:`PARENT_CHECK_FIRST_INTERVAL`. The default is
+    120.
+
 :macro-def:`<SUBSYS>_ADDRESS_FILE`
     :index:`NEGOTIATOR_ADDRESS_FILE`
     :index:`COLLECTOR_ADDRESS_FILE` A complete path to a file that
