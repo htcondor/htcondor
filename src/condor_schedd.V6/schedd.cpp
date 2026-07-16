@@ -3120,7 +3120,6 @@ void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 	ad.InsertAttr(attrjoin(buf,prefix,"Completed"), (long long)JobsCompleted);
 	if (JobsBlocked) ad.InsertAttr(attrjoin(buf,prefix,"Blocked"), (long long)JobsBlocked);
 	if (JobsPreparing) ad.InsertAttr(attrjoin(buf,prefix,"Preparing"), (long long)JobsPreparing);
-	ad.InsertAttr(attrjoin(buf,prefix,"Completed"), (long long)JobsCompleted);
 	ad.InsertAttr(attrjoin(buf,prefix,"Held"), (long long)JobsHeld);
 	ad.InsertAttr(attrjoin(buf,prefix,"Suspended"), (long long)JobsSuspended);
 	ad.InsertAttr(attrjoin(buf,prefix,"SchedulerJobs"), (long long)(SchedulerJobsIdle + SchedulerJobsRunning + SchedulerJobsHeld + SchedulerJobsRemoved + SchedulerJobsCompleted));
