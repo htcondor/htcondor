@@ -23,6 +23,7 @@
 #include "condor_sys_types.h"
 #include <string>
 #include <tuple>
+#include "condor_uid.h"
 
 /*
 *	DiskUsage holds the size of the working directory
@@ -47,7 +48,7 @@ public:
 	ExecDirMonitor& operator=(ExecDirMonitor&&) = default;
 	virtual ~ExecDirMonitor() = default;
 
-	virtual DiskUsage GetDiskUsage() = 0;
+	virtual DiskUsage GetDiskUsage(priv_state priv) = 0;
 	bool IsValid() const { return valid; }
 protected:
 	bool valid{true};
@@ -63,7 +64,7 @@ public:
 	ManualExecDirMonitor(const std::string& dir) : workingDir(dir) {
 		valid = workingDir.empty() ? false : true;
 	};
-	virtual DiskUsage GetDiskUsage();
+	virtual DiskUsage GetDiskUsage(priv_state priv = PRIV_USER);
 
 private:
 	std::string workingDir{};
@@ -76,7 +77,7 @@ private:
 class StatExecDirMonitor : public ExecDirMonitor {
 public:
 	StatExecDirMonitor() = default;
-	virtual DiskUsage GetDiskUsage() { return du; };
+	virtual DiskUsage GetDiskUsage(priv_state /* ignored */) { return du; };
 
 	DiskUsage du{};
 };

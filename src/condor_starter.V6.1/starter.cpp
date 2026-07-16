@@ -4336,8 +4336,10 @@ Starter::GetDiskUsage(bool exiting) const {
 #endif /* LINUX */
 		}
 
-		if (dirMonitor) { return dirMonitor->GetDiskUsage(); }
-		else { return DiskUsage{0,0}; }
+		if (dirMonitor) { return dirMonitor->GetDiskUsage(PRIV_ROOT); }
+		// Make it possible for the caller to tell the difference between an
+		// empty directory and a failure.
+		else { return DiskUsage{-1,0}; }
 	}
 
 #ifdef LINUX
