@@ -4,6 +4,7 @@
   meaning a child node only requires its parent(s) to finish executing
   rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
   :jira:`2690`
+
 - Add a helpful "how to monitor jobs" tip to stderr after
   :tool:`condor_submit` runs.
   :jira:`3173`
@@ -33,6 +34,10 @@
   though this will disable the use of user-supplied handles.
   See :ref:`provider_name_restrictions` for details.
   :jira:`2860`
+
+- Fix a DAGMan crash that could occur while using common input transfers
+  for jobs specified in a DAG.
+  :jira:`3835`
 
 - Fix a very rare collector crash when creating the ca certs file
   the first time and a view collector was also configured to run.

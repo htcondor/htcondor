@@ -40,6 +40,7 @@
 #include "enum_utils.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
+#include "transfer_proc.h"
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -537,8 +538,17 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event, boo
 			bool submitEventIsSane;
 			Node *node = LogEventNodeLookup(event, submitEventIsSane);
 			PrintEvent(DEBUG_VERBOSE, event, node, recovery);
+
 			// event is for a job outside this DAG; ignore it
 			if ( ! node) { break; }
+
+			// Less than zero for proc id is a non-job shadow event: Skip processing
+			if (event->proc < 0) {
+				debug_printf(DEBUG_NORMAL, "Warning: Skipping event due to non-job proc id %d%s\n",
+				             event->proc, isTransferShadowProcID(event->proc) ? ": Common Transfer Shadow" : "");
+				break;
+			}
+
 			if ( ! EventSanityCheck(event, node, &result)) {
 				// this event is "impossible"; we will either abort the DAG (if result was set to false) or
 				// ignore it and hope for the best...
