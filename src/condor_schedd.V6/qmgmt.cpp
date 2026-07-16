@@ -6350,7 +6350,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 
 			// when transforming a cluster ad, we need to add transformed attributes into the
 			// EditedClustrAttrs attribute to prevent job materialization from changing them.
-			if (jid.proc == -1 && xform_attrs && !xform_attrs->empty()) {
+			if (jid.proc == CLUSTERID_qkey2 && xform_attrs && !xform_attrs->empty()) {
 				std::string cur_list, new_list;
 				if (tmpAd2.LookupString(ATTR_EDITED_CLUSTER_ATTRS, cur_list)) {
 					add_attrs_from_string_tokens(*xform_attrs, cur_list);
@@ -6362,6 +6362,22 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 					new_list.insert(0, "\"");
 					new_list += "\"";
 					SetAttribute(jid.cluster, jid.proc, ATTR_EDITED_CLUSTER_ATTRS, new_list.c_str(), SetAttribute_SubmitTransform);
+				}
+			}
+
+			// TODO: should this be post-peparing??  (and post rewriteSpooledJobAd??)
+			// post_transform_adjustments chokes on the cluster ad because it is using
+			// the GlobalJobId to get the schedd name.  This must be fixed before we
+			// can do the ajustments on the cluster ad (which should probably be the
+			// only ad that is adjusted.)
+			if (jid.proc >= 0) { // HACK until post_transform_adjustments is fixed..
+				rval = scheduler.post_transform_adjustments(
+					procAd, jid, errorStack, has_job_factory, project_is_cluster_attr
+				);
+				if( rval < 0 ) {
+					// post_transform_adjustments() has set errorStack for us.
+					errno = EINVAL;
+					return rval;
 				}
 			}
 		}
@@ -6404,16 +6420,6 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			// but before 8.7.2 it happened after the submit transaction had been committed
 			// so the conservative changes puts it here.
 			rewriteSpooledJobAd(procAd, jid.cluster, jid.proc, false);
-		}
-
-		// TODO: should this be post-peparing??  (and post rewriteSpooledJobAd??)
-		rval = scheduler.post_transform_adjustments(
-			procAd, jid, errorStack, has_job_factory, project_is_cluster_attr
-		);
-		if( rval < 0 ) {
-			// post_transform_adjustments() has set errorStack for us.
-			errno = EINVAL;
-			return rval;
 		}
 	}
 
