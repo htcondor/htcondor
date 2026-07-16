@@ -25,6 +25,14 @@
 
 *** 25.13.0 bugs
 
+- Fixed a bug where the archive librarian could mistake a rotated history
+  file for the still-active one after a daemon restart, if the restart
+  landed before that file was fully read. This caused the file to never be
+  marked as fully read, and if it was later removed from disk, it would be
+  incorrectly renamed with a ``.REMOVED`` suffix and lose its recorded
+  rotation date.
+  :jira:`3830`
+
 - Fixed a bug where the *condor_credmon_oauth* would not create and/or
   refresh credentials containing a user-supplied handle. Consequently,
   underscores (and other special characters) are no longer allowed in
