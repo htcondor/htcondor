@@ -85,7 +85,8 @@ typedef struct PROC_ID {
 #define SUSPENDED			7
 #define JOB_STATUS_FAILED	8  /* possible future use */
 #define JOB_STATUS_BLOCKED	9  /* possible future use */
-#define JOB_STATUS_MAX  	9 /* Largest valid job status value */
+#define JOB_STATUS_PREPARING 10
+#define JOB_STATUS_MAX     10 /* Largest valid job status value */
 
 // define more searchable aliases for old job status defines
 #define JOB_STATUS_IDLE                IDLE
@@ -98,6 +99,20 @@ typedef struct PROC_ID {
 //#define JOB_STATUS_FAILED
 //#define JOB_STATUS_BLOCKED
 
+
+enum JobBlockedCondition {
+	CommonTransfer=0x0001,
+};
+
+inline JobBlockedCondition operator|(JobBlockedCondition a, JobBlockedCondition b) {
+	return static_cast<JobBlockedCondition>(static_cast<int64_t>(a) | static_cast<int64_t>(b));
+}
+inline JobBlockedCondition operator&(JobBlockedCondition a, JobBlockedCondition b) {
+	return static_cast<JobBlockedCondition>(static_cast<int64_t>(a) & static_cast<int64_t>(b));
+}
+inline JobBlockedCondition operator~(JobBlockedCondition a) {
+	return static_cast<JobBlockedCondition>(~static_cast<int64_t>(a));
+}
 
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
