@@ -396,7 +396,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			} else {
 				// need to lookup username from dir and do setOwner()
 				char *tmpOwner = nullptr;
-				pcache()->get_user_name(stat_buf.st_uid, tmpOwner);
+				// failure is detected via the tmpOwner null check below
+				std::ignore = pcache()->get_user_name(stat_buf.st_uid, tmpOwner);
 				if (!tmpOwner) {
 					// this could happen if, for instance,
 					// getpwuid() failed.

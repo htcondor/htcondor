@@ -1,6 +1,42 @@
 *** 25.13.0 features
 
+- DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
+  meaning a child node only requires its parent(s) to finish executing
+  rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
+  :jira:`2690`
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
+
+- The Archive Librarian now properly reduces the database size
+  on disk during garbage collection.
+  :jira:`3826`
+
+- Improve how an AP administrator can automatically provide OAuth
+  credentials for all jobs.
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` specifies
+  whether the AP is providing credentials for all jobs (default is true).
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+  specifies which credential names are being provided for all jobs
+  (default is all credentials that the AP can generate by itself).
+  Remote submitters no longer need to alter their configuration files to
+  submit to an AP that provides credentials for all jobs.
+  :jira:`3391`
+
 *** 25.13.0 bugs
+
+- Fixed a bug where the *condor_credmon_oauth* would not create and/or
+  refresh credentials containing a user-supplied handle. Consequently,
+  underscores (and other special characters) are no longer allowed in
+  credential provider names by default. This behavior change can be
+  reverted by setting :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` to true,
+  though this will disable the use of user-supplied handles.
+  See :ref:`provider_name_restrictions` for details.
+  :jira:`2860`
+
+- Fix a very rare collector crash when creating the ca certs file
+  the first time and a view collector was also configured to run.
+  :jira:`3832`
 
 *** 25.0.13 bugs
 
@@ -55,6 +91,16 @@
   addition to downloading individual files. Large files are uploaded in
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
+- HTCondor Connection Brokering (CCB) now supports a streaming mode that
+  brokers connections between two daemons that are *both* behind a CCB,
+  without opening any incoming ports. When the requesting daemon is itself
+  CCB-routed, the CCB server has the target daemon connect back to the CCB
+  server and then relays bytes between the two connections; the end-to-end
+  security handshake is still performed directly between the two daemons, so
+  the CCB server never decrypts their traffic. Streaming mode is enabled by
+  default and controlled by the new configuration knobs
+  :macro:`CCB_SERVER_STREAMING` and :macro:`CCB_CLIENT_STREAMING`.
+  :jira:`3805`
 
 - Jobs that transfer input sandboxes now log a file transfer started 
   event even when there list of files to be transferred is empty.
@@ -217,7 +263,7 @@
   variable still points to the correct place.
   :jira:`2949`
 
-- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+- On cgroup v1 systems, match cgroup v2 behavior of disabling virtual
   memory swap space for jobs.  This can be disabled by setting
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`

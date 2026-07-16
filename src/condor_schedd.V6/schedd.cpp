@@ -100,6 +100,7 @@
 #include "catalog_utils.h"
 #include "cxfer.h"
 #include "classad_string_utils.h"
+#include "guidance.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -1387,7 +1388,11 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 			DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 			// NOTE: This is cleaned up in callback function (if allocated)
 			FlockUpdateDetails* details = new FlockUpdateDetails(FlockCollectors.size(), flock_level, &SubDat);
-			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true, flockCommunicationCheck, details);
+			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true,
+				[details](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					flockCommunicationCheck(success, sock, errstack, trust_domain, should_try_token_request, details);
+				});
 		} else {
 			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 			SubDat.lastUpdateTime = time_now;
@@ -1863,7 +1868,11 @@ Scheduler::count_jobs()
 					m_token_requester.createCallbackData(col.name(),
 					DCTokenRequester::default_identity, "ADVERTISE_SCHEDD")
 				: nullptr;
-			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+			col.sendUpdate( UPDATE_SCHEDD_AD, cad, adSeq, NULL, true,
+				[data](bool success, Sock* sock, CondorError* errstack,
+					const std::string& trust_domain, bool should_try_token_request) {
+					DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+				});
 		}
 	}
 
@@ -1997,7 +2006,11 @@ Scheduler::count_jobs()
 						"owner %s\n", iter->second->name(),
 						SubDat.owners.begin()->c_str());
 					iter->second->sendUpdate( UPDATE_OWN_SUBMITTOR_AD, &pAd, adSeq,
-						NULL, true, DCTokenRequester::daemonUpdateCallback, data );
+						NULL, true,
+						[data](bool success, Sock* sock, CondorError* errstack,
+							const std::string& trust_domain, bool should_try_token_request) {
+							DCTokenRequester::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, data);
+						});
 				}
 			}
 		}
@@ -5472,7 +5485,15 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 }
 
 
-void
+// Returns true if srec is still valid after the call, false if it was deleted.
+// In the synchronous (non-threaded) case aboutToSpawnJobHandlerDone() runs
+// inline and may delete srec -- when the job is no longer runnable, or when
+// spawnJobHandler() finds no match -- and it returns 0 exactly in those cases.
+// Callers that reuse srec after this call (notably the MPI/parallel per-proc
+// loop, where the whole cluster shares the procid-0 srec) must stop touching
+// srec once this returns false.  In the threaded case any deletion is deferred
+// to the reaper, so srec is still valid when this returns.
+bool
 callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
 	// braces from vestigial if ! jobPrepNeedsThread
@@ -5481,7 +5502,7 @@ callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 				 "calling aboutToSpawnJobHandler() directly\n",
 				 cluster, proc );
 		aboutToSpawnJobHandler( cluster, proc, srec );
-		aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 );
+		return aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 ) != 0;
 	}
 }
 
@@ -9661,10 +9682,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     // some attributes coming out of negotiator's matching process that need to
     // make a subway transfer from slot/match ad to job/request ad, on their way
     // to the claim, and then eventually back around to the negotiator for use in
-    // preemption policies:
-    CopyAttribute(ATTR_REMOTE_GROUP, *jobAd, *mrec->my_match_ad);
-    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
-    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
+    // preemption policies.  A match record built without a match ad has a null
+    // my_match_ad (see the match_rec constructor), so guard before dereferencing.
+    if ( mrec->my_match_ad ) {
+        CopyAttribute(ATTR_REMOTE_GROUP, *jobAd, *mrec->my_match_ad);
+        CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
+        CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
+    }
 
 	// CRUFT Starting in 25.3, the startd assumes true if these
 	//   attributes aren't set.
@@ -9982,7 +10006,7 @@ Scheduler::enqueueStartdContact( ContactStartdArgs* args )
 {
 	 startdContactQueue.push(args);
 	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
-			  args->sinful() );  
+			  args->sinful() );
 
 	 rescheduleContactQueue();
 
@@ -10031,7 +10055,7 @@ Scheduler::checkContactQueue( int /* timerID */ )
 		args = startdContactQueue.front();
 		startdContactQueue.pop();
 		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %p, "
-				 "host=%s\n", args, args->sinful() ); 
+				 "host=%s\n", args, args->sinful() );
 		contactStartd( args );
 		delete args;
 	}
@@ -11213,7 +11237,7 @@ Scheduler::StartJobHandler( int /* timerID */ )
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
 		int universe = srec->universe;
-		callAboutToSpawnJobHandler( cluster, proc, srec );
+		bool srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec );
 
 		//bool wantPS = 0;
 		//if(job_ad) { job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS); }
@@ -11229,12 +11253,16 @@ Scheduler::StartJobHandler( int /* timerID */ )
 
 				continue;
 			}
-			
+
 				// We've just called callAboutToSpawnJobHandler on procid 0,
-				// now call it on the rest of them
+				// now call it on the rest of them.  All procs of an MPI/parallel
+				// cluster share this single procid-0 srec; if a per-proc call
+				// finds the job no longer runnable it deletes that shared srec,
+				// so stop as soon as srec is gone rather than pass a freed
+				// pointer back into callAboutToSpawnJobHandler.
 			proc = 1;
-			while( GetJobAd(cluster, proc) ) {
-				callAboutToSpawnJobHandler( cluster, proc, srec);
+			while( srec_valid && GetJobAd(cluster, proc) ) {
+				srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec);
 				proc++;
 			}
 		}
@@ -13430,10 +13458,14 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		// StartJob() will reblock them, or start a new transfer
 		// shadow, as appropriate.
 		//
+		// FIXME: the above is a lie; StartJob() will never be called
+		// again for these jobs (I think because they have matches).
+		//
 		// Doing things this way makes a single pass over the blocked
 		// matches, with each pass doing a set intersection; we could
 		// only one catalog at a time in the main loop, at the cost of
 		// iterating the blocked matches more than once.
+		std::vector< match_rec *> matches;
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
 				// It is a core design problem that we can't ever be sure
@@ -13460,11 +13492,63 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					if( release_block_condition(sr->job_id, CommonTransfer, "catalog was unregistered" ) )
 					{
 						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
-						mark_serial_job_running( sr->job_id );
-						addRunnableJob( sr );
+
+						//
+						// The job is now idle and holding a claimed resource,
+						// but we can't start a shadow for it.  We can't call
+						// mark_serial_job_running() because we're not starting
+						// a shadow, and if we call addRunnableJob(), we'll
+						// skip StartJob(mrec, job_id) [which is normally
+						// responsible for calling addRunnableJob() via
+						// start_std()].
+						//
+						// If we delete this match record, we should probably
+						// also delete its (this) shadow record; it will leak,
+						// otherwise -- or worse, prevent a new shadow record
+						// for the transfer shadow's job ID from being created
+						// when it's time to try again.
+						//
+						// Conveniently, this makes it equally difficult to
+						// delete the match record as to try to use it again.
+						// For now, we'll delete the match record; it seems
+						// safer.  In the future, we should probably do what
+						// we do when we get a d-slot back from the startd;
+						// that will probably end up with the same job, but
+						// at least that way we (a) don't call StartJob()
+						// from a weird place and (b) anything we do to prevent
+						// too many common-transfer retries will work generally.
+						//
+						// See above about HTCONDOR-3610.
+						//
+
+						// auto jobID = sr->job_id;
+						delete_shadow_rec( sr );
+						// This removes `m` from `matchesHeldByBlockedJobs`.
+						// We could rewrite the loop and assign the return
+						// value of erase or manually iterate as appropriate,
+						// but that means explicitly removing m, rather than
+						// letting DelMrec() handle it, which seems wrong.
+						// DelMrec( m );
+						matches.push_back( m );
+
+/* This code passes the tests locally, except test_unblocking_jobs.py,
+ * which fails `test_kill_transfer_shadow`, because the jobs all immediately
+ * reblock trying the transfer again.
+						// Stolen from StartJob( mrec ); should refactor.
+						auto result = StartJob( m, jobID );
+						if( result != SJ::SUCCEEDED ) {
+							StartJobFailed( m, jobID );
+
+							// (Skip the e-mail for now.)
+						}
+*/
 					}
 				}
 			}
+		}
+
+		for( match_rec * n : matches ) {
+		    DelMrec( n );
 		}
 	}
 }
@@ -15778,8 +15862,20 @@ size_t pidHash(const int &pid)
 //
 bool locate_and_advertise_local_credd(bool force) {
 
+	bool update_info = true;
+	bool new_check_creds = false;
+
 	Daemon local_credd(DT_CREDD);
 	local_credd.locate_local();
+
+	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+		std::string names;
+		new_check_creds = param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAME") ||
+		                  param(names, "CLIENT_CREDMON_PROVIDER_NAMES");
+	}
+
 	if ( ! force) {
 		// look to see if the credd address has changed
 		// if it has not then we are done
@@ -15787,11 +15883,20 @@ bool locate_and_advertise_local_credd(bool force) {
 		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
 		if ( ! local_credd.addr()) {
 			if (credd_addr.empty())
-				return false;
+				update_info = false;
 		} else {
 			if (credd_addr == local_credd.addr())
-				return false;
+				update_info = false;
 		}
+
+		// check if SubmitAlwaysCheckCreds has changed
+		bool old_check_creds = false;
+		daemonCore->ContactInfoExtra().LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, old_check_creds);
+		update_info |= (old_check_creds != new_check_creds);
+	}
+
+	if (!update_info) {
+		return false;
 	}
 
 	// update the extra contact info, and tell daemon core to write a new address file.
@@ -15806,7 +15911,12 @@ bool locate_and_advertise_local_credd(bool force) {
 	}
 	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
 	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	daemonCore->ContactInfoExtra().Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
 	DC_Enable_And_Drop_Addr_File();
+	if (scheduler.getScheddAd()) {
+		scheduler.getScheddAd()->Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
+		scheduler.update_local_ad_file();
+	}
 	return true;
 }
 
@@ -16456,6 +16566,7 @@ Scheduler::Init()
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
 	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
+	CopyAttribute(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
@@ -17096,7 +17207,9 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_adSchedd);
+	if (m_adSchedd) {
+		daemonCore->UpdateLocalAd(m_adSchedd);
+	}
 	return;
 }
 
@@ -21185,6 +21298,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 {
 	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
 	OwnerInfo * owner = nullptr;
+	JobQueueCluster * first_jqc = nullptr;
 
 	// verify that all of the jobs have the same owner and get the owner
 	//
@@ -21197,6 +21311,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		}
 		if ( ! owner) {
 			owner = jqc->ownerinfo;
+			first_jqc = jqc;
 		} else if ( owner != jqc->ownerinfo ) {
 			result.Assign(ATTR_ERROR_STRING, "Cannot export for more than one user");
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
@@ -21212,7 +21327,17 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		return false;
 	}
 
-	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
+	// Use the first cluster that actually resolved above.  The requested id
+	// set can be non-empty yet contain only missing cluster ids (the loop
+	// above skips those), in which case there is nothing to export.  Do not
+	// re-fetch GetClusterAd(*clusters.begin()) here: that id may be one of the
+	// missing ones and would hand back a null pointer we then dereference.
+	JobQueueCluster * jqc = first_jqc;
+	if ( ! jqc ) {
+		result.Assign(ATTR_ERROR_STRING, "No valid clusters to export");
+		dprintf(D_ALWAYS, "ExportJobs(): No valid clusters to export\n");
+		return false;
+	}
 
 	// verify the user is authorized to edit these jobs
 	if ( ! UserCheck2(jqc, user) ) {
@@ -21785,9 +21910,25 @@ Scheduler::post_transform_adjustments(
 
 	if( requested_catalogs.size() > 0 ) {
 		auto rc = std::make_unique<classad::ExprList>();
+		auto rcid = std::make_unique<classad::ExprList>();
+
+		std::string empty;
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
+
+
+			auto catalogID = computeCatalogID( * ad, catalog );
+			if( ! catalogID ) {
+				if( errorStack ) {
+					errorStack->push( "CXFER", 1, "Failed to compute catalog ID,"
+						" which is required for common file transfer." );
+				}
+				return -1;
+			}
+
+			classad::ExprTree * m = classad::Literal::MakeString( * catalogID );
+			rcid->push_back( m );
 		}
 
 		// This should be reimplemented to do what the job transforms do
@@ -21801,7 +21942,23 @@ Scheduler::post_transform_adjustments(
 			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
 		);
 		if( rv != 0 ) {
-			if( errorStack ) { /* ??? */ }
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOGS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
+			return -1;
+		}
+
+		rv = SetAttributeExpr(
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+		);
+		if( rv != 0 ) {
+			if( errorStack ) {
+				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
+					ATTR_REQUESTED_CATALOG_IDS ", which is required for "
+					"common file transfer: %d.", rv );
+			}
 			return -1;
 		}
 	}

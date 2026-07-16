@@ -99,6 +99,13 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( ccb_proxy_bench
+        "ccb_proxy_bench.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
     condor_exe( test_awaitable_deadline_socketd
         "test_awaitable_deadline_socketd.cpp"
         "${C_LIBEXEC}"
@@ -266,6 +273,15 @@ if (BUILD_TESTING)
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+		if (NOT WINDOWS)
+			condor_pl_test (test_ccb_streaming "Test CCB streaming/proxy mode for private-to-private connections" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test (test_ccb_streaming_paths "Test CCB streaming/proxy mode across additional network paths" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif (NOT WINDOWS)
+
+		# CCB streaming/proxy relay throughput benchmark
+		condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Fail.  We can't build this on Windows because of bad target names.
@@ -420,6 +436,7 @@ endif()
 			condor_pl_test(test_input_file_check "Test the input checker" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_clean_output_failure "Test output transfer failure handling" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_dag_checker "Test condor_dag_checker tool" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dag_node_weak_dependencies "Test DAG node weak parent/child dependencies" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_vault_credential "Test handling of vault credentials" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
 
 			condor_pl_test(test_custom_machine_resource "Test that a custom machine resource is assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
@@ -521,6 +538,7 @@ endif()
 			condor_pl_test(test_shadow_exit_codes "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_dagman_multiple_common_containers "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_cif_shadow_recycle "Test shadow recycling with CIF jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
+			condor_pl_test(test_command_data_slot "Verify the COMMAND_DATA_SLOT's client passes the MATCH session along" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# These Ornithology tests only work on linux.

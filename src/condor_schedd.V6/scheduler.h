@@ -1366,10 +1366,12 @@ int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
 
 /** A helper function that wraps the call to jobPrepNeedsThread() and
 	invokes aboutToSpawnJobHandler() as appropriate, either in its own
-	thread using Create_Thread_Qith_Wata(), or calling it and then
-	aboutToSpawnJobHandlerDone() directly.
+	thread using Create_Thread_With_Data(), or calling it and then
+	aboutToSpawnJobHandlerDone() directly.  Returns false if srec was deleted
+	during a synchronous call (job no longer runnable, or no match); the
+	caller must not reuse srec once this returns false.
 */
-void callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
+bool callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
 
 
 /** Hook to call whenever a job enters a "finished" state, something
