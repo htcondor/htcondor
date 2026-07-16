@@ -100,12 +100,13 @@ class GenericClassAdConverter():
             mapping={},
             projection=set(),
             ignore_attrs=set(),
+            custom_ignore_attrs=set(),
             required_attrs=set(),
             timestamp_fields=["EnteredCurrentStatus"],
             doc_id_fields=["RecordTime"],
             ):
         self.mapping = mapping
-        self.ignore_attrs = get_ignore_attrs(mapping, ignore_attrs)
+        self.ignore_attrs = get_ignore_attrs(mapping, custom_ignore_attrs, ignore_attrs)
         self.required_attrs = required_attrs
         self.timestamp_fields = timestamp_fields
         self.doc_id_fields = doc_id_fields

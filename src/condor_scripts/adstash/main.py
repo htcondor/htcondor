@@ -105,7 +105,7 @@ def adstash(args):
             mappings, settings = setup_index(interface=interface, ad_type="history", args=args)
             converter = AD_TYPE_CONVERTERS["history"](
                 mapping=mappings,
-                # TODO get combined ignore attrs
+                custom_ignore_attrs=args.custom_ignore_attrs,
             )
 
             metadata["condor_adstash_source"] = "ad_file"
@@ -126,7 +126,7 @@ def adstash(args):
                 converter = AD_TYPE_CONVERTERS[ad_type](
                     mapping=mappings,
                     projection=vars(args)[f"{daemon_type}_history_projection"],
-                    # TODO get combined ignore attrs
+                    custom_ignore_attrs=args.custom_ignore_attrs,
                 )
 
                 name_attr = "Name"
