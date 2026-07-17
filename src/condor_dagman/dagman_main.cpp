@@ -1190,15 +1190,17 @@ void main_init(int argc, char ** const argv) {
 		// stepping on our lock -- keep today's hard failure for that
 		// real conflict.
 		int exitCode = EXIT_ERROR;
-		char idBuf[32];
+		char buf[32];
 		ssize_t nread = -1;
+
 		if (lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
-			nread = full_read(dagman.m_lock_fd, idBuf, sizeof(idBuf) - 1);
+			nread = full_read(dagman.m_lock_fd, buf, sizeof(buf) - 1);
 		}
+
 		if (nread > 0) {
-			idBuf[nread] = '\0';
+			buf[nread] = '\0';
 			try {
-				if (std::stoi(idBuf) == dagman.DAGManJobId._cluster) {
+				if (std::stoi(buf) == dagman.DAGManJobId._cluster) {
 					exitCode = EXIT_RESTART;
 				}
 			} catch (const std::exception&) {}
@@ -1216,18 +1218,17 @@ void main_init(int argc, char ** const argv) {
 			             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
 			             "and re-submit the DAG.\n", lock_file.c_str());
 		}
+
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(exitCode);
 		dagman.CleanUp();
 		DC_Exit(exitCode);
-	}
-
-	// Stamp our own cluster id into the lock file so that a later instance
-	// that fails to acquire it can tell "it's just me, restarting" apart
-	// from a genuinely different DAG instance (see above).
-	{
-		std::string idLine = std::to_string(dagman.DAGManJobId._cluster) + "\n";
+	} else {
+		// Stamp our own cluster id into the lock file so that a later instance
+		// that fails to acquire it can tell "it's just me, restarting" apart
+		// from a genuinely different DAG instance (see above).
+		std::string id_str = std::to_string(dagman.DAGManJobId._cluster) + "\n";
 		if (ftruncate(dagman.m_lock_fd, 0) == 0 && lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
-			full_write(dagman.m_lock_fd, idLine.c_str(), idLine.size());
+			full_write(dagman.m_lock_fd, id_str.c_str(), id_str.size());
 		}
 	}
 
