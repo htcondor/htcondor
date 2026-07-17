@@ -199,6 +199,13 @@ skip_line(const std::string& line) {
 }
 
 //--------------------------------------------------------------------------------------------
+static bool
+isKeyword(std::string input, const istring_view check) {
+	std::replace(input.begin(), input.end(), '-', '_'); // Make PRE_SKIP == PRE-SKIP
+	return input.c_str() == check;
+}
+
+//--------------------------------------------------------------------------------------------
 // WARNING: This function clears the passed reference variable regardless of successfully reading a line
 bool
 DagParser::getnextline(std::string& line, bool raw) {
@@ -354,11 +361,11 @@ DagParser::ParseNodeTypes(DagLexer& details, DAG::CMD type) {
 	while (true) {
 		std::string token = details.next();
 		if (token.empty()) { break; }
-		else if (strcasecmp(token.c_str(), "NOOP") == 0) {
+		else if (isKeyword(token, "NOOP")) {
 			nodeCmd->SetNoop();
-		} else if (strcasecmp(token.c_str(), "DONE") == 0) {
+		} else if (isKeyword(token, "DONE")) {
 			nodeCmd->SetDone();
-		} else if (strcasecmp(token.c_str(), "DIR") == 0) {
+		} else if (isKeyword(token, "DIR")) {
 			std::string dir = details.next(DagLexer::TRIM_QUOTES::TRUE);
 			if (dir.empty()) {
 				error = "No directory path provided for DIR subcommand";
@@ -393,7 +400,7 @@ DagParser::ParseSplice(DagLexer& details) {
 	std::string error = "";
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "DIR") == 0) {
+		if (isKeyword(token, "DIR")) {
 			std::string dir = details.next(DagLexer::TRIM_QUOTES::TRUE);
 			if (dir.empty()) {
 				error = "No directory path provided for DIR subcommand";
@@ -423,13 +430,13 @@ DagParser::ParseParentChild(DagLexer& details, const std::string& keyword) {
 
 	bool parsing_children = false;
 	std::string token = details.next();
-	if (token.empty() || strcasecmp(token.c_str(), "CHILD") == 0) {
+	if (token.empty() || isKeyword(token, "CHILD")) {
 		return "No parent node(s) specified";
 	}
 
 	std::string error = "Missing CHILD specifier";
 	do {
-		if (strcasecmp(token.c_str(), "CHILD") == 0) {
+		if (isKeyword(token, "CHILD")) {
 			if ( ! details.peek().empty()) {
 				parsing_children = true;
 				error.clear();
@@ -457,7 +464,7 @@ DagParser::ParseScript(DagLexer& details) {
 		if (it != DAG::SCRIPT_TYPES_MAP.end()) {
 			cmd->SetType(it->second);
 			break;
-		} else if (strcasecmp(token.c_str(), "DEFER") == 0) {
+		} else if (isKeyword(token, "DEFER")) {
 			std::string value = details.next();
 			int status = 0;
 			time_t interval = 0;
@@ -473,7 +480,7 @@ DagParser::ParseScript(DagLexer& details) {
 				interval = (time_t)std::stoi(value);
 			} catch (...) { return "Invalid DEFER time value '" + value + "'"; }
 			cmd->SetDeferal(status, interval);
-		} else if (strcasecmp(token.c_str(), "DEBUG") == 0) {
+		} else if (isKeyword(token, "DEBUG")) {
 			std::string file = details.next();
 			if (file.empty()) { return "DEBUG missing filename"; }
 			std::string stream = details.next();
@@ -524,7 +531,7 @@ DagParser::ParseRetry(DagLexer& details) {
 
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "UNLESS-EXIT") != 0) {
+		if ( ! isKeyword(token, "UNLESS_EXIT")) {
 			return "Unexpected token '" + token + "'";
 		}
 
@@ -566,7 +573,7 @@ DagParser::ParseAbortDagOn(DagLexer& details) {
 
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "RETURN") != 0) {
+		if ( ! isKeyword(token, "RETURN")) {
 			return "Unexpected token '" + token + "'";
 		}
 
@@ -600,10 +607,10 @@ DagParser::ParseVars(DagLexer& details) {
 	// Possibly APPEND/PREPEND keyword or key=value pair (so peek and don't consume)
 	token = details.peek();
 
-	if (strcasecmp(token.c_str(), "PREPEND") == 0) {
+	if (isKeyword(token, "PREPEND")) {
 		cmd->Prepend();
 		token = details.next(); // Eat token
-	} else if (strcasecmp(token.c_str(), "APPEND") == 0) {
+	} else if (isKeyword(token, "APPEND")) {
 		cmd->Append();
 		token = details.next(); // Eat token
 	}
@@ -676,7 +683,7 @@ std::string
 DagParser::ParseSavePoint(DagLexer& details) {
 	std::string token = details.next();
 	if (token.empty()) { return "No node name specified"; }
-	else if (strcasecmp(token.c_str(), DAG::ALL_NODES.c_str()) == 0) {
+	else if (isKeyword(token, DAG::ALL_NODES.c_str())) {
 		return "ALL_NODES cannot be used for save point file command";
 	}
 
@@ -769,15 +776,15 @@ DagParser::ParseDot(DagLexer& details) {
 
 	token = details.next();
 	while ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "UPDATE") == 0) {
+		if (isKeyword(token, "UPDATE")) {
 			cmd->SetUpdate(true);
-		} else if (strcasecmp(token.c_str(), "DONT-UPDATE") == 0) {
+		} else if (isKeyword(token, "DONT_UPDATE")) {
 			cmd->SetUpdate(false);
-		} else if (strcasecmp(token.c_str(), "OVERWRITE") == 0) {
+		} else if (isKeyword(token, "OVERWRITE")) {
 			cmd->SetOverwrite(true);
-		} else if (strcasecmp(token.c_str(), "DONT-OVERWRITE") == 0) {
+		} else if (isKeyword(token, "DONT_OVERWRITE")) {
 			cmd->SetOverwrite(false);
-		} else if (strcasecmp(token.c_str(), "INCLUDE") == 0) {
+		} else if (isKeyword(token, "INCLUDE")) {
 			token = details.next();
 			if (token.empty()) { return "Missing INCLUDE header file"; }
 			cmd->SetInclude(token);
@@ -802,7 +809,7 @@ DagParser::ParseNodeStatus(DagLexer& details) {
 
 	token = details.next();
 	while ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "ALWAYS-UPDATE") == 0) {
+		if (isKeyword(token, "ALWAYS_UPDATE")) {
 			cmd->SetAlwaysUpdate();
 		} else {
 			try {
@@ -825,9 +832,9 @@ DagParser::ParseEnv(DagLexer& details) {
 	if (token.empty()) { return "Missing action (SET or GET) and variables"; }
 
 	bool set = false;
-	if (strcasecmp(token.c_str(), "SET") == 0) {
+	if (isKeyword(token, "SET")) {
 		set = true;
-	} else if (strcasecmp(token.c_str(), "GET") != 0) {
+	} else if ( ! isKeyword(token, "GET")) {
 		return "Unexpected token '" + token + "'";
 	}
 
@@ -924,7 +931,7 @@ DagParser::next() {
 			switch (cmd) {
 				case DAG::CMD::SUBDAG:
 					check = details.next(); // TODO: Make External keyword optional
-					if (strcasecmp(check.c_str(), "EXTERNAL") != 0) {
+					if ( ! isKeyword(check, "EXTERNAL")) {
 						parse_error = "Missing EXTERNAL keyword";
 						break;
 					}
@@ -944,7 +951,7 @@ DagParser::next() {
 				case DAG::CMD::PARENT_CHILD:
 					if (it->first == "WEAK") {
 						check = details.next();
-						if (check.empty() || strcasecmp(check.c_str(), "PARENT") != 0) {
+						if (check.empty() || !isKeyword(check, "PARENT")) {
 							parse_error = "WEAK dependency missing PARENT keyword";
 							break;
 						}
