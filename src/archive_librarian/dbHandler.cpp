@@ -1158,7 +1158,12 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         // Nothing eligible right now -- drop the temp table we just created so a future
         // run's "CREATE TEMP TABLE IF NOT EXISTS" doesn't silently reuse this stale,
         // empty one instead of recomputing against then-current data.
-        sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
+        int r = sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
+        if (r != SQLITE_OK) {
+            dprintf(D_ERROR, "Garbage collection drop temp table failed: %s\n", sqlite3_errmsg(db_));
+            ROLLBACK_AND_RETURN();
+        }
+
         if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
             dprintf(D_ERROR, "Garbage collection commit (no-op pass) failed: %s\n", errMsg);
             sqlite3_free(errMsg);
