@@ -1180,9 +1180,10 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		//CompletionDate order (e.g. LeaveJobInQueue can delay a job's append well past its completion),
 		//so for a specific cluster.proc this cutoff could fire on an unrelated ad and skip over the
 		//still-unread target proc before the real match (above) is ever reached.
-		if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion) {
+		// Optimization turned off for cluster early break for same issue: Need record write date to do 'correctly'
+		/*if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion) {
 			match.isDoneMatching = true;
-		}
+		}*/
 	}
 
 	//Remove all match jid's done searching
