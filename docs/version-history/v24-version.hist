@@ -10,9 +10,10 @@
   :jira:`3809`
 
 - Fixed a bug in :tool:`condor_history` where searching for a specific job id
-  (``cluster.proc``) could fail to find a matching ad that genuinely existed
-  in the history file, because the backwards scan could stop early based on
-  an unrelated job's completion time.
+  (``cluster.proc``) or a whole cluster (``cluster``) could fail to find a
+  matching ad that genuinely existed in the history file, because the
+  backwards scan could stop early based on an unrelated job's completion
+  time.
   :jira:`3837`
 
 *** 24.0.22 features

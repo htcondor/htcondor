@@ -544,25 +544,35 @@ Bar=1
     return p
 
 #===============================================================================================
-# Regression test for a bug where `condor_history <cluster>.<proc>` could silently miss a job ad
-# that genuinely exists in the history file. While scanning backwards, condor_history used to
-# assume history files are appended in strictly increasing CompletionDate order, and would stop
-# scanning as soon as it saw *any* ad (even one from an unrelated cluster) whose CompletionDate
-# predated the QDate of the cluster being searched for. That assumption isn't guaranteed - e.g.
-# LeaveJobInQueue can delay a job's append to history well past its actual completion time - so a
-# job appended out of CompletionDate order can fool the tool into stopping the scan before it ever
-# reaches the real, still-unread target ad.
+# Regression test for a bug where `condor_history <cluster>.<proc>` (and, in an analogous way,
+# `condor_history <cluster>`) could silently miss a job ad that genuinely exists in the history
+# file. While scanning backwards, condor_history used to assume history files are appended in
+# strictly increasing CompletionDate order, and would stop scanning as soon as it saw *any* ad
+# (even one from an unrelated cluster) whose CompletionDate predated the QDate of the cluster
+# being searched for. That assumption isn't guaranteed - e.g. LeaveJobInQueue can delay a job's
+# append to history well past its actual completion time - so a job appended out of CompletionDate
+# order can fool the tool into stopping the scan before it ever reaches the real, still-unread
+# target ad. The fix bounds cluster-only searches by CurrentTime - the actual time a record was
+# appended - instead of CompletionDate, since only append order is guaranteed monotonic.
 #
 # History file in order Top (oldest/first appended) -> Bottom (newest/last appended):
-# JID   CustAttr
-# 900.5 (target proc)             QDate=1000 CompletionDate=1060
-# 950.0 (unrelated cluster)       QDate=400  CompletionDate=500  <- looks "completed" before 900 was even submitted
-# 900.9 (other proc of cluster 900) QDate=1000 CompletionDate=1065
+# JID   QDate CompletionDate CurrentTime
+# 900.5 (target proc)               1000  1060  1060
+# 950.0 (unrelated cluster)         400   500   1200 <- CompletionDate looks "completed" before 900
+#                                                         was even submitted, but it was actually
+#                                                         archived (CurrentTime) well after 900's
+#                                                         QDate, e.g. due to LeaveJobInQueue.
+# 900.9 (other proc of cluster 900) 1000  1065  1300
 #
 # Scanning backwards for "900.5": we first hit 900.9 (same cluster, wrong proc), which records
 # cluster 900's QDate (1000). We then hit 950.0, whose CompletionDate (500) is less than that
 # QDate. With the bug, this falsely looked like proof nothing more could be found, and the scan
 # stopped right there - before ever reaching 900.5, which sits even further back in the file.
+#
+# Scanning backwards for "900" (cluster-only): the same 950.0 ad is encountered between the two
+# 900 procs. Using CompletionDate (500), 1000 > 500 would falsely stop the scan before 900.5 is
+# ever reached. Using CurrentTime (1200) instead, 1000 is not > 1200 + slop, so the scan correctly
+# continues on to find 900.5.
 COMP_ORDER_CLUSTER = 900
 COMP_ORDER_TARGET_PROC = 5
 COMP_ORDER_OTHER_PROC = 9
@@ -575,18 +585,19 @@ def writeCompletionOrderFile(test_dir, jobAd):
     ad["HistoryType"] = '"SCHEDD"'
     ad["Owner"] = "\"cole\""
 
-    def block(cluster, proc, qdate, completion, offset):
+    def block(cluster, proc, qdate, completion, currentTime, offset):
         ad["ClusterId"] = cluster
         ad["ProcId"] = proc
         ad["QDate"] = qdate
         ad["CompletionDate"] = completion
         ad_str = "".join(f"{key}={ad[key]}\n" for key in sorted(ad.keys()))
-        ad_str += f"*** Offset = {offset} ClusterId = {cluster} ProcId = {proc} Owner = \"cole\" CompletionDate = {completion}\n"
+        ad_str += (f"*** Offset = {offset} ClusterId = {cluster} ProcId = {proc} Owner = \"cole\" "
+                   f"CompletionDate = {completion} CurrentTime = {currentTime}\n")
         return ad_str
 
-    text = block(COMP_ORDER_CLUSTER, COMP_ORDER_TARGET_PROC, 1000, 1060, 0)
-    text += block(COMP_ORDER_UNRELATED_CLUSTER, 0, 400, 500, sys.getsizeof(text))
-    text += block(COMP_ORDER_CLUSTER, COMP_ORDER_OTHER_PROC, 1000, 1065, sys.getsizeof(text))
+    text = block(COMP_ORDER_CLUSTER, COMP_ORDER_TARGET_PROC, 1000, 1060, 1060, 0)
+    text += block(COMP_ORDER_UNRELATED_CLUSTER, 0, 400, 500, 1200, sys.getsizeof(text))
+    text += block(COMP_ORDER_CLUSTER, COMP_ORDER_OTHER_PROC, 1000, 1065, 1300, sys.getsizeof(text))
 
     with open(filename, "w") as f:
         f.write(text)
@@ -706,4 +717,13 @@ class TestCondorHistory:
         p = default_condor.run_command(["condor_history", target, "-file", writeCompletionOrderFile,
                                          "-af", "ClusterId", "ProcId"])
         assert p.stdout.strip() == f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}"
+
+    def test_completion_date_ordering_regression_cluster_only(self, default_condor, writeCompletionOrderFile):
+        p = default_condor.run_command(["condor_history", str(COMP_ORDER_CLUSTER), "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        lines = [line for line in p.stdout.strip().split("\n") if line]
+        assert set(lines) == {
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}",
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_OTHER_PROC}",
+        }
 

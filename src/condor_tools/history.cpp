@@ -159,6 +159,8 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
+// Tolerance for clock skew between the times individual history records were written
+static const time_t HISTORY_WRITE_DATE_SLOP_SECS = 5;
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -1175,15 +1177,15 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 				}
 			}
 		}
-		//If the cluster submit time is greater than the current completion date remove from data structure.
-		//Only safe for cluster-only searches: history files are appended in queue-exit order, not
-		//CompletionDate order (e.g. LeaveJobInQueue can delay a job's append well past its completion),
-		//so for a specific cluster.proc this cutoff could fire on an unrelated ad and skip over the
-		//still-unread target proc before the real match (above) is ever reached.
-		// Optimization turned off for cluster early break for same issue: Need record write date to do 'correctly'
-		/*if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion) {
+		//If the cluster submit time is greater than the time this record was written, remove from
+		//data structure. Only applied for cluster-only searches: history files are appended in
+		//write order, so once we've scanned back to a record written before our target cluster was
+		//even submitted, nothing further back can match. banner.completion holds that write time
+		//(CurrentTime), not the ad's CompletionDate, since CompletionDate can lag write order
+		//arbitrarily (e.g. LeaveJobInQueue). A few seconds of slop absorb clock skew between writes.
+		if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion + HISTORY_WRITE_DATE_SLOP_SECS) {
 			match.isDoneMatching = true;
-		}*/
+		}
 	}
 
 	//Remove all match jid's done searching
@@ -1442,6 +1444,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 
 	const char * rhs;
 	std::string attr;
+	bool haveWriteTime = false; //Whether CurrentTime (the record's actual write time) has been parsed
 	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
 		int end = 0;
 		ExprTree * tree = parser.ParseExpression(rhs);
@@ -1462,7 +1465,15 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 					newInfo.runId = static_cast<int>(valueNum);
 		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
 			ExprTreeIsLiteralString(tree,newInfo.owner);
-		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
+		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum)) {
+				newInfo.completion = valueNum;
+				haveWriteTime = true;
+			}
+		//CurrentTime (the record's actual write time) always wins over CompletionDate (which can lag
+		//write order arbitrarily, e.g. via LeaveJobInQueue) regardless of which attr the banner lists
+		//first; only fall back to CompletionDate when this banner has no CurrentTime at all.
+		} else if (!haveWriteTime && strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}
