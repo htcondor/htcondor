@@ -73,7 +73,9 @@ typedef struct PROC_ID {
 
 /*
 ** Warning!  Keep these consistent with the strings defined in the
-** JobStatusNames array defined in condor_util_lib/proc.c
+** JobStatusNames array in src/condor_utils/proc.cpp.  When you add a
+** new status here and bump JOB_STATUS_MAX, you MUST add a matching
+** string to that array.
 */
 #define JOB_STATUS_MIN		1 /* Smallest valid job status value */
 #define IDLE				1
