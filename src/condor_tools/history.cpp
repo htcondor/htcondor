@@ -1175,8 +1175,12 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 				}
 			}
 		}
-		//If the cluster submit time is greater than the current completion date remove from data structure
-		if (banner.completion > 0 && match.QDate > banner.completion) {
+		//If the cluster submit time is greater than the current completion date remove from data structure.
+		//Only safe for cluster-only searches: history files are appended in queue-exit order, not
+		//CompletionDate order (e.g. LeaveJobInQueue can delay a job's append well past its completion),
+		//so for a specific cluster.proc this cutoff could fire on an unrelated ad and skip over the
+		//still-unread target proc before the real match (above) is ever reached.
+		if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion) {
 			match.isDoneMatching = true;
 		}
 	}
