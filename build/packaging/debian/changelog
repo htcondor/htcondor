@@ -1,14 +1,25 @@
+condor (25.12.2-1) stable; urgency=medium
+
+  * Maintains a job index to speed up condor history queries
+  * Can now set a duration for a user's floor or priority factor
+  * DAGMan will go into cool-down if it fails to launch
+  * Improved column headers for condor_top
+  * Audit log is now enabled by default on the Access Point
+  * Fixed 25.11.0 bug that causes unbounded growth in the accountant log
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 20 Jul 2026 14:07:00 -0500
+
 condor (25.0.12-1) stable; urgency=medium
 
   * All changes in 24.12.22
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Jul 2026 22:18:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 22:18:00 -0500
 
 condor (24.12.22-1) stable; urgency=medium
 
   * Fix rare job router crash when removing a recently routed job
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Jul 2026 22:06:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 22:06:00 -0500
 
 condor (24.0.22-1) stable; urgency=medium
 
@@ -19,7 +30,7 @@ condor (24.0.22-1) stable; urgency=medium
   * Fix issue when tools could infinitely loop when using trust on first use
   * HTCondor tarballs now contain Apptainer 1.5.2
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Jul 2026 21:41:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 21:41:00 -0500
 
 condor (25.11.1-1) stable; urgency=medium
 

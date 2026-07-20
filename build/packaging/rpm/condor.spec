@@ -1337,6 +1337,14 @@ fi
 # configuration
 
 %changelog
+* Mon Jul 20 2026 Tim Theisen <tim@cs.wisc.edu> - 25.12.2-1
+- Maintains a job index to speed up condor history queries
+- Can now set a duration for a user's floor or priority factor
+- DAGMan will go into cool-down if it fails to launch
+- Improved column headers for condor_top
+- Audit log is now enabled by default on the Access Point
+- Fixed 25.11.0 bug that causes unbounded growth in the accountant log
+
 * Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.12-1
 - All changes in 24.12.22
 
