@@ -96,8 +96,8 @@ def main():
 
     # pretty print a list of args (but no passwords) if debugging
     safe_args = vars(args).copy()
-    if "es_password" in safe_args:
-        safe_args["es_password"] = "<hidden>"
+    if "se_password" in safe_args:
+        safe_args["se_password"] = "<hidden>"
     logging.debug(f"Using config: {pprint.pformat(safe_args)}")
 
     # catch signals

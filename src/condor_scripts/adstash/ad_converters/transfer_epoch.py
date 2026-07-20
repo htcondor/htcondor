@@ -36,7 +36,7 @@ class TransferEpochClassAdConverter(GenericClassAdConverter):
         ):
         if kwargs.get("projection"):
             logging.warning("Projections are not used for transfer epoch ads")
-        if kwargs.get("ignore_attrs"):
+        if kwargs.get("ignore_attrs") or kwargs.get("custom_ignore_attrs"):
             logging.warning("Attributes cannot be ignored for transfer epoch ads")
         super().__init__(
             timestamp_fields=timestamp_fields,

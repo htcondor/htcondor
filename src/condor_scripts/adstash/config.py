@@ -23,7 +23,6 @@ import argparse
 import htcondor2 as htcondor
 
 from pathlib import Path
-from collections import OrderedDict
 
 from adstash.interfaces.registry import ADSTASH_INTERFACES
 
@@ -245,8 +244,8 @@ def normalize_config_types(conf):
         "startd_history_max_ads",
         "schedd_history_timeout",
         "startd_history_timeout",
-        "es_timeout",
-        "es_bunch_size",
+        "se_timeout",
+        "se_bunch_size",
     ]
     bools = [
         "standalone",
@@ -254,8 +253,6 @@ def normalize_config_types(conf):
         "read_startd_history",
         "read_schedd_job_epoch_history",
         "read_schedd_transfer_epoch_history",
-        "to_elasticsearch",
-        "to_json",
         "se_use_https",
         "se_log_mappings",
     ]
