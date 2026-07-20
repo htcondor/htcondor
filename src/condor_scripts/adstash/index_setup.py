@@ -94,8 +94,7 @@ def set_index_settings(
             }
         }
     except (IndexError, ValueError, KeyError):
-        logging.warning(f"{existing_settings}")
-        pass
+        logging.debug(f"No existing total_fields.limit found in settings: {existing_settings}")
     existing_settings = field_limit_settings
 
     ses = SearchEngineSettings(

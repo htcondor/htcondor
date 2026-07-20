@@ -97,21 +97,21 @@ class GenericClassAdConverter():
 
     def __init__(
             self,
-            mapping={},
-            projection=set(),
-            ignore_attrs=set(),
-            custom_ignore_attrs=set(),
-            required_attrs=set(),
-            timestamp_fields=["EnteredCurrentStatus"],
-            doc_id_fields=["RecordTime"],
+            mapping=None,
+            projection=None,
+            ignore_attrs=None,
+            custom_ignore_attrs=None,
+            required_attrs=None,
+            timestamp_fields=None,
+            doc_id_fields=None,
             ):
-        self.mapping = mapping
-        self.ignore_attrs = get_ignore_attrs(mapping, custom_ignore_attrs, ignore_attrs)
-        self.required_attrs = required_attrs
-        self.timestamp_fields = timestamp_fields
-        self.doc_id_fields = doc_id_fields
-        if len(projection) > 0:
-            self.projection = {attr.lower() for attr in projection | required_attrs}
+        self.mapping = mapping or {}
+        self.ignore_attrs = get_ignore_attrs(self.mapping, custom_ignore_attrs, ignore_attrs)
+        self.required_attrs = required_attrs or set()
+        self.timestamp_fields = timestamp_fields or ["EnteredCurrentStatus"]
+        self.doc_id_fields = doc_id_fields or ["RecordTime"]
+        if projection:
+            self.projection = {attr.lower() for attr in projection | self.required_attrs}
         else:
             self.projection = None
         self.known_field_types = self.get_known_field_types(self.mapping)
@@ -165,14 +165,14 @@ class GenericClassAdConverter():
         '''
         known_field_types = defaultdict(dict)
         for base_field_name, field_properties in mapping["properties"].items():
-            field_name_heirarchy = parent_field_names + [base_field_name]
-            flattened_field_name = ".".join(field_name_heirarchy)
+            field_name_hierarchy = parent_field_names + [base_field_name]
+            flattened_field_name = ".".join(field_name_hierarchy)
             if self.projection is not None and flattened_field_name.lower() not in self.projection:
                 continue
             field_type = FIELD_TYPE_MAP[field_properties.get("type", "object")]
             known_field_types[flattened_field_name.lower()][flattened_field_name] = field_type
             if field_type is dict and "properties" in field_properties:
-                known_field_types = known_field_types | self.get_known_field_types(field_properties, field_name_heirarchy)
+                known_field_types = known_field_types | self.get_known_field_types(field_properties, field_name_hierarchy)
         return known_field_types
 
     def get_dynamic_template_matchers(self, mapping: dict) -> OrderedDict:
@@ -244,7 +244,7 @@ class GenericClassAdConverter():
 
         # 1. Get the field name and field type mappings if known
         known_mappings = True
-        field_names_types = self.known_field_types[attr.lower()]
+        field_names_types = self.known_field_types.get(attr.lower(), {})
 
         # 2. Get the field name and field type mappings if unknown
         if not field_names_types:

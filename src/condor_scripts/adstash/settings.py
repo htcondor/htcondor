@@ -79,12 +79,12 @@ def calculate_field_limit(mappings, previous_limit=0):
 
 class SearchEngineSettings():
 
-    def __init__(self, index_name, mappings, custom_settings={}, existing_settings={}):
+    def __init__(self, index_name, mappings, custom_settings=None, existing_settings=None):
         self.alias = index_name
         self.mappings = mappings
         self.existing_settings = existing_settings or DEFAULT_INITIAL_SETTINGS
         self.settings = self.flatten_settings(self.existing_settings)
-        self.update_settings = self.flatten_settings(custom_settings)
+        self.update_settings = self.flatten_settings(custom_settings or {})
         self._calculate_update_settings_fields_limit()
         self.index_template_name = f"{index_name}-template"
         self.index_definition = {
@@ -92,7 +92,8 @@ class SearchEngineSettings():
             "mappings": self.mappings,
         }
 
-    def flatten_settings(self, settings={}, parent=""):
+    def flatten_settings(self, settings=None, parent=""):
+        settings = settings or {}
         flattened_settings = {}
         for k, v in settings.items():
             if parent:
@@ -128,7 +129,7 @@ class SearchEngineSettings():
     def _calculate_update_settings_fields_limit(self):
         previous_limit = int(self.settings.get("index.mapping.total_fields.limit", 0))
         self.update_settings["index.mapping.total_fields.limit"] = calculate_field_limit(self.mappings, previous_limit)
-        # Using limit = 5000 as an arbitrary point to start warning about performance degredation
+        # Using limit = 5000 as an arbitrary point to start warning about performance degradation
         if self.update_settings["index.mapping.total_fields.limit"] > 5000 and self.update_settings["index.mapping.total_fields.limit"] > previous_limit:
             logging.warning(f"Large index.mapping.total_fields.limit: {self.update_settings['index.mapping.total_fields.limit']}")
             logging.warning("Fields accumulate over time due to new attributes (custom or first-class).")

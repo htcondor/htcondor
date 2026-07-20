@@ -31,11 +31,11 @@ class JSONFileInterface(GenericInterface):
         super().__init__(**kwargs)
 
 
-    def make_bulk_body(self, docs: list, metadata={}) -> str:
+    def make_bulk_body(self, docs: list, metadata=None) -> str:
         body = []
         for doc_id, doc in docs:
             doc["_id"] = doc_id
-            doc["metadata"] = metadata  # bolt on the metadata
+            doc["metadata"] = metadata or {}  # bolt on the metadata
             body.append(doc)
 
         if self.json_legacy:
@@ -44,7 +44,7 @@ class JSONFileInterface(GenericInterface):
         return json.dumps(body, indent=2, sort_keys=True, default=classad_json_serializer)
 
 
-    def post_ads(self, ads, metadata={}, **kwargs):
+    def post_ads(self, ads, metadata=None, **kwargs):
 
         body = self.make_bulk_body(ads, metadata)
         json_file = self.json_dir / f"{time.time()}.json"

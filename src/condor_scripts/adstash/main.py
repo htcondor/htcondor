@@ -102,7 +102,7 @@ def adstash(args):
         if source_type == "ad_file" and args.read_ad_file is not None:
 
             # Currently, we assume generic ad files are from job history
-            mappings, settings = setup_index(interface=interface, ad_type="history", args=args)
+            mappings, _ = setup_index(interface=interface, ad_type="history", args=args)
             converter = AD_TYPE_CONVERTERS["history"](
                 mapping=mappings,
                 custom_ignore_attrs=args.custom_ignore_attrs,
@@ -122,7 +122,7 @@ def adstash(args):
                     logging.warning(f"Skipping querying {daemon_type}s since --read_ad_file was set.")
                     continue
 
-                mappings, settings = setup_index(interface=interface, ad_type=ad_type, args=args)
+                mappings, _ = setup_index(interface=interface, ad_type=ad_type, args=args)
                 converter = AD_TYPE_CONVERTERS[ad_type](
                     mapping=mappings,
                     projection=vars(args)[f"{daemon_type}_history_projection"],

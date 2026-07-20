@@ -16,7 +16,10 @@
 import logging
 
 
-def get_ignore_attrs(custom_mappings={}, custom_ignore_attrs=set(), default_ignore_attrs=set()) -> set:
+def get_ignore_attrs(custom_mappings=None, custom_ignore_attrs=None, default_ignore_attrs=None) -> set:
+    custom_mappings = custom_mappings or {}
+    custom_ignore_attrs = custom_ignore_attrs or set()
+    default_ignore_attrs = default_ignore_attrs or set()
     # First, duplicate lowercase version of defaults
     ignore_attrs = default_ignore_attrs | {attr.lower() for attr in default_ignore_attrs}
     # Then, do not ignore any attrs that have been defined in the custom mappings
@@ -47,13 +50,13 @@ def flatten_mapping_properties(properties: dict, parent="") -> dict:
 # 3. Default properties
 def merge_properties(*properties_in: dict) -> dict:
     if len(properties_in) < 2:
-        raise ValueError("merge_proprties requires at least two dicts")
+        raise ValueError("merge_properties requires at least two dicts")
 
     properties_out = {}
 
     # Start with properties from the first argument
     flattened_properties_in = flatten_mapping_properties(properties_in[0])
-    properties_out.update(flattened_properties_in)
+    properties_out.update({k: v.copy() for k, v in flattened_properties_in.items()})
 
     # Merge the other properties, adding multi-fields when possible if there are conflicts
     for property_in in properties_in[1:]:
@@ -63,7 +66,7 @@ def merge_properties(*properties_in: dict) -> dict:
 
             # Add the field if it doesn't exist yet
             if field not in properties_out:
-                properties_out[field] = mapping
+                properties_out[field] = mapping.copy()
                 continue
 
             existing_field_type = properties_out[field].get("type", "object")
@@ -88,7 +91,7 @@ def merge_properties(*properties_in: dict) -> dict:
                 if new_field_type in properties_out[field]["fields"]:
                     continue
 
-                # Add the mapping to the existing mutli-fields
+                # Add the mapping to the existing multi-fields
                 properties_out[field]["fields"][new_field_type] = mapping
 
             else:

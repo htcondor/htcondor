@@ -28,7 +28,7 @@ from adstash.interfaces.generic import GenericInterface
 class StartdHistorySource(GenericAdSource):
 
 
-    def fetch_ads(self, startd_ad, max_ads=10000, projection=set()):
+    def fetch_ads(self, startd_ad, max_ads=10000, projection=None):
         if projection:  # If user has defined a projection, make sure it contains required attrs
             projection = projection | REQUIRED_ATTRS
 
@@ -44,10 +44,10 @@ class StartdHistorySource(GenericAdSource):
             history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting ads from {startd_ad['Machine']} since {since_expr}.")
         startd = htcondor.Startd(startd_ad)
-        return startd.history(constraint=True, projection=list(projection), **history_kwargs)
+        return startd.history(constraint=True, projection=list(projection or []), **history_kwargs)
 
 
-    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, startd_ad, metadata={}, chunk_size=0, **kwargs):
+    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, startd_ad, metadata=None, chunk_size=0, **kwargs):
         starttime = time.time()
         chunk = []
         startd_checkpoint = None

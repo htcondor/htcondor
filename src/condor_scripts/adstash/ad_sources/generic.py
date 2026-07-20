@@ -58,7 +58,7 @@ class GenericAdSource(object):
         return []
 
 
-    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, metadata={}, chunk_size=0, **kwargs):
+    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, metadata=None, chunk_size=0, **kwargs):
         chunk = []
         generic_checkpoint = None
         ads_posted = 0

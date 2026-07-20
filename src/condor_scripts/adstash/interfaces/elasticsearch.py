@@ -146,10 +146,10 @@ class ElasticsearchInterface(GenericInterface):
                 logging.info(f"{alias} is an alias, found active index {index}.")
                 return index
 
-        # fallback to lexigraphically last index
+        # fallback to lexicographically last index
         indices = list(indices.keys())
         indices.sort(reverse=True)
-        logging.warning(f"Could not find an activate index for alias {alias}, trying {indices[0]}")
+        logging.warning(f"Could not find an active index for alias {alias}, trying {indices[0]}")
         return indices[0]
 
 
@@ -203,7 +203,7 @@ class ElasticsearchInterface(GenericInterface):
             client.indices.put_settings(index=index, settings=settings)
 
 
-    def make_bulk_body(self, docs: list, metadata={}) -> str:
+    def make_bulk_body(self, docs: list, metadata=None) -> str:
         """
         Elasticsearch supports bulk indexing via NDJSON, where
         an action (e.g. "index") is followed by the data object
@@ -212,7 +212,7 @@ class ElasticsearchInterface(GenericInterface):
         """
         body = []
         for doc_id, doc in docs:
-            doc["metadata"] = {**doc.get("metadata", {}), **metadata}  # merge existing with chunk-level metadata
+            doc["metadata"] = {**doc.get("metadata", {}), **(metadata or {})}  # merge existing with chunk-level metadata
             action = {"index": {"_id": doc_id}}  # index the doc w/ this id
             body.append(json.dumps(action))
             body.append(json.dumps(doc, sort_keys=True, default=classad_json_serializer))
@@ -291,7 +291,7 @@ class ElasticsearchInterface(GenericInterface):
         return n_errors
 
 
-    def post_ads(self, ads: list, index: str, metadata={}, **kwargs) -> dict:
+    def post_ads(self, ads: list, index: str, metadata=None, **kwargs) -> dict:
         """
         Push a list of JSON-ified ads in the format
         [(doc_id, ad), (doc_id, ad), ...]

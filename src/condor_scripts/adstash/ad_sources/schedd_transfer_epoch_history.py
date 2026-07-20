@@ -28,7 +28,7 @@ import classad2 as classad
 class ScheddTransferEpochHistorySource(GenericAdSource):
 
 
-    def fetch_ads(self, schedd_ad, max_ads=10000, projection=set()):
+    def fetch_ads(self, schedd_ad, max_ads=10000, projection=None):
 
         if projection:
             logging.warning(f"Custom projections are not supported for transfer epoch history")
@@ -52,7 +52,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         return schedd.jobEpochHistory(constraint=True, projection=[], ad_type="TRANSFER", **history_kwargs)
 
 
-    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, schedd_ad, metadata={}, chunk_size=0, **kwargs):
+    def process_ads(self, interface: GenericInterface, converter: GenericClassAdConverter, ads: list, schedd_ad, metadata=None, chunk_size=0, **kwargs):
         starttime = time.time()
         chunk = []
         schedd_checkpoint = None
