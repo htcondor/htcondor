@@ -202,7 +202,7 @@ jobs:
       - name: ctests
         run: |
           $env:ASAN_OPTIONS = "log_path='$pwd/__build/asan.log':exit_code=0"
-          cd __build && ctest -j 20 --repeat-until-fail 1 -R job_foreach
+          cd __build && ctest -C Debug -j 20 --repeat-until-fail 1 -R "unit_test_macro_expand|job_foreach"
 
       - name: block upload until everything gone
         if: failure()
