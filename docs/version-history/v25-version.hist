@@ -51,6 +51,11 @@
   the first time and a view collector was also configured to run.
   :jira:`3832`
 
+- The classad functions versionGT, versionGE, versionLT, versionLE
+  and versionEQ are now case-insensitive, matching all other classad
+  functions.
+  :jira:`3818`
+
 - :tool:`condor_history` now selects the schedd to query the same way
   :tool:`condor_submit` and :tool:`condor_q` do, honoring both
   :macro:`SCHEDD_HOST` and :macro:`SCHEDD_NAME`.  Previously only
