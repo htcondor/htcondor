@@ -46,6 +46,14 @@
   the first time and a view collector was also configured to run.
   :jira:`3832`
 
+- :tool:`condor_history` now selects the schedd to query the same way
+  :tool:`condor_submit` and :tool:`condor_q` do, honoring both
+  :macro:`SCHEDD_HOST` and :macro:`SCHEDD_NAME`.  Previously only
+  :macro:`SCHEDD_HOST` was consulted and :macro:`SCHEDD_NAME` was ignored. Use
+  ``-local`` to force reading the local history file regardless of
+  configuration.
+  :jira:`3839`
+
 *** 25.0.13 bugs
 
 *** 25.12.0 features

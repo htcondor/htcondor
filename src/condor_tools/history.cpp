@@ -70,9 +70,11 @@ void Usage(const char* name, int iExitCode)
 		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
-		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
-		"   the SCHEDD configured by SCHEDD_HOST is queried.  If there\n"
-		"   is no configured SCHEDD (the default) the local history file(s) are read.\n"
+		"   If neither -file, -local, -userlog, nor -name is specified, then the\n"
+		"   schedd identified by SCHEDD_HOST or SCHEDD_NAME is located (as\n"
+		"   condor_q and condor_submit do).  If that schedd is on another host it\n"
+		"   is queried remotely; otherwise, or if no schedd can be located, the\n"
+		"   local history file(s) are read.\n"
 		"\n   and [restriction-list] is one or more of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
@@ -118,7 +120,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -323,7 +325,11 @@ main(int argc, const char* argv[])
   set_priv_initialize(); // allow uid switching if root
   config();
 
-  readfromfile = ! param_defined("SCHEDD_HOST");
+  // Whether to read the local history file(s) versus querying a schedd is
+  // decided below.  Flags like -file/-userlog/-local force local reading and
+  // -name/-pool force a remote query; those set source_is_explicit so we skip
+  // the automatic local-vs-remote detection done after argument parsing.
+  bool source_is_explicit = false;
 
   for(i=1; i<argc; i++) {
     if (is_dash_arg_prefix(argv[i],"long",1)) {
@@ -396,21 +402,24 @@ main(int argc, const char* argv[])
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
     }
 	else if (is_dash_arg_prefix(argv[i],"userlog",1)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
 		fileisuserlog = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"local",2)) {
-		// -local overrides the existance of SCHEDD_HOST and forces a local query
+		// -local overrides the existance of SCHEDD_HOST/SCHEDD_NAME and forces a local query
 		if ( ! g_name.empty()) {
 			fprintf(stderr, "Error: Arguments -local and -name cannot be used together\n");
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		dash_local = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
@@ -457,6 +466,7 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		writetosocket = true;
 		backwards = true;
 		longformat = true;
@@ -754,6 +764,7 @@ main(int argc, const char* argv[])
         }
         g_name = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
     else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
         i++;    
@@ -767,6 +778,7 @@ main(int argc, const char* argv[])
         }       
         g_pool = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
 	else if (argv[i][0] == '-') {
 		fprintf(stderr, "Error: Unknown argument %s\n", argv[i]);
@@ -783,6 +795,27 @@ main(int argc, const char* argv[])
   if (i<argc) Usage(argv[0]);
 
   condenseJobFilterList(true);
+
+  // Build the Daemon we would query for a remote history read.  This same
+  // object is reused by readHistoryRemote() below, so we only ever locate once.
+  daemon_t history_dt = want_startd_history ? DT_STARTD : DT_SCHEDD;
+  Daemon history_daemon(history_dt,
+                        g_name.empty() ? nullptr : g_name.c_str(),
+                        g_pool.empty() ? nullptr : g_pool.c_str());
+
+  // If the user did not explicitly select a source (-file/-userlog/-local, or
+  // -name/-pool), decide between reading the local history file(s) and querying
+  // a schedd the same way condor_q and condor_submit choose their schedd:
+  // locate the daemon (honoring SCHEDD_HOST first, then SCHEDD_NAME).  If it
+  // resolves to a daemon on this machine (its address came from a local
+  // address file) then read the local file(s); if it resolves to a remote
+  // daemon, query it.  If no daemon can be located at all (e.g. nothing
+  // configured, or the daemon is not running), fall back to the local file(s).
+  if ( ! source_is_explicit) {
+    if (history_daemon.locate(Daemon::LOCATE_FOR_LOOKUP) && ! history_daemon.locatedViaLocalFile()) {
+      readfromfile = false;
+    }
+  }
 
   //If record source is still AUTO then set to original history based on want_startd_history
   if (recordSrc == HRS_AUTO) {
@@ -924,7 +957,7 @@ main(int argc, const char* argv[])
     }
   }
   else {
-      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, history_daemon);
   }
   delete constraintExpr;
 
@@ -1053,7 +1086,7 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1084,7 +1117,9 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 		history_cmd = GET_HISTORY;
 	}
 
-	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
+	// daemon is supplied by the caller (already located when the local-vs-remote
+	// decision was made; locate() here is a no-op in that case, or performs the
+	// lookup for an explicit -name/-pool query).
 	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote %s (name=%s, pool=%s).\n", daemon_type, g_name.c_str(), g_pool.c_str());
 		exit(1);
