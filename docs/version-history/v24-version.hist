@@ -50,7 +50,7 @@
   :macro:`JOB_ROUTER_SCHEDD1_POOL` were set.
   :jira:`3760`
 
-- Fixed a bug where :tool:`condor_store_credd` would fail to store a pool password
+- Fixed a bug where :tool:`condor_store_cred` would fail to store a pool password
   when executing the ``add-pwd`` option as a privileged user (i.e. root).
   :jira:`3804`
 
