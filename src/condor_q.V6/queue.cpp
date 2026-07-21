@@ -1631,7 +1631,13 @@ processCommandLineArguments (int argc, const char *argv[])
 					}
 				}
 			}
-			qdo_mode = QDO_Progress;
+			// Don't clobber a custom output format (-af/-format/-print-format) that was
+			// specified before -batch on the command line, so that the -batch/custom-format
+			// conflict is diagnosed the same way regardless of argument order. (-af after
+			// -batch already wins because it assigns qdo_mode.)
+			if ((qdo_mode & QDO_BaseMask) < QDO_Custom) {
+				qdo_mode = QDO_Progress;
+			}
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
@@ -1793,7 +1799,10 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 			//	mode == QDO_JobIdle || // TODO: need a custom format for -batch -idle
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset) {
+				// -aaf appends columns to a per-job display and can't combine with the
+				// batch progress format, so don't turn batch on by default for it;
+				// treat bare -aaf like -nobatch -aaf rather than erroring out.
+				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset && append_autoformat_args.empty()) {
 					dash_batch = dash_batch_is_default;
 				}
 			}
@@ -1809,6 +1818,15 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 			dash_batch = false;
 		}
+	}
+
+	// A custom output format (-format, -af/-autoformat, or -print-format) replaces the
+	// built-in batch columns that -batch's progress reduction writes into, so the two
+	// can't be combined. Reject it the same way -aaf does below. These flags all select
+	// a custom (non-batch) display, so simply dropping -batch is enough to use them.
+	if (dash_batch && (qdo_mode & QDO_BaseMask) == QDO_Custom) {
+		fprintf(stderr, "Error: -format, -autoformat/-af and -print-format cannot be used with -batch mode output (the default), use them without -batch\n");
+		exit(1);
 	}
 
 	if (dash_dry_run) {
@@ -1837,7 +1855,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	if ( ! append_autoformat_args.empty()) {
 		if ( ! can_use_append_autoformat_args) {
 			if (dash_batch) {
-				fprintf(stderr, "Error: -aaf cannot be used with -batch mode output (the default), did you intend to use -af ?\n");
+				fprintf(stderr, "Error: -batch can't be used with -aaf\n");
 			} else {
 				fprintf(stderr, "Error: output formatting options conflict with -aaf options\n");
 			}
