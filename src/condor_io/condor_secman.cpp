@@ -972,7 +972,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 }
 
-class SecManStartCommand: Service, public ClassyCountedPtr {
+class SecManStartCommand: public ClassyCountedPtr {
  public:
 	SecManStartCommand (
 		int cmd,Sock *sock,bool raw_protocol, bool request_auth, bool resume_response,
@@ -2908,9 +2908,8 @@ SecManStartCommand::WaitForSocketCallback()
 	int reg_rc = daemonCore->Register_Socket(
 		m_sock,
 		m_sock->peer_description(),
-		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
-		req_description.c_str(),
-		this);
+		[this](Stream *stream) { return this->SocketCallback(stream); },
+		req_description.c_str());
 
 	if(reg_rc < 0) {
 		std::string msg;

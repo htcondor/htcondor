@@ -88,10 +88,11 @@ pcccWants( PROC_ID nowJob, match_rec * match ) {
 	dprintf( D_FULLDEBUG, "pcccWants( %d.%d, %p )\n", nowJob.cluster, nowJob.proc, match );
 
 	if( pcccTimerMap.find( nowJob ) == pcccTimerMap.end() ) {
+		int vacate_timeout = param_integer( "SCHEDD_NOW_JOB_VACATE_TIMEOUT", 20 );
 		pcccDoneCallback * pcd = new pcccDoneCallback( nowJob );
 		pcccTimerSelfMap[ nowJob ] = pcd;
 		pcccTimerMap[ nowJob ] = daemonCore->Register_Timer(
-			20 /* years of carefuly research */,
+			vacate_timeout,
 			(TimerHandlercpp) & pcccDoneCallback::callback,
 			"pcccDoneCallback", pcd );
 		dprintf( D_FULLDEBUG, "pcccWants( %d.%d, %p ): started timer %d (data %p)\n", nowJob.cluster, nowJob.proc, match, pcccTimerMap[ nowJob ], pcd );

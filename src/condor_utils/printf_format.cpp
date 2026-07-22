@@ -185,6 +185,7 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		/* Now, find the width, if any */
 	if( **fmt_p == '*' ) {
 			/* Width is given in an argument, we don't support this yet */
+		info->width = PRINTF_FMT_STAR_WIDTH;
     } else if( isdigit(**fmt_p) ) {
 			/* Width is a constant */
 		info->width = consumeInt( fmt_p );
@@ -206,6 +207,7 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		if( **fmt_p == '*') {
 				/* Precision is set as is an argument, we don't
 				   support this yet, either.  */
+			info->precision = PRINTF_FMT_STAR_WIDTH;
 		} else if( isdigit(**fmt_p) ) {
 			info->precision = consumeInt( fmt_p );
 		}
@@ -301,7 +303,7 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 
     case 'n':
 			/* don't really support this, but treat like an int */
-		info->type = PFT_INT;
+		info->type = PFT_CRASH;
 		break;
 
     case 'C':
@@ -348,4 +350,41 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		break;
     }
 	return TRUE;
+}
+
+// Check to see if a printf format is ok for the given data type.
+//   when extended_types is true, %V, %R, %T and %Y are permitted
+//   optionally, the offset of the format letter in the fmt string is returned.
+// returns:
+//   0 for not a print format
+//  -1 for bad printformat
+//   1 for good print format
+int validatePrintfFormat(const char *fmt, printf_fmt_t data_type, bool extended_types, int* fmt_char_offset)
+{
+	printf_fmt_info info;
+	const char * tmp = fmt;
+	if ( ! parsePrintfFormat(&tmp, &info)) {
+		return 0;
+	}
+	if (info.unsafe()) {
+		// uses %n which WRITES using a stack value as a pointer!!
+		// or * for width or * for precision which consume an extra stack arg.
+		return -1; // unsafe to use
+	}
+	if (fmt_char_offset) { *fmt_char_offset = (int)(tmp-fmt); }
+	bool type_ok = (data_type == info.type); // check if format type matches data type exactly
+	if ( ! type_ok) {
+		if (info.type == PFT_POINTER) {
+			type_ok = true; // %p is always safe
+		} else if (data_type == PFT_INT && info.type == PFT_CHAR) {
+			type_ok = true; // %c are ok for integer values
+		} else if (extended_types && info.type >= PFT_VALUE) {
+			type_ok = true; // %V, %R, %T, and %Y are ok
+		}
+	}
+	// another % format after this would make the whole format unsafe to use
+	if (parsePrintfFormat(&tmp, &info)) {
+		return -1; // unsafe.
+	}
+	return type_ok ? 1 : 0;
 }

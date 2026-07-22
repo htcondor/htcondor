@@ -1343,7 +1343,8 @@ bool evalInEachContext_func( const char * name,
 
 	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
 		classad::Value cav;
-		nal->Evaluate(state, cav);
+		// The success/failure is captured by inspecting cav below.
+		std::ignore = nal->Evaluate(state, cav);
 		classad::ExprList * list = NULL;
 		if(cav.IsListValue(list)) {
 			nal = list;
@@ -1378,11 +1379,13 @@ bool evalInEachContext_func( const char * name,
 			classad::Value cav = evaluateInContext(expr, state, nested_ad);
 			if (cav.IsListValue()) {
 				classad::ExprList * elv = nullptr;
-				cav.IsListValue(elv);
+				// type already confirmed by IsListValue() above
+				std::ignore = cav.IsListValue(elv);
 				lst->push_back(elv->Copy());
 			} else if (cav.IsClassAdValue()) {
 				classad::ClassAd * cad = nullptr;
-				cav.IsClassAdValue(cad);
+				// type already confirmed by IsClassAdValue() above
+				std::ignore = cav.IsClassAdValue(cad);
 				lst->push_back(cad->Copy());
 			} else {
 				lst->push_back(classad::Literal::MakeLiteral(cav));

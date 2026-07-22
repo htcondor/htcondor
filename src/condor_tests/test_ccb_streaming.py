@@ -43,6 +43,32 @@ def proxy_session_count(condor):
         "started streaming (proxy) session"
     )
 
+
+def collector_stat(condor, attr):
+    # Read a single attribute from the collector's own (self) ad.  Returns the
+    # stripped stdout, which is "" when the attribute is not (yet) published.
+    p = condor.run_command(["condor_status", "-collector", "-af", attr])
+    assert p.returncode == 0, "condor_status %s failed: %s" % (attr, p.stderr)
+    return p.stdout.strip()
+
+
+def wait_for_collector_stat(condor, attr, timeout=60):
+    # The CCBStreaming* stats live in the collector process and increment the
+    # instant a relay happens, but they only become visible in the collector's
+    # advertised self ad when the collector rebuilds it on its periodic self-ad
+    # timer (COLLECTOR_UPDATE_INTERVAL; the first publish is ~1s after startup).
+    # A firewalled tool can therefore stream successfully -- and the relay be
+    # logged -- a beat before the self ad carrying the stat exists, so poll for
+    # the published value rather than racing that publish.
+    deadline = time.time() + timeout
+    while True:
+        value = collector_stat(condor, attr)
+        if value not in ("", "undefined"):
+            return value
+        if time.time() >= deadline:
+            return value
+        time.sleep(1)
+
 # A unique payload the job must receive via HTCondor file transfer and echo back.
 TRANSFER_SENTINEL = "ccb-streaming-file-transfer-payload-2f9c1a7b"
 
@@ -68,7 +94,7 @@ def condor(test_dir):
             "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "SHADOW.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "STARTD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
-            # CCB's reverse-connect listener relies on the shared port being
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             # off (matching the existing lib_ccb_* tests).
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
@@ -168,6 +194,7 @@ def ccb_tool_condor(test_dir):
             "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR SCHEDD",
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             "COLLECTOR_DEBUG": "D_FULLDEBUG",
         },
     ) as condor:
@@ -228,31 +255,22 @@ class TestCCBStreamingTool:
             )
 
             # The broker's streaming statistics (published in its collector ad)
-            # should account for the session and the bytes it relayed.
-            sessions = condor.run_command(
-                ["condor_status", "-collector", "-af", "CCBStreamingSessions"]
+            # should account for the session and the bytes it relayed.  Wait for
+            # the collector to publish the self ad carrying the stat rather than
+            # racing that publish; once it appears, all CCBStreaming* attributes
+            # are present together.
+            sessions = wait_for_collector_stat(condor, "CCBStreamingSessions")
+            assert sessions not in ("", "undefined"), (
+                "CCBStreamingSessions not published: %r" % sessions
             )
-            assert sessions.returncode == 0
-            assert sessions.stdout.strip() not in ("", "undefined"), (
-                "CCBStreamingSessions not published: %r" % sessions.stdout
-            )
-            assert int(sessions.stdout.strip()) >= 1
+            assert int(sessions) >= 1
 
-            num_bytes = condor.run_command(
-                ["condor_status", "-collector", "-af", "CCBStreamingBytes"]
-            )
-            assert int(num_bytes.stdout.strip()) > 0
+            assert int(collector_stat(condor, "CCBStreamingBytes")) > 0
 
             # The request that produced the session is counted, and an orderly
             # close (EOF) is not counted as a relay failure.
-            requests = condor.run_command(
-                ["condor_status", "-collector", "-af", "CCBStreamingRequests"]
-            )
-            assert int(requests.stdout.strip()) >= 1
-            failed = condor.run_command(
-                ["condor_status", "-collector", "-af", "CCBStreamingFailed"]
-            )
-            assert int(failed.stdout.strip()) == 0
+            assert int(collector_stat(condor, "CCBStreamingRequests")) >= 1
+            assert int(collector_stat(condor, "CCBStreamingFailed")) == 0
         finally:
             if ro_dir is not None:
                 os.chmod(ro_dir, 0o755)
@@ -281,6 +299,7 @@ def no_streaming_condor(test_dir):
             "STARTD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             "COLLECTOR_DEBUG": "D_FULLDEBUG",
         },
     ) as condor:

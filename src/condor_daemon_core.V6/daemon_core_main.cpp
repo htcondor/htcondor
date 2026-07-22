@@ -3483,6 +3483,7 @@ int dc_main( int argc, char** argv )
 	char	*ptmp;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
+	bool	wantsConfigExcept = TRUE;
 	bool	done;
 
 	set_priv_initialize();
@@ -3815,6 +3816,7 @@ int dc_main( int argc, char** argv )
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
 	//config_options |= get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ? CONFIG_OPT_DEPRECATION_WARNINGS : 0;
 	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	if (wantsConfigExcept) { config_options |= CONFIG_OPT_WANT_EXCEPT; } // should this really be all daemons?
 	config_ex(config_options);
 
 

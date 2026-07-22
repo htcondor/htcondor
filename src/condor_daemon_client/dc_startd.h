@@ -399,13 +399,16 @@ public:
 		}
 
 		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		NotifyStartdOfMatchHandler *self = this;
 		m_startd.startCommand_nonblocking (
 			MATCH_INFO,
 			st,
 			m_timeout,
 			NULL,
-			NotifyStartdOfMatchHandler::startCommandCallback,
-			this);
+			[self](bool success, Sock *sock, CondorError *errstack,
+				const std::string &trust_domain, bool should_try_token_request) {
+				NotifyStartdOfMatchHandler::startCommandCallback(success, sock, errstack, trust_domain, should_try_token_request, self);
+			});
 
 			// Since this is nonblocking, we cannot give any immediate
 			// feedback on whether the message to the startd succeeds.

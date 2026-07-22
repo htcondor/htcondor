@@ -354,7 +354,8 @@ DockerProc::PullReaper(int pid, int status) {
 		std::string pull_stderror;
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
-			htcondor::readShortFile(DockerErrorFile(), pull_stderror);
+			// best-effort; if unreadable pull_stderror stays empty
+			std::ignore = htcondor::readShortFile(DockerErrorFile(), pull_stderror);
 		}
 		std::erase(pull_stderror, '\n');
 		message += ' ' + pull_stderror;

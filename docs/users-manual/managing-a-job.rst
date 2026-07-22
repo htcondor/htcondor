@@ -23,7 +23,7 @@ placed on **Hold**, or **Removed** entirely.  The numeric values behind these
 state names are listed in the :doc:`/codes-other-values/job-status-codes`
 section.  Note that the job exit code, which, by convention is 0 for success
 and non-zero for error, plays no role in determining the state of a job that
-was not submitted by *condor_dagman*.  See the dagman section (:ref:`DAGMan`)
+was not submitted by *condor_dagman*.  See the dagman section (:ref:`DAGMan Documentation`)
 for more information about how dagman uses the job exit code.
 
 .. mermaid::
