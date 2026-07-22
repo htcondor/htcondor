@@ -9498,6 +9498,199 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 }
 
 
+// Mint an AP-signed IDTOKEN granting the CONTROLLER capability.  An authorized
+// caller (the "htcondor ep controller" CLI) requests this token and delivers it
+// to an EP, which then treats this AP as its controller.  See CONTROLLER_DESIGN.md.
+int
+Scheduler::CmdRequestControllerToken(int, Stream* stream)
+{
+	ReliSock* rsock = (ReliSock*)stream;
+
+	ClassAd request_ad;
+	rsock->decode();
+	if (!getClassAd(rsock, request_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdRequestControllerToken() failed to read request ad\n");
+		return 0;
+	}
+
+	const char* fqu = rsock->getFullyQualifiedUser();
+	dprintf(D_ALWAYS, "Processing controller token request from %s\n", fqu ? fqu : "(unknown)");
+
+	ClassAd reply_ad;
+	rsock->encode();
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		reply_ad.Assign(ATTR_ERROR_CODE, 44);
+		reply_ad.Assign(ATTR_ERROR_STRING, "Token request disabled");
+		putClassAd(rsock, reply_ad);
+		rsock->end_of_message();
+		return 0;
+	}
+
+	// The identity this AP authenticates as when it later connects to the EP to
+	// evict claims; the EP authorizes evicts from exactly this identity.  We do
+	// NOT use the minted token for that connection (the AP authenticates with
+	// its normal daemon credentials), so this must match the AP's real daemon
+	// identity as the EP sees it.  Defaults to condor@<TRUST_DOMAIN> (the usual
+	// pooled-daemon identity) and is overridable for pools that map daemons
+	// differently.  See CONTROLLER_DESIGN.md.
+	std::string identity;
+	if (!param(identity, "SCHEDD_CONTROLLER_IDENTITY") || identity.empty()) {
+		identity = "condor";
+	}
+
+	long lifetime = -1;
+	request_ad.LookupInteger(ATTR_SEC_LIFETIME, lifetime);
+
+	CondorError err;
+	std::string key_name = htcondor::get_token_signing_key(err);
+	if (key_name.empty()) {
+		reply_ad.Assign(ATTR_ERROR_CODE, err.code() ? err.code() : 1);
+		reply_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
+		putClassAd(rsock, reply_ad);
+		rsock->end_of_message();
+		return 0;
+	}
+
+	const std::vector<std::string> authz = { "CONTROLLER" };
+	std::string token;
+	if (!Condor_Auth_Passwd::generate_token(identity, key_name, authz, lifetime,
+			false, token, rsock->getUniqueId(), &err))
+	{
+		reply_ad.Assign(ATTR_ERROR_CODE, err.code() ? err.code() : 1);
+		reply_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
+		putClassAd(rsock, reply_ad);
+		rsock->end_of_message();
+		return 0;
+	}
+
+	// Compose the fully-qualified controller identity (subject@issuer) the EP
+	// will authorize, and report our pool so the EP can reach us.
+	std::string trust_domain;
+	param(trust_domain, "TRUST_DOMAIN");
+	std::string full_identity = identity;
+	if (!trust_domain.empty()) {
+		full_identity += "@";
+		full_identity += trust_domain;
+	}
+
+	std::string pool;
+	param(pool, "COLLECTOR_HOST");
+
+	reply_ad.Assign(ATTR_ERROR_CODE, 0);
+	reply_ad.Assign(ATTR_SEC_TOKEN, token);
+	reply_ad.Assign("ControllerName", Name);
+	reply_ad.Assign("ControllerIdentity", full_identity);
+	if (!pool.empty()) {
+		reply_ad.Assign("ControllerPool", pool);
+	}
+
+	dprintf(D_ALWAYS, "Issued controller token for identity %s\n", full_identity.c_str());
+
+	if (!putClassAd(rsock, reply_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdRequestControllerToken() failed to send reply\n");
+		return 0;
+	}
+	return 0;
+}
+
+
+// Record (or forget) that this AP controls an EP.  The "htcondor ep controller"
+// CLI calls this after the EP itself has accepted (or been cleared of) the
+// relationship, so this AP knows the EPs it is responsible for and can list
+// them via "htcondor ap controlled".  This is bookkeeping only -- the eviction
+// authority lives on the EP; here we merely remember it.  See CONTROLLER_DESIGN.md.
+int
+Scheduler::CmdRegisterControlledEP(int, Stream* stream)
+{
+	ReliSock* rsock = (ReliSock*)stream;
+
+	ClassAd request_ad;
+	rsock->decode();
+	if (!getClassAd(rsock, request_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdRegisterControlledEP() failed to read request ad\n");
+		return 0;
+	}
+
+	const char* fqu = rsock->getFullyQualifiedUser();
+
+	ClassAd reply_ad;
+	rsock->encode();
+
+	std::string ep_name;
+	if (!request_ad.LookupString("EPName", ep_name) || ep_name.empty()) {
+		reply_ad.Assign(ATTR_RESULT, false);
+		reply_ad.Assign(ATTR_ERROR_STRING, "EPName not specified");
+		putClassAd(rsock, reply_ad);
+		rsock->end_of_message();
+		return 0;
+	}
+
+	bool remove = false;
+	request_ad.LookupBool("Remove", remove);
+
+	if (remove) {
+		m_controlledEPs.erase(ep_name);
+		dprintf(D_ALWAYS, "No longer controlling EP %s (reported by %s)\n",
+			ep_name.c_str(), fqu ? fqu : "(unknown)");
+	} else {
+		std::string ep_pool;
+		request_ad.LookupString("EPPool", ep_pool);
+
+		ClassAd ep_ad;
+		ep_ad.Assign(ATTR_NAME, ep_name);
+		if (!ep_pool.empty()) {
+			ep_ad.Assign("EPPool", ep_pool);
+		}
+		ep_ad.Assign("WhenControlled", (long long)time(nullptr));
+		m_controlledEPs[ep_name] = ep_ad;
+		dprintf(D_ALWAYS, "Now controlling EP %s (reported by %s)\n",
+			ep_name.c_str(), fqu ? fqu : "(unknown)");
+	}
+
+	reply_ad.Assign(ATTR_RESULT, true);
+	if (!putClassAd(rsock, reply_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdRegisterControlledEP() failed to send reply\n");
+		return 0;
+	}
+	return 0;
+}
+
+
+// Send back the list of EPs this AP controls, one ad at a time, using the same
+// streamed more-flag protocol as the other schedd ad queries (see getClaims).
+int
+Scheduler::CmdQueryControlledEPs(int, Stream* stream)
+{
+	ClassAd queryAd;
+	stream->decode();
+	stream->timeout(15);
+	if (!getClassAd(stream, queryAd) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdQueryControlledEPs() failed to read query ad\n");
+		return FALSE;
+	}
+
+	int more = 1;
+	int num_ads = 0;
+	stream->encode();
+	for (auto& [name, ad] : m_controlledEPs) {
+		if (!stream->code(more) || !putClassAd(stream, ad)) {
+			dprintf(D_ALWAYS, "CmdQueryControlledEPs() failed to send ad for %s\n", name.c_str());
+			return FALSE;
+		}
+		num_ads++;
+	}
+
+	more = 0;
+	if (!stream->code(more) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdQueryControlledEPs() failed to send end of controlled EP list\n");
+		return FALSE;
+	}
+	dprintf(D_FULLDEBUG, "Sent %d controlled EP ads in response to query\n", num_ads);
+	return TRUE;
+}
+
+
 void
 Scheduler::release_claim(int, Stream *sock)
 {
@@ -16883,6 +17076,20 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::CmdDirectAttach,
 			"DirectAttach", this, WRITE,
 			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(REQUEST_CONTROLLER_TOKEN,
+			"REQUEST_CONTROLLER_TOKEN",
+			(CommandHandlercpp)&Scheduler::CmdRequestControllerToken,
+			"RequestControllerToken", this, WRITE,
+			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(REGISTER_CONTROLLED_EP,
+			"REGISTER_CONTROLLED_EP",
+			(CommandHandlercpp)&Scheduler::CmdRegisterControlledEP,
+			"RegisterControlledEP", this, WRITE,
+			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(QUERY_CONTROLLED_EPS,
+			"QUERY_CONTROLLED_EPS",
+			(CommandHandlercpp)&Scheduler::CmdQueryControlledEPs,
+			"QueryControlledEPs", this, READ);
 
 		 // Commands used by the startd are registered at READ
 		 // level rather than something like DAEMON or WRITE in order

@@ -608,6 +608,16 @@ class Scheduler : public Service
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 	int				CmdDirectAttach(int cmd, Stream* stream);
+	// Mint an AP-signed IDTOKEN granting the CONTROLLER capability, returned
+	// to an authorized caller so it can make this AP an EP's controller.
+	int				CmdRequestControllerToken(int cmd, Stream* stream);
+	// Record (or, when Remove is set, forget) that this AP is the controller
+	// of an EP.  Called by the "htcondor ep controller" CLI after the EP has
+	// accepted the relationship.  The controller relationship is distinct from
+	// a claim: it grants eviction authority over the whole EP and holds no job.
+	int				CmdRegisterControlledEP(int cmd, Stream* stream);
+	// Return the list of EPs this AP currently controls (one ad each).
+	int				CmdQueryControlledEPs(int cmd, Stream* stream);
 
 	int			FindGManagerPid(PROC_ID job_id);
 
@@ -971,6 +981,13 @@ private:
 	ScheddCronJobMgr	*CronJobMgr;
 	std::map<std::string, ClassAd> extra_ads;
 
+	// EPs this AP is the controller of, keyed by EP name.  Populated when the
+	// "htcondor ep controller" CLI informs us after an EP accepts control, and
+	// listed by "htcondor ap controlled".  In-memory only (not persisted);
+	// distinct from claims (matchesByJobID) -- a controlled EP need not be
+	// claimed by us, and holds no job on our behalf.  See CONTROLLER_DESIGN.md.
+	std::map<std::string, ClassAd> m_controlledEPs;
+  
 	// The Preparing task prototypes, set on startup and extended by config
 	std::map<std::string, std::unique_ptr<PreparingTaskDescription>, CaseIgnLTYourString> preptask_proto;
 	// Ordered list of preparing tasks that are enabled by config

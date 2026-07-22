@@ -462,6 +462,14 @@ main_init( int, char* argv[] )
 								  "REHOME",
 								  command_rehome,
 											 "command_rehome", ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( SET_CONTROLLER,
+								  "SET_CONTROLLER",
+								  command_set_controller,
+											 "command_set_controller", ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( CLEAR_CONTROLLER,
+								  "CLEAR_CONTROLLER",
+								  command_clear_controller,
+											 "command_clear_controller", ADMINISTRATOR);
 	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
 								  "CANCEL_DRAIN_JOBS",
 								  command_cancel_drain_jobs,
@@ -523,8 +531,39 @@ main_config()
 }
 
 
+// Identity currently granted controller (ADMINISTRATOR) authorization via a
+// punched hole, so we only punch/fill on an actual change.
+static std::string PunchedControllerIdentity;
+
 void
-finish_main_config( void ) 
+reconfig_controller_authz()
+{
+	std::string identity;
+	param(identity, "STARTD_CONTROLLER_IDENTITY");
+	if (identity == PunchedControllerIdentity) {
+		return;
+	}
+
+	IpVerify* ipv = daemonCore->getIpVerify();
+	if (!PunchedControllerIdentity.empty()) {
+		ipv->FillHole(ADMINISTRATOR, PunchedControllerIdentity);
+		dprintf(D_ALWAYS, "Revoked controller authorization for %s\n",
+				PunchedControllerIdentity.c_str());
+	}
+	if (!identity.empty()) {
+		// The controller is a trusted AP being deliberately granted the
+		// ability to evict claims here.  We grant it ADMINISTRATOR rather
+		// than a vacate-only authorization; tightening the scope is a
+		// possible future refinement (see CONTROLLER_DESIGN.md).
+		ipv->PunchHole(ADMINISTRATOR, identity);
+		dprintf(D_ALWAYS, "Granted controller authorization (ADMINISTRATOR) to %s\n",
+				identity.c_str());
+	}
+	PunchedControllerIdentity = identity;
+}
+
+void
+finish_main_config( void )
 {
 #if defined(WIN32)
 	resmgr->reset_credd_test_throttle();
@@ -717,6 +756,9 @@ init_params( int first_time)
 		match_password_enabled = new_match_password;
 	}
 
+	// (Re)establish the controller's dynamic authorization from the
+	// persisted/configured STARTD_CONTROLLER_IDENTITY.
+	reconfig_controller_authz();
 
 	return TRUE;
 }

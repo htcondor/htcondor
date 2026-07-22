@@ -27,6 +27,7 @@
 #include "credmon_interface.h"
 #include "condor_holdcodes.h"
 #include "condor_config.h"
+#include "safe_fopen.h"
 
 #include <map>
 
@@ -2700,6 +2701,203 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 	}
 
 	return TRUE;
+}
+
+// Path to the file where the startd stores the capability token granted by
+// its controller (the AP allowed to evict any claim here).  Lives in SPOOL
+// and is written mode 0600, since it is a security-sensitive secret.
+static std::string
+controller_token_path()
+{
+	std::string path;
+	if( !param(path, "SPOOL") ) {
+		return "";
+	}
+	path += DIR_DELIM_CHAR;
+	path += "startd_controller.token";
+	return path;
+}
+
+// Persist the controller token to disk (mode 0600).  Returns true on success.
+static bool
+store_controller_token(const std::string &token)
+{
+	std::string path = controller_token_path();
+	if( path.empty() ) {
+		dprintf(D_ALWAYS, "store_controller_token: SPOOL not configured\n");
+		return false;
+	}
+	FILE *fp = safe_fcreate_replace_if_exists(path.c_str(), "w", 0600);
+	if( !fp ) {
+		dprintf(D_ERROR, "store_controller_token: failed to open %s: %s\n",
+				path.c_str(), strerror(errno));
+		return false;
+	}
+	bool ok = token.empty() ||
+		(fwrite(token.data(), 1, token.size(), fp) == token.size());
+	fclose(fp);
+	if( !ok ) {
+		dprintf(D_ERROR, "store_controller_token: failed to write %s\n", path.c_str());
+	}
+	return ok;
+}
+
+// Remove the persisted controller token, if any.
+static void
+remove_controller_token()
+{
+	std::string path = controller_token_path();
+	if( !path.empty() ) {
+		unlink(path.c_str());
+	}
+}
+
+// Helper to send a {Result, ErrorString} response ad and return rc.
+static int
+send_controller_response(Stream* s, bool result, const char* err_msg = nullptr)
+{
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT, result);
+	if( err_msg ) {
+		response_ad.Assign(ATTR_ERROR_STRING, err_msg);
+	}
+	s->encode();
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_*_controller: failed to send response to %s\n", s->peer_description());
+		return FALSE;
+	}
+	return result ? TRUE : FALSE;
+}
+
+int
+command_set_controller(int /*dc_cmd*/, Stream* s)
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !getClassAd(s, ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_set_controller: failed to read request from %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "Processing set controller request from %s\n", s->peer_description());
+
+	std::string controller_name;
+	if( !ad.LookupString("ControllerName", controller_name) || controller_name.empty() ) {
+		dprintf(D_ALWAYS, "command_set_controller: ControllerName not specified in request from %s\n", s->peer_description());
+		return send_controller_response(s, false, "ControllerName not specified");
+	}
+
+	std::string token;
+	if( !ad.LookupString("ControllerToken", token) || token.empty() ) {
+		dprintf(D_ALWAYS, "command_set_controller: ControllerToken not specified in request from %s\n", s->peer_description());
+		return send_controller_response(s, false, "ControllerToken not specified");
+	}
+
+	std::string controller_pool;
+	ad.LookupString("ControllerPool", controller_pool);
+
+	// The authenticated security identity the controller will present when it
+	// later connects to evict claims.  Recorded now ("bind at set time") and
+	// used to grant that identity authorization.  Falls back to the controller
+	// name if the caller did not supply a distinct identity.
+	std::string controller_identity;
+	ad.LookupString("ControllerIdentity", controller_identity);
+	if( controller_identity.empty() ) {
+		controller_identity = controller_name;
+	}
+
+	// A startd may have at most one controller.  If one is already set,
+	// reject the request; the existing controller must be cleared first.
+	std::string current_controller;
+	param(current_controller, "STARTD_CONTROLLER_NAME");
+	if( !current_controller.empty() ) {
+		dprintf(D_ALWAYS, "command_set_controller: already controlled by %s, rejecting request to set %s\n",
+				current_controller.c_str(), controller_name.c_str());
+		std::string err;
+		formatstr(err, "Already controlled by %s", current_controller.c_str());
+		return send_controller_response(s, false, err.c_str());
+	}
+
+	// Persist the token before recording the controller name, so we never
+	// advertise a controller whose token we failed to save.
+	if( !store_controller_token(token) ) {
+		return send_controller_response(s, false, "Failed to store controller token");
+	}
+
+	// Persist the controller name (and optional pool) so it survives a
+	// restart, and inject it into the running config so it takes effect now.
+	std::string config_value;
+	formatstr(config_value, "STARTD_CONTROLLER_NAME = %s\n", controller_name.c_str());
+	formatstr_cat(config_value, "STARTD_CONTROLLER_IDENTITY = %s\n", controller_identity.c_str());
+	if( !controller_pool.empty() ) {
+		formatstr_cat(config_value, "STARTD_CONTROLLER_POOL = %s\n", controller_pool.c_str());
+	}
+	int rc = set_persistent_config(strdup("controller"), strdup(config_value.c_str()));
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "command_set_controller: failed to persist STARTD_CONTROLLER_NAME = %s\n", controller_name.c_str());
+		remove_controller_token();
+		return send_controller_response(s, false, "Failed to set persistent config");
+	}
+
+	param_insert("STARTD_CONTROLLER_NAME", controller_name.c_str());
+	param_insert("STARTD_CONTROLLER_IDENTITY", controller_identity.c_str());
+	if( !controller_pool.empty() ) {
+		param_insert("STARTD_CONTROLLER_POOL", controller_pool.c_str());
+	}
+
+	dprintf(D_ALWAYS, "command_set_controller: set STARTD_CONTROLLER_NAME = %s (identity %s)\n",
+			controller_name.c_str(), controller_identity.c_str());
+
+	// Grant the controller's identity authorization to evict claims here, and
+	// re-advertise so the Controller attribute is published promptly.
+	reconfig_controller_authz();
+	resmgr->update_all();
+
+	return send_controller_response(s, true);
+}
+
+int
+command_clear_controller(int /*dc_cmd*/, Stream* s)
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !getClassAd(s, ad) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "command_clear_controller: failed to read request from %s\n", s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "Processing clear controller request from %s\n", s->peer_description());
+
+	std::string current_controller;
+	param(current_controller, "STARTD_CONTROLLER_NAME");
+	if( current_controller.empty() ) {
+		// Nothing to do; treat as success so the operation is idempotent.
+		dprintf(D_ALWAYS, "command_clear_controller: no controller set\n");
+		return send_controller_response(s, true);
+	}
+
+	// Remove the persisted controller config and token, and clear the
+	// running config so the Controller attribute stops being advertised.
+	int rc = set_persistent_config(strdup("controller"), strdup(""));
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS, "command_clear_controller: failed to clear persistent config\n");
+		return send_controller_response(s, false, "Failed to clear persistent config");
+	}
+	remove_controller_token();
+	param_insert("STARTD_CONTROLLER_NAME", "");
+	param_insert("STARTD_CONTROLLER_IDENTITY", "");
+	param_insert("STARTD_CONTROLLER_POOL", "");
+
+	dprintf(D_ALWAYS, "command_clear_controller: cleared controller (was %s)\n", current_controller.c_str());
+
+	// Revoke the controller's authorization and re-advertise without the
+	// Controller attribute.
+	reconfig_controller_authz();
+	resmgr->update_all();
+
+	return send_controller_response(s, true);
 }
 
 int

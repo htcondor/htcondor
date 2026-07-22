@@ -2665,6 +2665,16 @@ void Resource::publish_static(ClassAd* cap)
 	}
 
 	{
+		// If this startd has a controller (an AP granted the privilege to
+		// evict any claim here), advertise its name.  Absent otherwise.
+		std::string controller;
+		param(controller, "STARTD_CONTROLLER_NAME");
+		if (!controller.empty()) {
+			cap->Assign(ATTR_CONTROLLER, controller);
+		}
+	}
+
+	{
 		// Since the Rank expression itself only lives in the
 		// config file and the r_classad (not any obejects), we
 		// have to insert it here from r_classad.  If Rank is

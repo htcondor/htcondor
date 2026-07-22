@@ -508,6 +508,7 @@ endif()
 				# and so cannot keep the slot busy across the rehome request.
 				condor_pl_test(test_rehome_reboot "Test rehome --reboot guard and host reboot" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
+			condor_pl_test(test_startd_controller "Test startd controller set/clear/persistence" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 
