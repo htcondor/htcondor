@@ -383,6 +383,116 @@ private:
 	std::unordered_map<std::pair<std::string, std::string>, time_t> m_map;
 };
 
+class PreparingTaskInstance : public ServiceData
+{
+public:
+	/// Constructor
+	PreparingTaskInstance() = default;
+	PreparingTaskInstance (const JOB_ID_KEY & jid, std::string_view taskname)
+		: _jobid(jid), _task(taskname) {}
+
+	auto operator<=>(const PreparingTaskInstance& ti) const = default; // C++20 spaceship operator
+
+	// Comparison function for use with SelfDrainingQueue.
+	// Used to determine if another task is already in the queue.
+	// so we don't want to look at the whole class, only the job and task name.
+	virtual int ServiceDataCompare( ServiceData const* other ) const {
+		if ( ! other) return -1;
+		const PreparingTaskInstance & lhs = *(const PreparingTaskInstance *)(this);
+		const PreparingTaskInstance & rhs = *(const PreparingTaskInstance *)(other);
+		if (lhs._jobid < rhs._jobid) return -1;
+		if (lhs._jobid == rhs._jobid) {
+			if (lhs._task.size() < rhs._task.size()) return -1;
+			if (lhs._task < rhs._task) return -1;
+			if (lhs._task == rhs._task) return 0;
+		}
+		return 1;
+	}
+
+	JOB_ID_KEY _jobid{0,0};
+	std::string _task;
+};
+
+// Virtual class that each distinct Preparing task pattern derives from
+class PreparingTaskDescription
+{
+public:
+	// return the record scope for this task type. i.e. ClusterAd, UserAd/ProjectAd or JobAd scope
+	virtual bool in_scope(const JOB_ID_KEY & jid) = 0;
+	virtual bool matches(const ClassAd & ad) = 0;
+	// returns true if not needed or it was completed trivialy by this function
+	virtual bool do_trivialy(const JOB_ID_KEY & jid) = 0;
+	enum TaskResult { NotDone=0, Done=1, Pending=2, Abort=3 };
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr) = 0;
+	// returns a new preparing task to be queued
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid) = 0;
+	// config/reconfig the preparing task description
+	virtual void config() = 0;
+	PreparingTaskDescription(std::string_view tag) : _tag(tag) {};
+	virtual ~PreparingTaskDescription() {};
+	const std::string & tag() { return _tag; }
+protected:
+	std::string _tag{}; // param tag.  the task config tag
+};
+
+// the null preparing task is used for configured tasks that do not have a valid configuration
+// so we can be sure that all configured tasks have a task description object in the map.
+class NullPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & ) { return false; }
+	virtual bool matches(const ClassAd & ) { return false; }
+	virtual bool do_trivialy(const JOB_ID_KEY & ) { return true; }
+	virtual TaskResult do_task(JobQueueBase * , PreparingTaskInstance & , TransactionWatcher & , CondorError* =nullptr) { return Done; }
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid) { return new PreparingTaskInstance(jid, _tag); }
+	virtual void config() {}
+	NullPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~NullPreparingTask() {};
+};
+
+class UserTokenPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ad);
+	virtual bool do_trivialy(const JOB_ID_KEY & jid);
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	UserTokenPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~UserTokenPreparingTask() {};
+};
+
+// A preparing task that just delays, this is mostly for testing.
+class TimeDelayPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ) { return true; }
+	virtual bool do_trivialy(const JOB_ID_KEY & ) { return false; };
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	enum DelayScope { Cluster=-1, Job=0, User=2 };
+	TimeDelayPreparingTask(std::string_view tag, DelayScope _scope=Cluster) : PreparingTaskDescription(tag), delay_scope(_scope) {};
+	virtual ~TimeDelayPreparingTask() {};
+protected:
+	DelayScope delay_scope{DelayScope::Cluster};
+};
+
+class ExecProcessPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ad);
+	virtual bool do_trivialy(const JOB_ID_KEY & jid);
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	ExecProcessPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~ExecProcessPreparingTask() {};
+};
+
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
 {
@@ -719,6 +829,20 @@ class Scheduler : public Service
 	// find a project record or insert a pending project record
 	JobQueueProjectRec * insert_projectinfo(const char * project_name);
 
+	// called in CheckTransaction for each new job, to give a chance to add Preparing state tasks
+	// to the transaction. This function ads to the current transaction, and also modifies the ad to agree.
+	// The ad will be subsequently passed to transforms if post_transform is false.
+	// The ad can be a cluster ad.  New cluster ads in the transaction are guaranteed to be passed to
+	// this function before any job ads in the transaction. New proc ads passed to this function have
+	// been temporarily chained to a cluster ad (possibly a new, uncommitted one)
+	bool hasPreparingTasks() { return ! preptask_list.empty(); }
+	bool addPreparingTasksToNewJobInTransaction(const JOB_ID_KEY & jid, ClassAd & ad);
+	bool finalizePreparingTasksForNewJobInTransaction(const JOB_ID_KEY & jid, ClassAd & ad, bool has_spooling_hold);
+	void enqueueNextPreparingTask(JobQueueJob * job);
+	void completedPreparingTask(JobQueueJob * job);
+	void leavePreparingState(JobQueueJob * job);
+	bool addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time_t time);
+
 	void configGenericOsUsers();
 
 	bool m_useGenericOsUsers{false};
@@ -847,6 +971,11 @@ private:
 	ScheddCronJobMgr	*CronJobMgr;
 	std::map<std::string, ClassAd> extra_ads;
 
+	// The Preparing task prototypes, set on startup and extended by config
+	std::map<std::string, std::unique_ptr<PreparingTaskDescription>, CaseIgnLTYourString> preptask_proto;
+	// Ordered list of preparing tasks that are enabled by config
+	std::vector<std::string> preptask_list;
+
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
 	Timeslice       PeriodicExprInterval;
@@ -931,6 +1060,17 @@ private:
 		// queue.  Then, we can spawn all the shadows after the fact. 
 	std::vector<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
+
+		// queue for handling the JOB_STATUS_PREPARING tasks
+	SelfDrainingQueue prepare_job_queue;
+	int jobPreparingTaskHandler( ServiceData* job_id );
+	// returns true if a task was enqueued, false if not.
+	bool enqueuePreparingTask(const JOB_ID_KEY & jid, std::string_view taskname);
+
+		// timer and collection for the TimeDelayPreparingTask
+	std::map<time_t, std::deque<JOB_ID_KEY>> jobsToDelayPreparing;
+	int checkJobPrepareDelay_tid{-1};
+	void HandleTimeDelayPreparingCompletions(int timer_id);
 
 		// queue for sending hold/remove signals to shadows
 	SelfDrainingQueue stop_job_queue;
@@ -1180,7 +1320,9 @@ private:
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-extern void set_job_status(int cluster, int proc, int status);
+extern void set_job_status(const JOB_ID_KEY & jid, int status);
+extern void set_job_status(JobQueueJob * job, int status);
+inline void set_job_status(int cluster, int proc, int status) { return set_job_status({cluster,proc}, status); }
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
@@ -1224,10 +1366,12 @@ int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
 
 /** A helper function that wraps the call to jobPrepNeedsThread() and
 	invokes aboutToSpawnJobHandler() as appropriate, either in its own
-	thread using Create_Thread_Qith_Wata(), or calling it and then
-	aboutToSpawnJobHandlerDone() directly.
+	thread using Create_Thread_With_Data(), or calling it and then
+	aboutToSpawnJobHandlerDone() directly.  Returns false if srec was deleted
+	during a synchronous call (job no longer runnable, or no match); the
+	caller must not reuse srec once this returns false.
 */
-void callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
+bool callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
 
 
 /** Hook to call whenever a job enters a "finished" state, something
@@ -1249,13 +1393,13 @@ int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
 /* Returns true if an external manager (e.g. gridmanager, job router) has
  * indicated it is handling this job.
  */
-bool jobExternallyManaged(ClassAd * ad);
+bool jobExternallyManaged(const JobQueueJob * job);
 
 /* Returns true if an external manager (e.g. gridmanager, job router) has
  * finished handling this job, the job is now in a terminal state
  * (COMPELTED, REMOVED), and the manager doesn't need to see the job again.
  */
-bool jobManagedDone(ClassAd * ad);
+bool jobManagedDone(const JobQueueJob * ad);
 
 
 #endif /* _CONDOR_SCHED_H_ */

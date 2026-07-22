@@ -471,7 +471,6 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 SubmitResult
 DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	int rval = 0;
-	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	long long max_materialize = INT_MAX;
 	int selected_job_count = 0; // number of jobs we will be submitting (including unmaterialized jobs)
@@ -565,9 +564,9 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
-		if (cred_result != 0) {
-			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
+		bool cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
+		if (cred_result == false) {
+			errmsg = "Failed to produce job credentials: " + errmsg;
 			rval = -1;
 			result = SubmitResult::FAILURE;
 			goto finis;

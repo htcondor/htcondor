@@ -115,7 +115,10 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		// Check that multiline backslash escapes work
 		"DONE \\\n"
 		"     \\\n"
-		"B\n",
+		"B\n"
+		// Weak dependencies: single and multi parent/child
+		"WEAK PARENT A CHILD B\n"
+		"WEAK PARENT G H I J K CHILD L M N O P\n",
 	},
 	{
 		// Each command in this file is invalid/produces an error
@@ -226,6 +229,9 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"VARS A foo = \n"
 		"VARS A foo         \n"
 		"VARS A foo = bar = baz\n"
+		"WEAK\n"
+		"WEAK CHILD A\n"
+		"WEAK PARENT CHILD A B C\n"
 	},
 	{
 		// DAG with missing final newline
@@ -321,6 +327,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"JOBSTATE_LOG > some.log",
 		"SET_JOB_ATTR > foo=bar",
 		"DONE > B",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	},
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
@@ -431,6 +439,9 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":102 Failed to parse VARS command: Key value pair missing value: No value specified",
 		FAILURE_DAG + ":103 Failed to parse VARS command: Key value pair missing operator and value",
 		FAILURE_DAG + ":104 Failed to parse VARS command: Key value pair missing key",
+		FAILURE_DAG + ":105 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
+		FAILURE_DAG + ":106 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
+		FAILURE_DAG + ":107 Failed to parse PARENT command: No parent node(s) specified",
 	},
 };
 
@@ -482,6 +493,8 @@ static bool test_dag_file_parser_search_filter() {
 		"PARENT > [ A ] --> [ C D E ]",
 		"PARENT > [ C D E ] --> [ F ]",
 		"PARENT > [ G H I J K ] --> [ L M N O P ]",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	};
 	DagParser test(dag);
 	test.SearchFor(DAG::CMD::PARENT_CHILD);
@@ -531,6 +544,8 @@ static bool test_dag_file_parser_ignore_filter() {
 		"PARENT > [ A ] --> [ C D E ]",
 		"PARENT > [ C D E ] --> [ F ]",
 		"PARENT > [ G H I J K ] --> [ L M N O P ]",
+		"PARENT > WEAK [ A ] --> [ B ]",
+		"PARENT > WEAK [ G H I J K ] --> [ L M N O P ]",
 	};
 
 	std::set<DAG::CMD> search = {

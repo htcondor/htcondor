@@ -299,6 +299,17 @@ Singularity::setup(ClassAd &machineAd,
 		if (job_iwd != execute_dir) {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(target_dir);
+
+			sing_args.AppendArg("-B");
+			sing_args.AppendArg(slot_dir + ":" + "/condor_scratch");
+			// _CONDOR_SCRATCH_DIR should always point at the execute
+			// directory (as the vanilla universe does), which may or may
+			// not be a "scratch" subdir of slot_dir depending on
+			// STARTER_NESTED_SCRATCH.  Derive the in-container path from
+			// execute_dir rather than hardcoding the nested-scratch layout.
+			std::string container_scratch = execute_dir;
+			replace_str(container_scratch, slot_dir, "/condor_scratch");
+			job_env.SetEnv("_CONDOR_SCRATCH_DIR", container_scratch);
 		} else {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(pwd);

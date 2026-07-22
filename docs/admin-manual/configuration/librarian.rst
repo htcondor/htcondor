@@ -44,6 +44,18 @@ enable historical archive record indexing to a database by setting :macro:`use f
     reduce the database size to or below ``1GB`` during garbage collection. Default is
     ``0.8``.
 
+    The database file uses SQLite's incremental auto-vacuum mode so that garbage
+    collection actually shrinks the file on disk, rather than only freeing internal
+    space for reuse. The first time the archive librarian starts against an existing
+    database that predates this mode, it performs a one-time full ``VACUUM`` to convert
+    it; this copies the entire database and can take a while for a large file, but only
+    happens once.
+
+:macro-def:`LIBRARIAN_GC_BACKOFF_SECONDS`
+    An integer value representing how long, in seconds, to wait before retrying garbage
+    collection after a pass that did not reduce the database's file size. Defaults to
+    ``1800`` (30 minutes).
+
 :macro-def:`LIBRARIAN_MAX_JOBS_CACHED`
     An integer value representing the maximum number of job id information to database
     reference id's to cache in memory. Defaults to ``10,000``.
@@ -60,3 +72,12 @@ enable historical archive record indexing to a database by setting :macro:`use f
     An integer value representing the time interval in seconds between the archive
     librarians main actions of scanning archive files for new records and updating
     the database with indexes. Defaults to ``5``.
+
+:macro-def:`LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS`
+    An integer value representing how long, in milliseconds, the archive librarian
+    will wait on a locked SQLite3 database before giving up. Since the database runs
+    in WAL mode, ordinary reads and writes are not affected by this setting; it only
+    comes into play for the periodic WAL checkpoint and for the ``VACUUM`` /
+    ``incremental_vacuum`` operations used to reclaim disk space, where a lingering
+    reader can transiently hold a lock. Must be ``0`` or greater. Defaults to
+    ``30000`` (30 seconds).

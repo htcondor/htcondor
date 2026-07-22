@@ -3632,6 +3632,12 @@ type=int
 description=Maximum number of schedd forked workers
 tags=schedd
 
+[SCHEDD_NOW_JOB_VACATE_TIMEOUT]
+default=20
+type=int
+description=Number of seconds the schedd will wait for the targeted job(s) of a condor_now (coalesce) request to vacate before giving up on the now job
+tags=schedd
+
 [HA_LOCK_URL]
 default=
 type=string
@@ -5983,6 +5989,11 @@ type=string
 default=
 type=string
 
+[CREDMON_ALLOW_SPECIAL_CHAR_NAMES]
+default=false
+type=bool
+description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
+
 # Archive librarian configuration options
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
@@ -6022,6 +6033,13 @@ default=100000
 description=The upper limit of records indexed in one update interval for the archive librarian.
 tags=librarian
 
+[LIBRARIAN_GC_BACKOFF_SECONDS]
+default=1800
+type=int
+range=0,
+description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
+tags=librarian
+
 [LIBRARIAN_MAX_DATABASE_SIZE]
 default=2 * 1024 * 1024 * 1024
 #type=longlong
@@ -6038,6 +6056,13 @@ tags=librarian
 default=0.8
 type=double
 description=The percentage of the database size that the librarian aims to reduce to during garbage collection.
+tags=librarian
+
+[LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS]
+default=30000
+type=int
+range=0,
+description=How long, in milliseconds, the archive librarian will wait on a locked SQLite3 database before giving up.
 tags=librarian
 
 [USING_LIBRARIAN]

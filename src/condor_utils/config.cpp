@@ -3224,6 +3224,50 @@ const char * lookup_macro_default(const char * name, MACRO_SET & macro_set, MACR
 	return nullptr;
 }
 
+// forward ref
+static const char * nth_list_item(const char * list, char sep, const char * & endp, int index, bool trimmed);
+static const char * get_lookup_and_expand_macro_arg (
+	const char * args,
+	int index,
+	std::string &buf,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx);
+
+// A replacement for EXCEPT that will invoke the real thing if exceptions are permitted
+// and just print a similar message and return if exceptions are not.
+void MACRO_EVAL_CONTEXT::might_EXCEPT(MACRO_SET& mset, const char * file, int line, const char * fmt, ...)
+{
+	va_list pvar;
+	char buf[ BUFSIZ ];
+	va_start(pvar, fmt);
+	vsnprintf(buf, BUFSIZ, fmt, pvar);
+	if (allow_except()) {
+		_EXCEPT_Line = line;
+		_EXCEPT_File = file;
+		_EXCEPT_Errno = EINVAL;
+		_EXCEPT_("%s",buf);
+		return; // we never get here.
+	}
+
+	if (_EXCEPT_Reporter) {
+		_EXCEPT_Reporter(buf, line, file);
+	} else {
+		extern int _condor_dprintf_works; // see except.cpp
+		if( _condor_dprintf_works ) {
+			// look for a context with an ad - a hacky way to identify that this is a transform
+			if (mset.errors && this->is_context_ex && reinterpret_cast<const macro_eval_context_ex *>(this)->ad) {
+				// put the error in the mset so that the transform can print it.
+				mset.errors->push(nullptr, EINVAL, buf);
+			} else {
+				dprintf( D_ERROR, "ERROR \"%s\" at line %d in file %s\n", buf, line, file);
+			}
+		} else {
+			fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n", buf, line, file);
+		}
+	}
+	va_end(pvar);
+}
+
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
 // may point into the buffer returned in tbuf.  The caller will NOT free
@@ -3275,7 +3319,9 @@ static const char * evaluate_macro_func (
 			if (num_entries == 1) {
 				const char * list_name = entries.front().c_str();
 				if ( ! list_name) {
-					EXCEPT( "$RANDOM_CHOICE() config macro: no list!" );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_CHOICE() config macro: no list!");
+					tvalue = "";
+					break; // expand to nothing if we did not EXCEPT
 				}
 
 				const char * lval = lookup_macro(list_name, macro_set, ctx);
@@ -3305,7 +3351,9 @@ static const char * evaluate_macro_func (
 				tvalue = entries[rand_entry].c_str();
 			}
 			if( tvalue == nullptr ) {
-				EXCEPT("$RANDOM_CHOICE() macro in config file empty!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_CHOICE() macro is empty!" );
+				tvalue = "";
+				break;
 			}
 			tvalue = buf = strdup(tvalue);
 		}
@@ -3319,28 +3367,33 @@ static const char * evaluate_macro_func (
 			std::string tmp2 = entries.empty() ? "" : entries.front();
 			long	min_value=0;
 			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &min_value ) < 0 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid min!" );
+				min_value = 0;
 			}
 
 			tmp2 = entries.size() > 1 ? entries[1] : "";
 			long	max_value=0;
 			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &max_value ) < 0 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid max!" );
+				max_value = min_value;
 			}
 
 			tmp2 = entries.size() > 2 ? entries[2] : "";
 			long	step = 1;
 			if (tmp2.size() > 0) {
 				if (string_to_long( tmp2.c_str(), &step ) < -1 ) {
-					EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!");
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid step!");
+					step = 1;
 				}
 			}
 
 			if ( step < 1 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid step!" );
+				step = 1;
 			}
 			if ( min_value > max_value ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: min > max!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: min > max!" );
+				min_value = max_value;
 			}
 
 			// Generate the random value
@@ -3364,74 +3417,47 @@ static const char * evaluate_macro_func (
 			//   list_name must be the macro name of a comma separated list of items.
 		case SPECIAL_MACRO_ID_CHOICE:
 		{
-			std::vector<std::string> entries = split(body, ",", STI_NO_TRIM);
-			std::vector<std::string>::iterator entriesit = entries.begin() + 1;
-
-			if (entries.size() < 2) {
-				EXCEPT( "$CHOICE() config macro: no index!" );
-			}
-
-			// STI_NO_TRIM doesn't trim and keeps empty entries.  We want to trim,
-			// and keep empties
-			for (auto &entry : entries) {
-				trim(entry);
-			}
-			const char * index_name = entries.front().c_str();
-			const char * mval = lookup_macro(index_name, macro_set, ctx);
-			if ( ! mval) mval = index_name;
-
-			char * tmp2 = NULL;
-			if (strchr(mval, '$')) {
-				tmp2 = expand_macro(mval, macro_set, ctx);
-				mval = tmp2;
-			}
-
+			// the first argument is the index, and it must evaluate to a number
+			std::string argbuf;
+			char * items = nullptr;
+			const char * ival = get_lookup_and_expand_macro_arg(body, 0, argbuf, macro_set, ctx);
 			long long index = -1;
-			if ( ! string_is_long_param(mval, index) || index < 0 || index >= INT_MAX) {
-				EXCEPT( "$CHOICE() macro: %s is invalid index!", mval );
+			if ( ! string_is_long_param(ival, index) || index < 0 || index >= INT_MAX) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() error: '%s' is invalid index", ival);
+				index = 0;
 			}
+
+			// The second argument is either the start of the list, or the name of the list
+			const char * endp;
+			const char * lval = nth_list_item(body, ',', endp, 1, true);
+			if ( ! lval) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() error: no list");
+				tvalue = "";
+				break;
+			}
+			items = const_cast<char*>(lval); // lval points into body
 
 			tvalue = NULL;
-			if (entries.size() == 2) {
-				const char * list_name = entries[1].c_str();
-				if ( ! list_name) {
-					EXCEPT( "$CHOICE() config macro: no list!" );
-				}
-
-				const char * lval = lookup_macro(list_name, macro_set, ctx);
+			if ( ! strchr(lval,',')) { // no more commas, so it must be the name of the list
+				body[endp-body] = 0; // null term the list name (in case of trailing whitespace)
+				lval = lookup_macro(items, macro_set, ctx);
 				if ( ! lval) {
-					EXCEPT( "$CHOICE() macro: no list named \"%s\"!", list_name);
-				}
-
-				// now populate the entries list from lval.
-				entries.clear(); list_name = index_name = NULL;
-				if (strchr(lval, '$')) {
-					char * tmp3 = expand_macro(lval, macro_set, ctx);
-					if (tmp3) {
-						entries = split(tmp3, ",");
-						free(tmp3);
-					}
-				} else {
-					entries = split(lval, ",");
-				}
-				entriesit = entries.begin();
-			}
-
-			// scan the list looking for an item with the given index
-			for (int ii = 0; ii <= (int)index; ++ii) {
-				const char * val = entriesit->c_str();
-				entriesit++;
-				if (val != nullptr && ii == index) {
-					tvalue = buf = strdup(val);
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() macro: no list named \"%s\"!", items);
+					tvalue = "";
 					break;
+				} else {
+					items = buf = expand_macro(lval, macro_set, ctx);
 				}
 			}
 
+			// get the n item out of the list.
+			tvalue = nth_list_item(items, ',', endp, (int)index, true);
 			if ( ! tvalue) {
-				EXCEPT( "$CHOICE() config macro: index %d is out of range!", (int)index );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() config macro: index %d is out of range!", (int)index);
+				tvalue = "";
+			} else {
+				items[endp-items] = 0; // null term the item
 			}
-
-			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -3443,7 +3469,9 @@ static const char * evaluate_macro_func (
 			char * len_arg = NULL;
 			char * start_arg = strchr(body, ',');
 			if ( ! start_arg) {
-				EXCEPT( "$SUBSTR() macro: no length specified!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: no length specified!" );
+				tvalue = "";
+				break;
 			}
 
 			*start_arg++ = 0;
@@ -3455,37 +3483,39 @@ static const char * evaluate_macro_func (
 			const char * arg = lookup_macro(start_arg, macro_set, ctx);
 			if ( ! arg) arg = start_arg;
 
-			char * tmp3 = NULL;
+			auto_free_ptr tmp3;
 			if (strchr(arg, '$')) {
-				tmp3 = expand_macro(arg, macro_set, ctx);
+				tmp3.set(expand_macro(arg, macro_set, ctx));
 				arg = tmp3;
 			}
 
 			long long index = -1;
 			if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
-				EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: %s is invalid start index!", arg );
+				tvalue = "";
+				break;
 			}
 			start_pos = (int)index;
-			if (tmp3) {free(tmp3);} tmp3 = NULL;
-
+			tmp3.clear();
 
 			int sub_len = INT_MAX/2;
 			if (len_arg) {
 				const char * arg = lookup_macro(len_arg, macro_set, ctx);
 				if ( ! arg) arg = len_arg;
 
-				char * tmp3 = NULL;
 				if (strchr(arg, '$')) {
-					tmp3 = expand_macro(arg, macro_set, ctx);
+					tmp3.set(expand_macro(arg, macro_set, ctx));
 					arg = tmp3;
 				}
 
 				long long index = -1;
 				if ( ! string_is_long_param(arg, index) || index < INT_MIN || index > INT_MAX) {
-					EXCEPT( "$SUBSTR() macro: %s is invalid length !", arg );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: %s is invalid length !", arg );
+					tvalue = "";
+					break;
 				}
 				sub_len = (int)index;
-				if (tmp3) {free(tmp3);} tmp3 = NULL;
+				tmp3.clear();
 			}
 
 			const char * mval = lookup_macro(name, macro_set, ctx);
@@ -3528,15 +3558,12 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
-					EXCEPT( "%s macro: '%s' is not a valid format specifier!",
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"%s macro: '%s' is not a valid format specifier!",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
+					tvalue = buf = strdup(fmt);
+					break;
 				}
 			}
 
@@ -3553,7 +3580,9 @@ static const char * evaluate_macro_func (
 			if (special_id == SPECIAL_MACRO_ID_INT) {
 				long long int_val = -1;
 				if ( ! string_is_long_param(mval, int_val)) {
-					EXCEPT( "$INT() macro: %s does not evaluate to an integer!", mval );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$INT() macro: %s does not evaluate to an integer!", mval );
+					tvalue = "";
+					break;
 				}
 
 				const int cbuf = 56;
@@ -3562,7 +3591,9 @@ static const char * evaluate_macro_func (
 			} else {
 				double dbl_val = -1;
 				if ( ! string_is_double_param(mval, dbl_val)) {
-					EXCEPT( "$REAL() macro: %s does not evaluate to an real!", mval );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$REAL() macro: %s does not evaluate to an real!", mval );
+					tvalue = "";
+					break;
 				}
 
 				const int cbuf = 56;
@@ -3584,10 +3615,10 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
-					EXCEPT( "$STRING macro: '%s' is not a valid format specifier!", fmt);
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$STRING macro: '%s' is not a valid format specifier!", fmt);
+					tvalue = buf = strdup(fmt);
+					break;
 				}
 			}
 
@@ -3830,7 +3861,8 @@ static const char * evaluate_macro_func (
 		break;
 
 		default:
-			EXCEPT("Unknown special config macro %d!", special_id);
+			ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"Unknown special config macro %d!", special_id);
+			tvalue = "";
 		break;
 	}
 
@@ -4248,13 +4280,8 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
 					formatstr(errmsg, "%s error: '%s' is not a valid format specifier",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
 					return -1;
@@ -4298,9 +4325,7 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
 					formatstr(errmsg, "$STRING() error: '%s' is not a valid format specifier", fmt);
 					return -1;
 				}
@@ -4734,8 +4759,8 @@ unsigned int expand_macro (
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
-				//PRAGMA_REMIND("tj: put error reporting into MACRO_EVAL_CONTEXT_EX")
-				EXCEPT("%s", errmsg.c_str());
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"%s", errmsg.c_str());
+				cch = 0;
 				break;
 			}
 			if ( ! cch) {
