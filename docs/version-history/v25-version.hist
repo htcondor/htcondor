@@ -9,6 +9,10 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
+  off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
+  there was nowhere else to mount it.
+  :jira:`3768`
 - The Archive Librarian now properly reduces the database size
   on disk during garbage collection.
   :jira:`3826`
