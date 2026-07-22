@@ -85,6 +85,8 @@ class ResourceInfo:
     glideinsRunning: int = 0
     glideinsIdle: int = 0
     glideinsHeld: int = 0
+    lastHeardFrom: str = "Unknown"
+    
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
 
