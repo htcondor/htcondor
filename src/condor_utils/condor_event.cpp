@@ -2326,7 +2326,8 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line)) {
 		return 0;
 	}
-	sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
+	// Code/Subcode are optional; if absent, reason_code/reason_subcode keep their defaults
+	std::ignore = sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}

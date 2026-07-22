@@ -668,6 +668,22 @@ To help HTCondor distinguish which credentials should be provided by
 Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
 Vault-managed credential names.
 
+.. _provider_name_restrictions:
+
+Provider name restrictions and user-supplied credential handles
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+By default, credential provider names may only contain alphanumeric characters
+and hyphens.  This allows users to request multiple credentials from the same
+provider by appending handles (see
+:ref:`Passing a credential for URL file transfers <passing_credentials_for_url_transfers>`), which causes credential files to
+be named ``{provider}_{handle}.use``.
+
+Set :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` = ``True``
+only if existing provider names in your configuration contain underscores
+(or other non-alphanumeric/hyphen characters).
+Note that this setting disables support for user-supplied handles.
+
 
 Using HTCondor with Kerberos and AFS
 ------------------------------------

@@ -2013,7 +2013,7 @@ More information about networking in HTCondor can be found in
     CCB running time used on polling to check on already connected
     clients. The default value is 0.05.
 
-:macro-def:`CCB_READ_BUFFER[Networking]`
+:macro-def:`CCB_SERVER_READ_BUFFER[Networking]`
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
 
@@ -2026,7 +2026,7 @@ More information about networking in HTCondor can be found in
     The length, in seconds, that we wait for any CCB operation to complete.
     The default value is 300.
 
-:macro-def:`CCB_WRITE_BUFFER[Networking]`
+:macro-def:`CCB_SERVER_WRITE_BUFFER[Networking]`
     The size of the kernel TCP write buffer in bytes for all sockets
     used by CCB. The default value is 2 KiB.
 
@@ -2041,6 +2041,23 @@ More information about networking in HTCondor can be found in
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
     ``$(SPOOL)/<ip address>-<shared port ID or port number>.ccb_reconnect``.
+
+:macro-def:`CCB_RECONNECT_TIME[Networking]`
+    The length, in seconds, that a target daemon waits before attempting
+    to reconnect to a CCB server after its connection to that server has
+    failed. The default value is 60.
+
+:macro-def:`CCB_RECONNECT_ALLOWED_FROM_ANY_IP[Networking]`
+    A boolean value that controls whether the CCB server permits a
+    registered target daemon to reconnect from an IP address that differs
+    from the one it originally used to register. When ``False``, the
+    default, a reconnect request whose source IP does not match the
+    address recorded at registration is denied, which protects against
+    another host attempting to hijack a target daemon's CCB
+    registration. Set this to ``True`` only when target daemons are
+    expected to legitimately change IP addresses between connections,
+    such as when they roam between networks or sit behind a NAT that
+    reassigns addresses. The default value is ``False``.
 
 :macro-def:`COLLECTOR_USES_SHARED_PORT[Networking]`
     A boolean value that specifies whether the *condor_collector* uses

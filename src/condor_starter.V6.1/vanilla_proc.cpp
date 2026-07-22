@@ -361,8 +361,10 @@ VanillaProc::StartJob()
 			std::string available_gpus;
 			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
 			classad::Value v;
-			starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
-			v.IsStringValue(available_gpus);
+			// if the expression does not evaluate to a string, available_gpus
+			// remains empty, which means hide all (see below)
+			std::ignore = starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			std::ignore = v.IsStringValue(available_gpus);
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);

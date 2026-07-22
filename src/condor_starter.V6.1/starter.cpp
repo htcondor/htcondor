@@ -3606,7 +3606,8 @@ Starter::PublishToEnv( Env* proc_env )
 				const char * env_value = nullptr;
 				std::string firstGPUuuid;
 				std::string joinExpression;
-				mad->EvaluateExpr("AvailableGPUS[0].id", val);
+				// checked below via val.IsStringValue()
+				std::ignore = mad->EvaluateExpr("AvailableGPUS[0].id", val);
 
 				// condor_gpu_discovery identifies MIG devices with a UUID that starts with "MIG-"
 				// but NVIDIA_VISIBLE_DEVICES expects these to begin with MIG-, not GPU-MIG-
@@ -4335,8 +4336,10 @@ Starter::GetDiskUsage(bool exiting) const {
 #endif /* LINUX */
 		}
 
-		if (dirMonitor) { return dirMonitor->GetDiskUsage(); }
-		else { return DiskUsage{0,0}; }
+		if (dirMonitor) { return dirMonitor->GetDiskUsage(PRIV_ROOT); }
+		// Make it possible for the caller to tell the difference between an
+		// empty directory and a failure.
+		else { return DiskUsage{-1,0}; }
 	}
 
 #ifdef LINUX
