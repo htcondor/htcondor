@@ -253,7 +253,8 @@ constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 class match_rec
 {
  public:
-    match_rec(char const*, char const*, const JOB_ID_KEY & jid, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+	match_rec(char const* claimid, char const* peer, const JOB_ID_KEY & jid,
+		const ClassAd*, char const* user, char const* pool, bool is_dedicated);
 	~match_rec();
 
 	char * peer{nullptr}; //sinful address of startd
@@ -261,17 +262,13 @@ class match_rec
 	char * pool{nullptr}; // negotiator hostname if flocking; else empty
 	shadow_rec * shadowRec{nullptr};
 
-		// cluster of the job we used to obtain the match
-	int origcluster{0};
-
-		// if match is currently active, cluster and proc of the
+		// if match is currently active, this is the job id of the
 		// running job associated with this match; otherwise,
-		// cluster==origcluster and proc==-1
+		// it is {origcluster,-1}
 		// NOTE: use SetMrecJobID() to change cluster and proc,
 		// because this updates the index of matches by job id.
-	int cluster{0};
-	int proc{0};
-
+	PROC_ID jid{0,0};
+	int origcluster{0}; // cluster of the job we used to obtain the match (set in constructor)
 	int status{0};
 	int num_exceptions{0};
 	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
@@ -279,6 +276,7 @@ class match_rec
 	time_t entered_current_status{0};
 	time_t last_alive{time(0)};
 	PROC_ID m_now_job{0,0};
+	PROC_ID ocu_originator{0,0}; // procid of the ocu claimer job when is_ocu is true
 
 	ClassAd * my_match_ad{nullptr};
 	ClassAd m_added_attrs;
@@ -288,13 +286,10 @@ class match_rec
 	bool scheduled{false}; // For use by the DedicatedScheduler
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
-	bool			is_ocu {false}; // when true, hold forever, hand out to others
-    PROC_ID         ocu_originator;  // procid of the ocu claimer job
-									
+	bool is_ocu{false}; // when true, hold forever, hand out to others
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
-	ClaimIdParser claim_id;
 	std::shared_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
@@ -306,11 +301,16 @@ class match_rec
 		// entered_current_status)
 	void	setStatus( int stat );
 
-	std::string m_description;
 	void makeDescription();
-	char const *description() const {
-		return m_description.c_str();
-	}
+	const char *description() const { return m_description.c_str(); }
+
+	const char *claimId() { return claim_id.claimId(); }
+	const char *publicClaimId() { return claim_id.publicClaimId(); }
+	const char *secSessionId() { return claim_id.secSessionId(); }
+
+protected:
+	ClaimIdParser claim_id; // the claimid of a match rec is immutable
+	std::string m_description;
 
 };
 
@@ -883,6 +883,7 @@ class Scheduler : public Service
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
 	OCU *getOCU(int ocu_id);
+	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
