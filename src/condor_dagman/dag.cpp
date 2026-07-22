@@ -542,10 +542,14 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event, boo
 			// event is for a job outside this DAG; ignore it
 			if ( ! node) { break; }
 
-			// Less than zero for proc id is a non-job shadow event: Skip processing
-			if (event->proc < 0) {
-				debug_printf(DEBUG_NORMAL, "Warning: Skipping event due to non-job proc id %d%s\n",
-				             event->proc, isTransferShadowProcID(event->proc) ? ": Common Transfer Shadow" : "");
+			// Common transfer shadows reuse the job's ClassAd (and thus its
+			// DAGMan log) with a reserved proc id (<= FIRST_TRANSFER_PROC_ID);
+			// their events are not real job procs, so skip them.  Note: cluster
+			// level events (ULOG_CLUSTER_SUBMIT/REMOVE) also carry proc id -1 but
+			// must NOT be skipped -- they are dispatched normally below.
+			if (isTransferShadowProcID(event->proc)) {
+				debug_printf(DEBUG_NORMAL, "Warning: Skipping event due to non-job proc id %d: Common Transfer Shadow\n",
+				             event->proc);
 				break;
 			}
 
