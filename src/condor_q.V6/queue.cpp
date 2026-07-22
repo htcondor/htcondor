@@ -1802,8 +1802,17 @@ processCommandLineArguments (int argc, const char *argv[])
 				// -aaf appends columns to a per-job display and can't combine with the
 				// batch progress format, so don't turn batch on by default for it;
 				// treat bare -aaf like -nobatch -aaf rather than erroring out.
-				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset && append_autoformat_args.empty()) {
-					dash_batch = dash_batch_is_default;
+				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset) {
+					if ( ! append_autoformat_args.empty()) {
+						// Batch would otherwise be the default here; -aaf silently
+						// disabling it can be surprising (a per-job listing can be much
+						// larger than the batched one), so say what happened.
+						if (dash_batch_is_default) {
+							fprintf(stderr, "Warning: -aaf cannot be combined with -batch mode output (the default), so -batch is disabled\n");
+						}
+					} else {
+						dash_batch = dash_batch_is_default;
+					}
 				}
 			}
 		}
@@ -1826,6 +1835,12 @@ processCommandLineArguments (int argc, const char *argv[])
 	// a custom (non-batch) display, so simply dropping -batch is enough to use them.
 	if (dash_batch && (qdo_mode & QDO_BaseMask) == QDO_Custom) {
 		fprintf(stderr, "Error: -format, -autoformat/-af and -print-format cannot be used with -batch mode output (the default), use them without -batch\n");
+		// -af/-autoformat sets both the Format and PrintFormat bits (QDO_AutoFormat);
+		// -format and -print-format each set only one. For the -af case, -aaf is the
+		// likely intent: it appends the requested columns to the (un-batched) per-job display.
+		if ((qdo_mode & QDO_AutoFormat) == QDO_AutoFormat) {
+			fprintf(stderr, "       To append columns to the per-job display instead, use -aaf\n");
+		}
 		exit(1);
 	}
 
