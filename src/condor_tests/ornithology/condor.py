@@ -649,18 +649,27 @@ class Condor:
                 "RestartMode.CRASH needs real kill -9 semantics; not supported on Windows"
             )
 
+        # "master" is deliberately excluded here even for a whole-pool crash:
+        # _kill_condor_master() below already SIGKILLs it via its own Popen
+        # handle, which is also how we wait() on/relaunch it.
         targets = (
             {daemon_name.lower()}
             if daemon_name is not None
-            else {"master", "collector", "negotiator", "schedd", "startd"}
+            else {"collector", "negotiator", "schedd", "startd"}
         )
 
         daemons_who = self.run_command(["condor_who", "-daemons"], timeout=30, echo=False)
         for line in daemons_who.stdout.split("\n"):
             fields = line.split()
-            if len(fields) < 3 or fields[0].lower() not in targets:
+            if len(fields) < 3 or fields[0].lower() not in targets or not fields[2].isdigit():
+                # PID column is "no" for a daemon condor_who reports as
+                # already exited, or "?" if unknown -- neither is a real pid.
                 continue
-            os.kill(int(fields[2]), signal.SIGKILL)
+            try:
+                os.kill(int(fields[2]), signal.SIGKILL)
+            except ProcessLookupError:
+                # Already gone between the listing and the kill.
+                pass
 
         if daemon_name is None:
             self._kill_condor_master()

@@ -4245,8 +4245,8 @@ int dc_main( int argc, char** argv )
 		// in DaemonCore::HandleProcessExit().
 		//
 	if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
-		int first_interval = param_integer( "PARENT_CHECK_FIRST_INTERVAL", 15 );
-		int interval = param_integer( "PARENT_CHECK_INTERVAL", 120 );
+		int first_interval = param_integer( "PARENT_CHECK_FIRST_INTERVAL", 15, 0 );
+		int interval = param_integer( "PARENT_CHECK_INTERVAL", 120, 1 );
 		daemonCore->Register_Timer( first_interval, interval,
 				check_parent, "check_parent" );
 	}
