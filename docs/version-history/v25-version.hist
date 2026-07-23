@@ -1,13 +1,24 @@
+*** 25.14.0 features
+
+*** 25.14.0 bugs
+
+*** 25.0.14 bugs
+
 *** 25.13.0 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
   meaning a child node only requires its parent(s) to finish executing
   rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
   :jira:`2690`
+
 - Add a helpful "how to monitor jobs" tip to stderr after
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
+  off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
+  there was nowhere else to mount it.
+  :jira:`3768`
 - The Archive Librarian now properly reduces the database size
   on disk during garbage collection.
   :jira:`3826`
@@ -42,13 +53,31 @@
   See :ref:`provider_name_restrictions` for details.
   :jira:`2860`
 
+- Fix a DAGMan crash that could occur while using common input transfers
+  for jobs specified in a DAG.
+  :jira:`3835`
+
 - Fix a very rare collector crash when creating the ca certs file
   the first time and a view collector was also configured to run.
   :jira:`3832`
 
+- The classad functions :classad-function:`versionGT`,
+  :classad-function:`versionGE`, :classad-function:`versionLT`,
+  :classad-function:`versionLE` and :classad-function:`versionEQ` are now
+  case-insensitive, matching all other classad functions.
+  :jira:`3818`
+
+- :tool:`condor_history` now selects the schedd to query the same way
+  :tool:`condor_submit` and :tool:`condor_q` do, honoring both
+  :macro:`SCHEDD_HOST` and :macro:`SCHEDD_NAME`.  Previously only
+  :macro:`SCHEDD_HOST` was consulted and :macro:`SCHEDD_NAME` was ignored. Use
+  ``-local`` to force reading the local history file regardless of
+  configuration.
+  :jira:`3839`
+
 *** 25.0.13 bugs
 
-*** 25.12.0 features
+*** 25.12.2 features
 
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
@@ -126,14 +155,7 @@
   reboot.
   :jira:`3766`
 
-*** 25.12.0 bugs
-
-- Fixed a bug that could cause the *condor_negotiator* accountant log
-  (``Accountantnew.log``) to grow without bound.  Records for slots that
-  were no longer claimed were no longer being removed during each
-  negotiation cycle, so they accumulated indefinitely.  This bug was
-  introduced in HTCondor 25.11.
-  :jira:`3795`
+*** 25.12.2 bugs
 
 - Fixed a bug that could cause file descriptor leaks in *blahpd*.
   :jira:`3786`
@@ -145,6 +167,21 @@
   :jira:`3751`
 
 *** 25.0.12 bugs
+
+*** 25.11.1 bugs
+
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
+
+  :jira:`3808`
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.11.0.
+  :jira:`3795`
 
 *** 25.11.0 features
 

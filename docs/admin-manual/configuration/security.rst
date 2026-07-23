@@ -219,8 +219,9 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`FS_REMOTE_DIR`
     The location of a directory visible to both server and client in Remote
-    File System authentication. The default when not defined is the
-    directory ``/shared/scratch/tmp``.
+    File System authentication. There is no default; if the FS_REMOTE method
+    is used but this macro is not defined, HTCondor logs an error and falls
+    back to the directory ``/tmp``.
 
 :macro-def:`FS_ROOT_TO_CONDOR`
     When this boolean value is ``True``, when a client authenticates as

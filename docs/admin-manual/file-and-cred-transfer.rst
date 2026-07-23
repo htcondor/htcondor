@@ -673,14 +673,11 @@ Vault-managed credential names.
 Provider name restrictions and user-supplied credential handles
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-By default,
-credential provider names
-may only contain alphanumeric characters and hyphens.
-This allows users
-to request multiple credentials
-from the same provider
-by appending handles (see :ref:`passing_credentials_for_url_transfers`),
-which causes credential files to be named ``{provider}_{handle}.use``.
+By default, credential provider names may only contain alphanumeric characters
+and hyphens.  This allows users to request multiple credentials from the same
+provider by appending handles (see
+:ref:`Passing a credential for URL file transfers <passing_credentials_for_url_transfers>`), which causes credential files to
+be named ``{provider}_{handle}.use``.
 
 Set :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` = ``True``
 only if existing provider names in your configuration contain underscores

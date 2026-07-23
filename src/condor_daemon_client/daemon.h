@@ -250,6 +250,13 @@ public:
 		  */
 	bool isLocal( void ) const			{ return _is_local; }
 
+		/** Return true if locate() found this daemon's address by reading a
+		  local file (its address file or daemon ad file) rather than by
+		  querying the collector.  This is a reliable indication that the
+		  daemon is running on this machine.  Only meaningful after locate().
+		  */
+	bool locatedViaLocalFile( void ) const	{ return _located_via_local_file; }
+
 		/** Specify the path to the address file, which will be used
 		*   if locate decides to use an address file and if it exists
 		*/
@@ -715,6 +722,7 @@ protected:
 	int _port;
 	daemon_t _type;
 	bool _is_local;
+	bool _located_via_local_file{false};
 	bool _tried_locate;
 	bool _tried_init_hostname;
 	bool _tried_init_version;

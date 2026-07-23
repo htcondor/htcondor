@@ -40,6 +40,7 @@
 #include "enum_utils.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
+#include "transfer_proc.h"
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -537,8 +538,21 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event, boo
 			bool submitEventIsSane;
 			Node *node = LogEventNodeLookup(event, submitEventIsSane);
 			PrintEvent(DEBUG_VERBOSE, event, node, recovery);
+
 			// event is for a job outside this DAG; ignore it
 			if ( ! node) { break; }
+
+			// Common transfer shadows reuse the job's ClassAd (and thus its
+			// DAGMan log) with a reserved proc id (<= FIRST_TRANSFER_PROC_ID);
+			// their events are not real job procs, so skip them.  Note: cluster
+			// level events (ULOG_CLUSTER_SUBMIT/REMOVE) also carry proc id -1 but
+			// must NOT be skipped -- they are dispatched normally below.
+			if (isTransferShadowProcID(event->proc)) {
+				debug_printf(DEBUG_NORMAL, "Warning: Skipping event due to non-job proc id %d: Common Transfer Shadow\n",
+				             event->proc);
+				break;
+			}
+
 			if ( ! EventSanityCheck(event, node, &result)) {
 				// this event is "impossible"; we will either abort the DAG (if result was set to false) or
 				// ignore it and hope for the best...
