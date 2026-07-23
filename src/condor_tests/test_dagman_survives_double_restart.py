@@ -92,6 +92,14 @@ def condor(test_dir):
             # noticed quickly instead of after up to ~135s.
             "DAGMAN.PARENT_CHECK_FIRST_INTERVAL": 2,
             "DAGMAN.PARENT_CHECK_INTERVAL": 2,
+            # Same reasoning, for shared_port: CRASH mode deliberately
+            # doesn't kill it, so an orphaned instance from an earlier
+            # restart otherwise lingers for up to ~135s (the default)
+            # before noticing its parent is gone and self-shutting-down --
+            # a real window for it to collide with a later case's freshly
+            # started instance at the same SHARED_PORT_DAEMON_AD_FILE path.
+            "SHARED_PORT.PARENT_CHECK_FIRST_INTERVAL": 1,
+            "SHARED_PORT.PARENT_CHECK_INTERVAL": 1,
             # See test_dagman_survives_ap_restart.py: master's default
             # per-restart backoff adds a flat ~10s unrelated to this test
             # -- doubly costly here since this test restarts twice.

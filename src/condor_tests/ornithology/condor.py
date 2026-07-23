@@ -627,6 +627,37 @@ class Condor:
 
             time.sleep(0.5)
 
+        # The pid-debounce above only proves the new process answered a
+        # -quick query -- e.g. a schedd can show up there with an address
+        # that's still missing its real port/addrs (still mid-registration
+        # with shared_port) well before it's actually ready to take new
+        # submissions. IsReady is condor_master's own bookkeeping of
+        # whether every daemon it's watching has sent it a real alive
+        # message, which -- unlike the -quick address snapshot -- lags
+        # behind a daemon's own internal startup (job-queue reload,
+        # shared_port registration, etc.). It's the same signal
+        # _wait_for_ready() already trusts for the initial standup; a
+        # restart deserves the same bar.
+        while True:
+            remaining = timeout - (time.time() - start)
+            if remaining <= 0:
+                raise TimeoutError(
+                    "{} came back but never reported IsReady (mode={}) within {}s".format(
+                        daemon_name or "pool", mode, timeout
+                    )
+                )
+
+            who = self.run_command(
+                ["condor_who", f"-wait:{min(10, int(remaining)) or 1}", "IsReady"],
+                timeout=30,
+                echo=False,
+                suppress=True,
+            )
+            if who.stdout.strip():
+                who_ad = dict(kv.split(" = ") for kv in who.stdout.splitlines())
+                if who_ad.get("IsReady") == "true":
+                    break
+
     def _crash(self, daemon_name: Optional[str]):
         """
         SIGKILL either one named daemon or every daemon in the pool.
