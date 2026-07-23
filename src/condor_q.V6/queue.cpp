@@ -1631,7 +1631,13 @@ processCommandLineArguments (int argc, const char *argv[])
 					}
 				}
 			}
-			qdo_mode = QDO_Progress;
+			// Don't clobber a custom output format (-af/-format/-print-format) that was
+			// specified before -batch on the command line, so that the -batch/custom-format
+			// conflict is diagnosed the same way regardless of argument order. (-af after
+			// -batch already wins because it assigns qdo_mode.)
+			if ((qdo_mode & QDO_BaseMask) < QDO_Custom) {
+				qdo_mode = QDO_Progress;
+			}
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
@@ -1793,8 +1799,20 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 			//	mode == QDO_JobIdle || // TODO: need a custom format for -batch -idle
 				mode == QDO_DAG) { // DAG and batch go naturally together
+				// -aaf appends columns to a per-job display and can't combine with the
+				// batch progress format, so don't turn batch on by default for it;
+				// treat bare -aaf like -nobatch -aaf rather than erroring out.
 				if ( ! dash_factory && ! dash_run && ! dash_idle && ! dash_jobset) {
-					dash_batch = dash_batch_is_default;
+					if ( ! append_autoformat_args.empty()) {
+						// Batch would otherwise be the default here; -aaf silently
+						// disabling it can be surprising (a per-job listing can be much
+						// larger than the batched one), so say what happened.
+						if (dash_batch_is_default) {
+							fprintf(stderr, "Warning: -aaf cannot be combined with -batch mode output (the default), so -batch is disabled\n");
+						}
+					} else {
+						dash_batch = dash_batch_is_default;
+					}
 				}
 			}
 		}
@@ -1809,6 +1827,21 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 			dash_batch = false;
 		}
+	}
+
+	// A custom output format (-format, -af/-autoformat, or -print-format) replaces the
+	// built-in batch columns that -batch's progress reduction writes into, so the two
+	// can't be combined. Reject it the same way -aaf does below. These flags all select
+	// a custom (non-batch) display, so simply dropping -batch is enough to use them.
+	if (dash_batch && (qdo_mode & QDO_BaseMask) == QDO_Custom) {
+		fprintf(stderr, "Error: -format, -autoformat/-af and -print-format cannot be used with -batch mode output (the default), use them without -batch\n");
+		// -af/-autoformat sets both the Format and PrintFormat bits (QDO_AutoFormat);
+		// -format and -print-format each set only one. For the -af case, -aaf is the
+		// likely intent: it appends the requested columns to the (un-batched) per-job display.
+		if ((qdo_mode & QDO_AutoFormat) == QDO_AutoFormat) {
+			fprintf(stderr, "       To append columns to the per-job display instead, use -aaf\n");
+		}
+		exit(1);
 	}
 
 	if (dash_dry_run) {
@@ -1837,7 +1870,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	if ( ! append_autoformat_args.empty()) {
 		if ( ! can_use_append_autoformat_args) {
 			if (dash_batch) {
-				fprintf(stderr, "Error: -aaf cannot be used with -batch mode output (the default), did you intend to use -af ?\n");
+				fprintf(stderr, "Error: -batch can't be used with -aaf\n");
 			} else {
 				fprintf(stderr, "Error: output formatting options conflict with -aaf options\n");
 			}
