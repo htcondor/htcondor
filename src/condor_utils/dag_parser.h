@@ -372,6 +372,7 @@ private:
 	std::string ParseVars(DagLexer& details);
 	std::string ParsePriority(DagLexer& details);
 	std::string ParsePreSkip(DagLexer& details);
+	std::string ParseTolerance(DagLexer& details);
 	std::string ParseSavePoint(DagLexer& details);
 	std::string ParseCategory(DagLexer& details);
 	std::string ParseMaxJobs(DagLexer& details);

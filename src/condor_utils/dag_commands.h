@@ -62,6 +62,7 @@ namespace DAG {
 		VARS,
 		PRIORITY,
 		PRE_SKIP,
+		TOLERANCE,
 		DONE,
 		MAXJOBS,
 		CONFIG,
@@ -95,6 +96,13 @@ namespace DAG {
 		DEFAULT = -1,
 		PREPEND,
 		APPEND,
+	};
+
+	// How to handle rest of node job list when tolerance failure occurs
+	enum class ToleranceMode {
+		AUTO,           // Determined by config
+		FAIL_FAST,      // Remove all other jobs immediately
+		WAIT,           // Let remaining jobs complete
 	};
 
 	// Quick map of keyword strings to enum value
@@ -548,6 +556,43 @@ public:
 	int GetExitCode() const { return code; }
 private:
 	int code{0}; // PRE Script exit code that triggers skip
+};
+
+// TOLERANCE Command
+class ToleranceCommand : public NodeModifierCommand {
+public:
+	ToleranceCommand() = delete;
+	ToleranceCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
+
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::TOLERANCE; };
+	virtual std::string _getDetails() const {
+		std::string ret;
+		const char* mode_str = "UNKNOWN";
+		switch (mode) {
+			case DAG::ToleranceMode::AUTO: mode_str = "AUTO"; break;
+			case DAG::ToleranceMode::FAIL_FAST: mode_str = "FAIL-FAST"; break;
+			case DAG::ToleranceMode::WAIT: mode_str = "WAIT"; break;
+		}
+		formatstr(ret, "%s %d %s %s", Disp(node), tolerance, is_percent ? "T" : "F", mode_str);
+		return ret;
+	}
+
+	void SetTolerance(const int t, const bool percent = false) {
+		tolerance = t;
+		is_percent = percent;
+	}
+
+	int GetTolerance() const { return tolerance; }
+	bool IsPercentage() const { return is_percent; }
+
+	void FailFast() { mode = DAG::ToleranceMode::FAIL_FAST; }
+	void Wait() { mode = DAG::ToleranceMode::WAIT; }
+	DAG::ToleranceMode GetMode() const { return mode; }
+
+private:
+	int tolerance{0}; // Amount of failures to tolerate before considering failed
+	DAG::ToleranceMode mode{DAG::ToleranceMode::AUTO}; // What to do when failure is detected
+	bool is_percent{false}; // Tolerance value is a percent value
 };
 
 // DONE Command

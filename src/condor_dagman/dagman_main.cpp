@@ -308,6 +308,9 @@ bool Dagman::Config() {
 	config[conf::b::AbortOnScarySubmit] = param_boolean("DAGMAN_ABORT_ON_SCARY_SUBMIT", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %s\n", config[conf::b::AbortOnScarySubmit] ? "True" : "False");
 
+	config[conf::b::RemoveJobListOnFailure] = param_boolean("DAGMAN_REMOVE_JOB_LIST_ON_FAILURE", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOB_LIST_ON_FAILURE setting: %s\n", config[conf::b::RemoveJobListOnFailure] ? "True" : "False");
+
 	config[conf::i::PendingReportInverval] = param_integer("DAGMAN_PENDING_REPORT_INTERVAL", 600);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n", config[conf::i::PendingReportInverval]);
 

@@ -680,6 +680,53 @@ DagParser::ParsePreSkip(DagLexer& details) {
 }
 
 std::string
+DagParser::ParseTolerance(DagLexer& details) {
+	std::string token = details.next();
+	if (token.empty()) { return "No node name specified"; }
+
+	data.reset(new ToleranceCommand(token));
+	ToleranceCommand* cmd = (ToleranceCommand*)data.get();
+	assert(cmd != nullptr);
+
+	token = details.next();
+	if (token.empty()) { return "Missing failure tolerance value"; }
+
+	bool is_percent = false;
+	if (token.back() == '%') {
+		token.pop_back();
+
+		if (token.empty()) {
+			return "Empty percentage specified for failure tolerance";
+		}
+
+		is_percent = true;
+	}
+
+	try {
+		int tol = std::stoi(token);
+
+		if (tol < 0 || (is_percent && tol > 100)) {
+			throw std::invalid_argument("Failure tolerance is out of range");
+		}
+
+		cmd->SetTolerance(tol, is_percent);
+	} catch (...) {
+		return "Invalid tolerance value '" + token + "'";
+	}
+
+	token = details.next();
+	if (isKeyword(token, "FAIL_FAST")) {
+		cmd->FailFast();
+		token = details.next();
+	} else if (isKeyword(token, "WAIT")) {
+		cmd->Wait();
+		token = details.next();
+	}
+
+	return ( ! token.empty()) ? "Unexpected token '" + token + "'" : "";
+}
+
+std::string
 DagParser::ParseSavePoint(DagLexer& details) {
 	std::string token = details.next();
 	if (token.empty()) { return "No node name specified"; }
@@ -975,6 +1022,9 @@ DagParser::next() {
 					break;
 				case DAG::CMD::PRE_SKIP:
 					parse_error = ParsePreSkip(details);
+					break;
+				case DAG::CMD::TOLERANCE:
+					parse_error = ParseTolerance(details);
 					break;
 				case DAG::CMD::DONE:
 					check = details.next();

@@ -165,6 +165,8 @@ PARENT F P S CHILD A
 
 RETRY S1 3
 PRIORITY DNE 5
+TOLERANCE DNE 5
+TOLERANCE S1 5
 
 CATEGORY DNE FOO
 
@@ -297,27 +299,39 @@ REJECT
                 "DagCommand": "PRIORITY",
             },
             {
-                "Reason": "References to undefined nodes: DNE",
+                "Reason": "References undefined node DNE",
+                "SourceFile": "VALIDATION_ERRORS.dag",
+                "SourceLine": 32,
+                "DagCommand": "TOLERANCE",
+            },
+            {
+                "Reason": "Cannot be applied to splice S1",
                 "SourceFile": "VALIDATION_ERRORS.dag",
                 "SourceLine": 33,
+                "DagCommand": "TOLERANCE",
+            },
+            {
+                "Reason": "References to undefined nodes: DNE",
+                "SourceFile": "VALIDATION_ERRORS.dag",
+                "SourceLine": 35,
                 "DagCommand": "CATEGORY",
             },
             {
                 "Reason": "Configuration file /dne/first.conf does not exist",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 35,
+                "SourceLine": 37,
                 "DagCommand": "CONFIG",
             },
             {
                 "Reason": "DAG configuration file is already defined",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 36,
+                "SourceLine": 38,
                 "DagCommand": "CONFIG",
             },
             {
                 "Reason": "DAG marked with REJECT command",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 38,
+                "SourceLine": 40,
             },
         ],
     },
