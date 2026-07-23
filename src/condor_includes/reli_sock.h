@@ -107,6 +107,8 @@ public:
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack);
 
+	virtual int do_outbound_ccb_connect(char const *ccb_addr,char const *target,bool nonblocking,CondorError * errorStack,int ttl = -1);
+
 	virtual void cancel_reverse_connect();
 
 	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking,char const *sharedPortIP );

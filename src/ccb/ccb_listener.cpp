@@ -20,7 +20,9 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "ccb_listener.h"
+#include "ccb_server.h"
 #include "subsystem_info.h"
+#include "condor_attributes.h"
 
 static int CCB_TIMEOUT = 300;
 
@@ -366,6 +368,11 @@ CCBListener::ReadMsgFromCCB()
 		return false;
 	}
 	m_sock->timeout(CCB_TIMEOUT);
+		// Switch the socket to decode mode before reading.  In the non-blocking
+		// path DaemonCore delivers the socket ready to read, but in the blocking
+		// registration path this is called right after WriteMsgToCCB() left the
+		// socket in encode mode, so without this the read gets garbage.
+	m_sock->decode();
 	ClassAd msg;
 	if( !getClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -419,6 +426,13 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 
 	daemonCore->daemonContactInfoChanged();
 
+		// Notify any interested party (e.g. a CCB server that registered upstream)
+		// that registration completed and a ccbid is now assigned -- fires again on
+		// each reconnect/re-registration, so a changed ccbid is picked up too.
+	if( m_on_registered ) {
+		m_on_registered();
+	}
+
 	return true;
 }
 
@@ -449,11 +463,11 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 			"CCBListener: received request to connect to %s, request id %s.\n",
 			name.c_str(), request_id.c_str());
 
-	return DoReversedCCBConnect( address.c_str(), connect_id.c_str(), request_id.c_str(), name.c_str() );
+	return DoReversedCCBConnect( address.c_str(), connect_id.c_str(), request_id.c_str(), name.c_str(), &msg );
 }
 
 bool
-CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id, char const *peer_description )
+CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id, char const *peer_description, ClassAd const *route_ad )
 {
 	Daemon daemon( DT_ANY, address );
 	CondorError errstack;
@@ -467,6 +481,22 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		// the following is put in the message because that is an easy (lazy)
 		// way to make it available to ReportReverseConnectResult
 	msg_ad->Assign( ATTR_MY_ADDRESS, address);
+		// Carry a tunnel route + audit trail (if any) through to ReverseConnected: a
+		// non-empty CCBRoute means we are an intermediate CCB and must, once our
+		// reverse connection to the requester is up, set up the next hop and relay
+		// rather than handle a command locally.
+	if( route_ad ) {
+		std::string route, orig_req, prior_hop;
+		if( route_ad->LookupString( ATTR_CCB_ROUTE, route ) && !route.empty() ) {
+			msg_ad->Assign( ATTR_CCB_ROUTE, route );
+		}
+		if( route_ad->LookupString( ATTR_CCB_ORIGINAL_REQUESTER, orig_req ) ) {
+			msg_ad->Assign( ATTR_CCB_ORIGINAL_REQUESTER, orig_req );
+		}
+		if( route_ad->LookupString( ATTR_CCB_PRIOR_HOP, prior_hop ) ) {
+			msg_ad->Assign( ATTR_CCB_PRIOR_HOP, prior_hop );
+		}
+	}
 
 	if( !sock ) {
 			// Failed to create socket or initiate connect
@@ -541,9 +571,28 @@ CCBListener::ReverseConnected(Stream *stream)
 		else {
 			((ReliSock*)sock)->isClient(false);
 			static_cast<ReliSock*>(sock)->resetHeaderMD();
-			daemonCore->HandleReqAsync(sock);
-			sock = NULL; // daemonCore took ownership of sock
-			ReportReverseConnectResult(msg_ad,true);
+
+			std::string route;
+			msg_ad->LookupString( ATTR_CCB_ROUTE, route );
+			if( !route.empty() && m_ccb_server ) {
+					// Intermediate CCB hop: this reverse connection is the upstream
+					// pipe to the requesting broker.  Hand it to our CCB server, which
+					// sets up the next hop toward the route head and splices the two --
+					// no local command handling, no client authentication.
+				CCBServer::CCBRouteContext ctx;
+				ctx.route = route;
+				msg_ad->LookupString( ATTR_CCB_ORIGINAL_REQUESTER, ctx.original_requester );
+				msg_ad->LookupString( ATTR_CCB_PRIOR_HOP, ctx.prior_hop );
+				ctx.reply_to_requester = false;
+				m_ccb_server->StartInboundRelay( static_cast<ReliSock*>(sock), ctx );
+				sock = NULL; // CCB server took ownership of sock
+				ReportReverseConnectResult(msg_ad,true);
+			}
+			else {
+				daemonCore->HandleReqAsync(sock);
+				sock = NULL; // daemonCore took ownership of sock
+				ReportReverseConnectResult(msg_ad,true);
+			}
 		}
 	}
 
@@ -696,6 +745,28 @@ CCBListeners::Configure(char const *addresses)
 		}
 		m_ccb_listeners.push_back( ccb_listener );
 
+		ccb_listener->SetCCBServer( m_ccb_server );
+		if( m_on_registered ) {
+			ccb_listener->SetRegistrationCallback( m_on_registered );
+		}
 		ccb_listener->InitAndReconfig();
+	}
+}
+
+void
+CCBListeners::SetCCBServer( CCBServer *s )
+{
+	m_ccb_server = s;
+	for( auto & l : m_ccb_listeners ) {
+		l->SetCCBServer( s );
+	}
+}
+
+void
+CCBListeners::SetRegistrationCallback( std::function<void()> cb )
+{
+	m_on_registered = cb;
+	for( auto & l : m_ccb_listeners ) {
+		l->SetRegistrationCallback( cb );
 	}
 }

@@ -15,6 +15,17 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
+- Added CCB tunneling, which lets an entire set of daemons on a restricted host
+  (for example an HPC worker node that cannot make direct outbound TCP
+  connections) send *and* receive all of their connections through a Connection
+  Broker. A daemon or tool routes its outbound connections through a broker with
+  :macro:`OUTBOUND_CCB_ADDRESS`; a broker relays them with
+  :macro:`CCB_OUTBOUND_PROXY`. The :tool:`condor_master` can run and orchestrate a
+  local inside CCB automatically with :macro:`USE_OUTBOUND_CCB`. Inbound
+  connections to a tunneled daemon route recursively through every broker in the
+  path while the end-to-end CEDAR security session is preserved, and a client
+  authenticates only to the entry broker.
+  :jira:`3828`
 - When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
   off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
   there was nowhere else to mount it.

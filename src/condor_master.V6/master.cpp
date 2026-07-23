@@ -1469,10 +1469,21 @@ init_daemon_list()
 			daemon_names.emplace_back("MASTER");
 		}
 
+			// If outbound-CCB tunneling is enabled, we need a local collector to
+			// act as the inside CCB.  Add it if absent (it is moved to the front
+			// below), mirroring USE_SHARED_PORT.
+		if( param_boolean("USE_OUTBOUND_CCB", false)
+			&& daemon_names.end() == std::ranges::find(daemon_names, std::string("COLLECTOR"))
+			&& param_boolean("AUTO_INCLUDE_COLLECTOR_IN_DAEMON_LIST",true) )
+		{
+			dprintf(D_ALWAYS,"Adding COLLECTOR to DAEMON_LIST to act as the local (inside) CCB, because USE_OUTBOUND_CCB=true (to disable this, set AUTO_INCLUDE_COLLECTOR_IN_DAEMON_LIST=False)\n");
+			daemon_names.emplace_back("COLLECTOR");
+		}
+
 
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
-			  the front... 
+			  the front...
 			*/
 		auto col_it = std::ranges::find(daemon_names, std::string("COLLECTOR"));
 		if (col_it != daemon_names.end()) {

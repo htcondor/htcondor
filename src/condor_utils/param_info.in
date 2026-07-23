@@ -4393,6 +4393,55 @@ type=bool
 description=When true, a daemon that is itself behind a CCB will attempt to reach another CCB-routed (private) peer by asking a streaming-capable broker to proxy the connection, instead of giving up. The attempt is only made when the broker advertises support, so this is safe to leave enabled.
 tags=ccb
 
+[OUTBOUND_CCB_ADDRESS]
+default=
+version=25.13.0
+type=string
+description=When set, this daemon or tool routes its outbound connections through the named CCB broker instead of dialing targets directly: it asks the broker to dial the target on its behalf and splice the two connections into a transparent relay, over which the normal end-to-end CEDAR handshake proceeds. Intended for hosts (such as HPC worker nodes) that cannot make direct outbound TCP connections. Like CCB_ADDRESS, this may be a space-separated list of brokers, which are tried in randomized order for failover and load-balancing. Loopback and same-host targets are still connected directly. Unlike CCB_ADDRESS, this concerns making outbound connections rather than being reachable, so it embeds no CCBID into this daemon's address. If CCB_ADDRESS is not set, a daemon defaults its inbound CCB to this value as well: a host that cannot dial out directly usually cannot be dialed either, and the same broker serves both directions. Set CCB_ADDRESS explicitly to override.
+tags=ccb
+
+[CCB_OUTBOUND_PROXY]
+default=false
+version=25.13.0
+type=bool
+description=When true, this CCB server (broker) will act as an outbound proxy: on an authorized CCB_PROXY_CONNECT request it dials the requested target and splices the two sockets into a transparent relay. Because this makes the broker an outbound proxy, it is disabled by default and is gated by DAEMON authorization and CCB_OUTBOUND_TARGET_ALLOWLIST. This mode is also enabled implicitly on an inside CCB (one with CCB_OUTBOUND_NEXT_HOP set), which is a forwarding outbound proxy by definition; such a broker only ever forwards to its configured next hop, so it needs no allow-list of its own.
+tags=ccb
+
+[CCB_OUTBOUND_TARGET_ALLOWLIST]
+default=*
+version=25.13.0
+type=string
+description=Comma or space separated list of host or CIDR patterns a CCB server's outbound proxy (CCB_OUTBOUND_PROXY) is permitted to dial. Host patterns may use wildcards (for example *.example.com), matched case-insensitively; an IP target may also match a CIDR/network entry. The default of a single asterisk permits every target not excluded by CCB_OUTBOUND_TARGET_DENYLIST; an empty list permits nothing. The deny-list is consulted first, so it takes precedence.
+tags=ccb
+
+[CCB_OUTBOUND_TARGET_DENYLIST]
+default=127.0.0.0/8 ::1 fe80::/10 169.254.0.0/16 localhost
+version=25.13.0
+type=string
+description=Comma or space separated list of host or CIDR patterns a CCB server's outbound proxy (CCB_OUTBOUND_PROXY) will refuse to dial, even when CCB_OUTBOUND_TARGET_ALLOWLIST would permit them. Uses the same wildcard/CIDR matching as the allow-list. The default refuses loopback and link-local targets, so the broker cannot be used to reach services bound to its own host (an SSRF guard); it is exposed here as an overridable default rather than hard-coded so it is visible via condor_config_val.
+tags=ccb
+
+[CCB_OUTBOUND_TTL]
+default=8
+version=25.13.0
+type=int
+description=Time-to-live for an outbound-proxy (CCB_PROXY_CONNECT) request, set by the originating daemon or tool. Each broker that forwards the request to its next hop decrements the TTL and refuses once it reaches zero, bounding the chain length (and catching next-hop loops) at the originator rather than at any intermediate broker. Rarely needs changing.
+tags=ccb
+
+[CCB_OUTBOUND_NEXT_HOP]
+default=
+version=25.13.0
+type=string
+description=When set, this CCB server (an inside broker in a tunnel) registers with the named next-hop (outside) broker so it is itself reachable through the tunnel, and stamps the resulting tunnel address into the CCBIDs it hands out so inbound connections to its local registrants route through both brokers. Also selects the next-hop transport for outbound proxying. In most deployments this is set automatically by the condor_master (see USE_OUTBOUND_CCB) and rarely needs to be configured by hand.
+tags=ccb
+
+[USE_OUTBOUND_CCB]
+default=false
+version=25.13.0
+type=bool
+description=When true, the condor_master runs a local collector as an inside CCB (adding COLLECTOR to DAEMON_LIST if absent), waits for it to register with the next-hop broker named by CCB_OUTBOUND_NEXT_HOP and signal readiness, and then points the other daemons it starts at that local collector for both directions: as their CCB_ADDRESS (so their inbound connections route through the tunnel, with their advertised contacts stamped with the tunnel address by the inside CCB) and as their OUTBOUND_CCB_ADDRESS (so their outbound connections tunnel through it too). A node that cannot dial out directly is thus fully tunneled from this single knob. Analogous to USE_SHARED_PORT.
+tags=ccb
+
 [ROOSTER_INTERVAL]
 default=300
 version=7.4.0

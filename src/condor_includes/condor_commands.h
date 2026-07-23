@@ -762,7 +762,7 @@ static_assert(makeCommandTable().back().first == COMMAND_LAST, "Is the size of t
 *** Command ids used by the collector 
 ************/
 constexpr const
-std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
+std::array<std::pair<int, const char *>, 64> makeCollectorCommandTable() {
 	return {{ 
 #define UPDATE_STARTD_AD		0
 		{UPDATE_STARTD_AD, "UPDATE_STARTD_AD"},
@@ -929,6 +929,15 @@ std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
 			// Request a collector to retrieve an identity token from a schedd.
 #define IMPERSONATION_TOKEN_REQUEST 81
 		{IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST"},
+
+			// Ask a CCB to dial a target on the requester's behalf and splice the
+			// two sockets into a relay (outbound-CCB / tunneling mode).
+#define CCB_PROXY_CONNECT 82
+		{CCB_PROXY_CONNECT, "CCB_PROXY_CONNECT"},
+
+		// (command 83 is unused: a tunneling CCB's derived address travels in the
+		// ordinary CCB_REGISTER reply, which the inside CCB defers until it is
+		// tunnel-ready, so no separate query command is needed.)
 
 #define COLLECTOR_COMMAND_LAST (INT_MAX - 1)			// used by the Win32 credd only
 		{COLLECTOR_COMMAND_LAST, "COLLECTOR_COMMAND_LAST"},
