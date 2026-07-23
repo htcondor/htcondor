@@ -16,6 +16,7 @@
 import os
 import re
 import sys
+import json
 import logging
 import argparse
 
@@ -52,9 +53,14 @@ def get_default_config(name="ADSTASH"):
         "se_use_https": False,
         "se_timeout": 2 * 60,
         "se_bunch_size": 250,
-        "se_index_name": "htcondor-000001",
+        "se_index_name": "htcondor",
         "se_log_mappings": True,
         "json_dir": Path.cwd(),
+        "custom_field_properties": None,
+        "custom_dynamic_templates": None,
+        "custom_ignore_attrs": set(),
+        "custom_index_settings": None,
+        "init_index": False,
     }
     return defaults
 
@@ -71,7 +77,9 @@ def get_htcondor_config(name="ADSTASH"):
         "threads": p.get(f"{name}_NUM_THREADS"),
         "collectors": p.get(f"{name}_READ_POOLS"),
         "schedds": p.get(f"{name}_READ_SCHEDDS"),
+        "ignore_schedds": p.get(f"{name}_IGNORE_SCHEDDS"),
         "startds": p.get(f"{name}_READ_STARTDS"),
+        "ignore_startds": p.get(f"{name}_IGNORE_STARTDS"),
         "read_schedd_history": p.get(f"{name}_SCHEDD_HISTORY"),
         "read_startd_history": p.get(f"{name}_STARTD_HISTORY"),
         "read_schedd_job_epoch_history": p.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
@@ -95,6 +103,10 @@ def get_htcondor_config(name="ADSTASH"):
         "se_ca_certs": p.get(f"{name}_ES_CA_CERTS", p.get(f"{name}_SE_CA_CERTS")),
         "se_log_mappings": p.get(f"{name}_SE_LOG_MAPPINGS"),
         "json_dir": p.get(f"{name}_JSON_DIR"),
+        "custom_field_properties": p.get(f"{name}_CUSTOM_FIELD_PROPERTIES"),
+        "custom_dynamic_templates": p.get(f"{name}_CUSTOM_DYNAMIC_TEMPLATES"),
+        "custom_ignore_attrs": p.get(f"{name}_CUSTOM_IGNORE_ATTRS"),
+        "custom_index_settings": p.get(f"{name}_CUSTOM_INDEX_SETTINGS"),
     }
 
     # Convert debug level
@@ -140,7 +152,9 @@ def get_environment_config(name="ADSTASH"):
         "threads": env.get(f"{name}_NUM_THREADS"),
         "collectors": env.get(f"{name}_READ_POOLS"),
         "schedds": env.get(f"{name}_READ_SCHEDDS"),
+        "ignore_schedds": env.get(f"{name}_IGNORE_SCHEDDS"),
         "startds": env.get(f"{name}_READ_STARTDS"),
+        "ignore_startds": env.get(f"{name}_IGNORE_STARTDS"),
         "read_schedd_history": env.get(f"{name}_SCHEDD_HISTORY"),
         "read_startd_history": env.get(f"{name}_STARTD_HISTORY"),
         "read_schedd_job_epoch_history": env.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
@@ -164,6 +178,10 @@ def get_environment_config(name="ADSTASH"):
         "se_ca_certs": env.get(f"{name}_SE_CA_CERTS", env.get(f"{name}_CA_CERTS")),
         "se_log_mappings": env.get(f"{name}_SE_LOG_MAPPINGS"),
         "json_dir": env.get(f"{name}_JSON_DIR"),
+        "custom_field_properties": env.get(f"{name}_CUSTOM_FIELD_PROPERTIES"),
+        "custom_dynamic_templates": env.get(f"{name}_CUSTOM_DYNAMIC_TEMPLATES"),
+        "custom_ignore_attrs": env.get(f"{name}_CUSTOM_IGNORE_ATTRS"),
+        "custom_index_settings": env.get(f"{name}_CUSTOM_INDEX_SETTINGS"),
     }
 
     # remove None values
@@ -226,8 +244,8 @@ def normalize_config_types(conf):
         "startd_history_max_ads",
         "schedd_history_timeout",
         "startd_history_timeout",
-        "es_timeout",
-        "es_bunch_size",
+        "se_timeout",
+        "se_bunch_size",
     ]
     bools = [
         "standalone",
@@ -235,8 +253,6 @@ def normalize_config_types(conf):
         "read_startd_history",
         "read_schedd_job_epoch_history",
         "read_schedd_transfer_epoch_history",
-        "to_elasticsearch",
-        "to_json",
         "se_use_https",
         "se_log_mappings",
     ]
@@ -352,6 +368,12 @@ def get_config(argv=None):
         help="Log level (CRITICAL/ERROR/WARNING/INFO/DEBUG) [default: %(default)s]",
     )
     parser.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        default=False,
+        help="Don't print out log messages",
+    )
+    parser.add_argument(
         "--threads",
         type=int,
         help=("Number of parallel threads for querying [default: %(default)d]"),
@@ -440,9 +462,23 @@ def get_config(argv=None):
         ),
     )
     history_group.add_argument(
+        "--ignore_schedds",
+        help=(
+            "Comma-separated list of Schedd names to skip processing "
+            "[default is to process all Schedds located by Collectors]"
+        ),
+    )
+    history_group.add_argument(
         "--startds",
         help=(
             "Comma-separated list of Startd machines to process "
+            "[default is to process all Startds located by Collectors]"
+        ),
+    )
+    history_group.add_argument(
+        "--ignore_startds",
+        help=(
+            "Comma-separated list of Startd machines to skip processing "
             "[default is to process all Startds located by Collectors]"
         ),
     )
@@ -557,7 +593,7 @@ def get_config(argv=None):
         "--se_no_log_mappings",
         dest="se_log_mappings",
         action="store_false",
-        help="Don't write a JSON file with mappings to the log directory",
+        help="Don't write a JSON file with mappings and settings to the log directory",
     )
     se_group.add_argument(
         "--se_ca_certs", "--ca_certs",
@@ -580,6 +616,73 @@ def get_config(argv=None):
         help="Directory to store JSON files, which are named by timestamp [defaults to current directory]",
     )
 
+    field_settings_group = parser.add_argument_group(
+        title = "Field mapping and index setting customization options",
+        description = "Override or add additional field mappings and index settings."
+    )
+    field_settings_group.add_argument(
+        "--custom_field_properties",
+        type=Path,
+        metavar="PATH",
+        help="Path to JSON file containing field properties",
+    )
+    field_settings_group.add_argument(
+        "--custom_dynamic_templates",
+        type=Path,
+        metavar="PATH",
+        help="Path to JSON file containing dynamic templates",
+    )
+    field_settings_group.add_argument(
+        "--custom_ignore_attrs",
+        help="Comma-separated list of ClassAd attributes to ignore",
+    )
+    field_settings_group.add_argument(
+        "--custom_index_settings",
+        type=Path,
+        metavar="PATH",
+        help="Path to JSON file containing index settings",
+    )
+
+    init_index_group = parser.add_argument_group(
+        title = "Index initialization options",
+        description = "Write out JSON files (with reasonable defaults) for when first setting up condor_adstash."
+    )
+    init_index_group.add_argument(
+        "--init_index",
+        action="store_true",
+        help="Write out JSON files to set up a new index for your search engine then exit."
+    )
+    init_index_group.add_argument(
+        "--init_ad_type",
+        choices=["history", "job_epoch_history", "transfer_epoch_history"],
+        default="history",
+        help="Ad type to use for default mappings [default: %(default)s]",
+    )
+    init_index_group.add_argument(
+        "--init_output_directory",
+        type=Path,
+        default=Path().cwd(),
+        help="Directory to write index JSON and README files [default is current working dir: %(default)s]",
+    )
+    init_index_group.add_argument(
+        "--no_alias",
+        dest="use_alias",
+        action="store_false",
+        help="Do not use index aliases (not recommended)",
+    )
+    init_index_group.add_argument(
+        "--no_ilm",
+        dest="use_ilm",
+        action="store_false",
+        help="Do not use an index lifecycle management policy (not recommended)",
+    )
+    init_index_group.add_argument(
+        "--no_template",
+        dest="use_template",
+        action="store_false",
+        help="Do not use an index template (not recommended)",
+    )
+
     # Parse args and add process name back to the list
     args = parser.parse_args(remaining_argv)
     args_dict = vars(args)
@@ -589,6 +692,22 @@ def get_config(argv=None):
         args.schedd_history_projection = set(re.split(r"[\s,]+", args.schedd_history_projection.strip()))
     if args.startd_history_projection:
         args.startd_history_projection = set(re.split(r"[\s,]+", args.startd_history_projection.strip()))
+    if args.custom_ignore_attrs:
+        args.custom_ignore_attrs = set(re.split(r"[\s,]+", args.custom_ignore_attrs.strip()))
+
+    # Read JSON files
+    for arg in ["custom_field_properties", "custom_dynamic_templates", "custom_index_settings"]:
+        if args_dict.get(arg) is not None:
+            try:
+                with args_dict[arg].open("r") as f:
+                    try:
+                        args_dict[arg] = json.load(f)
+                    except json.JSONDecodeError:
+                        logging.exception(f"Could not parse JSON from {args_dict[arg]}, exiting")
+                        sys.exit(1)
+            except Exception:
+                logging.exception(f"Could not open {args_dict[arg]}, exiting")
+                sys.exit(2)
 
     # Check for deprecated args
     for arg in remaining_argv:
@@ -600,5 +719,10 @@ def get_config(argv=None):
         if arg == "--json_local":
             logging.warning(f"Use of --json_local is deprecated, use --interface=jsonfile instead.")
             args.interface="jsonfile"
+
+    # Set the log dir for mappings and settings
+    args.se_log_mappings_dir = args.log_file.parent  # Default to same dir as log file
+    if args.interface == "jsonfile":  # Backwards compat, mappings used to be stored in JSON dir
+        args.se_log_mappings_dir = args.json_dir
 
     return args
