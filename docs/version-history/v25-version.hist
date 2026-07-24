@@ -1,5 +1,12 @@
 *** 25.0.14 bugs
 
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the intial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
+
 *** 25.0.13 bugs
 
 *** 25.0.12 bugs
