@@ -1267,6 +1267,18 @@ type=int
 description=Pid Snapshot Interval for the Master
 tags=daemon_core
 
+[PARENT_CHECK_FIRST_INTERVAL]
+default=15
+type=int
+description=Seconds after startup before a daemon's first check of whether its parent process is still alive. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_FIRST_INTERVAL.
+tags=daemon_core
+
+[PARENT_CHECK_INTERVAL]
+default=120
+type=int
+description=Seconds between checks of whether a daemon's parent process is still alive; if not, the daemon shuts itself down. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL.
+tags=daemon_core
+
 [SEC_DEBUG_PRINT_KEYS]
 default=false
 type=bool

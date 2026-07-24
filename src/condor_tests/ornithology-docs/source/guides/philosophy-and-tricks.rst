@@ -92,6 +92,43 @@ I prefer to name the test tuples directly:
     def failure_log_message(which_failure_injection):
         return which_failure_injection[1]
 
+Simulating AP/Daemon Restarts
+------------------------------
+
+:meth:`Condor.restart` and :meth:`Condor.restart_daemon` interrupt a
+running pool -- the whole pool, or a single named daemon -- in one of
+three ways, given as a :class:`RestartMode`:
+
+- ``RestartMode.GRACEFUL``: ``condor_restart`` (clean shutdown, then restart).
+- ``RestartMode.FAST``: ``condor_restart -fast`` (abrupt but signaled shutdown).
+- ``RestartMode.CRASH``: SIGKILLs the daemon process(es) directly, with no
+  cleanup at all. POSIX-only (not supported on Windows); this is the only
+  mode that actually interrupts an in-flight job process running under the
+  affected daemon (e.g. a local-universe node under ``startd``) -- GRACEFUL
+  and FAST let already-running jobs finish undisturbed.
+
+Both methods block until the affected daemon(s) have genuinely come back
+(confirmed via two consecutive, matching ``condor_who`` checks, not just
+one -- a single "yes" can be a momentarily-stale read right after a
+restart), raising ``TimeoutError`` if they don't within ``timeout`` seconds.
+
+.. code-block:: python
+
+    from ornithology import Condor, RestartMode
+
+    condor.restart(mode=RestartMode.GRACEFUL)          # whole pool
+    condor.restart_daemon("schedd", mode=RestartMode.CRASH)  # one daemon
+
+If your test needs a job to still be genuinely running (or blocked) at
+the exact moment the restart lands, don't rely on a fixed ``time.sleep()``
+in the job's own script to guess how long the restart will take on a
+given machine -- that races the real restart-command execution time and
+can silently pass without ever actually landing the interruption on a
+slow machine. Instead, have the job poll for a sentinel file's existence
+and only create that file yourself once the restart has actually
+completed (see ``dagman_recovery_utils.py``'s ``write_attempt_script``/
+``write_recoverability_dag`` in ``src/condor_tests`` for a worked example).
+
 Debugging Structure
 -------------------
 
