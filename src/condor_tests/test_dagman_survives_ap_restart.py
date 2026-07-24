@@ -93,6 +93,16 @@ def condor(test_dir):
             # adds a flat ~10s per restart unrelated to anything this test
             # is exercising. Clamped to a minimum of 1 by param_integer().
             "MASTER_BACKOFF_CONSTANT": 1,
+            # A schedd-only restart can leave the new schedd mid-startup
+            # (e.g. shared_port not yet registered) when the freshly
+            # respawned DAGMan -- itself a child of that schedd -- already
+            # starts retrying its node submission. The default 6-attempt
+            # budget with doubling backoff (dag.cpp's ProcessFailedSubmit)
+            # gives up after ~31s, which can be shorter than a schedd
+            # restart takes under CI load. Widen it to the param's max
+            # (param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16) in
+            # dagman_main.cpp) to ride that out.
+            "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
         },
     ) as condor:
         yield condor
