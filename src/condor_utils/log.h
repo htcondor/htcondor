@@ -48,8 +48,9 @@
 class LogRecord {
 public:
 	
-	LogRecord();
-	virtual ~LogRecord();
+	LogRecord() = default;
+	LogRecord(int op) : op_type(op) {}
+	virtual ~LogRecord() {};
 	int get_op_type() const { return op_type; }
 
 	int Write(FILE *fp);
@@ -62,11 +63,19 @@ public:
 
 	static int readword(FILE*, char *&);
 	static int readline(FILE*, char *&);
+	// returns an ephemeral string view pointing to the null-terminated internal static line buffer
+	static std::string_view readline_fast(FILE* fp, bool partial_line_ok=false);
+	static void free_linebuf();
+	static void reserve_linebuf(size_t cb);
+	static size_t linebuf_size();
 
 	virtual char const *get_key() = 0;
 
 protected:
-	int op_type;	/* This is the type of operation being performed */
+	int op_type{0};	/* This is the type of operation being performed */
+
+	static char *linebuf;
+	static size_t bufsize;
 
 private:
 	int WriteHeader(FILE *fp) const;
@@ -79,6 +88,7 @@ class ConstructLogEntry
 public:
 	virtual ClassAd* New(const char * key, const char * mytype) const = 0;
 	virtual void Delete(ClassAd*& val) const = 0;
+	virtual LogRecord * NewLogRec(int optype) const = 0;
 	virtual ~ConstructLogEntry() {}; // declare (superfluous) virtual constructor to get rid of g++ warning.
 };
 

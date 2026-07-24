@@ -496,6 +496,11 @@ static inline bool IsSpecialJobId( int cluster_id, int proc_id )
 	return false;
 }
 
+LogRecord * ConstructClassAdLogTableEntry<JobQueuePayload>::NewLogRec(int optype) const
+{
+	return MakeLogRecord(optype, *this);
+}
+
 ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, const char * mytype) const
 {
 	JOB_ID_KEY jid(key);

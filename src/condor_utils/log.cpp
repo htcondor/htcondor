@@ -49,15 +49,6 @@ bool valid_record_optype(int optype) {
     return false;
 }
 
-LogRecord::LogRecord()
-{
-	op_type = 0;
-}
-
-
-LogRecord::~LogRecord()
-{
-}
 
 int
 LogRecord::readword(FILE *fp, char * &str)
@@ -159,6 +150,115 @@ LogRecord::readline(FILE *fp, char * &str)
 	free(buf);
 	return i-1;
 }
+
+// static buffer for readline_fast
+char *LogRecord::linebuf{nullptr};
+size_t LogRecord::bufsize{0};
+
+/* static */ void LogRecord::free_linebuf()
+{
+	if (linebuf) {
+		free(linebuf);
+		linebuf = nullptr;
+		bufsize = 0;
+	}
+}
+
+/* static */ void LogRecord::reserve_linebuf(size_t cb)
+{
+	if (linebuf && cb > bufsize) {
+		// if realloc succeed, our buffer was copied and freed.
+		char * tmp = (char*)realloc(linebuf, cb+1);
+		if (tmp) {
+			bufsize = cb;
+			linebuf = tmp;
+		}
+	}
+	if ( ! linebuf) {
+		bufsize = cb;
+		linebuf = (char*)malloc(bufsize+1);
+		if (linebuf) { memset(linebuf,0,bufsize+1); }
+	}
+}
+
+/* static */ size_t LogRecord::linebuf_size()
+{
+	return bufsize;
+}
+
+/* static */ std::string_view LogRecord::readline_fast(FILE* fp, bool partial_line_ok /*=false*/)
+{
+	if ( ! fp || feof(fp)) return {};
+
+	if ( ! linebuf) { reserve_linebuf(1024); }
+	ASSERT(linebuf);
+
+	char * end_ptr = linebuf;  // Pointer to read into next read
+
+	for (;;) {
+		size_t len = bufsize - (end_ptr - linebuf) + 1;
+		if (len <= 5) {
+			size_t end_off = end_ptr - linebuf; // remember our end position
+			size_t old_size = bufsize;
+			reserve_linebuf(bufsize*2); // grow buffer by doubling it
+			if (old_size == bufsize) {
+				// failed to grow the buffer
+				EXCEPT( "Out of memory - classad log record too long" );
+			} else {
+				// grow successful, adjust to a new linebuf pointer
+				end_ptr = linebuf + end_off;
+				len = bufsize - end_off + 1;
+			}
+		}
+
+		if ( ! fgets(end_ptr,len,fp)) {
+			// we hit EOF (or error)
+			if (*linebuf == 0) {
+				return {}; // we read nothing at all
+			} else {
+				// if we got a newline in the buffer, then this is a good read
+				// otherwise it is an error or partial line
+				if (*end_ptr) {
+					size_t cch = strlen(end_ptr);
+					if (end_ptr[cch-1] == '\n') {
+						end_ptr += cch-1;
+						if (end_ptr > linebuf && end_ptr[-1] == '\r') {
+							--end_ptr;
+						}
+						*end_ptr = 0;
+						return {linebuf, end_ptr};
+					}
+				}
+				if (partial_line_ok) {
+					return {linebuf}; // return what we got
+				}
+				return {}; // no newline, so we read nothing
+			}
+		}
+
+		// See if fgets read an entire line, or simply ran out of buffer space
+		if (*end_ptr == 0) {
+			continue;
+		}
+
+		size_t cch = strlen(end_ptr);
+		if (end_ptr[cch-1] != '\n') {
+			// if we made it here, fgets() ran out of buffer space.
+			// move our read_ptr pointer forward so we concatenate the
+			// rest on after we realloc our buffer above.
+			end_ptr += cch;
+			continue;	// since we are not finished reading this line
+		}
+
+		end_ptr += cch-1;
+		if (end_ptr > linebuf && end_ptr[-1] == '\r') {
+			--end_ptr;
+		}
+		*end_ptr = 0;
+		return {linebuf, end_ptr};
+	}
+}
+
 
 int
 LogRecord::Write(FILE *fp)
