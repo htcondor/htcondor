@@ -1351,10 +1351,10 @@ init_params()
 }
 
 // helper function to determin if the executable of a daemon matches the executable of a DC daemon
-static bool same_exe_as_daemon(const char * daemon_name, std::vector<std::string> &dc_names, std::set<std::string> & dc_exes)
+static bool same_exe_as_daemon(const char * daemon_name, const AttrNameSet &dc_names, std::set<std::string> & dc_exes)
 {
 	// first time we call this, build a collection of daemon executables paths
-	if (dc_exes.empty() && ! dc_names.empty()) {
+	if (dc_exes.empty() && dc_names.size() > 0) {
 		for (const auto &name: dc_names) {
 			auto_free_ptr program(param(name.c_str()));
 			if (program) { dc_exes.insert(program.ptr()); }
@@ -1373,55 +1373,45 @@ void
 init_daemon_list()
 {
 	std::vector<std::string> daemon_names;
-	std::vector<std::string> dc_daemon_names;
 	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
 	std::set<std::string> dc_daemon_exes; // paths to daemon binaries for the daemon core daemons, used if needed
 
 	daemons.ordered_daemon_names.clear();
-	char* dc_daemon_list = param("DC_DAEMON_LIST");
+	auto_free_ptr dc_daemon_list(param("DC_DAEMON_LIST"));
 
-	if( !dc_daemon_list ) {
-		std::ranges::copy(default_dc_daemon_array, std::back_inserter(dc_daemon_names));
-	} else {
-		if ( *dc_daemon_list == '+' ) {
-			std::ranges::copy(default_dc_daemon_array, std::back_inserter(dc_daemon_names));
-			dc_daemon_names.emplace_back(&dc_daemon_list[1]);
-		}
-		else {
-			dc_daemon_names = split(dc_daemon_list);
+	// It's too easy for config to break things by setting DC_DAEMON_LIST,
+	// So add all of the built-in daemons to the DC list unconditionally
+	size_t num_default = sizeof(default_dc_daemon_array)/sizeof(default_dc_daemon_array[0]);
+	AttrNameSet dc_daemon_names(default_dc_daemon_array, default_dc_daemon_array + num_default);
 
-			int	missing = 0;
-			for (const char *default_entry: default_dc_daemon_array) {
-				bool found = false;
-				for (const auto &dc_daemon_name : dc_daemon_names) {
-					found = (MATCH == strcasecmp(dc_daemon_name.c_str(), default_entry));
-				}
-				if(!found) {
-					dprintf(D_ALWAYS,
-							"WARNING: expected to find %s in"
-							" DC_DAEMON_LIST, but it is not there.\n",
-							default_entry);
-					missing++;
-				}
+	// then insert additional entries from DC_DAEMON_LIST config knob.
+	// for legacy reasons, skip over leading + in the daemon name,
+	// skip empty entries and entries that are just +
+	// Also add a secret hack for -DAEMON so it is still possible to explicitly
+	// remove an entry from the DC list.
+	if (dc_daemon_list) {
+		for (const auto & str : StringTokenIterator(dc_daemon_list)) {
+			if (str.empty()) continue;
+			if (str.front() == '+') {
+				if (str.size() > 1) dc_daemon_names.insert(str.c_str()+1);
+			} else if (str.front() == '-') {
+				if (str.size() > 1) dc_daemon_names.erase(str.c_str()+1);
+			} else {
+				dc_daemon_names.insert(str);
 			}
-			if ( missing ) {
-				dprintf( D_ALWAYS,
-						 "WARNING: "
-						 "%d entries are missing from DC_DAEMON_LIST.  "
-						 "Unless you know what you are doing, it "
-						 "is best to leave DC_DAEMON_LIST undefined "
-						 "so that the default settings are used, "
-						 "or use the new 'DC_DAEMON_LIST = "
-						 "+<list>' syntax.\n", missing );
-			}
-				
 		}
-		free(dc_daemon_list);
-	}
-
-		// Tolerate a trailing comma in the list
-	if (dc_daemon_names.back().size() == 0) {
-		dc_daemon_names.erase(--dc_daemon_names.end());
+		// Report questionable entries and print the effective list
+		std::string dclist;
+		dclist.reserve(dc_daemon_names.size() * 16);
+		for (const auto & name : dc_daemon_names) {
+			if ( ! is_valid_param_name(name.c_str())) {
+				dprintf(D_ALWAYS, "WARNING: DC_DAEMON_LIST should contain only config variable names."
+					" But it has '%s' which is not.\n", name.c_str());
+			}
+			if (dclist.size()) dclist += " ";
+			dclist += name;
+		}
+		dprintf(D_FULLDEBUG, "Effective DC_DAEMON_LIST = %s\n", dclist.c_str());
 	}
 
 	char* ha_list = param("MASTER_HA_LIST");
@@ -1439,13 +1429,8 @@ init_daemon_list()
 
 		for (const auto &daemon_name: ha_names) {
 			if(daemons.FindDaemon(daemon_name.c_str()) == nullptr) {
-				if (std::count(dc_daemon_names.begin(),
-							   dc_daemon_names.end(),
-							   daemon_name) > 0) {
-					new class daemon(daemon_name.c_str(), true, true );
-				} else {
-					new class daemon(daemon_name.c_str(), false, true );
-				}
+				bool is_dc = dc_daemon_names.count(daemon_name) > 0;
+				new class daemon(daemon_name.c_str(), is_dc, true );
 			}
 		}
 	}
@@ -1516,11 +1501,10 @@ init_daemon_list()
 
 		for (const auto &daemon_name : daemon_names) {
 			if(daemons.FindDaemon(daemon_name.c_str()) == nullptr) {
-				bool is_DC = dc_daemon_names.end() != 
-					std::ranges::find(dc_daemon_names, daemon_name);
+				bool is_DC = dc_daemon_names.count(daemon_name) > 0;
 				if ( ! is_DC) {
 					// daemon is not in the DC list, check to see if uses the same executable
-					// as on of the DC daemons, if so, we presume it is DC
+					// as one of the DC daemons, if so, we presume it is DC
 					is_DC = same_exe_as_daemon(daemon_name.c_str(), dc_daemon_names, dc_daemon_exes);
 				}
 				new class daemon(daemon_name.c_str(), is_DC);
