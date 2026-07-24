@@ -111,14 +111,22 @@ General
 
 :macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`
     An integer value representing the number of jobs in a single cluster that can fail
-    before DAGMan considers the cluster as failed and removes any remaining jobs. This
-    value is applied to all nodes in the DAG for each execution. The default value is ``0``, meaning no jobs should fail.
+    before DAGMan considers the cluster as failed. This value is applied to all nodes
+    in the DAG for each execution, unless overridden for a specific node with the
+    :dag-cmd:`TOLERANCE` command. The default value is ``0``, meaning no jobs should fail.
 
     .. warning::
 
         If the tolerance value is greater than or equal to the total number of jobs in
         a cluster then DAGMan will consider the cluster as successful even if all jobs
         fail.
+
+:macro-def:`DAGMAN_REMOVE_JOB_LIST_ON_FAILURE`
+    A boolean value that defaults to ``True``. When ``True``, DAGMan removes the
+    remaining queued jobs in a node's cluster as soon as that node's job list is
+    declared failed (see :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`). When ``False``,
+    the remaining jobs are left to run to completion instead. This can be overridden
+    per node with the *FAIL-FAST* and *WAIT* modes of the :dag-cmd:`TOLERANCE` command.
 
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
     A boolean value that defaults to ``False``. When ``True``, variables

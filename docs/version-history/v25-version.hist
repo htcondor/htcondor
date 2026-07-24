@@ -1,5 +1,11 @@
 *** 25.14.0 features
 
+- Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
+  finer control on what constitutes failure with a job list in a single
+  node and whether DAGMan should immediately remove job list upon failure
+  or wait for jobs to finish.
+  :jira:`3838`
+
 *** 25.14.0 bugs
 
 *** 25.0.14 bugs

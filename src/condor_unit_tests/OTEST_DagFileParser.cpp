@@ -93,6 +93,9 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"VARS D foo=\"\" bar=''\n"
 		"PRIORITY D -82\n"
 		"PRE-SKIP E 12\n"
+		"TOLERANCE E 3\n"
+		"TOLERANCE D 25% FAIL-FAST\n"
+		"TOLERANCE C 10 WAIT\n"
 		"SAVE-POINT-FILE B\n"
 		"SAVE_POINT_FILE C ../custom/path/important.save\n"
 		"CATEGORY C CAT-1\n"
@@ -232,6 +235,14 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"WEAK\n"
 		"WEAK CHILD A\n"
 		"WEAK PARENT CHILD A B C\n"
+		"TOLERANCE\n"
+		"TOLERANCE A\n"
+		"TOLERANCE A foo\n"
+		"TOLERANCE A 5 garbage\n"
+		"TOLERANCE A %\n"
+		"TOLERANCE A 5 WAIT garbage\n"
+		"TOLERANCE A -1\n"
+		"TOLERANCE A 101%\n"
 	},
 	{
 		// DAG with missing final newline
@@ -308,6 +319,9 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"VARS > D [bar=] [foo=]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
+		"TOLERANCE > E 3 F AUTO",
+		"TOLERANCE > D 25 T FAIL-FAST",
+		"TOLERANCE > C 10 F WAIT",
 		"SAVE_POINT_FILE > B B-" + SUCCESS_DAG + ".save",
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
@@ -442,6 +456,14 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":105 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
 		FAILURE_DAG + ":106 Failed to parse PARENT command: WEAK dependency missing PARENT keyword",
 		FAILURE_DAG + ":107 Failed to parse PARENT command: No parent node(s) specified",
+		FAILURE_DAG + ":108 Failed to parse TOLERANCE command: No node name specified",
+		FAILURE_DAG + ":109 Failed to parse TOLERANCE command: Missing failure tolerance value",
+		FAILURE_DAG + ":110 Failed to parse TOLERANCE command: Invalid tolerance value 'foo'",
+		FAILURE_DAG + ":111 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":112 Failed to parse TOLERANCE command: Empty percentage specified for failure tolerance",
+		FAILURE_DAG + ":113 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":114 Failed to parse TOLERANCE command: Invalid tolerance value '-1'",
+		FAILURE_DAG + ":115 Failed to parse TOLERANCE command: Invalid tolerance value '101'",
 	},
 };
 

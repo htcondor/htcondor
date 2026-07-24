@@ -75,6 +75,14 @@ Node Behavior
 
         PRE_SKIP <NodeName | ALL_NODES> non-zero-exit-code
 
+:dag-cmd-def:`TOLERANCE` (see :ref:`Full Description<DAG node tolerance cmd>`)
+    Override, for a specific node, how many job failures its job list can
+    tolerate and whether the remaining jobs get removed once declared failed.
+
+    .. code-block:: condor-dagman
+
+        TOLERANCE <NodeName | ALL_NODES> FailureValue[%] [FAIL-FAST | WAIT]
+
 :dag-cmd-def:`PRIORITY` (see :ref:`Full Description<DAG Node Priorities>`)
     Assign a node priority to control DAGMan node submission.
 

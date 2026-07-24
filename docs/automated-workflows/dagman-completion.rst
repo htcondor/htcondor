@@ -79,8 +79,37 @@ Table 2.2 lists the definition of node success and failure only for the cases
 where the PRE script fails, when DAGMan is configured to always run POST scripts.
 
 If a node contains more than one job, then the entire list of jobs is considered
-a failure when any job in the list fails. Once declared as failed, the remaining
-jobs associated with the node will be removed from the queue.
+a failure once the number of failed jobs exceeds the node's failure tolerance
+(see :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`, default ``0``). Once declared
+failed, the remaining jobs are removed from the queue by default (see
+:macro:`DAGMAN_REMOVE_JOB_LIST_ON_FAILURE`). Both behaviors can be overridden
+per node with the :dag-cmd:`TOLERANCE[Usage]` command.
+
+:index:`job list failure tolerance<single: DAGMan; Job list failure tolerance>`
+
+.. _DAG node tolerance cmd:
+
+TOLERANCE
+^^^^^^^^^
+
+The :dag-cmd:`TOLERANCE` command overrides, for a single node, how many
+job failures its job list can tolerate and whether the remaining jobs get
+removed once it's declared failed. Syntax:
+
+.. code-block:: condor-dagman
+
+    TOLERANCE <NodeName | ALL_NODES> FailureValue[%] [FAIL-FAST | WAIT]
+
+*FailureValue* is the number of job failures, within the identified node's
+job list, that DAGMan will tolerate before declaring that job list failed.
+It overrides :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` for this node.
+Instead of a fixed count, it may be given as a percentage of the node's
+total submitted jobs by appending a ``%`` (e.g. ``50%`` tolerates failure
+of up to half of the jobs in the list).
+
+*FAIL-FAST* or *WAIT* overrides :macro:`DAGMAN_REMOVE_JOB_LIST_ON_FAILURE` for
+this node: *FAIL-FAST* always removes the remaining jobs, *WAIT* always leaves
+them running. Omitting both keeps the global default.
 
 :index:`skipping node execution<single: DAGMan; Skipping node execution>`
 
