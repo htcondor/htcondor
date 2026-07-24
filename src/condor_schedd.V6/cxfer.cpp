@@ -205,7 +205,7 @@ call_StartJobFailure( const std::string & claimID ) {
 			// handling depends on knowing if the match record being deleted
 			// is a transfer shadow's.
 			auto * shadow_record = mrec->shadowRec;
-			PROC_ID id( mrec->cluster, transferToPromptingProcID(mrec->proc) );
+			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
 			scheduler.StartJobFailed( mrec, id );
 
 			if( shadow_record != nullptr ) {
@@ -238,11 +238,11 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 	CondorError errorStack;
 	DCStartd startd( mrec->peer, nullptr );
 
-	ClaimIdParser cidp( mrec->claim_id.claimId() );
+	ClaimIdParser cidp( mrec->claimId() );
 	char const * sessionID = cidp.secSessionId();
 	// dprintf( D_ALWAYS, "start_command_data_slot(): using sessionID %s\n", sessionID );
 
-	std::string originalClaimID = mrec->claim_id.claimId();
+	std::string originalClaimID = mrec->claimId();
 	auto result = startd.startCommand_nonblocking(
 		COMMAND_DATA_SLOT,
 		Sock::reli_sock,
