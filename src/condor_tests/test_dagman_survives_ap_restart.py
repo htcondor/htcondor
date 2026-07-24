@@ -75,12 +75,23 @@ def condor(test_dir):
     # DAGMan is itself a scheduler-universe job: any restart that evicts it
     # (or kills it) makes it exit non-zero, which by default puts it in a
     # 5-minute cooldown (SCHEDULER_UNIVERSE_COOL_DOWN_DURATION) before the
-    # schedd will resubmit it -- disable that so recovery happens promptly,
-    # the same fix job_dagman_condor_restart.run/job_dagman_large_dag.run use.
+    # schedd will resubmit it -- shrink (not zero) that so recovery happens
+    # promptly, the same fix job_dagman_condor_restart.run/
+    # job_dagman_large_dag.run use. Zero disables the cooldown entirely
+    # (setJobCoolDown() short-circuits on <= 0, schedd.cpp) -- but that
+    # also removes the *only* throttle on relaunching the duplicate DAGMan
+    # a restarted schedd spawns for the same job id, which loses the
+    # .dag.lock race against the real orphan and exits EXIT_RESTART; with
+    # no cooldown at all, schedd respawns a fresh duplicate every
+    # SCHEDD_MIN_INTERVAL (~5s), each doing a full DAG re-parse and two
+    # schedd qmgmt connections, for as long as the real orphan takes to
+    # finish -- real resource contention against that orphan's own
+    # retries, observed as a many-minutes-long duplicate-spawn storm
+    # under CI load. A few seconds is enough to still recover promptly.
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 0,
+            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 3,
             # Speed up DAGMan's own orphan self-detection (normally a
             # generic, shared 15s/120s DaemonCore cadence -- see
             # daemon_core_main.cpp's check_parent()) so a crashed/restarted

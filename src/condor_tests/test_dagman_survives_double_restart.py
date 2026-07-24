@@ -82,11 +82,13 @@ def condor(test_dir):
     # See test_dagman_survives_ap_restart.py: without this, a restarted
     # DAGMan (a scheduler-universe job) sits in a 5-minute cooldown before
     # the schedd will resubmit it -- twice as costly here, since this test
-    # restarts the pool twice.
+    # restarts the pool twice. Shrunk, not zeroed, so it doesn't also remove
+    # the only throttle on the duplicate DAGMan a restarted schedd spawns
+    # for the same job id (see test_dagman_survives_ap_restart.py).
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 0,
+            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 3,
             # See test_dagman_survives_ap_restart.py: speed up DAGMan's own
             # orphan self-detection so a crashed/restarted schedd is
             # noticed quickly instead of after up to ~135s.
@@ -104,6 +106,10 @@ def condor(test_dir):
             # per-restart backoff adds a flat ~10s unrelated to this test
             # -- doubly costly here since this test restarts twice.
             "MASTER_BACKOFF_CONSTANT": 1,
+            # See test_dagman_survives_ap_restart.py: widen DAGMan's
+            # node-submit retry budget so a schedd restart that's slower
+            # than usual under CI load doesn't cause a premature give-up.
+            "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
         },
     ) as condor:
         yield condor
