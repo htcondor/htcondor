@@ -4336,7 +4336,7 @@ Starter::GetDiskUsage(bool exiting) const {
 #endif /* LINUX */
 		}
 
-		if (dirMonitor) { return dirMonitor->GetDiskUsage(PRIV_ROOT); }
+		if (dirMonitor) { return dirMonitor->GetDiskUsage(PRIV_ROOT, m_skip_multilink_files); }
 		// Make it possible for the caller to tell the difference between an
 		// empty directory and a failure.
 		else { return DiskUsage{-1,0}; }

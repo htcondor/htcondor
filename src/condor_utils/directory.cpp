@@ -158,7 +158,7 @@ Directory::~Directory()
 }
 
 filesize_t
-Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/)
+Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/, bool skip_multilink_files /* = false */)
 {
 	const char* thefile = NULL;
 	filesize_t dir_size = 0;
@@ -174,6 +174,12 @@ Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/)
 		// Always skip symlinks to files or directories
 		// (but they do count towards number_of_entries)
 		if (IsSymlink()) continue;
+
+        if( skip_multilink_files ) {
+#ifndef WIN32
+            if( curr && curr->GetLinkCount() > 1 ) { continue; }
+#endif
+        }
 
 		if (IsDirectory()) {
 			// recursively traverse down directory tree
