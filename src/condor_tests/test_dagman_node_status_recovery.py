@@ -99,6 +99,12 @@ def condor(test_dir):
             # node-submit retry budget so a schedd restart that's slower
             # than usual under CI load doesn't cause a premature give-up.
             "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
+            # See test_dagman_survives_ap_restart.py: shrink the schedd's
+            # own ad-file-refresh cadence (both, since SCHEDD_MIN_INTERVAL
+            # floors SCHEDD_INTERVAL) so a restarted schedd's address info
+            # doesn't stay stale for minutes at a time.
+            "SCHEDD_INTERVAL": 1,
+            "SCHEDD_MIN_INTERVAL": 1,
         },
     ) as condor:
         yield condor

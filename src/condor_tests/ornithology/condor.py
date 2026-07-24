@@ -247,7 +247,23 @@ class Condor:
 
     def _setup_local_dirs(self):
         if self.clean_local_dir_before and self.local_dir.exists():
-            shutil.rmtree(self.local_dir)
+            # _wait_for_master_to_terminate() only confirms condor_master
+            # itself has exited, not that every daemon it spawned (collector,
+            # schedd, negotiator, startd, shared_port) has too -- master's own
+            # fast-shutdown doesn't block its exit on that. On POSIX that's
+            # harmless (an unlinked-but-still-open file is fine), but on
+            # Windows a lingering child's still-open log handle makes this
+            # rmtree() fail with PermissionError ("used by another process")
+            # until that handle is released, typically within a second or
+            # two. Retry briefly instead of tracking down every child pid.
+            for attempt in range(10):
+                try:
+                    shutil.rmtree(self.local_dir)
+                    break
+                except OSError:
+                    if attempt == 9:
+                        raise
+                    time.sleep(1)
             logger.debug("Removed existing local dir for {}".format(self))
 
         condor_dirs_to_make = [
@@ -566,7 +582,18 @@ class Condor:
         for :attr:`RestartMode.CRASH`, the daemon (and its whole process
         tree -- see :meth:`_crash`) is SIGKILLed directly and left for
         ``condor_master``'s own child-monitoring to relaunch.
+
+        Use :meth:`restart` (not this method) to restart ``master`` itself:
+        ``_crash()``'s relaunch logic (killing and re-execing
+        ``condor_master``) only runs for a whole-pool restart
+        (``daemon_name is None``), so passing ``"master"`` here would
+        SIGKILL it without ever relaunching it, leaving the whole pool dead.
         """
+        if daemon_name.lower() == "master":
+            raise ValueError(
+                "restart_daemon() can't target \"master\" -- its relaunch "
+                "logic only runs for a whole-pool restart; use restart() instead."
+            )
         self._restart(daemon_name=daemon_name, mode=mode, timeout=timeout)
 
     def _restart(self, daemon_name: Optional[str], mode: RestartMode, timeout: int):

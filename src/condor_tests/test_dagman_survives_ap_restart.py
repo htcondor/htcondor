@@ -114,6 +114,21 @@ def condor(test_dir):
             # (param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16) in
             # dagman_main.cpp) to ride that out.
             "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
+            # A restarted schedd's local address/ad file (what DAGMan's
+            # direct-submit resolves against -- see Daemon::locate() in
+            # dc_schedd.cpp) is only refreshed on Scheduler::count_jobs()'s
+            # own cadence (SCHEDD_INTERVAL, default 300s, floored by
+            # SCHEDD_MIN_INTERVAL, default 5s -- schedd.cpp). Whatever the
+            # exact reason a schedd-only restart occasionally leaves DAGMan
+            # resolving a stale/dead socket for minutes at a time, shrinking
+            # both closes that window almost immediately regardless of the
+            # precise cause, the same "stop waiting on a 300s-scale
+            # production default" fix already applied to
+            # SCHEDULER_UNIVERSE_COOL_DOWN_DURATION/MASTER_BACKOFF_CONSTANT
+            # above. Both must move together: SCHEDD_MIN_INTERVAL floors the
+            # cadence regardless of how low SCHEDD_INTERVAL is set.
+            "SCHEDD_INTERVAL": 1,
+            "SCHEDD_MIN_INTERVAL": 1,
         },
     ) as condor:
         yield condor
