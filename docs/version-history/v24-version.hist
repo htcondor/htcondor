@@ -2,6 +2,13 @@
 
 *** 24.0.23 bugs
 
+- Fixed a bug in :tool:`condor_history` where searching for a specific job id
+  (``cluster.proc``) or a whole cluster (``cluster``) could fail to find a
+  matching ad that genuinely existed in the history file, because the
+  backwards scan could stop early based on an unrelated job's completion
+  time.
+  :jira:`3837`
+
 - When file transfer is off, we now log a file transfer start and end
   messages to the log, not just the start message.
   :jira:`3813`
@@ -11,12 +18,6 @@
   strings with extra trailing characters.
   :jira:`3809`
 
-- Fixed a bug in :tool:`condor_history` where searching for a specific job id
-  (``cluster.proc``) or a whole cluster (``cluster``) could fail to find a
-  matching ad that genuinely existed in the history file, because the
-  backwards scan could stop early based on an unrelated job's completion
-  time.
-  :jira:`3837`
 
 *** 24.12.22 bugs
 
