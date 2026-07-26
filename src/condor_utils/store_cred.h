@@ -185,7 +185,7 @@ class CredSorter
 	CredType Sort(const std::string& cred_name) const;
 
 	// Map a CredType to the mode string passed to the credential storer via
-	// the _CONDOR_CREDENTIAL_STORER_MODE environment variable.  Returns nullptr
+	// the CONDOR_CREDENTIAL_STORER_MODE environment variable.  Returns nullptr
 	// for types the storer does not handle.
 	static const char *StorerMode(CredType type);
 

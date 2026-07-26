@@ -42,7 +42,6 @@ Only the `requests` library is required (no requests_oauthlib dependency).
 from credmon.CredentialMonitors.AbstractCredentialMonitor import AbstractCredentialMonitor
 from credmon.utils import atomic_rename
 import os
-import re
 import time
 import json
 import glob
