@@ -25,6 +25,12 @@ bool isTransferShadowProcID( int procID ) {
 }
 
 inline
+bool isTransferShadowProcID( const PROC_ID & jid ) {
+	return jid.proc <= FIRST_TRANSFER_PROC_ID;
+}
+
+
+inline
 bool isInvalidProcID( int procID ) {
 	return FIRST_TRANSFER_PROC_ID < procID && procID < 0;
 }

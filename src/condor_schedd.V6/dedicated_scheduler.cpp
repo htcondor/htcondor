@@ -846,7 +846,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec )
 
 	rsock.encode();
     d.startCommand( RELEASE_CLAIM, &rsock);
-	rsock.put( m_rec->claim_id.claimId() );
+	rsock.put( m_rec->claimId() );
 	rsock.end_of_message();
 
 	if( IsFulldebug(D_FULLDEBUG) ) { 
@@ -892,9 +892,9 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	sock.encode();
 
-	if( !sock.put(m_rec->claim_id.claimId()) ) {
+	if( !sock.put(m_rec->claimId()) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code ClaimId (%s)\n", m_rec->claim_id.publicClaimId() );
+				 "Can't code ClaimId (%s)\n", m_rec->publicClaimId() );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -938,9 +938,9 @@ DedicatedScheduler::checkClaimLeases( )
 				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
 				renew_time = now;
 			} else {
-				GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+				GetAttributeInt(mrec->jid, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
 			}
-			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
+			SetAttributeInt( mrec->jid, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
 
@@ -1217,7 +1217,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->put( (*matches)[i]->claim_id.claimId() ) ) {
+			if( ! stream->put( (*matches)[i]->claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "ClaimId for match %zu of proc %d\n", i, p );
 				return FALSE;
@@ -1769,7 +1769,7 @@ DedicatedScheduler::sortResources( )
 				mr->needs_release_claim = false;
 				scheduler.unlinkMrec(mr);
 				mr->is_dedicated = true; // it is now!
-				mr->cluster = -1; // dissociate from previous job
+				mr->jid.cluster = -1; // dissociate from previous job
 				auto *resource = new ClassAd(*mr->my_match_ad);
 				dPrintAd(D_ALWAYS, *resource);
 				
@@ -1778,7 +1778,7 @@ DedicatedScheduler::sortResources( )
 				resource->LookupString(ATTR_NAME, &slot_name);
 				auto [it1, success1] = all_matches.emplace(slot_name, mr);
 				ASSERT(success1);
-				auto [it2, success2] = all_matches_by_id.emplace(mr->claim_id.claimId(), mr);
+				auto [it2, success2] = all_matches_by_id.emplace(mr->claimId(), mr);
 				ASSERT(success2);
 				free(slot_name);
 			}
@@ -1945,7 +1945,7 @@ DedicatedScheduler::spawnJobs( )
 			  aboutToSpawnJobHandler() hook to complete.
 			*/
 		allocation->status = A_RUNNING;
-		allocation->setClaimId( mrec->claim_id.claimId() );
+		allocation->setClaimId( mrec->claimId() );
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -1977,8 +1977,8 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				// Foreach node within this proc...
 			for( int i=0; i < n; i++ ) {
 					// Grab the claim from the mrec
-				char const *claim = (*(*allocation->matches)[p])[i]->claim_id.claimId();
-				char const *publicClaim = (*(*allocation->matches)[p])[i]->claim_id.publicClaimId();
+				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
 
 				std::string claim_buf;
 				if( strchr(claim,',') ) {
@@ -2815,8 +2815,8 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// and mark it scheduled & allocated
 		mrec->scheduled = true;
 		mrec->allocated = true;
-		mrec->cluster   = cluster;
-		mrec->proc      = proc;
+		mrec->jid.cluster   = cluster;
+		mrec->jid.proc      = proc;
 
 			// We're now at a new proc
 		if( proc != last_proc) {
@@ -3252,12 +3252,12 @@ DedicatedScheduler::AddMrec(
     if (slot_type == "Static") {
 		auto [it1, success1] = all_matches.emplace(slot_name, mrec);
 		ASSERT(success1);
-		auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+		auto [it2, success2] = all_matches_by_id.emplace(mrec->claimId(), mrec);
 		ASSERT(success2);
     } else {
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
-        pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
+        pending_claims[mrec->publicClaimId()] = claim_id;
     }
 
 	removeRequest( job_id );
@@ -3274,7 +3274,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 				 "match not deleted\n" );
 		return false;
 	}
-	return DelMrec( rec->claim_id.claimId() );
+	return DelMrec( rec->claimId() );
 }
 
 
@@ -3300,14 +3300,14 @@ DedicatedScheduler::DelMrec( char const* id )
 		        cid.publicClaimId());
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
-		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
+		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
 			if(rit->second){
 				delete rit->second;
 				pending_requests.erase(rit);
 			}
 		}
 		std::map<std::string,std::string>::iterator cit;
-		if((cit = pending_claims.find(rec->claim_id.publicClaimId())) != pending_claims.end()){
+		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
 			pending_claims.erase(cit);
 		}
 		delete rec;
@@ -3331,12 +3331,12 @@ DedicatedScheduler::DelMrec( char const* id )
 		// have dangling pointers, etc.  We can look it up w/ the
 		// cluster from the mrec.
 	AllocationNode* alloc = nullptr;
-	auto alloc_it = allocations.find(rec->cluster);
+	auto alloc_it = allocations.find(rec->jid.cluster);
 	if (alloc_it == allocations.end()) {
 			// Cool, this match wasn't allocated to anyone, so we
 			// don't have to worry about it.  If the match isn't
 			// allocated to anyone, the cluster better be -1.
-		ASSERT( rec->cluster == -1 );
+		ASSERT( rec->jid.cluster == -1 );
 	} else {
 			// Bummer, this match was allocated to one of our jobs.
 			// We don't have to worry about shutting it down, since
@@ -3365,11 +3365,11 @@ DedicatedScheduler::DelMrec( char const* id )
 				// we couldn't find the match record in the allocation
 				// node.  This must be a programmer error...
 			dprintf( D_ALWAYS, "ERROR deleting match record for cluster %d\n",
-					 rec->cluster );  
+					 rec->jid.cluster );
 			dprintf( D_ALWAYS, "Allocation node for this cluster doesn't "
 					 "include the match rec\n" );
 			EXCEPT( "Can't delete m_rec from allocation node for cluster %d",
-					rec->cluster );
+					rec->jid.cluster );
 		}
 	}
 
@@ -4078,7 +4078,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 			auto [it1, success1] = all_matches.emplace(host, mrec);
 			ASSERT(success1);
-			auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+			auto [it2, success2] = all_matches_by_id.emplace(mrec->claimId(), mrec);
 			ASSERT(success2);
 
 			jobsToAllocate.Append(job);
@@ -4200,15 +4200,15 @@ void
 deallocMatchRec( match_rec* mrec )
 {
 	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec(%d.%d)\n",
-	         mrec ? mrec->cluster : -1, mrec ? mrec->proc : -1);
+	         mrec ? mrec->jid.cluster : -1, mrec ? mrec->jid.proc : -1);
 		// We might call this with a NULL mrec, so don't seg fault.
 	if( ! mrec ) {
 		return;
 	}
 	mrec->allocated = false;
 	mrec->scheduled = false;
-	mrec->cluster = -1;
-	mrec->proc = -1;
+	mrec->jid.cluster = -1;
+	mrec->jid.proc = -1;
 	mrec->shadowRec = nullptr;
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
@@ -4236,7 +4236,7 @@ DedicatedScheduler::GetMatchRequestAd( match_rec* qmrec ) {
         return nullptr;
     }
 
-    auto f(pending_requests.find(qmrec->claim_id.claimId()));
+    auto f(pending_requests.find(qmrec->claimId()));
     if (f == pending_requests.end()) {
         dprintf(D_ALWAYS, "DedicatedScheduler::GetMatchRequestAd -- failed to find job assigned to claim\n");
         return nullptr;
