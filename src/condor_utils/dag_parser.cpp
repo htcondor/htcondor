@@ -200,9 +200,16 @@ skip_line(const std::string& line) {
 
 //--------------------------------------------------------------------------------------------
 static bool
-isKeyword(std::string input, const istring_view check) {
-	std::replace(input.begin(), input.end(), '-', '_'); // Make PRE_SKIP == PRE-SKIP
-	return input.c_str() == check;
+isKeyword(const std::string_view input, const std::string_view check) {
+	auto equivalent_chars = [](char lhs, char rhs) {
+		auto normalize = [](unsigned char c) {
+			c = std::tolower(c);
+			return (c == '-') ? '_' : c;
+		};
+		return normalize(lhs) == normalize(rhs);
+	};
+
+	return std::ranges::equal(input, check, equivalent_chars);
 }
 
 //--------------------------------------------------------------------------------------------
@@ -700,12 +707,15 @@ DagParser::ParseTolerance(DagLexer& details) {
 		}
 
 		is_percent = true;
+	} else if (details.peek() == "%") {
+		is_percent = true;
+		std::ignore = details.next();
 	}
 
 	try {
 		int tol = std::stoi(token);
 
-		if (tol < 0 || (is_percent && tol > 100)) {
+		if (tol < 0) {
 			throw std::invalid_argument("Failure tolerance is out of range");
 		}
 

@@ -96,6 +96,8 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"TOLERANCE E 3\n"
 		"TOLERANCE D 25% FAIL-FAST\n"
 		"TOLERANCE C 10 WAIT\n"
+		"TOLERANCE A 15 % FAIL-FAST\n"
+		"TOLERANCE B 150%\n"
 		"SAVE-POINT-FILE B\n"
 		"SAVE_POINT_FILE C ../custom/path/important.save\n"
 		"CATEGORY C CAT-1\n"
@@ -242,7 +244,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"TOLERANCE A %\n"
 		"TOLERANCE A 5 WAIT garbage\n"
 		"TOLERANCE A -1\n"
-		"TOLERANCE A 101%\n"
+		"TOLERANCE A 5 % garbage\n"
 	},
 	{
 		// DAG with missing final newline
@@ -322,6 +324,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"TOLERANCE > E 3 F AUTO",
 		"TOLERANCE > D 25 T FAIL-FAST",
 		"TOLERANCE > C 10 F WAIT",
+		"TOLERANCE > A 15 T FAIL-FAST",
+		"TOLERANCE > B 150 T AUTO",
 		"SAVE_POINT_FILE > B B-" + SUCCESS_DAG + ".save",
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
@@ -463,7 +467,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":112 Failed to parse TOLERANCE command: Empty percentage specified for failure tolerance",
 		FAILURE_DAG + ":113 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
 		FAILURE_DAG + ":114 Failed to parse TOLERANCE command: Invalid tolerance value '-1'",
-		FAILURE_DAG + ":115 Failed to parse TOLERANCE command: Invalid tolerance value '101'",
+		FAILURE_DAG + ":115 Failed to parse TOLERANCE command: Unexpected token 'garbage'",
 	},
 };
 

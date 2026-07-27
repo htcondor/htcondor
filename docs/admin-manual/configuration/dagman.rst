@@ -122,11 +122,12 @@ General
         fail.
 
 :macro-def:`DAGMAN_REMOVE_JOB_LIST_ON_FAILURE`
-    A boolean value that defaults to ``True``. When ``True``, DAGMan removes the
+    A boolean value that when ``True`` causes DAGMan to remove the
     remaining queued jobs in a node's cluster as soon as that node's job list is
     declared failed (see :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`). When ``False``,
     the remaining jobs are left to run to completion instead. This can be overridden
     per node with the *FAIL-FAST* and *WAIT* modes of the :dag-cmd:`TOLERANCE` command.
+    This value defaults to ``True``.
 
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
     A boolean value that defaults to ``False``. When ``True``, variables

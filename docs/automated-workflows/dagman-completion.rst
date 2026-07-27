@@ -100,12 +100,10 @@ removed once it's declared failed. Syntax:
 
     TOLERANCE <NodeName | ALL_NODES> FailureValue[%] [FAIL-FAST | WAIT]
 
-*FailureValue* is the number of job failures, within the identified node's
-job list, that DAGMan will tolerate before declaring that job list failed.
-It overrides :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` for this node.
-Instead of a fixed count, it may be given as a percentage of the node's
-total submitted jobs by appending a ``%`` (e.g. ``50%`` tolerates failure
-of up to half of the jobs in the list).
+*FailureValue* is the number or percentage of job failures within the
+identified node's job list, that DAGMan will tolerate before declaring
+that job list failed. It overrides :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE`
+for this node.
 
 *FAIL-FAST* or *WAIT* overrides :macro:`DAGMAN_REMOVE_JOB_LIST_ON_FAILURE` for
 this node: *FAIL-FAST* always removes the remaining jobs, *WAIT* always leaves
