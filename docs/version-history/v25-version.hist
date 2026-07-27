@@ -1,7 +1,7 @@
 *** 25.0.13 bugs
 
 - Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
-  the intial ``+`` as a single entry.  It again properly handles a list of
+  the initial ``+`` as a single entry.  It again properly handles a list of
   daemon names after the initial ``+``. And to avoid future problems the
   initial ``+`` is now optional; Built-in daemons can no longer be removed
   as DC daemons using this config variable.
