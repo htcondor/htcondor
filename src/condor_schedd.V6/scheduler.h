@@ -304,7 +304,7 @@ class match_rec
 	void makeDescription();
 	const char *description() const { return m_description.c_str(); }
 
-	const char *claimId() { return claim_id.claimId(); }
+	const char *claimId() const { return claim_id.claimId(); }
 	const char *publicClaimId() { return claim_id.publicClaimId(); }
 	const char *secSessionId() { return claim_id.secSessionId(); }
 
