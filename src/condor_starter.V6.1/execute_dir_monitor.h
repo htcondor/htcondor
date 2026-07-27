@@ -64,7 +64,7 @@ public:
 	ManualExecDirMonitor(const std::string& dir) : workingDir(dir) {
 		valid = workingDir.empty() ? false : true;
 	};
-	virtual DiskUsage GetDiskUsage(priv_state priv, bool skip_multink_files);
+	virtual DiskUsage GetDiskUsage(priv_state priv, bool skip_multilink_files);
 
 private:
 	std::string workingDir{};
