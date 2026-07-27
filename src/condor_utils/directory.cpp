@@ -184,7 +184,7 @@ Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/, bool skip_mult
 		if (IsDirectory()) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
-			dir_size += subdir.GetDirectorySize(number_of_entries);
+			dir_size += subdir.GetDirectorySize(number_of_entries, skip_multilink_files);
 		} else {
 			dir_size += GetFileSize();
 		}
