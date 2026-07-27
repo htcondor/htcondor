@@ -467,7 +467,7 @@ class LogSetAttributeFast : public LogRecord {
 public:
 	LogSetAttributeFast() { op_type = CondorLogOp_SetAttribute; };
 	virtual ~LogSetAttributeFast() {
-		delete key; key = nullptr;
+		free(key); key = nullptr;
 #ifdef FAST_LOG_SET_ATTRIBUTE
 		name = nullptr;
 		value = nullptr;
