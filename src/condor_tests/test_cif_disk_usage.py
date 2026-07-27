@@ -96,6 +96,12 @@ class TestCIFDiskSize:
         stagingSize = int( (two_files + 1023) / 1024 )
         print(f"Staging size expected to be {stagingSize}...")
 
+        # The .chirp.config (48), the .machine.ad (6104), and the .job.ad
+        # (3770) take up a noticeable # amount of space when we're being
+        # precise -- about 10 KiB.  The size of both depend strongly on
+        # unimportant details, so allow some slop.
+        slop = 32
+
         for starter_log_path in log_directory.glob('StarterLog.*'):
             starter_log = starter_log_path.read_text()
             for line in starter_log.splitlines():
@@ -107,19 +113,14 @@ class TestCIFDiskSize:
                     if matches:
                         if matches[1] == 'mapping':
                             print(line)
-                            assert matches[2] == str(0)
-                            continue
+                            sizeOnDisk = int(matches[2])
+                            assert 0 <= sizeOnDisk
+                            assert sizeOnDisk < slop
                         elif matches[1] == 'staging':
                             print(line)
                             sizeOnDisk = int(matches[2])
                             print(f"... actual size on disk {sizeOnDisk}.")
                             assert stagingSize <= sizeOnDisk
-                            # The .chirp.config (48), the .machine.ad (6104),
-                            # and the .job.ad (3770) take up a noticeable
-                            # amount of space when we're being precise --
-                            # about 10 KiB.  The size of both depend strongly
-                            # on unimportant details, so allow some slop.
-                            slop = 32
                             assert sizeOnDisk < (stagingSize + slop)
                         else:
                             assert False

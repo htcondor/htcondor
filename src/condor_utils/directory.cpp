@@ -175,17 +175,19 @@ Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/, bool skip_mult
 		// (but they do count towards number_of_entries)
 		if (IsSymlink()) continue;
 
-        if( skip_multilink_files ) {
-#ifndef WIN32
-            if( curr && curr->GetLinkCount() > 1 ) { continue; }
-#endif
-        }
-
 		if (IsDirectory()) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
 			dir_size += subdir.GetDirectorySize(number_of_entries, skip_multilink_files);
 		} else {
+			if( skip_multilink_files ) {
+#ifndef WIN32
+				if( curr && curr->GetLinkCount() > 1 ) {
+					continue;
+				}
+#endif
+			}
+
 			dir_size += GetFileSize();
 		}
 	}
