@@ -1225,10 +1225,24 @@ void main_init(int argc, char ** const argv) {
 	} else {
 		// Stamp our own cluster id into the lock file so that a later instance
 		// that fails to acquire it can tell "it's just me, restarting" apart
-		// from a genuinely different DAG instance (see above).
+		// from a genuinely different DAG instance (see above). A failed/short
+		// write here leaves the lock file without a readable id, which would
+		// make that later duplicate wrongly take the EXIT_ERROR (hard
+		// failure) path instead of EXIT_RESTART -- reintroducing the removal
+		// race this whole mechanism exists to prevent -- so warn if it happens.
 		std::string id_str = std::to_string(dagman.DAGManJobId._cluster) + "\n";
 		if (ftruncate(dagman.m_lock_fd, 0) == 0 && lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
-			full_write(dagman.m_lock_fd, id_str.c_str(), id_str.size());
+			if (full_write(dagman.m_lock_fd, id_str.c_str(), id_str.size()) != (ssize_t)id_str.size()) {
+				debug_printf(DEBUG_QUIET,
+				             "WARNING: Failed to write cluster id to lock file %s (%d): %s; "
+				             "a later duplicate DAGMan may not recognize this as the same job.\n",
+				             lock_file.c_str(), errno, strerror(errno));
+			}
+		} else {
+			debug_printf(DEBUG_QUIET,
+			             "WARNING: Failed to truncate/seek lock file %s (%d): %s; "
+			             "a later duplicate DAGMan may not recognize this as the same job.\n",
+			             lock_file.c_str(), errno, strerror(errno));
 		}
 	}
 

@@ -155,7 +155,7 @@ def wait_for_attempt(attempts_log, name: str, min_count: int = 1, timeout: int =
         time.sleep(0.5)
 
 
-def wait_for_all_attempts(attempts_log, names, timeout: int = 300) -> None:
+def wait_for_all_attempts(attempts_log, names, timeout: int = 900) -> None:
     """
     Poll ``attempts_log`` (ground truth of what actually ran) until every
     node in ``names`` has run at least once.
@@ -171,6 +171,14 @@ def wait_for_all_attempts(attempts_log, names, timeout: int = 300) -> None:
     new schedd reports as "that job is done" (real, but misleading -- it's
     only the duplicate that's done), even though the real DAG is still
     being carried out, invisibly to the new schedd, by the orphan.
+
+    Default timeout is 900s, not the more common 120-300s used elsewhere in
+    this module: DAGMAN_MAX_SUBMIT_ATTEMPTS's own uncapped exponential
+    backoff (dag.cpp's ProcessFailedSubmit) means a legitimately-still-
+    retrying DAGMan can take well over 300s of *correct* behavior to reach
+    even its 9th of 16 attempts (~256s cumulative delay before that one
+    retry alone). A shorter timeout here would kill the pool and fail the
+    test while DAGMan is still working, not stuck.
     """
     deadline = time.time() + timeout
     while True:

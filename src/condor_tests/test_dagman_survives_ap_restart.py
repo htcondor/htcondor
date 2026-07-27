@@ -75,24 +75,54 @@ def condor(test_dir):
     # DAGMan is itself a scheduler-universe job: any restart that evicts it
     # (or kills it) makes it exit non-zero, which by default puts it in a
     # 5-minute cooldown (SCHEDULER_UNIVERSE_COOL_DOWN_DURATION) before the
-    # schedd will resubmit it -- disable that so recovery happens promptly,
-    # the same fix job_dagman_condor_restart.run/job_dagman_large_dag.run use.
+    # schedd will resubmit it -- shrink (not zero) that so recovery happens
+    # promptly, the same fix job_dagman_condor_restart.run/
+    # job_dagman_large_dag.run use. Zero disables the cooldown entirely
+    # (setJobCoolDown() short-circuits on <= 0, schedd.cpp) -- but that
+    # also removes the *only* throttle on relaunching the duplicate DAGMan
+    # a restarted schedd spawns for the same job id, which loses the
+    # .dag.lock race against the real orphan and exits EXIT_RESTART; with
+    # no cooldown at all, schedd respawns a fresh duplicate every
+    # SCHEDD_MIN_INTERVAL (~5s), each doing a full DAG re-parse and two
+    # schedd qmgmt connections, for as long as the real orphan takes to
+    # finish -- real resource contention against that orphan's own
+    # retries, observed as a many-minutes-long duplicate-spawn storm
+    # under CI load. A few seconds is enough to still recover promptly.
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 0,
+            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 3,
             # Speed up DAGMan's own orphan self-detection (normally a
             # generic, shared 15s/120s DaemonCore cadence -- see
             # daemon_core_main.cpp's check_parent()) so a crashed/restarted
             # schedd is noticed quickly instead of after up to ~135s.
             "DAGMAN.PARENT_CHECK_FIRST_INTERVAL": 2,
             "DAGMAN.PARENT_CHECK_INTERVAL": 2,
+            # Same reasoning, for shared_port: the pool-crash case's _crash()
+            # deliberately doesn't kill it, so an orphaned instance from a
+            # crashed-and-relaunched master otherwise lingers up to ~135s
+            # (the default) before noticing its parent is gone and
+            # self-shutting-down -- a real window for it to collide with the
+            # newly (re)started master's own shared_port instance at the
+            # same SHARED_PORT_DAEMON_AD_FILE path.
+            "SHARED_PORT.PARENT_CHECK_FIRST_INTERVAL": 1,
+            "SHARED_PORT.PARENT_CHECK_INTERVAL": 1,
             # This test restarts daemons in every parametrized case;
             # master's default backoff before respawning an exited daemon
             # (MASTER_BACKOFF_CONSTANT, default 9 -- see masterDaemon.cpp)
             # adds a flat ~10s per restart unrelated to anything this test
             # is exercising. Clamped to a minimum of 1 by param_integer().
             "MASTER_BACKOFF_CONSTANT": 1,
+            # A schedd-only restart can leave the new schedd mid-startup
+            # (e.g. shared_port not yet registered) when the freshly
+            # respawned DAGMan -- itself a child of that schedd -- already
+            # starts retrying its node submission. The default 6-attempt
+            # budget with doubling backoff (dag.cpp's ProcessFailedSubmit)
+            # gives up after ~31s, which can be shorter than a schedd
+            # restart takes under CI load. Widen it to the param's max
+            # (param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16) in
+            # dagman_main.cpp) to ride that out.
+            "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
         },
     ) as condor:
         yield condor
@@ -137,7 +167,10 @@ class TestDAGManSurvivesAPRestart:
         # duplicate attempt racing the still-alive orphaned original --
         # while the real DAG keeps running, invisibly, in that orphan. So
         # wait on what actually ran, not on the schedd's job-queue view.
-        wait_for_all_attempts(attempts_log, ("A", "B", "C"), timeout=300)
+        # timeout left at wait_for_all_attempts()'s own 900s default: see
+        # its docstring for why 300s isn't enough headroom given
+        # DAGMAN_MAX_SUBMIT_ATTEMPTS=16's worst-case backoff below.
+        wait_for_all_attempts(attempts_log, ("A", "B", "C"))
 
         # Node A finished before the interruption -- it must not re-run.
         assert count_attempts(attempts_log, "A") == 1

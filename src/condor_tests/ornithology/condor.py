@@ -247,7 +247,26 @@ class Condor:
 
     def _setup_local_dirs(self):
         if self.clean_local_dir_before and self.local_dir.exists():
-            shutil.rmtree(self.local_dir)
+            # _wait_for_master_to_terminate() only confirms condor_master
+            # itself has exited, not that every daemon it spawned (collector,
+            # schedd, negotiator, startd, shared_port) has too -- master's own
+            # fast-shutdown doesn't block its exit on that. On POSIX that's
+            # harmless (an unlinked-but-still-open file is fine), but on
+            # Windows a lingering child's still-open log handle makes this
+            # rmtree() fail with PermissionError ("used by another process")
+            # until that handle is released. Observed to take longer than a
+            # 10x1s budget on some CI runs (still failing after the full 10
+            # attempts), so retry longer instead of tracking down every
+            # child pid.
+            attempts = 20
+            for attempt in range(attempts):
+                try:
+                    shutil.rmtree(self.local_dir)
+                    break
+                except OSError:
+                    if attempt == attempts - 1:
+                        raise
+                    time.sleep(2)
             logger.debug("Removed existing local dir for {}".format(self))
 
         condor_dirs_to_make = [
@@ -566,7 +585,18 @@ class Condor:
         for :attr:`RestartMode.CRASH`, the daemon (and its whole process
         tree -- see :meth:`_crash`) is SIGKILLed directly and left for
         ``condor_master``'s own child-monitoring to relaunch.
+
+        Use :meth:`restart` (not this method) to restart ``master`` itself:
+        ``_crash()``'s relaunch logic (killing and re-execing
+        ``condor_master``) only runs for a whole-pool restart
+        (``daemon_name is None``), so passing ``"master"`` here would
+        SIGKILL it without ever relaunching it, leaving the whole pool dead.
         """
+        if daemon_name.lower() == "master":
+            raise ValueError(
+                "restart_daemon() can't target \"master\" -- its relaunch "
+                "logic only runs for a whole-pool restart; use restart() instead."
+            )
         self._restart(daemon_name=daemon_name, mode=mode, timeout=timeout)
 
     def _restart(self, daemon_name: Optional[str], mode: RestartMode, timeout: int):
@@ -627,6 +657,37 @@ class Condor:
 
             time.sleep(0.5)
 
+        # The pid-debounce above only proves the new process answered a
+        # -quick query -- e.g. a schedd can show up there with an address
+        # that's still missing its real port/addrs (still mid-registration
+        # with shared_port) well before it's actually ready to take new
+        # submissions. IsReady is condor_master's own bookkeeping of
+        # whether every daemon it's watching has sent it a real alive
+        # message, which -- unlike the -quick address snapshot -- lags
+        # behind a daemon's own internal startup (job-queue reload,
+        # shared_port registration, etc.). It's the same signal
+        # _wait_for_ready() already trusts for the initial standup; a
+        # restart deserves the same bar.
+        while True:
+            remaining = timeout - (time.time() - start)
+            if remaining <= 0:
+                raise TimeoutError(
+                    "{} came back but never reported IsReady (mode={}) within {}s".format(
+                        daemon_name or "pool", mode, timeout
+                    )
+                )
+
+            who = self.run_command(
+                ["condor_who", f"-wait:{min(10, int(remaining)) or 1}", "IsReady"],
+                timeout=30,
+                echo=False,
+                suppress=True,
+            )
+            if who.stdout.strip():
+                who_ad = dict(kv.split(" = ") for kv in who.stdout.splitlines())
+                if who_ad.get("IsReady") == "true":
+                    break
+
     def _crash(self, daemon_name: Optional[str]):
         """
         SIGKILL either one named daemon or every daemon in the pool.
@@ -649,18 +710,27 @@ class Condor:
                 "RestartMode.CRASH needs real kill -9 semantics; not supported on Windows"
             )
 
+        # "master" is deliberately excluded here even for a whole-pool crash:
+        # _kill_condor_master() below already SIGKILLs it via its own Popen
+        # handle, which is also how we wait() on/relaunch it.
         targets = (
             {daemon_name.lower()}
             if daemon_name is not None
-            else {"master", "collector", "negotiator", "schedd", "startd"}
+            else {"collector", "negotiator", "schedd", "startd"}
         )
 
         daemons_who = self.run_command(["condor_who", "-daemons"], timeout=30, echo=False)
         for line in daemons_who.stdout.split("\n"):
             fields = line.split()
-            if len(fields) < 3 or fields[0].lower() not in targets:
+            if len(fields) < 3 or fields[0].lower() not in targets or not fields[2].isdigit():
+                # PID column is "no" for a daemon condor_who reports as
+                # already exited, or "?" if unknown -- neither is a real pid.
                 continue
-            os.kill(int(fields[2]), signal.SIGKILL)
+            try:
+                os.kill(int(fields[2]), signal.SIGKILL)
+            except ProcessLookupError:
+                # Already gone between the listing and the kill.
+                pass
 
         if daemon_name is None:
             self._kill_condor_master()

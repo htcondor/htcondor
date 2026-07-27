@@ -82,20 +82,34 @@ def condor(test_dir):
     # See test_dagman_survives_ap_restart.py: without this, a restarted
     # DAGMan (a scheduler-universe job) sits in a 5-minute cooldown before
     # the schedd will resubmit it -- twice as costly here, since this test
-    # restarts the pool twice.
+    # restarts the pool twice. Shrunk, not zeroed, so it doesn't also remove
+    # the only throttle on the duplicate DAGMan a restarted schedd spawns
+    # for the same job id (see test_dagman_survives_ap_restart.py).
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 0,
+            "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 3,
             # See test_dagman_survives_ap_restart.py: speed up DAGMan's own
             # orphan self-detection so a crashed/restarted schedd is
             # noticed quickly instead of after up to ~135s.
             "DAGMAN.PARENT_CHECK_FIRST_INTERVAL": 2,
             "DAGMAN.PARENT_CHECK_INTERVAL": 2,
+            # Same reasoning, for shared_port: CRASH mode deliberately
+            # doesn't kill it, so an orphaned instance from an earlier
+            # restart otherwise lingers for up to ~135s (the default)
+            # before noticing its parent is gone and self-shutting-down --
+            # a real window for it to collide with a later case's freshly
+            # started instance at the same SHARED_PORT_DAEMON_AD_FILE path.
+            "SHARED_PORT.PARENT_CHECK_FIRST_INTERVAL": 1,
+            "SHARED_PORT.PARENT_CHECK_INTERVAL": 1,
             # See test_dagman_survives_ap_restart.py: master's default
             # per-restart backoff adds a flat ~10s unrelated to this test
             # -- doubly costly here since this test restarts twice.
             "MASTER_BACKOFF_CONSTANT": 1,
+            # See test_dagman_survives_ap_restart.py: widen DAGMan's
+            # node-submit retry budget so a schedd restart that's slower
+            # than usual under CI load doesn't cause a premature give-up.
+            "DAGMAN_MAX_SUBMIT_ATTEMPTS": 16,
         },
     ) as condor:
         yield condor
@@ -140,8 +154,10 @@ class TestDAGManSurvivesDoubleRestart:
 
         # See test_dagman_survives_ap_restart.py for why ground truth is
         # used here instead of ClusterState.all_complete on the submitted
-        # job handle.
-        wait_for_all_attempts(attempts_log, ("A", "B", "C"), timeout=300)
+        # job handle. timeout left at wait_for_all_attempts()'s own 900s
+        # default: see its docstring for why 300s isn't enough headroom
+        # given DAGMAN_MAX_SUBMIT_ATTEMPTS=16's worst-case backoff below.
+        wait_for_all_attempts(attempts_log, ("A", "B", "C"))
 
         # A and C each finished exactly once; only B (interrupted twice)
         # is expected to have run more than once.
@@ -189,8 +205,10 @@ class TestDAGManSurvivesBackToBackRestarts:
 
         # See test_dagman_survives_ap_restart.py for why ground truth is
         # used here instead of ClusterState.all_complete on the submitted
-        # job handle.
-        wait_for_all_attempts(attempts_log, ("A", "B", "C"), timeout=300)
+        # job handle. timeout left at wait_for_all_attempts()'s own 900s
+        # default: see its docstring for why 300s isn't enough headroom
+        # given DAGMAN_MAX_SUBMIT_ATTEMPTS=16's worst-case backoff below.
+        wait_for_all_attempts(attempts_log, ("A", "B", "C"))
 
         # Unlike TestDAGManSurvivesDoubleRestart, neither restart mode
         # here is expected to interrupt B, so A/B/C should each run
