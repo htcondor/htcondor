@@ -4379,8 +4379,14 @@ Starter::CheckLVUsage( int /* timerID */ )
 	}
 
 	filesize_t limit = m_lvm_lv_size_kb * 1024LL;
-	//Thick provisioning check for 98% LV usage
-	if ( ! m_lv_handle->IsThin()) { limit = limit * 0.98; }
+	if ( ! m_lv_handle->IsThin()) {
+		// Thick LVs have no headroom above their nominal size, so this
+		// margin must leave room for ext4 overhead or the hold becomes
+		// unreachable before a hard ENOSPC. Overhead is proportionally
+		// larger on small LVs; sites with small thick LVs may need to
+		// lower this below the default.
+		limit = limit * param_double("LVM_THICK_LV_MARGIN", 0.98, 0.0, 1.0);
+	}
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;

@@ -1224,6 +1224,12 @@ default=2000
 type=int
 tags=starter
 
+[LVM_THICK_LV_MARGIN]
+default=0.98
+range=0.0,1.0
+type=double
+tags=starter
+
 [LVM_HIDE_MOUNT]
 default=auto
 description=Inform LVM to mount per job LV in hidden mount namespace
