@@ -769,10 +769,12 @@ Starter::handleJobSetupCommand(
 			bool report_mapping_failure = false;
 			s->jic->getJobAd()->LookupBool( "ReportMappingFailure", report_mapping_failure );
 
-			const bool CORRECTLY = true;
-			auto usage = s->GetDiskUsage(CORRECTLY);
-			auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
-			dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %ld (KiB)\n", sizeOnDisk );
+			if( IsDebugCategory(D_TEST) ) {
+				const bool CORRECTLY = true;
+				auto usage = s->GetDiskUsage(CORRECTLY);
+				auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
+				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %ld (KiB)\n", sizeOnDisk );
+			}
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
