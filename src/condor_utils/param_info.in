@@ -1353,6 +1353,12 @@ range=1,
 type=int
 tags=daemon_core
 
+[STARTER_FIRST_CHILDALIVE_DELAY]
+default=30
+range=0,
+type=int
+tags=daemon_core
+
 [EXCEPT_ON_ERROR]
 default=
 type=string
