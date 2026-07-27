@@ -756,6 +756,15 @@ prevent the job from using more scratch space than provisioned.
     a buffer to better catch over use of disk before a job gets ``ENOSPC`` errors.
     The default value is 2000 (2GB).
 
+:macro-def:`LVM_THICK_LV_MARGIN`
+    A double value between 0.0 and 1.0: the fraction of a thick
+    (non-thin) logical volume's nominal size at which a job is held for
+    exceeding its allocated disk. Thick volumes have no headroom above
+    their nominal size, so this margin must leave room for the
+    filesystem's own overhead, or the job hits ``ENOSPC`` before the hold
+    is reached. That overhead is proportionally larger on small volumes.
+    The default value is 0.98.
+
 :macro-def:`LVM_HIDE_MOUNT`
     A value that enables LVM to create a mount namespace making the
     mount only visible to the job and associated starter. Any process

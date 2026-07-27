@@ -297,19 +297,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Build Ubuntu 
+      - name: Build Ubuntu
         run: |
           sudo useradd -m condor
           sudo apt-get update
-          sudo apt-get install uuid-dev libcurl4-openssl-dev
+          sudo apt-get install uuid-dev libcurl4-openssl-dev lvm2 e2fsprogs cryptsetup openssh-server openssh-client
           sudo pip3 install -r src/condor_tests/requirements.txt
           mkdir __build && chmod 0777 __build
           cd __build && cmake -GNinja -DWITH_SCITOKENS:bool=false -DWITH_KRB5:bool=false -DWITH_MUNGE:bool=false -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install
           chmod a+rwx /home/runner
 
       - name: Test with rootness
-        # Use su to run as condorauto user inside container
-        run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
+        # Tests requiring root (or passwordless sudo) are selected by CTest
+        # label ("root"), set via condor_pl_test(... "quick;ctest;root" ...)
+        # in src/condor_tests/CMakeLists.txt, rather than hardcoding test
+        # names here -- new root-requiring tests only need the label, not a
+        # CI edit.
+        run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-on-failure --output-junit test.xml -j 40 -L root )
+
+      - name: Fix permissions for artifact upload
+        # Tests run under sudo (HTCONDOR_TEST_USE_SUDO=1) leave root-owned
+        # files (e.g. condor lock/run state) under __build/src/condor_tests;
+        # actions/upload-artifact runs as the unprivileged runner user and
+        # fails to zip those up otherwise.
+        if: always()
+        run: sudo chown -R "$(id -un):$(id -gn)" __build
 
       - name: Upload All on Failure
         if: failure()
@@ -317,8 +329,8 @@ jobs:
         with:
           name: root-output-for-ubuntu
           path: |
-            /home/runner
             __build/Testing
+            __build/src/condor_tests/*_ctest
           retention-days: 2
           overwrite: true
 
