@@ -209,7 +209,7 @@ private:
 #ifndef WIN32
 	uid_t owner;
 	gid_t group;
-	nlink_t link_count;
+	nlink_t link_count {0};
 #endif
 	bool valid;
 	mode_t file_mode;
