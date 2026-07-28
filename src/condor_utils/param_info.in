@@ -2173,9 +2173,10 @@ tags=submit
 usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
 [SUBMIT_SEND_RESCHEDULE]
-default=true
+default=false
 type=bool
 tags=submit
+description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO

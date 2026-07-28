@@ -262,7 +262,6 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(const PROC_ID &);
 void mark_job_running(const PROC_ID &);
 void mark_serial_job_running(const PROC_ID &);
-//int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 bool service_this_universe(const JobQueueJob*);
 int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
@@ -275,7 +274,6 @@ schedd_runtime_probe WalkJobQ_count_a_job_runtime;
 schedd_runtime_probe WalkJobQ_PeriodicExprEval_runtime;
 schedd_runtime_probe WalkJobQ_clear_autocluster_id_runtime;
 schedd_runtime_probe WalkJobQ_add_runnable_local_jobs_runtime;
-schedd_runtime_probe WalkJobQ_fixAttrUser_runtime;
 schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
 int	WallClockCkptInterval = 0;
@@ -1074,6 +1072,23 @@ Scheduler::timeout( int /* timerID */ )
 
 	count_jobs();
 
+	// We want to send a reschedule to the negotiator when we send updates showing job pressure
+	// after an interval with no pressure. This is because the negotiator will keep calling
+	// as long as there is pressure, and will only sleep when it thinks we have no pressure.
+	// count_jobs sets SubmitterUpdateTime to 0 if it sends no updates, and the current time if it sends any
+	// it sets TotalSubmitterPressure equal to the sum of JobsIdle in all of the submitters sent
+	if (SubmitterUpdateTime) {
+		// we sent at last one submitter ad.
+		// did the pressure signal change?
+		bool was_pressure = LastSubmitterPressure > 0;
+		bool is_pressure = TotalSubmitterPressure > 0;
+		if (was_pressure != is_pressure) {
+			EnteredCurrentSubmitterPressure = SubmitterUpdateTime;
+			LastSubmitterPressure = TotalSubmitterPressure;
+			m_need_reschedule = is_pressure;
+		}
+	}
+
 	clean_shadow_recs();
 
 		// Spooling should not take too long
@@ -1118,6 +1133,23 @@ Scheduler::timeout( int /* timerID */ )
 	time_to_next_run = SchedDInterval.getTimeToNextRun();
 	daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 }
+
+void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs)
+{
+	dprintf(D_FULLDEBUG, "endSubmitTransaction new_jobs=%d idle=%d\n", num_new_jobs, num_new_idle_jobs);
+
+	// when we get new idle jobs and we had no submitter pressure before (i.e no idle jobs)
+	// we want to consider re-running count_jobs and sending a RESCHEDULE to the negotiator
+	if (num_new_idle_jobs > 0) {
+		if ( ! LastSubmitterPressure) {
+			dprintf(D_STATUS,
+				"%d new idle jobs submitted, and last update had no job pressure. Triggering a rechedule.\n",
+				num_new_idle_jobs);
+			needReschedule();
+		}
+	}
+}
+
 
 void
 Scheduler::check_claim_request_timeouts()
@@ -1399,6 +1431,9 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 			SubDat.lastUpdateTime = time_now;
 			SubDat.absentUpdateSent = (SubDat.num.Hits == 0);
+			pAd.LookupInteger(ATTR_IDLE_JOBS, SubDat.lastUpdateNumIdle);
+			this->TotalSubmitterPressure += SubDat.lastUpdateNumIdle;
+			this->SubmitterUpdateTime = time_now;
 		}
 		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
 			num_updates, owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
@@ -1463,6 +1498,9 @@ Scheduler::count_jobs()
 	time_t AbsentSubmitterLifetime = param_integer("ABSENT_SUBMITTER_LIFETIME", 60*60*24*7); // 1 week.
 	time_t AbsentSubmitterUpdateRate = param_integer("ABSENT_SUBMITTER_UPDATE_RATE", 60*5); // 5 min
 	time_t AbsentOwnerLifetime = param_integer("ABSENT_OWNER_LIFETIME", 60*5);
+
+	TotalSubmitterPressure = 0; // sum of JobsIdle of all submitter ads we send to the primary collector
+	SubmitterUpdateTime = 0; // set when we actually send a submitter ad to the primary collector
 
 	JobsRunning = 0;
 	JobsIdle = 0;
@@ -2107,6 +2145,9 @@ Scheduler::count_jobs()
 				num_udates, submitter_name.c_str(), (int)(update_time - SubDat.lastUpdateTime),
 				SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 		SubDat.lastUpdateTime = update_time;
+		pAd.LookupInteger(ATTR_IDLE_JOBS, SubDat.lastUpdateNumIdle);
+		TotalSubmitterPressure += SubDat.lastUpdateNumIdle;
+		SubmitterUpdateTime = time_now;
 
 	  // also update all of the flock hosts
 	  if( FlockCollectors.size() ) {
@@ -3989,17 +4030,23 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		return 0;
 	}
 
-	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
-		dprintf(D_ALWAYS, "Job %d.%d has no %s attribute.  Ignoring...\n",
-		        job->jid.cluster, job->jid.proc, ATTR_JOB_STATUS);
-		return 0;
+	status = job->Status();
+	if (status < JOB_STATUS_MIN || status > JOB_STATUS_MAX) {
+		job->PopulateFromAd();
+		if (job->Status() >= JOB_STATUS_MIN && job->Status() <= JOB_STATUS_MAX) {
+			dprintf(D_ERROR, "Job %d.%d had invalid status of %d. fixed by PopulateFromAd(). this is a bug.\n", job->jid.cluster, job->jid.proc, status);
+			status = job->Status();
+		} else {
+			dprintf(D_ERROR, "Job %d.%d has invalid status of %d. (%d)  Ignoring\n",
+				job->jid.cluster, job->jid.proc, job->Status(), status);
+			return 0;
+		}
 	}
 
-	bool noop = false;
-	job->LookupBool(ATTR_JOB_NOOP, noop);
+	bool noop = job->IsNoopJob();
 	if (noop && status != COMPLETED) {
-		int cluster = 0;
-		int proc = 0;
+		int cluster = job->jid.cluster;
+		int proc = job->jid.proc;
 		int noop_status = 0;
 		int temp = 0;
 		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_SIGNAL, temp) != 0) {
@@ -4008,8 +4055,6 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_CODE, temp) != 0) {
 			noop_status = generate_exit_code(temp);
 		}	
-		job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-		job->LookupInteger(ATTR_PROC_ID, proc);
 		dprintf(D_FULLDEBUG, "Job %d.%d is a no-op with status %d\n",
 				cluster,proc,noop_status);
 		set_job_status(cluster, proc, COMPLETED);
@@ -4023,9 +4068,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
 		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
-		universe = CONDOR_UNIVERSE_VANILLA;
-	}
+	universe = job->Universe();
 
 	int request_cpus = 0;
     if (job->LookupInteger(ATTR_REQUEST_CPUS, request_cpus) == 0) {
@@ -13925,7 +13968,6 @@ mark_job_stopped(const PROC_ID & job_id)
 		BeginTransaction();
 	}
 
-#if 1
 	if (job->UseParallelScheduler()) {
 		// get the cluster ad for this job (it may already be a cluster ad)
 		if ( ! job->IsCluster()) { job = job->Cluster(); }
@@ -13938,30 +13980,6 @@ mark_job_stopped(const PROC_ID & job_id)
 	} else {
 		_mark_job_stopped(job->jid);
 	}
-#else
-	int universe = CONDOR_UNIVERSE_VANILLA;
-	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
-					&universe);
-	int wantPS = 0;
-	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_WANT_PARALLEL_SCHEDULING,
-					&wantPS);
-	if( (universe == CONDOR_UNIVERSE_MPI) || 
-		(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ){
-		ClassAd *ad;
-		ad = GetNextJob(1);
-		while (ad != NULL) {
-			PROC_ID tmp_id;
-			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-			if (tmp_id.cluster == job_id.cluster) {
-				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				_mark_job_stopped(tmp_id);
-			}
-			ad = GetNextJob(0);
-		}
-	} else {
-		_mark_job_stopped(job_id);
-	}
-#endif
 
 	if( !already_in_transaction ) {
 			// It is ok to use a NONDURABLE transaction here.
@@ -14351,7 +14369,6 @@ release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, con
 ** Wrapper for setting the job status to deal with Parallel jobs, which can
 ** contain multiple procs.
 */
-#if 1
 void
 set_job_status(const JOB_ID_KEY & jid, int status)
 {
@@ -14401,51 +14418,6 @@ set_job_status(JobQueueJob * job, int status)
 	}
 }
 
-#else
-
-void
-set_job_status(int cluster, int proc, int status)
-{
-	int universe = CONDOR_UNIVERSE_VANILLA;
-	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-
-	int wantPS = 0;
-	GetAttributeInt(cluster, proc, ATTR_WANT_PARALLEL_SCHEDULING, &wantPS);
-
-	BeginTransaction();
-
-	if( ( universe == CONDOR_UNIVERSE_MPI) || 
-		( universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
-		ClassAd *ad;
-		ad = GetNextJob(1);
-		while (ad != NULL) {
-			PROC_ID tmp_id;
-			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-			if (tmp_id.cluster == cluster) {
-				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS,
-								status);
-				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_ENTERED_CURRENT_STATUS,
-								 time(0) );
-				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_LAST_SUSPENSION_TIME, 0 ); 
-			}
-			ad = GetNextJob(0);
-		}
-	} else {
-		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
-		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 time(nullptr) );
-		SetAttributeInt( cluster, proc,
-						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
-	}
-
-		// Nothing written in this transaction requires immediate
-		// sync to disk.
-	CommitNonDurableTransactionOrDieTrying();
-}
-#endif
 
 void
 Scheduler::child_exit(int pid, int status)
@@ -14643,10 +14615,17 @@ Scheduler::child_exit(int pid, int status)
 	// if need be.
 	//
 	if ( srec_was_local_universe == true ) {
+	#if 0 
+		// TJ: JULY 2026 - can't call count_a_job here as that
+		// would mess up global job counters.  Also it doesn't change
+		// the state of any job so what was the intent?  This code
+		// is *really* old, but even in the original schedd.C file
+		// it's unclear what the point is.
 		JobQueueJob *job_ad = GetJobAd(job_id);
 		if (job_ad) {
 			count_a_job( job_ad, job_ad->jid, NULL);
 		}
+	#endif
 	}
 
 	// If we're not trying to shutdown, now that either an agent
@@ -16823,7 +16802,7 @@ Scheduler::Register()
 		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
-			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
+			(CommandHandlercpp)&Scheduler::external_reschedule_request, // this is now (mostly) a dummy command
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
@@ -17405,15 +17384,21 @@ Scheduler::invalidate_ads()
 }
 
 
+// a RESCHEDULE command was received.  We mostly ignore these now
+// and use internal state to decide when to send a RECHEDULE command to the negotiator.
 int
-Scheduler::reschedule_negotiator(int, Stream *s)
+Scheduler::external_reschedule_request(int, Stream *s)
 {
 	if( s && !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to receive end of message for RESCHEDULE.\n");
-		return 0;
 	}
+	return 0;
+}
 
-		// don't bother the negotiator if we are shutting down
+int
+Scheduler::reschedule_negotiator()
+{
+	// don't bother the negotiator if we are shutting down
 	if ( ExitWhenDone ) {
 		return 0;
 	}
@@ -18660,25 +18645,6 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return FALSE;
 }
 
-#if 0 // TODO: this function is untested, but probably works...
-int
-fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw)
-{
-	YourString oldUidDomain(static_cast<char *>(oldUidDomain_raw));
-	std::string user;
-
-	if (job->LookupString(ATTR_USER, user) && domain_of_user(user.c_str(),"#") == oldUidDomain) {
-		size_t at_sign = user.find_last_of('@');
-		if (at_sign != std::string::npos) {
-			user.erase(at_sign+1);
-			user += scheduler.uidDomain();
-			job->Assign(ATTR_USER, user);
-		}
-	}
-
-	return 0;
-}
-#endif
 
 void
 fixReasonAttrs( PROC_ID job_id, JobAction action )

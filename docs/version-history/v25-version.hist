@@ -6,6 +6,13 @@
   or wait for jobs to finish.
   :jira:`3838`
 
+- The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
+  command that it wants expedited matchmaking when it changes from having
+  no idle jobs to having some idle jobs. As a part of this change the
+   *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  :jira:``
+
 *** 25.14.0 bugs
 
 *** 25.0.14 bugs
