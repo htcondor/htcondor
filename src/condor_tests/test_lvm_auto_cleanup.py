@@ -8,6 +8,8 @@
 # state can be inspected synchronously right after shutdown.
 
 import logging
+import time
+
 import pytest
 
 from ornithology import *
@@ -27,6 +29,20 @@ logger.setLevel(logging.DEBUG)
 pytestmark = pytest.mark.skipif(not LVMTestable(), reason=LVM_SKIP_REASON)
 
 AUTO_VG_NAME = "condor_test_auto_cleanup_vg"
+
+CLEANUP_TIMEOUT = 60
+CLEANUP_POLL_INTERVAL = 1
+
+
+def wait_for_cleanup(condition, description, timeout=CLEANUP_TIMEOUT, interval=CLEANUP_POLL_INTERVAL):
+    """Poll condition() until it's true, tolerating the brief lvm/udev
+    metadata lag that can follow vgremove/pvremove during startd shutdown."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return
+        time.sleep(interval)
+    assert condition(), f"{description} was not cleaned up within {timeout} seconds"
 
 
 @config(params={"thin": True, "thick": False})
@@ -69,8 +85,10 @@ class TestLVMAutoCleanup:
             assert loop_dev, "loopback device for backing file was never created"
             assert vg_exists(AUTO_VG_NAME)
 
-        # condor_master has shut down; everything it auto-created is gone.
-        assert not vg_exists(AUTO_VG_NAME)
-        assert not pv_exists(loop_dev)
-        assert loop_dev_for_file(backing_file) is None
-        assert not backing_file.exists()
+        # condor_master has shut down; everything it auto-created should be
+        # gone. vgremove/pvremove can lag briefly behind startd exiting, so
+        # poll instead of asserting immediately.
+        wait_for_cleanup(lambda: not vg_exists(AUTO_VG_NAME), f"volume group {AUTO_VG_NAME}")
+        wait_for_cleanup(lambda: not pv_exists(loop_dev), f"physical volume {loop_dev}")
+        wait_for_cleanup(lambda: loop_dev_for_file(backing_file) is None, f"loopback device for {backing_file}")
+        wait_for_cleanup(lambda: not backing_file.exists(), f"backing file {backing_file}")
