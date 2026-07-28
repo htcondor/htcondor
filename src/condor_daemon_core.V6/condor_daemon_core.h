@@ -1436,6 +1436,7 @@ class DaemonCore : public Service
                Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
+	private:
     int Create_Process (
         const char      *name,
         ArgList const   &arglist,
@@ -1459,6 +1460,7 @@ class DaemonCore : public Service
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
+	public:	
 
     int CreateProcessNew(
         const std::string & name,
