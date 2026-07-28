@@ -338,7 +338,8 @@ class OptionalCreateProcessArgs {
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
 	{}
     OptionalCreateProcessArgs() :
         _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
@@ -346,7 +347,8 @@ class OptionalCreateProcessArgs {
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs(
@@ -377,7 +379,8 @@ class OptionalCreateProcessArgs {
         sig_mask(sig_mask), job_opt_mask(job_opt_mask),
         core_hard_limit(core_hard_limit), affinity_mask(affinity_mask),
         daemon_sock(daemon_sock), err_return_msg(err_return_msg),
-        _remap(remap), as_hard_limit(as_hard_limit)
+        _remap(remap), as_hard_limit(as_hard_limit),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs & priv(priv_state p) { this->_priv = p; return *this; }
@@ -398,6 +401,12 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
     OptionalCreateProcessArgs & reaperID(int ri) { this->reaper_id = ri; return *this; }
+    // Arm the daemon-core hung-child backstop for this child at creation time,
+    // rather than waiting for its first DC_CHILDALIVE message.  seconds is how
+    // long from now the child is considered hung if it sends no alive.  0 (the
+    // default) preserves the historical behavior of not arming until the first
+    // alive arrives.
+    OptionalCreateProcessArgs & initialHungTimeout(int seconds) { this->initial_hung_timeout = seconds; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to
@@ -426,6 +435,7 @@ class OptionalCreateProcessArgs {
     std::string &     err_return_msg;
     FilesystemRemap * _remap;
     long              as_hard_limit;
+    int               initial_hung_timeout;
 
     // We'd like to use std::optional for the std::string reference, but
     // we can't do that until C++17 is a thing for us.  Instead, initialize
@@ -1426,6 +1436,7 @@ class DaemonCore : public Service
                Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
+	private:
     int Create_Process (
         const char      *name,
         ArgList const   &arglist,
@@ -1449,6 +1460,7 @@ class DaemonCore : public Service
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
+	public:	
 
     int CreateProcessNew(
         const std::string & name,
