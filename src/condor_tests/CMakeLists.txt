@@ -434,7 +434,6 @@ endif()
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_killed_during_recovery "Test DAGMan converges after being killed while itself in recovery mode" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/dagman_recovery_utils.py")
 			condor_pl_test(test_dagman_node_status_recovery "Test DAGMan node status file stays accurate across AP restarts" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/dagman_recovery_utils.py")
 			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
