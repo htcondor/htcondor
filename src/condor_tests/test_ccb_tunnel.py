@@ -51,6 +51,12 @@ def outside(test_dir):
         local_dir=test_dir / "outside",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
             "DAEMON_LIST": "MASTER COLLECTOR",
@@ -72,6 +78,12 @@ def inside(test_dir, outside):
         local_dir=test_dir / "inside",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             # The local collector is this pool's own central manager (its own
             # port); it is ALSO the inside CCB, registering upstream with the
@@ -105,6 +117,12 @@ def node_offhost_ccb(test_dir, outside, inside):
         local_dir=test_dir / "node_offhost_ccb",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             # Report to the top-level collector so the schedd has a reachable CM.
             "COLLECTOR_HOST": collector_address(outside),
@@ -139,6 +157,12 @@ def inside_exec(test_dir, outside):
         local_dir=test_dir / "inside_exec",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             "USE_OUTBOUND_CCB": "TRUE",
             "CCB_OUTBOUND_NEXT_HOP": outside_addr,
@@ -379,6 +403,12 @@ def outside2(test_dir):
         local_dir=test_dir / "outside2",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
             "DAEMON_LIST": "MASTER COLLECTOR",
@@ -398,6 +428,12 @@ def inside_multi(test_dir, outside, outside2):
         local_dir=test_dir / "inside_multi",
         config={
             "ENABLE_IPV6": "FALSE",
+            # Single-host test: FS auth ties its rendezvous directory to the
+            # daemon's own network address, which a broker-relayed tunnel hop does
+            # not carry, so a tool's FS auth to a tunneled daemon cannot satisfy the
+            # binding.  Real tunnels span hosts (no shared filesystem), so FS auth is
+            # not used across them.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
             "USE_SHARED_PORT": "FALSE",
             "USE_OUTBOUND_CCB": "TRUE",
             "CCB_OUTBOUND_NEXT_HOP": next_hops,
