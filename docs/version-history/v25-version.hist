@@ -11,7 +11,7 @@
   no idle jobs to having some idle jobs. As a part of this change the
    *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
    and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
-  :jira:``
+  :jira:`3836`
 
 *** 25.14.0 bugs
 
