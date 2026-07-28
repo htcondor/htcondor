@@ -397,6 +397,14 @@ public:
 		jobs.clear();
 	}
 
+	void SetTolerance(const int tol, const DAG::ToleranceMode mode, const bool percentage = false) {
+		m_failure_tolerance = tol;
+		m_tolerance_mode = mode;
+		m_tolerance_is_percentage = percentage;
+	}
+
+	bool RemoveOnBatchFailure(bool config_rm_on_fail);
+
 	Script* _scriptPre{nullptr};
 	Script* _scriptPost{nullptr};
 	Script* _scriptHold{nullptr};
@@ -452,6 +460,7 @@ private:
 
 	time_t _lastEventTime{0}; // The time of the most recent event related to this job.
 
+	DAG::ToleranceMode m_tolerance_mode{DAG::ToleranceMode::AUTO}; // What to do when job list is considered failed
 	NodeType _type{NodeType::JOB}; // Node type (job, final, provisioner...)
 	status_t _Status{STATUS_READY}; // Current node status
 
@@ -477,6 +486,8 @@ private:
 	int abort_dag_val{-1}; // Return code to notify DAG to abort
 	int abort_dag_return_val{std::numeric_limits<int>::max()}; // Specific value to exit with upon abort
 
+	int m_failure_tolerance{-1}; // How many jobs in list can fail before declaring failure
+
 	int _jobstateSeqNum{0}; // This nodes job state sequence number
 
 	int _dfsOrder{-1}; // DFS ordering of the node
@@ -487,6 +498,9 @@ private:
 
 	bool have_retry_abort_val{false}; // Indicate node has retry abort condition value
 	bool have_abort_dag_val{false}; // Indicate node has an abort condition value
+
+	bool m_tolerance_is_percentage{false}; // Failure tolerance is a percentage
+
 	bool is_factory{false}; // Indicate placed job list is late materialization factory
 	bool _visited{false}; // Node has been visited by DFS order
 

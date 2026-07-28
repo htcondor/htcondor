@@ -188,8 +188,35 @@ Node::SetProcEvent(int proc, int event) {
 //---------------------------------------------------------------------------
 bool
 Node::CheckBatchFailed(int tolerance) {
-	// TODO: Add per node overrides
-	return totalJobsFailed > tolerance;
+	int check = tolerance;
+
+	if (m_failure_tolerance > -1) {
+		check = m_failure_tolerance;
+
+		if (m_tolerance_is_percentage) {
+			check = (numJobsSubmitted * m_failure_tolerance) / 100;
+		}
+	}
+
+	return totalJobsFailed > check;
+}
+
+//---------------------------------------------------------------------------
+bool
+Node::RemoveOnBatchFailure(bool config_rm_on_fail) {
+	if (_queuedNodeJobProcs <= 0) {
+		return false;
+	}
+
+	bool rm = config_rm_on_fail;
+
+	switch (m_tolerance_mode) {
+		case DAG::ToleranceMode::AUTO: break;
+		case DAG::ToleranceMode::FAIL_FAST: rm = true; break;
+		case DAG::ToleranceMode::WAIT: rm = false; break;
+	}
+
+	return rm;
 }
 
 //---------------------------------------------------------------------------

@@ -51,6 +51,15 @@ static const std::set<istring> NODE_KEYWORDS = {
 	"SERVICE",
 };
 
+// Keywords recognized by the new (dag_parser.h) parser that are explicitly
+// not supported when running in deprecated old parse mode
+// (DAGMAN_USE_OLD_FILE_PARSER=True). Add new entries here to have them
+// cleanly rejected rather than falling through to the generic bad-input error.
+static constexpr std::array<const char *, 2> UNSUPPORTED_OLD_PARSER_KEYWORDS = {
+	"WEAK",
+	"TOLERANCE",
+};
+
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
@@ -443,10 +452,11 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			parsed_line_successfully = parse_parent(dag, filename, lineNumber);
 		}
 
-		// WEAK node dependencies explicitly not supported with old parse mode due to deprecation
-		else if (strcasecmp(token, "WEAK") == 0) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s:%d Weak node dependencies are not supported in deprecated parse mode (DAGMAN_USE_OLD_FILE_PARSER=True)\n",
-			             filename, lineNumber);
+		// Keywords explicitly not supported with old parse mode due to deprecation
+		else if (std::any_of(UNSUPPORTED_OLD_PARSER_KEYWORDS.begin(), UNSUPPORTED_OLD_PARSER_KEYWORDS.end(),
+		                      [token](const char * kw) { return strcasecmp(token, kw) == 0; })) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s:%d %s is not supported in deprecated parse mode (DAGMAN_USE_OLD_FILE_PARSER=True)\n",
+			             filename, lineNumber, token);
 			parsed_line_successfully = false;
 		}
 
@@ -3092,6 +3102,9 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 		case DAG::CMD::PRE_SKIP:
 			all_good = ProcessPreSkip(DAG::DERIVE_CMD<PreSkipCommand>(cmd), dag, dag_munge_id);
 			break;
+		case DAG::CMD::TOLERANCE:
+			all_good = ProcessTolerance(DAG::DERIVE_CMD<ToleranceCommand>(cmd), dag, dag_munge_id);
+			break;
 		case DAG::CMD::DONE:
 			all_good = ProcessDone(DAG::DERIVE_CMD<DoneCommand>(cmd), dag, dag_munge_id);
 			break;
@@ -3561,6 +3574,25 @@ bool DagProcessor::ProcessPreSkip(const PreSkipCommand* skip, Dag& dag, int dag_
 			             node->GetNodeName(), error.c_str());
 			return false;
 		}
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessTolerance(const ToleranceCommand* cmd, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		node->SetTolerance(cmd->GetTolerance(), cmd->GetMode(), cmd->IsPercentage());
 	}
 
 	if ( ! found_a_node) {

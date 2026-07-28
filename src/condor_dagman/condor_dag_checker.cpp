@@ -732,6 +732,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 			case DAG::CMD::VARS:
 			case DAG::CMD::PRIORITY:
 			case DAG::CMD::PRE_SKIP:
+			case DAG::CMD::TOLERANCE:
 			case DAG::CMD::DONE:
 				{
 					const NodeModifierCommand* mod = DAG::DERIVE_CMD<NodeModifierCommand>(cmd);

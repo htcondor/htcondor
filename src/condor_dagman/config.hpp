@@ -50,6 +50,7 @@ namespace DagmanConfigOptions {
 		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
 		UseOldDagParser,               // Use old DAG file parser and processing
 		ParseTimingDebug,              // Undocumented: report wall-clock time and peak RSS for DAG parse and edge-processing phases
+		RemoveJobListOnFailure,        // Job batch should be removed once the list is determined to be failed
 		_SIZE // MUST BE FINAL ITEM
 	};
 
