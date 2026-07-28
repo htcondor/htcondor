@@ -1653,7 +1653,7 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun]) {
 		// If DAGMan submitted jobs without error invalidate state for queue checking
 		_validatedState = false;
-		if ( ! submitter->Reschedule()) {
+		if (config[conf::b::SubmitSendReschedule] && ! submitter->Reschedule()) {
 			debug_printf(DEBUG_NORMAL, "Warning: Failed to send reschedule to schedd\n");
 		}
 	}

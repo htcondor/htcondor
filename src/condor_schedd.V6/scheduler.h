@@ -227,16 +227,16 @@ struct SubmitterData {
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
   // level.
-  int FlockLevel;
-  int OldFlockLevel;
-  time_t NegotiationTimestamp; // used to grow the flock level because the near negotiators are not finding matches
-  time_t lastUpdateTime; // the last time we sent updates to the collector
-  bool isOwnerName; // the name of this submitter record is the same as the name of an owner record.
-  bool absentUpdateSent;
+  int FlockLevel{0};
+  int OldFlockLevel{0};
+  time_t NegotiationTimestamp{0}; // used to grow the flock level because the near negotiators are not finding matches
+  time_t lastUpdateTime{0};  // the last time we sent updates to the collector
+  int  lastUpdateNumIdle{0}; // number of idle jobs sent with the last update
+  bool isOwnerName{false}; // the name of this submitter record is the same as the name of an owner record.
+  bool absentUpdateSent{false};
   bool skipNegotiation{false};
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  SubmitterData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
-      , lastUpdateTime(0), isOwnerName(false), absentUpdateSent(false)  { }
+  SubmitterData() = default;
 };
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
@@ -558,10 +558,12 @@ class Scheduler : public Service
 	// negotiation
 	int				negotiatorSocketHandler(Stream *);
 	int				negotiate(int, Stream *);
-	int				reschedule_negotiator(int, Stream *);
 	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
-	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(0, NULL); }
+	int				external_reschedule_request(int, Stream *);
+	int				reschedule_negotiator();
+	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(); }
+
 	void			release_claim(int, Stream *);
 	// I think this is actually a serious bug...
 	int				release_claim_command_handler(int i, Stream * s) { release_claim(i, s); return 0; }
@@ -843,6 +845,8 @@ class Scheduler : public Service
 	void leavePreparingState(JobQueueJob * job);
 	bool addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time_t time);
 
+	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs);
+
 	void configGenericOsUsers();
 
 	bool m_useGenericOsUsers{false};
@@ -1024,6 +1028,10 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
+	int				TotalSubmitterPressure{0};
+	int				LastSubmitterPressure{0};
+	time_t			SubmitterUpdateTime{0}; // the last time we sent a submitter ad with no pressure to the primary collector
+	time_t			EnteredCurrentSubmitterPressure{0}; // the last time submitter pressure changed from true to false and v.v
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
