@@ -20,35 +20,62 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 	if (BUILD_TESTING)
 
-		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
+		# The logical CMake target name is always the base name, with any trailing
+		# .exe removed, so it is identical on every platform.  That lets callers use
+		# the plain name in add_dependencies() and $<TARGET_FILE:...> generator
+		# expressions without worrying about the on-disk suffix.
+		string (REGEX REPLACE "\\.exe$" "" _cet_target "${_CNDR_TARGET}")
+
+		# A test whose submit/.cmd files name the binary <target>.exe needs that
+		# exact file name on *every* platform (not just Windows).  Such a test
+		# passes the EXE keyword; we then force the .exe suffix so the on-disk file
+		# is <target>.exe even on Unix.  (Naming the target with a trailing .exe is
+		# also honored for backward compatibility.)  Without it, the binary uses the
+		# platform default: <target>.exe on Windows, plain <target> on Unix.
+		set(_cet_force_exe FALSE)
+		if ( NOT "${_cet_target}" STREQUAL "${_CNDR_TARGET}" )
+			set(_cet_force_exe TRUE)
+		endif()
+		# Note: inside a macro ARGN is a string substitution, not a real list
+		# variable, so it must be expanded with ${ARGN} rather than IN LISTS ARGN.
+		foreach(_cet_arg ${ARGN})
+			if ("${_cet_arg}" STREQUAL "EXE")
+				set(_cet_force_exe TRUE)
+			endif()
+		endforeach()
+
+		add_executable( ${_cet_target} EXCLUDE_FROM_ALL ${_SRCS})
+		set_target_properties( ${_cet_target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR} )
+
+		if ( _cet_force_exe )
+			set_target_properties( ${_cet_target} PROPERTIES SUFFIX ".exe" )
+			APPEND_VAR(CONDOR_TEST_EXES "${_cet_target}.exe")
+		elseif ( WINDOWS )
+			# Plain name: on Windows CMake appends its default .exe suffix.
+			APPEND_VAR(CONDOR_TEST_EXES "${_cet_target}.exe")
+		else()
+			APPEND_VAR(CONDOR_TEST_EXES "${_cet_target}")
+		endif()
 
 		if ( WINDOWS )
-			string (REPLACE ".exe" "" LOCAL_${_CNDR_TARGET} "${LOCAL_${_CNDR_TARGET}}")
-			#dprint ("condor_exe_test: ${LOCAL_${_CNDR_TARGET}} : from ${_CNDR_TARGET}")
-			APPEND_VAR(CONDOR_TEST_EXES "${LOCAL_${_CNDR_TARGET}}.exe")
-		else(WINDOWS)
-			APPEND_VAR(CONDOR_TEST_EXES ${_CNDR_TARGET})
-		endif( WINDOWS )
-
-		add_executable( ${LOCAL_${_CNDR_TARGET}} EXCLUDE_FROM_ALL ${_SRCS})
-
-		set_target_properties( ${LOCAL_${_CNDR_TARGET}} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR} )
-		
-		if ( WINDOWS )
-			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
+			set_property( TARGET ${_cet_target} PROPERTY FOLDER "tests" )
 		endif ( WINDOWS )
 
-		add_dependencies(${LOCAL_${_CNDR_TARGET}} condor_version_obj)
-		target_link_libraries(${LOCAL_${_CNDR_TARGET}} PRIVATE "${_LINK_LIBS};condor_version_obj" )
+		add_dependencies(${_cet_target} condor_version_obj)
+		target_link_libraries(${_cet_target} PRIVATE "${_LINK_LIBS};condor_version_obj" )
 
 		if ( APPLE )
-			add_custom_command( TARGET ${LOCAL_${_CNDR_TARGET}}
+			# Pass the actual built file, not the target name: with the .exe suffix
+			# forced on some targets the two differ (target x_foo -> file x_foo.exe),
+			# and macosx_rewrite_libs must be handed a real filename or it silently
+			# skips it and leaves the dylib load paths unrewritten.
+			add_custom_command( TARGET ${_cet_target}
 				POST_BUILD
 				WORKING_DIRECTORY ${TEST_TARGET_DIR}
-				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${LOCAL_${_CNDR_TARGET}} )
+				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs $<TARGET_FILE:${_cet_target}> )
 		endif(APPLE)
 
-		APPEND_VAR( CONDOR_TESTS ${LOCAL_${_CNDR_TARGET}} )
+		APPEND_VAR( CONDOR_TESTS ${_cet_target} )
 
 	endif(BUILD_TESTING)
 

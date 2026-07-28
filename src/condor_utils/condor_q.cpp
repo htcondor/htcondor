@@ -432,6 +432,7 @@ encode_status( int status )
 		'S',	 //SUSPENDED			7
 		'F',	 //JOB_STATUS_FAILED	8
 		'B',	 //JOB_STATUS_BLOCKED	9
+		'P',	 //JOB_STATUS_PREPARING	10
 	};
 
 	if (status < JOB_STATUS_MIN || status > JOB_STATUS_MAX) {

@@ -59,34 +59,12 @@ static std::string computeFileHash(const std::string& path) {
     return hash;
 }
 
-// Extracts the YYYYMMDDTHHMMSS rotation timestamp from a filename suffix.
-// Returns nullopt when the filename has no rotation suffix.
 // NOTE: findHistoryFiles() gets all archive files and verifies that each
-//       is a rotated archive file in <basename>.YYYYMMDDTHHMMSS format
-// NOTE: rfind used so base filenames containing '.' (e.g. schedd1.history,
-//       foo.bar) are not mistaken for rotated files — the suffix is then
-//       validated: exactly 15 chars, 'T' at index 8, all other chars digits.
-static std::optional<std::string> extractRotationTime(const std::string& filename) {
-    auto pos = filename.rfind(".");
-
-    if (pos == std::string::npos || pos + 1 >= filename.length()) {
-        return std::nullopt;
-    }
-
-    std::string suffix = filename.substr(pos + 1);
-    if (suffix.length() != 15 || suffix[8] != 'T') {
-        return std::nullopt;
-    }
-
-    for (size_t i = 0; i < 15; ++i) {
-        if (i == 8) { continue; }
-        if ( ! std::isdigit(static_cast<unsigned char>(suffix[i]))) {
-            return std::nullopt;
-        }
-    }
-
-    return std::make_optional(suffix);
-}
+//       is a rotated archive file in <basename>.YYYYMMDDTHHMMSS format.
+// NOTE: extractRotationTime() (librarian_types.h) uses rfind so base filenames
+//       containing '.' (e.g. schedd1.history, foo.bar) are not mistaken for
+//       rotated files — the suffix is validated: exactly 15 chars, 'T' at
+//       index 8, all other chars digits.
 
 // Collects disk metadata for path and returns a populated ArchiveFile.
 // Returns nullopt if any required stat / hash step fails.
@@ -627,8 +605,8 @@ bool Librarian::update() {
                 updated.filename = removedName;
                 dbHandler_.updateFileInfo(updated);
             } else if ( ! info.fully_read) {
-                dprintf(D_STATUS, "update: rotated archive '%s' disappeared before being fully read; marking deleted in DB.\n",
-                        path.c_str());
+                dprintf(D_ERROR, "update: rotated archive '%s' disappeared before being fully read; "
+                        "any unread records in it are permanently lost.\n", path.c_str());
             }
 
             dbHandler_.markFileDeleted(info.id, now);
@@ -747,10 +725,9 @@ void Librarian::reconfig(bool startup) {
     config[i::DBBusyTimeoutMs]            = param_integer("LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS", 30'000,
                                                             0, std::numeric_limits<int>::max());
 
-    param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", config[ll::MaxRecordsPerUpdate], true,
-                   100'000);
-    param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[ll::DBMaxSizeBytes], true,
-                   2LL * 1024 * 1024 * 1024);
+    config[ll::MaxRecordsPerUpdate] = param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 100'000);
+    config[ll::DBMaxSizeBytes] = param_longlong("LIBRARIAN_MAX_DATABASE_SIZE",
+                                                 2LL * 1024 * 1024 * 1024);
 
     config[dbl::DBHighWaterMark] = param_double("LIBRARIAN_HIGH_WATER_MARK", 0.97, 0, 1);
     config[dbl::DBLowWaterMark] = param_double("LIBRARIAN_LOW_WATER_MARK", 0.80, 0, 1);

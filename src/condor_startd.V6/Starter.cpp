@@ -1059,6 +1059,17 @@ int Starter::execDCStarter(
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
+
+		// Arm the daemon-core hung-child backstop for the starter at spawn
+		// time.  The starter delays its first DC_CHILDALIVE (see
+		// STARTER_FIRST_CHILDALIVE_DELAY) so that short-lived starters do not
+		// pay the cost of an alive at all; without arming here, a starter that
+		// hung before its first alive would never be reaped by the startd.
+		// The first alive that does arrive overwrites this deadline.  Use the
+		// same not-responding timeout the starter itself will report.
+	int starter_hung_timeout = param_integer("STARTER_NOT_RESPONDING_TIMEOUT",
+			param_integer("NOT_RESPONDING_TIMEOUT", 3600, 1), 1);
+
 	OptionalCreateProcessArgs cpArgs;
 	s_pid = daemonCore->
 		CreateProcessNew( final_path, *final_args,
@@ -1068,6 +1079,7 @@ int Starter::execDCStarter(
 		                	.familyInfo(&fi)
 		                	.socketInheritList(inherit_list)
 		                	.std(std_fds)
+		                	.initialHungTimeout(starter_hung_timeout)
 		                	.daemonSock(daemon_sock.c_str()));
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");

@@ -49,6 +49,7 @@ Daemon::common_init() {
 	_type = DT_NONE;
 	_port = -1;
 	_is_local = false;
+	_located_via_local_file = false;
 	_tried_locate = false;
 	_tried_init_hostname = false;
 	_tried_init_version = false;
@@ -210,6 +211,7 @@ Daemon::deepCopy( const Daemon &copy )
 	_port = copy._port;
 	_type = copy._type;
 	_is_local = copy._is_local;
+	_located_via_local_file = copy._located_via_local_file;
 	_tried_locate = copy._tried_locate;
 	_tried_init_hostname = copy._tried_init_hostname;
 	_tried_init_version = copy._tried_init_version;
@@ -1320,6 +1322,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			if ( ! foundLocalAd) {
 				readAddressFile( _subsys.c_str() );
 			}
+		}
+		// If a local address file / daemon ad gave us the address, then the
+		// daemon is running on this machine.  Record that so callers can
+		// distinguish a locally-resolved daemon from one found via the collector.
+		if ( ! _addr.empty()) {
+			_located_via_local_file = true;
 		}
 	}
 

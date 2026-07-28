@@ -1033,7 +1033,9 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
     }
     std::ignore = sqlite3_finalize(stmtS);
 
-    // 3. Recover Files — only non-deleted, non-rotated files (active tracking set)
+    // 3. Recover Files — every file not yet removed from disk (DateOfDeletion IS NULL).
+    //    This is NOT just the active file: a rotated file that hadn't finished being
+    //    read yet at shutdown is also still un-deleted and must be recovered here.
     const char* filesSql =
         "SELECT FileId, FileName, FileInode, FileHash, LastOffset, FullyRead, "
         "AvgRecordSize, RecordsRead "
@@ -1057,6 +1059,18 @@ bool DBHandler::maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& a
         file.records_read    = sqlite3_column_int64(stmtF, 7);
         file.size            = -1;
         file.last_modified   = 0;
+
+        // The Files table doesn't persist rotation_time in ArchiveFile's string form
+        // (DateOfRotation is a derived Unix timestamp used only for reporting), so
+        // rebuild it from the filename suffix — the same source makeArchiveFile() uses
+        // for freshly discovered files. Leaving this empty for a rotated file would make
+        // update() treat it as the still-active file: it would never be marked
+        // FullyRead on reaching EOF, and if later removed from disk it would be
+        // misrenamed to "<name>.REMOVED" with DateOfRotation reset to 0.
+        auto rotTime = extractRotationTime(fs::path(file.filename).filename().string());
+        if (rotTime) {
+            file.rotation_time = *rotTime;
+        }
 
         archiveFiles[file.filename] = std::move(file);
     }
@@ -1144,7 +1158,12 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         // Nothing eligible right now -- drop the temp table we just created so a future
         // run's "CREATE TEMP TABLE IF NOT EXISTS" doesn't silently reuse this stale,
         // empty one instead of recomputing against then-current data.
-        sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
+        int r = sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
+        if (r != SQLITE_OK) {
+            dprintf(D_ERROR, "Garbage collection drop temp table failed: %s\n", sqlite3_errmsg(db_));
+            ROLLBACK_AND_RETURN();
+        }
+
         if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
             dprintf(D_ERROR, "Garbage collection commit (no-op pass) failed: %s\n", errMsg);
             sqlite3_free(errMsg);

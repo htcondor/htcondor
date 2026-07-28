@@ -537,12 +537,13 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( ATTR_RESULT, result );
 			context.InsertAttr( ATTR_STAGING_DIR, staging->path().string() );
 
-			const bool EXITING = true;
-			auto usage = s->GetDiskUsage(! EXITING);
+			const bool CORRECTLY = true;
+			auto usage = s->GetDiskUsage(CORRECTLY);
 			// To avoid over-complicating the WithInResourceLimits and
 			// quantize-disk expressions, the size here is in KiB
 			// (the units of `Disk`).
-			long long sizeOnDisk = (usage.execute_size / 1024) + 1;
+			auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
+			dprintf( D_TEST, "cxfer: sizeOnDisk = %ld (KiB)\n", sizeOnDisk );
 			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
 
 			continue_conversation(context);

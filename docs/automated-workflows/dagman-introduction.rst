@@ -128,15 +128,17 @@ PARENT/CHILD Relationships
 
 :index:`describing dependencies<single: DAGMan; Describing dependencies>`
 The :dag-cmd:`PARENT/CHILD[Usage]` command specifies the dependencies within the DAG.
-Nodes are parents and/or children of other nodes within the DAG. A parent node must
-be completed successfully before any of its children may be started. A child node may
-only be started once all its parents have successfully completed.
+Nodes are parents and/or children of other nodes within the DAG. By default, a parent
+node must be completed successfully before any of its children may be started, and a
+child node may only be started once all of its parents have successfully completed.
+This default (*strong*) behavior can be relaxed per-dependency with the optional
+*WEAK* keyword; see :ref:`Weak Dependencies<DAG weak dependencies>` below.
 
 The syntax used for each dependency (:dag-cmd:`PARENT/CHILD`) command is
 
 .. code-block:: condor-dagman
 
-    PARENT ParentNodeName [ParentNodeName2 ... ] CHILD ChildNodeName [ChildNodeName2 ... ]
+    [WEAK] PARENT ParentNodeName [ParentNodeName2 ... ] CHILD ChildNodeName [ChildNodeName2 ... ]
 
 .. sidebar:: Creating Multiple Dependencies for Nodes
 
@@ -176,6 +178,52 @@ or all of the dependencies on separate lines:
     PARENT A CHILD B C
     PARENT B CHILD D
     PARENT C CHILD D
+
+.. _DAG weak dependencies:
+
+Weak Dependencies
+''''''''''''''''''
+
+:index:`weak dependency<single: DAGMan; Weak dependency>`
+By default, a dependency is *strong*: a child node can only run once every
+one of its parents has **completed successfully**. Prefixing a dependency
+declaration with the optional *WEAK* keyword relaxes this: a child of a
+weak dependency only requires that its parent has **finished executing**,
+regardless of whether that parent succeeded or failed.
+
+.. code-block:: condor-dagman
+    :caption: Example DAG description declaring a weak dependency
+
+    WEAK PARENT A CHILD B
+
+.. mermaid::
+    :align: center
+
+    flowchart TD
+     A -.-> B
+
+If *A* fails in the example above, *B* still runs normally instead of being
+marked ``FUTILE``.
+
+.. note::
+
+    Weak dependencies are **not transitive**. If a node with only weak
+    children itself never executes -- for example, because one of *its own*
+    parents failed via a *strong* dependency -- its children are still
+    marked ``FUTILE``, even though the dependency on it is weak. A node that
+    never ran cannot satisfy any dependency, weak or strong, of its own
+    children. Only the node immediately upstream of a failure benefits from
+    the weak relaxation.
+
+If the same *PARENT*/*CHILD* pair is declared more than once with different
+strengths, the *strong* declaration always wins, regardless of the order the
+two declarations appear in the DAG file.
+
+A node that fails but whose only children are reached via weak dependencies
+is still reported and counted as a failed node for the current run. However,
+because it already executed and therefore satisfied every one of its weak
+children, a Rescue DAG generated afterward marks that node as ``DONE``
+instead of leaving it to be re-run.
 
 .. sidebar:: Script Execution Times Based on Type
 

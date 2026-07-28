@@ -407,6 +407,10 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 		return false;
 	}
 	auto ca_cert = read_cert(cafile);
+	if (!ca_cert) {
+		dprintf(D_ALWAYS, "Cannot generate a new certificate - failed to read CA certificate from %s.\n", cafile.c_str());
+		return false;
+	}
 
 	auto private_key = generate_key(keyfile);
 	if (!private_key) {

@@ -23,12 +23,12 @@
 #include "execute_dir_monitor.h"
 #include "directory.h"
 
-DiskUsage ManualExecDirMonitor::GetDiskUsage() {
+DiskUsage ManualExecDirMonitor::GetDiskUsage(priv_state desired_priv) {
 	DiskUsage du;
 
 	// make sure this computation is done with user priv, since that
 	// is who owns the directory and it may not be world-readable
-	Directory dir(workingDir.c_str(), PRIV_USER);
+	Directory dir(workingDir.c_str(), desired_priv);
 	time_t begin_time = time(nullptr);
 	du.execute_size = dir.GetDirectorySize(&du.file_count);
 	time_t scan_time = time(nullptr) - begin_time;

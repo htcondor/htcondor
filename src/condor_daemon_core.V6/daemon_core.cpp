@@ -11544,6 +11544,18 @@ int DaemonCore::CreateProcessNew(
 		ocpa.affinity_mask, ocpa.daemon_sock,
 		& ocpa.err_return_msg,
 		ocpa._remap, ocpa.as_hard_limit );
+
+		// If the caller asked us to arm the hung-child backstop now (rather
+		// than waiting for the child's first DC_CHILDALIVE), set the initial
+		// deadline on the child's PidEntry.  This lets a child safely delay
+		// its first alive without opening a window in which the parent would
+		// never reap it if it hung early.  The first alive overwrites this.
+	if ( rv > 0 && ocpa.initial_hung_timeout > 0 ) {
+		auto itr = pidTable.find(rv);
+		if ( itr != pidTable.end() ) {
+			itr->second.hung_past_this_time = time(nullptr) + ocpa.initial_hung_timeout;
+		}
+	}
 	return rv;
 }
 

@@ -194,6 +194,22 @@ These macros affect the *condor_credd* and its credmon plugin.
     meaningful when :macro:`SEC_CREDENTIAL_STORER` is also configured to point
     to the Vault credential storer.
 
+:macro-def:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS`
+    A boolean value that defaults to ``True``. When ``True``, the access
+    point automatically requests the local credmon provider credentials
+    for every job, so that remote submitters do not need to alter their
+    configuration to submit to an access point that provides credentials
+    for all jobs. Set to ``False`` to disable this behavior.
+
+:macro-def:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+    A comma and/or space separated list of credential provider names that
+    the access point provides for all jobs when
+    :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` is ``True``. When unset,
+    the value falls back to :macro:`LOCAL_CREDMON_PROVIDER_NAMES`,
+    ``LOCAL_CREDMON_PROVIDER_NAME``, and
+    ``CLIENT_CREDMON_PROVIDER_NAMES``, meaning all credentials that
+    the access point can generate by itself.
+
 :macro-def:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES`
     A boolean value that defaults to ``False``. When ``False``, provider
     names may only contain alphanumeric characters and hyphens, and
