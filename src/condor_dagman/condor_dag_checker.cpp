@@ -110,6 +110,13 @@ struct MockDagNode; // forward declare -- needed by the alias right below
 using MockDag = Dag<MockDagData, MockDagNode>;
 
 struct MockDagNode {
+	MockDagNode() = default;
+	// Explicit ctor, not just relying on C++20 parenthesized aggregate init --
+	// AddNode()'s Node<N>(id, args...) direct-initializes N via N(args...),
+	// and older toolchains (e.g. the macOS13 CI builder's Apple clang) don't
+	// support P0960 for that call shape.
+	MockDagNode(std::string n, DAG::CMD t) : name(std::move(n)), type(t) {}
+
 	std::string name;
 	DAG::CMD type{DAG::CMD::JOB};
 };

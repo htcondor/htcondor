@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -120,7 +121,22 @@ class Dag {
 public:
 	Dag() { WireDataParent(); }
 
+	// Two overloads, not one: a single unconstrained `template<typename...
+	// Args> Dag(Args&&...)` is a better match than the compiler-generated
+	// copy/move constructors whenever it's called with exactly one Dag
+	// lvalue/rvalue argument (forwarding reference binds without the
+	// const-adjustment or move-vs-copy tie-break the special members need),
+	// so it silently hijacks them -- then tries to build `data` (type D) from
+	// the whole Dag, which doesn't compile. Excluding Args=Dag from the
+	// single-argument overload lets copy/move construction (e.g. a
+	// std::vector<Dag<D, N>>'s reallocation) resolve to the real special
+	// members instead.
+	template<typename T>
+	requires (!std::same_as<std::remove_cvref_t<T>, Dag>)
+	Dag(T&& arg) : data(std::forward<T>(arg)) { WireDataParent(); }
+
 	template<typename... Args>
+	requires (sizeof...(Args) != 1)
 	Dag(Args&&... args) : data(std::forward<Args>(args)...) { WireDataParent(); }
 
 	D data{};

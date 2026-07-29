@@ -1577,7 +1577,7 @@ static bool test_variadic_construction_from_individual_members() {
 	emit_retval(actual.c_str());
 
 	if (dag.data.name != "my workflow" || dag.data.priority != 5 || ! dag.data.enabled) { FAIL; }
-	if (dag[a].data.name != "A" || dag[a].data.weight != 10 || dag[a].data.cost != 2.5) { FAIL; }
+	if (dag[a].data.name != "A" || dag[a].data.weight != 10 || ! floats_close(dag[a].data.cost, 2.5)) { FAIL; }
 
 	PASS;
 }
