@@ -23,6 +23,7 @@
 
 import logging
 import time
+from collections import namedtuple
 
 from ornithology import action, Condor, ClusterState, write_file, format_script
 
@@ -124,6 +125,13 @@ def relay_ap(test_dir, cm):
         yield condor
 
 
+# Carries the submitted job handle alongside each broker's proxy-session count
+# captured immediately BEFORE the job was submitted, so a test can assert the
+# count strictly increased -- catching a job that silently used a direct
+# connection instead of the relay/tunnel.
+APJobResult = namedtuple("APJobResult", ["handle", "before_cm", "before_inside_ccb"])
+
+
 @action
 def ap_job(test_dir, cm, inside_ccb, ep, relay_ap):
     payload = write_file(test_dir / "ap_in.dat", TRANSFER_SENTINEL + "\n")
@@ -131,6 +139,11 @@ def ap_job(test_dir, cm, inside_ccb, ep, relay_ap):
         test_dir / "ap_job.sh",
         format_script("#!/bin/sh\ncat ap_in.dat\n"),
     )
+    # Baseline each broker's relay count BEFORE the job runs, so the relay test can
+    # assert a per-job increase rather than an absolute count (which a job taking a
+    # silent direct connection could still satisfy from earlier setup traffic).
+    before_cm = proxy_session_count(cm)
+    before_inside_ccb = proxy_session_count(inside_ccb)
     handle = relay_ap.submit(
         description={
             "executable": exe.as_posix(),
@@ -146,7 +159,7 @@ def ap_job(test_dir, cm, inside_ccb, ep, relay_ap):
         count=1,
     )
     assert handle.wait(condition=ClusterState.all_complete, timeout=360, verbose=True)
-    return handle
+    return APJobResult(handle, before_cm, before_inside_ccb)
 
 
 class TestCCBTunnelRelayAP:
@@ -154,7 +167,7 @@ class TestCCBTunnelRelayAP:
         # The job completed: matchmaking, the schedd->startd claim (AP -> tunneled
         # EP), and the shadow<->starter connection (private AP <-> tunneled EP) all
         # succeeded across the tunnel and the relay.
-        assert ap_job.state.all_complete()
+        assert ap_job.handle.state.all_complete()
 
     def test_sandbox_delivered(self, ap_job, test_dir):
         # File transfer -- a shadow<->starter connection -- carried the payload back
@@ -162,7 +175,17 @@ class TestCCBTunnelRelayAP:
         assert TRANSFER_SENTINEL in (test_dir / "ap_job.out").read_text()
 
     def test_brokers_relayed(self, cm, inside_ccb, ap_job):
-        # Both the cm's CCB and the inside CCB relayed at least one streaming
-        # connection for the job (the tunneled/relayed daemon-to-daemon traffic).
-        assert proxy_session_count(cm) > 0, "cm CCB relayed nothing"
-        assert proxy_session_count(inside_ccb) > 0, "inside CCB relayed nothing"
+        # Both the cm's CCB and the inside CCB must log a NEW streaming relay for the
+        # job's tunneled/relayed daemon-to-daemon traffic.  Asserting a strict
+        # increase over the pre-submit baseline (not just count > 0) makes the test
+        # fail if the job silently used a direct connection instead of the relay/tunnel.
+        assert proxy_session_count(cm) > ap_job.before_cm, (
+            "cm CCB relayed nothing new for the job (before=%d, after=%d) -- "
+            "the job may have used a direct connection"
+            % (ap_job.before_cm, proxy_session_count(cm))
+        )
+        assert proxy_session_count(inside_ccb) > ap_job.before_inside_ccb, (
+            "inside CCB relayed nothing new for the job (before=%d, after=%d) -- "
+            "the job may have used a direct connection"
+            % (ap_job.before_inside_ccb, proxy_session_count(inside_ccb))
+        )

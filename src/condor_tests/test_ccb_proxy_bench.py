@@ -329,6 +329,110 @@ class TestCCBOutboundTunnelBench:
         )
 
 
+def _ssrf_exit_config(test_dir_sub, **overrides):
+    # Base config for a directly-dialing exit broker used by the SSRF-guard tests.
+    cfg = {
+        "ENABLE_IPV6": "FALSE",
+        "USE_SHARED_PORT": "FALSE",
+        "DAEMON_LIST": "MASTER COLLECTOR",
+        "COLLECTOR_DEBUG": "D_FULLDEBUG",
+        "CCB_OUTBOUND_PROXY": "TRUE",
+        # The CCB_PROXY_CONNECT request authenticates at DAEMON; on one host a
+        # separate-pool requester would otherwise try the process-family session,
+        # so disable it (as the other tunnel tests do) so the request authenticates
+        # cleanly and is refused specifically by the target check, not by auth.
+        "SEC_USE_FAMILY_SESSION": "False",
+    }
+    cfg.update(overrides)
+    return cfg
+
+
+@action
+def deny_wins_exit(test_dir):
+    # An exit broker whose ALLOW-list would permit a loopback target but whose
+    # DENY-list also matches it.  The deny-list is consulted first, so deny must win
+    # even though the allow-list says yes -- proving deny-list precedence.
+    with Condor(
+        local_dir=test_dir / "deny_wins_exit",
+        config=_ssrf_exit_config(
+            test_dir,
+            CCB_OUTBOUND_TARGET_ALLOWLIST="127.0.0.0/8",
+            CCB_OUTBOUND_TARGET_DENYLIST="127.0.0.0/8",
+        ),
+    ) as condor:
+        yield condor
+
+
+@action
+def default_denylist_exit(test_dir):
+    # An exit broker with the DEFAULT deny-list (loopback/link-local) and the default
+    # allow-list ("*").  Proves the built-in SSRF guard refuses a loopback target so
+    # the broker cannot be used to reach services bound to its own host.
+    with Condor(
+        local_dir=test_dir / "default_denylist_exit",
+        config=_ssrf_exit_config(test_dir),
+    ) as condor:
+        yield condor
+
+
+@action
+def resolve_deny_exit(test_dir):
+    # An exit broker whose deny-list is a loopback CIDR ONLY (no "localhost" literal)
+    # and whose allow-list is "*".  A hostname target that RESOLVES to loopback must
+    # still be refused -- exercising the DNS-resolution deny check (only the
+    # resolved-address match, not a literal name match, can catch it here).
+    with Condor(
+        local_dir=test_dir / "resolve_deny_exit",
+        config=_ssrf_exit_config(
+            test_dir,
+            CCB_OUTBOUND_TARGET_DENYLIST="127.0.0.0/8",
+            CCB_OUTBOUND_TARGET_ALLOWLIST="*",
+        ),
+    ) as condor:
+        yield condor
+
+
+class TestCCBOutboundSSRFGuard:
+    # SSRF hardening: an outbound-proxy broker must refuse to dial targets that would
+    # let a requester reach services on the broker's own host (loopback/link-local),
+    # with the deny-list taking precedence over the allow-list.  ccb_proxy_bench
+    # --outbound --target <sinful> aims the CCB_PROXY_CONNECT at a chosen target; a
+    # refused request never dials, so the listener child is simply released.
+    def _expect_refused(self, condor, target):
+        result = condor.run_command(
+            [
+                ccb_proxy_bench_path(condor),
+                broker_sinful(condor),
+                str(BENCH_SECONDS),
+                "--outbound",
+                "--target",
+                target,
+            ],
+            timeout=BENCH_SECONDS + 40,
+        )
+        assert result.returncode != 0, (
+            "outbound-proxy request to %s was not refused: %s"
+            % (target, result.stdout)
+        )
+        assert "disallowed target" in condor.collector_log.path.read_text(), (
+            "broker did not log refusing the disallowed target %s" % target
+        )
+
+    def test_denylist_wins_over_allowlist(self, deny_wins_exit):
+        # The same loopback target is on BOTH lists; deny must win.
+        self._expect_refused(deny_wins_exit, "<127.0.0.1:1>")
+
+    def test_default_loopback_denied(self, default_denylist_exit):
+        # The default deny-list refuses a loopback IP target even with allow-list "*".
+        self._expect_refused(default_denylist_exit, "<127.0.0.1:1>")
+
+    def test_hostname_resolving_to_loopback_denied(self, resolve_deny_exit):
+        # A hostname target that resolves to 127.0.0.1 is refused by the CIDR
+        # deny-list via DNS resolution: the deny-list here carries no "localhost"
+        # literal, so only the resolved-address check can catch it.
+        self._expect_refused(resolve_deny_exit, "<localhost:1>")
+
+
 @action
 def reaper_condor(test_dir):
     with Condor(

@@ -22,10 +22,8 @@
 # collectors therefore log a streaming (proxy) relay for the one connection.
 
 import logging
-import os
 import time
-
-import pytest
+from collections import namedtuple
 
 from ornithology import action, Condor, ClusterState, write_file, format_script
 
@@ -183,8 +181,17 @@ def inside_exec(test_dir, outside):
         yield condor
 
 
+# Carries the submitted job handle alongside each broker's proxy-session count
+# captured immediately BEFORE the job was submitted, so a test can assert the
+# count strictly increased -- catching a job that silently used a direct
+# connection instead of the tunnel.
+TunnelJobResult = namedtuple(
+    "TunnelJobResult", ["handle", "before_outside", "before_inside"]
+)
+
+
 @action
-def tunnel_job(test_dir, inside_exec):
+def tunnel_job(test_dir, outside, inside_exec):
     # A job whose sandbox transfer forces a shadow<->starter connection.  The
     # shadow (NET_DEFAULT) and starter (NET_EXEC) are on different private
     # networks and both behind the inside CCB, so that connection -- and the
@@ -195,6 +202,11 @@ def tunnel_job(test_dir, inside_exec):
         test_dir / "tunnel_job.sh",
         format_script("#!/bin/sh\ncat tunnel_in.dat\n"),
     )
+    # Baseline each broker's relay count BEFORE the job runs, so the relay test
+    # can assert a per-job increase rather than an absolute count (which a job
+    # taking a silent direct connection could still satisfy from earlier setup).
+    before_outside = proxy_session_count(outside)
+    before_inside = proxy_session_count(inside_exec)
     handle = inside_exec.submit(
         description={
             "executable": exe.as_posix(),
@@ -210,7 +222,7 @@ def tunnel_job(test_dir, inside_exec):
         count=1,
     )
     assert handle.wait(condition=ClusterState.all_complete, timeout=300, verbose=True)
-    return handle
+    return TunnelJobResult(handle, before_outside, before_inside)
 
 
 def schedd_name(inside):
@@ -239,8 +251,16 @@ class TestCCBTunnel:
     def test_firewalled_tool_reaches_schedd_through_both_brokers(
         self, outside, inside, monkeypatch
     ):
-        if getattr(os, "geteuid", lambda: 1)() == 0:
-            pytest.skip("simulating a firewalled tool requires non-root")
+        # NOTE: this test runs as root too.  The firewall is simulated purely by
+        # _CONDOR_USE_SHARED_PORT=FALSE + _CONDOR_TOOLS_ASSUME_FIREWALLS=TRUE
+        # (set below).  With USE_SHARED_PORT false, SharedPortEndpoint::UseSharedPort
+        # returns false at its "USE_SHARED_PORT=false" check -- BEFORE the
+        # can_switch_ids() (root) branch that would otherwise let root use the shared
+        # port -- so the CCB client cannot open a reverse-connect listener and falls
+        # back to streaming through the brokers.  That fallback path is
+        # uid-independent, so there is no root-only reason to skip.  (A prior skip
+        # here was over-conservative; the FS-auth channel-binding concern that
+        # motivated it is handled separately by SEC_FS_ENFORCE_CHANNEL_BINDING=False.)
 
         name = schedd_name(inside)
         assert name, "tunneled schedd never advertised to its collector"
@@ -282,8 +302,10 @@ class TestCCBTunnel:
         # tunnel path with a non-existent one, then try to reach it.
         import re
 
-        if getattr(os, "geteuid", lambda: 1)() == 0:
-            pytest.skip("simulating a firewalled tool requires non-root")
+        # Runs as root too: the firewall is simulated by _CONDOR_USE_SHARED_PORT=FALSE
+        # + _CONDOR_TOOLS_ASSUME_FIREWALLS=TRUE (set below), which forces the streaming
+        # fallback regardless of uid.  See the note in
+        # test_firewalled_tool_reaches_schedd_through_both_brokers.
 
         name = schedd_name(inside)
         assert name, "tunneled schedd never advertised to its collector"
@@ -330,7 +352,7 @@ class TestCCBTunnelJob:
     # this job needs (schedd->startd claim, shadow<->starter) cross the tunnel and
     # daemons connect non-blocking, so completing proves the async multi-hop follow.
     def test_job_ran_through_the_tunnel(self, tunnel_job):
-        assert tunnel_job.state.all_complete()
+        assert tunnel_job.handle.state.all_complete()
 
     def test_sandbox_transfer_delivered_through_the_tunnel(self, tunnel_job, test_dir):
         # The job catted its transferred input to stdout, which file transfer -- a
@@ -339,9 +361,19 @@ class TestCCBTunnelJob:
 
     def test_both_brokers_relayed_for_the_job(self, outside, inside_exec, tunnel_job):
         # The job's cross-network connections traverse both brokers, so each
-        # collector-as-CCB logged at least one streaming relay.
-        assert proxy_session_count(outside) > 0, "outside CCB relayed nothing"
-        assert proxy_session_count(inside_exec) > 0, "inside CCB relayed nothing"
+        # collector-as-CCB must log a NEW streaming relay for this job.  Asserting a
+        # strict increase over the pre-submit baseline (not just count > 0) makes the
+        # test fail if the job silently used a direct connection instead of the tunnel.
+        assert proxy_session_count(outside) > tunnel_job.before_outside, (
+            "outside CCB relayed nothing new for the job (before=%d, after=%d) -- "
+            "the job may have used a direct connection"
+            % (tunnel_job.before_outside, proxy_session_count(outside))
+        )
+        assert proxy_session_count(inside_exec) > tunnel_job.before_inside, (
+            "inside CCB relayed nothing new for the job (before=%d, after=%d) -- "
+            "the job may have used a direct connection"
+            % (tunnel_job.before_inside, proxy_session_count(inside_exec))
+        )
 
 
 class TestCCBTunnelOffHostCCB:
@@ -456,6 +488,22 @@ def _broker_hostport(condor):
     return m.group(1) if m else sinful
 
 
+def _hostport_reachable(hostport):
+    # True iff a TCP connection to host:port completes.  Takes a captured host:port
+    # string (not a live Condor) because a broker taken down with condor_off deletes
+    # its collector address file, so it can no longer be read back from the daemon.
+    # Used to confirm a broker is really down (so a later success genuinely required
+    # failover, not a lucky race against a still-listening socket).
+    import socket
+
+    host, _, port = hostport.rpartition(":")
+    try:
+        with socket.create_connection((host, int(port)), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
 class TestCCBTunnelMultipleUpstream:
     def test_schedd_advertises_both_tunnel_paths(self, outside, outside2, inside_multi):
         # The inside CCB registered upstream through BOTH brokers, so the schedd's
@@ -480,4 +528,75 @@ class TestCCBTunnelMultipleUpstream:
         assert want_b in addr, (
             "schedd contact missing the path through the second broker %s: %s"
             % (want_b, addr)
+        )
+
+    def test_reachable_via_surviving_broker_after_one_fails(
+        self, outside, outside2, inside_multi, monkeypatch
+    ):
+        # Defined LAST in this class on purpose: it brings `outside` down, and the
+        # class-scoped fixtures keep it down for anything defined after it.  With the
+        # inside CCB registered upstream through BOTH brokers, killing the
+        # first-listed broker must not sever the schedd: a firewalled tool -- which
+        # cannot accept a reverse connection and so must route through a broker --
+        # still reaches the schedd by failing over to the surviving broker, and that
+        # survivor relays the hop.
+        name = schedd_name(inside_multi)
+        assert name, "tunneled schedd never advertised to its collector"
+
+        want_a = _broker_hostport(outside)
+        want_b = _broker_hostport(outside2)
+
+        # Precondition: both tunnel paths are live in the schedd's contact before we
+        # take a broker down (otherwise "failover" would be vacuous).
+        deadline = time.time() + 90
+        addr = ""
+        while time.time() < deadline:
+            p = inside_multi.run_command(["condor_status", "-schedd", "-af", "MyAddress"])
+            if p.returncode == 0 and p.stdout.strip():
+                addr = p.stdout.strip().splitlines()[0]
+                if want_a in addr and want_b in addr:
+                    break
+            time.sleep(1)
+        assert want_a in addr and want_b in addr, (
+            "schedd contact did not carry both tunnel paths before failover: %s" % addr
+        )
+
+        # Capture the outside broker's host:port BEFORE taking it down: condor_off
+        # deletes its collector address file, so it cannot be read back afterward.
+        outside_hostport = _broker_hostport(outside)
+
+        # Bring the first broker down and confirm it is truly unreachable, so the
+        # later success cannot be a race against a still-listening socket.
+        outside.run_command(["condor_off", "-fast", "-collector"], timeout=30)
+        down_by = time.time() + 60
+        while time.time() < down_by and _hostport_reachable(outside_hostport):
+            time.sleep(1)
+        assert not _hostport_reachable(outside_hostport), (
+            "outside broker's collector never went down after condor_off"
+        )
+
+        before_survivor = proxy_session_count(outside2)
+
+        # Firewalled tool: forced to stream through a broker (see the firewalled-tool
+        # test earlier).  The path through the dead broker must fail and the client
+        # must fall over to the survivor.
+        monkeypatch.setenv("_CONDOR_TOOLS_ASSUME_FIREWALLS", "TRUE")
+        monkeypatch.setenv("_CONDOR_USE_SHARED_PORT", "FALSE")
+
+        p = inside_multi.run_command(["condor_q", "-name", name], timeout=120)
+        assert p.returncode == 0, (
+            "firewalled condor_q did not fail over to the surviving broker: "
+            "rc=%s stdout=%r stderr=%r" % (p.returncode, p.stdout, p.stderr)
+        )
+
+        # The survivor must have relayed the hop for this connection, proving the
+        # schedd was reached THROUGH the surviving broker and not by a direct path.
+        deadline = time.time() + 60
+        while (
+            time.time() < deadline
+            and proxy_session_count(outside2) <= before_survivor
+        ):
+            time.sleep(1)
+        assert proxy_session_count(outside2) > before_survivor, (
+            "surviving broker did not relay the failed-over tunnel hop"
         )

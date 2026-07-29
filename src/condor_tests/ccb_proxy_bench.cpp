@@ -430,7 +430,12 @@ static int targetRole_listener( int seconds, FILE *to_parent )
 
 // requesterRole_outbound: ask the broker to dial the listener on our behalf
 // (CCB_PROXY_CONNECT) and blast over the spliced socket, reporting throughput.
-static int requesterRole_outbound( const char *broker, int seconds, FILE *from_target, int ttl )
+// If target_override is non-empty, ask the broker to dial THAT address instead of
+// the listener's -- used by the SSRF-guard tests to point the request at a denied
+// target (e.g. a loopback IP or a name that resolves to loopback); such a request
+// is refused before any dial, so the listener child is simply released afterward.
+static int requesterRole_outbound( const char *broker, int seconds, FILE *from_target,
+								   int ttl, const char *target_override )
 {
 	char line[256];
 	if( !fgets(line, sizeof(line), from_target) ) {
@@ -438,6 +443,7 @@ static int requesterRole_outbound( const char *broker, int seconds, FILE *from_t
 	}
 	std::string target(line);
 	while( !target.empty() && (target.back()=='\n' || target.back()=='\r') ) { target.pop_back(); }
+	if( target_override && *target_override ) { target = target_override; }
 
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_PROXY_CONNECT, Stream::reli_sock, 20, NULL);
@@ -487,7 +493,7 @@ static int requesterRole_outbound( const char *broker, int seconds, FILE *from_t
 int main( int argc, char **argv )
 {
 	if( argc < 2 ) {
-		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test | --outbound [--ttl N]]\n", argv[0]);
+		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test | --outbound [--ttl N] [--target <sinful>]]\n", argv[0]);
 		return 2;
 	}
 	const char *broker = argv[1];
@@ -495,12 +501,14 @@ int main( int argc, char **argv )
 	bool cap_mode = false;
 	bool outbound_mode = false;
 	int outbound_ttl = -1;   // -1 => let the broker apply its own default
+	const char *outbound_target = nullptr;   // override the dialed target (SSRF tests)
 	int seconds = 5;
 	for( int i = 2; i < argc; i++ ) {
 		if( std::string(argv[i]) == "--no-reverse-connect" ) { reaper_mode = true; }
 		else if( std::string(argv[i]) == "--cap-test" ) { cap_mode = true; }
 		else if( std::string(argv[i]) == "--outbound" ) { outbound_mode = true; }
 		else if( std::string(argv[i]) == "--ttl" && i+1 < argc ) { outbound_ttl = atoi(argv[++i]); }
+		else if( std::string(argv[i]) == "--target" && i+1 < argc ) { outbound_target = argv[++i]; }
 		else { seconds = atoi(argv[i]); }
 	}
 
@@ -539,7 +547,7 @@ int main( int argc, char **argv )
 	FILE *from_target = fdopen(fds[0], "r");
 
 	if( outbound_mode ) {
-		int rc = from_target ? requesterRole_outbound(broker, seconds, from_target, outbound_ttl) : 1;
+		int rc = from_target ? requesterRole_outbound(broker, seconds, from_target, outbound_ttl, outbound_target) : 1;
 		if( from_target ) { fclose(from_target); }
 			// If the broker refused (e.g. TTL exhausted or target not allow-listed),
 			// the listener child is still blocked in accept(); release it so waitpid
