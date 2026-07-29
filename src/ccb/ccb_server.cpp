@@ -25,6 +25,7 @@
 #include "condor_sinful.h"
 #include "condor_netaddr.h"
 #include "condor_sockaddr.h"
+#include "ipv6_hostname.h"
 #include "condor_crypt.h"
 #include "daemon.h"
 #include "dc_message.h"
@@ -1562,12 +1563,18 @@ CCBServer::StartInboundRelay( ReliSock *upstream, const CCBRouteContext &route_c
 // client.  We own request_sock until we answer it and delete it; client_sock (the
 // dialed connection) is passed to StartProxyRequest once the dial completes.
 struct OldClientRelay {
+	CCBServer *server{nullptr};        // owner; used only to decrement the in-flight count
 	ReliSock *request_sock{nullptr};   // the client's CCB_REQUEST socket
 	std::string connect_id;            // secret the client matches on its reverse connect
 	CCBID target_ccbid{0};             // entry hop toward the tunnel (route head)
 	std::string route;                 // remaining hops after target (space-separated)
 	std::string original_requester;    // audit: who this is really for
 	std::string prior_hop;             // audit: the broker that set up the next hop (us)
+		// RAII: exactly one decrement of the in-flight-dial count when this context is
+		// released -- which happens on every exit path (dial/register failure, or once
+		// OldClientReverseConnected returns and the registered handler that also held a
+		// reference is gone), with no manual bookkeeping to miss a branch.
+	~OldClientRelay() { if( server ) { server->m_oldclient_dials_inflight--; } }
 };
 
 	// Split a chained CCBID "42#17#99" into the entry hop "42" and the remaining
@@ -1612,6 +1619,66 @@ CCBServer::HandleOldClientTunnelRequest( ReliSock *request_sock,
 		return;
 	}
 
+		// This dial reverse-connects the broker to an attacker-influenced address
+		// (client_addr is the request's ATTR_MY_ADDRESS), so apply the same SSRF guard
+		// the outbound-proxy path uses before committing it: a target on the deny-list
+		// (by default loopback/link-local) or outside the allow-list is refused.
+	if( !OutboundTargetAllowed( client_addr ) ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing old-client tunnel request from %s: reverse-connect "
+				"target %s is not permitted by this broker.\n",
+				request_sock->peer_description(), client_addr.c_str());
+		RequestReply( request_sock, false, "target not permitted", 0, target_ccbid );
+		delete request_sock;
+		return;
+	}
+
+		// Enforce the same streaming session and handshake caps as the outbound-proxy
+		// path (shared session tables) before committing the dial, so this path cannot
+		// be used to exhaust file descriptors past the configured limits.  The session
+		// itself is created later (StartProxyRequest), so this is the earliest safe
+		// point to bound it.
+	int max_sessions = param_integer("CCB_SERVER_MAX_STREAMING_SESSIONS", 0, 0);
+	if( max_sessions > 0 && (int)m_proxy_sessions.size() >= max_sessions ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing old-client tunnel request from %s: at the session limit "
+				"(CCB_SERVER_MAX_STREAMING_SESSIONS=%d).\n",
+				request_sock->peer_description(), max_sessions);
+		RequestReply( request_sock, false, "CCB session limit reached on the broker",
+				0, target_ccbid );
+		delete request_sock;
+		return;
+	}
+	int max_handshakes = param_integer("CCB_SERVER_MAX_STREAMING_HANDSHAKES", 0, 0);
+	if( max_handshakes > 0 &&
+		(m_oldclient_dials_inflight + (int)m_pending_handshakes.size()) >= max_handshakes ) {
+			// Count both the dials already in flight on this path (not yet in the
+			// handshake table) and the pending handshakes, since both are pre-relay.
+		dprintf(D_ALWAYS,
+				"CCB: refusing old-client tunnel request from %s: at the handshake limit "
+				"(CCB_SERVER_MAX_STREAMING_HANDSHAKES=%d).\n",
+				request_sock->peer_description(), max_handshakes);
+		RequestReply( request_sock, false, "CCB handshake limit reached on the broker",
+				0, target_ccbid );
+		delete request_sock;
+		return;
+	}
+
+		// Build the relay context and take ownership of request_sock BEFORE committing
+		// the dial, so the RAII in-flight counter (incremented here, decremented in
+		// ~OldClientRelay) already covers the dial itself -- a broker-side connect that
+		// can take up to CCB_TIMEOUT to fail.  From here on request_sock is owned by
+		// ctx and deleted exactly once, on whichever path terminates this request.
+	auto ctx = std::make_shared<OldClientRelay>();
+	ctx->server = this;
+	m_oldclient_dials_inflight++;
+	ctx->request_sock = request_sock;
+	ctx->connect_id = connect_id;
+	ctx->target_ccbid = target_ccbid;
+	ctx->route = route;
+	ctx->original_requester = RequesterIdentity( request_sock );
+	ctx->prior_hop = m_address;
+
 		// Reverse-connect to the client ourselves, as if we were the target: dial it
 		// back non-blocking so the CCB main loop is never stalled.  Completion is
 		// delivered to OldClientReverseConnected, which sends the reverse-connect hello
@@ -1622,31 +1689,26 @@ CCBServer::HandleOldClientTunnelRequest( ReliSock *request_sock,
 	Sock *client_sock = client.makeConnectedSocket(
 			Stream::reli_sock, ccb_timeout, 0, &errstack, true /*nonblocking*/ );
 	if( !client_sock ) {
+			// ctx (and thus the in-flight count) is released when this scope returns.
 		dprintf(D_ALWAYS,
 				"CCB: failed to initiate reverse connection to old client %s: %s\n",
 				client_addr.c_str(), errstack.getFullText().c_str());
-		RequestReply( request_sock, false, "failed to reverse-connect to requester",
+		RequestReply( ctx->request_sock, false, "failed to reverse-connect to requester",
 				0, target_ccbid );
-		delete request_sock;
+		delete ctx->request_sock;
 		return;
 	}
-
-	auto ctx = std::make_shared<OldClientRelay>();
-	ctx->request_sock = request_sock;
-	ctx->connect_id = connect_id;
-	ctx->target_ccbid = target_ccbid;
-	ctx->route = route;
-	ctx->original_requester = RequesterIdentity( request_sock );
-	ctx->prior_hop = m_address;
 
 	int rc = daemonCore->Register_Socket(
 			client_sock, "ccb old-client reverse dial",
 			[this, ctx](Stream *s){ return OldClientReverseConnected( ctx, (ReliSock *)s ); },
 			"CCBServer::OldClientReverseConnected" );
 	if( rc < 0 ) {
-		RequestReply( request_sock, false, "failed to register reverse connection",
+			// The handler never registered, so ctx here is the only reference; it (and
+			// the in-flight count) is released when this scope returns.
+		RequestReply( ctx->request_sock, false, "failed to register reverse connection",
 				0, target_ccbid );
-		delete request_sock;
+		delete ctx->request_sock;
 		delete client_sock;
 		return;
 	}
@@ -1883,18 +1945,30 @@ ccbProxyConnectReply( ReliSock *sock, bool result, char const *errmsg )
 }
 
 	// Does host/addr match any entry in `list` (a space/comma-separated set)?  An
-	// IP target matches a CIDR/network entry; any target matches a hostname entry by
-	// case-insensitive wildcard via matches_anycase_withwildcard -- the same matcher
-	// HTCondor's ALLOW/DENY host authorization uses, so "*.example.com" works.
+	// IP target matches a CIDR/network entry; a hostname target matches a CIDR entry
+	// if any of the addresses it resolves to (`resolved`) falls in that network, so a
+	// name pointing at a denied network cannot slip past.  Any target also matches a
+	// hostname entry by case-insensitive wildcard via matches_anycase_withwildcard --
+	// the same matcher HTCondor's ALLOW/DENY host authorization uses, so
+	// "*.example.com" works.
 static bool
 ccbTargetMatchesList( const std::string &list, char const *host,
-                      const condor_sockaddr &addr, bool is_ip )
+                      const condor_sockaddr &addr, bool is_ip,
+                      const std::vector<condor_sockaddr> &resolved )
 {
 	for( const auto &entry : StringTokenIterator( list ) ) {
-		if( is_ip ) {
-			condor_netaddr net;
-			if( net.from_net_string( entry.c_str() ) && net.match( addr ) ) {
-				return true;
+		condor_netaddr net;
+		if( net.from_net_string( entry.c_str() ) ) {
+			if( is_ip ) {
+				if( net.match( addr ) ) {
+					return true;
+				}
+			} else {
+				for( const auto &raddr : resolved ) {
+					if( net.match( raddr ) ) {
+						return true;
+					}
+				}
 			}
 		}
 		if( matches_anycase_withwildcard( entry.c_str(), host ) ) {
@@ -1916,6 +1990,20 @@ CCBServer::OutboundTargetAllowed( const std::string &target )
 	condor_sockaddr addr;
 	bool is_ip = addr.from_ip_string( host );
 
+		// When the target is a hostname rather than an IP literal, resolve it up front
+		// so the deny-list can be applied to the addresses it actually points at;
+		// otherwise a name resolving to loopback/link-local would evade the CIDR
+		// deny-list.  Fail closed if resolution yields nothing.  (Known residual: the
+		// later connect() re-resolves the name, so a DNS-rebinding TOCTOU between this
+		// check and the dial is not closed here and must be addressed separately.)
+	std::vector<condor_sockaddr> resolved;
+	if( !is_ip ) {
+		resolved = resolve_hostname( host );
+		if( resolved.empty() ) {
+			return false;
+		}
+	}
+
 		// Deny-list wins: a target matching CCB_OUTBOUND_TARGET_DENYLIST is refused
 		// even when the allow-list would permit it.  Its default is the
 		// loopback/link-local set, so by default the broker refuses to be used to
@@ -1923,7 +2011,7 @@ CCBServer::OutboundTargetAllowed( const std::string &target )
 		// now a visible, overridable config value rather than hard-coded.
 	std::string denylist;
 	if( param( denylist, "CCB_OUTBOUND_TARGET_DENYLIST" ) && !denylist.empty() &&
-		ccbTargetMatchesList( denylist, host, addr, is_ip ) )
+		ccbTargetMatchesList( denylist, host, addr, is_ip, resolved ) )
 	{
 		return false;
 	}
@@ -1934,7 +2022,7 @@ CCBServer::OutboundTargetAllowed( const std::string &target )
 	if( !param( allowlist, "CCB_OUTBOUND_TARGET_ALLOWLIST" ) ) {
 		return false;
 	}
-	return ccbTargetMatchesList( allowlist, host, addr, is_ip );
+	return ccbTargetMatchesList( allowlist, host, addr, is_ip, resolved );
 }
 
 int
@@ -1961,8 +2049,12 @@ CCBServer::HandleProxyConnect( int cmd, Stream *stream )
 		// refuse at 0 when forwarding, so the chain length is bounded by the endpoint
 		// rather than any intermediate broker's own maximum.  Default to the local
 		// originator TTL if the request carries none.
-	int ttl = param_integer("CCB_OUTBOUND_TTL", 8, 1);
+	int local_ttl = param_integer("CCB_OUTBOUND_TTL", 8, 1);
+	int ttl = local_ttl;
 	msg.LookupInteger( ATTR_CCB_TTL, ttl );
+		// An incoming TTL may only lower, never raise, this broker's own budget, so a
+		// forwarding broker never honors a client value larger than its configured max.
+	ttl = std::min( ttl, local_ttl );
 	if( target.empty() || connect_id.empty() ) {
 		ccbProxyConnectReply( sock, false, "missing target address or connect id" );
 		return FALSE;

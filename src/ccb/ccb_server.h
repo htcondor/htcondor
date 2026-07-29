@@ -66,6 +66,9 @@ class CCBServer: Service {
 		// The upstream registration listener hands routed (tunneled) reverse-connect
 		// requests back to us via StartInboundRelay (which takes a CCBRouteContext).
 	friend class CCBListener;
+		// Carries the in-flight old-client reverse dial; its destructor decrements
+		// m_oldclient_dials_inflight (RAII), so it needs access to that private member.
+	friend struct OldClientRelay;
  private:
 	bool m_registered_handlers;
 	std::map<CCBID,CCBTarget *> m_targets;        // ccbid --> target
@@ -120,6 +123,16 @@ class CCBServer: Service {
 		// erase-of-absent is a no-op, a missed transition self-heals at teardown
 		// rather than wedging the count forever the way a bare counter would.
 	std::unordered_set<std::string> m_pending_handshakes;
+
+		// Old-client (non-tunneling) reverse dials that have been committed but are not
+		// yet recorded in m_proxy_sessions / m_pending_handshakes: the dial is in
+		// flight, or its completion callback has not yet reached StartProxyRequest.
+		// Counted here (RAII, via OldClientRelay's destructor) so a burst of concurrent
+		// old-client CCB_REQUESTs cannot start unbounded broker-side dials -- each up to
+		// CCB_TIMEOUT long -- before any of them lands in the handshake table.  Combined
+		// with m_pending_handshakes when enforcing the handshake cap (both are pre-relay
+		// states).  Single-threaded daemonCore event loop, so a plain int suffices.
+	int m_oldclient_dials_inflight{0};
 
 	int m_polling_timer;
 		// The epoll file descriptor.  Only used on platforms where
