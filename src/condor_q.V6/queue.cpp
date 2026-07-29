@@ -1809,6 +1809,16 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 			dash_batch = false;
 		}
+
+		// batch mode rewrites specific columns (counters, batch name, job ids) of the
+		// built-in batch output format, so it cannot be used with a custom output format.
+		if (dash_batch && (qdo_mode & (QDO_Format | QDO_PrintFormat))) {
+			if (dash_batch_specified) {
+				fprintf( stderr, "Error: -batch conflicts with -format, -autoformat and -print-format\n" );
+				exit( 1 );
+			}
+			dash_batch = false;
+		}
 	}
 
 	if (dash_dry_run) {
@@ -3492,6 +3502,23 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 	return 1;
 }
 
+// helpers for writing the baked batch-mode values into a row.  The column will not
+// exist if the output format has fewer columns than the built-in batch format, so we
+// must check for NULL before writing. (see reduce_results)
+static void set_int_column(JobRowOfData & jr, int ixCol, int value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetIntegerValue(value);
+	jr.rov.set_col_valid(ixCol, (bool)(value > 0));
+}
+
+static void set_string_column(JobRowOfData & jr, int ixCol, const char * value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetStringValue(value);
+	jr.rov.set_col_valid(ixCol, true);
+}
+
 // reduce the data by summarizing all of the procs in a cluster
 // and all of the nodes in a dag into a single line of output.
 //
@@ -3539,28 +3566,23 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		if (num_held > 0) wids.any_held = true;
 
 		int ixCol = ixFirstCounterCol; // starting column for counters
-		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
-		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+		set_int_column(jr, ixCol, num_done);
 		wids.count_widths[0] = MAX(wids.count_widths[0], number_width(num_done));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
-		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+		set_int_column(jr, ixCol, num_active);
 		wids.count_widths[1] = MAX(wids.count_widths[1], number_width(num_active));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
-		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+		set_int_column(jr, ixCol, num_idle);
 		wids.count_widths[2] = MAX(wids.count_widths[2], number_width(num_idle));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
-		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+		set_int_column(jr, ixCol, num_held);
 		wids.count_widths[3] = MAX(wids.count_widths[3], number_width(num_held));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
-		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+		set_int_column(jr, ixCol, num_total);
 		wids.count_widths[4] = MAX(wids.count_widths[4], number_width(num_total));
 
 		int name_width = 0;
@@ -3588,8 +3610,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
 				formatstr(tmp, "ID: %d", jid.cluster);
-				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
-				jr.rov.set_col_valid(ixBatchNameCol, true);
+				set_string_column(jr, ixBatchNameCol, tmp.c_str());
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
 			}
 		}
@@ -3604,8 +3625,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		} else {
 			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
-		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
-		jr.rov.set_col_valid(ixJobIdsCol, true);
+		set_string_column(jr, ixJobIdsCol, tmp.c_str());
 		wids.ids_width = MAX(wids.ids_width, (int)tmp.length());
 	}
 
