@@ -160,13 +160,19 @@ ScheddNegotiate::nextJob()
 
 		// When sending a batch of resource requests (SEND_RESOURCE_REQUEST_LIST),
 		// m_num_resource_reqs_to_send is how many ads (including the one about to
-		// be built) are still due in this batch. Reserve one unit of budget for
-		// each of the *other* ads so a single large backlog can't consume the
-		// whole batch before the remaining ads are ever shown to the negotiator.
-		// For the one-job-at-a-time protocol this is always 0, so it has no effect.
+		// be built) the negotiator is willing to receive in this batch -- but that
+		// is just an upper bound the negotiator advertises (default 200) and is
+		// usually far larger than the number of auto clusters we actually have
+		// left to send. Reserve budget only for the *other* auto clusters that
+		// genuinely remain in m_jobs, so a single large backlog can't consume the
+		// whole offer budget before the remaining, actually-pending clusters are
+		// ever shown to the negotiator.  For the one-job-at-a-time protocol this
+		// is always 0, so it has no effect.
 	int reserved_for_pending_requests = 0;
 	if ( m_refund_unused_resource_requests ) {
-		reserved_for_pending_requests = MAX(0, m_num_resource_reqs_to_send - 1);
+		int other_pending_clusters = m_jobs ? (int)m_jobs->size() : 0;
+		if (other_pending_clusters > 0) { other_pending_clusters -= 1; }
+		reserved_for_pending_requests = MAX(0, MIN(m_num_resource_reqs_to_send - 1, other_pending_clusters));
 	}
 
 	while( !m_jobs->empty() && m_jobs_can_offer ) {
