@@ -9,7 +9,13 @@ import pytest
 
 from ornithology import *
 
-from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config, SMALL_BACKING_FILE_MB
+from liblvm import (
+    LVMTestable,
+    LVM_SKIP_REASON,
+    lvm_config,
+    SMALL_BACKING_FILE_MB,
+    JOB_REQUEST_MEMORY_MB,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -67,7 +73,13 @@ def overfill_job_hash(job_a_mount_file, thin_provisioning):
     return {
         "shell": (
             f"findmnt -no SOURCE . > {job_a_mount_file}; "
-            f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb}); "
+            # oflag=direct keeps the dd fallback out of page cache, so the
+            # write counts against the LV's disk quota instead of also
+            # piling onto the job's cgroup memory limit -- request_memory is
+            # likewise sized above overfill_mb (see JOB_REQUEST_MEMORY_MB) as
+            # a second layer of protection. See test_lvm_disk_quota_enforcement.py
+            # for the OOM-race this avoids.
+            f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} oflag=direct); "
             "sleep 60"
         ),
         "universe": "vanilla",
@@ -75,7 +87,7 @@ def overfill_job_hash(job_a_mount_file, thin_provisioning):
         "error": "error_a",
         "log": "multi_slot_a_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": f"{request_disk_mb}m",
         # Forces the job to actually run in the LVM-mounted scratch dir;
         # same-host IF_NEEDED transfer would otherwise use the submit dir.
@@ -95,7 +107,7 @@ def wellbehaved_job_hash(job_b_mount_file):
         "error": "error_b",
         "log": "multi_slot_b_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
         "should_transfer_files": "YES",
     }

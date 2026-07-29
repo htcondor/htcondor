@@ -11,7 +11,7 @@ import pytest
 
 from ornithology import *
 
-from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config
+from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config, JOB_REQUEST_MEMORY_MB
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -56,7 +56,7 @@ def job_ad_env_job_hash():
         "error": "error",
         "log": "job_ad_env_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
         "transfer_output_files": "result.txt",
         # Forces the job to actually run in the LVM-mounted scratch dir;
