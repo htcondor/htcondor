@@ -1539,15 +1539,24 @@ static bool test_dag_of_plain_ints() {
 //------------------------------------------------------------------------------------
 // Dag<D, N>'s constructor and AddNode() are both variadic, forwarding straight to
 // D's/N's own constructor -- individual member values work directly, no need to
-// pre-build a D/N value. For a plain aggregate like these, this relies on C++20's
-// paren-init-for-aggregates (P0960).
+// pre-build a D/N value.
 struct MultiFieldDagData {
+	MultiFieldDagData() = default;
+	// Explicit ctor, not just relying on C++20 parenthesized aggregate init --
+	// older toolchains (e.g. the macOS13 CI builder's Apple clang) don't
+	// support P0960 for Dag(Args&&...)'s direct-init call shape.
+	MultiFieldDagData(std::string n, int p, bool e) : name(std::move(n)), priority(p), enabled(e) {}
+
 	std::string name;
 	int priority;
 	bool enabled;
 };
 
 struct MultiFieldNodeData {
+	MultiFieldNodeData() = default;
+	// Same P0960 limitation as MultiFieldDagData, for AddNode()'s N(args...).
+	MultiFieldNodeData(std::string n, int w, double c) : name(std::move(n)), weight(w), cost(c) {}
+
 	std::string name;
 	int weight;
 	double cost;
