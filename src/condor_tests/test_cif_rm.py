@@ -94,7 +94,7 @@ class TestCIF:
         num_data_slots = 0
         for slot in results:
             if "data" in slot['Name']:
-                num_data_slots += 0
+                num_data_slots += 1
         assert num_data_slots == 1
 
         # Wait for KEEP_DATA_CLAIM_IDLE to pass and a little slop.
