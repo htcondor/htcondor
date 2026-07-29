@@ -4468,12 +4468,19 @@ Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, un
 		// (nothing to collide with) can skip AddArc's dedupe scan entirely.
 		node_id_t pid = p->GetNodeID();
 		for (auto c : children) {
+			// A child already in `edge` before this call already has `pid` registered
+			// as a parent -- update_parent() must only fire for a genuinely new link,
+			// else re-declaring it here would wrongly convert its single-parent state
+			// into a bogus wait edge (or double-register it on an existing one).
+			bool already_present = ! fresh_edge && edge.Contains(c->GetNodeID());
+
 			if (fresh_edge) {
 				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
 			} else {
 				std::ignore = edge.AddArc(c->GetNodeID(), meta); // strongest-wins handled inside AddArc
 			}
-			update_parent(c, pid);
+
+			if ( ! already_present) { update_parent(c, pid); }
 		}
 	}
 
