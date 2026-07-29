@@ -1,5 +1,9 @@
 *** 25.0.14 bugs
 
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
 *** 25.0.13 bugs
 
 - Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
