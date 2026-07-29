@@ -1584,7 +1584,7 @@ CCBClient::RegisterReverseConnectCallback()
 	// reverse-connect hello).  So do not register the reverse-connect command
 	// handler here -- besides being unnecessary, it collides with the handler a
 	// CCB *server* registers for the same command, which matters when a CCB server
-	// itself forwards an outbound-proxy request through a next hop (Stage C).
+	// itself forwards an outbound-proxy request through a next hop.
 	if( !m_outbound_mode && !registered_reverse_connect_command ) {
 		registered_reverse_connect_command = true;
 

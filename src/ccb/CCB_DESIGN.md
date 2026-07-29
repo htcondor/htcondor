@@ -92,7 +92,7 @@ Common ClassAd attributes on these messages:
 
 Tunneling mode adds `CCBRoute` (`ATTR_CCB_ROUTE`), `CCBOriginalRequester`
 (`ATTR_CCB_ORIGINAL_REQUESTER`), `CCBPriorHop` (`ATTR_CCB_PRIOR_HOP`),
-`CCBTTL` (`ATTR_CCB_TTL`), and `CCBAddress` (`ATTR_CCB_ADDRESS`); see §6–§8.
+and `CCBTTL` (`ATTR_CCB_TTL`); see §6–§8.
 
 ---
 
@@ -324,7 +324,7 @@ paths (one per next hop), and every consumer treats it as such.
 An inside CCB is, by construction, a forwarding outbound proxy, so configuring a
 next hop enables outbound-proxy mode automatically (§7).
 
-### 8.2 Reaching a tunneled daemon (model 1: registration-channel recursion)
+### 8.2 Reaching a tunneled daemon (registration-channel recursion)
 
 A client reaching a nested contact does **not** authenticate to every broker in
 the chain. It sends **one** request to the flat entry (outermost) broker, carrying
@@ -465,7 +465,7 @@ nested.
 | Collector signals ready after upstream registration | `CCBServer::NotifyMasterTunnelReady` → `DC_SET_READY` |
 | Master records the readiness signal | `Daemons::FindDaemonByPID` → `daemon::SetReadyState` |
 | Hold other daemons until ready | `daemon::WaitBeforeStartingOtherDaemons` (gated by `m_after_startup_wait_for_ready`) |
-| Inject CCB addresses into children | `daemon::Start` (`_condor_CCB_ADDRESS`, `_condor_OUTBOUND_CCB_ADDRESS`) |
+| Inject CCB addresses into children | `daemon::RealStart` (`_condor_CCB_ADDRESS`, `_condor_OUTBOUND_CCB_ADDRESS`) |
 | Model 2: defer registration until tunnel-ready | `CCBServer::HandleRegistration` / `OnUpstreamRegistered` → `SendRegistrationReply` |
 
 Knobs: `USE_OUTBOUND_CCB` (model 1), `OUTBOUND_CCB_ADDRESS` (model 2),
@@ -539,4 +539,4 @@ not registered).
 | Tunneling | `RegisterUpstream`, `OnUpstreamRegistered`, `StampAddresses`, `CCBIDToContactString`, `StartInboundRelay`, `ValidRoute`, `NotifyMasterTunnelReady` | `SetCCBServer`, `SetRegistrationCallback`, `ReverseConnected` (routed) | nested-contact resolve (`SplitCCBContact`), route in `CCB_REQUEST` |
 | Old-client back-compat | `HandleOldClientTunnelRequest`, `OldClientReverseConnected` | — | (client is unmodified) |
 | Deferred registration | `HandleRegistration`, `SendRegistrationReply`, `OnUpstreamRegistered` | `HandleCCBRegistrationReply` (just waits) | — |
-| Master | — | — | — (see `condor_master.V6/masterDaemon.cpp`: `daemon::Start`, `WaitBeforeStartingOtherDaemons`, `SetReadyState`) |
+| Master | — | — | — (see `condor_master.V6/masterDaemon.cpp`: `daemon::RealStart`, `WaitBeforeStartingOtherDaemons`, `SetReadyState`) |

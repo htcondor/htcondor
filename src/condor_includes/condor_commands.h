@@ -935,9 +935,7 @@ std::array<std::pair<int, const char *>, 64> makeCollectorCommandTable() {
 #define CCB_PROXY_CONNECT 82
 		{CCB_PROXY_CONNECT, "CCB_PROXY_CONNECT"},
 
-		// (command 83 is unused: a tunneling CCB's derived address travels in the
-		// ordinary CCB_REGISTER reply, which the inside CCB defers until it is
-		// tunnel-ready, so no separate query command is needed.)
+		// (83 reserved)
 
 #define COLLECTOR_COMMAND_LAST (INT_MAX - 1)			// used by the Win32 credd only
 		{COLLECTOR_COMMAND_LAST, "COLLECTOR_COMMAND_LAST"},

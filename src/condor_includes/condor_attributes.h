@@ -1231,7 +1231,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_DOWNLOADING  "Downloading"
 #define ATTR_TIMEOUT  "Timeout"
 #define ATTR_CCBID  "CCBID"
-#define ATTR_CCB_ADDRESS  "CCBAddress"
 #define ATTR_CCB_TTL  "CCBTTL"
 	// Inbound tunnel routing/audit: the remaining downstream CCBIDs to reach after
 	// this hop (space-separated; empty/absent at the final hop), and the audit
