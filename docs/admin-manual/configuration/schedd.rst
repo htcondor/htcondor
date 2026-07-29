@@ -169,6 +169,27 @@ These macros control the *condor_schedd*.
                       $(MAX_SHADOWS_OPSYS), \
                       $(MAX_JOBS_RUNNING) )
 
+:macro-def:`SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS`
+    A boolean value that controls two related behaviors that prevent a
+    single auto cluster's backlog from consuming a whole negotiation
+    session's :macro:`MAX_JOBS_RUNNING` budget and starving lower job
+    priority auto clusters:
+
+    -  When the *condor_schedd* is sending the negotiator a batch of
+       resource requests, it reserves one unit of budget for each other
+       resource request still due in the batch, so a single large
+       backlog cannot consume the entire batch before the remaining
+       requests are ever shown to the negotiator.
+    -  When a rejected auto cluster's offer is not fully used, the
+       unused portion is refunded back into the session's budget,
+       letting the next (lower job priority) auto cluster still be
+       considered in the same session.
+
+    This value defaults to ``True``. When ``False``, a large idle-job
+    backlog in one auto cluster can consume the whole session budget,
+    starving lower priority auto clusters until a later cycle even when
+    matching slots are idle.
+
 :macro-def:`MAX_JOBS_SUBMITTED`
     This integer value limits the number of jobs permitted in a
     *condor_schedd* daemon's queue. Submission of a new cluster of jobs

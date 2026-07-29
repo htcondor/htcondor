@@ -5326,6 +5326,13 @@ description=Should Schedd obey SLOT_WEIGHT
 tags=schedd
 usage=
 
+[SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS]
+default=true
+type=bool
+description=Reserve per-batch offer budget for other pending resource requests, and refund a rejected resource request's unused speculative match count back into the session's job-offer budget, so lower priority auto clusters are not starved
+tags=schedd
+usage=
+
 [SCHEDD_SLOT_WEIGHT]
 default=
 

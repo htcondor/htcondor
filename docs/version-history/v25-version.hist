@@ -15,6 +15,11 @@
 
 *** 25.14.0 bugs
 
+- Fixed a bug where a large backlog of higher job priority jobs could
+  exhaust a negotiation session's offer budget and starve a lower
+  priority auto cluster, even when matching slots were idle.
+  :jira:`3855`
+
 *** 25.0.14 bugs
 
 *** 25.13.0 features

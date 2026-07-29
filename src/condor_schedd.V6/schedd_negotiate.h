@@ -215,6 +215,13 @@ class ScheddNegotiate: public DCMsg {
  private:
 	std::set<int> m_rejected_auto_clusters;
 
+		// Per outstanding resource request, how many offered matches are
+		// still unconfirmed; used to refund unused offers on rejection.
+	std::map<PROC_ID,int> m_outstanding_offer_counts;
+
+		// See SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS.
+	bool m_refund_unused_resource_requests;
+
 	std::string m_owner;
 	std::string m_remote_pool;
 	std::string m_negotiator_name;
