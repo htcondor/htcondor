@@ -304,12 +304,13 @@ class match_rec
 	void makeDescription();
 	const char *description() const { return m_description.c_str(); }
 
-	const char *claimId() const { return claim_id.claimId(); }
-	const char *publicClaimId() { return claim_id.publicClaimId(); }
-	const char *secSessionId() { return claim_id.secSessionId(); }
+	const char *claimId() const { return claim_id ? claim_id : ""; } // empty rather than null to match old ClaimIdParser
+	const char *publicClaimId(std::string &buf) const { return claim_id_parser.publicClaimId(buf); }
+	const char *secSessionId(std::string &buf) const { return claim_id_parser.secSessionId(buf); }
 
 protected:
-	ClaimIdParser claim_id; // the claimid of a match rec is immutable
+	char * claim_id{nullptr}; // the claimid of a match rec is immutable
+	ClaimIdParserLite claim_id_parser; // a parser for the above claim_id
 	std::string m_description;
 
 };

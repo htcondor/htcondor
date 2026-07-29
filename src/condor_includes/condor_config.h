@@ -184,6 +184,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
 		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
 		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		char * get() { return p; }                 // for compat with unique_ptr
+		char * release() { return detach(); }      // for compat with unique_ptr
+		const char * c_str() { return p?p:""; }    // return a printable pointer
 		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
 		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
 	private:
