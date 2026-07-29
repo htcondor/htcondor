@@ -95,9 +95,10 @@ class TestCIF:
         for slot in results:
             if "data" in slot['Name']:
                 num_data_slots += 0
+        assert num_data_slots == 1
 
         # Wait for KEEP_DATA_CLAIM_IDLE to pass and a little slop.
-        time.sleep(20+1)
+        time.sleep(20+5)
 
         results = the_condor.status(
             ad_type = htcondor2.AdType.Startd,
