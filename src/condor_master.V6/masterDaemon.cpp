@@ -448,6 +448,12 @@ daemon::DoConfig( bool init )
 	}
 
 	if( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+			// Recompute the readiness barrier from scratch on every (re)config so
+			// toggling tunneling off does not leave a stale barrier set, which
+			// would block startup indefinitely.
+		m_after_startup_wait_for_ready = false;
+		m_after_startup_wait_for_file.clear();
+
 		std::string next_hop;
 		if( param_boolean("USE_OUTBOUND_CCB", false) &&
 			param(next_hop,"CCB_OUTBOUND_NEXT_HOP") && !next_hop.empty() )

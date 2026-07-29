@@ -109,9 +109,9 @@ def inside(test_dir, outside):
 def node_offhost_ccb(test_dir, outside, inside):
     # A node with NO local inside CCB.  It tunnels through an off-host inside CCB
     # -- here the `inside` pool's collector -- named by OUTBOUND_CCB_ADDRESS.  The
-    # master gates daemon startup on that off-host CCB being tunnel-ready (queried
-    # via CCB_GET_TUNNEL_ADDRESS) and injects the CCB's direct address as the
-    # daemons' CCB_ADDRESS, rather than reading a local ready file.
+    # master injects that CCB's direct address as the daemons' CCB_ADDRESS; the
+    # off-host CCB defers each registration reply until it is itself tunnel-ready,
+    # so a daemon learns a nested (tunnel) contact without any separate query.
     off_host_ccb = collector_address(inside)
     with Condor(
         local_dir=test_dir / "node_offhost_ccb",

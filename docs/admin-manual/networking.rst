@@ -808,8 +808,8 @@ inside CCB for *both* directions -- as their :macro:`CCB_ADDRESS` (inbound) and
 their :macro:`OUTBOUND_CCB_ADDRESS` (outbound) -- so this single knob fully tunnels
 a node that cannot dial out directly (analogous to :macro:`USE_SHARED_PORT`). When
 the inside CCB is off-host and shared by several nodes, set only
-:macro:`OUTBOUND_CCB_ADDRESS` on each node; the master learns the tunnel address
-by querying that CCB before starting its daemons. In both cases
+:macro:`OUTBOUND_CCB_ADDRESS` on each node; the master injects that CCB's direct
+address as the daemons' :macro:`CCB_ADDRESS`. In both cases
 :macro:`CCB_OUTBOUND_NEXT_HOP` is normally configured automatically and rarely
 needs to be set by hand.
 

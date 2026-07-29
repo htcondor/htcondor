@@ -536,7 +536,7 @@ not registered).
 | Traditional request | `HandleRequest`, `ForwardRequestToTarget`, `RequestReply` | `HandleCCBRequest`, `DoReversedCCBConnect`, `ReportReverseConnectResult` | `ReverseConnect` |
 | Streaming | `RequestNeedsProxy`, `StartProxyRequest`, `HandleReverseConnect`, `StartRelay` | `ReverseConnected` | `ReverseConnect` (`CCBStreamingRequired`) |
 | Outbound | `HandleProxyConnect`, `StartOutgoingProxyRequest`, `OutgoingConnectComplete`, `OutboundTargetAllowed` | — | `do_outbound_ccb_connect` (via `Sock::special_connect`) |
-| Tunneling | `RegisterUpstream`, `OnUpstreamRegistered`, `StampAddresses`, `CCBIDToContactString`, `StartInboundRelay`, `ValidRoute`, `HandleGetTunnelAddress`, `NotifyMasterTunnelReady` | `SetCCBServer`, `SetRegistrationCallback`, `ReverseConnected` (routed) | nested-contact resolve (`SplitCCBContact`), route in `CCB_REQUEST` |
+| Tunneling | `RegisterUpstream`, `OnUpstreamRegistered`, `StampAddresses`, `CCBIDToContactString`, `StartInboundRelay`, `ValidRoute`, `NotifyMasterTunnelReady` | `SetCCBServer`, `SetRegistrationCallback`, `ReverseConnected` (routed) | nested-contact resolve (`SplitCCBContact`), route in `CCB_REQUEST` |
 | Old-client back-compat | `HandleOldClientTunnelRequest`, `OldClientReverseConnected` | — | (client is unmodified) |
 | Deferred registration | `HandleRegistration`, `SendRegistrationReply`, `OnUpstreamRegistered` | `HandleCCBRegistrationReply` (just waits) | — |
 | Master | — | — | — (see `condor_master.V6/masterDaemon.cpp`: `daemon::Start`, `WaitBeforeStartingOtherDaemons`, `SetReadyState`) |

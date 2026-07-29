@@ -367,7 +367,7 @@ CCBServer::InitAndReconfig()
 		// We rely on the Sinful constructor recognizing sinfuls
 		// without brackets.  Not sure why we bother stripping them off
 		// in the first place, but we can't change that without
-		// breaking backwards compabitility.
+		// breaking backwards compatibility.
 	m_address = sinful.getCCBAddressString();
 
 		// Tunneling: if a next-hop broker is configured, register with it and, once
