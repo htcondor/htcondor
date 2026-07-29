@@ -11157,6 +11157,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			dprintf( D_ZKM, "mark_catalog_dead(%s): time expired, marking shadow retiring.\n", catalogName.c_str() );
 			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
+			catalogToTimerMap.erase( catalogName );
 		},
 		"terminate transfer shadow lease"
 	);
