@@ -248,14 +248,16 @@ class Submit(Verb):
             args_list.extend(snakemake_args)
 
         arguments = " ".join(args_list)
-        
+
+        request_memory = htcondor.param.get("SNAKEMAKE_MANAGER_REQUEST_MEM", "512MB")
+
         submit_description = htcondor.Submit({
             "executable": snakemake_path,
             "arguments": arguments,
             "universe": "local",
             "request_disk": "512MB",
             "request_cpus": 1,
-            "request_memory": 512,
+            "request_memory": request_memory,
             
             # Set up logging
             "log": f"{jobdir}/snakemake-mgmt-$(ClusterId).log",
