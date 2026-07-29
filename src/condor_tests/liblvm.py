@@ -36,12 +36,10 @@ SMALL_BACKING_FILE_MB = 512
 # Default LVM_THIN_LV_EXTRA_SIZE_MB (2000 MB) exceeds our backing store.
 SMALL_THIN_EXTRA_MB = 32
 
-# Comfortably above the largest write any of these tests perform (the 600MB
-# thick-mode disk-quota overfill), so a job's cgroup memory limit is never
-# what triggers a hold -- these tests are about disk enforcement, not
-# memory, and shouldn't rely on the incidental headroom from
-# quantize(RequestMemory,{128})'s default rounding.
-JOB_REQUEST_MEMORY_MB = 1024
+# Default request memory which should be comfortable given all
+# memories are quantized on 128M which only saw OOM killed jobs
+# rarely.
+JOB_REQUEST_MEMORY_MB = 256
 
 REQUIRED_LVM_TOOLS = (
     "losetup",
