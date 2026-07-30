@@ -77,7 +77,20 @@ def the_removed_jobs( the_condor, the_common_file ):
 
     the_condor.act( htcondor2.JobAction.Remove, job_handle.clusterid )
 
-    return job_handle
+    print()
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        # What we're actually waiting for is all of the shadows to die.
+        results = the_condor.query(
+            projection=['ClusterID', 'ProcID', 'JobStatus']
+        )
+        print(time.time())
+        print(results)
+        if len(results) == 0:
+            return job_handle
+        time.sleep(5)
+
+    assert False
 
 
 class TestCIF:
