@@ -173,6 +173,8 @@ bool Dagman::Config() {
 	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", config[conf::b::AggressiveSubmit] ? "True" : "False");
 
+	config[conf::b::SubmitSendReschedule] = param_boolean("SUBMIT_SEND_RESCHEDULE", false);
+
 	config[conf::i::LogScanInterval] = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
 	if (admin_min_scan_int > 0 && config[conf::i::LogScanInterval] < admin_min_scan_int) {
 		debug_printf(DEBUG_NORMAL, "Warning: Specified scan interval %d is less than administrator limit\n",

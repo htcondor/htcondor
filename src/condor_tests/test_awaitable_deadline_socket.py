@@ -25,8 +25,6 @@ def the_condor(test_dir):
             # Ornithology needs this, for some reason.
             "TEST_AWAITABLE_DEADLINE_SOCKETD_LOG":
                 f"$(LOG)/AwaitableDeadlineSocketLog",
-            "DC_DAEMON_LIST":
-                "+ TEST_AWAITABLE_DEADLINE_SOCKETD",
         },
     ) as condor:
         yield condor
