@@ -1809,16 +1809,6 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 			dash_batch = false;
 		}
-
-		// batch mode rewrites specific columns (counters, batch name, job ids) of the
-		// built-in batch output format, so it cannot be used with a custom output format.
-		if (dash_batch && (qdo_mode & (QDO_Format | QDO_PrintFormat))) {
-			if (dash_batch_specified) {
-				fprintf( stderr, "Error: -batch conflicts with -format, -autoformat and -print-format\n" );
-				exit( 1 );
-			}
-			dash_batch = false;
-		}
 	}
 
 	if (dash_dry_run) {
