@@ -11115,7 +11115,7 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 
 bool
 Scheduler::mark_catalog_dead( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_dead(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_dead(%s)\n", catalogName.c_str() );
 
 	if( catalogToTimerMap.contains( catalogName ) ) {
 		dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
@@ -11168,7 +11168,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 
 bool
 Scheduler::mark_catalog_live( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_live(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_live(%s)\n", catalogName.c_str() );
 
 	if(! catalogToTimerMap.contains(catalogName)) {
 	    dprintf( D_ZKM, "mark_catalog_live(%s): catalog not dead, ignoring.\n", catalogName.c_str() );
