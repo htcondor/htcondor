@@ -10000,6 +10000,47 @@ process_job_credentials(
 
 	error_string.clear();
 
+	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+	bool always_check_credd = false;
+
+	Daemon credd(DT_CREDD);
+
+	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+	// in either case we want to initialize our credd object from the passed-in one if we can.
+	if (schedd_or_credd) {
+		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+		if (schedd) {
+			std::string credd_address;
+			if (schedd->getCreddAddress(credd_address)) {
+				// when we init the credd from the schedd's locationAd,
+				// it will pick up the CreddIpAddr in the locationAd and
+				// use it to set the addr field of the daemon object
+				// And it will use the name, machine, and version of the schedd
+				// TODO: does the location ad need to know the name of the credd?
+				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+			} else {
+				if (schedd->name() && ! schedd->isLocal()) {
+					// this is a Hail Mary, if the address of the credd is not known,
+					// and the schedd is remote we hope that the credd name and the schedd name are the same.
+					// if this is a local schedd, we are better off using a default credd.
+					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+				}
+			}
+			ClassAd* schedd_ad = schedd->locationAd();
+			if (schedd_ad && schedd_ad->LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, always_check_credd)) {
+				add_local = false;
+			}
+		} else if (schedd_or_credd->type() == DT_CREDD) {
+			credd = *schedd_or_credd;
+		}
+	}
+
+	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
+		if (!submit_hash.build_oauth_service_ads(token_names, token_ads, error_string)) {
+			return false;
+		}
+	}
+
 	std::string storer;
 	if(param(storer, "SEC_CREDENTIAL_STORER")) {
 		// SEC_CREDENTIAL_STORER is a script to run that calls
@@ -10056,47 +10097,6 @@ process_job_credentials(
 				formatstr(error_string, "'%s' failed: exit code %d", storer.c_str(), rc);
 				return false;
 			}
-		}
-	}
-
-	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
-	bool always_check_credd = false;
-
-	Daemon credd(DT_CREDD);
-
-	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
-	// in either case we want to initialize our credd object from the passed-in one if we can.
-	if (schedd_or_credd) {
-		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
-		if (schedd) {
-			std::string credd_address;
-			if (schedd->getCreddAddress(credd_address)) {
-				// when we init the credd from the schedd's locationAd,
-				// it will pick up the CreddIpAddr in the locationAd and
-				// use it to set the addr field of the daemon object
-				// And it will use the name, machine, and version of the schedd
-				// TODO: does the location ad need to know the name of the credd?
-				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
-			} else {
-				if (schedd->name() && ! schedd->isLocal()) {
-					// this is a Hail Mary, if the address of the credd is not known,
-					// and the schedd is remote we hope that the credd name and the schedd name are the same.
-					// if this is a local schedd, we are better off using a default credd.
-					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
-				}
-			}
-			ClassAd* schedd_ad = schedd->locationAd();
-			if (schedd_ad && schedd_ad->LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, always_check_credd)) {
-				add_local = false;
-			}
-		} else if (schedd_or_credd->type() == DT_CREDD) {
-			credd = *schedd_or_credd;
-		}
-	}
-
-	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
-		if (!submit_hash.build_oauth_service_ads(token_names, token_ads, error_string)) {
-			return false;
 		}
 	}
 
