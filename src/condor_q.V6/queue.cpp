@@ -1631,7 +1631,11 @@ processCommandLineArguments (int argc, const char *argv[])
 					}
 				}
 			}
-			qdo_mode = QDO_Progress;
+			// Don't clobber a custom output format (-af/-format/-print-format) that was
+			// we will eventually error out because of this, but we don't do it here.
+			if ((qdo_mode & QDO_BaseMask) < QDO_Custom) {
+				qdo_mode = QDO_Progress;
+			}
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
@@ -1777,6 +1781,11 @@ processCommandLineArguments (int argc, const char *argv[])
 		if (app.prmask.has_headings()) {
 			customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER);
 		}
+	}
+
+	if (dash_batch_specified && dash_batch && !autoformat_args.empty()) {
+		fprintf( stderr, "Error: -batch conflicts with -format and -af\n" );
+		exit(1);
 	}
 
 	if (dash_long) {

@@ -17,6 +17,10 @@
 
 *** 25.0.14 bugs
 
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
 *** 25.13.0 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
