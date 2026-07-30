@@ -36,10 +36,14 @@ SMALL_BACKING_FILE_MB = 512
 # Default LVM_THIN_LV_EXTRA_SIZE_MB (2000 MB) exceeds our backing store.
 SMALL_THIN_EXTRA_MB = 32
 
-# Default request memory which should be comfortable given all
-# memories are quantized on 128M which only saw OOM killed jobs
-# rarely.
-JOB_REQUEST_MEMORY_MB = 256
+# Default request memory for LVM test jobs that don't write large files.
+JOB_REQUEST_MEMORY_MB = 64
+
+# Comfortably above the largest write any test performs (the 600MB
+# thick-mode disk-quota overfill in test_lvm_disk_quota_enforcement.py and
+# test_lvm_multi_slot_isolation.py), so those jobs' cgroup memory limit is
+# never what triggers a hold -- they're about disk enforcement, not memory.
+OVERFILL_JOB_REQUEST_MEMORY_MB = 768
 
 REQUIRED_LVM_TOOLS = (
     "losetup",
