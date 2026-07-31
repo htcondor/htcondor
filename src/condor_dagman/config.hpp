@@ -51,6 +51,7 @@ namespace DagmanConfigOptions {
 		UseOldDagParser,               // Use old DAG file parser and processing
 		ParseTimingDebug,              // Undocumented: report wall-clock time and peak RSS for DAG parse and edge-processing phases
 		RemoveJobListOnFailure,        // Job batch should be removed once the list is determined to be failed
+		SubmitSendReschedule,          // Submit is supposed to do reschedule to schedd (i.e. SUBMIT_SEND_RESCHEDULE)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -105,6 +106,7 @@ public:
 		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
 		boolOpts[static_cast<size_t>(b::UseOldDagParser)] = false;
+		boolOpts[static_cast<size_t>(b::SubmitSendReschedule)] = false;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;

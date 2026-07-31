@@ -6,9 +6,20 @@
   or wait for jobs to finish.
   :jira:`3838`
 
+- The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
+  command that it wants expedited matchmaking when it changes from having
+  no idle jobs to having some idle jobs. As a part of this change the
+   *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  :jira:`3836`
+
 *** 25.14.0 bugs
 
 *** 25.0.14 bugs
+
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
 
 *** 25.13.0 features
 
@@ -172,6 +183,12 @@
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the initial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
 
 *** 25.0.12 bugs
 

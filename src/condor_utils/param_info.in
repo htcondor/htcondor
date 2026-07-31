@@ -1273,6 +1273,18 @@ type=int
 description=Pid Snapshot Interval for the Master
 tags=daemon_core
 
+[PARENT_CHECK_FIRST_INTERVAL]
+default=15
+type=int
+description=Seconds after startup before a daemon's first check of whether its parent process is still alive. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_FIRST_INTERVAL.
+tags=daemon_core
+
+[PARENT_CHECK_INTERVAL]
+default=120
+type=int
+description=Seconds between checks of whether a daemon's parent process is still alive; if not, the daemon shuts itself down. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL.
+tags=daemon_core
+
 [SEC_DEBUG_PRINT_KEYS]
 default=false
 type=bool
@@ -2173,9 +2185,10 @@ tags=submit
 usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
 [SUBMIT_SEND_RESCHEDULE]
-default=true
+default=false
 type=bool
 tags=submit
+description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
