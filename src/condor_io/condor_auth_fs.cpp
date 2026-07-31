@@ -62,6 +62,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 
 	if ( mySock_->isClient() ) {
 		std::string new_dir;
+		std::string ext;
 
 		// receive the directory name to create
 		mySock_->decode();
@@ -96,14 +97,28 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 
 		// Perform some sanity checks on the directory the server sent...
 		if (param_boolean("SEC_FS_ENFORCE_CHANNEL_BINDING", true)) {
-			std::string new_dir_prefix;
-			formatstr(new_dir_prefix, "%s_%s_%d_", (remote_?"FS_REMOTE":"FS"), mySock_->peer_ip_str(), mySock_->peer_port());
-			const char* new_dir_basename = condor_basename(new_dir.c_str());
-			if (strncmp(new_dir_basename, new_dir_prefix.c_str(), new_dir_prefix.size()) != 0) {
-				dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Server-requested directory '%s' doesn't match expected prefix '%s'\n", (remote_?"_REMOTE":""), new_dir_basename, new_dir_prefix.c_str());
-				errstack->push((remote_?"FS_REMOTE":"FS"), 1003,
-					"Directory name doesn't match server's network address.");
-				goto client_reply;
+			// If the server's filename ends in '_', then it wants us to
+			// add our own random characters to the end of the filename
+			// to perform channel binding (and tell it via CEDAR what we
+			// added), instead of validating the ip:port in the filename.
+			// In some networking environments, our notion of the server's
+			// ip address may not match its notion of its ip address for
+			// this connection, even though we're on the same machine.
+			if (new_dir.back() == '_') {
+				char* tmp = Condor_Crypt_Base::randomHexKey(8);
+				ext = tmp;
+				new_dir += ext;
+				free(tmp);
+			} else {
+				std::string new_dir_prefix;
+				formatstr(new_dir_prefix, "%s_%s_%d_", (remote_?"FS_REMOTE":"FS"), mySock_->peer_ip_str(), mySock_->peer_port());
+				const char* new_dir_basename = condor_basename(new_dir.c_str());
+				if (strncmp(new_dir_basename, new_dir_prefix.c_str(), new_dir_prefix.size()) != 0) {
+					dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Server-requested directory '%s' doesn't match expected prefix '%s'\n", (remote_?"_REMOTE":""), new_dir_basename, new_dir_prefix.c_str());
+					errstack->push((remote_?"FS_REMOTE":"FS"), 1003,
+						"Directory name doesn't match server's network address.");
+					goto client_reply;
+				}
 			}
 		}
 
@@ -120,8 +135,9 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 
 	client_reply:
 		// send over result as a success/failure indicator (-1 == failure)
+		// If we added characters to the filename, send that as well.
 		mySock_->encode();
-		if (!mySock_->code( client_result ) || !mySock_->end_of_message()) {
+		if (!mySock_->code( client_result ) || !(ext.empty() || mySock_->code(ext)) || !mySock_->end_of_message()) {
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 				__FUNCTION__, __LINE__);
 			if (!new_dir.empty()) {
@@ -158,67 +174,38 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 		// server code
 		setRemoteUser( NULL );
 
-		if ( remote_ ) {
+		std::string filename;
+		formatstr(filename, "%s/%s_%s_%d_XXXXXXXXX",
+		          parent_dir.c_str(), (remote_?"FS_REMOTE":"FS"), mySock_->my_ip_str(), mySock_->get_port());
+		dprintf(D_SECURITY, "%s: client template is %s\n", (remote_?"FS_REMOTE":"FS"), filename.c_str());
 
-			std::string filename;
-			formatstr(filename, "%s/FS_REMOTE_%s_%d_XXXXXXXXX",
-			          parent_dir.c_str(), mySock_->my_ip_str(), mySock_->get_port());
-			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
-
-			int sync_fd;
-			char *new_dir = strdup(filename.c_str());
-			sync_fd = condor_mkstemp(new_dir);
-			m_new_dir = new_dir;
-			free(new_dir);
-			if( sync_fd < 0 ) {
-				// path must be invalid?
-				//
-				// this means that mktemp set new_dir to the empty string.  we
-				// code this across.  old clients will try it and fail, and new
-				// clients will know that the server had trouble.  for the
-				// error message we print the filename, not new_dir which is
-				// empty.
-				int en = errno;  // strerror could replace errno!
-				errstack->pushf("FS_REMOTE", 1002,
-						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.c_str(), strerror(en), en);
-				m_new_dir = "";			//the other process will expect an
-										//empty string on failure
-			} else {
-				::close( sync_fd );
-				unlink( m_new_dir.c_str() );
-				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", m_new_dir.c_str() );
-			}
+		int sync_fd;
+		char * new_dir = strdup(filename.c_str());
+		sync_fd = condor_mkstemp(new_dir);
+		m_new_dir = new_dir;
+		free(new_dir);
+		if( sync_fd < 0 ) {
+			// path must be invalid?
+			//
+			// this means that mktemp set new_dir to the empty string.  we
+			// code this across.  old clients will try it and fail, and new
+			// clients will know that the server had trouble.  for the
+			// error message we print the filename, not new_dir which is
+			// empty.
+			int en = errno;  // strerror could replace errno!
+			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1002,
+					"condor_mkstemp(%s) failed: %s (%i)",
+					filename.c_str(), strerror(en), en);
+			m_new_dir = "";			//the other process will expect an
+									//empty string on failure
 		} else {
-			std::string filename;
-			formatstr(filename, "%s/FS_%s_%d_XXXXXXXXX",
-			          parent_dir.c_str(), mySock_->my_ip_str(), mySock_->get_port());
-			dprintf( D_SECURITY, "FS: client template is %s\n", filename.c_str() );
-
-			int sync_fd;
-			char * new_dir = strdup(filename.c_str());
-			sync_fd = condor_mkstemp(new_dir);
-			m_new_dir = new_dir;
-			free(new_dir);
-			if( sync_fd < 0 ) {
-				// path must be invalid?
-				//
-				// this means that mktemp set new_dir to the empty string.  we
-				// code this across.  old clients will try it and fail, and new
-				// clients will know that the server had trouble.  for the
-				// error message we print the filename, not new_dir which is
-				// empty.
-				int en = errno;  // strerror could replace errno!
-				errstack->pushf("FS", 1002,
-						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.c_str(), strerror(en), en);
-				m_new_dir = "";			//the other process will expect an
-										//empty string on failure
-			} else {
-				::close( sync_fd );
-				unlink( m_new_dir.c_str() );
-				dprintf( D_SECURITY, "FS: client filename is %s\n", m_new_dir.c_str() );
-			}			
+			::close( sync_fd );
+			unlink( m_new_dir.c_str() );
+			// Ending the name in '_' is an invitation for the client to
+			// append their own text to the end of the filename and tell us
+			// via CEDAR what they added.
+			m_new_dir += '_';
+			dprintf( D_SECURITY, "%s: client filename is %s\n", (remote_?"FS_REMOTE":"FS"), m_new_dir.c_str() );
 		}
 
 		// now, send over directory name for client to create
@@ -240,14 +227,17 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 	int client_result = -1;
 	int server_result = -1;
 	int fail = -1 == 0;
+	std::string client_ext;
 
 	if( non_blocking && !mySock_->readReady() ) {
 		return 2;
 	}
 
 	// see if the client claims success (it could be lying of course!)
+	// The client can optionally tell us that they added some characters
+	// to the end of the filename.
 	mySock_->decode();
-	if (!mySock_->code( client_result ) || !mySock_->end_of_message()) {
+	if (!mySock_->code( client_result ) || !(mySock_->peek_end_of_message() || mySock_->code(client_ext)) || !mySock_->end_of_message()) {
 		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 			__FUNCTION__, __LINE__);
 		return fail;
@@ -260,7 +250,13 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 	server_result = -1;
 
 	// but first, we need to verify that everything is correct
-	if ( client_result != -1  && m_new_dir.size() && m_new_dir[0]) {
+	// If the client added characters to the end of the filename, they
+	// can't include '/'.
+	if (strchr(client_ext.c_str(), '/') != nullptr) {
+		errstack->pushf((remote_?"FS_REMOTE":"FS"), 1007,
+		                "Client extension with directory seperator (%s)", client_ext.c_str());
+
+	} else if ( client_result != -1  && m_new_dir.size() && m_new_dir[0]) {
 
 		if (remote_) {
 			// now, if this is a remote filesystem, it is possibly NFS.
@@ -309,6 +305,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// from the server side, forcing the nfs client to flush everything
 			// and sync with the server.  now, we can finally stat the file.
 		}
+
+		m_new_dir += client_ext;
 
 		//check dir to ensure that claimant is owner
 		struct stat stat_buf;
