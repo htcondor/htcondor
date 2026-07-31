@@ -47,4 +47,17 @@ int pseudo_get_sec_session_info(
 	std::string &filetrans_session_key);
 int pseudo_event_notification( const ClassAd & ad );
 
+// Result of do_REMOTE_syscall(), interpreted by RemoteResource::handleSysCalls().
+//   SyscallOK       - RPC handled normally; keep the syscall socket open.
+//   ExpectedClose   - The starter has expectedly closed the connection
+//                     (job exit / claim deactivated). Begin shadow shutdown.
+//   UnexpectedClose - Unexpected network failure. Drop into reconnect mode.
+enum class RemoteSyscallResult {
+	SyscallOK,
+	ExpectedClose,
+	UnexpectedClose,
+};
+
+RemoteSyscallResult do_REMOTE_syscall();
+
 #endif

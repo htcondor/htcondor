@@ -189,7 +189,7 @@ def ce_info_from_collectors(resource_info_by_fqdn):
             if "CollectorHost" in ad:
                 ceColl = htcondor.Collector(ad["CollectorHost"])
                 try:
-                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableTimeReason"])
+                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableReason"])
                     canReachCeCollector = True
                 except:
                     canReachCeCollector = False
@@ -198,8 +198,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
                 info.healthInfo="CE Collector unreachable"
                 continue
             for gridAd in gridAds:
-                if "GridResourceUnavailableTime" in gridAd and "GridResourceUnavailableTimeReason" in gridAd:
-                    hinfo = classad.ExprTree('strcat("Since ",formatTime(GridResourceUnavailableTime),": ",GridResourceUnavailableTimeReason)').eval(gridAd)
+                if "GridResourceUnavailableTime" in gridAd and "GridResourceUnavailableReason" in gridAd:
+                    hinfo = classad.ExprTree('strcat("Since ",formatTime(GridResourceUnavailableTime),": ",GridResourceUnavailableReason)').eval(gridAd)
                     info.health="Poor"
                     info.healthInfo=hinfo
                     continue

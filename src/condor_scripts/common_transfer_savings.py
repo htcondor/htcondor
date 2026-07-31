@@ -66,9 +66,9 @@ def main(requested_clusterID):
                 CommonCatalogsByClusterID[clusterID] += 1
 
             new_style = False
-            if '_x_common_input_catalogs' in entry:
+            if 'CommonInputCatalogs' in entry:
                 new_style = True
-                string_list = entry['_x_common_input_catalogs']
+                string_list = entry['CommonInputCatalogs']
                 # This isn't quite right, but it's probably close enough.
                 list = string_list.split(',')
                 CommonCatalogsByClusterID[clusterID] += len(list)

@@ -35,6 +35,7 @@ def _daemon_type_from_ad_type(ad_type: AdType):
         AdType.HAD: DaemonType.HAD,
         AdType.Credd: DaemonType.Credd,
         AdType.Placementd: DaemonType.Credd,
+        AdType.Collector: DaemonType.Collector,
     }
     # Should raise HTCondorEnumError.
     return map.get(ad_type, None)
@@ -62,7 +63,7 @@ def reload_config(root_config_file : Optional[str] = None) -> None:
     _reload_config(root_config_file)
 
 
-def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str]):
+def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str] = None):
     """
     Send a command to an HTCondor daemon.
 
@@ -159,7 +160,7 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, s
                      or a :class:`classad2.ClassAd` describing the daemon
                      as returned by :meth:`Collector.locate`.
     :param str authz: Authorization level or command to test.
-    :param security: SecurityContext to use for authentication.
+    :param security: The :class:`SecurityContext` to use for authentication.
     """
 
     addr = None

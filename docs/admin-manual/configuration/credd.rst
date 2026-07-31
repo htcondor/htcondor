@@ -40,7 +40,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     getting locked out.
 
 :macro-def:`CREDMON_KRB`
-    The path to the credmon daemon process when using the Kerberos 
+    The path to the credmon daemon process when using the Kerberos
     credentials type.  The default is /usr/sbin/condor_credmon_krb
 
 :macro-def:`CREDMON_OAUTH`
@@ -57,6 +57,14 @@ These macros affect the *condor_credd* and its credmon plugin.
     The time in seconds between renewing OAuth2 tokens.  The default is
     half of :macro:`CREDMON_OAUTH_TOKEN_MINIMUM`.  This is currently implemented
     only in the vault credmon, not the default oauth credmon.
+
+:macro-def:`CREDMON_WEB_PREFIX`
+    The full URL to prepend to the Oauth2 Credmon paths. The default (unset) is
+    the equivalent of setting it to ``https://$(FULL_HOSTNAME)``. If your
+    Credmon OAuth webserver lives under a different path, set it to
+    ``https://<hostname>/<path>``, without the trailing ``/``. The
+    :macro:`<OAuth2ServiceName>_RETURN_URL_SUFFIX` is appended to this prefix
+    before being passed to the OAuth service.
 
 :macro-def:`OAUTH2_CREDMON_PROVIDER_NAMES`
     A comma and/or space separated list of provider names that the OAuth2
@@ -132,7 +140,7 @@ These macros affect the *condor_credd* and its credmon plugin.
     ``read:/user/{username} write:/user/{username}``.
 
 :macro-def:`LOCAL_CREDMON_AUTHZ_TEMPLATE_EXPR`
-    A classad expression evaluated in the context of a ClassAd containing the 
+    A classad expression evaluated in the context of a ClassAd containing the
     submitter's system username in the ``Username`` attribute.  This should
     evaluate to a classad string type that contains the authorization template.
     If specified, this takes precedence over :macro:`LOCAL_CREDMON_AUTHZ_TEMPLATE`.
@@ -167,9 +175,10 @@ These macros affect the *condor_credd* and its credmon plugin.
     A string valued macro that defines a path to the credential monitor
     executable.
 
-:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
-    pass additional command line options to gettoken.  Mostly
-    used for vault, where this should be set to "-a vault_name".
+:macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS`
+    A configuration option to pass additional command line options to
+    gettoken. Mostly used for vault, where this should be set to
+    "-a vault_name".
 
 :macro-def:`TRUSTED_VAULT_HOSTS`
     A space-and/or-comma-separated list of hostnames of Vault servers
@@ -184,3 +193,28 @@ These macros affect the *condor_credd* and its credmon plugin.
     all providers not claimed by other credmon types.  This knob is only
     meaningful when :macro:`SEC_CREDENTIAL_STORER` is also configured to point
     to the Vault credential storer.
+
+:macro-def:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS`
+    A boolean value that defaults to ``True``. When ``True``, the access
+    point automatically requests the local credmon provider credentials
+    for every job, so that remote submitters do not need to alter their
+    configuration to submit to an access point that provides credentials
+    for all jobs. Set to ``False`` to disable this behavior.
+
+:macro-def:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+    A comma and/or space separated list of credential provider names that
+    the access point provides for all jobs when
+    :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` is ``True``. When unset,
+    the value falls back to :macro:`LOCAL_CREDMON_PROVIDER_NAMES`,
+    ``LOCAL_CREDMON_PROVIDER_NAME``, and
+    ``CLIENT_CREDMON_PROVIDER_NAMES``, meaning all credentials that
+    the access point can generate by itself.
+
+:macro-def:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES`
+    A boolean value that defaults to ``False``. When ``False``, provider
+    names may only contain alphanumeric characters and hyphens, and
+    underscores in credential file names are treated as separators between
+    a provider name and a user-supplied handle (e.g. ``box_readonly``
+    matches provider ``box``). When ``True``, underscores are permitted
+    in provider names and credential files are matched exactly, disabling
+    handle support.

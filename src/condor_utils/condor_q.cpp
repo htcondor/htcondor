@@ -334,7 +334,9 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 	if (useAll) {
 			// The fast case with the new protocol
 		std::string attrs_str = join(attrs,"\n");
-		GetAllJobsByConstraint_Start(constraint, attrs_str.c_str());
+		if (GetAllJobsByConstraint_Start(constraint, attrs_str.c_str()) != 0) {
+			goto done;
+		}
 
 		while( true ) {
 			ad = new ClassAd();
@@ -383,6 +385,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		}
 	}
 
+ done:
 	// Make sure ad is not leaked no matter how we break out of the above loops.
 	delete ad; 
 
@@ -429,6 +432,7 @@ encode_status( int status )
 		'S',	 //SUSPENDED			7
 		'F',	 //JOB_STATUS_FAILED	8
 		'B',	 //JOB_STATUS_BLOCKED	9
+		'P',	 //JOB_STATUS_PREPARING	10
 	};
 
 	if (status < JOB_STATUS_MIN || status > JOB_STATUS_MAX) {

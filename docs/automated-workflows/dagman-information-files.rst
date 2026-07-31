@@ -86,8 +86,8 @@ information:
    precision.
 -  ``duration``: The duration of the client, in seconds, with millisecond precision.
 -  ``exitcode``: The :tool:`condor_dagman` exit code.
--  ``dagman_id``: The :tool:`condor_dagman` instances :ad-attr:`ClusterId` value.
--  ``parent_dagman_id``: The :ad-attr:`ClusterId` value of this DAGs parent
+-  ``dagman_id``: The :tool:`condor_dagman` instance's :ad-attr:`ClusterId` value.
+-  ``parent_dagman_id``: The :ad-attr:`ClusterId` value of this DAG's parent
    :tool:`condor_dagman` instance; empty if this DAG is not a SUBDAG.
 -  ``rescue_dag_number``: The number of the Rescue DAG being run; 0 if not running
    a Rescue DAG.
@@ -105,7 +105,7 @@ information:
    only be ``1`` or ``0``. Note, these nodes are counted in the normal ``nodes`` metrics.
 -  ``service_nodes``: The number of SERVICE nodes in the DAG description file.
 -  ``service_nodes_failed``: The number of failed service nodes in the workflow.
--  ``service_nodes_succeeded``: The number of service nodes that succeeded execution.
+-  ``service_nodes_succeeded``: The number of service nodes that succeeded.
 -  ``total_nodes``: The total number of nodes in the DAG description file.
 -  ``total_nodes_run``: The total number of nodes executed in a DAG.
 -  ``jobs_submitted``: The total number of jobs DAGMan submitted.
@@ -114,7 +114,7 @@ information:
 -  ``dag_status``: The final :ad-attr:`DAG_Status` of the DAG.
 
 If :macro:`DAGMAN_REPORT_GRAPH_METRICS[and DAGMan metrics file]` is set to True then the
-additionally following metrics will be recorded:
+following additional metrics will be recorded:
 
 -  ``graph_height``: The height of the DAG.
 -  ``graph_width``: The width of the DAG.
@@ -123,9 +123,9 @@ additionally following metrics will be recorded:
 
 .. note::
 
-    The metrics file has two versions due to shift in terminology as V1 refers
-    to ``nodes`` as ``jobs`` for attribute names included in the metrics json.
-    To have DAGMan write V1 metrics set :macro:`DAGMAN_METRICS_FILE_VERSION` = ``1``.
+    The metrics file has two versions due to a shift in terminology, as V1 refers
+    to ``nodes`` as ``jobs`` for the attribute names included in the metrics json.
+    To have DAGMan write V1 metrics, set :macro:`DAGMAN_METRICS_FILE_VERSION` = ``1``.
 
 .. sidebar:: Sample Node Status File Contents
 
@@ -184,8 +184,8 @@ Current Node Status File
 
 DAGMan has the option to write the DAG and its node statuses to a file
 periodically. This is intended for a user or script to use for monitoring
-the DAG. To have DAGMan write the node status file simply use the
-:dag-cmd:`NODE_STATUS_FILE[Usage]` commands syntax as follows:
+the DAG. To have DAGMan write the node status file, simply use the
+:dag-cmd:`NODE_STATUS_FILE[Usage]` command's syntax as follows:
 
 .. code-block:: condor-dagman
 
@@ -199,14 +199,14 @@ status file was completed as well as the time of the next update.
 The status file may be updated once per :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL[and the Node Status File]`
 in combination with the optional *minimumUpdateTime* value which defaults
 to 60 seconds. The status file is also updated a final time when the DAG
-completes either successfully or not.
+completes, whether successfully or not.
 
 Normally the node status file is only updated if the status of some node
-has changed since the last file update. If provided the optional
-*ALWAYS-UPDATE* keyword then DAGMan will always update the status file
+has changed since the last file update. If the optional *ALWAYS-UPDATE*
+keyword is provided, then DAGMan will always update the status file
 even if no nodes have changed status.
 
-The following example would result the file ``my.dag.status`` that will be
+The following example would result in the file ``my.dag.status`` being
 rewritten with the current DAG status information at intervals of 30 seconds
 or more:
 
@@ -228,8 +228,8 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 -  6 (STATUS_ERROR): The node has failed.
 -  7 (STATUS_FUTILE): The node will never run because an ancestor node failed.
 
-An *ancestor* is a node that a another node depends on either directly or indirectly
-through a chain of :dag-cmd:`PARENT/CHILD` relationships. Provided the DAG visualized below,
+An *ancestor* is a node that another node depends on either directly or indirectly
+through a chain of :dag-cmd:`PARENT/CHILD` relationships. In the DAG visualized below,
 node **G**'s *ancestors* are nodes **A**, **B**, **D**, and **F**.
 
 .. mermaid::
@@ -266,7 +266,7 @@ when the :dag-cmd:`JOBSTATE_LOG[Usage]` command is declared with the following s
 The job state log is a filtered and easily machine-readable version of the
 ``*.dagman.out`` debug log file. It contains all the node events and some
 additional meta information. Unlike the node status file, the job state log
-is appended to. Meaning it contains the entire DAG history rather than just
+is appended to, meaning it contains the entire DAG history rather than just
 the current snapshot.
 
 There are 5 line types in the job state log. Each line begins with a Unix
@@ -274,7 +274,7 @@ timestamp in the form of seconds since the Epoch. Fields within each line
 are separated by a single space character.
 
 #. **DAGMan Start**:
-    A meta-event identifying the :tool:`condor_dagman` job start. Where
+    A meta-event identifying the :tool:`condor_dagman` job start, where
     **DAGJobId** is the :ad-attr:`ClusterId` and :ad-attr:`ProcId` of
     the DAGMan job.
 
@@ -283,15 +283,15 @@ are separated by a single space character.
         timestamp INTERNAL *** DAGMAN_STARTED DAGJobID ***
 
 #. **DAGMan Exit**:
-    A meta-event identifying the :tool:`condor_dagman` job exit. Where **ExitCode**
-    is the DAGMan jobs exit code.
+    A meta-event identifying the :tool:`condor_dagman` job exit, where **ExitCode**
+    is the DAGMan job's exit code.
 
     .. code-block:: text
 
         timestamp INTERNAL *** DAGMAN_FINISHED ExitCode ***
 
 #. **Recovery Started**:
-    A meta-event identifying DAGMan has entered recovery mode. While in recovery, node
+    A meta-event identifying that DAGMan has entered recovery mode. While in recovery, node
     events are only printed if they were not already printed prior to recovery mode
     start.
 
@@ -332,7 +332,7 @@ are separated by a single space character.
         - **POST_SCRIPT_FAILURE**: Node POST script exited with non-zero exit code
 
     The *CondorId* is the node job's :ad-attr:`ClusterId` and :ad-attr:`ProcId`.
-    Meta-events that take prior to successful job submission will not have an
+    Meta-events that occur prior to successful job submission will not have an
     assigned *CondorId*.
 
     The *JobTag* is an externally defined tag to assist any workflow managers
@@ -345,7 +345,7 @@ are separated by a single space character.
         +job_tag_name = "+job_tag_value"
         +job_tag_value = "<JobTag>"
 
-    If utilizing Pegasus this can be bypassed by setting:
+    If utilizing Pegasus, this can be bypassed by setting:
 
     .. code-block:: condor-submit
 
@@ -355,7 +355,7 @@ are separated by a single space character.
     each node run attempt due to retries or if the DAG is rerun from a rescue
     file.
 
-Below is example contents of a job state log assuming *JobTag* was set to ``local``:
+Below are example contents of a job state log, assuming *JobTag* was set to ``local``:
 
 .. code-block:: text
     :caption: Example jobstate log contents

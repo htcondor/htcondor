@@ -211,7 +211,8 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 			server_result = -1;
 		} else {
 			char *tmpOwner = nullptr;
-			pcache()->get_user_name(uid, tmpOwner);
+			// failure is detected via the tmpOwner null check below
+			std::ignore = pcache()->get_user_name(uid, tmpOwner);
 			if (!tmpOwner) {
 				// this could happen if, for instance,
 				// getpwuid() failed.

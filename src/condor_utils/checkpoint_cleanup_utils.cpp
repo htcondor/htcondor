@@ -255,7 +255,10 @@ moveCheckpointsToCleanupDirectory(
 	// The owner-specific directory should have the same ownership
 	// as the spool directory going into it.
 	struct stat statbuf = {};
-	stat(spool.string().c_str(), &statbuf);
+	if( stat(spool.string().c_str(), &statbuf) != 0 ) {
+		dprintf( D_ALWAYS, "moveCheckpointsToCleanupDirectory(): failed to stat spool directory '%s' (%d: %s), will not clean up.\n", spool.string().c_str(), errno, strerror(errno) );
+		return false;
+	}
 	auto owner_uid = statbuf.st_uid;
 	auto owner_gid = statbuf.st_gid;
 

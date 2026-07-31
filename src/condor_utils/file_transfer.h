@@ -448,6 +448,13 @@ class FileTransfer final: public Service {
 	void setTransferFilePermissions( bool value )
 		{ TransferFilePermissions = value; }
 
+		// Control whether user-supplied transfer plugins are allowed
+		// 0 = allow
+		// 1 = is fail loudly
+		// 2 = ignore user plugins, and use only built-in plugins. transfer will fail if built-in plugins cannot handle the transfer
+	enum UserPluginDisableMode { Allow=0, Fail=1, Ignore=2 };
+	void setDisableUserSuppliedTransferPlugins(UserPluginDisableMode disable_mode);
+
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
@@ -727,6 +734,7 @@ class FileTransfer final: public Service {
 	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
 	bool m_has_protected_url{false};
+	UserPluginDisableMode I_dont_allow_user_supplied_transfer_plugins{Allow};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
 #endif

@@ -31,6 +31,7 @@ class ReliSock;
 class Stream;
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad);
+bool getPODClassAd( Stream *sock, classad::ClassAd& ad);
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
 #define GET_CLASSAD_NO_CACHE            0x01 // don't use the classAdCache (default is to cache)
 #define GET_CLASSAD_NO_TYPES            0x02 // sock will not have MyType and TargetType following the ad

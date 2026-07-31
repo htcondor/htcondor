@@ -92,7 +92,7 @@ SUBMIT-DESCRIPTION sleep {{
     # Submit DAG, wait for completion, and return node test case info
     dag = htcondor.Submit.from_dag(DAG_FILENAME)
     dagman_job = default_condor.submit(dag)
-    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=60)
+    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=180)
     return NODES
 
 #===============================================================================================

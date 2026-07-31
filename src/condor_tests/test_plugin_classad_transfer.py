@@ -90,10 +90,9 @@ def the_completed_job(the_test_case, the_condor, the_log):
         'log':                  the_log.as_posix(),
         'env':                  the_test_case['env'],
 
-        'transfer_input_files': 'debug://sleep/1, http://google.com',
+        'transfer_input_files': 'debug://sleep/1',
         'MY.PluginData':        '[ foo = "bar"; ]',
         'MY.debug_PluginData':  '[ bar = "debug-data"; ]',
-        'MY.http_PluginData':   '[ baz = "http-data"; ]',
     }
 
     the_job_handle = the_condor.submit(

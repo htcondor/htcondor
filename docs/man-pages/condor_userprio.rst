@@ -71,6 +71,13 @@ Edit Options
  **-setfactor** *submitter* *value*
     Set the priority factor of the submitter specified by *submitter*
     to the specified *value*.
+    When combined with **-duration**, the priority factor is set as a
+    temporary *lease*: at the next negotiation cycle on or after
+    *seconds* have elapsed, the priority factor is automatically
+    restored to its prior value.  Lease state is persistent across a
+    *condor_negotiator* restart.  It is an error to set a lease while
+    one is already in effect for the same submitter; cancel the
+    existing lease first with **-cancelfactorlease**.
  **-setprio** *submitter* *value*
     Set the real priority of the submitter specified by *submitter*
     to the specified *value*.
@@ -80,11 +87,42 @@ Edit Options
     of all running jobs (See :macro:`SLOT_WEIGHT`).
     Setting the ceiling to -1 clears any previously set ceiling, and
     sets the effective ceiling to unlimited.
+    When combined with **-duration**, the ceiling is set as a temporary
+    *lease*: at the next negotiation cycle on or after *seconds* have
+    elapsed, the ceiling is automatically restored to its prior value.
+    Lease state is persistent, so it survives a *condor_negotiator*
+    restart.  It is an error to set a lease while one is already in
+    effect for the same submitter; cancel the existing lease first
+    with **-cancelceilinglease**.
+ **-duration** *seconds*
+    Only valid with **-setceiling**, **-setfloor**, or **-setfactor**.
+    Make the corresponding value a lease that expires after *seconds*
+    seconds, at which point the prior value is restored.
+ **-cancelceilinglease** *submitter*
+    Cancel an in-effect ceiling lease for *submitter*, immediately
+    restoring the ceiling value that was in effect before the lease
+    was set.  It is an error if no lease is in effect.
+ **-cancelfloorlease** *submitter*
+    Cancel an in-effect floor lease for *submitter*, immediately
+    restoring the floor value that was in effect before the lease
+    was set.  It is an error if no lease is in effect.
+ **-cancelfactorlease** *submitter*
+    Cancel an in-effect priority-factor lease for *submitter*,
+    immediately restoring the priority factor that was in effect
+    before the lease was set.  It is an error if no lease is in
+    effect.
  **-setfloor** *submitter* *value*
     Set the floor for the submitter specified by *submitter* to the
     specified *value*. Where *value* is the sum of the SlotWeight
     of all running jobs (See :macro:`SLOT_WEIGHT`).
     Setting the floor to 0 clears any previously set floor.
+    When combined with **-duration**, the floor is set as a temporary
+    *lease*: at the next negotiation cycle on or after *seconds* have
+    elapsed, the floor is automatically restored to its prior value.
+    Lease state is persistent across a *condor_negotiator* restart.
+    It is an error to set a lease while one is already in effect for
+    the same submitter; cancel the existing lease first with
+    **-cancelfloorlease**.
 
 Display Options
 ~~~~~~~~~~~~~~~
@@ -178,41 +216,53 @@ General Remarks
 The default tool output will display the following information for each active
 submitter
 
- Effective Priority
-    The effective priority value of the submitter, which is used to calculate
-    the submitter's share when allocating resources. A lower value means a
-    higher priority, and the minimum value (highest priority) is 0.5.
-    The effective priority is calculated by multiplying the real
-    priority by the priority factor.
- Priority Factor
-    The system administrator can set this value for each submitter, thus
-    controlling a submitter's effective priority relative to other submitters.
-    This can be used to create different classes of submitters.
- Weighted In Use
-    The number of resources currently used.
- Total Usage (Weighted hours)
-    The accumulated number of resource-hours used by the submitter since the
-    usage start time.
- Time Since Last Usage
-    Elapsed time since the specific submitter last had claimed resources.
- Submitter Floor
-    The minimum guaranteed number of CPU cores assigned to the specific submitter.
- Submitter Ceiling
-    Maximum number of CPU cores assigned to the specific submitter.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Effective Priority
+     - The effective priority value of the submitter, which is used to calculate
+       the submitter's share when allocating resources. A lower value means a
+       higher priority, and the minimum value (highest priority) is 0.5.
+       The effective priority is calculated by multiplying the real
+       priority by the priority factor.
+   * - Priority Factor
+     - The system administrator can set this value for each submitter, thus
+       controlling a submitter's effective priority relative to other submitters.
+       This can be used to create different classes of submitters.
+   * - Weighted In Use
+     - The number of resources currently used.
+   * - Total Usage (Weighted hours)
+     - The accumulated number of resource-hours used by the submitter since the
+       usage start time.
+   * - Time Since Last Usage
+     - Elapsed time since the specific submitter last had claimed resources.
+   * - Submitter Floor
+     - The minimum guaranteed number of CPU cores assigned to the specific submitter.
+   * - Submitter Ceiling
+     - Maximum number of CPU cores assigned to the specific submitter.
 
 When executed with the **-all** option, the following additional columns of
 information will be displayed
 
- Real Priority
-    The value of the real priority of the submitter. This value follows the
-    submitter's resource usage.
- Usage Start Time
-    The time since when usage has been recorded for the submitter. This time
-    is set when a submitter job runs for the first time. It is reset to the
-    present time when the usage for the submitter is reset.
- Last Usage Time
-    The most recent time a resource usage has been recorded for the
-    submitter.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Real Priority
+     - The value of the real priority of the submitter. This value follows the
+       submitter's resource usage.
+   * - Usage Start Time
+     - The time since when usage has been recorded for the submitter. This time
+       is set when a submitter job runs for the first time. It is reset to the
+       present time when the usage for the submitter is reset.
+   * - Last Usage Time
+     - The most recent time a resource usage has been recorded for the
+       submitter.
 
 For security purposes of authentication and authorization, specifying an
 Edit Option requires the ADMINISTRATOR level of access.

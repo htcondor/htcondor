@@ -1,7 +1,7 @@
 DaemonCore Command Numbers
 ==========================
 
-Table B.4: DaemonCore Commands
+Table: DaemonCore Commands
 
 +---------+------------------------------+
 | 60000   | DC_RAISESIGNAL               |

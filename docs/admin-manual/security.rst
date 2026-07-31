@@ -102,7 +102,7 @@ Introducing: AES
 """"""""""""""""
 
 We also support AES, a widely-used encryption
-method that has hardware support in most modern CPUS.  Because the overhead of
+method that has hardware support in most modern CPUs.  Because the overhead of
 encryption is so much lower, we have turned it on by default.  We use AES in
 such a way (called AESGCM mode) that it provides integrity checks (checksums)
 on transmitted data, and this method is now on by default and is the preferred
@@ -180,10 +180,9 @@ the :ref:`admin-manual/security:token authentication` section.
 Daemon-to-Daemon Connections (Daemon Authentication)
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
-HTCondor daemons need to trust each other to pass information security from one
-to the other.  This information may contain important attributes about a job to
+HTCondor daemons need to trust each other to pass information securely from one to the other.  This information may contain important attributes about a job to
 run, such as which executable to run, the arguments, and which user to run the
-job as.  Obviously, being able to tamper those could allow an impersonator to
+job as.  Obviously, being able to tamper with those could allow an impersonator to
 perform all sorts of nefarious tasks.
 
 For daemons that run on the same machine, for example a :tool:`condor_master`,
@@ -205,7 +204,7 @@ is the string set by the token issuer, and is usually equal to the
 ``$(UID_DOMAIN)`` setting on the central manager.  (Note that setting
 :macro:`UID_DOMAIN` has other consequences.)
 
-Once HTCondor has determined the authenticate principal, it checks the
+Once HTCondor has determined the authenticated principal, it checks the
 authorization lists as mentioned above in
 :ref:`admin-manual/security:general security flow`.  For daemon-to-daemon
 authorization, there are a few lists that may be consulted.
@@ -404,202 +403,192 @@ levels implement a partial hierarchy; a higher level often implies a
 ``READ`` or both a ``WRITE`` and a ``READ`` level of access as
 described.
 
-``READ``
-    This access level can obtain or read information about HTCondor.
-    Examples that require only ``READ`` access are viewing the status of
-    the pool with :tool:`condor_status`, checking a job queue with
-    :tool:`condor_q`, or viewing user priorities with :tool:`condor_userprio`.
-    ``READ`` access does not allow any changes, and it does not allow
-    job submission.
+.. list-table:: Access Levels
+   :header-rows: 1
+   :widths: 20 80
 
-``WRITE``
-    This access level is required to send (write) information to
-    HTCondor. Examples that require ``WRITE`` access are job submission
-    with :tool:`condor_submit` and advertising a machine so it appears in the
-    pool (this is usually done automatically by the *condor_startd*
-    daemon). The ``WRITE`` level of access implies ``READ`` access.
-
-``ADMINISTRATOR``
-    This access level has additional HTCondor administrator rights to
-    the pool. It includes the ability to change user priorities with the
-    command :tool:`condor_userprio`, as well as the ability to turn HTCondor
-    on and off (as with the commands :tool:`condor_on` and :tool:`condor_off`).
-    The :tool:`condor_fetchlog` tool also requires an ``ADMINISTRATOR``
-    access level. The ``ADMINISTRATOR`` level of access implies both
-    ``READ`` and ``WRITE`` access.
-
-``CONFIG``
-    This access level is required to modify a daemon's configuration
-    using the :tool:`condor_config_val` command. By default, this level of
-    access can change any configuration parameters of an HTCondor pool,
-    except those specified in the ``condor_config.root`` configuration
-    file. The ``CONFIG`` level of access implies ``READ`` access.
-
-``DAEMON``
-    This access level is used for commands that are internal to the
-    operation of HTCondor. An example of this internal operation is when
-    the *condor_startd* daemon sends its ClassAd updates to the
-    *condor_collector* daemon (which may be more specifically
-    controlled by the ADVERTISE_STARTD access level). Authorization
-    at this access level should only be given to the user account under
-    which the HTCondor daemons run. The ``DAEMON`` level of access
-    implies both ``READ`` and ``WRITE`` access.
-
-``NEGOTIATOR``
-    This access level is used specifically to verify that commands are
-    sent by the *condor_negotiator* daemon. The *condor_negotiator*
-    daemon runs on the central manager of the pool. Commands requiring
-    this access level are the ones that tell the *condor_schedd* daemon
-    to begin negotiating, and those that tell an available
-    *condor_startd* daemon that it has been matched to a
-    *condor_schedd* with jobs to run. The ``NEGOTIATOR`` level of
-    access implies ``READ`` access.
-
-``ADVERTISE_MASTER``
-    This access level is used specifically for commands used to
-    advertise a :tool:`condor_master` daemon to the collector. Any setting
-    for this access level that is not defined will default to the
-    corresponding setting in the ``DAEMON`` access level.
-    The ``ADVERTISE_MASTER`` level of access implies ``READ`` access. 
-
-``ADVERTISE_STARTD``
-    This access level is used specifically for commands used to
-    advertise a *condor_startd* daemon to the collector. Any setting
-    for this access level that is not defined will default to the
-    corresponding setting in the ``DAEMON`` access level.
-    The ``ADVERTISE_STARTD`` level of access implies ``READ`` access. 
-
-``ADVERTISE_SCHEDD``
-    This access level is used specifically for commands used to
-    advertise a *condor_schedd* daemon to the collector. Any setting
-    for this access level that is not defined will default to the
-    corresponding setting in the ``DAEMON`` access level.
-    The ``ADVERTISE_SCHEDD`` level of access implies ``READ`` access. 
-
-``CLIENT``
-    This access level is different from all the others. Whereas all of
-    the other access levels refer to the security policy for accepting
-    connections from others, the ``CLIENT`` access level applies when an
-    HTCondor daemon or tool is connecting to some other HTCondor daemon.
-    In other words, it specifies the policy of the client that is
-    initiating the operation, rather than the server that is being
-    contacted.
+   * - Access Level
+     - Description
+   * - ``READ``
+     - This access level can obtain or read information about HTCondor.
+       Examples that require only ``READ`` access are viewing the status of
+       the pool with :tool:`condor_status`, checking a job queue with
+       :tool:`condor_q`, or viewing user priorities with :tool:`condor_userprio`.
+       ``READ`` access does not allow any changes, and it does not allow
+       job submission.
+   * - ``WRITE``
+     - This access level is required to send (write) information to
+       HTCondor. Examples that require ``WRITE`` access are job submission
+       with :tool:`condor_submit` and advertising a machine so it appears in the
+       pool (this is usually done automatically by the *condor_startd*
+       daemon). The ``WRITE`` level of access implies ``READ`` access.
+   * - ``ADMINISTRATOR``
+     - This access level has additional HTCondor administrator rights to
+       the pool. It includes the ability to change user priorities with the
+       command :tool:`condor_userprio`, as well as the ability to turn HTCondor
+       on and off (as with the commands :tool:`condor_on` and :tool:`condor_off`).
+       The :tool:`condor_fetchlog` tool also requires an ``ADMINISTRATOR``
+       access level. The ``ADMINISTRATOR`` level of access implies both
+       ``READ`` and ``WRITE`` access.
+   * - ``CONFIG``
+     - This access level is required to modify a daemon's configuration
+       using the :tool:`condor_config_val` command. By default, this level of
+       access can change any configuration parameters of an HTCondor pool,
+       except those specified in the ``condor_config.root`` configuration
+       file. The ``CONFIG`` level of access implies ``READ`` access.
+   * - ``DAEMON``
+     - This access level is used for commands that are internal to the
+       operation of HTCondor. An example of this internal operation is when
+       the *condor_startd* daemon sends its ClassAd updates to the
+       *condor_collector* daemon (which may be more specifically
+       controlled by the ADVERTISE_STARTD access level). Authorization
+       at this access level should only be given to the user account under
+       which the HTCondor daemons run. The ``DAEMON`` level of access
+       implies both ``READ`` and ``WRITE`` access.
+   * - ``NEGOTIATOR``
+     - This access level is used specifically to verify that commands are
+       sent by the *condor_negotiator* daemon. The *condor_negotiator*
+       daemon runs on the central manager of the pool. Commands requiring
+       this access level are the ones that tell the *condor_schedd* daemon
+       to begin negotiating, and those that tell an available
+       *condor_startd* daemon that it has been matched to a
+       *condor_schedd* with jobs to run. The ``NEGOTIATOR`` level of
+       access implies ``READ`` access.
+   * - ``ADVERTISE_MASTER``
+     - This access level is used specifically for commands used to
+       advertise a :tool:`condor_master` daemon to the collector. Any setting
+       for this access level that is not defined will default to the
+       corresponding setting in the ``DAEMON`` access level.
+       The ``ADVERTISE_MASTER`` level of access implies ``READ`` access.
+   * - ``ADVERTISE_STARTD``
+     - This access level is used specifically for commands used to
+       advertise a *condor_startd* daemon to the collector. Any setting
+       for this access level that is not defined will default to the
+       corresponding setting in the ``DAEMON`` access level.
+       The ``ADVERTISE_STARTD`` level of access implies ``READ`` access.
+   * - ``ADVERTISE_SCHEDD``
+     - This access level is used specifically for commands used to
+       advertise a *condor_schedd* daemon to the collector. Any setting
+       for this access level that is not defined will default to the
+       corresponding setting in the ``DAEMON`` access level.
+       The ``ADVERTISE_SCHEDD`` level of access implies ``READ`` access.
+   * - ``CLIENT``
+     - This access level is different from all the others. Whereas all of
+       the other access levels refer to the security policy for accepting
+       connections from others, the ``CLIENT`` access level applies when an
+       HTCondor daemon or tool is connecting to some other HTCondor daemon.
+       In other words, it specifies the policy of the client that is
+       initiating the operation, rather than the server that is being
+       contacted.
 
 The following is a list of registered commands that daemons will accept.
 The list is ordered by daemon. For each daemon, the commands are grouped
 by the access level required for a daemon to accept the command from a
 given machine.
 
-ALL DAEMONS:
+.. list-table:: Daemon Commands by Access Level
+   :header-rows: 1
+   :widths: 15 20 65
 
-``WRITE``
-    The command sent as a result of :tool:`condor_reconfig` to reconfigure a
-    daemon.
+   * - Daemon
+     - Access Level
+     - Command Description
+   * - All Daemons
+     - ``WRITE``
+     - The command sent as a result of :tool:`condor_reconfig` to reconfigure a daemon.
+   * - Startd
+     - ``WRITE``
+     - All commands that relate to a *condor_schedd* daemon claiming a
+       machine, starting jobs there, or stopping those jobs.
+   * - Startd
+     - ``READ``
+     - The command that :tool:`condor_preen` sends to request the current state
+       of the *condor_startd* daemon.
+   * - Startd
+     - ``NEGOTIATOR``
+     - The command that the *condor_negotiator* daemon sends to match a
+       machine's *condor_startd* daemon with a given *condor_schedd*
+       daemon.
+   * - Negotiator
+     - ``WRITE``
+     - The command that initiates a new negotiation cycle. It is sent by
+       the *condor_schedd* when new jobs are submitted or a
+       :tool:`condor_reschedule` command is issued.
+   * - Negotiator
+     - ``READ``
+     - The command that can retrieve the current state of user priorities
+       in the pool, sent by the :tool:`condor_userprio` command.
+   * - Negotiator
+     - ``ADMINISTRATOR``
+     - The command that can set the current values of user priorities, sent
+       as a result of the :tool:`condor_userprio` command.
+   * - Collector
+     - ``ADVERTISE_MASTER``
+     - Commands that update the *condor_collector* daemon with new
+       :tool:`condor_master` ClassAds.
+   * - Collector
+     - ``ADVERTISE_SCHEDD``
+     - Commands that update the *condor_collector* daemon with new
+       *condor_schedd* ClassAds.
+   * - Collector
+     - ``ADVERTISE_STARTD``
+     - Commands that update the *condor_collector* daemon with new
+       *condor_startd* ClassAds.
+   * - Collector
+     - ``DAEMON``
+     - All other commands that update the *condor_collector* daemon with
+       new ClassAds. Note that the specific access levels such as
+       ``ADVERTISE_STARTD`` default to the ``DAEMON`` settings, which in
+       turn defaults to ``WRITE``.
+   * - Collector
+     - ``READ``
+     - All commands that query the *condor_collector* daemon for ClassAds.
+   * - Schedd
+     - ``NEGOTIATOR``
+     - The command that the *condor_negotiator* sends to begin negotiating
+       with this *condor_schedd* to match its jobs with available
+       *condor_startds*.
+   * - Schedd
+     - ``WRITE``
+     - The command which :tool:`condor_reschedule` sends to the *condor_schedd*
+       to get it to update the *condor_collector* with a current ClassAd
+       and begin a negotiation cycle.
 
-STARTD:
+       The commands which write information into the job queue (such as
+       :tool:`condor_submit` and :tool:`condor_hold`). Note that for most commands
+       which attempt to write to the job queue, HTCondor will perform an
+       additional user-level authentication step. This additional
+       user-level authentication prevents, for example, an ordinary user
+       from removing a different user's jobs.
+   * - Schedd
+     - ``READ``
+     - The command from any tool to view the status of the job queue.
 
-``WRITE``
-    All commands that relate to a *condor_schedd* daemon claiming a
-    machine, starting jobs there, or stopping those jobs.
-``READ``
-    The command that :tool:`condor_preen` sends to request the current state
-    of the *condor_startd* daemon.
+       The commands that a *condor_startd* sends to the *condor_schedd*
+       when the *condor_schedd* daemon's claim is being preempted and also
+       when the lease on the claim is renewed. These operations only
+       require ``READ`` access, rather than ``DAEMON`` in order to limit
+       the level of trust that the *condor_schedd* must have for the
+       *condor_startd*. Success of these commands is only possible if the
+       *condor_startd* knows the secret claim id, so effectively,
+       authorization for these commands is more specific than HTCondor's
+       general security model implies. The *condor_schedd* automatically
+       grants the *condor_startd* ``READ`` access for the duration of the
+       claim. Therefore, if one desires to only authorize specific execute
+       machines to run jobs, one must either limit which machines are
+       allowed to advertise themselves to the pool (most common) or
+       configure the *condor_schedd* 's
+       :macro:`ALLOW_CLIENT` setting to only allow connections from
+       the *condor_schedd* to the trusted execute machines.
+   * - Master
+     - ``ADMINISTRATOR``
+     - ``restart``: Master restarts itself (and all its children)
 
-``NEGOTIATOR``
-    The command that the *condor_negotiator* daemon sends to match a
-    machine's *condor_startd* daemon with a given *condor_schedd*
-    daemon.
+       ``off``: Master shuts down all its children
 
-NEGOTIATOR:
+       ``off -master``: Master shuts down all its children and exits
 
-``WRITE``
-    The command that initiates a new negotiation cycle. It is sent by
-    the *condor_schedd* when new jobs are submitted or a
-    :tool:`condor_reschedule` command is issued.
-
-``READ``
-    The command that can retrieve the current state of user priorities
-    in the pool, sent by the :tool:`condor_userprio` command.
-
-``ADMINISTRATOR``
-    The command that can set the current values of user priorities, sent
-    as a result of the :tool:`condor_userprio` command.
-
-COLLECTOR:
-
-``ADVERTISE_MASTER``
-    Commands that update the *condor_collector* daemon with new
-    :tool:`condor_master` ClassAds.
-
-``ADVERTISE_SCHEDD``
-    Commands that update the *condor_collector* daemon with new
-    *condor_schedd* ClassAds.
-
-``ADVERTISE_STARTD``
-    Commands that update the *condor_collector* daemon with new
-    *condor_startd* ClassAds.
-
-``DAEMON``
-    All other commands that update the *condor_collector* daemon with
-    new ClassAds. Note that the specific access levels such as
-    ``ADVERTISE_STARTD`` default to the ``DAEMON`` settings, which in
-    turn defaults to ``WRITE``.
-
-``READ``
-    All commands that query the *condor_collector* daemon for ClassAds.
-
-SCHEDD:
-
-``NEGOTIATOR``
-    The command that the *condor_negotiator* sends to begin negotiating
-    with this *condor_schedd* to match its jobs with available
-    *condor_startds*.
-
-``WRITE``
-    The command which :tool:`condor_reschedule` sends to the *condor_schedd*
-    to get it to update the *condor_collector* with a current ClassAd
-    and begin a negotiation cycle.
-
-    The commands which write information into the job queue (such as
-    :tool:`condor_submit` and :tool:`condor_hold`). Note that for most commands
-    which attempt to write to the job queue, HTCondor will perform an
-    additional user-level authentication step. This additional
-    user-level authentication prevents, for example, an ordinary user
-    from removing a different user's jobs.
-
-``READ``
-    The command from any tool to view the status of the job queue.
-
-    The commands that a *condor_startd* sends to the *condor_schedd*
-    when the *condor_schedd* daemon's claim is being preempted and also
-    when the lease on the claim is renewed. These operations only
-    require ``READ`` access, rather than ``DAEMON`` in order to limit
-    the level of trust that the *condor_schedd* must have for the
-    *condor_startd*. Success of these commands is only possible if the
-    *condor_startd* knows the secret claim id, so effectively,
-    authorization for these commands is more specific than HTCondor's
-    general security model implies. The *condor_schedd* automatically
-    grants the *condor_startd* ``READ`` access for the duration of the
-    claim. Therefore, if one desires to only authorize specific execute
-    machines to run jobs, one must either limit which machines are
-    allowed to advertise themselves to the pool (most common) or
-    configure the *condor_schedd* 's
-    :macro:`ALLOW_CLIENT` setting to only allow connections from
-    the *condor_schedd* to the trusted execute machines.
-
-MASTER: All commands are registered with ``ADMINISTRATOR`` access:
-
-``restart``
-    Master restarts itself (and all its children)
-
-``off``
-    Master shuts down all its children
-
-``off -master``
-    Master shuts down all its children and exits
-
-``on``
-    Master spawns all the daemons it is configured to spawn
+       ``on``: Master spawns all the daemons it is configured to spawn
 
 Security Negotiation
 --------------------
@@ -698,7 +687,7 @@ the understanding of this scenario. Some HTCondor commands, such as the
 use of :tool:`condor_submit` to submit jobs always require authentication of
 the submitter, no matter what the policy says. This is because the
 identity of the submitter needs to be known in order to carry out the
-operation. Others commands, such as :tool:`condor_q`, do not always require
+operation. Other commands, such as :tool:`condor_q`, do not always require
 authentication, so in the above example, the server's policy would force
 Frida's :tool:`condor_q` queries to be authenticated, whereas a different
 policy could allow :tool:`condor_q` to happen without any authentication.
@@ -1041,7 +1030,7 @@ Similarly, a daemon authenticating as a client against a remote server will
 record the result of the authentication in a system-wide trust whose location
 is kept in the configuration variable :macro:`SEC_SYSTEM_KNOWN_HOSTS`.  Since a
 daemon cannot prompt the administrator for a decision, it will always deny
-unknown CAs _unless_ :macro:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
+unknown CAs *unless* :macro:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
 
 The first time any daemon is authenticated, even if it's not through SSL, it will be noted in the
 ``known_hosts`` file.
@@ -1053,7 +1042,7 @@ The format of the ``known_hosts`` file is line-oriented and has three fields,
    HOSTNAME METHOD CERTIFICATE_DATA
 
 Any blank line or line prefixed with ``#`` will be ignored.
-Any line prefixed with ``!`` will result in the CA certificate to _not_ be trusted.  To easily switch
+Any line prefixed with ``!`` will result in the CA certificate to *not* be trusted.  To easily switch
 an untrusted CA to be trusted, simply delete the ``!`` prefix.
 
 For example, collector.wisc.edu would be trusted with this file entry using SSL:
@@ -1063,7 +1052,7 @@ For example, collector.wisc.edu would be trusted with this file entry using SSL:
    collector.wisc.edu SSL MIIBvjCCAWSgAwIBAgIJAJRheVnN5ZDyMAoGCCqGSM49BAMCMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTAeFw0yMTA1MTcxOTQ3MjRaFw0zMTA1MTUxOTQ3MjNaMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPN7qu+qdsfP6WR++UucrZYvMhssre8jvgWsnPBdzCYU/EqHYp+wri/aAKyDrLM5R1lWX44jSykgIpTOCLJUS/ajYzBhMB0GA1UdDgQWBBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAfBgNVHSMEGDAWgBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwICBDAKBggqhkjOPQQDAgNIADBFAiARfW+suELxSzSdi9u20hFs/aSXpd+gwJ6Ne8jjG+y/2AIhAO6f3ff9nnYRmesFbvt1lv+LosOMbeiUdVoaKFOGIyuJ
 
 
-The following line would cause collector.wisc.edu to _not_ be trusted:
+The following line would cause collector.wisc.edu to *not* be trusted:
 
 .. code-block:: text
 
@@ -1147,7 +1136,7 @@ write or administrator access level.
 Kerberos authentication on Unix platforms requires access to various
 files that usually are only accessible by the root user. At this time,
 the only supported way to use KERBEROS authentication on Unix platforms
-is to start daemons HTCondor as user root.
+is to start HTCondor daemons as user root.
 
 Password Authentication
 '''''''''''''''''''''''
@@ -1182,7 +1171,7 @@ the **-c** option when using to :tool:`condor_store_cred` **add**. Running
 
     $ condor_store_cred -c add
 
-prompts for the pool password and store it on the local machine, making
+prompts for the pool password and stores it on the local machine, making
 it available for daemons to use in authentication. The :tool:`condor_master`
 must be running for this command to work.
 
@@ -1221,8 +1210,7 @@ cancellation, if the channel is not encrypted for whatever reason
 (typically because common accounts do not exist or HTCondor's security
 is misconfigured).
 
-When a daemon is authenticated using a pool password, its security
-principle is condor_pool@$(UID_DOMAIN), where $(UID_DOMAIN) is taken
+When a daemon is authenticated using a pool password, its security principal is condor_pool@$(UID_DOMAIN), where $(UID_DOMAIN) is taken
 from the daemon's configuration. The ALLOW_DAEMON and ALLOW_NEGOTIATOR
 configuration variables for authorization should restrict access using
 this name. For example,
@@ -1425,7 +1413,7 @@ token given the user's authenticated identity.  Unlike ``condor_token_create``,
 the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in :macro:`SEC_PASSWORD_DIRECTORY`).
 
-If no security authentication methods specified by the administrator - and the
+If no security authentication methods are specified by the administrator - and the
 daemon or user has access to at least one token - then ``IDTOKENS`` authentication
 is automatically added to the list of valid authentication methods. Otherwise,
 to setup ``IDTOKENS`` authentication, enable it in the list of authentication methods:
@@ -1435,7 +1423,7 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
-**Revoking Token**: If a token is lost, stolen, or accidentally exposed,
+**Revoking Tokens**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token revocation mechanism in order
 to prevent unauthorized use.  Revocation can be accomplished by setting the
 :macro:`SEC_TOKEN_REVOCATION_EXPR` configuration parameter;
@@ -1492,7 +1480,10 @@ File System Authentication
 
 This form of authentication utilizes the ownership of a file in the
 identity verification of a client. A daemon authenticating a client
-requires the client to write a file in a specific location (``/tmp``).
+requires the client to write a file in a specific directory.  By
+default, the directory is ``/tmp``, but the location of the file is
+controlled by the configuration parameter :macro:`FS_LOCAL_DIR`.
+This must be a publicly writable directory with the sticky bit set.
 The daemon then checks the ownership of the file. The file's ownership
 verifies the identity of the client. In this way, the file system
 becomes the trusted authority. This authentication method is only
@@ -2362,8 +2353,7 @@ HTCondor can be registered with:
     daemons. For example, they can view the status of the pool, see the
     job queue(s), and view user permissions. ``READ`` access does not
     allow a machine to alter any information, and does not allow job
-    submission. A machine listed with ``READ`` permission will be unable
-    join an HTCondor pool; the machine can only view information about
+    submission. A machine listed with ``READ`` permission will be unable to join an HTCondor pool; the machine can only view information about
     the pool.
 
 ``WRITE``

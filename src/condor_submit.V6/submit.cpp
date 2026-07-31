@@ -1009,6 +1009,7 @@ main( int argc, const char *argv[] )
 			}
 		} else {
 			int this_cluster = -1, job_count=0;
+			std::vector<int> submitted_clusters;
 			for (size_t ix=0; ix < SubmitInfo.size(); ix++) {
 				if (SubmitInfo[ix].cluster != this_cluster) {
 					if (this_cluster != -1) {
@@ -1016,11 +1017,26 @@ main( int argc, const char *argv[] )
 						job_count = 0;
 					}
 					this_cluster = SubmitInfo[ix].cluster;
+					if (this_cluster != -1) {
+						submitted_clusters.push_back(this_cluster);
+					}
 				}
 				job_count += SubmitInfo[ix].lastjob - SubmitInfo[ix].firstjob + 1;
 			}
 			if (this_cluster != -1) {
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
+			}
+
+			// Offer a hint on how to follow the just-submitted job(s), unless this
+			// was only a dry-run (in which case nothing was actually queued).
+			if ( ! DashDryRun && ! submitted_clusters.empty()) {
+				std::string cluster_list;
+				for (int cluster : submitted_clusters) {
+					if ( ! cluster_list.empty()) { cluster_list += ' '; }
+					cluster_list += std::to_string(cluster);
+				}
+				fprintf(stderr, "To monitor your job(s), run: condor_watch_q -clusters %s\n",
+					cluster_list.c_str());
 			}
 		}
 	}
@@ -1607,16 +1623,16 @@ int submit_jobs (
 		if(! sent_credential_to_credd) {
 			std::string URL;
 			std::string error_string;
-			int cred_result = process_job_credentials(
+			bool cred_result = process_job_credentials(
 				submit_hash,
 				DashDryRun,
 				MySchedd,
 				URL,
 				error_string
 			);
-			if( cred_result != 0 ) {
+			if( cred_result == false ) {
 				// what is the best way to bail out / abort the submit process?
-				printf( "Failed to process job credential requests (%d): '%s'; BAILING OUT.\n", cred_result, error_string.c_str() );
+				printf( "Failed to process job credential requests: '%s'; BAILING OUT.\n", error_string.c_str() );
 				exit(1);
 			}
 			if(! URL.empty()) {

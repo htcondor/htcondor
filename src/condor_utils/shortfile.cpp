@@ -22,7 +22,12 @@ htcondor::readShortFile( const std::string & fileName, std::string & contents ) 
     }
 
     struct stat statbuf = {};
-    fstat(fd, &statbuf);
+    if( fstat(fd, &statbuf) != 0 ) {
+        dprintf( D_ALWAYS, "Failed to stat file '%s' for reading: '%s' (%d).\n",
+            fileName.c_str(), strerror( errno ), errno );
+        close( fd );
+        return false;
+    }
     filesize_t fileSize = statbuf.st_size;
 
     char * rawBuffer = (char *)malloc( fileSize + 1 );

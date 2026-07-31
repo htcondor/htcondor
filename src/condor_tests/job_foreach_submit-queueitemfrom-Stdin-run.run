@@ -126,17 +126,25 @@ print "Test continuing\n";
 my $jobsdone = "false";
 my @queuestate = ();
 my $remainingjobs = 0;
+my $tries = 0;
+my $maxtries = 60;
 while($jobsdone eq "false") {
+	if($tries++ > $maxtries) {
+		print "condor_q never reported an empty queue after $maxtries tries\n";
+		RegisterResult(0, "test_name", "$testname");
+		last;
+	}
 	@queuestate = ();
 	$cmdstatus = runCondorTool("condor_q -tot -all", \@queuestate, 2, {emit_output=>1});
 	$remainingjobs = CheckQueue(\@queuestate);
 	if($remainingjobs == 0) {
 		$jobsdone = "true";
-	} elsif ($remainingjobs == -1) {
-		print "No jobs line from condor_q\n";
-		RegisterResult(0, "test_name", "$testname");
-		last;
 	} else {
+		# $remainingjobs == -1 means condor_q produced no "N jobs;" totals line
+		# on this poll.  That happens transiently when the query races with the
+		# last job leaving the queue (seen on Windows when a slow-to-launch job
+		# straggles past the initial sleep).  It is not an error, so just retry
+		# rather than failing the test.
 		sleep(1);
 	}
 }

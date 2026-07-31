@@ -4,3 +4,6 @@ extensions/__pycache__
 utils/html-cleanup/src/*
 utils/html-cleanup/dst/*
 __pycache__
+
+# Ignore dynamically produced bits and bobs
+_static/generated/*/*

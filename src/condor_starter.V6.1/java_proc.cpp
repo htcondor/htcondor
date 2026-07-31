@@ -346,7 +346,7 @@ If our job exited, then parse the output of the wrapper,
 and return a POSIX status that resembles exactly what
 happened.
 */
-bool
+ReapResult
 JavaProc::JobReaper(int pid, int status)
 {
 	if(pid==JobPid) {
@@ -370,7 +370,7 @@ JavaProc::JobReaper(int pid, int status)
 		return VanillaProc::JobReaper(pid,status);
 
 	} else {
-		return false;
+		return ReapResult::JobNotFound;
 	}
 }
 

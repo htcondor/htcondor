@@ -239,6 +239,7 @@ public:
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );
+	bool deactivateClaimFinalXfer( void );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
 	bool starterKillFamily();
@@ -292,7 +293,7 @@ public:
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
-	void receiveUpdateCommand(int cmd, ClassAd &payload_ad, ClassAd &reply_ad);
+	void receiveUpdateCommand(int cmd, const ClassAd &payload_ad, ClassAd &reply_ad);
 
 		// registered callback for premature closure of connection from
 		// schedd requesting this claim
@@ -370,6 +371,11 @@ private:
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	bool        c_schedd_reported_job_done;
+	// Set while Claim::starterExited is on the stack so that a pending final
+	// update drained via handle_pending_updates() does not push the slot
+	// through Claimed/Cleaning before the reap completes the normal
+	// post-starter transition.
+	bool        c_reaping{false};
 	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 	std::string c_ocu_name;

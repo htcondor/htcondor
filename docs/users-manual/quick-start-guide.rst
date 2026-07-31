@@ -46,7 +46,7 @@ Job ClassAd, which is usually created by the system from a submit description fi
 HTCondor is a High Throughput system, which means it has been designed to 
 effectively manage hundreds of thousands of jobs.  Attributes of jobs that
 must be defined include the executable or script to run, the amount of memory, CPU
-and other machine resources it needs, and descriptions of the file inputs it need.
+and other machine resources it needs, and descriptions of the file inputs it needs.
 The set of files used by a job is called the "sandbox".  There is an input sandbox,
 the input files that exist before a job starts; the output sandbox, the set of files
 created by the job; and a scratch sandbox, the set of files made as the job runs.
@@ -72,8 +72,8 @@ This first executable program is a shell script (Linux or Mac) or batch file
 system; the Linux (or Mac) version is shown first, and
 the Windows version is shown second.  To try this example,
 log in to the AP, and use an editor to type in or copy and paste
-the file contents.  Name the resulting file ``sleep.sh`` if the AP 
-is Linux (or Mac) operating system, and name the resulting file ``sleep.bat``
+the file contents.  Name the resulting file ``sleep.sh`` if the AP
+is running a Linux (or Mac) operating system, and name the resulting file ``sleep.bat``
 if the AP is running Windows.  Note that you will need to
 know whether the operating system on your AP is a Linux (or Mac)
 operating system or Windows.
@@ -181,9 +181,9 @@ Point in order to run.  This allows HTCondor to run as many jobs as
 possible on each EP without overloading them.  Jobs must declare the
 number of CPUs, the amount of memory and disk they need.  Special jobs
 may need to request other resources, such as GPUs or licenses.  Ask your
-administrator if your jobs requires such things.  The amount of cpus
-is unit less, but memory and disk requires can have a "M" for megabyte,
-"G" for Gigabyte suffix for legibility.  Without the suffix, memory
+administrator if your job requires such things.  The number of CPUs
+is unitless, but memory and disk requests can take an "M" (megabyte) or
+"G" (gigabyte) suffix for legibility.  Without the suffix, memory
 units are megabytes and disk kilobytes.
 
 .. code-block:: condor-submit
@@ -229,7 +229,7 @@ The :subcom:`queue` command tells HTCondor to run one instance of this job.
 With this submit description file, all that remains is to hand off the job to
 HTCondor.  Note that the :subcom:`queue` command should be the last command in the
 file.  Commands after the :subcom:`queue` are  ignored.  Otherwise, the order of
-commands with the file does not matter. Assuming the current working directory
+commands within the file does not matter. Assuming the current working directory
 contains the ``sleep.sub`` submit description file and the executable
 (``sleep.sh`` or ``sleep.bat``), the command line
 
@@ -528,11 +528,89 @@ Mac) convention of appending the directory name with a slash character (/).
         * outfile.txt
         * science3.log
 
+Submitting a GPU Job
+--------------------
+
+This example demonstrates how to submit a job that requests GPU resources.
+HTCondor can automatically match jobs that need GPUs with execution points
+that have GPU devices available.
+
+The submit description file shows how to request a GPU using the
+:subcom:`request_gpus` command:
+
+.. code-block:: condor-submit
+
+    # gpu_simple.sub -- simple GPU job example
+    # This job requests one GPU and demonstrates how GPU assignments
+    # are exposed to the job via the CUDA_VISIBLE_DEVICES environment variable.
+
+    universe = vanilla
+
+    # Script executed on the execute node
+    executable = gpu_check.sh
+
+    # Request one CPU core and one GPU device
+    request_cpus = 1
+    request_gpus = 1
+
+    # Memory requirement for the job
+    request_memory = 2GB
+
+    # Standard HTCondor log, output, and error files
+    output = gpu.out
+    error  = gpu.err
+    log    = gpu.log
+
+    queue
+
+When HTCondor assigns a GPU to your job, it sets the ``CUDA_VISIBLE_DEVICES``
+environment variable to indicate which GPU device(s) have been allocated.
+Most GPU-accelerated applications automatically use this environment variable
+to determine which GPU to use.
+
+Here is an example executable script that checks for GPU assignment:
+
+.. code-block:: bash
+
+    #!/bin/bash
+    # gpu_check.sh
+    # This script runs on the execute node and prints GPU information
+
+    echo "=== HTCondor GPU Job Check ==="
+    echo "Hostname: $(hostname)"
+    echo "Date: $(date)"
+
+    echo
+    echo "CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES"
+    echo
+
+    # If NVIDIA utilities are available, show GPU info
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        echo "nvidia-smi output:"
+        nvidia-smi
+    else
+        echo "nvidia-smi not found (this is OK on non-NVIDIA systems)"
+    fi
+
+    echo
+    echo "Job completed successfully."
+
+Remember to make the script executable on Linux or Mac systems:
+
+.. code-block:: console
+
+    $ chmod u+x gpu_check.sh
+
+This example can be used to verify GPU job submission works correctly,
+even on systems without physical GPUs. The job will match with execution
+points that have GPUs available. For actual GPU computation, replace
+``gpu_check.sh`` with your GPU-accelerated application.
+
 Creating Workflows with DAGMan
 ------------------------------
 
 It is common to have a sequence of jobs that need to run in a particular order.
-The most common reason is the output one job becomes the input of another.
+The most common reason is that the output of one job becomes the input of another.
 While you could place the first job, and manually check up on the first job
 until it finishes, and only then place the second job, HTCondor comes with a
 workflow manager called DAGMan. Here is a brief introduction to DAGMan. For
@@ -541,7 +619,7 @@ more detailed information see :ref:`DAGMan documentation`.
 .. warning::
 
     This example assumes all files are within the same working directory for
-    simplicity. It is important to think about how the workflow directory structure
+    simplicity. It is important to think about the workflow directory structure
     before executing a workflow of jobs.
 
 To start, this example has two jobs. The first is a simulator job that produces
@@ -605,7 +683,7 @@ described in a DAG file utilizing the DAG Description Language
 This DAG file creates a workflow consisting of two nodes named
 ``simulator`` and ``analyzer``. Each node has the similarly named
 submit description files (``*.sub``) to be executed. The DAG also
-informs that the ``analyzer`` node is dependent on the ``simulator``
+specifies that the ``analyzer`` node is dependent on the ``simulator``
 node such that the former only executes once the latter executes
 successfully.
 
@@ -617,8 +695,8 @@ From here the workflow can be executed by running the following command:
 
 .. note::
 
-    This example is a simple introduction DAGMan workflows and only touches
-    the surface. There is much more in regards to executing/managing DAGMan
+    This example is a simple introduction to DAGMan workflows and only touches
+    the surface. There is much more regarding executing/managing DAGMan
     workflows and various capabilities of DAGMan.
 
 Where to Go from Here

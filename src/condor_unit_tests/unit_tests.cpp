@@ -68,6 +68,7 @@ bool OTEST_ranger();
 bool OTEST_Timeslice();
 bool OTEST_DagFileParser();
 bool OTEST_DagLexer();
+bool OTEST_ArchiveReader();
 
 	// function map that maps testing function names to testing functions
 const static struct {
@@ -108,6 +109,7 @@ const static struct {
 	map(OTEST_Timeslice),
 	map(OTEST_DagFileParser),
 	map(OTEST_DagLexer),
+	map(OTEST_ArchiveReader),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 

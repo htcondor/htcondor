@@ -183,7 +183,7 @@ _remote_param_get( PyObject *, PyObject * args ) {
 
 static PyObject *
 _remote_param_set( PyObject *, PyObject * args ) {
-    // _param_get(self.location._handle, key, value)
+    // _param_set(self.location._handle, key, value)
     PyObject_Handle * handle = NULL;
     const char * key = NULL;
     const char * value = NULL;

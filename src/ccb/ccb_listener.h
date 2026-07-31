@@ -67,7 +67,7 @@ class CCBListener: public Service, public ClassyCountedPtr {
 
 	bool SendMsgToCCB(ClassAd &msg,bool blocking);
 	bool WriteMsgToCCB(ClassAd &msg);
-	static void CCBConnectCallback(bool success,Sock *sock,CondorError *errstack, const std::string & /* trust_domain */, bool /* should_try_token_auth */, void *misc_data);
+	void handleCCBConnect(bool success, Sock *sock);
 	void ReconnectTime(int timerID = -1);
 	void Connected();
 	void Disconnected();

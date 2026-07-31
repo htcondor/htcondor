@@ -192,8 +192,9 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
             results = nullptr;
         }
         switch (rv) {
-            case 0: break;  // should never get here on success, this is just for clarity.
-            case -1: break; // error already set by python (in callback)
+            case 0:   // should never get here on success, this is just for clarity.
+            case -1:  // error already set by python (in callback)
+                break;
 
             case Q_UNSUPPORTED_OPTION_ERROR:
                 // This was HTCondorIOError in version 1.

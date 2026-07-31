@@ -25,79 +25,95 @@ If **-total** is not specified, *condor_userlog* will first display a
 record for each workstation allocation, which includes the following
 information:
 
- Job
-    The cluster/process id of the HTCondor job.
- Host
-    The host where the job ran. By default, the host's IP address is
-    displayed. If **-hostname** is specified, the host name will be
-    displayed instead.
- Start Time
-    The time (month/day hour:minute) when the job began running on the
-    host.
- Evict Time
-    The time (month/day hour:minute) when the job was evicted from the
-    host.
- Wall Time
-    The time (days+hours:minutes) for which this workstation was
-    allocated to the job.
- Good Time
-    The allocated time (days+hours:min) which contributed to the
-    completion of this job.  If the job exited during the allocation,
-    then this value will equal "Wall Time."  Otherwise, it will 0+00:00;
-    self-checkpoint are presently ignored.
- CPU Usage
-    The CPU time (days+hours:min) which contributed to the completion of
-    this job.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Job
+     - The cluster/process id of the HTCondor job.
+   * - Host
+     - The host where the job ran. By default, the host's IP address is
+       displayed. If **-hostname** is specified, the host name will be
+       displayed instead.
+   * - Start Time
+     - The time (month/day hour:minute) when the job began running on the
+       host.
+   * - Evict Time
+     - The time (month/day hour:minute) when the job was evicted from the
+       host.
+   * - Wall Time
+     - The time (days+hours:minutes) for which this workstation was
+       allocated to the job.
+   * - Good Time
+     - The allocated time (days+hours:min) which contributed to the
+       completion of this job. If the job exited during the allocation,
+       then this value will equal "Wall Time." Otherwise, it will 0+00:00;
+       self-checkpoints are presently ignored.
+   * - CPU Usage
+     - The CPU time (days+hours:min) which contributed to the completion of
+       this job.
 
 *condor_userlog* will then display summary statistics per host:
 
- Host/Job
-    The IP address or host name for the host.
- Wall Time
-    The workstation time (days+hours:minutes) allocated by this host to
-    the jobs specified in the query. By default, all jobs in the log are
-    included in the query.
- Good Time
-    The time (days+hours:minutes) allocated on this host which
-    contributed to the completion of the jobs specified in the query.
- CPU Usage
-    The CPU time (days+hours:minutes) obtained from this host which
-    contributed to the completion of the jobs specified in the query.
- Avg Alloc
-    The average length of an allocation on this host
-    (days+hours:minutes).
- Avg Lost
-    The average amount of work lost (days+hours:minutes) when a job was
-    evicted from this host.  
-    
- Goodput
-    This percentage is computed as Good Time divided by Wall Time.
- Util.
-    This percentage is computed as CPU Usage divided by Good Time.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Host/Job
+     - The IP address or host name for the host.
+   * - Wall Time
+     - The workstation time (days+hours:minutes) allocated by this host to
+       the jobs specified in the query. By default, all jobs in the log are
+       included in the query.
+   * - Good Time
+     - The time (days+hours:minutes) allocated on this host which
+       contributed to the completion of the jobs specified in the query.
+   * - CPU Usage
+     - The CPU time (days+hours:minutes) obtained from this host which
+       contributed to the completion of the jobs specified in the query.
+   * - Avg Alloc
+     - The average length of an allocation on this host (days+hours:minutes).
+   * - Avg Lost
+     - The average amount of work lost (days+hours:minutes) when a job was
+       evicted from this host.
+   * - Goodput
+     - This percentage is computed as Good Time divided by Wall Time.
+   * - Util.
+     - This percentage is computed as CPU Usage divided by Good Time.
 
 *condor_userlog* will then display summary statistics per job:
 
- Host/Job
-    The cluster/process id of the HTCondor job.
- Wall Time
-    The total workstation time (days+hours:minutes) allocated to this
-    job.
- Good Time
-    The total time (days+hours:minutes) allocated to this job which
-    contributed to the job's completion.
- CPU Usage
-    The total CPU time (days+hours:minutes) which contributed to this
-    job's completion.
- Avg Alloc
-    The average length of a workstation allocation obtained by this job
-    in minutes (days+hours:minutes).
- Avg Lost
-    The average amount of work lost (days+hours:minutes) when this job
-    was evicted from a host; self-checkpoints are presently ignored.
- Goodput
-    This percentage is computed as Good Time divided by Wall Time.
- Util.
-    This percentage is computed as CPU Usage divided by Good Time.
+.. list-table::
+   :header-rows: 1
+   :widths: auto
+
+   * - Field
+     - Description
+   * - Host/Job
+     - The cluster/process id of the HTCondor job.
+   * - Wall Time
+     - The total workstation time (days+hours:minutes) allocated to this
+       job.
+   * - Good Time
+     - The total time (days+hours:minutes) allocated to this job which
+       contributed to the job's completion.
+   * - CPU Usage
+     - The total CPU time (days+hours:minutes) which contributed to this
+       job's completion.
+   * - Avg Alloc
+     - The average length of a workstation allocation obtained by this job
+       (days+hours:minutes).
+   * - Avg Lost
+     - The average amount of work lost (days+hours:minutes) when this job
+       was evicted from a host; self-checkpoints are presently ignored.
+   * - Goodput
+     - This percentage is computed as Good Time divided by Wall Time.
+   * - Util.
+     - This percentage is computed as CPU Usage divided by Good Time.
 
 Finally, *condor_userlog* will display a summary for all hosts and
 jobs.

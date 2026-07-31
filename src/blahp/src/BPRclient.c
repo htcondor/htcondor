@@ -236,7 +236,7 @@ main(int argc, char **argv)
 		
 		if ((the_proxy = (char *)malloc(proxy_stat.st_size + 1)) == NULL)
 		{
-			printf("%s: unable to allocate read buffer (%d bytes)", argv[0], proxy_stat.st_size + 1);
+			printf("%s: unable to allocate read buffer (%lld bytes)", argv[0], (long long)(proxy_stat.st_size + 1));
 			close(fd_socket);
 			exit(1);
 		}

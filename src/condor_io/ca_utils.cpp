@@ -265,8 +265,8 @@ std::unique_ptr<FILE, fcloser> get_known_hosts()
 			fname.c_str(), strerror(errno), errno);
 	} else {
 		// We want to read from beginning of the file; since we open in append mode,
-		// we will write to the end.
-		fseek(fp.get(), 0, SEEK_SET);
+		// we will write to the end.  A seek failure is not actionable here.
+		std::ignore = fseek(fp.get(), 0, SEEK_SET);
 	}
 
 	return fp;
@@ -407,6 +407,10 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 		return false;
 	}
 	auto ca_cert = read_cert(cafile);
+	if (!ca_cert) {
+		dprintf(D_ALWAYS, "Cannot generate a new certificate - failed to read CA certificate from %s.\n", cafile.c_str());
+		return false;
+	}
 
 	auto private_key = generate_key(keyfile);
 	if (!private_key) {
@@ -584,7 +588,7 @@ bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::s
 	do {
 		fprintf(stderr, "Please type 'yes' or 'no':\n");
 		std::getline(std::cin, response);
-	} while (response != "yes" && response != "no");
+	} while (std::cin.good() && response != "yes" && response != "no");
 
 	return response == "yes";
 }

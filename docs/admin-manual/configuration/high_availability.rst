@@ -22,8 +22,7 @@ These macros affect the high availability operation of HTCondor.
 
 
     The High Availability feature allows for several :tool:`condor_master`
-    daemons (most likely on separate machines) to work together to
-    insure that a particular service stays available. These
+    daemons (most likely on separate machines) to work together to ensure that a particular service stays available. These
     :tool:`condor_master` daemons ensure that one and only one of them will
     have the listed daemons running.
 
@@ -74,8 +73,7 @@ These macros affect the high availability operation of HTCondor.
     the shared lock, the :tool:`condor_master` will hold the lock for this
     number of seconds. Additionally, the :tool:`condor_master` will
     periodically renew each lock as long as the :tool:`condor_master` and the
-    daemon are running. When the daemon dies, or the :tool:`condor_master`
-    exists, the :tool:`condor_master` will immediately release the lock(s) it
+    daemon are running. When the daemon dies, or the :tool:`condor_master` exits, the :tool:`condor_master` will immediately release the lock(s) it
     holds.
 
     :macro:`HA_LOCK_HOLD_TIME` defaults to 3600 seconds (one hour).

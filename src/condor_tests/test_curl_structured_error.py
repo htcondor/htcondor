@@ -42,10 +42,10 @@ TEST_CASES = {
     "CURLE_COULDNT_RESOLVE_HOST": {
         "expected": {
             "ErrorType":        "Resolution",
-            "FailedName":       "no-such.tld",
+            "FailedName":       "nonexistent.invalid",
             "FailureType":      "Unknown",
         },
-        "url":    "http://no-such.tld/file",
+        "url":    "http://nonexistent.invalid/file",
     },
     # I don't know how to generate this one, actually.
     # CURLE_REMOTE_ACCESS_DENIED
@@ -99,7 +99,7 @@ TEST_CASES = {
             "ErrorType":        "Contact",
             "FailedServer":     "Unknown",
         },
-        "url":    "http://localhost:{closed_port}/file",
+        "url":    "http://127.0.0.1:{closed_port}/file",
     },
 
     # I have no idea what triggers these.
@@ -128,7 +128,7 @@ def the_job_description(path_to_sleep):
 @action
 def the_closed_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('localhost', 0))
+    s.bind(('127.0.0.1', 0))
     (address, port) = s.getsockname()
     yield port
     s.close()

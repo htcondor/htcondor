@@ -105,6 +105,10 @@
    then treats this just like JOB_SHOULD_REQUEUE. */
 #define JOB_RECONNECT_FAILED (16 + EXIT_CODE_OFFSET)
 
+#define JOB_CXFER_FAILED_REQUEUE (17 + EXIT_CODE_OFFSET)
+#define JOB_CXFER_FAILED_HOLD (18 + EXIT_CODE_OFFSET)
+#define JOB_MAPPING_FAILED (19 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code

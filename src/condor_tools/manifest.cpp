@@ -159,6 +159,11 @@ main( int argc, char ** argv ) {
         // happen when the shadow deletes checkpoints while the job is
         // still running, because the schedd will ask this tool to clean
         // up all checkpoints, even the already removed ones.
+        //
+        // Only remove .job.ad when the directory has nothing else in it.
+        // Removing .job.ad and then failing to remove a non-empty parent
+        // directory would strand an orphaned cleanup directory that
+        // neither this tool nor condor_preen can later recover.
         std::error_code errCode;
         bool onlyTheLonely = true;
         auto i = std::filesystem::directory_iterator( jobAdPath.parent_path(), errCode );
@@ -173,12 +178,12 @@ main( int argc, char ** argv ) {
             }
         }
 
-        if( deleted || onlyTheLonely ) {
+        if( onlyTheLonely ) {
             fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
-            std::filesystem::remove( jobAdPath );
+            std::filesystem::remove( jobAdPath, errCode );
 
             fprintf( stderr, "Removing %s after successful clean-up.\n", parentPath.string().c_str() );
-            std::filesystem::remove( parentPath );
+            std::filesystem::remove( parentPath, errCode );
         }
 
         return deleted ? 0 : 1;

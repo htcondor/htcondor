@@ -76,6 +76,10 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
+ **-verbose**
+    Print the request ID assigned to the drain request after it is
+    submitted. The request ID can later be passed to **-cancel** via
+    **-request-id** to cancel a specific draining request.
  **-pool** *pool-name*
     Specify an alternate HTCondor pool, if the default one is not
     desired.

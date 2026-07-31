@@ -1,6 +1,7 @@
 #!/usr/bin/env pytest
 
 import os
+import time
 import logging
 import htcondor2 as htcondor
 
@@ -17,11 +18,16 @@ logger.setLevel(logging.DEBUG)
 @action
 def reported_disk_space(test_dir):
     with Condor(test_dir / "condor", { "RESERVED_DISK": "3145728" }) as condor:
-        result = condor.status(
-            ad_type=htcondor.AdTypes.Startd,
-            projection=["TotalDisk"],
-        )
-        return result[0]["TotalDisk"]
+        deadline = time.time() + 30
+        while True:
+            result = condor.status(
+                ad_type=htcondor.AdTypes.Startd,
+                projection=["TotalDisk"],
+            )
+            if result and "TotalDisk" in result[0]:
+                return result[0]["TotalDisk"]
+            assert time.time() < deadline, "startd slot ad never reached collector"
+            time.sleep(1)
 
 @action
 def actual_disk_space(test_dir):

@@ -74,7 +74,7 @@ public:
 		/** Make certain all decendants are	dead via the ProcFamily,
 			save final usage statistics, and call OsProc::JobReaper().
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 		/** Call family->suspend() */
 	virtual void Suspend();

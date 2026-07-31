@@ -71,6 +71,12 @@ typedef struct macro_meta {
 	short int    use_count{0};
 	short int    ref_count{0};
 } MACRO_META;
+class macro_meta_tracer {
+public:
+	virtual ~macro_meta_tracer() = default;
+	virtual bool match(const char * name) = 0;
+	virtual void log(const char * name, const char * old_value, const char * new_value, MACRO_META & meta) = 0;
+};
 typedef struct macro_defaults {
 	int size{0};
 	MACRO_DEF_ITEM * table{nullptr}; // points to const table[size] key/default-value pairs (pointer not owned here)
@@ -91,6 +97,7 @@ typedef struct macro_set {
 	MACRO_SOURCES sources;
 	MACRO_DEFAULTS * defaults{nullptr}; // optional reference to const defaults table (ptr not owned here)
 	CondorError * errors{nullptr}; // optional error stack, if non NULL, use instead of fprintf to stderr (owned here)
+	macro_meta_tracer * tracer{nullptr};
 
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
@@ -116,23 +123,32 @@ typedef struct macro_eval_context {
 	const char *subsys{nullptr};  // default subsys prefix
 	const char *cwd{nullptr};     // current working directory, used for $F macro expansion
 	char without_default{0};
-	char use_mask{0};
+	char use_mask{0}; // see um_* flags defined below.
 	char also_in_config{0}; // also do lookups in the config hashtable (used by submit)
 	char is_context_ex{0};
 
-	void init(const char * sub, char mask=2) {
+	// use_mask flags
+	enum : char {
+		um_COUNT_USES = 0x01,
+		um_COUNT_REFS = 0x02,
+		um_COUNT_USES_AND_REFS = 0x03,
+		um_ALLOW_EXCEPT = 0x40,
+	};
+	bool allow_except() { return (use_mask & um_ALLOW_EXCEPT) != 0; }
+	void init(const char * sub, char mask=um_COUNT_REFS) {
 		cwd = subsys = localname = nullptr;
-		is_context_ex = also_in_config = use_mask = without_default = 0;
+		is_context_ex = also_in_config = without_default = 0;
 		this->subsys = sub;
 		this->use_mask = mask;
 	}
+	void might_EXCEPT(MACRO_SET& mset, const char * cppfile, int line, const char * fmt, ...);
 } MACRO_EVAL_CONTEXT;
 
 typedef struct macro_eval_context_ex : macro_eval_context {
 	// to do lookups of last resort into the given Ad, set these. they are useually null.
 	const char *adname{nullptr}; // name prefix for lookups into the ad
 	const ClassAd * ad{nullptr}; // classad for lookups
-	void init(const char * sub, char mask=2) {
+	void init(const char * sub, char mask=um_COUNT_REFS) {
 		adname = nullptr;
 		ad = nullptr;
 		macro_eval_context::init(sub, mask);
@@ -186,7 +202,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// param table.
 	bool param_defined_by_config(const char* name);
 	const char * param_unexpanded(const char *name);
-	char* param_or_except( const char *name );
 	int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
@@ -197,6 +212,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	long long param_longlong( const char *name, long long default_value = 0,
+					    long long min_value = (std::numeric_limits<long long>::min)(),
+					    long long max_value = (std::numeric_limits<long long>::max)(),
+					    bool use_param_table = true );
 	bool param_longlong( const char *name, long long int &value,
 						bool use_default, long long default_value,
 						bool check_ranges = true,
@@ -248,6 +267,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 								const MACRO_META **ppmet);
 
 	MACRO_SET * param_get_macro_set();
+	void init_param_context(MACRO_EVAL_CONTEXT & ctx);
 
 	// lookup "name" in ALL of relevant tables as indicated by the MACRO_EVAL_CONTEXT.
 	// as soon as an item is found (even an empty item) lookup stops.  the lookup order is
@@ -364,6 +384,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 	bool get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files );
 
+	// enable tracing of file and line for self-substitution for the given param names
+	void enable_config_tracing(macro_meta_tracer *);
+
 	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
@@ -373,6 +396,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	#define CONFIG_OPT_WANT_EXCEPT 0x400 // default to EXCEPT for errors in config (number of args for $CHOICE, etc)
 	#define CONFIG_OPT_USE_THIS_ROOT_CONFIG 0x800 // use the root config file specified in the last argument of real_config
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
@@ -488,6 +512,11 @@ int write_config_file(const char* pathname, int options);
 
 	void init_global_config_table(int options);
 	void clear_global_config_table(void);
+
+	void swap_global_config(MACRO_SET & macros, std::string & global_source, std::vector<std::string> & local_sources);
+	void init_config_table(MACRO_SET & macros, int options);
+	void clear_config_table(MACRO_SET & macros);
+	void swap_config_tables(MACRO_SET & msetA, MACRO_SET & msetB);
 
 	char * get_tilde(void);
 	char * param ( const char *name );

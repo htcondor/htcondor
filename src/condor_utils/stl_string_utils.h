@@ -105,14 +105,10 @@ bool contains_prefix_anycase(const std::vector<std::string> &list, const std::st
 bool contains_prefix_anycase(const std::vector<std::string> &list, const char* str);
 
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_withwildcard(const std::vector<std::string> &list, const char* str);
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str);
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str);
-bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str);
 
 bool matches_withwildcard(const char* pattern, const char* str);
 bool matches_anycase_withwildcard(const char* pattern, const char* str);

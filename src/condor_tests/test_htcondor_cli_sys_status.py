@@ -177,13 +177,29 @@ def condor(test_dir):
                 }) as condor:
         yield condor
 
+def _output_has_bad_health(output: str) -> bool:
+    # Skip header line; check remaining non-empty lines for "Bad" health.
+    for line in output.split("\n")[1:]:
+        if line.strip() and re.search(r"\bBad\b", line):
+            return True
+    return False
+
+
 @action
 def run_commands(condor):
     OUTPUT = {}
     for test, info in TEST_CASES.items():
         sleep(info[1])
-        p = condor.run_command(info[0])
-        OUTPUT[test] = p.stdout + p.stderr
+        # Poll up to 6 times at 10s intervals until no daemon reports "Bad"
+        # health. RecentDaemonCoreDutyCycle can spike during daemon startup,
+        # which the htcondor cli reports as Bad health.
+        for attempt in range(6):
+            p = condor.run_command(info[0])
+            output = p.stdout + p.stderr
+            if not _output_has_bad_health(output):
+                break
+            sleep(10)
+        OUTPUT[test] = output
     return OUTPUT
 
 @action(params={name: name for name in TEST_CASES})

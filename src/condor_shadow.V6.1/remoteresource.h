@@ -114,9 +114,11 @@ class RemoteResource : public Service {
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?
+			@param final_transfer If true, request final file transfer before vacating
+			       (used by condor_rm -transfer)
 			@return true on success, false if a problem occurred.
 		*/
-	virtual bool killStarter( bool graceful = false );
+	virtual bool killStarter( bool graceful = false, bool final_transfer = false );
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 
@@ -419,6 +421,10 @@ class RemoteResource : public Service {
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
 	std::string starter_version;
+
+	// Will be nullptr if the starter version isn't at least 25.12.
+	ClassAd * getSlotAd() { return slotAd; };
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -427,6 +433,7 @@ class RemoteResource : public Service {
 			for things like i/o, etc, we have to have one copy of 
 			the ClassAd for each resource...and thus, it's here. */
 	ClassAd *jobAd;
+	ClassAd *slotAd {nullptr};
 
 		/* internal data: if you can't figure the following out.... */
 	char *machineName;

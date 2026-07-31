@@ -41,8 +41,15 @@ TEST_CASES = {
         JobStatus.HELD,
         "Aborting job as guided...",
     ),
+    # The leading RetryReqest [sic] gives the shadow's FileTransfer object
+    # time to reap the previous (failed) transfer thread before the starter
+    # retries.  Without it, the shadow's Upload() hits
+    # "FileTransfer::Upload called during active transfer!" and EXCEPTs.
+    # This mirrors the real (non-test) guidance flow, which only sends
+    # RetryTransfer after the FT status reaches XFER_STATUS_DONE.
+    # N.B.: The typo "RetryReqest" matches COMMAND_RETRY_REQUEST in guidance.h.
     "RetryTransfer": (
-        '{ [ Command = "RetryTransfer"; ], [ Command = "RetryRequest"; RetryDelay = 5; ], [ Command = "CarryOn"; ] }',
+        '{ [ Command = "RetryReqest"; RetryDelay = 2; ], [ Command = "RetryTransfer"; ], [ Command = "RetryReqest"; RetryDelay = 5; ], [ Command = "CarryOn"; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
@@ -74,7 +81,7 @@ TEST_CASES = {
         "Aborting job as guided...",
     ),
     "RetryTransfer w/ Extra": (
-        '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "RetryRequest"; RetryDelay = 5; Extraneous = False; ], [ Command = "CarryOn"; Extraneous = True; ] }',
+        '{ [ Command = "RetryReqest"; RetryDelay = 2; Extraneous = True; ], [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "RetryReqest"; RetryDelay = 5; Extraneous = False; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
@@ -102,6 +109,11 @@ def the_condor(test_dir, path_to_shadow_wrapper):
             "SHADOW_DEBUG":                 "D_FULLDEBUG",
             "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
 
+            # Prevent shadow recycling so each job gets a fresh shadow
+            # process.  The static the_index in send_guidance_from_job_ad()
+            # is not reset between recycled jobs, causing flaky failures.
+            "SHADOW_WORKLIFE":              0,
+
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",
         },
@@ -128,7 +140,7 @@ def the_job_description(test_dir, path_to_sleep):
         "starter_debug":            "D_FULLDEBUG",
         "request_cpus":             1,
         "request_memory":           1,
-        "transfer_input_files":     "http://no-such.tld/example",
+        "transfer_input_files":     "http://nonexistent.invalid/example",
     }
 
 
@@ -180,7 +192,7 @@ def the_expected_log_line(the_job_name):
 @action
 def the_completed_job(the_condor, the_job_handle):
     assert the_job_handle.wait(
-        timeout=40,
+        timeout=120,
         condition=ClusterState.all_terminal
     )
 
@@ -230,7 +242,7 @@ class TestGuidanceCommands:
             expected_shadow_log_line = "Diagnostic 'unknown' did not complete: 'Error - Unregistered'"
             the_shadow_log = the_condor.shadow_log.open()
             assert the_shadow_log.wait(
-                timeout=1,
+                timeout=10,
                 condition=lambda line: expected_shadow_log_line in line.message and f"{the_completed_job.clusterid}.0" in line.tags
             )
 

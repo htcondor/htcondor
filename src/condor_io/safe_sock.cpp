@@ -165,9 +165,10 @@ int SafeSock::end_of_message()
 					if(_longMsg->prevMsg)
 						_longMsg->prevMsg->nextMsg = _longMsg->nextMsg;
 					else {
-						int index = labs(_longMsg->msgID.ip_addr +
-						                 _longMsg->msgID.time +
-								     _longMsg->msgID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
+						size_t index = (static_cast<unsigned long>(_longMsg->msgID.ip_addr) +
+						                static_cast<unsigned long>(_longMsg->msgID.time) +
+						                static_cast<unsigned long>(_longMsg->msgID.msgNo))
+						               % SAFE_SOCK_HASH_BUCKET_SIZE;
 						_inMsgs[index] = _longMsg->nextMsg;
 					}
 					if(_longMsg->nextMsg)
@@ -545,7 +546,7 @@ int SafeSock::handle_incoming_packet()
 	int seqNo, length;
 	_condorMsgID mID;
 	void* data;
-	int index;
+	size_t index;
 	int received;
 	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
 	time_t curTime;
@@ -621,7 +622,10 @@ int SafeSock::handle_incoming_packet()
     
     /* long message */
     curTime = (unsigned long)time(NULL);
-    index = labs(mID.ip_addr + mID.time + mID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
+    index = (static_cast<unsigned long>(mID.ip_addr) +
+             static_cast<unsigned long>(mID.time) +
+             static_cast<unsigned long>(mID.msgNo))
+            % SAFE_SOCK_HASH_BUCKET_SIZE;
     tempMsg = _inMsgs[index];
     while(tempMsg != NULL && !same(tempMsg->msgID, mID)) {
         prev = tempMsg;

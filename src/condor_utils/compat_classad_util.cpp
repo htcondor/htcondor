@@ -438,20 +438,31 @@ bool ExprTreeIsJobIdConstraint(classad::ExprTree * tree, int & cluster, int & pr
 
 static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * attrs, classad::References *scopes);
 
+// get the general type of expression, so we can do intelligent things in the code based on literal vs. attr, vs expression
+ExpressionKind getExpressionKind(classad::ExprTree * expr) {
+	if ( ! expr) return ExpressionKind::None;
+	constexpr ExpressionKind fromkind[]{Attr, Tree, Tree, NestedAd, List, Tree, Literal};
+	auto kind = expr->GetKind();
+	if (kind < classad::ExprTree::NodeKind::ATTRREF_NODE) return ExpressionKind::None;
+	if (kind > classad::ExprTree::NodeKind::ERROR_LITERAL) kind = classad::ExprTree::NodeKind::ERROR_LITERAL;
+	return fromkind[kind];
+}
+
 // check to see that a classad expression is valid, and optionally return the names of the attributes that it references
-bool IsValidClassAdExpression(const char * str, classad::References * attrs /*=NULL*/, classad::References *scopes /*=NULL*/)
+ExpressionKind IsValidClassAdExpression(const char * str, classad::References * attrs /*=NULL*/, classad::References *scopes /*=NULL*/)
 {
-	if ( ! str || ! str[0]) return false;
+	if ( ! str || ! str[0]) return ExpressionKind::None;
 
 	classad::ExprTree * expr = NULL;
 	int rval = ParseClassAdRvalExpr(str, expr);
+	ExpressionKind rv = getExpressionKind(expr);
 	if (0 == rval) {
 		if (attrs) {
 			GetAttrsAndScopes(expr, attrs, scopes);
 		}
 		delete expr;
 	}
-	return rval == 0;
+	return rv;
 }
 
 // walk an ExprTree, calling a function each time a ATTRREF_NODE is found.

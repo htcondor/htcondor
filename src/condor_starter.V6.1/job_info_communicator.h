@@ -417,7 +417,7 @@ public:
 	const ClassAd * getJobAd() { return job_ad; }
 
 		/* Get optional secrets ad */
-	const ClassAd * getMachineSecetsAd() { return machine_secrets_ad; }
+	const ClassAd * getMachineSecretsAd() { return machine_secrets_ad; }
 
 	virtual bool genericRequestGuidance(
 		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
@@ -430,6 +430,11 @@ public:
 	}
 
 	virtual void runPrepareJobHook();
+
+	virtual ClassAd * getMachineAd() { return mach_ad; }
+
+	virtual bool colorSlot( const ClassAd & /* colorAd */, ClassAd & /* replyAd */ ) { return false; }
+	virtual bool announceCatalog( const ClassAd & /* catalogAd */, ClassAd & /* replyAd */ ) { return false; }
 
 protected:
 

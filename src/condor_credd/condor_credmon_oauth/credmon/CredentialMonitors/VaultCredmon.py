@@ -109,6 +109,9 @@ class VaultCredmon(AbstractCredentialMonitor):
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
         self.providers = kw.get("providers", set())
+        self.allow_special_chars = False
+        if htcondor is not None:
+            self.allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
 
     def request_url(self, url, headers, params):
         parsedurl = urllib3.util.parse_url(url)
@@ -287,26 +290,35 @@ class VaultCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip extension
 
-        if token_name in self.providers:  # any explicitly defined token can proceed
+        # When handles are enabled, extract provider prefix for matching
+        if not self.allow_special_chars:
+            if token_name.endswith("_"):
+                self.log.warning(f"Skipping credential file with trailing underscore: {access_token_path}")
+                return
+            provider_name = token_name.split("_", 1)[0]
+        else:
+            provider_name = token_name
+
+        if provider_name in self.providers:  # any explicitly defined token can proceed
             pass
         elif self.providers and "*" not in self.providers:
             return
         elif htcondor:  # at this point, providers is [], ["*"], or ["*", ...]
-            if token_name == "scitokens":
-                self.log.warning('Ignoring "%s" tokens (default local issuer token), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name)
+            if provider_name == "scitokens":
+                self.log.warning('Ignoring "%s" tokens (default local issuer token), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, provider_name)
                 return
-            elif (token_name + "_CLIENT_ID") in htcondor.param:
-                self.log.warning('Ignoring "%s" tokens (`%s_CLIENT_ID` exists), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name, token_name)
+            elif (provider_name + "_CLIENT_ID") in htcondor.param:
+                self.log.warning('Ignoring "%s" tokens (`%s_CLIENT_ID` exists), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, provider_name, provider_name)
                 return
             elif (
-                token_name == htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME") or
-                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", "")) or
-                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
-                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
+                provider_name == htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME") or
+                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", "")) or
+                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
+                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
                 ):
                 self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name)
                 return
-        elif token_name == 'scitokens':
+        elif provider_name == 'scitokens':
             self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name)
             return
 

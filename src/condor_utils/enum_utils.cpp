@@ -103,6 +103,7 @@ const struct Translation JobActionTranslation[] = {
 	{ "ClearDirtyAttrs", JA_CLEAR_DIRTY_JOB_ATTRS },
 	{ "Suspend", JA_SUSPEND_JOBS },
 	{ "Continue", JA_CONTINUE_JOBS },
+	{ "TransferAndRemove", JA_TRANSFER_AND_REMOVE_JOBS },
 	{ "NULL", 0 }
 };
 

@@ -2,10 +2,10 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>{% block title %}HTCondorView{% endblock title %}</title>
+    <title>{% block title %} {{ site_title }}  {% endblock title %}</title>
     <base href="{{ base }}">
     {% block favicon %}
-        <link rel="icon" type="image/png" href="static/favicon.png">
+        <link rel="icon" type="image/png" href="{{ favicon_url }}">
     {% endblock favicon %}
 
     {% block stylesheets %}
@@ -34,7 +34,7 @@
         <script src="static/htcondorview.js?version=13"></script>
         <script src="https://www.gstatic.com/charts/loader.js"></script>
         <script>
-            google.charts.load('current', {packages: ['corechart','table','treemap','annotatedtimeline']});
+            google.charts.load('52', {packages: ['corechart','table','treemap','annotatedtimeline']});
             google.charts.setOnLoadCallback(googleChartsLoaded);
         </script>
 		<script>
@@ -75,7 +75,9 @@
 
     {% endblock js %}
 
-    {% block style %}{% endblock style %}
+    
+    {% block style %}
+    {% endblock style %}
 
     {% block head %}{% endblock head %}
     
@@ -83,7 +85,7 @@
 <body>
     <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
 			<div class="navbar-logo">
-                <a href="{{url_for('landing.ce_user_landing_page')}}"><img width="145px" src="static/navbar_logo.svg"></a>
+                <a href="{{url_for('landing.ce_user_landing_page')}}"><img height="26px" src="{{ navbar_logo_url }}"></a>
 			</div>
 		
 			<div class="navbar-brand abs container">

@@ -1,14 +1,13 @@
 Troubleshooting HTCondor Jobs
 =============================
 
-How To Debug a Held Jobs
-------------------------
+How To Debug a Held Job
+-----------------------
 
 When HTCondor cannot successfully run a job, heuristics decide whether the
-failure was a problem with the job itself, or with the system. If the
-reason was a problem with the job that might repeat, should HTCondor
-attempt to re-run the job, then HTCondor will "hold" the job, so that it
-will not be automatically re-run.  You can see these held jobs by running
+failure was a problem with the job itself, or with the system. If the problem
+is with the job and would likely repeat on a re-run, HTCondor will "hold" the
+job, so that it will not be automatically re-run.  You can see these held jobs by running
 condor_q -hold.  A held job is a signal from the system to the user that
 some kind of manual intervention should be taken to fix the problem.
 
@@ -141,8 +140,8 @@ However, if you see repeated entries like
      ...
 
 Then this flapping is the problem, and you'll need to figure out why.  Perhaps a
-*condor_submit -i* interactive login, and trying to start the job by hand is
-useful, maybe you'll need to ask a system administrator.
+*condor_submit -i* interactive login and trying to start the job by hand will be
+useful; or maybe you'll need to ask a system administrator.
 
 Jobs that don't match any Execution Point
 '''''''''''''''''''''''''''''''''''''''''
@@ -154,7 +153,7 @@ jobs to set certain custom attributes to identify them, or for accounting.
 HTCondor has a tool we call better-analyze that simulates the matching of slots
 to jobs.  It isn't perfect, as it doesn't have full knowledge of the system,
 but it is easy to run, and can help to quickly narrow down this kind of
-problems.
+problem.
 
 .. code-block:: console
 
@@ -210,7 +209,7 @@ Not enough priority
 '''''''''''''''''''
 
 Another reason your job isn't running is that other jobs of yours are running,
-but your priority isn't good enough to allow any more of your jobs running.
+but your priority isn't good enough to allow any more of your jobs to run.
 If this is a problem, the HTCondor *condor_schedd* will run your jobs in
 the order specified by the Job_Priority submit command.  You could 
 give your more important jobs a higher job priority.  The command

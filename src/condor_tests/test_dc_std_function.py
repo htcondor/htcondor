@@ -31,7 +31,6 @@ def the_condor(test_dir, the_attr, the_value):
             "TEST_DC_STD_FUNCTIOND_ARGS":   f"{the_attr} {the_value}",
             # Ornithology needs this, for some reason.
             "TEST_DC_STD_FUNCTIOND_LOG":    f"$(LOG)/TestDcStdFunctionLog",
-            "DC_DAEMON_LIST":               "+ TEST_DC_STD_FUNCTIOND",
         },
     ) as condor:
         yield condor

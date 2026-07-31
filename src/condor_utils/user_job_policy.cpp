@@ -274,7 +274,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 			// uses ATTR_JOB_START_DATE to determine duration, but using
 			// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
 			if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
-				if( time(nullptr) - birthday >= allowedJobDuration ) {
+				if( (time(nullptr) - birthday) >= allowedJobDuration ) {
 					m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
 					m_fire_source = FS_JobDuration;
 					formatstr(m_fire_reason, "The job exceeded allowed job duration of %s", format_time_short(allowedJobDuration));
@@ -292,7 +292,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 		if (ad.LookupInteger(ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration) &&
 			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting) &&
 			ad.LookupInteger(ATTR_SHADOW_BIRTHDATE, birthday) &&
-			beganExecuting > birthday) {
+			beganExecuting >= birthday) {
 
 			// We use TransferOutFinished because the shadow only sets
 			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.

@@ -31,6 +31,8 @@
 #include <generic_stats.h>
 #include <vector>
 
+#include "transfer_proc.h"
+
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
 
@@ -530,6 +532,7 @@ protected:
 	//char entry_type (defined in JobQueueBase)
 	char universe{0};      // this is in sync with ATTR_JOB_UNIVERSE
 	char status{0};        // this is in sync with committed job status and used when tracking job counts by state
+	bool parallel{false};  // parallel/mpi universe or ATTR_WANT_PARALLEL_SCHEDULING
 public:
 	JobRunnableState run{JobRunnableState::Unset};
 	int dirty_flags{0};	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
@@ -556,11 +559,11 @@ public:
 
 	int  Universe() const { return universe; }
 	int  Status() const { return status; }
+	bool UseParallelScheduler() const { return parallel; } // true if parallel/mpi or ATTR_WANT_PARALLEL_SCHEDULING
 	unsigned int  Jobset() const { return set_id < 0 ? 0 : set_id; }
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
-	bool IsOCUClaimer() const; // True if this job holds the ocu claim. It is not a real job
 	void DirtyNoopAttr() { run = JobRunnableState::DirtyNoop; }
 #if 0
 	// FUTURE:
@@ -588,6 +591,7 @@ protected:
 	int num_idle{0};
 	int num_running{0};
 	int num_held{0};
+	int num_blocked{0}; // JOB_STATUS_BLOCKED or JOB_STATUS_PREPARING
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
@@ -837,6 +841,7 @@ public:
 	ConstructClassAdLogTableEntry(class Scheduler * _schedd) : schedd(_schedd) {}
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
 	virtual void Delete(ClassAd* &val) const;
+	virtual LogRecord * NewLogRec(int optype) const;
 	class Scheduler* schedd = nullptr;
 };
 
@@ -987,7 +992,7 @@ enum class runnable_reason_code : int {
 	IsNoopJob,
 	NotIdle,
 	UniverseNotInService,
-	IsOCUClaimer, // job is an OCU claimer, not a real job
+//	IsOCUClaimer,    // job is an OCU claimer, not a real job (obsolete)
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,

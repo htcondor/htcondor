@@ -84,7 +84,7 @@ ScriptProc::StartJob()
 		// path to the binary, and don't try to chmod it.
 	std::string exe_path = "";
 	if( tmp != NULL && !fullpath( tmp ) ) {
-		exe_path += starter->GetWorkingDir(0);
+		exe_path += starter->GetWorkingDir(WD::OUTER);
 		exe_path += DIR_DELIM_CHAR;
 	}
 

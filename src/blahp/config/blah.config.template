@@ -30,6 +30,13 @@ blah_max_threaded_cmds=50
 #head and worker nodes.
 blah_shared_directories=/
 
+#Should the job be run in the Iwd specified at submit time? If set to
+#'no', then a temporary subdirectory is created to run the job and all
+#job files are copied/moved to/from this temporary directory.
+#Running in the Iwd requires that all directories with job files are
+#shared (i.e. blah_shared_directories=/).
+blah_run_in_workdir=yes
+
 #By default the job temporary work directory is created as a subdirectory
 #of wherever the batch system is configured to land the job. 
 #This variable changes the location where the work directory is created.

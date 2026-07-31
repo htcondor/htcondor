@@ -108,3 +108,24 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 				action );
 	}
 }
+
+
+void
+ShadowUserPolicy::checkAtExit( void ) {
+	if( job_ad != NULL ) { BaseUserPolicy::checkAtExit(); }
+}
+
+void
+ShadowUserPolicy::checkPeriodicSoon() {
+	if( job_ad != NULL ) { BaseUserPolicy::checkPeriodicSoon(); }
+}
+
+void
+ShadowUserPolicy::startTimer( void ) {
+	if( job_ad != NULL ) { BaseUserPolicy::startTimer(); }
+}
+
+void
+ShadowUserPolicy::checkPeriodic( int timerID ) {
+	if( job_ad != NULL ) { BaseUserPolicy::checkPeriodic(timerID); }
+}

@@ -293,6 +293,11 @@ static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 static char jid[] = "$(ClusterId).$(ProcId)";
 static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
+// a convenience so you can use $(JobListId) in your submit description
+static char jid_cluster[] = "$(ClusterId)";
+static condor_params::string_value JobListIdMacroDef = { jid_cluster, 0 };
+
+
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
 	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
@@ -348,6 +353,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
 	{ "JobId",     &JobIdMacroDef },
+	{ "JobListId", &JobListIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
@@ -1403,7 +1409,7 @@ int SubmitHash::SetJavaVMArgs()
 }
 
 
-int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
+int SubmitHash::check_open(_submit_file_role role,  const std::string &name, int flags )
 {
 	std::string strPathname;
 
@@ -1413,19 +1419,18 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 	if ( JobDisableFileChecks ) return 0;
 
 	/* No need to check for existence of the Null file. */
-	if( strcmp(name, NULL_FILE) == MATCH ) {
+	if( name == NULL_FILE ) {
 		return 0;
 	}
 
-	if ( IsUrl( name ) || strstr(name, "$$(") ) {
+	if ( IsUrl( name.c_str() ) || name.find("$$(") != std::string::npos ) {
 		return 0;
 	}
 
-	strPathname = full_path(name);
+	strPathname = full_path(name.c_str());
 
 	// is the last character a path separator?
-	int namelen = (int)strlen(name);
-	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+	bool trailing_slash = !name.empty() && IS_ANY_DIR_DELIM_CHAR(name.back());
 
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
@@ -1518,7 +1523,7 @@ int SubmitHash::CheckStdFile(
 		}
 
 		if (transfer_it && ! JobDisableFileChecks) {
-			check_open(role, file.c_str(), access);
+			check_open(role, file, access);
 			RETURN_IF_ABORT();
 		}
 	}
@@ -4846,6 +4851,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserNotes
 	{SUBMIT_KEY_UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_NotesAttrsCommand, ATTR_SUBMIT_EVENT_NOTES_ATTRS, SimpleSubmitKeyword::f_as_string},
 	// formerly SetStackSize
 	{SUBMIT_KEY_StackSize, ATTR_STACK_SIZE, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJarFiles
@@ -5417,6 +5423,12 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
 				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
+			} else {
+				// check for retry_request_disk
+				auto_free_ptr rrd(submit_param(SUBMIT_KEY_RetryRequestDisk));
+				if (rrd) {
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, rrd);
+				}
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
@@ -6017,7 +6029,14 @@ int SubmitHash::SetRequirements()
 		if (expr) {
 			double disk = 0;
 			if ( ! ExprTreeIsLiteralNumber(expr, disk) || (disk > 0.0)) {
-				answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				if( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+					// Sufficiently recent versions of the starter will adjust
+					// RequestDisk to reflect common files usage, so the job
+					// shouldn't try to enforce WithinResourceLimits.
+					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+				} else {
+					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				}
 			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
@@ -6649,9 +6668,14 @@ int SubmitHash::SetAccountingGroup()
 int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
-	std::string tokens;
+	classad::References tokens;
 	if (NeedsOAuthServices(false, tokens)) {
-		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
+		std::string tokens_str;
+		for (const auto& name: tokens) {
+			if (!tokens_str.empty()) tokens_str += ',';
+			tokens_str += name;
+		}
+		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens_str.c_str());
 	}
 
 	return 0;
@@ -6982,17 +7006,32 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		} else {
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
-			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			// To avoid colliding inside a DAG when container images are
+			// common by default, make the implicit catalog name depend on
+			// the container image name.
+			std::string catalogName;
+			std::string baseName = condor_basename(container_image.ptr());
+			if( baseName.empty() ) {
+				baseName = condor_dirname(container_image.ptr());
+			}
+			cleanStringForUseAsAttr( baseName, '_', false );
+			formatstr( catalogName, "container_%s", baseName.c_str() );
+
+			std::string attributeName;
+			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
+			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "_x_common_input_catalogs", xcip );
+			// if the attribute is absent, xcip stays empty (handled below)
+			std::ignore = job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
-			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+			if( xcip.find( catalogName ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
-				xcip += "condor_container_image";
-				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+				xcip += catalogName;
+				AssignJobString( ATTR_COMMON_INPUT_CATALOGS, xcip.c_str() );
 			}
 		}
 
@@ -7030,7 +7069,7 @@ int SubmitHash::process_input_file_list(std::vector<std::string>& input_list, lo
 	for (auto& tmp: input_list) {
 		count++;
 		check_and_universalize_path(tmp);
-		check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+		check_open(SFR_INPUT, tmp, O_RDONLY);
 		// get file size, but only if the caller requests it.
 		// in practice, we will check the sizes of files here in submit
 		// but not when doing late materialization
@@ -7396,7 +7435,7 @@ int SubmitHash::SetTransferFiles()
 		if (job->LookupString(ATTR_JOB_CMD, tmp) && tmp != "java") {
 			if ( ! contains(input_file_list, tmp)) {
 				input_file_list.emplace_back(tmp);
-				check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, tmp, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
 				}
@@ -7409,7 +7448,7 @@ int SubmitHash::SetTransferFiles()
 				filepath = file;
 				check_and_universalize_path(filepath);
 				input_file_list.emplace_back(filepath);
-				check_open(SFR_INPUT, filepath.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, filepath, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(filepath.c_str());
 				}
@@ -7773,13 +7812,10 @@ int SubmitHash::FixupTransferInputFiles()
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
 	bool add_local,	// in: Add local issuer/client services mentioned in configuration
-	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
-	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
-	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
+	classad::References & service_names)   // out: set of services names for OAuthServicesNeeded job attribute
+	const
 {
-	if (request_ads) { request_ads->clear(); }
-	if (ads_error) { ads_error->clear(); }
-	services.clear();
+	service_names.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
 	if (tokens_needed.empty() && !add_local) {
@@ -7794,10 +7830,6 @@ bool SubmitHash::NeedsOAuthServices(
 	for (auto name = sti.first(); name != NULL; name = sti.next()) {
 		enabled_services.insert(name);
 	}
-
-	// this will be populated with the fully qualifed service names
-	// that have been enabled, these names will include the handle suffix
-	classad::References service_names;
 
 	// scan the submit keys for things that match the form
 	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
@@ -7863,37 +7895,32 @@ bool SubmitHash::NeedsOAuthServices(
 	// service names mentioned in our configuration.
 	if (add_local) {
 		std::string names;
-		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
-			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
-		}
-		for (const auto& name: StringTokenIterator(names)) {
-			service_names.insert(name);
-		}
-		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		if (param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES")) {
 			for (const auto& name: StringTokenIterator(names)) {
 				service_names.insert(name);
+			}
+		} else {
+			if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+				param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+			}
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+			if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+				for (const auto& name: StringTokenIterator(names)) {
+					service_names.insert(name);
+				}
 			}
 		}
 	}
 
-	// return the string that we will use for the OAuthServicesNeeded job attribute
-	for (auto name = service_names.begin(); name != service_names.end(); ++name){
-		if (!services.empty()) services += ",";
-		services += *name;
-	}
-
-	// at this point, service_names has the list fully qualified service names, including the handle suffix
-	// now we need to build services ads for these
-	if (request_ads) {
-		build_oauth_service_ads(service_names, *request_ads, *ads_error);
-	}
 	return !service_names.empty();
 }
 
 // fill out token request ads for the needed oauth services
 // returns -1 and fills out error if the SubmitHash is missing a required field
 // returns 0 on success
-int SubmitHash::build_oauth_service_ads (
+bool SubmitHash::build_oauth_service_ads (
 	classad::References & unique_names,
 	std::vector<ClassAd> & requests,
 	std::string & error) const
@@ -7938,7 +7965,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_SCOPES", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7958,7 +7985,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_AUDIENCE", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7978,7 +8005,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_OPTIONS", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -8001,7 +8028,7 @@ int SubmitHash::build_oauth_service_ads (
 		// request_ad->Assign("Username", "<username>");
 	}
 
-	return 0;
+	return true;
 }
 
 
@@ -8030,6 +8057,8 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	// Force Year,Month,Day, etc to be stored in the submit hash
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {
@@ -8160,7 +8189,14 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	}
 	
 	/* Insert the version into the ClassAd */
-	baseJob.Assign( ATTR_VERSION, CondorVersion() );
+	const char *schedd_version = getScheddVersion();
+	
+	// Schedd version is "" for dry-run
+	if (schedd_version && *schedd_version) {
+		baseJob.Assign( ATTR_VERSION, getScheddVersion());
+	}
+
+	baseJob.Assign( ATTR_SUBMIT_VERSION, CondorVersion() );
 	baseJob.Assign( ATTR_PLATFORM, CondorPlatform() );
 #endif
 
@@ -8461,7 +8497,8 @@ bool SubmitHash::is_dag_command(const char * line) {
 	};
 
 	StringTokenIterator l(line, " \t");
-	return dag_commands.contains(l.first());
+	const char * first = l.first();
+	return first && dag_commands.contains(first);
 }
 
 
@@ -9875,7 +9912,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 bool
 credd_has_tokens(
-	const std::string & token_names,
+	const classad::References & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
 	Daemon* credd,
@@ -9886,7 +9923,12 @@ credd_has_tokens(
 
 	if (IsDebugLevel(D_SECURITY)) {
 		char *myname = my_username();
-		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", token_names.c_str(), myname);
+		std::string creds_str;
+		for (const auto& name: token_names) {
+			if (!creds_str.empty()) creds_str += ',';
+			creds_str += name;
+		}
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", creds_str.c_str(), myname);
 		free(myname);
 	}
 
@@ -9898,7 +9940,7 @@ credd_has_tokens(
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
 		size_t i = 0;
-		for (const auto& name: StringTokenIterator(token_names)) {
+		for (const auto& name: token_names) {
 			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, token_ads[i], "\t"));
 			buf.clear();
 			i++;
@@ -9923,16 +9965,16 @@ credd_has_tokens(
 		// do_check_oauth_creds will also dprintf the same(ish) messages
 		switch (rv) {
 		case -1:
-			formatstr( error_string, "CRED: invalid request to credd!\n");
+			formatstr( error_string, "CRED: invalid request to credd!");
 			break;
 		case -2: // could not locate
-			formatstr( error_string, "CRED: locate(credd) failed!\n");
+			formatstr( error_string, "CRED: locate(credd) failed!");
 			break;
 		case -3: // start command failed
-			formatstr( error_string, "CRED: startCommand to CredD failed!\n");
+			formatstr( error_string, "CRED: startCommand to CredD failed!");
 			break;
 		case -4: // communication failure (timeout of protocol mismatch)
-			formatstr( error_string, "CRED: communication failure!\n");
+			formatstr( error_string, "CRED: communication failure!");
 			break;
 		}
 
@@ -9943,7 +9985,7 @@ credd_has_tokens(
 }
 
 
-int
+bool
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
@@ -9952,17 +9994,50 @@ process_job_credentials(
 	std::string & URL,
 	std::string & error_string
 ) {
-	std::string token_names;
+	classad::References token_names;
 	std::vector<ClassAd> token_ads;
 	CredSorter sorter;
 
 	error_string.clear();
 
 	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+	bool always_check_credd = false;
 
-	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
-		if ( !error_string.empty()) {
-			return 1;
+	Daemon credd(DT_CREDD);
+
+	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+	// in either case we want to initialize our credd object from the passed-in one if we can.
+	if (schedd_or_credd) {
+		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+		if (schedd) {
+			std::string credd_address;
+			if (schedd->getCreddAddress(credd_address)) {
+				// when we init the credd from the schedd's locationAd,
+				// it will pick up the CreddIpAddr in the locationAd and
+				// use it to set the addr field of the daemon object
+				// And it will use the name, machine, and version of the schedd
+				// TODO: does the location ad need to know the name of the credd?
+				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+			} else {
+				if (schedd->name() && ! schedd->isLocal()) {
+					// this is a Hail Mary, if the address of the credd is not known,
+					// and the schedd is remote we hope that the credd name and the schedd name are the same.
+					// if this is a local schedd, we are better off using a default credd.
+					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+				}
+			}
+			ClassAd* schedd_ad = schedd->locationAd();
+			if (schedd_ad && schedd_ad->LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, always_check_credd)) {
+				add_local = false;
+			}
+		} else if (schedd_or_credd->type() == DT_CREDD) {
+			credd = *schedd_or_credd;
+		}
+	}
+
+	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
+		if (!submit_hash.build_oauth_service_ads(token_names, token_ads, error_string)) {
+			return false;
 		}
 	}
 
@@ -10016,44 +10091,16 @@ process_job_credentials(
 		if (call_storer) {
 			int rc = my_system(storer_args);
 			if (rc < 0) {
-				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
-				return 1;
+				formatstr(error_string, "Failed to run '%s': errno %d (%s)", storer.c_str(), errno, strerror(errno));
+				return false;
 			} else if (rc > 0) {
-				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
-				return 1;
+				formatstr(error_string, "'%s' failed: exit code %d", storer.c_str(), rc);
+				return false;
 			}
 		}
 	}
 
-	Daemon credd(DT_CREDD);
-
-	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
-	// in either case we want to initialize our credd object from the passed-in one if we can.
-	if (schedd_or_credd) {
-		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
-		if (schedd) {
-			std::string credd_address;
-			if (schedd->getCreddAddress(credd_address)) {
-				// when we init the credd from the schedd's locationAd,
-				// it will pick up the CreddIpAddr in the locationAd and
-				// use it to set the addr field of the daemon object
-				// And it will use the name, machine, and version of the schedd
-				// TODO: does the location ad need to know the name of the credd?
-				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
-			} else {
-				if (schedd->name() && ! schedd->isLocal()) {
-					// this is a Hail Mary, if the address of the credd is not known,
-					// and the schedd is remote we hope that the credd name and the schedd name are the same.
-					// if this is a local schedd, we are better off using a default credd.
-					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
-				}
-			}
-		} else if (schedd_or_credd->type() == DT_CREDD) {
-			credd = *schedd_or_credd;
-		}
-	}
-
-	if (!token_ads.empty()) {
+	if (!token_ads.empty() || always_check_credd) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
 		// The credd can send one of three responses:
@@ -10063,22 +10110,22 @@ process_job_credentials(
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
 		if (!credd.locate()) {
-			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-			return 1;
+			formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
+			return false;
 		}
 		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
-					return 0;
+					return true;
 				} else {
-					formatstr(error_string, "OAuth error: %s\n\n", URL.c_str() );
-					return 1;
+					formatstr(error_string, "OAuth error: %s", URL.c_str() );
+					return false;
 				}
 			}
-			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", token_names.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything\n");
 
 		} else if(! error_string.empty()) {
-			return 1;
+			return false;
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
@@ -10089,7 +10136,7 @@ process_job_credentials(
 	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
 		// nothing to do
-		return 0;
+		return true;
 	}
 
 	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
@@ -10108,8 +10155,8 @@ process_job_credentials(
 		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
-			formatstr( error_string, "ERROR: (%i) invoking %s\n", errno, producer.c_str() );
-			return 1;
+			formatstr( error_string, "Failed to launch %s: %s", producer.c_str(), strerror(errno) );
+			return false;
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
 			ASSERT(uber_ticket);
@@ -10118,8 +10165,8 @@ process_job_credentials(
 			my_pclose(uber_file);
 
 			if(bytes_read == 0) {
-				formatstr( error_string, "ERROR: failed to read any data from %s!\n", producer.c_str() );
-				return 1;
+				formatstr( error_string, "Failed to read any data from %s!", producer.c_str() );
+				return false;
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
@@ -10138,17 +10185,17 @@ process_job_credentials(
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
-						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
-						return 1;
+						formatstr( error_string, "store_cred of Kerberos credential failed - %s", err ? err : "" );
+						return false;
 					}
 				} else {
-					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
+					formatstr( error_string, "Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", credd.version());
-					return 1;
+					return false;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-				return 1;
+				formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
+				return false;
 			}
 		}
 	}  // end of block to run a credential producer
@@ -10162,7 +10209,7 @@ process_job_credentials(
 	// it is also available to the submit file parser itself (i.e. can be used in If statements)
 	submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 
-	return 0;
+	return true;
 }
 
 

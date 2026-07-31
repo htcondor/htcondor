@@ -82,6 +82,8 @@
 #define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
 #define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
 #define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
+#define SUBMIT_KEY_RetryRequestDisk "retry_request_disk"
+
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
@@ -217,6 +219,7 @@
 #define SUBMIT_KEY_DAGManJobId "dagman_job_id"
 #define SUBMIT_KEY_LogNotesCommand "submit_event_notes"
 #define SUBMIT_KEY_UserNotesCommand "submit_event_user_notes"
+#define SUBMIT_KEY_NotesAttrsCommand "submit_event_notes_attrs"
 #define SUBMIT_KEY_JarFiles "jar_files"
 #define SUBMIT_KEY_JavaVMArgs "java_vm_args"
 #define SUBMIT_KEY_JavaVMArguments1 "java_vm_arguments"
@@ -635,7 +638,7 @@ public:
 	int  process_q_line(MACRO_SOURCE & source, char* line, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv);
 
 	void warn_unused(FILE* out, const char *app=NULL);
-	int check_open( _submit_file_role role, const char *name, int flags );
+	int check_open( _submit_file_role role, const std::string &name, int flags );
 
 	// stuff value into the submit's hashtable and mark 'name' as a used param
 	// this function is intended for use during queue iteration to stuff changing values like $(Cluster) and $(Process)
@@ -734,7 +737,7 @@ public:
 	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
 	// if a request_ads collection is provided, it will be populated with OAuth service ads
 	// and ads_error be set to describe any required but missing attributes in the request_ads
-	bool NeedsOAuthServices(bool add_local, std::string & services, std::vector<ClassAd> * request_ads=NULL, std::string * ads_error=NULL) const;
+	bool NeedsOAuthServices(bool add_local, classad::References & service_names) const;
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
@@ -765,6 +768,8 @@ public:
 	// Note: SubmitHash does not own this pointer
 	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
 	void detachTransferMap() { protectedUrlMap = nullptr; }
+
+	bool build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
 
 protected:
 	MACRO_SET SubmitMacroSet;
@@ -922,7 +927,6 @@ protected:
 
 	// private helper functions
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
-	int build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions);
 	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
@@ -1229,7 +1233,7 @@ const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
 
 #define PJC_NOT_DRY_RUN 0
 
-int process_job_credentials(
+bool process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,

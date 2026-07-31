@@ -257,20 +257,19 @@ createConfigTarball(	const char * configDir,
 
 	std::string scheddName;
 	CondorQuery q(SCHEDD_AD);
-	ClassAdList l;
+	std::vector<ClassAd> l;
 	auto r = q.fetchAds( l, collectorHost.c_str() );
 	if( r != Q_OK ) {
 		formatstr( tarballError, "unable to get schedd's ad" );
 		free(cwd);
 		return false;
 	}
-	if( l.Length() != 1 ) {
+	if( l.size() != 1 ) {
 		formatstr( tarballError, "Found more than one scheduler in the AP collector" );
 		free(cwd);
 		return false;
 	}
-	l.Rewind();
-	ClassAd * c = l.Next();
+	ClassAd * c = &l[0];
 	if(! c->LookupString( ATTR_NAME, scheddName )) {
 		formatstr( tarballError, "Scheduler ad in AP collector did not contain the scheduler's name." );
 		free(cwd);

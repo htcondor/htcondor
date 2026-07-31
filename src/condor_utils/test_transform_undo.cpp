@@ -885,7 +885,6 @@ int main( int /*argc*/, const char ** argv) {
 	const char * pcolon;
 	bool other_arg = false;
 	const char * jobfile = nullptr;
-	const char * jobad_string = nullptr;
 
 	// if we don't init dprintf, calls to it will be will be malloc'ed and stored
 	// for later. this form of init will match the fewest possible issues.
@@ -947,18 +946,6 @@ int main( int /*argc*/, const char ** argv) {
 				fprintf(stderr, "ERROR: Could not parse job file '%s' : %s\n", jobfile, "");
 				return 1;
 			}
-		}
-	} else if (jobad_string) {
-
-		// parse from string
-		std::string_view instr(jobad_string);
-		while ( ! instr.empty() && isspace(instr.front())) {
-			instr.remove_prefix(1);
-		}
-		lexsrc = new CompatStringViewLexerSource(instr,0);
-		if ( ! ccfi.begin(lexsrc, true)) {
-			fprintf(stderr, "ERROR: Could not parse jobad string\n");
-			return 1;
 		}
 	}
 

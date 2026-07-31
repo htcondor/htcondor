@@ -1,0 +1,28 @@
+# This example demonstrates how to submit a GPU job to HTCondor.
+# The job requests a single GPU and prints the GPU assignment
+# visible to the job via the CUDA_VISIBLE_DEVICES environment variable.
+#
+# No physical GPU is required to understand this example.
+
+# Simple example of submitting a GPU job to HTCondor.
+# This submit file requests one GPU and demonstrates
+# how GPU assignments are exposed to the job environment.
+
+universe = vanilla
+
+# Script executed on the execute node
+executable = gpu_check.sh
+
+# Request one CPU core and one GPU device
+request_cpus = 1
+request_gpus = 1
+
+# Memory requirement for the job
+request_memory = 2GB
+
+# Standard HTCondor log, output, and error files
+output = gpu.out
+error  = gpu.err
+log    = gpu.log
+
+queue

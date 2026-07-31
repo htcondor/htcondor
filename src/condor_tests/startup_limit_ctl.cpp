@@ -36,9 +36,10 @@ void usage()
 
 bool parse_int(const char *s, int &out)
 {
+    if (!s || *s == '\0') { return false; }
     char *end = nullptr;
     long v = strtol(s, &end, 10);
-    if (!s || *s == '\0' || (end && *end)) { return false; }
+    if (end && *end) { return false; }
     out = (int)v;
     return true;
 }
@@ -46,7 +47,7 @@ bool parse_int(const char *s, int &out)
 ReliSock *open_command_sock(DaemonHack &schedd, int cmd, CondorError &err)
 {
     Sock *sock = nullptr;
-    StartCommandResult res = schedd.startCommand(cmd, Stream::reli_sock, &sock, 20, &err, 0, nullptr, nullptr, false);
+    StartCommandResult res = schedd.startCommand(cmd, Stream::reli_sock, &sock, 20, &err, 0);
     if (res != StartCommandSucceeded) { return nullptr; }
     ReliSock *rsock = dynamic_cast<ReliSock *>(sock);
     if (!rsock) {

@@ -88,10 +88,12 @@ bool TrackTotals::haveTotals()
     	case PP_SLOTS_RUN:
 		case PP_SLOTS_STATE:
     	case PP_SLOTS_COD:
-    	case PP_SCHEDD_NORMAL:
+		case PP_SLOTS_HEALTH:
+		case PP_SCHEDD_NORMAL:
     	case PP_SUBMITTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
 		case PP_STARTDAEMON:
+		case PP_STARTD_HEALTH:
 			break;
 
 		default:
@@ -156,7 +158,7 @@ void StartDaemonTotal::addProjection(classad::References & attrs)
 		ATTR_TOTAL_CPUS, ATTR_TOTAL_MEMORY, /*"TotalDisk",*/ "TotalGPUs", 
 		"TotalInUseCpus", "TotalInUseMemory", "TotalInUseDisk", "TotalInUseGPUs",
 		"TotalBackfillInUseCpus", "TotalBackfillInUseMemory", "TotalBackfillInUseDisk", "TotalBackfillInUseGPUs",
-		ATTR_ARCH, ATTR_OPSYS, ATTR_OPSYS_AND_VER, ATTR_CONDOR_VERSION,	// for key
+		ATTR_ARCH, ATTR_OPSYS, ATTR_OPSYS_AND_VER,  ATTR_OPSYS_SHORT_NAME, ATTR_CONDOR_VERSION,	// for key
 	};
 	for (auto key : keys) attrs.insert(key);
 }
@@ -226,6 +228,54 @@ displayInfo (FILE *file, int)
 		100 * mem_usage/machines, 100 * bk_mem_usage/machines
 		);
 }
+
+// HEALTH
+
+void StartdHealthTotal::addProjection(classad::References & attrs)
+{
+	static const char * const keys[] = {
+		ATTR_HEALTHY, ATTR_HEALTH_EXPRS,
+		ATTR_ARCH, ATTR_OPSYS, ATTR_OPSYS_AND_VER, ATTR_OPSYS_SHORT_NAME, ATTR_CONDOR_VERSION,	// for key
+	};
+	for (auto key : keys) attrs.insert(key);
+}
+
+int StartdHealthTotal::
+update (ClassAd *ad, int /*options*/)
+{
+	classad::Value health;
+	bool has_health = false;
+	bool is_healthy = false;
+	bool is_broken = ad->Lookup(ATTR_BROKEN_REASONS) || ad->Lookup(ATTR_SLOT_BROKEN_REASON);
+	has_health = ad->EvaluateAttr(ATTR_HEALTHY, health) && health.IsBooleanValueEquiv(is_healthy);
+	if (is_broken) {
+		broken += 1;
+	} else if ( ! has_health) {
+		unsupported += 1;
+	} else if (is_healthy) {
+		healthy += 1;
+	} else {
+		unhealthy += 1;
+	}
+	return 1;
+}
+
+void StartdHealthTotal::
+displayHeader(FILE *file)
+{
+	fprintf (file, "%9.9s %9.9s %9.9s %9.9s\n",
+		"Healthy", "Unhealthy", "Broken", "Unknown");
+}
+
+
+void StartdHealthTotal::
+displayInfo (FILE *file, int)
+{
+	fprintf (file, "%9d %9d %9d %9d\n",
+		healthy, unhealthy, broken, unsupported
+	);
+}
+
 
 void StartdNormalTotal::addProjection(classad::References & attrs)
 {
@@ -781,6 +831,8 @@ makeTotalObject (ppOption ppo)
 		case PP_SUBMITTER_NORMAL:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 		case PP_STARTDAEMON:		ct = new StartDaemonTotal; break;
+		case PP_SLOTS_HEALTH:		ct = new StartdHealthTotal; break;
+		case PP_STARTD_HEALTH:		ct = new StartdHealthTotal; break;
 
 		default:
 			return NULL;
@@ -799,16 +851,18 @@ bool ClassTotal::makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 		case PP_SLOTS_RUN:
 		case PP_SLOTS_COD:
 		case PP_SLOTS_SERVER:
+		case PP_SLOTS_HEALTH:
 		{
-			char p1[128], p2[128];
-			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) ||
-				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
+			std::string arch, opsys;
+			if (!ad->LookupString(ATTR_ARCH, arch) ||
+				!ad->LookupString(ATTR_OPSYS, opsys))
 				return false;
-			formatstr(key, "%s/%s", p1, p2);
+			formatstr(key, "%s/%s", arch.c_str(), opsys.c_str());
 			return true;
 		}
 
 		case PP_STARTDAEMON:
+		case PP_STARTD_HEALTH:
 			return format_platform_name(key, ad);
 
 		case PP_SLOTS_STATE:

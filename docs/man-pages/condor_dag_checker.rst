@@ -13,7 +13,8 @@ Synopsis
 **condor_dag_checker** [*OPTIONS*] *DAG_File* [*DAG_File* ...]
 
 **condor_dag_checker** [**-AllowIllegalChars**] [**-UseDagDir**] [**-[No]JoinNodes**]
-[**-json** | **-Statistics**]
+[**-json** | **-Statistics**] [**-CheckExternalFiles**] [**-CheckJDL**] [**-CheckScripts**]
+[**-CheckSubDags**] [**-Strict**]
 
 Description
 -----------
@@ -28,30 +29,38 @@ Options
 
  **-AllowIllegalChars**
     Allow use of illegal characters in node names.
+ **-CheckExternalFiles**
+    Process external submit and Sub-DAG files if they exist.
+ **-CheckJDL**
+    Best effort process node submit descriptions similar to
+    :tool:`condor_submit` *-dry-run*
+ **-CheckScripts**
+    Check that node scripts exist.
+ **-CheckSubDags**
+    Best effort process Sub-DAG files.
  **-[No]JoinNodes**
     Enable/Disable use of join nodes in produced DAG. Enabled
     by default.
- **-UseDagDir**
-    Switch into the DAG file's directory prior to parsing.
  **-json**
     Print results into JSON format.
  **-Statistics**
     Print statistics about the parsed DAG.
+ **-Strict**
+    Require external files checked to exists during processing
+    or be considered an error.
+ **-UseDagDir**
+    Switch into the DAG file's directory prior to parsing.
 
 General Remarks
 ---------------
 
-This tool does not currently verify the existence files specified
-for various DAG components (i.e. scripts and node submit descriptions).
-
-This tool does not process internal DAG files specified via the
-:dag-cmd:`SUBDAG` command as they can be dynamically generated. To
-verify both the root DAG file and any SubDAG files, simply specify
-all DAG files on the command line:
-
-.. code-block:: console
-
-    $ condor_dag_checker root.dag sub-dag1.dag sub-dag2.dag sub-sub-dag.dag
+This tool by default does not check any external files that are used
+by the DAG (i.e. scripts, submit files, Sub-DAGs) because these can be
+dynamically generated during DAGMan's lifetime. Using **-CheckExternalFiles**
+will enable this tool to also process Sub-DAGs and submit files (akin to
+:tool:`condor_submit` *-dry-run*). This is best effort and only process
+the external files if they exist. Use **-Strict** to report an error if
+these external files do not exist.
 
 This tool will process files specified by the :dag-cmd:`INCLUDE` and
 :dag-cmd:`SPLICE` commands.
@@ -102,8 +111,32 @@ Example comparing DAG file with and without join nodes:
 
 .. code-block:: console
 
-    $ condor_dag_checker -stat -JoinNodes
-    $ condor_dag_checker -stat -NoJoinNodes
+    $ condor_dag_checker -stat -JoinNodes sample.dag
+    $ condor_dag_checker -stat -NoJoinNodes sample.dag
+
+Example processing Sub-DAGs best effort:
+
+.. code-block:: console
+
+    $ condor_dag_checker -CheckSubDags russian-nested.dag
+
+Example processing node submit descriptions best effort:
+
+.. code-block:: console
+
+    $ condor_dag_checker -CheckJDL sample.dag
+
+Example verifying all node scripts exist:
+
+.. code-block:: console
+
+    $ condor_dag_checker -CheckScripts sample.dag
+
+Example checking all external files for existence and validity:
+
+.. code-block:: console
+
+    $ condor_dag_checker -CheckExternalFiles -strict sample.dag
 
 See Also
 --------

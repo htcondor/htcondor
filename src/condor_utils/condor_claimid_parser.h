@@ -46,7 +46,7 @@ class ClaimIdParser {
 		m_sinful_part = "";
 		m_public_part = "";
 	}
-	char const *claimId() {
+	char const *claimId() const {
 		return m_claim_id.c_str();
 	}
 	char const *startdSinfulAddr() {
