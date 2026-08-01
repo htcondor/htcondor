@@ -7015,14 +7015,19 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			// the full path to the container image.  The could make for
 			// very long and rather ugly attribute name, so instead use
 			// (a short prefix of) the hash of that path.
-			std::string the_full_path = full_path( container_image.ptr() );
+			std::string hash_key;
+			if(! IsUrl(container_image.ptr())) {
+				hash_key = full_path( container_image.ptr() );
+			} else {
+				hash_key = container_image.ptr();
+			}
 
 			unsigned int mdLength = 0;
 			unsigned char messageDigest[EVP_MAX_MD_SIZE];
-			if(! AWSv4Impl::doSha256( the_full_path, messageDigest, & mdLength )) {
+			if(! AWSv4Impl::doSha256( hash_key, messageDigest, & mdLength )) {
 				// There's doesn't seem to be a failure path out of this
 				// function, so for now, just fail catastrophically.
-				EXCEPT( "Failed to hash full path (%s) of container image, aborting.\n", the_full_path.c_str() );
+				EXCEPT( "Failed to container image ('%s', hashed as '%s'), aborting.\n", container_image.ptr(), hash_key.c_str() );
 			}
 
 			std::string catalogName;
