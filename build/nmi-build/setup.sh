@@ -268,6 +268,10 @@ if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$
     else
         $INSTALL procps-ng
     fi
+    if [ "$ID" = 'opensuse-leap' ] && [ "$VERSION_ID" -eq 16 ]; then
+        # Install missing dependencies for apptainer
+        $INSTALL fuse2fs gocryptfs
+    fi
     if [ "$ID" != 'amzn' ] && [ "$ID" != 'sles' ]; then
         $INSTALL apptainer
     fi
