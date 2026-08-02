@@ -23,9 +23,13 @@
 #include "submit_utils.h"
 #include "condor_version.h"
 #include "my_username.h"
+#include "edge.h"
+#include "dag.hpp"
 
 #include <limits>
+#include <memory>
 #include <set>
+#include <stdexcept>
 #include <vector>
 #include <filesystem>
 #include <system_error>
@@ -95,26 +99,33 @@ void addCommandError(const BaseDagCommand* cmd, const std::string& err, std::vec
 #define FAIL_AND_RETURN(cmd, msg, errors) addCommandError(cmd, msg, errors); return;
 
 
-struct MockDag {
-	MockDag() = default;
+// Config flags shared across every MockDag in this run -- not per-scope DAG data, so
+// they live at file scope, same as `included_files` below.
+static short check_external = 0; // Check all JDL simulation for job submission
+static bool strict = false; // Check extra stuff with stricter rules e.g. JDL files exist
+static bool use_join_nodes = false;
 
-	struct Node {
-		Node(const std::string& n, const uint32_t i, DAG::CMD t) {
-			name = n;
-			num = i;
-			type = t;
-		}
+struct MockDagData; // forward declare -- needed by MockDagNode below
+struct MockDagNode; // forward declare -- needed by the alias right below
+using MockDag = Dag<MockDagData, MockDagNode>;
 
-		std::string name{};
-		std::set<uint32_t> children{};
-		uint32_t num{0};
-		DAG::CMD type{DAG::CMD::JOB};
-		bool has_parent{false};
-		bool visited{false};
-	};
+struct MockDagNode {
+	MockDagNode() = default;
+	// Explicit ctor, not just relying on C++20 parenthesized aggregate init --
+	// AddNode()'s Node<N>(id, args...) direct-initializes N via N(args...),
+	// and older toolchains (e.g. the macOS13 CI builder's Apple clang) don't
+	// support P0960 for that call shape.
+	MockDagNode(std::string n, DAG::CMD t) : name(std::move(n)), type(t) {}
+
+	std::string name;
+	DAG::CMD type{DAG::CMD::JOB};
+};
+
+struct MockDagData {
+	void SetParent(MockDag& dag) { self = std::addressof(dag); }
 
 	bool hasSplice(const std::string& name) const {
-		return std::ranges::find(splices, name, &MockDag::scope) != splices.end();
+		return std::ranges::find(splices, name, [](const MockDag& d) { return d.data.scope; }) != splices.end();
 	}
 
 	bool hasNode(const std::string& name) const {
@@ -125,9 +136,12 @@ struct MockDag {
 		return hasNode(name) || hasSplice(name);
 	}
 
+	inline bool hasFinal() const { return ! final_node.empty(); }
+	inline bool hasProvisioner() const { return ! provisioner.empty(); }
+
 	void makeDependencies(const ParentChildCommand* pc, std::vector<DagParseError>& errors) {
-		std::vector<uint32_t> parents;
-		std::vector<uint32_t> children;
+		std::vector<node_id_t> parents;
+		std::vector<node_id_t> children;
 
 		std::string missing_parents;
 		std::string missing_children;
@@ -143,27 +157,20 @@ struct MockDag {
 			if ( ! missing_parents.empty())  { err += " Parents [" + missing_parents + "]"; }
 			if ( ! missing_children.empty()) { err += " Children [" + missing_children + "]"; }
 			addCommandError(pc, err, errors);
+			return;
 		}
 
 		if (use_join_nodes && parents.size() > 1 && children.size() > 1) {
 			std::string join_node_name = "_condor_join_node" + std::to_string(++join_node_index);
-			auto& join_node = nodes.emplace_back(join_node_name, node_index++, DAG::CMD::JOB);
-			for (const auto num : parents) {
-				nodes[num - node_index_offset].children.insert(join_node.num);
-				join_node.has_parent = true;
-			}
+			node_id_t join_node = self->AddNode(join_node_name, DAG::CMD::JOB);
+
+			std::ignore = self->Connect(parents, {join_node});
 
 			parents.clear();
-			parents.push_back(join_node.num);
+			parents.push_back(join_node);
 		}
 
-		for (const auto p_num : parents) {
-			auto& parent = nodes[p_num - node_index_offset];
-			for (const auto c_num : children) {
-				parent.children.insert(c_num);
-				nodes[c_num - node_index_offset].has_parent = true;
-			}
-		}
+		std::ignore = self->Connect(parents, children);
 	}
 
 	std::string addNode(const std::string& name, DAG::CMD t) {
@@ -176,8 +183,8 @@ struct MockDag {
 			return "Provisioner node is already defined in the DAG";
 		}
 
-		auto& node = nodes.emplace_back(name, node_index++, t);
-		node_name_hash[name] = node.num;
+		node_id_t id = self->AddNode(name, t);
+		node_name_hash[name] = id;
 
 		if (t == DAG::CMD::FINAL) {
 			final_node = name;
@@ -188,19 +195,6 @@ struct MockDag {
 		return "";
 	}
 
-	void inheritSpliceNodes() {
-		for (auto& splice : splices) {
-			++num_splices += splice.num_splices;
-			for (auto& node : splice.nodes) {
-				std::string name = splice.scope + "+" + node.name;
-				node_name_hash[name] = node.num;
-				node.name = name;
-				nodes.push_back(node);
-			}
-			splice.nodes.clear();
-		}
-	}
-
 	MockDag* addSplice(const std::string& name, std::string& error) {
 		if (contains(name)) {
 			error = "Splice name " + name + " is already defined in the DAG";
@@ -208,21 +202,58 @@ struct MockDag {
 		}
 
 		auto& splice = splices.emplace_back();
-		splice.node_index_offset = node_index;
+		splice.data.scope = name;
 
 		return &splice;
 	}
 
+	// Folds every splice's own independent graph into this one: re-AddNode()s each of
+	// its nodes (name-prefixed with the splice's scope, same as production/real
+	// DAGMan splice semantics) and re-Connect()s each of its edges, translating ids
+	// through a per-splice old-id -> new-id map. This is what lets a PARENT_CHILD
+	// reference to a splice by name later resolve to that splice's boundary
+	// (leaf/root) nodes exactly as if they'd always lived directly in this DAG --
+	// unlike a SUBDAG, which stays a fully separate, independently-checked DAG (see
+	// checkSubdag()).
+	void inheritSpliceNodes() {
+		for (auto& splice : splices) {
+			num_splices += 1 + splice.data.num_splices;
+
+			std::vector<node_id_t> id_map(splice.NumNodes());
+
+			for (auto& node : splice) {
+				std::string name = splice.data.scope + "+" + node.data.name;
+				node_id_t new_id = self->AddNode(name, node.data.type);
+				node_name_hash[name] = new_id;
+				id_map[node.GetID()] = new_id;
+			}
+
+			for (auto& node : splice) {
+				std::vector<node_id_t> child_ids;
+				splice.VisitChildren(node, [&child_ids](MockDag&, Node<MockDagNode>&, Node<MockDagNode>& child) -> int {
+					child_ids.push_back(child.GetID());
+					return 0;
+				});
+
+				if ( ! child_ids.empty()) {
+					std::vector<node_id_t> new_children;
+					new_children.reserve(child_ids.size());
+					for (auto cid : child_ids) { new_children.push_back(id_map[cid]); }
+					std::ignore = self->Connect({id_map[node.GetID()]}, new_children);
+				}
+			}
+		}
+	}
+
 	void getStats(ClassAd& stats) {
 		std::map<std::string, uint32_t> node_counts;
-		size_t num_arcs = 0;
 		bool has_graph_nodes = false;
 
-		for (const auto& node : nodes) {
-			switch (node.type) {
+		for (auto& node : *self) {
+			switch (node.data.type) {
 				case DAG::CMD::JOB:
 					has_graph_nodes = true;
-					if (node.name.starts_with("_condor_join_node"))
+					if (node.data.name.starts_with("_condor_join_node"))
 						node_counts[DAG_STAT_NUM_JOIN]++;
 					else
 						node_counts[DAG_STAT_NUM_NODES]++;
@@ -242,15 +273,15 @@ struct MockDag {
 					// TODO: We should never get here!!!
 					break;
 			}
-			num_arcs += node.children.size();
 		}
 
-		stats.InsertAttr(DAG_STAT_TOTAL_NODES, (int)nodes.size());
+		stats.InsertAttr(DAG_STAT_TOTAL_NODES, (int)self->NumNodes());
 
 		for (const auto& [key, count]: node_counts) {
 			stats.InsertAttr(key, (int)count);
 		}
 
+		size_t num_arcs = self->GetEdgeTable().ArcCount();
 		if (num_arcs > 0) { stats.InsertAttr(DAG_STAT_NUM_ARCS, (int)num_arcs); }
 		if (num_splices > 0) { stats.InsertAttr(DAG_STAT_NUM_SPLICES, (int)num_splices); }
 
@@ -263,55 +294,38 @@ struct MockDag {
 		}
 
 		if (has_graph_nodes) {
-			uint32_t height = 1;
-			std::vector<uint32_t> widths;
-			std::vector<uint32_t> ancestors;
-			bool cycle = false;
-			bool found_start_nodes = false;
+			std::vector<node_id_t> ancestors;
 
-			widths.emplace_back(0);
-
-			for (auto& node : nodes) {
-				switch (node.type) {
-					case DAG::CMD::FINAL:
-					case DAG::CMD::SERVICE:
-					case DAG::CMD::PROVISIONER:
-						node.visited = true;
-						continue;
-						break;
-					default:
-						break;
-				}
-
-				if ( ! node.has_parent) {
-					found_start_nodes = true;
-					if (walkDFS(node, 0, height, widths, ancestors)) {
-						cycle = true;
-						break;
+			if (self->Cycle(&ancestors)) {
+				// Only non-special nodes count as a real traversal root -- FINAL/
+				// SERVICE/PROVISIONER can't have dependencies (considerDependency()),
+				// so they're always isolated and must not count toward "found a root".
+				bool found_start_nodes = std::ranges::any_of(*self, [](const auto& node) {
+					switch (node.data.type) {
+						case DAG::CMD::FINAL:
+						case DAG::CMD::SERVICE:
+						case DAG::CMD::PROVISIONER:
+							return false;
+						default:
+							return node.NoParents();
 					}
-				}
-			}
+				});
 
-			std::erase_if(widths, [](uint32_t n) { return n == 0; });
+				std::string not_visited;
+				std::ranges::for_each(*self, [&not_visited](const auto& node){
+					if ( ! node.WasVisited()) {
+						not_visited += (not_visited.empty() ? "" : ",") + node.data.name;
+					}
+				});
 
-			std::string not_visited;
-			std::ranges::for_each(nodes, [&not_visited](const auto& node){
-				if ( ! node.visited) {
-					not_visited += (not_visited.empty() ? "" : ",") + node.name;
-				}
-			});
-
-			if ( ! found_start_nodes || ! not_visited.empty()) { cycle = true; }
-
-			if (cycle) {
 				stats.InsertAttr(DAG_STAT_HAS_CYCLE, true);
 				std::string cycle_msg = "No initial nodes discovered";
 
 				if (found_start_nodes) {
 					if ( ! ancestors.empty()) {
 						cycle_msg.clear();
-						for (auto num : ancestors) {
-							cycle_msg += (cycle_msg.empty() ? "" : " -> ") + nodes[num - node_index_offset].name;
+						for (auto id : ancestors) {
+							cycle_msg += (cycle_msg.empty() ? "" : " -> ") + (*self)[id].data.name;
 						}
 					} else if ( ! not_visited.empty()) {
 						cycle_msg = "Failed to visit nodes " + not_visited;
@@ -319,7 +333,27 @@ struct MockDag {
 				}
 
 				stats.InsertAttr(DAG_STAT_DETECTED_CYCLE, cycle_msg);
-			} else if ( ! widths.empty()) {
+			} else {
+				uint32_t height = 1;
+				std::vector<uint32_t> widths{0};
+
+				self->Walk([&height, &widths](MockDag&, Node<MockDagNode>& node, size_t depth) {
+					switch (node.data.type) {
+						case DAG::CMD::FINAL:
+						case DAG::CMD::SERVICE:
+						case DAG::CMD::PROVISIONER:
+							return; // trivial isolated roots -- excluded from height/width stats
+						default:
+							break;
+					}
+
+					if (widths.size() <= depth) { widths.resize(depth + 1, 0); }
+					widths[depth]++;
+					height = MAX((uint32_t)depth + 1, height);
+				}, WalkOrder::DFS);
+
+				std::erase_if(widths, [](uint32_t n) { return n == 0; });
+
 				stats.InsertAttr(DAG_STAT_HEIGHT, (int)height);
 
 				uint32_t max = *(std::ranges::max_element(widths));
@@ -332,61 +366,10 @@ struct MockDag {
 				stats.AssignExpr(DAG_STAT_WIDTH_BY_DEPTH, list.c_str());
 			}
 		}
-
 	}
-
-	inline bool hasFinal() const { return ! final_node.empty(); }
-	inline bool hasProvisioner() const { return ! provisioner.empty(); }
-
-	std::map<std::string, uint32_t> node_name_hash{};
-	std::vector<Node> nodes{};
-	std::vector<MockDag> splices{};
-	std::string scope{};
-
-	std::string final_node{};
-	std::string provisioner{};
-
-	size_t num_splices{0};
-	uint32_t node_index_offset{0};
-
-	static uint32_t node_index;
-	static uint32_t join_node_index;
-	static short check_external; // Check all JDL simulation for job submission
-	static bool strict; // Check extra stuff with stricter rules e.g. JDL files exist
-	static bool use_join_nodes;
 
 private:
-	bool walkDFS(Node& node, size_t depth, uint32_t& height, std::vector<uint32_t>& widths, std::vector<uint32_t>& ancestors) {
-		if (node.visited) {
-			bool cycle = false;
-			if (std::ranges::find(ancestors, node.num) != ancestors.end()) {
-				ancestors.emplace_back(node.num);
-				cycle = true;
-			}
-			return cycle;
-		}
-
-		node.visited = true;
-
-		widths[depth]++;
-		height = MAX(depth + 1, height);
-
-		if ( ! node.children.empty()) {
-			if (widths.size() - 1 <= depth) { widths.emplace_back(0); }
-
-			ancestors.emplace_back(node.num);
-
-			for (const auto num : node.children) {
-				if (walkDFS(nodes[num - node_index_offset], depth + 1, height, widths, ancestors)) { return true; }
-			}
-
-			ancestors.pop_back();
-		}
-
-		return false;
-	}
-
-	void considerDependency(const ParentChildCommand* pc, const std::string& name, const bool is_parent, std::vector<uint32_t>& list, std::string& missing, std::vector<DagParseError>& errors) {
+	void considerDependency(const ParentChildCommand* pc, const std::string& name, const bool is_parent, std::vector<node_id_t>& list, std::string& missing, std::vector<DagParseError>& errors) {
 		static std::set<DAG::CMD> invalid = {
 			DAG::CMD::FINAL,
 			DAG::CMD::SERVICE,
@@ -394,24 +377,25 @@ private:
 		};
 
 		if (hasNode(name)) {
-			auto& node = nodes[node_name_hash[name] - node_index_offset];
-			if (invalid.contains(node.type)) {
-				std::string type(DAG::GET_KEYWORD_STRING(node.type));
-				addCommandError(pc, type + " node " + name + " can not have dependencies", errors);
+			node_id_t id = node_name_hash[name];
+			DAG::CMD type = (*self)[id].data.type;
+			if (invalid.contains(type)) {
+				std::string type_str(DAG::GET_KEYWORD_STRING(type));
+				addCommandError(pc, type_str + " node " + name + " can not have dependencies", errors);
 			} else {
-				list.push_back(node.num);
+				list.push_back(id);
 			}
 		} else if (hasSplice(name)) {
-			auto it = std::ranges::find(splices, name, &MockDag::scope);
-			std::string prefix = it->scope + "+";
-			for (auto& node : nodes) {
-				bool is_splice_end = is_parent ? node.children.empty() : ( ! node.has_parent);
-				if (node.name.starts_with(prefix) && is_splice_end) {
-					if (invalid.contains(node.type)) {
-						std::string type(DAG::GET_KEYWORD_STRING(node.type));
-						addCommandError(pc, type + " node " + name + " can not have dependencies", errors);
+			auto it = std::ranges::find(splices, name, [](const MockDag& d) { return d.data.scope; });
+			std::string prefix = it->data.scope + "+";
+			for (auto& node : *self) {
+				bool is_splice_end = is_parent ? node.NoChildren() : node.NoParents();
+				if (node.data.name.starts_with(prefix) && is_splice_end) {
+					if (invalid.contains(node.data.type)) {
+						std::string type_str(DAG::GET_KEYWORD_STRING(node.data.type));
+						addCommandError(pc, type_str + " node " + name + " can not have dependencies", errors);
 					} else {
-						list.push_back(node.num);
+						list.push_back(node.GetID());
 					}
 				}
 			}
@@ -420,14 +404,24 @@ private:
 			missing += name;
 		}
 	}
+
+	std::map<std::string, node_id_t> node_name_hash{};
+	std::vector<MockDag> splices{};
+
+	// "" for the top-level DAG (and every independent SUBDAG), or this splice's own
+	// declared name otherwise (unprefixed -- just what it's called at its own scope).
+	std::string scope{};
+
+	std::string final_node{};
+	std::string provisioner{};
+
+	size_t num_splices{0};
+	uint32_t join_node_index{0};
+
+	MockDag* self{nullptr};
 };
 
 
-uint32_t MockDag::node_index = 0;
-uint32_t MockDag::join_node_index = 0;
-short MockDag::check_external = 0;
-bool MockDag::strict = false;
-bool MockDag::use_join_nodes = false;
 static std::set<std::string> included_files;
 
 
@@ -463,11 +457,6 @@ void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagPar
 		std::vector<DagParseError> subdag_errors;
 		MockDag subdag;
 
-		uint32_t restore_node_idx = subdag.node_index;
-		uint32_t restore_join_node_idx = subdag.join_node_index;
-		subdag.node_index = 0;
-		subdag.join_node_index = 0;
-
 		included_files.insert(file);
 		parseDAG(parser, subdag, subdag_errors);
 		included_files.erase(file);
@@ -477,11 +466,6 @@ void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagPar
 				addCommandError(cmd, err.GetLocation() + ">" + err.GetError(), errors);
 			}
 		}
-
-		subdag.node_index = restore_node_idx;
-		subdag.join_node_index = restore_join_node_idx;
-
-		included_files.erase(file);
 	} else if (strict) {
 		addCommandError(cmd, source + " does not exist", errors);
 	}
@@ -590,7 +574,7 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 		}
 
 		// Break after first successful job ad unless strict checking is enabled
-		if ( ! MockDag::strict) { break; }
+		if ( ! strict) { break; }
 	}
 
 	if (rval < 0) {
@@ -623,17 +607,17 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					{
 						const NodeCommand* node = DAG::DERIVE_CMD<NodeCommand>(cmd);
 
-						std::string err = dag.addNode(node->GetName(), cmd_val);
+						std::string err = dag.data.addNode(node->GetName(), cmd_val);
 						if ( ! err.empty()) {
 							addCommandError(node, err, errors);
 						}
 
-						if (cmd_val == DAG::CMD::SUBDAG && dag.check_external & CHECK_SUB_DAGS) {
+						if (cmd_val == DAG::CMD::SUBDAG && check_external & CHECK_SUB_DAGS) {
 							std::string parent_dag = parser.GetAbsolutePath();
 							included_files.insert(parent_dag);
-							checkSubdag(DAG::DERIVE_CMD<SubdagCommand>(cmd), dag.strict, errors);
+							checkSubdag(DAG::DERIVE_CMD<SubdagCommand>(cmd), strict, errors);
 							included_files.erase(parent_dag);
-						} else if (dag.check_external & CHECK_JDL){
+						} else if (check_external & CHECK_JDL){
 							std::string src = node->GetSubmit();
 							JDL type = JDL::PATH;
 							if (node->HasInlineDesc()) {
@@ -650,7 +634,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 						const SpliceCommand* splice = DAG::DERIVE_CMD<SpliceCommand>(cmd);
 
 						std::string err;
-						MockDag* splice_dag = dag.addSplice(splice->GetName(), err);
+						MockDag* splice_dag = dag.data.addSplice(splice->GetName(), err);
 						if ( ! err.empty()) {
 							addCommandError(splice, err, errors);
 							continue;
@@ -673,8 +657,6 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 								addCommandError(splice, "Recursive splicing detected", errors);
 								continue;
 							}
-
-							splice_dag->scope = splice->GetName();
 
 							included_files.insert(file);
 							parseDAG(sp, *splice_dag, errors);
@@ -716,10 +698,9 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 	const auto& new_errors = parser.GetParseErrorList();
 	errors.insert(errors.end(), new_errors.begin(), new_errors.end());
 
-	dag.inheritSpliceNodes();
+	dag.data.inheritSpliceNodes();
 
 	std::ranges::sort(commands, [](DagCmd& l, DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
-	std::ranges::sort(dag.nodes, {}, &MockDag::Node::num);
 
 	bool has_config = false;
 
@@ -743,13 +724,13 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					if (node_name.c_str() == all_nodes_keyword) {
 						// Allow ALL_NODES (case insensitive)
 						if (cmd_val == DAG::CMD::DONE) { error = "ALL_NODES can not be used with DONE command"; }
-					} else if (dag.hasSplice(node_name)) {
+					} else if (dag.data.hasSplice(node_name)) {
 						error = "Cannot be applied to splice " + node_name;
-					} else if ( ! dag.hasNode(node_name)) {
+					} else if ( ! dag.data.hasNode(node_name)) {
 						error = "References undefined node " + node_name;
 					}
 
-					if (dag.check_external & CHECK_SCRIPTS && cmd_val == DAG::CMD::SCRIPT) {
+					if (check_external & CHECK_SCRIPTS && cmd_val == DAG::CMD::SCRIPT) {
 						const ScriptCommand* script = DAG::DERIVE_CMD<ScriptCommand>(cmd);
 						if ( ! std::filesystem::exists(script->GetScript())) {
 							addCommandError(script, "Script file does not exist", errors);
@@ -762,7 +743,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				}
 				break;
 			case DAG::CMD::PARENT_CHILD:
-				dag.makeDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), errors);
+				dag.data.makeDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), errors);
 				break;
 			case DAG::CMD::CATEGORY:
 				{
@@ -770,7 +751,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					std::string missing;
 
 					for (const auto& node : cat->GetNodes()) {
-						if ( ! dag.hasNode(node.data()) && node.data() != all_nodes_keyword) {
+						if ( ! dag.data.hasNode(node.data()) && node.data() != all_nodes_keyword) {
 							if ( ! missing.empty()) { missing += ","; }
 							missing += node.data();
 						}
@@ -807,7 +788,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				}
 				break;
 			case DAG::CMD::SUBMIT_DESCRIPTION:
-				if (dag.check_external & CHECK_JDL) {
+				if (check_external & CHECK_JDL) {
 					const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
 					std::ignore = node_jdl_dne.erase(desc->GetName());
 					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, errors);
@@ -819,7 +800,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 
 	// Any missing JDL files can now be added since we
 	// removed any submit description references
-	if (dag.strict) {
+	if (strict) {
 		for (auto& [_, err] : node_jdl_dne) {
 			errors.push_back(std::move(err));
 		}
@@ -832,7 +813,7 @@ bool json_printer(const std::string& file, MockDag& dag, std::vector<DagParseErr
 
 	result.InsertAttr("DagFile", file);
 
-	dag.getStats(result);
+	dag.data.getStats(result);
 
 	bool cyclic = false;
 	result.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);
@@ -880,7 +861,7 @@ bool json_printer(const std::string& file, MockDag& dag, std::vector<DagParseErr
 
 bool stats_printer(const std::string& file, MockDag& dag, std::vector<DagParseError>& /*errors*/) {
 	ClassAd stats;
-	dag.getStats(stats);
+	dag.data.getStats(stats);
 
 	bool cyclic = false;
 	stats.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);
@@ -895,7 +876,7 @@ bool stats_printer(const std::string& file, MockDag& dag, std::vector<DagParseEr
 
 bool default_printer(const std::string& file, MockDag& dag, std::vector<DagParseError>& errors) {
 	ClassAd stats;
-	dag.getStats(stats);
+	dag.data.getStats(stats);
 
 	bool cyclic = false;
 	stats.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);
@@ -991,7 +972,7 @@ int main(int argc, const char** argv) {
 
 	bool use_dag_dir = false;
 	bool allow_illegal_chars = param_boolean("DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS", false);
-	bool use_join_nodes = param_boolean("DAGMAN_USE_JOIN_NODES", true);
+	use_join_nodes = param_boolean("DAGMAN_USE_JOIN_NODES", true);
 	bool print_json = false;
 
 	// Process command line arugments
@@ -1015,15 +996,15 @@ int main(int argc, const char** argv) {
 			setPrinterOption(DagPrinter::STATISTICS, option);
 			printer = stats_printer;
 		} else if (matchOption(option, "CheckExternalFiles", 8)) {
-			MockDag::check_external |= CHECK_EXTERNAL;
+			check_external |= CHECK_EXTERNAL;
 		} else if (matchOption(option, "CheckSubDags", 8)) {
-			MockDag::check_external |= CHECK_SUB_DAGS;
+			check_external |= CHECK_SUB_DAGS;
 		} else if (matchOption(option, "CheckJDL", 8)) {
-			MockDag::check_external |= CHECK_JDL;
+			check_external |= CHECK_JDL;
 		} else if (matchOption(option, "CheckScripts", 8)) {
-			MockDag::check_external |= CHECK_SCRIPTS;
+			check_external |= CHECK_SCRIPTS;
 		} else if (matchOption(option, "Strict", 6)) {
-			MockDag::strict = true;
+			strict = true;
 		} else if (option.starts_with("-")) {
 			fprintf(stderr, "ERROR: Unknown command line option '%s'\n", option.data());
 			usage(EXIT_ERROR);
@@ -1031,8 +1012,6 @@ int main(int argc, const char** argv) {
 			dag_files.emplace_back(option.data());
 		}
 	}
-
-	MockDag::use_join_nodes = use_join_nodes;
 
 	if (dag_files.empty()) {
 		fprintf(stderr, "ERROR: No DAG file(s) provided for linting.\n");
@@ -1049,42 +1028,54 @@ int main(int argc, const char** argv) {
 		std::vector<DagParseError> errors;
 
 		MockDag dag;
-		dag.node_index = 0;
-		dag.join_node_index = 0;
 
-		if (parser.failed()) {
-			exit_code = EXIT_FAILURE;
-			errors.emplace_back(
-			       file.string(), // Failed source file
-			       0,             // Never parsed anything so set error line to 0
-			       "Failed to open DAG " + file.filename().string() + ": " + parser.error()
-			);
-		} else {
-			parser.AllowIllegalChars(allow_illegal_chars)
-			      .ContOnParseFailure();
-
-			ChangeDir cd(file.parent_path(), use_dag_dir);
-			if (cd.failed()) {
+		// Dag<D, N>/EdgeTable (edge.h, dag.hpp) throw rather than abort on an
+		// internal error -- catch each known type here so a bug in one DAG file's
+		// graph construction can't take down the whole tool run uncaught.
+		try {
+			if (parser.failed()) {
+				exit_code = EXIT_FAILURE;
 				errors.emplace_back(
 				       file.string(), // Failed source file
 				       0,             // Never parsed anything so set error line to 0
-				       "Failed to change directories: " + cd.error()
+				       "Failed to open DAG " + file.filename().string() + ": " + parser.error()
 				);
 			} else {
-				included_files.clear();
-				included_files.insert(parser.GetFile());
+				parser.AllowIllegalChars(allow_illegal_chars)
+				      .ContOnParseFailure();
 
-				parseDAG(parser, dag, errors);
+				ChangeDir cd(file.parent_path(), use_dag_dir);
+				if (cd.failed()) {
+					errors.emplace_back(
+					       file.string(), // Failed source file
+					       0,             // Never parsed anything so set error line to 0
+					       "Failed to change directories: " + cd.error()
+					);
+				} else {
+					included_files.clear();
+					included_files.insert(parser.GetFile());
+
+					parseDAG(parser, dag, errors);
+				}
 			}
-		}
 
-		if ( ! errors.empty()) {
-			exit_code = EXIT_FAILURE;
-		}
+			if ( ! errors.empty()) {
+				exit_code = EXIT_FAILURE;
+			}
 
-		if (printer(file.string(), dag, errors)) {
-			// Cycle was detected while printing output
-			exit_code = EXIT_FAILURE;
+			if (printer(file.string(), dag, errors)) {
+				// Cycle was detected while printing output
+				exit_code = EXIT_FAILURE;
+			}
+		} catch (const std::out_of_range& e) {
+			fprintf(stderr, "ERROR: Invalid graph reference while processing '%s': %s\n", file.string().c_str(), e.what());
+			exit_code = EXIT_ERROR;
+		} catch (const std::logic_error& e) {
+			fprintf(stderr, "ERROR: Internal graph invariant violation while processing '%s': %s\n", file.string().c_str(), e.what());
+			exit_code = EXIT_ERROR;
+		} catch (const std::exception& e) {
+			fprintf(stderr, "ERROR: Unexpected error while processing '%s': %s\n", file.string().c_str(), e.what());
+			exit_code = EXIT_ERROR;
 		}
 
 		if (print_json) {

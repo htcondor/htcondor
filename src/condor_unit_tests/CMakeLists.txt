@@ -55,10 +55,17 @@ OTEST_TmpDir.cpp
 OTEST_UserPolicy.cpp
 OTEST_DagFileParser.cpp
 OTEST_ArchiveReader.cpp
+OTEST_Edge.cpp
+OTEST_Dag.cpp
 )
 
+# dag.hpp (Dag<D, T>/Node<T>) is templated, but leans on the non-template
+# EdgeTable/Edge machinery in condor_dagman/edge.cpp -- that isn't part of any
+# library condor_unit_tests already links against, so it's pulled in directly.
+include_directories(${CONDOR_SOURCE_DIR}/src/condor_dagman)
+
 # old style condor unit tests that all link into a single huge exe
-condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS}")
+condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};${CONDOR_SOURCE_DIR}/src/condor_dagman/edge.cpp;emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS}")
 
 # stand-alone test for async reader class since it needs to generate test files
 condor_exe_test(async_freader_tests async_freader_tests.cpp "${CONDOR_TOOL_LIBS}")
