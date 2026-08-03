@@ -9630,12 +9630,14 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
-			// was put on hold in GetJobAd().
+			// was put on hold in GetJobAd().  Capture the job id before
+			// we forget the match rec, so we can still describe it below.
+		PROC_ID jid = mrec->jid;
 		mrec = NULL;
 
 		char const *reason = "find/expand";
 		if( !args->isDedicated() ) {
-			if( GetJobAd(mrec->jid) ) {
+			if( GetJobAd(jid) ) {
 				reason = "expand";
 			}
 			else {
