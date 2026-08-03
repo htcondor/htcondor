@@ -10,7 +10,14 @@ import pytest
 
 from ornithology import *
 
-from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config, SMALL_BACKING_FILE_MB
+from liblvm import (
+    LVMTestable,
+    LVM_SKIP_REASON,
+    lvm_config,
+    SMALL_BACKING_FILE_MB,
+    JOB_REQUEST_MEMORY_MB,
+    OVERFILL_JOB_REQUEST_MEMORY_MB,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -59,13 +66,19 @@ def overfill_job_hash(thin_provisioning):
         request_disk_mb = 512
         overfill_mb = 600
     return {
-        "shell": f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb}); sleep 60",
+        # oflag=direct on the dd fallback keeps the write out of the LV's own
+        # page cache, but the loop device backing the LV isn't opened with
+        # direct-io, so a buffered write can still pile onto the job's
+        # cgroup memory limit -- request_memory is sized well above
+        # overfill_mb (see OVERFILL_JOB_REQUEST_MEMORY_MB) as the real
+        # protection against that race.
+        "shell": f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} oflag=direct); sleep 60",
         "universe": "vanilla",
         "output": "output",
         "error": "error",
         "log": "overfill_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{OVERFILL_JOB_REQUEST_MEMORY_MB}m",
         "request_disk": f"{request_disk_mb}m",
         # Forces the job to actually run in the LVM-mounted scratch dir;
         # same-host IF_NEEDED transfer would otherwise use the submit dir.
@@ -94,7 +107,7 @@ def underquota_job_hash():
         "error": "error",
         "log": "underquota_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
         "should_transfer_files": "YES",
     }
