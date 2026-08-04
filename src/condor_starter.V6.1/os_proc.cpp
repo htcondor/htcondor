@@ -935,8 +935,7 @@ OsProc::ShutdownGraceful()
 	}
 	requested_exit = true;
 
-	// Pick the signal to send: prefer the job's remove-kill signal if it set
-	// one, otherwise the soft-kill signal.  Note that on Windows findRmKillSig()
+	// Pick the signal to send: prefer the job's remove-kill signal if it is set
 	// always returns SIGTERM (there are no real signals), so this always
 	// resolves to a soft kill delivered via condor_softkill.
 	int kill_sig = (findRmKillSig(JobAd) != -1) ? rm_kill_sig : soft_kill_sig;
