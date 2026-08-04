@@ -598,11 +598,9 @@ def watch_q(
     # When refreshing in place (i.e. on a tty), draw into the terminal's
     # "alternate screen" buffer so that quitting restores whatever was on the
     # console before condor_watch_q started, the way `less` behaves.
+    refresh = refresh and sys.stdout.isatty()
+
     in_alt_screen = False
-    if refresh:
-        sys.stdout.write(ALT_SCREEN_ENTER)
-        sys.stdout.flush()
-        in_alt_screen = True
 
     def leave_alt_screen():
         nonlocal in_alt_screen
@@ -611,6 +609,20 @@ def watch_q(
             sys.stdout.flush()
             in_alt_screen = False
 
+    if refresh:
+        sys.stdout.write(ALT_SCREEN_ENTER)
+        sys.stdout.flush()
+        in_alt_screen = True
+
+        import signal
+
+        def _handle_exit_signal(signum, frame):
+            leave_alt_screen()
+            raise KeyboardInterrupt
+
+        for _sig in ("SIGTERM", "SIGHUP", "SIGQUIT"):
+            if hasattr(signal, _sig):
+                signal.signal(getattr(signal, _sig), _handle_exit_signal)
     try:
         msg, move, clear = None, None, None
         batch_name_to_nodes_total, cluster_ids_with_nodes_total = find_nodes_total(
