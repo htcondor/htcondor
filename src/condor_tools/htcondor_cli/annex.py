@@ -164,13 +164,6 @@ create_options_new = {
             "type": Path,
             "default": Path(htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")),
         },
-        "control_path": {
-            "args": ("--tmp_dir",),
-            "dest": "control_path",
-            "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
-            "type": Path,
-            "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
-        },
         "startd_noclaim_shutdown": {
             "args": ("--idle-time", "--startd-noclaim-shutdown"),
             "metavar": "SECONDS",

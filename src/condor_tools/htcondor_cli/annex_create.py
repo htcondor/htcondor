@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 import tarfile
 import re
+import tempfile
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -1075,7 +1076,6 @@ def annex_inner_func_new(
     collector,
     token_file,
     password_file,
-    control_path,
     startd_noclaim_shutdown,
     test,
 ):
@@ -1108,14 +1108,6 @@ def annex_inner_func_new(
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
         raise RuntimeError(f"Token file {token_file} doesn't exist.")
-
-    control_path = Path(control_path).expanduser()
-    if control_path.exists():
-        if not control_path.is_dir():
-            raise RuntimeError(f"{control_path} must be a directory")
-    else:
-        logger.debug(f"{control_path} not found, attempt to create it")
-        control_path.mkdir(parents=True, exist_ok=True)
 
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
@@ -1249,9 +1241,8 @@ def annex_inner_func_new(
 
     version = htcondor.version().split()[1]
 
-    record_file = Path(os.path.join(control_path, "annex.record"))
-    with open(record_file, "w") as f:
-        f.write(f"""# Annex record
+    record_file = tempfile.NamedTemporaryFile(mode="w", delete_on_close=False)
+    record_file.file.write(f"""# Annex record
 VERSION={version}
 STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
 JOB_NAME={annex_name}
@@ -1260,7 +1251,7 @@ OWNERS={owners}
 REQUEST_ID={request_id}
 SCHEDD_NAME={schedd_name}
 """)
-    atexit.register(lambda: os.remove(record_file))
+    record_file.file.close()
 
     # Create the setup tarball
     # TODO add a README
@@ -1275,7 +1266,7 @@ SCHEDD_NAME={schedd_name}
         tar_file.add(local_script_dir / "00-annex-pilot-base", f"{tar_dirname}/00-annex-pilot-base")
         tar_file.add(token_file, f"{tar_dirname}/annex.token")
         tar_file.add(password_file, f"{tar_dirname}/annex.password")
-        tar_file.add(record_file, f"{tar_dirname}/{record_file.name}")
+        tar_file.add(record_file.file.name, f"{tar_dirname}/annex.record")
 
     logger.info(f"\nPlease copy the file {tar_filename} to the HPC system")
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
