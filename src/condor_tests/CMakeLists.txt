@@ -1101,8 +1101,8 @@ endif()
 
 	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_prepost.dag;src/condor_tests/job_dagman_prepost-node.cmd;src/condor_tests/job_dagman_prepost-prehello.template;src/condor_tests/job_dagman_prepost-posthello.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl;src/condor_tests/x_dagman_readprepostlog.pl;$<TARGET_FILE:x_read_joblog>")
 
-	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest")
-	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;long")
+	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_retry.dag;src/condor_tests/job_dagman_retry-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_retry-monitor.pl")
+	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_throttle.dag;src/condor_tests/job_dagman_throttle.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;$<TARGET_FILE:x_read_joblog>")
 
 	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_unlessexit.cmd;src/condor_tests/job_dagman_unlessexit.dag;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_retry-monitor.pl")
 	if (NOT WINDOWS)
