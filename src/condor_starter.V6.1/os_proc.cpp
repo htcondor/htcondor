@@ -949,7 +949,7 @@ OsProc::ShutdownGraceful()
 	// VanillaProc::ShutdownFast() tears down the whole process family via
 	// Kill_Family().
 	if (!daemonCore->Send_Signal(JobPid, kill_sig)) {
-		dprintf(D_ALWAYS, "Send (softkill) signal failed, escalating to hard kill now\n");
+		dprintf(D_ALWAYS, "Failed to send graceful kill signal %d to pid %d; escalating to hard kill now\n", kill_sig, JobPid);
 		return ShutdownFast();
 	}
 
