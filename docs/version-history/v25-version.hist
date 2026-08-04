@@ -1,5 +1,10 @@
 *** 25.14.0 features
 
+- :tool:`condor_watch_q` now draws its live display on the terminal's
+  alternate screen, so quitting restores whatever was on the console
+  before it started, the same way less behaves.
+  :jira:`3854`
+
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
   finer control on what constitutes failure with a job list in a single
   node and whether DAGMan should immediately remove job list upon failure
