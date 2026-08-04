@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <regex>
+#include <set>
 
 #include "condor_config.h"
 #include "my_popen.h"
@@ -163,6 +164,70 @@ Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 }
 
 
+// Apptainer and Singularity honor a large, growing set of APPTAINER_* /
+// SINGULARITY_* environment variables that change how the container is built
+// and run -- bind mounts (APPTAINER_BIND, APPTAINER_BINDPATH, ...), overlays,
+// writable roots, containment, cache/tmp locations, and more.  A job must not
+// be able to reach around the starter and reconfigure its own sandbox this
+// way, so rather than chase individual names we strip the whole namespace from
+// the environment apptainer will see.
+//
+// The APPTAINERENV_* / SINGULARITYENV_* passthrough prefix is intentionally
+// NOT matched (note the trailing underscore in the prefixes below), so the
+// sanctioned mechanism for injecting variables *into* the container -- both
+// what a job sets directly and what convertEnv() generates -- keeps working.
+//
+// Call this early, before we set our own APPTAINER_CACHEDIR/TMPDIR/PS1 etc.,
+// so we don't strip the values the starter itself installs.
+// The built-in allowlist of APPTAINER_*/SINGULARITY_* variables that a job is
+// permitted to set.  These configure things the job legitimately owns (e.g.
+// credentials for pulling its own private image) rather than the shape of the
+// sandbox, so they survive the strip below.  Admins can allow additional names
+// with the SINGULARITY_ALLOWED_JOB_ENV_VARS knob.
+static const std::set<std::string> singularityEnvAllowlist = {
+	"APPTAINER_DOCKER_USERNAME",
+	"APPTAINER_DOCKER_PASSWORD",
+	"SINGULARITY_DOCKER_USERNAME",
+	"SINGULARITY_DOCKER_PASSWORD",
+};
+
+void
+Singularity::cleanEnvironment(Env &job_env) {
+	// Singularity and Apptainer prohibit setting HOME.  Just delete it.
+	job_env.DeleteEnv("HOME");
+
+	// The allowlist is the built-in set plus any names the admin permits via
+	// SINGULARITY_ALLOWED_JOB_ENV_VARS (a space/comma separated list).
+	std::set<std::string> allowlist(singularityEnvAllowlist);
+	std::string admin_allowed;
+	if (param(admin_allowed, "SINGULARITY_ALLOWED_JOB_ENV_VARS")) {
+		for (const auto &name : StringTokenIterator(admin_allowed)) {
+			allowlist.emplace(name);
+		}
+	}
+
+	// Collect every APPTAINER_*/SINGULARITY_* variable the job has set.  The
+	// allowlist is applied in the loop below rather than here, since the Walk
+	// callback is a plain function pointer that cannot capture it.
+	std::vector<std::string> candidates;
+	job_env.Walk([](void *pv, const std::string &name, const std::string &) {
+		auto *names = static_cast<std::vector<std::string> *>(pv);
+		if (name.starts_with("APPTAINER_") || name.starts_with("SINGULARITY_")) {
+			names->push_back(name);
+		}
+		return true;
+	}, &candidates);
+
+	for (const auto &name : candidates) {
+		if (allowlist.contains(name)) {
+			dprintf(D_FULLDEBUG, "Keeping allowed container env var %s in job environment\n", name.c_str());
+			continue;
+		}
+		dprintf(D_ALWAYS, "Removing %s from job environment before launching container\n", name.c_str());
+		job_env.DeleteEnv(name);
+	}
+}
+
 Singularity::result
 Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
@@ -186,6 +251,12 @@ Singularity::setup(ClassAd &machineAd,
 	if (!find_singularity(sing_exec_str)) {
 		return Singularity::FAILURE;
 	}
+
+	// Strip any APPTAINER_*/SINGULARITY_* variables the job may have set
+	// before we start building the container, so the job cannot subvert the
+	// sandbox (e.g. by setting APPTAINER_BINDPATH to override our -B mounts).
+	// Do this before we install our own APPTAINER_CACHEDIR/TMPDIR/PS1 below.
+	cleanEnvironment(job_env);
 
 	std::string image;
 	if (!param_eval_string(image, "SINGULARITY_IMAGE_EXPR", "SingularityImage", &machineAd, &jobAd)) {
@@ -270,13 +341,6 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg("-W");
 	sing_args.AppendArg(execute_dir);
-
-	// Singularity and Apptainer prohibit setting HOME.  Just delete it
-	job_env.DeleteEnv("HOME");
-	job_env.DeleteEnv("APPTAINER_BIND");
-	job_env.DeleteEnv("APPTAINER_BINDDIR");
-	job_env.DeleteEnv("SINGULARITY_BIND");
-	job_env.DeleteEnv("SINGULARITY_BINDDIR");
 
 	// Bind-mount the execute directory.
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
@@ -603,12 +667,13 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
-	// Cleanse environment
+	// Do NOT call cleanEnvironment() here.  runTest() only runs after a
+	// successful setup(), which already stripped the job's APPTAINER_*/
+	// SINGULARITY_* vars *and* installed our own (APPTAINER_CACHEDIR/TMPDIR
+	// etc.) into this same Env.  Re-stripping would delete the starter's own
+	// values and make the test fall back to default cache/tmp locations.
+	// setup() already removed HOME too; delete it again defensively.
 	env.DeleteEnv("HOME");
-	env.DeleteEnv("APPTAINER_BIND");
-	env.DeleteEnv("APPTAINER_BINDDIR");
-	env.DeleteEnv("SINGULARITY_BIND");
-	env.DeleteEnv("SINGULARITY_BINDDIR");
 	//
 	// First replace "exec" with "test"
 	ArgList testArgs;
