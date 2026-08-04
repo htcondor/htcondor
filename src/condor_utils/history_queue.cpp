@@ -137,7 +137,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		searchDir = false;
 	}
 
-	if (m_requests >= m_max_requests) {
+	if (m_requests >= m_max_concurrency) {
 		if (m_queue.size() > 1000) {
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
 		}
@@ -165,7 +165,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 
 int HistoryHelperQueue::reaper(int, int) {
 	m_requests--;
-	while ((m_requests < m_max_requests) && m_queue.size() > 0) {
+	while ((m_requests < m_max_concurrency) && m_queue.size() > 0) {
 		auto it = m_queue.begin();
 		launcher(*it);
 		m_queue.erase(it);
