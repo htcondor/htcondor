@@ -667,8 +667,13 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
-	// Cleanse environment
-	cleanEnvironment(env);
+	// Do NOT call cleanEnvironment() here.  runTest() only runs after a
+	// successful setup(), which already stripped the job's APPTAINER_*/
+	// SINGULARITY_* vars *and* installed our own (APPTAINER_CACHEDIR/TMPDIR
+	// etc.) into this same Env.  Re-stripping would delete the starter's own
+	// values and make the test fall back to default cache/tmp locations.
+	// setup() already removed HOME too; delete it again defensively.
+	env.DeleteEnv("HOME");
 	//
 	// First replace "exec" with "test"
 	ArgList testArgs;
