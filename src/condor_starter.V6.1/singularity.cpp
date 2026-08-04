@@ -223,7 +223,7 @@ Singularity::cleanEnvironment(Env &job_env) {
 			dprintf(D_FULLDEBUG, "Keeping allowed container env var %s in job environment\n", name.c_str());
 			continue;
 		}
-		dprintf(D_FULLDEBUG, "Removing %s from job environment before launching container\n", name.c_str());
+		dprintf(D_ALWAYS, "Removing %s from job environment before launching container\n", name.c_str());
 		job_env.DeleteEnv(name);
 	}
 }
