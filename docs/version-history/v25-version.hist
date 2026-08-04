@@ -1,10 +1,101 @@
+*** 25.14.0 features
+
+- Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
+  finer control on what constitutes failure with a job list in a single
+  node and whether DAGMan should immediately remove job list upon failure
+  or wait for jobs to finish.
+  :jira:`3838`
+
+- The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
+  command that it wants expedited matchmaking when it changes from having
+  no idle jobs to having some idle jobs. As a part of this change the
+   *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  :jira:`3836`
+
+*** 25.14.0 bugs
+
+*** 25.0.14 bugs
+
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
 *** 25.13.0 features
+
+- DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
+  meaning a child node only requires its parent(s) to finish executing
+  rather than to succeed. See :ref:`Weak Dependencies<DAG weak dependencies>`.
+  :jira:`2690`
+
+- Improve how an AP administrator can automatically provide OAuth
+  credentials for all jobs.
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS` specifies
+  whether the AP is providing credentials for all jobs (default is true).
+  Configuration knob :macro:`SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES`
+  specifies which credential names are being provided for all jobs
+  (default is all credentials that the AP can generate by itself).
+  Remote submitters no longer need to alter their configuration files to
+  submit to an AP that provides credentials for all jobs.
+  :jira:`3391`
+
+- When :macro:`SINGULARITY_TARGET_DIR` is true and file transfer is 
+  off, we now mount the _CONDOR_SCRATCH_DIR on /condor_scratch, as 
+  there was nowhere else to mount it.
+  :jira:`3768`
+
+- Add a helpful "how to monitor jobs" tip to stderr after
+  :tool:`condor_submit` runs.
+  :jira:`3173`
 
 *** 25.13.0 bugs
 
+- Fixed a bug where the *condor_credmon_oauth* would not create and/or
+  refresh credentials containing a user-supplied handle. Consequently,
+  underscores (and other special characters) are no longer allowed in
+  credential provider names by default. This behavior change can be
+  reverted by setting :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` to true,
+  though this will disable the use of user-supplied handles.
+  See :ref:`provider_name_restrictions` for details.
+  :jira:`2860`
+
+- The Archive Librarian now properly reduces the database size
+  on disk during garbage collection.
+  :jira:`3826`
+
+- Fixed a bug where the archive librarian could mistake a rotated history
+  file for the still-active one after a daemon restart, if the restart
+  landed before that file was fully read. This caused the file to never be
+  marked as fully read, and if it was later removed from disk, it would be
+  incorrectly renamed with a ``.REMOVED`` suffix and lose its recorded
+  rotation date.
+  :jira:`3830`
+
+- The ClassAd functions :classad-function:`versionGT`,
+  :classad-function:`versionGE`, :classad-function:`versionLT`,
+  :classad-function:`versionLE` and :classad-function:`versionEQ` are now
+  case-insensitive, matching all other ClassAd functions.
+  :jira:`3818`
+
+- :tool:`condor_history` now selects the schedd to query the same way
+  :tool:`condor_submit` and :tool:`condor_q` do, honoring both
+  :macro:`SCHEDD_HOST` and :macro:`SCHEDD_NAME`.  Previously only
+  :macro:`SCHEDD_HOST` was consulted and :macro:`SCHEDD_NAME` was ignored. Use
+  ``-local`` to force reading the local history file regardless of
+  configuration.
+  :jira:`3839`
+
+- Fix a very rare collector crash when creating the CA certificates file
+  the first time and a view collector was also configured to run.
+  :jira:`3832`
+
+- Fix a DAGMan crash that could occur while using common input transfers
+  for jobs specified in a DAG.
+  :jira:`3835`
+
 *** 25.0.13 bugs
 
-*** 25.12.0 features
+*** 25.12.2 features
 
 - Introducing the :ref:`archive-librarian`. A new daemon that maintains an
   SQLite3 database of indexes to historical job records located in an Access
@@ -55,6 +146,16 @@
   addition to downloading individual files. Large files are uploaded in
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
+- HTCondor Connection Brokering (CCB) now supports a streaming mode that
+  brokers connections between two daemons that are *both* behind a CCB,
+  without opening any incoming ports. When the requesting daemon is itself
+  CCB-routed, the CCB server has the target daemon connect back to the CCB
+  server and then relays bytes between the two connections; the end-to-end
+  security handshake is still performed directly between the two daemons, so
+  the CCB server never decrypts their traffic. Streaming mode is enabled by
+  default and controlled by the new configuration knobs
+  :macro:`CCB_SERVER_STREAMING` and :macro:`CCB_CLIENT_STREAMING`.
+  :jira:`3805`
 
 - Jobs that transfer input sandboxes now log a file transfer started 
   event even when there list of files to be transferred is empty.
@@ -72,14 +173,7 @@
   reboot.
   :jira:`3766`
 
-*** 25.12.0 bugs
-
-- Fixed a bug that could cause the *condor_negotiator* accountant log
-  (``Accountantnew.log``) to grow without bound.  Records for slots that
-  were no longer claimed were no longer being removed during each
-  negotiation cycle, so they accumulated indefinitely.  This bug was
-  introduced in HTCondor 25.11.
-  :jira:`3795`
+*** 25.12.2 bugs
 
 - Fixed a bug that could cause file descriptor leaks in *blahpd*.
   :jira:`3786`
@@ -89,8 +183,29 @@
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the initial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
 
 *** 25.0.12 bugs
+
+*** 25.11.1 bugs
+
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001>`_.
+
+  :jira:`3808`
+
+- Fixed a bug that could cause the *condor_negotiator* accountant log
+  (``Accountantnew.log``) to grow without bound.  Records for slots that
+  were no longer claimed were no longer being removed during each
+  negotiation cycle, so they accumulated indefinitely.  This bug was
+  introduced in HTCondor 25.11.0.
+  :jira:`3795`
 
 *** 25.11.0 features
 
@@ -217,7 +332,7 @@
   variable still points to the correct place.
   :jira:`2949`
 
-- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+- On cgroup v1 systems, match cgroup v2 behavior of disabling virtual
   memory swap space for jobs.  This can be disabled by setting
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`

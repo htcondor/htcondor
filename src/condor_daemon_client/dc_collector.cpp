@@ -281,20 +281,16 @@ bool DCCollector::checkCachedVersion(int major, int minor, int subminor, bool de
 }
 
 bool
-DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata)
+DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking, StartCommandCallback callback)
 {
-	StartCommandCallback callback;
-	if (callback_fn) {
-			// Wrap the legacy fn+misc pair into a std::function closure so
-			// everything below this point can use a single typed callback.
-		callback = [callback_fn, miscdata](bool success, Sock *s, CondorError *e,
-				const std::string &trust_domain, bool should_try_token_request) {
-			(*callback_fn)(success, s, e, trust_domain, should_try_token_request, miscdata);
-		};
-	}
-
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
+			// Still fire the callback so any storage it owns (e.g. the
+			// misc_data captured by the lambda) is reclaimed; every other
+			// return path from sendUpdate invokes the callback exactly once.
+		if (callback) {
+			callback(true, nullptr, nullptr, "", false);
+		}
 		return true;
 	}
 

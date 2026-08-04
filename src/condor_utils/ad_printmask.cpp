@@ -81,10 +81,10 @@ commonRegisterFormat (int wid, int opts, const char *print,
 
 		const char* tmp_fmt = newFmt->printfFmt;
 		struct printf_fmt_info fmt_info;
-		if (parsePrintfFormat(&tmp_fmt, &fmt_info)) {
+		if (parsePrintfFormat(&tmp_fmt, &fmt_info) && fmt_info.type != PFT_CRASH) {
 			newFmt->fmt_type = (char)fmt_info.type;
 			newFmt->fmt_letter = fmt_info.fmt_letter;
-			if ( ! wid) {
+			if ( ! wid && ! fmt_info.unsafe()) {
 				newFmt->width = fmt_info.width;
 				if (fmt_info.is_left)
 					newFmt->options |= FormatOptionLeftAlign;
@@ -273,7 +273,8 @@ display (FILE *file, ClassAd *al, ClassAd *target /* =NULL */)
 	display(temp, al, target);
 
 	if ( ! temp.empty()) {
-		fputs(temp.c_str(), file);
+		// a write failure here is not actionable from a display routine
+		std::ignore = fputs(temp.c_str(), file);
 		return 0;
 	}
 	return 1;
@@ -578,7 +579,7 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 					// that no data is needed here.
 				if (fmt->printfFmt) {
 					const char* tmp_fmt = fmt->printfFmt;
-					if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.unsafe()) {
 						print_no_data = true;
 					}
 					fmt_type = fmt_info.type;
@@ -814,7 +815,7 @@ display (std::string & out, MyRowOfValues & rov)
 		} else if (printfFmt) {
 			struct printf_fmt_info fmt_info;
 			const char * ptag = printfFmt;
-			if ( ! parsePrintfFormat(&ptag, &fmt_info)) {
+			if ( ! parsePrintfFormat(&ptag, &fmt_info) || fmt_info.unsafe()) {
 				pszVal = printfFmt;
 			} else {
 				switch (fmt_info.type) {

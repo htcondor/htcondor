@@ -1421,7 +1421,8 @@ StatsD::ReadMetricsToReset()
 		return false;
 	}
 
-	fseek(fp, 0 , SEEK_SET);
+	// any seek/read failure is caught below when we deserialize the contents
+	std::ignore = fseek(fp, 0 , SEEK_SET);
 	std::string buf(fileSize,'\0');
 	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);
 	if (actual != static_cast<size_t>(fileSize)) {

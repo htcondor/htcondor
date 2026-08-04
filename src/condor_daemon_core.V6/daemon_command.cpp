@@ -1460,9 +1460,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			m_comTable[m_cmd_index].force_authentication &&
 			!m_sock->triedAuthentication() )
 		{
-			SecMan::authenticate_sock(m_sock, WRITE, &errstack);
 				// we don't check the return value, because the code below
 				// handles what to do with unauthenticated connections
+			std::ignore = SecMan::authenticate_sock(m_sock, WRITE, &errstack);
 		}
 
 		if (m_reqFound && !m_sock->isAuthenticated()) {

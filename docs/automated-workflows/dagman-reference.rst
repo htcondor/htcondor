@@ -24,11 +24,13 @@ General
         JOB NodeName SubmitDescription [DIR directory] [NOOP] [DONE]
 
 :dag-cmd-def:`PARENT/CHILD` (see :ref:`Full Description<DAG node dependencies>`)
-    Create dependencies between two or more DAG nodes.
+    Create dependencies between two or more DAG nodes. The optional *WEAK*
+    prefix relaxes the dependency so a child only requires its parent(s) to
+    have finished executing, not succeeded; see :ref:`Weak Dependencies<DAG weak dependencies>`.
 
     .. code-block:: condor-dagman
 
-        PARENT ParentNodeName [ParentNodeName2 ... ] CHILD  ChildNodeName [ChildNodeName2 ... ]
+        [WEAK] PARENT ParentNodeName [ParentNodeName2 ... ] CHILD  ChildNodeName [ChildNodeName2 ... ]
 
 :dag-cmd-def:`SPLICE` (see :ref:`Full Description<DAG splicing>`)
     Incorporate the specified DAG file into the structure of another DAG.
@@ -72,6 +74,14 @@ Node Behavior
     .. code-block:: condor-dagman
 
         PRE_SKIP <NodeName | ALL_NODES> non-zero-exit-code
+
+:dag-cmd-def:`TOLERANCE` (see :ref:`Full Description<DAG node tolerance cmd>`)
+    Override, for a specific node, how many job failures its job list can
+    tolerate and whether the remaining jobs get removed once declared failed.
+
+    .. code-block:: condor-dagman
+
+        TOLERANCE <NodeName | ALL_NODES> FailureValue[%] [FAIL-FAST | WAIT]
 
 :dag-cmd-def:`PRIORITY` (see :ref:`Full Description<DAG Node Priorities>`)
     Assign a node priority to control DAGMan node submission.

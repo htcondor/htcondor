@@ -904,6 +904,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	if( tSlotAd ) {
 		if( slotAd ) { delete slotAd; }
 		slotAd = new ClassAd(* tSlotAd);
+		// The copy constructor also copies parentScope, which points at the
+		// (soon to be destroyed) ClassAd that tSlotAd was nested in.  We're
+		// keeping this copy long after that scope is gone, so detach it to
+		// avoid a dangling scope pointer when expressions in slotAd (or ads
+		// nested within it) are later evaluated.
+		slotAd->SetParentScope( nullptr );
 	}
 
 	// This seems like the obvious place to change the job ad so that we

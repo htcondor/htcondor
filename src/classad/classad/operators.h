@@ -187,9 +187,11 @@ class Operation : public ExprTree
 		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 
-			// returns true if result is determined for this operation
-			// based on the evaluated arg1
-		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
+		// Returns SIG_CHLD1 and sets result if the result can be determined
+		//   from the value of arg1.
+		// Otherwise, returns SIG_CHLD2 and/or SIG_CHLD3 OR'd together to
+		//   indicate which additional args need to be evaluated.
+		static int shortCircuit(OpKind op, Value const &arg1, Value &result);
 
 		// auxillary functionms
 		bool combine( OpKind&, Value&, ExprTree*&, 
@@ -337,10 +339,6 @@ class Operation2 : public Operation
 		//virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 		bool flatten( EvalState &, Value &, ExprTree *& ) const;
 
-			// returns true if result is determined for this operation
-			// based on the evaluated arg1
-		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
-
 		// auxillary functionms
 		bool combine( OpKind&, Value&, ExprTree*&,
 				int, Value&, ExprTree*, int, Value&, ExprTree* ) const;
@@ -375,10 +373,6 @@ class Operation3 : public Operation
 
 		/// Make a deep copy of the expression
 		virtual ExprTree* Copy( ) const;
-
-			// returns true if result is determined for this operation
-			// based on the evaluated arg1
-		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
 
 	protected:
 		/// Constructor

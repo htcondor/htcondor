@@ -537,13 +537,28 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( ATTR_RESULT, result );
 			context.InsertAttr( ATTR_STAGING_DIR, staging->path().string() );
 
-			const bool EXITING = true;
-			auto usage = s->GetDiskUsage(! EXITING);
+			const bool CORRECTLY = true;
+			s->include_multilink_files_in_disk_usage(true);
+			auto usage = s->GetDiskUsage(CORRECTLY);
 			// To avoid over-complicating the WithInResourceLimits and
 			// quantize-disk expressions, the size here is in KiB
 			// (the units of `Disk`).
-			long long sizeOnDisk = (usage.execute_size / 1024) + 1;
+			auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
+			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %ld (KiB)\n", sizeOnDisk );
 			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
+
+			//
+			// We're wibbling in and out of the event loop, but we never call
+			// JobInfoCommunicator::allJobsSpawned(), so it never starts the
+			// timer to do updates.  That's fine, and probably good -- it's
+			// less confusing for a jobless starter this way -- but that
+			// also means that we never update the "job's" DiskUsage -- we
+			// can't -- and thus never update the slot's DiskUsage -- which
+			// is confusing.
+			//
+			ClassAd updateAd;
+			updateAd.Assign( ATTR_DISK_USAGE, sizeOnDisk );
+			s->jic->updateStartd( & updateAd, false );
 
 			continue_conversation(context);
 			return true;
@@ -766,6 +781,13 @@ Starter::handleJobSetupCommand(
 
 			bool report_mapping_failure = false;
 			s->jic->getJobAd()->LookupBool( "ReportMappingFailure", report_mapping_failure );
+
+			if( IsDebugCategory(D_TEST) ) {
+				const bool CORRECTLY = true;
+				auto usage = s->GetDiskUsage(CORRECTLY);
+				auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
+				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %ld (KiB)\n", sizeOnDisk );
+			}
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );

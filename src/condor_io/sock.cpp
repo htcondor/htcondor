@@ -2521,7 +2521,9 @@ condor_sockaddr
 Sock::my_addr_wildcard_okay() const
 {
 	condor_sockaddr addr;
-	condor_getsockname(_sock, addr);
+	// If condor_getsockname() fails, addr is left as a default-constructed
+	// (wildcard) address, which is acceptable for this caller (hence the name).
+	std::ignore = condor_getsockname(_sock, addr);
 	return addr;
 }
 

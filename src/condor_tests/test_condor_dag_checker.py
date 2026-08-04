@@ -165,6 +165,8 @@ PARENT F P S CHILD A
 
 RETRY S1 3
 PRIORITY DNE 5
+TOLERANCE DNE 5
+TOLERANCE S1 5
 
 CATEGORY DNE FOO
 
@@ -297,27 +299,39 @@ REJECT
                 "DagCommand": "PRIORITY",
             },
             {
-                "Reason": "References to undefined nodes: DNE",
+                "Reason": "References undefined node DNE",
+                "SourceFile": "VALIDATION_ERRORS.dag",
+                "SourceLine": 32,
+                "DagCommand": "TOLERANCE",
+            },
+            {
+                "Reason": "Cannot be applied to splice S1",
                 "SourceFile": "VALIDATION_ERRORS.dag",
                 "SourceLine": 33,
+                "DagCommand": "TOLERANCE",
+            },
+            {
+                "Reason": "References to undefined nodes: DNE",
+                "SourceFile": "VALIDATION_ERRORS.dag",
+                "SourceLine": 35,
                 "DagCommand": "CATEGORY",
             },
             {
                 "Reason": "Configuration file /dne/first.conf does not exist",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 35,
+                "SourceLine": 37,
                 "DagCommand": "CONFIG",
             },
             {
                 "Reason": "DAG configuration file is already defined",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 36,
+                "SourceLine": 38,
                 "DagCommand": "CONFIG",
             },
             {
                 "Reason": "DAG marked with REJECT command",
                 "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 38,
+                "SourceLine": 40,
             },
         ],
     },
@@ -705,6 +719,65 @@ SCRIPT POST A /dne/post.sh
                 "SourceFile": "OPT_CHECK_SCRIPTS_MISSING.dag",
                 "SourceLine": 3,
                 "DagCommand": "SCRIPT",
+            },
+        ],
+    },
+    # Test Case: Statistics for a WEAK dependency chain -- same shape as SHISKABOB,
+    # confirming the checker treats WEAK arcs identically to strong ones structurally
+    "WEAK_DEPENDENCY_STATS": {
+        KEY_DAG: """# Shiskabob DAG using WEAK dependencies
+JOB A desc
+JOB B desc
+JOB C desc
+
+WEAK PARENT A CHILD B
+WEAK PARENT B CHILD C
+""",
+        KEY_EXIT: 0,
+        KEY_STATS: {
+            "TotalNodes": 3,
+            "NumNodes": 3,
+            "NumArcs": 2,
+            "GraphHeight": 3,
+            "GraphWidth": 1,
+            "WidthByDepth": [1,1,1],
+        }
+    },
+    # Test Case: Verify a WEAK dependency line still triggers the join-node
+    # optimization identically to a strong one (same shape as OPT_USE_JOIN_STATS)
+    "WEAK_DEPENDENCY_JOIN_NODE": {
+        KEY_DAG: """# Weak dependency that still makes a join node
+JOB A desc
+JOB B desc
+JOB C desc
+JOB D desc
+JOB E desc
+JOB F desc
+
+WEAK PARENT A B C CHILD D E F
+""",
+        KEY_OPTIONS: ["-joinNodes"],
+        KEY_EXIT: 0,
+        KEY_STATS: {
+            "TotalNodes": 7,
+            "NumNodes": 6,
+            "NumJoinNodes": 1,
+            "NumArcs": 6,
+            "GraphHeight": 3,
+            "GraphWidth": 3,
+            "WidthByDepth": [3,1,3],
+        }
+    },
+    # Test Case: WEAK dependency line missing the required PARENT keyword
+    "WEAK_MISSING_PARENT_KEYWORD": {
+        KEY_DAG: "WEAK CHILD A\n",
+        KEY_EXIT: 1,
+        KEY_ERRORS: [
+            {
+                "Reason": "WEAK dependency missing PARENT keyword",
+                "SourceFile": "WEAK_MISSING_PARENT_KEYWORD.dag",
+                "SourceLine": 1,
+                "DagCommand": "PARENT",
             },
         ],
     },

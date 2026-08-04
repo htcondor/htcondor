@@ -62,10 +62,11 @@ std::tuple<int, int> DagmanMetrics::GetSums() {
 void DagmanMetrics::CountNodes(const Dag* dag) {
 	for (const auto& node : dag->_nodes) {
 		_graphNumVertices++;
-		_graphNumEdges += node->CountChildren();
 		nodeCounts[node->GetDagFile() != nullptr][METRIC::COUNT::TOTAL]++;
 	}
 	nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::TOTAL] = (int)dag->_service_nodes.size();
+
+	_graphNumEdges = static_cast<int>(dag->edge_table.ArcCount());
 }
 
 //---------------------------------------------------------------------------

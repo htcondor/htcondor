@@ -37,8 +37,11 @@
 #include "dagman_metrics.h"
 #include "dagman_commands.h"
 #include "directory.h"
+#include "condor_blkng_full_disk_io.h"
+#include "truncate.h"
 
 #include <filesystem>
+#include "profiling.hpp"
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -161,11 +164,16 @@ bool Dagman::Config() {
 	config[conf::b::ReportGraphMetrics] = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REPORT_GRAPH_METRICS setting: %s\n", config[conf::b::ReportGraphMetrics] ? "True" : "False");
 
+	// Undocumented on purpose: enables parse/edge-processing timing and memory diagnostics
+	config[conf::b::ParseTimingDebug] = param_boolean("DAGMAN_DEBUG_PARSE_TIMING", false);
+
 	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
 
 	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", config[conf::b::AggressiveSubmit] ? "True" : "False");
+
+	config[conf::b::SubmitSendReschedule] = param_boolean("SUBMIT_SEND_RESCHEDULE", false);
 
 	config[conf::i::LogScanInterval] = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
 	if (admin_min_scan_int > 0 && config[conf::i::LogScanInterval] < admin_min_scan_int) {
@@ -303,6 +311,9 @@ bool Dagman::Config() {
 
 	config[conf::b::AbortOnScarySubmit] = param_boolean("DAGMAN_ABORT_ON_SCARY_SUBMIT", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %s\n", config[conf::b::AbortOnScarySubmit] ? "True" : "False");
+
+	config[conf::b::RemoveJobListOnFailure] = param_boolean("DAGMAN_REMOVE_JOB_LIST_ON_FAILURE", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOB_LIST_ON_FAILURE setting: %s\n", config[conf::b::RemoveJobListOnFailure] ? "True" : "False");
 
 	config[conf::i::PendingReportInverval] = param_integer("DAGMAN_PENDING_REPORT_INTERVAL", 600);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n", config[conf::i::PendingReportInverval]);
@@ -1007,6 +1018,17 @@ void main_init(int argc, char ** const argv) {
 	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
+	const bool parse_timing = dagman.config[conf::b::ParseTimingDebug];
+
+	using namespace Profiling;
+	TimePoint t_parse_start, t_parse_end, t_process_end;
+	long rss_before_parse{0}, rss_after_parse{0}, rss_after_process{0};
+
+	if (parse_timing) {
+		t_parse_start    = Clock::now();
+		rss_before_parse = peak_rss_kb();
+	}
+
 	DagProcessor dp(dagman);
 	int dag_id = 0;
 
@@ -1025,10 +1047,15 @@ void main_init(int argc, char ** const argv) {
 			dagman.RemoveRunningJobs(rm_reason, true);
 			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
-			
+
 				// Note: debug_error calls DC_Exit().
 			debug_error(1, DEBUG_QUIET, "Failed to parse %s\n", file.c_str());
 		}
+	}
+
+	if (parse_timing) {
+		t_parse_end    = Clock::now();
+		rss_after_parse = peak_rss_kb();
 	}
 
 	if (dagOpts[shallow::i::Priority] != 0) {
@@ -1043,6 +1070,27 @@ void main_init(int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
+
+	if (parse_timing) {
+		t_process_end      = Clock::now();
+		rss_after_process  = peak_rss_kb();
+		double t_parse   = elapsed_s(t_parse_start, t_parse_end);
+		double t_process = elapsed_s(t_parse_end,   t_process_end);
+		double t_total   = elapsed_s(t_parse_start, t_process_end);
+		debug_printf(DEBUG_NORMAL,
+		    "DAGMAN_DEBUG_PARSE_TIMING (%zu DAG file(s)):\n"
+		    "  %-28s  %10s  %14s\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10.3f  %14ld\n"
+		    "  %-28s  %10s  %14ld\n",
+		    dagOpts.numDagFiles(),
+		    "Phase",                    "Wall (s)",  "Peak RSS (KiB)",
+		    "DAG file parsing",          t_parse,     rss_after_parse,
+		    "LiftSplices + AdjustEdges", t_process,   rss_after_process,
+		    "Total",                     t_total,     rss_after_process,
+		    "RSS before parse",          "",          rss_before_parse);
+	}
 
 	dagman.metrics->CountNodes(dagman.dag);
 
@@ -1175,13 +1223,73 @@ void main_init(int argc, char ** const argv) {
 	dagman.lock->setBlocking(false);
 
 	if ( ! dagman.lock->obtain(WRITE_LOCK)) { // NOTE: Windows mutex lock will take up to 10s to fail
-		debug_printf(DEBUG_QUIET,
-		             "Aborting because it looks like another instance of DAGMan is "
-		             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
-		             "and re-submit the DAG.\n", lock_file.c_str());
-		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		// Another instance holds the lock. If the cluster id recorded
+		// below is this exact same job, it's almost certainly our own
+		// still-alive pre-restart self: the schedd has no reconnect
+		// protocol for scheduler-universe jobs, so after a restart it can
+		// blindly respawn us while our earlier instance is still running
+		// as an orphan. Exit in a way the schedd requeues rather than
+		// removes, so it doesn't tear down our sibling node jobs out from
+		// under that still-running original. A recorded id that's a
+		// different job (or no readable id at all, e.g. a lock file left
+		// by a pre-upgrade DAGMan) is a genuinely different DAG instance
+		// stepping on our lock -- keep today's hard failure for that
+		// real conflict.
+		int exitCode = EXIT_ERROR;
+		char buf[32];
+		ssize_t nread = -1;
+
+		if (lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
+			nread = full_read(dagman.m_lock_fd, buf, sizeof(buf) - 1);
+		}
+
+		if (nread > 0) {
+			buf[nread] = '\0';
+			try {
+				if (std::stoi(buf) == dagman.DAGManJobId._cluster) {
+					exitCode = EXIT_RESTART;
+				}
+			} catch (const std::exception&) {}
+		}
+
+		if (exitCode == EXIT_RESTART) {
+			debug_printf(DEBUG_QUIET,
+			             "Lock file %s is still held by this same DAGMan job (cluster %d); "
+			             "assuming it is our own still-running pre-restart instance and "
+			             "exiting to be requeued, not removed.\n",
+			             lock_file.c_str(), dagman.DAGManJobId._cluster);
+		} else {
+			debug_printf(DEBUG_QUIET,
+			             "Aborting because it looks like another instance of DAGMan is "
+			             "currently running on this DAG; if that is not the case, delete the lock file (%s) "
+			             "and re-submit the DAG.\n", lock_file.c_str());
+		}
+
+		dagman.dag->GetJobstateLog().WriteDagmanFinished(exitCode);
 		dagman.CleanUp();
-		DC_Exit(EXIT_ERROR);
+		DC_Exit(exitCode);
+	} else {
+		// Stamp our own cluster id into the lock file so that a later instance
+		// that fails to acquire it can tell "it's just me, restarting" apart
+		// from a genuinely different DAG instance (see above). A failed/short
+		// write here leaves the lock file without a readable id, which would
+		// make that later duplicate wrongly take the EXIT_ERROR (hard
+		// failure) path instead of EXIT_RESTART -- reintroducing the removal
+		// race this whole mechanism exists to prevent -- so warn if it happens.
+		std::string id_str = std::to_string(dagman.DAGManJobId._cluster) + "\n";
+		if (ftruncate(dagman.m_lock_fd, 0) == 0 && lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
+			if (full_write(dagman.m_lock_fd, id_str.c_str(), id_str.size()) != (ssize_t)id_str.size()) {
+				debug_printf(DEBUG_QUIET,
+				             "WARNING: Failed to write cluster id to lock file %s (%d): %s; "
+				             "a later duplicate DAGMan may not recognize this as the same job.\n",
+				             lock_file.c_str(), errno, strerror(errno));
+			}
+		} else {
+			debug_printf(DEBUG_QUIET,
+			             "WARNING: Failed to truncate/seek lock file %s (%d): %s; "
+			             "a later duplicate DAGMan may not recognize this as the same job.\n",
+			             lock_file.c_str(), errno, strerror(errno));
+		}
 	}
 
 	debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
@@ -1201,6 +1309,13 @@ void main_init(int argc, char ** const argv) {
 	}
 
 	print_status(true);
+
+	// Undocumented on purpose: exit cleanly after full setup (parse, process, rescue, recover)
+	// without entering the execution loop.
+	if (dagOpts[shallow::b::SetupOnly]) {
+		debug_printf(DEBUG_NORMAL, "Exiting after DAG setup (-SetupOnly).\n");
+		ExitSuccess();
+	}
 
 	debug_printf(DEBUG_VERBOSE, "Registering condor_event_timer...\n");
 	daemonCore->Register_Timer(1, dagman.config[conf::i::LogScanInterval], condor_event_timer, "condor_event_timer");

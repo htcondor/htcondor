@@ -58,4 +58,7 @@ std::optional<std::string> makeCIFName(
 std::optional< std::tuple< std::string, std::string > >
 determineCIFScopeAndType( const classad::ClassAd & jobAd );
 
+std::optional< std::string >
+computeCatalogID( const classad::ClassAd & jobAd, const std::string & catalogName );
+
 #endif /* defined(_CONDOR_GUIDANCE_H) */

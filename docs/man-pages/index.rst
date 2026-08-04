@@ -187,7 +187,6 @@ General Administrator Commands
     :maxdepth: 1
     :glob:
 
-    condor_check_password
     condor_config_val
     condor_configure
     condor_fetchlog

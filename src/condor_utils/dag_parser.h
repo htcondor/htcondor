@@ -328,7 +328,7 @@ public:
 		if (err.empty()) {
 			auto perr = ParseError();
 			if (perr.has_value()) {
-				err = perr.value().str();
+				err = perr->str();
 			}
 		}
 		return err;
@@ -365,13 +365,14 @@ private:
 	std::string ParseNodeTypes(DagLexer& details, DAG::CMD type);
 	std::string ParseSplice(DagLexer& details);
 	std::string ParseSubmitDesc(DagLexer& details);
-	std::string ParseParentChild(DagLexer& details);
+	std::string ParseParentChild(DagLexer& details, const std::string& keyword);
 	std::string ParseScript(DagLexer& details);
 	std::string ParseRetry(DagLexer& details);
 	std::string ParseAbortDagOn(DagLexer& details);
 	std::string ParseVars(DagLexer& details);
 	std::string ParsePriority(DagLexer& details);
 	std::string ParsePreSkip(DagLexer& details);
+	std::string ParseTolerance(DagLexer& details);
 	std::string ParseSavePoint(DagLexer& details);
 	std::string ParseCategory(DagLexer& details);
 	std::string ParseMaxJobs(DagLexer& details);

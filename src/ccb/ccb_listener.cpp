@@ -157,8 +157,16 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 				return false;
 			}
 			m_waiting_for_connect = true;
-			incRefCount(); // do not let ourselves be deleted until called back
-			ccb.startCommand_nonblocking( cmd, m_sock, CCB_TIMEOUT, NULL, CCBListener::CCBConnectCallback, this, NULL, false, USE_TMP_SEC_SESSION );
+				// The lambda captures a classy_counted_ptr to us, keeping us
+				// alive until the callback fires (or the closure is destroyed).
+				// This replaces the old manual incRefCount()/decRefCount() pair.
+			classy_counted_ptr<CCBListener> self(this);
+			ccb.startCommand_nonblocking( cmd, m_sock, CCB_TIMEOUT, nullptr,
+				[self](bool success, Sock *sock, CondorError * /*errstack*/,
+						const std::string & /*trust_domain*/, bool /*should_try_token_auth*/) {
+					self->handleCCBConnect(success, sock);
+				},
+				nullptr, false, USE_TMP_SEC_SESSION );
 			return false;
 		}
 	}
@@ -183,26 +191,25 @@ CCBListener::WriteMsgToCCB(ClassAd &msg)
 }
 
 void
-CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack*/, const std::string & /*trust_domain*/, bool /*should_try_token_auth*/, void *misc_data)
+CCBListener::handleCCBConnect(bool success, Sock *sock)
 {
-	CCBListener *self = (CCBListener *)misc_data;
+	m_waiting_for_connect = false;
 
-	self->m_waiting_for_connect = false;
-
-	ASSERT( self->m_sock == sock );
+	ASSERT( m_sock == sock );
 
 	if( success ) {
-		ASSERT( self->m_sock->is_connected() );
-		self->Connected();
-		self->RegisterWithCCBServer();
+		ASSERT( m_sock->is_connected() );
+		Connected();
+		RegisterWithCCBServer();
 	}
 	else {
-		delete self->m_sock;
-		self->m_sock = NULL;
-		self->Disconnected();
+		delete m_sock;
+		m_sock = nullptr;
+		Disconnected();
 	}
 
-	self->decRefCount(); // remove ref count from when we started the connect
+	// Our refcount (held by the lambda that called us) drops when the lambda
+	// is destroyed after this returns.
 }
 
 void
@@ -240,7 +247,6 @@ CCBListener::Disconnected()
 
 	if( m_waiting_for_connect ) {
 		m_waiting_for_connect = false;
-		decRefCount();
 	}
 
 	m_waiting_for_registration = false;

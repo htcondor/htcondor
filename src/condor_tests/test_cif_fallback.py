@@ -96,7 +96,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
-    credential_path = user_dir / "the_credential"
+    credential_path = user_dir / "the-credential"
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
@@ -109,7 +109,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the-credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -124,7 +124,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
 
         "transfer_input_files":     "input3.txt",
-        "use_oauth_services":       "the_credential",
+        "use_oauth_services":       "the-credential",
 
         "leave_in_queue":           True,
     }

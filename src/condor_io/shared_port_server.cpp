@@ -141,6 +141,13 @@ SharedPortServer::RemoveDeadAddressFile()
 		close( fd );
 		if( unlink(shared_port_server_ad_file.c_str()) == 0 ) {
 			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.c_str());
+		} else if( errno == ENOENT ) {
+			// Whatever left this behind (e.g. an orphaned shared_port
+			// instance self-exiting and cleaning up after itself once it
+			// notices its parent is gone) already removed it between our
+			// open() and unlink() above -- not a failure, just a race we
+			// lost harmlessly.
+			dprintf(D_ALWAYS,"%s was already removed by the time we tried to unlink it\n",shared_port_server_ad_file.c_str());
 		} else {
 			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.c_str() );
 		}

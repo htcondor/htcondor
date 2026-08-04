@@ -324,6 +324,9 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          libvirt0,
+#if !defined(JAMMY)
+         passt,
+#endif
          ${misc:Depends},
          ${shlibs:Depends}
 Description: distributed workload management system - single node configuration

@@ -625,14 +625,36 @@ job is running and the execute node needs to connect back to the submit
 node (for example, to transfer output files), the execute node can
 connect by going through CCB to request a connection.
 
-If both A and B are in separate private networks, then CCB alone cannot
-provide connectivity. However, if an incoming port or port range can be
-opened in one of the private networks, then the situation becomes
-equivalent to one of the scenarios described above and CCB can provide
-bi-directional communication given only one-directional connectivity.
-See :ref:`admin-manual/networking:port usage in htcondor` for information on
+If both A and B are in separate private networks, then process A cannot
+accept the reverse connection from process B, so the basic scheme described
+above does not apply. Historically this was unsupported unless an incoming
+port or port range could be opened in one of the private networks (making the
+situation equivalent to one of the scenarios described above). See
+:ref:`admin-manual/networking:port usage in htcondor` for information on
 opening port ranges. Also note that CCB works nicely with
 *condor_shared_port*.
+
+Starting with HTCondor version 25.12.0, the both-private case is handled
+directly by **CCB streaming mode** without opening any ports. When the
+requesting process A is itself behind a CCB, it asks the CCB server to proxy
+the connection: the CCB server instructs process B to connect back to the CCB
+server (rather than to A), and the CCB server then splices the two
+connections together, acting as a transparent TCP relay between A and B. The
+normal end-to-end HTCondor security handshake is performed directly between A
+and B over this relay, so the CCB server authenticates and authorizes the two
+endpoints but never decrypts their traffic. Streaming mode is enabled by
+default and controlled by :macro:`CCB_SERVER_STREAMING` on the CCB server and
+:macro:`CCB_CLIENT_STREAMING` on the requesting daemon. A streaming-capable
+requester only attempts a proxied connection after confirming (from the
+version exchanged during the security handshake) that the CCB server supports
+it, so streaming mode is safe to leave enabled in a mixed-version pool.
+
+The same proxying also helps a client that cannot accept a reverse connection
+at all, such as an unprivileged command-line tool behind a firewall or NAT.
+When ``TOOLS_ASSUME_FIREWALLS`` is set and such a client would otherwise be
+unable to open a reachable port to listen for the reverse connection, it
+requests a proxied connection through the CCB server instead of giving up,
+provided the server supports streaming.
 
 Any *condor_collector* may be used as a CCB server. There is no
 requirement that the *condor_collector* acting as the CCB server be the

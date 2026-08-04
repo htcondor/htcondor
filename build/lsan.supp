@@ -13,7 +13,9 @@ leak:test_log_writer
 leak:/usr/bin/perl
 leak:Perl_call_list
 
-#  Python leaks
+#  Or apptainer/mqsuashfs
+leak:mksquashfs
+
 leak:AllocNoTrack
 leak:pymain_init
 

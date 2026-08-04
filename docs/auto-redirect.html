@@ -11,7 +11,7 @@
 <h3>What to do:</h3>
 <p>
 	Please inform the HTCSS development team of this issue by emailing us at
-	<a href=mailto:htcondor-users@cs.wisc.edu>HTCondor Users Mailing List</a>
+	<a href=mailto:htcondor-users@g-groups.wisc.edu>HTCondor Users Mailing List</a>
 	with the failure reason, the URL you attempted to reach, and where you
 	found the attempted URL.
 </p>
@@ -82,7 +82,7 @@ function redirect() {
 	// UhOh: error happend so update page display with the found issue
 	if (errmsg !== "") {
 		document.getElementById("doc-link").href = url_root;
-		document.getElementById("fail-reason").innerHTML = errmsg;
+		document.getElementById("fail-reason").textContent = errmsg;
 	}
 }
 </script>

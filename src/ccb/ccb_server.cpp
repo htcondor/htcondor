@@ -38,6 +38,15 @@ struct CCBStats {
 	stats_entry_recent<int> CCBRequestsNotFound;
 	stats_entry_recent<int> CCBRequestsSucceeded;
 	stats_entry_recent<int> CCBRequestsFailed;
+	// Streaming/proxy mode: proxy requests received; sessions the broker
+	// successfully spliced; relays that failed *after* the splice was established
+	// (a clean shutdown / EOF is not counted as a failure); how many are relaying
+	// right now; and the total bytes relayed (summed over both directions).
+	stats_entry_recent<int> CCBStreamingRequests;
+	stats_entry_recent<int> CCBStreamingSessions;
+	stats_entry_recent<int> CCBStreamingFailed;
+	stats_entry_abs<int> CCBStreamingActive;
+	stats_entry_recent<int64_t> CCBStreamingBytes;
 
 	void AddStatsToPool(StatisticsPool& pool, int publevel)
 	{
@@ -48,6 +57,11 @@ struct CCBStats {
 		STATS_POOL_ADD(pool, "", CCBRequestsNotFound, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsSucceeded, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsFailed, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingRequests, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingSessions, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingFailed, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingActive, publevel);
+		STATS_POOL_ADD(pool, "", CCBStreamingBytes, publevel);
 	}
 };
 
@@ -168,6 +182,20 @@ CCBServer::RegisterHandlers()
 		READ);
 	ASSERT( rc >= 0 );
 
+	if( param_boolean("CCB_SERVER_STREAMING",true) ) {
+			// In streaming/proxy mode, targets reverse-connect to *us* and we
+			// splice them to the requester.  This inbound connection is the
+			// raw CCB_REVERSE_CONNECT command (no security handshake), so it is
+			// registered with ALLOW, exactly as CCBClient does on its end.
+		rc = daemonCore->Register_CommandWithPayload(
+			CCB_REVERSE_CONNECT,
+			"CCB_REVERSE_CONNECT",
+			(CommandHandlercpp)&CCBServer::HandleReverseConnect,
+			"CCBServer::HandleReverseConnect",
+			this,
+			ALLOW);
+		ASSERT( rc >= 0 );
+	}
 }
 
 void
@@ -443,6 +471,7 @@ CCBServer::PollSockets(int /* timerID */)
 
 	// periodically call the following
 	SweepReconnectInfo();
+	SweepProxySessions();
 }
 
 int
@@ -610,6 +639,42 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 		return FALSE;
 	}
 
+		// Streaming/proxy mode: if the requester is itself behind a CCB (its
+		// return address is CCB-routed, or it explicitly asked for streaming),
+		// it cannot accept a direct reverse connection.  Instead we keep its
+		// socket, have the target reverse-connect to us, and splice the two.
+		//
+		// Do NOT shrink this socket's OS buffers (below): unlike a normal CCB
+		// request -- a one-shot exchange of small ClassAds -- a streaming
+		// request socket becomes a data relay carrying a peer's entire
+		// connection, so it should keep the (autotuned / inherited) socket
+		// buffers rather than the tiny control-plane size.
+	if( RequestNeedsProxy( msg, return_addr.c_str() ) ) {
+		StartProxyRequest( sock, target, connect_id.c_str(), sock->peer_description() );
+		return KEEP_STREAM;
+	}
+
+		// The requester insisted on streaming (it cannot accept a direct reverse
+		// connection) but we are not going to proxy -- streaming is disabled here
+		// (CCB_SERVER_STREAMING is false).  Reject cleanly with an explanatory
+		// message rather than forwarding a request the target cannot satisfy,
+		// which would otherwise fail slowly and confusingly.
+	bool streaming_required = false;
+	if( msg.LookupBool("CCBStreamingRequired", streaming_required) && streaming_required ) {
+		dprintf(D_ALWAYS,
+				"CCB: rejecting request from %s for ccbid %s: it requires CCB "
+				"streaming mode, which is disabled on this broker "
+				"(CCB_SERVER_STREAMING is false).\n",
+				sock->peer_description(), target_ccbid_str.c_str());
+		RequestReply( sock, false,
+					  "CCB streaming mode is required to reach this daemon but is "
+					  "disabled on the CCB server (CCB_SERVER_STREAMING is false)",
+					  0, target_ccbid );
+		return FALSE;
+	}
+
+		// Normal CCB request: only small ClassAds flow on this socket, and the
+		// broker may hold many of them, so shrink its buffers.
 	SetSmallBuffers(sock);
 
 	CCBServerRequest *request =
@@ -874,6 +939,591 @@ CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const 
 		ccb_stats.CCBRequestsSucceeded += 1;
 	} else {
 		ccb_stats.CCBRequestsFailed += 1;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Streaming/proxy mode (CCB_STREAMING)
+//
+// When the requester is itself behind a CCB it cannot accept a direct reverse
+// connection.  Instead the broker keeps the requester's CCB_REQUEST socket,
+// tells the target to reverse-connect to the broker, and then splices the two
+// sockets together as a transparent TCP relay.
+// ---------------------------------------------------------------------------
+
+class CCBProxySession {
+public:
+	// One direction of the relay.  The userspace buffer starts small and grows
+	// on demand up to RELAY_BUF_MAX, so a broker carrying many mostly-idle proxy
+	// sessions does not pay the full per-direction footprint for each.  It only
+	// holds bytes read from the source that the destination could not yet accept;
+	// the in-flight headroom that decouples a fast sender from a slow receiver
+	// lives in the kernel socket buffers.  We stop reading the source while this
+	// buffer is non-empty; the source's data then backs up in the kernel TCP
+	// buffer, which provides backpressure for the TCP sender.
+	static const int RELAY_BUF_START = 4 * 1024;          // initial shuttle size
+	static const int RELAY_BUF_MAX   = 32 * 1024;         // cap it grows to
+	struct Dir {
+		std::vector<char> buf;  // grows from RELAY_BUF_START up to RELAY_BUF_MAX
+		int  len;           // bytes currently buffered
+		int  off;           // bytes already written to the destination
+		bool src_eof;       // source closed its sending side
+		bool dst_shutdown;  // we have shut down the destination's write side
+		Dir() : len(0), off(0), src_eof(false), dst_shutdown(false) {}
+		bool hasData() const { return off < len; }
+		void clear() { len = 0; off = 0; }
+	};
+
+	std::string connect_id;
+	std::string request_id;
+	ReliSock *requester;  // endpoint "A"
+	ReliSock *target;     // endpoint "B"
+	bool relaying;
+	// Set once a relaying session is being torn down.  Both relay sockets share a
+	// handler that captures a shared_ptr to this session; the first to fail flips
+	// this flag and wakes the other, and every relay callback that sees it simply
+	// returns non-KEEP_STREAM so DaemonCore cancels+deletes its socket (see
+	// ProxyRelayData / BeginRelayTeardown).  The session itself is owned by the
+	// shared_ptrs captured in the two relay handlers (plus the m_proxy_sessions
+	// entry until teardown detaches it), so it is freed automatically once the
+	// last relay socket -- and thus its handler -- is gone.  This guarantees the
+	// session outlives every still-pending sibling callback without a manual
+	// reference count.
+	bool dying;
+	// When the session was created (request forwarded to the target).  The
+	// periodic maintenance sweep reaps a session that is still not relaying after
+	// the handshake timeout, so a target that never connects back cannot pin the
+	// requester's socket forever.
+	time_t created;
+	Dir a_to_b;   // bytes read from the requester, to be written to the target
+	Dir b_to_a;   // bytes read from the target, to be written to the requester
+
+	CCBProxySession() : requester(nullptr), target(nullptr), relaying(false), dying(false), created(0) {}
+};
+
+// Relay helpers (defined below; forward-declared for use in HandleReverseConnect).
+static bool ccbSetNonBlocking( int fd );
+
+bool
+CCBServer::RequestNeedsProxy( ClassAd &msg, char const *return_addr )
+{
+	if( !param_boolean("CCB_SERVER_STREAMING",true) ) {
+		return false;
+	}
+	bool required = false;
+	if( msg.LookupBool("CCBStreamingRequired",required) && required ) {
+		return true;
+	}
+	if( return_addr ) {
+		Sinful s(return_addr);
+		if( s.getCCBContact() ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void
+CCBServer::StartProxyRequest( ReliSock *requester, CCBTarget *target, char const *connect_id, char const *name )
+{
+	ccb_stats.CCBStreamingRequests += 1;
+
+		// Enforce the configured limits before committing any resources: an
+		// overall cap on concurrent proxy sessions, and a tighter cap on sessions
+		// still in the handshake (the more easily abused, never-completing kind).
+		// 0 means unlimited.  Reject over-limit requests with a clear failure.
+	int max_sessions = param_integer("CCB_SERVER_MAX_STREAMING_SESSIONS", 0, 0);
+	if( max_sessions > 0 && (int)m_proxy_sessions.size() >= max_sessions ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing streaming request from %s: at the streaming "
+				"session limit (CCB_SERVER_MAX_STREAMING_SESSIONS=%d).\n",
+				requester->peer_description(), max_sessions);
+		RequestReply( requester, false,
+				"CCB streaming session limit reached on the broker", 0,
+				target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;
+		return;
+	}
+	int max_handshakes = param_integer("CCB_SERVER_MAX_STREAMING_HANDSHAKES", 0, 0);
+	if( max_handshakes > 0 && (int)m_pending_handshakes.size() >= max_handshakes ) {
+		dprintf(D_ALWAYS,
+				"CCB: refusing streaming request from %s: at the streaming "
+				"handshake limit (CCB_SERVER_MAX_STREAMING_HANDSHAKES=%d).\n",
+				requester->peer_description(), max_handshakes);
+		RequestReply( requester, false,
+				"CCB streaming handshake limit reached on the broker", 0,
+				target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;
+		return;
+	}
+
+	auto session = std::make_shared<CCBProxySession>();
+	session->connect_id = connect_id;
+	session->requester = requester;
+	session->created = time(nullptr);  // handshake deadline is relative to this
+	CCBIDToString( m_next_request_id++, session->request_id );
+
+		// If a session with this connect id already exists, reject (the connect
+		// id is a fresh random token, so this should not normally happen).
+	if( m_proxy_sessions.find(session->connect_id) != m_proxy_sessions.end() ) {
+		RequestReply( requester, false, "duplicate connect id", 0, target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
+		delete requester;  // session (shared_ptr) is freed on return; it never owns the socket
+		return;
+	}
+	m_proxy_sessions[session->connect_id] = session;
+	m_pending_handshakes.insert( session->connect_id );  // pending until relaying
+
+		// Ask the target to reverse-connect to *this broker*.
+	ClassAd msg;
+	msg.Assign( ATTR_COMMAND, CCB_REQUEST );
+	std::string myaddr = "<" + m_address + ">";
+	msg.Assign( ATTR_MY_ADDRESS, myaddr );
+	msg.Assign( ATTR_CLAIM_ID, connect_id );
+	msg.Assign( ATTR_REQUEST_ID, session->request_id );
+	if( name ) {
+		msg.Assign( ATTR_NAME, name );
+	}
+
+	Sock *tsock = target->getSock();
+	tsock->encode();
+	if( !putClassAd( tsock, msg ) || !tsock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to forward proxy request to target ccbid %lu\n",
+				target->getCCBID());
+		RequestReply( requester, false, "failed to forward proxy request to target", 0, target->getCCBID() );
+		ccb_stats.CCBRequestsFailed += 1;
+		DestroyProxySession( session.get() );
+		return;
+	}
+
+	dprintf(D_FULLDEBUG,
+			"CCB: started streaming (proxy) session for target ccbid %lu, "
+			"request id %s\n",
+			target->getCCBID(), session->request_id.c_str());
+}
+
+int
+CCBServer::HandleReverseConnect( int cmd, Stream *stream )
+{
+	ReliSock *sock = (ReliSock *)stream;
+	ASSERT( cmd == CCB_REVERSE_CONNECT );
+	sock->timeout(1);
+
+	ClassAd hello;
+	sock->decode();
+	if( !getClassAd( sock, hello ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to read reverse-connect hello from %s\n",
+				sock->peer_description());
+		return FALSE;
+	}
+
+	std::string connect_id;
+	hello.LookupString( ATTR_CLAIM_ID, connect_id );
+
+	auto it = m_proxy_sessions.find( connect_id );
+	if( it == m_proxy_sessions.end() ) {
+		dprintf(D_ALWAYS,
+				"CCB: no pending proxy session for reverse connect from %s\n",
+				sock->peer_description());
+		return FALSE;
+	}
+	std::shared_ptr<CCBProxySession> session = it->second;
+	if( session->target ) {
+			// already satisfied; reject the duplicate
+		return FALSE;
+	}
+	session->target = sock;
+
+		// Tell the requester its connection will be proxied on this socket.
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, true );
+	reply.Assign( "ProxyMode", true );
+	session->requester->encode();
+	if( !putClassAd( session->requester, reply ) || !session->requester->end_of_message() ) {
+		dprintf(D_ALWAYS,"CCB: failed to send proxy reply to requester %s\n",
+				session->requester->peer_description());
+		ccb_stats.CCBRequestsFailed += 1;
+		DestroyProxySession( session.get() );
+		return KEEP_STREAM; // we took ownership of sock via session->target
+	}
+
+		// Replay the target's reverse-connect hello to the requester so its
+		// accept logic (cmd==CCB_REVERSE_CONNECT && ClaimId==connect_id) passes.
+	session->requester->encode();
+	int rcmd = CCB_REVERSE_CONNECT;
+	if( !session->requester->put(rcmd) ||
+		!putClassAd( session->requester, hello ) ||
+		!session->requester->end_of_message() )
+	{
+		dprintf(D_ALWAYS,"CCB: failed to replay reverse-connect hello to requester\n");
+		ccb_stats.CCBRequestsFailed += 1;
+		DestroyProxySession( session.get() );
+		return KEEP_STREAM;
+	}
+
+		// From here on, both sockets carry opaque end-to-end bytes.  Disable
+		// any broker-session crypto on the requester socket so the relay reads
+		// the raw bytes the requester sends after it adopts the connection.
+	session->requester->set_crypto_key( false, NULL );
+	session->target->set_crypto_key( false, NULL );
+
+		// Put both sockets in non-blocking mode for the relay.
+	if( !ccbSetNonBlocking(session->requester->get_file_desc()) ||
+		!ccbSetNonBlocking(session->target->get_file_desc()) )
+	{
+		dprintf(D_ALWAYS,"CCB: failed to set proxy sockets non-blocking\n");
+		ccb_stats.CCBRequestsFailed += 1;
+		DestroyProxySession( session.get() );
+		return KEEP_STREAM;
+	}
+
+		// Begin the non-blocking byte relay.  Both sockets share one handler that
+		// captures a shared_ptr to the session (so the session stays alive as long
+		// as either relay socket -- and thus its handler -- is registered).  The
+		// handler attempts non-blocking I/O in both directions and adjusts each
+		// socket's read/write interest to avoid triggering reads when we cannot
+		// write.
+	session->relaying = true;
+	m_pending_handshakes.erase( session->connect_id );  // handshake done -> relaying
+
+	StdSocketHandler relay_handler =
+		[this, session](Stream *) { return ProxyRelayData( session.get() ); };
+
+	int rc = daemonCore->Register_Socket(
+		session->requester,
+		"ccb proxy (requester)",
+		relay_handler,
+		"CCBServer::ProxyRelayData" );
+	ASSERT( rc >= 0 );
+
+	rc = daemonCore->Register_Socket(
+		session->target,
+		"ccb proxy (target)",
+		relay_handler,
+		"CCBServer::ProxyRelayData" );
+	ASSERT( rc >= 0 );
+
+		// The broker's job -- connecting the two peers -- is done; the splice is
+		// live.  Count it as a succeeded request and as an active relay.
+	ccb_stats.CCBStreamingSessions += 1;
+	ccb_stats.CCBStreamingActive += 1;
+	ccb_stats.CCBRequestsSucceeded += 1;
+
+	dprintf(D_FULLDEBUG|D_NETWORK,
+			"CCB: established streaming (proxy) relay for request id %s\n",
+			session->request_id.c_str());
+	return KEEP_STREAM;
+}
+
+#ifndef SHUT_WR
+#define SHUT_WR SD_SEND   // POSIX name for Winsock's "stop sending" shutdown
+#endif
+#ifndef SHUT_RDWR
+#define SHUT_RDWR SD_BOTH // POSIX name for Winsock's "stop both" shutdown
+#endif
+
+// ccbSetNonBlocking puts a socket fd into non-blocking mode.
+static bool ccbSetNonBlocking( int fd )
+{
+#ifdef WIN32
+	unsigned long mode = 1;
+	return ioctlsocket( (SOCKET)fd, FIONBIO, &mode ) == 0;
+#else
+	int flags = fcntl( fd, F_GETFL, 0 );
+	if( flags < 0 ) {
+		return false;
+	}
+	return fcntl( fd, F_SETFL, flags | O_NONBLOCK ) == 0;
+#endif
+}
+
+// ccbHandlerType maps desired read/write interest to a daemonCore HandlerType.
+static HandlerType ccbHandlerType( bool want_read, bool want_write )
+{
+	if( want_read && want_write ) return HANDLE_READ_WRITE;
+	if( want_read )               return HANDLE_READ;
+	if( want_write )              return HANDLE_WRITE;
+	return HANDLE_NONE;
+}
+
+// The relay does raw non-blocking recv()/send(), so it must classify socket
+// errors portably: on Windows they live in WSAGetLastError() (not errno) and use
+// WSAE* names.  Capture the error immediately after the failing call.
+static int ccbSockErrno()
+{
+#ifdef WIN32
+	return WSAGetLastError();
+#else
+	return errno;
+#endif
+}
+static bool ccbWouldBlock( int e )
+{
+#ifdef WIN32
+	return e == WSAEWOULDBLOCK;
+#else
+	return e == EAGAIN || e == EWOULDBLOCK;
+#endif
+}
+static bool ccbInterrupted( int e )
+{
+#ifdef WIN32
+	return e == WSAEINTR;
+#else
+	return e == EINTR;
+#endif
+}
+
+// ccbFlush writes as much of a direction's buffer to the destination fd as it
+// can without blocking.  Returns false on a hard (non-retryable) error.
+static bool ccbFlush( CCBProxySession::Dir &d, int dstfd )
+{
+	while( d.hasData() ) {
+		ssize_t w = send( dstfd, d.buf.data() + d.off, d.len - d.off, 0 );
+		if( w > 0 ) {
+			d.off += (int)w;
+		}
+		else {
+			int e = ccbSockErrno();
+			if( w < 0 && ccbWouldBlock(e) ) {
+				break; // destination not ready; keep the remainder buffered
+			}
+			else if( w < 0 && ccbInterrupted(e) ) {
+				continue;
+			}
+			else {
+				return false; // hard error (e.g. EPIPE)
+			}
+		}
+	}
+	if( !d.hasData() ) {
+		d.clear();
+	}
+	return true;
+}
+
+// ccbPumpDirection runs one direction of the relay: flush any buffered bytes to
+// the destination, then -- while our small userspace buffer is empty -- read
+// from the source and push it toward the destination, looping so that one
+// wakeup drains everything the kernel currently has rather than a single chunk.
+// We stop reading the source while the buffer holds unflushed bytes: the
+// source's data then backs up in the kernel socket buffer and, beyond that,
+// throttles the real sender via TCP.  The two directions are independent, and
+// the relay only adds buffering to the path, so it cannot deadlock a stream that
+// a direct connection would not.  Once the source has closed and the buffer is
+// drained, the destination's write side is shut down to propagate EOF.  Returns
+// false on a hard error.
+static bool ccbPumpDirection( CCBProxySession::Dir &d, ReliSock *src, ReliSock *dst, const char *label )
+{
+	int srcfd = src->get_file_desc();
+	int dstfd = dst->get_file_desc();
+
+	if( !ccbFlush( d, dstfd ) ) {
+		dprintf(D_NETWORK,"CCB RELAY[%s]: flush hard error (errno=%d)\n",label,ccbSockErrno());
+		return false;
+	}
+
+	while( !d.src_eof && !d.hasData() ) {
+		if( d.buf.empty() ) { d.buf.resize( CCBProxySession::RELAY_BUF_START ); }
+		int cap = (int)d.buf.size();
+		ssize_t n = recv( srcfd, d.buf.data(), cap, 0 );
+		if( n > 0 ) {
+			ccb_stats.CCBStreamingBytes += (int64_t)n;
+			d.len = (int)n;
+			d.off = 0;
+			if( !ccbFlush( d, dstfd ) ) {
+				dprintf(D_NETWORK,"CCB RELAY[%s]: post-recv flush hard error (errno=%d)\n",label,ccbSockErrno());
+				return false;
+			}
+			// We filled the buffer and drained it, so the source likely has more
+			// queued; grow (up to the cap) so the next read drains more per
+			// syscall.  Idle/light sessions never fill it and stay small.
+			if( n == cap && !d.hasData() && cap < CCBProxySession::RELAY_BUF_MAX ) {
+				int next = cap * 2;
+				d.buf.resize( next < CCBProxySession::RELAY_BUF_MAX ? next : CCBProxySession::RELAY_BUF_MAX );
+			}
+		}
+		else if( n == 0 ) {
+			d.src_eof = true;
+			break;
+		}
+		else {
+			int e = ccbSockErrno();
+			if( ccbWouldBlock(e) ) {
+				break; // source drained for now
+			}
+			else if( ccbInterrupted(e) ) {
+				continue;
+			}
+			else {
+				return false; // hard error
+			}
+		}
+	}
+
+	if( d.src_eof && !d.hasData() && !d.dst_shutdown ) {
+		shutdown( dstfd, SHUT_WR );
+		d.dst_shutdown = true;
+		dprintf(D_NETWORK,"CCB RELAY[%s]: source EOF, shut down dst fd=%d write side\n",label,dstfd);
+	}
+	return true;
+}
+
+int
+CCBServer::ProxyRelayData( CCBProxySession *s )
+{
+	if( !s ) {
+		return KEEP_STREAM;
+	}
+	if( s->dying ) {
+		// The session is already being torn down: the other socket's callback (or
+		// this socket's own teardown) flipped it dying and woke us only so that we
+		// retire this socket.  Do not touch the splice; returning non-KEEP_STREAM
+		// makes DaemonCore cancel+delete this socket, which drops this handler's
+		// shared_ptr and frees the session once the other socket is gone too.
+		return FALSE;
+	}
+
+	// Non-blocking I/O makes it safe to attempt both directions on every
+	// callback regardless of which socket woke us; an unready socket simply
+	// returns EAGAIN.
+	if( !ccbPumpDirection( s->a_to_b, s->requester, s->target, "req->tgt" ) ||
+		!ccbPumpDirection( s->b_to_a, s->target, s->requester, "tgt->req" ) )
+	{
+		// A hard send/recv error after the splice was established (a clean
+		// shutdown / EOF does not get here -- it sets src_eof and is handled
+		// below as an orderly close).
+		ccb_stats.CCBStreamingFailed += 1;
+		dprintf(D_NETWORK,"CCB RELAY: tearing down session (request id %s) on pump error\n",
+				s->request_id.c_str());
+		BeginRelayTeardown( s );
+		return FALSE;
+	}
+
+	// Both directions fully closed: tear down.
+	if( s->a_to_b.dst_shutdown && s->b_to_a.dst_shutdown ) {
+		BeginRelayTeardown( s );
+		return FALSE;
+	}
+
+	// Re-evaluate each socket's read/write interest.  A socket is the source of
+	// one direction and the destination of the other:
+	//   - read it while its outbound buffer is empty (once it holds unflushed
+	//     bytes we stop reading and let the source back up in the kernel)
+	//   - write it while the other direction has buffered bytes for it
+	HandlerType ht_req = ccbHandlerType(
+		!s->a_to_b.hasData() && !s->a_to_b.src_eof,
+		s->b_to_a.hasData() );
+	HandlerType ht_tgt = ccbHandlerType(
+		!s->b_to_a.hasData() && !s->b_to_a.src_eof,
+		s->a_to_b.hasData() );
+	daemonCore->Set_Socket_Handler_Type( s->requester, ht_req );
+	daemonCore->Set_Socket_Handler_Type( s->target, ht_tgt );
+
+	return KEEP_STREAM;
+}
+
+void
+CCBServer::SweepProxySessions()
+{
+		// Reap streaming (proxy) sessions whose handshake never completed: the
+		// target was asked to connect back to be spliced but never did, so the
+		// requester's socket would otherwise be pinned indefinitely.
+	int handshake_timeout =
+		param_integer("CCB_SERVER_STREAMING_HANDSHAKE_TIMEOUT", 300, 0);
+	if( handshake_timeout <= 0 ) {
+		return;
+	}
+	time_t now = time(nullptr);
+	auto it = m_proxy_sessions.begin();
+	while( it != m_proxy_sessions.end() ) {
+			// DestroyProxySession erases the current element, so advance first.
+		auto next_it = it;
+		++next_it;
+		CCBProxySession *session = it->second.get();
+		if( !session->relaying && now - session->created >= handshake_timeout ) {
+			dprintf(D_ALWAYS,
+					"CCB: streaming (proxy) handshake for request id %s timed out "
+					"after %d seconds; the target never connected back to be "
+					"relayed.\n",
+					session->request_id.c_str(), handshake_timeout);
+			RequestReply( session->requester, false,
+					"CCB streaming handshake timed out: the target did not "
+					"connect back to the broker", 0, 0 );
+			ccb_stats.CCBRequestsFailed += 1;
+			DestroyProxySession( session );
+		}
+		it = next_it;
+	}
+}
+
+void
+CCBServer::DestroyProxySession( CCBProxySession *session )
+{
+	if( !session ) {
+		return;
+	}
+		// This path is only for a session that has not begun relaying (it is still
+		// in the handshake).  No relay sockets are registered with DaemonCore yet,
+		// so there is no sibling callback to race and everything can be freed
+		// synchronously.  A relaying session is torn down via BeginRelayTeardown,
+		// which lets each socket retire itself from its own callback.
+	ASSERT( !session->relaying );
+
+		// We still own these sockets (DaemonCore only takes ownership once they are
+		// registered for relaying), so delete them here.  delete on nullptr is fine.
+	delete session->requester;
+	delete session->target;
+	session->requester = nullptr;
+	session->target = nullptr;
+
+		// Dropping the m_proxy_sessions entry releases the only shared_ptr to a
+		// pre-relaying session (no relay handler holds one yet), so this frees it.
+	m_pending_handshakes.erase( session->connect_id );
+	auto it = m_proxy_sessions.find( session->connect_id );
+	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
+		m_proxy_sessions.erase( it );
+	}
+}
+
+void
+CCBServer::BeginRelayTeardown( CCBProxySession *session )
+{
+	if( !session || session->dying ) {
+		return;  // idempotent: the other socket may have started this already
+	}
+	session->dying = true;
+	ccb_stats.CCBStreamingActive -= 1;
+
+		// Wake both relay sockets so that each retires itself from its own callback
+		// -- the only context in which DaemonCore can safely cancel and delete a
+		// socket that may currently be in service.  shutdown() forces an EOF/error
+		// wakeup even on a socket with no pending I/O, and selecting it for read
+		// guarantees it lands in the next select() set.  Each woken callback returns
+		// non-KEEP_STREAM, so DaemonCore cancels+deletes its socket and destroys its
+		// copy of the relay handler; the session is freed once the last such handler
+		// (its shared_ptr) is gone.
+	if( session->requester ) {
+		daemonCore->Set_Socket_Handler_Type( session->requester, HANDLE_READ );
+		shutdown( session->requester->get_file_desc(), SHUT_RDWR );
+	}
+	if( session->target ) {
+		daemonCore->Set_Socket_Handler_Type( session->target, HANDLE_READ );
+		shutdown( session->target->get_file_desc(), SHUT_RDWR );
+	}
+
+		// Detach from the lookup tables so no new request can match this session and
+		// so the shared_ptr the map held is released (the relay handlers keep the
+		// session alive until their sockets are gone).  Do this last: the shutdown
+		// calls above still need session->requester / session->target.
+	m_pending_handshakes.erase( session->connect_id );  // a no-op once relaying
+	auto it = m_proxy_sessions.find( session->connect_id );
+	if( it != m_proxy_sessions.end() && it->second.get() == session ) {
+		m_proxy_sessions.erase( it );
 	}
 }
 
