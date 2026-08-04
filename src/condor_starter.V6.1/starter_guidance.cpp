@@ -547,6 +547,19 @@ Starter::handleJobSetupCommand(
 			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %ld (KiB)\n", sizeOnDisk );
 			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
 
+			//
+			// We're wibbling in and out of the event loop, but we never call
+			// JobInfoCommunicator::allJobsSpawned(), so it never starts the
+			// timer to do updates.  That's fine, and probably good -- it's
+			// less confusing for a jobless starter this way -- but that
+			// also means that we never update the "job's" DiskUsage -- we
+			// can't -- and thus never update the slot's DiskUsage -- which
+			// is confusing.
+			//
+			ClassAd updateAd;
+			updateAd.Assign( ATTR_DISK_USAGE, sizeOnDisk );
+			s->jic->updateStartd( & updateAd, false );
+
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_COLOR_SLOT ) {
