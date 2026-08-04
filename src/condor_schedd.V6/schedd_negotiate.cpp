@@ -52,6 +52,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_job_id.cluster = -1;
 	m_current_job_id.proc = -1;
 	m_instance = next_negotiate_instance_id++;
+	m_refund_unused_resource_requests = param_boolean("SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS", true);
 }
 
 ScheddNegotiate::~ScheddNegotiate()
@@ -157,6 +158,23 @@ ScheddNegotiate::nextJob()
 		return true;
 	}
 
+		// When sending a batch of resource requests (SEND_RESOURCE_REQUEST_LIST),
+		// m_num_resource_reqs_to_send is how many ads (including the one about to
+		// be built) the negotiator is willing to receive in this batch -- but that
+		// is just an upper bound the negotiator advertises (default 200) and is
+		// usually far larger than the number of auto clusters we actually have
+		// left to send. Reserve budget only for the *other* auto clusters that
+		// genuinely remain in m_jobs, so a single large backlog can't consume the
+		// whole offer budget before the remaining, actually-pending clusters are
+		// ever shown to the negotiator.  For the one-job-at-a-time protocol this
+		// is always 0, so it has no effect.
+	int reserved_for_pending_requests = 0;
+	if ( m_refund_unused_resource_requests ) {
+		int other_pending_clusters = m_jobs ? (int)m_jobs->size() : 0;
+		if (other_pending_clusters > 0) { other_pending_clusters -= 1; }
+		reserved_for_pending_requests = MAX(0, MIN(m_num_resource_reqs_to_send - 1, other_pending_clusters));
+	}
+
 	while( !m_jobs->empty() && m_jobs_can_offer ) {
 		ResourceRequestCluster & cluster = m_jobs->front();
 
@@ -229,16 +247,28 @@ ScheddNegotiate::nextJob()
 							// resource_count is the remaining un-iterated jobs plus this one.
 							int resource_count = 1+clusterSize;
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
-							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
+							int available_to_offer = m_jobs_can_offer - reserved_for_pending_requests;
+							if (m_jobs_can_offer > 0 && resource_count > available_to_offer)
 							{
-								dprintf(D_FULLDEBUG, "Offering %d jobs instead of %d to the negotiator for this cluster; nearing internal limits (MAX_JOBS_RUNNING, etc).\n", m_jobs_can_offer, resource_count);
-								resource_count = m_jobs_can_offer;
+								int original_resource_count = resource_count;
+								resource_count = MAX(1, available_to_offer);
+								dprintf(D_FULLDEBUG,
+								        "Offering %d jobs instead of %d to the negotiator for this cluster; "
+								        "nearing internal limits (MAX_JOBS_RUNNING, etc) or reserving budget "
+								        "for %d other pending resource request(s) in this batch.\n",
+								        resource_count, original_resource_count, reserved_for_pending_requests);
 							}
 							m_jobs_can_offer -= resource_count;
 							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,resource_count);
+							if ( m_refund_unused_resource_requests ) {
+								m_outstanding_offer_counts[m_current_job_id] = resource_count;
+							}
 						}
 						else {
 							m_jobs_can_offer--;
+							if ( m_refund_unused_resource_requests ) {
+								m_outstanding_offer_counts[m_current_job_id] = 1;
+							}
 						}
 
 						// Copy attributes from chained parent ad into our copy 
@@ -619,6 +649,22 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		}
 		scheduler_handleJobRejected( m_current_job_id, m_current_auto_cluster_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;
+
+		if ( m_refund_unused_resource_requests ) {
+			// Refund the unused portion of this offer so a later, lower
+			// priority auto cluster isn't starved of session budget.
+			auto it = m_outstanding_offer_counts.find(m_current_job_id);
+			if ( it != m_outstanding_offer_counts.end() ) {
+				if ( it->second > 0 ) {
+					m_jobs_can_offer += it->second;
+					dprintf(D_FULLDEBUG,
+						"Refunding %d unused resource request(s) for job %d.%d back into this negotiation session's offer budget (session can now offer %d more).\n",
+						it->second, m_current_job_id.cluster, m_current_job_id.proc, m_jobs_can_offer);
+				}
+				m_outstanding_offer_counts.erase(it);
+			}
+		}
+
 		setAutoClusterRejected( m_current_auto_cluster_id );
 		nextJob();
 		break;
@@ -666,6 +712,15 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		}
 
 		m_current_resources_delivered++;
+
+		if ( m_refund_unused_resource_requests ) {
+			auto it = m_outstanding_offer_counts.find(m_current_job_id);
+			if ( it != m_outstanding_offer_counts.end() ) {
+				if ( --(it->second) <= 0 ) {
+					m_outstanding_offer_counts.erase(it);
+				}
+			}
+		}
 
 		std::string slot_name_buf;
 		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);

@@ -112,7 +112,9 @@ the negotiation cycle is to match slots to submitters and their jobs.
 
            Fetch an idle job from a *condor_schedd* holding jobs from
            that submitter.  The *condor_schedd* will present the jobs
-           to the negotiator in job :subcom:`priority` order.
+           to the negotiator in job :subcom:`priority` order, one auto
+           cluster at a time, up to :macro:`MAX_JOBS_RUNNING` per session
+           (see :macro:`SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS`).
 
            -  Build a potential match list of slots where this job could run,
               out of all the slots the negotiator fetched in the first step above:
