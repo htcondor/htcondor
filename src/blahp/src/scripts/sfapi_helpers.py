@@ -324,12 +324,10 @@ def load_sflapi_client_secret():
             sf_file.chmod(0o600)
 
     client_id = (sf_key_dir / "clientid.txt").read_text().strip()
-    print(f"User client id for superfacility is {client_id}")
 
     sfapi_key = sf_key_dir / "priv_key.jwk"
     client_secret = JsonWebKey.import_key(json.loads(sfapi_key.read_text()))
 
-    print(f"Client secret for superfacility is {client_secret}")
     return client_id, client_secret
 
 
