@@ -242,7 +242,7 @@ def create_remote_blahp_directory(name):
         # the key maps to
         user = client.user()
 
-        remote_home = f"/global/homes/{user.name[0]}/{user.name}"
+        #remote_home = f"/global/homes/{user.name[0]}/{user.name}"
         remote_scratch = f"/pscratch/sd/{user.name[0]}/{user.name}"
 
         # we create it on remote_scratch
@@ -285,8 +285,8 @@ def check_job_status(jobid):
     load_sflapi_client_secret()
     with Client(client_id, client_secret) as client:
         perlmutter = client.compute(Machine.perlmutter)
-        job = perlmutter.job(jobid=args.value)
-    print(f"Job {args.value} state: {job.state}")
+        job = perlmutter.job(jobid=jobid)
+    print(f"Job {jobid} state: {job.state}")
 
 def print_nersc_status():
     """
@@ -295,11 +295,6 @@ def print_nersc_status():
     Uses public SFAPI access (no credentials required) and prints one line
     per resource in the format: name | description | status.
     """
-    with Client() as client:
-        perlmutter_status = client.resources.status(Machine.perlmutter)
-
-    perlmutter_status.status
-
     with Client() as client:
         nersc_status = client.resources.status()
 
