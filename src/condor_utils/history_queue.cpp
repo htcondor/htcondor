@@ -138,8 +138,8 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 	}
 
 	if (m_requests >= m_max_concurrency) {
-		if ((int)m_queue.size() > m_max_requests) {
-			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
+		if (m_queue.size() >= static_cast<size_t>(m_max_requests)) {
+			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than " + std::to_string(m_max_requests) + " requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
 		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit, record_src);
