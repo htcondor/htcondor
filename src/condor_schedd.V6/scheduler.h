@@ -913,6 +913,13 @@ class Scheduler : public Service
 	// Stop the timer, if any, waiting to release the claim.
 	bool mark_catalog_live( const std::string & catalogName );
 
+	// When we delete a match record, we also check to see if the corresponding
+	// shadow is the last shadow to require any particular catalog, so that we
+	// can mark those catalogs dead.  In some cases, the schedd will delete a
+	// shadow record before it deletes the match record, so we need to check
+	// in both places.
+	void mark_catalogs_dead_if_last_consumer( shadow_rec * shadowRec, char * peer );
+
 
 	// After obtaining the final form of a job ad (after transforms), there's
 	// some C++ code we'd like to run to fix a few things up.

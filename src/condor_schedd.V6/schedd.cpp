@@ -11154,7 +11154,7 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 
 bool
 Scheduler::mark_catalog_dead( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_dead(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_dead(%s)\n", catalogName.c_str() );
 
 	if( catalogToTimerMap.contains( catalogName ) ) {
 		dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
@@ -11196,6 +11196,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			dprintf( D_ZKM, "mark_catalog_dead(%s): time expired, marking shadow retiring.\n", catalogName.c_str() );
 			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
+			catalogToTimerMap.erase( catalogName );
 		},
 		"terminate transfer shadow lease"
 	);
@@ -11206,7 +11207,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 
 bool
 Scheduler::mark_catalog_live( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_live(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_live(%s)\n", catalogName.c_str() );
 
 	if(! catalogToTimerMap.contains(catalogName)) {
 	    dprintf( D_ZKM, "mark_catalog_live(%s): catalog not dead, ignoring.\n", catalogName.c_str() );
@@ -13618,6 +13619,20 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	// deleted, make sure to delete this shadow's maps.
 	unregister_shadow_catalogs(rec, rec->pid);
 
+	//
+	// The above only does anything if this shadow is a transfer shadow,
+	// which is correct as far as it goes.  However, we only check to see
+	// if this shadow is the last non-transfer shadow in unlinkMrec(), and
+	// sometimes (condor_rm), that means we'll never call unlinkMrec() on
+	// a match record that still has a shadow record, and the checking code
+	// will never trigger.  Since, clearly, the reverse is also true (that
+	// we _do_ call unlinkMrec() with a shadowrec), we just have to do this
+	// in both places.
+	//
+	if( rec->match ) {
+		mark_catalogs_dead_if_last_consumer( rec, rec->match->peer );
+	}
+
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
 		// TODO Failure to spawn a reconnect shadow should probably still
@@ -13763,7 +13778,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		rec->match->setStatus( M_CLAIMED );
 	}
 
-	if( rec->keepClaimAttributes &&  rec->match ) {
+	if( rec->keepClaimAttributes && rec->match ) {
 			// We are shutting down and detaching from this claim.
 			// Remove the claim record without sending RELEASE_CLAIM
 			// to the startd.
@@ -14608,7 +14623,6 @@ Scheduler::child_exit(int pid, int status)
 		// We always want to delete the shadow record regardless
 		// of how the job exited
 		delete_shadow_rec( pid );
-
 	}
 
 	//
@@ -17658,7 +17672,6 @@ Scheduler::DelMrec(char const* id)
 	return DelMrec(it->second);
 }
 
-
 int
 Scheduler::DelMrec(match_rec *match) {
 	if (this->unlinkMrec(match) == 0) {
@@ -17708,50 +17721,7 @@ Scheduler::unlinkMrec(match_rec* match)
 		removeMatchFromSinful( match->peer, match );
 	}
 
-	// If every other claim against this match's startd points to a transfer
-	// shadow, then start a timer to release those claims unless another claim
-	// arrives in time.  To avoid a loop, only do this for transfer matches.
-	if( match->shadowRec && match->peer ) {
-		switch( match->shadowRec->cxfer_state ) {
-			case CXFER_STATE::INVALID:
-				break;
-			case CXFER_STATE::MAPPING: {
-				auto matches = getMatchesBySinful( match->peer );
-				if( matches ) {
-					size_t count = 0;
-					for( const auto & match : * matches ) {
-						if( match->shadowRec ) {
-							switch( match->shadowRec->cxfer_state ) {
-								case CXFER_STATE::INVALID:
-								case CXFER_STATE::MAPPING:
-									break;
-								case CXFER_STATE::RETIRING:
-									break;
-								case CXFER_STATE::STAGED:
-								case CXFER_STATE::STAGING:
-									++count;
-							}
-						}
-					}
-
-					if( count == matches->size() ) {
-						for( const auto & match : * matches ) {
-							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
-								mark_catalog_dead( name );
-							}
-						}
-					}
-				}
-				} break;
-			case CXFER_STATE::STAGING:
-				break;
-			case CXFER_STATE::STAGED:
-				break;
-			case CXFER_STATE::RETIRING:
-				break;
-		}
-	}
-
+	mark_catalogs_dead_if_last_consumer( match->shadowRec, match->peer );
 
 	PROC_ID jobId{match->jid};
 
@@ -17819,6 +17789,63 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	numMatches--;
 	return 0;
+}
+
+void
+Scheduler::mark_catalogs_dead_if_last_consumer( shadow_rec * shadowRec, char * peer ) {
+	// If every other claim against this match's startd points to a transfer
+	// shadow, then start a timer to release those claims unless another claim
+	// arrives in time.  To avoid a loop, only do this for transfer matches.
+	if( shadowRec && peer ) {
+		switch( shadowRec->cxfer_state ) {
+			case CXFER_STATE::INVALID:
+				break;
+			case CXFER_STATE::MAPPING: {
+				auto matches = getMatchesBySinful( peer );
+				if( matches ) {
+					// This code sees two matches when called from
+					// delete_shadow_rec() because it hasn't unlinked from
+					// its match record yet.  Rather than move the call,
+					// don't include shadowRec in the matches.
+					std::erase_if( * matches,
+						[shadowRec](match_rec * m) -> bool {
+							return m->shadowRec == shadowRec;
+						}
+					);
+
+					size_t count = 0;
+					for( const auto & match : * matches ) {
+						if( match->shadowRec ) {
+							switch( match->shadowRec->cxfer_state ) {
+								case CXFER_STATE::INVALID:
+								case CXFER_STATE::MAPPING:
+									break;
+								case CXFER_STATE::RETIRING:
+									break;
+								case CXFER_STATE::STAGED:
+								case CXFER_STATE::STAGING:
+									++count;
+							}
+						}
+					}
+
+					if( count == matches->size() ) {
+						for( const auto & match : * matches ) {
+							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
+								mark_catalog_dead( name );
+							}
+						}
+					}
+				}
+				} break;
+			case CXFER_STATE::STAGING:
+				break;
+			case CXFER_STATE::STAGED:
+				break;
+			case CXFER_STATE::RETIRING:
+				break;
+		}
+	}
 }
 
 shadow_rec*
