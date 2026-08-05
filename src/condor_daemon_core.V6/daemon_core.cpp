@@ -1810,9 +1810,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
-	if (handler_f) {
-		sockTable[i].std_handler = *handler_f;
-	}
+		// Always (re)assign std_handler -- including clearing it when this
+		// registration does not supply one.  Cancel_Socket does not clear a slot's
+		// std_handler, so a slot freed by a std::function-handler socket keeps that
+		// std::function until the slot is reused.  If the slot is then reused by a
+		// registration with only a C/C++ handler (or none, e.g. a command socket via
+		// Register_Command_Socket), the stale std_handler would otherwise linger and,
+		// because CallSocketHandler_worker dispatches std_handler when handler and
+		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
+		// of whatever the stale std::function captured.
+	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
@@ -2221,9 +2228,11 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
 	pipeTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		pipeTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally: this slot may be reused from a
+	// prior registration that installed a std::function, and Cancel_Pipe
+	// does not reset it.  Leaving a stale std_handler here would let dispatch
+	// call a dead captured object (heap-use-after-free).
+	pipeTable[i].std_handler = handler_f ? *handler_f : StdPipeHandler();
 	pipeTable[i].is_cpp = (bool)is_cpp;
 	pipeTable[i].service = s;
 	pipeTable[i].data_ptr = NULL;
@@ -2654,9 +2663,12 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		reapTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally.  Besides the reuse-of-cancelled-slot
+	// case, this path also replaces a live entry in place (rid > 0), and the
+	// reaper table explicitly permits all-null handlers (use the default
+	// reaper).  Leaving a stale std_handler here would let dispatch call a
+	// dead captured object (heap-use-after-free) instead of the default reaper.
+	reapTable[i].std_handler = handler_f ? *handler_f : StdReaperHandler();
 	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = nullptr;
