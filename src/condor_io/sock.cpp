@@ -2965,7 +2965,85 @@ Sock::get_sinful_public() const
 	return get_sinful();
 }
 
-int 
+	// True if `addr` refers to one of this daemon's own command sockets, using the
+	// canonical same-endpoint test (Sinful::addressPointsToMe -- host, port, addrs,
+	// and shared-port id).
+static bool
+addressIsMyself( const Sinful &addr )
+{
+	if( !daemonCore ) {
+		return false;
+	}
+	for( const Sinful &mine : daemonCore->InfoCommandSinfulStringsMyself() ) {
+		if( mine.addressPointsToMe( addr ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+Sock::bypassOutboundCCBForTarget( char const *target_sinful, char const *outbound_ccb )
+{
+	Sinful target( target_sinful );
+	char const *target_host = target.getHost();
+
+		// No usable target host -> connect directly.
+	if( !target_host || !*target_host ) {
+		return true;
+	}
+
+		// A host in outbound-CCB mode can always reach itself directly, so never
+		// route loopback or same-host targets (any port) through the broker.  Check
+		// the target against loopback and against every local interface address (all
+		// families) -- not just the primary IPv4 address, which misses IPv6 and
+		// multi-homed same-host targets.
+	condor_sockaddr taddr;
+	if( taddr.from_ip_string( target_host ) ) {
+		if( taddr.is_loopback() ) {
+			return true;
+		}
+		if( taddr.compare_address( get_local_ipaddr(CP_IPV4) ) ||
+			taddr.compare_address( get_local_ipaddr(CP_IPV6) ) )
+		{
+			return true;
+		}
+	}
+		// The target is one of my own command sockets (any address family).
+	if( addressIsMyself( target ) ) {
+		return true;
+	}
+
+		// OUTBOUND_CCB_ADDRESS may be a space-separated list of brokers (failover /
+		// load-balance, like CCB_ADDRESS); check the target and self against every
+		// broker in it.
+	if( outbound_ccb && *outbound_ccb ) {
+		for( const auto &entry : StringTokenIterator( outbound_ccb, " " ) ) {
+			Sinful broker( entry.c_str() );
+			if( !broker.valid() ) {
+				continue;
+			}
+				// Never tunnel the connection to the broker *through* the broker: if
+				// the target is an outbound broker itself, connect to it directly.
+				// (Otherwise a master querying the off-host broker for its tunnel
+				// address would ask the broker to dial itself.)
+			if( broker.addressPointsToMe( target ) ) {
+				return true;
+			}
+				// If *I* am an outbound broker (OUTBOUND_CCB_ADDRESS points at one of
+				// my own addresses), reach targets directly rather than self-proxying.
+				// This lets an inside CCB register upstream and dial exit targets while
+				// OUTBOUND_CCB_ADDRESS is set in shared config.
+			if( addressIsMyself( broker ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+int
 Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError * errorStack)
 {
 	if( !host || *host != '<' ) {
@@ -3043,6 +3121,21 @@ Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError
 			ASSERT( sharedPortIP );
 
 			return do_shared_port_local_connect( shared_port_id, nonblocking, sharedPortIP );
+		}
+	}
+
+		// Outbound-CCB (tunneling) mode: if this daemon routes its outbound
+		// connections through a broker, this socket has not opted out, and the
+		// target is not local, ask the broker to dial the target on our behalf and
+		// splice the connection.  This takes precedence over both a direct connect
+		// and the target's own CCB contact, because a host in this mode may have no
+		// direct outbound TCP at all.
+	if( !m_bypass_outbound_ccb ) {
+		std::string outbound_ccb;
+		if( param( outbound_ccb, "OUTBOUND_CCB_ADDRESS" ) && !outbound_ccb.empty()
+			&& !bypassOutboundCCBForTarget( host, outbound_ccb.c_str() ) )
+		{
+			return do_outbound_ccb_connect( outbound_ccb.c_str(), host, nonblocking, errorStack );
 		}
 	}
 

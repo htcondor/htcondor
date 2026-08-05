@@ -3189,6 +3189,24 @@ DaemonCore::reconfig(void) {
 		}
 
 		char *ccb_addresses = param("CCB_ADDRESS");
+		if( !ccb_addresses || !ccb_addresses[0] ) {
+				// No explicit inbound CCB.  If this daemon tunnels its *outbound*
+				// connections through a CCB (OUTBOUND_CCB_ADDRESS), it almost certainly
+				// cannot be dialed directly either, so default its *inbound* CCB to that
+				// same broker: the inside CCB serves both directions and stamps the
+				// tunnel nesting into the contact it hands out.  Under the master this is
+				// already injected (and gated on the tunnel being ready); this makes a
+				// daemon started standalone self-configure the same way.  An explicit
+				// CCB_ADDRESS overrides.
+			free( ccb_addresses );
+			ccb_addresses = param("OUTBOUND_CCB_ADDRESS");
+			if( ccb_addresses && ccb_addresses[0] ) {
+				dprintf( D_ALWAYS,
+						 "No CCB_ADDRESS configured; defaulting inbound CCB to "
+						 "OUTBOUND_CCB_ADDRESS=%s (outbound-CCB tunnel).\n",
+						 ccb_addresses );
+			}
+		}
 		if( m_shared_port_endpoint ) {
 				// if we are using a shared port, then we don't need our
 				// own ccb listener; SharedPortServer will have its own
