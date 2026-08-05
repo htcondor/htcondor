@@ -43,11 +43,20 @@ def the_reply(the_condor, the_attr):
     for line in the_log.open().read():
         if line.message.startswith('DaemonCore: command socket at '):
             [prefix, sinful] = line.message.split('DaemonCore: command socket at ')
-            result = the_condor.run_command(
-                ['condor_status', '-af', the_attr, '-direct', sinful]
-            )
+            # The daemon logs its command socket before its shared-port
+            # registration is necessarily routable, so an immediate -direct
+            # connect can race and fail with a communication error (seen on
+            # Windows).  Retry a few times before giving up.
+            result = None
+            for attempt in range(10):
+                result = the_condor.run_command(
+                    ['condor_status', '-af', the_attr, '-direct', sinful]
+                )
+                if result.returncode == 0:
+                    return result.stdout
+                logger.debug(f"condor_status attempt {attempt} failed: {result.stderr}")
+                time.sleep(1)
             assert result.returncode == 0
-            return result.stdout
     assert False
 
 
