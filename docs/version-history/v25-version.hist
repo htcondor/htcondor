@@ -15,6 +15,10 @@
 
 *** 25.14.0 bugs
 
+- Fixed a bug where a job with streaming output or error would not be
+  able to reconnect to a restarted or rebooted schedd in some cases.
+  :jira:`3869`
+
 *** 25.0.14 bugs
 
 - Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
