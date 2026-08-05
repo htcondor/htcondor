@@ -54,6 +54,8 @@
 #include "condor_base64.h"
 #include "zkm_base64.h"
 
+#include "AWSv4-impl.h"
+
 #include <algorithm>
 #include <charconv>
 #include <string>
@@ -7007,16 +7009,32 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
 
+
 			// To avoid colliding inside a DAG when container images are
-			// common by default, make the implicit catalog name depend on
-			// the container image name.
-			std::string catalogName;
-			std::string baseName = condor_basename(container_image.ptr());
-			if( baseName.empty() ) {
-				baseName = condor_dirname(container_image.ptr());
+			// common, the catalog name we generate here must depend on
+			// the full path to the container image.  The could make for
+			// very long and rather ugly attribute name, so instead use
+			// (a short prefix of) the hash of that path.
+			std::string hash_key;
+			if(! IsUrl(container_image.ptr())) {
+				hash_key = full_path( container_image.ptr() );
+			} else {
+				hash_key = container_image.ptr();
 			}
-			cleanStringForUseAsAttr( baseName, '_', false );
-			formatstr( catalogName, "container_%s", baseName.c_str() );
+
+			unsigned int mdLength = 0;
+			unsigned char messageDigest[EVP_MAX_MD_SIZE];
+			if(! AWSv4Impl::doSha256( hash_key, messageDigest, & mdLength )) {
+				// There's doesn't seem to be a failure path out of this
+				// function, so for now, just fail catastrophically.
+				EXCEPT( "Failed to container image ('%s', hashed as '%s'), aborting.\n", container_image.ptr(), hash_key.c_str() );
+			}
+
+			std::string catalogName;
+			std::string containerHash;
+			AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, containerHash );
+			formatstr( catalogName, "container_%s", containerHash.substr(0, 8).c_str() );
+
 
 			std::string attributeName;
 			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
