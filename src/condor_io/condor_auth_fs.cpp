@@ -109,7 +109,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			// even if we're on the same machine. Particularly, when it's
 			// using NAT and TCP_FORWARDING_HOST.
 			if (new_dir.back() == '_') {
-				formatstr(ext, "%s:%d", mySock_->peer_ip_str(), mySock_->peer_port());
+				ext = mySock_->peer_addr().to_ip_and_port_string();
 				new_dir += ext;
 				dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE_FS%s: Adding server ip:port to directory name: %s\n", (remote_?"_REMOTE":""), ext.c_str());
 			} else {
@@ -266,8 +266,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			server_result = -1;
 			goto send_reply;
 		}
-		Sinful client_peer(client_ext.c_str());
-		if (!client_peer.valid()) {
+		condor_sockaddr client_peer;
+		if (!client_peer.from_ip_and_port_string(client_ext.c_str())) {
 			dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Client extension not valid ip:port (%s)\n", (remote_?"_REMOTE":""), client_ext.c_str());
 			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1004,
 		                "Client extension not valid ip:port (%s)", client_ext.c_str());
@@ -276,9 +276,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		}
 		// Check if the client's view of our endpoint of the TCP connection
 		// matches our own.
-		std::string my_endp;
-		formatstr(my_endp, "%s:%d", mySock_->my_ip_str(), mySock_->get_port());
-		if (my_endp == client_ext) {
+		if (client_peer == mySock_->my_addr()) {
 			client_ext_matches = true;
 		}
 		// If we're a daemon, check if the client's view of our endpoint
@@ -288,7 +286,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		if (!client_ext_matches && daemonCore && daemonCore->InfoCommandSinfulStringMyself(false)) {
 			Sinful myself(daemonCore->InfoCommandSinfulStringMyself(false));
 			myself.setSharedPortID(nullptr);
-			if (myself.addressPointsToMe(client_peer)) {
+			if (myself.addressPointsToMe(Sinful(client_peer.to_ip_and_port_string().c_str()))) {
 				client_ext_matches = true;
 			}
 		}
