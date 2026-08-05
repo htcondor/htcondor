@@ -1972,14 +1972,14 @@ condor (8.6.11) unstable; urgency=medium
 
   * Nightly build
 
- -- Tim Theisen <tim@exec-23.batlab.org>  Thu, 31 May 2018 15:01:37 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 31 May 2018 15:01:37 -0500
 
 condor (8.6.8~dfsg.1-2) unstable; urgency=medium
 
   * Disable GSOAP (Closes: #890007) (GSOAP will be dropped from HTCondor soon)
   * Package Apache NOTICE file (fix up lintian error)
 
- -- Tim Theisen <tim@exec-23.batlab.org>  Mon, 19 Mar 2018 18:28:58 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 19 Mar 2018 18:28:58 -0500
 
 condor (8.6.8~dfsg.1-1) unstable; urgency=medium
 
