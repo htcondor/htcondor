@@ -13,6 +13,11 @@
    and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
   :jira:`3836`
 
+- Added support for submitting jobs remotely to NERSC's Perlmutter HPC
+  system using their Superfacility REST API.
+  Use the grid universe **batch** type with a scheduler name of ``sfapi``.
+  :jira:`3461`
+
 *** 25.14.0 bugs
 
 - Fixed a bug where a job with streaming output or error would not be
