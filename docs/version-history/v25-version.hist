@@ -1,4 +1,4 @@
-*** 25.13.0 features
+*** 25.13.1 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
   meaning a child node only requires its parent(s) to finish executing
@@ -25,7 +25,7 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
-*** 25.13.0 bugs
+*** 25.13.1 bugs
 
 - Fixed a bug where the *condor_credmon_oauth* would not create and/or
   refresh credentials containing a user-supplied handle. Consequently,
