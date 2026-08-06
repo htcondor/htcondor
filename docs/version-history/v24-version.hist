@@ -18,6 +18,11 @@
   strings with extra trailing characters.
   :jira:`3809`
 
+- Fixed :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to work when
+  :macro:`TCP_FORWARDING_HOST` is being used.
+  Before, FS authentication could fail incorrectly.
+  :jira:`3860`
+
 *** 24.0.22 features
 
 - HTCondor tarballs now contain `Apptainer 1.5.2 <https://github.com/apptainer/apptainer/releases/tag/v1.5.2>`_
