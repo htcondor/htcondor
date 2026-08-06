@@ -1224,6 +1224,12 @@ default=2000
 type=int
 tags=starter
 
+[LVM_THICK_LV_MARGIN]
+default=0.98
+range=0.0,1.0
+type=double
+tags=starter
+
 [LVM_HIDE_MOUNT]
 default=auto
 description=Inform LVM to mount per job LV in hidden mount namespace
@@ -1265,6 +1271,18 @@ tags=daemon_core,HookClientMgr
 default=60
 type=int
 description=Pid Snapshot Interval for the Master
+tags=daemon_core
+
+[PARENT_CHECK_FIRST_INTERVAL]
+default=15
+type=int
+description=Seconds after startup before a daemon's first check of whether its parent process is still alive. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_FIRST_INTERVAL.
+tags=daemon_core
+
+[PARENT_CHECK_INTERVAL]
+default=120
+type=int
+description=Seconds between checks of whether a daemon's parent process is still alive; if not, the daemon shuts itself down. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL.
 tags=daemon_core
 
 [SEC_DEBUG_PRINT_KEYS]
@@ -1350,6 +1368,12 @@ tags=daemon_core
 [NOT_RESPONDING_TIMEOUT]
 default=3600
 range=1,
+type=int
+tags=daemon_core
+
+[STARTER_FIRST_CHILDALIVE_DELAY]
+default=30
+range=0,
 type=int
 tags=daemon_core
 
@@ -2161,9 +2185,10 @@ tags=submit
 usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
 [SUBMIT_SEND_RESCHEDULE]
-default=true
+default=false
 type=bool
 tags=submit
+description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
@@ -3630,6 +3655,12 @@ tags=schedd
 default=8
 type=int
 description=Maximum number of schedd forked workers
+tags=schedd
+
+[SCHEDD_NOW_JOB_VACATE_TIMEOUT]
+default=20
+type=int
+description=Number of seconds the schedd will wait for the targeted job(s) of a condor_now (coalesce) request to vacate before giving up on the now job
 tags=schedd
 
 [HA_LOCK_URL]
@@ -5934,6 +5965,11 @@ type=string
 default=
 type=string
 
+[CREDMON_ALLOW_SPECIAL_CHAR_NAMES]
+default=false
+type=bool
+description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
+
 # Archive librarian configuration options
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
@@ -5973,6 +6009,13 @@ default=100000
 description=The upper limit of records indexed in one update interval for the archive librarian.
 tags=librarian
 
+[LIBRARIAN_GC_BACKOFF_SECONDS]
+default=1800
+type=int
+range=0,
+description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
+tags=librarian
+
 [LIBRARIAN_MAX_DATABASE_SIZE]
 default=2 * 1024 * 1024 * 1024
 #type=longlong
@@ -5989,6 +6032,13 @@ tags=librarian
 default=0.8
 type=double
 description=The percentage of the database size that the librarian aims to reduce to during garbage collection.
+tags=librarian
+
+[LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS]
+default=30000
+type=int
+range=0,
+description=How long, in milliseconds, the archive librarian will wait on a locked SQLite3 database before giving up.
 tags=librarian
 
 [USING_LIBRARIAN]

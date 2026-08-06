@@ -265,7 +265,10 @@ public:
 	}
 
 	// Get job working directory disk usage: return bytes used & num dirs + files
-	DiskUsage GetDiskUsage(bool exiting=false) const;
+	void include_multilink_files_in_disk_usage(bool v) {
+	    m_skip_multilink_files = ! v;
+	}
+	DiskUsage GetDiskUsage(bool exiting) const;
 
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
@@ -525,6 +528,9 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
+
+		// Only data slots should count such files.
+	bool m_skip_multilink_files {true};
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

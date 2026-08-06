@@ -172,9 +172,12 @@ AppendHistory(ClassAd* ad)
 		  if (!ad->LookupString("Owner", owner)) {
 			  owner = "?";
 		  }
+		  // CurrentTime is the actual time this record was appended, which unlike CompletionDate
+		  // (delayed arbitrarily by e.g. LeaveJobInQueue) is guaranteed to be monotonic across
+		  // records in this file; condor_history uses it to safely bound backwards scans.
 		  fprintf(LogFile,
-                      "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-				  offset, cluster, proc, owner.c_str(), completion);
+                      "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d CurrentTime = %lld\n",
+				  offset, cluster, proc, owner.c_str(), completion, (long long)time(nullptr));
 		  fflush( LogFile );
       }
   }

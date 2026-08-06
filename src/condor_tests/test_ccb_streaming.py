@@ -94,7 +94,7 @@ def condor(test_dir):
             "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "SHADOW.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "STARTD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
-            # CCB's reverse-connect listener relies on the shared port being
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             # off (matching the existing lib_ccb_* tests).
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
@@ -194,6 +194,7 @@ def ccb_tool_condor(test_dir):
             "SCHEDD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR SCHEDD",
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             "COLLECTOR_DEBUG": "D_FULLDEBUG",
         },
     ) as condor:
@@ -298,6 +299,7 @@ def no_streaming_condor(test_dir):
             "STARTD.CCB_ADDRESS": "$(COLLECTOR_HOST)",
             "USE_SHARED_PORT": "FALSE",
             "DAEMON_LIST": "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "false",
             "COLLECTOR_DEBUG": "D_FULLDEBUG",
         },
     ) as condor:

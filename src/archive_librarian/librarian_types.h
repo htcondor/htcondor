@@ -1,11 +1,40 @@
 #pragma once
 
+#include <cctype>
 #include <cstdint>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "archive_reader.h"
+
+// Extracts the YYYYMMDDTHHMMSS rotation timestamp from a filename suffix.
+// Returns nullopt when the filename has no rotation suffix.
+// Shared by librarian.cpp (fingerprinting freshly discovered files) and
+// dbHandler.cpp (reconstructing rotation_time for files recovered from the DB,
+// which does not persist DateOfRotation in a form ArchiveFile can reuse directly).
+inline std::optional<std::string> extractRotationTime(const std::string& filename) {
+    auto pos = filename.rfind(".");
+
+    if (pos == std::string::npos || pos + 1 >= filename.length()) {
+        return std::nullopt;
+    }
+
+    std::string suffix = filename.substr(pos + 1);
+    if (suffix.length() != 15 || suffix[8] != 'T') {
+        return std::nullopt;
+    }
+
+    for (size_t i = 0; i < 15; ++i) {
+        if (i == 8) { continue; }
+        if ( ! std::isdigit(static_cast<unsigned char>(suffix[i]))) {
+            return std::nullopt;
+        }
+    }
+
+    return std::make_optional(suffix);
+}
 
 struct ArchiveFile {
     std::unique_ptr<ArchiveReader> reader{};   // Forward reader; open until fully read then reset

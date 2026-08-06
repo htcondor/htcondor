@@ -1577,15 +1577,15 @@ compareVersion( const char * name, const ArgumentList & argList,
 		int r = natural_cmp( sLeft.c_str(), sRight.c_str() );
 		if( 0 == strcasecmp( name, "versioncmp" ) ) {
 			result.SetIntegerValue(r);
-		} else if( 0 == strcmp( name, "versionLE" ) ) {
+		} else if( 0 == strcasecmp( name, "versionLE" ) ) {
 			result.SetBooleanValue( r <= 0 );
-		} else if( 0 == strcmp( name, "versionLT" ) ) {
+		} else if( 0 == strcasecmp( name, "versionLT" ) ) {
 			result.SetBooleanValue( r < 0 );
-		} else if( 0 == strcmp( name, "versionGE" ) ) {
+		} else if( 0 == strcasecmp( name, "versionGE" ) ) {
 			result.SetBooleanValue( r >= 0 );
-		} else if( 0 == strcmp( name, "versionGT" ) ) {
+		} else if( 0 == strcasecmp( name, "versionGT" ) ) {
 			result.SetBooleanValue( r > 0 );
-		} else if( 0 == strcmp( name, "versionEQ" ) ) {
+		} else if( 0 == strcasecmp( name, "versionEQ" ) ) {
 			result.SetBooleanValue( r == 0 );
 		} else {
 			// This should never happen.
