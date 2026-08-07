@@ -116,10 +116,14 @@ else
 fi
 
 BINARIES_FILE="condor-${VERSION}-${arch}_${distro}-stripped.tar.gz"
-RELEASE_URL="${BINARIES_URL_BASE}${series}/${VERSION}/release/${BINARIES_FILE}"
-BETA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/beta/${BINARIES_FILE}"
-ALPHA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/alpha/${BINARIES_FILE}"
-SNAPSHOT_URL="${BINARIES_URL_BASE}${series}/${VERSION}/snapshot/${BINARIES_FILE}"
+if [ -z "${BINARIES_URL}" ] ; then
+    RELEASE_URL="${BINARIES_URL_BASE}${series}/${VERSION}/release/${BINARIES_FILE}"
+    BETA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/beta/${BINARIES_FILE}"
+    ALPHA_URL="${BINARIES_URL_BASE}${series}/${VERSION}/alpha/${BINARIES_FILE}"
+    SNAPSHOT_URL="${BINARIES_URL_BASE}${series}/${VERSION}/snapshot/${BINARIES_FILE}"
+else
+    RELEASE_URL="${BINARIES_URL}"
+fi
 
 # Some of these downloads may fail, which is not fatal.
 # We'll exit explicitly on a fatal failure.
