@@ -1,3 +1,13 @@
+*** 24.0.23 features
+
+- HTCondor tarballs now contain `Pelican 7.26.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.26.0.
+
+- HTCondor tarballs now contain `Apptainer 1.5.3 <https://github.com/apptainer/apptainer/releases/tag/v1.5.3>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.3.
+
 *** 24.0.23 bugs
 
 - Fixed a bug in :tool:`condor_history` where searching for a specific job id
