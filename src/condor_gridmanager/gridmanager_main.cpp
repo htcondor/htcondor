@@ -41,7 +41,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname@uid-domain>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
