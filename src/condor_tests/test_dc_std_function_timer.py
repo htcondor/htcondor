@@ -22,7 +22,6 @@ def the_condor(test_dir):
             "TEST_STDF_TIMER_D":        "$(LIBEXEC)/test_stdf_timer_d",
             # Ornithology needs this, for some reason.
             "TEST_STDF_TIMER_D_LOG":    f"$(LOG)/TestStdFTimerDLog",
-            "DC_DAEMON_LIST":           "+ TEST_STDF_TIMER_D",
         },
     ) as condor:
         yield condor

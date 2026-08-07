@@ -13,11 +13,24 @@
    and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
   :jira:`3836`
 
+- Added support for submitting jobs remotely to NERSC's Perlmutter HPC
+  system using their Superfacility REST API.
+  Use the grid universe **batch** type with a scheduler name of ``sfapi``.
+  :jira:`3461`
+
 *** 25.14.0 bugs
+
+- Fixed a bug where a job with streaming output or error would not be
+  able to reconnect to a restarted or rebooted schedd in some cases.
+  :jira:`3869`
 
 *** 25.0.14 bugs
 
-*** 25.13.0 features
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
+*** 25.13.1 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
   meaning a child node only requires its parent(s) to finish executing
@@ -44,7 +57,7 @@
   :tool:`condor_submit` runs.
   :jira:`3173`
 
-*** 25.13.0 bugs
+*** 25.13.1 bugs
 
 - Fixed a bug where the *condor_credmon_oauth* would not create and/or
   refresh credentials containing a user-supplied handle. Consequently,
@@ -179,6 +192,12 @@
   to a very short value.  Previously, short values (< 10 seconds)
   could cause very long delays in communications.
   :jira:`3751`
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the initial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
 
 *** 25.0.12 bugs
 
