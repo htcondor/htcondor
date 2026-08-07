@@ -1241,7 +1241,7 @@ def annex_inner_func_new(
 
     version = htcondor.version().split()[1]
 
-    record_file = tempfile.NamedTemporaryFile(mode="w", delete_on_close=False)
+    record_file = tempfile.NamedTemporaryFile(mode="w")
     record_file.file.write(f"""# Annex record
 VERSION={version}
 STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
@@ -1266,7 +1266,7 @@ SCHEDD_NAME={schedd_name}
         tar_file.add(local_script_dir / "00-annex-pilot-base", f"{tar_dirname}/00-annex-pilot-base")
         tar_file.add(token_file, f"{tar_dirname}/annex.token")
         tar_file.add(password_file, f"{tar_dirname}/annex.password")
-        tar_file.add(record_file.file.name, f"{tar_dirname}/annex.record")
+        tar_file.add(record_file.name, f"{tar_dirname}/annex.record")
 
     logger.info(f"\nPlease copy the file {tar_filename} to the HPC system")
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
