@@ -841,3 +841,19 @@ const char * empty_if_null(const char * c_str) {
     return c_str;
 }
 
+// malloc a buffer to hold a null terminated copy of data from a string_view
+// free the buffer like one you got from strdup().
+char * strviewdup(std::string_view sv) {
+	if (sv.empty()) {
+		return strdup("");
+	}
+	size_t len = sv.size();
+	if (sv.back()) len += 1; // add 1 to null terminate
+
+	char * str = (char*)malloc(len);
+	memcpy(str, sv.data(), sv.size());
+	str[len-1] = '\0'; // make sure of null term.
+
+	return str;
+}
+
