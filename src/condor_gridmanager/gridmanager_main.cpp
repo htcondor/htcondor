@@ -147,8 +147,14 @@ main_init( int argc, char ** const argv )
 	// not as user condor.
 	if (os_name) {
 		std::string buf;
-		const char *owner = name_of_user(os_name, buf);
-		const char *domain = domain_of_user(os_name, nullptr);
+		const char* owner = nullptr;
+		const char* domain = nullptr;
+#if defined(WIN32)
+		owner = name_of_user(os_name, buf);
+		domain = domain_of_user(os_name, nullptr);
+#else
+		owner = os_name;
+#endif
 		if ( !init_user_ids(owner, domain)) {
 			dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			// uids.cpp will EXCEPT when we set_user_priv() now
