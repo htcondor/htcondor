@@ -1135,7 +1135,9 @@ def annex_inner_func_new(
     if test is None:
         c = htcondor.Collector(collector)
         r = c.query(ad_type=htcondor.AdTypes.Schedd)
-        if len(r) != 1:
+        if len(r) == 0:
+            raise RuntimeError("Didn't find scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        elif len(r) != 1:
             raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
         schedd_name = r[0].get('name')
         if schedd_name is None:

@@ -470,7 +470,7 @@ class Status(Verb):
                         f"{(now - youngest_birthday)/(60*60):.2f} hours old",
                         end=""
                     )
-                    if youngest_hours is not None:
+                    if youngest_retirement is not None:
                         print(
                             f" and will retire in "
                             f"{(youngest_retirement - now)/(60*60):.2f} hours."
