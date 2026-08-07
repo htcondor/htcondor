@@ -597,6 +597,7 @@ endif()
 				condor_pl_test(test_dagman_survives_ap_restart "Test DAGMan recovers after graceful/fast/crash AP restarts" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/dagman_recovery_utils.py")
 				condor_pl_test(test_dagman_survives_double_restart "Test DAGMan survives two AP restarts back to back" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/dagman_recovery_utils.py")
 			endif()
+			condor_pl_test(test_startd_controller "Test startd controller set/clear/persistence" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 

@@ -92,6 +92,12 @@ protected:
 extern void finish_main_config( void );
 extern bool authorizedForCOD( const char* owner );
 
+// Reconcile the dynamic ADMINISTRATOR authorization granted to this startd's
+// controller (an AP allowed to evict any claim here) with the current value of
+// STARTD_CONTROLLER_IDENTITY.  Idempotent; safe to call at init, on reconfig,
+// and after the controller is set or cleared.
+extern void reconfig_controller_authz();
+
 // Define external global variables
 
 // Resource manager

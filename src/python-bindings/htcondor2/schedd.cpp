@@ -717,6 +717,97 @@ _schedd_reschedule(PyObject *, PyObject * args) {
 
 
 static PyObject *
+_schedd_request_controller_token(PyObject *, PyObject * args) {
+    // _schedd_request_controller_token(addr)
+    // Returns a tuple (token, controller_name, controller_identity, controller_pool).
+
+    const char * addr = NULL;
+    if(! PyArg_ParseTuple( args, "z", & addr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+    std::string token, controller_name, controller_identity, controller_pool;
+    CondorError errStack;
+    if(! schedd.requestControllerToken( token, controller_name, controller_identity, controller_pool, errStack )) {
+        std::string error = "Failed to request controller token: " + errStack.getFullText();
+        PyErr_SetString( PyExc_HTCondorException, error.c_str() );
+        return NULL;
+    }
+
+    return Py_BuildValue( "ssss",
+        token.c_str(), controller_name.c_str(),
+        controller_identity.c_str(), controller_pool.c_str() );
+}
+
+
+static PyObject *
+_schedd_register_controlled_ep(PyObject *, PyObject * args) {
+    // _schedd_register_controlled_ep(addr, ep_name, ep_pool, remove)
+
+    const char * addr = NULL;
+    const char * ep_name = NULL;
+    const char * ep_pool = NULL;
+    int remove = 0;
+    if(! PyArg_ParseTuple( args, "szzp", & addr, & ep_name, & ep_pool, & remove )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+    CondorError errStack;
+    if(! schedd.registerControlledEP( ep_name, ep_pool, remove != 0, errStack )) {
+        std::string error = "Failed to register controlled EP: " + errStack.getFullText();
+        PyErr_SetString( PyExc_HTCondorException, error.c_str() );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_schedd_get_controlled_eps(PyObject *, PyObject * args) {
+    // _schedd_get_controlled_eps(addr) -> list of ClassAds
+
+    const char * addr = NULL;
+    if(! PyArg_ParseTuple( args, "z", & addr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+    std::vector<std::unique_ptr<ClassAd>> results;
+    CondorError errStack;
+    if(! schedd.getControlledEPs( results, errStack )) {
+        std::string error = "Failed to query controlled EPs: " + errStack.getFullText();
+        PyErr_SetString( PyExc_HTCondorException, error.c_str() );
+        return NULL;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_get_controlled_eps" );
+        return nullptr;
+    }
+
+    for( auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        auto rv = PyList_Append(list, pyClassAd);
+        Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return nullptr;
+        }
+    }
+
+    return list;
+}
+
+
+static PyObject *
 _schedd_export_job_ids(PyObject *, PyObject * args) {
     // _schedd_export_job_ids(addr, job_list, export_dir, new_spool_dir)
 

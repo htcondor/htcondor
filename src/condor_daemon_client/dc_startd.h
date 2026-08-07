@@ -208,6 +208,21 @@ public:
 		// call error() to get a descriptive error message
 	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false, bool reboot = false);
 
+		// Send SET_CONTROLLER command to startd, designating an AP as the
+		// controller allowed to evict any claim on this EP.
+		// controller_name: the name of the controlling AP (required)
+		// controller_pool: collector pool used to reach the controller (may be NULL)
+		// controller_identity: the security identity the controller will
+		//         authenticate as when it evicts claims (may be NULL, in which
+		//         case the EP falls back to controller_name)
+		// token: the AP-signed capability token authorizing the relationship (required)
+		// returns: true/false on success/failure; call error() for the message
+	bool set_controller(const char *controller_name, const char *controller_pool, const char *controller_identity, const char *token);
+
+		// Send CLEAR_CONTROLLER command to startd, removing any controller.
+		// returns: true/false on success/failure; call error() for the message
+	bool clear_controller();
+
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
  private:
