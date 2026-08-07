@@ -257,6 +257,11 @@ class match_rec
 		const ClassAd*, char const* user, char const* pool, bool is_dedicated);
 	~match_rec();
 
+	// match_rec cannot be safely copied or assigned or moved
+	match_rec(const match_rec &) = delete;
+	match_rec& operator=(const match_rec& other) = delete;
+	match_rec& operator=(match_rec&& other) = delete;
+
 	char * peer{nullptr}; //sinful address of startd
 	char * user{nullptr};
 	char * pool{nullptr}; // negotiator hostname if flocking; else empty
