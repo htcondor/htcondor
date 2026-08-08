@@ -12,6 +12,9 @@ import secrets
 import textwrap
 import subprocess
 from pathlib import Path
+import tarfile
+import re
+import tempfile
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -523,7 +526,7 @@ def invoke_condor_annex(
 
         if proc.returncode == 0:
             # We could join the control flows for EC2 and HPC at the bottom
-            # of annex_inner_func(), instead, once we're sure this'll work.
+            # of annex_inner_func_old(), instead, once we're sure this'll work.
             logger.info(f"{ANSI_BRIGHT}... requested.{ANSI_RESET_ALL}")
             return 0
         else:
@@ -537,7 +540,7 @@ def invoke_condor_annex(
         raise RuntimeError(f"Failed to request AWS EC2 annex in {INITIAL_CONNECTION_TIMEOUT} seconds")
 
 
-def annex_inner_func(
+def annex_inner_func_old(
     logger,
     annex_name,
     nodes,
@@ -647,12 +650,12 @@ def annex_inner_func(
         raise RuntimeError(f"Token file {token_file} doesn't exist.")
 
     control_path = Path(control_path).expanduser()
-    if control_path.is_dir():
-        if not control_path.exists():
-            logger.debug(f"{control_path} not found, attempt to create it")
-            control_path.mkdir(parents=True, exist_ok=True)
+    if control_path.exists():
+        if not control_path.is_dir():
+            raise RuntimeError(f"{control_path} must be a directory")
     else:
-        raise RuntimeError(f"{control_path} must be a directory")
+        logger.debug(f"{control_path} not found, attempt to create it")
+        control_path.mkdir(parents=True, exist_ok=True)
 
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
@@ -700,7 +703,9 @@ def annex_inner_func(
     if test is None:
         c = htcondor.Collector(collector)
         r = c.query(ad_type=htcondor.AdTypes.Schedd)
-        if len(r) != 1:
+        if len(r) == 0:
+            raise RuntimeError("Didn't find scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        elif len(r) != 1:
             raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
         schedd_name = r[0].get('name')
         if schedd_name is None:
@@ -897,6 +902,11 @@ def annex_inner_func(
     #     undefined -- to make sure it keeps polling.
     #   * The job runs every five minutes because of cron_minute.
     #
+    job_env = []
+    if os.environ.get("PYTHONPATH") is not None:
+        job_env.append(f'PYTHONPATH={os.environ.get("PYTHONPATH")}')
+    if os.environ.get("CONDOR_CONFIG") is not None:
+        job_env.append(f'CONDOR_CONFIG={os.environ.get("CONDOR_CONFIG")}')
     submit_description = htcondor.Submit(
         {
             "universe": "local",
@@ -915,7 +925,7 @@ def annex_inner_func(
             # Consider adding a log, an output, and an error file to assist
             # in debugging later.  Problem: where should it go?  How does it
             # get cleaned up?
-            "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
+            "environment": f'"{" ".join(job_env)}"',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
             "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
@@ -1059,6 +1069,211 @@ def annex_inner_func(
     logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
 
 
+def annex_inner_func_new(
+    logger,
+    annex_name,
+    owners,
+    collector,
+    token_file,
+    password_file,
+    startd_noclaim_shutdown,
+    test,
+):
+
+    # We use this same method to determine the user name in `htcondor job`,
+    # so even if it's wrong, it will at least consistently so.
+    username = getpass.getuser()
+
+    # As reminders for when we fix lifetime being specified in seconds.
+    idletime_in_seconds = startd_noclaim_shutdown
+
+    if test is not None and test == 1:
+        return
+
+    # Location of the local universe script files
+    local_script_dir = (
+        Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor")) / "annex"
+    )
+
+    if not local_script_dir.is_dir():
+        raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
+
+    # If the user didn't specify a token file, create one on the fly.
+    if token_file is None:
+        logger.debug("Creating annex token...")
+        token_file = create_annex_token(logger, annex_name)
+        atexit.register(lambda: os.unlink(token_file))
+        logger.debug("..done.")
+
+    token_file = Path(token_file).expanduser()
+    if not token_file.exists():
+        raise RuntimeError(f"Token file {token_file} doesn't exist.")
+
+    password_file = Path(password_file).expanduser()
+    if not password_file.exists():
+        try:
+            old_umask = os.umask(0o077)
+            with password_file.open("wb") as f:
+                password = secrets.token_bytes(16)
+                f.write(password)
+            password_file.chmod(0o0400)
+            try:
+                os.umask(old_umask)
+            except OSError:
+                pass
+        except OSError as ose:
+            raise RuntimeError(
+                f"Password file {password_file} does not exist and could not be created: {ose}."
+            )
+
+    #
+    # The pilot needs to know the name of the schedd so it can look the schedd
+    # up in the annex collector.  Since it's hard to extract the name of the
+    # schedd from the schedd itself (?!), we might as well ask the annex collector
+    # ourselves and verify that the pilot will get an answer.
+    #
+    if test is None:
+        c = htcondor.Collector(collector)
+        r = c.query(ad_type=htcondor.AdTypes.Schedd)
+        if len(r) == 0:
+            raise RuntimeError("Didn't find scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        elif len(r) != 1:
+            raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        schedd_name = r[0].get('name')
+        if schedd_name is None:
+            raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
+
+
+    ##
+    ## While we're requiring that jobs are submitted before creating the
+    ## annex (for .sif pre-staging purposes), refuse to make the annex
+    ## if no such jobs exist.
+    ##
+    schedd = htcondor.Schedd()
+    annex_jobs = schedd.query(f'TargetAnnexName == "{annex_name}"')
+
+    enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
+    if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
+        if not annex_jobs:
+            raise RuntimeError(
+                f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
+            )
+        logger.debug(
+            f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
+        )
+
+    if test == 2:
+        return
+
+    # Submit local universe job.
+    logger.debug("Submitting state-tracking job...")
+    local_job_executable = local_script_dir / "annex-local-universe.py"
+    if not local_job_executable.exists():
+        raise RuntimeError(
+            f"Could not find local universe executable, expected {local_job_executable}"
+        )
+    #
+    # The magic in this job description is thus:
+    #   * hpc_annex_start_time is undefined until the job runs and finds
+    #     a startd ad with a matching hpc_annex_request_id.
+    #   * The job will go idle (because it can't start) at that point,
+    #     based on its Requirements.
+    #   * Before then, the job's on_exit_remove must be false -- not
+    #     undefined -- to make sure it keeps polling.
+    #   * The job runs every five minutes because of cron_minute.
+    #
+    job_env = []
+    if os.environ.get("PYTHONPATH") is not None:
+        job_env.append(f'PYTHONPATH={os.environ.get("PYTHONPATH")}')
+    if os.environ.get("CONDOR_CONFIG") is not None:
+        job_env.append(f'CONDOR_CONFIG={os.environ.get("CONDOR_CONFIG")}')
+    submit_description = htcondor.Submit(
+        {
+            "universe": "local",
+            # hpc_annex_start time is set by the job script when it finds
+            # a startd ad with a matching request ID.  At that point, we can
+            # stop runnig this script, but we don't remove it to simplify
+            # the UI/UX code; instead, we wait until an hour past the end
+            # of the request's lifetime to trigger a peridic remove.
+            "requirements": "hpc_annex_start_time =?= undefined",
+            "executable": str(local_job_executable),
+            # Sadly, even if you set on_exit_remove to ! requirements,
+            # the job lingers in X state for a good long time.
+            "cron_minute": "*/5",
+            "on_exit_remove": "PeriodicRemove =?= true",
+            "periodic_remove": f"hpc_annex_start_time + 14*24*3600 < time()",
+            # Consider adding a log, an output, and an error file to assist
+            # in debugging later.  Problem: where should it go?  How does it
+            # get cleaned up?
+            "environment": f'"{" ".join(job_env)}"',
+            "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
+            "jobbatchname": f'{annex_name} [HPC Annex]',
+            "+hpc_annex_request_id": 'GlobalJobID',
+            # Properties of the annex request.  We should think about
+            # representing these as a nested ClassAd.  Ideally, the back-end
+            # would, instead of being passed a billion command-line arguments,
+            # just pull this ad from the collector (after this local universe
+            # job has forwarded it there).
+            "+hpc_annex_name": f'"{annex_name}"',
+            "+hpc_annex_collector": f'"{collector}"',
+            "+hpc_annex_owners": f'"{owners}"',
+            # Hard state required for clean up.  We'll be adding
+            # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
+            # as they're reported by the back-end script.
+        }
+    )
+
+    try:
+        logger.debug(f"")
+        logger.debug(textwrap.indent(str(submit_description), "  "))
+        submit_result = schedd.submit(submit_description)
+    except Exception:
+        raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
+
+    cluster_id = submit_result.cluster()
+    logger.debug(f"... done.")
+    logger.debug(f"with cluster ID {cluster_id}.")
+
+    results = schedd.query(
+        f'ClusterID == {cluster_id} && ProcID == 0',
+        opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+        projection=["GlobalJobID"],
+        )
+    request_id = results[0]["GlobalJobID"]
+
+    version = htcondor.version().split()[1]
+
+    record_file = tempfile.NamedTemporaryFile(mode="w")
+    record_file.file.write(f"""# Annex record
+VERSION={version}
+STARTD_NOCLAIM_SHUTDOWN={startd_noclaim_shutdown}
+JOB_NAME={annex_name}
+COLLECTOR={collector}
+OWNERS={owners}
+REQUEST_ID={request_id}
+SCHEDD_NAME={schedd_name}
+""")
+    record_file.file.close()
+
+    # Create the setup tarball
+    # TODO add a README
+    sanitized_name = re.sub('[^-a-zA-Z0-9_.]', '_', annex_name)
+    tar_filename = f"annex-{sanitized_name}.tar"
+    tar_dirname = f"annex-{sanitized_name}"
+    with tarfile.open(tar_filename, "x") as tar_file:
+        tar_file.add(local_script_dir / "README.annex-setup", f"{tar_dirname}/README.annex-setup")
+        tar_file.add(local_script_dir / "annex-setup.sh", f"{tar_dirname}/annex-setup.sh")
+        tar_file.add(local_script_dir / "annex-job-setup.sh", f"{tar_dirname}/annex-job-setup.sh")
+        tar_file.add(local_script_dir / "annex-node.sh", f"{tar_dirname}/annex-node.sh")
+        tar_file.add(local_script_dir / "00-annex-pilot-base", f"{tar_dirname}/00-annex-pilot-base")
+        tar_file.add(token_file, f"{tar_dirname}/annex.token")
+        tar_file.add(password_file, f"{tar_dirname}/annex.password")
+        tar_file.add(record_file.name, f"{tar_dirname}/annex.record")
+
+    logger.info(f"\nPlease copy the file {tar_filename} to the HPC system")
+    logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
+
+
 def annex_name_exists(annex_name):
     schedd = htcondor.Schedd()
     constraint = f'hpc_annex_name == "{annex_name}"'
@@ -1070,15 +1285,28 @@ def annex_name_exists(annex_name):
     return len(annex_jobs) > 0
 
 
-def annex_create(logger, annex_name, **others):
+def annex_create_old(logger, annex_name, **others):
     if others.get("test") is None:
         if annex_name_exists(annex_name):
             raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
-    return annex_inner_func(logger, annex_name, **others)
+    return annex_inner_func_old(logger, annex_name, **others)
 
 
-def annex_add(logger, annex_name, **others):
+def annex_add_old(logger, annex_name, **others):
     if others.get("test") is None:
         if not annex_name_exists(annex_name):
             raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
-    return annex_inner_func(logger, annex_name, **others)
+    return annex_inner_func_old(logger, annex_name, **others)
+
+def annex_create_new(logger, annex_name, **others):
+    if others.get("test") is None:
+        if annex_name_exists(annex_name):
+            raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
+    return annex_inner_func_new(logger, annex_name, **others)
+
+
+def annex_add_new(logger, annex_name, **others):
+    if others.get("test") is None:
+        if not annex_name_exists(annex_name):
+            raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
+    return annex_inner_func_new(logger, annex_name, **others)
