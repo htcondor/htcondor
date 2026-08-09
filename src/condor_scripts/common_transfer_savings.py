@@ -87,6 +87,316 @@ def common_transfer_bytes(entry):
     return int(entry.get('CedarSizeBytes', 0) or 0)
 
 
+#
+# ---------------------------------------------------------------------------
+# Timing diagnostics
+# ---------------------------------------------------------------------------
+#
+# The point of these is to answer the question the savings arithmetic above
+# cannot: does common-file reuse actually make the workflow *finish sooner*,
+# or does it only take load off the CDN / origin?  Those are different claims
+# and the byte counts only support the second one.
+#
+# The metric that settles it is ActivationSetupDuration.  The shadow sets
+# activation.StartTime when the startd accepts the claim (remoteresource.cpp:
+# 218) and StartExecutionTime when the job body actually begins (:2148), then
+# records the difference as ActivationSetupDuration (:2164).  Everything that
+# stands between "we have a slot" and "the user's code is running" is inside
+# that window -- common-file staging and mapping, ordinary input transfer, and
+# starter setup.  It is therefore directly comparable between a run that uses
+# common files and a control run that does not, which is exactly what we want.
+#
+# Two things worth knowing when reading the numbers:
+#
+#   * JobCurrentStart/FinishTransferInputDate cover only the job's *own* input
+#     sandbox.  They come from the job's FileTransfer object
+#     (remoteresource.cpp:2054-2057), and common files move over a separate
+#     FileTransfer (the shadow's commonFTO), so common-file bytes are NOT in
+#     that window.  Moving a container image into a catalog therefore shrinks
+#     "input transfer" even when nothing got faster -- the cost just moved into
+#     the rest of ActivationSetupDuration.  Compare setup, not input transfer.
+#
+#   * CompletionDate is set by the schedd, not the shadow, so it is absent or
+#     stale in EPOCH ads (which are written by the shadow).  We use
+#     EpochWriteDate -- inserted into every epoch record at write time
+#     (job_ad_instance_recording.cpp:227) -- as the end-of-run timestamp.
+#
+
+
+def dur(seconds):
+    # Format a duration.  Returns a fixed-ish width string so columns line up.
+    if seconds is None:
+        return "--"
+    seconds = float(seconds)
+    if seconds < 0:
+        return "--"
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    if seconds < 3600:
+        return f"{seconds / 60:.1f}m"
+    if seconds < 86400:
+        return f"{seconds / 3600:.2f}h"
+    return f"{seconds / 86400:.2f}d"
+
+
+def attr_int(entry, *names):
+    # First of `names` present in `entry` and integer-valued, else None.
+    for name in names:
+        if name not in entry:
+            continue
+        try:
+            return int(entry[name])
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def attr_timestamp(entry, *names):
+    # As attr_int(), but rejects zero/negative values.  HTCondor leaves unset
+    # date attributes at 0 rather than removing them, and a 0 here would turn
+    # into a ~56-year interval.
+    value = attr_int(entry, *names)
+    if value is None or value <= 0:
+        return None
+    return value
+
+
+def span(entry, start_names, end_names):
+    # Duration between two timestamp attributes, or None if either is missing.
+    # Negative spans are treated as missing: they mean the two attributes came
+    # from different runs (e.g. an attribute the shadow never refreshed).
+    start = attr_timestamp(entry, *start_names)
+    end = attr_timestamp(entry, *end_names)
+    if start is None or end is None:
+        return None
+    delta = end - start
+    return delta if delta >= 0 else None
+
+
+def summarize(values):
+    # min / median / mean / p90 / max over a list of numbers.
+    values = [v for v in values if v is not None]
+    if not values:
+        return None
+    ordered = sorted(values)
+    n = len(ordered)
+
+    def percentile(p):
+        # Nearest-rank.  Exact enough for the sample sizes involved, and it
+        # never interpolates a value that no job actually exhibited.
+        rank = int(-(-p * n // 100))
+        return ordered[max(0, min(n - 1, rank - 1))]
+
+    return {
+        'n': n,
+        'min': ordered[0],
+        'median': percentile(50),
+        'mean': sum(ordered) / n,
+        'p90': percentile(90),
+        'max': ordered[-1],
+        'total': sum(ordered),
+    }
+
+
+def print_stat_row(label, stat):
+    if stat is None:
+        print(f"    {label:<24}       --")
+        return
+    print(
+        f"    {label:<24} n={stat['n']:<6}"
+        f"min {dur(stat['min']):>8}   med {dur(stat['median']):>8}   "
+        f"mean {dur(stat['mean']):>8}   p90 {dur(stat['p90']):>8}   "
+        f"max {dur(stat['max']):>8}"
+    )
+
+
+def collect_timing(entry):
+    #
+    # Pull the per-epoch (per run attempt) timings out of one EPOCH ad.
+    # Every field may be None; the summaries skip missing values rather than
+    # dropping the whole record, because which attributes are present varies
+    # with how the run ended (completed, evicted, held).
+    #
+    return {
+        # Claim accepted -> job body starts.  The headline metric.
+        'setup': attr_int(entry, 'ActivationSetupDuration'),
+        # The job's own sandbox only -- see the note above.
+        'input_transfer': span(
+            entry,
+            ('JobCurrentStartTransferInputDate',),
+            ('JobCurrentFinishTransferInputDate',),
+        ),
+        # Claim accepted -> common files mapped.  Present only for epochs that
+        # actually mapped a catalog, and it is the number that separates the
+        # job that paid for the staging from the ones that reused it.
+        'common_wait': span(
+            entry,
+            ('JobCurrentStartDate',),
+            ('CommonFilesMappedTime',),
+        ),
+        # Job body execution.
+        'execute': attr_int(entry, 'ActivationExecutionDuration') or span(
+            entry,
+            ('JobCurrentStartExecutingDate',),
+            ('EpochWriteDate',),
+        ),
+        # Whole activation, setup through teardown.
+        'activation': attr_int(entry, 'ActivationDuration') or span(
+            entry,
+            ('JobCurrentStartDate',),
+            ('EpochWriteDate',),
+        ),
+        # Idle in the queue before this run started.
+        'queue_wait': span(entry, ('QDate',), ('JobCurrentStartDate',)),
+        # Absolute stamps, for the makespan.
+        'start': attr_timestamp(entry, 'JobCurrentStartDate'),
+        'end': attr_timestamp(entry, 'EpochWriteDate'),
+        'qdate': attr_timestamp(entry, 'QDate'),
+        # Did this epoch map a catalog?  Lets us split the summaries.
+        'mapped': 'CommonFilesMappedTime' in entry,
+    }
+
+
+def dagman_wall_clock(schedd, clusterID):
+    #
+    # True end-to-end time for a DAG, from the DAGMan job's own history record.
+    #
+    # DAGMan runs in the scheduler universe, so it has no shadow and therefore
+    # writes no epoch ads -- the node jobs' epoch ads can only tell us when the
+    # first node started and the last one finished.  That understates the real
+    # cost of the workflow: it misses DAGMan startup and shutdown, and any
+    # stretch where nodes were throttled, retrying, or waiting on a dependency
+    # with nothing running.  For a throughput comparison the submit-to-finish
+    # number is the honest one, so go get it.
+    #
+    # Returns None (quietly) if the DAGMan record has already aged out of the
+    # history, or if history is not readable.
+    #
+    try:
+        ads = schedd.history(
+            constraint=f'ClusterID == {clusterID}',
+            projection=[
+                'ClusterID', 'ProcID', 'QDate', 'JobStartDate',
+                'CompletionDate', 'RemoteWallClockTime', 'JobStatus',
+                'JobUniverse', 'EnteredCurrentStatus',
+            ],
+            match=1,
+        )
+        ads = list(ads)
+    except Exception:
+        return None
+
+    if not ads:
+        return None
+    ad = ads[0]
+
+    return {
+        'qdate': attr_timestamp(ad, 'QDate'),
+        'start': attr_timestamp(ad, 'JobStartDate'),
+        'end': attr_timestamp(ad, 'CompletionDate', 'EnteredCurrentStatus'),
+        'wall': attr_int(ad, 'RemoteWallClockTime'),
+    }
+
+
+def report_timing(label, records, schedd, dagman_clusterID):
+    #
+    # Print the timing block for one group.  `records` is the list of per-epoch
+    # dicts from collect_timing().
+    #
+    if not records:
+        return
+
+    print(f"  timing ({label})")
+
+    #
+    # Makespan, measured across the node jobs we can see.
+    #
+    starts = [r['start'] for r in records if r['start'] is not None]
+    ends = [r['end'] for r in records if r['end'] is not None]
+    qdates = [r['qdate'] for r in records if r['qdate'] is not None]
+
+    if starts and ends:
+        print(
+            f"    first node start -> last node finish:   "
+            f"{dur(max(ends) - min(starts))}"
+        )
+    if qdates and ends:
+        print(
+            f"    first submit     -> last node finish:   "
+            f"{dur(max(ends) - min(qdates))}"
+        )
+
+    #
+    # The DAGMan job's own wall clock, which is the number to quote when
+    # comparing two runs end-to-end.
+    #
+    if dagman_clusterID is not None:
+        dagman = dagman_wall_clock(schedd, dagman_clusterID)
+        if dagman is not None:
+            wall = None
+            if dagman['start'] is not None and dagman['end'] is not None:
+                wall = dagman['end'] - dagman['start']
+            elif dagman['wall'] is not None:
+                wall = dagman['wall']
+            if wall is not None:
+                print(
+                    f"    DAGMan job wall clock:                  "
+                    f"{dur(wall)}   (cluster {dagman_clusterID}, "
+                    f"scheduler universe)"
+                )
+            if dagman['qdate'] is not None and dagman['end'] is not None:
+                print(
+                    f"    DAGMan submit -> finish:                "
+                    f"{dur(dagman['end'] - dagman['qdate'])}"
+                )
+        else:
+            print(
+                f"    DAGMan job wall clock:                  "
+                f"--   (no history record for cluster "
+                f"{dagman_clusterID}; it may have aged out)"
+            )
+
+    #
+    # Per-job distributions.  Sum of setup across all runs is the total
+    # overhead the workflow paid; it is the quantity common files is supposed
+    # to reduce.
+    #
+    print()
+    setup = summarize([r['setup'] for r in records])
+    print_stat_row("activation setup", setup)
+    print_stat_row("  input transfer (own)",
+                   summarize([r['input_transfer'] for r in records]))
+    print_stat_row("  common-files wait",
+                   summarize([r['common_wait'] for r in records]))
+    print_stat_row("job execution", summarize([r['execute'] for r in records]))
+    print_stat_row("whole activation",
+                   summarize([r['activation'] for r in records]))
+    print_stat_row("queue wait", summarize([r['queue_wait'] for r in records]))
+
+    #
+    # Split setup by whether the epoch mapped a catalog.  In a common-files run
+    # the mapped population contains both the job that paid for the staging and
+    # the ones that reused it, so a long tail here is the staging cost; in a
+    # control run everything lands in "no common files" and the comparison is
+    # against the other run's numbers.
+    #
+    mapped = [r['setup'] for r in records if r['mapped']]
+    unmapped = [r['setup'] for r in records if not r['mapped']]
+    if mapped and unmapped:
+        print()
+        print_stat_row("  setup, mapped", summarize(mapped))
+        print_stat_row("  setup, not mapped", summarize(unmapped))
+
+    if setup is not None:
+        print()
+        print(
+            f"    total setup overhead across {setup['n']} run"
+            f"{'s' if setup['n'] != 1 else ''}: {dur(setup['total'])}"
+            f"   (this is what common files is meant to shrink)"
+        )
+    print()
+
+
 def main(by_dag, requested_id):
 
     #
@@ -104,13 +414,23 @@ def main(by_dag, requested_id):
     # build a ClusterID -> scope map.  COMMON ads for other scopes are
     # discarded during folding below.
     #
+    # Note that the COMMON clause must use "==" and not "=!= \"EPOCH\"".  The
+    # ClassAd "=!=" (IS NOT) operator is total -- it never evaluates to
+    # UNDEFINED -- so `EpochAdType =!= "EPOCH"` is TRUE for any ad that has no
+    # EpochAdType attribute at all, and would drag in every such record in the
+    # history.  Those records exist: EpochAdType was only written into the ad
+    # *body* in 24.10.2 (before that it lived only on the banner line), and the
+    # ad_type= filter matches on the banner, so it can't screen them out.  With
+    # "==" a missing attribute evaluates to UNDEFINED and the ad is not
+    # selected, which is what we want.  Nothing is lost by this: COMMON epoch
+    # ads postdate 24.10.2, so every COMMON ad carries EpochAdType.
     constraint = None
     if requested_id is not None:
         if by_dag:
             constraint = (
                 f'(ClusterID == {requested_id}) || '
                 f'(DAGManJobId == {requested_id}) || '
-                f'(EpochAdType =!= "EPOCH")'
+                f'(EpochAdType == "COMMON")'
             )
         else:
             constraint = f'clusterID == {requested_id}'
@@ -159,9 +479,31 @@ def main(by_dag, requested_id):
     # For reporting: which procs each cluster ran.
     ProcsByCluster = defaultdict(set)
 
+    # Per-epoch timing records (see collect_timing()).  Unlike every counter
+    # above, these are gathered for *all* real job runs, whether or not the job
+    # used common files at all -- a control run with data reuse disabled has no
+    # COMMON ads and no common-file catalogs, and its timings are exactly what
+    # we need in order to have something to compare against.
+    TimingByClusterID = defaultdict(list)
+
+    # Records we couldn't classify at all (see below); reported at the end so
+    # that a partially-unreadable history doesn't look like a clean result.
+    untyped_records = 0
+    # EPOCH ads belonging to transfer shadows rather than to real job runs
+    # (see below).  Counted so that the staging activity stays visible even
+    # though it's excluded from the accounting.
+    transfer_shadow_records = 0
+
     for entry in results:
-        clusterID = entry['ClusterID']
-        epoch_ad_type = entry['EpochAdType']
+        # An epoch history file accumulates across upgrades, so it can hold
+        # records written before EpochAdType was added to the ad body (24.10.2)
+        # or with a banner we couldn't parse a type out of.  We can't tell what
+        # such a record is, so count it and move on rather than dying.
+        epoch_ad_type = entry.get('EpochAdType')
+        clusterID = entry.get('ClusterID')
+        if epoch_ad_type is None or clusterID is None:
+            untyped_records += 1
+            continue
 
         if epoch_ad_type == "COMMON":
             CommonTransfersByClusterID[clusterID] += 1
@@ -176,8 +518,52 @@ def main(by_dag, requested_id):
             else:
                 scope = clusterID
             ClusterToScope[clusterID] = scope
-            if 'ProcID' in entry:
-                ProcsByCluster[clusterID].add(entry['ProcID'])
+
+            #
+            # Skip the EPOCH ads written by "transfer shadows".
+            #
+            # When the schedd decides to stage a catalog it spawns a dedicated
+            # shadow under the *prompting* job's cluster, with a mangled procID
+            # (see promptingToTransferProcID() and FIRST_TRANSFER_PROC_ID in
+            # src/condor_utils/transfer_proc.h; transfer procIDs are <= -1000).
+            # That shadow is handed the prompting job's ad, so it carries
+            # CommonInputCatalogs, and it writes an EPOCH ad when the schedd
+            # eventually vacates it at KEEP_DATA_CLAIM_IDLE expiry
+            # (BaseShadow::evictJob -> writeAdToEpoch).  It only ever stages,
+            # never maps, so it has no CommonFilesMappedTime and would
+            # otherwise be miscounted as an epoch that fell back to normal
+            # input transfer -- inflating both the common-file epoch count and
+            # the fell-back count, and depressing the final percentage.
+            #
+            # Prefer the explicit marker over the procID encoding.  The schedd
+            # stamps IsTransferShadow = true into the ad it hands the transfer
+            # shadow (schedd.cpp, alongside the ProcID rewrite and
+            # TransferTheseCatalogs), and because an EPOCH record is an
+            # unfiltered copy of the whole job ad it survives into the history.
+            # The procID mangling is explicitly a stopgap -- see the comment on
+            # FIRST_TRANSFER_PROC_ID, "at some point ... this should all
+            # change" -- so treat it only as a fallback for records written
+            # before the marker existed.  Note that any negative procID here is
+            # a transfer shadow: epoch recording rejects procIDs strictly
+            # between -1000 and 0 outright, per isInvalidProcID().
+            #
+            # We keep the DAG scope recorded above -- it came from the
+            # prompting job's ad, so it is correct, and it usefully covers the
+            # very clusters that have COMMON ads -- but count nothing else.
+            #
+            procID = entry.get('ProcID')
+            is_transfer_shadow = bool(entry.get('IsTransferShadow', False))
+            if not is_transfer_shadow and procID is not None:
+                is_transfer_shadow = int(procID) < 0
+            if is_transfer_shadow:
+                transfer_shadow_records += 1
+                continue
+
+            if procID is not None:
+                ProcsByCluster[clusterID].add(procID)
+
+            # Timings for every real run, common files or not.
+            TimingByClusterID[clusterID].append(collect_timing(entry))
 
             old_style = False
             if 'CommonInputFiles' in entry:
@@ -198,13 +584,23 @@ def main(by_dag, requested_id):
             if 'CommonFilesMappedTime' in entry:
                 CommonFilesMappedByClusterID[clusterID] += 1
 
-    if len(CommonTransfersByClusterID) == 0:
-        what = "DAG/scope" if by_dag else "cluster ID"
-        if requested_id is None:
-            print("Found no common file transfers.")
-        else:
-            print(f"Found no common file transfer for {what} {requested_id}.")
-        sys.exit(0)
+    if untyped_records:
+        print(
+            f"note: skipped {untyped_records} epoch record"
+            f"{'s' if untyped_records != 1 else ''} with no EpochAdType or "
+            f"ClusterID (written before HTCondor 24.10.2, which is when the ad "
+            f"type was added to the ad body).  These cannot be classified and "
+            f"are not counted below.\n"
+        )
+
+    if transfer_shadow_records:
+        print(
+            f"note: excluded {transfer_shadow_records} EPOCH record"
+            f"{'s' if transfer_shadow_records != 1 else ''} written by "
+            f"transfer shadows (IsTransferShadow / negative ProcID).  These "
+            f"are catalog stagings, not job runs, and are not epochs that fell "
+            f"back to normal input transfer.\n"
+        )
 
     #
     # Fold the per-cluster counters into per-group counters.  In cluster mode
@@ -222,6 +618,48 @@ def main(by_dag, requested_id):
         for cid, value in by_cluster.items():
             by_group[group_of(cid)] += value
         return by_group
+
+    # Timing folds by concatenation rather than by addition.
+    TimingByGroup = defaultdict(list)
+    AllClustersByGroup = defaultdict(set)
+    for cid, records in TimingByClusterID.items():
+        TimingByGroup[group_of(cid)].extend(records)
+        AllClustersByGroup[group_of(cid)].add(cid)
+
+    #
+    # Emit the timing report first, because it does not depend on the
+    # common-files accounting in any way.  That ordering is deliberate: a
+    # control run with data reuse disabled has no COMMON ads at all, and if we
+    # bailed out on that before reporting timings there would be nothing to
+    # compare a common-files run against.
+    #
+    for group, records in sorted(TimingByGroup.items()):
+        if requested_id is not None and group != requested_id:
+            continue
+        is_dag = by_dag and group in ScopeIsDAG
+        clusters = AllClustersByGroup[group]
+        print(f"{'DAG' if is_dag else 'Cluster'} {group}")
+        report_timing(
+            f"{len(records)} run{'s' if len(records) != 1 else ''} over "
+            f"{len(clusters)} cluster{'s' if len(clusters) != 1 else ''}",
+            records,
+            schedd,
+            group if is_dag else None,
+        )
+
+    if len(CommonTransfersByClusterID) == 0:
+        what = "DAG/scope" if by_dag else "cluster ID"
+        if requested_id is None:
+            print("Found no common file transfers.")
+        else:
+            print(f"Found no common file transfer for {what} {requested_id}.")
+        if TimingByGroup:
+            print(
+                "  (Timings above are still valid -- this is what a run with "
+                "data reuse disabled\n   looks like, and is the baseline for "
+                "comparison.)"
+            )
+        return 0
 
     EpochsByGroup = fold(EpochsByClusterID)
     CommonFilesMappedByGroup = fold(CommonFilesMappedByClusterID)
@@ -250,7 +688,11 @@ def main(by_dag, requested_id):
             continue
 
         is_dag = by_dag and group in ScopeIsDAG
-        label = f"DAG {group}" if is_dag else f"Cluster {group}"
+        # The group header was already printed by the timing report above, so
+        # name this block for what it is rather than repeating the header.
+        label = (
+            f"{'DAG' if is_dag else 'Cluster'} {group}: common-file accounting"
+        )
 
         clusters = ClustersByGroup[group]
         # The node count is the number of distinct clusters that used common
