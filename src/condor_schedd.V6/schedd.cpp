@@ -10234,6 +10234,8 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 	}
 
 	JobQueueJob* job_ad = GetJobAd(cluster, proc);
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job_ad->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job_ad);
 	if ( ULog ) {
 		JobDisconnectedEvent event;
