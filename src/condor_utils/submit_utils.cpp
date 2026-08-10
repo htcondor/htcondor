@@ -7027,7 +7027,8 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			if(! AWSv4Impl::doSha256( hash_key, messageDigest, & mdLength )) {
 				// There's doesn't seem to be a failure path out of this
 				// function, so for now, just fail catastrophically.
-				EXCEPT( "Failed to container image ('%s', hashed as '%s'), aborting.\n", container_image.ptr(), hash_key.c_str() );
+				push_error( stderr, "Failed to hash container image ('%s', hashed as '%s'), aborting.\n", container_image.ptr(), hash_key.c_str() );
+				ABORT_AND_RETURN(2);
 			}
 
 			std::string catalogName;
