@@ -96,16 +96,6 @@ Starter::initRunData( void )
 
 	m_vacate_job_soft_cb.reset();
 	m_vacate_job_hard_cb.reset();
-
-		// XXX: ProcFamilyUsage needs a constructor
-	s_usage.max_image_size = 0;
-	s_usage.num_procs = 0;
-	s_usage.percent_cpu = 0.0;
-	s_usage.sys_cpu_time = 0;
-	s_usage.total_image_size = 0;
-	s_usage.user_cpu_time = 0;
-	s_vm_cpu_usage = 0; // extra cpu percentage from VM processes
-	s_num_vm_cpus = 1;
 }
 
 // when a claim associated with this starter is destroyed before the starter is reaped
@@ -477,16 +467,6 @@ pid_t Starter::spawn(Claim * claim, time_t now, Stream* s)
 
 	if (claim) {
 		s_is_vm_universe = claim->universe() == CONDOR_UNIVERSE_VM;
-
-		// we will need to know the number of cpus allocated to the hypervisor in order to interpret
-		// the cpu usage numbers, so capture that now.
-		ClassAd * jobAd = claim->ad();
-		if (jobAd) {
-			if ( ! jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, s_num_vm_cpus) &&
-				 ! jobAd->LookupInteger(ATTR_REQUEST_CPUS, s_num_vm_cpus)) {
-				s_num_vm_cpus = 1;
-			}
-		}
 	}
 
 	ClaimType ct = CLAIM_NONE;
@@ -859,25 +839,8 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		// better than nothing.
 		update_ad.LookupString(ATTR_STARTER_IP_ADDR,m_starter_addr);
 
-		// The update may contain information of VM cpu utitilization because
-		// hypervisors such as libvirt will spawn processes outside
-		// of condor's perview. we want to capture the value here so we can include it in our usage
-		double fPercentCPU=0.0;
-		bool has_vm_cpu = update_ad.LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
-
 		if( claim ) {
 			claim->receiveJobClassAdUpdate(update_ad, final_update);
-
-			ClassAd * jobAd = claim->ad();
-			if (jobAd) {
-				// in case the cpu utilization was modified while being updated.
-				has_vm_cpu = jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
-			}
-		}
-
-		// we only want to overwrite the member for additional cpu if we got an update for that attribute
-		if (has_vm_cpu) {
-			s_vm_cpu_usage = fPercentCPU;
 		}
 	}
 
@@ -1113,42 +1076,10 @@ Starter::dprintf( int flags, const char* fmt, ... )
 	va_end( args );
 }
 
-const ProcFamilyUsage & Starter::updateUsage()
-{
-	if (daemonCore->Get_Family_Usage(s_pid, s_usage, true) == FALSE) {
-		EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
-		        "info for the starter and decendents" ); 
-	}
-
-	// In vm universe, there may be a process dealing with a VM.
-	// Unfortunately, such a process is created by a specific 
-	// running daemon for virtual machine program(such as vmware-serverd).
-	// So our Get_Family_Usage is unable to get usage for the process.
-	// Here, we call a function in vm universe manager.
-	// If this starter is for vm universe, s_usage will be updated.
-	// Otherwise, s_usage will not change.
-	if ( resmgr ) {
-		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
-		
-		// computations outside take cores into account, so we need to correct for that
-		// using the latest cached values for vm cpu usage and vm num cpus.
-		double fPercentCPU = s_vm_cpu_usage * s_num_vm_cpus;
-		dprintf( D_LOAD, "Starter::percentCpuUsage() adding VM Utilization %f\n",fPercentCPU);
-		
-		s_usage.percent_cpu += fPercentCPU;
-		
-	}
-
-	if( IsDebugVerbose(D_LOAD) ) {
-		dprintf(D_LOAD | D_VERBOSE,
-		        "Starter::percentCpuUsage(): Percent CPU usage "
-		        "for the family of starter with pid %u is: %f\n",
-		        s_pid,
-		        s_usage.percent_cpu );
-	}
-
-	return s_usage;
-}
+// NOTE: The startd no longer polls Get_Family_Usage() on the starter's pid to
+// measure the job's resource usage.  The starter (which is universe-aware) now
+// measures the job process family itself and pushes the values to us; see
+// Claim::receiveJobClassAdUpdate() and Claim::updateUsage().
 
 void
 Starter::printInfo( int debug_level )
