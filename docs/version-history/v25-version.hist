@@ -1,5 +1,17 @@
 *** 25.14.0 features
 
+- Each running job's CPU, memory, and disk usage is now measured by the
+  *condor_starter* that manages the job and reported to the *condor_startd*,
+  rather than the *condor_startd* sampling the starter's process family
+  itself.  This makes usage reporting correct for docker and vm universe
+  jobs, whose workloads run outside the starter's process tree (in the
+  container runtime or hypervisor), and refreshes the *condor_startd*'s view
+  on a faster, separately configurable cadence controlled by the new
+  :macro:`STARTER_UPDATE_INTERVAL_STARTD` knob.  As a consequence, resources
+  consumed while transferring a job's input sandbox, before the job itself
+  starts, are no longer counted as the job's own usage.
+  :jira:`3331`
+
 - :tool:`condor_watch_q` now draws its live display on the terminal's
   alternate screen, so quitting restores whatever was on the console
   before it started, the same way less behaves.
