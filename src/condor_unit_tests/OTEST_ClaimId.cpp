@@ -96,9 +96,13 @@ std::string getScheddWriteSessionInfo() {
 	classad::ClassAdParser adparser;
 	std::unique_ptr<ClassAd> ad(adparser.ParseClassAd(baseClaimInfoAd));
 	constexpr char validWriteCmds[] = R"(ValidCommands="60021,60052,421,478,480,486,488,489,487,499,531,464,479,551,552,1112,509,511,526,527,528,521,507,60007,457,60020,550,443,441,6,12,5,515,516,519,540,560,553,1111")";
-	ad->Insert(validWriteCmds);
-
+	bool result = ad->Insert(validWriteCmds);
 	std::string info;
+
+	if (!result) {
+		return info;  // empty meaning broken
+	}
+
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(info, ad.get());
 
