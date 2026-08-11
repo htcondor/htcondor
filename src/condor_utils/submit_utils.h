@@ -154,6 +154,7 @@
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
 #define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
 #define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
+#define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input_files"
 #define SUBMIT_KEY_TransferContainer "transfer_container"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"

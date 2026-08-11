@@ -44,7 +44,7 @@ def the_common_files( test_dir ):
     subdirectory.mkdir(exist_ok=True, parents=True)
     common_file_b = common_files_d / subdirectory / "common-file.b"
 
-    # Writefiles that are just over 4 MB in size, because the quantization
+    # Write files that are just over 4 MB in size, because the quantization
     # sometimes matters.
     contents = "1234567890abcdef" * ((64 * 128 * 8 * 4) + 1)
     common_file_a.write_text(contents)
@@ -64,7 +64,7 @@ def the_running_jobs( the_condor, the_common_files ):
         "request_memory":           1,
         "request_disk":             256,
         "log":                      "the_running_jobs.log.$(ClusterID)",
-        "MY.CommonInputFiles":      f'"{the_common_files.as_posix()}"',
+        "transfer_common_input_files": f"{the_common_files.as_posix()}",
     }
 
     job_handle = the_condor.submit(

@@ -4922,6 +4922,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 
+	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string},
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
