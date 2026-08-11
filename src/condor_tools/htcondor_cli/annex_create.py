@@ -1193,8 +1193,8 @@ def annex_inner_func_new(
             # hpc_annex_start time is set by the job script when it finds
             # a startd ad with a matching request ID.  At that point, we can
             # stop runnig this script, but we don't remove it to simplify
-            # the UI/UX code; instead, we wait until an hour past the end
-            # of the request's lifetime to trigger a peridic remove.
+            # the UI/UX code; instead, we wait two weeks to trigger a
+            # periodic remove.
             "requirements": "hpc_annex_start_time =?= undefined",
             "executable": str(local_job_executable),
             # Sadly, even if you set on_exit_remove to ! requirements,
@@ -1217,9 +1217,6 @@ def annex_inner_func_new(
             "+hpc_annex_name": f'"{annex_name}"',
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_owners": f'"{owners}"',
-            # Hard state required for clean up.  We'll be adding
-            # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
-            # as they're reported by the back-end script.
         }
     )
 
@@ -1256,7 +1253,6 @@ SCHEDD_NAME={schedd_name}
     record_file.file.close()
 
     # Create the setup tarball
-    # TODO add a README
     sanitized_name = re.sub('[^-a-zA-Z0-9_.]', '_', annex_name)
     tar_filename = f"annex-{sanitized_name}.tar"
     tar_dirname = f"annex-{sanitized_name}"
