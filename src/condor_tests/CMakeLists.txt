@@ -271,10 +271,8 @@ if (BUILD_TESTING)
 			condor_pl_test (test_ccb_tunnel_ap "Test a relayed AP reaching a tunneled EP through CCB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test (test_ccb_tunnel_3hop "Test the inbound CCB tunnel through three chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif (NOT WINDOWS)
-
-		# CCB streaming/proxy relay throughput benchmark
-		condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -315,6 +313,7 @@ if (BUILD_TESTING)
 			condor_pl_test(test_check_reactivate_after_checkpoint "Test CHECK_REACTIVATE_AFTER_CHECKPOINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_throttles "Test setting of DAGMan throttles" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_common_input_files "Test DAGMan and condor_dag_checker reject differing MY.CommonInputFiles in one DAG" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 
 			condor_pl_test(test_dc_std_function "Test std::function command handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -465,6 +464,7 @@ endif()
 			if (NOT WINDOWS)
 				condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+        condor_pl_test(test_snake_submit "Test htcondor CLI snake submit logic" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 			condor_pl_test(test_dagman_inline_desc "Test DAGMan inline descriptions" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_options_mutual_exclusion "Test DAGMan Util options mutual exclusion" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -620,6 +620,7 @@ endif()
 			condor_pl_test(test_dagman_multiple_common_containers "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_cif_shadow_recycle "Test shadow recycling with CIF jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_command_data_slot "Verify the COMMAND_DATA_SLOT's client passes the MATCH session along" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_cif_rm "Do we always remove data slots" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_disk_usage "Do we compute disk usage for CIF jobs correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
@@ -1107,8 +1108,8 @@ endif()
 
 	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_prepost.dag;src/condor_tests/job_dagman_prepost-node.cmd;src/condor_tests/job_dagman_prepost-prehello.template;src/condor_tests/job_dagman_prepost-posthello.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl;src/condor_tests/x_dagman_readprepostlog.pl;$<TARGET_FILE:x_read_joblog>")
 
-	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest")
-	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;long")
+	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_retry.dag;src/condor_tests/job_dagman_retry-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_retry-monitor.pl")
+	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_throttle.dag;src/condor_tests/job_dagman_throttle.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;$<TARGET_FILE:x_read_joblog>")
 
 	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_unlessexit.cmd;src/condor_tests/job_dagman_unlessexit.dag;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_retry-monitor.pl")
 	if (NOT WINDOWS)
@@ -1189,7 +1190,7 @@ endif()
 	if (NOT WINDOWS)
 		condor_pl_test(job_dagman_pegasus_recovery "Test recovery of Pegasus-generated sub-DAGs" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pegasus_recovery.dag;src/condor_tests/job_dagman_pegasus_recovery-nodeA.pl;src/condor_tests/job_dagman_pegasus_recovery-nodeC.cmd;src/condor_tests/job_dagman_pegasus_recovery.dag.condor.sub_template;src/condor_tests/job_dagman_pegasus_recovery-nodeB.cmd;src/condor_tests/job_dagman_pegasus_recovery-nodeC.pl;src/condor_tests/job_dagman_pegasus_recovery-nodeA.cmd;src/condor_tests/job_dagman_pegasus_recovery-nodeB.pl")
 	endif()
-	condor_pl_test(job_dagman_abort-B "Test DAG abort with failure" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_abort-B.cfg;src/condor_tests/job_dagman_abort-B.dag;src/condor_tests/job_dagman_abort-B-script.pl;src/condor_tests/x_dagman_retry-monitor.pl")
+	condor_pl_test(job_dagman_abort-B "Test DAG abort with failure" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_abort-B.cfg;src/condor_tests/job_dagman_abort-B.dag;src/condor_tests/job_dagman_abort-B-script.pl;src/condor_tests/x_dagman_retry-monitor.pl;src/condor_tests/echo.bat;src/condor_tests/makeexit.bat")
 
 	# The following test has many random faiures
 	#condor_pl_test(job_dagman_abort-final-A "Test DAG abort with final node" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_abort-final-A.dag;src/condor_tests/job_dagman_abort-final-A-nodeE-pre.pl;src/condor_tests/job_dagman_abort-final-A-node-sleep.pl;src/condor_tests/job_dagman_abort-final-A-nodeE.cmd;src/condor_tests/job_dagman_abort-final-A-node-fail.cmd;src/condor_tests/job_dagman_abort-final-A-node-succeed.cmd;src/condor_tests/job_dagman_abort-final-A-nodeE.pl;src/condor_tests/job_dagman_abort-final-A-node-sleep.cmd;src/condor_tests/x_echostring.pl;src/condor_tests/x_dagman_retry-monitor.pl")

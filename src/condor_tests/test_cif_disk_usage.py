@@ -105,7 +105,7 @@ class TestCIFDiskSize:
         for starter_log_path in log_directory.glob('StarterLog.*'):
             starter_log = starter_log_path.read_text()
             for line in starter_log.splitlines():
-                if 'D_TEST' in line and 'sizeOnDisk' in line:
+                if 'D_TEST' in line and 'cxfer: sizeOnDisk' in line:
                     print(starter_log_path)
                     num_starter_logs += 1
 

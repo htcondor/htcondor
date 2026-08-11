@@ -93,7 +93,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual bool registerStarterInfo( void ) { EXCEPT("MOCK"); return false; }
         virtual bool initUserPriv( void ) { EXCEPT("MOCK"); return false; }
         virtual bool publishUpdateAd( ClassAd* ) { EXCEPT("MOCK"); return false; }
-
+        virtual void updateStartd( ClassAd *, bool ) { EXCEPT("MOCK");}
 };
 
 

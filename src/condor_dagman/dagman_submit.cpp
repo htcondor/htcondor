@@ -722,11 +722,23 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 			}
 
 			ClassAd *proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
+			std::string cif;
 			if ( ! proc_ad) {
 				errmsg = "failed to create job classad";
 				rval = -1;
 				result = SubmitResult::FAILURE;
 				goto finis;
+			}
+
+			if (proc_ad->EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
+				if ( ! dm.dag->cif.empty()) {
+					if (dm.dag->cif != cif) {
+						errmsg = "Multiple differing common input transfer lists declared in DAG";
+						rval = -1;
+						result = SubmitResult::FAILURE;
+						goto finis;
+					}
+				} else { dm.dag->cif = cif; }
 			}
 
 			if (send_cluster) { // we need to send the cluster ad

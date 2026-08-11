@@ -467,7 +467,8 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	, status(M_UNCLAIMED)
 	, entered_current_status(time(NULL))
 	, is_dedicated(is_dedicated_arg)
-	, claim_id(the_claim_id)
+	, claim_id(strdup(the_claim_id))
+	, claim_id_parser(claim_id)
 {
 
 	if( match ) {
@@ -489,15 +490,23 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	// create the session, that may because it already exists, and this
 	// is a duplicate match record that will soon be thrown out.)
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( claim_id.secSessionInfo()[0] == '\0' ) {
-			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",claim_id.publicClaimId());
+
+		std::string publicId; // in case we need to print the public id (could we use the public part instead?)
+		std::string sessionInfo(claim_id_parser.secSessionInfo());
+
+		if( sessionInfo.empty() ) {
+			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",
+				this->publicClaimId(publicId));
 		}
 		else {
+			std::string sessionId(claim_id_parser.secSessionId());
+			std::string sessionKey(claim_id_parser.secSessionKey());
+
 			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 				DAEMON,
-				claim_id.secSessionId(),
-				claim_id.secSessionKey(),
-				claim_id.secSessionInfo(),
+				sessionId.c_str(),
+				sessionKey.c_str(),
+				sessionInfo.c_str(),
 				AUTH_METHOD_MATCH,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				peer,
@@ -509,7 +518,8 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 				use_sec_session = true;
 			}
 			if( !rc ) {
-				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",claim_id.publicClaimId());
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",
+					this->publicClaimId(publicId));
 			}
 		}
 	}
@@ -526,7 +536,7 @@ match_rec::makeDescription() {
 		m_description += " ";
 	}
 	if( IsFulldebug(D_FULLDEBUG) ) {
-		m_description += claim_id.publicClaimId();
+		m_description += claim_id_parser.publicClaimId();
 	}
 	else if( peer ) {
 		m_description += peer;
@@ -568,17 +578,23 @@ match_rec::~match_rec()
 	}
 
 	if(use_sec_session) {
+		// TODO: change SecMan so accept a string_view for session id
+		std::string strSessionId(claim_id_parser.secSessionId());
+		const char * session_id = strSessionId.c_str();
+
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
 			// handle any final communication from the startd that may
 			// still be in flight.
-		daemonCore->getSecMan()->SetSessionExpiration(claim_id.secSessionId(),time(NULL)+600);
+		daemonCore->getSecMan()->SetSessionExpiration(session_id,time(NULL)+600);
 			// In case we get the same claim id again before the slop time
 			// expires, mark this session as "lingering" so we know it can
 			// be replaced.
-		daemonCore->getSecMan()->SetSessionLingerFlag(claim_id.secSessionId());
+		daemonCore->getSecMan()->SetSessionLingerFlag(session_id);
 	}
+	claim_id_parser.clear(); // clear because this refs the claim_id we are about to free
+	if (claim_id) { free(claim_id); claim_id = nullptr; }
 }
 
 
@@ -903,11 +919,8 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
 	           m_scheduler_startup, (long unsigned)m_negotiator_seq);
 
-	auto keybuf = std::unique_ptr<char, decltype(free)*>{
-		Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9),
-		free
-	};
-	if (!keybuf.get()) {
+	auto_free_ptr keybuf(Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9));
+	if ( ! keybuf) {
 		return false;
 	}
 
@@ -919,7 +932,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		NEGOTIATOR,
 		id.c_str(),
-		keybuf.get(),
+		keybuf,
 		session_info,
 		AUTH_METHOD_MATCH,
 		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
@@ -931,8 +944,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
 	}
 	if ( retval ) {
-		ClaimIdParser cid(id.c_str(), exported_session_info.c_str(), keybuf.get());
-		capability = cid.claimId();
+		capability = ClaimIdParserLite::make(id, exported_session_info, keybuf.get());
 	}
 	return retval;
 }
@@ -950,11 +962,8 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
 	           m_scheduler_startup, static_cast<long unsigned>(m_negotiator_seq));
 
-	auto keybuf = std::unique_ptr<char, decltype(free)*>{
-		Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9),
-		free
-	};
-	if (!keybuf.get()) {
+	auto_free_ptr keybuf(Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9));
+	if ( ! keybuf) {
 		return false;
 	}
 
@@ -977,8 +986,7 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
 	}
 	if ( retval ) {
-		ClaimIdParser cid(id.c_str(), exported_session_info.c_str(), keybuf.get());
-		capability = cid.claimId();
+		capability = ClaimIdParserLite::make(id, exported_session_info, keybuf.get());
 	}
 	return retval;
 }
@@ -9987,10 +9995,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
 		if (IsFulldebug(D_FULLDEBUG)) {
-			ClaimIdParser idp( msg->leftover_claim_id() );
+			std::string publicId = ClaimIdParserLite(msg->leftover_claim_id()).publicClaimId();
 			dprintf( D_FULLDEBUG,
 					"Received match from startd, leftover slot ad %s claim %s\n",
-					slot_name, idp.publicClaimId()  );
+					slot_name, publicId.c_str() );
 		}
 
 			// Tell the schedd about the leftover resources it can go claim.
@@ -10154,6 +10162,7 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 	char* pool = NULL;
 	std::string user;
 	std::string claim_id;
+	std::string publicId; // in case we need to print the claim id.
 	char* startd_addr = NULL;
 	char* startd_name = NULL;
 	char* startd_principal = NULL;
@@ -10202,8 +10211,8 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 			// rely on the claim id to tell us how to connect to the startd.
 		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
 				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
-		ClaimIdParser id_parser(claim_id.c_str());
-		startd_addr = strdup(id_parser.startdSinfulAddr());
+		ClaimIdParserLite id_parser(claim_id);
+		startd_addr = strviewdup(id_parser.startdSinfulAddr());
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
 	
@@ -10225,6 +10234,17 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 	}
 
 	JobQueueJob* job_ad = GetJobAd(cluster, proc);
+	// Already checked above, but let's be sure
+	if (job_ad == nullptr) {
+		dprintf(D_ALWAYS, "WARNING: job %d.%d no longer in job queue, cannot reconnect\n", cluster, proc);
+		mark_job_stopped( job );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		return;
+	}
+
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job_ad->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job_ad);
 	if ( ULog ) {
 		JobDisconnectedEvent event;
@@ -10241,12 +10261,14 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		ULog = NULL;
 	}
 
-	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
-			 "(%s: %s)\n", cluster, proc, attr_JobUser.c_str(), user.c_str() );
-	ClaimIdParser idp( claim_id.c_str() );
-	dprintf( D_FULLDEBUG, "ClaimId: %s\n", idp.publicClaimId() );
-	if( pool ) {
-		dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
+	if (IsFulldebug(D_FULLDEBUG)) {
+		dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
+				 "(%s: %s)\n", cluster, proc, attr_JobUser.c_str(), user.c_str() );
+		publicId = ClaimIdParserLite(claim_id).publicClaimId();
+		dprintf( D_FULLDEBUG, "ClaimId: %s\n", publicId.c_str() );
+		if( pool ) {
+			dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
+		}
 	}
 		// note: AddMrec will makes its own copy of match_ad
 	match_rec *mrec = AddMrec( claim_id.c_str(), startd_addr, job, match_ad,
@@ -11154,7 +11176,7 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 
 bool
 Scheduler::mark_catalog_dead( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_dead(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_dead(%s)\n", catalogName.c_str() );
 
 	if( catalogToTimerMap.contains( catalogName ) ) {
 		dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
@@ -11196,6 +11218,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			dprintf( D_ZKM, "mark_catalog_dead(%s): time expired, marking shadow retiring.\n", catalogName.c_str() );
 			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
+			catalogToTimerMap.erase( catalogName );
 		},
 		"terminate transfer shadow lease"
 	);
@@ -11206,7 +11229,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 
 bool
 Scheduler::mark_catalog_live( const std::string & catalogName ) {
-	dprintf( D_ZKM, "mark_catalog_live(%s)\n", catalogName.c_str() );
+	dprintf( D_TEST, "mark_catalog_live(%s)\n", catalogName.c_str() );
 
 	if(! catalogToTimerMap.contains(catalogName)) {
 	    dprintf( D_ZKM, "mark_catalog_live(%s): catalog not dead, ignoring.\n", catalogName.c_str() );
@@ -12650,9 +12673,9 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	// Create security session for all scheduler universe jobs to automatically use
 	{ // Scope for variable creation
 		std::string sec_session_id = schedUniverseSecSessionId(job_id);
-		auto sec_session_key = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9), free};
+		auto_free_ptr sec_session_key(Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9));
 
-		if ( ! sec_session_key.get()) {
+		if ( ! sec_session_key) {
 			dprintf(D_ERROR, "Failed to create security session key for scheduler universe job %d.%d.\n",
 			        job_id.cluster, job_id.proc);
 			goto wrapup;
@@ -12694,8 +12717,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 			goto wrapup;
 		}
 
-		ClaimIdParser session(sec_session_id.c_str(), sec_session_info.c_str(), sec_session_key.get());
-		cmd_secret = session.claimId();
+		cmd_secret = ClaimIdParserLite::make(sec_session_id, sec_session_info, sec_session_key.get());
 
 		// Set in scheduler jobs environment to be automatically picked up
 		envobject.SetEnv(ENV_CONDOR_SEC_SESSION, cmd_secret.c_str());
@@ -13179,6 +13201,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	match_rec* mrec = new_rec->match;
 	int cluster = new_rec->job_id.cluster;
 	int proc = new_rec->job_id.proc;
+	std::string publicId; // temp buffer for building a public claim id
 
 	if( mrec && !new_rec->is_reconnect ) {
 
@@ -13191,13 +13214,13 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		mrec->last_alive = time(nullptr);
 		if(! transfer_proc) {
 			SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
-			SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
+			SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId(publicId) );
 			SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 			SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 		} else {
 			// What's the ClassAd primitive equivalent of SetPrivateAttributeString()?
 			new_rec->matchInfo->InsertAttr( ATTR_CLAIM_ID, mrec->claimId() );
-			new_rec->matchInfo->InsertAttr( ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
+			new_rec->matchInfo->InsertAttr( ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId(publicId) );
 			new_rec->matchInfo->InsertAttr( ATTR_STARTD_IP_ADDR, mrec->peer );
 			new_rec->matchInfo->InsertAttr( ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 		}
@@ -13618,6 +13641,20 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	// deleted, make sure to delete this shadow's maps.
 	unregister_shadow_catalogs(rec, rec->pid);
 
+	//
+	// The above only does anything if this shadow is a transfer shadow,
+	// which is correct as far as it goes.  However, we only check to see
+	// if this shadow is the last non-transfer shadow in unlinkMrec(), and
+	// sometimes (condor_rm), that means we'll never call unlinkMrec() on
+	// a match record that still has a shadow record, and the checking code
+	// will never trigger.  Since, clearly, the reverse is also true (that
+	// we _do_ call unlinkMrec() with a shadowrec), we just have to do this
+	// in both places.
+	//
+	if( rec->match ) {
+		mark_catalogs_dead_if_last_consumer( rec, rec->match->peer );
+	}
+
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
 		// TODO Failure to spawn a reconnect shadow should probably still
@@ -13763,7 +13800,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		rec->match->setStatus( M_CLAIMED );
 	}
 
-	if( rec->keepClaimAttributes &&  rec->match ) {
+	if( rec->keepClaimAttributes && rec->match ) {
 			// We are shutting down and detaching from this claim.
 			// Remove the claim record without sending RELEASE_CLAIM
 			// to the startd.
@@ -14200,7 +14237,8 @@ send_vacate(match_rec* match,int cmd)
 	msg->setSuccessDebugLevel(D_ALWAYS);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
 	if (match->use_sec_session) {
-		msg->setSecSessionId( match->secSessionId() );
+		std::string sessbuf;
+		msg->setSecSessionId( match->secSessionId(sessbuf) );
 	}
 
 	if ( !startd->hasUDPCommandPort() || param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",true) ) {
@@ -14608,7 +14646,6 @@ Scheduler::child_exit(int pid, int status)
 		// We always want to delete the shadow record regardless
 		// of how the job exited
 		delete_shadow_rec( pid );
-
 	}
 
 	//
@@ -17528,6 +17565,7 @@ Scheduler::AddMrec(
 	}
 
 	match_rec *rec = nullptr;
+	std::string publicId; // in case we need to dprintf the public claim id.
 
 	if( pre_existing ) {
 		*pre_existing = nullptr;
@@ -17542,16 +17580,14 @@ Scheduler::AddMrec(
 	auto it = matches.find(id);
 	if (it != matches.end()) {
 		tempRec = it->second;
-		char const *pubid = tempRec->publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 pubid ? pubid : "(null)" );
+				 tempRec->publicClaimId(publicId));
 		if( pre_existing ) {
 			*pre_existing = tempRec;
 		}
 		return nullptr;
 	}
-
 
 	rec = new match_rec(id, peer, jid, my_match_ad, user, pool, false);
 	ASSERT(rec);
@@ -17564,7 +17600,7 @@ Scheduler::AddMrec(
 
 	auto [it2, success] = matches.emplace(id, rec);
 	if (!success) {
-		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", rec->publicClaimId());
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", rec->publicClaimId(publicId));
 		delete rec;
 		return nullptr;
 	}
@@ -17658,7 +17694,6 @@ Scheduler::DelMrec(char const* id)
 	return DelMrec(it->second);
 }
 
-
 int
 Scheduler::DelMrec(match_rec *match) {
 	if (this->unlinkMrec(match) == 0) {
@@ -17708,50 +17743,7 @@ Scheduler::unlinkMrec(match_rec* match)
 		removeMatchFromSinful( match->peer, match );
 	}
 
-	// If every other claim against this match's startd points to a transfer
-	// shadow, then start a timer to release those claims unless another claim
-	// arrives in time.  To avoid a loop, only do this for transfer matches.
-	if( match->shadowRec && match->peer ) {
-		switch( match->shadowRec->cxfer_state ) {
-			case CXFER_STATE::INVALID:
-				break;
-			case CXFER_STATE::MAPPING: {
-				auto matches = getMatchesBySinful( match->peer );
-				if( matches ) {
-					size_t count = 0;
-					for( const auto & match : * matches ) {
-						if( match->shadowRec ) {
-							switch( match->shadowRec->cxfer_state ) {
-								case CXFER_STATE::INVALID:
-								case CXFER_STATE::MAPPING:
-									break;
-								case CXFER_STATE::RETIRING:
-									break;
-								case CXFER_STATE::STAGED:
-								case CXFER_STATE::STAGING:
-									++count;
-							}
-						}
-					}
-
-					if( count == matches->size() ) {
-						for( const auto & match : * matches ) {
-							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
-								mark_catalog_dead( name );
-							}
-						}
-					}
-				}
-				} break;
-			case CXFER_STATE::STAGING:
-				break;
-			case CXFER_STATE::STAGED:
-				break;
-			case CXFER_STATE::RETIRING:
-				break;
-		}
-	}
-
+	mark_catalogs_dead_if_last_consumer( match->shadowRec, match->peer );
 
 	PROC_ID jobId{match->jid};
 
@@ -17819,6 +17811,63 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	numMatches--;
 	return 0;
+}
+
+void
+Scheduler::mark_catalogs_dead_if_last_consumer( shadow_rec * shadowRec, char * peer ) {
+	// If every other claim against this match's startd points to a transfer
+	// shadow, then start a timer to release those claims unless another claim
+	// arrives in time.  To avoid a loop, only do this for transfer matches.
+	if( shadowRec && peer ) {
+		switch( shadowRec->cxfer_state ) {
+			case CXFER_STATE::INVALID:
+				break;
+			case CXFER_STATE::MAPPING: {
+				auto matches = getMatchesBySinful( peer );
+				if( matches ) {
+					// This code sees two matches when called from
+					// delete_shadow_rec() because it hasn't unlinked from
+					// its match record yet.  Rather than move the call,
+					// don't include shadowRec in the matches.
+					std::erase_if( * matches,
+						[shadowRec](match_rec * m) -> bool {
+							return m->shadowRec == shadowRec;
+						}
+					);
+
+					size_t count = 0;
+					for( const auto & match : * matches ) {
+						if( match->shadowRec ) {
+							switch( match->shadowRec->cxfer_state ) {
+								case CXFER_STATE::INVALID:
+								case CXFER_STATE::MAPPING:
+									break;
+								case CXFER_STATE::RETIRING:
+									break;
+								case CXFER_STATE::STAGED:
+								case CXFER_STATE::STAGING:
+									++count;
+							}
+						}
+					}
+
+					if( count == matches->size() ) {
+						for( const auto & match : * matches ) {
+							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
+								mark_catalog_dead( name );
+							}
+						}
+					}
+				}
+				} break;
+			case CXFER_STATE::STAGING:
+				break;
+			case CXFER_STATE::STAGED:
+				break;
+			case CXFER_STATE::RETIRING:
+				break;
+		}
+	}
 }
 
 shadow_rec*
@@ -17925,6 +17974,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 	int ret_value;
 	match_rec* match = NULL;
 	ClassAd *job_ad = NULL;
+	std::string publicId; // in case we need to print a claimid
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
@@ -17967,9 +18017,8 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 	} else {
 		ret_value = -1;
 		if (claim_id) {
-			ClaimIdParser idp( claim_id );
-			dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n",
-				idp.publicClaimId() );
+			publicId = ClaimIdParserLite(claim_id).publicClaimId();
+			dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n", publicId.c_str());
 		}
 	}
 
@@ -18595,7 +18644,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 		job_claimid = mrec->claimId();
 		if (mrec->use_sec_session) {
-			match_sec_session_id = mrec->secSessionId();
+			std::string sessbuf;
+			match_sec_session_id = mrec->secSessionId(sessbuf);
 		}
 	}
 

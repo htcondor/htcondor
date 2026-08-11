@@ -1919,6 +1919,14 @@ default=true
 type=bool
 tags=starter
 
+[SINGULARITY_ALLOWED_JOB_ENV_VARS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Additional APPTAINER_/SINGULARITY_ env vars a job may set
+tags=starter
+
 [UPDATE_INTERVAL]
 default=300
 type=int
