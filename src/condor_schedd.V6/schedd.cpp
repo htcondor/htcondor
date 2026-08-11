@@ -10234,6 +10234,15 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 	}
 
 	JobQueueJob* job_ad = GetJobAd(cluster, proc);
+	// Already checked above, but let's be sure
+	if (job_ad == nullptr) {
+		dprintf(D_ALWAYS, "WARNING: job %d.%d no longer in job queue, cannot reconnect\n", cluster, proc);
+		mark_job_stopped( job );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		return;
+	}
+
 	TemporaryPrivSentry sentry;
 	init_user_ids_from_ad(*job_ad->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job_ad);
