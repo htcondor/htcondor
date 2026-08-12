@@ -1563,7 +1563,8 @@ These macros control the *condor_schedd*.
     Container images are definitionally immutable and usually the same for
     every job in a cluster (and many clusters in a DAG); in addition, they
     are usually large.  Thus, container images are prime candidates for
-    common file transfer, so that they get transferred to an EP once and
+    :ref:`common file transfer<common_file_transfer>`,
+    so that they get transferred to an EP once and
     can be used many times.  (Because they use the same common file transfer
     mechanism as any other common file, container images are not presently
     shared between different job owners.)
