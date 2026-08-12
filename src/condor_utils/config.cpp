@@ -2643,11 +2643,15 @@ public:
 
 class ConfigMacroSkipCount : public ConfigMacroBodyCheck {
 public:
+	ConfigMacroSkipCount(classad::References & names) : skipped_names(names) {}
 	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
-	int skip_count = 0;
+	const char * force_skip(int func_id, const char * body, int len);
+	bool can_evaluate(int func_id, const char * body, int bodylen, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	classad::References & skipped_names;
+	int skip_count{0};
 };
 
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	ConfigMacroSkipCount & skb,
 	MACRO_SET& macro_set,
@@ -2745,6 +2749,20 @@ static int is_config_macro(const char* prefix, int length, MACRO_BODY_CHARS & bo
 		return MACRO_ID_NORMAL;
 	} else if (length > 1 && prefix[1] == '$') {
 		return 0;
+	}
+	return is_special_config_macro(prefix, length, bodychars);
+}
+
+static int is_any_macro(const char* prefix, int length, MACRO_BODY_CHARS & bodychars)
+{
+	// prefix of just "$" is our normal macro expansion
+	// prefix of just "$$" is dollardollar macro expansion, we should not match those...
+	if (length == 1) {
+		bodychars = MACRO_BODY_IDCHAR_COLON;
+		return MACRO_ID_NORMAL;
+	} else if (length == 2 && prefix[1] == '$') {
+		bodychars = (prefix[3] == '[') ? MACRO_BODY_SCAN_BRACKET : MACRO_BODY_IDCHAR_COLON;
+		return MACRO_ID_DOUBLEDOLLAR;
 	}
 	return is_special_config_macro(prefix, length, bodychars);
 }
@@ -2936,6 +2954,10 @@ public:
 	}
 };
 
+class SkipNothingBody : public ConfigMacroBodyCheck {
+public:
+	virtual bool skip(int /*func_id*/, const char * /*body*/, int /*len*/) { return false; }
+};
 
 
 #ifdef METAKNOBS_WITH_ARGS
@@ -4680,6 +4702,38 @@ tryagain:
 	return prefix_id;
 }
 
+// find next $ or $$ macro of any type and return the range of the macro
+// used for scanning a string for *any* unexpanded macro (which is generally not what we do when expanding)
+// the use case for this function is when you want to split a string without splitting any of the macros.
+int next_unexpanded_macro(const char * value, size_t offset, UNEXPANDED_MACRO_EXTENTS &extent)
+{
+	extent.clear();
+	SkipNothingBody skipnothing_body; // match all forms of $ and $$ macros
+	MACRO_POSITION pos;
+	int id = next_config_macro(is_any_macro, skipnothing_body, value, (int)offset, pos);
+	if (id) {
+		extent.left = value + pos.dollar;
+		extent.body = value + pos.body;
+		extent.right = value + pos.right;
+	}
+	return id;
+}
+
+bool has_unexpanded_macros(const char * value, bool ignore_dollor)
+{
+	MACRO_POSITION pos;
+	int offset = 0;
+	int macro_type = SPECIAL_MACRO_ID_NONE;
+	if (ignore_dollor) {
+		NoDollarBody no_dollar; // skip over $(DOLLAR)
+		macro_type = next_config_macro(is_config_macro, no_dollar, value, offset, pos);
+	} else {
+		SkipNothingBody skipnothing_body; // match all forms of $ and $$ macros
+		macro_type = next_config_macro(is_any_macro, skipnothing_body, value, offset, pos) != SPECIAL_MACRO_ID_NONE;
+	}
+	return macro_type != SPECIAL_MACRO_ID_NONE;
+}
+
 
 // used by config_canonicalize_path, gcc 4.4.7 needs it to be declared at global scope.
 struct _remove_duplicate_path_chars {
@@ -4805,16 +4859,91 @@ unsigned int expand_macro (
 	return non_empty_mask;
 }
 
+const char * ConfigMacroSkipCount::force_skip(int func_id, const char * body, int len) {
+	if (func_id == SPECIAL_MACRO_ID_ENV) {
+		// we don't expect to ever get here
+	} else if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+		++skip_count;
+	} else if (func_id == MACRO_ID_NORMAL) {
+		int namelen = len;
+		const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
+		if (colon) {
+			int colonlen = (int)(colon - body);
+			namelen = MIN(namelen, colonlen);
+		}
+		std::string knob(body, namelen);
+		skipped_names.insert(knob);
+		++skip_count;
+	} else if (func_id > 0) {
+		int namelen = len;
+		const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+		if (comma) {
+			int commalen = (int)(comma - body);
+			namelen = MIN(namelen, commalen);
+		}
+		std::string knob(body, namelen);
+		skipped_names.insert(knob);
+		++skip_count;
+	}
+	return body + len;
+}
+
+// return true if the macro function is ok to evaluate when we are doing selective evaluation
+// the return is false if the function does a lookup that would not fully expand.
+bool ConfigMacroSkipCount::can_evaluate(int func_id, const char * body, int bodylen, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx)
+{
+	if (func_id > SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+		const char * bodyend = body+bodylen;
+		const char * p, *e;
+		p = nth_list_item(body, ',', e, 0, true); // arg 0
+		if ( ! p) return true; // go ahead
+		if (e > bodyend) e = bodyend;
+		std::string name(p, e-p);
+		const char * mval = lookup_macro(name.c_str(), macro_set, ctx);
+		if (mval) {
+			std::string buf(mval);
+			int tmp = skip_count;
+			if (selective_expand_macro(buf, *this, macro_set, ctx) > tmp) {
+				skip_count = tmp+1; // set the skip count to +1, (it might be more than +1)
+				skipped_names.insert(name);
+				return false;
+			}
+		}
+		if (func_id == SPECIAL_MACRO_ID_CHOICE) {
+			// When the choice macro has exactly 2 args, the second arg is also a macro name.
+			p = nth_list_item(body, ',', e, 1, true); // arg 1
+			if (p && ! strchr(p, ',')) {
+				if (e > bodyend) e = bodyend;
+				name.assign(p, e-p);
+				mval = lookup_macro(name.c_str(), macro_set, ctx);
+				if (mval) {
+					std::string buf(mval);
+					int tmp = skip_count;
+					if (selective_expand_macro(buf, *this, macro_set, ctx) > tmp) {
+						skip_count = tmp+1; // set the skip count to +1, (it might be more than +1)
+						skipped_names.insert(name);
+						return false;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
 // select only macros that we want to pre-expand when building the submit digest.
 class SkipKnobsBody : public ConfigMacroSkipCount {
 public:
 	classad::References & skip_knobs;
-	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs) {}
+	SkipKnobsBody(classad::References & knobs, classad::References & skipped)
+		: ConfigMacroSkipCount(skipped), skip_knobs(knobs) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
-		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+		if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) return false;
+		if (func_id == MACRO_ID_NORMAL) {
 			// skip $(dollar)
 			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				skipped_names.insert(DOLLAR_ID);
 				++skip_count;
 				return true;
 			}
@@ -4828,11 +4957,30 @@ public:
 			// skip $(knob) when knob is in the skip_knobs set.
 			std::string knob(body, namelen);
 			if (skip_knobs.find(knob) != skip_knobs.end()) {
+				skipped_names.insert(knob);
+				++skip_count;
+				return true;
+			}
+			return false;
+		} else if (func_id > 0) {
+			// this is one of the macros that takes args
+			int namelen = len;
+			const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+			if (comma) {
+				int colonlen = (int)(comma - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is in the skip_knobs set.
+			std::string knob(body, namelen);
+			if (skip_knobs.find(knob) != skip_knobs.end()) {
+				skipped_names.insert(knob);
 				++skip_count;
 				return true;
 			}
 			return false;
 		}
+		// for $$ expansion we end up here.
+		skipped_names.insert("$");
 		++skip_count;
 		return true;
 	}
@@ -4840,20 +4988,32 @@ public:
 
 // expand macros that do not match the names passed in the skip_knobs collection
 // used by submit_utils to selectively expand submit hash keys when creating the submit digest
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	classad::References &skip_knobs,
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	SkipKnobsBody skb(skip_knobs);
+	classad::References dummy;
+	SkipKnobsBody skb(skip_knobs, dummy);
+	return selective_expand_macro(value, skb, macro_set, ctx);
+}
+
+int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	classad::References &skip_knobs,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx,
+	classad::References & skipped)
+{
+	SkipKnobsBody skb(skip_knobs, skipped);
 	return selective_expand_macro(value, skb, macro_set, ctx);
 }
 
 // expand only macros that the skb callback does not indicate should be skipped
 // returns the count of skipped expansions
 //
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	ConfigMacroSkipCount & skb,
 	MACRO_SET& macro_set,
@@ -4880,10 +5040,19 @@ unsigned int selective_expand_macro (
 			pos2.body  -= pos.dollar;
 			pos2.right -= pos.dollar;
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
+			if (special_id > SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+				if ( ! skb.can_evaluate(special_id, tmp + pos.body, pos.body_len(), macro_set, ctx)) {
+					pos.dollar = pos.right;
+					continue;
+				}
+			}
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
-				macro_set.push_error(stderr, -1, NULL, "%s", errmsg.c_str());
-				return -1;
+				// when evaluation fails, assume it is because of selective expansion
+				// and just skip over this function macro
+				skb.force_skip(special_id, tmp + pos.body, pos.body_len());
+				pos.dollar = pos.right;
+				continue;
 			}
 			if ( ! cch) {
 				value.erase(pos.dollar, pos.right-pos.dollar);
@@ -4904,19 +5073,22 @@ public:
 	MACRO_SET& mset;
 	MACRO_EVAL_CONTEXT & ctx;
 
-	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c) : mset(m), ctx(c) {}
+	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c, classad::References & skipped)
+		: ConfigMacroSkipCount(skipped), mset(m), ctx(c) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
-		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+		if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) return false;
+		if (func_id == MACRO_ID_NORMAL) {
 			// skip $(dollar)
 			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				skipped_names.insert(DOLLAR_ID);
 				++skip_count;
 				return true;
 			}
 
 			int namelen = len;
 			const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
-			if (colon) {
+			if (colon && func_id == MACRO_ID_NORMAL) {
 				int colonlen = (int)(colon - body);
 				namelen = MIN(namelen, colonlen);
 			}
@@ -4924,11 +5096,31 @@ public:
 			std::string knob(body, namelen);
 			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
 			if ( ! pval || ! pval[0]) {
+				skipped_names.insert(DOLLAR_ID);
+				++skip_count;
+				return true;
+			}
+			return false;
+		} else if (func_id > 0) {
+			// this is one of the macros that takes args
+			int namelen = len;
+			const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+			if (comma) {
+				int colonlen = (int)(comma - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is in the skip_knobs set.
+			std::string knob(body, namelen);
+			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
+			if ( ! pval || ! pval[0]) {
+				skipped_names.insert(knob);
 				++skip_count;
 				return true;
 			}
 			return false;
 		}
+		// we get here for $$
+		skipped_names.insert("$");
 		++skip_count;
 		return true;
 	}
@@ -4936,12 +5128,23 @@ public:
 
 // do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
 // returns the number of $() and $func() patterns that were skipped.
-unsigned int expand_defined_macros (
+int expand_defined_macros (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	SkipUndefinedBody skub(macro_set, ctx);
+	classad::References dummy;
+	SkipUndefinedBody skub(macro_set, ctx, dummy);
+	return selective_expand_macro(value, skub, macro_set, ctx);
+}
+
+int expand_defined_macros (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx,
+	classad::References & skipped)
+{
+	SkipUndefinedBody skub(macro_set, ctx, skipped);
 	return selective_expand_macro(value, skub, macro_set, ctx);
 }
 
