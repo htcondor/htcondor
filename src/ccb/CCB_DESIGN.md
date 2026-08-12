@@ -457,6 +457,16 @@ registration reply until it is itself tunnel-ready**, so a daemon that starts ea
 simply blocks in registration and the contact it ultimately learns is already
 nested.
 
+The deferral is bounded by `CCB_TUNNEL_REGISTRATION_TIMEOUT` (default 300s, 0 to
+wait indefinitely): if the inside CCB's own upstream registration has still not
+completed by then, `CCBServer::SweepDeferredRegistrationReplies` **disconnects**
+the waiting registrant rather than replying with a failure. A failure reply is
+not an option, because `CCBListener::HandleCCBRegistrationReply` `EXCEPT`s on a
+reply that carries no `ATTR_CCBID`; hanging up is the backward-compatible signal,
+and the registrant's `CCBListener` treats it as a lost connection and
+re-registers after `CCB_RECONNECT_TIME` (being deferred again) until the tunnel
+comes up.
+
 **Code** (master in `condor_master.V6/masterDaemon.cpp`; readiness signal in
 `ccb_server.cpp`):
 

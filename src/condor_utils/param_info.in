@@ -4405,6 +4405,13 @@ type=int
 description=How long (in seconds) a CCB server (broker) waits for the target of a streaming (proxy) request to connect back and be spliced before abandoning the half-open session, freeing the requester's socket, and reporting a failure. This bounds only the handshake; once the relay is established it has no idle timeout. Set to 0 to disable handshake reaping.
 tags=ccb
 
+[CCB_TUNNEL_REGISTRATION_TIMEOUT]
+default=300
+version=25.12.0
+type=int
+description=How long (in seconds) a tunneling inside CCB will hold a registrant's CCB_REGISTER reply while waiting to complete its own upstream registration. Replies are deferred so a registrant only ever learns a reachable, nested tunnel contact; if the tunnel does not come up within this time, the broker disconnects the waiting registrant, which reconnects and re-registers after CCB_RECONNECT_TIME. Set to 0 to wait indefinitely.
+tags=ccb
+
 [CCB_SERVER_MAX_STREAMING_SESSIONS]
 default=0
 version=25.12.0

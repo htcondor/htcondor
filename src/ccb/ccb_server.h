@@ -95,8 +95,11 @@ class CCBServer: Service {
 	CCBListeners *m_upstream_ccb;
 		// Registrations whose CCB_REGISTER reply we deferred because this inside CCB
 		// was not yet tunnel-ready (their contact would have been non-nested).
-		// OnUpstreamRegistered flushes these once m_tunnel_contacts is derived.
-	std::vector<CCBID> m_pending_registration_replies;
+		// OnUpstreamRegistered flushes these once m_tunnel_contacts is derived.  The
+		// time_t is when the reply was deferred: if the tunnel never comes up,
+		// SweepDeferredRegistrationReplies() gives up on the entry after
+		// CCB_TUNNEL_REGISTRATION_TIMEOUT so the registrant does not wait forever.
+	std::vector<std::pair<CCBID,time_t>> m_pending_registration_replies;
 	std::string m_reconnect_fname;
 	FILE *m_reconnect_fp;
 	time_t m_last_reconnect_info_sweep;
@@ -224,6 +227,10 @@ class CCBServer: Service {
 		// Periodic maintenance: reap proxy sessions whose handshake never
 		// completed (called from PollSockets, the existing CCB poll timer).
 	void SweepProxySessions();
+		// Periodic maintenance: give up on registration replies this inside CCB has
+		// been holding for too long waiting to become tunnel-ready (called from
+		// PollSockets, the existing CCB poll timer).
+	void SweepDeferredRegistrationReplies();
 
 		// --- outbound-CCB / tunneling mode (CCB_OUTBOUND_PROXY) ---
 		// Command handler: a requester asks this broker to dial a target on its
