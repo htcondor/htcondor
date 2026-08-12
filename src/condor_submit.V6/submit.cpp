@@ -131,7 +131,7 @@ SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	CmdFileIsStdin = false;
 bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
 bool	GotCmdlineKeys = false; // key=value or -append specifed on the command line
-bool	AllowMultipleQueueStatements = false;
+bool	AllowMultipleQueueStatements = true;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int     DashQueryCapabilities = 0; // get capabilites from schedd and print the
