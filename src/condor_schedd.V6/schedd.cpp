@@ -10240,6 +10240,10 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		mark_job_stopped( job );
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		if (startd_addr) free(startd_addr);
+		if (startd_name) free(startd_name);
+		if (startd_principal) free(startd_principal);
+		if (pool) free(pool);
 		return;
 	}
 
