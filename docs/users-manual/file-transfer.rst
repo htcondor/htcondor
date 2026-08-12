@@ -920,6 +920,9 @@ If you need to specify a region, you may do so using :subcom:`aws_region[with no
 despite the name.
 
 
+.. include:: common-file-transfer.inc
+
+
 Public Input Files
 ''''''''''''''''''
 
