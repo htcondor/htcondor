@@ -612,11 +612,12 @@ endif()
 			condor_pl_test(test_cif_failures "Test common input files failures" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_disk_size "Do common files actually save space" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_shadow_exit_codes "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
-			condor_pl_test(test_dagman_multiple_common_containers "Test CIF shadow exit codes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
+			condor_pl_test(test_dagman_multiple_common_containers "Test DAGMan/CIF interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_cif_shadow_recycle "Test shadow recycling with CIF jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
 			condor_pl_test(test_command_data_slot "Verify the COMMAND_DATA_SLOT's client passes the MATCH session along" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_rm "Do we always remove data slots" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_disk_usage "Do we compute disk usage for CIF jobs correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_catalog_scopes "transfer_common_input_files not shared between non-DAG clusters" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# These Ornithology tests only work on linux.
