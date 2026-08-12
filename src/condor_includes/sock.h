@@ -472,6 +472,12 @@ public:
 	void set_bypass_outbound_ccb(bool b) { m_bypass_outbound_ccb = b; }
 	bool bypass_outbound_ccb() const { return m_bypass_outbound_ccb; }
 
+		// The connect path caches OUTBOUND_CCB_ADDRESS so it does not do a param
+		// lookup on every outbound connect.  DaemonCore::reconfig() calls this so
+		// config changes are picked up; non-DaemonCore processes (tools) never need
+		// it, since they simply param once lazily.
+	static void invalidateOutboundCCBAddressCache();
+
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
@@ -529,6 +535,10 @@ protected:
 		// the target is loopback/same-host, the target IS the broker, or this
 		// daemon itself is the broker.
 	bool bypassOutboundCCBForTarget( char const *target_sinful, char const *outbound_ccb );
+
+		// The configured OUTBOUND_CCB_ADDRESS (empty if unset), cached on first use.
+		// See invalidateOutboundCCBAddressCache().
+	static const std::string &outboundCCBAddress();
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack) = 0;
 	virtual void cancel_reverse_connect() = 0;

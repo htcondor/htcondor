@@ -593,10 +593,10 @@ CCBServer::OnUpstreamRegistered()
 		// their replies carry a reachable, nested contact.  (A registrant that
 		// disconnected in the meantime has been removed, so skip a stale ccbid.)
 	if( !m_pending_registration_replies.empty() ) {
-		std::vector<CCBID> pending;
+		std::vector<std::pair<CCBID,time_t>> pending;
 		pending.swap( m_pending_registration_replies );
-		for( CCBID ccbid : pending ) {
-			if( CCBTarget *t = GetTarget( ccbid ) ) {
+		for( const auto &entry : pending ) {
+			if( CCBTarget *t = GetTarget( entry.first ) ) {
 				SendRegistrationReply( t );
 			}
 		}
@@ -759,6 +759,7 @@ CCBServer::PollSockets(int /* timerID */)
 	// periodically call the following
 	SweepReconnectInfo();
 	SweepProxySessions();
+	SweepDeferredRegistrationReplies();
 }
 
 int
@@ -815,7 +816,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 		// nested contact.  This is what lets the master learn a daemon's tunnel
 		// address from ordinary registration, with no separate tunnel-address query.
 	if( m_upstream_ccb && m_tunnel_contacts.empty() ) {
-		m_pending_registration_replies.push_back( target->getCCBID() );
+		m_pending_registration_replies.emplace_back( target->getCCBID(), time(nullptr) );
 		dprintf(D_FULLDEBUG,
 				"CCB: deferring registration reply to %s until this inside CCB has "
 				"registered upstream.\n", sock->peer_description());
@@ -2481,13 +2482,63 @@ CCBServer::SweepProxySessions()
 					"after %d seconds; the target never connected back to be "
 					"relayed.\n",
 					session->request_id.c_str(), handshake_timeout);
-			RequestReply( session->requester, false,
-					"CCB streaming handshake timed out: the target did not "
-					"connect back to the broker", 0, 0 );
+				// Only the client-facing (outermost) hop may answer the requester.
+				// On an intermediate relay hop the requester is the raw upstream
+				// pipe, so writing a CEDAR ClassAd onto it would corrupt the stream;
+				// the outer (originating) broker runs its own handshake timer and
+				// answers the client.
+			if( session->reply_to_requester ) {
+				RequestReply( session->requester, false,
+						"CCB streaming handshake timed out: the target did not "
+						"connect back to the broker", 0, 0 );
+			}
 			ccb_stats.CCBRequestsFailed += 1;
 			DestroyProxySession( session );
 		}
 		it = next_it;
+	}
+}
+
+void
+CCBServer::SweepDeferredRegistrationReplies()
+{
+		// Give up on registration replies this inside CCB has been holding while
+		// waiting to become tunnel-ready: if our upstream registration never
+		// completes, the registrant would otherwise block in registration forever.
+		//
+		// We hang up on the registrant rather than replying with a failure, because
+		// a reply without ATTR_CCBID is fatal to the other side: see
+		// CCBListener::HandleCCBRegistrationReply(), which EXCEPTs on it.  Hanging
+		// up is the backward-compatible failure signal -- the registrant's
+		// CCBListener treats it as a lost connection and reconnects after
+		// CCB_RECONNECT_TIME (60s by default), re-registering (and being deferred
+		// again) until the tunnel finally comes up.
+	int timeout = param_integer("CCB_TUNNEL_REGISTRATION_TIMEOUT", 300, 0);
+	if( timeout <= 0 || m_pending_registration_replies.empty() ) {
+		return;
+	}
+	time_t now = time(nullptr);
+	auto it = m_pending_registration_replies.begin();
+	while( it != m_pending_registration_replies.end() ) {
+		if( now - it->second < timeout ) {
+			++it;
+			continue;
+		}
+			// A registrant that already disconnected has been removed, leaving a
+			// stale ccbid here; GetTarget() returns null for it.  Either way the
+			// entry is dropped.
+		if( CCBTarget *target = GetTarget( it->first ) ) {
+			dprintf(D_ALWAYS,
+					"CCB: this inside CCB has still not completed its upstream "
+					"registration after %d seconds; disconnecting waiting "
+					"registrant %s so it retries later (its CCBListener will "
+					"reconnect after CCB_RECONNECT_TIME).\n",
+					timeout, target->getSock()->peer_description());
+				// RemoveTarget() closes the socket and frees the target; do not
+				// touch it afterwards.
+			RemoveTarget( target );
+		}
+		it = m_pending_registration_replies.erase( it );
 	}
 }
 

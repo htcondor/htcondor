@@ -3057,6 +3057,9 @@ DaemonCore::reconfig(void) {
 	secman->reconfig();
 	secman->getIpVerify()->Init();
 
+		// the connect path caches OUTBOUND_CCB_ADDRESS; re-read it on reconfig
+	Sock::invalidateOutboundCCBAddressCache();
+
         // invoke reconfig method on our class to handle timer events
     t.reconfig();
 
