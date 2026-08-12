@@ -5436,6 +5436,14 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 	if ( (status == COMPLETED || status == REMOVED) &&
 	     ! scheduler.FindSrecByProcID(jobad->jid) )
 	{
+			// A removed job leaves the queue via the JOB_ABORTED event.  The
+			// deferred abort_job_myself() normally writes it, but this reaper
+			// can win the race and destroy the ad first; if so, write the
+			// event here (idempotently) so it is never lost.  COMPLETED jobs
+			// already got their terminal event from the shadow.
+		if ( status == REMOVED ) {
+			scheduler.WriteAbortToUserLog(jobad);
+		}
 		DestroyProc(cluster,proc);
 	}
 
@@ -5880,6 +5888,22 @@ Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const cha
 bool
 Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 {
+		// The JOB_ABORTED event must be written exactly once, but more than
+		// one cleanup path can race to remove the same job: the deferred
+		// abort_job_myself() (act_on_job_myself_queue) and the periodic policy
+		// reaper (PeriodicExprEval) can both try to reap an idle removed job.
+		// If the reaper destroys the ad before the deferred handler runs, the
+		// abort event would otherwise be lost, hanging any user-log consumer
+		// (e.g. DAGMan) that waits for a terminal event.  Use a nondurable
+		// marker so whichever path arrives first logs the event and the rest
+		// skip it.
+	int abort_logged = 0;
+	if( GetAttributeInt(job->jid.cluster, job->jid.proc,
+	                    ATTR_JOB_ABORT_EVENT_LOGGED, &abort_logged) >= 0 &&
+	    abort_logged ) {
+		return true;
+	}
+
 	TemporaryPrivSentry sentry;
 	init_user_ids_from_ad(*job->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job);
@@ -5903,6 +5927,12 @@ Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
+
+		// Mark the event as logged so a racing cleanup path won't write a
+		// duplicate.  Nondurable: the marker only needs to outlive the ad,
+		// which is destroyed moments later, so it need not survive a restart.
+	SetAttributeInt(job->jid.cluster, job->jid.proc,
+	                ATTR_JOB_ABORT_EVENT_LOGGED, 1, NONDURABLE);
 	return true;
 }
 

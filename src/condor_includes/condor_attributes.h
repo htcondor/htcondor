@@ -444,6 +444,7 @@
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
 #define ATTR_JOB_ID  "JobId"
 #define ATTR_JOB_FINISHED_HOOK_DONE  "JobFinishedHookDone"
+#define ATTR_JOB_ABORT_EVENT_LOGGED  "JobAbortEventLogged"
 #define ATTR_JOB_INPUT  "In"
 #define ATTR_JOB_IWD  "Iwd"
 #define ATTR_JOB_IWD_FLUSH_NFS_CACHE  "IwdFlushNFSCache"
