@@ -590,47 +590,6 @@ long-running workflows.  Like any other job, dataflow jobs may
 appear in the nodes of a DAG.
 
 
-Public Input Files
-''''''''''''''''''
-
-There are some cases where HTCondor's file transfer mechanism is
-inefficient. For jobs that need to run a large number of times, the
-input files need to get transferred for every job, even if those files
-are identical. This wastes resources on both the access point and the
-network, slowing overall job execution time.
-
-Public input files allow a user to specify files to be transferred over
-a publicly-available HTTP web service. A system administrator can then
-configure caching proxies, load balancers, and other tools to
-dramatically improve performance. Public input files are not available
-by default, and need to be explicitly enabled by a system administrator.
-
-To specify files that use this feature, the submit file should include a
-:subcom:`public_input_files[example]`
-command. This comma-separated list specifies files which HTCondor will
-transfer using the HTTP mechanism. For example:
-
-.. code-block:: condor-submit
-
-      should_transfer_files = YES
-      when_to_transfer_output = ON_EXIT
-      transfer_input_files = file1,file2
-      public_input_files = public_data1,public_data2
-
-Similar to the regular
-:subcom:`transfer_input_files[and public input files]`,
-the files specified in
-:subcom:`public_input_files[example]`
-can be relative to the submit directory, or absolute paths. You can also
-specify an :subcom:`initialdir[and public input files]`,
-and :tool:`condor_submit` will look for files relative to that directory. The
-files must be world-readable on the file system (files with permissions
-set to 0644, directories with permissions set to 0755).
-
-Lastly, all files transferred using this method will be publicly
-available and world-readable, so this feature should not be used for any
-sensitive data.
-
 Behavior for Error Cases
 ''''''''''''''''''''''''
 
@@ -960,3 +919,44 @@ key files described above.
 If you need to specify a region, you may do so using :subcom:`aws_region[with non-AWS S3 cloud]`,
 despite the name.
 
+
+Public Input Files
+''''''''''''''''''
+
+There are some cases where HTCondor's file transfer mechanism is
+inefficient. For jobs that need to run a large number of times, the
+input files need to get transferred for every job, even if those files
+are identical. This wastes resources on both the access point and the
+network, slowing overall job execution time.
+
+Public input files allow a user to specify files to be transferred over
+a publicly-available HTTP web service. A system administrator can then
+configure caching proxies, load balancers, and other tools to
+dramatically improve performance. Public input files are not available
+by default, and need to be explicitly enabled by a system administrator.
+
+To specify files that use this feature, the submit file should include a
+:subcom:`public_input_files[example]`
+command. This comma-separated list specifies files which HTCondor will
+transfer using the HTTP mechanism. For example:
+
+.. code-block:: condor-submit
+
+      should_transfer_files = YES
+      when_to_transfer_output = ON_EXIT
+      transfer_input_files = file1,file2
+      public_input_files = public_data1,public_data2
+
+Similar to the regular
+:subcom:`transfer_input_files[and public input files]`,
+the files specified in
+:subcom:`public_input_files[example]`
+can be relative to the submit directory, or absolute paths. You can also
+specify an :subcom:`initialdir[and public input files]`,
+and :tool:`condor_submit` will look for files relative to that directory. The
+files must be world-readable on the file system (files with permissions
+set to 0644, directories with permissions set to 0755).
+
+Lastly, all files transferred using this method will be publicly
+available and world-readable, so this feature should not be used for any
+sensitive data.
