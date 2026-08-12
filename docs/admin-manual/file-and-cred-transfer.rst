@@ -107,202 +107,6 @@ script provided to transfer these URLs.  If your ``custommethod://`` protocol
 is already supported at your execution point, the plugin provided in your
 submit file will take precedence.
 
-Enabling the Transfer of Public Input Files over HTTP
------------------------------------------------------
-
-Another option for transferring files over HTTP is for users to specify
-a list of public input files. These are specified in the submit file as
-follows:
-
-.. code-block:: condor-submit
-
-    public_input_files = file1,file2,file3
-
-HTCondor will automatically convert these files into URLs and transfer
-them over HTTP using plug-ins. The advantage to this approach is that
-system administrators can leverage Squid caches or load-balancing
-infrastructure, resulting in improved performance. This also allows us
-to gather statistics about file transfers that were not previously
-available.
-
-When a user submits a job with public input files, HTCondor generates a
-hash link for each file in the root directory for the web server. Each
-of these links points back to the original file on local disk. Next,
-HTCondor replaces the names of the files in the submit job with web
-links to their hashes. These get sent to the execute node, which
-downloads the files using our curl_plugin tool, and are then remapped
-back to their original names.
-
-In the event of any errors or configuration problems, HTCondor will fall
-back to a regular (non-HTTP) file transfer.
-
-To enable HTTP public file transfers, a system administrator must
-perform several steps as described below.
-
-Install a web service for public input files
-''''''''''''''''''''''''''''''''''''''''''''
-
-An HTTP service must be installed and configured on the submit node. Any
-regular web server software such as Apache
-(`https://httpd.apache.org/ <https://httpd.apache.org/>`_) or nginx
-(`https://nginx.org <https://nginx.org>`_) will do. The submit node
-must be running a Linux system.
-
-Configuration knobs for public input files
-''''''''''''''''''''''''''''''''''''''''''
-
-Several knobs must be set and configured correctly for this
-functionality to work:
-
--  :macro:`ENABLE_HTTP_PUBLIC_FILES`:
-   Must be set to true (default: false)
-   :macro:`HTTP_PUBLIC_FILES_ADDRESS`: The full web address
-   (hostname + port) where your web server is serving files (default:
-   127.0.0.1:8080)
-   :macro:`HTTP_PUBLIC_FILES_ROOT_DIR`: Absolute path to the local
-   directory where the web service is serving files from.
--  :macro:`HTTP_PUBLIC_FILES_USER`:
-   User security level used to write links to the directory specified by
-   HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
-   this knob:
-
-   #. **<user>**: Links will be written as the user who submitted the job.
-   #. **<condor>**: Links will be written as user running condor
-      daemons. By default this is the user condor unless you have
-      changed this by setting the configuration parameter CONDOR_IDS.
-   #. **<%username%>**: Links will be written as the user %username% (i.e., httpd, nobody) If using this option, make sure the directory is writable
-      by this particular user.
-
-   The default setting is <condor>.
-
-Additional HTTP infrastructure for public input files
-'''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-The main advantage of using HTTP for file transfers is that system
-administrators can use additional infrastructure (such as Squid caching)
-to improve file transfer performance. This is outside the scope of the
-HTCondor configuration but is still worth mentioning here. When
-curl_plugin is invoked, it checks the environment variable http_proxy
-for a proxy server address; by setting this appropriately on execute
-nodes, a system can dramatically improve transfer speeds for commonly
-used files.
-
-.. _self-checkpointing-jobs:
-
-Self-Checkpointing Jobs
------------------------
-
-As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
-(see :subcom:`checkpoint_destination`),
-which causes HTCondor to store the job's checkpoint(s) at the specific URL
-(rather than in the AP's :macro:`SPOOL` directory).  This can be a major
-improvement in scalability.  Once the job leaves the queue, HTCondor should
-delete its stored checkpoints -- but the plug-in for the checkpoint destination
-wrote the files, so HTCondor doesn't know how to delete them.  You, the
-HTCondor administrator, need to tell HTCondor how to delete checkpoints by
-registering the corresponding clean-up plug-in.
-
-You may also wish to prevent jobs with checkpoint destinations that HTCondor
-doesn't know how to clean up from entering the queue.  To enable this, add
-``use policy:OnlyRegisteredCheckpointDestinations``
-(:ref:`reference<OnlyRegisteredCheckpointDestinations>`)
-to your HTCondor configuration.
-
-Registering a Checkpoint Destination
-''''''''''''''''''''''''''''''''''''
-
-When transferring files to or from a URL, HTCondor assumes that a plug-in
-which handles a particular schema (e.g., ``https``) can read from and write
-to any URL starting with ``https://``.  However, this may not be true for
-a clean-up plug-in (see below).  Therefore, when registering a clean-up
-plug-in, you specify a URL prefix for which that plug-in is responsible,
-using a map file syntax.  A map file is line-oriented; every line has three
-columns, separated by whitespace.  The left column must be ``*``; the
-middle column is a URL prefix; and the right column is the clean-up plug-in
-to invoke, plus any required arguments, separated by commas.  (Presently,
-the columns can not contain spaces.)  Prefixes are checked in order of
-decreasing length, regardless of their order in the file.
-
-The default location of the checkpoint destination mapfile is
-``$(ETC)/checkpoint-destination-mapfile``, but it can be specified by
-the configuration value :macro:`CHECKPOINT_DESTINATION_MAPFILE`.
-
-Checkpoint Destinations with a Filesystem Mounted on the AP
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-HTCondor ships with a clean-up plugin (``cleanup_locally_mounted_checkpoint``) that deletes
-checkpoints from a filesystem mounted on the AP.  This is more useful than
-it sounds, because the mounted filesystem could be the remote backing store
-for files available through some other service, perhaps on a different
-machine.  The plug-in needs to be told how to map from the destination URL to
-the corresponding location in the filesystem.  For instance, if you’ve mounted
-a CephFS at ``/ceph/example-fs`` and made that origin available via the OSDF at
-``osdf:///example.vo/example-fs``, your map file would include the line
-
-.. code-block:: text
-
-   *       osdf:///example.vo/example-fs/      cleanup_locally_mounted_checkpoint,-prefix,\0,-path,/ceph/example-fs
-
-because the ``cleanup_locally_mounted_checkpoint`` script that ships with
-HTCondor needs to know the URL and path to the ``example-fs``.  (One could
-replace ``\0`` with ``osdf:///example.vo/example-fs/``, but that could lead
-to accidentally changing one without changing the other.)
-
-Other Checkpoint Destinations
-'''''''''''''''''''''''''''''
-
-You may specify a different executable in the right column.  Executables
-which are not specified with an absolute path are assumed to be in the
-:macro:`LIBEXEC` directory.
-
-The remainder of this section is a detailed explanation of how HTCondor
-launches such an executable.  This may be useful for administrators who
-wish to understand the process tree they're seeing, but it is intended
-to aid people trying to write a checkpoint clean-up plug-in for a
-different kind of checkpoint destination.  For the rest of this section,
-assume that "a job" means "a job which specified a checkpoint destination."
-
-When a job exits the queue, the *condor_schedd* will immediately spawn the
-checkpoint clean-up process (*condor_manifest*); that process will call the
-checkpoint clean-up plug-in once per file in each checkpoint the job wrote.
-The *condor_schedd* does not check to see if this process succeeded; that's
-a job for :tool:`condor_preen`.  When :tool:`condor_preen` runs, if a job's checkpoint
-has not been cleaned up, it will also spawn *condor_manifest*, and do so in
-exactly the same way the *condor_schedd* did.  Failures will be reported via
-the usual channels for :tool:`condor_preen`.  You may specify how long
-*condor_manifest* may run with the configuration macro
-:macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
-*condor_manifest* tool removes each MANIFEST file as its contents get cleaned
-up, so this timeout need only be long enough to complete a single checkpoint's
-worth of clean-up in order to make progress.
-
-(On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
-the job whose checkpoints are being cleaned up; this is both safer and easier,
-since that user may have useful privileges (for example, filesystems may be
-mounted "root-squash").)
-
-The *condor_manifest* command understands the "MANIFEST" file format used
-by HTCondor to record the names and hashes of files in the checkpoint, and
-also how to find every MANIFEST file created by the job.  For each file in
-each MANIFEST, ``condor_manifest`` invokes the command specified in the
-map file, followed by the arguments specified in the map file,
-followed by ``-from <BASE> -file <FILE> -jobad <JOBAD>``, where ``<BASE><FILE>``
-is the complete URL to which ``<FILE>`` was stored and ``<FILE>`` is name
-listed in the MANIFEST.  We use this construction because ``<BASE>`` includes
-path components generated by HTCondor to ensure the uniqueness of checkpoints,
-which permits the user to specify the same checkpoint destination for every
-job in a cluster (or in a DAG, etc).  ``<JOBAD>`` is the full path to a copy
-of the job ad, in case the clean-up plug-in needs to know, for example, which
-credentials were used to upload the checkpoint(s).
-
-The plug-in will *not* be explicitly instructed to remove
-directories, not even the directories HTCondor created to make sure that
-different checkpoints are written to different places.  The plug-in can
-determine which directories HTCondor created by comparing the registered
-prefix to the ``<BASE>`` argument described above, if it wishes to remove
-them.  If ``<FILE>`` is a relative path, then that relative path is part
-of the checkpoint.
-
 .. _enabling_oauth_credentials:
 
 Enabling the Fetching and Use of Credentials
@@ -684,6 +488,204 @@ only if existing provider names in your configuration contain underscores
 (or other non-alphanumeric/hyphen characters).
 Note that this setting disables support for user-supplied handles.
 
+.. _admin_common_file_transfer:
+
+Common File Transfer for Admnistrators
+--------------------------------------
+
+The concept and limitations of :ref:`common_file_transfer` are explained in
+the user manual.  This section of the manual explains a bit about the
+(26.0.x) implementation and then the relevant configuration options.
+
+Implementation Overview
+'''''''''''''''''''''''
+
+.. info:
+
+    This section is **not** normative; the implementation is subject to
+    change.  Certain properties of the described system may be visible to
+    the submitter or the administrator, but are not documented because
+    we do *not* promise that they won't change.
+
+Common File Catalogs and Scopes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Internally, HTCondor converts the :subcom:`container_image` (if appropriate;
+see below) and the :subcom:`transfer_common_input_files` into named lists of
+objects (files or URLs) called "catalogs".  The container image catalog's
+name will be something like "container_77fc30a2", where the hexadecimal at
+the end is a hash of the full path (or URL) to the container; the name for
+common input files' catalog will be something like "clusterID_34732" and
+"dagmanJobID_7779332".
+
+The common files implementation operates on catalogs, rather than on
+individual files, and you'll see catalog names appear in various places
+in job and slot ads.  HTCondor assumes that every catalog of the same
+name in the same scope contains the same list of objects.  There are two
+scopes (in 26.0.x): the cluster scope and the DAGMan scope.  A job which
+has :attr:`DAGManJobID` set looks up its catalog names in that scope;
+otherwise, the job looks up its catalog names in its own scope.  This
+should be entirely transparent to the submitter unless they manage to
+specify a common input files list that depends on a proc-specific property
+(e.g. :attr:`ProcID`, but also includes variables from the item data).
+
+Transfer Shadows and Data Slots
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When the schedd wants to start a job, it checks to see if the job declares
+any common files, and if so, if (a) the matching EP can transfer common
+files and (b) if it has already done so.  If (a) is false, starts the job
+as normal, and it falls back to uncommon file transfer.  If (b) is false,
+the schedd puts the job into the (new) blocked state, represented with a
+``B`` in ``condor_q``.  It then starts a "transfer shadow."  This shadow
+is responsible for transferring the common file catalog(s) required by the
+job to the matching EP.  The transfer shadow transfers the catalog(s) not
+to a normal job slot, but to new type of slot, the data slot.  Initially,
+the data slot contains all of the resources necessary to run the job; this
+makes sure that we don't lose those resources during the transfer and do
+it unnecessarily.  When the common files transfer finishes, the schedd
+creates a new job slot out of the data slot (leaving behind only enough
+disk space to hold the common files) and runs the previously-blocked job
+there.
+
+The data slot remains available for as long as any job on its EP has any of
+its catalogs mapped, plus a certain amount of time (defined by
+:config:`KEEP_DATA_CLAIM_IDLE`) to allow for the schedd and/or DAGMan to start
+another job on the same EP after the first one finishes.  Jobs do not require
+the data slot to be avaiable once they've actually started, but vacating the
+data slot won't recover any disk space until those jobs are done.
+
+Mapping Common File Catalogs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The intention is that a submitter be able to move part of their input transfer
+list to the common file list and not have to change their jobs at all.  To do
+so, HTCondor must arrange for the files on disk to appear identical, even if
+some of them were not transferred again.  Presently, this is accomplished by
+making hardlinks from the data slot into the job slot(s); the hardlinks are
+made into the places in the scratch directory where the transfers would have
+ended up.  (This does mean that EPs which defined multiple execute directories
+must *not* split them across filesystems.)  The process of creating these
+hardlinks is called "mapping", although this word should only but very rarely
+show up in any of HTCondor's output.
+
+
+
+.. _self-checkpointing-jobs:
+
+Self-Checkpointing Jobs
+-----------------------
+
+As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
+(see :subcom:`checkpoint_destination`),
+which causes HTCondor to store the job's checkpoint(s) at the specific URL
+(rather than in the AP's :macro:`SPOOL` directory).  This can be a major
+improvement in scalability.  Once the job leaves the queue, HTCondor should
+delete its stored checkpoints -- but the plug-in for the checkpoint destination
+wrote the files, so HTCondor doesn't know how to delete them.  You, the
+HTCondor administrator, need to tell HTCondor how to delete checkpoints by
+registering the corresponding clean-up plug-in.
+
+You may also wish to prevent jobs with checkpoint destinations that HTCondor
+doesn't know how to clean up from entering the queue.  To enable this, add
+``use policy:OnlyRegisteredCheckpointDestinations``
+(:ref:`reference<OnlyRegisteredCheckpointDestinations>`)
+to your HTCondor configuration.
+
+Registering a Checkpoint Destination
+''''''''''''''''''''''''''''''''''''
+
+When transferring files to or from a URL, HTCondor assumes that a plug-in
+which handles a particular schema (e.g., ``https``) can read from and write
+to any URL starting with ``https://``.  However, this may not be true for
+a clean-up plug-in (see below).  Therefore, when registering a clean-up
+plug-in, you specify a URL prefix for which that plug-in is responsible,
+using a map file syntax.  A map file is line-oriented; every line has three
+columns, separated by whitespace.  The left column must be ``*``; the
+middle column is a URL prefix; and the right column is the clean-up plug-in
+to invoke, plus any required arguments, separated by commas.  (Presently,
+the columns can not contain spaces.)  Prefixes are checked in order of
+decreasing length, regardless of their order in the file.
+
+The default location of the checkpoint destination mapfile is
+``$(ETC)/checkpoint-destination-mapfile``, but it can be specified by
+the configuration value :macro:`CHECKPOINT_DESTINATION_MAPFILE`.
+
+Checkpoint Destinations with a Filesystem Mounted on the AP
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor ships with a clean-up plugin (``cleanup_locally_mounted_checkpoint``) that deletes
+checkpoints from a filesystem mounted on the AP.  This is more useful than
+it sounds, because the mounted filesystem could be the remote backing store
+for files available through some other service, perhaps on a different
+machine.  The plug-in needs to be told how to map from the destination URL to
+the corresponding location in the filesystem.  For instance, if you’ve mounted
+a CephFS at ``/ceph/example-fs`` and made that origin available via the OSDF at
+``osdf:///example.vo/example-fs``, your map file would include the line
+
+.. code-block:: text
+
+   *       osdf:///example.vo/example-fs/      cleanup_locally_mounted_checkpoint,-prefix,\0,-path,/ceph/example-fs
+
+because the ``cleanup_locally_mounted_checkpoint`` script that ships with
+HTCondor needs to know the URL and path to the ``example-fs``.  (One could
+replace ``\0`` with ``osdf:///example.vo/example-fs/``, but that could lead
+to accidentally changing one without changing the other.)
+
+Other Checkpoint Destinations
+'''''''''''''''''''''''''''''
+
+You may specify a different executable in the right column.  Executables
+which are not specified with an absolute path are assumed to be in the
+:macro:`LIBEXEC` directory.
+
+The remainder of this section is a detailed explanation of how HTCondor
+launches such an executable.  This may be useful for administrators who
+wish to understand the process tree they're seeing, but it is intended
+to aid people trying to write a checkpoint clean-up plug-in for a
+different kind of checkpoint destination.  For the rest of this section,
+assume that "a job" means "a job which specified a checkpoint destination."
+
+When a job exits the queue, the *condor_schedd* will immediately spawn the
+checkpoint clean-up process (*condor_manifest*); that process will call the
+checkpoint clean-up plug-in once per file in each checkpoint the job wrote.
+The *condor_schedd* does not check to see if this process succeeded; that's
+a job for :tool:`condor_preen`.  When :tool:`condor_preen` runs, if a job's checkpoint
+has not been cleaned up, it will also spawn *condor_manifest*, and do so in
+exactly the same way the *condor_schedd* did.  Failures will be reported via
+the usual channels for :tool:`condor_preen`.  You may specify how long
+*condor_manifest* may run with the configuration macro
+:macro:`PREEN_CHECKPOINT_CLEANUP_TIMEOUT`.  The
+*condor_manifest* tool removes each MANIFEST file as its contents get cleaned
+up, so this timeout need only be long enough to complete a single checkpoint's
+worth of clean-up in order to make progress.
+
+(On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
+the job whose checkpoints are being cleaned up; this is both safer and easier,
+since that user may have useful privileges (for example, filesystems may be
+mounted "root-squash").)
+
+The *condor_manifest* command understands the "MANIFEST" file format used
+by HTCondor to record the names and hashes of files in the checkpoint, and
+also how to find every MANIFEST file created by the job.  For each file in
+each MANIFEST, ``condor_manifest`` invokes the command specified in the
+map file, followed by the arguments specified in the map file,
+followed by ``-from <BASE> -file <FILE> -jobad <JOBAD>``, where ``<BASE><FILE>``
+is the complete URL to which ``<FILE>`` was stored and ``<FILE>`` is name
+listed in the MANIFEST.  We use this construction because ``<BASE>`` includes
+path components generated by HTCondor to ensure the uniqueness of checkpoints,
+which permits the user to specify the same checkpoint destination for every
+job in a cluster (or in a DAG, etc).  ``<JOBAD>`` is the full path to a copy
+of the job ad, in case the clean-up plug-in needs to know, for example, which
+credentials were used to upload the checkpoint(s).
+
+The plug-in will *not* be explicitly instructed to remove
+directories, not even the directories HTCondor created to make sure that
+different checkpoints are written to different places.  The plug-in can
+determine which directories HTCondor created by comparing the registered
+prefix to the ``<BASE>`` argument described above, if it wishes to remove
+them.  If ``<FILE>`` is a relative path, then that relative path is part
+of the checkpoint.
 
 Using HTCondor with Kerberos and AFS
 ------------------------------------
@@ -857,3 +859,83 @@ For **Local** universe jobs:
 For **Scheduler** universe jobs:
 
 * The job does **not** have access to OAuth credentials
+
+Enabling the Transfer of Public Input Files over HTTP
+-----------------------------------------------------
+
+Another option for transferring files over HTTP is for users to specify
+a list of public input files. These are specified in the submit file as
+follows:
+
+.. code-block:: condor-submit
+
+    public_input_files = file1,file2,file3
+
+HTCondor will automatically convert these files into URLs and transfer
+them over HTTP using plug-ins. The advantage to this approach is that
+system administrators can leverage Squid caches or load-balancing
+infrastructure, resulting in improved performance. This also allows us
+to gather statistics about file transfers that were not previously
+available.
+
+When a user submits a job with public input files, HTCondor generates a
+hash link for each file in the root directory for the web server. Each
+of these links points back to the original file on local disk. Next,
+HTCondor replaces the names of the files in the submit job with web
+links to their hashes. These get sent to the execute node, which
+downloads the files using our curl_plugin tool, and are then remapped
+back to their original names.
+
+In the event of any errors or configuration problems, HTCondor will fall
+back to a regular (non-HTTP) file transfer.
+
+To enable HTTP public file transfers, a system administrator must
+perform several steps as described below.
+
+Install a web service for public input files
+''''''''''''''''''''''''''''''''''''''''''''
+
+An HTTP service must be installed and configured on the submit node. Any
+regular web server software such as Apache
+(`https://httpd.apache.org/ <https://httpd.apache.org/>`_) or nginx
+(`https://nginx.org <https://nginx.org>`_) will do. The submit node
+must be running a Linux system.
+
+Configuration knobs for public input files
+''''''''''''''''''''''''''''''''''''''''''
+
+Several knobs must be set and configured correctly for this
+functionality to work:
+
+-  :macro:`ENABLE_HTTP_PUBLIC_FILES`:
+   Must be set to true (default: false)
+   :macro:`HTTP_PUBLIC_FILES_ADDRESS`: The full web address
+   (hostname + port) where your web server is serving files (default:
+   127.0.0.1:8080)
+   :macro:`HTTP_PUBLIC_FILES_ROOT_DIR`: Absolute path to the local
+   directory where the web service is serving files from.
+-  :macro:`HTTP_PUBLIC_FILES_USER`:
+   User security level used to write links to the directory specified by
+   HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
+   this knob:
+
+   #. **<user>**: Links will be written as the user who submitted the job.
+   #. **<condor>**: Links will be written as user running condor
+      daemons. By default this is the user condor unless you have
+      changed this by setting the configuration parameter CONDOR_IDS.
+   #. **<%username%>**: Links will be written as the user %username% (i.e., httpd, nobody) If using this option, make sure the directory is writable
+      by this particular user.
+
+   The default setting is <condor>.
+
+Additional HTTP infrastructure for public input files
+'''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The main advantage of using HTTP for file transfers is that system
+administrators can use additional infrastructure (such as Squid caching)
+to improve file transfer performance. This is outside the scope of the
+HTCondor configuration but is still worth mentioning here. When
+curl_plugin is invoked, it checks the environment variable http_proxy
+for a proxy server address; by setting this appropriately on execute
+nodes, a system can dramatically improve transfer speeds for commonly
+used files.

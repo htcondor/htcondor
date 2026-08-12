@@ -1174,6 +1174,10 @@ FILE TRANSFER COMMANDS
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
 
+ :subcom-def:`transfer_common_input_files` = < file1,file2,file... >
+    As :subcom:`transfer_input_files`, except that the specified files or URLS
+    are common across more than one job.  See :ref:`common_file_transfer`.
+
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured
     HTTP server on the AP to transfer. These files will not be encrypted,
