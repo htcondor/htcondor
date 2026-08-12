@@ -23,6 +23,10 @@
   Use the grid universe **batch** type with a scheduler name of ``sfapi``.
   :jira:`3461`
 
+- The -constraint option now works with the :tool:`condor_userprio` in 
+  all cases.
+  :jira:`3873`
+
 *** 25.14.0 bugs
 
 - Fixed a bug where a job with streaming output or error would not be
