@@ -27,6 +27,10 @@
   all cases.
   :jira:`3873`
 
+- When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
+  without an explicit docker tag in the image name to be in the cache.
+  :jira:`3876`
+
 *** 25.14.0 bugs
 
 - Fixed a bug where a job with streaming output or error would not be
