@@ -14,12 +14,13 @@ machine a second time:
 
 - The file *must* be immutable:
 
-  - neither written to by the job, nor
+  - neither written to by either job, nor
   - changed by any other means while the workflow is running.
 - The file *must* be either:
 
-  - the declared :subcom:`container_image` for a job; or
-  - listed in the jobs :attr:`CommonInputFiles` attribute.
+  - the declared :subcom:`container_image` for each job; or
+  - listed in each job's :attr:`CommonInputFiles` attribute (usually set via
+    the :subcom:`transfer_common_input_files` submit command).
 - The two jobs *must* be either:
 
   - in the vanilla universe; or
