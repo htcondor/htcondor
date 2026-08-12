@@ -738,12 +738,12 @@ grants read access to the ``/physics-data`` prefix in the OSDF:
     PHYSICSDATA_PELICAN_PERMISSIONS = read
 
     PHYSICSDATA_PELICAN_CLIENT_ID          = ex4mpl3cl13nt1d
-    PHYSICSDATA_PELICAN_CLIENT_SECRET_FILE = /etc/condor/secrets/physicsdata_client_secret
+    PHYSICSDATA_PELICAN_CLIENT_SECRET_FILE = /etc/condor/.secrets/physicsdata_client_secret
 
 .. code-block:: console
 
     # ls -l /etc/condor/.secrets/physicsdata_client_secret
-    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/secrets/physicsdata_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/physicsdata_client_secret
 
 ``<ServiceName>_PELICAN_PERMISSIONS`` is a list of one or more of ``read``,
 ``write``, and ``modify`` (whitespace and/or comma separated); the token is

@@ -82,6 +82,9 @@ class PelicanCredmon(AbstractCredentialMonitor):
         self.providers = set(kw.get("providers", set()))
         # Cache of issuer URL -> (token_endpoint, fetched_at) for OIDC discovery.
         self._discovery_cache = {}
+        self.allow_special_chars = False
+        if htcondor is not None:
+            self.allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
 
     # ------------------------------------------------------------------
     # Configuration helpers
@@ -94,15 +97,20 @@ class PelicanCredmon(AbstractCredentialMonitor):
     def _provider_for(self, token_name):
         """Return the configured provider name that owns this token, or None.
 
-        A token name may carry a `_<handle>` suffix added for reduced scopes;
-        the credentials/config live under the base service name.
+        When CREDMON_ALLOW_SPECIAL_CHAR_NAMES is False (the default), a token
+        name may carry a `_<handle>` suffix added for reduced scopes; the
+        credentials/config live under the base provider name (everything
+        before the first underscore).
         """
-        if token_name in self.providers:
-            return token_name
-        if "_" in token_name:
-            base = token_name.rsplit("_", 1)[0]
-            if base in self.providers:
-                return base
+        if token_name.endswith("_"):
+            self.log.warning("Skipping credential with trailing underscore: %s", token_name)
+            return None
+        if not self.allow_special_chars and "_" in token_name:
+            provider_name = token_name.split("_", 1)[0]
+        else:
+            provider_name = token_name
+        if provider_name in self.providers:
+            return provider_name
         return None
 
     def _client_credentials(self, provider):
