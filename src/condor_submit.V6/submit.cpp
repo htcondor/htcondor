@@ -1027,9 +1027,12 @@ main( int argc, const char *argv[] )
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 			}
 
+#ifndef WIN32
 			// Offer a hint on how to follow the just-submitted job(s), unless this
-			// was only a dry-run (in which case nothing was actually queued).
-			if ( ! DashDryRun && ! submitted_clusters.empty()) {
+			// was only a dry-run (in which case nothing was actually queued) or an
+			// interactive job (which the user is already attached to).  Skip on
+			// Windows, where condor_watch_q is not available.
+			if ( ! DashDryRun && ! dash_interactive && ! submitted_clusters.empty()) {
 				std::string cluster_list;
 				for (int cluster : submitted_clusters) {
 					if ( ! cluster_list.empty()) { cluster_list += ' '; }
@@ -1038,6 +1041,7 @@ main( int argc, const char *argv[] )
 				fprintf(stderr, "To monitor your job(s), run: condor_watch_q -clusters %s\n",
 					cluster_list.c_str());
 			}
+#endif
 		}
 	}
 
