@@ -265,10 +265,14 @@ if (BUILD_TESTING)
 			condor_pl_test (test_ccb_streaming "Test CCB streaming/proxy mode for private-to-private connections" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test (test_ccb_streaming_paths "Test CCB streaming/proxy mode across additional network paths" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-		endif (NOT WINDOWS)
 
-		# CCB streaming/proxy relay throughput benchmark
-		condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test (test_ccb_tunnel "Test inbound CCB tunnel through two chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test (test_ccb_tunnel_ap "Test a relayed AP reaching a tunneled EP through CCB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test (test_ccb_tunnel_3hop "Test the inbound CCB tunnel through three chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif (NOT WINDOWS)
 
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -309,6 +313,7 @@ if (BUILD_TESTING)
 			condor_pl_test(test_check_reactivate_after_checkpoint "Test CHECK_REACTIVATE_AFTER_CHECKPOINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_throttles "Test setting of DAGMan throttles" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_common_input_files "Test DAGMan and condor_dag_checker reject differing MY.CommonInputFiles in one DAG" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 
 			condor_pl_test(test_dc_std_function "Test std::function command handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")

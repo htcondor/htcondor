@@ -76,7 +76,8 @@
 #include "submit_internal.h"
 
 #ifdef ENABLE_SUBMIT_FROM_TABLE
-static int submit_next_proc(JOB_ID_KEY & jid, SubmitHash &submit_hash, const int item_index, const int step, bool send_cluster_ad);
+static int submit_next_proc(JOB_ID_KEY & jid, SubmitHash &submit_hash, SubmitStepFromQArgs & ssi,
+	const int item_index, const int step, bool send_cluster_ad);
 #else
 static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash &submit_hash, char * item, int item_index, int options, const char * delims, const char * ws);
 #endif
@@ -130,6 +131,7 @@ SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	CmdFileIsStdin = false;
 bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
 bool	GotCmdlineKeys = false; // key=value or -append specifed on the command line
+bool	AllowMultipleQueueStatements = true;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int     DashQueryCapabilities = 0; // get capabilites from schedd and print the
@@ -147,7 +149,7 @@ int	  ProcId = -1;
 int		ClustersCreated = 0;
 int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
-bool	NewExecutable = false;
+//bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
@@ -228,7 +230,7 @@ bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 bool is_crlf_shebang(const char * path);
 int  MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
-int  DoUnitTests(int options);
+int  DoUnitTests(int options, const char * subfile);
 
 char *username = NULL;
 
@@ -748,7 +750,7 @@ main( int argc, const char *argv[] )
 	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
 
 	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
-	if (DashDryRun > 0x10) { exit(DoUnitTests(DashDryRun)); }
+	if (DashDryRun > 0x10) { exit(DoUnitTests(DashDryRun, cmd_file)); }
 
 	// we don't want a schedd instance if we are dumping to a file
 	if ( !DumpClassAdToFile && !sim_current_condor_version) {
@@ -1027,9 +1029,12 @@ main( int argc, const char *argv[] )
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 			}
 
+#ifndef WIN32
 			// Offer a hint on how to follow the just-submitted job(s), unless this
-			// was only a dry-run (in which case nothing was actually queued).
-			if ( ! DashDryRun && ! submitted_clusters.empty()) {
+			// was only a dry-run (in which case nothing was actually queued) or an
+			// interactive job (which the user is already attached to).  Skip on
+			// Windows, where condor_watch_q is not available.
+			if ( ! DashDryRun && ! dash_interactive && ! submitted_clusters.empty()) {
 				std::string cluster_list;
 				for (int cluster : submitted_clusters) {
 					if ( ! cluster_list.empty()) { cluster_list += ' '; }
@@ -1038,6 +1043,7 @@ main( int argc, const char *argv[] )
 				fprintf(stderr, "To monitor your job(s), run: condor_watch_q -clusters %s\n",
 					cluster_list.c_str());
 			}
+#endif
 		}
 	}
 
@@ -1354,6 +1360,7 @@ int ParseDashAppendLines(std::vector<std::string> &exlines, MACRO_SOURCE& source
 }
 #endif
 
+#if 0
 bool CheckForNewExecutable(MACRO_SET& macro_set) {
     static std::string last_submit_executable;
     static std::string last_submit_cmd;
@@ -1379,6 +1386,7 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 
 	return new_exe;
 }
+#endif
 
 static bool jobset_ad_is_trivial(const ClassAd *ad)
 {
@@ -1493,10 +1501,12 @@ int submit_jobs (
 	int want_factory = as_factory ? 1 : -1;
 	int need_factory = (as_factory & 1) != 0;
 	long long max_materialize = INT_MAX;
+	int task_packing = 1;
 	//long long max_idle = INT_MAX;
 
 	// there can be multiple queue statements in the file, we need to process them all.
-	for (;;) {
+	// but we will break out of this loop after 1 iteration if AllowMultipleQueueStatements is false
+	do {
 		if (feof(fp)) { break; }
 
 		// Error if any data (non-comment/blank lines) exist post queue for late materialization
@@ -1557,10 +1567,10 @@ int submit_jobs (
 			submit_hash.optimize();
 
 			// Prime the globals we use to detect a change in executable, and force NewExecutable to be true
-			CheckForNewExecutable(submit_hash.macros());
-			NewExecutable = true;
+			//CheckForNewExecutable(submit_hash.macros());
+			//NewExecutable = true;
 		} else {
-			NewExecutable = CheckForNewExecutable(submit_hash.macros());
+			//NewExecutable = CheckForNewExecutable(submit_hash.macros());
 		}
 
 		// do the dry-run logging of queue arguments
@@ -1664,6 +1674,9 @@ int submit_jobs (
 		int selected_item_count = o.item_len();
 	#endif
 
+		// does the submit file want task packing?
+		submit_hash.want_task_packing(task_packing);
+
 		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
 		// to decide whether this is a factory or not.
@@ -1750,14 +1763,24 @@ int submit_jobs (
 		if ( ! MyQ) { rval = -1; break; }
 
 		// allocate a cluster object if this is the first time through the loop, or if the executable changed.
-		if (NewExecutable || (ClusterId < 0)) {
+		if (/*NewExecutable || */ (ClusterId < 0)) {
 			rval = allocate_a_cluster();
 			if (rval < 0)
 				break;
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
+		  #ifdef SUPPORT_FOR_TASK_PACKING
+			ssqa.set_packing(task_packing);
+		  #endif
 			ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
 			new_cluster_ad = true;
 		#endif
+			// move input files to common_input_files (if UseCommonInputFiles is enabled)
+			submit_hash.synthesize_common_files(ssqa.vars(),true);
+		} else {
+			// Set begin for this phase, but ProcId that is one more than the last one
+			// We do this so that multiple QUEUE statements keep counting up the ProcId
+			// until we allocate a new cluster.
+			ssqa.begin(JOB_ID_KEY(ClusterId,ProcId+1), true);
 		}
 
 		if (want_factory) { // factory submit
@@ -1768,7 +1791,12 @@ int submit_jobs (
 			// load the first item, this also sets jid, item_index, and step
 			// but do not set the live vars into the hash before we build the submit digest
 			JOB_ID_KEY jid;
+		#ifdef SUPPORT_FOR_TASK_PACKING
+			int taskid = 0;
+			rval = ssqa.next_raw(jid, ErrContext.item_index, ErrContext.step, taskid, false);
+		#else
 			rval = ssqa.next_raw(jid, ErrContext.item_index, ErrContext.step, false);
+		#endif
 
 			submit_hash.make_digest(submit_digest, ClusterId, ssqa.vars(), 0);
 		#else
@@ -1881,10 +1909,11 @@ int submit_jobs (
 		} else { // non-factory submit
 
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			// set begin for this phase, but with the stored next_proc() value
+			// set begin for this phase, but using the previously set jidInit value
 			// we do this so that multiple QUEUE statements keep counting up the ProcId
 			// until we allocate a new cluster.
-			JOB_ID_KEY jid = ssqa.next_jobid();
+			JOB_ID_KEY jid = ssqa.m_jidInit;
+			//PRAGMA_REMIND("TJ: I think this ssqa.begin can be removed")
 			ssqa.begin(jid, true);
 		#else
 			init_vars(submit_hash, ClusterId, o.vars);
@@ -1901,13 +1930,19 @@ int submit_jobs (
 			}
 
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			while ((rval = ssqa.next_selected(jid, ErrContext.item_index, ErrContext.step, true)) > 0) {
+		  #ifdef SUPPORT_FOR_TASK_PACKING
+			int taskid = 0;
+			while ((rval = ssqa.next_selected(jid, ErrContext.item_index, ErrContext.step, taskid, true)) > 0)
+		  #else
+			while ((rval = ssqa.next_selected(jid, ErrContext.item_index, ErrContext.step,true)) > 0)
+		  #endif
+			{
 
 				// rval from next will be 1 for normal, 2 if this is the first proc ad
 				// we want to send the cluster ad before the first proc ad
 				// note that submit_next_proc will exit the process on error
 				// so we don't expect to ever hit the break below.
-				rval = submit_next_proc(jid, submit_hash, ErrContext.item_index, ErrContext.step, new_cluster_ad);
+				rval = submit_next_proc(jid, submit_hash, ssqa, ErrContext.item_index, ErrContext.step, new_cluster_ad);
 				new_cluster_ad = false; // don't send cluster ad again unless/until we allocate a new one.
 				if (rval < 0) break;
 			}
@@ -1948,7 +1983,7 @@ int submit_jobs (
 		if (rval < 0)
 			break;
 
-	} // end for(;;)
+	} while (AllowMultipleQueueStatements);
 
 	submit_hash.detachTransferMap();
 
@@ -2204,7 +2239,13 @@ int allocate_a_cluster()
 
 #ifdef ENABLE_SUBMIT_FROM_TABLE
 // submit the next cluster and proc ad to the schedd
-static int submit_next_proc(JOB_ID_KEY & jid, SubmitHash &submit_hash, const int item_index, const int step, bool send_cluster_ad)
+static int submit_next_proc(
+	JOB_ID_KEY & jid,
+	SubmitHash &submit_hash,
+	SubmitStepFromQArgs & ssi,
+	const int item_index,
+	const int step,
+	bool send_cluster_ad)
 {
 	if ( ! MyQ)
 		return -1;
@@ -2275,6 +2316,7 @@ static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)
 		GotNonEmptyQueueCommand = 1;
+		jid = {ClusterId,ProcId};
 	#else
 		// update the live $(Cluster), $(Process) and $(Step) string buffers
 		(void)snprintf(ClusterString, sizeof(ClusterString), "%d", ClusterId);
@@ -2309,7 +2351,23 @@ static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash
 				rval = MySendJobAttributes(JOB_ID_KEY(jid.cluster, -1), *cad, setattrflags);
 			}
 		}
-		NewExecutable = false;
+		//NewExecutable = false;
+
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		if (ssi.packing() > 1) {
+			int task_packing = ssi.packing();
+			int taskid, item_indexT, stepT;
+			JOB_ID_KEY jidT = jid;
+			for (int ix = 1; ix < task_packing; ++ix) {
+				if (ssi.next_selected(jidT, item_indexT, stepT, taskid, true)) {
+					submit_hash.add_job_task(taskid, item_indexT, stepT);
+				}
+			}
+			submit_hash.finalize_job_tasks(task_packing);
+		}
+	#else
+		(void)ssi;
+	#endif
 
 		// now send the proc ad
 		if (rval >= 0) {
@@ -2485,6 +2543,9 @@ init_params()
 	WarnOnUnusedMacros =
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
 							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
+
+	AllowMultipleQueueStatements = param_boolean("SUBMIT_ALLOW_MULTIPLE_QUEUE_STATEMENTS",
+		AllowMultipleQueueStatements ? true : false);
 
 	if ( param_boolean("SUBMIT_NOACK_ON_SETATTRIBUTE",true) ) {
 		setattrflags |= SetAttribute_NoAck;  // set noack flag
@@ -2680,13 +2741,15 @@ setupAuthentication(SubmitHash &submit_hash)
 	}
 }
 
+// this is in submit_utils.cpp, but not in the header file because deque.
+extern void macro_aware_split(std::string_view input, std::deque<std::string_view> & sections);
 
 // PRAGMA_REMIND("make a proper queue args unit test.")
 //
 // The old pre-submit_utils unit tests should be a good refernce,
 // and can be pulled out of git's history of this file from the hash
 // d7f3ffdd8fac1316344cdf30eeb65b95b355da99 and earlier.
-int DoUnitTests(int options)
+int DoUnitTests(int options, const char * subfile)
 {
 	static const struct {
 		int          rval;
@@ -2805,6 +2868,75 @@ int DoUnitTests(int options)
 		fprintf(stderr, "\n");
 	}
 
+	// submitfile tests
+	if (subfile && *subfile != '-') {
+		const int ClusterId = 12345; // arbitrary value for cluster for testing
+		std::string errmsg;
+		MacroStreamFile msf;
+		SubmitHash submit_hash;
+		SubmitStepFromQArgs ssqa(submit_hash);
+		submit_hash.init(JSM_CONDOR_SUBMIT);
+		if ( ! msf.open(subfile, false, submit_hash.macros(), errmsg)) {
+			fprintf( stderr, "\nERROR: Failed to open command file (%s) (%s)\n", subfile, errmsg.c_str());
+			exit(1);
+		}
+
+		submit_hash.insert_submit_filename(subfile, FileMacroSource);
+		submit_hash.setScheddVersion(MySchedd ? MySchedd->version() : CondorVersion());
+		submit_hash.init_base_ad(get_submit_time(), username);
+
+		char * qline = NULL;
+		int rval = submit_hash.parse_up_to_q_line(msf, errmsg, &qline);
+		if (rval == 0) {
+			submit_hash.optimize();
+			const char * queue_args = NULL;
+			if (qline) { queue_args = SubmitHash::is_queue_statement(qline); }
+			rval = ssqa.init(queue_args, errmsg);
+			if (rval == 0) { rval = ssqa.load_items(msf, true, errmsg); }
+			if (rval == 0) {
+				//int selected_item_count = ssqa.selected_item_count();
+				ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
+				// we have to make the cluster ad before we can make full paths and do $Ff expansion
+				submit_hash.make_job_ad(JOB_ID_KEY(ClusterId,0), 0, 0, false, false, nullptr, nullptr);
+
+				auto skip_knobs = submit_hash.per_proc_keys(ssqa.vars(), ClusterId);
+				auto tif = submit_hash.lookup(SUBMIT_KEY_TransferInputFiles);
+				if ( ! tif) tif = submit_hash.lookup(ATTR_TRANSFER_INPUT_FILES);
+				if (tif) {
+					MACRO_EVAL_CONTEXT ctx;
+					submit_hash.init_macro_eval_context(ctx);
+
+					std::string inputs(tif);
+					submit_hash.selective_expand_macro(inputs, skip_knobs, ctx);
+					fprintf(stdout,
+						"TransferInputFiles: '%s'\n"
+						"SelectivelyExpand : '%s'\n"
+						"Split:\n",
+						tif, inputs.c_str());
+
+					std::deque<std::string_view> sections;
+					macro_aware_split(tif, sections);
+					std::string buf;
+					for (auto sv : sections) {
+						buf = sv;
+						bool is_macro = has_unexpanded_macros(buf.c_str(), true);
+						fprintf(stdout, "\t%s\t'%s'\n", is_macro ? "macro" : "", buf.c_str());
+					}
+
+					fprintf(stdout, "SelectivelyExpanded:\n");
+					for (auto sv : sections) {
+						buf = sv;
+						submit_hash.selective_expand_macro(buf, skip_knobs, ctx);
+						bool is_macro = has_unexpanded_macros(buf.c_str(), true);
+						fprintf(stdout, "\t%s\t'%s'\n", is_macro ? "macro" : "", buf.c_str());
+					}
+
+				}
+
+
+			}
+		}
+	}
 
 
 	return (options > 1) ? 1 : 0;
