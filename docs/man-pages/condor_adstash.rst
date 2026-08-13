@@ -15,7 +15,7 @@ Synopsis
 **condor_adstash** [**-\-process_name** *NAME*] [**-\-standalone** ]
 [**-\-sample_interval** *SECONDS*] [**-\-checkpoint_file** *PATH*]
 [**-\-log_file** *PATH*] [**-\-log_level** *LEVEL*]
-[**-\-threads** *THREADS*] [**-\-interface** *{null,elasticsearch,jsonfile}*]
+[**-\-threads** *THREADS*] [**-\-interface** *{null,elasticsearch,jsonfile,jsonlinefile}*]
 [**-\-collectors** *COLLECTORS*] [**-\-schedds** *SCHEDDS*] [**-\-startds** *STARTDS*]
 [**-\-schedd_history** ] [**-\-startd_history** ]
 [**-\-schedd_job_epoch_history** ] [**-\-schedd_transfer_epoch_history** ]
@@ -79,7 +79,7 @@ Options
  **-\-threads** *THREADS*
     Number of parallel threads to use when polling for job ClassAds and when
     pushing documents to Elasticsearch
- **-\-interface** *{null,elasticsearch,opensearch,jsonfile}*
+ **-\-interface** *{null,elasticsearch,opensearch,jsonfile,jsonlinefile}*
     Push ads via the chosen interface
 
 ClassAd source options
