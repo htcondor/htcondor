@@ -29,6 +29,8 @@ def the_condor( test_dir ):
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+
+            "SUBMIT_USE_COMMON_INPUT_FILES":	"TRUE",
         },
     ) as the_condor:
         yield the_condor
@@ -64,7 +66,7 @@ def the_running_jobs( the_condor, the_common_files ):
         "request_memory":           1,
         "request_disk":             256,
         "log":                      "the_running_jobs.log.$(ClusterID)",
-        "transfer_common_input_files": f"{the_common_files.as_posix()}",
+        "common_input_files": 		f"{the_common_files.as_posix()}",
     }
 
     job_handle = the_condor.submit(

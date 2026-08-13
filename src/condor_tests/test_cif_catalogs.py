@@ -111,6 +111,8 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
+
+            "SUBMIT_USE_COMMON_INPUT_FILES":	"TRUE",
         },
     ) as the_cs_condor:
         yield the_cs_condor
@@ -472,7 +474,7 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
         "request_cpus":             1,
         "request_memory":           1,
 
-        "transfer_common_input_files":  "A1.txt, A2.txt",
+        "common_input_files":  		"A1.txt, A2.txt",
 
         "should_transfer_files":    True,
 
