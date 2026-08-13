@@ -271,7 +271,7 @@ DockerProc::LaunchContainer() {
 	TemporaryPrivSentry sentry(PRIV_USER);
 	std::string workingDir = starter->GetWorkingDir(0);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
-	std::string DockerErrorFile  = workingDir + "/docker_stderror";
+	std::string DockerErrorFile  = workingDir + "/.docker_stderror";
 
 	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -402,7 +402,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
 			std::string fileName = starter->GetWorkingDir(0);
-			fileName += "/docker_stderror";
+			fileName += "/.docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
 			if (fd >= 0) {
 				int r = read(fd, buf, 511);
@@ -418,14 +418,14 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				}
 				close(fd);
 			} else {
-				dprintf(D_ALWAYS, "Cannot open docker_stderror\n");
+				dprintf(D_ALWAYS, "Cannot open .docker_stderror\n");
 			}
 			}
 			message = buf;
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
-			unlink("docker_stderror");
+			unlink(".docker_stderror");
 			}
 			return VanillaProc::JobReaper( pid, status );
 		}
@@ -770,8 +770,38 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	fds[1] = fdpass_recv(ns->get_file_desc());
 	fds[2] = fdpass_recv(ns->get_file_desc());
 
+	// Read the length-prefixed command string from docker_enter.
+	// Length 0 means interactive shell; otherwise run the command.
+	std::string command;
+	uint32_t cmd_len = 0;
+	int fd = ns->get_file_desc();
+	if (read(fd, &cmd_len, sizeof(cmd_len)) == sizeof(cmd_len)) {
+		cmd_len = ntohl(cmd_len);
+		if (cmd_len > 0) {
+			command.resize(cmd_len);
+			int bytes_read = 0;
+			while (bytes_read < (int)cmd_len) {
+				int r = read(fd, &command[bytes_read], cmd_len - bytes_read);
+				if (r <= 0) break;
+				bytes_read += r;
+			}
+			command.resize(bytes_read);
+		}
+	}
+
 	ArgList args;
-	args.AppendArg("-i");
+	std::string exec_command;
+	bool interactive = command.empty();
+	if (interactive) {
+		// Interactive shell
+		exec_command = "/bin/bash";
+		args.AppendArg("-i");
+	} else {
+		// Run a specific command via /bin/sh -c
+		exec_command = "/bin/sh";
+		args.AppendArg("-c");
+		args.AppendArg(command);
+	}
 
 	Env env;
 	std::string env_errors;
@@ -785,10 +815,18 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
 	rc = DockerAPI::execInContainer(
-	 containerName, "/bin/bash", args, env,fds,execReaperId,execPid);
+	 containerName, exec_command, args, env,fds,execReaperId,execPid,interactive);
 	}
 
 	dprintf(D_ALWAYS, "docker exec returned %d for pid %d\n", rc, execPid);
+
+	// Close the ssh session fds in the starter; the child has inherited them.
+	// If we keep them open, sshd won't detect the command has finished.
+	for (int i = 0; i <= 2; i++) {
+		if (fds[i] >= 0) {
+			close(fds[i]);
+		}
+	}
 
 #else
 	// Shut the compiler up

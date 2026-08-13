@@ -371,11 +371,20 @@ class Schedd():
         if isinstance(since, int):
             since = f"ClusterID == {since}"
         elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+            pattern = re.compile(r'(\d+)\.(\d+)')
+            matches = pattern.fullmatch(since)
+            if matches is not None:
+                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
+            else:
+                pattern = re.compile(r'(\d+)')
+                matches = pattern.fullmatch(r'(\d+)')
+                if matches is not None:
+                    since = f"ClusterID == {matches[1]}"
+                else:
+                    try:
+                        e = classad.ExprTree(since)
+                    except classad.ClassAdException:
+                        raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
@@ -609,31 +618,36 @@ class Schedd():
             # If the original itemdata wasn't inline, there's not only no
             # need to repeat it, but it's technically syntactically invalid.
             if submit_file.strip().endswith("("):
+                projection = None
                 original_item_data = description.itemdata()
                 if original_item_data is not None:
+                    first = next(original_item_data)
+                    projection = first.keys()
+                    submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
                     for item in original_item_data:
-                        submit_file = _add_line_from_itemdata(submit_file, item, separator)
+                        submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
                     submit_file = submit_file + ")\n"
 
         elif itemdata is None:
             submit_file = submit_file + "queue\n"
 
         else:
+            projection = None
             first = next(itemdata)
             if isinstance(first, str):
                 submit_file = submit_file + "QUEUE item FROM "
             elif isinstance(first, dict):
                 if any(not isinstance(x, str) for x in first.keys()):
                     raise TypeError("itemdata dictionaries must have string keys")
-                keys_list = ",".join(first.keys())
-                submit_file = submit_file + f"QUEUE {keys_list} FROM "
+                projection = first.keys()
+                submit_file = submit_file + f"QUEUE {','.join(projection)} FROM "
             else:
                 raise TypeError("itemdata must be a list of strings or dictionaries")
 
             submit_file = submit_file + "(\n"
-            submit_file = _add_line_from_itemdata(submit_file, first, separator)
+            submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
             for item in itemdata:
-                submit_file = _add_line_from_itemdata(submit_file, item, separator)
+                submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
             submit_file = submit_file + ")\n"
 
         # This assumes that None is the default value for the queue parameter.
@@ -689,7 +703,7 @@ class Schedd():
         )
 
 
-    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
+    def refreshGSIProxy(self, cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
         """
         Refresh a (running) job's GSI proxy.
 
@@ -701,7 +715,7 @@ class Schedd():
             ``-1`` to use the value specific by :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`.
         :return:  The remaining lifetime.
         """
-        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proxy), str(proxy_filename), int(lifetime))
+        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proc), str(proxy_filename), int(lifetime))
 
 
     def reschedule(self) -> None:
@@ -793,7 +807,7 @@ class Schedd():
         projection_string = ",".join(projection)
         return _schedd_get_claims(self._addr, str(constraint), projection_string)
 
-def _add_line_from_itemdata(submit_file, item, separator):
+def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):
         if "\n" in item:
             raise ValueError("itemdata strings must not contain newlines")
@@ -803,7 +817,7 @@ def _add_line_from_itemdata(submit_file, item, separator):
             raise ValueError("itemdata keys must not contain newlines")
         if any(["\n" in x for x in item.values()]):
             raise ValueError("itemdata values must not contain newlines")
-        submit_file = submit_file + separator.join(item.values()) + "\n"
+        submit_file = submit_file + separator.join([item.get(k, "") for k in projection]) + "\n"
     return submit_file
 
 

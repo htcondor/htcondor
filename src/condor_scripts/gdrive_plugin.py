@@ -13,7 +13,7 @@ import json
 import mimetypes
 
 import requests
-import classad
+import classad2 as classad
 
 TOKEN_DIR_ENV_NAME = '_CONDOR_CREDS'
 TOKEN_FILE_EXT = '.use'

@@ -1553,7 +1553,7 @@ main (int argc, char *argv[])
 
 		style_text = "";
 		mainPP.pm.dump(style_text, &GlobalFnTable);
-		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
+		fprintf(fout, "\nPrintMask: WID FHLAT[XOPTS] LTR TYP KIND ALT %%f FUNC\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
 		q = query->getQueryAd (queryAd);

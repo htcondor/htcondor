@@ -301,6 +301,7 @@ main( int argc, const char *argv[] )
 				int tmp = str_to_cmd(argv[i]);
 				if (tmp >= QUERY_USERREC_ADS && tmp <= DELETE_USERREC) {
 					cmd = tmp;
+					dash_add = is_arg_prefix(argv[i], "add", -1);
 					continue;
 				}
 			}

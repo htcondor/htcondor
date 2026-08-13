@@ -540,6 +540,11 @@ init_params( int first_time)
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
+	} else {
+		if (ep_eventlog.isEnabled()) {
+			/* auto & reconfigEvent = */ ep_eventlog.composeEvent(ULOG_EP_RECONFIG,nullptr);
+			ep_eventlog.flush();
+		}
 	}
 
 	resmgr->init_config_classad();

@@ -198,6 +198,8 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
+// Tolerance for clock skew between the times individual history records were written
+static const time_t HISTORY_WRITE_DATE_SLOP_SECS = 5;
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -1322,8 +1324,13 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 				}
 			}
 		}
-		//If the cluster submit time is greater than the current completion date remove from data structure
-		if (banner.completion > 0 && match.QDate > banner.completion) {
+		//If the cluster submit time is greater than the time this record was written, remove from
+		//data structure. Only applied for cluster-only searches: history files are appended in
+		//write order, so once we've scanned back to a record written before our target cluster was
+		//even submitted, nothing further back can match. banner.completion holds that write time
+		//(CurrentTime), not the ad's CompletionDate, since CompletionDate can lag write order
+		//arbitrarily (e.g. LeaveJobInQueue). A few seconds of slop absorb clock skew between writes.
+		if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion + HISTORY_WRITE_DATE_SLOP_SECS) {
 			match.isDoneMatching = true;
 		}
 	}
@@ -1452,17 +1459,27 @@ static void printJob(ClassAd & ad)
 	// maybe fix that someday, but as far as I know, the non-socket printing
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
+		classad::References order;
+		classad::References * proj = &projection;
+		if (projection.empty()) {
+			// fetch all attributes as a projection because this forces the print order
+			sGetAdAttrs(order, ad, false);
+			proj = &order;
+		}
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, proj);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, proj, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, proj, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
+			// dont use fPrintAd here because it does not print in projection order
+			std::string buffer;
+			sPrintAdAttrs(buffer, ad, *proj);
+			fputs(buffer.c_str(), stdout);
 		}
 		printf("\n");
 	} else {
@@ -1581,6 +1598,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 
 	const char * rhs;
 	std::string attr;
+	bool haveWriteTime = false; //Whether CurrentTime (the record's actual write time) has been parsed
 	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
 		int end = 0;
 		ExprTree * tree = parser.ParseExpression(rhs);
@@ -1601,7 +1619,15 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 					newInfo.runId = static_cast<int>(valueNum);
 		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
 			ExprTreeIsLiteralString(tree,newInfo.owner);
-		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
+		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum)) {
+				newInfo.completion = valueNum;
+				haveWriteTime = true;
+			}
+		//CurrentTime (the record's actual write time) always wins over CompletionDate (which can lag
+		//write order arbitrarily, e.g. via LeaveJobInQueue) regardless of which attr the banner lists
+		//first; only fall back to CompletionDate when this banner has no CurrentTime at all.
+		} else if (!haveWriteTime && strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}

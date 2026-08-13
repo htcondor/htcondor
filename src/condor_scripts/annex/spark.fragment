@@ -1,4 +1,7 @@
 SCRATCH=/scratch/$USER
+# Spark is now running Alma 9.
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://htcss-downloads.chtc.wisc.edu/tarball/25.x/25.6.1/release/condor-25.6.1-x86_64_AlmaLinux9-stripped.tar.gz
+
 
 CONFIG_FRAGMENT() {
     : # This function intentionally left defined but blank.

@@ -1242,9 +1242,9 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
-	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
+	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsRunning);
 
-	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
+	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
@@ -6611,13 +6611,13 @@ struct UpdateGSICredContinuation : Service {
 
 public:
 	UpdateGSICredContinuation(int cmd, const std::string &temp_path,
-		const std::string &final_path, const std::string &job_owner,
+		const std::string &final_path, bool user_priv,
 		PROC_ID jobid, void *state)
 	:
 	  m_cmd(cmd),
+	  m_user_priv(user_priv),
 	  m_temp_path(temp_path),
 	  m_final_path(final_path),
-	  m_job_owner(job_owner),
 	  m_jobid(jobid),
 	  m_state(state)
 	{}
@@ -6627,6 +6627,7 @@ public:
 
 private:
 	int m_cmd;
+	bool m_user_priv;
 	std::string m_temp_path;
 	std::string m_final_path;
 	std::string m_job_owner;  // empty job owner indicates we should use condor_priv.
@@ -6727,7 +6728,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
-	std::string job_owner;
+	bool use_user_priv = false;
 #ifndef WIN32
 		// Check the ownership of the job's spool directory and switch
 		// our priv state if needed.
@@ -6753,17 +6754,16 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			// We should already be in condor priv, but we want to save it
 			// in the 'priv' variable.
 		priv = set_condor_priv();
-			// In UpdateGSICredContinuation below, an empty job_owner
-			// means we should do file access as condor_priv.
-		job_owner.clear();
+		use_user_priv = false;
 	} else {
 		if ( !init_user_ids(jobad->ownerinfo) ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-					 job_owner.c_str() );
+			         jobad->ownerinfo->Name() );
 			refuse(s);
 			return FALSE;
 		}
 		priv = set_user_priv();
+		use_user_priv = true;
 	}
 #endif
 
@@ -6788,7 +6788,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		new UpdateGSICredContinuation(cmd,
 			temp_proxy_path.c_str(),
 			final_proxy_path.c_str(),
-			job_owner,
+			use_user_priv,
 			jobid,
 			state);
 
@@ -6825,11 +6825,11 @@ UpdateGSICredContinuation::finish(Stream *stream)
 	ReliSock *rsock = static_cast<ReliSock*>(stream);
 	priv_state priv;
 #ifndef WIN32
-	if (!m_job_owner.empty()) {
+	if (m_user_priv) {
 		JobQueueJob* jobad = GetJobAd(m_jobid);
 		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
-			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-				m_job_owner.c_str());
+			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for owner of %d.%d!\n",
+			        m_jobid.cluster, m_jobid.proc);
 			delete this;
 			return false;
 		}
@@ -8878,6 +8878,12 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			return 0;
 		}
 
+		ClaimIdParser claim(claim_id.c_str());
+		if (claim.secSessionInfo()[0] == '\0') {
+			dprintf(D_ERROR, "DIRECT_ATTACH claim doesn't have security session,  ignoring\n");
+			continue;
+		}
+
 			// TODO allow trusted users to match all jobs
 			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
 		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
@@ -10233,7 +10239,9 @@ bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
 {
 	classad::EvalState state;
 	state.SetScopes(this);
-	return expr->Evaluate(state , val);
+	auto r = expr->Evaluate(state , val);
+	val.MakeSelfContained(state);
+	return r;
 }
 
 bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
@@ -13795,6 +13803,41 @@ size_t pidHash(const int &pid)
 	return pid;
 }
 
+// look for a local CREDD and and include it's address in our address file
+//
+bool locate_and_advertise_local_credd(bool force) {
+
+	Daemon local_credd(DT_CREDD);
+	local_credd.locate_local();
+	if ( ! force) {
+		// look to see if the credd address has changed
+		// if it has not then we are done
+		std::string credd_addr;
+		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
+		if ( ! local_credd.addr()) {
+			if (credd_addr.empty())
+				return false;
+		} else {
+			if (credd_addr == local_credd.addr())
+				return false;
+		}
+	}
+
+	// update the extra contact info, and tell daemon core to write a new address file.
+	if (local_credd.addr()) {
+		daemonCore->ContactInfoExtra().Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		if (scheduler.getScheddAd()) {
+			scheduler.getScheddAd()->Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		}
+	} else {
+		// TODO: do we want to clear?
+		// daemonCore->ContactInfoExtra().Delete(ATTR_CREDD_IP_ADDR);
+	}
+	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
+	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	DC_Enable_And_Drop_Addr_File();
+	return true;
+}
 
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
@@ -13810,7 +13853,7 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
-    stats.Reconfig();
+	stats.Reconfig();
 
 	if (first_time_in_init) {
 		if (param_boolean("USE_JOBSETS", false)) {
@@ -13888,6 +13931,8 @@ Scheduler::Init()
 			}
 		}
 	}
+	// now that we know our daemon name, refresh our address file
+	locate_and_advertise_local_credd(true);
 
 	m_include_default_flock_param = param_boolean("FLOCK_BY_DEFAULT", true);
 
@@ -14377,6 +14422,7 @@ Scheduler::Init()
 	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
+	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.

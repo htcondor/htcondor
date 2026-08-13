@@ -330,10 +330,10 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int v
 		return false;
 	}
 
-	if ( (st.st_mtime != st2.st_mtime) || (st.st_ctime != st2.st_ctime) ) {
-		dprintf(D_ALWAYS,
-		        "ERROR: read_secure_file(%s): %lu!=%lu  OR  %lu!=%lu\n",
-			 fname, st.st_mtime,st2.st_mtime, st.st_ctime,st2.st_ctime);
+	if (st.st_mtime != st2.st_mtime) {
+		dprintf(D_ERROR,
+		        "read_secure_file(%s): file modified during reading (%lld!=%lld)\n",
+			 fname, (long long)st.st_mtime, (long long)st2.st_mtime);
 		fclose(fp);
 		free(fbuf);
 		return false;

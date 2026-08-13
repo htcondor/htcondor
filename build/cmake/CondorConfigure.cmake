@@ -53,6 +53,15 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
+	# VS 2019 16.3 or later support the MultiToolTask builder, which parallelizes
+	# like Ninja.  Turn this on if not already on.
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+	endif()
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	endif()
+
 endif()
 
 # means user did not specify, so change the default.
@@ -593,14 +602,17 @@ if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
-    if ( APPLE )
-        set( SFTP_SERVER "/usr/libexec/sftp-server" )
-    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
-        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
-    elseif ( DEB_SYSTEM_NAME )
-        set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
-    else()
-        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+    find_file( SFTP_SERVER
+        NAMES sftp-server
+        PATHS /usr/libexec
+              /usr/lib/ssh
+              /usr/lib/openssh
+              /usr/libexec/openssh
+              /usr/libexec/ssh
+        NO_DEFAULT_PATH
+    )
+    if ( NOT SFTP_SERVER )
+        message( WARNING "Could not find sftp-server in any of the expected locations" )
     endif()
 endif()
 
@@ -694,20 +706,20 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-# We'll do the installation ourselves, below
-set (FMT_INSTALL false)
-
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
-
 # Remove when we have C++23 everywhere
 include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
 
+# External fmt lib not used anywhere currently and is causing build
+# errors with newer MacOS clang v21.0.0 so comment out (will be in C++23)
+# We'll do the installation ourselves, below
+#set (FMT_INSTALL false)
+#add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 # But don't try to install the header files anywhere
-set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
-install(TARGETS fmt
-	LIBRARY DESTINATION "${C_LIB}"
-	ARCHIVE DESTINATION "${C_LIB}"
-	RUNTIME DESTINATION "${C_LIB}")
+#set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+#install(TARGETS fmt
+#	LIBRARY DESTINATION "${C_LIB}"
+#	ARCHIVE DESTINATION "${C_LIB}"
+#	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)

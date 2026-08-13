@@ -25,6 +25,7 @@
 #include "selector.h"
 #include "condor_threads.h"
 #include "condor_sockfunc.h"
+#include "condor_rw.h"
 
 /*
  * Returns true if the given error number indicates
@@ -100,12 +101,16 @@ static char const *not_null_peer_description(char const *peer_description,SOCKET
  * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket
  */
 int
-condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t timeout, int flags, bool non_blocking )
+condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t timeout, CondorRWFlags flags, bool non_blocking )
 {
 	Selector selector;
 	int nr = 0, nro;
 	time_t start_time=0, cur_time=0;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
+	int recv_flags = 0;
+	if (flags == CondorRWFlags::Peek) {
+		recv_flags = MSG_PEEK;
+	}
 
 	if( IsDebugLevel(D_NETWORK) ) {
 		dprintf(D_NETWORK,
@@ -114,7 +119,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
 				(long long)timeout,
-				flags,
+				recv_flags,
 				non_blocking);
 	}
 
@@ -138,7 +143,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 #endif
 		nr = -2;
 		while (nr == -2 || (nr == -1 && errno == EINTR)) {
-			nr = recv(fd, buf, sz, flags);
+			nr = recv(fd, buf, sz, recv_flags);
 		}
 
 		if ( nr <= 0 ) {
@@ -151,7 +156,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 			the_error = errno;
 			the_errorstr = strerror(the_error);
 #endif
-			if ( nr == 0 && !(flags & MSG_PEEK)) {
+			if ( nr == 0 && !(recv_flags & MSG_PEEK)) {
 				nr = -2;
 				dprintf( D_FULLDEBUG, "condor_read(): "
 					"Socket closed when trying to read %d bytes from %s in non-blocking mode\n",
@@ -259,7 +264,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 		
 		start_thread_safe("recv");
 
-		nro = recv(fd, &buf[nr], sz - nr, flags);
+		nro = recv(fd, &buf[nr], sz - nr, recv_flags);
 		// Save the error value before stop_thread_safe(), as that may
 		// overwrite it.
 		int the_error;
@@ -340,7 +345,11 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 
 			return -1;
 		}
-		nr += nro;
+		// Increment the number of bytes read,
+		// but not if we got a short read when using MSG_PEEK.
+		if ( !(recv_flags & MSG_PEEK) || nro == (sz - nr) ) {
+			nr += nro;
+		}
 	}
 	
 /* Post Conditions */

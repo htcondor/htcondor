@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <deque>
+
 class BackwardFileReader {
 protected:
 
@@ -105,6 +107,9 @@ private:
 
 	// prefixes or part of a line into str, and updates internal
 	// variables to keep track of what parts of the buffer have been returned.
-	bool PrevLineFromBuf(std::string & str);
+	bool PrevLineFromBuf(std::string & str, std::deque<std::string> & stash);
 
+	// insert the contents of the stash that PrevLineFromBuf built up
+	// into the front of the output string and clear the stash
+	void insert_stash(std::string & str, std::deque<std::string> & stash, const char * first_bit);
 };

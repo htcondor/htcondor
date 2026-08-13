@@ -329,11 +329,11 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration. Relevant only if HTCondor daemons are not run as root
     on Unix platforms or Local System on Windows platforms. The default
     is ``$(HOME)/.condor/user_config`` on Unix platforms. The default is
-    %USERPROFILE\\.condor\\user_config on Windows platforms. If a fully
+    %USERPROFILE%\\.condor\\user_config on Windows platforms. If a fully
     qualified path is given, that is used. If a fully qualified path is
     not given, then the Unix path ``$(HOME)/.condor/`` prefixes the file
     name given on Unix platforms, or the Windows path
-    %USERPROFILE\\.condor\\ prefixes the file name given on Windows
+    %USERPROFILE%\\.condor\\ prefixes the file name given on Windows
     platforms.
 
     The ability of a user to use this user-specified configuration file
@@ -4562,6 +4562,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     run on the EP.  When true, if the Architecture in the image is defined
     and does not match the EP, the job is put on hold.
 
+:macro-def:`DOCKER_TRUST_LOCAL_IMAGES[STARTD]`
+    Defaults to false.  When true, docker universe jobs can use docker images
+    that have been prestaged into the local docker image cache, even if
+    that image cannot be pulled from a repository, or if it doesn't exist
+    in any repository.
+
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
@@ -6592,6 +6598,14 @@ These settings affect the *condor_starter*.
     specifying a URL. See
     :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
     for a description of the functionality required of a plug-in.
+
+:macro-def:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT[STARTER]`
+    An integer number of seconds (defaulting to 20 seconds) after which
+    the starter will kill a file transfer plug-in if it takes too long
+    to return its ClassAd describing its capabilities.  This may 
+    need to be set higher than the default if the plugin is stored 
+    on a slow or shared filesystem, or if it does a significant amount 
+    of work to generate its ClassAd.
 
 :macro-def:`<PLUGIN>_TEST_URL[STARTER]`
     This configuration takes a URL to be tested against the specified
@@ -9763,6 +9777,12 @@ macros are described in the :doc:`/admin-manual/security` section.
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
 
+:macro-def:`FS_ROOT_TO_CONDOR[SECURITY]`
+    When this boolean value is ``True``, when a client authenticates as
+    user ``root`` via the FS or FS_REMOTE method, the server changes the
+    authenticated identity to the Condor user (usually ``condor``).
+    The default value is ``True``.
+
 :macro-def:`DISABLE_EXECUTE_DIRECTORY_ENCRYPTION[SECURITY]`
     A boolean value that when set to ``True`` disables the ability for
     encryption of job execute directories on the specified host. Defaults
@@ -9852,13 +9872,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    daemon-to-daemon authentication with the token method.  Defaults to
-    ``/etc/condor/tokens.d``.
+    The path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.
+    Defaults to ``/etc/condor/tokens.d`` on unix and
+    ``$(RELEASE_DIR)\tokens.d`` on Windows.
 
 :macro-def:`SEC_TOKEN_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+    The path to the directory containing tokens for
+    user authentication with the token method.
+    Defaults to ``~/.condor/tokens.d`` on unix and
+    %USERPROFILE%\\.condor\\tokens.d on Windows.
 
 :macro-def:`SEC_TOKEN_REVOCATION_EXPR[SECURITY]`
     A ClassAd expression evaluated against tokens during authentication;

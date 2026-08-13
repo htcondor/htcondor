@@ -1152,7 +1152,7 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
-
+extern bool locate_and_advertise_local_credd(bool force);
 
 /** Hook to call whenever we're going to give a job to a "job
 	handler", be that a shadow, starter (local univ), or gridmanager.

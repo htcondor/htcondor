@@ -11,8 +11,8 @@
 
 
 int HIP_CALL hip_GetDeviceCount( int * pcount );
-bool enumerateHIPDevices( std::vector< BasicProps > & devices );
+bool enumerateHIPDevices( std::vector< BasicProps > & devices, int fix_guid_magic );
 
-dlopen_return_t setHIPFunctionPointers();
+dlopen_return_t setHIPFunctionPointers(int simulate=0);
 
 #endif /* _HIP_DEVICE_ENUMERATION_H */

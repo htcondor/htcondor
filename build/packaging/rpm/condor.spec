@@ -24,7 +24,14 @@ BuildArch: x86_64_v2
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
+%if "%{os_release_id}" == "sles"
+%global dist .sles15sp5
+%else
 %global dist .leap15
+%endif
+%endif
+%if %{suse_version} == 1600
+%global dist .leap16
 %endif
 %endif
 
@@ -39,11 +46,8 @@ URL: https://htcondor.org/
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-# Do not provide libfmt
-%global __requires_exclude ^libfmt\\.so.*$
-
 Source0: %{name}-%{condor_version}.tar.gz
-
+Source1: %{name}.sysusers.conf
 Source8: htcondor.pp
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -52,12 +56,12 @@ BuildRequires: cmake
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: libvirt-devel
 %endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
-%if ! ( 0%{?rhel} >= 10 )
+%if ! ( 0%{?rhel} >= 10 ) && "%{os_release_id}" != "sles"
 BuildRequires: libXScrnSaver-devel
 %endif
 %if 0%{?suse_version}
@@ -89,8 +93,10 @@ BuildRequires: nss-devel
 BuildRequires: openssl-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
+BuildRequires: dbus-1-devel
 %else
 BuildRequires: expat-devel
+BuildRequires: dbus-devel
 %endif
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
@@ -99,11 +105,13 @@ BuildRequires: python3-devel
 BuildRequires: libcurl-devel
 
 # Authentication build requirements
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: voms-devel
 %endif
+%if "%{os_release_id}" != "sles"
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
+%endif
 
 %if 0%{?devtoolset}
 BuildRequires: which
@@ -115,9 +123,15 @@ BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
-%if  0%{?suse_version}
-BuildRequires: gcc11
-BuildRequires: gcc11-c++
+%if 0%{?suse_version}
+%if %{suse_version} == 1500
+BuildRequires: gcc12
+BuildRequires: gcc12-c++
+%endif
+%if %{suse_version} == 1600
+BuildRequires: gcc15
+BuildRequires: gcc15-c++
+%endif
 %endif
 
 BuildRequires: libuuid-devel
@@ -128,6 +142,9 @@ Requires: libuuid
 %endif
 
 BuildRequires: systemd-devel
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+BuildRequires:  systemd-rpm-macros
+%endif
 %if 0%{?suse_version}
 BuildRequires: systemd
 %else
@@ -187,9 +204,11 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %if 0%{?suse_version}
+%if "%{os_release_id}" != "sles"
 Requires: libvomsapi1
+%endif
 %else
 Requires: voms
 %endif
@@ -197,31 +216,40 @@ Requires: voms
 %if 0%{?suse_version}
 Requires: krb5
 Requires: libcom_err2
+%if "%{os_release_id}" != "sles"
 Requires: libmunge2
+%endif
+%if %{suse_version} == 1500
 Requires: libopenssl1_1
+%endif
+%if %{suse_version} == 1600
+Requires: libopenssl3
+%endif
+%if "%{os_release_id}" != "sles"
 Requires: libSciTokens0
+%endif
 Requires: libsystemd0
 %else
 Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp >= 0.6.2
+Requires: scitokens-cpp
 Requires: systemd-libs
 %endif
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.18.1 or pelican-debug >= 7.18.1)
-Requires: pelican-osdf-compat >= 7.18.1
+Requires: (pelican >= 7.26.0 or pelican-debug >= 7.26.0)
+Requires: pelican-osdf-compat >= 7.26.0
 
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
-%if 0%{?suse_version}
-# Unfortunately, Apptainer is lagging behind in openSUSE
-Requires: apptainer >= 1.3.6
+%if 0%{?suse_version} == 1500
+# Unfortunately, Apptainer is lagging behind on openSUSE 15
+Requires: apptainer >= 1.4.5
 %else
-Requires: apptainer >= 1.4.2
+Requires: apptainer >= 1.5.3
 %endif
 %endif
 
@@ -229,8 +257,12 @@ Requires: apptainer >= 1.4.2
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-#Provides: user(condor) = 64
-#Provides: group(condor) = 64
+%if 0%{?fedora} >= 42
+# The RPM macros already makes virtual Provides for user and group
+%else
+Provides: user(condor) = 64
+Provides: group(condor) = 64
+%endif
 
 %if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
@@ -273,13 +305,15 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %endif
 
 %if 0%{?rhel} <= 10
-# upgrade-checks package discontinued as of 24.8.0
-Obsoletes: %{name}-upgrade-checks < 24.8.0
+# upgrade-checks package discontinued as of 24.9.0
+Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
 %if 0%{?suse_version}
+%if %{suse_version} == 1500
 %debug_package
+%endif
 %endif
 
 %description
@@ -323,7 +357,7 @@ useful on systems where no device (e.g. /dev/*) can be used to
 determine console idle time.
 
 #######################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %package vm-gahp
 Summary: HTCondor's VM Gahp
 Group: Applications/System
@@ -490,11 +524,15 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-getent group condor >/dev/null || groupadd -r condor
+%if 0%{?fedora} >= 42
+# RPM handles user creation automagically in these versions
+%else
+getent group condor >/dev/null || groupadd --system --gid 64 condor
 getent passwd condor >/dev/null || \
-  useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
-    -c "Owner of HTCondor Daemons" condor
+  useradd --system --uid 64 --gid condor --home-dir /var/lib/condor \
+  --shell /usr/sbin/nologin --comment "Owner of HTCondor Daemons" condor
 exit 0
+%endif
 
 
 %prep
@@ -508,8 +546,14 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?suse_version}
-export CC=/usr/bin/gcc-11
-export CXX=/usr/bin/g++-11
+%if %{suse_version} == 1500
+export CC=/usr/bin/gcc-12
+export CXX=/usr/bin/g++-12
+%endif
+%if %{suse_version} == 1600
+export CC=/usr/bin/gcc-15
+export CXX=/usr/bin/g++-15
+%endif
 %endif
 
 %if 0%{?devtoolset}
@@ -565,16 +609,20 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 8
+%if 0%{?rhel} == 8 || 0%{?suse_version} >= 1600
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if 0%{?amzn}
-       -DWITH_VOMS:BOOL=FALSE \
+%if 0%{?amzn} || "%{os_release_id}" == "sles"
        -DWITH_LIBVIRT:BOOL=FALSE \
+       -DWITH_VOMS:BOOL=FALSE \
+%endif
+%if "%{os_release_id}" == "sles"
+       -DWITH_MUNGE:BOOL=FALSE \
+       -DWITH_SCITOKENS:BOOL=FALSE \
 %endif
        -DCMAKE_INSTALL_PREFIX:PATH=/
 
@@ -705,6 +753,9 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 
+mkdir -p %{buildroot}%{_sysusersdir}
+install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
+
 mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 
@@ -735,17 +786,6 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
-# htcondor/dags only works with Python3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
-
-# htcondor/personal.py only works with Python3
-rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
-
-# New fangled stuff does not work with Python2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
-
 # classad3 shouldn't be distributed yet
 rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
@@ -768,6 +808,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # % {_unitdir}/condor.socket
+%{_sysusersdir}/condor.conf
 %dir %_datadir/condor/
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
@@ -783,9 +824,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/condor/libfmt.so
-%_libdir/condor/libfmt.so.10
-%_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
@@ -1156,7 +1194,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_kbdd
 
 #################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %files vm-gahp
 %defattr(-,root,root,-)
 %_sbindir/condor_vm-gahp
@@ -1189,8 +1227,6 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-/usr/lib64/python%{python3_version}/site-packages/classad/
-/usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 /usr/lib64/python%{python3_version}/site-packages/classad2/
@@ -1274,6 +1310,166 @@ fi
 # configuration
 
 %changelog
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.12-1
+- All changes in 24.12.22
+
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.22-1
+- Fix rare job router crash when removing a recently routed job
+
+* Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
+- Fix a bug that could cause the arc_gahp to crash
+- Reduce the size of Python wheels by 84% by removing debug symbols
+- Fix issue when tools could infinitely loop when using trust on first use
+- HTCondor tarballs now contain Apptainer 1.5.2
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.11-1
+- All changes in HTCondor 24.12.21
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.21-1
+- Fix rare EP crash when using a custom docker wrapper script
+
+* Wed Jun 10 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.21-1
+- Fix rare issue where condor_dagman would abort after a system reboot
+- HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.10-1
+- Add support for Ubuntu 26.04 (Resolute Raccoon)
+- All changes in HTCondor 24.12.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.20-1
+- Fixed Access Point spooled X.509 job proxy refresh
+- All changes in HTCondor 24.0.20
+
+* Tue May 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.20-1
+- Fix reporting of RemoteUserCPU in parallel universe
+- condor_ssh_to_job can now execute one-shot commands when using containers
+- condor_ssh_to_job now enters the proper cgroup when using containers
+- HTCondor tarballs now contain Pelican 7.24.2
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.9-1
+- All changes in 24.12.19
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.19-1
+- Fix crash when a user provided Docker script produces unexpected output
+- All changes in 24.0.19
+
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.19-1
+- Now properly reports NVIDIA MIG GPU device names
+- Fix performance problem in the htcondor2 Python ClassAd parser
+- Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+- Batch grid universe jobs now tolerate a dot in the username
+- Fix huge reported job execution times when an AP restarts
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.8-1
+- All changes in 24.12.18
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
+- Improve AMD GPU detection when using RCOM6/HIP libraries
+- Fix for new jobs getting kicked off LVM EP due to quantization mismatch
+- condor_submit now reports an error for circular requirement expressions
+- condor_status now correctly reports offline GPUs
+- Can use a string for 'since' with htcondor.Schedd.history()
+- Fix for backfill GPUs disappearing on reconfig
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.18-1
+- Enable use of in-memory SciTokens cache, if disk cache not usable
+- Fix condor_submit using different executables with late materialization
+- HTCondor tarballs now contain Pelican 7.23.0
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.7-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-1
+- Initial support for openSUSE 16
+- Make HTCondor Python wheel usable with the python-slim Docker image
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
+- Fix problem specifying scope or audience with a Vault-managed credential
+- Fix late materialization bug when job transform sets immutable attribute
+- Fix problem where a backfill slot would refuse claims
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.16-1
+- Fix floating point memory or disk request not fitting into some slots
+- Fix condor_rooster crash when unhibernate rank was not constant
+- Fix memory leak in the htcondor2.JobEventLog.events() Python method
+- condor_history -long now prints attributes in alphabetical order
+- Fix LVM setup to not timeout when creating a large volume
+- LVM creation no longer saves meta data which eventually fills the disk
+- HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.5-1
+- Initial support for Ubuntu 24.04 on the ARM64 platform
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.3-1
+- All changes in 24.12.14
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.14-1
+- Fix interoperability problem between HTCondor-CE 24 and 25 which
+  manifests as a Job Router crash when upgrading the CE to HTCondor 25
+- Fix several issues when submitting jobs with itemdata in
+  the htcondor2 Python bindings
+- Fix bug when using max_idle and transfer_input_files that could result
+  in the container_image to be only transferred with the first job
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the CUDA_VISIBLE_DEVICES environment variable
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.2-1
+- Update Python file transfer plugins to use the new Python bindings
+- Fix incorrect environment when using Singularity and nested scratch
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.13-1
+- Fix annoying momentary text status flash in condor_watch_q
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
+* Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.1-1
+- New and improved Python bindings: classad2 and htcondor2
+- The original Python bindings have been removed
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
+- Add the ability to enforce memory and CPU limits on local universe jobs
+- Add the ability for condor_chirp to work within a Docker universe job
+- condor_watch_q now exits with any keyboard input
+- The shell submit keyword now works with interactive jobs
+- All changes in 24.0.12
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
+- Update condor_upgrade_check to warn about v1 Python bindings retirement
+- Update condor_upgrade_check to look for old syntax job transforms
+- All changes in 23.10.29
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
+- Fix flocking to pools when there are intermittent network issues
+- HTCondor tarballs now contain Pelican 7.19.3
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
 - Add job attributes to track why and how often a job is vacated
 - Add the ability to notify a user when their job first starts
@@ -1291,7 +1487,7 @@ fi
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
 - Fix condor_token_request to accept automatically-approved tokens
 
-* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.3-1
 - Fix condor_store_cred bug that broke installing with get_htcondor
 
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
@@ -1599,7 +1795,7 @@ fi
 - Fix so 'condor_submit -interactive' works on cgroup v2 execution points
 
 * Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
-- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Preliminary support for Ubuntu 24.04 (Noble Numbat)
 - Warns about deprecated multiple queue statements in a submit file
 - Fix bug where plugins could not signify to retry a file transfer
 - The condor_upgrade_check script checks for proper token file permissions

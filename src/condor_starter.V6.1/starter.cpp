@@ -3540,9 +3540,27 @@ Starter::PublishToEnv( Env* proc_env )
 			if (contains_anycase(tags, "GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
 				classad::Value val;
 				const char * env_value = nullptr;
-				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
+				std::string firstGPUuuid;
+				std::string joinExpression;
+				mad->EvaluateExpr("AvailableGPUS[0].id", val);
+
+				// condor_gpu_discovery identifies MIG devices with a UUID that starts with "MIG-"
+				// but NVIDIA_VISIBLE_DEVICES expects these to begin with MIG-, not GPU-MIG-
+				//
+				// But, non-mig need to begin with GPU-uuid
+				if (val.IsStringValue(firstGPUuuid) && firstGPUuuid.starts_with("MIG-")) {
+					joinExpression = "join(\",\",evalInEachContext(DeviceUuid, AvailableGPUs))";
+				} else {
+					joinExpression = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+				}
+
+				if (mad->EvaluateExpr(joinExpression, val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}

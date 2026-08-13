@@ -496,6 +496,11 @@ static inline bool IsSpecialJobId( int cluster_id, int proc_id )
 	return false;
 }
 
+LogRecord * ConstructClassAdLogTableEntry<JobQueuePayload>::NewLogRec(int optype) const
+{
+	return MakeLogRecord(optype, *this);
+}
+
 ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, const char * mytype) const
 {
 	JOB_ID_KEY jid(key);
@@ -2291,6 +2296,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			cad->Delete(ATTR_OS_USER);
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
 				cad->LookupString(ATTR_PROJECT_NAME, project_name);
@@ -2319,6 +2325,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->set_id = 0;
 			ad->Delete(ATTR_JOB_SET_ID);
 			ad->Delete(ATTR_JOB_SET_NAME);
+			ad->Delete(ATTR_OS_USER);
 
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
@@ -4645,13 +4652,8 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 	// allowed to do that, via the internal API.
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
-		// should we fail or silently succeed?  (old submits set secure attrs)
-		const CondorVersionInfo *vers = nullptr;
-		if ( Q_SOCK && ! Ignore_Secure_SetAttr_Attempts) {
-			vers = Q_SOCK->get_peer_version();
-		}
-		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
-			// new versions should know better!  fail!
+		// should we fail or silently succeed?
+		if ( ! Ignore_Secure_SetAttr_Attempts) {
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -4660,10 +4662,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 			errno = EACCES;
 			return -1;
 		} else {
-			// old versions get a pass.  succeed (but do nothing).
-			// The idea here is we will not set the secure attributes, but we won't
-			// propagate the error back because we don't want old condor_submits to not
-			// be able to submit jobs.
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -5894,6 +5892,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 	// In effect, they are making attributes that are set by a submit transform pseudo-immutable. (the root cause of HTCONDOR-1369)
 	// TODO: make it possible to declare only some transforms as cluster-only
 	bool transform_factory_and_job = param_boolean("TRANSFORM_FACTORY_AND_JOB_ADS", true);
+	bool project_is_cluster_attr = scheduler.HasPersistentProjectInfo();
 
 	for(const JobQueueKey jid : new_keys) {
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) {
@@ -5938,6 +5937,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 					// we already transformed the factory cluster ad, disable transforms
 					// for proc ads if ...and_jobs is false
 					do_transforms = transform_factory_and_job;
+					has_job_factory = true; // make sure the transform knows this is a factory job
 				}
 			}
 		}
@@ -5946,7 +5946,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 		// apply job transforms to the procAd.
 		// If the transforms fail, bail on the transaction.
 		if (do_transforms) {
-			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory);
+			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory, project_is_cluster_attr);
 			if  (rval < 0) {
 				if ( errorStack ) {
 					errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
@@ -6667,14 +6667,6 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 						jid.cluster, jid.proc, owner);
 				#endif
 				}
-			}
-
-				// ...
-			std::string ap_user;
-			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
 			}
 		}
 
@@ -7754,6 +7746,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// so if parent is deleted before caller is finished with this
 		// ad, things will still be ok.
 		ChainCollapse(*expanded_ad);
+
+		JobQueueJob* job = dynamic_cast<JobQueueJob*>(ad);
+		if (job->ownerinfo->OsUser()) {
+			expanded_ad->Assign(ATTR_OS_USER, job->ownerinfo->OsUser());
+		}
 
 		// before $$ expansion, we may need to convert the Environment from v1 to v2
 		// or switch the v1 delimiter to match the target OS. We do this so that if the 

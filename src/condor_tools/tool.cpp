@@ -1119,7 +1119,7 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 	  query.addANDConstraint(constraint);
 	}
 	query.setLocationLookup("tool", false);
-	query.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	query.requestPrivateAttrs();
 
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);

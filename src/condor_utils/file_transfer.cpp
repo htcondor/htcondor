@@ -151,9 +151,11 @@ public:
 	void setXferQueue(const std::string &queue) { m_xfer_queue = queue; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
 	void setDomainSocket(bool value) { is_domainsocket = value; }
+	void setFifo(bool value) { is_fifo = value; }
 	void setSymlink(bool value) { is_symlink = value; }
 	void setDirectory(bool value) { is_directory = value; }
 	bool isDomainSocket() const {return is_domainsocket;}
+	bool isFifo() const {return is_fifo;}
 	bool isSymlink() const {return is_symlink;}
 	bool isDirectory() const {return is_directory;}
 	bool isSrcUrl() const {return !m_src_scheme.empty();}
@@ -267,6 +269,7 @@ private:
 	std::string m_dest_url;
 	std::string m_xfer_queue;
 	bool is_domainsocket{false};
+	bool is_fifo{false};
 	bool is_directory{false};
 	bool is_symlink{false};
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
@@ -1729,6 +1732,7 @@ FileTransfer::Reap(int exit_status)
 
 	Info.duration = time(nullptr) - TransferStart;
 	Info.in_progress = false;
+	bool set_success_to_failed = false;
 	if( WIFSIGNALED(exit_status) ) {
 		Info.success = false;
 		Info.try_again = true;
@@ -1745,7 +1749,14 @@ FileTransfer::Reap(int exit_status)
 		} else {
 			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
 					 WEXITSTATUS(exit_status) );
-			Info.success = false;
+			// We can't set Info.success to false here, because 
+			// we drain the pipe below, and there might be an info
+			// message before the final update with the error.
+			// ReadTransferPipeMsg() can call a callback to the
+			// caller, which should not see the success status 
+			// as failed until we have the full error message
+			// which comes from the final message on the pipe.
+			set_success_to_failed = true;
 		}
 	}
 
@@ -1769,9 +1780,15 @@ FileTransfer::Reap(int exit_status)
 		// followed by the final update message. Keep reading until we
 		// get the final message or encounter an error reading from the pipe
 		do {
-			if ( ! ReadTransferPipeMsg())
+			if ( ! ReadTransferPipeMsg()) {
 				break;
+			}
 		} while (Info.xfer_status != XFER_STATUS_DONE);
+	}
+	if (set_success_to_failed) {
+		// Now we can set success to false, so the final callback
+		// below can interpret everything correctly. 
+		Info.success = false;
 	}
 
 	if( registered_xfer_pipe ) {
@@ -4256,7 +4273,7 @@ createCheckpointManifest(
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
-		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
+		if( fileitem.isDirectory() || fileitem.isDomainSocket() || fileitem.isFifo() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
 		std::string sourceHash;
@@ -4945,6 +4962,16 @@ FileTransfer::uploadFileList(
 	// (Of course, it would arguably be better not to generate such entries
 	// in the first place, but that's scary for other reasons.)
 	//
+
+	// If the file list is empty, the loop below never runs and we would
+	// never report XFER_STATUS_ACTIVE.  The shadow logs a transfer-started
+	// userlog event when it first sees the transfer become active, so an
+	// empty transfer would otherwise log a finished event with no matching
+	// started event.  Report active here so that an empty transfer still
+	// logs its start.
+	if( filelist.empty() ) {
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+	}
 
 	for (auto &fileitem : filelist)
 	{
@@ -7959,6 +7986,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #ifndef WIN32
 	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
 	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
+	file_xfer_item.setFifo( S_ISFIFO(st.st_mode) );
 #endif
 
 	file_xfer_item.setDirectory( st.st_mode & S_IFDIR );
@@ -7967,6 +7995,15 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		// also not an error. Remove the entry from the list and return true.
 	if( file_xfer_item.isDomainSocket() ) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
+			"from transfer list\n", UrlSafePrint(full_src_path) );
+		expanded_list.pop_back();
+		return true;
+	}
+
+		// Likewise, named pipes (FIFOs) must not be sent: reading from one
+		// with no writer will block forever and hang the transfer.
+	if( file_xfer_item.isFifo() ) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a FIFO, excluding "
 			"from transfer list\n", UrlSafePrint(full_src_path) );
 		expanded_list.pop_back();
 		return true;

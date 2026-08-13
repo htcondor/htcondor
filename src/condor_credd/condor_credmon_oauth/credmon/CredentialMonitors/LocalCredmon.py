@@ -93,27 +93,6 @@ class LocalCredmon(OAuthCredmon):
         return htcondor.param.get(f"{self.credmon_name}_CREDMON_{self.provider}_{config}", htcondor.param.get(f"{self.credmon_name}_CREDMON_{config}", default))
 
 
-    def should_renew(self, username, token_name):
-        if not super().should_renew(username, token_name):
-            return False
-
-        # Refuse to provide a token to users outside a specific group (if configured)
-        if self.authz_group_requirement:
-            if not self.authz_group_mapfile:
-                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
-                return False
-            try:
-                groups = get_user_groups(username, self.authz_group_mapfile)
-            except IOError:
-                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
-                return False
-            if self.authz_group_requirement not in groups:
-                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
-                return False
-
-        return True
-
-
     def generate_access_token_info(self, username: str, token_name: str) -> TokenInfo:
         """
         Determines what information should be in the token for a given username / provider
@@ -146,19 +125,21 @@ class LocalCredmon(OAuthCredmon):
         """
         Write a serialized access token to the credential directory.
         """
+        if isinstance(serialized_token, bytes):
+            serialized_token = serialized_token.decode()
         (tmp_fd, tmp_access_token_path) = tempfile.mkstemp(dir = self.cred_dir)
         with os.fdopen(tmp_fd, 'w') as f:
             if self.token_use_json:
                 # use JSON if configured to do so, i.e. when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = True (default)
                 f.write(json.dumps({
-                    "access_token": serialized_token.decode(),
+                    "access_token": serialized_token,
                     "expires_in":   int(token_lifetime),
                 }))
             else:
                 # otherwise write a bare token string when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = False
-                f.write(serialized_token.decode()+'\n')
+                f.write(serialized_token+'\n')
 
         access_token_path = os.path.join(self.cred_dir, username, token_name + '.use')
 
@@ -177,6 +158,21 @@ class LocalCredmon(OAuthCredmon):
         """
         Create a SciToken at the specified path.
         """
+
+        # Refuse to provide a token to users outside a specific group (if configured)
+        if self.authz_group_requirement:
+            if not self.authz_group_mapfile:
+                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
+                return False
+            try:
+                groups = get_user_groups(username, self.authz_group_mapfile)
+            except IOError:
+                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
+                return False
+            if self.authz_group_requirement not in groups:
+                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
+                self.log.error(f"Writing an empty {self.provider} token for {username}")
+                return self.write_access_token(username, token_name, self.token_lifetime, "")
 
         info = self.generate_access_token_info(username, token_name)
 

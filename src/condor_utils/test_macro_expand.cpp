@@ -298,6 +298,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "", ret);
 		gmstr.clear();
 		hashout = NULL;
+		fail_count++;
 	} else {
 		dump_macro_set(set, gmstr, "\t");
 		hashout = gmstr.c_str();
@@ -305,6 +306,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			fprintf(stderr, "Failed %5d: test '%s' local=%s subsys=%s resulting hashtable does not match expected\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");
 			ret = -1;
+			fail_count++;
 		} else if (verbose) {
 			fprintf(stdout, "    OK %5d: test '%s' local=%s subsys=%s\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");

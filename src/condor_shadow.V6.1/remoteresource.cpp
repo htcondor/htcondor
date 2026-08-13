@@ -498,12 +498,20 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
-	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+	switch(do_REMOTE_syscall()) {
+	case -1:
+		// The socket closed at the expected time. Start shutdown.
+		dprintf(D_SYSCALLS,"do_REMOTE_syscall returned -1, assume starter is exiting after job exit\n");
 		attemptShutdown();
-		return KEEP_STREAM;
+		break;
+	case -2:
+		// Unexpected network trouble. We'll be in reconnect mode now.
+		dprintf(D_SYSCALLS, "do_REMOTE_syscall returned -2, assume starter may still be alive\n");
+		break;
+	default:
+		// Normal RPC, note contact from starter
+		hadContact();
 	}
-	hadContact();
 	return KEEP_STREAM;
 }
 
@@ -1142,10 +1150,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_stime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1162,10 +1170,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_utime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -2005,6 +2013,14 @@ RemoteResource::reconnect( void )
 	if( ! gjid ) {
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
+	}
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
 	}
 	if( lease_duration < 0 ) { 
 			// if it's our first time, figure out what we've got to

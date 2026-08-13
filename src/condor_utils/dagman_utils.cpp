@@ -26,8 +26,6 @@
 #include "dagman_utils.h"
 #include "my_popen.h"
 #include "read_multiple_logs.h"
-#include "../condor_procapi/processid.h"
-#include "../condor_procapi/procapi.h"
 #include "tmp_dir.h"
 #include "tokener.h"
 #include "which.h"
@@ -946,122 +944,6 @@ DagmanUtils::popen (ArgList &args) {
 		}
 	}
 	return r;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::create_lock_file(const char *lockFileName, bool abortDuplicates) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "w");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for writing.\n", lockFileName);
-		result = -1;
-	}
-
-	// Create the ProcessId object.
-	ProcessId *procId = nullptr;
-	if (result == 0 && abortDuplicates) {
-		int status;
-		int precision_range = 1;
-		if (ProcAPI::createProcessId(daemonCore->getpid(), procId, status, &precision_range) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to create process ID (%d)\n", status);
-			result = -1;
-		}
-	}
-
-	// Write out the ProcessId object.
-	if (result == 0 && abortDuplicates) {
-		if (procId->write(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to write process ID information to %s\n", lockFileName);
-			result = -1;
-		}
-	}
-
-	// Confirm the ProcessId object's uniqueness.
-	if (result == 0 && abortDuplicates) {
-		int status;
-		if (ProcAPI::confirmProcessId(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("Warning: Failed to confirm process ID (%d)\n", status);
-		} else if ( ! procId->isConfirmed()) {
-			print_msg("Warning: Ignoring error that ProcessId not confirmed unique\n");
-		} else if (procId->writeConfirmationOnly(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to confirm writing of process ID information\n");
-			result = -1;
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: closing lock file failed with (%d): %s\n",
-			        errno, strerror(errno));
-		}
-	}
-
-	return result;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::check_lock_file(const char *lockFileName) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "r");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for reading.\n",
-		            lockFileName);
-		result = -1;
-	}
-
-	ProcessId *procId = nullptr;
-	if (result != -1) {
-		int status;
-		procId = new ProcessId(fp, status);
-		if (status != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to create process Id object from lock file %s\n",
-			            lockFileName);
-			result = -1;
-		}
-	}
-
-	if (result != -1) {
-		int status;
-		if (ProcAPI::isAlive(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to determine whether DAGMan that wrote lock file is alive.\n");
-			result = -1;
-		} else if (status == PROCAPI_ALIVE) {
-			print_error("ERROR: Duplicate DAGMan PID %d is alive; this DAGMan should abort.\n",
-			            procId->getPid());
-			result = 1;
-
-		} else if (status == PROCAPI_DEAD) {
-			print_msg("Duplicate DAGMan PID %d is no longer alive; this DAGMan should continue.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else if (status == PROCAPI_UNCERTAIN) {
-			print_msg("Duplicate DAGMan PID %d *may* be alive; this DAGMan is continuing, "
-			          "but this will cause problems if the duplicate DAGMan is alive.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else {
-			EXCEPT("Illegal ProcAPI::isAlive() status value: %d", status);
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: Failed to close lock file failed (%d): %s\n",
-			            errno, strerror(errno));
-		}
-	}
-
-	return result;
 }
 
 // Add a DAG file to DAGMan options

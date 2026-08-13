@@ -46,6 +46,12 @@ DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
 {
 }
 
+bool DCSchedd::getCreddAddress(std::string & address) {
+	ClassAd * ad = locationAd();
+	if ( ! ad) return false;
+	return ad->LookupString(ATTR_CREDD_IP_ADDR, address);
+}
+
 ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
 					const char *reason_code,
@@ -2726,6 +2732,7 @@ ClassAd * DCSchedd::updateProjectAds(
 	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
+
 
 ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {
 	ReliSock rsock;

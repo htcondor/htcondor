@@ -1421,7 +1421,7 @@ Resource::eval_state( void )
 void
 Resource::reconfig( void )
 {
-	r_attr->reconfig_DevIds(resmgr->m_attr, r_id, r_sub_id);
+	r_attr->reconfig_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot);
 #if HAVE_JOB_HOOKS
 	if (m_hook_keyword) {
 		free(m_hook_keyword);
@@ -3951,7 +3951,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 				ParseClassAdRvalExpr(exprstr, tree);
 				if ( tree &&
 					 EvalExprToNumber(tree,req_classad,mach_classad,result) &&
-					 result.IsIntegerValue(val) )
+					 result.IsNumber(val) )
 				{
 					req_classad->Assign(resources[i],val);
 				}

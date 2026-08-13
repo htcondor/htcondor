@@ -67,12 +67,15 @@ my %memory_data64 = (
 	"fedora40" => "904",
 	"fedora41" => "904",
 	"fedora42" => "904",
+	"fedora43" => "1064",
 	"opensuse15" => "904",
+	"opensuse16" => "1860",
 	"redhat5"  => "448",
 	"redhat6"  => "492",
 	"redhat7"  => "644",
 	"sl6"      => "488",
 	"sl7"      => "652",
+	"suse15"   => "868",
 	"ubuntu12" => "684",
 	"ubuntu14" => "664",
 	"ubuntu16" => "664",
@@ -80,6 +83,7 @@ my %memory_data64 = (
 	"ubuntu20" => "752",
 	"ubuntu22" => "1500",
 	"ubuntu24" => "1284",
+	"ubuntu26" => "1500",
 );
 # for X86 shadows
 my %memory_data32 = (

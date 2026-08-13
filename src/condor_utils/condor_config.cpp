@@ -337,7 +337,7 @@ bool _allocation_pool::contains(const char * pb)
 
 		// if this address is within the allocation of this hunk, then
 		// the pool contains this pointer.
-		if (pb >= ph->pb && (int)(pb - ph->pb) < ph->ixFree)
+		if (pb >= ph->pb && pb < ph->pb + ph->ixFree)
 			return true;
 	}
 	return false;
@@ -2349,6 +2349,17 @@ param_integer( const char *name, int default_value,
 	int result;
 
 	param_integer( name, result, true, default_value,
+				   true, min_value, max_value, NULL, NULL, use_param_table );
+	return result;
+}
+
+long long
+param_longlong( const char *name, long long default_value,
+			    long long min_value, long long max_value, bool use_param_table )
+{
+	long long result;
+
+	param_longlong( name, result, true, default_value,
 				   true, min_value, max_value, NULL, NULL, use_param_table );
 	return result;
 }

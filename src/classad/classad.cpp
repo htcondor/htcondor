@@ -1795,7 +1795,9 @@ Flatten( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 	EvalState	state;
 
 	state.SetScopes( this );
-	return( tree->Flatten( state , val , fexpr ) );
+	auto r = tree->Flatten( state , val , fexpr );
+	val.MakeSelfContained( state );
+	return r;
 }
 
 bool ClassAd::	// NAC
@@ -1805,7 +1807,9 @@ FlattenAndInline( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 
 	state.SetScopes( this );
 	state.flattenAndInline = true;
-	return( tree->Flatten( state , val , fexpr ) );
+	auto r = tree->Flatten( state , val , fexpr );
+	val.MakeSelfContained( state );
+	return r;
 }
 
 void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)

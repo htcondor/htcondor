@@ -23,19 +23,21 @@ Amazon Linux 2023;
 Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
 Enterprise Linux 9, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
 Enterprise Linux 10, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-openSUSE LEAP 15 including SUSE Linux Enterprise Server (SLES) 15.
-Binaries are available for x86_64 for all these platforms.
+openSUSE LEAP 15 and 16.
+Binaries are available for ``x86_64`` for all these platforms.
 For Enterprise Linux 8, HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
 For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 For Enterprise Linux 10, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/25.0/htcondor-release-current.amzn2023.noarch.rpm>`_
-* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/25.0/htcondor-release-current.el8.noarch.rpm>`_
-* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/25.0/htcondor-release-current.el9.noarch.rpm>`_
-* `Enterprise Linux 10 <https://research.cs.wisc.edu/htcondor/repo/25.0/htcondor-release-current.el10.noarch.rpm>`_
-* `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/25.0/htcondor-release-current.leap15.noarch.rpm>`_
+* `Amazon Linux 2023 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.amzn2023.noarch.rpm>`_
+* `Enterprise Linux 8 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.el9.noarch.rpm>`_
+* `Enterprise Linux 10 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.el10.noarch.rpm>`_
+* `Enterprise Linux 10 (x86_64_v2) <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.el10.x86_64_v2.rpm>`_
+* `openSUSE LEAP 15 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.leap15.noarch.rpm>`_
+* `openSUSE LEAP 16 <https://htcss-downloads.chtc.wisc.edu/repo/25.0/htcondor-release-current.leap16.noarch.rpm>`_
 
 The Enterprise Linux HTCondor packages depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -50,24 +52,23 @@ deb-based Distributions
 -----------------------
 
 We support the following deb-based platforms: Debian 12 (Bookworm) and Debian 13 (Trixie); and
-Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
-Binaries are available for x86_64 for all these platforms.
+Ubuntu 22.04 (Jammy Jellyfish), 24.04 (Noble Numbat), and 26.04 (Resolute Raccoon).
+Binaries are available for ``x86_64`` for all these platforms.
+``arm64`` binaries are available for Ubuntu 24.04 (Noble Numbat) and 26.04 (Resolute Raccoon).
 These repositories also include the source packages.
+
+Place our `signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-25.0-Key>`_
+in ``/etc/apt/keyrings/htcondor.asc``
 
 Debian 12 and 13
 ################
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-25.0-Key>`_
-with ``apt-key add`` before adding the repositories below.
-
-* Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/25.0 bookworm main``
-* Debian 13: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/25.0 trixie main``
+* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.0-bookworm.list>`_
+* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.0-trixie.list>`_
 
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-25.0-Key>`_
-with ``apt-key add`` before adding the repositories below.
-
-* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/25.0 jammy main``
-* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/25.0 noble main``
+* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-jammy.list>`_
+* Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-noble.list>`_
+* Ubuntu 26.04 (resolute raccoon): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-resolute.list>`_

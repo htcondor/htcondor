@@ -1005,6 +1005,23 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
+	rv = curl_easy_setopt( curl.get(), CURLOPT_CONNECTTIMEOUT, 15 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		return false;
+	}
+
+	rv = curl_easy_setopt( curl.get(), CURLOPT_TIMEOUT, 60 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_TIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_TIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		return false;
+	}
 
 /*
     rv = curl_easy_setopt( curl.get(), CURLOPT_DEBUGFUNCTION, debug_callback );

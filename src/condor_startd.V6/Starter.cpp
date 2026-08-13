@@ -226,6 +226,18 @@ Starter::publish( ClassAd* ad )
 		return;
 	}
 
+	// LVM setting disk quantum does not get set by intial static ad
+	// Check if not set and using LVM to get actual value
+	const auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+	long long disk_quantum = 0;
+	if (volman_setup && (!s_ad->LookupInteger(ATTR_STARTD_DISK_QUANTUM, disk_quantum) || disk_quantum <= 0)) {
+		disk_quantum = volman->GetDiskQuantum();
+		if (disk_quantum > 0) {
+			s_ad->Assign(ATTR_STARTD_DISK_QUANTUM, disk_quantum);
+		}
+	}
+
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
 	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {
@@ -787,7 +799,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	// this is a Register_Socket callback, but we also call this in the reaper
 	// so it's possible that the number of updates available will be 0
 	int pending_bytes = stream->bytes_available_to_read();
-	while (pending_bytes > 0) {
+	while (static_cast<Sock*>(stream)->msgReady()) {
 
 		time_t msg_time = time(NULL);
 
@@ -865,7 +877,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 	}
 
-	if( final_update ) {
+	if( final_update || static_cast<ReliSock*>(stream)->is_closed() ) {
 		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;

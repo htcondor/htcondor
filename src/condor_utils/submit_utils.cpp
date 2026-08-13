@@ -3521,6 +3521,13 @@ int SubmitHash::ReportCommonMistakes()
 		ABORT_AND_RETURN(1);
 	}
 
+	std::string out_dir;
+	if (job->Lookup(ATTR_OUTPUT_DESTINATION) && job->Lookup(ATTR_OUTPUT_DIRECTORY)) {
+		push_error(stderr, "You cannot use both " SUBMIT_KEY_OutputDestination
+			" and " SUBMIT_KEY_OutputDirectory " in the same submit file\n");
+		ABORT_AND_RETURN(1);
+	}
+
 	return abort_code;
 }
 
@@ -4494,6 +4501,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile},
 	// formerly SetWantGracefulRemoval
 	{SUBMIT_KEY_WantGracefulRemoval, ATTR_WANT_GRACEFUL_REMOVAL, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobMaxVacateTime
@@ -5510,10 +5518,18 @@ int SubmitHash::SetRequirements()
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
 		// get classified as external references.
-	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
+	req_ad.Assign(ATTR_REQUEST_MEMORY,0); // for use by checks_reqmem below
 	req_ad.Assign(ATTR_VM_CKPT_MAC, "");
+	req_ad.Assign(ATTR_REQUIREMENTS, true); // so we can detect circular Requirements
 
-	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
+	if ( ! answer.empty() && ! GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs)) {
+		// could not get references, if it is because Requirements references Requirements
+		push_warning(stderr, "Could not get attribute references from Requirements: %s\n", answer.c_str());
+	}
+	if (job_refs.count(ATTR_REQUIREMENTS) || machine_refs.count(ATTR_REQUIREMENTS)) {
+		push_error(stderr, ATTR_REQUIREMENTS " = %s\nIs Circular. Did you intend to use $(Requirements) ?\n", answer.c_str());
+		ABORT_AND_RETURN(1);
+	}
 
 	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
@@ -5971,11 +5987,13 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
-				// check output (only a single file this time)
+				// check output (not a list this time)
 				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
 					if (IsUrl(file_list.c_str())) {
 						std::string tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
+					} else {
+						push_warning(stderr, SUBMIT_KEY_OutputDestination " must be a URL, did you mean " SUBMIT_KEY_OutputDirectory " ?\n");
 					}
 				}
 
@@ -6557,6 +6575,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			}
 		}
 	} else {
+		// we get here for late-mat when the digest does not have container_image (it's a constant)
+		// but if we are building an input transfer list, we still need to add the full path of
+		// the container to it.
+		std::string container_path;
+		if (clusterAd && clusterAd->LookupString(ATTR_CONTAINER_IMAGE "FullPath", container_path)) {
+			input_files.emplace_back(container_path);
+			// when there is a clusterAd, accumulate_size_kb will be a nullptr
+		}
 		return 0;
 	}
 
@@ -6574,10 +6600,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
+	if (container_image)  {
 		input_files.emplace_back(container_image.ptr());
 		if (accumulate_size_kb) {
-			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+			*accumulate_size_kb += calc_image_size_kb(container_image);
 		}
 
 		// Now that we've sure that we're transfering the container, set
@@ -6589,6 +6615,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+
+		// if we are going to change ContainerImage, we need to store the full pathname
+		// for use by late-materialization when late-mat will be building a per-job transfer input list
+		job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
 
 		size_t pos = container_tmp.find(':');
 		if (pos == std::string::npos) {
@@ -7610,6 +7640,8 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	// Force Year,Month,Day, etc to be stored in the submit hash
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {
@@ -7868,7 +7900,16 @@ ClassAd* SubmitHash::make_job_ad (
 	job = new DeltaClassAd(*procAd);
 
 	// really a command, needs to happen before any calls to check_open
-	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
+	JobDisableFileChecks = false;
+	auto_free_ptr filechecks(submit_param(SUBMIT_CMD_skip_filechecks));
+	if (filechecks) {
+		if (YourStringNoCase("warn") == filechecks.ptr()) {
+			FileChecksAreWarnings = true;
+		} else if ( ! string_is_boolean_param(filechecks, JobDisableFileChecks)) {
+			push_error(stderr, "SUBMIT_CMD_skip_filechecks=%s is invalid, must be 'warn' or a boolean\n", filechecks.ptr());
+			abort_code = 1;
+		}
+	}
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
 	SetIWD();		// must be called very early
@@ -8596,6 +8637,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 
 	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
 	bool legacy_split = table_opts.empty();
+	bool split_on_ws = table_opts.ws_sep; // capture the split-on-whitespace flag in case we need to turn it off
 
 	// setup token seps
 	const char* token_seps = ", \t";
@@ -8605,6 +8647,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 	char sep_char = 0;
 	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
 		sep_char = '\x1f'; // autodetected US separator
+		split_on_ws = false; // turnoff whitespace splitting.
 	} else {
 		sep_char = table_opts.sep_char;
 	}
@@ -8612,7 +8655,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 		// build a dynamic token_seps string
 		char* seps = table_token_seps;
 		*seps++ = sep_char;
-		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		if (split_on_ws) { *seps++ = ' '; *seps++ = '\t'; }
 		*seps = 0;
 
 		token_seps = table_token_seps;
@@ -8950,14 +8993,6 @@ int SubmitHash::load_external_q_foreach_items (
 			expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
 		}
 		citems = submit_expand_globs(o.items, expand_options, errmsg);
-		if ( ! errmsg.empty()) {
-			if (citems >= 0) {
-				push_warning(stderr, "%s", errmsg.c_str());
-			} else {
-				push_error(stderr, "%s", errmsg.c_str());
-			}
-			errmsg.clear();
-		}
 		if (citems < 0) return citems;
 		break;
 
@@ -9200,7 +9235,7 @@ static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
 
 // while building a submit digest, fixup right hand side for certain key=rhs pairs
 // for now this is mostly used to promote some paths to fully qualified paths.
-void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
+void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions)
 {
 	const DIGEST_FIXUP_KEY* found = NULL;
 	found = BinaryLookup<DIGEST_FIXUP_KEY>(aDigestFixupAttrs, COUNTOF(aDigestFixupAttrs), key, strcasecmp);
@@ -9226,7 +9261,10 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	if (found->id == idKeyUniverse && topping) { rhs = topping; }
 
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
-	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
+	// HTCONDOR-3546 TJ : I don't see why we fixup idKeyExecutable at all here since
+	// SetExecutable calls full_path which uses FACTORY.IWD.  I'm doing the conservative
+	// change by checking has_pending_expansions, but we can probably remove the idKeyExecutable case entirely
+	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo && !has_pending_expansions)) {
 		if (rhs.empty()) return;
 		const char * path = rhs.c_str();
 		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
@@ -9403,7 +9441,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 			if (iret > 0) {
 				has_pending_expansions = true;
 			}
-			fixup_rhs_for_digest(key, rhs);
+			fixup_rhs_for_digest(key, rhs, has_pending_expansions);
 		} else {
 			rhs = "";
 		}
@@ -9499,6 +9537,7 @@ int
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
+	Daemon* schedd_or_credd,
 
 	std::string & URL,
 	std::string & error_string
@@ -9642,18 +9681,40 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-			Daemon my_credd(DT_CREDD);
-			if (my_credd.locate()) {
-				// this version check will fail if CredD is not
-				// local.  the version is not exchanged over
-				// the wire until calling startCommand().  if
-				// we want to support remote submit we should
-				// just send the command anyway, after checking
-				// to make sure older CredDs won't completely
-				// choke on the new protocol.
-				bool new_credd = true; // assume new credd
-				if (my_credd.version()) {
-					CondorVersionInfo cvi(my_credd.version());
+
+			Daemon credd(DT_CREDD);
+
+			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+			// in either case we want to initialize our credd object from the passed-in one if we can.
+			if (schedd_or_credd) {
+				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+				if (schedd) {
+					std::string credd_address;
+					if (schedd->getCreddAddress(credd_address)) {
+						// when we init the credd from the schedd's locationAd,
+						// it will pick up the CreddIpAddr in the locationAd and
+						// use it to set the addr field of the daemon object
+						// And it will use the name, machine, and version of the schedd
+						// TODO: does the location ad need to know the name of the credd?
+						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+					} else {
+						if (schedd->name() && ! schedd->isLocal()) {
+							// this is a Hail Mary, if the address of the credd is not known,
+							// and the schedd is remote we hope that the credd name and the schedd name are the same.
+							// if this is a local schedd, we are better off using a default credd.
+							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+						}
+					}
+				} else if (schedd_or_credd->type() == DT_CREDD) {
+					credd = *schedd_or_credd;
+				}
+			}
+
+			// if we did not init the credd object from an ad, we need to locate now.
+			if (credd.locate()) {
+				bool new_credd = true; // assume new credd if version is not known.
+				if (credd.version()) {
+					CondorVersionInfo cvi(credd.version());
 					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
 				}
 				if (new_credd) {
@@ -9661,18 +9722,18 @@ process_job_credentials(
 					const char * err = NULL;
 					ClassAd return_ad;
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
-					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
 						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
 						return 1;
 					}
 				} else {
 					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
-							"  Credd version: %s", my_credd.version() );
+							"  Credd version: %s", credd.version());
 					return 1;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) failed!\n" );
+				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
 				return 1;
 			}
 		}

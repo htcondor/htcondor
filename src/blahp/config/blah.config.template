@@ -47,6 +47,9 @@ blah_shared_directories=/
 #blah_wn_inputsandbox=/tmp
 #blah_wn_outputsandbox=/tmp
 
+#The directory to use for temporary files during job submission
+#blah_temp_dir=/tmp
+
 #A directory to save each generated submit file in, for debugging.
 #Warning: This creates a new file for each job; you will have to
 #clean up the files yourself.

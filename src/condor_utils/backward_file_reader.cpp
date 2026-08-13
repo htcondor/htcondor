@@ -149,23 +149,27 @@ bool BackwardFileReader::PrevLine(std::string & str)
 {
 	str.clear();
 
+	// stash of temporary strings, for when we for when we need
+	// to hold multiple buffers before we find a \n
+	std::deque<std::string> stash;
+
 	// can we get a previous line out of our existing buffer?
 	// then do that.
-	if (PrevLineFromBuf(str))
+	if (PrevLineFromBuf(str, stash))
 		return true;
 
 	// no line in the buffer? then return false
 	if (AtBOF())
 		return false;
 
-	const int64_t cbBack = 512;
+	const int64_t cbBack = BUFSIZ;
 	while (true) {
 		int64_t off = cbPos > cbBack ? cbPos - cbBack : 0;
 		int cbToRead = (int)(cbPos - off);
 
 		// we want to read in cbBack chunks at cbBack aligment, of course
 		// this only makes sense to do if cbBack is a power of 2. 
-		// also, in order to get EOF to register, we have to read a little 
+		// also, in order to get EOF to register, we have to read past the end
 		// so we may want the first read (from the end, of course) to be a bit 
 		// larger than cbBack so that we read at least cbBack but also end up
 		// on cbBack alignment. 
@@ -173,8 +177,8 @@ bool BackwardFileReader::PrevLine(std::string & str)
 			// test to see if cbBack is a power of 2, if it is, then set our
 			// seek to align on cbBack.
 			if (!(cbBack & (cbBack-1))) {
-				// seek to an even multiple of cbBack at least cbBack from the end of the file.
-				off = (cbFile - cbBack) & ~(cbBack-1);
+				// seek to the last even multiple of cbBack before the end of the file.
+				off = (cbFile - 1) & ~(cbBack-1);
 				cbToRead = cbFile - off;
 			}
 			cbToRead += 16;
@@ -190,7 +194,7 @@ bool BackwardFileReader::PrevLine(std::string & str)
 		cbPos = off;
 
 		// try again to get some data from the buffer
-		if (PrevLineFromBuf(str) || AtBOF())
+		if (PrevLineFromBuf(str, stash) || AtBOF())
 			return true;
 	}
 }
@@ -210,9 +214,45 @@ bool BackwardFileReader::OpenFile(int fd, const char * open_options)
 	return error == 0;
 }
 
+// When we have to scan muiltiple buffers to find a newline, we will have a set of buffers (the stash)
+// that we need to assemble into the final result. The current out will be the last part.
+// The stash will be in the middle in reverse order, and the first_bit should be at the beginning of the output.
+//
+void BackwardFileReader::insert_stash(std::string & out, std::deque<std::string> & stash, const char * first_bit)
+{
+	if (stash.empty()) {
+		// no stash, just insert the first bit at the start of the output buffer
+		out.insert(0, first_bit);
+	} else if (*first_bit == 0 && stash.size() == 1) {
+		// no first bit and a stash of one, just insert the stash at the start of the output buffer
+		out.insert(0, stash.back());
+		stash.pop_back();
+	} else {
+		// we have multiple pieces to assemble into the output, so we build that into a
+		// temporary string, and the move that into the output.
+		//
+		// create a tmp string that is big enough to hold the stash,
+		// the current output value, and the first_bit
+		size_t cch = strlen(first_bit) + out.size();
+		for (const auto & str : stash) { cch += str.size(); }
+		std::string tmp; tmp.reserve(cch+1);
+
+		// build up the tmp with the first bit first, the stash from back to front,
+		// and the current output value last
+		tmp.assign(first_bit);
+		while ( ! stash.empty()) {
+			tmp.append(stash.back());
+			stash.pop_back();
+		}
+		tmp.append(out);
+		// finally move the result to the output
+		out = std::move(tmp);
+	}
+}
+
 // prefixes or part of a line into str, and updates internal
 // variables to keep track of what parts of the buffer have been returned.
-bool BackwardFileReader::PrevLineFromBuf(std::string & str)
+bool BackwardFileReader::PrevLineFromBuf(std::string & str, std::deque<std::string> & stash)
 {
 	// if we have no buffered data, then there is nothing to do
 	int cb = buf.size();
@@ -229,6 +269,9 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str)
 			if (buf[cb-1] == '\r')
 				buf[--cb] = 0;
 			buf.setsize(cb);
+#if 1
+			insert_stash(str, stash, "");
+#endif
 			return true;
 		}
 	}
@@ -241,7 +284,11 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str)
 	// returning all of the characters that we found.
 	while (cb > 0) {
 		if (buf[--cb] == '\n') {
+#if 1
+			insert_stash(str, stash, &buf[cb+1]);
+#else
 			str.insert(0, &buf[cb+1]);
+#endif
 			buf[cb] = 0;
 			buf.setsize(cb);
 			return true;
@@ -249,9 +296,19 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str)
 	}
 
 	// we hit the start of the buffer without finding another newline,
-	// so return that text, but only return true if we are also at the start
+	// so add that text to the output, but only return true if we are also at the start
 	// of the file.
+#if 1
+	if (0 == cbPos) {
+		insert_stash(str, stash, &buf[0]);
+	} else if ( ! str.empty()) {
+		stash.emplace_back(&buf[0]);
+	} else {
+		str = &buf[0];
+	}
+#else
 	str.insert(0, &buf[0]);
+#endif
 	buf[0] = 0;
 	buf.clear();
 

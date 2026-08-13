@@ -77,6 +77,16 @@ class CollectorList {
 		return query(cQuery, fetchAds_callback, &adList, errstack);
 	}
 
+	static bool fetchAds_callback_vector(void* pv, ClassAd *ad) {
+		auto *padList = (std::vector<std::unique_ptr<ClassAd>> *)pv;
+		padList->emplace_back(ad);
+		return false;
+	}
+
+	QueryResult query (CondorQuery & cQuery, std::vector<std::unique_ptr<ClassAd>> &adList, CondorError *errstack = 0) {
+		return query(cQuery, fetchAds_callback_vector, &adList, errstack);
+	}
+
 private:
 	std::vector<DCCollector*> m_list;
 	DCCollectorAdSequences * adSeq;

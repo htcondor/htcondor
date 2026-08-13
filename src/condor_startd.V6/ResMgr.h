@@ -254,12 +254,23 @@ public:
 	}
 
 	// called from StartdCronJob::Publish after one or more adlist ads with an ad_name prefix are updated
-	// this gives a chance to refresh the startd cron ads right away
-	// TODO: TJ, figure out is this necessary?
-	void adlist_updated(const char * /*ad_name*/, bool update_collector) {
-		// TODO: be more selective about what we refresh here?
+	// this gives a chance to refresh the startd cron ads right away.  If a specific ad was just updated
+	// the pointer to that ad will be passed
+	void adlist_updated(StartdNamedClassAd* sad, bool update_collector) {
 		walk(&Resource::refresh_startd_cron_attrs);
-		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+		if (update_collector) {
+			// trigger updates for slots that this ad was merged into
+			// TODO: pass the update_collector flag into the walk above instead of this?
+			if (sad) {
+				walk([&](Resource* rip) {
+					if (rip->r_classad && sad->InSlotList(rip->r_id) && sad->ShouldMergeInto(rip->r_classad, nullptr)) {
+						rip->update_needed(Resource::WhyFor::wf_cronRequest);
+					}
+				});
+			}
+			// trigger update for daemon ad. We only need to do this if we did not update any slots, but
+			rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+		}
 	}
 
 private:

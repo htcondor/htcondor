@@ -200,6 +200,18 @@ bool GetJobAccountingInfo(HANDLE hJob, JOBOBJECT_BASIC_ACCOUNTING_INFORMATION &i
 	return true;
 }
 
+bool GetJobMemoryInfo(HANDLE hJob, JOBOBJECT_EXTENDED_LIMIT_INFORMATION &info)
+{
+	ZeroMemory(&info, sizeof(info));
+	unsigned int cbRet = 0;
+	if ( ! QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation, &info, sizeof(info), &cbRet)) {
+		unsigned int err = GetLastError();
+		PrintLastError(hStdErr, GetLastError(), "Could not query memory usage info from JobObject", 0, NULL);
+		return false;
+	}
+	return true;
+}
+
 /*
 void FormatJobAccountingInfo(BprintBuffer<char> &bp, HANDLE hJob)
 {
@@ -912,6 +924,7 @@ extern "C" void __cdecl begin( void )
 
 		unsigned int msElapsed = 0;
 		JOBOBJECT_BASIC_ACCOUNTING_INFORMATION acct; ZeroMemory(&acct, sizeof(acct));
+		JOBOBJECT_EXTENDED_LIMIT_INFORMATION meminfo; ZeroMemory(&meminfo, sizeof(meminfo));
 		for (;;) {
 			unsigned int msEffectiveTimeout = has_timeout ? (msTimeout - msElapsed) : 0xFFFFFFFF;
 			unsigned int wait_obj = WaitForMultipleObjects(1, &pi.hProcess, true, msEffectiveTimeout);
@@ -955,6 +968,15 @@ extern "C" void __cdecl begin( void )
 						bp.formatf("Job Processes: {0:d}", acct.TotalProcesses);
 						bp.formatf(", SysCpu: {0:z3} sec", msSys);
 						bp.printfl(", UserCpu: {0:z3} sec", msUser);
+
+						if (GetJobMemoryInfo(hJob, meminfo)) {
+							bp.formatf("Memory: {0:z6} MB", meminfo.PeakJobMemoryUsed);
+							bp.printfl(", LargestProcess: {0:z6} MB", meminfo.PeakProcessMemoryUsed);
+							// TODO: these always seem to be 0, investigation needed.
+							//bp.formatf("Read: {0:z6} MB", meminfo.IoInfo.ReadTransferCount);
+							//bp.formatf(", Write: {0:z6} MB", meminfo.IoInfo.WriteTransferCount);
+							//bp.printfl(", Other: {0:z6} MB", meminfo.IoInfo.OtherTransferCount);
+						}
 					}
 				}
 				CloseHandle(pi.hProcess); CloseHandle(pi.hThread);

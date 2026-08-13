@@ -82,7 +82,7 @@ class Check:
         return self.version > other.version
 
 
-NEXT_MAJOR_VERSION = (25, 0, 0)
+NEXT_MAJOR_VERSION = (26, 0, 0)
 CURRENT_VERSION = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
 IS_WINDOWS = os.name == "nt"
 VERBOSITY = Debug.BASE
@@ -946,7 +946,7 @@ def main():
     format_print(
         """
         To ask any questions regarding incompatibilities email:
-            htcondor-users@cs.wisc.edu
+            htcondor-users@g-groups.wisc.edu
         """,
         newline=True,
     )

@@ -169,6 +169,9 @@ int add_user_mapping(const char * mapname, const char * mapdata);
 int reconfig_user_maps();
 bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
 
+// predicate for sorting class ads by rank
+int SlotRankSortFunc(ClassAd *ad1,ClassAd *ad2,void *data);
+
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree
 // and produce both string and tree on demand.

@@ -100,6 +100,7 @@ fi
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
 export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
+rpm --version
 rpmbuild "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 # shellcheck disable=SC2046 # Intended splitting of find output

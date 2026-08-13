@@ -4,9 +4,84 @@
   and incompatibilities going to V26 of HTCondor.
   :jira:`3453`
 
+*** 25.0.14 bugs
+
+- Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
+  ``-af`` arguments. This combination now produces an error message.
+  :jira:`3833`
+
+*** 25.0.13 bugs
+
+- Fixed a regression where :macro:`DC_DAEMON_LIST` would treat everything after
+  the initial ``+`` as a single entry.  It again properly handles a list of
+  daemon names after the initial ``+``. And to avoid future problems the
+  initial ``+`` is now optional; Built-in daemons can no longer be removed
+  as DC daemons using this config variable.
+  :jira:`3845`
+
+*** 25.0.12 bugs
+
+*** 25.0.11 bugs
+
+*** 25.0.10 features
+
+- Add Ubuntu 26.04 (Resolute Raccoon) support.
+  :jira:`3703`
+
+*** 25.0.10 bugs
+
+*** 25.0.9 bugs
+
+*** 25.0.8 bugs
+
+*** 25.0.7 bugs
+
+*** 25.0.6 features
+
+- Initial support for openSUSE Leap 16.
+  :jira:`3233`
+
+- Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
+  the HTCondor Python wheel is usable with the python-slim Docker image.
+  :jira:`3469`
+
+*** 25.0.6 bugs
+
+*** 25.0.5 features
+
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
+  :jira:`3414`
+
+*** 25.0.5 bugs
+
 *** 25.0.3 bugs
 
 *** 25.0.2 bugs
 
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
+- Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
+  :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
+  variables that pointed into the job's execute directory were not correct.
+  :jira:`3265`
+
+*** 25.0.1 features
+
+- New implementations of the Python bindings, ``htcondor2`` and ``classad2``. This
+  re-implementation of the Python bindings fixes short-comings in the original
+  implementation and eases future maintenance.
+  :jira:`2153`
+
+- The original implementation of the Python bindings has been removed.
+  To use the new Python bindings, please read the
+  :doc:`migration guide <../apis/python-bindings/api/version2/migration-guide>`.
+  :jira:`3240`
+
 *** 25.0.1 bugs
+
+- Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
+  when the leading dash was omitted.
+  :jira:`3284`
 

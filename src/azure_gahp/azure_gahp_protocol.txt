@@ -13,7 +13,7 @@
                                  August 2017
 
                                HTCondor Project
-                    [http://research.cs.wisc.edu/htcondor]
+                    [http://htcss-downloads.chtc.wisc.edu]
 
                        Department of Computer Sciences
                        University of Wisconsin-Madison

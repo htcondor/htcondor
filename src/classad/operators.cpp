@@ -1047,9 +1047,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		case Value::STRING_VALUE:
 			// check if both are strings
 			if (vt1 != Value::STRING_VALUE || vt2 != Value::STRING_VALUE) {
-				// comparison between strings and non-exceptional non-string 
+				// comparison between strings and non-exceptional non-string
 				// values is error
 				result.SetErrorValue();
+				classad::CondorErrMsg = "strings can only be compared to strings";
 				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 			compareStrings (op, v1, v2, result);

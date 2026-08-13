@@ -104,6 +104,12 @@ bool dc_args_default_to_background(bool background);
 // Disable default log setup and ignore -l log directory. Must be called before dc_main()
 void DC_Disable_Default_Log();
 
+// functions to temporarily disable the address file
+// and then to re-enable it and drop a fresh one.
+// Used by the Schedd to prevent early dropping of incomplete address files
+void DC_Disable_Addr_File();
+void DC_Enable_And_Drop_Addr_File();
+
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
 bool dc_release_background_parent(int status);
@@ -1657,7 +1663,9 @@ class DaemonCore : public Service
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
-	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL); 
+	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL);
+
+	ClassAd & ContactInfoExtra() { return m_contact_info_extra; }
 
 		/**
 		   Publish all DC-specific attributes into the given ClassAd.
@@ -2378,6 +2386,7 @@ class DaemonCore : public Service
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
 	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
+	ClassAd m_contact_info_extra; // has extra attributes that should be included in our daemon address files
 
 	//
 	// For compabitility with existing configurations and code, when we

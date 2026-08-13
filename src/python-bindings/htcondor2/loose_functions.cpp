@@ -70,19 +70,68 @@ _set_subsystem( PyObject *, PyObject * args ) {
 
 
 static PyObject *
-_reload_config( PyObject *, PyObject * ) {
-	// FIXME: In version 1, there was some Windows-specific stuff to do here,
-	// which should probably be moved into config() itself.
-	config();
+_reload_config( PyObject *, PyObject * args ) {
+
+	const char * root_config_file = nullptr;
+	if( ! PyArg_ParseTuple( args, "z", & root_config_file)) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+#ifdef WIN32
+	// When a root config is passed, we don't look at environment to find condor_config
+	// so we don't need to workaround the python environment bug below.
+	// Note that this also defeats the code that copies _CONDOR_ vars across, but that code
+	// is a pretty questionable way for python to change the config of the *current* process.
+	// Changing CONDOR_CONFIG evironment var will be typically done with a with block
+	// that changes the CONDOR_CONFIG env var back, but never gives us a chance to change
+	// anything else back. if the code that changes the CONDOR_CONFIG also passes the
+	// root_config_file param, the config unwind will "just work" since we never copied the
+	// real env changes over to the c-runtime env.
+	if ( ! root_config_file) {
+		// On Windows, there are two sets of environment variables: Win32 and C runtime.
+		// When a python program sets environment variables, they only
+		// go into the Win32 set.  The HTCondor config routines only examine the
+		// C runtime set.  What a mess, there is only so much we can do until
+		// this is "fixed" in Python - see https://bugs.python.org/issue16633
+		// In the meantime we attempt to workaround this by scanning the Win32
+		// environment for variables on interest to HTCondor's config(), and
+		// copying them into the C runtime environment.
+		char *env_str = GetEnvironmentStrings();
+		if (env_str) {
+			const char *ptr = env_str;
+			while ( *ptr != '\0' ) {
+				if (strncasecmp("CONDOR_CONFIG=",ptr,14)==0 ||
+					strncasecmp("_CONDOR_",ptr,8)==0)
+				{
+					_putenv(ptr);
+				}
+				ptr += strlen(ptr) + 1;
+			}
+			FreeEnvironmentStrings(env_str);
+			env_str = NULL;
+		}
+	}
+#endif
+	int flags = CONFIG_OPT_WANT_QUIET | CONFIG_OPT_NO_EXIT;
+	flags |= CONFIG_OPT_WANT_META; // TODO: remove this or expose the metadata to python...
+	config_host(nullptr, flags, root_config_file);
 
 	Py_RETURN_NONE;
 }
 
 
 static PyObject *
-_enable_debug( PyObject *, PyObject * ) {
+_enable_debug( PyObject *, PyObject * args ) {
+
+	const char * flags = nullptr;
+	if( ! PyArg_ParseTuple( args, "z", & flags)) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
 	dprintf_make_thread_safe();
-	dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+	dprintf_config_tool(get_mySubSystem()->getName(), flags);
 
 	Py_RETURN_NONE;
 }

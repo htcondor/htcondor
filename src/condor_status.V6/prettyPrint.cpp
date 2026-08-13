@@ -168,13 +168,13 @@ int ppCropNameWidth(void*pv, int /*index*/, Formatter * fmt, const char * /*attr
 	if (fmt->options & FormatOptionSpecial001) {
 		if (pi->name_width) {
 			fmt->width = pi->name_width;
-			fmt->options &= ~FormatOptionAutoWidth;
+			fmt->options &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
 		}
 	}
 	if (fmt->options & FormatOptionSpecial002) {
 		if (pi->machine_width) {
 			fmt->width = pi->machine_width;
-			fmt->options &= ~FormatOptionAutoWidth;
+			fmt->options &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
 		}
 	}
 	return 0;
@@ -392,7 +392,7 @@ const char * const startdPFV_Normal[] = { "SELECT",
 	ATTR_STATE                      " WIDTH AUTO OR ??",
 	ATTR_ACTIVITY                   " WIDTH  -8 OR ??",
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??",
-	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??",
+	ATTR_MEMORY          " AS Mem     WIDTH   6 PRINTF %6d OR ??",
 	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -",
 	"SUMMARY STANDARD"
 };
@@ -1261,6 +1261,8 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 					fmt->width = pi->name_width;
 					if ( ! pi->wide_display) fmt->options &= ~FormatOptionAutoWidth;
 					fmt->options |= (pi->name_flags & FormatOptionAutoWidth);
+				} else if (pi->name_flags & FormatOptionAutoWidth) {
+					fmt->options |= FormatOptionAutoWidth;
 				}
 			}
 		}
@@ -1345,7 +1347,7 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 		} else {
 			ppSetStartdNormalCols(display_width, constr);
 			name_flags = FormatOptionAutoWidth;
-			width_of_fixed_cols = 61;
+			width_of_fixed_cols = 65;
 		}
 		break;
 
