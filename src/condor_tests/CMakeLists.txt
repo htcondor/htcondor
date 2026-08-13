@@ -266,6 +266,11 @@ if (BUILD_TESTING)
 
 			condor_pl_test (test_ccb_streaming_paths "Test CCB streaming/proxy mode across additional network paths" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+			condor_pl_test (test_ccb_tunnel "Test inbound CCB tunnel through two chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test (test_ccb_tunnel_ap "Test a relayed AP reaching a tunneled EP through CCB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test (test_ccb_tunnel_3hop "Test the inbound CCB tunnel through three chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif (NOT WINDOWS)
 
