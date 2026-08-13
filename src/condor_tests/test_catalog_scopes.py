@@ -31,8 +31,6 @@ def the_condor( test_dir ):
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-
-            "SUBMIT_USE_COMMON_INPUT_FILES":	"TRUE",
         },
     ) as the_condor:
         yield the_condor

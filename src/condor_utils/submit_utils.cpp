@@ -675,7 +675,12 @@ SubmitHash::SubmitHash()
 
 	// TODO: move this to condor_submit? or expose a method on the class to set this?
 	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
-	UseCommonInputFiles = param_boolean("SUBMIT_USE_COMMON_INPUT_FILES", false);
+	// Would be nice if the compiler would let us leave the default for this
+	// C++ boolean to unset, so that people don't try to change it and forget
+	// that the C++ initializer doesn't matter.  (So now we have four places
+	// to set this default: the header, this constructor, this function call,
+	// and the param table.  Joy.)
+	UseCommonInputFiles = param_boolean("SUBMIT_USE_COMMON_INPUT_FILES", true);
 
 	mctx.init("SUBMIT", 3);
 }

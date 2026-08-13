@@ -111,8 +111,6 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
-
-            "SUBMIT_USE_COMMON_INPUT_FILES":	"TRUE",
         },
     ) as the_cs_condor:
         yield the_cs_condor
