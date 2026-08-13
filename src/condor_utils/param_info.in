@@ -2198,6 +2198,12 @@ type=bool
 tags=submit
 description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
 
+[SUBMIT_PREVENT_MULTI_QUEUE]
+default=true
+type=bool
+tags=submit
+description=Submit will stop at the first QUEUE statement and warn if it sees anything after it.
+
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
 default=false
