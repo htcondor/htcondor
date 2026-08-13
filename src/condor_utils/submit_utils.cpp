@@ -112,7 +112,7 @@ inline classad::Value * AdHasValue(ClassAd* parent, const std::string & attr, cl
 				static classad::Value v;
 				((classad::Literal *)expr)->GetValue(v);
 				if (v.GetType() == vt) {
-					return &v;;
+					return &v;
 				}
 			}
 		}

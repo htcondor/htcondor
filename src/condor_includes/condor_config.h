@@ -337,7 +337,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
 	// returns the number of macros that were skipped.
 	// used by submit_utils to selectively expand submit hash keys when creating the submit digest
-	// returns the number of skipped for < 0 for expansion error
+	// returns the number of skipped or < 0 for expansion error
 	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set,
 		MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);

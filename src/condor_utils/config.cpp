@@ -4729,7 +4729,7 @@ bool has_unexpanded_macros(const char * value, bool ignore_dollor)
 		macro_type = next_config_macro(is_config_macro, no_dollar, value, offset, pos);
 	} else {
 		SkipNothingBody skipnothing_body; // match all forms of $ and $$ macros
-		macro_type = next_config_macro(is_any_macro, skipnothing_body, value, offset, pos) != SPECIAL_MACRO_ID_NONE;
+		macro_type = next_config_macro(is_any_macro, skipnothing_body, value, offset, pos);
 	}
 	return macro_type != SPECIAL_MACRO_ID_NONE;
 }
