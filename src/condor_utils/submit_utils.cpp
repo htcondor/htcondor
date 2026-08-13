@@ -8222,6 +8222,11 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Clear();
 	base_job_is_cluster_ad = 0;
 
+	// Schedds older than 25.14 don't know what the CommonInputFiles attribute is.
+	// so flip the default once we know the schedd version.
+	CondorVersionInfo cvi(getScheddVersion());
+	if ( ! cvi.built_since_version(25, 14, 0)) { UseCommonInputFiles = false; }
+
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
 	baseJob.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // needed for HTCondor before version 23.0

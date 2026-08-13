@@ -540,8 +540,10 @@ public:
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
+	bool setUseCommonInputFiles(bool value) { bool old = UseCommonInputFiles; UseCommonInputFiles = value; return old;}
 	bool setFileChecksAreWarnings(bool value) { bool old = FileChecksAreWarnings; FileChecksAreWarnings = value; return old; }
 	bool getFileChecksAreWarnings() { return FileChecksAreWarnings; }
+	bool getUseCommonInputFiles() { return UseCommonInputFiles; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
 	void clearExtendedCommands() { extendedCmds.Clear(); }
@@ -859,7 +861,7 @@ protected:
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
 	bool InsertDefaultPolicyExprs{false};
-	bool UseCommonInputFiles{false};
+	bool UseCommonInputFiles{true};
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
