@@ -5442,7 +5442,9 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 			// event here (idempotently) so it is never lost.  COMPLETED jobs
 			// already got their terminal event from the shadow.
 		if ( status == REMOVED ) {
-			scheduler.WriteAbortToUserLog(jobad);
+			if( !scheduler.WriteAbortToUserLog(jobad) ) {
+				dprintf( D_ALWAYS, "Failed to write abort event to the user log\n" );
+			}
 		}
 		DestroyProc(cluster,proc);
 	}
