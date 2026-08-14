@@ -402,7 +402,9 @@ static int targetRole_listener( int seconds, FILE *to_parent )
 	}
 	socklen_t slen = sizeof(sin);
 	if( getsockname(lfd, (struct sockaddr *)&sin, &slen) != 0 ) {
-		fprintf(stderr, "listener: getsockname() failed\n"); return 1;
+		fprintf(stderr, "listener: getsockname() failed\n");
+		close(lfd);
+		return 1;
 	}
 	int port = ntohs(sin.sin_port);
 	if( listen(lfd, 1) != 0 ) { fprintf(stderr, "listener: listen() failed\n"); return 1; }
