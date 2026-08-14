@@ -391,7 +391,10 @@ static int targetRole_listener( int seconds, FILE *to_parent )
 	int lfd = socket(AF_INET, SOCK_STREAM, 0);
 	if( lfd < 0 ) { fprintf(stderr, "listener: socket() failed\n"); return 1; }
 	int one = 1;
-	setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	int r = setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	if (r != 0) {
+		fprintf(stderr, "listener: setsockopt(SO_REUSEADDR) failed\n");
+	}
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
