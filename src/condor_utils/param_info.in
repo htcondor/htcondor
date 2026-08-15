@@ -7237,7 +7237,7 @@ use role:execute
 @end
 
 ##
-## Version-specific knobx.
+## Version-specific knobs.
 ##
 [$SECURITY.recommended_v9_0]
 description = default security config for 9.0 and later args:([service [, admins]])
