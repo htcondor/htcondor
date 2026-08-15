@@ -14,8 +14,8 @@
 - The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
   command that it wants expedited matchmaking when it changes from having
   no idle jobs to having some idle jobs. As a part of this change the
-   *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
-   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+  and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
   :jira:`3836`
 
 - Added support for submitting jobs remotely to NERSC's Perlmutter HPC
