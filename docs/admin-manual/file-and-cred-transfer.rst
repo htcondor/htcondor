@@ -494,82 +494,42 @@ Common File Transfer for Admnistrators
 --------------------------------------
 
 The concept and limitations of :ref:`common_file_transfer` are explained in
-the user manual.  This section of the manual explains a bit about the
-(26.0.x) implementation and then the relevant configuration options.
+the user manual.
 
-Implementation Overview
-'''''''''''''''''''''''
+As the administrator, you can control:
+
+- if common file transfers are enabled at all
+  (:conf:`FORBID_COMMON_FILE_TRANSFER`);
+- if container images are common by default
+  (:conf:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`)
+- and if so, which ones
+  (:conf:`CONTAINER_REGEX_COMMON_BY_DEFAULT``);
+- how long the AP should keep a data slot on an EP in hopes that another
+  job will want the same common file(s)
+  (:conf:`KEEP_DATA_CLAIM_IDLE`;
+- and how long the AP should wait before giving up on a data slot whose
+  connection has been lost
+  (:conf:`DATA_SLOT_MAX_DISCONNECT_DURATION`).
+
+Hopefully, you'll never have any reason to turn any of these knobs.
+
+Implemenation Notes
+'''''''''''''''''''
 
 .. info:
+    This section is **not** normative.  It reflects the implementation
+    as released in version 26.0.1, and is subject to change without
+    warning.
 
-    This section is **not** normative; the implementation is subject to
-    change.  Certain properties of the described system may be visible to
-    the submitter or the administrator, but are not documented because
-    we do *not* promise that they won't change.
-
-Common File Catalogs and Scopes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Internally, HTCondor converts the :subcom:`container_image` (if appropriate;
-see below) and the :subcom:`transfer_common_input_files` into named lists of
-objects (files or URLs) called "catalogs".  The container image catalog's
-name will be something like "container_77fc30a2", where the hexadecimal at
-the end is a hash of the full path (or URL) to the container; the name for
-common input files' catalog will be something like "clusterID_34732" and
-"dagmanJobID_7779332".
-
-The common files implementation operates on catalogs, rather than on
-individual files, and you'll see catalog names appear in various places
-in job and slot ads.  HTCondor assumes that every catalog of the same
-name in the same scope contains the same list of objects.  There are two
-scopes (in 26.0.x): the cluster scope and the DAGMan scope.  A job which
-has :ad-attr:`DAGManJobId` set looks up its catalog names in that scope;
-otherwise, the job looks up its catalog names in its own scope.  This
-should be entirely transparent to the submitter unless they manage to
-specify a common input files list that depends on a proc-specific property
-(e.g. :ad-attr:`ProcId`, but also includes variables from the item data).
-
-Transfer Shadows and Data Slots
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-When the schedd wants to start a job, it checks to see if the job declares
-any common files, and if so, if (a) the matching EP can transfer common
-files and (b) if it has already done so.  If (a) is false, starts the job
-as normal, and it falls back to uncommon file transfer.  If (b) is false,
-the schedd puts the job into the (new) blocked state, represented with a
-``B`` in ``condor_q``.  It then starts a "transfer shadow."  This shadow
-is responsible for transferring the common file catalog(s) required by the
-job to the matching EP.  The transfer shadow transfers the catalog(s) not
-to a normal job slot, but to new type of slot, the data slot.  Initially,
-the data slot contains all of the resources necessary to run the job; this
-makes sure that we don't lose those resources during the transfer and do
-it unnecessarily.  When the common files transfer finishes, the schedd
-creates a new job slot out of the data slot (leaving behind only enough
-disk space to hold the common files) and runs the previously-blocked job
-there.
-
-The data slot remains available for as long as any job on its EP has any of
-its catalogs mapped, plus a certain amount of time (defined by
-:config:`KEEP_DATA_CLAIM_IDLE`) to allow for the schedd and/or DAGMan to start
-another job on the same EP after the first one finishes.  Jobs do not require
-the data slot to be avaiable once they've actually started, but vacating the
-data slot won't recover any disk space until those jobs are done.
-
-Mapping Common File Catalogs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The intention is that a submitter be able to move part of their input transfer
-list to the common file list and not have to change their jobs at all.  To do
-so, HTCondor must arrange for the files on disk to appear identical, even if
-some of them were not transferred again.  Presently, this is accomplished by
-making hardlinks from the data slot into the job slot(s); the hardlinks are
-made into the places in the scratch directory where the transfers would have
-ended up.  (This does mean that EPs which defined multiple execute directories
-must *not* split them across filesystems.)  The process of creating these
-hardlinks is called "mapping", although this word should only but very rarely
-show up in any of HTCondor's output.
-
-
+As you might expect, each data slot has a corresponding shadow.  Because
+that shadow does not correspond to a specific job (the job which prompted
+the transfer will of course run while that shadow is running), those
+shadows -- which we refer to internally as "transfer" shadows -- do not have
+valid job IDs.  Instead, their job IDs are constructed from the prompting
+job's cluster ID (used unmodified) and proc ID (made negative and reduced
+by 1000).  That is, if the prompting job was 123.45, the transfer shadow,
+when required to record a job ID, will record 123.-1045.  This may cause
+your monitoring tools grief.
 
 .. _self-checkpointing-jobs:
 
