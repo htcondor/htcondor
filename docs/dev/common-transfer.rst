@@ -60,3 +60,22 @@ must *not* split them across filesystems.)  The process of creating these
 hardlinks is called "mapping", although this word should only but very rarely
 show up in any of HTCondor's output.
 
+There are three kinds of mapping: hardlink, bind mount, and copying.  We only
+use hardlinks in production.  We'd like to use bind mounts for cases where
+we can't use hardlinks (e.g., LVs), but we presently don't, because -- unlike
+the hardlink-based mapper -- the kernel does not ensure that the hardlinked
+files remain available after the original files have been deleted during
+transfer starter clean-up.  Attempting to use copy-based mapping failed because
+the startd can't acquire additional disk space during d-slot splitting.
+
+The knobs ``FORBID_HARDLINK_MAPPING``, ``FORBID_BINDMOUNT_MAPPING``, and
+``FORBID_COPY_MAPPING`` can be used during development to prevent a certain
+kind of mapping from occuring on an EP.
+
+Because we default to copying on LVs, we added ``ALLOW_COMMON_FILES_ON_LVS``
+defaulted to off until such time as we can safely set the default for
+mapping on LVs to bind mount.
+
+The original intention was to support Windows EPs with copy mapping, but
+see above for why that won't work; it may end up being easier just to
+implement a Window-specific variety of the hardlink mapping.
