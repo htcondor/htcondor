@@ -496,25 +496,38 @@ Common File Transfer for Admnistrators
 The concept and limitations of :ref:`common_file_transfer` are explained in
 the user manual.
 
+Additional EP Requirements
+''''''''''''''''''''''''''
+
+Currently, only some 26.0.x EPs can transfer common files:
+
+- The EP must be Linux.
+- The EP must either not define :macro:`SLOT<N>_EXECUTE` or define all
+  :macro:`SLOT<N>_EXECUTE` directories to be on the same filesystem.
+- The EP must *not* define :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+
+Configuration
+'''''''''''''
+
 As the administrator, you can control:
 
 - if common file transfers are enabled at all
-  (:conf:`FORBID_COMMON_FILE_TRANSFER`);
+  (:macro:`FORBID_COMMON_FILE_TRANSFER`);
 - if container images are common by default
-  (:conf:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`)
+  (:macro:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`)
 - and if so, which ones
-  (:conf:`CONTAINER_REGEX_COMMON_BY_DEFAULT``);
+  (:macro:`CONTAINER_REGEX_COMMON_BY_DEFAULT`);
 - how long the AP should keep a data slot on an EP in hopes that another
   job will want the same common file(s)
-  (:conf:`KEEP_DATA_CLAIM_IDLE`;
+  (:macro:`KEEP_DATA_CLAIM_IDLE`);
 - and how long the AP should wait before giving up on a data slot whose
   connection has been lost
-  (:conf:`DATA_SLOT_MAX_DISCONNECT_DURATION`).
+  (:macro:`DATA_SLOT_MAX_DISCONNECT_DURATION`).
 
 Hopefully, you'll never have any reason to turn any of these knobs.
 
-Implemenation Notes
-'''''''''''''''''''
+Implementation Notes
+''''''''''''''''''''
 
 .. info:
     This section is **not** normative.  It reflects the implementation
