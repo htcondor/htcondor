@@ -429,21 +429,21 @@ Snake Verbs
 .. warning::
      Snakemake is not packaged with HTCondor and must be installed seperately.
      See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
-     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`_
+     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`__
      for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
 
 **htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
 
      Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
      job.  That management job runs Snakemake with the
-     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`_, which in turn submits each
+     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`__, which in turn submits each
      Snakemake rule as its own HTCondor job.
 
-     **snakefile** 
+     **snakefile**
         Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
         current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
-     
-     **-\-jobdir <directory>** 
+
+     **-\-jobdir <directory>**
         Create a directory in the current working directory with the specified name.
         If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
      
