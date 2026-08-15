@@ -19,7 +19,7 @@ machine a second time:
 - The file *must* be either:
 
   - the declared :subcom:`container_image` for each job; or
-  - listed in each job's :attr:`CommonInputFiles` attribute (usually set via
+  - listed in each job's :ad-attr:`CommonInputFiles` attribute (usually set via
     the :subcom:`transfer_common_input_files` submit command).
 - The two jobs *must* be either:
 
@@ -50,7 +50,8 @@ Using common files will never increase the resource requirements for your job.
 Common Container Images
 """""""""""""""""""""""
 
-If your administrator has enabled (:macro:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`) common container images,
+If your administrator has enabled common container images
+(:macro:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`),
 you don't need to do anything; any container image that HTCondor (as opposed
 to Docker) transfers will be eligible.  Your jobs should spend less time (on
 average) transferring container images and more time actually running.
@@ -58,7 +59,7 @@ average) transferring container images and more time actually running.
 Instead, your administrator may require you to specify that your container
 image is common; you may set
 
-```container_is_common = True```
+``container_is_common = True``
 
 in your submit file to do so.  See :subcom:`container_is_common` for
 details.
@@ -74,15 +75,15 @@ job does, you must explicitly tell HTCondor which input files are common by
 setting :subcom:`transfer_common_input_files` in your submit file.  For
 example:
 
-```transfer_common_input_files = x, y, osdf://e/z/p/z```
+``transfer_common_input_files = x, y, osdf://e/z/p/z``
 
 The list is identical in syntax to :subcom:`transfer_input_files`, including
 its ability to specify URLs.
 
 When submitting a DAG, HTCondor will check that every submit file in the DAG
 specifies the *same* common input files; at the moment, you only get
-one per DAG.  We apologize for the inconvenience (but you can work around it
-by submitting a sub-DAG).
+one per DAG.  You can work around this limitation by submitting a
+:ref:`sub-DAG<subdag-external>`.
 
 As with common container images, your jobs should spend less time (on average)
 transferring your common files and more time actually running.

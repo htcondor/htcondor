@@ -523,11 +523,11 @@ individual files, and you'll see catalog names appear in various places
 in job and slot ads.  HTCondor assumes that every catalog of the same
 name in the same scope contains the same list of objects.  There are two
 scopes (in 26.0.x): the cluster scope and the DAGMan scope.  A job which
-has :attr:`DAGManJobID` set looks up its catalog names in that scope;
+has :ad-attr:`DAGManJobId` set looks up its catalog names in that scope;
 otherwise, the job looks up its catalog names in its own scope.  This
 should be entirely transparent to the submitter unless they manage to
 specify a common input files list that depends on a proc-specific property
-(e.g. :attr:`ProcID`, but also includes variables from the item data).
+(e.g. :ad-attr:`ProcId`, but also includes variables from the item data).
 
 Transfer Shadows and Data Slots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
