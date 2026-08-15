@@ -88,6 +88,38 @@ one per DAG.  You can work around this limitation by submitting a
 As with common container images, your jobs should spend less time (on average)
 transferring your common files and more time actually running.
 
+Data Slots
+""""""""""
+
+When HTCondor transfers a common file (either a container image or an input
+file) to an EP, it transfers it to a special type of slot, the "data" slot.
+The data slot starts out with enough resources (CPUs, memory, GPUs, etc) to
+run the job for which it will store common file(s); this is to reserve those
+resources to make sure that the common file transfer isn't wasted.  (This
+does not increase your job's resource usage, since the same file(s) would
+have had to have been transferred in order to start your job in a regular
+"job" slot, which would also have been reserving those resources.)  Once
+the common file transfer(s) are complete, all of the reserved resources and
+some of the disk (whatever the job asked for that's not already used by
+the common file(s)) are transferred to a job slot for use there.
+
+The usual HTCondor accounting applies to a data slot.
+
+The Blocked State
+"""""""""""""""""
+
+A job which has reserved computational resources but which is waiting for
+common file transfer to finish is in the "blocked" state, displayed in
+:tool:`condor_q` as ``B``.  A job in the blocked state is not idle: its AP has
+already provisioned the resources to run it.  It is also not running: it
+has not yet started (its own) file transfer.
+
+A job may enter the blocked stated without creating a new data slot if a
+common file transfer (to the corresponding EP) is already scheduled or in
+progress when the AP decides to run that job on that EP.  (If the common
+file transfer(s) to that EP have already completed, then the job immediately
+goes into the running state.)
+
 Jobs With Very Large Inputs
 """""""""""""""""""""""""""
 
@@ -104,3 +136,12 @@ GPU may be able to run on as many GPUs as that EP has available.  This is good
 for you (the submitter) and for the administrator: you get more simultaneous
 jobs and the administrator doesn't have to worry about your jobs leaving GPUs
 idle because no other job can fit on the machine.
+
+Job Event Logs
+""""""""""""""
+
+Common file transfer(s) are recorded in job event logs, using their own
+:doc:`event code<../codes-other-values/job-event-log-codes>` (47), so that
+the definition of existing transfer-transfer events (code 40) doesn't
+change.  Likewise, because a common file transfer isn't part of any specific
+job, these events are recorded with negative proc IDs.
