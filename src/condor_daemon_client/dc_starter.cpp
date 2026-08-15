@@ -556,10 +556,10 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		it++, it2++)
 	{
 		classad::Value value;
-		(*it2)->Evaluate(value);
+		classad::ClassAd::EvaluateExpr(nullptr, *it2, value);
 		off_t off = -1;
 		value.IsIntegerValue(off);
-		(*it)->Evaluate(value);
+		classad::ClassAd::EvaluateExpr(nullptr, *it, value);
 		std::string filename;
 		int64_t xfer_fd = -1;
 		if (!value.IsStringValue(filename) && value.IsIntegerValue(xfer_fd))
