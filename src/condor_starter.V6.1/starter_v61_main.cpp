@@ -108,10 +108,10 @@ printClassAd( void )
 		bool allow_cif_on_lvs =  param_boolean( "ALLOW_COMMON_FILES_ON_LVS", false );
 		if( (! lv_enabled) || allow_cif_on_lvs ) {
 			printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
-		}
 
-		StagingDirectoryFactory sdf;
-		printf( "%s = \"%s\"\n", ATTR_MAPPING_METHOD, sdf.type().c_str() );
+			StagingDirectoryFactory sdf;
+			printf( "%s = \"%s\"\n", ATTR_MAPPING_METHOD, sdf.type().c_str() );
+		}
 	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {
