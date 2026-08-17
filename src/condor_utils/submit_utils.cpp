@@ -675,12 +675,8 @@ SubmitHash::SubmitHash()
 
 	// TODO: move this to condor_submit? or expose a method on the class to set this?
 	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
-	// Would be nice if the compiler would let us leave the default for this
-	// C++ boolean to unset, so that people don't try to change it and forget
-	// that the C++ initializer doesn't matter.  (So now we have four places
-	// to set this default: the header, this constructor, this function call,
-	// and the param table.  Joy.)
-	UseCommonInputFiles = param_boolean("SUBMIT_USE_COMMON_INPUT_FILES", true);
+	// Default to the C++-level initial value.
+	SynthesizeCommonInputFiles = param_boolean("SUBMIT_SYNTHESIZE_COMMON_INPUT_FILES", SynthesizeCommonInputFiles);
 
 	mctx.init("SUBMIT", 3);
 }
@@ -7258,7 +7254,7 @@ int SubmitHash::SetTransferFiles()
 	RETURN_IF_ABORT();
 
 	// canonicalize CommonInputFiles and store in the job
-	if ( ! clusterAd && UseCommonInputFiles) {
+	if ( ! clusterAd && AllowCommonInputFiles ) {
 		macro_value.set(submit_param(SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES));
 		if (macro_value) {
 			const char * files = trim_and_strip_quotes_in_place(macro_value.ptr());
@@ -8230,7 +8226,9 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	// Schedds older than 25.14 don't know what the CommonInputFiles attribute is.
 	// so flip the default once we know the schedd version.
 	CondorVersionInfo cvi(getScheddVersion());
-	if ( ! cvi.built_since_version(25, 14, 0)) { UseCommonInputFiles = false; }
+	if ( ! cvi.built_since_version(25, 14, 0)) {
+		AllowCommonInputFiles = false;
+	}
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
@@ -9825,8 +9823,12 @@ bool SubmitHash::want_task_packing(int & packing)
 // modify the dictionary to set common_input_files from the other submit commands
 bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, bool force)
 {
-	if ( ! UseCommonInputFiles) {
-		return 0;
+	if ( ! AllowCommonInputFiles ) {
+		return false;
+	}
+
+	if ( ! SynthesizeCommonInputFiles) {
+		return false;
 	}
 
 	// check for an existing common input keyword, if there is none when we have work to do.
@@ -9837,7 +9839,7 @@ bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, 
 		if (exist_common) common_key = ATTR_COMMON_INPUT_FILES;
 	}
 	if (exist_common && ! force) {
-		return strlen(exist_common); // has common
+		return true;
 	}
 	if ( ! exist_common) {
 		// start by setting an empty common files list
@@ -9854,7 +9856,7 @@ bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, 
 	}
 	if ( ! tif) {
 		// no files, no common files
-		return 0;
+		return false;
 	}
 
 	std::string common(exist_common ? exist_common : "");
@@ -9865,7 +9867,7 @@ bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, 
 		set_submit_param(xfer_key, uncommon.c_str());
 	}
 
-	return common.size();
+	return ! common.empty();
 }
 
 bool SubmitHash::extract_per_proc_items(
