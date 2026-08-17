@@ -101,9 +101,8 @@ def adstash(args):
 
         if source_type == "ad_file" and args.read_ad_file is not None:
 
-            # Currently, we assume generic ad files are from job history
-            mappings, _ = setup_index(interface=interface, ad_type="history", args=args)
-            converter = AD_TYPE_CONVERTERS["history"](
+            mappings, _ = setup_index(interface=interface, ad_type=args.ad_file_type, args=args)
+            converter = AD_TYPE_CONVERTERS[args.ad_file_type](
                 mapping=mappings,
                 custom_ignore_attrs=args.custom_ignore_attrs,
             )

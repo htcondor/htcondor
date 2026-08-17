@@ -25,6 +25,7 @@ import htcondor2 as htcondor
 from pathlib import Path
 
 from adstash.interfaces.registry import ADSTASH_INTERFACES
+from adstash.index_setup import AD_TYPE_DEFAULT_MAPPINGS
 
 
 def get_default_config(name="ADSTASH"):
@@ -42,6 +43,7 @@ def get_default_config(name="ADSTASH"):
         "read_schedd_job_epoch_history": False,
         "read_schedd_transfer_epoch_history": False,
         "read_ad_file": None,
+        "ad_file_type": "history",
         "schedd_history_max_ads": 10000,
         "startd_history_max_ads": 10000,
         "schedd_history_timeout": 2 * 60,
@@ -85,6 +87,7 @@ def get_htcondor_config(name="ADSTASH"):
         "read_schedd_job_epoch_history": p.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
         "read_schedd_transfer_epoch_history": p.get(f"{name}_SCHEDD_TRANSFER_EPOCH_HISTORY"),
         "read_ad_file": p.get(f"{name}_AD_FILE"),
+        "ad_file_type": p.get(f"{name}_AD_FILE_TYPE"),
         "schedd_history_max_ads": p.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": p.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": p.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
@@ -160,6 +163,7 @@ def get_environment_config(name="ADSTASH"):
         "read_schedd_job_epoch_history": env.get(f"{name}_SCHEDD_JOB_EPOCH_HISTORY"),
         "read_schedd_transfer_epoch_history": env.get(f"{name}_SCHEDD_TRANSFER_EPOCH_HISTORY"),
         "read_ad_file": env.get(f"{name}_AD_FILE"),
+        "ad_file_type": env.get(f"{name}_AD_FILE_TYPE"),
         "schedd_history_max_ads": env.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": env.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": env.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
@@ -441,9 +445,14 @@ def get_config(argv=None):
         metavar="PATH",
         dest="read_ad_file",
         help=(
-            "Load Job ClassAds from this file instead of querying daemons. "
-            "(Ignores --schedd_history and --startd_history.)"
+            "Load ClassAds from this file instead of querying daemons."
         ),
+    )
+    source_group.add_argument(
+        "--ad_file_type",
+        choices=list(AD_TYPE_DEFAULT_MAPPINGS.keys()),
+        default="history",
+        help="Ad type for --ad_file (determines mappings and converter) [default: %(default)s]",
     )
 
     history_group = parser.add_argument_group("Options for HTCondor daemon (Schedd, Startd, etc.) history sources")
@@ -654,7 +663,7 @@ def get_config(argv=None):
     )
     init_index_group.add_argument(
         "--init_ad_type",
-        choices=["history", "job_epoch_history", "transfer_epoch_history"],
+        choices=list(AD_TYPE_DEFAULT_MAPPINGS.keys()),
         default="history",
         help="Ad type to use for default mappings [default: %(default)s]",
     )
