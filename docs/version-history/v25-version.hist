@@ -8,8 +8,6 @@
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
   finer control on what constitutes failure with a job list in a single
   node and whether DAGMan should immediately remove job list upon failure
-293
-
   or wait for jobs to finish.
   :jira:`3838`
 
@@ -65,7 +63,6 @@
   ``-af`` arguments. This combination now produces an error message.
   :jira:`3833`
 
-*** 25.13.1 features
 *** 25.13.2 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
