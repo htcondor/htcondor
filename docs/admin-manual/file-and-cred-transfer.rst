@@ -529,10 +529,13 @@ Hopefully, you'll never have any reason to turn any of these knobs.
 Implementation Notes
 ''''''''''''''''''''
 
-.. info:
-    This section is **not** normative.  It reflects the implementation
-    as released in version 26.0.1, and is subject to change without
+.. note::
+    These sections are **not** normative.  They reflect the implementation
+    as released in version 26.0.1, and are subject to change without
     warning.
+
+Data Slot job IDs
+^^^^^^^^^^^^^^^^^
 
 As you might expect, each data slot has a corresponding shadow.  Because
 that shadow does not correspond to a specific job (the job which prompted
@@ -543,6 +546,51 @@ job's cluster ID (used unmodified) and proc ID (made negative and reduced
 by 1000).  That is, if the prompting job was 123.45, the transfer shadow,
 when required to record a job ID, will record 123.-1045.  This may cause
 your monitoring tools grief.
+
+Job Ad and Slot Ad Attributes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A cluster (or DAG) with common files runs on the same resource(s) as the same
+cluster (or DAG) would without them.  (Unless the common files save so much
+disk space as to allow an EP to be more finely divided.)  As such, HTCondor
+does not do match-making based on common files.  However, the present
+implementation uses what would otherwise be match-making techniques to allocate
+disk appropriately when creating job slots.
+
+An EP advertises ``catalogs``, a list of ClassAd attributes each of which
+refers to a nested ClassAd; the names are arbitrary, e.g., ``catalog_1``,
+but should not repeat until the startd restarts.  Each advertised catalog
+contains its ``id`` (a string representation of the attribute reference
+it ``catalogs``), a ``Catalog`` name (unique within its scope), a
+``CatalogID`` (globally unique), the ``AP`` at which the cluster or
+DAG was placed, the ``CatalogPath`` (where on the EP's disk to find the
+common files), the ``CatalogSize`` (the size in bytes of the common files
+on disk), the ``CatalogScope`` (a string representation of, presently, either
+the cluster ID or the DAGMan job ID), and the ``CatalogScopeType`` (a string
+specifying one of the previous two options).
+
+The ``CatalogID`` is used for simplify the expression used to calculate
+the sum of the sizes of the catalogs requested by the job that the EP
+already has.  The remainder of the attributes are intended to be useful for
+understanding why which common files are being stored at which EPs.
+
+(Presently, a single job may have require only two different "catalogs" of
+common files: its container image and its common input files.  We expect to
+relax this constraint in 26.x development series.)
+
+These attributes are not documented elsewhere in this manual in case we find
+it necessary to change them.
+
+The size computation above relies on the job-ad attribute
+``RequestedCatalogIDs``, a ClassAd list of (the globally unique) catalog IDs.
+The corresponding ``RequestedCatalogs`` is a ClassAd list of
+(implicitly-scoped) catalog names provided for your convenience.
+
+The job-ad attribute ``CommonInputCatalogs`` is a string list of
+(implicitly-scoped) catalog names.  Each name has a corresponding ClassAd
+attribute (prefixed by ``_x_catalog``), identical in format to
+:ad-attr:`TransferInput`.  The corresponding attributes each define a catalog
+for transfer.
 
 .. _self-checkpointing-jobs:
 

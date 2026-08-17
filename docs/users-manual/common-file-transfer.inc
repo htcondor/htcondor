@@ -38,9 +38,8 @@ The last constraint is, of course, a scheduling constraint and not under your
 control.  Likewise, HTCondor can only take advantage of this
 new feature if both the AP to which the job was submitted and the EP on which
 the first (and subsequent) jobs run are sufficiently recent (that is, version
-26 or later) and configured in a compatible way (see FIXME, the admin section,
-explicitly excluding LV-enabled EPs and EPs whose execute directories are
-_not_ all on the same filesystem, etc).  This is all taken care of automatically
+26 or later) and configured in a compatible way
+(see :ref`admin_common_file_transfer`).  This is taken care of automatically
 by the HTCondor system, but it will *not* result in your job running on any
 fewer resources: HTCondor will automatically fall back to uncommon file
 transfer as necessary.
@@ -136,6 +135,15 @@ GPU may be able to run on as many GPUs as that EP has available.  This is good
 for you (the submitter) and for the administrator: you get more simultaneous
 jobs and the administrator doesn't have to worry about your jobs leaving GPUs
 idle because no other job can fit on the machine.
+
+Common Files and Checkpointing
+""""""""""""""""""""""""""""""
+
+FIXME: test this.
+
+You should (for efficiency and clarity) already be omitting input files that
+the job doesn't change from subcom:`transfer_checkpoint_files`; continue to
+do so by not including files any files from subcom:`common_input_files` either.
 
 Job Event Logs
 """"""""""""""
