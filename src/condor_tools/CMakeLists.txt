@@ -43,6 +43,10 @@ condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "$
 condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_ssl_fingerprint "ssl_fingerprint.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 
+if (WITH_PLACEMENT)
+    condor_exe(condor_login "login.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+endif()
+
 if (LINUX)
     condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
     condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -101,6 +105,5 @@ condor_shared_lib( libgetpwnam "getpwnam.cpp" )
 set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
 endif()
 
-# htcondor tool + Python htcondor_cli module
+# htcondor tool (htcondor_cli module is installed via bindings/python/setup.py)
 install ( FILES htcondor DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( DIRECTORY htcondor_cli DESTINATION ${C_PYTHON3ARCHLIB} )

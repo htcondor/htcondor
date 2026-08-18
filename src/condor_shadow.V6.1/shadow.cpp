@@ -143,9 +143,14 @@ void
 UniShadow::spawnFinish()
 {
 	hookTimerCancel();
-	if( ! remRes->activateClaim() ) {
-			// we're screwed, give up:
-		shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
+
+	int refuse_code = 0;
+	std::string refuse_reason;
+	if( ! remRes->activateClaim(refuse_code, refuse_reason) ) {
+		if ( ! refuse_code) { refuse_code = CONDOR_HOLD_CODE::FailedToActivateClaim; }
+		if (refuse_reason.empty()) { refuse_reason = "Failed to activate claim"; }
+		// can't activate, so give up.
+		shutDown(JOB_NOT_STARTED, refuse_reason.c_str(), refuse_code);
 	}
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
@@ -331,18 +336,24 @@ void
 UniShadow::requestJobRemoval() {
 	remRes->setExitReason( JOB_KILLED );
 	bool job_wants_graceful_removal = jobWantsGracefulRemoval();
-	dprintf(D_ALWAYS,"Requesting %s removal of job.\n",
-			job_wants_graceful_removal ? "graceful" : "fast");
-	remRes->killStarter( job_wants_graceful_removal );
+	dprintf(D_ALWAYS,"Requesting %s removal of job%s.\n",
+			job_wants_graceful_removal ? "graceful" : "fast",
+			transfer_and_remove_requested ? " with final file transfer" : "");
+	remRes->killStarter( job_wants_graceful_removal, transfer_and_remove_requested );
 }
 
 int UniShadow::handleJobRemoval(int sig) {
 	dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;
+		// TRANSFER_SANDBOX_AND_RM_JOB means condor_rm -transfer: do final file transfer before removing
+	if( sig == TRANSFER_SANDBOX_AND_RM_JOB) {
+		transfer_and_remove_requested = true;
+		dprintf( D_ALWAYS, "Transfer-and-remove requested (TRANSFER_SANDBOX_AND_RM_JOB)\n" );
+	}
 		// if we're not in the middle of trying to reconnect, we
 		// should immediately kill the starter.  if we're
 		// reconnecting, we'll do the right thing once a connection is
-		// established now that the remove_requested flag is set... 
+		// established now that the remove_requested flag is set...
 	if( remRes->getResourceState() != RR_RECONNECT ) {
 		requestJobRemoval();
 	}
@@ -496,6 +507,7 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 
 		// We've only got one remote resource, so if it successfully
 		// reconnected, we can safely log our reconnect event
+	logReconnectRecord(true, time(nullptr), false);
 	logReconnectedEvent();
 
 	// If the shadow started in reconnect mode, check the job ad to see
@@ -992,6 +1004,10 @@ void UniShadow::checkInputFileTransfer() {
 			} else {
 				results.emplace_back( URL, false, (size_t)-1, false );
 			}
+			
+			if( buffer ) {
+				free( buffer );
+			}
 		} else if( scheme == "osdf" || scheme == "pelican" ) {
 			ArgList args;
 			args.AppendArg( "/usr/bin/pelican" );
@@ -1018,6 +1034,10 @@ void UniShadow::checkInputFileTransfer() {
 				}
 			} else {
 				results.emplace_back( URL, false, (size_t)-1, false );
+			}
+			
+			if( buffer ) {
+				free( buffer );
 			}
 		} else {
 			dprintf( D_ALWAYS, "Skipping URL '%s': don't know how to check it.\n", URL.c_str() );

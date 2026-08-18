@@ -39,7 +39,9 @@
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
 #include "condor_config.h"
+#include "set_user_priv_from_ad.h"
 #include "submit_job.h"
+#include "NewClassAdJobLogConsumer.h"
 
 
 ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci, int cluster, int proc, std::string& error_details, const char * my_identity)
@@ -219,7 +221,7 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
 }
 
 
-bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out)
 {
 	bool success = false;
 	int cluster = -1;
@@ -334,14 +336,20 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 		}
 	}
 
+	if (RemoteCommitTransaction(0, &errstack) < 0) {
+		dprintf(D_ERROR, "Failed to commit job submission : %s\n",
+		        errstack.getFullText(true).c_str());
+		goto submit_done;
+	}
+
+	if (GetAttributeString(cluster, proc, ATTR_USER, user_out) == -1) {
+		dprintf(D_ERROR, "Failed to query User attribute of routed job.\n");
+	}
+
 	success = true;
 
  submit_done:
-	bool commit = success;
-	if( qmgr && ! DisconnectQ(qmgr, commit, &errstack)) {
-		dprintf(D_ERROR, "Failed to commit job submission : %s\n", errstack.getFullText(true).c_str());
-		return false;
-	}
+	DisconnectQ(qmgr, false);
 	if (!success) {
 		return false;
 	}
@@ -371,8 +379,8 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 
 	schedd.reschedule();
 
-	if(cluster_out) { *cluster_out = cluster; }
-	if(proc_out) { *proc_out = proc; }
+	cluster_out = cluster;
+	proc_out = proc;
 
 	return true;
 }
@@ -802,7 +810,7 @@ bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
 
-	if ( ! ulog.initialize(ad, true) ) {
+	if ( ! ulog.initialize(ad) ) {
 		dprintf( D_FULLDEBUG,
 				 "(%d.%d) Unable to open user log (event %d)\n",
 				 event.cluster, event.proc, event.eventNumber );
@@ -824,8 +832,13 @@ bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 	return true;
 }
 
-bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+
 	JobTerminatedEvent event;
 
 	if(!InitializeTerminateEvent(&event,ad)) {
@@ -835,8 +848,13 @@ bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+
 	JobAbortedEvent event;
 
 	if(!InitializeAbortedEvent(&event,ad)) {
@@ -846,8 +864,13 @@ bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
+bool WriteHoldEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+
 	JobHeldEvent event;
 	if(!InitializeHoldEvent(&event,ad))
 	{
@@ -857,8 +880,13 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+
 	int cluster;
 	int proc;
 	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
@@ -877,8 +905,13 @@ bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+
 	int cluster;
 	int proc;
 	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );

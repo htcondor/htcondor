@@ -2,7 +2,7 @@ Cloud Annex Customization Guide
 ===============================
 
 Aside from the configuration macros (see the
-:doc:`/cloud-computing/annex-configuration` section), the major way to
+:ref:`cloud_annex_config_options` section), the major way to
 customize :tool:`htcondor annex` is my customizing the default disk image. Because
 the implementation of :tool:`htcondor annex` varies from service to service, and that
 implementation determines the constraints on the disk image, the this section

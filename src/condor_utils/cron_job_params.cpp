@@ -30,9 +30,8 @@
 #include "classad/classad.h"
 
 CronJobParams::CronJobParams( const char		*job_name,
-							  const CronJobMgr	&mgr )
-		: CronParamBase( *(mgr.GetParamBase()) ),
-		  m_mgr( mgr ),
+							  const char *param_base )
+		: CronParamBase( *(param_base?param_base:"") ),
 		  m_mode( CRON_ILLEGAL ),
 		  m_modestr( nullptr ),
 		  m_job( nullptr ),
@@ -64,7 +63,7 @@ CronJobParams::GetParamName( const char *item ) const
 		return NULL;
 	}
 	strcpy( m_name_buf, &m_base );
-	strcat( m_name_buf, "_" );
+	if (m_name_buf[0]) strcat( m_name_buf, "_" );
 	strcat( m_name_buf, m_name.c_str() );
 	strcat( m_name_buf, "_" );
 	strcat( m_name_buf, item );

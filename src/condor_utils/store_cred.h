@@ -118,7 +118,7 @@ long long do_store_cred(
 
 bool store_cred_failed(long long ret, int mode, const char ** errstring=NULL);
 
-int do_check_oauth_creds(const classad::ClassAd* request_ads[], int num_ads, std::string & outputURL, Daemon* d = NULL);
+int do_check_oauth_creds(const std::vector<const classad::ClassAd*>& request_ads, std::string & outputURL, Daemon* d = NULL);
 
 // store a password into a file on unix and into the registry on Windows
 int store_cred_password(const char *user, const char *pass, int mode);
@@ -180,15 +180,21 @@ class CredSorter
 	CredSorter() { Init(); }
 	void Init();
 
-	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, UnknownType };
+	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, PelicanType, UnknownType };
 
 	CredType Sort(const std::string& cred_name) const;
+
+	// Map a CredType to the mode string passed to the credential storer via
+	// the CONDOR_CREDENTIAL_STORER_MODE environment variable.  Returns nullptr
+	// for types the storer does not handle.
+	static const char *StorerMode(CredType type);
 
  private:
 	std::string m_local_names;
 	std::string m_client_names;
 	std::string m_oauth2_names;
 	std::string m_vault_names;
+	std::string m_pelican_names;
 	bool m_vault_enabled{false};
 };
 

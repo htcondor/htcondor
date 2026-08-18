@@ -33,6 +33,7 @@
 #include "file_transfer.h"
 #include "condor_holdcodes.h"
 #include "job_ad_instance_recording.h"
+#include "transfer_proc.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -61,6 +62,9 @@ static int proc = -1;
 static const char * xfer_queue_contact_info = NULL;
 bool sendUpdatesToSchedd = true;
 static time_t shadow_worklife_expires = 0;
+
+#include "cxfer_state.h"
+CXFER_STATE cxfer_type = CXFER_STATE::INVALID;
 
 static void
 usage( int argc, char* argv[] )
@@ -100,21 +104,21 @@ parseArgs( int argc, char *argv[] )
 		opt = tmp[0];
 
 		if( sscanf(opt, "%d.%d", &cluster, &proc) == 2 ) {
-			if( cluster < 0 || proc < 0 ) {
-				dprintf(D_ALWAYS, 
-						"ERROR: invalid cluster.proc specified: %s\n", opt);
+			if( cluster < 0 || isInvalidProcID(proc) ) {
+				dprintf(D_ALWAYS,
+						"ERROR: invalid cluster specified: %s\n", opt);
 				usage(argc, argv);
 			}
 			continue;
 		}
-		
-		if( opt[0] == '<' ) { 
+
+		if( opt[0] == '<' ) {
 				// might be the schedd's address
 			if( is_valid_sinful(opt)) {
 				schedd_addr = opt;
 				continue;
 			} else {
-				dprintf(D_ALWAYS, 
+				dprintf(D_ALWAYS,
 						"ERROR: invalid shadow-private schedd_addr specified: %s\n", opt);
 				usage(argc, argv);
 			}
@@ -127,6 +131,18 @@ parseArgs( int argc, char *argv[] )
 
 		if( strcmp(opt, "--use-guidance-in-job-ad") == 0 ) {
 			use_guidance_in_job_ad = true;
+			continue;
+		}
+
+		if(strncmp(opt, "--cxfer", 7) == 0) {
+			std::string type(opt + 7);
+			if( type == "=staging" ) {
+				cxfer_type = CXFER_STATE::STAGING;
+			} else if( type == "=mapping" ) {
+				cxfer_type = CXFER_STATE::MAPPING;
+			} else {
+				dprintf( D_ALWAYS, "Unknown --cxfer type, ignoring it.\n" );
+			}
 			continue;
 		}
 
@@ -393,7 +409,10 @@ int handleSignals(int sig)
 		
 		switch (sig)
 		{
-			case SIGUSR1: // remove the job
+			case SIGUSR1: // hold the job
+				iRet =  Shadow->handleJobRemoval(sig); // actually hold
+				break;
+			case SIGUSR2: // remove the job
 				iRet =  Shadow->handleJobRemoval(sig);
 				break;
 			case DC_SIGSUSPEND: // send down a signal to suspend the job
@@ -406,6 +425,9 @@ int handleSignals(int sig)
 				break;
 			case UPDATE_JOBAD:
 				iRet =  Shadow->handleUpdateJobAd(sig);
+				break;
+			case TRANSFER_SANDBOX_AND_RM_JOB: // transfer and remove - for now, same as remove
+				iRet =  Shadow->handleJobRemoval(sig);
 				break;
 			default: 
 				break;
@@ -436,8 +458,14 @@ main_init(int argc, char *argv[])
 							"dummy_reaper");
 
 
-		// register SIGUSR1 (condor_rm) for shutdown...
-	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
+		// register SIGUSR1 (condor_hold) for shutdown...
+	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
+		&handleSignals,"handleSignals");
+		// register SIGUSR2 (condor_rm) for shutdown...
+	daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+		&handleSignals,"handleSignals");
+		// register TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer) for transfer and remove...
+	daemonCore->Register_Signal( TRANSFER_SANDBOX_AND_RM_JOB, "TRANSFER_SANDBOX_AND_RM_JOB",
 		&handleSignals,"handleSignals");
 		// register UPDATE_JOBAD for qedit changes
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UPDATE_JOBAD", 
@@ -550,6 +578,11 @@ recycleShadow(int previous_job_exit_reason)
 		return false;
 	}
 	if( shadow_worklife_expires && time(NULL) > shadow_worklife_expires ) {
+		return false;
+	}
+	// This doesn't (currently) happen, but (at least for now) we wouldn't
+	// want to re-use this shadow even if it did.
+	if( cxfer_type == CXFER_STATE::STAGING ) {
 		return false;
 	}
 

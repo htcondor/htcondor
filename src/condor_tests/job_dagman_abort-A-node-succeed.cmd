@@ -3,7 +3,7 @@ arguments		= job_dagman_abort-A-node.cmd $(nodename) OK
 universe       	= local
 log			= job_dagman_abort-A-node.log
 notification   	= NEVER
-getenv         	= true
+getenv = CONDOR*,PATH
 output			= job_dagman_abort-A-node.$(nodename).out
 error			= job_dagman_abort-A-node.err
 queue

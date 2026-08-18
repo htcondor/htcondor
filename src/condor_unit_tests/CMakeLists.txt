@@ -40,6 +40,7 @@ FTEST_your_string.cpp
 )
 set( OTSrcs
 OTEST_ArgList.cpp
+OTEST_ClaimId.cpp
 OTEST_condor_sockaddr.cpp
 OTEST_Directory.cpp
 OTEST_Env.cpp
@@ -54,6 +55,7 @@ OTEST_Timeslice.cpp
 OTEST_TmpDir.cpp
 OTEST_UserPolicy.cpp
 OTEST_DagFileParser.cpp
+OTEST_ArchiveReader.cpp
 )
 
 # old style condor unit tests that all link into a single huge exe
@@ -64,6 +66,7 @@ condor_exe_test(async_freader_tests async_freader_tests.cpp "${CONDOR_TOOL_LIBS}
 
 # formly boost-testy unit tests that each link to a stand-alone exe
 condor_exe_test ( _ring_buffer_tester ring_buffer_tests.cpp "" OFF )
+condor_exe_test ( _generic_stats_tester generic_stats_tests.cpp "${CONDOR_TOOL_LIBS}" OFF )
 condor_exe_test ( _consumption_policy_tester consumption_policy_tests.cpp "condor_utils" OFF )
 
 

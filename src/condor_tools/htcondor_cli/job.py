@@ -41,7 +41,7 @@ def get_job_ad(logger, job_id, options):
                 "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
                 "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
                 "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog", "TransferInStarted",
-                "TransferInFinished"]
+                "TransferInFinished", "JobCoolDownExpiration"]
     try:
         job = schedd.query(constraint=constraint, projection=projection, limit=1)
     except IndexError:
@@ -383,6 +383,10 @@ class Status(Verb):
                 if job_atts > 0:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+                cooldown_expiration = job_ad.get("JobCoolDownExpiration")
+                if cooldown_expiration is not None and cooldown_expiration > time.time():
+                    cooldown_time_remaining = cooldown_expiration - time.time()
+                    logger.info(f"The job is in cool down and will be retried in {readable_time(cooldown_time_remaining)}.")
 
             elif job_status == htcondor.JobStatus.RUNNING:
                 job_running_time = datetime.now() - datetime.fromtimestamp(job_ad["JobStartDate"])

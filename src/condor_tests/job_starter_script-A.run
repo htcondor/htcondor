@@ -22,6 +22,12 @@
 use CondorTest;
 use CondorUtils;
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    STARTER_ALLOW_JOB_PRE_AND_POST_CMD = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 $cmd = 'job_starter_script-A.cmd';
 $testdesc =  'Test starter pre and post scripts - vanilla U';
 $testname = "job_starter_script-A";

@@ -5,7 +5,7 @@ Configuration for Central Managers
 Introduction
 ------------
 
-The Center Manager machine, or CM, is a role that usually runs on one machine
+The Central Manager machine, or CM, is a role that usually runs on one machine
 in your pool.  In some ways, it defines the extent and scope of the pool.  A
 central manager must run at least one *condor_collector* and
 *condor_negotiator* daemon, and most pools run exactly one of each.  Some large
@@ -14,7 +14,7 @@ over a very large pool (say, more than 100,000 slots), or to move the load of
 handling monitoring and reporting queries to a different collector than is
 handling the operational aspects of running a pool, or to improve the
 availability of the pool as a whole.  In the same way, most pools run with a
-single negotiator negotiator daemon, but in some specialized configurations,
+single negotiator daemon, but in some specialized configurations,
 separate negotiators can handle fast matching to a subset of the pool, or break
 the pool accounting into separate shards.
 
@@ -42,7 +42,7 @@ to users according to the policies of the administrators of the CM and the EP.
 Thus, there is a lot of configuration control that you have over this daemon
 and how it works.  Scheduling of jobs is a two-phased process.  The *condor_negotiator*
 tries to balance the allocation of all the slots in the pool in some fair way.
-It then give these allocated slots to the *condor_schedd*'s that hold the jobs
+It then gives these allocated slots to the *condor_schedd*'s that hold the jobs
 of those users, and it is the *condor_schedd* on the AP that is responsible for the
 final selection of which jobs run on which slots.  The *condor_schedd* can re-use a
 match the negotiator has given it to run multiple jobs in succession.  Because of this,
@@ -239,8 +239,7 @@ two priority values assigned to HTCondor users:
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
 priorities may be found in the 
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration
-file entries` section.
+:ref:`negotiator_config_options` section.
 
 Real User Priority (RUP)
 ''''''''''''''''''''''''
@@ -308,7 +307,7 @@ according to the inverse ratio rule.
 
 Assume two users with no history, named A and B, using a pool with 100 cores. To
 simplify the math, also assume both users have an equal priority factor of 1.0.
-User A submits a very large number of short-running jobs at time t = 0 zero.  User
+User A submits a very large number of short-running jobs at time t = 0.  User
 B waits until 48 hours later, and also submits an infinite number of short jobs.
 At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
 and so user A gets the whole pool.  At the 48 hour mark, both users compete for
@@ -403,8 +402,7 @@ associated with a single negotiation cycle. Therefore, the configuration
 variables :macro:`PREEMPTION_REQUIREMENTS_STABLE` and
 :macro:`PREEMPTION_RANK_STABLE` exist to inform the *condor_negotiator* daemon
 that values may change. See the
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration file
-entries` section for definitions of these configuration variables.
+:ref:`negotiator_config_options` section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
@@ -425,6 +423,13 @@ entries` section for definitions of these configuration variables.
     A floating point value representing the user priority of the job
     currently running on the particular slot represented by <N> on the
     slot.
+
+:index:`RemoteUserFloor<single: RemoteUserFloor; ClassAd attribute, ephemeral>` \ ``RemoteUserFloor``
+    An integer value representing the resource/slot floor (minimum
+    number of slots guaranteed to the user) for the job currently
+    running on the slot. This version of the attribute, with no slot
+    represented in the attribute name, refers to the current slot being
+    evaluated.
 
 :index:`RemoteUserResourcesInUse<single: RemoteUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``
     The integer number of slots currently utilized by the user of the
@@ -518,7 +523,7 @@ have submitted jobs and calculates their priority. Then, it totals the
 SlotWeight (by default, cores) of all currently available slots, and 
 using the ratios of the user priorities, it calculates the number of 
 cores each user could get. This is their pie slice.
-(See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
+(See: SLOT_WEIGHT in :ref:`startd_config_options`)
 
 If any users have a floor defined via :tool:`condor_userprio` -set-floor
 , and their current allocation of cores is below the floor, a 
@@ -576,7 +581,7 @@ the username selected by setting the submit file option
     accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
-"ishamel", but "ishmael" will not be the operating system id the shadow
+"ishmael", but "ishmael" will not be the operating system id the shadow
 or job uses.  Note that HTCondor trusts the user to set this
 to a valid value.  The administrator can use schedd requirements or transforms
 to validate such settings, if desired.  accounting_group_user is frequently used
@@ -768,7 +773,7 @@ the following example:
 This configuration is the same as above for the chemistry users.
 However, :macro:`GROUP_ACCEPT_SURPLUS` is set to ``False`` globally,
 ``False`` for the physics parent group, and ``True`` for the subgroups
-group_physics.lep and group_physics.lep. This means that
+group_physics.lep and group_physics.hep. This means that
 group_physics.lep and group_physics.hep are allowed to exceed their
 quota of 15 and 5, but their sum cannot exceed 20, for that is their
 parent's quota. If the group_physics had :macro:`GROUP_ACCEPT_SURPLUS` set
@@ -780,7 +785,7 @@ is, any leaf nodes of this tree with excess quota will share it with any
 peers which accept surplus. Any subsequent excess will then be passed up
 to the parent node and over to all of its children, recursively. Any
 node that does not accept surplus implements a hard cap on the number of
-slots that the sum of it's children use.
+slots that the sum of its children use.
 
 After the *condor_negotiator* calculates the quota assigned to each group,
 possibly adding in surplus, it then negotiates with the *condor_schedd* daemons
@@ -914,7 +919,7 @@ HTCondor should constrain the number of running jobs which need the X
 software to 3. The administrator picks XSW as the name of the resource
 and sets the configuration
 
-.. code-block:: text
+.. code-block:: condor-config
 
     XSW_LIMIT = 3
 
@@ -928,7 +933,7 @@ configuration may specify a concurrency limit for all resources that are
 not covered by specifically-named limits. The configuration variable
 :macro:`CONCURRENCY_LIMIT_DEFAULT` sets this value. For example,
 
-.. code-block:: text
+.. code-block:: condor-config
 
     CONCURRENCY_LIMIT_DEFAULT = 1
 
@@ -943,20 +948,20 @@ submit description file or adding an attribute to the job ClassAd. In
 the submit description file, an example job that requires the X software
 adds:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW, DATABASE, FILESERVER
 
@@ -966,7 +971,7 @@ syntax that follows the resource name by a colon character and the
 integer number of resources. For example, if the above job uses three
 units of the file server resource, it is declared with
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW, DATABASE, FILESERVER:3
 
@@ -975,7 +980,7 @@ member of the set, the configuration may become tedious, as it defines
 each member of the set individually. A shortcut defines a name for a
 set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     CONCURRENCY_LIMIT_DEFAULT = 5
     CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
@@ -1000,21 +1005,21 @@ number of network intensive jobs on each network to 10. Configuration of
 each execute machine advertises which local network it is on. A machine
 on ``"NETWORK_A"`` configures
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK = "NETWORK_A"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK = "NETWORK_B"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK_A_LIMIT = 10
     NETWORK_B_LIMIT = 10
@@ -1022,7 +1027,7 @@ The configuration for the negotiator sets the concurrency limits:
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits_expr = TARGET.NETWORK
 
@@ -1035,7 +1040,7 @@ the matched machine. The other limit is of a specialized application
 called ``"SWX"`` in this example. The negotiator configuration is
 extended to also include
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SWX_LIMIT = 15
 
@@ -1043,7 +1048,7 @@ The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
 command:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 
@@ -1089,7 +1094,7 @@ should use.
 
 Running with multiple negotiators also means you need to be careful with the
 :tool:`condor_userprio` command.  As there is no default negotiator, you should
-always name the specific negotiator you want to :tool:`condor_userprio` to talk to
+always name the specific negotiator you want :tool:`condor_userprio` to talk to
 with the `-name` option.
 
 Defragmenting Dynamic Slots
@@ -1123,7 +1128,7 @@ lightweight daemon that should not require a lot of system resources.
 Here is an example configuration that puts the *condor_defrag* daemon
 to work:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DAEMON_LIST = $(DAEMON_LIST) DEFRAG
     DEFRAG_INTERVAL = 3600
@@ -1136,8 +1141,7 @@ from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
 *condor_defrag* daemon may be found in the
-:ref:`admin-manual/configuration-macros:condor_defrag configuration file
-macros` section.
+:ref:`defrag_config_options` section.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining
@@ -1228,8 +1232,7 @@ Configuring a Machine to be a HTCondorView Server
 To configure the HTCondorView collector, a few configuration variables
 are added or modified for the *condor_collector* chosen to act as the
 HTCondorView collector. These configuration variables are described in
-:ref:`admin-manual/configuration-macros:condor_collector configuration file
-entries`. Here are brief explanations of the entries that must be customized:
+:ref:`collector_config_options`. Here are brief explanations of the entries that must be customized:
 
 :macro:`POOL_HISTORY_DIR`
     The directory where historical data will be stored. This directory
@@ -1323,7 +1326,7 @@ jobs and allocating new slots. High availability of the
 problem.
 
 Configuration allows one of multiple machines within the pool to
-function as the central manager. While there are may be many active
+function as the central manager. While there may be many active
 *condor_collector* daemons, only a single, active *condor_negotiator*
 daemon will be running. The machine with the *condor_negotiator* daemon
 running is the active central manager. The other potential central
@@ -1369,7 +1372,7 @@ communications between machines when
    running, yet the machine is functioning
 
 The high availability mechanism distinguishes between these two, and it
-operates based only on first (when a central manager machine is down). A
+operates based only on the first (when a central manager machine is down). A
 lack of executing daemons does not cause the protocol to choose or use a
 new active central manager.
 
@@ -1403,8 +1406,7 @@ Configuration
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
 configured appropriately in order to make the high availability
-mechanism work. See the :ref:`admin-manual/configuration-macros:configuration
-file entries relating to high availability` section, for definitions
+mechanism work. See the :ref:`high_availability_config_options` section, for definitions
 of these configuration variables.
 
 The *condor_had* and *condor_replication* daemons use the
@@ -1423,8 +1425,7 @@ may be computed using the following formula:
 
 .. code-block:: text
 
-    stabilization period = 12 * (number of central managers) *
-                              $(HAD_CONNECTION_TIMEOUT)
+    Stabilization Period = 12 * (number of central managers) * $(HAD_CONNECTION_TIMEOUT)
 
 To disable the high availability of central managers mechanism, it is
 sufficient to remove :macro:`HAD`, :macro:`REPLICATION`, and :macro:`NEGOTIATOR` from
@@ -1438,10 +1439,12 @@ commands kill all *condor_had*, *condor_replication*, and all running
 *condor_negotiator* daemons. The last command is invoked on the host
 where the single *condor_negotiator* daemon is to run.
 
-#. condor_off -all -neg
-#. condor_off -all -subsystem -replication
-#. condor_off -all -subsystem -had
-#. condor_on -neg
+.. code-block:: console
+
+    # condor_off -all -neg
+    # condor_off -all -subsystem -replication
+    # condor_off -all -subsystem -had
+    # condor_on -neg
 
 When configuring *condor_had* to control the *condor_negotiator*, if
 the default backoff constant value is too small, it can result in a
@@ -1530,8 +1533,7 @@ machines.
     # See note above the length of the negotiation cycle.
     MASTER_HAD_BACKOFF_CONSTANT = 360
 
-The following shared-port configuration is for the machines which that
-will not be central managers.
+The following shared-port configuration is for the machines that will not be central managers.
 
 .. code-block:: condor-config
 
@@ -1569,7 +1571,7 @@ manager machines.
     HAD_ARGS = -f -p $(HAD_PORT)
 
     ## The following macro defines the port number condor_replication will listen
-    ## on on this machine. This port should match the port number specified
+    ## on this machine. This port should match the port number specified
     ## for that replication daemon in the REPLICATION_LIST
     ## Port number is arbitrary (make sure no collision with other applications)
     ## This is a sample port number
@@ -1712,7 +1714,7 @@ document: complete information is available at the ganglia homepage at
 the subject, or numerous webpages.
 
 Generally speaking, the *condor_gangliad* should be setup to run on the same
-system where the ganglia *gmetad* is running.  Unless the pools is exceptionally
+system where the ganglia *gmetad* is running.  Unless the pool is exceptionally
 large, putting the gmetad and the *condor_gangliad* on the central manager
 machine is a good choice.  To enable the *condor_gangliad*, simply add
 the line
@@ -1815,8 +1817,16 @@ Recognized metric attribute names and their use:
     recommended.
  Derivative
     A boolean value that specifies if Ganglia should graph the
-    derivative of this metric. Ganglia versions prior to 3.4 do not
-    support this.
+    derivative of this metric. If ``True``, and this metric is an aggregate metric, then the derivative of
+    each value to be aggregated is computed, and the aggregate function is applied to these derivatives.
+    This is useful for numeric attributes that are "counters", i.e. they start at zero and are
+    monotonically increasing throughout the lifetime of a slot or a daemon.  
+    For example, consider the schedd ad attribute :ad-attr:`FileTransferUploadBytes` which publishes the total number of
+    bytes uploaded by the schedd. If ``Derivative`` is set to ``True``, and this metric is an aggregate metric, then the sum of the derivatives of "FileTransferUploadBytes"
+    across the pool is computed and published. The derivative of "FileTransferUploadBytes" for each ClassAd is the positive change
+    in the value of "FileTransferUploadBytes" since the last update.
+    If this metric is not an aggregate metric, then computing of the derivative is performed by
+    Ganglia as usual (note: this requires Ganglia versions 3.4 or later).
  Type
     A string specifying the type of the metric. Possible values are
     "double", "float", "int32", "uint32", "int16", "uint16", "int8",
@@ -2036,7 +2046,7 @@ The following demonstrates an example configuration for two HTCondorView
 servers, where both HTCondorView servers (and the *condor_collector*)
 are running on the same machine, localhost.localdomain:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VIEWSERV01 = $(COLLECTOR)
     VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01

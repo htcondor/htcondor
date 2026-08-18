@@ -186,8 +186,8 @@ FunctionCall( )
 FunctionCall::
 ~FunctionCall ()
 {
-	for( ArgumentList::iterator i=arguments.begin(); i!=arguments.end(); i++ ) {
-		delete (*i);
+	for( auto arg : arguments ) {
+		delete arg;
 	}
 }
 
@@ -234,10 +234,8 @@ CopyFrom(const FunctionCall &functioncall)
     functionName = functioncall.functionName;
 	function     = functioncall.function;
 
-	for (ArgumentList::const_iterator i = functioncall.arguments.begin(); 
-         i != functioncall.arguments.end();
-         i++ ) {
-		newArg = (*i)->Copy( );
+	for (const auto arg : functioncall.arguments) {
+		newArg = arg->Copy( );
 		if( newArg ) {
 			arguments.push_back( newArg );
 		} else {
@@ -405,8 +403,8 @@ _SetParentScope( const ClassAd* parent )
 {
 	parentScope = parent;
 
-	for( ArgumentList::iterator i=arguments.begin(); i!=arguments.end(); i++ ) {
-		(*i)->SetParentScope( parent );
+	for( auto arg : arguments ) {
+		arg->SetParentScope( parent );
 	}
 }
 	
@@ -437,9 +435,7 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 
 	fc->functionName = str;
 
-	for( ArgumentList::iterator i = args.begin(); i != args.end( ); i++ ) {
-		fc->arguments.push_back( *i );
-	}
+	fc->arguments.insert(fc->arguments.end(), args.begin(), args.end());
 	return( fc );
 }
 
@@ -448,10 +444,7 @@ void FunctionCall::
 GetComponents( string &fn, vector<ExprTree*> &args ) const
 {
 	fn = functionName;
-	for( ArgumentList::const_iterator i = arguments.begin(); 
-			i != arguments.end( ); i++ ) {
-		args.push_back( *i );
-	}
+	args.insert(args.end(), arguments.begin(), arguments.end());
 }
 
 
@@ -487,9 +480,8 @@ _Evaluate( EvalState &state, Value &value, ExprTree *& tree ) const
 
 	tmpSig->functionName = functionName;
 	rval = true;
-	for(ArgumentList::const_iterator i=arguments.begin();i!=arguments.end();
-			i++) {
-		rval = (*i)->Evaluate( state, tmpVal, argSig );
+	for(const auto arg : arguments) {
+		rval = arg->Evaluate( state, tmpVal, argSig );
 		if( rval ) tmpSig->arguments.push_back( argSig );
 	}
 	tree = tmpSig;
@@ -525,9 +517,8 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 	newCall->function = function;
 
 	// flatten the arguments
-	for(ArgumentList::const_iterator i=arguments.begin();i!=arguments.end();
-			i++ ) {
-		if( (*i)->Flatten( state, argValue, argTree ) ) {
+	for(const auto arg : arguments) {
+		if( arg->Flatten( state, argValue, argTree ) ) {
 			if( argTree ) {
 				newCall->arguments.push_back( argTree );
 				fold = false;
@@ -1586,15 +1577,15 @@ compareVersion( const char * name, const ArgumentList & argList,
 		int r = natural_cmp( sLeft.c_str(), sRight.c_str() );
 		if( 0 == strcasecmp( name, "versioncmp" ) ) {
 			result.SetIntegerValue(r);
-		} else if( 0 == strcmp( name, "versionLE" ) ) {
+		} else if( 0 == strcasecmp( name, "versionLE" ) ) {
 			result.SetBooleanValue( r <= 0 );
-		} else if( 0 == strcmp( name, "versionLT" ) ) {
+		} else if( 0 == strcasecmp( name, "versionLT" ) ) {
 			result.SetBooleanValue( r < 0 );
-		} else if( 0 == strcmp( name, "versionGE" ) ) {
+		} else if( 0 == strcasecmp( name, "versionGE" ) ) {
 			result.SetBooleanValue( r >= 0 );
-		} else if( 0 == strcmp( name, "versionGT" ) ) {
+		} else if( 0 == strcasecmp( name, "versionGT" ) ) {
 			result.SetBooleanValue( r > 0 );
-		} else if( 0 == strcmp( name, "versionEQ" ) ) {
+		} else if( 0 == strcasecmp( name, "versionEQ" ) ) {
 			result.SetBooleanValue( r == 0 );
 		} else {
 			// This should never happen.
@@ -1697,7 +1688,8 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-    convertValueToRealValue(arg, result);
+    // on failure result is set to an error value, which is the desired outcome
+    std::ignore = convertValueToRealValue(arg, result);
     return true;
 }
 
@@ -1794,9 +1786,9 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 	if (expr && state.curAd) {
 		classad::References attrs;
 		if (ClassAd::_GetExternalReferences(expr, state.curAd, state, attrs, true)) {
-			for (auto it = attrs.begin(); it != attrs.end(); ++it) {
-				const char * attr = it->c_str();
-				size_t len = it->length();
+			for (const auto &attr_ref : attrs) {
+				const char * attr = attr_ref.c_str();
+				size_t len = attr_ref.length();
 				if (0 == strncasecmp(attr, "target.", 7)) {
 					attr += 7;
 					len -= 7;
@@ -2854,7 +2846,7 @@ static bool regexp_helper(
 			}
 
 #if PCRE2_MAJOR == 10 && PCRE2_MINOR < 43
-			pcre2_substring_list_free((PCRE2_SPTR *)groups_pcre2);
+			pcre2_substring_list_free(const_cast<PCRE2_SPTR *>(groups_pcre2));
 #else
 			pcre2_substring_list_free(groups_pcre2);
 #endif

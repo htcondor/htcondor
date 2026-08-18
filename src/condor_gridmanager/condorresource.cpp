@@ -70,6 +70,21 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 	return resource;
 }
 
+void
+CondorResource::CleanupAllResources()
+{
+	// ~CondorResource() erases itself from ResourcesByName, so we must not
+	// iterate the member map while deleting its elements -- doing so
+	// invalidates our iterator and leads to a heap-use-after-free on the next
+	// increment.  Detach the map into a local first, then delete from that;
+	// each destructor's erase then hits the now-empty member map as a no-op.
+	std::map<std::string, CondorResource *> resourcesByNameSwap;
+	resourcesByNameSwap.swap( ResourcesByName );
+	for ( auto &elem : resourcesByNameSwap ) {
+		delete elem.second;
+	}
+}
+
 CondorResource::CondorResource( const char *resource_name, const char *pool_name,
                                 const Proxy *proxy, const std::string &scitokens_file )
 	: BaseResource( resource_name )

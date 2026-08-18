@@ -25,6 +25,7 @@
 
 #include "condor_state.h"
 
+#include <memory>
 #include <vector>
 #include <map>
 #include <set>
@@ -38,7 +39,8 @@ static const double PriorityDelta = 0.5;
 // request matched against them
 #define CP_MATCH_COST "_cp_match_cost"
 
-template <typename K, typename AD> class ClassAdLog;
+#include "AccountantDB.h"
+
 struct GroupEntry;
 
 class Accountant {
@@ -63,6 +65,31 @@ public:
   void  SetCeiling(const std::string& CustomerName, int Ceiling); // set Ceiling for a customer
   void  SetFloor(const std::string& CustomerName, int Floor); // set Floor for a customer
 
+  // Ceiling leases: temporarily override a submitter's ceiling for a bounded
+  // duration, then revert to the prior value. Expiration is an absolute unix
+  // time; an expiration of 0 (or attribute absent) means no lease is active.
+  // Returns true on success; on failure sets err and leaves state unchanged.
+  bool SetCeilingLease(const std::string& CustomerName, int Ceiling,
+                       int DurationSeconds, std::string& err);
+  bool CancelCeilingLease(const std::string& CustomerName, std::string& err);
+  time_t GetCeilingLeaseExpiration(const std::string& CustomerName);
+  // Called once per negotiation cycle: expires any lease whose time has passed.
+  void CheckCeilingLeases();
+
+  // Floor leases: same shape as ceiling leases above.
+  bool SetFloorLease(const std::string& CustomerName, int Floor,
+                     int DurationSeconds, std::string& err);
+  bool CancelFloorLease(const std::string& CustomerName, std::string& err);
+  time_t GetFloorLeaseExpiration(const std::string& CustomerName);
+  void CheckFloorLeases();
+
+  // Priority-factor leases: same shape, but the leased value is a double.
+  bool SetPriorityFactorLease(const std::string& CustomerName, double PriorityFactor,
+                              int DurationSeconds, std::string& err);
+  bool CancelPriorityFactorLease(const std::string& CustomerName, std::string& err);
+  time_t GetPriorityFactorLeaseExpiration(const std::string& CustomerName);
+  void CheckPriorityFactorLeases();
+
   void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
   void SetLastTime(const std::string& CustomerName, int LastTime); // set Last usage time for a customer
@@ -78,7 +105,7 @@ public:
 
   double GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
-  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
+  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const std::string& customerName, ClassAd *ad); // Help function for above
 
   void CheckMatches(std::vector<ClassAd *>& ResourceList);  // Remove matches that are not claimed
 
@@ -97,7 +124,7 @@ public:
   void DisplayLog();
   void DisplayMatches();
 
-  ClassAd* GetClassAd(const std::string& Key);
+  ClassAd* GetClassAd(AccountantTable table, const std::string& Key);
 
   // This maps submitter names to their assigned accounting group.
   // When called with a defined group name, it maps that group name to itself.
@@ -152,21 +179,13 @@ private:
   // Data members
   //--------------------------------------------------------
 
-  ClassAdLog<std::string, ClassAd*> * AcctLog;
+  std::unique_ptr<AccountantDB> db;
   time_t LastUpdateTime;
 
   std::map<std::string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
-
-  //--------------------------------------------------------
-  // Static values
-  //--------------------------------------------------------
-
-  static std::string AcctRecord;
-  static std::string CustomerRecord;
-  static std::string ResourceRecord;
 
   //--------------------------------------------------------
   // Utility functions
@@ -177,18 +196,6 @@ private:
   int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
   static std::string GetDomain(const std::string& CustomerName);
-
-  bool DeleteClassAd(const std::string& Key);
-
-  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue);
-  void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
-  void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
-
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue);
-  bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue);
-  bool GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<std::string, int>& gnmap);
 };

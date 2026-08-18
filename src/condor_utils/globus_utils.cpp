@@ -439,7 +439,7 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 {
 	X509_NAME *email_orig = NULL;
 	GENERAL_NAME *gen;
-	GENERAL_NAMES *gens;
+	GENERAL_NAMES *gens = nullptr;
 	X509 *tmp_cert = NULL;
 	char *email = NULL, *email2 = NULL;
 	int i, j;
@@ -471,17 +471,19 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 				}
 				ASN1_IA5STRING *email_ia5 = gen->d.ia5;
 				// Sanity checks.
-				if (email_ia5->type != V_ASN1_IA5STRING) goto cleanup;
-				if (!email_ia5->data || !email_ia5->length) goto cleanup;
-				email2 = BUF_strdup((char *)email_ia5->data);
-				// We want to return something we can free(), so make another copy.
-				if (email2) {
-					email = strdup(email2);
-					OPENSSL_free(email2);
-				}
+				if (ASN1_STRING_type(email_ia5) != V_ASN1_IA5STRING) goto cleanup;
+				const unsigned char *email_data = ASN1_STRING_get0_data(email_ia5);
+				int email_data_len = ASN1_STRING_length(email_ia5);
+				if (!email_data || !email_data_len) goto cleanup;
+				if (memchr(email_data, '\0', email_data_len)) goto cleanup;
+				email = (char *)malloc(email_data_len + 1);
+				if (!email) goto cleanup;
+				memcpy(email, email_data, email_data_len);
+				email[email_data_len] = '\0';
 				break;
 			}
 			sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+			gens = nullptr;
 		}
 	}
 
@@ -491,6 +493,9 @@ char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 	}
 
  cleanup:
+	if (gens) {
+		sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+	}
 	if (email_orig) {
 		X509_NAME_free(email_orig);
 	}

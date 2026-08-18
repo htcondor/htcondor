@@ -266,6 +266,9 @@ condor_isidchar(int c)
 
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
 
+// characters allowed between + and = when using FOO += value
+#define CONFIG_PLUS_SEP_CHARSET ",;|&*"
+
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 // The length of the DOLLAR_ID string
@@ -965,6 +968,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	std::string hereData;
 	std::string hereName;
 	std::string hereTag;
+	std::string plusRhs;
 
 	for (const auto &line_str: StringTokenIterator(config, "\n")) {
 		auto_free_ptr line = strdup(line_str.c_str());
@@ -1015,6 +1019,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		const char * pop = line;
 		char * ptr = line.ptr();
 		int op = 0;
+		char plus_sep = 0, double_plus = 0;
 
 		// detect the 'use' keyword
 		bool is_meta = starts_with_ignore_case(ptr, "use ");
@@ -1043,6 +1048,19 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 				pop = ptr;
 				op = *ptr;
 				++ptr; // extra skip because @=
+			} else if (*ptr == '+') {
+				int ix = 1;
+				if (strchr(CONFIG_PLUS_SEP_CHARSET, ptr[ix])) {
+					plus_sep = ptr[ix++]; double_plus = 1;
+					if (ptr[ix] == plus_sep) { ++ix; double_plus = 2; }
+				}
+				if (ptr[ix] != '=') {
+					op = 0; // +<sep> must be followed by =
+					break;
+				}
+				pop = ptr;
+				op = *ptr;
+				ptr += ix; // ptr should now point to =
 			} else if (ISOP(*ptr)) {
 				if (ISOP(op)) {
 					op = 0; // more than one op is not allowed, so trigger a failure
@@ -1136,6 +1154,32 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 				hereTag = rhs;
 				hereData.clear();
 				continue;
+			}
+
+			// if there is a + operator, we turn  "XXX +<sep>= rhs" 
+			// into "XXX = $(XXX)<sep>rhs" when XXX already has a non-empty value
+			if (op == '+') {
+				const char * curval = lookup_macro(name, macro_set, ctx);
+				if (curval && *curval) {
+					plusRhs = curval;
+					// for single separator like ;,| we want XXX;XXX
+					// for double separator like &&  we want XXX && XXX
+					if (plus_sep) {
+						if (double_plus > 1) {
+							plusRhs.push_back(' ');
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(' ');
+						} else {
+							plusRhs.push_back(plus_sep);
+						}
+					} else {
+						plusRhs.push_back(' ');
+					}
+					plusRhs += rhs;
+					rhs = plusRhs.c_str();
+				}
+				op = '='; // we have handled the + op, to now we just need to fall down to do the = op
 			}
 
 			/* expand self references only */
@@ -1407,7 +1451,7 @@ Parse_macros(
 	char*	rhs = NULL;
 	char*	ptr = NULL;
 	char*	into_file = NULL; // holds <file> for "include command into <file> : <script>"
-	char	op, name_end_ch;
+	char	op, name_end_ch, plus_sep=0, double_plus=0;
 	int		retval = 0;
 	bool	firstRead = true;
 	const int gl_opt_old = 0;
@@ -1419,6 +1463,7 @@ Parse_macros(
 	std::string   hereData; // used to accumulate @= multiline values
 	std::string      hereName;
 	std::string      hereTag;
+	std::string   plusRhs; // used to build += right hand side.
 	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
 	if ( ! pctx) pctx = &defctx;
 
@@ -1561,19 +1606,28 @@ Parse_macros(
 		char * name_end = ptr; // keep track of where we null-terminate the name, so we can reverse it later
 		name_end_ch = *name_end;
 		if (*ptr) { *ptr++ = '\0'; }
-		// scan for an operator character if we don't have one already. operator can be : = or @=
+		// scan for an operator character if we don't have one already. operator can be : = @= or +=
 		if ( ! ISOP(op)) {
 			while (isspace(*ptr)) ++ptr;
-			if (*ptr && ! ISOP(*ptr) && ! (*ptr == '@')) word_before_op = ptr;
-			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@')) {
+			if (*ptr && ! ISOP(*ptr) && ! (*ptr == '@') && ! (*ptr == '+')) word_before_op = ptr;
+			while ( *ptr && ! ISOP(*ptr) && ! (*ptr == '@') && ! (*ptr == '+')) {
 				++ptr;
 			}
 			pop = ptr;
 			op = *ptr;
 			if (op) {
+				double_plus = plus_sep = 0;
 				++ptr;
 				if (op == '@') {
 					// the @ op must be followed by an = to be valid.
+					if (*ptr == '=') ++ptr;
+					else op = 0;
+				} else if (op == '+') {
+					// the + op must be followed by an optional separator and then = to be valid.
+					if (strchr(CONFIG_PLUS_SEP_CHARSET, *ptr)) {
+						plus_sep = *ptr++; double_plus = 1;
+						if (*ptr == plus_sep) { double_plus = 2; ++ptr; }
+					}
 					if (*ptr == '=') ++ptr;
 					else op = 0;
 				}
@@ -1581,7 +1635,7 @@ Parse_macros(
 		}
 		// if we still haven't got an operator, then this isn't a valid config line,
 		// (it *might* be a valid submit line however.)
-		if ( ! ISOP(op) && op != '@' && ! is_submit) {
+		if ( ! ISOP(op) && op != '@' && op != '+' && ! is_submit) {
 			retval = -1;
 			name = NULL;
 			goto cleanup;
@@ -1800,7 +1854,7 @@ Parse_macros(
 			std::string plusname = "MY."; plusname += name+1;
 			insert_macro(plusname.c_str(), (*name=='+') ? rhs : "", macro_set, FileSource, *pctx);
 
-		} else if (is_submit && ((op != '=' && op != '@') || MATCH == strcasecmp(name, "queue"))) {
+		} else if (is_submit && ((op != '=' && op != '@' && op != '+') || MATCH == strcasecmp(name, "queue"))) {
 
 			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, config_errmsg);
 			if (retval != 0) { // this may or may not be a failure, but we should stop reading the file.
@@ -1833,15 +1887,42 @@ Parse_macros(
 				continue;
 			}
 
+			// if there is a + operator, we turn  "XXX +<sep>= rhs" 
+			// into "XXX = $(XXX)<sep>rhs" when XXX already has a non-empty value
+			const char * crhs = rhs;
+			if (op == '+') {
+				const char * curval = lookup_macro(name, macro_set, *pctx);
+				if (curval && *curval) {
+					plusRhs = curval;
+					// for single separator like ;,| we want XXX;XXX
+					// for double separator like &&  we want XXX && XXX
+					if (plus_sep) {
+						if (double_plus > 1) {
+							plusRhs.push_back(' ');
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(plus_sep);
+							plusRhs.push_back(' ');
+						} else {
+							plusRhs.push_back(plus_sep);
+						}
+					} else {
+						plusRhs.push_back(' ');
+					}
+					plusRhs += rhs;
+					crhs = plusRhs.c_str();
+				}
+				op = '='; // we have handled the + op, to now we just need to fall down to do the = op
+			}
+
 			if (options & READ_MACROS_EXPAND_IMMEDIATE) {
-				value = expand_macro(rhs, macro_set, *pctx);
+				value = expand_macro(crhs, macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
 				}
 			} else  {
 				/* expand self references only */
-				value = expand_self_macro(rhs, name, macro_set, *pctx);
+				value = expand_self_macro(crhs, name, macro_set, *pctx);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
@@ -2211,6 +2292,10 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
 		char * tvalue = expand_self_macro(value, name, set, ctx);
+		if (set.metat && set.tracer && set.tracer->match(name)) {
+			// if replacement tracing is enabled, call the tracer log function before we do the replacement
+			set.tracer->log(name, pitem->raw_value, tvalue, set.metat[pitem - set.table]);
+		}
 		if (MATCH != strcmp(tvalue, pitem->raw_value)) {
 			pitem->raw_value = set.apool.insert(tvalue);
 		}
@@ -2558,11 +2643,15 @@ public:
 
 class ConfigMacroSkipCount : public ConfigMacroBodyCheck {
 public:
+	ConfigMacroSkipCount(classad::References & names) : skipped_names(names) {}
 	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
-	int skip_count = 0;
+	const char * force_skip(int func_id, const char * body, int len);
+	bool can_evaluate(int func_id, const char * body, int bodylen, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	classad::References & skipped_names;
+	int skip_count{0};
 };
 
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	ConfigMacroSkipCount & skb,
 	MACRO_SET& macro_set,
@@ -2660,6 +2749,20 @@ static int is_config_macro(const char* prefix, int length, MACRO_BODY_CHARS & bo
 		return MACRO_ID_NORMAL;
 	} else if (length > 1 && prefix[1] == '$') {
 		return 0;
+	}
+	return is_special_config_macro(prefix, length, bodychars);
+}
+
+static int is_any_macro(const char* prefix, int length, MACRO_BODY_CHARS & bodychars)
+{
+	// prefix of just "$" is our normal macro expansion
+	// prefix of just "$$" is dollardollar macro expansion, we should not match those...
+	if (length == 1) {
+		bodychars = MACRO_BODY_IDCHAR_COLON;
+		return MACRO_ID_NORMAL;
+	} else if (length == 2 && prefix[1] == '$') {
+		bodychars = (prefix[3] == '[') ? MACRO_BODY_SCAN_BRACKET : MACRO_BODY_IDCHAR_COLON;
+		return MACRO_ID_DOUBLEDOLLAR;
 	}
 	return is_special_config_macro(prefix, length, bodychars);
 }
@@ -2851,6 +2954,10 @@ public:
 	}
 };
 
+class SkipNothingBody : public ConfigMacroBodyCheck {
+public:
+	virtual bool skip(int /*func_id*/, const char * /*body*/, int /*len*/) { return false; }
+};
 
 
 #ifdef METAKNOBS_WITH_ARGS
@@ -3139,6 +3246,50 @@ const char * lookup_macro_default(const char * name, MACRO_SET & macro_set, MACR
 	return nullptr;
 }
 
+// forward ref
+static const char * nth_list_item(const char * list, char sep, const char * & endp, int index, bool trimmed);
+static const char * get_lookup_and_expand_macro_arg (
+	const char * args,
+	int index,
+	std::string &buf,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx);
+
+// A replacement for EXCEPT that will invoke the real thing if exceptions are permitted
+// and just print a similar message and return if exceptions are not.
+void MACRO_EVAL_CONTEXT::might_EXCEPT(MACRO_SET& mset, const char * file, int line, const char * fmt, ...)
+{
+	va_list pvar;
+	char buf[ BUFSIZ ];
+	va_start(pvar, fmt);
+	vsnprintf(buf, BUFSIZ, fmt, pvar);
+	if (allow_except()) {
+		_EXCEPT_Line = line;
+		_EXCEPT_File = file;
+		_EXCEPT_Errno = EINVAL;
+		_EXCEPT_("%s",buf);
+		return; // we never get here.
+	}
+
+	if (_EXCEPT_Reporter) {
+		_EXCEPT_Reporter(buf, line, file);
+	} else {
+		extern int _condor_dprintf_works; // see except.cpp
+		if( _condor_dprintf_works ) {
+			// look for a context with an ad - a hacky way to identify that this is a transform
+			if (mset.errors && this->is_context_ex && reinterpret_cast<const macro_eval_context_ex *>(this)->ad) {
+				// put the error in the mset so that the transform can print it.
+				mset.errors->push(nullptr, EINVAL, buf);
+			} else {
+				dprintf( D_ERROR, "ERROR \"%s\" at line %d in file %s\n", buf, line, file);
+			}
+		} else {
+			fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n", buf, line, file);
+		}
+	}
+	va_end(pvar);
+}
+
 // given the body text of a config macro, and the macro id and macro context
 // evaluate the body and return a string. the string may be a literal, or
 // may point into the buffer returned in tbuf.  The caller will NOT free
@@ -3190,7 +3341,9 @@ static const char * evaluate_macro_func (
 			if (num_entries == 1) {
 				const char * list_name = entries.front().c_str();
 				if ( ! list_name) {
-					EXCEPT( "$RANDOM_CHOICE() config macro: no list!" );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_CHOICE() config macro: no list!");
+					tvalue = "";
+					break; // expand to nothing if we did not EXCEPT
 				}
 
 				const char * lval = lookup_macro(list_name, macro_set, ctx);
@@ -3220,7 +3373,9 @@ static const char * evaluate_macro_func (
 				tvalue = entries[rand_entry].c_str();
 			}
 			if( tvalue == nullptr ) {
-				EXCEPT("$RANDOM_CHOICE() macro in config file empty!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_CHOICE() macro is empty!" );
+				tvalue = "";
+				break;
 			}
 			tvalue = buf = strdup(tvalue);
 		}
@@ -3234,28 +3389,33 @@ static const char * evaluate_macro_func (
 			std::string tmp2 = entries.empty() ? "" : entries.front();
 			long	min_value=0;
 			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &min_value ) < 0 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid min!" );
+				min_value = 0;
 			}
 
 			tmp2 = entries.size() > 1 ? entries[1] : "";
 			long	max_value=0;
 			if ((tmp2.size() == 0) || string_to_long( tmp2.c_str(), &max_value ) < 0 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid max!" );
+				max_value = min_value;
 			}
 
 			tmp2 = entries.size() > 2 ? entries[2] : "";
 			long	step = 1;
 			if (tmp2.size() > 0) {
 				if (string_to_long( tmp2.c_str(), &step ) < -1 ) {
-					EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!");
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid step!");
+					step = 1;
 				}
 			}
 
 			if ( step < 1 ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: invalid step!" );
+				step = 1;
 			}
 			if ( min_value > max_value ) {
-				EXCEPT( "$RANDOM_INTEGER() config macro: min > max!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$RANDOM_INTEGER() config macro: min > max!" );
+				min_value = max_value;
 			}
 
 			// Generate the random value
@@ -3279,74 +3439,47 @@ static const char * evaluate_macro_func (
 			//   list_name must be the macro name of a comma separated list of items.
 		case SPECIAL_MACRO_ID_CHOICE:
 		{
-			std::vector<std::string> entries = split(body, ",", STI_NO_TRIM);
-			std::vector<std::string>::iterator entriesit = entries.begin() + 1;
-
-			if (entries.size() < 2) {
-				EXCEPT( "$CHOICE() config macro: no index!" );
-			}
-
-			// STI_NO_TRIM doesn't trim and keeps empty entries.  We want to trim,
-			// and keep empties
-			for (auto &entry : entries) {
-				trim(entry);
-			}
-			const char * index_name = entries.front().c_str();
-			const char * mval = lookup_macro(index_name, macro_set, ctx);
-			if ( ! mval) mval = index_name;
-
-			char * tmp2 = NULL;
-			if (strchr(mval, '$')) {
-				tmp2 = expand_macro(mval, macro_set, ctx);
-				mval = tmp2;
-			}
-
+			// the first argument is the index, and it must evaluate to a number
+			std::string argbuf;
+			char * items = nullptr;
+			const char * ival = get_lookup_and_expand_macro_arg(body, 0, argbuf, macro_set, ctx);
 			long long index = -1;
-			if ( ! string_is_long_param(mval, index) || index < 0 || index >= INT_MAX) {
-				EXCEPT( "$CHOICE() macro: %s is invalid index!", mval );
+			if ( ! string_is_long_param(ival, index) || index < 0 || index >= INT_MAX) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() error: '%s' is invalid index", ival);
+				index = 0;
 			}
+
+			// The second argument is either the start of the list, or the name of the list
+			const char * endp;
+			const char * lval = nth_list_item(body, ',', endp, 1, true);
+			if ( ! lval) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() error: no list");
+				tvalue = "";
+				break;
+			}
+			items = const_cast<char*>(lval); // lval points into body
 
 			tvalue = NULL;
-			if (entries.size() == 2) {
-				const char * list_name = entries[1].c_str();
-				if ( ! list_name) {
-					EXCEPT( "$CHOICE() config macro: no list!" );
-				}
-
-				const char * lval = lookup_macro(list_name, macro_set, ctx);
+			if ( ! strchr(lval,',')) { // no more commas, so it must be the name of the list
+				body[endp-body] = 0; // null term the list name (in case of trailing whitespace)
+				lval = lookup_macro(items, macro_set, ctx);
 				if ( ! lval) {
-					EXCEPT( "$CHOICE() macro: no list named \"%s\"!", list_name);
-				}
-
-				// now populate the entries list from lval.
-				entries.clear(); list_name = index_name = NULL;
-				if (strchr(lval, '$')) {
-					char * tmp3 = expand_macro(lval, macro_set, ctx);
-					if (tmp3) {
-						entries = split(tmp3, ",");
-						free(tmp3);
-					}
-				} else {
-					entries = split(lval, ",");
-				}
-				entriesit = entries.begin();
-			}
-
-			// scan the list looking for an item with the given index
-			for (int ii = 0; ii <= (int)index; ++ii) {
-				const char * val = entriesit->c_str();
-				entriesit++;
-				if (val != nullptr && ii == index) {
-					tvalue = buf = strdup(val);
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() macro: no list named \"%s\"!", items);
+					tvalue = "";
 					break;
+				} else {
+					items = buf = expand_macro(lval, macro_set, ctx);
 				}
 			}
 
+			// get the n item out of the list.
+			tvalue = nth_list_item(items, ',', endp, (int)index, true);
 			if ( ! tvalue) {
-				EXCEPT( "$CHOICE() config macro: index %d is out of range!", (int)index );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$CHOICE() config macro: index %d is out of range!", (int)index);
+				tvalue = "";
+			} else {
+				items[endp-items] = 0; // null term the item
 			}
-
-			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
@@ -3358,7 +3491,9 @@ static const char * evaluate_macro_func (
 			char * len_arg = NULL;
 			char * start_arg = strchr(body, ',');
 			if ( ! start_arg) {
-				EXCEPT( "$SUBSTR() macro: no length specified!" );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: no length specified!" );
+				tvalue = "";
+				break;
 			}
 
 			*start_arg++ = 0;
@@ -3370,37 +3505,39 @@ static const char * evaluate_macro_func (
 			const char * arg = lookup_macro(start_arg, macro_set, ctx);
 			if ( ! arg) arg = start_arg;
 
-			char * tmp3 = NULL;
+			auto_free_ptr tmp3;
 			if (strchr(arg, '$')) {
-				tmp3 = expand_macro(arg, macro_set, ctx);
+				tmp3.set(expand_macro(arg, macro_set, ctx));
 				arg = tmp3;
 			}
 
 			long long index = -1;
 			if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
-				EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: %s is invalid start index!", arg );
+				tvalue = "";
+				break;
 			}
 			start_pos = (int)index;
-			if (tmp3) {free(tmp3);} tmp3 = NULL;
-
+			tmp3.clear();
 
 			int sub_len = INT_MAX/2;
 			if (len_arg) {
 				const char * arg = lookup_macro(len_arg, macro_set, ctx);
 				if ( ! arg) arg = len_arg;
 
-				char * tmp3 = NULL;
 				if (strchr(arg, '$')) {
-					tmp3 = expand_macro(arg, macro_set, ctx);
+					tmp3.set(expand_macro(arg, macro_set, ctx));
 					arg = tmp3;
 				}
 
 				long long index = -1;
 				if ( ! string_is_long_param(arg, index) || index < INT_MIN || index > INT_MAX) {
-					EXCEPT( "$SUBSTR() macro: %s is invalid length !", arg );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$SUBSTR() macro: %s is invalid length !", arg );
+					tvalue = "";
+					break;
 				}
 				sub_len = (int)index;
-				if (tmp3) {free(tmp3);} tmp3 = NULL;
+				tmp3.clear();
 			}
 
 			const char * mval = lookup_macro(name, macro_set, ctx);
@@ -3443,15 +3580,12 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
-					EXCEPT( "%s macro: '%s' is not a valid format specifier!",
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"%s macro: '%s' is not a valid format specifier!",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
+					tvalue = buf = strdup(fmt);
+					break;
 				}
 			}
 
@@ -3468,7 +3602,9 @@ static const char * evaluate_macro_func (
 			if (special_id == SPECIAL_MACRO_ID_INT) {
 				long long int_val = -1;
 				if ( ! string_is_long_param(mval, int_val)) {
-					EXCEPT( "$INT() macro: %s does not evaluate to an integer!", mval );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$INT() macro: %s does not evaluate to an integer!", mval );
+					tvalue = "";
+					break;
 				}
 
 				const int cbuf = 56;
@@ -3477,7 +3613,9 @@ static const char * evaluate_macro_func (
 			} else {
 				double dbl_val = -1;
 				if ( ! string_is_double_param(mval, dbl_val)) {
-					EXCEPT( "$REAL() macro: %s does not evaluate to an real!", mval );
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$REAL() macro: %s does not evaluate to an real!", mval );
+					tvalue = "";
+					break;
 				}
 
 				const int cbuf = 56;
@@ -3499,10 +3637,10 @@ static const char * evaluate_macro_func (
 			char * fmt = strchr(body, ',');
 			if (fmt) {
 				*fmt++ = 0;
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
-					EXCEPT( "$STRING macro: '%s' is not a valid format specifier!", fmt);
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"$STRING macro: '%s' is not a valid format specifier!", fmt);
+					tvalue = buf = strdup(fmt);
+					break;
 				}
 			}
 
@@ -3745,7 +3883,8 @@ static const char * evaluate_macro_func (
 		break;
 
 		default:
-			EXCEPT("Unknown special config macro %d!", special_id);
+			ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"Unknown special config macro %d!", special_id);
+			tvalue = "";
 		break;
 	}
 
@@ -4163,13 +4302,8 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
-					|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
-					|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
-					|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
-					) {
+				printf_fmt_t data_type = (special_id == SPECIAL_MACRO_ID_INT) ? PFT_INT : PFT_FLOAT;
+				if (validatePrintfFormat(fmt, data_type) <= 0) {
 					formatstr(errmsg, "%s error: '%s' is not a valid format specifier",
 						(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
 					return -1;
@@ -4213,9 +4347,7 @@ static ptrdiff_t evaluate_macro_func (
 			// is there a format arg?
 			const char * fmt = nth_list_item(args, ',', endp, 1, false);
 			if (fmt) {
-				const char * tmp_fmt = fmt;
-				printf_fmt_info fmt_info;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) || fmt_info.type != PFT_STRING) {
+				if (validatePrintfFormat(fmt, PFT_STRING) <= 0) {
 					formatstr(errmsg, "$STRING() error: '%s' is not a valid format specifier", fmt);
 					return -1;
 				}
@@ -4570,6 +4702,38 @@ tryagain:
 	return prefix_id;
 }
 
+// find next $ or $$ macro of any type and return the range of the macro
+// used for scanning a string for *any* unexpanded macro (which is generally not what we do when expanding)
+// the use case for this function is when you want to split a string without splitting any of the macros.
+int next_unexpanded_macro(const char * value, size_t offset, UNEXPANDED_MACRO_EXTENTS &extent)
+{
+	extent.clear();
+	SkipNothingBody skipnothing_body; // match all forms of $ and $$ macros
+	MACRO_POSITION pos;
+	int id = next_config_macro(is_any_macro, skipnothing_body, value, (int)offset, pos);
+	if (id) {
+		extent.left = value + pos.dollar;
+		extent.body = value + pos.body;
+		extent.right = value + pos.right;
+	}
+	return id;
+}
+
+bool has_unexpanded_macros(const char * value, bool ignore_dollor)
+{
+	MACRO_POSITION pos;
+	int offset = 0;
+	int macro_type = SPECIAL_MACRO_ID_NONE;
+	if (ignore_dollor) {
+		NoDollarBody no_dollar; // skip over $(DOLLAR)
+		macro_type = next_config_macro(is_config_macro, no_dollar, value, offset, pos);
+	} else {
+		SkipNothingBody skipnothing_body; // match all forms of $ and $$ macros
+		macro_type = next_config_macro(is_any_macro, skipnothing_body, value, offset, pos);
+	}
+	return macro_type != SPECIAL_MACRO_ID_NONE;
+}
+
 
 // used by config_canonicalize_path, gcc 4.4.7 needs it to be declared at global scope.
 struct _remove_duplicate_path_chars {
@@ -4649,8 +4813,8 @@ unsigned int expand_macro (
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
-				//PRAGMA_REMIND("tj: put error reporting into MACRO_EVAL_CONTEXT_EX")
-				EXCEPT("%s", errmsg.c_str());
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"%s", errmsg.c_str());
+				cch = 0;
 				break;
 			}
 			if ( ! cch) {
@@ -4695,16 +4859,91 @@ unsigned int expand_macro (
 	return non_empty_mask;
 }
 
+const char * ConfigMacroSkipCount::force_skip(int func_id, const char * body, int len) {
+	if (func_id == SPECIAL_MACRO_ID_ENV) {
+		// we don't expect to ever get here
+	} else if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+		++skip_count;
+	} else if (func_id == MACRO_ID_NORMAL) {
+		int namelen = len;
+		const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
+		if (colon) {
+			int colonlen = (int)(colon - body);
+			namelen = MIN(namelen, colonlen);
+		}
+		std::string knob(body, namelen);
+		skipped_names.insert(knob);
+		++skip_count;
+	} else if (func_id > 0) {
+		int namelen = len;
+		const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+		if (comma) {
+			int commalen = (int)(comma - body);
+			namelen = MIN(namelen, commalen);
+		}
+		std::string knob(body, namelen);
+		skipped_names.insert(knob);
+		++skip_count;
+	}
+	return body + len;
+}
+
+// return true if the macro function is ok to evaluate when we are doing selective evaluation
+// the return is false if the function does a lookup that would not fully expand.
+bool ConfigMacroSkipCount::can_evaluate(int func_id, const char * body, int bodylen, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx)
+{
+	if (func_id > SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+		const char * bodyend = body+bodylen;
+		const char * p, *e;
+		p = nth_list_item(body, ',', e, 0, true); // arg 0
+		if ( ! p) return true; // go ahead
+		if (e > bodyend) e = bodyend;
+		std::string name(p, e-p);
+		const char * mval = lookup_macro(name.c_str(), macro_set, ctx);
+		if (mval) {
+			std::string buf(mval);
+			int tmp = skip_count;
+			if (selective_expand_macro(buf, *this, macro_set, ctx) > tmp) {
+				skip_count = tmp+1; // set the skip count to +1, (it might be more than +1)
+				skipped_names.insert(name);
+				return false;
+			}
+		}
+		if (func_id == SPECIAL_MACRO_ID_CHOICE) {
+			// When the choice macro has exactly 2 args, the second arg is also a macro name.
+			p = nth_list_item(body, ',', e, 1, true); // arg 1
+			if (p && ! strchr(p, ',')) {
+				if (e > bodyend) e = bodyend;
+				name.assign(p, e-p);
+				mval = lookup_macro(name.c_str(), macro_set, ctx);
+				if (mval) {
+					std::string buf(mval);
+					int tmp = skip_count;
+					if (selective_expand_macro(buf, *this, macro_set, ctx) > tmp) {
+						skip_count = tmp+1; // set the skip count to +1, (it might be more than +1)
+						skipped_names.insert(name);
+						return false;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
 // select only macros that we want to pre-expand when building the submit digest.
 class SkipKnobsBody : public ConfigMacroSkipCount {
 public:
 	classad::References & skip_knobs;
-	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs) {}
+	SkipKnobsBody(classad::References & knobs, classad::References & skipped)
+		: ConfigMacroSkipCount(skipped), skip_knobs(knobs) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
-		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+		if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) return false;
+		if (func_id == MACRO_ID_NORMAL) {
 			// skip $(dollar)
 			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				skipped_names.insert(DOLLAR_ID);
 				++skip_count;
 				return true;
 			}
@@ -4718,11 +4957,30 @@ public:
 			// skip $(knob) when knob is in the skip_knobs set.
 			std::string knob(body, namelen);
 			if (skip_knobs.find(knob) != skip_knobs.end()) {
+				skipped_names.insert(knob);
+				++skip_count;
+				return true;
+			}
+			return false;
+		} else if (func_id > 0) {
+			// this is one of the macros that takes args
+			int namelen = len;
+			const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+			if (comma) {
+				int colonlen = (int)(comma - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is in the skip_knobs set.
+			std::string knob(body, namelen);
+			if (skip_knobs.find(knob) != skip_knobs.end()) {
+				skipped_names.insert(knob);
 				++skip_count;
 				return true;
 			}
 			return false;
 		}
+		// for $$ expansion we end up here.
+		skipped_names.insert("$");
 		++skip_count;
 		return true;
 	}
@@ -4730,20 +4988,32 @@ public:
 
 // expand macros that do not match the names passed in the skip_knobs collection
 // used by submit_utils to selectively expand submit hash keys when creating the submit digest
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	classad::References &skip_knobs,
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	SkipKnobsBody skb(skip_knobs);
+	classad::References dummy;
+	SkipKnobsBody skb(skip_knobs, dummy);
+	return selective_expand_macro(value, skb, macro_set, ctx);
+}
+
+int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	classad::References &skip_knobs,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx,
+	classad::References & skipped)
+{
+	SkipKnobsBody skb(skip_knobs, skipped);
 	return selective_expand_macro(value, skb, macro_set, ctx);
 }
 
 // expand only macros that the skb callback does not indicate should be skipped
 // returns the count of skipped expansions
 //
-unsigned int selective_expand_macro (
+int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	ConfigMacroSkipCount & skb,
 	MACRO_SET& macro_set,
@@ -4770,10 +5040,19 @@ unsigned int selective_expand_macro (
 			pos2.body  -= pos.dollar;
 			pos2.right -= pos.dollar;
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
+			if (special_id > SPECIAL_MACRO_ID_RANDOM_INTEGER) {
+				if ( ! skb.can_evaluate(special_id, tmp + pos.body, pos.body_len(), macro_set, ctx)) {
+					pos.dollar = pos.right;
+					continue;
+				}
+			}
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
-				macro_set.push_error(stderr, -1, NULL, "%s", errmsg.c_str());
-				return -1;
+				// when evaluation fails, assume it is because of selective expansion
+				// and just skip over this function macro
+				skb.force_skip(special_id, tmp + pos.body, pos.body_len());
+				pos.dollar = pos.right;
+				continue;
 			}
 			if ( ! cch) {
 				value.erase(pos.dollar, pos.right-pos.dollar);
@@ -4794,19 +5073,22 @@ public:
 	MACRO_SET& mset;
 	MACRO_EVAL_CONTEXT & ctx;
 
-	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c) : mset(m), ctx(c) {}
+	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c, classad::References & skipped)
+		: ConfigMacroSkipCount(skipped), mset(m), ctx(c) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
-		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+		if (func_id == SPECIAL_MACRO_ID_RANDOM_INTEGER) return false;
+		if (func_id == MACRO_ID_NORMAL) {
 			// skip $(dollar)
 			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				skipped_names.insert(DOLLAR_ID);
 				++skip_count;
 				return true;
 			}
 
 			int namelen = len;
 			const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
-			if (colon) {
+			if (colon && func_id == MACRO_ID_NORMAL) {
 				int colonlen = (int)(colon - body);
 				namelen = MIN(namelen, colonlen);
 			}
@@ -4814,11 +5096,31 @@ public:
 			std::string knob(body, namelen);
 			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
 			if ( ! pval || ! pval[0]) {
+				skipped_names.insert(DOLLAR_ID);
+				++skip_count;
+				return true;
+			}
+			return false;
+		} else if (func_id > 0) {
+			// this is one of the macros that takes args
+			int namelen = len;
+			const char * comma = strchr(body, ','); // this might return the pos of a colon AFTER len
+			if (comma) {
+				int colonlen = (int)(comma - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is in the skip_knobs set.
+			std::string knob(body, namelen);
+			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
+			if ( ! pval || ! pval[0]) {
+				skipped_names.insert(knob);
 				++skip_count;
 				return true;
 			}
 			return false;
 		}
+		// we get here for $$
+		skipped_names.insert("$");
 		++skip_count;
 		return true;
 	}
@@ -4826,12 +5128,23 @@ public:
 
 // do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
 // returns the number of $() and $func() patterns that were skipped.
-unsigned int expand_defined_macros (
+int expand_defined_macros (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	SkipUndefinedBody skub(macro_set, ctx);
+	classad::References dummy;
+	SkipUndefinedBody skub(macro_set, ctx, dummy);
+	return selective_expand_macro(value, skub, macro_set, ctx);
+}
+
+int expand_defined_macros (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx,
+	classad::References & skipped)
+{
+	SkipUndefinedBody skub(macro_set, ctx, skipped);
 	return selective_expand_macro(value, skub, macro_set, ctx);
 }
 

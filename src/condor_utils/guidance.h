@@ -2,6 +2,9 @@
 #define _CONDOR_GUIDANCE_H
 
 // #include <optional>
+// #include <tuple>
+// #include <string>
+// #include "classad/classad.h"
 // #include "guidance.h"
 
 enum class GuidanceResult : int {
@@ -20,6 +23,7 @@ enum class GuidanceResult : int {
 #define ATTR_EVENT_TYPE             "EventType"
 #define ATTR_RETRY_DELAY            "RetryDelay"
 #define ATTR_JOB_ENVIRONMENT_READY  "JobEnvironmentReady"
+#define ATTR_COLOR_AD               "ColorAd"
 
 #define COMMAND_RUN_DIAGNOSTIC      "RunDiagnostic"
 #define COMMAND_RETRY_TRANSFER      "RetryTransfer"
@@ -30,6 +34,7 @@ enum class GuidanceResult : int {
 #define COMMAND_STAGE_COMMON_FILES  "StageCommonFiles"
 #define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
 #define COMMAND_JOB_SETUP           "DoJobSetup"
+#define COMMAND_COLOR_SLOT          "ColorSlot"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
@@ -49,5 +54,11 @@ std::optional<std::string> makeCIFName(
     const std::string & startdAddress,
     const std::string & content
 );
+
+std::optional< std::tuple< std::string, std::string > >
+determineCIFScopeAndType( const classad::ClassAd & jobAd );
+
+std::optional< std::string >
+computeCatalogID( const classad::ClassAd & jobAd, const std::string & catalogName );
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

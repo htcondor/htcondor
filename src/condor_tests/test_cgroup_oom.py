@@ -18,7 +18,10 @@ logger.setLevel(logging.DEBUG)
 # Standup a condor with user-space cgroup v2 enabled
 @standup
 def condor(test_dir):
-    with Condor(test_dir / "condor", config={"CREATE_CGROUP_WITHOUT_ROOT": "true"}) as condor:
+    with Condor(test_dir / "condor", config={
+        "CREATE_CGROUP_WITHOUT_ROOT": "true",
+        "LOCAL_UNIVERSE_CGROUP_ENFORCEMENT": "true",
+        }) as condor:
         yield condor
 
 # Standup a condor with user-space cgroup v2 enabled and job hook
@@ -28,6 +31,13 @@ def condor_with_hook(test_dir):
                                                         "STARTER_DEFAULT_JOB_HOOK_KEYWORD": "TEST",
                                                         "TEST_HOOK_PREPARE_JOB": test_dir / "hook_starter_test_prepare.sh"}) as condor_with_hook:
         yield condor_with_hook
+
+# Standup a condor with user-space cgroup v2 enabled and SUBMIT_REQUEST_MISSING_UNITS=error
+@standup
+def condor_with_units_error(test_dir):
+    with Condor(test_dir / "condor_units_error", config={"CREATE_CGROUP_WITHOUT_ROOT": "true",
+                                                          "SUBMIT_REQUEST_MISSING_UNITS": "error"}) as condor_units:
+        yield condor_units
 
 # The actual job will allocate 200 Mb in python, but request 50Mb.
 # The 50Mb might get rounded up to 128, so be careful.
@@ -273,9 +283,104 @@ def retry_memory_job(condor, retry_memory_job_hash):
     )
     return ctj
 
+@action
+def retry_memory_no_units_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "retry_no_units_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50mb",
+            "retry_request_memory": "400",  # No units - should fail
+            "request_cpus": "1",
+            "request_disk": "200mb"
+            }
+
+@action
+def retry_memory_max_no_units_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "retry_max_no_units_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50mb",
+            "retry_request_memory_max": "500",  # No units - should fail
+            "request_cpus": "1",
+            "request_disk": "200mb"
+            }
+
+@action
+def retry_memory_with_units_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "retry_with_units_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50mb",
+            "retry_request_memory": "400mb",  # With units - should succeed
+            "request_cpus": "1",
+            "request_disk": "200mb"
+            }
+
+@action
+def retry_memory_max_with_units_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "retry_max_with_units_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50mb",
+            "retry_request_memory_max": "500mb",  # With units - should succeed
+            "request_cpus": "1",
+            "request_disk": "200mb"
+            }
+
+@action
+def local_universe_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "local",
+            "output": "local_output",
+            "error": "local_error",
+            "log": "local_oom_log",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
+
+@action
+def completed_local_test_job(condor, local_universe_job_hash):
+    clj = condor.submit(
+        {**local_universe_job_hash}, count=1
+    )
+    assert clj.wait(
+        condition=ClusterState.all_held,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_complete,
+    )
+    return clj
+
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
+    if os.environ.get("HTCONDOR_TEST_USE_SUDO") == "1":
+        # When using sudo, we should have root
+        return True
+
     with open('/proc/self/cgroup') as fd:
         proc_self_cgroup = fd.read()
 
@@ -335,3 +440,27 @@ class TestCgroupOOM:
 
     def test_cgroup_with_retry_memory(self, retry_memory_job):
         assert retry_memory_job.state.all_complete()
+
+    def test_retry_memory_without_units_fails(self, condor_with_units_error, retry_memory_no_units_job_hash):
+        # Test that submitting retry_request_memory without units fails when SUBMIT_REQUEST_MISSING_UNITS=error
+        with pytest.raises(Exception):
+            condor_with_units_error.submit({**retry_memory_no_units_job_hash}, count=1)
+
+    def test_retry_memory_max_without_units_fails(self, condor_with_units_error, retry_memory_max_no_units_job_hash):
+        # Test that submitting retry_request_memory_max without units fails when SUBMIT_REQUEST_MISSING_UNITS=error
+        with pytest.raises(Exception):
+            condor_with_units_error.submit({**retry_memory_max_no_units_job_hash}, count=1)
+
+    def test_retry_memory_with_units_succeeds(self, condor_with_units_error, retry_memory_with_units_job_hash):
+        # Test that submitting retry_request_memory with units succeeds even when SUBMIT_REQUEST_MISSING_UNITS=error
+        job = condor_with_units_error.submit({**retry_memory_with_units_job_hash}, count=1)
+        assert job.wait(
+            condition=ClusterState.all_complete,
+            timeout=120,
+            verbose=True,
+            fail_condition=ClusterState.any_held,
+        )
+
+    def test_local_universe_oom(self, completed_local_test_job):
+        # Test that a local universe job that exceeds memory is put on hold
+        assert completed_local_test_job.state.all_held()

@@ -52,6 +52,8 @@ class Create(Verb):
 
         try:
             result_ad = schedd.create_ocu(ocu_ad)
+            if result_ad["Result"] != 0:
+                raise RuntimeError(f"Failed to create ocu: {result_ad['ErrorString']}")
             ocu_id = result_ad["OCUId"]
             name = result_ad["OCUName"]
             print(f"OCU created with Id {ocu_id} and name {name}.")
@@ -62,8 +64,16 @@ class Query(Verb):
     """
     Queries the existing OCUs in the system.
     """
+    options = {
+            "raw": {
+                "args": ("--raw",),
+                "action": "store_true",
+                "default": False,
+                "help": "display raw classad",
+                },
+            }
 
-    def __init__(self, logger):
+    def __init__(self, logger, **options):
         # Get schedd
         schedd = htcondor.Schedd()
 
@@ -71,8 +81,21 @@ class Query(Verb):
             ad = classad.ClassAd()
             results = schedd.query_ocu(ad)
 
-            for ad in results:
-                print(ad)
+            if options["raw"]:
+                for ad in results:
+                    print(ad)
+            else:
+                print("OCUId  OCUName              Owner                    State CPUs  Memory Disk Activations")
+                for ad in results:
+                    ocuID = ad.get("OCUId", "unknown")
+                    ocuName = ad.get("OCUName", "unknown")
+                    owner = ad.get("Owner", "unknown")
+                    state = ad.get("OCUState", "?")
+                    cpus = ad.get("RequestCpus", 0)
+                    memory = ad.get("RequestMemory", 0)
+                    disk = ad.get("RequestDisk", 0)
+                    activations = ad.get("OCUOwnerActivations", 0)
+                    print(f"{ocuID:<6} {ocuName:<20} {owner:<24} {state:<5} {cpus:<4} {memory:<6} {disk:<4} {activations}")
 
         except Exception as e:
             raise RuntimeError(f"Error querying ocu: {str(e)}")
@@ -121,6 +144,8 @@ class Remove(Verb):
 
         try:
             remove_ad = schedd.remove_ocu(int(ocu_id))
+            if remove_ad["Result"] != 0:
+                raise RuntimeError(f"Failed to remove ocu {ocu_id}: {remove_ad['ErrorString']}")
         except Exception as e:
             logger.error(f"Error while trying to remove ocu {ocu_id}:\n{str(e)}")
             raise RuntimeError(f"Error removing ocu: {str(e)}")

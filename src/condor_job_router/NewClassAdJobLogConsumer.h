@@ -170,7 +170,7 @@ public:
 	NewClassAdJobLogConsumer(classad::ClassAdCollection & jobads);
 
 	UserRecord * GetUserAd(const std::string & username);
-	UserRecord * GetJobUser(ClassAd* jobad);
+	UserRecord * GetJobUser(const ClassAd* jobad);
 
 	void Reset();
 

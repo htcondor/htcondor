@@ -1,10 +1,8 @@
-      
 
 *condor_qedit*
 ===============
 
 modify job attributes
-:index:`condor_qedit<single: condor_qedit; HTCondor commands>`\ :index:`condor_qedit command`
 
 Synopsis
 --------
@@ -62,9 +60,17 @@ attribute is set or changed if any name or value is invalid.
 Options
 -------
 
+ **-help**
+    Display usage information and exit.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
+ **-dry-run**
+    Do not modify any job attributes; instead, report whether the
+    requested edit would be permitted. Useful for checking which
+    attributes are protected or otherwise not editable before performing
+    the actual update. Requires a *condor_schedd* that supports the
+    **-dry-run** query.
  **-n** *schedd-name*
     Modify job attributes in the queue of the specified schedd
  **-pool** *pool-name*
@@ -72,6 +78,25 @@ Options
     specified pool
  **-forward**
     Forward modifications to shadow/gridmanager
+ **-constraint** *expression*
+    Restrict the edit to jobs for which the ClassAd *expression*
+    evaluates to *true*. May be combined with **-owner** and
+    **-jobids**; only jobs that match all of the supplied restrictions
+    will be edited. If only **-constraint** is given, jobs not owned by
+    the current user are skipped unless the user is a queue
+    superuser.
+ **-owner** *owner*
+    Restrict the edit to jobs owned by *owner*. May be combined with
+    **-jobids** and **-constraint**.
+ **-jobids** *id-list*
+    Restrict the edit to the comma-separated list of job IDs in
+    *id-list*. Each ID may be a *cluster* or a *cluster.proc*. May be
+    combined with **-owner** and **-constraint**.
+ **-edits[:auto|long|xml|json|new]** *file*
+    Read the *attribute = value* edit list from *file*, in ClassAd
+    format. The optional format qualifier selects the input format; the
+    default ``auto`` detects the format from the input. If *file* is
+    ``-``, edits are read from standard input.
 
 Examples
 --------
@@ -99,6 +124,16 @@ A job's ClassAd attributes may be viewed with
 Exit Status
 -----------
 
-*condor_qedit* will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+0  -  Success
 
+1  -  Failure
+
+See Also
+--------
+
+:tool:`condor_q`, :tool:`condor_submit`, :tool:`condor_prio`, :tool:`condor_hold`, :tool:`condor_release`
+
+Availability
+------------
+
+Linux, MacOS, Windows

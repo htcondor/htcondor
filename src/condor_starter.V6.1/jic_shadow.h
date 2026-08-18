@@ -137,20 +137,22 @@ public:
 			between the failure of the transfer and the disconnection of the
 			shadow when the starter notifies it of the file transfer error.
 			This call will put the job on hold and cause the shadow to
-			disconnect from the starter if something went wrong. If 
+			disconnect from the starter if something went wrong. If
 			the file transfer went right, then it is a noop.
 		*/
 	bool transferOutputMopUp( void );
 
+	virtual void setOutputTransfer(bool b) { m_did_output_transfer = b; }
+
 		/** The last job this starter is controlling has been
-   			completely cleaned up.  We don't care, since we just wait
-			for the shadow to tell the startd to tell us to go away. 
+			completely cleaned up.  We don't care, since we just wait
+			for the shadow to tell the startd to tell us to go away.
 		*/
 	void allJobsGone( void );
 
 		/** The starter has been asked to shutdown fast.  Disable file
 			transfer, since we don't want that on fast shutdowns.
-			Also, set a flag so we know we were asked to vacate. 
+			Also, set a flag so we know we were asked to vacate.
 		 */
 	void gotShutdownFast( void );
 
@@ -266,9 +268,14 @@ public:
 
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
+	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+	virtual bool announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd );
+
+	virtual void updateStartd( ClassAd *ad, bool final_update );
+
 private:
 
-    void _remove_files_from_output();
+	void _remove_files_from_output();
 
 	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
@@ -295,11 +302,6 @@ private:
 			@return true if success, false if failure
 		*/
 	bool updateShadow( ClassAd* update_ad );
-
-		/** Send an update ClassAd to the startd.
-			@param ad Update ad
-		 */
-	void updateStartd( ClassAd *ad, bool final_update );
 
 		/** Send a command to the startd and get a classad reply
 		*/
@@ -516,6 +518,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
+	FileTransfer::UserPluginDisableMode m_ft_user_plugin_disable{FileTransfer::UserPluginDisableMode::Allow};
 	bool m_did_output_transfer;
 	bool m_output_transfer_active{false};
 

@@ -160,7 +160,10 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 		}
 
 		bool success = daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,
-			DCTokenRequester::daemonUpdateCallback, data);
+			[data](bool cb_success, Sock* sock, CondorError* errstack,
+				const std::string& trust_domain, bool should_try_token_request) {
+				DCTokenRequester::daemonUpdateCallback(cb_success, sock, errstack, trust_domain, should_try_token_request, data);
+			});
 
 		if( !nonblocking && num_collectors > 1 ) {
 			daemon->blacklistMonitorQueryFinished(success);

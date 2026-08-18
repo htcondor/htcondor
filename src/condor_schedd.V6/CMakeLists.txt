@@ -30,6 +30,7 @@ set(qmgmtElements
 set(scheddElements
 autocluster.cpp
 checkpoint_cleanup.cpp
+cxfer.cpp
 dedicated_scheduler.cpp
 grid_universe.cpp
 jobsets.cpp
@@ -39,6 +40,7 @@ qmgmt_common.cpp
 qmgmt.cpp
 qmgmt_factory.cpp
 qmgmt_receivers.cpp
+qmgmt_startup_limits.cpp
 schedd.cpp
 schedd_cron_job.cpp
 schedd_cron_job_mgr.cpp

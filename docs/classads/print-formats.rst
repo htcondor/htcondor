@@ -66,7 +66,7 @@ column headings.
 The optional ``Query Type`` qualifier have the following keywords:
 
   ``FROM AUTOCLUSTER``
-    Query the Schedd's default auotcluster set.
+    Query the Schedd's default autocluster set.
 
   ``UNIQUE``
     Query the Schedd for newly built autocluster based on the unique
@@ -451,15 +451,6 @@ attributes regardless of the data produced from the evaluated expression.
 
 ``RUNTIME``
     Render provided float value as a human readable time string ``DD+hh:mm:ss``.
-
-.. hidden::
-
-    ``⨁ STDU_GOODPUT``
-        Render a jobs 'goodput' time in seconds.
-
-    ``⨁ STDU_MPBS``
-        Render a jobs Megabytes per second of 'goodput' for the total bytes of data
-        sent and received.
 
 ``STRINGS_FROM_LIST``
     Renders a provided ClassAd list as a comma separated string list of items.

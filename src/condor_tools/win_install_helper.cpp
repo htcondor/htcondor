@@ -301,7 +301,7 @@ int __cdecl main(int argc, const char * argv[])
 	if ( ! identity.empty()) {
 		CondorError err;
 		std::string token;
-		if (!Condor_Auth_Passwd::generate_token(identity, key_id, authz, -1, token, 0, &err)) {
+		if (!Condor_Auth_Passwd::generate_token(identity, key_id, authz, -1, false, token, 0, &err)) {
 			fprintf_s(fp, "Failed to generate a token.\n");
 			fprintf_s(fp, "%s\n", err.getFullText(true).c_str());
 			if ( ! log_only) { exit(2); }

@@ -1,5 +1,13 @@
 maxjobs cat0 15
 
+# No need to run the DAG so make first job exit
+JOB root {
+	executable = x_sleep.pl
+	arguments  = 1
+}
+ABORT-DAG-ON root 0 RETURN 0
+PARENT root CHILD A0
+
 job A0 job_dagman_splice-cat.cmd
 vars A0 racer = "Eddy Merckx"
 

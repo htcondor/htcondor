@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <vector>
 
 #if defined(Darwin)
 #include <sys/sysctl.h>
@@ -472,7 +473,7 @@ sysapi_get_darwin_info(void)
 
 	int major = 0, minor = 0, patch = 0;
 	int fields = sscanf(ver_str, "%d.%d.%d", &major, &minor, &patch);
-	if (major < 10 || major > 14 || fields < 2 || (major == 10 && fields != 3)) {
+	if (major < 10 || fields < 2 || (major == 10 && fields != 3)) {
 		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
 	}
 
@@ -514,11 +515,11 @@ sysapi_get_darwin_info(void)
 const char * 
 sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release) 
 {
-    char tmp_info[strlen(tmp_opsys_short_name) + 1 + 10];
+    std::vector<char> tmp_info(strlen(tmp_opsys_short_name) + 1 + 10);
     char *info_str;
 
-    snprintf( tmp_info, sizeof(tmp_info), "%s%s", tmp_opsys_short_name, tmp_release);
-    info_str = strdup( tmp_info );
+    snprintf( tmp_info.data(), tmp_info.size(), "%s%s", tmp_opsys_short_name, tmp_release);
+    info_str = strdup( tmp_info.data() );
 
 	ASSERT(info_str);
 
@@ -801,12 +802,12 @@ sysapi_find_major_version ( const char *info_str )
 const char *
 sysapi_find_opsys_versioned( const char *tmp_opsys, int tmp_opsys_major_version )
 {
-        char tmp_opsys_versioned[strlen(tmp_opsys) + 1 + 10];
+        std::vector<char> tmp_opsys_versioned(strlen(tmp_opsys) + 1 + 10);
         char *my_opsys_versioned;
 
-        snprintf( tmp_opsys_versioned, sizeof(tmp_opsys_versioned), "%s%d", tmp_opsys, tmp_opsys_major_version);
+        snprintf( tmp_opsys_versioned.data(), tmp_opsys_versioned.size(), "%s%d", tmp_opsys, tmp_opsys_major_version);
 
-	my_opsys_versioned = strdup( tmp_opsys_versioned );
+	my_opsys_versioned = strdup( tmp_opsys_versioned.data() );
 	ASSERT(my_opsys_versioned);
 	return my_opsys_versioned;
 }

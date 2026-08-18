@@ -47,6 +47,7 @@ struct LVMReportItem {
     std::string name{}; // Volume Group or LV name
     std::string size{}; // Total size bytes of object
     std::string data{}; // VG free or LV data % used
+    std::string extent{}; // LV extent size (equals minimum disk quantum size)
     bool is_lv{false};  // Is this item an LV or Volume Group
     bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
 };
@@ -113,7 +114,12 @@ VolumeManager::VolumeManager()
             goto end_lvm_setup;
         }
 
-        m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        // Secret config option to name the volume group when auto generated
+        param(m_volume_group_name, "LVM_AUTO_VG_NAME");
+        if (m_volume_group_name.empty()) {
+            m_volume_group_name = "condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+        }
+
         if (m_use_thin_provision) { m_pool_lv_name = m_volume_group_name + "_THINPOOL"; }
 
             // Preemptively clean-up condor-owned devices.
@@ -289,6 +295,14 @@ isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
         return false;
     }
 
+    //
+    // We can't hide the mounts of a job provisioning a common file catalog.
+    //
+    bool is_transfer_shadow = false;
+    if ( jobAd.LookupBool( ATTR_IS_TRANSFER_SHADOW, is_transfer_shadow ) && is_transfer_shadow ) {
+        return false;
+    }
+
     // All good
     return true;
 }
@@ -387,7 +401,7 @@ VolumeManager::CreateFilesystem(const std::string &devname, CondorError &err, in
     args.AppendArg("-O");
     args.AppendArg("^has_journal");
     args.AppendArg("-E");
-    args.AppendArg("lazy_itable_init=0");
+    args.AppendArg("lazy_itable_init=1");
     args.AppendArg("-m");
     args.AppendArg("0");
     args.AppendArg("-L");
@@ -818,7 +832,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         std::string per_slot_device = DevicePath(vg_name, lv_name, encrypted);
         while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
             if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
-                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n",
+                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, unmounting\n",
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
@@ -879,10 +893,9 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
-    args.AppendArg("--autobackup");
-    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -908,6 +921,7 @@ VolumeManager::RemovePV(const std::string &pv_name, CondorError &err, int timeou
     args.AppendArg("pvremove");
     args.AppendArg(pv_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -977,12 +991,13 @@ static bool
 getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMReportFilter& filter, int timeout, bool query_lvs=true)
 {
     std::string exe = query_lvs ? "lvs" : "vgs";
-    std::string options = query_lvs ? "vg_name,lv_name,pool_lv,lv_tags,lv_size,data_percent" : "vg_name,vg_size,vg_free";
+    std::string options = query_lvs ? "vg_name,lv_name,pool_lv,lv_tags,lv_size,data_percent,vg_extent_size" : "vg_name,vg_size,vg_free,vg_extent_size";
 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg(exe);
     args.AppendArg("--noheadings");
+    if ( ! query_lvs) { args.AppendArg("--readonly"); }
     args.AppendArg("--nameprefixes");
     args.AppendArg("--separator");
     args.AppendArg(LVM_REPORT_DELIM);
@@ -1019,7 +1034,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
         return true;
     }
 
-    size_t expected_item_count = query_lvs ? 6 : 3;
+    size_t expected_item_count = query_lvs ? 7 : 4;
     for (const auto& line : StringTokenIterator(report.ptr(), "\n")) { // line: LM2_Option1='value'@LVM_Option2='value'@LVM2_Option3=''
         LVMReportItem item(query_lvs);
         auto info = split(line, LVM_REPORT_DELIM);
@@ -1034,7 +1049,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
                 !extractReportVal(info[1], item.name) || (!filter.lv_names.empty() && !filter.lv_names.contains(item.name)) ||
                 !extractReportVal(info[2], pool) || (filter.thinpool != item.name && pool != filter.thinpool) || (filter.ignore_thinpool && filter.thinpool == item.name) ||
                 !extractReportVal(info[3], tags) || (filter.thinpool != item.name && !reportWantLV(tags, filter.want_condor)) ||
-                !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data))
+                !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data) || !extractReportVal(info[6], item.extent))
             {
                 continue;
             }
@@ -1043,7 +1058,8 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
 
         } else {
             if (!extractReportVal(info[0], item.name) || item.name != filter.volume_group ||
-                !extractReportVal(info[1], item.size) || !extractReportVal(info[2], item.data))
+                !extractReportVal(info[1], item.size) || !extractReportVal(info[2], item.data) ||
+                !extractReportVal(info[3], item.extent))
             {
                 continue;
             }
@@ -1135,6 +1151,18 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
         }
     }
 
+    // Process and store the extent size to use for disk quantization.
+    // Note: This value can not be changed without recreating the volume group
+    // Note: Default extent size is 4MB.
+    try {
+        m_disk_quantum_kb = std::stoll(provision.extent) / 1024;
+    } catch(...) {
+        // If failure here just warn and use the default extent size
+        dprintf(D_STATUS, "Warning: Failed to convert Volume Group extent size %s: Defaulting disk quantum to 4MB\n",
+                provision.extent.c_str());
+        m_disk_quantum_kb = 4096;
+    }
+
     // NOTE: We are querying for associated non-condor LVs rather than
     //       using the used_bytes so that leaked condor LVs don't take
     //       away from the available bytes.
@@ -1147,6 +1175,10 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     filter.lv_names.clear();
     filter.QueryNonCondorLVs().SkipThinpool();
 
+    // Reset non-condor usage count so multiple calls don't
+    // create bogus numbers (does a += below)
+    m_non_condor_usage = 0;
+
     // NOTE: Failures here make things wonky but aren't critical failures
     if ( ! getLVMReport(report, err, filter, GetTimeout())) {
         dprintf(D_STATUS, "Warning: Failed to query non-condor LVs: %s\n",
@@ -1155,8 +1187,7 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     } else {
         for (const auto& lv : report) {
             try {
-                uint64_t used = std::stoll(lv.size);
-                AddNonCondorUsage(used);
+                m_non_condor_usage += std::stoll(lv.size);
             } catch (...) {
                 dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
                         lv.size.c_str(), lv.name.c_str());
@@ -1304,7 +1335,7 @@ int VolumeManager::CountLVDevices(const std::string& lv) {
 
 
 bool
-VolumeManager::IsSetup() {
+VolumeManager::IsSetup() const {
     bool lvm_setup = true;
 
     CondorError err;
@@ -1362,6 +1393,10 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
     if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
 
     ad->Assign(ATTR_LVM_BACKING_STORE, GetBackingDevice());
+
+    if (m_disk_quantum_kb > 0) {
+        ad->Assign(ATTR_STARTD_DISK_QUANTUM, (long long)m_disk_quantum_kb);
+    }
 }
 
 

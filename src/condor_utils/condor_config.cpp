@@ -34,7 +34,6 @@
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
 
-      1) ~/.condor/     # if not started as root
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/
@@ -120,6 +119,7 @@ static MACRO_SET ConfigMacroSet = {
 	0, 0,
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults, NULL };
+static int ConfigMacroSetAllowExcept = 0; // MACRO_EVAL_CONTEXT::um_ALLOW_EXCEPT;
 const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
 //const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
 const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
@@ -337,7 +337,7 @@ bool _allocation_pool::contains(const char * pb)
 
 		// if this address is within the allocation of this hunk, then
 		// the pool contains this pointer.
-		if (pb >= ph->pb && (int)(pb - ph->pb) < ph->ixFree)
+		if (pb >= ph->pb && pb < ph->pb + ph->ixFree)
 			return true;
 	}
 	return false;
@@ -404,7 +404,7 @@ std::string user_config_source; // which of the files in local_config_sources is
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
 {
-	ctx.init(get_mySubSystem()->getName(), 2);
+	ctx.init(get_mySubSystem()->getName(), MACRO_EVAL_CONTEXT::um_COUNT_REFS);
 	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
 	ctx.localname = get_mySubSystem()->getLocalName();
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
@@ -636,21 +636,10 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-bool validate_config(bool abort_if_invalid, int opt)
+bool validate_config(bool abort_if_invalid)
 {
-	bool deprecation_check = (opt & CONFIG_OPT_DEPRECATION_WARNINGS);
 	unsigned int invalid_entries = 0;
-	unsigned int deprecated_entries = 0;
 	std::string invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
-	std::string deprecated_out;
-	Regex re;
-	if (deprecation_check) {
-		int errcode, erroffset;
-		// check for knobs of the form SUBSYS.LOCALNAME.*
-		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
-			EXCEPT("Programmer error in condor_config: invalid regexp");
-		}
-	}
 
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	while( ! hash_iter_done(it) ) {
@@ -667,17 +656,6 @@ bool validate_config(bool abort_if_invalid, int opt)
 			invalid_out += "\n";
 			invalid_entries++;
 		}
-		if (deprecation_check && re.match(name)) {
-			deprecated_out += "   ";
-			deprecated_out += name;
-			MACRO_META * pmet = hash_iter_meta(it);
-			if (pmet) {
-				deprecated_out += " at ";
-				param_append_location(pmet, deprecated_out);
-			}
-			deprecated_out += "\n";
-			deprecated_entries++;
-		}
 		hash_iter_next(it);
 	}
 	hash_iter_delete(&it);
@@ -688,12 +666,6 @@ bool validate_config(bool abort_if_invalid, int opt)
 			dprintf(D_ALWAYS, "%s", invalid_out.c_str());
 			return false;
 		}
-	}
-	if (deprecated_entries > 0) {
-		dprintf(D_ALWAYS,
-			"WARNING: Some configuration variables appear to be an unsupported form of SUBSYS.LOCALNAME.* override\n"
-			"       The supported form is just LOCALNAME.* Variables are:\n%s",
-			deprecated_out.c_str());
 	}
 	return true;
 }
@@ -784,8 +756,7 @@ bool config_ex(int config_options)
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	bool result = real_config(NULL, wantsQuiet, config_options, NULL);
 	if (!result) { return result; }
-	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
-	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
+	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT));
 }
 
 
@@ -808,8 +779,12 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	#endif
 
 	static bool first_time = true;
-	if( first_time ) {
+	if( first_time || ! ConfigMacroSet.defaults) {
 		first_time = false;
+		if (config_options & CONFIG_OPT_WANT_EXCEPT) {
+			// default the MACRO_EVAL_CONTEXT::use_mask for the global config to enable exceptions
+			ConfigMacroSetAllowExcept = MACRO_EVAL_CONTEXT::um_ALLOW_EXCEPT;
+		}
 		init_global_config_table(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
@@ -1022,8 +997,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 	CondorError errorStack;
 	if(! validate_network_interfaces( & errorStack )) {
-		const char * subsysName = get_mySubSystem()->getName();
-		if( 0 == strcmp( subsysName, "TOOL" ) ) {
+		if ((config_options & CONFIG_OPT_NO_EXIT) || ! get_mySubSystem()->isDaemon()) {
 			fprintf( stderr, "%s\n", errorStack.getFullText().c_str() );
 		} else {
 			EXCEPT( "%s", errorStack.getFullText().c_str() );
@@ -1361,6 +1335,10 @@ get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files )
 	return true;
 }
 
+void enable_config_tracing(macro_meta_tracer * tracer) {
+	ConfigMacroSet.tracer = tracer;
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( const char* dirlist, const char* host )
@@ -1681,14 +1659,22 @@ char * get_winreg_string_value(const char * key, const char * valuename)
 }
 #endif
 
-char * find_python3_dot(int minor_ver) {
+char * find_python3_dot([[maybe_unused]] int minor_ver) {
 #ifdef WIN32
 	std::string regKey;
 	formatstr(regKey, "Software\\Python\\PythonCore\\3.%d\\InstallPath", minor_ver);
-	return get_winreg_string_value(regKey.c_str(), "ExecutablePath");
+	char * pythonpath = get_winreg_string_value(regKey.c_str(), "ExecutablePath");
+	if (pythonpath && strchr(pythonpath, ' ')) { // if there are embedded spaces, convert to short path
+		DWORD cb = GetShortPathNameA(pythonpath, NULL, 0);
+		if (cb > 0) {
+			auto_free_ptr longpath(pythonpath);
+			pythonpath = (char*)malloc(++cb);
+			GetShortPathNameA(longpath.ptr(), pythonpath, cb);
+		}
+	}
+	return pythonpath;
 #else
 	// TODO: add non-windows implementation
-	(void)minor_ver; // Shut the compiler up
 	return nullptr;
 #endif
 }
@@ -1942,63 +1928,11 @@ const char * set_live_param_value(const char * name, const char * live_value)
 	return old_value;
 }
 
-
-void
-init_global_config_table(int config_options)
-{
-	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
-	ConfigMacroSet.size = 0;
-	ConfigMacroSet.sorted = 0;
-	ConfigMacroSet.options = (config_options & ~CONFIG_OPT_WANT_META);
-#ifdef PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
-	ConfigMacroSet.options |= CONFIG_OPT_SMART_COM_IN_CONT;
-#endif
-#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
-#else
-	ConfigMacroSet.options |= CONFIG_OPT_KEEP_DEFAULTS;
-#endif
-	if (ConfigMacroSet.table) delete [] ConfigMacroSet.table;
-	ConfigMacroSet.table = new MACRO_ITEM[512];
-	if (ConfigMacroSet.table) {
-		ConfigMacroSet.allocation_size = 512;
-		clear_global_config_table(); // to zero-init the table.
-	}
-	if (ConfigMacroSet.defaults) {
-		// Initialize the default table.
-		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
-		ConfigMacroSet.defaults->metat = NULL;
-		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
-		ConfigMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
-	}
-	if (want_meta) {
-		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
-		ConfigMacroSet.metat = new MACRO_META[ConfigMacroSet.allocation_size];
-		ConfigMacroSet.options |= CONFIG_OPT_WANT_META;
-		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
-			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
-			memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
-		}
-	}
-
-	return;
+void init_global_config_table(int config_options) {
+	init_config_table(ConfigMacroSet, config_options | CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO);
 }
-
-void
-clear_global_config_table()
-{
-	if (ConfigMacroSet.table) {
-		memset((void*)ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
-	}
-	if (ConfigMacroSet.metat) {
-		memset((void*)ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
-	}
-	ConfigMacroSet.size = 0;
-	ConfigMacroSet.sorted = 0;
-	ConfigMacroSet.apool.clear();
-	ConfigMacroSet.sources.clear();
-	if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->metat) {
-		memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
-	}
+void clear_global_config_table() { 
+	clear_config_table(ConfigMacroSet);
 
 	/* don't want to do this here because of reconfig.
 	ConfigMacroSet.allocation_size = 0;
@@ -2007,7 +1941,94 @@ clear_global_config_table()
 	*/
 	global_config_source       = "";
 	local_config_sources.clear();
+}
+void swap_global_config(MACRO_SET & mset, std::string & global_source, std::vector<std::string> & local_sources) {
+	std::swap(global_config_source, global_source);
+	std::swap(local_config_sources, local_sources);
+	swap_config_tables(ConfigMacroSet, mset);
+}
+
+void
+init_config_table(MACRO_SET & mset, int config_options)
+{
+	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
+	mset.size = 0;
+	mset.sorted = 0;
+	mset.options = (config_options & ~CONFIG_OPT_WANT_META);
+#ifdef PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
+	mset.options |= CONFIG_OPT_SMART_COM_IN_CONT;
+#endif
+#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
+#else
+	mset.options |= CONFIG_OPT_KEEP_DEFAULTS;
+#endif
+	if (mset.table) delete [] mset.table;
+	mset.table = new MACRO_ITEM[512];
+	if (mset.table) {
+		mset.allocation_size = 512;
+		clear_config_table(mset); // to zero-init the table.
+	}
+	if (config_options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) {
+		mset.defaults = &ConfigMacroDefaults;
+	}
+	if (mset.defaults) {
+		// Initialize the default table.
+		if (mset.defaults->metat) delete [] mset.defaults->metat;
+		mset.defaults->metat = NULL;
+		mset.defaults->size = param_info_init((const void**)&mset.defaults->table);
+		mset.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
+	}
+	if (want_meta) {
+		if (mset.metat) delete [] mset.metat;
+		mset.metat = new MACRO_META[mset.allocation_size];
+		mset.options |= CONFIG_OPT_WANT_META;
+		if (mset.defaults && mset.defaults->size) {
+			mset.defaults->metat = new MACRO_DEFAULTS::META[mset.defaults->size];
+			memset((void*)mset.defaults->metat, 0, sizeof(mset.defaults->metat[0]) * mset.defaults->size);
+		}
+	}
+
 	return;
+}
+
+void
+clear_config_table(MACRO_SET & mset)
+{
+	if (mset.table) {
+		memset((void*)mset.table, 0, sizeof(mset.table[0]) * mset.allocation_size);
+	}
+	if (mset.metat) {
+		memset((void*)mset.metat, 0, sizeof(mset.metat[0]) * mset.allocation_size);
+	}
+	mset.size = 0;
+	mset.sorted = 0;
+	mset.apool.clear();
+	mset.sources.clear();
+	if (mset.defaults && mset.defaults->metat) {
+		memset((void*)mset.defaults->metat, 0, sizeof(mset.defaults->metat[0]) * mset.defaults->size);
+	}
+
+	return;
+}
+
+template<class T> void myswap(T & a, T & b) { T c = a; a = b; b = c; }
+void swap_config_tables(MACRO_SET & msetA, MACRO_SET & msetB)
+{
+#define SWAP(tag) std::swap(msetA.tag, msetB.tag)
+//#define SWAP(tag) myswap(msetA.tag, msetB.tag)
+	SWAP(size);
+	SWAP(allocation_size);
+	SWAP(options);
+	SWAP(sorted);
+	SWAP(table);
+	SWAP(metat);
+	SWAP(apool.nHunk);
+	SWAP(apool.cMaxHunks);
+	SWAP(apool.phunks);
+	std::swap(msetA.sources, msetB.sources);
+	SWAP(defaults);
+	SWAP(errors);
+#undef SWAP
 }
 
 MACRO_SET * param_get_macro_set()
@@ -2015,10 +2036,17 @@ MACRO_SET * param_get_macro_set()
 	return &ConfigMacroSet;
 }
 
+void init_param_context(MACRO_EVAL_CONTEXT & ctx)
+{
+	init_macro_eval_context(ctx);
+	ctx.use_mask |= ConfigMacroSetAllowExcept;
+}
+
 bool param_defined_by_config(const char *name)
 {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
+	ctx.use_mask |= ConfigMacroSetAllowExcept;
 	ctx.without_default = true;
 
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
@@ -2029,6 +2057,7 @@ const char * param_unexpanded(const char *name)
 {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
+	ctx.use_mask |= ConfigMacroSetAllowExcept;
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
 	if (pval && ! pval[0]) return NULL;
 	return pval;
@@ -2043,10 +2072,11 @@ bool param_defined(const char* name) {
 	return false;
 }
 
-unsigned int expand_defined_config_macros (std::string &value)
+int expand_defined_config_macros (std::string &value)
 {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
+	ctx.use_mask |= ConfigMacroSetAllowExcept;
 	return expand_defined_macros(value, ConfigMacroSet, ctx);
 }
 
@@ -2054,13 +2084,13 @@ unsigned int expand_defined_config_macros (std::string &value)
 char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
-	ctx.use_mask = 3;
+	ctx.use_mask = MACRO_EVAL_CONTEXT::um_COUNT_USES_AND_REFS | ConfigMacroSetAllowExcept;
 	return param_ctx(name, ctx);
 }
 
 char *param_with_context(const char *name, const char *subsys, const char *localname, const char * cwd ) {
 	MACRO_EVAL_CONTEXT ctx;
-	ctx.init(subsys, 3);
+	ctx.init(subsys, MACRO_EVAL_CONTEXT::um_COUNT_USES_AND_REFS | ConfigMacroSetAllowExcept);
 	ctx.localname = localname;
 	ctx.cwd = cwd;
 	return param_ctx(name, ctx);
@@ -2193,10 +2223,9 @@ param_integer( const char *name, int &value,
 	
 	int result;
 	long long long_result;
-	char *string = NULL;
 
 	ASSERT( name );
-	string = param( name );
+	auto_free_ptr string(param(name));
 	if( ! string ) {
 		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %d\n",
 				 name, default_value );
@@ -2207,47 +2236,52 @@ param_integer( const char *name, int &value,
 	}
 
 	int err_reason = 0;
+	const char * err_fmt = nullptr;
 	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
 	if ( ! valid) {
 		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
-			EXCEPT("Invalid expression for %s (%s) "
+			err_fmt = "Invalid expression for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %d).";
 		}
 
 		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
-			EXCEPT("Invalid result (not an integer) for %s (%s) "
+			err_fmt = "Invalid result (not an integer) for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %d).";
 		}
 		long_result = default_value;
 	}
 	result = long_result;
 
-	if( (int)result != long_result ) {
-		EXCEPT( "%s in the condor configuration is out of bounds for"
+	if( (int)long_result != long_result ) {
+		err_fmt = "%s in the condor configuration is out of bounds for"
 				" an integer (%s)."
 				"  Please set it to an integer in the range %d to %d"
-				" (default %d).",
-				name, string, min_value, max_value, default_value );
+				" (default %d).";
+		if (long_result > INT_MAX) { result = INT_MAX; }
+		else if (long_result < INT_MIN) { result = INT_MIN; }
 	}
 	else if ( check_ranges  &&  ( result < min_value )  ) {
-		EXCEPT( "%s in the condor configuration is too low (%s)."
+		err_fmt = "%s in the condor configuration is too low (%s)."
 				"  Please set it to an integer in the range %d to %d"
-				" (default %d).",
-				name, string, min_value, max_value, default_value );
+				" (default %d).";
+		result = min_value;
 	}
 	else if ( check_ranges  && ( result > max_value )  ) {
-		EXCEPT( "%s in the condor configuration is too high (%s)."
+		err_fmt = "%s in the condor configuration is too high (%s)."
 				"  Please set it to an integer in the range %d to %d"
-				" (default %d).",
-				name, string, min_value, max_value, default_value );
+				" (default %d).";
+		result = max_value;
 	}
-	free( string );
+
+	if (err_fmt) {
+		MACRO_EVAL_CONTEXT ctx;
+		init_param_context(ctx);
+		ctx.might_EXCEPT(ConfigMacroSet, "condor_config.cpp",__LINE__,err_fmt,name, string.ptr(), min_value, max_value, default_value);
+	}
 
 	value = result;
 	return true;
@@ -2282,10 +2316,9 @@ param_longlong( const char *name, long long int &value,
 	}
 	
 	long long long_result;
-	char *string = NULL;
 
 	ASSERT( name );
-	string = param( name );
+	auto_free_ptr string(param(name));
 	if( ! string ) {
 		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %lld\n",
 				 name, default_value );
@@ -2296,39 +2329,43 @@ param_longlong( const char *name, long long int &value,
 	}
 
 	int err_reason = 0;
+	const char * err_fmt = nullptr;
 	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
 	if ( ! valid) {
 		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
-			EXCEPT("Invalid expression for %s (%s) "
+			err_fmt = "Invalid expression for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "an integer expression in the range %lld to %lld "
-				   "(default %lld).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %lld).";
 		}
 
 		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
-			EXCEPT("Invalid result (not an integer) for %s (%s) "
+			err_fmt = "Invalid result (not an integer) for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "an integer expression in the range %lld to %lld "
-				   "(default %lld).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %lld).";
 		}
 		long_result = default_value;
 	}
 
 	if ( check_ranges  &&  ( long_result < min_value )  ) {
-		EXCEPT( "%s in the condor configuration is too low (%s)."
+		err_fmt = "%s in the condor configuration is too low (%s)."
 				"  Please set it to an integer in the range %lld to %lld"
-				" (default %lld).",
-				name, string, min_value, max_value, default_value );
+				" (default %lld).";
+		long_result = min_value;
 	}
 	else if ( check_ranges  && ( long_result > max_value )  ) {
-		EXCEPT( "%s in the condor configuration is too high (%s)."
+		err_fmt = "%s in the condor configuration is too high (%s)."
 				"  Please set it to an integer in the range %lld to %lld"
-				" (default %lld).",
-				name, string, min_value, max_value, default_value );
+				" (default %lld).";
+		long_result = max_value;
 	}
-	free( string );
+
+	if (err_fmt) {
+		MACRO_EVAL_CONTEXT ctx;
+		init_param_context(ctx);
+		ctx.might_EXCEPT(ConfigMacroSet, "condor_config.cpp",__LINE__,err_fmt,name, string.ptr(), min_value, max_value, default_value);
+	}
 
 	value = long_result;
 	return true;
@@ -2353,17 +2390,15 @@ param_integer( const char *name, int default_value,
 	return result;
 }
 
-// require that the attribute I'm looking for is defined in the config file.
-char* param_or_except(const char *attr)
+long long
+param_longlong( const char *name, long long default_value,
+			    long long min_value, long long max_value, bool use_param_table )
 {
-	char *tmp = NULL;
+	long long result;
 
-	tmp = param(attr);
-	if (tmp == NULL || strlen(tmp) <= 0) {
-		EXCEPT("Please define config file entry to non-null value: %s", attr);
-	}
-
-	return tmp;
+	param_longlong( name, result, true, default_value,
+				   true, min_value, max_value, NULL, NULL, use_param_table );
+	return result;
 }
 
 /*
@@ -2443,10 +2478,9 @@ param_double( const char *name, double default_value,
 	}
 	
 	double result;
-	char *string;
 
 	ASSERT( name );
-	string = param( name );
+	auto_free_ptr string(param(name));
 	
 	if( ! string ) {
 		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %f\n",
@@ -2455,39 +2489,44 @@ param_double( const char *name, double default_value,
 	}
 
 	int err_reason = 0;
+	const char * err_fmt = nullptr;
 	bool valid = string_is_double_param(string, result, me, target, name, &err_reason);
 	if( !valid ) {
 		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
-			EXCEPT("Invalid expression for %s (%s) "
+			err_fmt = "Invalid expression for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %lg).";
 		}
 
 		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
-			EXCEPT("Invalid result (not a number) for %s (%s) "
+			err_fmt = "Invalid result (not a number) for %s (%s) "
 				   "in condor configuration.  Please set it to "
 				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
+				   "(default %lg).";
 		}
 		result = default_value;
 	}
 
 	if( result < min_value ) {
-		EXCEPT( "%s in the condor configuration is too low (%s)."
+		err_fmt = "%s in the condor configuration is too low (%s)."
 				"  Please set it to a number in the range %lg to %lg"
-				" (default %lg).",
-				name, string, min_value, max_value, default_value );
+				" (default %lg).";
+		result = min_value;
 	}
 	else if( result > max_value ) {
-		EXCEPT( "%s in the condor configuration is too high (%s)."
+		err_fmt = "%s in the condor configuration is too high (%s)."
 				"  Please set it to a number in the range %lg to %lg"
-				" (default %lg).",
-				name, string, min_value, max_value, default_value );
+				" (default %lg).";
+		result = max_value;
 	}
-	free( string );
+
+	if (err_fmt) {
+		MACRO_EVAL_CONTEXT ctx;
+		init_param_context(ctx);
+		ctx.might_EXCEPT(ConfigMacroSet, "condor_config.cpp",__LINE__,err_fmt,name,string.ptr(),min_value,max_value,default_value);
+	}
+
 	return result;
 }
 
@@ -2599,11 +2638,10 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	}
 
 	bool result = default_value;
-	char *string;
 	bool valid = true;
 
 	ASSERT( name );
-	string = param( name );
+	auto_free_ptr string(param(name));
 	
 	if (!string) {
 		if (do_log) {
@@ -2616,13 +2654,14 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	valid = string_is_boolean_param(string, result, me, target, name);
 
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
+		MACRO_EVAL_CONTEXT ctx;
+		init_param_context(ctx);
+		ctx.might_EXCEPT(ConfigMacroSet, "condor_config.cpp",__LINE__,
+			"%s in the condor configuration  is not a valid boolean (\"%s\")."
 				"  Please set it to True or False (default is %s)",
-				name, string, default_value ? "True" : "False" );
+				name, string.ptr(), default_value ? "True" : "False" );
 	}
 
-	free( string );
-	
 	return result;
 }
 

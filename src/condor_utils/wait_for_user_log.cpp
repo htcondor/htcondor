@@ -90,5 +90,5 @@ WaitForUserLog::getOffset() const {
 
 void
 WaitForUserLog::setOffset( size_t offset ) {
-    reader.setOffset(offset);
+    (void)reader.setOffset(offset);
 }

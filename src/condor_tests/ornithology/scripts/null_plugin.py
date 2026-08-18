@@ -127,7 +127,7 @@ class DevNullPlugin:
         # Get transfer statistics
         transfer_stats = {
             'TransferSuccess': True,
-            'TransferProtocol': 'xferstats',
+            'TransferProtocol': 'null',
             'TransferType': 'upload',
             'TransferFileName': local_file_path,
             'TransferFileBytes': stats[1],
@@ -159,7 +159,7 @@ class DevNullPlugin:
         # Get transfer statistics
         transfer_stats = {
             'TransferSuccess': True,
-            'TransferProtocol': 'xferstats',
+            'TransferProtocol': 'null',
             'TransferType': 'upload',
             'TransferFileName': local_file_path,
             'TransferFileBytes': stats[1],

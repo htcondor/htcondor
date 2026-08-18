@@ -48,20 +48,22 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         #dprint ("${_CNDR_TARGET} install destination (${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC})")
     endif()
     
-    # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
-    if ( WINDOWS )   
-        set( ${_CNDR_TARGET}_pdb ${_COPY_PDBS} )
-
-        if ( ${_CNDR_TARGET}_pdb )
-            INSTALL(CODE "FILE(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" TYPE EXECUTABLE FILES \"${CMAKE_CURRENT_BINARY_DIR}/\${CMAKE_INSTALL_CONFIG_NAME}/${_CNDR_TARGET}.pdb\")")
+    # Install the .pdb alongside the exe. The TARGET_PDB_FILE generator
+    # expression resolves the config-specific path and pdb name, and OPTIONAL
+    # keeps install from failing when a configuration produces no pdb.
+    if ( WINDOWS )
+        if ( _COPY_PDBS )
+            install(FILES $<TARGET_PDB_FILE:${_CNDR_TARGET}>
+                    DESTINATION ${_INSTALL_LOC}
+                    OPTIONAL)
         endif ()
-        
+
         set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "executables" )
 
         #add updated manifest only for VS2012 and above
         if(NOT (MSVC_VERSION LESS 1700))
             add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD 
-                COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
+                COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${_CNDR_TARGET}.exe)
         endif(NOT (MSVC_VERSION LESS 1700))
 
     endif( WINDOWS )

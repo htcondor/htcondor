@@ -24,6 +24,14 @@
 // jobWaitUntilExecuteTime()) called to implement "carry on" with ones that
 // make it easy to check the result of the test cases.
 //
+// Update: jobWaitUntilExecuteTime() is now called as a result of calling
+// runPrepareJobHook(), so that the latter doesn't happen until after
+// common file transfer.  In the real starter, the invocation is indirect,
+// via prepareJobHookDone(), because control flow passes through the event
+// loop if we _do_ spawn a PREPARE_JOB hook.  This makes the mockery more
+// complicated.  We could simplify it a bit (by setting `jwuet_called` in
+// runPrepareJobHook()), but orthogonality is probably good here.
+//
 
 class MockJIC;
 using mock_genericRequestGuidance_type = std::function<bool(
@@ -31,13 +39,15 @@ using mock_genericRequestGuidance_type = std::function<bool(
 )>;
 
 
+class MockStarter;
 class MockJIC : public JobInfoCommunicator {
     private:
         mock_genericRequestGuidance_type the_test_case;
+        MockStarter * the_starter {nullptr};
 
     public:
 
-        MockJIC( mock_genericRequestGuidance_type m_grg ) : the_test_case(m_grg) { }
+        MockJIC( mock_genericRequestGuidance_type m_grg, MockStarter * s ) : the_test_case(m_grg), the_starter(s) { }
         virtual ~MockJIC() = default;
 
         virtual bool genericRequestGuidance(
@@ -51,6 +61,7 @@ class MockJIC : public JobInfoCommunicator {
 
         bool got_diagnostic_event = false;
 
+        virtual void runPrepareJobHook();
 
         // Additional mocks.
         virtual int JobCluster() const { return 1; }
@@ -82,7 +93,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual bool registerStarterInfo( void ) { EXCEPT("MOCK"); return false; }
         virtual bool initUserPriv( void ) { EXCEPT("MOCK"); return false; }
         virtual bool publishUpdateAd( ClassAd* ) { EXCEPT("MOCK"); return false; }
-
+        virtual void updateStartd( ClassAd *, bool ) { EXCEPT("MOCK");}
 };
 
 
@@ -127,12 +138,16 @@ class MockStarter : public Starter {
     public:
 
         MockStarter( mock_genericRequestGuidance_type m_grg );
-        virtual ~MockStarter() = default;
+        virtual ~MockStarter() {
+            delete jic;
+        }
 
         // The "carry on" action if the job environment is ready.
         virtual bool jobWaitUntilExecuteTime();
 
-        // The "carry on" action if the job environmet is unready.
+        virtual void prepareJobHookDone();
+
+        // The "carry on" action if the job environment is unready.
         virtual bool skipJobImmediately();
 
         bool jwuet_called = false;
@@ -141,7 +156,7 @@ class MockStarter : public Starter {
 
 
 MockStarter::MockStarter( mock_genericRequestGuidance_type m_grg ) {
-    jic = new MockJIC(m_grg);
+    jic = new MockJIC(m_grg, this);
 }
 
 
@@ -153,12 +168,26 @@ MockStarter::jobWaitUntilExecuteTime() {
 }
 
 
+// This is now called before jobWaitUntilExecuteTime().
+void MockJIC::runPrepareJobHook() {
+    dprintf( D_ALWAYS, "MockJIC::runPrepareJobHook()\n" );
+    the_starter->prepareJobHookDone();
+    return;
+}
+
+
 bool
 MockStarter::skipJobImmediately() {
     dprintf( D_ALWAYS, "MockStarter::skipJobImmediately()\n" );
     sji_called = true;
     return true;
 };
+
+
+void
+MockStarter::prepareJobHookDone() {
+    jobWaitUntilExecuteTime();
+}
 
 
 //
@@ -258,14 +287,14 @@ test_main( int /* argv */, char ** /* argv */ ) {
 
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentReady( & ms );
         ASSERT( ms.jwuet_called && ! ms.sji_called );
     }
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( const auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentUnready( & ms );
         ASSERT( ms.sji_called && ! ms.jwuet_called );
@@ -353,7 +382,7 @@ bool Starter::skipJobImmediately() { EXCEPT("MOCK"); return false; }
 bool Starter::removeDeferredJobs() { EXCEPT("MOCK"); return false; }
 int Starter::jobEnvironmentReady() { EXCEPT("MOCK"); return -1; }
 int Starter::jobEnvironmentCannotReady(int i, UnreadyReason const&) { EXCEPT("MOCK"); return i; }
-void Starter::SpawnPreScript(int) { EXCEPT("MOCK"); }
+void Starter::SpawnJobOrPreScript(int) { EXCEPT("MOCK"); }
 void Starter::SkipJobs(int) { EXCEPT("MOCK"); }
 bool Starter::allJobsDone() { EXCEPT("MOCK"); return false; }
 int Starter::Reaper(int, int) { EXCEPT("MOCK"); }
@@ -361,6 +390,8 @@ bool Starter::transferOutput() { EXCEPT("MOCK"); return false; }
 bool Starter::cleanupJobs() { EXCEPT("MOCK"); return false; }
 void Starter::RecordJobExitStatus(int) { EXCEPT("MOCK"); }
 bool Starter::removeTempExecuteDir(int&,const char*) { EXCEPT("MOCK"); return false; }
+DiskUsage Starter::GetDiskUsage(bool) const { EXCEPT("MOCK"); return {0,0}; }
+
 
 #if       defined(LINUX)
 VolumeManager::Handle::~Handle() { }
@@ -397,3 +428,4 @@ bool JobInfoCommunicator::updateX509Proxy(int, ReliSock*) { EXCEPT("MOCK"); retu
 bool JobInfoCommunicator::initJobInfo() { EXCEPT("MOCK"); return false; }
 void JobInfoCommunicator::checkForStarterDebugging() { EXCEPT("MOCK"); }
 void JobInfoCommunicator::writeExecutionVisa(classad::ClassAd&) { EXCEPT("MOCK"); }
+void JobInfoCommunicator::runPrepareJobHook() { EXCEPT("MOCK"); }

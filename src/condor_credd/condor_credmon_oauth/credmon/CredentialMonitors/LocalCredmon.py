@@ -60,6 +60,7 @@ class LocalCredmon(OAuthCredmon):
         self.token_use_json = True
         self.token_aud = ""
         self.token_ver = "scitoken:2.0"
+        self.allow_special_chars = False
         if htcondor != None:
             self._private_key_location = self.get_credmon_config("PRIVATE_KEY", "/etc/condor/scitokens-private.pem")
             if self._private_key_location != None and os.path.exists(self._private_key_location):
@@ -79,6 +80,7 @@ class LocalCredmon(OAuthCredmon):
             self.token_use_json = self.get_credmon_config("TOKEN_USE_JSON", self.token_use_json)
             self.token_aud = self.get_credmon_config("TOKEN_AUDIENCE", self.token_aud)
             self.token_ver = self.get_credmon_config("TOKEN_VERSION", self.token_ver)
+            self.allow_special_chars = htcondor.param.get("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", False) is True
         else:
             self._private_key_location = None
         if not self.token_issuer and htcondor:
@@ -104,27 +106,6 @@ class LocalCredmon(OAuthCredmon):
         (where `LOCAL` is substituted with the current class's `credmon_name` attribute)
         """
         return htcondor.param.get(f"{self.credmon_name}_CREDMON_{self.provider}_{config}", htcondor.param.get(f"{self.credmon_name}_CREDMON_{config}", default))
-
-
-    def should_renew(self, username, token_name):
-        if not super().should_renew(username, token_name):
-            return False
-
-        # Refuse to provide a token to users outside a specific group (if configured)
-        if self.authz_group_requirement:
-            if not self.authz_group_mapfile:
-                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
-                return False
-            try:
-                groups = get_user_groups(username, self.authz_group_mapfile)
-            except IOError:
-                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
-                return False
-            if self.authz_group_requirement not in groups:
-                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
-                return False
-
-        return True
 
 
     def generate_access_token_info(self, username: str, token_name: str) -> TokenInfo:
@@ -171,19 +152,21 @@ class LocalCredmon(OAuthCredmon):
         """
         Write a serialized access token to the credential directory.
         """
+        if isinstance(serialized_token, bytes):
+            serialized_token = serialized_token.decode()
         (tmp_fd, tmp_access_token_path) = tempfile.mkstemp(dir = self.cred_dir)
         with os.fdopen(tmp_fd, 'w') as f:
             if self.token_use_json:
                 # use JSON if configured to do so, i.e. when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = True (default)
                 f.write(json.dumps({
-                    "access_token": serialized_token.decode(),
+                    "access_token": serialized_token,
                     "expires_in":   int(token_lifetime),
                 }))
             else:
                 # otherwise write a bare token string when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = False
-                f.write(serialized_token.decode()+'\n')
+                f.write(serialized_token+'\n')
 
         access_token_path = os.path.join(self.cred_dir, username, token_name + '.use')
 
@@ -202,6 +185,21 @@ class LocalCredmon(OAuthCredmon):
         """
         Create a SciToken at the specified path.
         """
+
+        # Refuse to provide a token to users outside a specific group (if configured)
+        if self.authz_group_requirement:
+            if not self.authz_group_mapfile:
+                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
+                return False
+            try:
+                groups = get_user_groups(username, self.authz_group_mapfile)
+            except IOError:
+                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
+                return False
+            if self.authz_group_requirement not in groups:
+                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
+                self.log.error(f"Writing an empty {self.provider} token for {username}")
+                return self.write_access_token(username, token_name, self.token_lifetime, "")
 
         info = self.generate_access_token_info(username, token_name)
 
@@ -232,20 +230,20 @@ class LocalCredmon(OAuthCredmon):
 
     def process_cred_file(self, cred_fname):
         """
-        Split out the file path to get username and base.
+        Split out the file path to get username and token_name.
         Pass that data to the SciToken acquiring function.
 
         Format of cred_path should be:
-        <cred_dir> / <username> / <provider>.top
+        <cred_dir> / <username> / <provider>[_<handle>].top
         """
-        # Take the cred_dir out of the cred_path
-        base, _ = os.path.split(cred_fname)
+        base, fname = os.path.split(cred_fname)
         username = os.path.basename(base)
+        token_name = os.path.splitext(fname)[0]
 
-        if self.should_renew(username, self.provider):
+        if self.should_renew(username, token_name):
             self.log.info('Found %s, acquiring SciToken and .use file', cred_fname)
             try:
-                success = self.refresh_access_token(username, self.provider)
+                success = self.refresh_access_token(username, token_name)
             except Exception as exc:
                 success = False
                 self.log.exception(f"Exception occurred when refreshing access token: {exc}")
@@ -258,19 +256,22 @@ class LocalCredmon(OAuthCredmon):
         """
         Scan the credential directory for new credential requests.
 
-        The LocalCredmon will look for files of the form `<username>/<provider>.top`
-        and create the corresponding access token files, then invoke the parent OAuthCredmon
-        method.
+        The LocalCredmon will look for files of the form `<username>/<provider>[_<handle>].top`
+        and create the corresponding access token files.
         """
 
-        provider_glob = glob.glob(os.path.join(self.cred_dir, "*", f"{self.provider}.top"))
-        self.log.debug(f"Found {len(provider_glob)} {self.provider} tokens to process")
+        provider_files = glob.glob(os.path.join(self.cred_dir, "*", f"{self.provider}.top"))
+        if not self.allow_special_chars:  # then we can pick up tokens with handles, too
+            provider_files += glob.glob(os.path.join(self.cred_dir, "*", f"{self.provider}_*.top"))
+        self.log.debug(f"Found {len(provider_files)} {self.provider} tokens to process")
 
-        for file_name in provider_glob:
+        for file_name in provider_files:
+            token_name = os.path.splitext(os.path.basename(file_name))[0]
+            if token_name.endswith("_"):
+                self.log.warning(f"Skipping credential file with trailing underscore: {file_name}")
+                continue
             self.log.debug(f"Processing {file_name}")
             self.process_cred_file(file_name)
-
-        super(LocalCredmon, self).scan_tokens
 
 
 def get_user_groups(username, mapfile):

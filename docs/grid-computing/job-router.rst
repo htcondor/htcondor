@@ -198,8 +198,7 @@ An Example Configuration
 The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
 specific to the Job Router are in the 
-:ref:`admin-manual/configuration-macros:condor_job_router configuration file
-entries` section. One route a local SLURM cluster.
+:ref:`job_router_config_options` section. One route a local SLURM cluster.
 A second route is cluster accessed via ARC CE. The third
 site is an HTCondor site accessed by HTCondor-C. The *condor_job_router* daemon
 does not know which site will be best for a given job. The policy implemented in
@@ -284,7 +283,7 @@ Routing Table Entry Commands and Macro values
 A route consists of a sequence of Macro values and commands which are applied
 in order to produce the routed job ClassAd.  Certain macro names have special meaning
 when used in a router transform.  These special macro names are listed below
-along a brief listing of the the transform commands.  For a more detailed description
+along a brief listing of the transform commands.  For a more detailed description
 of the transform commands refer to the :ref:`classads/transforms:Transform Commands` section.
 
 The conversion of a job to a routed copy will usually require the job ClassAd to

@@ -150,10 +150,12 @@ class CronJob : public Service
 	int SetTimer( time_t first, time_t seconds );
 	int KillTimer( time_t seconds );
 
+#if 0 // is anyone using this??
   protected:
 	virtual const CronJobMgr & Mgr( void ) {
-		return m_params->GetMgr();
+		return m_mgr;
 	};
+#endif
 
 	// Protected data
   protected:

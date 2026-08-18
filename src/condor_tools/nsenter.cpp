@@ -25,6 +25,17 @@
 #include <grp.h>
 #include <signal.h>
 #include <algorithm>
+#include <cstdio>
+#include <cerrno>
+#include <string.h>
+#include <vector>
+#include <string>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sched.h>
 
 // condor_nsenter
 // 
@@ -80,6 +91,41 @@ void reset_pty_and_exit(int signo) {
 	exit(signo);
 }
 
+int enter_ns(pid_t pid, const char *ns) {
+	struct stat st{};
+	char buf[256];
+	snprintf(buf, sizeof(buf), "/proc/self/ns/%s", ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
+	long my_ns = st.st_ino;
+	snprintf(buf, sizeof(buf), "/proc/%d/ns/%s", pid, ns);
+	if (stat(buf, &st) < 0) {
+		fprintf(stderr, "stat(%s) failed: %s\n", buf, strerror(errno));
+		exit(-1);
+	}
+	long your_ns = st.st_ino;
+
+	// It is an error to try to setns to a namespace we are already in.
+	if (your_ns == my_ns) {
+		// Quietly return, this is probably not a problem
+		return 0;
+	}
+	int fd = open(buf, O_RDONLY);
+	int r = setns(fd, 0);
+	close(fd);
+	if (r < 0) {
+		fprintf(stderr, "cannot setns %s: %s\n", ns, strerror(errno));
+		fprintf(stderr, "condor_ssh_to_job cannot enter the namespace of the containerized job.\n");
+		fprintf(stderr, "This is probably because the container runtime is installed as setuid,\n");
+		fprintf(stderr, "but htcondor itself was not installed as root, so it does not have the\n");
+		fprintf(stderr, "permissions to enter the user namespace.\n");
+		exit(-1);
+	}
+	return 0;
+}
+
 int main( int argc, char *argv[] )
 {
 	std::string condor_prefix;
@@ -87,12 +133,19 @@ int main( int argc, char *argv[] )
 	uid_t uid = 0;
 	gid_t gid = 0;
 	const char *supp_groups = nullptr;
+	int cmd_start = 0; // index into argv where the command begins, 0 = none
 
 	// parse command line args
 	for( int i=1; i<argc; i++ ) {
 		if(is_arg_prefix(argv[i],"-help")) {
 			usage(argv[0]);
 			exit(1);
+		}
+
+		// "--" ends option parsing; everything after is the command
+		if(strcmp(argv[i], "--") == 0) {
+			if (i + 1 < argc) cmd_start = i + 1;
+			break;
 		}
 
 		// target pid to enter
@@ -190,6 +243,7 @@ int main( int argc, char *argv[] )
 	// copy DISPLAY from outside to inside.  sshd has set this,
 	// it is the only one from the outside we need on the inside,
 	// and one way that an ssh-to-job shell is different than the job.
+
 	std::string display;
 	if (getenv("DISPLAY")) {
 		formatstr(display, "DISPLAY=%s", getenv("DISPLAY"));
@@ -211,63 +265,44 @@ int main( int argc, char *argv[] )
 
 	std::string filename;
 
-	// start changing namespaces.  Note that once we do this, things
-	// get funny in this process
-	formatstr(filename, "/proc/%d/ns/uts", pid);
-	int fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open uts namespace: %d %s\n", errno, strerror(errno));
-		exit(1);
-	}
-	int r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		// This means an unprivileged singularity, most likely
-		// need to set user namespace instead.
-		formatstr(filename, "/proc/%d/ns/user", pid);
-		fd = open(filename.c_str(), O_RDONLY);
-		if (fd < 0) {
-			fprintf(stderr, "Can't open user namespace: %d %s\n", errno, strerror(errno));
-			exit(1);
+	// Move into the job's cgroup so that the ssh shell shares the same
+	// resource limits as the job.  We must do this before entering the
+	// mnt namespace, because /sys/fs/cgroup won't be visible after that.
+	// Read /proc/<pid>/cgroup to find the cgroupv2 path, then write our
+	// PID into that cgroup.
+	{
+		std::string cgroupfile;
+		formatstr(cgroupfile, "/proc/%d/cgroup", pid);
+		FILE *f = fopen(cgroupfile.c_str(), "r");
+		if (f) {
+			char line[1024];
+			while (fgets(line, sizeof(line), f)) {
+				// cgroupv2 format: "0::<path>\n"
+				if (strncmp(line, "0::", 3) == 0) {
+					// strip trailing newline
+					char *nl = strchr(line, '\n');
+					if (nl) *nl = '\0';
+					std::string cgroup_procs;
+					formatstr(cgroup_procs, "/sys/fs/cgroup%s/cgroup.procs", line + 3);
+					FILE *cp = fopen(cgroup_procs.c_str(), "w");
+					if (cp) {
+						fprintf(cp, "%d\n", getpid());
+						fclose(cp);
+					} else {
+						fprintf(stderr, "Warning: cannot move into job cgroup %s: %s\n",
+							cgroup_procs.c_str(), strerror(errno));
+					}
+					break;
+				}
+			}
+			fclose(f);
 		}
-		r = setns(fd, 0);
-		close(fd);
-		if (r < 0) {
-			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(errno));
-			exit(1);
-		}
 	}
 
-	// now the pid namespace
-	formatstr(filename, "/proc/%d/ns/pid", pid);
-	fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open pid namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-	r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		fprintf(stderr, "Can't setns to pid namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-
-	// finally the mnt namespace
-	formatstr(filename, "/proc/%d/ns/mnt", pid);
-	fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open mnt namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-	r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		fprintf(stderr, "Can't setns to mnt namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-
-	setgroups(0, nullptr);
-
+	// Set supplementary groups while we are still root in the initial
+	// user namespace.  Once we setns() into a rootless container's user
+	// namespace, /proc/<pid>/setgroups is typically "deny" and any
+	// setgroups(2) call will fail with EPERM regardless of capabilities.
 	if (supp_groups != nullptr) {
 		std::vector<gid_t> setgroups_vec;
 		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
@@ -275,12 +310,25 @@ int main( int argc, char *argv[] )
 		}
 		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
 		if (r < 0) {
-			fprintf(stderr, "warning: cannot set supplemental groups to %s\n", supp_groups);
+			fprintf(stderr, "warning: cannot set supplemental groups to %s: %s\n",
+				supp_groups, strerror(errno));
+		}
+	} else {
+		int r = setgroups(0, nullptr);
+		if (r < 0) {
+			fprintf(stderr, "warning: setgroups(0) failed: %s\n", strerror(errno));
 		}
 	}
 
+	// start changing namespaces.  Note that once we do this, things
+	// get funny in this process
+	enter_ns(pid, "user");
+	enter_ns(pid, "uts");
+	enter_ns(pid, "pid");
+	enter_ns(pid, "mnt");
+
 	// order matters!
-	r = setgid(gid);
+	int r = setgid(gid);
 	if (r < 0) {
 		fprintf(stderr, "Can't setgid to %d\n", gid);
 		exit(1);
@@ -289,6 +337,37 @@ int main( int argc, char *argv[] )
 	if (r < 0) {
 		fprintf(stderr, "Can't setuid to %d\n", uid);
 		exit(1);
+	}
+
+	// For non-interactive commands, skip the pty and just exec directly.
+	// The fds from the ssh client are already on 0/1/2.
+	if (cmd_start > 0) {
+		int childpid = fork();
+		if (childpid == 0) {
+			if (getenv("_CONDOR_SCRATCH_DIR")) {
+				int r = chdir(getenv("_CONDOR_SCRATCH_DIR"));
+				if (r < 0) {
+					fprintf(stderr, "Cannot chdir to %s: %s\n", getenv("_CONDOR_SCRATCH_DIR"), strerror(errno));
+				}
+			}
+			setsid();
+
+			// Build a null-terminated argv for the command
+			std::vector<const char *> cmd_argv;
+			for (int i = cmd_start; i < argc; i++) {
+				cmd_argv.push_back(argv[i]);
+			}
+			cmd_argv.push_back(nullptr);
+
+			execvpe(cmd_argv[0], const_cast<char *const *>(cmd_argv.data()),
+				const_cast<char *const *>(envp.data()));
+			fprintf(stderr, "exec of %s failed: %s\n", cmd_argv[0], strerror(errno));
+			exit(errno);
+		} else {
+			int status;
+			waitpid(childpid, &status, 0);
+		}
+		return 0;
 	}
 
 	struct winsize win;
@@ -313,8 +392,8 @@ int main( int argc, char *argv[] )
 
 	int childpid = fork();
 	if (childpid == 0) {
-	
-		// in the child -- 
+
+		// in the child --
 
 		close(0);
 		close(1);
@@ -340,15 +419,16 @@ int main( int argc, char *argv[] )
 
 		// and make it the process group leader
 		tcsetpgrp(workerPty, getpid());
- 
+
 		// and set the window size properly
 		ioctl(0, TIOCSWINSZ, &win);
 
 		// Finally, launch the shell
-		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
+		execle("/bin/sh", "sh", "-l", "-i", nullptr, envp.data());
  
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
+		sleep(2);
 		exit(errno);
 
 	} else {
@@ -369,7 +449,7 @@ int main( int argc, char *argv[] )
 		tio.c_cc[VMIN] = 1;
 		tio.c_cc[VTIME] = 0;
 		tcsetattr(0, TCSAFLUSH, &tio);
-		
+
 		struct sigaction handler;
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
@@ -392,7 +472,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(masterPty, &readfds)) {
 				char buf[4096];
 				int r = read(masterPty, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(1, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -405,7 +485,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(0, &readfds)) {
 				char buf[4096];
 				int r = read(0, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(masterPty, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -416,8 +496,7 @@ int main( int argc, char *argv[] )
 			}
 		}
 		int status;
-		waitpid(childpid, &status, 0);	
+		waitpid(childpid, &status, 0);
 	}
 	return 0;
 }
-

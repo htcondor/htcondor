@@ -120,6 +120,9 @@ Options
     (view option) Display configuration file name and line number where
     the variable is set, along with the raw, expanded, and default
     values of the variable.
+ **-trace**
+    (view option) Display old configuration file name and line number and
+    value each time the variable is replaced as the configuration is loaded.
  **-debug[:<opts>]**
     (view option) Send output to ``stderr``, overriding a set value of
     :macro:`TOOL_DEBUG`.
@@ -179,6 +182,12 @@ Options
     the options: **-dump**, **-config**, or **-verbose**.
  **-master | -schedd | -startd | -collector | -negotiator**
     (location option) The specific daemon to query.
+ **-root-config** *file*
+    (location option) Read configuration starting from *file* as the
+    root configuration file, rather than the configuration file
+    determined from the environment variable CONDOR_CONFIG or the usual search path. Only
+    applies when *condor_config_val* is reading the configuration from
+    files; it is ignored when querying a daemon.
  **use** *category* [*:set name* ] [**-expand** ]
     Display information about configuration templates (see
     :ref:`admin-manual/introduction-to-configuration:configuration templates`).
@@ -217,7 +226,7 @@ of the :macro:`MAX_JOBS_RUNNING` configuration variable to the value 10.
 
        $ condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
        Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
-       schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+       schedd perdita.cs.wisc.edu <192.0.2.32:52067>.
 
 A command that will implement the change just set in the previous
 example.
@@ -242,7 +251,7 @@ was before the command to set it to 10:
 
        $ condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
        Successfully unset configuration "MAX_JOBS_RUNNING" on 
-       schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+       schedd perdita.cs.wisc.edu <192.0.2.32:52067>.
 
 A command that will implement the change just set in the previous
 example.

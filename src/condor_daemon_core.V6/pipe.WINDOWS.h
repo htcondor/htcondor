@@ -57,12 +57,22 @@ public:
 	// longer registered
 	void cancel();
 
+	// called from the PID-watcher thread as the very last action on a
+	// PidEntry once post_wait() has reported the pipe ready. Signals the
+	// main thread (which may be blocked in cancel()) that the watcher is
+	// completely done touching the PidEntry, so it is now safe to delete.
+	// This MUST be the watcher's final access to the PidEntry: once it
+	// returns, Cancel_Pipe may free the PidEntry out from under us.
+	void watcher_done();
+
 	// called from PID-watcher thread before WaitForMultipleObjects
 	virtual HANDLE pre_wait() = 0;
 
 	// called from PID-watcher thread after the overlapped I/O's event
 	// object is signaled. returns true if the handler is ready to be
-	// fired, false if not
+	// fired, false if not. NOTE: this no longer signals m_watched_event;
+	// the watcher must call watcher_done() after it has finished updating
+	// the PidEntry (see pidWatcherThread).
 	virtual bool post_wait() = 0;
 
 	// checked from DaemonCore::Driver to ensure the pipe is ready

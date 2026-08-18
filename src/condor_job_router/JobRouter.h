@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "HashTable.h"
 #include "RoutedJob.h"
 
 #include "classad/classad_distribution.h"
@@ -145,7 +144,7 @@ class JobRouter: public Service {
 	classad::ClassAdCollection *GetSchedd2ClassAds();
 
  private:
-	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
+	std::map<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
 	std::map<std::string,std::string> m_idtokens; // IDTOKENs created by the job router that can be included in routed jobs

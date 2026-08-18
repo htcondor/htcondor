@@ -140,6 +140,47 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 	return 0;
 }
 
+static int parse_append_format_args(int argc, const char * argv[], AttrListPrintMask & prmask, classad::References & attrs, bool diagnostic)
+{
+	// if the last column of the existing format is set to width 0, set it to a non-zero width instead
+	// so that the column gets auto-width adjusted to match the data. (setting the last column to width 0
+	// is a trick we use to prevent the last column heading from being space padded on the right.
+	int lastcol = prmask.ColCount()-1;
+	prmask.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
+			if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
+				fmt->width = 3;
+				// this is a complete hack, but the default formats that use 0 width for the last column
+				// want left aligned data.
+				fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
+			}
+			return 1;
+		}, &lastcol);
+
+	//ClassAd ad;
+	const char * pcolon;
+	for (int i = 0; i < argc; ++i)
+	{
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V,r,T, or Y is permitted.\n", pcolon);
+					return -1;
+				}
+			}
+			int ixNext = parse_autoformat_args(argc, argv, i+1, format_char, prmask, attrs, diagnostic, true);
+			if (ixNext < 0) {
+				return -ixNext;
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	return 0;
+}
 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, show_held = 0, dash_dag = 0;
 static  int dash_batch_specified = 0, dash_batch_is_default = 1, dash_batch = 0;
@@ -184,7 +225,7 @@ static	QueryResult result;
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
-static	ClassAdList	scheddList;
+static std::vector<ClassAd> scheddList;
 
 static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
@@ -265,7 +306,6 @@ static	bool		current_run = true;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
 static	bool		dash_idle = false;
-static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
@@ -283,6 +323,8 @@ static	char		*scheddAddr;	// used by format_remote_host()
 static CollectorList * Collectors = NULL;
 
 static std::vector<const char *> autoformat_args;
+static std::vector<const char *> append_autoformat_args;
+static bool can_use_append_autoformat_args = false;
 
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
@@ -518,7 +560,6 @@ void profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheSt
 
 int main (int argc, const char **argv)
 {
-	ClassAd		*ad;
 	bool		first;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
@@ -632,7 +673,13 @@ int main (int argc, const char **argv)
 		/* I couldn't find a local schedd, so dump a message about what
 			happened. */
 
-		fprintf( stderr, "Error: %s\n", schedd.error() );
+		const char *locate_error = schedd.error();
+		// if there's no schedd, locate does not set an error string.
+		if (!locate_error) {
+			locate_error = "Could not find the local condor_schedd"; 
+		}
+
+		fprintf( stderr, "Error: %s\n", locate_error);
 		if (!expert) {
 			fprintf(stderr, "\n");
 			print_wrapped_text("Extra Info: You probably saw this "
@@ -710,8 +757,7 @@ int main (int argc, const char **argv)
 	first = true;
 	CondorClassAdListWriter writer(dash_long_format);
 	// get queue from each ScheddIpAddr in ad
-	scheddList.Open();
-	while ((ad = scheddList.Next()))
+	for (auto& ad: scheddList)
 	{
 		/* default to true for remotely queryable */
 
@@ -721,11 +767,11 @@ int main (int argc, const char **argv)
 		*/
 		std::string scheddName;
 		std::string scheddAddr;
-		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
-				ad->LookupString(ATTR_NAME, scheddName) &&
-				ad->LookupString(ATTR_MACHINE, scheddMachine)
-				)
-			)
+		if ( ! (ad.LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+		        ad.LookupString(ATTR_NAME, scheddName) &&
+		        ad.LookupString(ATTR_MACHINE, scheddMachine)
+		        )
+		    )
 		{
 			/* something is wrong with this schedd/submittor ad, try the next one */
 			continue;
@@ -734,7 +780,7 @@ int main (int argc, const char **argv)
 		first = false;
 
 		std::string scheddVersion;
-		ad->LookupString(ATTR_VERSION, scheddVersion);
+		ad.LookupString(ATTR_VERSION, scheddVersion);
 		CondorVersionInfo v(scheddVersion.c_str());
 		if (v.built_since_version(8, 3, 3)) {
 			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & QueryFetchOpts::fetch_MyJobs);
@@ -745,9 +791,6 @@ int main (int argc, const char **argv)
 		Q.useDefaultingOperator(v.built_since_version(8,6,0));
 		retval = show_schedd_queue(scheddAddr.c_str(), scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
-
-	// close list
-	scheddList.Close();
 
 	if (dash_long) {
 		writer.writeFooter(stdout, always_write_xml_footer);
@@ -777,7 +820,7 @@ static int cleanup_globals(int exit_code)
 
 	// do this to make Valgrind happy.
 	cleanupAnalysis();
-	scheddList.Clear();
+	scheddList.clear();
 
 	return exit_code;
 }
@@ -848,7 +891,6 @@ enum {
 	QDO_JobNormal,
 	QDO_JobRuntime,
 	QDO_JobIdle,
-	QDO_JobGoodput,
 	QDO_JobGridInfo,
 	QDO_JobGridEC2Info,
 	QDO_JobHold,
@@ -1271,6 +1313,24 @@ processCommandLineArguments (int argc, const char *argv[])
 			i+=2;
 		}
 		else
+		if (is_dash_arg_colon_prefix(dash_arg, "aaf", &pcolon, 3)) {
+				// make sure we have at least one more argument
+			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: -aaf requires at least one attribute parameter\n" );
+				exit( 1 );
+			}
+			// process all arguments that don't begin with "-" as part of appendautoformat.
+			append_autoformat_args.push_back(argv[i]);
+			while (i+1 < argc && *(argv[i+1]) != '-') {
+				++i;
+				append_autoformat_args.push_back(argv[i]);
+			}
+			// if list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+		}
+		else
 		if (is_dash_arg_colon_prefix(dash_arg, "autoformat", &pcolon, 5) ||
 			is_dash_arg_colon_prefix(dash_arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
@@ -1506,14 +1566,6 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "goodput", 2)) {
-			// goodput and show_io require the same column
-			// real-estate, so they're mutually exclusive
-			dash_goodput = true;
-			show_io = false;
-			qdo_mode = QDO_JobGoodput;
-		}
-		else
 		if (is_dash_arg_prefix(dash_arg, "cputime", 2)) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
@@ -1554,10 +1606,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
-			// goodput and show_io require the same column
-			// real-estate, so they're mutually exclusive
 			show_io = true;
-			dash_goodput = false;
 			qdo_mode = QDO_JobIO;
 		}
 		else if (is_dash_arg_prefix(dash_arg, "dag", 2)) {
@@ -1582,7 +1631,11 @@ processCommandLineArguments (int argc, const char *argv[])
 					}
 				}
 			}
-			qdo_mode = QDO_Progress;
+			// Don't clobber a custom output format (-af/-format/-print-format) that was
+			// we will eventually error out because of this, but we don't do it here.
+			if ((qdo_mode & QDO_BaseMask) < QDO_Custom) {
+				qdo_mode = QDO_Progress;
+			}
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
@@ -1730,6 +1783,11 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 	}
 
+	if (dash_batch_specified && dash_batch && !autoformat_args.empty()) {
+		fprintf( stderr, "Error: -batch conflicts with -format and -af\n" );
+		exit(1);
+	}
+
 	if (dash_long) {
 		customHeadFoot = HF_BARE;
 		if (dash_tot) {
@@ -1763,21 +1821,45 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "goodput", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		constexpr const char * amo[]{ "", "normal", "run", "idle", "grid", "grid:ec2", "hold", "holdcodes", "io",
+			"factory", "dag", "totals", "batch", "autocluster", "jobset", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
+		can_use_append_autoformat_args = ! dash_batch; // built in formats that are not batch mode can use append_autoformat
 		// if the user did not specify -wide or -wide:<num>, and the width of the screen cannot be
 		// determined (because we are writing to a pipe or file), then don't truncate the output to fit the screen
-		if ( ! dash_wide && (getConsoleWindowSize() < 0)) widescreen = true;
+		if ( ! dash_wide && (getConsoleWindowSize() < 0 || ! append_autoformat_args.empty())) widescreen = true;
 		initOutputMask(app.prmask, qdo_mode, widescreen);
 	} else {
+		can_use_append_autoformat_args = (qdo_mode == (QDO_Custom | QDO_PrintFormat)); // custom print formats can use append_autoformat
+
 		// handle flags that just set a constraint when used with a formatting option, but
 		// set a constraint and a format when used alone.
 		if (dash_factory) {
 			if (dash_factory & 1) Q.addAND("ProcId is undefined");
 			if (dash_factory & 2) Q.addAND("JobMaterializeDigestFile isnt undefined");
 		}
+	}
+
+	// incorporate the -aaf (append autoformat) columns into the output format.
+	if ( ! append_autoformat_args.empty()) {
+		if ( ! can_use_append_autoformat_args) {
+			if (dash_batch) {
+				fprintf(stderr, "Error: -aaf cannot be used with -batch mode output (the default), did you intend to use -af ?\n");
+			} else {
+				fprintf(stderr, "Error: output formatting options conflict with -aaf options\n");
+			}
+			exit(1);
+		}
+
+		int nargs = (int)append_autoformat_args.size();
+		append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[cargs] is.
+		classad::References refs;
+		if (parse_append_format_args(nargs, &append_autoformat_args[0], app.prmask, refs, dash_dry_run) < 0) {
+			exit(1);
+		}
+		app.attrs.insert(refs.begin(), refs.end());
 	}
 
 	// convert cluster and cluster.proc into constraints
@@ -1974,6 +2056,12 @@ local_render_job_status_char (std::string & result, ClassAd*ad, Formatter &)
 		put_result[0] = transfer_queued ? 'q' : ' ';
 		put_result[1] = '>';
 	}
+	time_t cooldown = 0;
+	ad->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cooldown);
+	// If cooldown expiry in the future, we are in cooldown now
+	if (cooldown > time(nullptr)) {
+		put_result[1] = 'c';
+	}
 	result = put_result;
 	return true;
 }
@@ -2137,7 +2225,6 @@ usage (const char *myName, int other)
 		"\t-dag\t\t\t Sort DAG jobs under their DAGMan\n"
 		"\t-expert\t\t\t Display shorter error messages\n"
 		"\t-grid\t\t\t Get information about grid jobs\n"
-		"\t-goodput\t\t Display job goodput statistics\n"
 		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\t Get information about jobs on hold\n"
 		"\t-hold-codes\t\t Display first job for each unique hold code and subcode\n"
@@ -2152,21 +2239,25 @@ usage (const char *myName, int other)
 		"\t-version\t\t Print the HTCondor version and exit\n"
 		"\t-wide[:<width>]\t\t Don't truncate data to fit in 80 columns.\n"
 		"\t\t\t\t Truncates to console width or <width> argument.\n"
-		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-autoformat[:jlhVrTY,tng] <attr> [<attr2> [...]]\n"
 		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
 		"\t        j   Display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
+		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
 		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
 		"\t\t\t\t (experimental, see htcondor-wiki for more information)\n"
@@ -2345,7 +2436,6 @@ SUMMARY STANDARD
 extern const char * const jobDefault_PrintFormat;
 extern const char * const jobRuntime_PrintFormat;
 extern const char * const jobIdle_PrintFormat;
-extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
 extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
@@ -2366,7 +2456,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 #if 1
 	//PRAGMA_REMIND("tj: do I need to do anything to adjust the summarize mask here?")
 #else
-	if ( dash_run || dash_goodput || dash_grid ) 
+	if ( dash_run || dash_grid )
 		summarize = false;
 	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
 		summarize = false;
@@ -2408,11 +2498,10 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		const int mode;
 		const char * tag;
 		const char * fmt;
-	} info[] = {
+	} info[]{
 		{ QDO_JobNormal,      "",         jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },
-		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
 		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
 		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
@@ -3173,7 +3262,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 			if ( ! pcolval) continue;
 
 			const char * name = NULL;
-			pcolval->IsStringValue(name);
+			if ( ! pcolval->IsStringValue(name) || ! name) continue;
 			int cch = (int)strlen(name);
 
 			buf.clear();
@@ -3412,6 +3501,23 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 	return 1;
 }
 
+// helpers for writing the baked batch-mode values into a row.  The column will not
+// exist if the output format has fewer columns than the built-in batch format, so we
+// must check for NULL before writing. (see reduce_results)
+static void set_int_column(JobRowOfData & jr, int ixCol, int value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetIntegerValue(value);
+	jr.rov.set_col_valid(ixCol, (bool)(value > 0));
+}
+
+static void set_string_column(JobRowOfData & jr, int ixCol, const char * value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetStringValue(value);
+	jr.rov.set_col_valid(ixCol, true);
+}
+
 // reduce the data by summarizing all of the procs in a cluster
 // and all of the nodes in a dag into a single line of output.
 //
@@ -3459,28 +3565,23 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		if (num_held > 0) wids.any_held = true;
 
 		int ixCol = ixFirstCounterCol; // starting column for counters
-		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
-		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+		set_int_column(jr, ixCol, num_done);
 		wids.count_widths[0] = MAX(wids.count_widths[0], number_width(num_done));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
-		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+		set_int_column(jr, ixCol, num_active);
 		wids.count_widths[1] = MAX(wids.count_widths[1], number_width(num_active));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
-		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+		set_int_column(jr, ixCol, num_idle);
 		wids.count_widths[2] = MAX(wids.count_widths[2], number_width(num_idle));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
-		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+		set_int_column(jr, ixCol, num_held);
 		wids.count_widths[3] = MAX(wids.count_widths[3], number_width(num_held));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
-		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+		set_int_column(jr, ixCol, num_total);
 		wids.count_widths[4] = MAX(wids.count_widths[4], number_width(num_total));
 
 		int name_width = 0;
@@ -3508,8 +3609,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
 				formatstr(tmp, "ID: %d", jid.cluster);
-				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
-				jr.rov.set_col_valid(ixBatchNameCol, true);
+				set_string_column(jr, ixBatchNameCol, tmp.c_str());
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
 			}
 		}
@@ -3524,8 +3624,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		} else {
 			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
-		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
-		jr.rov.set_col_valid(ixJobIdsCol, true);
+		set_string_column(jr, ixJobIdsCol, tmp.c_str());
 		wids.ids_width = MAX(wids.ids_width, (int)tmp.length());
 	}
 
@@ -4415,17 +4514,6 @@ const char * const jobIdle_PrintFormat = "SELECT\n"
 "   LastRemoteHost AS LAST_HOST WIDTH 0\n"
 "SUMMARY NONE\n";
 
-const char * const jobGoodput_PrintFormat = "SELECT\n"
-"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
-"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
-"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
-"   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
-"   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
-"   JobStatus     AS GOODPUT         WIDTH 8   PRINTAS STDU_GOODPUT OR ??\n"
-"   RemoteUserCpu AS CPU_UTIL        WIDTH 9   PRINTAS CPU_UTIL OR ??\n"
-"   BytesSent     AS 'Mb/s'          WIDTH 7   PRINTAS STDU_MPBS OR ??\n"
-"SUMMARY NONE\n";
-
 const char * const jobGrid_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
@@ -4512,7 +4600,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_JOB_LAST_REMOTE_WALL_CLOCK "\0"},
 	{ "DAG_OWNER",       ATTR_OWNER, 0, local_render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, local_render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" ATTR_JOB_COOL_DOWN_EXPIRATION "\0"},
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", local_render_memory_usage, ATTR_MEMORY_USAGE "\0" },
 	{ "OWNER",           ATTR_OWNER, 0, local_render_owner, ATTR_NICE_USER_deprecated "\0" },
 	{ "REMOTE_HOST",     ATTR_OWNER, 0, local_render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
@@ -4702,7 +4790,13 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	StringLiteralInputStream stream(sumyformat.c_str());
 	dummySettings.reset();
 	app.sumymask.clearFormats();
-	SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	// These summary formats are compiled-in constants, so any parse failure is
+	// a programming bug.  The return value is always 0; errors (if any) are
+	// reported via the messages string, so EXCEPT on that instead.
+	std::ignore = SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	if ( ! messages.empty()) {
+		EXCEPT("Failed to parse built-in summary format: %s", messages.c_str());
+	}
 
 	// dont' actually want to display headings for the summary lines when using standard_summary2 or standard_summary3
 	app.sumymask.clear_headings();

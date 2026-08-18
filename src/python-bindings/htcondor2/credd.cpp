@@ -184,7 +184,7 @@ _credd_do_check_oauth_creds(PyObject *, PyObject * args) {
     }
 
     std::string url;
-    int rv = do_check_oauth_creds(&requests[0], (int)requests.size(), url, d);
+    int rv = do_check_oauth_creds(requests, url, d);
     if( d != NULL ) { delete d; }
 
     return Py_BuildValue("iz", rv, url.c_str());

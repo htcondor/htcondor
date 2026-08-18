@@ -23,7 +23,7 @@ import re
 master_doc = 'index'
 
 # Patterns/files to exclude from build source
-exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store']
+exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store', 'dev']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -45,6 +45,7 @@ extensions = [
     'macro-def',
     'subcom',
     'subcom-def',
+    'docman',
     'dag-cmd-def',
     'dag-cmd',
     'index',
@@ -56,6 +57,9 @@ extensions = [
     'ad-attr',
     'hidden',
     'flatten-history',
+    'fake-definition',
+    'vacate_combined_table',
+    'generate_all_macros',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -79,9 +83,7 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-        'display_version': False
-}
+html_theme_options = {}
 
 # Enable Github edits
 html_context = {

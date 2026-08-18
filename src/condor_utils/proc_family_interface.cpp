@@ -31,7 +31,7 @@
 #include "proc_family_direct_cgroup_v2.h"
 #endif
 
-ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* subsys)
+ProcFamilyInterface* ProcFamilyInterface::create([[maybe_unused]] FamilyInfo *fi, const char* subsys)
 {
 	// If we want cgroups, use the direct, in-process version if possible
 #ifdef LINUX
@@ -42,8 +42,6 @@ ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* sub
 	if (fi && fi->cgroup && ProcFamilyDirectCgroupV1::can_create_cgroup_v1(scgroup)) {
 		return new ProcFamilyDirectCgroupV1;
 	}
-#else
-	(void)fi; // shut the compiler up
 #endif
 
 	ProcFamilyInterface* ptr;
@@ -66,17 +64,8 @@ ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* sub
 		        "GID-based process tracking requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
-	}
-	else if (param_boolean("GLEXEC_JOB", false)) {
 
-		dprintf(D_ALWAYS,
-		        "GLEXEC_JOB requires use of ProcD; "
-		            "ignoring USE_PROCD setting\n");
-		ptr = new ProcFamilyProxy;
-	// Note: if CGROUPS is turned on and the startd has USE_PROCD=false,
-	// then we will respect the procd setting and not use cgroups.
 	} else {
-
 		ptr = new ProcFamilyDirect;
 	}
 	ASSERT(ptr != NULL);

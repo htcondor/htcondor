@@ -26,8 +26,6 @@
 #include "dagman_utils.h"
 #include "my_popen.h"
 #include "read_multiple_logs.h"
-#include "../condor_procapi/processid.h"
-#include "../condor_procapi/procapi.h"
 #include "tmp_dir.h"
 #include "tokener.h"
 #include "which.h"
@@ -115,14 +113,14 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	/*	Set up DAGMan proper jobs getenv filter
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
+	*	Note: We want to make sure the following list of variables always
+	*	      for DAGMan. - Cole Bollig 2026-2-16
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL,ASAN_OPTIONS,LSAN_OPTIONS";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL,ASAN_OPTIONS,LSAN_OPTIONS,BEARER_TOKEN,BEARER_TOKEN_FILE";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
 	} else {
-		//Scitoken related variables
-		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
 		for (const auto& vars : options[deep::slist::GetFromEnv]) {
 			if (vars.empty()) continue;
@@ -176,10 +174,6 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "# requeued by the schedd if it exits abnormally or\n");
 	fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
 	fprintf(pSubFile, "on_exit_remove = %s\n", removeExpr.c_str() );
-
-	if (!usingPythonBindings) {
-		fprintf(pSubFile, "copy_to_spool = %s\n", options[shallow::b::CopyToSpool] ? "True" : "False" );
-	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp
@@ -255,12 +249,12 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg( "-DoRecov" );
 	}
 
+	if (options[shallow::b::SetupOnly]) {
+		args.AppendArg("-SetupOnly");
+	}
+
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
-
-	if (options[shallow::b::DumpRescueDag]) {
-		args.AppendArg("-DumpRescue");
-	}
 
 	if (options[shallow::i::Priority] != 0) {
 		args.AppendArg("-Priority");
@@ -270,6 +264,11 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	if ( ! options[shallow::str::SaveFile].empty()) {
 		args.AppendArg("-load_save");
 		args.AppendArg(options[shallow::str::SaveFile]);
+	}
+
+	if ( ! options[shallow::str::RescueFile].empty()) {
+		args.AppendArg("-RescueFile");
+		args.AppendArg(options[shallow::str::RescueFile]);
 	}
 
 	options.addDeepArgs(args);
@@ -465,30 +464,6 @@ DagmanUtils::setUpOptions(DagmanOptions &options, str_list &dagFileAttrLines, st
 	options[shallow::str::DebugLog] += ".dagman.out";
 	options[shallow::str::SchedLog] = primaryDag + ".dagman.log";
 	options[shallow::str::SubFile] = primaryDag + DAG_SUBMIT_FILE_SUFFIX;
-
-	std::string rescueDagBase;
-
-		// If we're running each DAG in its own directory, write any rescue
-		// DAG to the current directory, to avoid confusion (since the
-		// rescue DAG must be run from the current directory).
-	if (options[deep::b::UseDagDir]) {
-		if ( ! condor_getcwd(rescueDagBase)) {
-			print_error("ERROR: Unable to get cwd (%d): %s\n", errno, strerror(errno));
-			return false;
-		}
-		rescueDagBase += DIR_DELIM_STRING;
-		rescueDagBase += condor_basename(primaryDag.c_str());
-	} else {
-		rescueDagBase = primaryDag;
-	}
-
-		// If we're running multiple DAGs, put "_multi" in the rescue
-		// DAG name to indicate that the rescue DAG is for *all* of
-		// the DAGs we're running.
-	if (options.isMultiDag()) {
-		rescueDagBase += "_multi";
-	}
-	options[shallow::str::RescueFile] = rescueDagBase + ".rescue";
 
 	options[shallow::str::LockFile] = primaryDag + ".lock";
 
@@ -816,6 +791,12 @@ DagmanUtils::FindLastRescueDagNum(const std::string &primaryDagFile, bool multiD
 	return lastRescue;
 }
 
+static std::string RescueDagBase(const std::string& base, bool multi) {
+	std::string ret(base);
+	if (multi) { ret += "_multi"; }
+	return ret + ".rescue";
+}
+
 /** Creates a rescue DAG name, given a primary DAG name and rescue
 	DAG number
 	@param primaryDagFile The primary DAG file name
@@ -828,11 +809,7 @@ DagmanUtils::RescueDagName(const std::string& primaryDagFile, bool multiDags, in
 {
 	ASSERT( rescueDagNum >= 1 );
 
-	std::string fileName(primaryDagFile);
-	if ( multiDags ) {
-		fileName += "_multi";
-	}
-	fileName += ".rescue";
+	std::string fileName = RescueDagBase(primaryDagFile, multiDags);
 	formatstr_cat(fileName, "%.3d", rescueDagNum);
 
 	return fileName;
@@ -869,6 +846,15 @@ DagmanUtils::RenameRescueDagsAfter(const std::string& primaryDagFile, bool multi
 			       rescueDagName.c_str(), errno, strerror(errno));
 		}
 	}
+}
+
+int DagmanUtils::ExtractRescueNum(const std::string& file, const std::string& primaryDagFile, bool multiDags) {
+	std::string rescue = RescueDagBase(primaryDagFile, multiDags);
+	if (starts_with(file, rescue) && file.length() > rescue.length()) {
+		return std::atoi(file.substr(rescue.length()).c_str());
+	}
+
+	return 0;
 }
 
 /** Attempts to unlink the given file, and prints an appropriate error
@@ -940,7 +926,7 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 	bool bHadError = false;
 		// If not running a rescue DAG, check for existing files
 		// generated by condor_submit_dag...
-	if ( ! autoRunningRescue && options[deep::i::DoRescueFrom] < 1 &&
+	if ( ! autoRunningRescue && options[deep::i::DoRescueFrom] < 1 && options[shallow::str::RescueFile].empty() &&
 		 ! options[deep::b::UpdateSubmit] && options[shallow::str::SaveFile].empty()) {
 			if (fileExists(options[shallow::str::SubFile])) {
 				print_error("ERROR: \"%s\" already exists.\n",
@@ -964,17 +950,28 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 			}
 	}
 
-		// This is checking for the existance of an "old-style" rescue
-		// DAG file.
-	if ( ! options[deep::i::AutoRescue] && options[deep::i::DoRescueFrom] < 1 &&
-		 fileExists(options[shallow::str::RescueFile])) {
-			print_error("ERROR: \"%s\" already exists.\n",
-			            options[shallow::str::RescueFile].c_str());
+	std::string oldRescueDag = RescueDagBase(options.primaryDag(), options.isMultiDag());
+	if (options[deep::b::UseDagDir]) {
+		// Use absolute path for DAGs running in their own directory to avoid confusion
+		std::string path;
+		if ( ! condor_getcwd(path)) {
+			print_error("ERROR: Unable to get cwd (%d): %s\n", errno, strerror(errno));
+			return false;
+		}
+
+		std::string fullPath;
+		dircat(path.c_str(), oldRescueDag.c_str(), fullPath);
+		oldRescueDag = fullPath;
+	}
+
+	// This is checking for the existance of an "old-style" rescue DAG file.
+	if ( ! options[deep::i::AutoRescue] && options[deep::i::DoRescueFrom] < 1 && fileExists(oldRescueDag)) {
+			print_error("ERROR: \"%s\" already exists.\n", oldRescueDag.c_str());
 			print_error("\tYou may want to resubmit your DAG using that file, instead of \"%s\"\n",
 			            options.primaryDag().c_str());
 			print_error("\tLook at the HTCondor manual for details about DAG rescue files.\n");
 			print_error("\tPlease investigate and either remove \"%s\",\n",
-			            options[shallow::str::RescueFile].c_str());
+			            oldRescueDag.c_str());
 			print_error("\tor use it as the input to condor_submit_dag.\n");
 			bHadError = true;
 	}
@@ -1016,122 +1013,6 @@ DagmanUtils::popen (ArgList &args) {
 		}
 	}
 	return r;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::create_lock_file(const char *lockFileName, bool abortDuplicates) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "w");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for writing.\n", lockFileName);
-		result = -1;
-	}
-
-	// Create the ProcessId object.
-	ProcessId *procId = nullptr;
-	if (result == 0 && abortDuplicates) {
-		int status;
-		int precision_range = 1;
-		if (ProcAPI::createProcessId(daemonCore->getpid(), procId, status, &precision_range) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to create process ID (%d)\n", status);
-			result = -1;
-		}
-	}
-
-	// Write out the ProcessId object.
-	if (result == 0 && abortDuplicates) {
-		if (procId->write(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to write process ID information to %s\n", lockFileName);
-			result = -1;
-		}
-	}
-
-	// Confirm the ProcessId object's uniqueness.
-	if (result == 0 && abortDuplicates) {
-		int status;
-		if (ProcAPI::confirmProcessId(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("Warning: Failed to confirm process ID (%d)\n", status);
-		} else if ( ! procId->isConfirmed()) {
-			print_msg("Warning: Ignoring error that ProcessId not confirmed unique\n");
-		} else if (procId->writeConfirmationOnly(fp) != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to confirm writing of process ID information\n");
-			result = -1;
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: closing lock file failed with (%d): %s\n",
-			        errno, strerror(errno));
-		}
-	}
-
-	return result;
-}
-
-//-----------------------------------------------------------------------------
-int
-DagmanUtils::check_lock_file(const char *lockFileName) {
-	int result = 0;
-
-	FILE *fp = safe_fopen_wrapper_follow(lockFileName, "r");
-	if (fp == nullptr) {
-		print_error("ERROR: Failed to open lock file %s for reading.\n",
-		            lockFileName);
-		result = -1;
-	}
-
-	ProcessId *procId = nullptr;
-	if (result != -1) {
-		int status;
-		procId = new ProcessId(fp, status);
-		if (status != ProcessId::SUCCESS) {
-			print_error("ERROR: Failed to create process Id object from lock file %s\n",
-			            lockFileName);
-			result = -1;
-		}
-	}
-
-	if (result != -1) {
-		int status;
-		if (ProcAPI::isAlive(*procId, status) != PROCAPI_SUCCESS) {
-			print_error("ERROR: Failed to determine whether DAGMan that wrote lock file is alive.\n");
-			result = -1;
-		} else if (status == PROCAPI_ALIVE) {
-			print_error("ERROR: Duplicate DAGMan PID %d is alive; this DAGMan should abort.\n",
-			            procId->getPid());
-			result = 1;
-
-		} else if (status == PROCAPI_DEAD) {
-			print_msg("Duplicate DAGMan PID %d is no longer alive; this DAGMan should continue.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else if (status == PROCAPI_UNCERTAIN) {
-			print_msg("Duplicate DAGMan PID %d *may* be alive; this DAGMan is continuing, "
-			          "but this will cause problems if the duplicate DAGMan is alive.\n",
-			          procId->getPid());
-			result = 0;
-
-		} else {
-			EXCEPT("Illegal ProcAPI::isAlive() status value: %d", status);
-		}
-	}
-
-	delete procId;
-
-	if (fp != nullptr) {
-		if (fclose(fp) != 0) {
-			print_error("ERROR: Failed to close lock file failed (%d): %s\n",
-			            errno, strerror(errno));
-		}
-	}
-
-	return result;
 }
 
 // Add a DAG file to DAGMan options
@@ -1181,7 +1062,7 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 	args.AppendArg("-AutoRescue");
 	args.AppendArg(std::to_string(self[i::AutoRescue]));
 
-	if (inWriteSubmit || self[i::DoRescueFrom]) {
+	if (self[i::DoRescueFrom]) {
 		args.AppendArg("-DoRescueFrom");
 		args.AppendArg(std::to_string(self[i::DoRescueFrom]));
 	}
@@ -1451,18 +1332,62 @@ std::string DagmanOptions::processOptionArg(const std::string& opt, std::string 
 	return arg;
 }
 
+bool DagmanOptions::checkMutualExclusion(const std::string& opt, std::string& err, const std::string& flag) {
+	// Check for mutual exclusion
+	auto it = dagOptsMutualExclusions.find(opt);
+	if (it != dagOptsMutualExclusions.end()) {
+		std::vector<std::string> intersection;
+		std::ranges::set_intersection(it->second, setOptions, std::back_inserter(intersection));
+		if ( ! intersection.empty()) {
+			std::string conflicts, desc;
+			if (flag.empty()) {
+				// Just join option keywords
+				conflicts = join(intersection, ",");
+				desc = "option";
+			} else {
+				// Join option flags
+				conflicts = std::accumulate(dagOptionsInfoMap.begin(), dagOptionsInfoMap.end(), std::string{},
+							[intersection](std::string curr, const auto& pair) {
+								const auto& [opt_flag, info] = pair;
+								if (std::ranges::find(intersection, std::get<0>(info)) != intersection.end()) {
+									if (curr.size()) { curr += ","; }
+									curr += opt_flag;
+								}
+								return curr;
+							});
+				desc = "flag";
+			}
+			if (intersection.size() > 1) { desc += "s"; }
+			formatstr(err, "%s can not be used with the following %s: %s",
+			          flag.empty() ? opt.c_str() : flag.c_str(), desc.c_str(), conflicts.c_str());
+			return false;
+		}
+	}
+
+	setOptions.insert(opt);
+	return true;
+}
+
 bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err, DagmanOptions* duplicate) {
 	SetDagOpt ret = SetDagOpt::KEY_DNE;
 	// Get information about flag
 	std::string fullFlag = DagmanGetFullFlag(flag);
 	const auto& [opt, meta, _, __] = DagmanGetFlagInfo(flag);
+
 	// No option means invalid flag
 	if (opt.empty()) {
 		formatstr(err,"Error: Unknown flag '%s' provided", flag.c_str());
 		return false;
+	}
+
+	// Check for mutual exclusion of flags/options (note independent of contradictory bool options)
+	if ( ! checkMutualExclusion(opt, err, fullFlag)) {
+		err = "Error: " + err;
+		return false;
+	}
 
 	// Handle bool options
-	} else if (IsOptionTypeBool(opt)) {
+	if (IsOptionTypeBool(opt)) {
 		// Check if opposite flags for the same option were specified
 		if (boolFlagCheck.contains(opt)) {
 			std::string usedFlag = boolFlagCheck[opt];

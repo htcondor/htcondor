@@ -59,7 +59,7 @@
 const char* digest_state_and_activity (char * sa, State st, Activity ac)
 {
 	const char state_letters[] = "~OUMCPSXFD#?";
-	const char act_letters[] = "0ibrvsek#?";
+	const char act_letters[] = "0ibrvsekc#?";
 
 	sa[1] = sa[0] = ' ';
 	sa[2] = 0;
@@ -268,22 +268,6 @@ bool render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/
 	return true;
 }
 
-bool render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/)
-{
-	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
-		return false;
-
-	int ckpt_time = 0;
-	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
-	if (ckpt_time == 0) return false;
-	double util = cputime/ckpt_time*100.0;
-	if (util > 100.0) util = 100.0;
-	else if (util < 0.0) return false;
-	cputime = util;
-	// printf(result_format, "  %6.1f%%", util);
-	return true;
-}
-
 bool render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt)
 {
 	if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)) {
@@ -438,6 +422,7 @@ bool render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt
 		{ TRANSFERRING_OUTPUT, "XFER_OUT" },
 		{ JOB_STATUS_FAILED, "FAILED" },
 		{ JOB_STATUS_BLOCKED, "BLOCKED" },
+		{ JOB_STATUS_PREPARING, "PREPARING" },
 	};
 	for (size_t ii = 0; ii < COUNTOF(states); ++ii) {
 		if (jobStatus == states[ii].status) {
@@ -518,13 +503,12 @@ const char * format_job_factory_mode (const classad::Value &val, Formatter &)
 
 bool render_job_id (std::string & result, ClassAd* ad, Formatter &)
 {
-	char str[PROC_ID_STR_BUFLEN];
-	int cluster_id=0, proc_id=0;
-	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id))
-		return false;
-	ad->LookupInteger(ATTR_PROC_ID,proc_id);
-	ProcIdToStr(cluster_id, proc_id, str);
-	result = str;
+	JOB_ID_KEY jid{0,-1};
+	if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster)) {
+		return ad->LookupString(ATTR_JOB_ID, result);
+	}
+	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
+	jid.sprint(result);
 	return true;
 }
 
@@ -571,6 +555,7 @@ const char * format_job_status_raw (long long job_status, Formatter &)
 	case SUSPENDED: return "Suspend";
 	case JOB_STATUS_FAILED: return "Failed ";
 	case JOB_STATUS_BLOCKED: return "Blocked";
+	case JOB_STATUS_PREPARING: return "Preparing";
 	default:        return "Unk    ";
 	}
 }
@@ -584,9 +569,10 @@ const char * format_job_status_char (long long status, Formatter & /*fmt*/)
 	case RUNNING:   ret = "R"; break;
 	case REMOVED:   ret = "X"; break;
 	case COMPLETED: ret = "C"; break;
+	case TRANSFERRING_OUTPUT: ret = ">"; break;
 	case JOB_STATUS_FAILED: ret = "F"; break;
 	case JOB_STATUS_BLOCKED: ret = "B"; break;
-	case TRANSFERRING_OUTPUT: ret = ">"; break;
+	case JOB_STATUS_PREPARING: ret = "P"; break;
 	}
 	return ret;
 }
@@ -684,57 +670,6 @@ bool render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 		return true;
 	}
 	return false;
-}
-
-bool render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/)
-{
-	int job_status;
-	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
-		return false;
-
-	time_t ckpt_time = 0;
-	time_t shadow_bday = 0;
-	time_t last_ckpt = 0;
-	double wall_clock = 0.0;
-	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday && last_ckpt > shadow_bday) {
-		wall_clock += last_ckpt - shadow_bday;
-	}
-	if (wall_clock <= 0.0) return false;
-
-	goodput_time = ckpt_time/wall_clock*100.0;
-	if (goodput_time > 100.0) goodput_time = 100.0;
-	else if (goodput_time < 0.0) return false;
-	//sprintf(put_result, " %6.1f%%", goodput_time);
-	return true;
-}
-
-bool render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
-{
-	double bytes_sent;
-	if ( ! ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent))
-		return false;
-
-	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
-	time_t shadow_bday = 0;
-	time_t last_ckpt = 0;
-	int job_status = IDLE;
-	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday && last_ckpt > shadow_bday) {
-		wall_clock += last_ckpt - shadow_bday;
-	}
-	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
-	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
-	if (total_mbits <= 0) return false;
-	mbps = total_mbits / wall_clock;
-	// sprintf(result_format, " %6.2f", mbps);
-	return true;
 }
 
 const char * format_utime_double (double utime, Formatter & /*fmt*/)
@@ -898,13 +833,63 @@ bool render_strings_from_list ( classad::Value & value, ClassAd*, Formatter & fm
 
 bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 {
-	if( ! value.IsListValue() ) {
+	if( ! value.IsListValue() && ! value.IsStringValue() ) {
 		return false;
 	}
 	std::string buffer;
 	value.SetStringValue(extractUniqueStrings(value, fmt, buffer));
 	return true;
 }
+
+bool render_failed_health_exprs ( classad::Value & value, ClassAd* ad, Formatter & fmt )
+{
+	std::string buf;
+	std::string unhealth;
+	if( ! value.IsListValue() ) {
+		// if unhealthy is not supported, look for a slot broken string
+		// or a Startd broken reasons list of strings.
+		if (ad->LookupString(ATTR_SLOT_BROKEN_REASON, unhealth)) {
+			value.SetStringValue(unhealth);
+			return true;
+		} else if (ad->EvaluateAttr(ATTR_BROKEN_REASONS, value)) {
+			return render_unique_strings(value, ad, fmt);
+		}
+		return false;
+	}
+	const classad::ExprList * list = NULL;
+	if( ! value.IsListValue( list ) ) {
+		value.SetStringValue("[Attribute not a list.]");
+		return true;
+	}
+
+	classad::Value itemval;
+	classad::ExprList::const_iterator item = list->begin();
+	for( ; item != list->end(); ++item ) {
+		ExprTree * expr = *item /*, * sig = nullptr*/;
+		expr->SetParentScope(ad);
+		bool bval = true;
+		if (ad->EvaluateExpr(expr, itemval) && itemval.IsBooleanValueEquiv(bval)) {
+			if (bval) {
+				// health ok, skip this one.
+			} else {
+				if ( ! unhealth.empty()) unhealth += ", ";
+				buf.clear();
+				unhealth += ExprTreeToString(expr, buf);
+			}
+		} else if (itemval.IsUndefinedValue()) {
+			// undefined, skip this one.
+			//if ( ! unhealth.empty()) unhealth += ",";
+			//unhealth += "undef";
+		} else if (itemval.IsErrorValue()) {
+			if ( ! unhealth.empty()) unhealth += ",";
+			unhealth += "error";
+		}
+	}
+
+	value.SetStringValue(unhealth);
+	return true;
+}
+
 
 //=================================Format Table======================================
 //          !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!!
@@ -916,7 +901,6 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "CONDOR_PLATFORM", "CondorPlatform", 0, render_condor_platform, NULL },
 	{ "CONDOR_VERSION",  ATTR_CONDOR_VERSION, 0, render_version, NULL },
-	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },
 	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 #if 0
 	//This was a collision between history table and prettyPrint table
@@ -931,7 +915,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_FACTORY_MODE",ATTR_JOB_MATERIALIZE_PAUSED, 0, format_job_factory_mode, NULL },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" ATTR_JOB_ID "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 #if 0
 	//This was a collision between queue table and history table
@@ -958,10 +942,9 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "READABLE_MB",     ATTR_MEMORY, 0, format_readable_mb, NULL },
 	{ "REMOTE_HOST",     ATTR_OWNER, 0, render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
 	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
-	{ "STDU_GOODPUT",    ATTR_JOB_STATUS, "%.1f", render_goodput, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" },
-	{ "STDU_MPBS",       ATTR_BYTES_SENT, "%.2f", render_mbps, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" ATTR_JOB_STATUS "\0" ATTR_BYTES_RECVD "\0"},
 	{ "STRINGS_FROM_LIST", NULL, 0, render_strings_from_list, NULL },
 	{ "TIME",            ATTR_KEYBOARD_IDLE, 0, format_real_time, NULL },
+	{ "UNHEALTH",        ATTR_HEALTH_EXPRS, 0, render_failed_health_exprs, ATTR_HEALTHY "\0" ATTR_BROKEN_REASONS "\0" ATTR_SLOT_BROKEN_REASON "\0" },
 	{ "UNIQUE",          NULL, 0, render_unique_strings, NULL },
 };
 

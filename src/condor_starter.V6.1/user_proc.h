@@ -26,8 +26,16 @@
 #include "env.h"
 #include "condor_classad.h"
 
+/** Return type for JobReaper() indicating what happened when a pid exited.
+*/
+enum class ReapResult {
+	JobNotFound,      ///< This UserProc did not match the exited pid
+	JobDone,          ///< This UserProc matched the pid and the job is finished
+	JobShouldReExec,  ///< This UserProc matched the pid but will re-exec the job locally (e.g. self-checkpoint)
+};
+
 /** This class is a base class for the various types of startable
-	processes.  It defines a bunch of pure virtual functions that 
+	processes.  It defines a bunch of pure virtual functions that
 	are to be implemented in child classes.
 
  */
@@ -50,13 +58,14 @@ public:
 	virtual int StartJob() = 0;
 
 		/** A pid exited.  If this UserProc wants to do any cleanup
-			now that this pid has exited, it does so here.  If we
-			return true, the starter will consider this UserProc done,
-			remove it from the active job list, and put it in a list
-			of jobs that are already reaped.
-		    @return true if this UserProc is no longer active, false if it is
+			now that this pid has exited, it does so here.
+		    @return JobDone if this UserProc is finished and should be
+			        moved to the reaped list, JobShouldReExec if this
+			        UserProc handled the exit but will re-exec the job
+			        (e.g. after a self-checkpoint), or JobNotFound if
+			        this UserProc did not match the exited pid.
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 		/** Job exits.  Starter has decided it's done with everything
 			it needs to do, and we can now notify the job's controller

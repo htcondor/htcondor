@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor2/_utils")
+set(PACKAGES      "classad3" "classad2" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor2/_utils" "htcondor_cli")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -12,6 +12,7 @@ htcondor2/_startd.py
 htcondor2/_credd.py
 htcondor2/_cred_check.py
 htcondor2/_cred_type.py
+htcondor2/_placementd.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
@@ -19,6 +20,7 @@ htcondor2/_history_src.py
 htcondor2/_daemon_command.py
 htcondor2/_dagman.py
 htcondor2/_drain_type.py
+htcondor2/_vacate_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
 htcondor2/_schedd.py
@@ -77,6 +79,33 @@ classad3/Expression.py
 
 )
 
+# htcondor_cli sources live in src/condor_tools, not bindings/python
+set(HTCONDOR_CLI_DIR "${CMAKE_SOURCE_DIR}/src/condor_tools")
+set(HTCONDOR_CLI_SOURCES
+htcondor_cli/__init__.py
+htcondor_cli/access_point.py
+htcondor_cli/annex.py
+htcondor_cli/annex_create.py
+htcondor_cli/annex_validate.py
+htcondor_cli/central_manager.py
+htcondor_cli/cli.py
+htcondor_cli/conf.py
+htcondor_cli/convert_ad.py
+htcondor_cli/credential.py
+htcondor_cli/dagman.py
+htcondor_cli/ep.py
+htcondor_cli/eventlog.py
+htcondor_cli/histogram.py
+htcondor_cli/job.py
+htcondor_cli/job_set.py
+htcondor_cli/noun.py
+htcondor_cli/ocu.py
+htcondor_cli/server.py
+htcondor_cli/snake.py
+htcondor_cli/utils.py
+htcondor_cli/verb.py
+)
+
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
@@ -93,6 +122,7 @@ if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor_cli)
 
 	# Now make a command to copy each source file to the destination
 	if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -106,12 +136,20 @@ if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
 		endforeach()
 	endif()
 
+	# htcondor_cli sources come from src/condor_tools, not bindings/python
+	foreach(CLI_SOURCE_FILE ${HTCONDOR_CLI_SOURCES})
+		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${CLI_SOURCE_FILE}"
+			COMMAND ${CMAKE_COMMAND} ARGS -E copy "${HTCONDOR_CLI_DIR}/${CLI_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${CLI_SOURCE_FILE}"
+			DEPENDS "${HTCONDOR_CLI_DIR}/${CLI_SOURCE_FILE}"
+		)
+		list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${CLI_SOURCE_FILE}")
+	endforeach()
+
     if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
         list(APPEND DEPS classad_module htcondor)
     endif()
 
     if (WINDOWS AND DEFINED PYTHON3_VERSION_STRING)
-        list(APPEND DEPS py3classad_module py3htcondor)
         if (NOT DEFINED PYTHON_VERSION_STRING) # make sure Windows has a Python executable even if building Python 3 only
             set(PYTHON_EXECUTABLE ${PYTHON3_EXECUTABLE})
         endif()
@@ -169,9 +207,6 @@ if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
     if (NOT WINDOWS AND PYTHON3LIBS_FOUND)
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
 		set (DEPENDENT_MODULES "")
-		if (WITH_PYTHON_BINDINGS) 
-			list(APPEND DEPENDENT_MODULES py3classad_module py3htcondor)
-		endif()
 		if (WITH_PYTHON_BINDINGS_V2) 
 			list(APPEND DEPENDENT_MODULES py3classad2_impl py3htcondor2_impl)
 		endif()

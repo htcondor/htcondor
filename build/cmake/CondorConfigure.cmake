@@ -53,6 +53,20 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
+	# VS 2019 16.3 or later support the MultiToolTask builder, which parallelizes
+	# like Ninja.  Turn this on if not already on.
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+	endif()
+	# On batlab, we are randomly getting a permission error from msbuild when it 
+	# tries to access the global semaphore which EnforceProcessCountAcrossBuilds uses.
+
+	# Let's try turning off the semaphore, we build /mp:4, and condor controls the
+	# number of builds, so I think we should be ok.  Better than getting red builds
+	#if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+	#	list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	#endif()
+
 endif()
 
 # means user did not specify, so change the default.
@@ -278,7 +292,7 @@ if (FIPS_BUILD)
     add_definitions(-DFIPS_MODE=1)
 endif()
 
-add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
+add_definitions(-D${OS_NAME}=1)
 if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
@@ -342,13 +356,9 @@ if( NOT WINDOWS)
 	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
 	check_symbol_exists(TCP_KEEPCNT "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPCNT)
 	check_symbol_exists(TCP_KEEPINTVL, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPINTVL)
+	check_symbol_exists(TCP_USER_TIMEOUT "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_USER_TIMEOUT)
 	if("${OS_NAME}" STREQUAL "LINUX")
 		check_include_files("linux/tcp.h" HAVE_LINUX_TCP_H)
-	endif()
-	if( HAVE_LINUX_TCP_H )
-		check_symbol_exists(TCP_USER_TIMEOUT, "linux/tcp.h;sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_USER_TIMEOUT)
-	else()
-		check_symbol_exists(TCP_USER_TIMEOUT, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_USER_TIMEOUT)
 	endif()
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
@@ -454,6 +464,18 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	  find_library(HAVE_XSS Xss)
 	endif()
 
+	find_package(DBus1)
+	if (DBus1_FOUND)
+	  set(HAVE_DBUS DBus1_FOUND)
+	  include_directories(${DBus1_INCLUDE_DIRS})
+	endif()
+
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(LIBSYSTEMD libsystemd)
+	if (LIBSYSTEMD_FOUND)
+	  set(HAVE_LIBSYSTEMD LIBSYSTEMD_FOUND)
+	endif()
+
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
     if (HAVE_SD_DAEMON_H)
 		# Since systemd-209, libsystemd-daemon.so has been deprecated
@@ -521,6 +543,7 @@ option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
+option(WITH_PLACEMENT "Support for placement tokens and tokens database" ON)
 if (LINUX)
 	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
 endif(LINUX)
@@ -551,11 +574,26 @@ endif()
 set(CMAKE_MACOSX_RPATH OFF)
 
 if (WITH_ADDRESS_SANITIZER)
-	# Condor daemons dup stderr to /dev/null, so to see output need to run with
-	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
-	add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	if (WINDOWS)
+		# MSVC's AddressSanitizer.  The compiler flag is /fsanitize=address
+		# (cl.exe also accepts the '-' form) and it auto-links the ASan runtime
+		# import libs, so no explicit linker flag is needed to enable it.  It is
+		# however incompatible with the /RTC runtime checks and with incremental
+		# linking, both of which the multi-config Debug flags turn on by default,
+		# so strip /RTC from the Debug flags and force /INCREMENTAL:NO.  At run
+		# time clang_rt.asan_dynamic-x86_64.dll must be on PATH beside the
+		# binaries (the CI workflow copies it out of the VS toolchain).
+		string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+		string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}")
+		add_compile_options(/fsanitize=address)
+		add_link_options(/INCREMENTAL:NO)
+	else()
+		# Condor daemons dup stderr to /dev/null, so to see output need to run with
+		# ASAN_OPTIONS="log_path=/tmp/asan" condor_master
+		add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	endif()
 endif()
 
 if (WITH_UB_SANITIZER)
@@ -593,14 +631,17 @@ if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
-    if ( APPLE )
-        set( SFTP_SERVER "/usr/libexec/sftp-server" )
-    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
-        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
-    elseif ( DEB_SYSTEM_NAME )
-        set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
-    else()
-        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+    find_file( SFTP_SERVER
+        NAMES sftp-server
+        PATHS /usr/libexec
+              /usr/lib/ssh
+              /usr/lib/openssh
+              /usr/libexec/openssh
+              /usr/libexec/ssh
+        NO_DEFAULT_PATH
+    )
+    if ( NOT SFTP_SERVER )
+        message( WARNING "Could not find sftp-server in any of the expected locations" )
     endif()
 endif()
 
@@ -671,7 +712,7 @@ endif()
 
 # Common externals
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.46)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.22.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
@@ -694,20 +735,20 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-# We'll do the installation ourselves, below
-set (FMT_INSTALL false)
-
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
-
 # Remove when we have C++23 everywhere
 include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
 
+# External fmt lib not used anywhere currently and is causing build
+# errors with newer MacOS clang v21.0.0 so comment out (will be in C++23)
+# We'll do the installation ourselves, below
+#set (FMT_INSTALL false)
+#add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
 # But don't try to install the header files anywhere
-set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
-install(TARGETS fmt
-	LIBRARY DESTINATION "${C_LIB}"
-	ARCHIVE DESTINATION "${C_LIB}"
-	RUNTIME DESTINATION "${C_LIB}")
+#set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+#install(TARGETS fmt
+#	LIBRARY DESTINATION "${C_LIB}"
+#	ARCHIVE DESTINATION "${C_LIB}"
+#	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -798,6 +839,7 @@ endif()
 set (CONDOR_LIBS "condor_utils")
 set (CONDOR_TOOL_LIBS "condor_utils")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+set (CONDOR_FILE_PERMS   OWNER_READ OWNER_WRITE                GROUP_READ                WORLD_READ                )
 if (LINUX)
 	set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s")
 else ()

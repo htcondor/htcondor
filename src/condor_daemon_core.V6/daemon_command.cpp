@@ -37,6 +37,29 @@
 #include "daemon_command.h"
 #include "condor_base64.h"
 
+static bool LooksLikeTLSClientHello(const unsigned char *buf, size_t len)
+{
+	// buf[2] is the legacy version field. 0x01 is TLS 1.0, 0x03 is TLS 1.2
+	// TLS 1.3 uses 0x03 for backwards compatibility.
+	// We allow up to 0x04 (hypothetical future version) but not higher to avoid false positives.
+	return len >= 3 && buf[0] == 0x16 && buf[1] == 0x03 && buf[2] <= 0x04;
+}
+
+static bool LooksLikeHttpRequest(const char *buf, size_t len)
+{
+	static const char *const methods[] = {
+		"GET ", "POST ", "HEAD ", "PUT ", "DELETE ", "OPTIONS ",
+		"TRACE ", "CONNECT ", "PATCH "
+	};
+	for (auto method : methods) {
+		size_t mlen = strlen(method);
+		if (len >= mlen && strncmp(buf, method, mlen) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 static unsigned int ZZZZZ = 0;
 static int ZZZ_always_increase() {
@@ -300,10 +323,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
-				// but first, we should be nice and send a message back to
-				// the people who sent us the wrong session id.
-				daemonCore->send_invalidate_session ( return_address_ss, sess_id );
-
 				if( return_address_ss ) {
 					free( return_address_ss );
 					return_address_ss = NULL;
@@ -394,9 +413,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
-
-				// but first, send a message to whoever provided us with incorrect session id
-				daemonCore->send_invalidate_session( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -515,47 +531,54 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();
 
-		// Determine if incoming socket is HTTP over TCP, or if it is CEDAR.
-		// For better or worse, we figure this out by seeing if the socket
-		// starts w/ a GET or POST.  Hopefully this does not correspond to
-		// a daemoncore command int!  [not ever likely, since CEDAR ints are
-		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
-		// with a more foolproof method.
-		// Note: We no longer support soap, but this peek is part of the
-		//   code below that checks if this is a command that shared port
-		//   should transparently hand off to the collector.
-	char tmpbuf[6];
-	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
-			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
-	}
+	// See if we have a special command handler for unknown command integers or HTTP/TLS fallbacks.
+	// We do manual CEDAR parsing here to peek at the command int directly without consuming data
+	// from the socket. The first five bytes are the CEDAR packet header. The next eight bytes are
+	// the command int itself. Leaving the data unconsumed is necessary for the shared port daemon
+	// to transparently hand connections elsewhere when it doesn't handle the command.
+	if (m_is_tcp && (daemonCore->HandleUnregistered() || daemonCore->HandleHTTP())) {
+		long long tmp_req;
+		char tmpbuf[8+5]; memset(tmpbuf, 0, sizeof(tmpbuf));
+		int sz = sizeof(tmpbuf);
+		int rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf, sz, 1, CondorRWFlags::Peek);
+		if (rc != sz) {
+			char const *ip = m_sock->peer_ip_str();
+			if(!ip) {
+				ip = "unknown address";
+			}
+			dprintf(D_ERROR, "DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
 
-		// This was not a soap request; next, see if we have a special command
-		// handler for unknown command integers.
-		//
-		// We do manual CEDAR parsing here to look at the command int directly
-		// without consuming data from the socket.  The first few bytes are the
-		// size of the message, followed by the command int itself.
-	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
-	tmp_req = ntohl(tmp_req);
-	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
-			// Peek at the command integer if one exists.
-		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf2, 8+5, 1, MSG_PEEK);
-		char *tmpbuf3 = tmpbuf2 + 5;
-		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
-		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
-		tmp_req = ntohl(tmp_req);
+		bool http_handler = daemonCore->HandleHTTP();
+		bool looks_tls = false;
+		bool looks_http = false;
+		if (http_handler) {
+			looks_tls = LooksLikeTLSClientHello(reinterpret_cast<unsigned char*>(tmpbuf), rc);
+			looks_http = LooksLikeHttpRequest(tmpbuf, rc);
+		}
 
-			// Lookup the command integer in our command table to see if it is unregistered
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf + 5, sizeof(tmp_req));
+		tmp_req = ntohLL(tmp_req);
+
 		int tmp_cmd_index;
-		if(	   (!m_isSharedPortLoopback)
-			&& (! daemonCore->CommandNumToTableIndex( tmp_req, &tmp_cmd_index ))
-			&& ( daemonCore->HandleUnregisteredDCAuth()
-				|| (tmp_req != DC_AUTHENTICATE) ) ) {
+		bool unknown_cmd = (!m_isSharedPortLoopback)
+			&& (! daemonCore->CommandNumToTableIndex( (int)tmp_req, &tmp_cmd_index ))
+			&& ( daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE) );
+
+		if (unknown_cmd && http_handler && (looks_tls || looks_http)) {
+			ScopedEnableParallel(false);
+			if( m_sock_had_no_deadline ) {
+				// unset the deadline we assigned in WaitForSocketData
+				m_sock->set_deadline(0);
+			}
+			m_result = daemonCore->CallHTTPCommandHandler((int)tmp_req, m_sock);
+			return CommandProtocolFinished;
+		}
+
+		if (unknown_cmd && daemonCore->HandleUnregistered()) {
 			ScopedEnableParallel(false);
 
 			if( m_sock_had_no_deadline ) {
@@ -563,9 +586,15 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 				m_sock->set_deadline(0);
 			}
 
-			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			m_result = daemonCore->CallUnregisteredCommandHandler((int)tmp_req, m_sock);
 			return CommandProtocolFinished;
 		}
+	}
+
+	// If we don't know who this client is, limit them to single-packet
+	// CEDAR messages.
+	if (m_is_tcp && !m_sock->isMappedFQU() && param_boolean("SEC_USE_LOW_DATA_MODE", false)) {
+		((ReliSock*)m_sock)->SetLowDataMode(true);
 	}
 
 	m_state = CommandProtocolReadCommand;
@@ -625,7 +654,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", m_sock->peer_description());
 
-		if( !getClassAd(m_sock, m_auth_info)) {
+		if( !getPODClassAd(m_sock, m_auth_info)) {
 			dprintf (D_ERROR, "ERROR: DC_AUTHENTICATE unable to "
 					 "receive auth_info from %s!\n", m_sock->peer_description());
 			m_result = FALSE;
@@ -692,7 +721,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		if( m_auth_info.LookupString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str());
+			valid_cookie = daemonCore->cookie_is_valid((const unsigned char *)incoming_cookie.c_str(), (int)incoming_cookie.size());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.
@@ -751,22 +780,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
 						}
 					} else {
-						// Old client (pre-9.9.0), send out-of-band
+						// Old client (pre-9.9.0), can't send
 						// notification of invalid session.
-						std::string our_sinful;
-						m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						ClassAd info_ad;
-						// Presence of the ConnectSinful attribute indicates
-						// that the client understands and wants the
-						// extended information ad in the
-						// DC_INVALIDATE_KEY message.
-						if ( !our_sinful.empty() ) {
-							info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-						}
-
-						if( !return_addr.empty() ) {
-							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid.c_str(), &info_ad );
-						}
 
 						// consume the rejected message
 						m_sock->decode();
@@ -906,7 +921,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
@@ -1445,9 +1460,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			m_comTable[m_cmd_index].force_authentication &&
 			!m_sock->triedAuthentication() )
 		{
-			SecMan::authenticate_sock(m_sock, WRITE, &errstack);
 				// we don't check the return value, because the code below
 				// handles what to do with unauthenticated connections
+			std::ignore = SecMan::authenticate_sock(m_sock, WRITE, &errstack);
 		}
 
 		if (m_reqFound && !m_sock->isAuthenticated()) {
@@ -1465,7 +1480,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 					dprintf( D_ERROR, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
@@ -1542,8 +1557,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
+			bool has_capability = false;
 			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
-			if (policy_ad && policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			if (policy_ad) {
+				if (policy_ad->EvaluateAttrString("TokenCapabilities", authz_policy)) {
+					has_capability = true;
+				} else {
+					policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
+				}
+			}
+			if (!authz_policy.empty()) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
@@ -1570,7 +1593,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					can_attempt = false;
 				}
 			}
-			if (can_attempt) {
+			if (has_capability && can_attempt) {
+				// Client has capability that authorizes this command
+				dprintf(D_STATUS,
+					"PERMISSION GRANTED to %s from host %s for %s, "
+					"access level %s: reason: %s\n",
+					m_user.c_str(),
+					m_sock->peer_addr().to_ip_string_ex().c_str(),
+					command_desc.c_str(),
+					PermString(m_comTable[m_cmd_index].perm),
+					"client has capability that allows this command");
+				m_perm = USER_AUTH_SUCCESS;
+			} else if (can_attempt) {
 					// A bit redundant to have the outer conditional,
 					// but this gets the log verbosity right and has
 					// zero cost in the "normal" case with no alternate
@@ -1864,6 +1898,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		ClassAd q_response;
 		q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
 
+		// Include token-related attributes
+		// Can m_policy be NULL in practice?
+		if (m_policy) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto& token_attr: *m_policy) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				q_response.Insert(token_attr.first, token_attr.second->Copy());
+			}
+		}
+
 		if (!putClassAd(m_sock, q_response) ||
 			!m_sock->end_of_message()) {
 			dprintf (D_ERROR, "SECMAN: Error sending DC_SEC_QUERY reply to %s!\n", m_sock->peer_description());
@@ -1879,6 +1925,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// successfully abort before actually calling any command handler.
 		m_result = TRUE;
 		return CommandProtocolFinished;
+	}
+
+	// If we know who the client is, turn off CEDAR low-data mode, if it
+	// was enabled.
+	if (m_is_tcp && m_sock->isMappedFQU()) {
+		((ReliSock*)m_sock)->SetLowDataMode(false);
 	}
 
 	if ( m_reqFound == TRUE ) {

@@ -72,7 +72,7 @@ class ClassAd(MutableMapping):
       * ClassAd (:class:`ClassAd`)
       * undefined (:data:`classad2.Value.Undefined`)
       * error (:data:`classad2.Value.Error`)
-      * expression (:class:`ExprTree)
+      * expression (:class:`ExprTree`)
 
     When setting a value, :py:obj:`None` is converted to
     :data:`classad2.Value.Undefined` and :class:`dict`\s
@@ -80,8 +80,8 @@ class ClassAd(MutableMapping):
 
     Expressions are always evaluated lazily, so setting a value to
     :class:`ExprTree` ``2 + 2`` will not result in the value being
-    the :class:`int:` ``4``; this also applies when constructing or
-    parsing :class:`ClassAd`s or :classad:`ExprTree`s.
+    the :class:`int` ``4``; this also applies when constructing or
+    parsing :class:`ClassAd`\s or :class:`ExprTree`\s.
     """
 
     def __init__(self, input : Optional[Union[str, dict]] = None):
@@ -225,6 +225,7 @@ class ClassAd(MutableMapping):
         """
         return _classad_print_json(self._handle)
 
+    formatJson = printJson
 
     def printOld(self) -> str:
         """
@@ -232,6 +233,7 @@ class ClassAd(MutableMapping):
         """
         return _classad_print_old(self._handle)
 
+    formatOld = printOld
 
     def symmetricMatch(self, ad : "ClassAd") -> bool:
         '''
@@ -301,18 +303,19 @@ def _convert_local_datetime_to_utc_ts(dt):
 
 
 def _parse_ads_generator(input, parser : Parser = Parser.Auto):
-    total_offset = 0
+    file_offset = 0
     if not isinstance(input, str):
-        total_offset = input.tell()
+        file_offset = input.tell()
 
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (ad, offset) = _classad_parse_next(input_string, int(parser))
+        (ad, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
-        input_string = input_string[offset:]
+        string_offset += offset
         if not isinstance(input, str):
-            total_offset += offset
-            input.seek(total_offset, 0)
+            file_offset += offset
+            input.seek(file_offset, 0)
 
         if ad is None or offset == 0:
             return
@@ -371,16 +374,16 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
 
     result = ClassAd()
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (firstAd, offset) = _classad_parse_next(input_string, int(parser))
+        (firstAd, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
         if firstAd is None or offset == 0:
             return result
 
         if firstAd is not None:
             result.update(firstAd)
-        if offset != 0:
-            input_string = input_string[offset:]
+        string_offset += offset
 
         if not isinstance(input, str):
             total_offset += offset

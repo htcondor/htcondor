@@ -38,6 +38,7 @@ bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
+bool ExprTreeIsArray(classad::ExprTree * expr, size_t & num_elms);
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
 bool ExprTreeMayDollarDollarExpand(classad::ExprTree *tree, std::string & unparsed);
 
@@ -65,7 +66,9 @@ bool ExprTreeIsJobIdConstraint(classad::ExprTree * expr, int & cluster, int & pr
 
 // check to see that a classad expression is valid
 // if attrs is not NULL, it also adds attribute references from the expression into the current set.
-bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
+enum ExpressionKind { None=0, Literal=1, Attr=2, Tree=3, List=4, NestedAd=5 };
+ExpressionKind IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
+ExpressionKind getExpressionKind(classad::ExprTree * expr);
 
 typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
 // edit the given expr changing attribute references as the mapping indicates
@@ -76,6 +79,14 @@ int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping)
 // add attribute references to attrs when they are of the given scope. for example when scope is "MY"
 // and the expression contains MY.Foo, the Foo is added to attrs.
 int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
+
+// add attribute references to attrs when they are of the given scope or unscoped. For example when scope is
+// "MY" and the expression contains MY.Foo or Foo (unscoped), Foo is added to attrs.
+// This is designed for use cases where you have both a "MY" and a "TARGET" classad in context,
+// and you want to walk the expression only once.
+int GetAttrRefsOfScopesOrUnscoped(classad::ExprTree *expr,
+	classad::References &scope1_attrs, const std::string &scope1,
+	classad::References &scope2_attrs, const std::string &scope2);
 
 const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree);
 inline classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
@@ -169,6 +180,9 @@ int add_user_mapping(const char * mapname, const char * mapdata);
 int reconfig_user_maps();
 bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
 
+// predicate for sorting class ads by rank
+int SlotRankSortFunc(ClassAd *ad1,ClassAd *ad2,void *data);
+
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree
 // and produce both string and tree on demand.
@@ -222,7 +236,7 @@ public:
 	void set(char * str) { if (str && (exprstr != str)) { clear(); exprstr = str; } }
 	// get the constraint, parsing the string if needed to construct it.
 	// returns NULL if no constraint
-	bool parse(const char * str) { clear(); return ParseClassAdRvalExpr(str, expr); }
+	bool parse(const char * str) { clear(); return ParseClassAdRvalExpr(str, expr) == 0; }
 	classad::ExprTree * Expr(int * error=NULL) const {
 		int rval = 0;
 		if ( ! expr && ! empty()) {

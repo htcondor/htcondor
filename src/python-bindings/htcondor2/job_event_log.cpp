@@ -13,13 +13,31 @@ _job_event_log_init( PyObject *, PyObject * args ) {
 
     auto wful = new WaitForUserLog(file_name);
     if(! wful->isInitialized()) {
+        // Try to report a specific, human-readable reason for the failure.
+        std::string message = "Could not initialize JobEventLog: ";
+
+        if( file_name != NULL && access(file_name, R_OK) != 0 ) {
+            // We can't read the file, so give the operating system's reason
+            // (most commonly the file doesn't exist, or we lack permission),
+            // along with the filename.
+            formatstr_cat( message, "%s: '%s'.", strerror(errno), file_name );
+        } else {
+            // The file exists but the reader or trigger still failed to
+            // initialize; report whatever detail the reader recorded.
+            ReadUserLog::ErrorType error = ReadUserLog::LOG_ERROR_NONE;
+            const char * error_str = "unknown error";
+            unsigned line_num = 0;
+            wful->getErrorInfo( error, error_str, line_num );
+            formatstr_cat( message, "%s: '%s'.",
+                error_str, file_name ? file_name : "(null)" );
+        }
+        message += "  For more information, call htcondor.enable_debug() "
+            "and try again.";
+
         delete wful;
 
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_HTCondorException, "JobEventLog not initialized.  "
-            "Check the debug log, looking for ReadUserLog or "
-            "FileModifiedTrigger.  (Or call htcondor.enable_debug() "
-            "and try again.)" );
+        PyErr_SetString( PyExc_HTCondorException, message.c_str() );
         return NULL;
     }
     handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[WaitForUserLog]\n" ); delete (WaitForUserLog *)v; v = NULL; };
@@ -112,6 +130,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             }
 
             if(! event->formatEvent( event_text, fo )) {
+                delete event;
                 PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to string" );
                 return NULL;
             }
@@ -120,6 +139,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             // Obtain the event data.
             ClassAd * eventAd = event->toClassAd(false);
             if( eventAd == NULL ) {
+                delete event;
                 // This was HTCondorInternalError in version 1.
                 PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to ClassAd" );
                 return NULL;
@@ -130,6 +150,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             PyObject * pyEventAd = py_new_classad2_classad(eventAd->Copy());
             delete eventAd;
 
+            delete event;
             return Py_BuildValue( "zN", event_text.c_str(), pyEventAd );
         }
 

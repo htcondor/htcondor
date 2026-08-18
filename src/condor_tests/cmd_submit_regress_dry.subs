@@ -21,7 +21,7 @@ email_attributes = not, spam
 remote_initialdir = sandbox
 remote_grid_resource = condor stuff
 remote_remote_grid_resource = condor remoter stuff
-output_destination = /scratch/output/$(cluster)
+output_destination = url://scratch/output/$(cluster)
 want_graceful_removal = true
 job_max_vacate_time = 5*60
 encrypt_execute_directory = true
@@ -214,7 +214,7 @@ should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 transfer_input_files = $Fp(SUBMIT_FILE)../Multilevel_Thesis_WheatData, HTTP://example.com/file1, HTTPS://example.com/file2
 transfer_output_files = results.out
-output_destination = $(ClusterId)/$(ProcId)
+output_directory = /$(ClusterId)/$(ProcId)
 output=$Fn(SUBMIT_FILE).out
 error=$Fn(SUBMIT_FILE).err
 queue 2
@@ -363,6 +363,26 @@ success_exit_code = 5
 
 queue
 
+==retry_disk1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB
+retry_request_disk = 20MB
+queue
+
+==retry_disk2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB
+retry_request_disk = 20MB, 80MB
+queue
+
+==retry_disk3.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB, 20MB, 80 m
+queue
+
 ==retry_mem1.sub
 executable=$Fp(SUBMIT_FILE)basic.cmd
 arguments=10s
@@ -409,7 +429,7 @@ queue
 ==retry_mem3.sub
 executable=$Fp(SUBMIT_FILE)basic.cmd
 arguments=10s
-request_memory = 1GB, 2GB, 8GB
+request_memory = 1GB, 2G, 8 gb
 queue
 
 ==parallel.sub
@@ -516,3 +536,21 @@ queue paramset,chunk from (
 216 142
 240 133
 )
+
+==procexe.sub
+skip_filechecks=warn
+executable=$(item)
+queue item from (
+   basic.cmd
+   $Fp(SUBMIT_FILE)cmd_true.cmd
+   /bin/echo
+)
+
+==procitemexe.sub
+skip_filechecks=warn
+queue executable from (
+   basic.cmd
+   $Fp(SUBMIT_FILE)cmd_true.cmd
+   /bin/echo
+)
+

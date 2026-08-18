@@ -22,11 +22,8 @@ Quickstart Installation Instructions
 To download the latest HTCondor Windows Installer:
 
 #.  Go to the
-    `current channel <https://htcss-downloads.chtc.wisc.edu/tarball/current/>`_
+    `current channel <https://htcss-downloads.chtc.wisc.edu/tarball/current/current/>`_
     download site.
-#.  Click on the second-latest version.  (The latest version should always be
-    the under-development version and will only have ``daily`` builds.)
-#.  Click on the ``release`` folder.
 #.  Click on the file ending in ``.msi`` (usually the first one).
 
 Start the installer by double clicking on the MSI file once it's downloaded.

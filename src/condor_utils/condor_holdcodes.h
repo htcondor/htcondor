@@ -186,7 +186,7 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	JobNotStarted = 1003,
 	UserVacateJob = 1004,
 	JobShouldRequeue = 1005,
-	FailedToActivateClaim = 1006,
+	FailedToActivateClaim = 1006,  // (obsolete?) generic reason shadow could not activate the claim (see ActivationRefused* codes)
 	StarterError = 1007,
 	ReconnectFailed = 1008,
 	ClaimDeactivated = 1009,
@@ -204,9 +204,36 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	ContainerError = 1021,
 	ScheddVacate = 1022,
 	JobRemoved = 1023,
-	ScratchDirError = 1024
-	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
+	ScratchDirError = 1024,
+	SuccessfulCheckpoint = 1025
+	,ActivationRefusedBadRequest = 1026      // activation request ad (job) has missing or invalid attributes
+	,ActivationRefusedNoMatch = 1027         // slot does not match (see Analyze attribute of reply)
+	,ActivationRefusedStillCleaning = 1028   // slot is still cleaning up from previous activation
+	,ActivationRefusedWorklifeExpired = 1029 // claim worklife expired
+	,ActivationRefusedPreempted = 1030       // claim was preempted
+	,ActivationRefusedBroken  = 1031         // slot is broken
+	,ActivationRefusedNotIdle = 1032         // slot is not idle and there is no better reason code.
+	,ActivationRefusedUnclaimed = 1033       // slot is not claimed
+	,ActivationRefusedClaimNotFound = 1034   // claim id was not found
+	,ActivationRefusedOldClaim = 1035        // claim id existed once, but has been consumed (future)
+	,ActivationRefusedUnhealthy = 1036       // slot is unhealthy (future)
+	,StartdRehoming = 1037                   // startd is being rehomed to a different schedd
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
+)
+
+BETTER_ENUM(CONDOR_HOLD_SUBCODE, int,
+
+	// These are enums meant to be used as subcodes for the hold codes above.
+	// While each hold code could assign a different meaning to a given subcode, 
+	// there is value to having some standard meanings for subcodes across multiple hold codes.
+	// Recall any subcode less than or equal to -1000 means vacate (by default) instead of hold.
+
+	Unspecified = 0
+	,FileTransferPluginNotFound = -1001
+	,FileTransferPluginNotOperational = -1002
+	,FileTransferPluginExecFailed = -1003
+	,FileTransferPluginNoResultReported = -1004
+
 )
 
 BETTER_ENUM(FILETRANSFER_HOLD_CODE, int,
@@ -229,6 +256,26 @@ BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
 	Disk = 104
 )
 
+// Why didn't the job start?  Except for CatalogNameError, all of these are
+// vacate codes indicating that the job should go into cooldown (to avoid
+// immediately re-running it on the same slot).  CatalogNameError is a hold
+// code: it's unlikely to be the submitter's fault, but trying again with a
+// new shadow or starter likely won't fix the problem.
+BETTER_ENUM(JOB_NOT_STARTED_SUB_CODE, int,
+	CommonTransferBadReply = 1,
+	CommonTransferFailed = 2,
+	CommonMappingFailed = 3,
+	SlotColoringFailed = 4,
+	SlotColoringBadReply = 5,
+	OfferResourcesFailed = 6,
+
+	CatalogNameError = 7
+)
+
+// Hold reason subcode for final transfer on remove
+// Used when condor_rm -transfer triggers a vacate with file transfer
+#define HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE 1
+
 /* Helper functions to decipher hold codes and subcodes.
 
    These functions help determine if a job should be held or vacated based on its hold codes and subcodes.
@@ -250,8 +297,36 @@ inline bool shouldVacateJobBasedOnCodes(int code, int subcode) {
 	}
 	return false;
 }
+
 inline bool shouldHoldJobBasedOnCodes(int code, int subcode) {
 	return !shouldVacateJobBasedOnCodes(code, subcode);
+}
+
+// Any (code, subcode) tuple which is not known to a cool-down code isn't.
+inline bool shouldCoolJobBasedOnCodes(int vacateCode, int vacateSubCode) {
+	if( vacateCode == CONDOR_HOLD_CODE::JobNotStarted ) {
+		auto jnssc = JOB_NOT_STARTED_SUB_CODE::_from_integral_nothrow(vacateSubCode);
+		if(! jnssc) { return false; }
+
+		switch( * jnssc ) {
+			case JOB_NOT_STARTED_SUB_CODE::CommonTransferBadReply:
+			case JOB_NOT_STARTED_SUB_CODE::CommonTransferFailed:
+			case JOB_NOT_STARTED_SUB_CODE::CommonMappingFailed:
+			case JOB_NOT_STARTED_SUB_CODE::SlotColoringFailed:
+			case JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply:
+			case JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed:
+				return true;
+
+			case JOB_NOT_STARTED_SUB_CODE::CatalogNameError:
+				return false;
+
+			// Don't add `default` here, so that if we add a new value to
+			// JOB_NOT_STARTED_SUB_CODE, we have to explicitly decide if
+			// it should default to cooling down or not.
+		}
+	}
+
+	return false;
 }
 
 #endif

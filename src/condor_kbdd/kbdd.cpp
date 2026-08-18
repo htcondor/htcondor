@@ -26,7 +26,10 @@
 #include "condor_uid.h"
 #else
 #include "XInterface.unix.h"
-#endif
+#ifdef HAVE_DBUS
+#include "MutterInterface.unix.h"
+#endif /* HAVE_DBUS */
+#endif /* !WIN32 */
 
 #include "condor_config.h"
 #include "condor_query.h"
@@ -42,7 +45,10 @@
 #include <X11/Xlib.h>
 
 XInterface *xinter = NULL;
-#endif
+#ifdef HAVE_DBUS
+MutterInterface *minter = NULL;
+#endif /* HAVE_DBUS */
+#endif /* !WIN32 */
 
 #ifdef WIN32
 static void hack_kbdd_registry();
@@ -221,6 +227,9 @@ PollActivity(int /* tid */)
 		CheckActivity()
 	#else
 		(xinter && xinter->CheckActivity())
+#ifdef HAVE_DBUS
+		|| (minter && minter->CheckActivity())
+#endif
 	#endif
 		)
 	{
@@ -236,6 +245,9 @@ main_shutdown_graceful()
 {
 #ifndef WIN32
     delete xinter;
+#ifdef HAVE_DBUS
+    delete minter;
+#endif
 #endif
     DC_Exit(EXIT_SUCCESS);
 }
@@ -256,6 +268,9 @@ main_init(int, char *[])
 {
 #ifndef WIN32
 	xinter = NULL;
+#ifdef HAVE_DBUS
+	minter = NULL;
+#endif
 #endif
 
 	small_move_delta = param_integer("KBDD_BUMP_CHECK_SIZE", small_move_delta);
@@ -266,6 +281,9 @@ main_init(int, char *[])
 #ifndef WIN32
 	xinter = new XInterface(id);
 	if (xinter) { xinter->SetBumpCheck(small_move_delta, bump_check_after_idle_time_sec); }
+#ifdef HAVE_DBUS
+	minter = new MutterInterface();
+#endif
 #endif
 }
 

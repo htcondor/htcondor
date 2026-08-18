@@ -94,8 +94,9 @@ exit 0
     """
     filename = test_dir / 'singularity_tester.sh'
     write_file(filename, mock_singularity)
-    os.chmod(filename, stat.S_IRWXU)
+    os.chmod(filename, 0o755)
     write_file(test_dir / 'ignored.sif', "")
+    os.chmod(test_dir / 'ignored.sif', 0o755)
     return filename
 
 # Setup a personal condor with SINGULARITY pointing at the mocking wrapper
@@ -127,9 +128,13 @@ def completed_test_job(condor, test_job_hash):
     ctj = condor.submit(
         {**test_job_hash}, count=1
     )
+    # Ubuntu 26 ships /bin/cat from the rust uutils package, which is ~11 MB
+    # vs. ~50 KB for GNU coreutils. The executable plus the empty ignored.sif
+    # gives an ~11 MB sandbox, and on loaded CI runners that file transfer
+    # can take 75-90s, so a 60s timeout flakes.
     assert ctj.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=300,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
@@ -146,9 +151,10 @@ def completed_test_job_with_target_dir(condor, test_job_hash_with_target_dir):
     ctj = condor.submit(
         {**test_job_hash_with_target_dir}, count=1
     )
+    # See comment in completed_test_job re: Ubuntu 26 rust uutils /bin/cat.
     assert ctj.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=300,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )

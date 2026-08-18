@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 199> makeCommandTable() {
+std::array<std::pair<int, const char *>, 212> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -368,6 +368,22 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{SET_FLOOR, "SET_FLOOR"},
 #define DIRECT_ATTACH (SCHED_VERS+131) // Provide slot ads to the schedd (not from the negotiator)
 		{DIRECT_ATTACH, "DIRECT_ATTACH"},
+		// Manage temporary ceiling leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, Ceiling?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+		// Additional actions can be added without a new command.
+#define MANAGE_CEILING (SCHED_VERS+132)
+		{MANAGE_CEILING, "MANAGE_CEILING"},
+		// Manage temporary floor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, Floor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_FLOOR (SCHED_VERS+133)
+		{MANAGE_FLOOR, "MANAGE_FLOOR"},
+		// Manage temporary priority-factor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, PriorityFactor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_PRIORITY_FACTOR (SCHED_VERS+134)
+		{MANAGE_PRIORITY_FACTOR, "MANAGE_PRIORITY_FACTOR"},
 // command ids from +140 to +149 reserved for Schedd UserRec commands
 #define QUERY_USERREC_ADS (SCHED_VERS+140)
 		{QUERY_USERREC_ADS, "QUERY_USERREC_ADS"},
@@ -389,6 +405,28 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC"},
 #define QUERY_OCU_FROM_USERREC (SCHED_VERS + 153) // Query the OCU(s) associated with a given UserRec
 		{QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC"},
+
+#define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+154)
+		{REACTIVATE_CLAIM_CHECK, "REACTIVATE_CLAIM_CHECK"},
+#define PLACEMENT_USER_LOGIN    (SCHED_VERS+155)
+		{PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN"},
+#define PLACEMENT_QUERY_USERS    (SCHED_VERS+156)
+		{PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS"},
+#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+157)
+		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
+#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+158)
+		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
+#define CREATE_STARTUP_LIMIT      (SCHED_VERS+159)
+		{CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT"},
+#define QUERY_STARTUP_LIMITS      (SCHED_VERS+160)
+		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
+#define DEACTIVATE_CLAIM_FINAL_XFER	(SCHED_VERS+161)  	// deactivate claim and do final transfer
+		{DEACTIVATE_CLAIM_FINAL_XFER, "DEACTIVATE_CLAIM_FINAL_XFER"},
+#define REHOME	(SCHED_VERS+162)
+		{REHOME, "REHOME"},
+#define COMMAND_DATA_SLOT (SCHED_VERS+163)
+		{COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT"},
+
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},
@@ -519,8 +557,8 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{DC_RECONFIG_FULL, "DC_RECONFIG_FULL"},
 #define DC_FETCH_LOG        (DC_BASE+13)
 		{DC_FETCH_LOG, "DC_FETCH_LOG"},
-#define DC_INVALIDATE_KEY   (DC_BASE+14)
-		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
+//#define DC_INVALIDATE_KEY   (DC_BASE+14) /* not used */
+//		{DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY"},
 #define DC_OFF_PEACEFUL     (DC_BASE+15)
 		{DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL"},
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
@@ -640,6 +678,8 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 //#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)	/* Not used */
 #define UPDATE_JOBAD		   (DCSHADOW_BASE+5)
 		{UPDATE_JOBAD, "UPDATE_JOBAD"},
+#define TRANSFER_SANDBOX_AND_RM_JOB		   (DCSHADOW_BASE+6)
+		{TRANSFER_SANDBOX_AND_RM_JOB, "TRANSFER_SANDBOX_AND_RM_JOB"},
 
 
 /*
@@ -722,7 +762,7 @@ static_assert(makeCommandTable().back().first == COMMAND_LAST, "Is the size of t
 *** Command ids used by the collector 
 ************/
 constexpr const
-std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
+std::array<std::pair<int, const char *>, 64> makeCollectorCommandTable() {
 	return {{ 
 #define UPDATE_STARTD_AD		0
 		{UPDATE_STARTD_AD, "UPDATE_STARTD_AD"},
@@ -889,6 +929,13 @@ std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
 			// Request a collector to retrieve an identity token from a schedd.
 #define IMPERSONATION_TOKEN_REQUEST 81
 		{IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST"},
+
+			// Ask a CCB to dial a target on the requester's behalf and splice the
+			// two sockets into a relay (outbound-CCB / tunneling mode).
+#define CCB_PROXY_CONNECT 82
+		{CCB_PROXY_CONNECT, "CCB_PROXY_CONNECT"},
+
+		// (83 reserved)
 
 #define COLLECTOR_COMMAND_LAST (INT_MAX - 1)			// used by the Win32 credd only
 		{COLLECTOR_COMMAND_LAST, "COLLECTOR_COMMAND_LAST"},

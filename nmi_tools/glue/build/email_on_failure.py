@@ -40,7 +40,7 @@ def validate_input():
     if len(sys.argv) != 2:
         die_nice("Must pass in exactly one argument, the NMI Run ID that failed")
 
-    if re.search("\D", sys.argv[1]):
+    if re.search(r"\D", sys.argv[1]):
         die_nice("Argument supplied does not look like an NMI Run ID.  It contains a non-digit: %s" % sys.argv[1])
 
     return sys.argv[1]
@@ -53,10 +53,10 @@ def load_config(file):
 
     f = open(file, 'r')
     for line in f.readlines():
-        if re.match("\s*$", line) or re.match("\s*\#", line):
+        if re.match(r"\s*$", line) or re.match(r"\s*\#", line):
             continue
 
-        m = re.match("\s*(\S+)\s*=\s*(.+)$", line)
+        m = re.match(r"\s*(\S+)\s*=\s*(.+)$", line)
         if m:
             config[m.group(1)] = m.group(2).strip()
 
@@ -75,8 +75,8 @@ def check_runid(config, runid):
 
     # If this is a continuous build then we can leave the description alone.
     # But if it is a branch build we need to strip the date off the end of it.
-    if re.search("-2\d\d\d-\d\d?-\d\d?$", description):
-        description = re.sub("-2\d\d\d-\d\d?-\d\d?$", "", description)
+    if re.search(r"-2\d\d\d-\d\d?-\d\d?$", description):
+        description = re.sub(r"-2\d\d\d-\d\d?-\d\d?$", "", description)
 
     cursor.execute("SELECT result,project_version FROM Run WHERE user = \"cndrauto\" AND runid <= " + runid + " AND description LIKE \"" + description + "%\" ORDER BY runid DESC LIMIT 2;")
     (this_result, this_sha1) = cursor.fetchone()
@@ -116,7 +116,7 @@ def get_authors(new_sha1, old_sha1):
 
     authors = {}
     for line in os.popen(cmd).read().split("\n"):
-        m = re.match("\s*(.+) \|\| (.+)$", line)
+        m = re.match(r"\s*(.+) \|\| (.+)$", line)
         if m:
             authors[m.group(1)] = m.group(2).strip()
 

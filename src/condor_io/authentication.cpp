@@ -673,7 +673,7 @@ void Authentication::split_canonical_name(const std::string& can_name, std::stri
 	local_user[255] = 0;
 
     // split it into user@domain
-    char* tmp = strchr(local_user, '@');
+    char* tmp = strrchr(local_user, '@');
     if (tmp == NULL) {
         user = local_user;
         char * uid_domain = param("UID_DOMAIN");

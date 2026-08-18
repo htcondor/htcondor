@@ -314,12 +314,12 @@ sub VerifyRealData
 
 sub dashspoolreset
 {
-	system("rm -f dashspool.file1 dashspool.file2 ");
+	unlink qw(dashspool.file1 dashspool.file2);
 }
 
 sub initialreset
 {
-	system("rm -f dashspool.file1 dashspool.file2 dummydata realdata");
+	unlink qw(dashspool.file1 dashspool.file2 dummydata realdata);
 }
 
 sub MissingFiles

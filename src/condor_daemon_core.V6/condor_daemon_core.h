@@ -167,7 +167,8 @@ typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
 typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
 //@}
 
-typedef enum { 
+typedef enum {
+	HANDLE_NONE=0,	// registered but not polled for read or write
 	HANDLE_READ=1,
 	HANDLE_WRITE,
 	HANDLE_READ_WRITE
@@ -337,7 +338,8 @@ class OptionalCreateProcessArgs {
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
 	{}
     OptionalCreateProcessArgs() :
         _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
@@ -345,7 +347,8 @@ class OptionalCreateProcessArgs {
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
-        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l)
+        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs(
@@ -376,7 +379,8 @@ class OptionalCreateProcessArgs {
         sig_mask(sig_mask), job_opt_mask(job_opt_mask),
         core_hard_limit(core_hard_limit), affinity_mask(affinity_mask),
         daemon_sock(daemon_sock), err_return_msg(err_return_msg),
-        _remap(remap), as_hard_limit(as_hard_limit)
+        _remap(remap), as_hard_limit(as_hard_limit),
+        initial_hung_timeout(0)
     {}
 
     OptionalCreateProcessArgs & priv(priv_state p) { this->_priv = p; return *this; }
@@ -397,6 +401,12 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
     OptionalCreateProcessArgs & reaperID(int ri) { this->reaper_id = ri; return *this; }
+    // Arm the daemon-core hung-child backstop for this child at creation time,
+    // rather than waiting for its first DC_CHILDALIVE message.  seconds is how
+    // long from now the child is considered hung if it sends no alive.  0 (the
+    // default) preserves the historical behavior of not arming until the first
+    // alive arrives.
+    OptionalCreateProcessArgs & initialHungTimeout(int seconds) { this->initial_hung_timeout = seconds; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to
@@ -425,6 +435,7 @@ class OptionalCreateProcessArgs {
     std::string &     err_return_msg;
     FilesystemRemap * _remap;
     long              as_hard_limit;
+    int               initial_hung_timeout;
 
     // We'd like to use std::optional for the std::string reference, but
     // we can't do that until C++17 is a thing for us.  Instead, initialize
@@ -564,8 +575,14 @@ class DaemonCore : public Service
 		const char       *handler_descrip,
 		Service          *s,
 		bool              include_auth);
-    bool HandleUnregistered() const {return m_unregisteredCommand.num;}
-    bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
+
+	int Register_HTTP_CommandHandler(
+			StdCommandHandler handler,
+			const char       *handler_descrip);
+
+	bool HandleHTTP() const { return m_httpCommand.num; }
+	bool HandleUnregistered() const {return m_unregisteredCommand.num;}
+	bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
@@ -1016,6 +1033,7 @@ class DaemonCore : public Service
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 	int CallUnregisteredCommandHandler(int req, Stream *stream);
+    int CallHTTPCommandHandler(int req, Stream *stream);
 
 
 		// This function is called in order to have
@@ -1058,6 +1076,18 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Lookup_Socket ( Stream * iosock );
+
+    /** Change the I/O interest of an already-registered socket without
+        re-registering it. This lets a byte relay (e.g. CCB streaming) implement
+        backpressure: pause reads on the source while the destination is
+        congested (HANDLE_WRITE or HANDLE_NONE), and watch the destination for
+        writability while bytes are buffered. The socket keeps its existing
+        handler and registration.
+        @param iosock        the registered socket to adjust
+        @param handler_type  the new interest (HANDLE_NONE/READ/WRITE/READ_WRITE)
+        @return true if the socket was found and updated, false otherwise
+    */
+    bool Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type );
 	//@}
 
 	/** @name Pipe events.
@@ -1109,17 +1139,18 @@ class DaemonCore : public Service
 
 	/** Create an anonymous pipe.
 	*/
+	static constexpr int DEFAULT_PIPE_SIZE = 65536;
 	int Create_Pipe( int *pipe_ends,
 			 bool can_register_read = false, bool can_register_write = false,
 			 bool nonblocking_read = false, bool nonblocking_write = false,
-			 unsigned int psize = 4096);
+			 unsigned int psize = DEFAULT_PIPE_SIZE);
 
 	/** Create a named pipe
 	*/
 	int Create_Named_Pipe( int *pipe_ends,
 			 bool can_register_read = false, bool can_register_write = false,
 			 bool nonblocking_read = false, bool nonblocking_write = false,
-			 unsigned int psize = 4096, const char* pipe_name = NULL);
+			 unsigned int psize = DEFAULT_PIPE_SIZE, const char* pipe_name = NULL);
 	/** Make DaemonCore aware of an inherited pipe.
 	*/
 	int Inherit_Pipe( int p, bool write, bool can_register, bool nonblocking, int psize = 4096);
@@ -1413,6 +1444,7 @@ class DaemonCore : public Service
                Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
+	private:
     int Create_Process (
         const char      *name,
         ArgList const   &arglist,
@@ -1436,6 +1468,7 @@ class DaemonCore : public Service
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
+	public:	
 
     int CreateProcessNew(
         const std::string & name,
@@ -1455,6 +1488,7 @@ class DaemonCore : public Service
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
+	static const int ERRNO_OOM_KILLED_AT_STARTUP;
 
 	const static char* DEFAULT_INDENT;
 
@@ -1632,6 +1666,7 @@ class DaemonCore : public Service
 	bool CheckConfigSecurity( const char* config, Sock* sock );
 	bool CheckConfigAttrSecurity( const char* attr, Sock* sock );
 
+	std::string GetCommandsInAuthLevel(DCpermission perm, bool is_authenticated);
 
     /** Invalidate all session related cache since the configuration
      */
@@ -1640,7 +1675,7 @@ class DaemonCore : public Service
 	/* manage the secret cookie data */
 	bool set_cookie( int len, const unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
-	bool cookie_is_valid( const unsigned char* data );
+	bool cookie_is_valid( const unsigned char* data, int len );
 
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
@@ -1873,7 +1908,6 @@ class DaemonCore : public Service
 	bool m_never_use_kill_for_dc_signals;
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
-	bool m_invalidate_sessions_via_tcp;
 
 	// This pairing should representing the "same" socket, just on UDP and TCP.
 	// It's okay for parts to be NULL.  Safe to copy, although all of the
@@ -2017,8 +2051,6 @@ class DaemonCore : public Service
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
-	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
-
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,
 	// this is a transitional function for the old initial_command_sock 
@@ -2047,6 +2079,7 @@ class DaemonCore : public Service
     void                DumpCommandTable(int, const char* = NULL);
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
+    CommandEnt          m_httpCommand;
 
     struct SignalEnt
     {
@@ -2363,14 +2396,6 @@ class DaemonCore : public Service
 		   themselves.
 		*/
 	void initCollectorList(void);
-
-	// Inform a client that they attempted to resume a session that
-	// we don't have.
-	// If the client is version 8.8.0 or later, extended information
-	// can be provided in the info_ad. Older clients will assume the
-	// ad is part of the session id to invalidate.
-	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const ClassAd* info_ad = NULL ) const;
 
 	bool m_wants_restart{true};
 	bool m_in_shutdown_peaceful{false};

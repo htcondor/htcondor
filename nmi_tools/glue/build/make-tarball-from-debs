@@ -17,6 +17,9 @@ if [ ! -d $debdir ]; then
     exit 1
 fi
 
+# Pin umask so file modes baked into the tarball are reproducible
+umask 022
+
 extract_deb() {
     what=$1
     where=$2
@@ -68,6 +71,8 @@ elif [ $VERSION_CODENAME = 'jammy' ]; then
     arch_dist="${arch}_Ubuntu22"
 elif [ $VERSION_CODENAME = 'noble' ]; then
     arch_dist="${arch}_Ubuntu24"
+elif [ $VERSION_CODENAME = 'resolute' ]; then
+    arch_dist="${arch}_Ubuntu26"
 elif [ $VERSION_CODENAME = 'chimaera' ]; then
     arch_dist="${arch}_Devuan4"
 else

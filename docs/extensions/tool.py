@@ -45,6 +45,10 @@ def tool_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     if program_name not in TOOLS:
         docname = inliner.document.settings.env.docname
         warn(f"{docname}:{lineno} | Referenced tool '{program_name}' has no corresponding man page. Typo perhaps?")
+
+    if inliner.document.settings.env.config.MANPAGES:
+        return [ nodes.Text(program_name) ], []
+
     ref_link = f"href=\"{root_dir}/man-pages/{program_name}.html{htc_cli_verb_anchor}\""
     return make_ref_and_index_nodes(name, original_name, program_index,
                                     ref_link, rawtext, inliner, lineno, options)
@@ -52,4 +56,5 @@ def tool_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
 def setup(app):
     global TOOLS
     TOOLS = find_tools(app.srcdir)
+    app.add_config_value('MANPAGES', False, 'env')
     app.add_role("tool", tool_role)

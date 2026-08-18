@@ -39,7 +39,7 @@
 #endif
 
 
-//JobRouter *job_router = NULL;
+JobRouter *job_router = NULL;
 
 //-------------------------------------------------------------
 const char * MyName = NULL;
@@ -481,6 +481,8 @@ public:
 private:
 };
 
+class UserRecord;
+
 Scheduler::Scheduler(int id /*=0*/)
 	: m_consumer(NULL)
 	, m_mirror(NULL)
@@ -500,7 +502,7 @@ void Scheduler::init() {  config(); }
 void Scheduler::config() { if (m_mirror) m_mirror->config(); }
 void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
-
+UserRecord * Scheduler::GetJobUser(const ClassAd * jobad) { return nullptr; }
 
 // 
 JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), m_warn_cleanup(false), m_warn_update(false), m_warn_translate(false), m_warn_exit(false),NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_default_hook_keyword(NULL) {}
@@ -549,7 +551,7 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
 	return true;
 }
 
-bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed,int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed,int & cluster_out, int & proc_out, std::string & user_out)
 {
 	fprintf(stdout, "submit_job as %s@%s to %s%s:\n", owner.c_str(), domain.c_str(),
 		scci.label(),
@@ -626,32 +628,32 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 	return true;
 }
 
-bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
+bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad, UserRecord* )
 {
 	return true;
 }
 
-bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad, const UserRecord* )
 {
 	return true;
 }
 
-bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad, const UserRecord* )
 {
 	return true;
 }
 
-bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
+bool WriteHoldEventToUserLog( classad::ClassAd const &ad, const UserRecord* )
 {
 	return true;
 }
 
-bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad, const UserRecord* )
 {
 	return true;
 }
 
-bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad, const UserRecord* )
 {
 	return true;
 }

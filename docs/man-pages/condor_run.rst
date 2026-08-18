@@ -7,7 +7,7 @@ Submit a shell command-line as an HTCondor job
 Synopsis
 --------
 
-**condor_run** [**-u** *universe*] [**-a** *submitcmd*] *"shell
+**condor_run** [**-u** *universe*] [**-getenv**] [**-a** *submitcmd*] *"shell
 command"*
 
 Description
@@ -79,6 +79,8 @@ Options
     submit command in double quote marks. And, to include double quote
     marks within *submitcmd*, enclose the submit command in single quote
     marks.
+ **-getenv**
+    Add the getenv = true to the generated submit description file.
 
 Examples
 --------

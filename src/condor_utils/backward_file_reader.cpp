@@ -162,14 +162,14 @@ bool BackwardFileReader::PrevLine(std::string & str)
 	if (AtBOF())
 		return false;
 
-	const int64_t cbBack = 512;
+	const int64_t cbBack = BUFSIZ;
 	while (true) {
 		int64_t off = cbPos > cbBack ? cbPos - cbBack : 0;
 		int cbToRead = (int)(cbPos - off);
 
 		// we want to read in cbBack chunks at cbBack aligment, of course
 		// this only makes sense to do if cbBack is a power of 2. 
-		// also, in order to get EOF to register, we have to read a little 
+		// also, in order to get EOF to register, we have to read past the end
 		// so we may want the first read (from the end, of course) to be a bit 
 		// larger than cbBack so that we read at least cbBack but also end up
 		// on cbBack alignment. 
@@ -177,8 +177,8 @@ bool BackwardFileReader::PrevLine(std::string & str)
 			// test to see if cbBack is a power of 2, if it is, then set our
 			// seek to align on cbBack.
 			if (!(cbBack & (cbBack-1))) {
-				// seek to an even multiple of cbBack at least cbBack from the end of the file.
-				off = (cbFile - cbBack) & ~(cbBack-1);
+				// seek to the last even multiple of cbBack before the end of the file.
+				off = (cbFile - 1) & ~(cbBack-1);
 				cbToRead = cbFile - off;
 			}
 			cbToRead += 16;
@@ -266,7 +266,7 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str, std::deque<std::stri
 		// buffer ended _exactly_ at a newline boundary, so return
 		// the string rather than concatinating it to the newline.
 		if ( ! str.empty()) {
-			if (buf[cb-1] == '\r')
+			if (cb > 0 && buf[cb-1] == '\r')
 				buf[--cb] = 0;
 			buf.setsize(cb);
 #if 1
@@ -276,7 +276,7 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str, std::deque<std::stri
 		}
 	}
 	// because of windows style \r\n, we also tolerate a \r at the end of the line
-	if (buf[cb-1] == '\r') {
+	if (cb > 0 && buf[cb-1] == '\r') {
 		buf[--cb] = 0;
 	}
 

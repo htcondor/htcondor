@@ -521,7 +521,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 		if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
 			job_output_ad_is_stdout = true;
 		} else if( ! fullpath(job_output_ad_file) ) {
-			std::string path = starter->GetWorkingDir(0);
+			std::string path = starter->GetWorkingDir(WD::OUTER);
 			path += DIR_DELIM_CHAR;
 			path += job_output_ad_file;
 			free( job_output_ad_file );
@@ -532,7 +532,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 	}
 	if( ! m_job_update_ad_file.empty() ) {
 		if( ! fullpath(m_job_update_ad_file.c_str()) ) {
-			std::string path = starter->GetWorkingDir(0);
+			std::string path = starter->GetWorkingDir(WD::OUTER);
 			path += DIR_DELIM_CHAR;
 			path += m_job_update_ad_file;
 			m_job_update_ad_file = path;
@@ -890,33 +890,39 @@ JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * pur
 		return;
 	}
 
+		// If we made it here, either we're not compiled for hook
+		// support, or we didn't spawn a hook.  Either way, we're
+		// done and should tell the starter we're ready.
+		// The starter will finish setup and queue a timer to actually start the job
+	starter->jobEnvironmentReady();
+}
+
+
+void
+JobInfoCommunicator::runPrepareJobHook() {
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {
 		int rval = m_hook_mgr->tryHookPrepareJob();
 		switch (rval) {
-		case -1:   // Error
+		case -1: // Error
 			starter->RemoteShutdownFast(0);
 			return;
 			break;
 
-		case 0:    // Hook not configured
-				// Nothing to do, break out and finish.
+		case 0:  // Hook not configured
+			     // Nothing to do, break out and finish.
 			break;
 
-		case 1:    // Spawned the hook.
-				// We need to bail now, and let the handler call
-				// jobEnvironmentReady() when the hook returns.
+		case 1:  // Spawned the hook.
+			     // We need to bail now, and let the handler call
+			     // Starter::prepareJobHookDone() when the hook returns.
 			return;
 			break;
 		}
 	}
 #endif /* HAVE_JOB_HOOKS */
 
-		// If we made it here, either we're not compiled for hook
-		// support, or we didn't spawn a hook.  Either way, we're
-		// done and should tell the starter we're ready.
-		// The starter will finish setup and queue a timer to actually start the job
-	starter->jobEnvironmentReady();
+	starter->prepareJobHookDone();
 }
 
 

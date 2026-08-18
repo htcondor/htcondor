@@ -59,7 +59,7 @@ $rescuefile = "job_dagman_final-B.dag.rescue001";
 @rescuelines = ('# Rescue DAG file, created after running',
 			'#   the job_dagman_final-B.dag DAG file',
 			'# Created .*/.*/.* .*:.*:.* UTC',
-			'# Rescue DAG version: \d*\.\d*\.\d* \(partial\)',
+			'# Rescue DAG version: \d*\.\d*\.\d*',
 			'#',
 			'# Total number of Nodes: 3',
 			'# Nodes premarked DONE: 1',

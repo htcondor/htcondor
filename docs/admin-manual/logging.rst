@@ -173,7 +173,7 @@ history log
     completed. It is written by the *condor_schedd* daemon. The file
     name is ``$(SPOOL)/history``.
 
-    Administrators can change view this historical information by using
+    Administrators can view this historical information by using
     the command line tool :tool:`condor_history`.
 
     Configuration variables that affect the history log, setting details
@@ -242,7 +242,7 @@ Directories used by More than One Role
     of each daemon's log by setting :macro:`<SUBSYS>_LOG`,
     although you should never need to do so.  You can also control the sizes
     of the log files or how often they rotate; see
-    :ref:`admin-manual/configuration-macros:Daemon Logging Configuration File Entries`
+    :ref:`daemon_logging_config_options`
     for details.  If you want to write your logs to a shared filesystem,
     we recommend including ``$(HOSTNAME)`` in the value of :macro:`LOG` rather
     than changing the names of each individual log to not collide.  If you
@@ -257,8 +257,8 @@ Directories used by More than One Role
     placed on a local filesystem on each machine.  By default, they
     are placed in the :macro:`LOG` directory.
 
-Directories use by the Submit Role
-``````````````````````````````````
+Directories used by the Submit Role
+```````````````````````````````````
 
  :macro:`SPOOL`
     The :macro:`SPOOL` directory holds two types of files: system
@@ -279,10 +279,10 @@ Directories use by the Submit Role
     :macro:`JOB_QUEUE_LOG` to separate the job queue log (system data)
     from the (user) job data.  This can also be used to increase performance
     (or reliability) by moving the job queue log to specialized hardware (an
-    SSD or a a high-redundancy RAID, for example).
+    SSD or a high-redundancy RAID, for example).
 
-Directories use by the Execute Role
-```````````````````````````````````
+Directories used by the Execute Role
+````````````````````````````````````
 
  :macro:`EXECUTE`
     The :macro:`EXECUTE` directory is the parent directory of the
@@ -290,8 +290,7 @@ Directories use by the Execute Role
     execute-role machine.  HTCondor copies the executable and input files
     for a job to its subdirectory; the job's standard output and standard
     error streams are also logged here.  Jobs will also almost always
-    generate their output here as well, so the :macro:`EXECUTE` directory should
-    provide a plenty of space.  :macro:`EXECUTE` should not be placed under /tmp
+    generate their output here as well, so the :macro:`EXECUTE` directory should provide plenty of space.  :macro:`EXECUTE` should not be placed under /tmp
     or /var/tmp if possible, as HTCondor loses the ability to make /tmp and
     /var/tmp private to the job.  While not a requirement, ideally :macro:`EXECUTE`
     should be on a distinct filesystem, so that it is impossible for a rogue job

@@ -26,8 +26,8 @@ import time
 # Static global data( yeah, yuck)
 class EventPatterns( object  ):
     def __init__( self ) :
-        self.__re_hdr = re.compile( '(\d{3}) \((\d+)\.(\d+)\.(\d+)\) ' +
-                                    '(\d+/\d+ \d+:\d+:\d+) (.*)' )
+        self.__re_hdr = re.compile( r'(\d{3}) \((\d+)\.(\d+)\.(\d+)\) ' +
+                                    r'(\d+/\d+ \d+:\d+:\d+) (.*)' )
     def IsSeparatorLine( self, line ) :
         return line == "..."
     def HasSeparator( self, line ) :
@@ -230,7 +230,7 @@ class BaseRealEvent( BaseEvent ) :
             return self._lines
 
     def GetHostFromText( self, text ) :
-        m = re.search( '(<\d+\.\d+\.\d+\.\d+:\d+>)', text )
+        m = re.search( r'(<\d+\.\d+\.\d+\.\d+:\d+>)', text )
         if m is not None :
             return m.group(1)
         else :

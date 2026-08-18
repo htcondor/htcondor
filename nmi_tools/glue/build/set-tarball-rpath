@@ -13,16 +13,22 @@ if [ ! -d "$tarball" ]; then
     exit 1
 fi
 
+PATCHELF='patchelf'
+if [ -x /usr/bin/lief-patchelf ]; then
+    PATCHELF='lief-patchelf'
+fi
+echo "Using $PATCHELF"
+
 # shellcheck disable=SC2046
 for file in $(file $(find "$tarball" -type f)|grep  ' ELF '|sed -e s/:.*// | egrep -v '(\.o$|exit_37|pelican|get_user_ns)'); do
     echo Set RPATH to "$rpath" in "$file"
     # --force-rpath only works when there is no pre-existing RPATH or RUNPATH
-    if ! patchelf --remove-rpath "$file"; then
+    if ! $PATCHELF --remove-rpath "$file"; then
         echo ERROR: Cannot remove RPATH from "$file"
         exit 1
     fi
     # Force patchelf to set the RPATH, not RUNPATH
-    if ! patchelf --force-rpath --set-rpath "$rpath" "$file"; then
+    if ! $PATCHELF --force-rpath --set-rpath "$rpath" "$file"; then
         echo ERROR: Cannot set RPATH in "$file"
         exit 1
     fi

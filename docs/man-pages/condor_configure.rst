@@ -209,7 +209,7 @@ Options
     of the HTCondor installation. This option causes *condor_configure*
     to generate these scripts in the specified directory.
  **-credd**
-    Configure the the *condor_credd* daemon (credential manager
+    Configure the *condor_credd* daemon (credential manager
     daemon).
  **-verbose**
     Print information about changes to configuration variables as they

@@ -74,7 +74,7 @@ public:
 		/** Make certain all decendants are	dead via the ProcFamily,
 			save final usage statistics, and call OsProc::JobReaper().
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 		/** Call family->suspend() */
 	virtual void Suspend();
@@ -112,7 +112,7 @@ protected:
 	virtual int outputOpenFlags();
 	virtual int streamingOpenFlags( bool isOutput );
 
-	virtual void restartCheckpointedJob();
+	virtual bool restartCheckpointedJob();
 private:
 		// Current usage stats for this proc and all its children.
 	ProcFamilyUsage m_current_usage = {};

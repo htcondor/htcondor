@@ -13,14 +13,14 @@
 #
 # 26-Oct-2012  Created 
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 if(CONDOR_PACKAGE_NAME)
     set(BIN_DIR "${C_BIN}")
     set(SBIN_DIR "${C_SBIN}")
     set(LIBEXEC_DIR "${C_LIBEXEC_BLAHP}")
 
-    set(ClassAd_LIBRARY "classads")
+    set(ClassAd_LIBRARY "classad")
 else()
     set(BIN_DIR "bin")
     set(SBIN_DIR "sbin")
@@ -71,20 +71,21 @@ add_library(libblahp STATIC
 # a warning.  Turn off that warning
 set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-stringop-truncation")
 
-# programs for 'sbin'
-add_executable(blahpd_daemon main_daemon.c)
-target_link_libraries(blahpd_daemon libblahp)
-install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
-
-if(NOT CONDOR_PACKAGE_NAME)
-    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
-endif()
-target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
-
 add_library(libbfunctions STATIC Bfunctions.c)
-add_executable(blah_check_config blah_check_config.c)
-target_link_libraries(blah_check_config libbfunctions libblahp)
-install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+
+# programs for 'sbin'
+if(NOT CONDOR_PACKAGE_NAME)
+    add_executable(blahpd_daemon main_daemon.c)
+    target_link_libraries(blahpd_daemon libblahp)
+    install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
+
+    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
+    target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
+
+    add_executable(blah_check_config blah_check_config.c)
+    target_link_libraries(blah_check_config libbfunctions libblahp)
+    install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+endif()
 
 # These binaries aren't needed by OSG, so let's not build them
 if(WITH_FULL_BLAHP)
@@ -218,22 +219,15 @@ set(blah_scripts
     scripts/lsf_status.sh scripts/lsf_submit.sh scripts/lsf_hold.sh
     scripts/lsf_resume.sh scripts/condor_cancel.sh scripts/condor_status.sh
     scripts/condor_submit.sh scripts/condor_hold.sh scripts/condor_resume.sh
-    scripts/condor_local_submit_attributes.sh
-    scripts/pbs_local_submit_attributes.sh
-    scripts/lsf_local_submit_attributes.sh
     scripts/sge_cancel.sh scripts/sge_helper scripts/sge_resume.sh 
     scripts/sge_submit.sh scripts/sge_filestaging scripts/sge_hold.sh 
     scripts/sge_status.sh scripts/runcmd.pl.template
-    scripts/sge_local_submit_attributes.sh
     scripts/slurm_cancel.sh scripts/slurm_resume.sh scripts/slurm_status.sh
     scripts/slurm_hold.sh scripts/slurm_submit.sh
-    scripts/slurm_local_submit_attributes.sh
     scripts/nqs_cancel.sh scripts/nqs_resume.sh scripts/nqs_status.sh
     scripts/nqs_hold.sh scripts/nqs_submit.sh
-    scripts/nqs_local_submit_attributes.sh
     scripts/kubernetes_cancel.sh scripts/kubernetes_resume.sh scripts/kubernetes_status.sh
     scripts/kubernetes_hold.sh scripts/kubernetes_submit.sh
-    scripts/kubernetes_local_submit_attributes.sh
     scripts/__init__.py
     scripts/pbs_status.py
     scripts/slurm_status.py
@@ -241,6 +235,12 @@ set(blah_scripts
     scripts/condor_ping.sh scripts/kubernetes_ping.sh
     scripts/lsf_ping.sh scripts/nqs_ping.sh scripts/pbs_ping.sh
     scripts/sge_ping.sh scripts/slurm_ping.sh
+	scripts/flux_cancel.sh scripts/flux_hold.sh
+	scripts/flux_ping.sh scripts/flux_resume.sh scripts/flux_status.sh
+	scripts/flux_submit.sh scripts/flux_utils.sh
+    scripts/sfapi_cancel.sh scripts/sfapi_helpers.py
+    scripts/sfapi_ping.sh scripts/sfapi_setup.sh
+    scripts/sfapi_status.sh scripts/sfapi_submit.sh
    )
 
 install(FILES
@@ -249,6 +249,31 @@ install(FILES
                 GROUP_READ GROUP_EXECUTE
                 WORLD_READ WORLD_EXECUTE
     DESTINATION ${LIBEXEC_DIR})
+
+set(local_attr_scripts
+    condor_local_submit_attributes.sh
+    pbs_local_submit_attributes.sh
+    lsf_local_submit_attributes.sh
+    sge_local_submit_attributes.sh
+    sfapi_local_submit_attributes.sh
+    slurm_local_submit_attributes.sh
+    nqs_local_submit_attributes.sh
+    kubernetes_local_submit_attributes.sh
+    flux_local_submit_attributes.sh
+    )
+
+# The <lrms>_local_submit_attributes.sh scripts should be installed
+# under etc/blahp/, but be accessible via symlink from the blahp
+# libexec directory.
+foreach(local_script ${local_attr_scripts})
+    install(FILES scripts/${local_script}
+        PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE
+                    GROUP_READ GROUP_EXECUTE
+                    WORLD_READ WORLD_EXECUTE
+        DESTINATION etc/blahp)
+    file(RELATIVE_PATH PATH_DIFF "${CMAKE_INSTALL_PREFIX}/${LIBEXEC_DIR}" "${CMAKE_INSTALL_PREFIX}/etc/blahp/${local_script}")
+    install (CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"${PATH_DIFF}\" \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${LIBEXEC_DIR}/${local_script})")
+endforeach(local_script)
 
 # But this one isn't a standalone executable
 install(FILES

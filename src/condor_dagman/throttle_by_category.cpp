@@ -131,19 +131,3 @@ ThrottleByCategory::PrefixAllCategoryNames( const std::string &prefix )
 	_throttles = tmpThrottles;
 }
 
-//---------------------------------------------------------------------------
-// Note: don't change the format here -- this is used for rescue DAG files,
-// so what we print has to be parseable by parse().
-void
-ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
-{
-	ASSERT( fp != NULL );
-
-	for ( const auto& throttle: _throttles ) {
-		ThrottleInfo *info = throttle.second;
-		if ( info->isSet() ) {
-			fprintf( fp, "MAXJOBS %s %d\n", info->_category->c_str(),
-						info->_maxJobs );
-		}
-	}
-}

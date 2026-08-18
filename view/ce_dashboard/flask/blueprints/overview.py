@@ -5,6 +5,7 @@ import functools
 import xml.etree.ElementTree as ET
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 import time
+from blueprints.landing import get_ce_facility_site_descrip, get_next_prev_sites
 
 #######################
 # Functions to query Topology and cache responses
@@ -95,7 +96,14 @@ def get_data_from_ganglia():
     # If host is not fully qualified, add the default domain
     if not '.' in host:
         host = host + '.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    
+    metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
+
+    # Retrieve any metrics from Ganglia that start with any of the following phrases
+    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','EPs']
+    metric_args = '&'.join([f'mreg[]=%5E{expr}' for expr in metric_exprs])
+
+    df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r={r}&hreg[]={host}&{metric_args}&aggregate=1&csv=1',skipfooter=1,engine='python')
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend
 
@@ -127,16 +135,21 @@ def get_data_from_ganglia():
     # Add a 'Type' column to distinguish between project usage (with P) and total resource (with R) entries
     df['Type'] = df['Project'].apply(lambda x: 'R' if x.startswith('____meta_') else 'P')
     # Replace meta entries with more descriptive names for better readability
-    df['Project'] = df['Project'].str.replace('____meta_CpusIn', 'CpusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_CpusNotIn', 'CpusUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_GpusIn', 'GpusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_GpusNotIn', 'GpusUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_MemoryIn', 'MemoryAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_MemoryNotIn', 'MemoryUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_DiskIn', 'DiskAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_DiskNotIn', 'DiskUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_BcusIn', 'BcusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_BcusNotIn', 'BcusUnallocated')
+    for oldname, newname in (['CpusIn', 'CpusAllocated'],
+                              ['CpusNotIn', 'CpusUnallocated'],
+                              ['GpusIn', 'GpusAllocated'],
+                              ['GpusNotIn', 'GpusUnallocated'],
+                              ['MemoryIn', 'MemoryAllocated'],
+                              ['MemoryNotIn', 'MemoryUnallocated'],
+                              ['DiskIn', 'DiskAllocated'],
+                              ['DiskNotIn', 'DiskUnallocated'],
+                              ['BcusIn', 'BcusAllocated'],
+                              ['BcusNotIn', 'BcusUnallocated'],
+                              ['EPsRunning', 'EPsRunning'],
+                              ['EPsCpuLimited', 'EPsCpuLimited'],
+                              ['EPsMemoryLimited', 'EPsMemoryLimited'],
+                              ['EPsDiskLimited', 'EPsDiskLimited']):
+        df['Project'] = df['Project'].str.replace(f'____meta_{oldname}', newname)
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')
     df.drop(columns=['Memory_User'],inplace=True,errors='ignore')
@@ -176,7 +189,7 @@ overview_linkmap = {
 def handle_allocated_graph(resource):
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, *_ = get_ce_facility_site_descrip(host)
     title = facility if facility!='Unknown' else host
     return render_template('allocated_graph.html', resource=resource,
                            linkmap=overview_linkmap,
@@ -188,21 +201,25 @@ def handle_contributed():
     if time_range not in ['hour','day','week','month','year']:
         time_range = 'week'
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, name, *_ = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     title = facility if facility!='Unknown' else host
+
     return render_template('contributed.html', host=host, 
                            linkmap=overview_linkmap, time_range=time_range,
-                           page_title=title, ce_facility_name=facility, ce_site_name=site)
+                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site,
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/overview.html')
 def overview():
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, name, descrip, health = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     title = facility if facility!='Unknown' else host
-    return render_template('overview.html', page_title=title, ce_facility_name=facility, ce_site_name=site,
-                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap)
+    return render_template('overview.html', 
+                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site,
+                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap, 
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/data/ce_overview')
 def ce_overview_data():
@@ -212,6 +229,11 @@ def ce_overview_data():
 @overview_bp.route('/error-no-data.html')
 def error_no_data():
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
+    host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
+    facility, site, name, *_ = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     msg = request.args.get('msg','No data available')
-    return render_template('error_no_data.html', page_title=facility, ce_name=site, errMsg=msg, linkmap={})
+    return render_template('error_no_data.html', 
+                           page_title=facility, page_subtitle = name, 
+                           ce_name=site, errMsg=msg, linkmap=overview_linkmap,
+                           next_page=next_site, prev_page=prev_site)

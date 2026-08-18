@@ -58,6 +58,7 @@ class CondorResource : public BaseResource
 	                                             const char *pool_name,
 	                                             const Proxy *proxy,
 	                                             const std::string &scitokens_file );
+	static void CleanupAllResources();
 
 	static bool GahpErrorResourceDown( const char *errmsg );
 

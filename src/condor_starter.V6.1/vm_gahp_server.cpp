@@ -332,7 +332,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	m_vmgahp_pid = daemonCore->CreateProcessNew( JobName, vmgahp_args, 
 			cpArgs.priv(vmgahp_priv)
-				.reaperID(1)
 				.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 				.env(job_env)
 			    .cwd(workingdir)

@@ -30,6 +30,13 @@ Machine ClassAd Attributes
     ``"Retiring"``
         Waiting for a job to finish or for the maximum retirement time to expire
 
+    ``"Cleaning"``
+        The job has finished running and the *condor_starter* has sent
+        its final update, but the starter process has not yet been
+        reaped. When the starter exits, the slot leaves this activity
+        and returns to ``"Idle"`` (or moves to the ``"Preempting"``
+        state if a release, kill, or preempting claim is pending).
+
 :classad-attribute-def:`Arch`
     String with the architecture of the machine. Currently supported
     architectures have the following string definitions:
@@ -100,9 +107,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`ConsoleIdle`
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with :macro:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
-    :ref:`admin-manual/configuration-macros:condor_startd configuration
-    file macros` section.
+    with :macro:`SLOTS_CONNECTED_TO_CONSOLE`.
 
 :classad-attribute-def:`Cpus`
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
@@ -268,9 +273,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`HasFileTransferPluginMethods`
     A string of comma-separated file transfer protocols that the machine
-    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`
-    as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
-    entries`.
+    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`.
 
 :classad-attribute-def:`HasRotationalScratch`
     A boolean when true indicates that this machine's EXECUTE directory is on a rotational
@@ -333,6 +336,10 @@ Machine ClassAd Attributes
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
+:classad-attribute-def:`IsDataSlot`
+    When ``True``, the slot is in use by the AP to transfer and then store
+    common files, rather than run a job.
+
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
     setup to enforce disk usage limits for each job the machine executes.
@@ -363,7 +370,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobBusyTimeCount`
     The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
-    attribute. This is also the the total number times a *condor_starter*
+    attribute. This is also the total number times a *condor_starter*
     has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
@@ -411,7 +418,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobDurationCount`
     The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
-    attribute. This is also the the total number times a job has exited.
+    attribute. This is also the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 
@@ -979,9 +986,7 @@ Machine ClassAd Attributes
     This specifies the weight of the slot when calculating usage,
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
-    two ``SlotWeight = 1`` slots. See the description of :ad-attr:`SlotWeight`
-    in :ref:`admin-manual/configuration-macros:condor_startd configuration
-    file macros`.
+    two ``SlotWeight = 1`` slots. See the :macro:`SLOT_WEIGHT`.
 
 :classad-attribute-def:`StartdIpAddr`
     String with the IP and port address of the *condor_startd* daemon
@@ -1125,6 +1130,12 @@ Machine ClassAd Attributes
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
+:classad-attribute-def:`TotalTimeClaimedCleaning`
+    The number of seconds that this machine (slot) has accumulated
+    within the claimed cleaning state and activity pair since the
+    *condor_startd* began executing. This attribute will only be
+    defined if it has a value greater than 0.
+
 :classad-attribute-def:`TotalTimeClaimedIdle`
     The number of seconds that this machine (slot) has accumulated
     within the claimed idle state and activity pair since the
@@ -1188,7 +1199,10 @@ Machine ClassAd Attributes
     after the jobs have ended.
 
 :classad-attribute-def:`UidDomain`
-    file entries, and therefore all have the same logins.
+    The value of the :macro:`UID_DOMAIN` configuration variable, which is a string.
+    When this matches the domain portion of the job submitter's user identity, 
+    the job may be allowed to run as the submitter's operating system identify.
+    See the :macro:`UID_DOMAIN` documentation for more details.
 
 :classad-attribute-def:`VirtualMemory`
     The amount of currently available virtual memory (swap space)
@@ -1281,6 +1295,9 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     :ad-attr:`RemoteUser` would hold the name of the entity currently using the
     resource, while :ad-attr:`RemoteOwner` would hold the name of the entity
     that claimed the resource.
+
+:classad-attribute-def:`RemoteProject`
+    The name of the project which is currently using this resource. 
 
 :classad-attribute-def:`RemoteScheddName`
     The name of the *condor_schedd* which claimed this resource.
@@ -1553,4 +1570,5 @@ The following attributes are advertised when
     The instance's identifier with its provider (on its platform).
 
 :classad-attribute-def:`CloudInterruptible`
-    ``"True"`` if the instance, and ``"False"`` otherwise.
+    ``"True"`` if the instance may be evicted by the cloud system at anytime
+    (e.g. a spot instance), and ``"False"`` otherwise.

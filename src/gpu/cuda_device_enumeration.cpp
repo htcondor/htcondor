@@ -49,11 +49,18 @@ void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
 	}
 }
 
+static void
+print_nvml_error(const char* function_name, nvmlReturn_t r) {
+	const char* errorString = nvmlErrorString(r);
+	print_error(MODE_DIAGNOSTIC_MSG, "# %s() failed with %d (%s)\n", function_name, r, errorString ? errorString : "unknown error");
+}
+
 bool
 enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	int deviceCount = 0;
 
 	if( (cuDeviceGetCount(&deviceCount) != cudaSuccess) ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "# enumerateCUDADevices: cuDeviceGetCount failed\n");
 		return false;
 	}
 
@@ -61,6 +68,8 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 		BasicProps bp;
 		if( cudaSuccess == getBasicProps( dev, &bp ) ) {
 			devices.push_back(bp);
+		} else {
+			print_error(MODE_DIAGNOSTIC_MSG, "# enumerateCUDADevices: failed to get props for device %d\n", dev);
 		}
 	}
 
@@ -220,6 +229,7 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		}
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
+		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceComputeCapability(%p) returns %d.%d\n", dev, p->ccMajor, p->ccMinor);
 		cudaError_t r = cuDeviceTotalMem(&p->totalGlobalMem, dev);
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%p) returns %d, value = %llu\n", dev, r, (unsigned long long)p->totalGlobalMem);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
@@ -439,7 +449,7 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) 
 
 
 nvmlReturn_t
-getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs ) {
+getMIGParentDeviceUUIDs( std::map< std::string, std::vector<std::string> > & parentDeviceUUIDs ) {
 	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
 	// then there can be no MIG parent devices, trivial success
 	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
@@ -456,17 +466,36 @@ getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs ) {
 		unsigned int maxMigDeviceCount = 0;
 		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
 		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
+
+			// Collect all child UUIDs for this parent
+			std::vector<std::string> childUUIDs;
 			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
 				nvmlDevice_t migDevice;
 				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
-				if( NVML_SUCCESS != r ) { continue; }
+				if( NVML_SUCCESS != r ) {
+					print_nvml_error("nvmlDeviceGetMigDeviceHandleByIndex", r);
+					continue;
+				}
 
-				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
-				r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
-				if( NVML_SUCCESS != r ) { return r; }
+				char childUUID[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+				r = nvmlDeviceGetUUID( migDevice, childUUID, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+				if( NVML_SUCCESS != r ) {
+					print_nvml_error("[MIG child] nvmlDeviceGetUUID", r);
+					continue;
+				}
 
-				parentDeviceUUIDs.insert( uuid );
-				break;
+				childUUIDs.push_back(std::string(childUUID));
+			}
+
+			// store parent->children mapping if there is at least one child MIG device
+			if (!childUUIDs.empty()) {
+				char parentUUID[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+				r = nvmlDeviceGetUUID( device, parentUUID, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+				if( NVML_SUCCESS != r ) {
+					print_nvml_error("[MIG parent] nvmlDeviceGetUUID", r);
+					return r;
+				}
+				parentDeviceUUIDs[std::string(parentUUID)] = childUUIDs;
 			}
 		}
 	}
@@ -549,6 +578,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	r = nvmlDeviceGetName( migDevice, name, NVML_DEVICE_NAME_BUFFER_SIZE );
 	if( NVML_SUCCESS == r ) {
 		p->name = name;
+	} else {
+		print_nvml_error("nvmlDeviceGetName", r);
 	}
 
 	nvmlPciInfo_t pci;
@@ -556,6 +587,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 		r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
 		if( NVML_SUCCESS == r ) {
 			strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+		} else {
+			print_nvml_error("nvmlDeviceGetPciInfo_v3", r);
 		}
 	}
 
@@ -563,6 +596,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	r = nvmlDeviceGetMemoryInfo( migDevice, & memory );
 	if( NVML_SUCCESS == r ) {
 		p->totalGlobalMem = memory.total;
+	} else {
+		print_nvml_error("nvmlDeviceGetMemoryInfo", r);
 	}
 
 	int ccMajor = 0, ccMinor = 0;
@@ -571,6 +606,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 		if( NVML_SUCCESS == r ) {
 			p->ccMajor = ccMajor;
 			p->ccMinor = ccMinor;
+		} else {
+			print_nvml_error("nvmlDeviceGetCudaComputeCapability", r);
 		}
 	}
 
@@ -580,6 +617,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	if( NVML_SUCCESS == r ) {
 		// in MHz from NVML but KHz from CUDA
 		p->clockRate = clock * 1000;
+	} else {
+		print_nvml_error("nvmlDeviceGetMaxClockInfo", r);
 	}
 
 	// This only exists for MIG devices.
@@ -588,6 +627,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 		r = nvmlDeviceGetAttributes( migDevice, & attributes );
 		if( NVML_SUCCESS == r ) {
 			p->multiProcessorCount = attributes.multiprocessorCount;
+		} else {
+			print_nvml_error("nvmlDeviceGetAttributes", r);
 		}
 	}
 
@@ -595,6 +636,8 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	r = nvmlDeviceGetEccMode( migDevice, & current, & pending );
 	if( NVML_SUCCESS == r ) {
 		p->ECCEnabled = (current == NVML_FEATURE_ENABLED);
+	} else {
+		print_nvml_error("nvmlDeviceGetEccMode", r);
 	}
 
 	return NVML_SUCCESS;

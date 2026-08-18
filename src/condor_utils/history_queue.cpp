@@ -137,9 +137,9 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		searchDir = false;
 	}
 
-	if (m_requests >= m_max_requests) {
-		if (m_queue.size() > 1000) {
-			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
+	if (m_requests >= m_max_concurrency) {
+		if (m_queue.size() >= static_cast<size_t>(m_max_requests)) {
+			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than " + std::to_string(m_max_requests) + " requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
 		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit, record_src);
@@ -165,7 +165,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 
 int HistoryHelperQueue::reaper(int, int) {
 	m_requests--;
-	while ((m_requests < m_max_requests) && m_queue.size() > 0) {
+	while ((m_requests < m_max_concurrency) && m_queue.size() > 0) {
 		auto it = m_queue.begin();
 		launcher(*it);
 		m_queue.erase(it);
@@ -269,13 +269,24 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		}
 		std::string myargs;
 		args.GetArgsStringForLogging(myargs);
+		if (myargs.size() > 100000) {
+			std::string errmsg;
+			formatstr(errmsg, "Arguments to remote history query are too long (%ld), try with shorter constraint and/or projection", myargs.size());
+			dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
+			return sendHistoryErrorAd(state.GetStream(), 6, errmsg);
+		}
 		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
 	}
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 
-	pid_t pid = daemonCore->Create_Process(history_helper.ptr(), args, PRIV_ROOT, m_rid,
-		false, false, NULL, NULL, NULL, inherit_list);
+	OptionalCreateProcessArgs cpArgs;
+	pid_t pid = daemonCore->CreateProcessNew(history_helper.ptr(), args,
+		cpArgs.priv(PRIV_ROOT)
+			.reaperID(m_rid)
+			.wantCommandPort(false)
+			.wantUDPCommandPort(false)
+			.socketInheritList(inherit_list));
 	if (!pid) {
 		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
 	}

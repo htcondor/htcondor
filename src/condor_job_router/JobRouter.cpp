@@ -41,6 +41,7 @@
 #include "directory_util.h"
 #include "truncate.h"
 #include "set_user_priv_from_ad.h"
+#include "Scheduler.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -64,8 +65,7 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(unsigned int as_tool)
-	: m_jobs(hashFunction)
-	, m_round_robin_selection(true)
+	: m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -99,11 +99,8 @@ JobRouter::JobRouter(unsigned int as_tool)
 }
 
 JobRouter::~JobRouter() {
-	RoutedJob *job;
-
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
-		RemoveJob(job);
+	for (auto& [key, job]: m_jobs) {
+		delete job;
 	}
 
 	m_route_order.clear();
@@ -242,7 +239,7 @@ JobRouter::config( int /* timerID */ ) {
 	if (m_scheduler2) {
 		dprintf(D_ALWAYS, "Watching destination schedd (SCHEDD2): %s\n", m_scheduler2->following());
 	} else {
-		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destintation also\n");
+		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destination also\n");
 	}
 
 	m_scheduler->config();
@@ -573,7 +570,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	if (dir.empty()) { param(dir, "SEC_TOKEN_DIRECTORY"); }
 
 	CondorError err;
-	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
+	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, false, token, 0, &err)) {
 		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
 		return false;
 	}
@@ -762,15 +759,13 @@ JobRouter::InitPublicAd()
 void
 JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
-	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *orig_ad;
 
 	dprintf(D_FULLDEBUG, "JobRouter: Evaluating all managed jobs periodic "
 			"job policy expressions.\n");
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job))
+	for (auto& [key, job]: m_jobs)
 	{
 		orig_ad = ad_collection->GetClassAd(job->src_key);
 		
@@ -910,7 +905,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		num_holds++;
 		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, num_holds);
 
-		WriteHoldEventToUserLog(ad);
+		WriteHoldEventToUserLog(ad, m_scheduler->GetJobUser(&ad));
 
 		if(false == push_dirty_attributes(ad,m_schedd1))
 		{
@@ -1170,16 +1165,17 @@ JobRouter::GracefullyRemoveJob(RoutedJob *job) {
 
 bool
 JobRouter::AddJob(RoutedJob *job) {
-	return m_jobs.insert(job->src_key,job) == 0;
+	auto [it, success] = m_jobs.emplace(job->src_key, job);
+	return success;
 }
 
 RoutedJob *
 JobRouter::LookupJobWithSrcKey(std::string const &src_key) {
-	RoutedJob *job = NULL;
-	if(m_jobs.lookup(src_key,job) == -1) {
+	auto it = m_jobs.find(src_key);
+	if (it == m_jobs.end()) {
 		return NULL;
 	}
-	return job;
+	return it->second;
 }
 
 RoutedJob *
@@ -1195,9 +1191,9 @@ JobRouter::LookupJobWithKeys(std::string const &src_key,std::string const &dest_
 
 bool
 JobRouter::RemoveJob(RoutedJob *job) {
-	int success;
+	size_t success;
 	ASSERT(job);
-	success = m_jobs.remove(job->src_key);
+	success = m_jobs.erase(job->src_key);
 	delete job;
 	return success != 0;
 }
@@ -1228,9 +1224,7 @@ RoutedJob::~RoutedJob() {
 int
 JobRouter::NumManagedJobs() {
 	int count = 0;
-	RoutedJob *job = NULL;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (const auto& [key, job]: m_jobs) {
 		if(job->state != RoutedJob::RETIRED) count++;
 	}
 	return count;
@@ -1258,9 +1252,12 @@ JobRouter::Poll( int /* timerID */ ) {
 	UpdateRouteStats();
 	GetCandidateJobs();
 
+	// CleanupRetiredJob() will erase the m_jobs entry, so be careful...
 	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	auto it = m_jobs.begin();
+	while (it != m_jobs.end()) {
+		job = it->second;
+		it++;
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1268,16 +1265,14 @@ JobRouter::Poll( int /* timerID */ ) {
 		CheckSubmittedJobStatus(job);
 		FinalizeJob(job);
 		CleanupJob(job);
-		CleanupRetiredJob(job); //NOTE: this may delete job
+		CleanupRetiredJob(job); //NOTE: this may delete job and remove it from m_jobs
 	}
 }
 
 void JobRouter::SimulateRouting()
 {
 	ASSERT(m_operate_as_tool);
-	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1481,7 +1476,7 @@ JobRouter::AdoptOrphans() {
 			int job_status = IDLE;
 			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-				WriteEvictEventToUserLog( *src_ad );
+				WriteEvictEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad) );
 			}
 		}
 	} while (query.Next(src_key));
@@ -1499,7 +1494,7 @@ JobRouter::GetCandidateJobs() {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	JobRoute *route;
 
-	HashTable<std::string,std::string> constraint_list(hashFunction);
+	std::set<std::string> constraint_set;
 	std::string umbrella_constraint;
 
 	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
@@ -1543,14 +1538,13 @@ JobRouter::GetCandidateJobs() {
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		if(route->AcceptingMoreJobs()) {
-			std::string existing_constraint;
 			std::string this_constraint = route->RouteRequirementsString();
 			if(this_constraint.empty()) {
 				this_constraint = "True";
 			}
-			if(constraint_list.lookup(this_constraint,existing_constraint)==-1)
+			if(!constraint_set.contains(this_constraint))
 			{
-				constraint_list.insert(this_constraint,this_constraint);
+				constraint_set.emplace(this_constraint);
 				if(!route_constraints.empty()) route_constraints += " || ";
 				route_constraints += "(";
 				route_constraints += this_constraint;
@@ -1726,15 +1720,13 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 
 void
 JobRouter::UpdateRouteStats() {
-	RoutedJob *job;
 	JobRoute *route;
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		route->ResetCurrentRoutedJobs();
 	}
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		if(!job->route_name.empty()) {
 			route = safe_lookup_route(job->route_name);
 			if (route) {
@@ -1853,8 +1845,13 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 
 	unsigned int xform_flags = 0;
-	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS; }
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS | XFORM_UTILS_LOG_MACRO_ERRS; }
 	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS) { xform_flags |= XFORM_UTILS_LOG_STEPS; }
+	if ( ! m_operate_as_tool) {
+		// for non-tool, log macro errors ($func errors), but not overall errors inside TransformClassAd
+		// we log overall errors after TransformClassAd exits
+		xform_flags = XFORM_UTILS_LOG_TO_DPRINTF | XFORM_UTILS_LOG_MACRO_ERRS;
+	}
 
 	// The route ClassAd may change some things in the routed ad.
 	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms, xform_flags)) {
@@ -1936,6 +1933,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
+	std::string dest_user;
 	bool rc;
 
 	std::string owner, domain;
@@ -1945,7 +1943,11 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
-	rc = submit_job(owner, domain, job->dest_ad,m_schedd2,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(owner, domain, job->dest_ad, m_schedd2, job->is_sandboxed, dest_cluster_id, dest_proc_id, dest_user);
+
+	if (!dest_user.empty()) {
+		job->dest_ad.Assign(ATTR_USER, dest_user);
+	}
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into
@@ -2207,7 +2209,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
-		WriteAbortEventToUserLog( *src_ad );
+		WriteAbortEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad));
 		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
@@ -2344,7 +2346,7 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
 	if ( old_status != IDLE ) {
 		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad));
 		}
 		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
 		if(false == PushUpdatedAttributes(job->src_ad)) {
@@ -2383,7 +2385,7 @@ JobRouter::FinishFinalizeJob(RoutedJob *job) {
 			// exiting the queue.
 		SetJobIdle(job);
 	}
-	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
+	else if(!WriteTerminateEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad))) {
 	}
 	else {
 		EmailTerminateEvent(job->src_ad);
@@ -2590,7 +2592,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 		// previously running, we need an evict event.
 		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad) );
 		}
 		if(!yield_job(job->src_ad, m_schedd1, job->is_done, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold, &keep_trying))
 		{
@@ -2877,7 +2879,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (!pre_route.empty()) {
 		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
@@ -2895,6 +2897,12 @@ JobRoute::ApplyRoutingJobEdits(
 
 	if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying route: %s\n", m_route.getName()); }
 	rval = TransformClassAd(src_ad, m_route, mset, errmsg, xform_flags);
+	// report macro set errors (these come from $ functions)
+	if (mset.macros().errors && mset.macros().errors->message()) {
+		// TODO: figure out how to report the line number, maybe move this into TransformClassAd ?
+		dprintf(D_ALWAYS, "ERROR in route %s : %s\n", m_route.getName(), mset.macros().errors->message());
+		mset.macros().errors->clear();
+	}
 	if (rval < 0) {
 		// transform failed, errmsg says why.
 		dprintf(D_ALWAYS,"JobRouter failure (route=%s): %s.\n",Name(), errmsg.c_str());
@@ -2904,7 +2912,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (! post_route.empty()) {
 		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }

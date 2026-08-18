@@ -241,6 +241,7 @@ public:
 	virtual bool transferOutput(bool &transient_failure, bool& in_progress) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 	void setJobFailed() { job_failed = true; }
+	virtual void setOutputTransfer(bool) { }
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -416,7 +417,7 @@ public:
 	const ClassAd * getJobAd() { return job_ad; }
 
 		/* Get optional secrets ad */
-	const ClassAd * getMachineSecetsAd() { return machine_secrets_ad; }
+	const ClassAd * getMachineSecretsAd() { return machine_secrets_ad; }
 
 	virtual bool genericRequestGuidance(
 		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
@@ -427,6 +428,15 @@ public:
 	virtual int fetch_docker_creds(const ClassAd &/*query*/, ClassAd &/*creds*/) {
 		return -1;
 	}
+
+	virtual void runPrepareJobHook();
+
+	virtual ClassAd * getMachineAd() { return mach_ad; }
+
+	virtual bool colorSlot( const ClassAd & /* colorAd */, ClassAd & /* replyAd */ ) { return false; }
+	virtual bool announceCatalog( const ClassAd & /* catalogAd */, ClassAd & /* replyAd */ ) { return false; }
+
+	virtual void updateStartd( ClassAd *, bool ) { return; }
 
 protected:
 

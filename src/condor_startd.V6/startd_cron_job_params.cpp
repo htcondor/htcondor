@@ -28,10 +28,8 @@
 #include <list>
 
 // Override the lookup methods so that we can stuff in default values
-StartdCronJobParams::StartdCronJobParams(
-	const char			*job_name,
-	const CronJobMgr	&mgr )
-		: ClassAdCronJobParams( job_name, mgr )
+StartdCronJobParams::StartdCronJobParams(const char *job_name, const CronJobMgr	&mgr)
+	: ClassAdCronJobParams( job_name, mgr.GetParamBase(), mgr.GetName() )
 {
 }
 

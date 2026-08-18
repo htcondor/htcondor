@@ -17,11 +17,12 @@ Synopsis
 **condor_dagman** **-p 0** **-f** **-l .** [**-WaitForDebug**]
 [**-CsdVersion** *VersionString*] [**-AllowVersionMismatch**]
 [**-Batch-Name** *name*] [**-Dag** *DAG_file*] [**-Debug** *level*]
-[**-Dot**] [**-DryRun**] [**-DumpRescue**] [**-Lockfile** *filename*]
+[**-Dot**] [**-DryRun**] [**-Lockfile** *filename*]
 [**-Priority** *priority*] [**-SubmitMethod** *value*]
 [**-UseDagDir**] [**-AlwaysRunPost** | **-DontAlwaysRunPost**]
 [**-suppress_notification** | **-dont_suppress_notification**]
 [**-AutoRescue** *<0|1>*] [**-DoRescueFrom** *N*] [**-DoRecovery**]
+[**-RescueFile** *filename*]
 [**-load_save** *filename*] [**-MaxHold** *N*] [**-MaxIdle** *N*]
 [**-MaxJobs** *N*] [**-MaxPost** *N*] [**-MaxPre** *N*]
 
@@ -70,9 +71,6 @@ Options
  **-DryRun**
     Inform *condor_dagman* to execute the DAG without actually placing any
     jobs to the AP.
- **-DumpRescue**
-    Inform *condor_dagman* to produce a full rescue DAG file and exit before
-    executing the DAG.
  **-Lockfile** *filename*
     Path to a file to write *condor_dagman* process information. This prevents
     other *condor_dagman* executing the same DAG(s) from being executed in the
@@ -100,6 +98,8 @@ Options
     Default ``1`` is ``True``.
  **-DoRescueFrom** *N*
     Specify a specific rescue number to locate and restore state from.
+ **-RescueFile** *filename*
+    Specify a specific rescue file by name to restore state from.
  **-DoRecovery**
     Specify to startup in recovery mode (restore state from ``*.nodes.log``).
  **-load_save** *filename*

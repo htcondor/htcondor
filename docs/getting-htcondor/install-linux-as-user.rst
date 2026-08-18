@@ -12,16 +12,18 @@ instructions here: :doc:`admin-quick-start`.
 Download
 --------
 
-The first step is to download HTCondor for your platform.  If you know
-which platform you're using, that HTCondor supports it, and which
-version you want, you can download the corresponding file from
-`our website <https://htcss-downloads.chtc.wisc.edu/tarball/current/>`_;
-otherwise, we recommend using our download script, as follows.
+The first step is to download HTCondor for your platform.
+We recommend using our download script, as follows.
 
 .. code-block:: shell
 
     cd
     curl -fsSL https://get.htcondor.org | /bin/bash -s -- --download
+
+Otherwise, If you know
+which platform you're using and that HTCondor supports it,
+you can download the corresponding file from
+`our website <https://htcss-downloads.chtc.wisc.edu/tarball/current/current/>`_.
 
 On macOS, If you use a web browser to download a tarball from our web
 site, then the OS will mark the file as quarantined. All binaries

@@ -30,6 +30,9 @@
 
 #include "JobRouter.h"
 #include "submit_job.h"
+#include "Scheduler.h"
+
+extern JobRouter *job_router;
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
@@ -79,6 +82,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		// immediately correct a "wrong" value when not using non-default
 		// UID_DOMAIN (which isn't supported yet anyway).
 	ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
+	ad->Delete(ATTR_OS_USER);
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_JOB_LAST_REMOTE_WALL_CLOCK);
@@ -217,7 +221,8 @@ static void set_job_status_idle(classad::ClassAd const &orig, classad::ClassAd &
 	int old_update_status = IDLE;
 	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
 	if ( set_job_status_simple(orig,update,IDLE) && old_update_status == RUNNING ) {
-		WriteEvictEventToUserLog( orig );
+		UserRecord* urec = job_router->GetScheduler()->GetJobUser(&orig);
+		WriteEvictEventToUserLog(orig, urec);
 	}
 }
 
@@ -225,7 +230,8 @@ static void set_job_status_running(classad::ClassAd const &orig, classad::ClassA
 	int old_update_status = IDLE;
 	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
 	if ( set_job_status_simple(orig,update,RUNNING) && old_update_status == IDLE ) {
-		WriteExecuteEventToUserLog( orig );
+		UserRecord* urec = job_router->GetScheduler()->GetJobUser(&orig);
+		WriteExecuteEventToUserLog(orig, urec);
 	}
 }
 

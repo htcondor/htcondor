@@ -23,6 +23,8 @@
 #include "condor_classad.h"
 #include "JobRouter.h"
 
+class UserRecord;
+
 namespace classad { class ClassAd; }
 
 enum ClaimJobResult { 
@@ -78,7 +80,7 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
   condor_config file claims".
 
 */
-bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
+bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out );
 
 
 /*
@@ -138,12 +140,12 @@ schedd_name and pool_name can be NULL to indicate "local"
 bool remove_job(int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc);
 
 
-bool WriteTerminateEventToUserLog( classad::ClassAd const &ad );
-bool WriteAbortEventToUserLog( classad::ClassAd const &ad );
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec );
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec );
 bool EmailTerminateEvent( classad::ClassAd const &ad );
-bool WriteHoldEventToUserLog( classad::ClassAd const &ad );
-bool WriteExecuteEventToUserLog( classad::ClassAd const &ad );
-bool WriteEvictEventToUserLog( classad::ClassAd const &ad );
+bool WriteHoldEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec );
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec );
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec );
 
 
 #endif /* INCLUDE_SUBMIT_JOB_H*/

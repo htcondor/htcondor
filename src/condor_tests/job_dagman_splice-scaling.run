@@ -21,6 +21,8 @@
 
 # This test only tests to see if we can parse a dagfile containing many
 # splices. It does not test the running of it--only the parsing of it.
+# This is to verify that large numbers of splices being parsed and destroyed
+# do not cause DAGMan to fail to due daemoncore behavior
 
 use CondorTest;
 use Data::Dumper;
@@ -28,7 +30,7 @@ use Data::Dumper;
 $cmd = 'job_dagman_splice-scaling.dag';
 $testdesc =  'Splice Inclusion Scaling Test';
 $testname = "job_dagman_splice-scaling";
-$dagman_args = "-DumpRescue -verbose";
+$dagman_args = "-verbose";
 $max_splices = 10000;
 
 # truly const variables in perl
@@ -69,9 +71,7 @@ $submitted = sub
 
 $success = sub
 {
-	# This test only checks to see if condor_dagman exited with 0 after
-	# it dumps the rescue dag of the parsed splices. It does not check to
-	# see if the rescue dag is actually correct.
+	# This test only checks to see if condor_dagman exited with 0 after exit
 	CondorTest::debug("executed successfully\n",1);
 };
 
@@ -94,6 +94,17 @@ print DOUT<<END;
 # write a rescue dag properly after dagman loads the dag file. If so, then
 # dagman was able to parse it (and the splices) without hitting any limits.
 #
+
+# Job to trigger an early abort before running $max_splices jobs sequentially
+# since we only care about DAGMan (daemoncore) blowing up from creating & destroying
+# many splices
+
+JOB root {
+	executable = x_sleep.pl
+	arguments  = 1
+}
+ABORT-DAG-ON root 0 RETURN 0
+PARENT root CHILD S0
 
 END
 

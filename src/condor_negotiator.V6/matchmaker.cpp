@@ -425,8 +425,6 @@ Matchmaker ()
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
 	
-	stashedAds = new AdHash(hashFunction);
-
 	MatchList = NULL;
 	cachedAutoCluster = -1;
 	cachedName = NULL;
@@ -448,8 +446,6 @@ Matchmaker ()
 	update_collector_tid = -1;
 
 	update_interval = 5*MINUTE;
-
-	groupQuotasHash = NULL;
 
 	prevLHF = 0;
 	Collectors = 0;
@@ -523,13 +519,10 @@ Matchmaker::
 	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
-	if (groupQuotasHash) delete groupQuotasHash;
-	if (stashedAds) delete stashedAds;
     if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
-	int i;
-	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
-		delete negotiation_cycle_stats[i];
+	for (auto* stats : negotiation_cycle_stats) {
+		delete stats;
 	}
 
     if (NULL != hgq_root_group) delete hgq_root_group;
@@ -583,6 +576,15 @@ initialize (const char *neg_name)
     daemonCore->Register_Command (SET_FLOOR, "SetFloor",
             (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
 			"SET_FLOOR_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (MANAGE_CEILING, "ManageCeilingLease",
+            (CommandHandlercpp) &Matchmaker::MANAGE_CEILING_commandHandler,
+			"MANAGE_CEILING_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (MANAGE_FLOOR, "ManageFloorLease",
+            (CommandHandlercpp) &Matchmaker::MANAGE_FLOOR_commandHandler,
+			"MANAGE_FLOOR_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (MANAGE_PRIORITY_FACTOR, "ManagePriorityFactorLease",
+            (CommandHandlercpp) &Matchmaker::MANAGE_PRIORITY_FACTOR_commandHandler,
+			"MANAGE_PRIORITY_FACTOR_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
             (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler,
 			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
@@ -1023,7 +1025,7 @@ DELETE_USER_commandHandler (int, Stream *strm)
 	}
 
 	// reset usage
-	dprintf (D_ALWAYS,"Deleting accountanting record of %s\n", submitter.c_str());
+	dprintf (D_ALWAYS,"Deleting accounting record of %s\n", submitter.c_str());
 	accountant.DeleteRecord(submitter);
 	
 	return TRUE;
@@ -1168,6 +1170,189 @@ SET_CEILING_or_FLOOR_commandHandler (int command, Stream *stream) {
 	if (command == SET_FLOOR) {
 		dprintf(D_ALWAYS,"Setting the floor of %s to %d\n", submitter.c_str(), value);
 		accountant.SetFloor(submitter, value);
+	}
+	return TRUE;
+}
+
+// Request ad:  { Submitter = "...", Action = "set"|"cancel",
+//                Ceiling = N, Duration = N }  (latter two for "set" only)
+// Reply ad:    { Success = true|false, ErrorString = "..." }
+int Matchmaker::
+MANAGE_CEILING_commandHandler (int /*command*/, Stream *stream)
+{
+	ClassAd req;
+	stream->decode();
+	bool read_ok = getClassAd(stream, req) && stream->end_of_message();
+
+	std::string submitter;
+	std::string action;
+	bool ok = false;
+	std::string err;
+
+	if (!read_ok) {
+		err = "negotiator could not decode MANAGE_CEILING request ad";
+	} else if (!req.LookupString(ATTR_SUBMITTER, submitter) || submitter.empty()) {
+		err = "request is missing Submitter";
+	} else if (!req.LookupString("Action", action)) {
+		err = "request is missing Action";
+	} else if (strcasecmp(action.c_str(), "set") == 0) {
+		int ceiling = 0;
+		int duration = 0;
+		if (!req.LookupInteger("Ceiling", ceiling)) {
+			err = "set action requires Ceiling";
+		} else if (!req.LookupInteger("Duration", duration)) {
+			err = "set action requires Duration";
+		} else {
+			ok = accountant.SetCeilingLease(submitter, ceiling, duration, err);
+			if (ok) {
+				dprintf(D_ALWAYS,
+				        "Set ceiling lease for %s to %d for %d seconds\n",
+				        submitter.c_str(), ceiling, duration);
+			}
+		}
+	} else if (strcasecmp(action.c_str(), "cancel") == 0) {
+		ok = accountant.CancelCeilingLease(submitter, err);
+		if (ok) {
+			dprintf(D_ALWAYS, "Cancelled ceiling lease for %s\n",
+			        submitter.c_str());
+		}
+	} else {
+		formatstr(err, "unknown Action '%s'", action.c_str());
+	}
+
+	if (!ok) {
+		dprintf(D_ALWAYS, "MANAGE_CEILING rejected: %s\n", err.c_str());
+	}
+
+	ClassAd reply;
+	reply.Assign("Success", ok);
+	reply.Assign("ErrorString", err);
+	stream->encode();
+	if (!putClassAd(stream, reply) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "MANAGE_CEILING: failed to send reply\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+// Request ad:  { Submitter = "...", Action = "set"|"cancel",
+//                Floor = N, Duration = N }  (latter two for "set" only)
+// Reply ad:    { Success = true|false, ErrorString = "..." }
+int Matchmaker::
+MANAGE_FLOOR_commandHandler (int /*command*/, Stream *stream)
+{
+	ClassAd req;
+	stream->decode();
+	bool read_ok = getClassAd(stream, req) && stream->end_of_message();
+
+	std::string submitter;
+	std::string action;
+	bool ok = false;
+	std::string err;
+
+	if (!read_ok) {
+		err = "negotiator could not decode MANAGE_FLOOR request ad";
+	} else if (!req.LookupString(ATTR_SUBMITTER, submitter) || submitter.empty()) {
+		err = "request is missing Submitter";
+	} else if (!req.LookupString("Action", action)) {
+		err = "request is missing Action";
+	} else if (strcasecmp(action.c_str(), "set") == 0) {
+		int floor = 0;
+		int duration = 0;
+		if (!req.LookupInteger("Floor", floor)) {
+			err = "set action requires Floor";
+		} else if (!req.LookupInteger("Duration", duration)) {
+			err = "set action requires Duration";
+		} else {
+			ok = accountant.SetFloorLease(submitter, floor, duration, err);
+			if (ok) {
+				dprintf(D_ALWAYS,
+				        "Set floor lease for %s to %d for %d seconds\n",
+				        submitter.c_str(), floor, duration);
+			}
+		}
+	} else if (strcasecmp(action.c_str(), "cancel") == 0) {
+		ok = accountant.CancelFloorLease(submitter, err);
+		if (ok) {
+			dprintf(D_ALWAYS, "Cancelled floor lease for %s\n",
+			        submitter.c_str());
+		}
+	} else {
+		formatstr(err, "unknown Action '%s'", action.c_str());
+	}
+
+	if (!ok) {
+		dprintf(D_ALWAYS, "MANAGE_FLOOR rejected: %s\n", err.c_str());
+	}
+
+	ClassAd reply;
+	reply.Assign("Success", ok);
+	reply.Assign("ErrorString", err);
+	stream->encode();
+	if (!putClassAd(stream, reply) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "MANAGE_FLOOR: failed to send reply\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+// Request ad:  { Submitter = "...", Action = "set"|"cancel",
+//                PriorityFactor = X, Duration = N }  (latter two for "set" only)
+// Reply ad:    { Success = true|false, ErrorString = "..." }
+int Matchmaker::
+MANAGE_PRIORITY_FACTOR_commandHandler (int /*command*/, Stream *stream)
+{
+	ClassAd req;
+	stream->decode();
+	bool read_ok = getClassAd(stream, req) && stream->end_of_message();
+
+	std::string submitter;
+	std::string action;
+	bool ok = false;
+	std::string err;
+
+	if (!read_ok) {
+		err = "negotiator could not decode MANAGE_PRIORITY_FACTOR request ad";
+	} else if (!req.LookupString(ATTR_SUBMITTER, submitter) || submitter.empty()) {
+		err = "request is missing Submitter";
+	} else if (!req.LookupString("Action", action)) {
+		err = "request is missing Action";
+	} else if (strcasecmp(action.c_str(), "set") == 0) {
+		double factor = 0.0;
+		int duration = 0;
+		if (!req.LookupFloat("PriorityFactor", factor)) {
+			err = "set action requires PriorityFactor";
+		} else if (!req.LookupInteger("Duration", duration)) {
+			err = "set action requires Duration";
+		} else {
+			ok = accountant.SetPriorityFactorLease(submitter, factor, duration, err);
+			if (ok) {
+				dprintf(D_ALWAYS,
+				        "Set priority-factor lease for %s to %g for %d seconds\n",
+				        submitter.c_str(), factor, duration);
+			}
+		}
+	} else if (strcasecmp(action.c_str(), "cancel") == 0) {
+		ok = accountant.CancelPriorityFactorLease(submitter, err);
+		if (ok) {
+			dprintf(D_ALWAYS, "Cancelled priority-factor lease for %s\n",
+			        submitter.c_str());
+		}
+	} else {
+		formatstr(err, "unknown Action '%s'", action.c_str());
+	}
+
+	if (!ok) {
+		dprintf(D_ALWAYS, "MANAGE_PRIORITY_FACTOR rejected: %s\n", err.c_str());
+	}
+
+	ClassAd reply;
+	reply.Assign("Success", ok);
+	reply.Assign("ErrorString", err);
+	stream->encode();
+	if (!putClassAd(stream, reply) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "MANAGE_PRIORITY_FACTOR: failed to send reply\n");
+		return FALSE;
 	}
 	return TRUE;
 }
@@ -1548,6 +1733,7 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 	external_references.erase(ATTR_LAST_HEARD_FROM);
 	external_references.erase(ATTR_REMOTE_USER);
 	external_references.erase(ATTR_REMOTE_OWNER);
+	external_references.erase(ATTR_REMOTE_USER_FLOOR);
 	external_references.erase(ATTR_REMOTE_USER_PRIO);
 	external_references.erase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
 	external_references.erase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
@@ -1603,8 +1789,6 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 bool Matchmaker::
 getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage)
 {
-	ASSERT(groupQuotasHash);
-
     groupName = "";
 	groupQuota = 0.0;
 	groupUsage = 0.0;
@@ -1618,11 +1802,13 @@ getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQu
 
     groupName = group->name;
 
-	if (groupQuotasHash->lookup(groupName, groupQuota) == -1) {
+	auto itr = groupQuotasHash.find(groupName);
+	if (itr == groupQuotasHash.end()) {
 		// hash lookup failed, must not be a group name
 		return false;
 	}
 
+	groupQuota = itr->second;
 	groupUsage = accountant.GetWeightedResourcesUsed(groupName);
 
 	return true;
@@ -1728,6 +1914,13 @@ Matchmaker::negotiationTime( int /* timerID */ )
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
+	// Expire any ceiling/floor/priority-factor leases whose time has passed.
+	// Doing this before we read submitter values ensures restored values take
+	// effect this cycle.
+	accountant.CheckCeilingLeases();
+	accountant.CheckFloorLeases();
+	accountant.CheckPriorityFactorLeases();
+
 	time_t start_time = time(NULL);
 
 	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
@@ -1750,6 +1943,23 @@ Matchmaker::negotiationTime( int /* timerID */ )
 		// should send email here
 		return;
 	}
+
+	// Filter out submitters that have asked to be skipped this round.
+	// Done before pie/normalization so their demand does not affect
+	// other submitters' fair-share calculations.
+	auto skipSubmitter = [](const ClassAd *ad) {
+		bool skip = false;
+		if (ad->LookupBool(ATTR_SKIP_MATCHMAKING, skip) && skip) {
+			std::string name;
+			ad->LookupString(ATTR_NAME, name);
+			dprintf(D_ALWAYS,
+				"Skipping submitter %s for this negotiation cycle (%s=true)\n",
+				name.c_str(), ATTR_SKIP_MATCHMAKING);
+			return true;
+		}
+		return false;
+	};
+	std::erase_if(submitterAds, skipSubmitter);
 
     // From here we are committed to the main negotiator cycle, which is non
     // reentrant wrt reconfig. Set any reconfig to delay until end of this cycle
@@ -1786,11 +1996,6 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	// ----- Recalculate priorities for schedds
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
-
-	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(hashFunction);
-		ASSERT(groupQuotasHash);
-    }
 
 	int cPoolsize = 0;
     double weightedPoolsize = 0;
@@ -1984,12 +2189,8 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 	
 		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
 			// for all of the names of active submitters
-		for (it = names.begin(); it != names.end(); it++) {
-			std::string name = *it;
-			std::string key("Customer.");  // hashkey is "Customer" followed by name
-			key += name;
-
-			ClassAd *accountingAd = accountant.GetClassAd(key);
+		for (const auto& name : names) {
+				ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, name);
 			if (accountingAd) {
 
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
@@ -2039,7 +2240,7 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	std::string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(std::string("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(AccountantTable::Customer, CustomerName);
 
     if (CustomerAd == NULL) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
@@ -2118,8 +2319,8 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, nullptr, true);
 
     // Populate group's children recursively, if it has any
-    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(*j);
+    for (GroupEntry* child : group->children) {
+        forwardGroupAccounting(child);
     }
 }
 
@@ -2444,12 +2645,9 @@ negotiateWithGroup ( bool isFloorRound,
 				submitterPrioFactor);
 
 				if (spin_pie == 1) {
-					std::string key("Customer.");  // hashkey is "Customer" followed by name
-					key += submitterName;
-
 					// Save away the submitter share on the first pie spin to put in
 					// the accounting ad to publish to the AccountingAd.
-					ClassAd *accountingAd = accountant.GetClassAd(key);
+					ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, submitterName);
 					if (accountingAd) {
 						accountingAd->Assign("SubmitterShare", submitterShare);
 						accountingAd->Assign("SubmitterLimit", submitterShare * slotWeightTotal);
@@ -3108,10 +3306,11 @@ obtainAdsFromCollector (
 				oldAdEntry = NULL;
 
 				std::string adID = MachineAdID(ad);
-				stashedAds->lookup( adID, oldAdEntry);
-				// if we find it...
 				oldSequence = -1;
-				if( oldAdEntry ) {
+				auto itr = stashedAds.find(adID);
+				if (itr != stashedAds.end()) {
+					// if we find it...
+					oldAdEntry = itr->second;
 					oldSequence = oldAdEntry->sequenceNum;
 					oldAd = oldAdEntry->oldAd;
 				}
@@ -3157,15 +3356,15 @@ obtainAdsFromCollector (
 				if (replace) {
 					if(oldSequence >= 0) {
 						delete(oldAdEntry->oldAd);
-						delete(oldAdEntry->remoteHost);
+						free(oldAdEntry->remoteHost);
 						delete(oldAdEntry);
-						stashedAds->remove(adID);
+						stashedAds.erase(adID);
 					}
 					MapEntry *me = new MapEntry;
 					me->sequenceNum = newSequence;
 					me->remoteHost = strdup(remoteHost);
 					me->oldAd = new ClassAd(*ad);
-					stashedAds->insert(adID, me);
+					stashedAds.emplace(adID, me);
 				} else {
 					/*
 					  We have a stashed copy of this ad, and it's the
@@ -5506,6 +5705,9 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
+
+		int user_floor = accountant.GetFloor(remoteUser);
+		ad->Assign(ATTR_REMOTE_USER_FLOOR, user_floor);
 		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
@@ -5600,7 +5802,10 @@ reeval(ClassAd *ad)
 	ad->LookupInteger("CurMatches", cur_matches);
 
 	std::string adID = MachineAdID(ad);
-	stashedAds->lookup( adID, oldAdEntry);
+	auto itr = stashedAds.find(adID);
+	if (itr != stashedAds.end()) {
+		oldAdEntry = itr->second;
+	}
 		
 	cur_matches++;
 	ad->Assign("CurMatches", cur_matches);

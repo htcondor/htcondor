@@ -85,6 +85,13 @@ int ConvertSMVer2Cores(int major, int minor)
 		{ 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
 		{ 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
 		{ 0x86, 128}, // Ampere Generation (SM 8.6) GA10x class  (GeForce  RTX 3060)
+		{0x90, 128},
+		{0xa0, 128},
+		{0xa1, 128},
+		{0xa3, 128},
+		{0xb0, 128},
+		{0xc0, 128},
+		{0xc1, 128},
 		{   -1, -1 }
 	};
 
@@ -366,7 +373,7 @@ setPropertiesFromDynamicProps( KVP & props, nvmlDevice_t device ) {
 
 void
 setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra ) {
-	props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
+	if ( ! bp.uuid.empty()) { props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str()); }
 	if(! bp.name.empty()) { props["DeviceName"] = Format("\"%s\"", bp.name.c_str()); }
 	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
 	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
@@ -378,21 +385,32 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if (!bp.driver.empty()) {
 		props["NvidiaDriver"] = Format("\"%s\"", bp.driver.c_str());
 	}
+	if (bp.hipDetection > 0) {
+		props["Rocm"] = Format("%d", bp.hipDetection);
+		if (bp.driverVersion != 0 && bp.driverVersion != -1) {
+			// HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH
+			props["AmdDriverVersion"] = Format("\"%d.%d.%d\"",
+				bp.driverVersion/10000000,
+				(bp.driverVersion % 10000000) / 100000,
+				bp.driverVersion % 100000);
+		}
+	} else {
+		if (bp.driverVersion != -1) {
+			props["DriverVersion"] = Format("%d.%d", bp.driverVersion/1000, bp.driverVersion%100);
+			props["MaxSupportedVersion"] = Format("%d", bp.driverVersion);
+		}
+	}
 
 	if( opt_extra ) {
 		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
 		if( bp.multiProcessorCount > 0 ) {
 			props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
 		}
-		if( bp.ccMajor != -1 && bp.ccMinor != -1 ) {
+		if( bp.ccMajor != -1 && bp.ccMinor != -1  && ! bp.hipDetection) {
 			props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 		}
 	}
 
-	if( bp.driverVersion != -1 ) {
-		props["DriverVersion"] = Format("%d.%d", bp.driverVersion/1000, bp.driverVersion%100);
-		props["MaxSupportedVersion"] = Format("%d", bp.driverVersion);
-	}
 }
 
 
@@ -419,6 +437,8 @@ main( int argc, const char** argv)
 	int opt_dash_cuda = 0; // prefer cuda detection
 	int opt_cuda_only = 0; // require cuda detection
 	int detect_order = 0;  // counter used to set detection order, of 0 use legacy detection order
+	int simulate_hip_library = 0; // set to > 0 to simulate loading the hip library
+	unsigned int hip_guid_fixup_magic = 0;
 	std::set<std::string> hip_whitelist; // combined whitelist from HIP_VISIBLE_DEVICES and ROCR_VISIBLE_DEVICES
 
 	const char * opt_tag = "GPUs";
@@ -580,6 +600,15 @@ main( int argc, const char** argv)
 				return 1;
 			}
 		}
+		else if (is_dash_arg_colon_prefix(argv[i], "fix-hip-guid", &pcolon, 7)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+				fprintf (stderr, "Error: fix-hip-guid requires a hex argument\n");
+				// usage(stderr, argv[0]);
+				return 1;
+			}
+			hip_guid_fixup_magic = strtol(argv[++i], nullptr, 16);
+			if (pcolon) { simulate_hip_library = atoi(++pcolon); }
+		}
 		else if (is_dash_arg_prefix(argv[i], "nvcuda",-1)) {
 			// use nvcuda instead of cudart (option is for testing)
 			opt_nvcuda = true;
@@ -689,7 +718,7 @@ main( int argc, const char** argv)
 
 	if( ! opt_cuda_only && (opt_hip || (deviceCount == 0 && ! opt_opencl)) ) {
 		int hipDeviceCount = 0;
-		hip_handle = setHIPFunctionPointers();
+		hip_handle = setHIPFunctionPointers(simulate_hip_library);
 		if (hip_handle) {
 			hip_GetDeviceCount( & hipDeviceCount );
 			deviceCount+=hipDeviceCount;
@@ -725,7 +754,7 @@ main( int argc, const char** argv)
 
 	// We're doing it this way so that we can share the device-enumeration
 	// logic between condor_gpu_discovery and condor_gpu_utilization.
-	std::set< std::string > migDevices;
+	std::map< std::string, std::vector<std::string> > migDevices;
 	std::map< std::string, int > cudaDevices;
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
@@ -790,14 +819,99 @@ main( int argc, const char** argv)
 				return 1;
 			}
 
-			for( auto parentUUID : migDevices ) {
-				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s\n", parentUUID.c_str());
+			for( auto& parentChildPair : migDevices ) {
+				const std::string& parentUUID = parentChildPair.first;
+				const std::vector<std::string>& childUUIDs = parentChildPair.second;
+				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s, children:", parentUUID.c_str());
+				for( size_t i = 0; i < childUUIDs.size(); ++i ) {
+					print_error(MODE_DIAGNOSTIC_MSG, " %s", childUUIDs[i].c_str());
+				}
+				print_error(MODE_DIAGNOSTIC_MSG, "\n");
+			}
+
+			// Build the inverse map of migDevices, that maps child uuids to parent uuids
+			std::map<std::string, std::string> childToParentMap;
+			for (auto& parentChildPair : migDevices) {
+				const std::string& parentUUID = parentChildPair.first;
+				const std::vector<std::string>& childUUIDs = parentChildPair.second;
+				for (const std::string& childUUID : childUUIDs) {
+					childToParentMap[childUUID] = parentUUID;
+				}
+			}
+
+			// Inherit missing properties from parent devices for MIG devices
+			// MIG devices often have missing/invalid values for compute capability, driver info, etc,
+			// so we inherit these from their parent GPU
+			for (auto& bp : nvmlDevices) {
+				auto parentIt = childToParentMap.find(bp.uuid);
+				if (parentIt != childToParentMap.end()) {
+					const std::string& parentUUID = parentIt->second;
+
+					// Convert parent UUID from "GPU-<uuid>" format to "<uuid>"
+					std::string cudaParentUUID = parentUUID;
+					if (cudaParentUUID.find("GPU-") == 0) {
+						cudaParentUUID = cudaParentUUID.substr(4);
+					}
+
+					auto cudaParentIt = cudaDevices.find(cudaParentUUID);
+					if (cudaParentIt != cudaDevices.end()) {
+						int parentIndex = cudaParentIt->second;
+						if (parentIndex >= 0 && parentIndex < (int)enumeratedDevices.size()) {
+							const BasicProps& parentProps = enumeratedDevices[parentIndex];
+							if (bp.ccMajor == -1 || bp.ccMinor == -1) {
+								bp.ccMajor = parentProps.ccMajor;
+								bp.ccMinor = parentProps.ccMinor;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited compute capability %d.%d for MIG device %s from parent\n",
+									bp.ccMajor, bp.ccMinor, bp.uuid.c_str());
+							}
+							if (bp.clockRate == -1) {
+								bp.clockRate = parentProps.clockRate;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited clock rate %d for MIG device %s from parent\n",
+									bp.clockRate, bp.uuid.c_str());
+							}
+							if (bp.ECCEnabled == -1) {
+								bp.ECCEnabled = parentProps.ECCEnabled;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited ECC enabled %s for MIG device %s from parent\n",
+									bp.ECCEnabled ? "true" : "false", bp.uuid.c_str());
+							}
+							if (bp.driverVersion == -1) {
+								bp.driverVersion = parentProps.driverVersion;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited driver version %d for MIG device %s from parent\n",
+									bp.driverVersion, bp.uuid.c_str());
+							}
+							if (bp.driver.empty()) {
+								bp.driver = parentProps.driver;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited driver '%s' for MIG device %s from parent\n",
+									bp.driver.c_str(), bp.uuid.c_str());
+							}
+							if (bp.pciId[0] == '\0') {
+								memcpy(bp.pciId, parentProps.pciId, sizeof(bp.pciId));
+								bp.pciId[sizeof(bp.pciId) - 1] = '\0';
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited PCI ID %s for MIG device %s from parent\n",
+									bp.pciId, bp.uuid.c_str());
+							}
+							if (bp.xNACK == -1) {
+								bp.xNACK = parentProps.xNACK;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited xNACK %d for MIG device %s from parent\n",
+									bp.xNACK, bp.uuid.c_str());
+							}
+							if (bp.warpSize == -1) {
+								bp.warpSize = parentProps.warpSize;
+								print_error(MODE_DIAGNOSTIC_MSG, "diag: inherited warp size %d for MIG device %s from parent\n",
+									bp.warpSize, bp.uuid.c_str());
+							}
+						}
+					}
+				}
 			}
 		}
 
-		if(opt_hip){
-			enumerateHIPDevices(enumeratedDevices);
-		}
+	}
+
+	// if we loaded the hip (rocm) libraries, query for device props for those devices
+	print_error(MODE_DIAGNOSTIC_ERR, "diag: got properties for %d devices before hip\n", (int)enumeratedDevices.size());
+	if (hip_handle && (opt_hip || enumeratedDevices.empty())) {
+		enumerateHIPDevices(enumeratedDevices, hip_guid_fixup_magic);
 	}
 
 	//
@@ -880,7 +994,7 @@ main( int argc, const char** argv)
 					props["OpenCLVersion"] = ver;
 				}
 			}
-		} else {
+		} else if ( ! cl_gpu_ids.empty() && dev < (int)cl_gpu_ids.size()) {
 			// Report OpenCL properties.
 			cl_device_id did = cl_gpu_ids[dev];
 
@@ -1223,4 +1337,3 @@ void usage(FILE* out, const char * argv0)
 		"\n"
 	);
 }
-

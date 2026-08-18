@@ -10,41 +10,42 @@ Enabling the Transfer of Files Specified by a URL
 
 HTCondor permits input files to be directly transferred from a location specified
 by a URL to the EP; likewise, output files may be transferred to a location
-specified by a URL. All transfers (both input and output) are
-accomplished by invoking a **file transfer plugin**: an executable or shell
+specified by a URL.  All transfers (both input and output) are
+accomplished by invoking a **file transfer plugin**: an executable
 script that handles the task of file transfer.
 
 This URL specification works for most HTCondor job universes, but not grid,
-local or scheduler.  The execute machine directly retrieves the files from
-their source. Each URL-transferred file, is
+local or scheduler.
+
+When transferring input files, the execute machine directly retrieves the
+files from their source.  Each URL-transferred file is
 separately listed in the job submit description file with the command
-``transfer_input_files``;
-:subcom:`transfer_input_files[definition]`
+:subcom:`transfer_input_files[definition]`;
 see :doc:`../users-manual/file-transfer` for details.
 
-For transferring output files, either the entire output sandbox, or a
-subset of these files, as specified by the submit description file
-command ``transfer_output_files``
-:subcom:`transfer_output_files[definition]`
-are transferred to the directory specified by the URL. The URL itself is
+When transferring output files, the execute machine directly sends the
+files from the EP.  The files may be the entire output sandbox, or a
+subset, as specified by the submit description file command
+:subcom:`transfer_output_files[definition]`.  The destination URL is
 specified in the separate submit description file command
-:subcom:`output_destination[definition]`
-see :doc:`../users-manual/file-transfer` for details.  The plug-in
-is invoked once for each output file to be transferred.
+:subcom:`output_destination[definition]`; see
+:doc:`../users-manual/file-transfer` for details.
 
 Configuration identifies the availability of the one or more plug-in(s).
-The plug-ins must be installed and available on every execute machine
+The plug-ins must be installed and available on every EP
 that may run a job which might specify a URL, for either direction.
+(HTCondor will not try to run a job on an EP which does not believe
+that it has the required plug-in(s).)
 
-URL transfers are enabled by default in the configuration of execute
-machines. To Disable URL transfers, set
+URL transfers are enabled by default in the configuration of EPs.
+To disable URL transfers, set
 
 .. code-block:: condor-config
 
     ENABLE_URL_TRANSFERS = FALSE
 
 A comma separated list giving the absolute path and name of all
-available plug-ins is specified as in the example:
+available plug-ins is specified as in the following example:
 
 .. code-block:: condor-config
 
@@ -52,160 +53,48 @@ available plug-ins is specified as in the example:
                            /opt/condor/plugins/hdfs-plugin, \
                            /opt/condor/plugins/custom-plugin
 
-The *condor_starter* invokes all listed plug-ins to determine their
-capabilities. Each may handle one or more protocols (scheme names). The
-plug-in's response to invocation identifies which protocols it can
-handle. When a URL transfer is specified by a job, the *condor_starter*
-invokes the proper one to do the transfer. If more than one plugin is
-capable of handling a particular protocol, then the last one within the
-list given by :macro:`FILETRANSFER_PLUGINS` is used.
+Each plug-in will be invoked in order to determine which
+schemes (the part to the left of the ``://`` in a URL) it
+supports; if more than one plug-in advertises support for a
+specific scheme, the last one in the :macro:`FILETRANSFER_PLUGINS`
+list wins.
 
-HTCondor assumes that all plug-ins will respond in specific ways. To
-determine the capabilities of the plug-ins as to which protocols they
-handle, the *condor_starter* daemon invokes each plug-in giving it the
-command line argument ``-classad``. In response to invocation with this
-command line argument, the plug-in must respond with an output of at least
-four ClassAd attributes. The first three are fixed, the next is recommended:
-
-.. code-block:: condor-classad
-
-    MultipleFileSupport = true
-    PluginVersion = "1.1"
-    PluginType = "FileTransfer"
-    ProtocolVersion = 2
-
-The current protocol versions are 1 for single file plugins, and 2 for
-multi file.  These protocols will be assumed if the ``ProtocolVersion`` attribute
-is missing.
-
-The Next ClassAd attribute is ``SupportedMethods``. This attribute is a
-string containing a comma separated list of the protocols that the
-plug-in handles. So, for example
-
-.. code-block:: condor-classad
-
-    SupportedMethods = "http,ftp,file"
-
-would identify that the three protocols described by http, ftp, and file
-are supported. These strings will match the protocol specification as
-given within a URL in a
-:subcom:`transfer_input_files[and URLs]`
-command or within a URL in an :subcom:`output_destination[and URLs]`
-command in a submit description file for a job.
-
-This can be optionally followed by 2 or more attributes that give the
-plugin the ability to put arbitrary information, such as the plugin
-version into the STARTD classads. The first attribute should be a list
-of attribute names that should be included in the STARTD ads. By convention
-these attributes should have a common prefix. For example, the curl plugin might have:
-
-.. code-block:: condor-classad
-
-    StartdAttrs = "CurlPluginInfo"
-    CurlPluginInfo = strcat("Multi2:",PluginVersion,":",SupportedMethods)
-
-
-When a job specifies a URL transfer, the plug-in is invoked, without the
-command line argument ``-classad``. It will instead be given two other
-command line arguments. For the transfer of input file(s), the first
-will be the URL of the file to retrieve and the second will be the
-absolute path identifying where to place the transferred file. For the
-transfer of output file(s), the first will be the absolute path on the
-local machine of the file to transfer, and the second will be the URL of
-the directory and file name at the destination.
-
-The plug-in is expected to do the transfer, exiting with status 0 if the
-transfer was successful, and a non-zero status if the transfer was not
-successful. When not successful, the job is placed on hold, and the job
-ClassAd attribute :ad-attr:`HoldReason` will be set as appropriate for the job.
-The job ClassAd attribute :ad-attr:`HoldReasonSubCode` will be set to the exit
-status of the plug-in.
-
-As an example of the transfer of a subset of output files, assume that
-the submit description file contains
-
-.. code-block:: condor-submit
-
-    output_destination = url://server/some/directory/
-    transfer_output_files = foo, bar, qux
-
-HTCondor invokes the plug-in that handles the ``url`` protocol, passing
-it classads describing all the files to be transferred and their
-destinations. The directory delimiter (/ on Unix, and \\ on Windows) is
-appended to the destination URL, such that the input will look like the
-following:
-
-.. code-block:: console
-
-    [ LocalFileName = "/path/to/local/copy/of/foo"; Url = "url://server/some/directory//foo" ]
-    [ LocalFileName = "/path/to/local/copy/of/bar"; Url = "url://server/some/directory//bar" ]
-    [ LocalFileName = "/path/to/local/copy/of/qux"; Url = "url://server/some/directory//qux" ]
-
-HTCondor also expects the plugin to exit with one of the following standardized
-exit codes:
-
-    - **0**: Transfer successful
-    - **Any other value**: Transfer failed
-
-
-Custom File Transfer Plugins
-''''''''''''''''''''''''''''
-
-This functionality is not limited to a predefined set of protocols or plugins.
-New ones can be invented. As an invented example, the ``zkm``
-transfer type writes random bytes to a file. The plug-in that handles
-``zkm`` transfers would respond to invocation with the ``-classad`` command
-line argument with:
-
-.. code-block:: condor-classad
-
-    MultipleFileSupport = true
-    PluginVersion = "0.1"
-    PluginType = "FileTransfer"
-    SupportedMethods = "zkm"
-
-And, then when a job requested that this plug-in be invoked, for the
-invented example:
-
-.. code-block:: condor-submit
-
-    transfer_input_files = zkm://128/r-data
-
-the plug-in will be invoked with a first command line argument of
-``zkm://128/r-data`` and a second command line argument giving the full path
-along with the file name ``r-data`` as the location for the plug-in to
-write 128 bytes of random data.
-
-By default, HTCondor includes plugins for standard file protocols ``http://...``,
-``https://...`` and ``ftp://...``. Additionally, URL plugins exist 
-for transferring files to/from Box.com accounts (``box://...``),
-Google Drive accounts (``gdrive://...``),
-OSDF accounts (``osdf://...``),
-Stash accounts (``stash://...``),
-and Microsoft OneDrive accounts (``onedrive://...``).
-These plugins require users to have obtained OAuth2 credentials
-for the relevant service(s) before they can be used.
-See :ref:`enabling_oauth_credentials` for how to enable users
+By default, HTCondor includes plug-ins for the standard protocols
+``http://...``, ``https://...`` and ``ftp://...``.  Additionally, we provide
+plug-ins for transferring files to and from Box.com accounts (``box://...``),
+Google Drive accounts (``gdrive://...``), Microsoft OneDrive accounts
+(``onedrive://...``), the OSDF (``osdf://...``), and other Pelican Platform data
+federations (``pelican://...``).  These plug-ins require users to have
+obtained OAuth2 credentials for the relevant service(s) before they can be
+used.  See :ref:`enabling_oauth_credentials` for how to enable users
 to fetch OAuth2 credentials.
 
-An example template for a file transfer plugin is available in our
-source repository under `/src/condor_examples/filetransfer_example_plugin.py
-<https://github.com/htcondor/htcondor/blob/master/src/condor_examples/filetransfer_example_plugin.py>`_.
-This provides most of the functionality required in the plugin, except for
+Custom File Transfer Plug-Ins
+'''''''''''''''''''''''''''''
+
+This functionality is not limited to a predefined set of protocols or
+plug-ins; you may supply your own.
+
+An example template for a file transfer plugin is available in our source:
+`src/condor_examples/filetransfer_example_plugin.py <https://github.com/htcondor/htcondor/blob/master/src/condor_examples/filetransfer_example_plugin.py>`_.
+It provides the functionality required in the plugin, except for
 the transfer logic itself, which is clearly indicated in the comments.
 
-Sending File Transfer Plugins With Your Job
-'''''''''''''''''''''''''''''''''''''''''''
+The interface between HTCondor and a file-transfer plug-in is detailed
+:doc:`elsewhere <../apis/file-transfer-plugins/index>`.
+
+Sending File Transfer Plug-Ins With Your Job
+''''''''''''''''''''''''''''''''''''''''''''
 
 You can also use custom protocols on machines that do not have the necessary
-plugin installed. This is achieved by sending the file transfer plugin along
+plug-in installed. This is achieved by sending the file transfer plug-in along
 with your job, using the ``transfer_plugins`` submit attribute described
 on the :doc:`/man-pages/condor_submit` man page.
 
 Assume you want to transfer some URLs that use the ``custommethod://``
-protocol, and you also have a plugin script called
+protocol, and you also have a plug-in script called
 ``custommethod_plugin.py`` that knows how to handle these URLs. Since this
-plugin is not available on any of the execution points in your pool, you can
+plug-in is not available on any of the execution points in your pool, you can
 send it along with your job by including the following in the submit file:
 
 .. code-block:: condor-submit
@@ -213,8 +102,8 @@ send it along with your job by including the following in the submit file:
     transfer_plugins = custommethod=custommethod_plugin.py
     transfer_output_files = custommethod://path/to/file1, custommethod://path/to/file2
 
-When the job arrives at an exeuction point, it will know to use the plugin
-script provided to transfer these URLs. If your ``custommethod://`` protocol
+When the job arrives at an execution point, it will know to use the plug-in
+script provided to transfer these URLs.  If your ``custommethod://`` protocol
 is already supported at your execution point, the plugin provided in your
 submit file will take precedence.
 
@@ -277,12 +166,11 @@ functionality to work:
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:
 
-   #. **<user>**: Links will be written as user who submitted the job.
+   #. **<user>**: Links will be written as the user who submitted the job.
    #. **<condor>**: Links will be written as user running condor
       daemons. By default this is the user condor unless you have
       changed this by setting the configuration parameter CONDOR_IDS.
-   #. **<%username%>**: Links will be written as the user %username% (ie. httpd,
-      nobody) If using this option, make sure the directory is writable
+   #. **<%username%>**: Links will be written as the user %username% (i.e., httpd, nobody) If using this option, make sure the directory is writable
       by this particular user.
 
    The default setting is <condor>.
@@ -344,7 +232,7 @@ Checkpoint Destinations with a Filesystem Mounted on the AP
 
 HTCondor ships with a clean-up plugin (``cleanup_locally_mounted_checkpoint``) that deletes
 checkpoints from a filesystem mounted on the AP.  This is more useful than
-it sounds, because the mounted filesystem could the remote backing store
+it sounds, because the mounted filesystem could be the remote backing store
 for files available through some other service, perhaps on a different
 machine.  The plug-in needs to be told how to map from the destination URL to
 the corresponding location in the filesystem.  For instance, if you’ve mounted
@@ -389,7 +277,7 @@ up, so this timeout need only be long enough to complete a single checkpoint's
 worth of clean-up in order to make progress.
 
 (On non-Windows platforms, *condor_manifest* is spawned as the :ad-attr:`Owner` of
-the job whose checkpoints are being cleaned-up; this is both safer and easier,
+the job whose checkpoints are being cleaned up; this is both safer and easier,
 since that user may have useful privileges (for example, filesystems may be
 mounted "root-squash").)
 
@@ -408,7 +296,7 @@ of the job ad, in case the clean-up plug-in needs to know, for example, which
 credentials were used to upload the checkpoint(s).
 
 The plug-in will *not* be explicitly instructed to remove
-directories, not even the directories the HTCondor created to make sure that
+directories, not even the directories HTCondor created to make sure that
 different checkpoints are written to different places.  The plug-in can
 determine which directories HTCondor created by comparing the registered
 prefix to the ``<BASE>`` argument described above, if it wishes to remove
@@ -427,7 +315,7 @@ and used by file transfer plugins and/or users' executables.
 The types of credentials that can be managed in this way by HTCondor
 depend on which credential monitors ("credmons") have been configured.
 
-HTCondor currently has three credmon options:
+HTCondor currently has four credmon options:
 
 #. The local SciTokens issuer credmon,
    which generates and renews SciTokens credentials
@@ -437,10 +325,15 @@ HTCondor currently has three credmon options:
    which sends users to a local webserver
    to go through OAuth2 authorization code flow
    in order to fetch refresh and access tokens
-   from configured credential issuers, and
+   from configured credential issuers,
 #. The Vault credmon,
    which fetches arbitrary credentials from a configured `HashiCorp Vault <https://www.vaultproject.io/>`_ service
-   by authenticating to the service with users' long-lived Vault credentials.
+   by authenticating to the service with users' long-lived Vault credentials, and
+#. The Pelican credmon,
+   which obtains and renews access tokens from a
+   `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF)
+   by running the OAuth2 device-code flow and then exchanging the result for a
+   refreshable token using the credmon's own registered client credentials.
 
 As long as a user has jobs in the queue
 (and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once the user has no jobs in the queue),
@@ -622,7 +515,7 @@ Note that use of the ClassAd ``userMap`` function in a scope template
 expression is not currently supported.
 
 You can configure HTCondor to generate several different SciTokens,
-each with a seperate set of properties. First, pick a name for each
+each with a separate set of properties. First, pick a name for each
 type of SciToken and set ``LOCAL_CREDMON_PROVIDER_NAMES`` to the list
 of names.
 
@@ -740,7 +633,7 @@ Other service providers will require searching through API documentation to find
 which then must be added to the HTCondor configuration.
 For example, if you search the Box.com API documentation,
 you should find the following authorization and token URLs,
-and these URLs could be added them to the HTCondor config as below:
+and these URLs could be added to the HTCondor config as below:
 
 .. code-block:: condor-config
 
@@ -774,11 +667,114 @@ to see how to set up and configure the Vault server.
 Note that, when using the ``condor-credmon-multi`` package,
 in order to signal ``condor_submit`` to request *any* credentials via Vault,
 you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
-and point it to the location of ``condor_vault_storer`` (usually
-``/usr/bin/condor_vault_storer``).
+and point it to the location of ``condor_credential_storer`` (usually
+``/usr/bin/condor_credential_storer``).  This script was previously named
+``condor_vault_storer``; that name is still installed as a symlink, so existing
+configurations that reference it continue to work unchanged.
 To help HTCondor distinguish which credentials should be provided by
 Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
 Vault-managed credential names.
+
+.. _provider_name_restrictions:
+
+Provider name restrictions and user-supplied credential handles
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+By default, credential provider names may only contain alphanumeric characters
+and hyphens.  This allows users to request multiple credentials from the same
+provider by appending handles (see
+:ref:`Passing a credential for URL file transfers <passing_credentials_for_url_transfers>`), which causes credential files to
+be named ``{provider}_{handle}.use``.
+
+Set :macro:`CREDMON_ALLOW_SPECIAL_CHAR_NAMES` = ``True``
+only if existing provider names in your configuration contain underscores
+(or other non-alphanumeric/hyphen characters).
+Note that this setting disables support for user-supplied handles.
+
+.. _installing_credmon_pelican:
+
+Allowing users to fetch credentials from a Pelican federation such as the OSDF
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor can natively obtain and renew access tokens for a
+`Pelican <https://pelicanplatform.org/>`_ federation -- for example the
+`OSDF <https://osg-htc.org/services/osdf/>`_ -- so that jobs can read and write
+federation objects using ``osdf://`` or ``pelican://`` URLs. At submit time the
+``pelican`` client runs the OAuth2 device-code flow against the federation's
+token issuer to obtain an initial *subject* token; the credmon then uses its own
+registered client credentials to perform an
+`RFC 8693 <https://www.rfc-editor.org/rfc/rfc8693>`_ token exchange, receiving an
+access token and a refresh token that it keeps renewed on the access point for as
+long as the user has jobs in the queue.
+
+To enable it, install the ``condor-credmon-oauth`` RPM -- which provides the
+*condor_credmon_oauth* daemon, the *condor_credd*, and the
+``condor_credential_storer`` -- as well as the ``pelican`` client, then enable the
+credd and credmon with the ``use feature: oauth`` configuration template.
+
+Next, register an OAuth2 client for the access point with the federation's token
+issuer.  The client must be permitted the ``refresh_token`` and
+``urn:ietf:params:oauth:grant-type:token-exchange`` grant types, and must be
+allowed the scopes the service will hand out (for example ``offline_access`` and
+``storage.read:/``).  The issuer returns a client ID and a client secret; store
+the secret in a file readable only by root.
+
+For each Pelican "service" you wish to offer, add its name to
+``PELICAN_CREDMON_PROVIDER_NAMES``, point :macro:`SEC_CREDENTIAL_STORER` at
+``condor_credential_storer`` so that :tool:`condor_submit` routes the request through
+the storer, and describe the service with the ``<ServiceName>_PELICAN_*``
+options.  The following example defines a service named ``physicsdata`` that
+grants read access to the ``/physics-data`` prefix in the OSDF:
+
+.. code-block:: condor-config
+
+    # Route credential requests for Pelican services through the storer.
+    SEC_CREDENTIAL_STORER = /usr/bin/condor_credential_storer
+    PELICAN_CREDMON_PROVIDER_NAMES = physicsdata
+
+    # What the tokens are good for: the federation and the namespace prefix.
+    PHYSICSDATA_PELICAN_URL         = pelican://osg-htc.org
+    PHYSICSDATA_PELICAN_PREFIX      = /physics-data
+    PHYSICSDATA_PELICAN_PERMISSIONS = read
+
+    PHYSICSDATA_PELICAN_CLIENT_ID          = ex4mpl3cl13nt1d
+    PHYSICSDATA_PELICAN_CLIENT_SECRET_FILE = /etc/condor/.secrets/physicsdata_client_secret
+
+.. code-block:: console
+
+    # ls -l /etc/condor/.secrets/physicsdata_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/physicsdata_client_secret
+
+``<ServiceName>_PELICAN_PERMISSIONS`` is a list of one or more of ``read``,
+``write``, and ``modify`` (whitespace and/or comma separated); the token is
+granted every listed capability.  Because these capabilities do not imply one
+another (in particular ``modify`` does not imply ``read``), a service that needs
+to both read and overwrite objects should request, for example,
+``PHYSICSDATA_PELICAN_PERMISSIONS = read, modify``.
+If the ``pelican`` client is not on the system ``PATH``, set the ``PELICAN_BIN``
+environment variable so the storer can find it.
+
+To use the service, a submitter lists its name under ``use_oauth_services`` and
+refers to federation objects with ``osdf://`` (or ``pelican://``) URLs.  For
+example:
+
+.. code-block:: condor-submit
+
+    executable = analyze.sh
+
+    # Request a token for the "physicsdata" service.
+    use_oauth_services = physicsdata
+
+    # Stage in an input object from /physics-data using that token.
+    transfer_input_files = osdf:///physics-data/runs/run42.root
+
+    queue
+
+The first time the credential is needed, :tool:`condor_submit` prints a URL that
+the user must visit in a browser and approve.  Once approved, the credmon
+performs the token exchange and the job's access token (delivered as
+``physicsdata.use`` in the job's ``_CONDOR_CREDS`` directory) is kept refreshed
+automatically.
 
 
 Using HTCondor with Kerberos and AFS
@@ -789,9 +785,7 @@ Using HTCondor with Kerberos and AFS
 :index:`KRB5<single: KRB5>`
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at the 
-:ref:`admin-manual/configuration-macros:shared file system configuration file
-macros` section.
+shared file system are given at the :ref:`shared_fs_config_options` section.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
@@ -799,7 +793,7 @@ that would like to authenticate as the AFS user condor.
 
 However, there is support for HTCondor to manage kerberos tickets
 for users' jobs, such that a running job can access a valid kerberos
-ticket to autheticate to kerberified services such as AFS and GSSAPI.
+ticket to authenticate to kerberified services such as AFS and GSSAPI.
 
 Setting up Kerberos, AFS usage for running jobs
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -841,7 +835,7 @@ directory. The condor_master will find the program specified in the
 condor_config as :macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one
 command line flag to that program is “<directory_to_monitor>”. If the
 Credential Monitor exits for any reason, it will be restarted by the
-condor_master after a short delay. The exit status of the Credenital Monitor is
+condor_master after a short delay. The exit status of the Credential Monitor is
 logged but is otherwise ignored. The Credential Monitor must handle a SIGHUP
 signal which informs it that the contents of the directory it is monitoring
 have changed and it should rescan the directory and perform whatever actions
@@ -867,7 +861,7 @@ have valid credentials and it should NOT try to perform any actions on that
 user’s behalf. The Credential Monitor does not need to do anything when an
 uberticket is removed from the credential directory
 
-Once the job is about to start runnning on the execute side, The condor_master
+Once the job is about to start running on the execute side, The condor_master
 on the execute machine will launch the Credential Monitor as root to maintain
 the user’s credentials on the execute side. There will be one Credential
 Monitor per machine shared by all users. The Credential Monitor takes a
@@ -876,9 +870,10 @@ condor_master will find the program specified in the condor_config as
 :macro:`SEC_CREDENTIAL_MONITOR` and launch it as root. The one command line
 flag to that program is “<directory_to_monitor>”. If the Credential Monitor
 exits for any reason, it will be restarted by the condor_master after a short
-delay. The exit status of the Credenital Monitor is logged but is otherwise
+delay. The exit status of the Credential Monitor is logged but is otherwise
 ignored. The Credential Monitor must handle a SIGHUP signal which informs it
-that the contents of the directory it is monitoring have changed and it sho
+that the contents of the directory it is monitoring have changed and it should
+rescan the directory and perform whatever actions are necessary.
 
 The condor_starter will atomically place credentials into that directory when
 the user has jobs scheduled to run on that execute machine, and will remove
@@ -899,3 +894,58 @@ the job sandbox and set the environment variable KRB5CCNAME
 :index:`KRB5CCNAME<pair: KRB5CCNAME; environment variables for jobs>`
 to point to the credential cache. The condor_starter will also monitor the .cc file in the
 credential directory and place fresh copies into the job sandbox as needed.
+
+Credential Propagation by Job Universe
+'''''''''''''''''''''''''''''''''''''''
+
+The way credentials are propagated to jobs varies by job universe. This section
+describes how Kerberos and OAuth credentials are made available to different
+job universes.
+
+**Kerberos Credentials**
+
+For **Vanilla, Container, and Parallel** universe jobs:
+
+* The Kerberos credential is written in the job's scratch directory
+* The environment variable ``KRB5CCNAME`` is set to point to the credential
+* The job also has an AFS token obtained using the Kerberos credential
+* The EP must be running a credd and krb credmon
+* The starter and EP credmon keep the credential and AFS token refreshed without
+  contacting the AP
+
+For **Local** universe jobs:
+
+* The job has an AFS token obtained using the Kerberos credential
+* The starter writes the credential into a directory under the job's scratch directory,
+  but does **not** set ``KRB5CCNAME`` in the environment to point to it
+* The AP credmon keeps the credential and AFS token refreshed
+* The starter overwrites the credential file with the refreshed credential
+
+For **Scheduler** universe jobs:
+
+* The job has an AFS token obtained using the Kerberos credential
+* The job does **not** have access to the Kerberos credential itself
+* The AP credmon keeps the credential and AFS token refreshed
+
+**OAuth Credentials**
+
+For **Vanilla, Container, and Parallel** universe jobs:
+
+* All of the job's requested OAuth credentials are written in a directory under
+  the job's scratch directory
+* The environment variable ``_CONDOR_CREDS`` 
+  :index:`_CONDOR_CREDS<pair: _CONDOR_CREDS; environment variables for jobs>`
+  is set to point to this directory
+* The starter periodically polls the shadow to obtain refreshed credentials
+
+For **Local** universe jobs:
+
+* All of the job's requested OAuth credentials are written in a directory under
+  the job's scratch directory
+* The environment variable ``_CONDOR_CREDS`` is set to point to this directory
+* The starter periodically copies refreshed credentials out of the credd's
+  credential directory
+
+For **Scheduler** universe jobs:
+
+* The job does **not** have access to OAuth credentials

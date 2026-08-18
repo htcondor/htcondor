@@ -23,10 +23,10 @@ Synopsis
 [**-DoRescueFrom** *N*] [**-load_save** *filename*] [**-DoRecovery**]
 [**-AllowVersionMismatch**] [**-no_recurse** | **-do_recurse**]
 [**-update_submit**] [**-import_env**] [**-include_env** *variable[,variable...]*]
-[**-insert_env** *key=value[;key=value...]*] [**-DumpRescue**] [**-valgrind**]
+[**-insert_env** *key=value[;key=value...]*] [**-valgrind**]
 [**-DontAlwaysRunPost** | **-AlwaysRunPost**] [**-priority** *N*]
 [**-r/-remote** *schedd_name*] [**-schedd-daemon-ad-file** *filename*]
-[**-schedd-address-file** *filename*]
+[**-schedd-address-file** *filename*] [**-RescueFile** *filename*]
 
 
 Description
@@ -139,6 +139,8 @@ Options
     Default ``1`` is ``True``.
  **-DoRescueFrom** *N*
     Specify a specific rescue number to locate and restore state from.
+ **-RescueFile** *filename*
+    Specify a specific rescue file by name to restore state from.
  **-load_save** *filename*
     Specify a specific :dag-cmd:`SAVE_POINT_FILE` to restore state from.
     If provided a path DAGMan will attempt to read that file following
@@ -184,9 +186,6 @@ Options
         .. code-block:: console
 
             $ condor_submit_dag -insert_env |foo=0|bar=1|baz=2
- **-DumpRescue**
-    Inform DAGMan to produce a full rescue DAG file and exit before
-    executing the DAG.
  **-valgrind**
     Run DAGMan under *valgrind*.
 
@@ -330,9 +329,15 @@ Execute DAG with a custom batch name:
 
     $ condor_submit_dag -batch-name my-awesome-dag sample.dag
 
-Execute DAG and restore state from specific rescue file 8:
+Execute DAG and restore state from specific rescue file:
 
-.. code-block::
+.. code-block:: console
+
+    $ condor_submit_dag -RescueFile simple.dag.rescue008 simple.dag
+
+Execute DAG and restore state from specific rescue number 8:
+
+.. code-block:: console
 
     $ condor_submit_dag -dorescuefrom 8 sample.dag
 

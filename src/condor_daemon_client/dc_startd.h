@@ -91,15 +91,29 @@ public:
 			// TODO: add resource sharing info here??
 		};
 
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, std::shared_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
 			@param got_job_done do we believe that the job is done? (i.e. got the job_exit syscall)
 			@param claim_is_closing startd indicates if not accepting more jobs
+			@param job_is_restarting  Query-only.  Used by starter to check if
+			       it should restart a job after uploading its checkpoint.
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing);
+	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning, bool final_transfer=false);
+
+		/** Send the command to this startd to ask if claim_is_closing would be returned if we deactivated.
+			Used by starter to check if it should restart a job after uploading its checkpoint.
+			@param claim_is_closing startd indicates if not accepting more jobs
+			@return true on success, false on failure
+		 */
+	bool reactivateClaimCheck(bool & claim_is_closing);
+
+protected:
+		// helper for deactivateClaim and reactivateClaimCheck
+	bool deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bool *still_cleaning);
+public:
 
 		/** Try to activate the claim on this started with the given
 			job ClassAd and version of the starter we want to use. 
@@ -113,8 +127,7 @@ public:
 			@return OK on success, NOT_OK on failure, CONDOR_TRY_AGAIN
 		        if the startd is busy and wants us to try back later.
 		*/
-	int activateClaim( ClassAd* job_ad, int starter_version, 
-					   ReliSock** claim_sock_ptr, ClassAd * replyAd /*= nullptr*/ );
+	int activateClaim( ClassAd* job_ad, ReliSock** claim_sock_ptr, ClassAd * replyAd /*= nullptr*/);
 
 		/** Before activating a claim, attempt to delegate the user proxy
 			(if there is one). We used do this from the shadow if
@@ -144,7 +157,7 @@ public:
 	
 	bool resumeClaim( ClassAd* reply, int timeout = -1 );
 
-	bool deactivateClaim( VacateType type, ClassAd* reply,
+	bool deactivateClaimCA( VacateType type, ClassAd* reply,
 						  int timeout = -1 );
 
 	bool releaseClaim( VacateType type, ClassAd* reply,
@@ -168,9 +181,9 @@ public:
 	 */
 	bool _continueClaim();
 	
-	bool vacateClaim( const char* name );
+	bool vacateClaim( const char* name, bool fast=false );
 
-	bool getAds( ClassAdList &adsList );
+	bool vacateAllClaims(bool fast = false);
 
 		// request_id: set to the request id (can be used to cancel request)
 		// returns: true/false on success/failure
@@ -184,6 +197,16 @@ public:
 		// returns: true/false on success/failure
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
+
+		// Send REHOME command to startd
+		// schedd_name: the schedd to rehome to
+		// schedd_pool: the collector pool to use to find the schedd (NULL = use COLLECTOR_HOST)
+		// timeout: timeout for the rehome operation
+		// reboot: if true, reboot the host after evicting jobs (subject to
+		//         the startd's STARTD_REHOME_ALLOW_REBOOT guard expression)
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel = false, bool reboot = false);
 
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
@@ -361,13 +384,16 @@ public:
 		}
 
 		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		NotifyStartdOfMatchHandler *self = this;
 		m_startd.startCommand_nonblocking (
 			MATCH_INFO,
 			st,
 			m_timeout,
 			NULL,
-			NotifyStartdOfMatchHandler::startCommandCallback,
-			this);
+			[self](bool success, Sock *sock, CondorError *errstack,
+				const std::string &trust_domain, bool should_try_token_request) {
+				NotifyStartdOfMatchHandler::startCommandCallback(success, sock, errstack, trust_domain, should_try_token_request, self);
+			});
 
 			// Since this is nonblocking, we cannot give any immediate
 			// feedback on whether the message to the startd succeeds.

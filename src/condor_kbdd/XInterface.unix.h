@@ -28,6 +28,10 @@
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
 
+#ifdef HAVE_LIBSYSTEMD
+#include <systemd/sd-login.h>
+#endif
+
 class XInterface
 {
   public:
@@ -41,17 +45,22 @@ class XInterface
     bool ProcessEvents();
     void SelectEvents(Window win);
     bool QueryPointer();
-	bool QuerySSExtension();
+    bool QuerySSExtension();
     bool Connect();
     bool TryUser(const char *user);
     bool TryUserXDG(const char *user);
 
-	void ReadUtmp();
-	void FinishConnection();
+    void InitLoggedOnUsers();
+    void AddUniqueUsername(char *username);
+    bool ReadUtmp();
+#ifdef HAVE_LIBSYSTEMD
+    bool ReadSDLogin();
+#endif
+    void FinishConnection();
 
-    Display     *_display;
-    char*       _display_name;
-    time_t      _last_event;
+    Display      *_display;
+    char*        _display_name;
+    time_t       _last_event;
 
     Window       _pointer_root;
     Screen       *_pointer_screen;
@@ -62,12 +71,10 @@ class XInterface
     int          _small_move_delta;
     int          _bump_check_after_idle_time_sec;
 
-    int         _daemon_core_timer;
-    bool 	needsCheck;
-    bool 	hasXss; 
+    int          _daemon_core_timer;
+    bool         needsCheck;
+    bool         hasXss;
 
-	// The following are for getting rid of the obnoxious utmp stuff.
-	FILE * utmp_fp;
-	std::vector<char *> *logged_on_users;
+    std::vector<char *> *logged_on_users;
 };
 #endif //__XINTERFACE_H__

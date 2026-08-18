@@ -32,7 +32,6 @@ namespace DagmanConfigOptions {
 		RetryNodeFirst,                // Retry a failed node with retries before other nodes in the ready queue
 		MungeNodeNames,                // Munge node names for multi-DAG runs to make unique node names
 		AllowIllegalChars,             // Allow Node names to contain illegal characters
-		PartialRescue,                 // Write partial rescue DAG
 		RescueResetRetry,              // Reset Node Retries when writing rescue file
 		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
 		RemoveTempSubFiles,            // Remove temporary inline desc node submit files created for shell condor_submit
@@ -50,6 +49,9 @@ namespace DagmanConfigOptions {
 		CacheDebug,                    // Cache DAGMan debugging
 		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
 		UseOldDagParser,               // Use old DAG file parser and processing
+		ParseTimingDebug,              // Undocumented: report wall-clock time and peak RSS for DAG parse and edge-processing phases
+		RemoveJobListOnFailure,        // Job batch should be removed once the list is determined to be failed
+		SubmitSendReschedule,          // Submit is supposed to do reschedule to schedd (i.e. SUBMIT_SEND_RESCHEDULE)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -97,7 +99,6 @@ public:
 		boolOpts[static_cast<size_t>(b::MungeNodeNames)] = true;
 		boolOpts[static_cast<size_t>(b::AbortDuplicates)] = true;
 		boolOpts[static_cast<size_t>(b::AbortOnScarySubmit)] = true;
-		boolOpts[static_cast<size_t>(b::PartialRescue)] = true;
 		boolOpts[static_cast<size_t>(b::RescueResetRetry)] = true;
 		boolOpts[static_cast<size_t>(b::GenerateSubdagSubmit)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;
@@ -105,6 +106,7 @@ public:
 		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
 		boolOpts[static_cast<size_t>(b::UseOldDagParser)] = false;
+		boolOpts[static_cast<size_t>(b::SubmitSendReschedule)] = false;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;

@@ -36,6 +36,10 @@ div.wy-side-nav-search a.icon.icon-home:before {
 	height: 15px;
 }
 
+span.faux-definition {
+	display: none;
+}
+
 /* Enable tool mindmap links */
 [class*="link:"] {
 	cursor: pointer;

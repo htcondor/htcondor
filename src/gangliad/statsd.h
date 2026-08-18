@@ -162,6 +162,14 @@ class StatsD: Service {
 	bool publishPerExecuteNodeMetrics() const {return m_per_execute_node_metrics; }
 	bool isExecuteOnlyNode(std::string &machine) {return m_execute_only_nodes.count(machine)!=0;}
 
+	// Store a previous value for a metric for use in calculating derivatives of aggregate metrics.
+	// It gets stored into m_current_values, and then at the end of the publication cycle, m_current_values gets
+	// copied to m_previous_values so it is available for the next publication cycle.
+	void storePreviousValue(std::string const &key, double value) { m_current_values[key] = value; }
+
+	// Get a previous value for a metric for use in calculating derivatives of aggregate metrics. Return true if a previous value was found, false otherwise.
+	bool getPreviousValue(std::string const &key, double &value);
+
  protected:
 	int m_verbosity;
 	std::string m_requirements;
@@ -190,10 +198,19 @@ class StatsD: Service {
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
 
+	double m_start_time{0.0}; // time most recent update cycle started
+
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
 
 	std::string m_param_monitor_multiple_collectors;
 	std::unordered_set< std::string > m_unresponsive_collectors;
+
+	// Map that contains previous and current value of each metric for each machine, used to calculate derivatives of aggregate metrics
+	std::map<std::string, double> m_previous_values;
+	std::map<std::string, double> m_current_values;
+
+	// Remove entries from m_previous_values whose time doesn't match m_start_time
+	void cleanupOldPreviousValues();
 
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();
@@ -208,7 +225,7 @@ class StatsD: Service {
 	void ParseMetricsFromFile( std::string const &fname );
 
 	// Evaluate metrics against the provided daemon ad.
-	void publishDaemonMetrics(ClassAd *ad);
+	void publishDaemonMetrics(ClassAd& ad);
 
 	// Publish the final value of all aggreate metrics.
 	void publishAggregateMetrics();
@@ -220,16 +237,16 @@ class StatsD: Service {
 	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
-	void mapDaemonIPs(ClassAdList &daemon_ads);
+	void mapDaemonIPs(std::vector<ClassAd> &daemon_ads);
 
 	// Extract IP addresses of collectors, and set a default aggregate host
 	void mapCollectorIPs(CollectorList &collectors, bool reset_mappings);
 
 	// Determine which machines are execute-only nodes
-	void determineExecuteNodes(ClassAdList &daemon_ads);
+	void determineExecuteNodes(std::vector<ClassAd> &daemon_ads);
 
 	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
-	void getDaemonAds(ClassAdList &daemon_ads);
+	void getDaemonAds(std::vector<ClassAd> &daemon_ads);
 
 	// Query a collector to set MONITOR_MULTIPLE_COLLECTORS
 	bool getCollectorsToMonitor();

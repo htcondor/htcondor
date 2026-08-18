@@ -22,18 +22,20 @@
 #include <stdexcept>
 #include <assert.h>
 
-static const char* DELIMITERS = " \t";
+static const char* DELIMITERS = " \t\r";
 static const char* ILLEGAL_CHARS = "+";
-static bool TRIM_QUOTES = true;
 
 //--------------------------------------------------------------------------------------------
+static bool
+is_quote(const char c) {
+	return c == '"' || c == '\'';
+}
+
 std::string
-DagLexer::next(bool trim_quotes) {
+DagLexer::next(TRIM_QUOTES trim_quotes) {
 	std::string token;
 	bool escaped = false;
 	bool in_quotes = false;
-	bool is_pair = false;
-	bool pair_complete = false;
 	char quote = '-';
 
 	while (pos < len && str[pos]) {
@@ -41,44 +43,26 @@ DagLexer::next(bool trim_quotes) {
 			token += str[pos];
 			escaped = false;
 		} else if (in_quotes) {
-			assert(quote == '"' || quote == '\'');
+			assert(is_quote(quote));
 			if (str[pos] == '\\') {
 				escaped = true;
 			} else if (str[pos] == quote) {
-				if ( ! trim_quotes) { token += quote; }
+				if (trim_quotes == TRIM_QUOTES::FALSE) { token += quote; }
 				in_quotes = false;
 				quote = '-';
 			} else {
 				token += str[pos];
 			}
 		} else if (strchr(DELIMITERS, str[pos])) {
-			bool next_char_equals = false;
-			while (pos+1 < len && str[pos+1]) {
-				if (strchr(DELIMITERS, str[pos+1])) { pos++; }
-				else {
-					if (str[pos+1] == '=') { next_char_equals = true; }
-					break;
-				}
-			}
-			if ( ! token.empty()) {
-				if ((!is_pair && !next_char_equals) || pair_complete) {
-					is_pair = pair_complete = false;
-					break;
-				}
-			}
-		} else if (!is_pair && str[pos] == '=') {
-			is_pair = true;
-			token += str[pos];
+			if (token.size()) { break; }
 		} else {
-			if (str[pos] == '"' || str[pos] == '\'') {
+			if (is_quote(str[pos])) {
 				quote = str[pos];
-				if ( ! trim_quotes) { token += quote; }
+				if (trim_quotes == TRIM_QUOTES::FALSE) { token += quote; }
 				in_quotes = true;
 			} else {
 				token += str[pos];
 			}
-
-			if (is_pair) { pair_complete = true; }
 		}
 
 		pos++;
@@ -87,12 +71,117 @@ DagLexer::next(bool trim_quotes) {
 	if (in_quotes) {
 		err = "Invalid quoting: no ending quote found";
 		return "";
-	} else if (is_pair && !pair_complete) {
-		err = "Invalid key value pair: no value discovered";
-		return "";
 	}
 
 	return token;
+}
+
+kvp_parse_t
+DagLexer::next_key_value_pair(TRIM_QUOTES trim_quotes) {
+	enum class ReadingPhase {
+		KEY = 0, // Phase: Read key up to delimiter or equals sign
+		EQUALS,  // Phase: Locate equals and up to beginning of value (chomp delimiter)
+		VALUE    // Phase: Read value
+	};
+
+	std::string key, value;
+	ReadingPhase phase = ReadingPhase::KEY;
+	bool after_equals = false;
+
+	while (pos < len && str[pos]) {
+		char curr = str[pos];
+
+		switch (phase) {
+			case ReadingPhase::KEY:
+				if (curr == '"' || curr == '\'') {
+					// Key is not allowed to contain quote characters
+					err = "Key contains quotation mark";
+					return std::nullopt;
+				} else if (strchr(DELIMITERS, curr)) {
+					// If delimiter and we have a key then move on to EQUALS phase
+					if (key.size()) { phase = ReadingPhase::EQUALS; }
+				} else { // Non-delimiter character
+					if (curr == '=') {
+						if (key.empty()) {
+							// First non-delimiter char cannot be equals sign
+							err = "Key value pair missing key";
+							return std::nullopt;
+						}
+						// Move on to EQUALS phase (already found equals so do post equal sign chomp/checks)
+						phase = ReadingPhase::EQUALS;
+						after_equals = true;
+					} else {
+						// Key character so store
+						key.push_back(curr);
+					}
+				}
+
+				break; // End Key parse phase
+
+			case ReadingPhase::EQUALS:
+				if (strchr(DELIMITERS, curr)) {
+					// Do Nothing (chomp whitespace)
+				} else if (curr == '=') { // Found equals
+					if (after_equals) {
+						// We only expect one equals char in key=value pair
+						err = "Key value pair missing value: Double operator";
+						return std::nullopt;
+					} else {
+						// Found equals sign do post chomp/checks
+						after_equals = true;
+					}
+				} else if ( ! after_equals) {
+					// Non-delimiter character prior to equals sign char (not a key=value pair)
+					err = "Key value pair missing value: Failed to locate operator";
+					return std::nullopt;
+				} else {
+					// Found start of value (switch phase)
+					phase = ReadingPhase::VALUE;
+					pos--; // Don't lose this character
+				}
+
+				break; // End equals character parse phase
+
+			case ReadingPhase::VALUE: // This phase either fails or returns key value pair
+				value = next(TRIM_QUOTES::FALSE); // Just get next token at this point for simplicity
+
+				if (value.empty()) {
+					// We do our own quote trimming so empty value is a failure
+					// If error string is empty something bad has happened
+					if (err.empty()) { err = "Key value pair missing value: Unexpected error"; }
+					return std::nullopt;
+				}
+
+				// We should be guaranteed wrapping & matching quotes or no quotes from next()
+				if (is_quote(value.front())) {
+					if (trim_quotes == TRIM_QUOTES::TRUE) {
+						// Remove quotes if quoted and caller wants trimming
+						value = value.substr(1, value.length() - 2);
+					}
+				}
+
+				// Deliver the goods
+				return std::make_optional(std::make_pair(key, value));
+
+				break; // End value parse phase
+
+		} // End switch
+
+		pos++;
+	} // End while loop
+
+	// While loop ended early: No complete key=value pair so return nullopt and check for error
+	if (key.empty()) {
+		// No key=value pair (let caller determine error or not)
+	} else if (phase == ReadingPhase::KEY) {
+		// token with no following data
+		err = "Key value pair missing operator and value";
+	} else if (phase == ReadingPhase::EQUALS) {
+		// key with no value
+		err = "Key value pair missing value: No value specified";
+	}
+
+	return std::nullopt;
 }
 
 std::string
@@ -107,6 +196,20 @@ DagLexer::remain() {
 static bool
 skip_line(const std::string& line) {
 	return (line.empty() || line[0] == '#' || line.substr(0, 2) == "//");
+}
+
+//--------------------------------------------------------------------------------------------
+static bool
+isKeyword(const std::string_view input, const std::string_view check) {
+	auto equivalent_chars = [](char lhs, char rhs) {
+		auto normalize = [](unsigned char c) {
+			c = std::tolower(c);
+			return (c == '-') ? '_' : c;
+		};
+		return normalize(lhs) == normalize(rhs);
+	};
+
+	return std::ranges::equal(input, check, equivalent_chars);
 }
 
 //--------------------------------------------------------------------------------------------
@@ -236,14 +339,15 @@ DagParser::ParseNodeTypes(DagLexer& details, DAG::CMD type) {
 			data.reset(new ServiceCommand(node_name));
 			break;
 		default:
-			// This is a developer error so throw exception
-			throw std::invalid_argument("Invalid DAG Command: Not a node type");
+			// This should never happen: ParseNodeTypes() was called with a
+			// command that is not a node type.
+			return "Invalid DAG Command: Not a node type";
 	}
 
 	NodeCommand* nodeCmd = (NodeCommand*)data.get();
 	assert(nodeCmd != nullptr);
 
-	std::string desc = details.next(TRIM_QUOTES);
+	std::string desc = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (desc.empty()) {
 		return "No submit description provided";
 	}
@@ -264,12 +368,12 @@ DagParser::ParseNodeTypes(DagLexer& details, DAG::CMD type) {
 	while (true) {
 		std::string token = details.next();
 		if (token.empty()) { break; }
-		else if (strcasecmp(token.c_str(), "NOOP") == 0) {
+		else if (isKeyword(token, "NOOP")) {
 			nodeCmd->SetNoop();
-		} else if (strcasecmp(token.c_str(), "DONE") == 0) {
+		} else if (isKeyword(token, "DONE")) {
 			nodeCmd->SetDone();
-		} else if (strcasecmp(token.c_str(), "DIR") == 0) {
-			std::string dir = details.next(TRIM_QUOTES);
+		} else if (isKeyword(token, "DIR")) {
+			std::string dir = details.next(DagLexer::TRIM_QUOTES::TRUE);
 			if (dir.empty()) {
 				error = "No directory path provided for DIR subcommand";
 				break;
@@ -294,7 +398,7 @@ DagParser::ParseSplice(DagLexer& details) {
 	SpliceCommand* cmd = (SpliceCommand*)data.get();
 	assert(cmd != nullptr);
 
-	token = details.next(TRIM_QUOTES);
+	token = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (token.empty()) {
 		return "Missing DAG file";
 	}
@@ -303,8 +407,8 @@ DagParser::ParseSplice(DagLexer& details) {
 	std::string error = "";
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "DIR") == 0) {
-			std::string dir = details.next(TRIM_QUOTES);
+		if (isKeyword(token, "DIR")) {
+			std::string dir = details.next(DagLexer::TRIM_QUOTES::TRUE);
 			if (dir.empty()) {
 				error = "No directory path provided for DIR subcommand";
 			} else {
@@ -322,20 +426,24 @@ DagParser::ParseSplice(DagLexer& details) {
 }
 
 std::string
-DagParser::ParseParentChild(DagLexer& details) {
+DagParser::ParseParentChild(DagLexer& details, const std::string& keyword) {
 	data.reset(new ParentChildCommand);
 	ParentChildCommand* cmd = (ParentChildCommand*)data.get();
 	assert(cmd != nullptr);
 
+	if (keyword == "WEAK") {
+		cmd->SetIsWeak();
+	}
+
 	bool parsing_children = false;
 	std::string token = details.next();
-	if (token.empty() || strcasecmp(token.c_str(), "CHILD") == 0) {
+	if (token.empty() || isKeyword(token, "CHILD")) {
 		return "No parent node(s) specified";
 	}
 
 	std::string error = "Missing CHILD specifier";
 	do {
-		if (strcasecmp(token.c_str(), "CHILD") == 0) {
+		if (isKeyword(token, "CHILD")) {
 			if ( ! details.peek().empty()) {
 				parsing_children = true;
 				error.clear();
@@ -363,7 +471,7 @@ DagParser::ParseScript(DagLexer& details) {
 		if (it != DAG::SCRIPT_TYPES_MAP.end()) {
 			cmd->SetType(it->second);
 			break;
-		} else if (strcasecmp(token.c_str(), "DEFER") == 0) {
+		} else if (isKeyword(token, "DEFER")) {
 			std::string value = details.next();
 			int status = 0;
 			time_t interval = 0;
@@ -379,7 +487,7 @@ DagParser::ParseScript(DagLexer& details) {
 				interval = (time_t)std::stoi(value);
 			} catch (...) { return "Invalid DEFER time value '" + value + "'"; }
 			cmd->SetDeferal(status, interval);
-		} else if (strcasecmp(token.c_str(), "DEBUG") == 0) {
+		} else if (isKeyword(token, "DEBUG")) {
 			std::string file = details.next();
 			if (file.empty()) { return "DEBUG missing filename"; }
 			std::string stream = details.next();
@@ -430,7 +538,7 @@ DagParser::ParseRetry(DagLexer& details) {
 
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "UNLESS-EXIT") != 0) {
+		if ( ! isKeyword(token, "UNLESS_EXIT")) {
 			return "Unexpected token '" + token + "'";
 		}
 
@@ -472,7 +580,7 @@ DagParser::ParseAbortDagOn(DagLexer& details) {
 
 	token = details.next();
 	if ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "RETURN") != 0) {
+		if ( ! isKeyword(token, "RETURN")) {
 			return "Unexpected token '" + token + "'";
 		}
 
@@ -503,39 +611,30 @@ DagParser::ParseVars(DagLexer& details) {
 	VarsCommand* cmd = (VarsCommand*)data.get();
 	assert(cmd != nullptr);
 
-	// Possibly APPEND or PREPEND keyword
-	token = details.next(TRIM_QUOTES);
+	// Possibly APPEND/PREPEND keyword or key=value pair (so peek and don't consume)
+	token = details.peek();
 
-	if (strcasecmp(token.c_str(), "PREPEND") == 0) {
+	if (isKeyword(token, "PREPEND")) {
 		cmd->Prepend();
-		token = details.next(TRIM_QUOTES);
-	} else if (strcasecmp(token.c_str(), "APPEND") == 0) {
+		token = details.next(); // Eat token
+	} else if (isKeyword(token, "APPEND")) {
 		cmd->Append();
-		token = details.next(TRIM_QUOTES);
+		token = details.next(); // Eat token
 	}
 
 	int num_pairs = 0;
-	while ( ! token.empty()) {
-		size_t equals = token.find_first_of("=");
-		if (equals == std::string::npos) { return "Non key=value token specified: " + token; }
+	while (const auto kvp = details.next_key_value_pair(DagLexer::TRIM_QUOTES::TRUE)) {
+		auto [key, value] = *kvp;
 
-		std::string key = token.substr(0, equals);
-		std::string val = token.substr(equals + 1);
-
-		if (key.empty()) { return "Invalid key=value pair: Missing key"; }
-		if (val.empty()) { return "Invalid key=value pair: Missing value"; }
-
-		if (key == "+") { return "Variable name must contain at least one alphanumeric character"; }
-		else if (key[0] == '+') { key = "My." + key.substr(1); }
+		if (key == "+" || key == "My.") { return "Variable name must contain at least one alphanumeric character"; }
+		else if (key.front() == '+') { key = "My." + key.substr(1); }
 
 		std::string tmp(key);
 		lower_case(tmp);
 		if (tmp.starts_with("queue")) { return "Illegal variable name '" + key + "': name can not begin with 'queue'"; }
 
 		num_pairs++;
-		cmd->AddPair(key, val);
-
-		token = details.next(TRIM_QUOTES);
+		cmd->AddPair(key, value);
 	}
 
 	return (num_pairs == 0) ? "No key=value pairs specified" : "";
@@ -588,10 +687,60 @@ DagParser::ParsePreSkip(DagLexer& details) {
 }
 
 std::string
+DagParser::ParseTolerance(DagLexer& details) {
+	std::string token = details.next();
+	if (token.empty()) { return "No node name specified"; }
+
+	data.reset(new ToleranceCommand(token));
+	ToleranceCommand* cmd = (ToleranceCommand*)data.get();
+	assert(cmd != nullptr);
+
+	token = details.next();
+	if (token.empty()) { return "Missing failure tolerance value"; }
+
+	bool is_percent = false;
+	if (token.back() == '%') {
+		token.pop_back();
+
+		if (token.empty()) {
+			return "Empty percentage specified for failure tolerance";
+		}
+
+		is_percent = true;
+	} else if (details.peek() == "%") {
+		is_percent = true;
+		std::ignore = details.next();
+	}
+
+	try {
+		int tol = std::stoi(token);
+
+		if (tol < 0) {
+			throw std::invalid_argument("Failure tolerance is out of range");
+		}
+
+		cmd->SetTolerance(tol, is_percent);
+	} catch (...) {
+		return "Invalid tolerance value '" + token + "'";
+	}
+
+	token = details.next();
+	if (isKeyword(token, "FAIL_FAST")) {
+		cmd->FailFast();
+		token = details.next();
+	} else if (isKeyword(token, "WAIT")) {
+		cmd->Wait();
+		token = details.next();
+	}
+
+	return ( ! token.empty()) ? "Unexpected token '" + token + "'" : "";
+}
+
+std::string
 DagParser::ParseSavePoint(DagLexer& details) {
 	std::string token = details.next();
 	if (token.empty()) { return "No node name specified"; }
-	else if (strcasecmp(token.c_str(), DAG::ALL_NODES.c_str()) == 0) {
+	else if (isKeyword(token, DAG::ALL_NODES.c_str())) {
 		return "ALL_NODES cannot be used for save point file command";
 	}
 
@@ -599,7 +748,7 @@ DagParser::ParseSavePoint(DagLexer& details) {
 	SavePointCommand* cmd = (SavePointCommand*)data.get();
 	assert(cmd != nullptr);
 
-	token = details.next(TRIM_QUOTES);
+	token = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (token.empty()) {
 		// Default <node name>-<dag file>.save
 		std::string file = cmd->GetNodeName() + "-" + path.filename().string() + ".save";
@@ -656,7 +805,7 @@ DagParser::ParseMaxJobs(DagLexer& details) {
 
 std::string
 DagParser::ParseConfig(DagLexer& details) {
-	std::string file = details.next(TRIM_QUOTES);
+	std::string file = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (file.empty()) { return "No configuration file specified"; }
 
 	std::string junk = details.next();
@@ -675,7 +824,7 @@ DagParser::ParseConfig(DagLexer& details) {
 
 std::string
 DagParser::ParseDot(DagLexer& details) {
-	std::string token = details.next(TRIM_QUOTES);
+	std::string token = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (token.empty()) { return "No file specified"; }
 
 	data.reset(new DotCommand(token));
@@ -684,15 +833,15 @@ DagParser::ParseDot(DagLexer& details) {
 
 	token = details.next();
 	while ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "UPDATE") == 0) {
+		if (isKeyword(token, "UPDATE")) {
 			cmd->SetUpdate(true);
-		} else if (strcasecmp(token.c_str(), "DONT-UPDATE") == 0) {
+		} else if (isKeyword(token, "DONT_UPDATE")) {
 			cmd->SetUpdate(false);
-		} else if (strcasecmp(token.c_str(), "OVERWRITE") == 0) {
+		} else if (isKeyword(token, "OVERWRITE")) {
 			cmd->SetOverwrite(true);
-		} else if (strcasecmp(token.c_str(), "DONT-OVERWRITE") == 0) {
+		} else if (isKeyword(token, "DONT_OVERWRITE")) {
 			cmd->SetOverwrite(false);
-		} else if (strcasecmp(token.c_str(), "INCLUDE") == 0) {
+		} else if (isKeyword(token, "INCLUDE")) {
 			token = details.next();
 			if (token.empty()) { return "Missing INCLUDE header file"; }
 			cmd->SetInclude(token);
@@ -708,7 +857,7 @@ DagParser::ParseDot(DagLexer& details) {
 
 std::string
 DagParser::ParseNodeStatus(DagLexer& details) {
-	std::string token = details.next(TRIM_QUOTES);
+	std::string token = details.next(DagLexer::TRIM_QUOTES::TRUE);
 	if (token.empty()) { return "No file specified"; }
 
 	data.reset(new NodeStatusCommand(token));
@@ -717,7 +866,7 @@ DagParser::ParseNodeStatus(DagLexer& details) {
 
 	token = details.next();
 	while ( ! token.empty()) {
-		if (strcasecmp(token.c_str(), "ALWAYS-UPDATE") == 0) {
+		if (isKeyword(token, "ALWAYS_UPDATE")) {
 			cmd->SetAlwaysUpdate();
 		} else {
 			try {
@@ -740,9 +889,9 @@ DagParser::ParseEnv(DagLexer& details) {
 	if (token.empty()) { return "Missing action (SET or GET) and variables"; }
 
 	bool set = false;
-	if (strcasecmp(token.c_str(), "SET") == 0) {
+	if (isKeyword(token, "SET")) {
 		set = true;
-	} else if (strcasecmp(token.c_str(), "GET") != 0) {
+	} else if ( ! isKeyword(token, "GET")) {
 		return "Unexpected token '" + token + "'";
 	}
 
@@ -839,7 +988,7 @@ DagParser::next() {
 			switch (cmd) {
 				case DAG::CMD::SUBDAG:
 					check = details.next(); // TODO: Make External keyword optional
-					if (strcasecmp(check.c_str(), "EXTERNAL") != 0) {
+					if ( ! isKeyword(check, "EXTERNAL")) {
 						parse_error = "Missing EXTERNAL keyword";
 						break;
 					}
@@ -857,7 +1006,14 @@ DagParser::next() {
 					parse_error = ParseSubmitDesc(details);
 					break;
 				case DAG::CMD::PARENT_CHILD:
-					parse_error = ParseParentChild(details);
+					if (it->first == "WEAK") {
+						check = details.next();
+						if (check.empty() || !isKeyword(check, "PARENT")) {
+							parse_error = "WEAK dependency missing PARENT keyword";
+							break;
+						}
+					}
+					parse_error = ParseParentChild(details, it->first);
 					break;
 				case DAG::CMD::SCRIPT:
 					parse_error = ParseScript(details);
@@ -876,6 +1032,9 @@ DagParser::next() {
 					break;
 				case DAG::CMD::PRE_SKIP:
 					parse_error = ParsePreSkip(details);
+					break;
+				case DAG::CMD::TOLERANCE:
+					parse_error = ParseTolerance(details);
 					break;
 				case DAG::CMD::DONE:
 					check = details.next();
@@ -899,7 +1058,7 @@ DagParser::next() {
 					parse_error = ParseConfig(details);
 					break;
 				case DAG::CMD::INCLUDE:
-					check = details.next(TRIM_QUOTES);
+					check = details.next(DagLexer::TRIM_QUOTES::TRUE);
 					if (check.empty()) {
 						parse_error = "No include file specified";
 					} else {
@@ -917,7 +1076,7 @@ DagParser::next() {
 					parse_error = ParseNodeStatus(details);
 					break;
 				case DAG::CMD::JOBSTATE_LOG:
-					check = details.next(TRIM_QUOTES);
+					check = details.next(DagLexer::TRIM_QUOTES::TRUE);
 					if (check.empty()) {
 						parse_error = "No include file specified";
 					} else {

@@ -133,6 +133,8 @@ class PrettyPrinter {
 		int    ppSetStartdCompactCols( int width, int & mach_width, const char * & constr );
 		void       ppSetStartdLvmCols( int width, const char * & constr );
 		void     ppSetSlotLvUsageCols( int width, const char * & constr );
+		void        ppSetEPHealthCols( int width, bool daemon_ad, const char * & constr );
+		
 
 	public:
 		AttrListPrintMask           pm;
@@ -210,5 +212,9 @@ class PrettyPrinter {
 	"IsEnforcingDiskUsage"
 #define PMODE_SLOT_LV_USAGE_CONSTRAINT \
 	"IsEnforcingDiskUsage && PartitionableSlot=!=True"
+#define PMODE_STARTD_HEALTH_CONSTRAINT \
+	"size(HealthExprs) > 0"
+#define PMODE_SLOT_HEALTH_CONSTRAINT \
+	"size(HealthExprs) > 0"
 
 #endif /* _CONDOR_PRETTY_PRINT_H */

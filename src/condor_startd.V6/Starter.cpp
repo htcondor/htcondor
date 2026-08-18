@@ -94,8 +94,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-	m_vacate_job_soft_cb = nullptr;
-	m_vacate_job_hard_cb = nullptr;
+	m_vacate_job_soft_cb.reset();
+	m_vacate_job_hard_cb.reset();
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -136,10 +136,10 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_vacate_job_soft_cb ) {
+	if (m_vacate_job_soft_cb) {
 		m_vacate_job_soft_cb->cancelCallback();
 	}
-	if( m_vacate_job_hard_cb ) {
+	if (m_vacate_job_hard_cb) {
 		m_vacate_job_hard_cb->cancelCallback();
 	}
 }
@@ -224,6 +224,18 @@ Starter::publish( ClassAd* ad )
 
 	if (!s_ad) {
 		return;
+	}
+
+	// LVM setting disk quantum does not get set by intial static ad
+	// Check if not set and using LVM to get actual value
+	const auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+	long long disk_quantum = 0;
+	if (volman_setup && (!s_ad->LookupInteger(ATTR_STARTD_DISK_QUANTUM, disk_quantum) || disk_quantum <= 0)) {
+		disk_quantum = volman->GetDiskQuantum();
+		if (disk_quantum > 0) {
+			s_ad->Assign(ATTR_STARTD_DISK_QUANTUM, disk_quantum);
+		}
 	}
 
 	ExprTree *tree, *pCopy;
@@ -740,7 +752,11 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		}
 		if (add_a2_arg) {
 			if ( ! a2arg.empty()) a2arg += ",";
-			formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/scratch/" SANDBOX_STARTER_LOG_FILENAME);
+			} else {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			}
 			args.AppendArg("-a2");
 			args.AppendArg(a2arg);
 		}
@@ -1043,10 +1059,28 @@ int Starter::execDCStarter(
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
+
+		// Arm the daemon-core hung-child backstop for the starter at spawn
+		// time.  The starter delays its first DC_CHILDALIVE (see
+		// STARTER_FIRST_CHILDALIVE_DELAY) so that short-lived starters do not
+		// pay the cost of an alive at all; without arming here, a starter that
+		// hung before its first alive would never be reaped by the startd.
+		// The first alive that does arrive overwrites this deadline.  Use the
+		// same not-responding timeout the starter itself will report.
+	int starter_hung_timeout = param_integer("STARTER_NOT_RESPONDING_TIMEOUT",
+			param_integer("NOT_RESPONDING_TIMEOUT", 3600, 1), 1);
+
+	OptionalCreateProcessArgs cpArgs;
 	s_pid = daemonCore->
-		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
+		CreateProcessNew( final_path, *final_args,
+		                cpArgs.priv(PRIV_ROOT)
+		                	.reaperID(reaper_id)
+		                	.env(env)
+		                	.familyInfo(&fi)
+		                	.socketInheritList(inherit_list)
+		                	.std(std_fds)
+		                	.initialHungTimeout(starter_hung_timeout)
+		                	.daemonSock(daemon_sock.c_str()));
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1367,7 +1401,7 @@ Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode,soft);
 
-	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
+	auto msg_cb = std::make_shared<DCMsgCallback>( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
 
 	msg->setCallback( msg_cb );
 
@@ -1395,12 +1429,12 @@ void
 Starter::vacateJobCallback(DCMsgCallback *cb)
 {
 	bool soft = false;
-	if (cb == m_vacate_job_soft_cb) {
+	if (cb == m_vacate_job_soft_cb.get()) {
 		soft = true;
-		m_vacate_job_soft_cb = nullptr;
-	} else if (cb == m_vacate_job_hard_cb) {
+		m_vacate_job_soft_cb.reset();
+	} else if (cb == m_vacate_job_hard_cb.get()) {
 		soft = false;
-		m_vacate_job_hard_cb = nullptr;
+		m_vacate_job_hard_cb.reset();
 	} else {
 		EXCEPT("Unexpected starter vacate callback!");
 	}

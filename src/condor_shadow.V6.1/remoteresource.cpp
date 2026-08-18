@@ -41,15 +41,22 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "shadow.h"
+#include "pseudo_ops.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
-// for remote syscalls, this is currently in NTreceivers.C.
-extern int do_REMOTE_syscall();
+// To know if the schedd wants us to do common file transfer.  If not, this
+// is where we alter the input list to compensate.
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
 
 // for remote syscalls...
 ReliSock *syscall_sock;
@@ -137,6 +144,7 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
 	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
+	if ( slotAd ) { delete slotAd; slotAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -172,14 +180,15 @@ RemoteResource::~RemoteResource()
 
 
 bool
-RemoteResource::activateClaim( int starterVersion )
+RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 {
-	int reply;
-	ClassAd replyAd;
 	std::string anabuf;
-	const int max_retries = 20;
-	const int retry_delay = 1;
+	const int max_retries = 6; // with backoff, 6 retries is 1+2+3+4+5+5 = 20
+	int retry_delay = 1; // +1 sec backoff each time to a max of 5
 	int num_retries = 0;
+
+	refuse_code = 0;
+	refuse_reason.clear();
 
 	if ( ! dc_startd ) {
 		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
@@ -196,8 +205,10 @@ RemoteResource::activateClaim( int starterVersion )
 
 		// we'll eventually return out of this loop...
 	while( 1 ) {
-		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock, &replyAd );
+		ClassAd replyAd;
+		int reply = dc_startd->activateClaim(jobAd, &claim_sock, &replyAd);
+		if ( ! replyAd.LookupInteger(ATTR_VACATE_REASON_CODE, refuse_code)) { refuse_code = 0; }
+		if ( ! replyAd.LookupString(ATTR_VACATE_REASON, refuse_reason)) { refuse_reason.clear(); }
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -205,6 +216,13 @@ RemoteResource::activateClaim( int starterVersion )
 			         machineName ? machineName:"", dc_startd->addr() );
 			// Record the activation start time (HTCONDOR-861).
 			activation.StartTime = time(NULL);
+			shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+			{
+				int ld = 0;
+				if (jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, ld)) {
+					shadow->m_reconnect_record.m_lease_duration = ld;
+				}
+			}
 				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
@@ -229,9 +247,10 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
+			if (refuse_reason.empty()) { refuse_reason = "previous job still being vacated"; }
 			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			         "Request to run on %s %s was DELAYED (%s)\n",
+			         machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -242,6 +261,7 @@ RemoteResource::activateClaim( int starterVersion )
 					 "activateClaim(): will try again in %d seconds\n",
 					 retry_delay ); 
 			sleep( retry_delay );
+			retry_delay = MIN(retry_delay+1, 5);
 			break;
 
 		case CONDOR_ERROR:
@@ -251,19 +271,29 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case NOT_OK:
-			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was REFUSED\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED code=%d %s\n",
+					machineName ? machineName:"", dc_startd->addr(), refuse_code, refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED\n",
+						 machineName ? machineName:"", dc_startd->addr() );
+			}
 			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				std::replace(anabuf.begin(), anabuf.end(), (char)0x1e, '\n');
 				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
 			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
+
 		default:
-			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-			         "request to run on %s %s\n", reply,
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) code=%d from request to run on %s %s %s\n", reply,
+					refuse_code, machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) from request to run on %s %s\n", reply,
 			         machineName ? machineName:"", dc_startd->addr() );
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -276,7 +306,7 @@ RemoteResource::activateClaim( int starterVersion )
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -303,21 +333,32 @@ RemoteResource::killStarter( bool graceful )
 	// if we saw a job_exit.
 	// TODO If we add a version check or decide we don't care about 8.6.X
 	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool still_cleaning = false;
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
+		still_cleaning = false;
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
+		const char * errmsg = dc_startd->error();
+		CAResult caresult = CAResult::CA_COMMUNICATION_ERROR;
+		if ( ! errmsg) { errmsg = "Could not send command to startd"; }
+		else { caresult = dc_startd->errorCode(); }
+
+		// TODO: we should react to a reply timeout differently than we react to a failure to send the command.
+		bool timeout_on_reply = caresult == CAResult::CA_REPLY_TIMED_OUT;
+
 		num_tries--;
 		if (num_tries) {
 			const int delay = 5;
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE error. %s, will retry in %d seconds\n", errmsg, delay );
 			sleep(delay);
 		} else {
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd\n" );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE %s. %s\n", timeout_on_reply?"reply timed out":"error", errmsg);
 		}
 	}
 
@@ -343,10 +384,17 @@ RemoteResource::killStarter( bool graceful )
 		already_killed_fast = true;
 	}
 
-	const char* addr = dc_startd->addr();
-	if( addr ) {
-		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
-				 graceful ? "graceful" : "fast", addr );
+	if (m_got_job_done) {
+		if (still_cleaning) {
+			dprintf(D_STATUS, "Claim deactivated but starter is still cleaning up\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Claim deactivated\n");
+		}
+	} else {
+		const char* addr = dc_startd->addr();
+		if (addr) {
+			dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", graceful ? "graceful" : "fast", addr );
+		}
 	}
 
 	bool wantReleaseClaim = false;
@@ -501,12 +549,21 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
-	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+	switch(do_REMOTE_syscall()) {
+	case RemoteSyscallResult::ExpectedClose:
+		// The socket closed at the expected time. Start shutdown.
+		dprintf(D_SYSCALLS,"do_REMOTE_syscall returned ExpectedClose, assume starter is exiting after job exit\n");
 		attemptShutdown();
-		return KEEP_STREAM;
+		break;
+	case RemoteSyscallResult::UnexpectedClose:
+		// Unexpected network trouble. We'll be in reconnect mode now.
+		dprintf(D_SYSCALLS, "do_REMOTE_syscall returned UnexpectedClose, assume starter may still be alive\n");
+		break;
+	case RemoteSyscallResult::SyscallOK:
+		// Normal RPC, note contact from starter
+		hadContact();
+		break;
 	}
-	hadContact();
 	return KEEP_STREAM;
 }
 
@@ -842,6 +899,19 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// If we're talking to a newer starter, it's sent its slot ad along.
+	ClassAd * tSlotAd = dynamic_cast<ClassAd *>(ad->Lookup( "SlotAd" ));
+	if( tSlotAd ) {
+		if( slotAd ) { delete slotAd; }
+		slotAd = new ClassAd(* tSlotAd);
+		// The copy constructor also copies parentScope, which points at the
+		// (soon to be destroyed) ClassAd that tSlotAd was nested in.  We're
+		// keeping this copy long after that scope is gone, so detach it to
+		// avoid a dangling scope pointer when expressions in slotAd (or ads
+		// nested within it) are later evaluated.
+		slotAd->SetParentScope( nullptr );
+	}
+
 	// This seems like the obvious place to change the job ad so that we
 	// can properly initialize the FTO if the starter we're talking to is too
 	// old to handle common file transfer.  However, the FTO is actually
@@ -922,38 +992,53 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// If the starter is too old for common file transfer, fall back on
 	// per-proc file transfer.
 	//
-	CondorVersionInfo cvi( starter_version.c_str() );
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
-	// actually released as part of 25.2.FIXME.
+	// actually released as part of 25.2.x.
 	//
 	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
 	// can successfully do common file transfer if and only if there were no
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+
+	//
+	// If the admin has turned off common file transfer, fall back on
+	// per-proc file transfer.
+	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+
+	//
+	// If the schedd did not specify staging or mapping, fall back on
+	// per-proc file transfer.  (The schedd checks the previous conditions
+	// before deciding to specify staging or mapping, so these checks
+	// ought to be redundant.)
+	//
+	bool required = cxfer_type == CXFER_STATE::INVALID;
+
+    if( impossible || disallowed || required ) {
+		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to compute common input file catalogs.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
 		}
 
 		int required_version = 2;
-		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+			shadow->holdJob( "Internal error: failed to comput input files.",
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -1178,6 +1263,20 @@ RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 
 
 void
+RemoteResource::processResultAd( ClassAd * const resultAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing result ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * resultAd );
+}
+
+
+void
+RemoteResource::processInvocationAd( ClassAd * const invocationAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing invocation ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * invocationAd );
+}
+
+
+void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int64_t long_value;
@@ -1210,10 +1309,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	double real_value;
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_stime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1230,10 +1329,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
-		double prevUsage;
-		if (!jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, prevUsage)) {
-			prevUsage = 0.0;
-		}
+		// Use remote_rusage for previous per-node usage rather than jobAd,
+		// because for parallel universe node 0, jobAd is shared with the
+		// shadow and may contain the aggregate sum across all nodes.
+		double prevUsage = (double)remote_rusage.ru_utime.tv_sec;
 
 		// Remote cpu usage should be strictly increasing
 		if (real_value > prevUsage) {
@@ -1475,6 +1574,23 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
+
+				// ToddT and I are both working on tickets that will require
+				// looking at each ad individually, so to minimize merge
+				// conflicts, make this a call-out to another function.
+				for( const auto & result : results ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(result);
+					if( ad == nullptr ) { continue; }
+					processResultAd( ad );
+				}
+
+				for( const auto & invocation : invocations ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(invocation);
+					if( ad == nullptr ) { continue; }
+					processInvocationAd( ad );
+				}
+
+
 				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
 				invocationList = new classad::ExprList( invocations );
@@ -1485,6 +1601,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// attribute name were always just "PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
+
+			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
+				auto stats = shadow->getCommonTransferInfoStats();
+				if( stats ) {
+					c.Insert( "TransferCommonStats", (* stats).Copy() );
+				}
+			}
 
 			// Arguably, the epoch log would be easier to parse if the
 			// attribute name were always just "PluginResultList".
@@ -2054,6 +2177,7 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
+	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2086,7 +2210,16 @@ RemoteResource::reconnect( void )
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
 	}
-	if( lease_duration < 0 ) { 
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
+		shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+	}
+	if( lease_duration < 0 ) {
 			// if it's our first time, figure out what we've got to
 			// work with...
 		dprintf( D_FULLDEBUG, "Trying to reconnect job %s\n", gjid );
@@ -2095,6 +2228,7 @@ RemoteResource::reconnect( void )
 			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 					ATTR_JOB_LEASE_DURATION );
 		}
+		shadow->m_reconnect_record.m_lease_duration = lease_duration;
 		if( ! last_job_lease_renewal ) {
 				// if we were spawned in reconnect mode, this should
 				// be set.  if we're just trying a reconnect because
@@ -2236,7 +2370,7 @@ RemoteResource::locateReconnectStarter( void )
 			// found.  either way, we know the job is gone, and can
 			// safely give up and restart.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed( "Job not found at execution machine" );
+		shadow->reconnectFailed( "Job not found at execution machine", true );
 		break;
 
 	case CA_NOT_AUTHENTICATED:
@@ -2244,11 +2378,13 @@ RemoteResource::locateReconnectStarter( void )
 			// other daemon is now listening on the port. Either
 			// way, our claim, and thus the job, is dead.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed("Claim not found at execution machine");
+		shadow->reconnectFailed("Claim not found at execution machine", true);
 		break;
 
 	case CA_CONNECT_FAILED:
 	case CA_COMMUNICATION_ERROR:
+	case CA_REPLY_COMMUNICATION_ERROR:
+	case CA_REPLY_TIMED_OUT:
 			// for both of these, we need to keep trying until the
 			// lease_duration expires, since the startd might still be alive
 			// and only the network is dead...
@@ -2769,7 +2905,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 	}
 
 	struct stat si = {};
-	stat(proxy_path.c_str(), &si);
+	if( stat(proxy_path.c_str(), &si) != 0 ) {
+		dprintf(D_FULLDEBUG, "checkX509Proxy() failed to stat proxy '%s': %s\n",
+				proxy_path.c_str(), strerror(errno));
+	}
 	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);

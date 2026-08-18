@@ -73,6 +73,8 @@ DEFAULT_CONFIG = {
     "NUM_SLOTS_TYPE_1": "1",
     "SLOT_TYPE_1": "100%",
     "SLOT_TYPE_1_PARTITIONABLE": "TRUE",
+    # Singularity has intermittent issues on startup, turn off for now
+    "SINGULARITY": "/usr/bin/false",
 }
 
 ROLES = ["Personal"]
@@ -402,7 +404,10 @@ class PersonalPool:
         param_lines += textwrap.dedent(self._raw_config).splitlines()
 
         params = "\n".join(param_lines + [""])
-        self.config_file.write_text(params)
+        # Writing the pool's config file is this method's purpose; the "sensitive"
+        # values CodeQL sees (SEC_PASSWORD_DIRECTORY, SEC_TOKEN_DIRECTORY, ...) are
+        # directory paths, not credentials. Suppress the name-based false positive.
+        self.config_file.write_text(params)  # lgtm[py/clear-text-logging-sensitive-data]
 
     @_skip_if(PersonalPoolState.STARTING, PersonalPoolState.READY)
     def _start_condor(self):
@@ -522,7 +527,7 @@ class PersonalPool:
             return int(self.who()["MASTER_PID"])
 
     def _daemon_pids(self) -> List[int]:
-        return [int(v) for k, v in self.who() if k.endswith("_PID")]
+        return [int(v) for k, v in self.who().items() if k.endswith("_PID")]
 
     def _is_ready(self) -> bool:
         return self.who().get("IsReady", False)

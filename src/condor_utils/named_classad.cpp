@@ -37,8 +37,8 @@ NamedClassAd::NamedClassAd( const char *name, ClassAd *ad )
 // Destructor
 NamedClassAd::~NamedClassAd( void )
 {
-	free( m_name );
-	delete m_classad;
+	free( m_name ); m_name = nullptr;
+	delete m_classad; m_classad = nullptr;
 }
 
 // Comparison operators

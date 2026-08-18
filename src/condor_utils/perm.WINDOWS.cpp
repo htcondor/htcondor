@@ -86,7 +86,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 			
 			return retVal;
 		}
-		dprintf(D_ALWAYS, "perm::GetFileSecurity failed (err=%d)\n", GetLastError());
+		dprintf(D_ALWAYS, "perm::GetFileSecurity failed (err=%lu)\n", GetLastError());
 		return -1;
 	}
 	
@@ -104,7 +104,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 		pSD_length, 				// size of security descriptor buffer
 		&pSD_length_needed			// address of required size of buffer
 		) ) {
-		dprintf(D_ALWAYS, "perm::GetFileSecurity(%s) failed (err=%d)\n", file_name, GetLastError());
+		dprintf(D_ALWAYS, "perm::GetFileSecurity(%s) failed (err=%lu)\n", file_name, GetLastError());
 		delete[] pSD;
 		return -1;
 	}
@@ -116,7 +116,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 		&pacl,							// address of pointer to ACL
 		&acl_defaulted					// address of flag for default disc. ACL
 		) ) {
-		dprintf(D_ALWAYS, "perm::GetSecurityDescriptorDacl failed (file=%s err=%d)\n", file_name, GetLastError());
+		dprintf(D_ALWAYS, "perm::GetSecurityDescriptorDacl failed (file=%s err=%lu)\n", file_name, GetLastError());
 		delete[] pSD;
 		return -1;
 	}
@@ -140,7 +140,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 								sizeof(acl_info),  // size in bytes of buffer
 								AclSizeInformation // class of info to retrieve
 								) ) {
-			dprintf(D_ALWAYS, "Perm::GetAclInformation failed with error %d\n", GetLastError() );
+			dprintf(D_ALWAYS, "Perm::GetAclInformation failed with error %lu\n", GetLastError() );
 			return -1;
 		}
 
@@ -159,7 +159,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 							i,		// index of ACE we want
 							&current_ace	// pointer to ACE
 							) ) {
-				dprintf(D_ALWAYS, "Perm::GetAce() failed! Error code %d\n", GetLastError() );
+				dprintf(D_ALWAYS, "Perm::GetAce() failed! Error code %lu\n", GetLastError() );
 				return -1;
 			}
 
@@ -228,21 +228,21 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 		case ERROR_ACCESS_DENIED:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_ACCESS_DENIED\n");
 			NetApiBufferFree( buf );
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %lu, entries read: %lu )\n",
 				total_entries, entries_read );
 			return -1;
 			break;
 		case NERR_InvalidComputer:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_InvalidComputer\n");
 			NetApiBufferFree( buf );
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %lu, entries read: %lu )\n",
 				total_entries, entries_read );
 			return -1;
 			break;
 		case ERROR_NO_SUCH_ALIAS:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_NO_SUCH_ALIAS\n");
 			NetApiBufferFree( buf );
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %lu, entries read: %lu )\n",
 				total_entries, entries_read );
 			return -1;
 			break;
@@ -339,7 +339,7 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 		case NERR_GroupNotFound:
 			char* DCname = new char[ wcslen( DomainController )+1 ];
 			wsprintf(DCname, "%ws", DomainController);
-			dprintf(D_ALWAYS, "perm::NetGroupGetUsers failed: (domain: %s, domain controller: %s, total entries: %d, entries read: %d, err=%d)",
+			dprintf(D_ALWAYS, "perm::NetGroupGetUsers failed: (domain: %s, domain controller: %s, total entries: %lu, entries read: %lu, err=%lu)",
 				group_domain, DCname, total_entries, entries_read, GetLastError());
 			delete[] DCname;
 			NetApiBufferFree( BufPtr );
@@ -419,7 +419,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		);	
 
 	if ( ! success ) {
-		dprintf(D_ALWAYS, "perm::LookupAccountSid failed (err=%d)\n", GetLastError());
+		dprintf(D_ALWAYS, "perm::LookupAccountSid failed (err=%lu)\n", GetLastError());
 		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
 		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
 		return -1;
@@ -446,7 +446,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		BOOL bSuccess = GetComputerName( computerName, &nameLength );
 		if ( ! bSuccess ) {
 			// this should never happen
-			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %d)", GetLastError());
+			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %lu)", GetLastError());
 			result = -1; // failure
 		} else if ( strcmp( trustee_name, "Everyone" ) == 0 ) { 
 			// if file is in group Everyone, we're done.
@@ -717,7 +717,7 @@ bool perm::volume_has_acls( const char *filename )
 		NULL,0) ) 
 	{
 		dprintf(D_ALWAYS,
-		        "perm: GetVolumeInformation on volume %s FAILED err=%d\n",
+		        "perm: GetVolumeInformation on volume %s FAILED err=%lu\n",
 				root_path ? root_path : "(null)",
 		        GetLastError());
 		if (root_path) {
@@ -790,7 +790,7 @@ perm::set_acls( const char *filename )
 		// if the caller doesn't have WRITE_DAC access to the path. The 
 		// remedy in that case is to call set_owner() on the path first.
 		dprintf(D_FULLDEBUG, "perm::set_acls(%s): failed to get security info. "
-				"err=%d\n", filename, err);
+				"err=%lu\n", filename, err);
 		return false;
 	}
 
@@ -800,7 +800,7 @@ perm::set_acls( const char *filename )
 
 	if ( ERROR_SUCCESS != err ) {
 		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to get entries from ACL. "
-				"err=%d\n", filename, err);
+				"err=%lu\n", filename, err);
 		LocalFree(pSD);
 		return false;
 	}
@@ -843,7 +843,7 @@ perm::set_acls( const char *filename )
 
 	if ( ERROR_SUCCESS != err ) {
 		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to add new ACE "
-				"(err=%d)\n", filename, err);
+				"(err=%lu)\n", filename, err);
 
 		LocalFree(pSD);
 		return false;
@@ -868,8 +868,8 @@ perm::set_acls( const char *filename )
 		if (!OpenProcessToken(GetCurrentProcess(), 
 			TOKEN_ADJUST_PRIVILEGES, &hToken)) {
 
-          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %u\n",
-				  GetLastError()); 
+          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %lu\n",
+				  GetLastError());
        } else {
 
 	    	// Enable the SE_SECURITY_NAME privilege.
@@ -892,7 +892,7 @@ perm::set_acls( const char *filename )
 	if (err != ERROR_SUCCESS)
 	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file ACL "
-				"(err=%d).\n", filename,GetLastError() );
+				"(err=%lu).\n", filename,GetLastError() );
 		return false;
 	}
 	
@@ -936,7 +936,7 @@ bool perm::set_owner( const char *location ) {
 		domainBuffer, &domainBufferSize,	// Domain
 		&usage) ) {							// SID TYPE
 		dprintf(D_ALWAYS, "perm: LookupAccountName(%s, size) failed "
-				"(err=%d)\n", qualified_name, GetLastError());
+				"(err=%lu)\n", qualified_name, GetLastError());
 		return false;
 	}
 
@@ -959,8 +959,8 @@ bool perm::set_owner( const char *location ) {
 		if (!OpenProcessToken(GetCurrentProcess(), 
 			TOKEN_ADJUST_PRIVILEGES, &hToken)) 
        {
-          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %u\n",
-				  GetLastError()); 
+          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %lu\n",
+				  GetLastError());
        } else {
 
 	    	// Enable the SE_TAKE_OWNERSHIP_NAME privilege.
@@ -981,7 +981,7 @@ bool perm::set_owner( const char *location ) {
 	}
 
 	if ( err != ERROR_SUCCESS ) {
-		dprintf(D_ALWAYS, "perm: SetNamedSecurityInfo(%s) failed (err=%d)\n",
+		dprintf(D_ALWAYS, "perm: SetNamedSecurityInfo(%s) failed (err=%lu)\n",
 				location, err);
 		return false; 
 	}
@@ -1006,7 +1006,7 @@ bool SetPrivilege(
 		lpszPrivilege,   // privilege to lookup 
 		&luid ) )        // receives LUID of privilege
 	{
-		dprintf(D_ALWAYS, "LookupPrivilegeValue error: %u\n", GetLastError() ); 
+		dprintf(D_ALWAYS, "LookupPrivilegeValue error: %lu\n", GetLastError() );
 		return false; 
 	}
 
@@ -1028,7 +1028,7 @@ bool SetPrivilege(
 		(PTOKEN_PRIVILEGES) NULL, 
 		(PDWORD) NULL) )
 	{ 
-		dprintf(D_ALWAYS, "AdjustTokenPrivileges error: %u\n", GetLastError()); 
+		dprintf(D_ALWAYS, "AdjustTokenPrivileges error: %lu\n", GetLastError());
 		return false; 
 	} 
 

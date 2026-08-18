@@ -82,7 +82,7 @@ ScheddCronJobMgr::ShutdownOk( )
 CronJobParams *
 ScheddCronJobMgr::CreateJobParams( const char *job_name )
 {
-	return new ClassAdCronJobParams( job_name, *this );
+	return new ClassAdCronJobParams( job_name, GetParamBase(), GetName() );
 }
 
 // Create a new job

@@ -107,7 +107,7 @@ my $GetClusterId = sub {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-system("rm -f $catchlog");
+unlink $catchlog;
 
 $expect_return = 0;
 $result = SimpleJob::RunCheck(
