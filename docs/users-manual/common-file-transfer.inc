@@ -20,7 +20,7 @@ machine a second time:
 
   - the declared :subcom:`container_image` for each job; or
   - listed in each job's :ad-attr:`CommonInputFiles` attribute (usually set via
-    the :subcom:`transfer_common_input_files` submit command).
+    the :subcom:`transfer_common_input` submit command).
 - The two jobs *must* be either:
 
   - in the vanilla universe; or
@@ -71,10 +71,10 @@ Common Input Files
 
 Because common files must be immutable, and HTCondor doesn't know what your
 job does, you must explicitly tell HTCondor which input files are common by
-setting :subcom:`transfer_common_input_files` in your submit file.  For
+setting :subcom:`transfer_common_input` in your submit file.  For
 example:
 
-``transfer_common_input_files = x, y, osdf://e/z/p/z``
+``transfer_common_input = x, y, osdf://e/z/p/z``
 
 The list is identical in syntax to :subcom:`transfer_input_files`, including
 its ability to specify URLs.
@@ -143,7 +143,7 @@ FIXME: test this.
 
 You should (for efficiency and clarity) already be omitting input files that
 the job doesn't change from subcom:`transfer_checkpoint_files`; continue to
-do so by not including files any files from subcom:`common_input_files` either.
+do so by not including files any files from subcom:`transfer_common_input` either.
 
 Job Event Logs
 """"""""""""""
