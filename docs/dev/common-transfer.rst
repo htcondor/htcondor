@@ -2,7 +2,7 @@ Common File Catalogs and Scopes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Internally, HTCondor converts the :subcom:`container_image` (if appropriate;
-see below) and the :subcom:`transfer_common_input_files` into named lists of
+see below) and the :subcom:`transfer_common_input` into named lists of
 objects (files or URLs) called "catalogs".  The container image catalog's
 name will be something like "container_77fc30a2", where the hexadecimal at
 the end is a hash of the full path (or URL) to the container; the name for
