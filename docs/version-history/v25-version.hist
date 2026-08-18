@@ -1,5 +1,11 @@
 *** 25.14.0 features
 
+- :tool:`condor_rm` now accepts a **-hold** option that restricts the
+  removal to jobs in the held state. It may be combined with the usual
+  constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
+  so that only the held jobs among those selected are removed.
+  :jira:`3710`
+
 - :tool:`condor_watch_q` now draws its live display on the terminal's
   alternate screen, so quitting restores whatever was on the console
   before it started, the same way less behaves.
