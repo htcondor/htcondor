@@ -369,7 +369,7 @@ call_command_handler(
             co_return;
         }
 
-        // The generator is expected to return tye tuple
+        // The generator is expected to return the tuple
         //     (reply-format, time-out, input-format)
         // where the format variables are tuples consisting only of
         // ints, floats, strings, bytes, and classad2.ClassAds.

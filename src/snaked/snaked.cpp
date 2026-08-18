@@ -116,6 +116,8 @@ main_config() {
     // thing you'd get back, but apparently you get _ranges_, which you
     // can't convert back to either.)
     for( const auto & line : StringTokenIterator(snake_command_table, "\n" ) ) {
+        if( line.empty() ) { continue; }
+
         auto parts = split(line, " ");
         ASSERT(parts.size() == 3 );
         const std::string & command = parts[0];
