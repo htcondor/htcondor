@@ -172,7 +172,7 @@ class GenericClassAdConverter():
             field_type = FIELD_TYPE_MAP[field_properties.get("type", "object")]
             known_field_types[flattened_field_name.lower()][flattened_field_name] = field_type
             if field_type is dict and "properties" in field_properties:
-                known_field_types = known_field_types | self.get_known_field_types(field_properties, field_name_hierarchy)
+                known_field_types.update(self.get_known_field_types(field_properties, field_name_hierarchy))
         return known_field_types
 
     def get_dynamic_template_matchers(self, mapping: dict) -> OrderedDict:

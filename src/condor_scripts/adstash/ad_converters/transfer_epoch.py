@@ -85,7 +85,10 @@ class TransferEpochClassAdConverter(GenericClassAdConverter):
                     else:  # otherwise only add identifying attrs
                         for attr in ("TransferProtocol", "TransferType", "TransferUrl"):
                             debug_result[attr] = result.get(attr)
-                        yield debug_result | error_result
+                        try:
+                            yield debug_result | error_result
+                        except TypeError:  # backwards compat
+                            yield {**debug_result, **error_result}
 
     def expand_debug_ad(self, ad):
         result = {}
