@@ -329,7 +329,7 @@ class TestTransferEpochSingleAttempt:
     def test_transfer_file_info(self, single_attempt_docs):
         doc = single_attempt_docs[0]
         assert doc["TransferFileName"] == "input.txt"
-        assert doc["TransferProtocol"] == "osdf"
+        assert doc["TransferProtocol"] == "pelican"
         assert doc["TransferType"] == "download"
         assert doc["TransferFileBytes"] == 1000000
 
@@ -370,7 +370,7 @@ class TestTransferEpochMultiAttemptSuccess:
         doc0 = multi_attempt_success_docs[0]
         assert doc0["Attempt"] == 0
         assert doc0["FinalAttempt"] is False
-        assert doc0["TransferProtocol"] == "osdf"
+        assert doc0["TransferProtocol"] == "pelican"
         assert doc0["TransferType"] == "download"
         # Non-final attempts should NOT have the full result fields
         assert "TransferFileBytes" not in doc0
