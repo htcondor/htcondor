@@ -1,7 +1,7 @@
 #!/usr/bin/env pytest
 
 """
-Regression tests for condor_adstash ClassAd-to-doc conversion.
+Regression tests for condor_adstash history file read and ClassAd-to-doc conversion.
 Uses static history files with known contents.
 """
 
