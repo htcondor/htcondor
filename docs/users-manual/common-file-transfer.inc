@@ -8,9 +8,8 @@ the different copies are going to different machines, this is well and proper;
 but until version 26, HTCondor did not take advantage when the same file is
 transferred to the same machine more than once.
 
-Under certain limited but (hopefully) generally applicable circumstances,
-it now does.  Specifically, to avoid transferring a file to the same
-machine a second time:
+Under certain specific but (hopefully) generally applicable circumstances,
+it now does.  To avoid transferring a file to the same machine a second time:
 
 - The file *must* be immutable:
 
@@ -39,7 +38,7 @@ control.  Likewise, HTCondor can only take advantage of this
 new feature if both the AP to which the job was submitted and the EP on which
 the first (and subsequent) jobs run are sufficiently recent (that is, version
 26 or later) and configured in a compatible way
-(see :ref`admin_common_file_transfer`).  This is taken care of automatically
+(see :ref:`admin_common_file_transfer`).  This is taken care of automatically
 by the HTCondor system, but it will *not* result in your job running on any
 fewer resources: HTCondor will automatically fall back to uncommon file
 transfer as necessary.
@@ -97,10 +96,11 @@ run the job for which it will store common file(s); this is to reserve those
 resources to make sure that the common file transfer isn't wasted.  (This
 does not increase your job's resource usage, since the same file(s) would
 have had to have been transferred in order to start your job in a regular
-"job" slot, which would also have been reserving those resources.)  Once
-the common file transfer(s) are complete, all of the reserved resources and
-some of the disk (whatever the job asked for that's not already used by
-the common file(s)) are transferred to a job slot for use there.
+"job" slot, which would also have been reserving those resources during the
+transfer.)  Once the common file transfer(s) are complete, all of the
+reserved resources and some of the disk (whatever the job asked for that's
+not already used by the common file(s)) are transferred to a (new) job slot for
+use there.
 
 The usual HTCondor accounting applies to a data slot.
 
@@ -139,7 +139,7 @@ idle because no other job can fit on the machine.
 Common Files and Checkpointing
 """"""""""""""""""""""""""""""
 
-FIXME: test this.
+[FIXME: test this.]
 
 You should (for efficiency and clarity) already be omitting input files that
 the job doesn't change from subcom:`transfer_checkpoint_files`; continue to
