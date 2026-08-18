@@ -84,6 +84,33 @@ class TestCustomAttributes:
         # Input is integer 842, but unknown attrs are mapped as keyword (string)
         assert completed_doc["customattrfoo"] == "842"
 
+    def test_custom_attr_unknown_without_mapping(self, completed_doc):
+        # Without a custom mapping, CustomAttrKnown is also lowercased/stringified
+        assert "customattrknown" in completed_doc
+        assert completed_doc["customattrknown"] == "123"
+
+
+class TestCustomAttributeWithMapping:
+    """#2b: Custom attrs with an existing mapping preserve case and type"""
+
+    @pytest.fixture
+    def converter_with_custom_mapping(self):
+        custom_mappings = get_default_mappings(job)
+        custom_mappings["properties"]["CustomAttrKnown"] = {"type": "long"}
+        return JobClassAdConverter(mapping=custom_mappings)
+
+    @pytest.fixture
+    def doc_with_custom_mapping(self, converter_with_custom_mapping, ads):
+        return converter_with_custom_mapping.convert_ad_to_doc(ads[0])
+
+    def test_known_custom_attr_preserves_case(self, doc_with_custom_mapping):
+        assert "CustomAttrKnown" in doc_with_custom_mapping
+        assert "customattrknown" not in doc_with_custom_mapping
+
+    def test_known_custom_attr_preserves_type(self, doc_with_custom_mapping):
+        assert doc_with_custom_mapping["CustomAttrKnown"] == 123
+        assert isinstance(doc_with_custom_mapping["CustomAttrKnown"], int)
+
 
 class TestExpressionHandling:
     """#3: Expressions become _EXPR with string value when eval fails"""
