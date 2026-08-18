@@ -64,9 +64,12 @@ computeCommonInputFiles(
 	// Contrary to best practice, this may partially modify the i/o argument.
 	if( found_htc25_plumbing ) {
 		std::string default_name;
-		long long int clusterID = 0;
-		ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
-		formatstr( default_name, "clusterID_%lld", clusterID );
+		auto r = determineCIFScopeAndType(* jobAd);
+		if(! r) {
+		    return false;
+		}
+		auto [scope, type] = * r;
+		formatstr( default_name, "%s_%s", type.c_str(), scope.c_str() );
 		auto internal_catalog_name = makeCIFName(* jobAd, default_name, startdAddress, common_input_files);
 		if(! internal_catalog_name) {
 			return false;

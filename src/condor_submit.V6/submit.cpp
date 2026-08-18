@@ -1774,7 +1774,7 @@ int submit_jobs (
 			ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
 			new_cluster_ad = true;
 		#endif
-			// move input files to common_input_files (if UseCommonInputFiles is enabled)
+			// move input files to common_input_files (if SynthesizeCommonInputFiles is enabled)
 			submit_hash.synthesize_common_files(ssqa.vars(),true);
 		} else {
 			// Set begin for this phase, but ProcId that is one more than the last one

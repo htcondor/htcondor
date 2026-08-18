@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[ALLOW_COMMON_FILES_ON_LVS]
+default=false
+type=bool
+
 [CHECK_REACTIVATE_AFTER_CHECKPOINT]
 default=true
 type=bool

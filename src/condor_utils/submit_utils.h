@@ -169,7 +169,7 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
-#define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_CommonInputFiles "transfer_common_input"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
@@ -540,8 +540,10 @@ public:
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
+	bool setSynthesizeCommonInputFiles(bool value) { bool old = SynthesizeCommonInputFiles; SynthesizeCommonInputFiles = value; return old;}
 	bool setFileChecksAreWarnings(bool value) { bool old = FileChecksAreWarnings; FileChecksAreWarnings = value; return old; }
 	bool getFileChecksAreWarnings() { return FileChecksAreWarnings; }
+	bool getSynthesizeCommonInputFiles() { return SynthesizeCommonInputFiles; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
 	void clearExtendedCommands() { extendedCmds.Clear(); }
@@ -859,7 +861,8 @@ protected:
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
 	bool InsertDefaultPolicyExprs{false};
-	bool UseCommonInputFiles{false};
+	bool SynthesizeCommonInputFiles{false};
+	bool AllowCommonInputFiles{true};
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
