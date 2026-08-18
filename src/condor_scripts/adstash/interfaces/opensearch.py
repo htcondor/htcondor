@@ -92,7 +92,6 @@ class OpenSearchInterface(ElasticsearchInterface):
         logging.info(f"Updating mappings for index {index}")
         logging.debug(json.dumps(mappings, indent=2))
         if OS_VERSION >= (2,0,0):
-            body = {"mappings": mappings}
-            client.indices.put_mapping(index=index, body=body)
+            client.indices.put_mapping(index=index, body=mappings)
         else:
             client.indices.put_mapping(index=index, **mappings)
