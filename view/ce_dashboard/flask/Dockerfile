@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.9.13
+ARG PYTHON_VERSION=3.11
 FROM python:${PYTHON_VERSION}-slim AS base
 
 # Prevents Python from writing pyc files.
@@ -32,6 +32,15 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --root-user-action=ignore -r requirements.txt && \
     mkdir /etc/condor && \
     touch /etc/condor/condor_config
+
+# Install any OS-level dependencies.
+# Here we install libexpat1, which is required by the htcondor Python bindings,
+# but is not included in the slim Python Docker image.
+# (see https://opensciencegrid.atlassian.net/browse/HTCONDOR-3469)
+# We also clean up the apt cache to reduce the image size.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libexpat1 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Switch to the non-privileged user to run the application.
 USER appuser

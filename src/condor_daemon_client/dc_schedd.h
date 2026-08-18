@@ -92,6 +92,10 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		/* Constructor, used by job router */
+	DCSchedd( std::string_view name, std::string_view pool, std::string_view address_file );
+
+
 		// return the address of the CREDD associated with this schedd
 		// do not call this method until after locate() or equivalent.
 	bool getCreddAddress(std::string & address);
@@ -123,6 +127,18 @@ public:
 	ClassAd* removeJobs( const char* constraint, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_TOTALS );
+
+		/** Transfer output files and then remove jobs matching constraint.
+			@param constraint What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* transferAndRemoveJobs( const char* constraint, const char* reason,
+									CondorError * errstack,
+									action_result_type_t result_type = AR_TOTALS );
 
 		/** Force the local removal of jobs in the X state that match
 			the given constraint, regardless of whether they've been
@@ -181,6 +197,21 @@ public:
 	ClassAd* removeJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
+
+		/** Transfer output files and then remove jobs specified in the
+			given list.  The list should contain a comma-seperated list
+			of cluster.proc job ids.  Also, set ATTR_REMOVE_REASON to
+			the given reason.
+			@param ids What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* transferAndRemoveJobs( const std::vector<std::string>& ids, const char* reason,
+									CondorError * errstack,
+									action_result_type_t result_type = AR_LONG );
 
 		/** Force the local removal of jobs in the X state specified
 			in the given list, regardless of whether they've
@@ -367,7 +398,7 @@ public:
 	// returns -1 if the command could not be sent,
 	// otherwise the ActionResult attribute of the reply is returned
 	// which is 1 for success and 0 for error
-	int offerResources(const std::vector< std::pair<std::string, const ClassAd*> > & resources, const std::string & submitter_name, int timeout);
+	int offerResources(const std::vector< std::pair<std::string, const ClassAd*> > & resources, const std::string & submitter_name, int timeout, const char * claimID = NULL, long long disk_held_by_claim_in_mb = -1);
 
 	// offer a single slot to the schedd, optionally for for a given submitter
 	// returns -1 if the command could not be sent,
@@ -471,7 +502,7 @@ public:
 	int queryUsers(
 		const classad::ClassAd & query_ad,
 		// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
-		int (*process_func)(void*, ClassAd *ad),
+		std::function<int (void*data, ClassAd *ad)> process_func,
 		void * process_func_data,
 		int connect_timeout,
 		CondorError *errstack,
@@ -522,7 +553,11 @@ public:
 		CondorError *errstack);
 
 	ClassAd * updateUserAds(
-		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+		std::vector<ClassAd> & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
+	ClassAd * updateUserAds(
+		std::vector<const ClassAd*> & ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
 	ClassAd * addProjects(
@@ -542,6 +577,17 @@ public:
 		bool create_if,           // true if we want to create users that don't already exist
 		CondorError *errstack);
 
+	ClassAd * disableProjects(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * disableProjects(
+		const char * constraint, // expression
+		const char * reason,
+		CondorError *errstack);
+
 	ClassAd * removeProjects(
 		const char * names[],
 		int num_names,
@@ -554,7 +600,11 @@ public:
 		CondorError *errstack);
 
 	ClassAd * updateProjectAds(
-		ClassAdList & project_ads, // ads must have ATTR_USER attribute at a minimum
+		std::vector<ClassAd> & project_ads, // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
+	ClassAd * updateProjectAds(
+		std::vector<const ClassAd*> & ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
 	// when the caller wants more complete control over the command
@@ -562,7 +612,7 @@ public:
 	ClassAd * generalUpdateUserRecs(
 		int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 		bool is_project,           // set to true if ads are project ads or mixed user and project ads
-		ClassAdList & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+		std::vector<ClassAd> & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
 		CondorError *errstack);
 
 	/** Get DAGMan contact information (Address and secret)
@@ -580,6 +630,13 @@ public:
 
 	// get all the claimed slot ads from schedd
     bool getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError &errstack);
+
+	// The OCU ad must have the various Request_Memory, etc. 
+	// The OCU ad should have an OCU_NAME
+	ClassAd createOCU(const ClassAd &ocu_ad, CondorError *errstack);
+
+	ClassAd removeOCU(const ClassAd &ocu_ad, CondorError *errstack);
+	std::vector<ClassAd> queryOCU(const ClassAd &ocu_ad, CondorError *errstack);
 
 private:
 		/** This method actually does all the brains for all versions
@@ -638,7 +695,6 @@ private:
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
 	DCSchedd& operator = ( const DCSchedd& );
-
 };
 
 

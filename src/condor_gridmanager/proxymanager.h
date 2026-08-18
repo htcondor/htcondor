@@ -72,7 +72,7 @@ struct ProxySubject {
 extern int CheckProxies_interval;
 extern int minProxy_time;
 
-bool InitializeProxyManager( const char *proxy_dir );
+void InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
 Proxy *AcquireProxy( const ClassAd *job_ad, std::string &error,

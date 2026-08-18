@@ -58,6 +58,7 @@
 #endif
 
 #include "VolumeManager.h"
+#include "util.h"
 
 typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*VoidResourceMember)();
@@ -150,15 +151,25 @@ public:
 	}
 };
 
+enum class ResourceLockType {
+	NONE = 0,
+	HUNG_PID,           // Resources broken from hung PID
+	CGROUP,             // Resources broken from locked cgroup
+	LV,                 // Recources broken from leaked LV
+};
+
 // holds a broken resource, slot of slot_type
 class BrokenItem {
 public:
-	//BrokenItem() = default;
+	BrokenItem() { b_refid = ++monotonic_id; }
 	//~BrokenItem() = default;
 	//BrokenItem(const BrokenItem &) = default;
 	//BrokenItem(BrokenItem &&) = default;
 	//BrokenItem & operator=(const BrokenItem &) = default;
 
+	ResourceLockType b_lock{};      // Locking reason for broken resources
+	int          b_srcid{-1};       // Source slot ID (p-slot) to restore resources
+	unsigned int b_refid{0};        // Unique identifying ID for each broken item
 	unsigned int b_id{0};   // an id that we can bind GPUs to
 	unsigned int b_code{0}; // a reason code
 	time_t       b_time{0}; // the time we logged the brokenness
@@ -182,6 +193,7 @@ public:
 	// publish the broken resources into the given ad, for use by ep_eventlog
 	void publish_resources(ClassAd& ad, const char * prefix="") const;
 
+	static unsigned int monotonic_id; // Monotonically increasing counter for refid's
 };
 
 class ResMgr : public Service
@@ -254,13 +266,27 @@ public:
 	}
 
 	// called from StartdCronJob::Publish after one or more adlist ads with an ad_name prefix are updated
-	// this gives a chance to refresh the startd cron ads right away
-	// TODO: TJ, figure out is this necessary?
-	void adlist_updated(const char * /*ad_name*/, bool update_collector) {
-		// TODO: be more selective about what we refresh here?
+	// this gives a chance to refresh the startd cron ads right away.  If a specific ad was just updated
+	// the pointer to that ad will be passed
+	void adlist_updated(StartdNamedClassAd* sad, bool update_collector) {
 		walk(&Resource::refresh_startd_cron_attrs);
-		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+		if (update_collector) {
+			// trigger updates for slots that this ad was merged into
+			// TODO: pass the update_collector flag into the walk above instead of this?
+			if (sad) {
+				walk([&](Resource* rip) {
+					if (rip->r_classad && sad->InSlotList(rip->r_id) && sad->ShouldMergeInto(rip->r_classad, nullptr)) {
+						rip->update_needed(Resource::WhyFor::wf_cronRequest);
+					}
+				});
+			}
+			// trigger update for daemon ad. We only need to do this if we did not update any slots, but
+			rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+		}
 	}
+
+	// Locate a specific cleanup reminder. Return nullptr if DNE
+	CleanupReminder* findCleanupReminder(CleanupReminder::category cat, const std::string& name);
 
 private:
 	int in_walk = 0;
@@ -320,6 +346,7 @@ public:
 	State		state( void );			// Return the machine state
 
 	BrokenItem & get_broken_context(Resource * rip); // find or allocate a broken context for this slot
+	void RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids); // Restore broken resources from successfully cleaned up things (i.e. logical volumes)
 
 	void report_updates( void ) const;	// Log updates w/ dprintf()
 
@@ -447,6 +474,23 @@ public:
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
+
+		// "condor_ep rehome --reboot" support.  Returns true if the
+		// STARTD_REHOME_ALLOW_REBOOT guard expression permits rebooting
+		// the host on rehome.
+	bool rehomeRebootAllowed() const;
+		// Arrange for the host to reboot (via reboot_command) once all
+		// claims have been evicted.  Safe to call when there are no claims;
+		// in that case the reboot is initiated immediately.
+	void rebootAfterRehome(const std::string &reboot_command);
+		// Called when a starter exits: if a reboot is pending and all
+		// claims are now gone, schedule the reconfig-and-reboot.
+	void checkForRehomeReboot();
+		// True between rebootAfterRehome() and the completion of the
+		// deferred doRehomeReboot timer.  startd_exit_if_idle() honors
+		// this so a fast-shutdown does not race past the pending reboot.
+	bool rehomeRebootPending() const { return m_reboot_after_rehome; }
+
 	time_t getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 	void setLastDrainStopTime() {
@@ -618,6 +662,20 @@ private:
 	time_t total_draining_badput;
 	time_t total_draining_unclaimed;
 	time_t max_job_retirement_time_override;
+
+		// Pending reboot-on-rehome state.  m_reboot_after_rehome is set
+		// when a rehome --reboot request arrives and stays true until the
+		// deferred doRehomeReboot handler has actually invoked the reboot
+		// command, so a concurrent fast-shutdown will not exit out from
+		// under us.  m_reboot_timer_scheduled guards the zero-delay timer
+		// against double registration.
+	bool m_reboot_after_rehome{false};
+	bool m_reboot_timer_scheduled{false};
+	std::string m_reboot_command;
+		// Deferred handler that actually reconfigs and reboots the host,
+		// run from a zero-delay timer to avoid reentrancy with the
+		// starter-exit callback that detects "all claims evicted".
+	void doRehomeReboot(int timerID);
 
 	std::unique_ptr<VolumeManager> m_volume_mgr;
 };

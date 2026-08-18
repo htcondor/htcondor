@@ -40,6 +40,9 @@
 // for starter exit codes
 #include "exit.h"
 
+// for the STARTER_COMMAND enumeration
+#include "starter_commands.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -112,6 +115,17 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 }
 
 
+std::string
+claim_specific_ad_name( const char * scope, const char * publicClaimID ) {
+	std::string s( publicClaimID );
+
+	// Dots have special meaning in named ClassAd names.
+	std::replace( s.begin(), s.end(), '.', '_' );
+
+	// For stupid reasons, extra ads must each have a cron job.
+	return scope + ("." + s);
+}
+
 Claim::~Claim()
 {
 	if( c_type == CLAIM_COD ) {
@@ -120,13 +134,70 @@ Claim::~Claim()
 				 c_client->c_owner.c_str() );
 	}
 
+
+	// If the starter colored this slot, uncolor it now.
+	const char * publicClaimID = publicClaimId();
+	if( publicClaimID ) {
+		std::string coloringName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
+		resmgr->adlist_delete( coloringName.c_str() );
+
+		std::string catalogName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+
+		// If this claim was declaring a list of catalogs, remove
+		// them from the global list of catalogs.  We can do and determine
+		// this by removing the name of every attribute in our ad from
+		// the list, although this is slightly magical.
+		classad::ExprList * catalogList = nullptr;
+		std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+		StartdNamedClassAd * snca_g = resmgr->adlist_find( catalog_list_name.c_str() );
+		if( snca_g ) {
+			ClassAd * catalogListAd = snca_g->GetAd();
+
+			if( catalogListAd ) {
+				classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+				if( e ) {
+					e = catalogListAd->Lookup( "catalogs" );
+					catalogList = dynamic_cast<classad::ExprList *>(e);
+				}
+			}
+		}
+
+		if( catalogList ) {
+			StartdNamedClassAd * snca_l = resmgr->adlist_find( catalogName.c_str() );
+			if( snca_l ) {
+				ClassAd * catalogsAd = snca_l->GetAd();
+
+				if( catalogsAd ) {
+					for( auto i = catalogsAd->begin(); i != catalogsAd->end(); ++i ) {
+						for( auto j = catalogList->begin(); j != catalogList->end(); ++j ) {
+
+							auto * ar = dynamic_cast<classad::AttributeReference *>(* j);
+							if(! ar) { continue; }
+							ExprTree * e = nullptr; std::string attr; bool abs = false;
+							ar->GetComponents(e, attr, abs);
+
+							if( attr == i->first ) {
+								catalogList->erase(j);
+								// Of course our hand-written iterators aren't erasure-safe.
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		resmgr->adlist_delete( catalogName.c_str() );
+	}
+
+
 	// The resources assigned to this claim must have been freed by now.
 	// TODO: this should not happen on *every* claim delete
 	// figure the right place to put this - maybe when the Starter object is deleted?
 	if( c_rip != NULL && c_rip->r_classad != NULL ) {
 		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
 	} else if (c_rip && ! c_rip->is_broken_slot()) { // d-slots are marked as broken just before they are deleted.
-		dprintf( D_BACKTRACE, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
+		dprintf( D_FULLDEBUG, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim
@@ -151,8 +222,8 @@ Claim::~Claim()
 			}
 
 			// if we have a pending deactivate reply, send it now.
-			sendDeactivateReply();
-	
+			sendDeactivateReply(false);
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -172,7 +243,7 @@ Claim::~Claim()
 	setRequestStream( NULL );
 	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
-	if( c_global_job_id ) { 
+	if( c_global_job_id ) {
 		free( c_global_job_id );
 	}
 	if( c_cod_keyword ) {
@@ -255,12 +326,15 @@ Claim::publish( ClassAd* cad )
 		if( !c_client->c_owner.empty() ) {
 			cad->Assign(ATTR_REMOTE_OWNER, c_client->c_owner);
 		}
+		if( !c_client->c_project.empty() ) {
+			cad->Assign(ATTR_REMOTE_PROJECT, c_client->c_project);
+		}
 		if( !c_client->c_acctgrp.empty() ) {
 			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -367,6 +441,7 @@ Claim::unpublish( ClassAd* cad )
 		ATTR_REMOTE_SCHEDD_NAME,
 		ATTR_REMOTE_USER,
 		ATTR_REMOTE_OWNER,
+		ATTR_REMOTE_PROJECT,
 		ATTR_ACCOUNTING_GROUP,
 		ATTR_CLIENT_MACHINE,
 		ATTR_CONCURRENCY_LIMITS,
@@ -413,7 +488,7 @@ Claim::publishPreemptingClaim( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -607,9 +682,7 @@ Claim::start_match_timer()
 								   (TimerHandlercpp)
 								   &Claim::match_timed_out,
 								   "match_timed_out", this );
-	if( c_match_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_match_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started match timer (%d) for %d seconds.\n", 
 			 c_match_tid, match_timeout );
 }
@@ -631,7 +704,6 @@ Claim::cancel_match_timer()
 		c_match_tid = -1;
 	}
 }
-
 
 void
 Claim::match_timed_out( int /* timerID */ )
@@ -968,9 +1040,7 @@ Claim::startLeaseTimer()
 		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
-	if( c_lease_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_lease_tid >= 0);
 
 	// Figure out who should sending keep alives
 	// note that the job-ad lookups MUST be here rather than in cacheJobInfo
@@ -1413,6 +1483,25 @@ Claim::requestClaimSockClosed(Stream *s)
 	return FALSE;
 }
 
+void Claim::cancel_deactivate_reply_timer()
+{
+	if (c_deactivate_reply_tid != -1) {
+		if( daemonCore->Cancel_Timer(c_deactivate_reply_tid) < 0 ) {
+			dprintf( D_ERROR, "Failed to cancel deactivate reply timer (%d): daemonCore error\n", c_deactivate_reply_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Cancelled old deactivate reply timer (%d)\n", c_deactivate_reply_tid);
+		}
+		c_deactivate_reply_tid = -1;
+	}
+}
+
+// when deactivate reply timer fires, we want to send the reply
+void 
+Claim::send_deactivate_reply_timed_out( int /*timerID = -1*/ )
+{
+	sendDeactivateReply(false);
+}
+
 void
 Claim::setDeactivateStream(Stream* stream)
 {
@@ -1422,10 +1511,22 @@ Claim::setDeactivateStream(Stream* stream)
 	}
 	c_deactivate_stream = stream;
 
+	cancel_deactivate_reply_timer(); // just in case.
+
 	// register a callback if the deactivate reply sock is closed before we can reply
 	if( c_deactivate_stream ) {
 		std::string desc;
 		formatstr(desc, "deactivate claim %s", publicClaimId() );
+
+		// Shadow will wait 20 seconds, we guarantee a reply within 10 seconds
+		// sooner if we reap the Starter before then
+		const int deactivate_reply_timeout = 10;
+		c_deactivate_reply_tid = 
+			daemonCore->Register_Timer( 10, 0,
+				(TimerHandlercpp) &Claim::send_deactivate_reply_timed_out,
+				"send_deactivate_reply_timed_out", this );
+		ASSERT(c_deactivate_reply_tid >= 0);
+		dprintf( D_FULLDEBUG, "Started deactivate reply timer (%d) for %d seconds.\n",  c_deactivate_reply_tid, deactivate_reply_timeout );
 
 		int register_rc = daemonCore->Register_Socket(
 			c_deactivate_stream,
@@ -1458,7 +1559,7 @@ Claim::deactivateClaimSockClosed(Stream *s)
 }
 
 bool
-Claim::sendDeactivateReply()
+Claim::sendDeactivateReply(bool starter_exited)
 {
 	if (c_deactivate_stream) {
 
@@ -1467,6 +1568,10 @@ Claim::sendDeactivateReply()
 
 		ClassAd response_ad;
 		response_ad.Assign(ATTR_START,c_may_reactivate);
+		if ( ! starter_exited) {
+			response_ad.Assign("StillCleaning", true);
+			if (c_starter_pid) response_ad.Assign("StarterPID", c_starter_pid);
+		}
 		bool success = true;
 		if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
@@ -1478,6 +1583,11 @@ Claim::sendDeactivateReply()
 			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip);
 			ep_event.Ad().Assign("ReplyTime", _condor_debug_get_time_double());
 			ep_event.Ad().Assign("Success", success);
+			if ( ! c_may_reactivate) ep_event.Ad().Assign("ClaimClosing", true);
+			if ( ! starter_exited) {
+				ep_event.Ad().Assign("StillCleaning", true);
+				if (c_starter_pid) ep_event.Ad().Assign("StarterPID", c_starter_pid);
+			}
 			ep_eventlog.flush();
 		}
 
@@ -1659,6 +1769,8 @@ Claim::starterExited( Starter* starter, int status)
 {
 	int orphanedJob = 0;
 	bool still_broken = true;
+	CleanupReminder* reminder = nullptr;
+	c_reaping = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -1716,6 +1828,8 @@ Claim::starterExited( Starter* starter, int status)
 			if ( ! still_broken) {
 				dprintf(D_STATUS, "Broken resources successfully cleaned up. Ignoring exit code %d\n",
 				        WEXITSTATUS(status));
+			} else if (WEXITSTATUS(status) == STARTER_EXIT_IMMORTAL_LVM) {
+				reminder = resmgr->findCleanupReminder(CleanupReminder::category::logical_volume, starter->logicalVolumeName());
 			}
 		}
 
@@ -1777,10 +1891,12 @@ Claim::starterExited( Starter* starter, int status)
 		int code = BROKEN_CODE_UNCLEAN;
 		bool do_not_delete_slot = false; // set to true if the broken code indicates that the slot should not be deleted.
 		const char * reason = "Could not clean up after job";
+		ResourceLockType lock = ResourceLockType::HUNG_PID;
 		switch (WEXITSTATUS(status)) {
 		case STARTER_EXIT_IMMORTAL_LVM:
 			code = BROKEN_CODE_UNCLEAN_LV;
 			reason = "Could not clean up Logical Volume";
+			lock = ResourceLockType::LV;
 			break;
 		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
 			code = BROKEN_CODE_HUNG_PID;
@@ -1790,6 +1906,7 @@ Claim::starterExited( Starter* starter, int status)
 			code = BROKEN_CODE_HUNG_CGROUP;
 			reason = "Could not cleanup CGroup for slot";
 			do_not_delete_slot = true;
+			lock = ResourceLockType::CGROUP;
 			break;
 		default:
 			if (orphanedJob) {
@@ -1804,12 +1921,14 @@ Claim::starterExited( Starter* starter, int status)
 			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
 			if (do_not_delete_slot) { c_rip->r_do_not_delete = true; }
-			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
+			auto & brit = c_rip->set_broken_context(c_client, job, lock); // save client info, and give ownership of the job ad
+			if (reminder) { reminder->broken_id = brit.b_refid; }
 			if (ep_eventlog.isEnabled()) {
 				// write a RESOURCE_BREAK event reporting break reason and resources
 				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
 				ep_event.Ad().Assign("Code", code);
 				ep_event.Ad().Assign("Reason", reason);
+				ep_event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
 				if ( ! brit.b_res.empty()) {
 					ClassAd * resad = new ClassAd();
 					brit.publish_resources(*resad, "");
@@ -1826,7 +1945,7 @@ Claim::starterExited( Starter* starter, int status)
 	}
 
 	// if there is pending reply to DEACTIVATE_CLAIM, send the reply now
-	if (sendDeactivateReply() && ! mayReactivate()) {
+	if (sendDeactivateReply(true) && ! mayReactivate()) {
 		// TODO: do we need to change the slot state to reflect a closed claim here?
 	}
 
@@ -1852,7 +1971,7 @@ Claim::starterPidMatches( pid_t starter_pid ) const
 
 
 bool
-Claim::isDeactivating( void )
+Claim::isDeactivating() const
 {
 	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ||
 		// TODO: add a new Claim state while waiting to reap the starter on job completion
@@ -1860,6 +1979,19 @@ Claim::isDeactivating( void )
 		return true;
 	}
 	return false;
+}
+
+const char *
+Claim::isDeactivatingReason() const
+{
+	if (c_state == CLAIM_VACATING) {
+		return "Vacating job";
+	} else if (c_state == CLAIM_KILLING) {
+		return "Killing job";
+	} else if (c_schedd_reported_job_done && c_state == CLAIM_RUNNING) {
+		return "Cleaning up after job";
+	}
+	return nullptr;
 }
 
 
@@ -1919,6 +2051,18 @@ Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 		}
 	}
 		// not active, so nothing to do
+	return true;
+}
+
+
+bool
+Claim::deactivateClaimFinalXfer( void )
+{
+	if( isActive()) {
+		starterVacateJob("Claim deactivated with final transfer",
+			CONDOR_HOLD_CODE::ClaimDeactivated,
+			HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE, true);
+	}
 	return true;
 }
 
@@ -2366,6 +2510,7 @@ Claim::resetClaim( void )
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
 	c_schedd_reported_job_done = false;
+	c_reaping = false;
 }
 
 
@@ -2701,13 +2846,184 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
 			resmgr->startd_stats.bytes_recvd += bytes_recvd;
 		}
+
+		// Job is done running on the EP. Move the slot into Claimed/Cleaning
+		// so it stops matching new work and absorbs preempts while the
+		// starter winds down. Skip if we're already being reaped (the
+		// upcoming starter reap will handle the post-run transition
+		// directly) or if the slot is no longer in a running activity.
+		if (c_rip && !c_reaping && c_rip->state() == claimed_state) {
+			Activity a = c_rip->activity();
+			if (a == busy_act || a == retiring_act || a == suspended_act) {
+				c_rip->change_state(cleaning_act);
+			}
+		}
 	}
 }
 
-void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
-{
-	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+void Claim::receiveUpdateCommand( int c,
+	const ClassAd & payloadAd, ClassAd & replyAd
+) {
+	STARTER_COMMAND command{c};
+	static unsigned int catalogIndex = 0;
 
+	switch( command ) {
+		case STARTER_COMMAND::UPDATE:
+			ASSERT(command != STARTER_COMMAND::UPDATE);
+			break;
+
+		case STARTER_COMMAND::FINAL_UPDATE:
+			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
+			break;
+
+		case STARTER_COMMAND::ANNOUNCE_CATALOG: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				const char * reason = "Claim object has NULL resource pointer during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			//
+			// We don't need to validate the payload ad; the following code
+			// doesn't depend on the payload ad in any way, so it can't screw
+			// up the startd internals, and the only other thing we do with
+			// it is make in a uniquely-named nested ad, so it can't overwrite
+			// any other values, even if it were malicious.
+			//
+
+
+			//
+			// Make the announcement.
+			//
+
+			// Update the global list of catalogs.  (This can't be in the
+			// claim-specific ad because then it collides.)
+			std::string catalog_id;
+			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
+
+			ClassAd * catalogListAd = nullptr;
+			std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+			StartdNamedClassAd * namedCatalogListAd = resmgr->adlist_find( catalog_list_name.c_str() );
+			if( namedCatalogListAd == NULL ) {
+				catalogListAd = new ClassAd();
+				resmgr->adlist_replace( catalog_list_name.c_str(), catalogListAd );
+			} else {
+				catalogListAd = namedCatalogListAd->GetAd();
+			}
+
+			classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+			if( e == NULL ) {
+				catalogListAd->AssignExpr( "catalogs", "{}" );
+				e = catalogListAd->Lookup( "catalogs" );
+			}
+
+			auto * catalogList = dynamic_cast<classad::ExprList *>(e);
+			// Should we really have to type AttributeReference twice?
+			auto * ref = classad::AttributeReference::MakeAttributeReference(
+				NULL /* unscoped */, catalog_id, false /* relative */
+			);
+			catalogList->push_back( ref );
+
+
+			// Update the claim-specific ad.  (Strictly speaking, this should
+			// happen first, so that the attribute above is always defined,
+			// but the startd is single-threaded.)
+			ClassAd * catalogsAd = nullptr;
+			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
+			if( namedCatalogsAd == NULL ) {
+				catalogsAd = new ClassAd();
+				resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
+			} else {
+				catalogsAd = namedCatalogsAd->GetAd();
+			}
+
+			ClassAd * catalogAd = new ClassAd( payloadAd );
+			catalogAd->InsertAttr( "id", catalog_id );
+			catalogsAd->Insert( catalog_id, catalogAd );
+
+			//
+			// Successfully-advertised catalogs need to show up immediately
+			// in the internal ads used to determine the size of new slots.
+			//
+			resmgr->adlist_updated( NULL, false );
+
+
+			//
+			// Success.
+			//
+			replyAd.InsertAttr( ATTR_RESULT, true );
+		} break;
+
+
+		case STARTER_COMMAND::COLOR: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+			std::string claimSpecificAdName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
+
+			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			ClassAd * copy = new ClassAd( payloadAd );
+
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				delete copy;
+
+				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			formatstr( assignment, "SlotMergeConstraint = SlotID == %d", rip->r_id );
+
+			// Presumably this is actually insert-or-update.
+			copy->Insert( assignment );
+
+
+			// It's not enough to give this coloring ad its own name in the
+			// table of extra ads; we need to make sure that the coloring
+			// attributes from different starters don't collide with each
+			// other in the resulting machine ads.
+			ClassAd * shim = new ClassAd();
+			// This is awful.
+			std::string slot_name = rip->r_name;
+			slot_name = "colors_of_" + slot_name.substr( 0, slot_name.find("@") );
+			shim->Insert( slot_name.c_str(), copy );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), shim );
+			replyAd.InsertAttr( ATTR_RESULT, true );
+			} break;
+
+		default:
+			dprintf( D_ALWAYS, "Ignoring unknown starter command %d\n", c );
+			break;
+	}
 }
 
 bool

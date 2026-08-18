@@ -46,6 +46,11 @@ class ShadowUserPolicy : public BaseUserPolicy
 		 */
 	void init( ClassAd* job_ad_ptr, BaseShadow* shadow_ptr );
 
+    void checkAtExit( void );
+    void checkPeriodicSoon();
+    void startTimer( void );
+    void checkPeriodic( int timerID = -1 );
+
  protected:
 
 		/** This function is called whenever the UserPolicy code has

@@ -126,7 +126,7 @@ set( C_LIB			lib)
 set( C_LIB_PUBLIC		lib)
 set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
-set( C_LIBEXEC_BLAHP		libexec )
+set( C_LIBEXEC_BLAHP		libexec/blahp )
 set( C_SBIN			sbin)
 
 set( C_PYTHONARCHLIB lib/python)
@@ -525,6 +525,11 @@ elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 			DESTINATION	"${C_RUN_DIR}")
 	install(DIRECTORY
 			DESTINATION	"${C_LIB32}")
+
+elseif(APPLE)
+
+	install(DIRECTORY
+			DESTINATION	"${C_CONFIGD}")
 
 endif()
 

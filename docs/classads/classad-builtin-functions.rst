@@ -179,33 +179,33 @@ Optional parameters are given within square brackets.
     given. 
 
 :classad-function-def:`Boolean member(AnyType m, ListType l)`
-    Returns error if m does not evalute to a scalar, or l does not
-    evaluate to a list.  Otherwise the elements of l are evaluted
+    Returns error if m does not evaluate to a scalar, or l does not
+    evaluate to a list.  Otherwise the elements of l are evaluated
     in order, and if an element is equal to m in the sense of ``==``
     the result of the function is ``True``.  Otherwise the function
     returns false.
 
 :classad-function-def:`Boolean anyCompare(string op, list l, AnyType t)`
-    Returns error if op does not evalute to one of ``<``, ``<=``,
+    Returns error if op does not evaluate to one of ``<``, ``<=``,
     ``==``, ``>``, ``>=``, ``!-``, ``is`` or ``isnt``. Returns error
     if l isn't a list, or t isn't a scalar
-    Otherwise the elements of l are evaluted and compared to t
+    Otherwise the elements of l are evaluated and compared to t
     using the corresponding operator defined by op. If any of
     the members of l evaluate to true, the result is ``True``.
     Otherwise the function returns ``False``.
 
 :classad-function-def:`Boolean allCompare(string op, list l, AnyType t)`
-    Returns error if op does not evalute to one of ``<``, ``<=``,
+    Returns error if op does not evaluate to one of ``<``, ``<=``,
     ``==``, ``>``, ``>=``, ``!-``, ``is`` or ``isnt``. Returns error
     if l isn't a list, or t isn't a scalar
-    Otherwise the elements of l are evaluted and compared to t
+    Otherwise the elements of l are evaluated and compared to t
     using the corresponding operator defined by op. If all of
     the members of l evaluate to true, the result is ``True``.
     Otherwise the function returns ``False``.
 
 :classad-function-def:`Boolean identicalMember(AnyType m, ListType l)`
-    Returns error if m does not evalute to a scalar, or l does not
-    evaluate to a list.  Otherwise the elements of l are evaluted
+    Returns error if m does not evaluate to a scalar, or l does not
+    evaluate to a list.  Otherwise the elements of l are evaluated
     in order, and if an element is equal to m in the sense of ``=?=``
     the result of the function is ``True``.  Otherwise the function
     returns false.
@@ -692,7 +692,7 @@ string.
 :classad-function-def:`Integer stringListSize(String list [ , String delimiter ])`
     Returns the number of elements in the string ``list``, as delimited
     by the optional ``delimiter`` string. Returns ``ERROR`` if either
-    argument is not a string.
+    argument is not a string, or ``UNDEFINED``
 
     This function returns ``ERROR`` if other than 1 or 2 arguments are
     given. 
@@ -734,7 +734,8 @@ string.
     Returns ``TRUE`` if item ``x`` is in the string ``list``, as
     delimited by the optional ``delimiter`` string. Returns ``FALSE`` if
     item ``x`` is not in the string ``list``. Comparison is done with
-    ``strcmp()``. The return value is ``ERROR``, if any of the arguments
+    ``strcmp()``. An ``UNDEFINED`` value compares to ``false``,
+    otherwise, the return value is ``ERROR``, if any of the arguments
     are not strings.
 
 :classad-function-def:`Boolean stringListIMember(String x, String list [ , String delimiter ])`
@@ -847,7 +848,7 @@ characters other than these as options are ignored.
     ``default`` if the ``default`` argument is passed and the home
     directory of the user is not defined.)
 
-:classad-function-def:`List userMap(String mapSetName, String userName)`
+:classad-function-def:`String userMap(String mapSetName, String userName)`
     Map an input string using the given mapping set. Returns a string containing
     the list of groups to which the user belongs separated by commas or undefined
     if the user was not found in the map file.
@@ -866,8 +867,4 @@ characters other than these as options are ignored.
 
     The maps for the ``userMap()`` function are defined by the following
     configuration macros: :macro:`<SUBSYS>_CLASSAD_USER_MAP_NAMES`,
-    :macro:`CLASSAD_USER_MAPFILE_<name>` and :macro:`CLASSAD_USER_MAPDATA_<name>`
-    (see the :ref:`admin-manual/configuration-macros:htcondor-wide
-    configuration file entries` section).
-
-
+    :macro:`CLASSAD_USER_MAPFILE_<name>` and :macro:`CLASSAD_USER_MAPDATA_<name>`.

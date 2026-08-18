@@ -28,7 +28,7 @@ The directory to be removed together with other command line arguments
 may be specified within a file named *filename*, prefixing this argument
 with an ``@`` character.
 
-The *condor_rmdir.exe* executable is is intended to be used by HTCondor
+The *condor_rmdir.exe* executable is intended to be used by HTCondor
 with the **/S** **/C** options, which cause it to recurse into
 subdirectories and continue on errors.
 

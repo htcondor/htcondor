@@ -68,6 +68,9 @@ class Matchmaker : public Service
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int SET_CEILING_or_FLOOR_commandHandler(int, Stream*);
 		int SET_FLOOR_commandHandler(int, Stream*);
+		int MANAGE_CEILING_commandHandler(int, Stream*);
+		int MANAGE_FLOOR_commandHandler(int, Stream*);
+		int MANAGE_PRIORITY_FACTOR_commandHandler(int, Stream*);
 		int SET_ACCUMUSAGE_commandHandler(int, Stream*);
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
@@ -340,6 +343,7 @@ class Matchmaker : public Service
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
+		bool MatchPasswordEnabled{false};
         char * strSlotConstraint; // query collector for machineAds with this constraint
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas
@@ -356,10 +360,9 @@ class Matchmaker : public Service
 
 		CollectorList* Collectors;
 
-		typedef HashTable<std::string, MapEntry*> AdHash;
-		AdHash *stashedAds;			
+		std::map<std::string, MapEntry*> stashedAds;
 
-		groupQuotasHashType *groupQuotasHash;
+		groupQuotasHashType groupQuotasHash;
 
 		// rank condition on matches
 		ExprTree *rankCondStd;// no preemption or machine rank-preemption 

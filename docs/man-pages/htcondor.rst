@@ -27,9 +27,15 @@ Synopsis
 | **htcondor** **dag** *status* dagman-job-id
 | **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
 | **htcondor** **dag** *resume* dagman-job-id
+| **htcondor** **dag** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] dagman-job-id
+| **htcondor** **dag** *throttle* [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] dagman-job-id
+| **htcondor** **dag** *resources* [**-history**] dagman-job-id
+
+| **htcondor** **snake** *submit* [**-\-jobdir** *directory*] [**snakefile**] [**-\- snakemake_args ...**]
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
+| **htcondor** **eventlog** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] eventlog
 
 | **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
 | **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
@@ -47,6 +53,10 @@ Synopsis
 | **htcondor** **server** *status*
 
 | **htcondor** **ap** *status* [**hostname** ...]
+| **htcondor** **ap** *claims* [**-\-name** *ap-name*]
+
+| **htcondor** **ep** *rehome* [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+| **htcondor** **ep** *status* *ep-name*
 
 | **htcondor** **cm** *status*
 
@@ -62,7 +72,7 @@ predecessor tools.
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
 The nouns include an individual *job*, *jobset*, *eventlog*, *dag*,
-or *annex*.  Each noun is then followed by a noun-specific *verb* that
+*annex*, or *snake*.  Each noun is then followed by a noun-specific *verb* that
 describes the operation on that noun.
 
 One of the following optional global option may appear before the noun:
@@ -218,6 +228,15 @@ Eventlog Verbs
           so one can quickly get a count of all jobs running, idle and exitted
           per site by using this option.
 
+ **htcondor eventlog histogram** *logfile*
+     Display a histogram of job states over time for all jobs present in the
+     provided *logfile*.
+
+     **-i/-\-instant**
+         Show state transitions per time bucket.
+     **-c/-\-cumulative**
+         Show cumulative job states over time. This is the default.
+
 Annex Verbs
 -----------
 
@@ -362,6 +381,83 @@ DAG Verbs
   **htcondor dag resume** **dagman-job-id**
      Inform specific halted DAGMan process to continue making progress.
 
+  **htcondor dag histogram** **dagman-job-id**
+      Display a histogram of job states over time for all jobs managed by
+      an active DAG.
+
+      **-i/-\-instant**
+          Show state transitions per time bucket.
+      **-c/-\-cumulative**
+          Show cumulative job states over time. This is the default.
+
+  **htcondor dag throttle** [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] **dagman-job-id**
+      Change various throttles applied to an active DAG. At least one throttle option must be provided.
+
+      .. note::
+
+          This tool returns the throttle values that DAGMan will use after applying the
+          specified values. These numbers may be limited by administrator set values if
+          :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is ``False``.
+
+      **-\-nodes** *N*
+          Set the maximum number of nodes with jobs submitted to the local *condor_schedd*
+      **-\-idle** *N*
+          Set the maximum number of idle jobs associated with this DAG within the local *condor_schedd*\s queue.
+      **-\-pre** *N*
+          Set the maximum number of executing pre-scripts.
+      **-\-hold** *N*
+          Set the maximum number of executing hold-scripts.
+      **-\-post** *N*
+          Set the maximum number of executing post-scripts.
+      **-\-submissions** *N*
+          Set the maximum number of job list submissions per submit interval.
+
+  **htcondor dag resources** [**-history**] **dagman-job-id**
+      Display resource usage for all jobs managed by a DAG. For each job, shows
+      the node name, job ID, status, current memory usage, requested memory,
+      number of starts, and remote host. A summary line shows the total number
+      of running jobs, idle jobs, and the average memory utilization (the ratio
+      of current memory usage to requested memory) across all jobs that have
+      defined memory usage.
+
+      **-history**
+          Show jobs from the history file instead of the active queue.
+
+Snake Verbs
+-----------
+
+.. warning::
+     Snakemake is not packaged with HTCondor and must be installed seperately.
+     See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
+     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`_
+     for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
+
+**htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
+
+     Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
+     job.  That management job runs Snakemake with the
+     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`_, which in turn submits each
+     Snakemake rule as its own HTCondor job.
+
+     **snakefile** 
+        Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
+        current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
+     
+     **-\-jobdir <directory>** 
+        Create a directory in the current working directory with the specified name.
+        If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
+     
+     Anything after a **-\-** separator is passed through to Snakemake unmodified, so additional Snakemake
+     options can be supplied. 
+     
+     **For examples:**
+
+     .. code-block:: console
+
+         $ htcondor snake submit /path/to/Snakefile --jobdir mylogs -- --profile htcondor_profile
+         
+         $ htcondor snake submit -- --jobs 6 --cores 4
+
 .. sidebar:: HTCondor CLI System Nouns
 
     The server, access-point, and central-manager nouns refer to different
@@ -372,7 +468,7 @@ DAG Verbs
     - The *access-point* (**ap**) noun represents every access point
       known to a pool. This list will be looked up in the pool's
       collector(s).
-    - The *central-manager* (**cm**) noun refers to every every collector
+    - The *central-manager* (**cm**) noun refers to every collector
       to which the local host reports as set in :macro:`COLLECTOR_HOST`.
       Although an HTCondor pool is normally defined by a single collector,
       a pool may have more than one when utilizing :ref:`High Availability<Central Manager High Availability>`.
@@ -393,6 +489,56 @@ Access Point Verbs
     Returns the health status of all Access Points in a given pool.
     Specific hostnames can be provided to target which Access Points
     to get the status of.
+
+  **htcondor ap claims** [**-\-name** *ap-name*]
+
+    Displays active claims held by an access point.  For each claim,
+    shows the slot name, current activity, the source of the claim
+    (Negotiator, DirectAttach, or OCU), and the number of job
+    activations on that claim.
+
+    **-\-name** *ap-name*
+        Name or address of the access point to query.  If not specified,
+        the local access point is queried.
+
+Execution Point Verbs
+---------------------
+
+  **htcondor ep rehome** [**-\-schedd-pool** *pool*] [**-\-cancel**] [**-\-timeout** *seconds*] [**-\-reboot**] *ep-name* *schedd-name*
+
+    Directs the *condor_startd* on *ep-name* to evict all running jobs and
+    direct-attach to the *condor_schedd* identified by *schedd-name*. The
+    direct-attach configuration is persisted via the runtime persistent
+    config so it survives a restart of the *condor_startd*.
+
+    **-\-schedd-pool** *pool*
+        Collector pool to use when locating *schedd-name*. Defaults to
+        :macro:`COLLECTOR_HOST`.
+
+    **-\-cancel**
+        Cancel a prior rehome by unsetting
+        :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME` from the persistent
+        config. No jobs are evicted.
+
+    **-\-timeout** *seconds*
+        Timeout in seconds for the rehome operation. ``0`` (the default)
+        means no timeout.
+
+    **-\-reboot**
+        After evicting all running jobs, reboot the execution point host.
+        The persisted direct-attach configuration causes the host to
+        re-attach to *schedd-name* when it comes back up. This option is
+        only honored if :macro:`STARTD_REHOME_ALLOW_REBOOT` is set to an
+        expression that evaluates to ``True`` on every slot of the EP;
+        otherwise the request is refused and no jobs are evicted. The
+        reboot itself is performed by :macro:`STARTD_REBOOT_COMMAND`
+        (default ``/sbin/reboot``).
+
+  **htcondor ep status** *ep-name*
+
+    Lists every slot on the execution point *ep-name* together with its
+    slot type, state, activity, CPUs, and memory, followed by the total
+    slot count.
 
 Central Manager Verbs
 ---------------------

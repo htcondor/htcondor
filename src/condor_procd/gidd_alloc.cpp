@@ -26,6 +26,7 @@
 //   5) if a collision has occurred, it retries
 
 #include "condor_common.h"
+#include <vector>
 
 /* Apparently, in condor_sys_linux.h, we can't include <grp.h> as per the
 	comment that it messes about with standard universe. So instead
@@ -304,8 +305,8 @@ main(int argc, char* argv[])
 	}
 
 	int count = max - min + 1;
-	int used[count];
-	if (giduse_probe(min, count, used) == 1) {
+	std::vector<int> used(count);
+	if (giduse_probe(min, count, used.data()) == 1) {
 		fprintf(stderr, "giduse_probe error: %s", err_str);
 		return 1;
 	}

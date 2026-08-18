@@ -10,7 +10,7 @@ bool isChildOf(const char *subdir, pid_t parent);
 // by groveling through /proc
 
 pid_t
-findChildProc(pid_t parent) {
+findChildProc([[maybe_unused]] pid_t parent) {
 #ifdef LINUX
 	Directory d("/proc");
 
@@ -28,7 +28,6 @@ findChildProc(pid_t parent) {
 	}
 	return -1;
 #else
-	(void)parent;	// shut the compiler up
 	return -1;
 #endif
 }

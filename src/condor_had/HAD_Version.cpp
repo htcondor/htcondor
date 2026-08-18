@@ -81,7 +81,10 @@ Version::synchronize(bool isLogicalClockIncremented)
     createFile( m_stateFilePath );
 
 	struct stat status = {};
-	stat(m_stateFilePath.c_str(), &status);
+	if( stat(m_stateFilePath.c_str(), &status) != 0 ) {
+		dprintf( D_ALWAYS, "Version::synchronize failed to stat '%s': %s\n",
+				 m_stateFilePath.c_str(), strerror(errno) );
+	}
     
     time_t                currentTime = time( NULL );
     // to contain the time strings produced by 'ctime_r' function, which is

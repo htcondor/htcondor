@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 ############################################################################
 ## This debug plugin takes URL's encoded with how to function via a main
 ## command and potentially encoded information about what ClassAd information
@@ -7,12 +8,19 @@
 ## source type, and the encoding details wrapped in square brackets.
 ##
 ## Available Commands:
-##     - SLEEP   -> sleep for specified time
-##     - SIGNAL  -> Send specified signal to self  (as defined by python signal module)
-##     - EXIT    -> Exit immediately with specified code
-##     - ERROR   -> Mimic a transfer failure using information encoded in
-##                  URL to create returned ClassAd
-##     - SUCCESS -> As ERROR but successful transfer
+##     - SLEEP     -> sleep for specified time
+##     - SIGNAL    -> Send specified signal to self  (as defined by python signal module)
+##     - EXIT      -> Exit immediately with specified code
+##     - EXITNOAD  -> Exit immediately with specified code without producing a result ClassAd
+##                    (i.e. for simulating a plugin failure that doesn't produce a result ad)
+##     - EXITBADAD -> Exit immediately with specified code producing an unparseable ClassAd
+##                    (i.e. for simulating EP disk filling failure where the plugin attempts
+##                    to write an ad but fails to do so correctly)
+##     - ERROR     -> Mimic a transfer failure using information encoded in
+##                    URL to create returned ClassAd
+##     - SUCCESS   -> As ERROR but successful transfer
+##     - ECHO      -> Specify message to print to log
+##     - VERBOSITY -> Set logging level inline (allows dynamic verbosity changing for specific URLs)
 ##
 ## Available option encodings (excluding delete option):
 ##     - None: option -> ../resolution/..
@@ -40,6 +48,8 @@ import signal
 import re
 import enum
 import subprocess
+import datetime
+from typing import Union
 
 # ----------------------------------------------------------------------------
 EXIT_SUCCESS = 0
@@ -64,6 +74,15 @@ class DebugUrlParseError(Exception):
 
 
 # ----------------------------------------------------------------------------
+class DebugLoggingError(Exception):
+    """Custom debug logging exception"""
+
+    def __init__(self, msg=None):
+        self.message = msg if msg is not None else "Logging failure"
+        super().__init__(self.message)
+
+
+# ----------------------------------------------------------------------------
 class ActionType(enum.Enum):
     """Enumeration of encoding actions"""
 
@@ -74,9 +93,23 @@ class ActionType(enum.Enum):
 
 
 # ----------------------------------------------------------------------------
+class DebugLevel(enum.IntEnum):
+    """Required debug verbosity level to print debug message"""
+
+    ALWAYS = 0           # Always print this message
+    TEST = 1             # Test output required for a test
+    DEBUGGING = 2        # Increased output for debugging purposes
+    VERBOSE = 3          # Verbose debugging output
+    CHATTY = 4           # Very chatty debugging output
+
+# ----------------------------------------------------------------------------
 PROGRAM_NAME = "debug_plugin.py"
-PLUGIN_VERSION = "1.0.0"
+# Note: Changing the plugin version requires manual changes to test cases in
+#       test_debug_plugin and test_fto_failure_propagation
+PLUGIN_VERSION = "1.2.0"
 SUPPORTED_SCHEMAS = "debug,decode,encoded"
+# What Plugin protocol version does this speak
+PROTOCOL_VERSION = 4
 
 DEFAULT_HOSTNAME = "default.test.hostname"
 
@@ -138,6 +171,66 @@ ACTION_TYPE_STR = {
 }
 
 
+DATETIME_TIMESTAMP_FORMAT = "%m/%d/%Y %H:%M:%S"
+DEBUG_LEVEL = 0
+
+
+# ----------------------------------------------------------------------------
+def timestamp(msg: str) -> str:
+    """Prepend message string with date timestamp"""
+    timestamp = datetime.datetime.now().strftime(DATETIME_TIMESTAMP_FORMAT)
+    ret = f"{timestamp} {msg}"
+    return ret.strip()
+
+
+# ----------------------------------------------------------------------------
+def error(msg: str) -> None:
+    """Write error message to standard error"""
+    print(timestamp(msg), file=sys.stderr)
+
+
+# ----------------------------------------------------------------------------
+def debug(level: DebugLevel, msg: str) -> None:
+    """Write debugging message to standard output depending on set verbosity level"""
+    if DEBUG_LEVEL >= level:
+        print(timestamp(msg), file=sys.stdout)
+
+
+# ----------------------------------------------------------------------------
+
+def set_debug_level(level: Union[int, str]) -> None:
+    """Scoped function for changing the debug level on the fly"""
+    global DEBUG_LEVEL
+
+    if isinstance(level, int):
+        # Just use this value
+        pass
+    elif isinstance(level, str):
+        # Convert string to integer level
+        # Either specifying log level by name (i.e. ALWAYS, TEST, CHATTY, etc.)
+        # or by an integer value
+        verbosity = None
+        for log_level in DebugLevel:
+            if log_level.name.upper() == level.upper():
+                verbosity = log_level.value
+                break
+
+        if verbosity is None:
+            try:
+                verbosity = int(level)
+            except:
+                raise DebugLoggingError(f"Set Logging Level Failure: Invalid log level provided: {level}")
+
+        level = verbosity
+    else:
+        invalid_type = type(level)
+        raise DebugLoggingError(f"Set Logging Level Failure: Invalid level type ({invalid_type}). Expect int or str")
+
+    if DEBUG_LEVEL != level:
+        debug(DebugLevel.ALWAYS, f"Changing logging level from {DEBUG_LEVEL} to {level}")
+        DEBUG_LEVEL = level
+
+
 # ----------------------------------------------------------------------------
 def format_error(error: Exception) -> str:
     """Format an exception into error string"""
@@ -186,10 +279,12 @@ def parse_portion(url: str):
             option = details = ""
             action = ActionType.NONE
             trailing = False
+
         # Ignore all information post closing bracket ']' This allows
         # `keyword[info]ignored/keyword` to produce multiple portions
         elif trailing:
             continue
+
         # Process start of specified encoding details
         elif c == "[":
             # If no action type has been provided then info is inline
@@ -199,6 +294,7 @@ def parse_portion(url: str):
             in_brackets += 1
             if action == ActionType.INLINE:
                 details += c
+
         # Process end of specified encoding details
         elif c == "]":
             # Invalid URL if no start character ('[') found
@@ -211,17 +307,21 @@ def parse_portion(url: str):
                 trailing = True
             if action == ActionType.INLINE:
                 details += c
+
         # Store the details if in brackets (i.e. found open but not close)
         elif in_brackets > 0:
             details += c
+
         # Tilde specifies details is a file path to read
         elif c == "~":
             action = ActionType.FILE
             specifier = c
+
         # Hashtag specifies details is an executable to run
         elif c == "#":
             action = ActionType.SCRIPT
             specifier = c
+
         # If here then must be the start of the portion which is the sub option
         else:
             option += c
@@ -237,7 +337,8 @@ def parse_portion(url: str):
 # ----------------------------------------------------------------------------
 def replace_white_space(url: str, seq: str) -> str:
     """Replace non-escaped charater sequence with a space"""
-    return url.replace(f"\\{seq}", "{**temp-replacement**}").replace(seq, " ").replace("{**temp-replacement**}", seq)
+    debug(DebugLevel.CHATTY, f"Replacing '{seq}' with whitespaces in '{url}'")
+    return url.replace(f"\\{seq}", "{**temp-replacement**}").replace(seq, " ").replace("{**temp-replacement**}", f"\\{seq}")
 
 # ----------------------------------------------------------------------------
 def extract_details(action: ActionType, details: str) -> dict:
@@ -246,17 +347,23 @@ def extract_details(action: ActionType, details: str) -> dict:
 
     # Action type is none so do nothing (use default)
     if action == ActionType.NONE:
+        debug(DebugLevel.CHATTY, "Using default transfer attempt ClassAd")
         pass
+
     # Action type is inline ClassAd
     elif action == ActionType.INLINE:
         try:
             # Replace any '+' w/ spaces (%20's) already replaced and attempt to parse ClassAd
-            inline_ad = classad.ClassAd(replace_white_space(details, "+"))
+            details = replace_white_space(details, "+")
+            debug(DebugLevel.VERBOSE, f"Updating transfer attempt with inline ClassAd: '{details}'")
+            inline_ad = classad.ClassAd(details)
             ad.update(inline_ad)
         except Exception as e:
             raise DebugUrlParseError(f"Failed to parse inline information '{details}' into ClassAd: {e}")
+
     # Action type is file
     elif action == ActionType.FILE:
+        debug(DebugLevel.VERBOSE, f"Updating transfer attempt with contents from {details}")
         try:
             # Attempt to parse one ClassAd from the file
             with open(details, "r") as f:
@@ -264,21 +371,35 @@ def extract_details(action: ActionType, details: str) -> dict:
                 ad.update(f_ad)
         except Exception as e:
             raise DebugUrlParseError(f"Failed to parse file '{details}' into ClassAd: {e}")
+
     # Action type is a script
     elif action == ActionType.SCRIPT:
         try:
-            # Replace any '&&' w/ spaces (%20's) already replaced
+            # Replace any '::' w/ spaces (%20's) already replaced
             details = replace_white_space(details, "::")
+            debug(DebugLevel.VERBOSE, f"Updating transfer attempt with output from {details}")
+
             # Attempt to execute the script. Non-zero exit code is failure
-            p = subprocess.run(details.split(" "), stdout=subprocess.PIPE)
+            p = subprocess.run(details.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            LOG_SCRIPT_OUTPUT_PREFIX = '\t> '
+
+            stdout = p.stdout.rstrip().decode()
+            stderr = textwrap.indent(p.stderr.rstrip().decode(), LOG_SCRIPT_OUTPUT_PREFIX)
+            stdout_log = textwrap.indent(stdout, LOG_SCRIPT_OUTPUT_PREFIX)
+
+            debug(DebugLevel.VERBOSE, f"Script output:\n{stdout_log}")
+            debug(DebugLevel.VERBOSE, f"Script error:\n{stderr}")
+
             if p.returncode != EXIT_SUCCESS:
-                raise RuntimeError(f"Failed to excute script")
+                raise RuntimeError(f"Failed to excute script (exit={p.returncode})")
+
             # Attempt to parse one ClassAd from stdout of script
-            output = p.stdout.rstrip().decode()
-            p_ad = classad.parseOne(output)
+            p_ad = classad.parseOne(stdout)
             ad.update(p_ad)
         except Exception as e:
             raise DebugUrlParseError(f"Failed to parse script '{details}' output into ClassAd: {e}")
+
     # Unknown action type...
     else:
         raise DebugUrlParseError(f"Unknown specified option action: {action}")
@@ -307,7 +428,7 @@ class DebugPlugin:
             ActionType.SCRIPT: 0,
         }
 
-    def reset_per(self):
+    def reset_per(self) -> None:
         """Reset per URL statistics/data"""
         self.sub_cmd_counts = {key: 0 for key in self.sub_cmd_counts.keys()}
         self.details_counts = {key: 0 for key in self.details_counts}
@@ -333,6 +454,7 @@ class DebugPlugin:
             details = details.replace("%20", " ")
             # Check if portion has specified inner option
             if option.lower() not in OPTION_DEFAULTS:
+                debug(DebugLevel.VERBOSE, f"Skipping unknown encoded option {option}")
                 continue
 
             # Copy default option ad
@@ -344,16 +466,19 @@ class DebugPlugin:
 
             # If 'general' option: update main result ad
             if re.match(OPT_GENERAL, option, re.I):
+                debug(DebugLevel.CHATTY, "Updating general information for transfer result ClassAd")
                 info.update(extract_details(action, details))
                 continue
 
             # If 'delete' option: delete specified keys from main result ad
             if re.match(OPT_DELETE, option, re.I):
+                debug(DebugLevel.CHATTY, "Deleting information in transfer result ClassAd")
                 # Expects: delete[attr{,attr,...}]
                 if action != ActionType.INLINE or details.strip("[").strip("]") == "":
                     raise DebugUrlParseError(f"Invalid {OPT_DELETE} option specified: No inline details.")
                 for attr in details[1:-1].split(","):
                     if attr in info:
+                        debug(DebugLevel.VERBOSE, f"Removing {attr} from transfer result ClassAd")
                         del info[attr]
                 continue
 
@@ -369,12 +494,13 @@ class DebugPlugin:
 
         # If failure attempts have been specified then add ads to result ad
         if len(attempts) > 0:
+            debug(DebugLevel.DEBUGGING, f"URL transfer encoded with {len(attempts)} failure attempts")
             info["TransferErrorData"] = attempts
             info["TransferError"] = err_msg  # We should do something better here
 
         return info
 
-    def transfer_file(self, url: str, local_file: str, upload: bool) -> dict:
+    def transfer_file(self, url: str, local_file: str, upload: bool) -> Union[dict, str]:
         """Mock transfer a file to produce return ClassAd from information encoded from URL"""
         self.reset_per()
         now = int(time.time())
@@ -389,6 +515,7 @@ class DebugPlugin:
             "TransferFileBytes": 0,
             "TransferTotalBytes": 0,
             "TransferStartTime": now,
+            # Set end time to now for commands that do the bare minimum and return immediately
             "TransferEndTime": now,
             "ConnectionTimeSeconds": 0,
             "TransferUrl": url,
@@ -407,49 +534,102 @@ class DebugPlugin:
                     timeout = int(info.split("/")[0])
                 except Exception as e:
                     raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
+                debug(DebugLevel.DEBUGGING, f"Sleeping for {timeout} seconds...")
                 time.sleep(timeout)
+                debug(DebugLevel.CHATTY, "Finished sleeping!")
                 RESULT["TransferSuccess"] = True
+
             # SIGNAL (debug://signal/SIGTERM) -> Send a signal to self
             elif cmd == "SIGNAL":
                 value = info.split("/")[0]
                 SIGNAL = getattr(signal, value, signal.SIGTERM)
+                debug(DebugLevel.DEBUGGING, f"Sending signal {SIGNAL.name} to self...")
                 os.kill(os.getpid(), SIGNAL)
+                error(f"Failed to send signal {SIGNAL.name} to self!!!")
+
             # ERROR (debug://error/...) -> Specify a transfer failure with encoded return ad information
             elif cmd == "ERROR":
+                debug(DebugLevel.VERBOSE, f"Specified failed transfer encoded via '{info}'")
                 RESULT["TransferSuccess"] = False
                 RESULT.update(self.process_url(info))
                 if self.exit_code == EXIT_SUCCESS:
                     self.exit_code = 1
+
             # SUCCESS (debug://success/...) -> Specify a successful transfer with encoded return ad information
             elif cmd == "SUCCESS":
+                debug(DebugLevel.CHATTY, "Specified successfull transfer")
                 RESULT["TransferSuccess"] = True
                 RESULT.update(self.process_url(info))
-            # EXIT (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
-            elif cmd == "EXIT":
+
+            # EXIT/EXITNOAD/EXITBADAD (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
+            elif cmd in ["EXIT", "EXITNOAD", "EXITBADAD"]:
                 try:
                     # Limit exit code range 0-123 (negatives are turned into absolute values)
                     code = sorted([0, abs(int(info.split("/")[0])), 123])[1]
                 except Exception as e:
                     raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
+
+                debug(DebugLevel.CHATTY, f"Specified exit code: {code}")
                 # Only override exit code if no invalid URL's were parsed
                 if self.exit_code != EXIT_INVALID_URL:
+                    debug(DebugLevel.DEBUGGING, f"Changing exit code from {self.exit_code} to {code}")
                     self.exit_code = code
+
+                # Handle improper plugin exit cases:
+                #    1. Produce an unparseable ClassAd by writing a string instead of a dict (i.e. an ad) to the output file
+                #    2. Produce no output at all by returning an empty dict so that no file is created
+                if cmd == "EXITBADAD":
+                    debug(DebugLevel.CHATTY, "Writing bad classad to output")
+                    return "This is not a ClassAd!!!"
+                elif cmd == "EXITNOAD":
+                    debug(DebugLevel.CHATTY, "Writing no classad to output")
+                    return {}
+
                 RESULT["TransferSuccess"] = (self.exit_code == EXIT_SUCCESS)
+
+            # ECHO (debug://echo/stdout/message)
+            elif cmd == "ECHO":
+                try:
+                    stream, message = info.split("/", 1)
+                    stream = stream.upper()
+
+                    if stream not in ["STDOUT", "STDERR", "OUTPUT", "ERROR", "OUT", "ERR"]:
+                        raise RuntimeError(f"Invalid echo stream provided: {stream}")
+
+                    message = replace_white_space(message, "%20")
+                    if stream in ["STDOUT", "OUT", "OUTPUT"]:
+                        debug(DebugLevel.ALWAYS, message)
+                    else:
+                        error(message)
+                except Exception as e:
+                    raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
+
+            # VERBOSITY (debug://verbosity/3)
+            elif cmd == "VERBOSITY":
+                try:
+                    set_debug_level(info.split("/")[0])
+                except Exception as e:
+                    raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
+
             else:
                 raise DebugUrlParseError(f"Unknown debug URL command '{cmd}'")
+
         # Catch all exceptions and fail due to an invalid encoded URL provided
         except Exception as e:
+            error(f"Error: Failed to execute command ({cmd}): {e}")
             RESULT.update(get_error_dict(e, url, True))
             self.exit_code = EXIT_INVALID_URL
 
         # Add general debugging Developer Data to output
         RESULT["DeveloperData"] = self.get_dev_data()
+        # Update with actual end time (i.e. time to fully process & execute encoded URL)
+        RESULT["TransferEndTime"] = int(time.time())
 
         return RESULT
 
 
 # ----------------------------------------------------------------------------
-def recursive(l: list):
+def recursive(l: list) -> None:
     """Recursively loop through nested lists"""
     for item in l:
         if type(item) is list:
@@ -459,7 +639,7 @@ def recursive(l: list):
 
 
 # ----------------------------------------------------------------------------
-def parse_args():
+def parse_args() -> None:
     """Function to handle all CLI argument parsing"""
 
     parser = argparse.ArgumentParser(
@@ -533,25 +713,27 @@ def parse_args():
 
     args = parser.parse_args()
 
+    # If verbosity flag specified then use this level over the environment set level (if one)
+    if args.verbosity > 0:
+        set_debug_level(args.verbosity)
+
     # Special -test flag directly parses provided url and prints resulting ClassAd
     if args.testing is not None:
         plugin = DebugPlugin()
         for url in recursive(args.testing):
-            if args.verbosity > 0:
-                print(f"{url} yields:")
+            debug(DebugLevel.DEBUGGING, f"{url} yields:")
             result = plugin.transfer_file(url, "TESTING-DUMMY", args.upload)
             try:
-                print(str(classad.ClassAd(result)))
+                print(result if isinstance(result, str) else classad.ClassAd(result))
             except Exception as e:
-                if args.verbosity > 0:
-                    print(f"Error: Failed to convert results to ClassAd: {e}")
-                    print(result)
+                error(f"Error: Failed to convert results to ClassAd: {e}")
+                error(result)
         sys.exit(plugin.exit_code)
 
     # Ensure either -classad or (-infile and -outfile) specified
     if not args.classad and None in [args.infile, args.outfile]:
         parser.print_usage()
-        print(f"{PROGRAM_NAME}: error: invlaid args: expects either -classad or both -infile and -outfile")
+        error(f"{PROGRAM_NAME}: error: invalid args: expects either -classad or both -infile and -outfile")
         raise RuntimeError
 
     # Return capabilities ClassAd and exit
@@ -561,6 +743,7 @@ def parse_args():
             "PluginType": "FileTransfer",
             "SupportedMethods": SUPPORTED_SCHEMAS,
             "Version": PLUGIN_VERSION,
+            "ProtocolVersion": PROTOCOL_VERSION,
         }
         sys.stdout.write(classad.ClassAd(capabilities).printOld())
         sys.exit(EXIT_SUCCESS)
@@ -569,10 +752,11 @@ def parse_args():
 
 
 # ----------------------------------------------------------------------------
-def main():
+def main() -> None:
     try:
         args = parse_args()
-    except Exception:
+    except Exception as err:
+        error(f"Error: Failed to parse arguments: {err}")
         sys.exit(EXIT_SETUP_FAILURE)
 
     plugin = DebugPlugin()
@@ -582,35 +766,85 @@ def main():
     try:
         infile_ads = classad.parseAds(open(args.infile, "r"))
     except Exception as err:
+        error(f"Error: Failed to parse infile {args.infile} ClassAds: {err}")
         try:
             with open(args.outfile, "w") as outfile:
-                outfile_dict = get_error_dict(err)
-                outfile.write(str(classad.ClassAd(outfile_dict)))
-        except Exception:
-            pass
+                outfile.write(str(classad.ClassAd(get_error_dict(err))))
+        except Exception as deep_err:
+            error(f"Error: Failed to write failure output ClassAd: {deep_err}")
         sys.exit(EXIT_SETUP_FAILURE)
 
     # Now iterate over the list of classads and perform the transfers.
     try:
         with open(args.outfile, "w") as outfile:
             for ad in infile_ads:
+
+                # Non-transfer ClassAd
+                if "URL" not in ad or "LocalFileName" not in ad:
+                    debug(DebugLevel.TEST, f"Non-transfer ClassAd discovered:\n{ad}")
+                    continue
+
+                # Dump v4 protocol Plugin Data
+                if 'PluginData' in ad:
+                    data = ad.get("PluginData")
+                    debug(DebugLevel.TEST, f"Plugin data:\n{data}")
+
+                for key in ad.keys():
+                    if key.endswith('_PluginData'):
+                        data = ad.get(key)
+                        debug(DebugLevel.TEST, f"Specific Plugin Data (key = {key}):\n{data}")
+
+                # Process transfer ClassAd for action
                 try:
-                    outfile_dict = plugin.transfer_file(ad["Url"], ad["LocalFileName"], args.upload)
-                    outfile.write(str(classad.ClassAd(outfile_dict)))
+                    url = ad["Url"]
+                    result = plugin.transfer_file(url, ad["LocalFileName"], args.upload)
+                    if isinstance(result, str):
+                        outfile.write(result)
+                    elif len(result) > 0: # Don't write anything if empty to mimic failed to write ad
+                        outfile.write(str(classad.ClassAd(result)))
                 except Exception as err:
+                    error(f"Error: Failure to process {url}: {err}")
                     try:
-                        outfile_dict = get_error_dict(err, url=ad["Url"])
-                        outfile.write(str(classad.ClassAd(outfile_dict)))
-                    except Exception:
-                        pass
+                        outfile.write(str(classad.ClassAd(get_error_dict(err, url=url))))
+                    except Exception as deep_err:
+                        error(f"Error: Failed to write failure output ClassAd: {deep_err}")
                     sys.exit(EXIT_SETUP_FAILURE)
 
-    except Exception:
+    except Exception as e:
+        error(f"Error: Setup failure: {e}")
         sys.exit(EXIT_SETUP_FAILURE)
 
     sys.exit(plugin.exit_code)
 
 
 # ----------------------------------------------------------------------------
+def process_env() -> None:
+    """Process environment variables"""
+    global PROTOCOL_VERSION
+    global DATETIME_TIMESTAMP_FORMAT
+
+    env = os.environ
+
+    try:
+        PROTOCOL_VERSION = int(env.get('DEBUG_PLUGIN_PROTOCOL_VERSION', PROTOCOL_VERSION))
+    except Exception as e:
+        error(f"WARNING: Failed to process environment variable DEBUG_PLUGIN_PROTOCOL_VERSION: {e}")
+
+    try:
+        tmp = env.get("DEBUG_PLUGIN_TIMESTAMP_FORMAT", DATETIME_TIMESTAMP_FORMAT)
+        if bool(datetime.datetime.now().strftime(tmp)):
+            DATETIME_TIMESTAMP_FORMAT = tmp
+        else:
+            error(f"WARNING: Enviroment variable DEBUG_PLUGIN_TIMESTAMP_FORMAT has invalid value '{tmp}'")
+    except Exception as e:
+        error(f"WARNING: Failed to process evironment variable DEBUG_PLUGIN_TIMESTAMP_FORMAT: {e}")
+
+    try:
+        set_debug_level(env.get("DEBUG_PLUGIN_VERBOSITY", "ALWAYS"))
+    except Exception as e:
+        error(f"WARNING: Failed to process environment variable DEBUG_PLUGIN_VERBOSITY: {e}")
+
+# ----------------------------------------------------------------------------
 if __name__ == "__main__":
+    process_env()
     main()

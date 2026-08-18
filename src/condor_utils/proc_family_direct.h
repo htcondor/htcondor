@@ -72,6 +72,8 @@ public:
 
 	bool quit(void(*)(void*, int, int),void*) { return false; }; // nothing to do here, only needed when there is a procd
 
+	// Can we enforce memory limits with cgroups?
+	virtual bool cgroup_enforceable() const { return false;}
 private:
 
 	std::map<pid_t, ProcFamilyDirectContainer> m_table;

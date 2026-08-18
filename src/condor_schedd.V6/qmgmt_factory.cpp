@@ -310,7 +310,7 @@ JobFactory * MakeJobFactory(
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	} else {
 		restore_priv = true;
-		priv = set_user_priv_from_ad(*job);
+		priv = set_user_priv_from_ad(*job->ownerinfo);
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	}
 
@@ -431,7 +431,7 @@ int UnMaterializedJobCount(JobQueueCluster * cad, bool include_paused /*=false*/
 }
 
 
-bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
+bool GetJobFactoryMaterializeMode(const JobQueueCluster * cad, int & pause_code)
 {
 	pause_code = 0;
 	if ( ! cad ) return false;

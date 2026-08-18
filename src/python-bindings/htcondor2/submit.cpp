@@ -4,8 +4,7 @@ struct SubmitBlob {
     public:
         SubmitBlob() :
             m_src_pystring(EmptyMacroSrc),
-            m_ms_inline("", 0, EmptyMacroSrc),
-            EmptyItemString{'\0'}
+            m_ms_inline("", 0, EmptyMacroSrc)
         {
             m_hash.init(JSM_PYTHON_BINDINGS);
             // If we want to differentiate between the Python string
@@ -87,7 +86,7 @@ struct SubmitBlob {
 
         void insert_macro( const char * name, const std::string & value );
 
-        int process_job_credentials( Daemon* schedd, std::string & URL, std::string & error_string ) {
+        bool process_job_credentials( Daemon* schedd, std::string & URL, std::string & error_string ) {
             return ::process_job_credentials( m_hash, 0, schedd, URL, error_string );
         }
 
@@ -102,9 +101,6 @@ struct SubmitBlob {
         // We could easily keep these in Python, if that simplifies things.
         std::string m_qargs;
         std::string m_remainder;
-
-        // See comment in init_vars().
-        char EmptyItemString[1];
 };
 
 
@@ -474,6 +470,11 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
             return false;
         }
 
+        std::string err;
+        if( !dag_opts.checkMutualExclusion(k, err) ) {
+            PyErr_SetString(PyExc_RuntimeError, err.c_str());
+            return false;
+        }
 
         v = dag_opts.processOptionArg( k, v );
 
@@ -661,9 +662,9 @@ _submit_issue_credentials( PyObject *, PyObject * args ) {
 
     std::string URL;
     std::string error_string;
-    int rv = sb->process_job_credentials( nullptr,  URL, error_string ); // TODO: how to get the schedd daemon object here??
+    bool rv = sb->process_job_credentials( nullptr,  URL, error_string ); // TODO: how to get the schedd daemon object here??
 
-    if(rv != 0) {
+    if(rv == false) {
         PyErr_SetString( PyExc_HTCondorException, error_string.c_str() );
         return NULL;
     }

@@ -164,6 +164,7 @@ enum ULogEPEventNumber {
 	ULOG_EP_VACATE_CLAIM     = ULOG_EP_FIRST + 8,
 	ULOG_EP_DRAIN            = ULOG_EP_FIRST + 9,
 	ULOG_EP_RESOURCE_BREAK   = ULOG_EP_FIRST + 10,
+	ULOG_EP_RESOURCE_MEND    = ULOG_EP_FIRST + 11,
 	// when you add an event, also update ULogEPEventNumberNames, EPEventTypeNames,
 	ULOG_EP_FUTURE_EVENT
 };
@@ -186,6 +187,19 @@ enum ULogEventOutcome
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
 extern const char * const ULogEventOutcomeNames[];
 extern const  char SynchDelimiter[];
+
+//----------------------------------------------------------------------------
+/*
+	Enumeration for submission (Submit/ClusterSubmit) optional line storing actions
+	Note: see checkSubmitLine() in condor_event.cpp
+*/
+
+enum class SubmitEventLine {
+	RAW = 0,                 // Line should be treated as raw text
+	STRUCTURED_NOTE,         // Line is structured note i.e. inline ClassAd
+	OLD_DAG_NOTE,            // Line is an old style DAG log notes 'DAG Node: '
+	WARNING,                 // Line is a warning 'WARNING: '
+};
 
 //----------------------------------------------------------------------------
 /** Framework for a single User Log Event object.  This class is an abstract
@@ -470,6 +484,7 @@ class SubmitEvent : public ULogEvent
   public:
     ///
     SubmitEvent(void);
+    virtual ~SubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -497,6 +512,10 @@ class SubmitEvent : public ULogEvent
 
 	char const *getSubmitHost() { return submitHost.c_str(); }
 
+	bool hasStructuredNotes() const;
+
+	ClassAd& setStructuredNotes();
+
 	/// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
 	std::string submitHost;
 	// dagman-supplied text to include in the log event
@@ -505,6 +524,8 @@ class SubmitEvent : public ULogEvent
 	std::string submitEventUserNotes;
 	// schedd-supplied warning about unmet future requirements
 	std::string submitEventWarnings;
+	// Structured notes ad
+	ClassAd* structuredNotes{nullptr};
 };
 
 //----------------------------------------------------------------------------
@@ -1930,6 +1951,7 @@ class ClusterSubmitEvent : public ULogEvent
   public:
     ///
     ClusterSubmitEvent(void);
+    virtual ~ClusterSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -1955,12 +1977,18 @@ class ClusterSubmitEvent : public ULogEvent
 
     void setSubmitHost(char const *addr);
 
+	bool hasStructuredNotes() const;
+
+	ClassAd& setStructuredNotes();
+
 	/// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
 	std::string submitHost;
 	// dagman-supplied text to include in the log event
 	std::string submitEventLogNotes;
 	// user-supplied text to include in the log event
 	std::string submitEventUserNotes;
+	// Structured notes ad
+	ClassAd* structuredNotes{nullptr};
 };
 
 //----------------------------------------------------------------------------

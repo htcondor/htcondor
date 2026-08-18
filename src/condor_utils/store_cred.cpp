@@ -93,7 +93,7 @@ bool store_cred_failed(long long ret, int mode, const char ** errstring /*=NULL*
 static bool username_is_pool_password(const char *user, int * domain_pos = NULL)
 {
 	const int pool_name_len = sizeof(POOL_PASSWORD_USERNAME) - 1;
-	const char *at = strchr(user, '@');
+	const char *at = strrchr(user, '@');
 	int len;
 	if (at) {
 		len = (int)(at - user);
@@ -534,7 +534,12 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
+	// If we decide to modify a JSON-style cred to add scope/audience
+	// info, jsoncred will hold the modified data. The pointer cred
+	// will be redirected to point at jsoncred's data. In all cases,
+	// clen will hold the size of the data pointed to by cred.
 	size_t clen = credlen;
+	std::string jsoncred;
 
 	if (!use_top_file) {
 		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
@@ -549,7 +554,6 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ad->LookupString("Scopes", scopes);
 			ad->LookupString("Audience", audience);
 		}
-		std::string jsoncred;
 		if ((scopes != "") || (audience != "")) {
 			// Add scopes and/or audience into the JSON-formatted credentials
 			classad::ClassAdJsonParser jsonp;
@@ -1109,7 +1113,7 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				if ( !pw_wc ) {
 					answer = FAILURE_NOT_FOUND;
 				} else {
-					sprintf(passw, "%S", pw_wc);
+					snprintf(passw, MAX_PASSWORD_LENGTH, "%S", pw_wc);
 					SecureZeroMemory(pw_wc, wcslen(pw_wc));
 					delete[] pw_wc;
 					
@@ -1152,7 +1156,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
-	dom = strchr(user, '@');
+	dom = strrchr(user, '@');
 
 	if ( dom ) {
 		*dom = '\0';
@@ -1551,8 +1555,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		if ( ! sock->get(credlen)) {
 			got_message = false;
 		} else if (credlen) {
-			if (credlen > 0x1000000 * 100) {
-				dprintf(D_ALWAYS, "store_cred: ERROR cred too large (%d). possible protocol mismatch\n", credlen);
+			if (credlen < 0 || credlen > 100 * 1024 * 1024) {
+				dprintf(D_ALWAYS, "store_cred: ERROR cred size invalid (%d). possible protocol mismatch\n", credlen);
 				got_message = false;
 			} else {
 				cred.set((char*)malloc(credlen));
@@ -1567,7 +1571,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	}
 
 	if ( ! got_message || !sock->end_of_message()) {
-		dprintf(D_ALWAYS, "store_cred: did not recieve a valid command\n");
+		dprintf(D_ALWAYS, "store_cred: did not receive a valid command\n");
 		answer = FAILURE_PROTOCOL_MISMATCH;
 		goto cleanup_and_exit;
 	}
@@ -1598,7 +1602,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
-		size_t ix_at = fulluser.find('@');
+		size_t ix_at = fulluser.find_last_of('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
 			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;
@@ -2122,7 +2126,8 @@ do_store_cred (
 
 	if ( is_root() && d == NULL ) {
 		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
-		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
+		bool is_pool_pwd = username_is_pool_password(user) && ((mode & CRED_TYPE_MASK) == STORE_CRED_USER_PWD);
+		if (is_pool_pwd || (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE)) {
 			std::string pw;
 			if (cred) pw.assign((const char *)cred, credlen);
 			return_val = store_cred_password(user, pw.c_str(), mode);
@@ -2292,8 +2297,7 @@ int queryCredential( const char* user, Daemon *d ) {
 */
 
 int do_check_oauth_creds (
-	const classad::ClassAd* request_ads[],
-	int num_ads,
+	const std::vector<const classad::ClassAd*>& request_ads,
 	std::string & outputURL,
 	Daemon* d /* = NULL*/)
 {
@@ -2302,12 +2306,6 @@ int do_check_oauth_creds (
 	std::string daemonid;
 
 	outputURL.clear();
-	if (num_ads < 0) {
-		return -1;
-	}
-	if (num_ads == 0) {
-		return 0;
-	}
 
 	if (! d) {
 		Daemon my_credd(DT_CREDD);
@@ -2334,11 +2332,11 @@ int do_check_oauth_creds (
 
 	bool sent = false;
 	sock->encode();
-	if ( ! sock->put(num_ads)) {
+	if ( ! sock->put(request_ads.size())) {
 		sent = false;
 	} else {
 		sent = true;
-		for (int ii = 0; ii < num_ads; ++ii) {
+		for (size_t ii = 0; ii < request_ads.size(); ++ii) {
 			// to insure backward compability, there are 3 fields that *must* be set to empty strings
 			// if they are missing or undefined. 8.9.9 and later will handle missing fields correctly
 			// but 8.9.* < 8.9.9 will leak values from one attribute to the other 
@@ -2787,6 +2785,13 @@ void CredSorter::Init()
 			m_vault_names.clear();
 		}
 	}
+	// Pelican services must be enumerated explicitly; unlike Vault, an empty or
+	// unset list means there are no Pelican services (no wildcard).  Naming a
+	// service here keeps the Vault wildcard below from claiming it, and lets the
+	// submit side tell the storer to run in Pelican mode.
+	if (!param(m_pelican_names, "PELICAN_CREDMON_PROVIDER_NAMES")) {
+		m_pelican_names.clear();
+	}
 	std::string storer;
 	if (param(storer, "SEC_CREDENTIAL_STORER")) {
 		m_vault_enabled = true;
@@ -2817,6 +2822,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 			return VaultType;
 		}
 	}
+	// Explicitly-named Pelican services are claimed here, before the Vault
+	// wildcard below, so they are not misclassified as Vault.
+	for (const auto& str: StringTokenIterator(m_pelican_names)) {
+		if (cred_name == str) {
+			return PelicanType;
+		}
+	}
 	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
 	bool client_id_defined = param(param_val, param_name.c_str());
 	if (m_oauth2_names.empty() && client_id_defined) {
@@ -2826,4 +2838,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 		return VaultType;
 	}
 	return UnknownType;
+}
+
+const char *CredSorter::StorerMode(CredType type)
+{
+	switch (type) {
+	case VaultType:   return "vault";
+	case PelicanType: return "pelican";
+	default:          return nullptr;
+	}
 }

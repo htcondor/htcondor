@@ -109,7 +109,7 @@ OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *jo
 		}
 		else if ( starter->jic->usingFileTransfer() && transfer_exe ) {
 			formatstr( JobName, "%s%c%s",
-					starter->GetWorkingDir(0),
+					starter->GetWorkingDir(WD::OUTER),
 					DIR_DELIM_CHAR,
 					condor_basename(JobName.c_str()) );
 		}
@@ -248,174 +248,175 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// -1 will be treated as an error.
 	fds[0] = -2; fds[1] = -2; fds[2] = -2;
 
-		// in order to open these files we must have the user's privs:
-	priv_state priv;
-	priv = set_user_priv();
+	size_t *core_size_ptr = nullptr;
+	size_t core_size = 0;
+	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	int *affinity_mask = nullptr;
+	std::string args_string;
+	long rlimit_as_hard_limit = 0;
+	// in order to open these files we must have the user's privs:
+	{
+		TemporaryPrivSentry sentry(PRIV_USER);
 
-	bool stdin_ok;
-	bool stdout_ok;
-	bool stderr_ok;
-	fds[0] = openStdFile( SFT_IN,
-	                      NULL,
-	                      true,
-	                      "Input file");
-	stdin_ok = (fds[0] != -1);
-	fds[1] = openStdFile( SFT_OUT,
-	                      NULL,
-	                      true,
-	                      "Output file");
-	stdout_ok = (fds[1] != -1);
-	fds[2] = openStdFile( SFT_ERR,
-	                      NULL,
-	                      true,
-	                      "Error file");
-	stderr_ok = (fds[2] != -1);
+		bool stdin_ok;
+		bool stdout_ok;
+		bool stderr_ok;
+		fds[0] = openStdFile( SFT_IN,
+				NULL,
+				true,
+				"Input file");
+		stdin_ok = (fds[0] != -1);
+		fds[1] = openStdFile( SFT_OUT,
+				NULL,
+				true,
+				"Output file");
+		stdout_ok = (fds[1] != -1);
+		fds[2] = openStdFile( SFT_ERR,
+				NULL,
+				true,
+				"Error file");
+		stderr_ok = (fds[2] != -1);
 
-	/* Bail out if we couldn't open the std files correctly */
-	if( !stdin_ok || !stdout_ok || !stderr_ok ) {
-		/* only close ones that had been opened correctly */
-		for ( int i = 0; i <= 2; i++ ) {
-			if ( fds[i] >= 0 ) {
-				daemonCore->Close_FD ( fds[i] );
+		/* Bail out if we couldn't open the std files correctly */
+		if( !stdin_ok || !stdout_ok || !stderr_ok ) {
+			/* only close ones that had been opened correctly */
+			for ( int i = 0; i <= 2; i++ ) {
+				if ( fds[i] >= 0 ) {
+					daemonCore->Close_FD ( fds[i] );
+				}
 			}
+			dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
+			dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
+			job_not_started = true;
+			return 0;
 		}
-		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
-		dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
-		set_priv(priv); /* go back to original priv state before leaving */
-		job_not_started = true;
-		return 0;
-	}
 
 		// // // // // // 
 		// Misc + Exec
 		// // // // // // 
 
-	if( !ThisProcRunsAlongsideMainProc() ) {
-		starter->jic->notifyJobPreSpawn();
-	}
+		if( !ThisProcRunsAlongsideMainProc() ) {
+			starter->jic->notifyJobPreSpawn();
+		}
 
-	// compute job's renice value by evaluating the machine's
-	// JOB_RENICE_INCREMENT in the context of the job ad...
+		// compute job's renice value by evaluating the machine's
+		// JOB_RENICE_INCREMENT in the context of the job ad...
 
-    char* ptmp = param( "JOB_RENICE_INCREMENT" );
-	if( ptmp ) {
+		char* ptmp = param( "JOB_RENICE_INCREMENT" );
+		if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
-			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
-				"into job ad, Aborting OsProc::StartJob...\n" );
-			free( ptmp );
-			job_not_started = true;
-			return 0;
-		}
+			if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
+				dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
+						"into job ad, Aborting OsProc::StartJob...\n" );
+				free( ptmp );
+				job_not_started = true;
+				return 0;
+			}
 			// evaluate
-		if( JobAd->LookupInteger( "Renice", nice_inc ) ) {
-			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
-					 ptmp, nice_inc );
-		} else {
-			dprintf( D_ALWAYS, "WARNING: job renice expr (\"%s\") doesn't "
-					 "eval to int!  Using default of 10...\n", ptmp );
-			nice_inc = 10;
-		}
+			if( JobAd->LookupInteger( "Renice", nice_inc ) ) {
+				dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
+						ptmp, nice_inc );
+			} else {
+				dprintf( D_ALWAYS, "WARNING: job renice expr (\"%s\") doesn't "
+						"eval to int!  Using default of 10...\n", ptmp );
+				nice_inc = 10;
+			}
 
 			// enforce valid ranges for nice_inc
-		if( nice_inc < 0 ) {
-			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
-					 "low: adjusted to 0\n", nice_inc );
+			if( nice_inc < 0 ) {
+				dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+						"low: adjusted to 0\n", nice_inc );
+				nice_inc = 0;
+			}
+			else if( nice_inc > 19 ) {
+				dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+						"high: adjusted to 19\n", nice_inc );
+				nice_inc = 19;
+			}
+
+			ASSERT( ptmp );
+			free( ptmp );
+			ptmp = NULL;
+		} else {
+			// if JOB_RENICE_INCREMENT is undefined, default to 0
 			nice_inc = 0;
 		}
-		else if( nice_inc > 19 ) {
-			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
-					 "high: adjusted to 19\n", nice_inc );
-			nice_inc = 19;
-		}
-
-		ASSERT( ptmp );
-		free( ptmp );
-		ptmp = NULL;
-	} else {
-			// if JOB_RENICE_INCREMENT is undefined, default to 0
-		nice_inc = 0;
-	}
 
 		// Grab the full environment back out of the Env object 
-	if(IsFulldebug(D_FULLDEBUG)) {
-		std::string env_string;
-		job_env.getDelimitedStringForDisplay( env_string);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.c_str());
-	}
-
-	// Stash the environment in the manifest directory, if desired.
-	std::string manifest_dir = "_condor_manifest";
-	bool want_manifest = false;
-	if( JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir ) ||
-	   (JobAd->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
-		const std::string f = "environment";
-		FILE * file = starter->OpenManifestFile( f.c_str() );
-		if( file != NULL ) {
+		if(IsFulldebug(D_FULLDEBUG)) {
 			std::string env_string;
 			job_env.getDelimitedStringForDisplay( env_string);
-
-			fprintf( file, "%s\n", env_string.c_str());
-			fclose(file);
-		} else {
-			dprintf( D_ALWAYS, "Failed to open environment log %s: %d (%s)\n", f.c_str(), errno, strerror(errno) );
+			dprintf(D_FULLDEBUG, "Env = %s\n", env_string.c_str());
 		}
-	}
 
-	// Check to see if we need to start this process paused, and if
-	// so, pass the right flag to DC::Create_Process().
-	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
-	bool inherit_starter_env = false;
-	auto_free_ptr envlist(param("JOB_INHERITS_STARTER_ENVIRONMENT"));
-	if (envlist && ! string_is_boolean_param(envlist, inherit_starter_env)) {
-		WhiteBlackEnvFilter filter(envlist);
-		job_env.Import(filter);
-		inherit_starter_env = false; // make sure that CreateProcess doesn't inherit again
-	}
-	if ( ! inherit_starter_env) {
-		job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
-	}
-	bool suspend_job_at_exec = false;
-	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
-	if( suspend_job_at_exec ) {
-		dprintf( D_FULLDEBUG, "OsProc::StartJob(): "
-				 "Job wants to be suspended at exec\n" );
-		job_opt_mask |= DCJOBOPT_SUSPEND_ON_EXEC;
-	}
+		// Stash the environment in the manifest directory, if desired.
+		std::string manifest_dir = "_condor_manifest";
+		bool want_manifest = false;
+		if( JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir ) ||
+				(JobAd->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
+			const std::string f = "environment";
+			FILE * file = starter->OpenManifestFile( f.c_str() );
+			if( file != NULL ) {
+				std::string env_string;
+				job_env.getDelimitedStringForDisplay( env_string);
 
-	// If there is a requested coresize for this job, enforce it.
-	// Convert negative and very large values to RLIM_INFINITY, meaning
-	// no size limit.
-	// RLIM_INFINITY is unsigned, but its value and type size vary.
-	long long core_size_ad;
-	size_t core_size;
-	size_t *core_size_ptr = NULL;
+				fprintf( file, "%s\n", env_string.c_str());
+				fclose(file);
+			} else {
+				dprintf( D_ALWAYS, "Failed to open environment log %s: %d (%s)\n", f.c_str(), errno, strerror(errno) );
+			}
+		}
+
+		// Check to see if we need to start this process paused, and if
+		// so, pass the right flag to DC::Create_Process().
+		bool inherit_starter_env = false;
+		auto_free_ptr envlist(param("JOB_INHERITS_STARTER_ENVIRONMENT"));
+		if (envlist && ! string_is_boolean_param(envlist, inherit_starter_env)) {
+			WhiteBlackEnvFilter filter(envlist);
+			job_env.Import(filter);
+			inherit_starter_env = false; // make sure that CreateProcess doesn't inherit again
+		}
+		if ( ! inherit_starter_env) {
+			job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
+		}
+		bool suspend_job_at_exec = false;
+		JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
+		if( suspend_job_at_exec ) {
+			dprintf( D_FULLDEBUG, "OsProc::StartJob(): "
+					"Job wants to be suspended at exec\n" );
+			job_opt_mask |= DCJOBOPT_SUSPEND_ON_EXEC;
+		}
+
+		// If there is a requested coresize for this job, enforce it.
+		// Convert negative and very large values to RLIM_INFINITY, meaning
+		// no size limit.
+		// RLIM_INFINITY is unsigned, but its value and type size vary.
+		long long core_size_ad;
 #if !defined(WIN32)
-	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
-		if ( core_size_ad < 0 ) {
-			core_size = RLIM_INFINITY;
+		if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
+			if ( core_size_ad < 0 ) {
+				core_size = RLIM_INFINITY;
+			} else {
+				core_size = (size_t)core_size_ad;
+			}
 		} else {
-			core_size = (size_t)core_size_ad;
+			// if ATTR_CORE_SIZE is unset, assume 0
+			core_size = 0;
 		}
-	} else {
-		// if ATTR_CORE_SIZE is unset, assume 0
-		core_size = 0;
-	}
-	core_size_ptr = &core_size;
+		core_size_ptr = &core_size;
 #endif // !defined(WIN32)
 
-	long rlimit_as_hard_limit = 0;
-	char *rlimit_expr = param("STARTER_RLIMIT_AS");
-	if (rlimit_expr) {
-		classad::ClassAdParser parser;
+		char *rlimit_expr = param("STARTER_RLIMIT_AS");
+		if (rlimit_expr) {
+			classad::ClassAdParser parser;
 
-		classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
-		if (tree) {
-			classad::Value val;
-			long long result = 0L;
+			classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
+			if (tree) {
+				classad::Value val;
+				long long result = 0L;
 
-			if (EvalExprToNumber(tree, starter->jic->machClassAd(), JobAd, val) &&
-				val.IsIntegerValue(result)) {
+				if (EvalExprToNumber(tree, starter->jic->machClassAd(), JobAd, val) &&
+						val.IsIntegerValue(result)) {
 					result *= 1024 * 1024; // convert to megabytes
 					rlimit_as_hard_limit = (long)result; // truncate for Create_Process
 					if (result > rlimit_as_hard_limit) {
@@ -428,146 +429,145 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 					if (rlimit_as_hard_limit > 0) {
 						dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
 					}
+				} else {
+					dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
+				}
+				delete tree;
 			} else {
-				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
+				dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
 			}
-			delete tree;
-		} else {
-			dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
+			free( rlimit_expr );
 		}
-		free( rlimit_expr );
-	}
 
-	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
+		affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
 #ifdef WIN32
-	// if we loaded a slot user profile, import environment variables from it
-	bool load_profile = false;
-	bool run_as_owner = false;
-	JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
-	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
-	if (load_profile && !run_as_owner) {
-		const char * username = get_user_loginname();
-		/* publish the users environment into that of the main job's environment */
-		if (!OwnerProfile::environment(job_env, priv_state_get_handle(), username)) {
-			dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
-				username ? username : "<null>");
+		// if we loaded a slot user profile, import environment variables from it
+		bool load_profile = false;
+		bool run_as_owner = false;
+		JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+		JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+		if (load_profile && !run_as_owner) {
+			const char * username = get_user_loginname();
+			/* publish the users environment into that of the main job's environment */
+			if (!OwnerProfile::environment(job_env, priv_state_get_handle(), username)) {
+				dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
+						username ? username : "<null>");
+			}
 		}
-	}
 #endif
 
 		// While we are still in user priv, print out the username
 #if defined(LINUX)
-	htcondor::Singularity::result sing_result; 
-	int orig_args_len = args.Count();
+		htcondor::Singularity::result sing_result; 
+		int orig_args_len = args.Count();
 
-	htcondor::Singularity::UseLauncher launcher = htcondor::Singularity::NO_LAUNCHER;
-	if (SupportsPIDNamespace()) {
-		if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
-			launcher = htcondor::Singularity::USE_LAUNCHER;
-		}
-		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(0), job_env, launcher);
-	} else {
-		sing_result = htcondor::Singularity::DISABLE;
-	}
-
-	if (sing_result == htcondor::Singularity::SUCCESS) {
-		dprintf(D_ALWAYS, "Running job via singularity.\n");
-
-		if (launcher == htcondor::Singularity::USE_LAUNCHER) {
-			droppedContainerLaunched = true;
+		htcondor::Singularity::UseLauncher launcher = htcondor::Singularity::NO_LAUNCHER;
+		if (SupportsPIDNamespace()) {
+			if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
+				launcher = htcondor::Singularity::USE_LAUNCHER;
+			}
+			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(WD::OUTER), job_env, launcher);
+		} else {
+			sing_result = htcondor::Singularity::DISABLE;
 		}
 
-		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
-		if( ssh_enabled ) {
-			SetupSingularitySsh();
-		}
+		if (sing_result == htcondor::Singularity::SUCCESS) {
+			dprintf(D_ALWAYS, "Running job via singularity.\n");
 
-		if (fs_remap) {
-			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
-			fs_remap = NULL;
-		}
-		if (family_info && family_info->want_pid_namespace) {
-			dprintf(D_FULLDEBUG, "PID namespaces cannot be enabled for singularity jobs.\n");
-			job_not_started = true;
-			free(affinity_mask);
-			return 0;
-		}
+			if (launcher == htcondor::Singularity::USE_LAUNCHER) {
+				droppedContainerLaunched = true;
+			}
 
-		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
-			std::string singErrorMessage;
-			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env, singErrorMessage);
-			if (!result) {
-				free(affinity_mask);
+			bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
+			if( ssh_enabled ) {
+				SetupSingularitySsh();
+			}
+
+			if (fs_remap) {
+				dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
+				fs_remap = NULL;
+			}
+			if (family_info && family_info->want_pid_namespace) {
+				dprintf(D_FULLDEBUG, "PID namespaces cannot be enabled for singularity jobs.\n");
 				job_not_started = true;
-				std::string starterErrorMessage = "Singularity test failed:";
-				starterErrorMessage += singErrorMessage;
-				// TODO would be nice to detect if issue is due to user-provided image
-				starter->jic->notifyStarterError(starterErrorMessage.c_str(),
-				                                 true,
-				                                 CONDOR_HOLD_CODE::SingularityTestFailed,
-				                                 -1000);
+				free(affinity_mask);
 				return 0;
 			}
-		}
+
+			if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
+				std::string singErrorMessage;
+				bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env, singErrorMessage);
+				if (!result) {
+					free(affinity_mask);
+					job_not_started = true;
+					std::string starterErrorMessage = "Singularity test failed:";
+					starterErrorMessage += singErrorMessage;
+					// TODO would be nice to detect if issue is due to user-provided image
+					starter->jic->notifyStarterError(starterErrorMessage.c_str(),
+							true,
+							CONDOR_HOLD_CODE::SingularityTestFailed,
+							-1000);
+					return 0;
+				}
+			}
 
 
-	} else if (sing_result == htcondor::Singularity::FAILURE) {
-		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
-		job_not_started = true;
-		free(affinity_mask);
-		return 0;
-	} 
-#else
-	if( false ) {
-	}
-#endif
-	else {
-		char const *username = NULL;
-		char const *how = "";
-		username = get_user_loginname();
-		if( !username ) {
-			username = "same uid as parent: personal condor";
-		}
-		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
-	}
-		// Support USER_JOB_WRAPPER parameter...
-	if( has_wrapper ) {
-
-			// make certain this wrapper program exists and is executable
-		if( access(wrapper.c_str(),X_OK) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
-					 wrapper.c_str() );
+		} else if (sing_result == htcondor::Singularity::FAILURE) {
+			dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
 			job_not_started = true;
 			free(affinity_mask);
 			return 0;
+		} 
+#else
+		if( false ) {
 		}
+#endif
+		else {
+			char const *username = NULL;
+			char const *how = "";
+			username = get_user_loginname();
+			if( !username ) {
+				username = "same uid as parent: personal condor";
+			}
+			dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
+		}
+		// Support USER_JOB_WRAPPER parameter...
+		if( has_wrapper ) {
+
+			// make certain this wrapper program exists and is executable
+			if( access(wrapper.c_str(),X_OK) < 0 ) {
+				dprintf( D_ALWAYS, 
+						"Cannot find/execute USER_JOB_WRAPPER file %s\n",
+						wrapper.c_str() );
+				job_not_started = true;
+				free(affinity_mask);
+				return 0;
+			}
 			// Now, we've got a valid wrapper.  We want that to become
 			// "JobName" so we exec it directly. We also insert the
 			// wrapper filename at the front of args. As a result,
 			// the executable being wrapped is now argv[1] and so forth.
-		args.InsertArg(wrapper.c_str(),0);
-		JobName = wrapper;
-	}
+			args.InsertArg(wrapper.c_str(),0);
+			JobName = wrapper;
+		}
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 
 
-	std::string args_string;
-	args.GetArgsStringForDisplay(args_string, 1);
-	if( has_wrapper ) {
+		args.GetArgsStringForDisplay(args_string, 1);
+		if( has_wrapper ) {
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(),
-				 args_string.c_str() );
-	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
-				 args_string.c_str() );
-	}
+			dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(),
+					args_string.c_str() );
+		} else {
+			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
+					args_string.c_str() );
+		}
 
 
 
-	set_priv ( priv );
+	} // end of priv'ed block
 
     // use this to return more detailed and reliable error message info
     // from create-process operation.
@@ -683,20 +683,31 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			std::string err_msg = "Failed to execute '";
-			err_msg += JobName;
-			err_msg += "'";
-			if(!args_string.empty()) {
-				err_msg += " with arguments ";
-				err_msg += args_string;
-			}
-			err_msg += ": ";
-			err_msg += create_process_err_msg;
-			if( !ThisProcRunsAlongsideMainProc() ) {
-				starter->jic->notifyStarterError( err_msg.c_str(),
-			    	                              true,
-			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
-			            	                      create_process_errno );
+			if (create_process_errno == DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP) {
+				std::string err_msg = "Job was OOM killed by cgroup memory limit "
+					"before it could start. Consider requesting more memory.";
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
+			} else {
+				std::string err_msg = "Failed to execute '";
+				err_msg += JobName;
+				err_msg += "'";
+				if(!args_string.empty()) {
+					err_msg += " with arguments ";
+					err_msg += args_string;
+				}
+				err_msg += ": ";
+				err_msg += create_process_err_msg;
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
 			}
 		}
 
@@ -718,7 +729,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-bool
+ReapResult
 OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
@@ -734,7 +745,7 @@ OsProc::JobReaper( int pid, int status )
 			if (droppedContainerLaunched) {
 				TemporaryPrivSentry sentry(PRIV_USER);
 				
-				std::string launchFilePath = starter->GetWorkingDir(0);
+				std::string launchFilePath = starter->GetWorkingDir(WD::OUTER);
 				launchFilePath += "/.condor_container_launched";
 				struct stat unused;
 				int r = stat(launchFilePath.c_str(), &unused);
@@ -923,22 +934,26 @@ OsProc::ShutdownGraceful()
 		Continue();
 	}
 	requested_exit = true;
-	if ( findRmKillSig(JobAd) != -1 ) {
-		daemonCore->Send_Signal(JobPid, rm_kill_sig);
-	} else {
-		bool sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
-		if (!sent) {
-			dprintf(D_ALWAYS, "Send (softkill) signal failed, retrying...\n");
-			sleep(1);
-			sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
-			if (!sent) {
-				dprintf(D_ALWAYS, "Send (softkill) signal failed twice, hardkill will fire after timeout\n");
-			} else {
-				dprintf(D_ALWAYS, "Send (softkill) signal worked the second time\n");
-			}
-		}
+
+	// Pick the signal to send: prefer the job's remove-kill signal if it is set
+	// always returns SIGTERM (there are no real signals), so this always
+	// resolves to a soft kill delivered via condor_softkill.
+	int kill_sig = (findRmKillSig(JobAd) != -1) ? rm_kill_sig : soft_kill_sig;
+
+	// If we can't even deliver the graceful kill signal, don't wait for the
+	// (distant) vacate deadline to expire -- hard-kill the job now.  On Windows
+	// condor_softkill can fail to find a window owned by the job process
+	// (SOFTKILL_WINDOW_NOT_FOUND), e.g. when a job is removed so soon after it
+	// starts that it has not yet created its window; the job would otherwise
+	// linger until the startd's kill timeout.  ShutdownFast() is virtual, so
+	// VanillaProc::ShutdownFast() tears down the whole process family via
+	// Kill_Family().
+	if (!daemonCore->Send_Signal(JobPid, kill_sig)) {
+		dprintf(D_ALWAYS, "Failed to send graceful kill signal %d to pid %d; escalating to hard kill now\n", kill_sig, JobPid);
+		return ShutdownFast();
 	}
-	return false;	// return false says shutdown is pending	
+
+	return false;	// return false says shutdown is pending
 }
 
 
@@ -1093,16 +1108,48 @@ OsProc::SetupSingularitySsh() {
 	sshListener.close();
 	sshListener.assignDomainSocket(uds);
 
-	// and bind it to a filename in the scratch directory
+	// Bind the socket to .docker_sock in the scratch directory.
+	//
+	// AF_UNIX sun_path is only 108 bytes on Linux, but HTCondor's execute
+	// directory path can be longer than that, so the naive
+	// "workingDir + /.docker_sock" overflows sun_path and bind() returns
+	// ENAMETOOLONG.
+	//
+	// Workaround: open the working directory as a fd and bind() through
+	// /proc/self/fd/<N>/.docker_sock.  /proc/self/fd/<N> is a magic
+	// symlink to whatever the fd points at, so the kernel resolves the
+	// lookup starting from our dirfd and creates the socket inode in the
+	// real (long-path) directory.  The string we actually copy into
+	// sun_path is short -- a small fixed prefix plus an int and the
+	// filename -- so it always fits.  See the matching comment in
+	// docker_proc.cpp::SetupDockerSsh for more detail.
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	// O_PATH suffices: the fd is only used as a directory reference for
+	// /proc/self/fd lookup, never read or written through.
+	int dirfd = -1;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	dirfd = open(workingDir.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+	}
+	if (dirfd < 0) {
+		dprintf(D_ALWAYS, "Cannot open working dir %s for singularity ssh_to_job: %d\n", workingDir.c_str(), errno);
+		return;
+	}
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		dprintf(D_ALWAYS, "Cannot format /proc/self/fd path for singularity ssh_to_job\n");
+		close(dirfd);
+		return;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	{
@@ -1110,9 +1157,11 @@ OsProc::SetupSingularitySsh() {
 	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
 	if (rc < 0) {
 		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for singularity ssh_to_job: %d\n", pipeName.c_str(), errno);
+		close(dirfd);
 		return;
 	}
 	}
+	close(dirfd);
 
 	listen(uds, 50);
 	sshListener._state = Sock::sock_special;
@@ -1159,6 +1208,25 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// Read the length-prefixed command string from docker_enter.
+	// Length 0 means interactive shell; otherwise run the command.
+	std::string ssh_command;
+	uint32_t cmd_len = 0;
+	int cmd_fd = sns->get_file_desc();
+	if (read(cmd_fd, &cmd_len, sizeof(cmd_len)) == sizeof(cmd_len)) {
+		cmd_len = ntohl(cmd_len);
+		if (cmd_len > 0) {
+			ssh_command.resize(cmd_len);
+			int bytes_read = 0;
+			while (bytes_read < (int)cmd_len) {
+				int r = read(cmd_fd, &ssh_command[bytes_read], cmd_len - bytes_read);
+				if (r <= 0) break;
+				bytes_read += r;
+			}
+			ssh_command.resize(bytes_read);
+		}
+	}
+
 	// we have the pid of the singularity process, need pid of the job
 	// sometimes this is the direct child of singularity, sometimes singularity
 	// runs an init-like process and the job is the grandchild of singularity
@@ -1173,7 +1241,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		pid = findChildProc(pid);
 
 	ArgList args;
-	args.AppendArg("/usr/bin/nsenter");
+	args.AppendArg("condor_nsenter"); // argv[0] is ignored, but let's set it to something reasonable
 	args.AppendArg("-t"); // target pid
 	char buf[32];
 	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, pid); *p = '\0';}
@@ -1223,21 +1291,6 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		free(user_name);
 	}
 
-	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
-	if (setuid) {
-		// The default case where singularity is using a setuid wrapper
-		args.AppendArg("-m"); // mount namespace
-		args.AppendArg("-i"); // ipc namespace
-		args.AppendArg("-p"); // pid namespace
-		args.AppendArg("-r"); // root directory
-		args.AppendArg("-w"); // cwd is container's
-
-	} else {
-		args.AppendArg("-U"); // enter only the User namespace
-		args.AppendArg("-r"); // chroot
-		args.AppendArg("-preserve-credentials");
-	}
-
 	Env env;
 	std::string env_errors;
 	if (!starter->GetJobEnv(JobAd,&env, env_errors)) {
@@ -1252,7 +1305,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		// nsenter itself uses _CONDOR_SCRATCH_DIR to decide where the
 		// home directory is, so leave this one behind, set to the
 		// old non-prefixed value
+		//
+		// But if STARTER_NESTED_SCRATCH is true, we need to append /scratch
+		if (param_boolean("STARTER_NESTED_SCRATCH",false)) {
+			target_dir += "/scratch";
+		}
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
+	}
+
+	if (!ssh_command.empty()) {
+		args.AppendArg("--");
+		args.AppendArg("/bin/sh");
+		args.AppendArg("-c");
+		args.AppendArg(ssh_command);
 	}
 
 	std::string bin_dir;
@@ -1260,14 +1325,26 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
 	bin_dir += "/condor_nsenter";
 
+	std::string nsenter_for_display;
+	args.GetArgsStringForDisplay(nsenter_for_display);
+
+	dprintf(D_ALWAYS, "About to exec condor_nsenter with args %s\n", nsenter_for_display.c_str());
     std::string create_process_err_msg;
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
-		 cpArgs.priv(setuid ? PRIV_ROOT: PRIV_USER)
+		 cpArgs.priv(PRIV_ROOT)
 		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+
+	// Close the ssh session fds in the starter; the child has inherited them.
+	// If we keep them open, sshd won't detect the command has finished.
+	for (int i = 0; i <= 2; i++) {
+		if (fds[i] >= 0) {
+			close(fds[i]);
+		}
+	}
 
 #else
 		(void)stream;	// shut the compiler up

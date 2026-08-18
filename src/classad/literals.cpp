@@ -20,6 +20,7 @@
 
 #include "classad/common.h"
 #include "classad/exprTree.h"
+#include "classad/lexer.h"
 #include "classad/util.h"
 
 #include <charconv>
@@ -375,6 +376,43 @@ static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin)
         }
     }
     return offset;
+}
+
+bool
+Literal::IsLiteralToken(Lexer::TokenType tt)
+{
+	switch (tt) {
+	case Lexer::LEX_INTEGER_VALUE:
+	case Lexer::LEX_REAL_VALUE:
+	case Lexer::LEX_BOOLEAN_VALUE:
+	case Lexer::LEX_STRING_VALUE:
+	case Lexer::LEX_UNDEFINED_VALUE:
+	case Lexer::LEX_ERROR_VALUE:
+		return true;
+	default:
+		return false;
+	}
+}
+
+Literal *
+Literal::MakeLiteral(const Lexer::TokenValue &tv)
+{
+	switch (tv.type) {
+	case Lexer::LEX_BOOLEAN_VALUE:
+		return MakeBool(tv.boolValue);
+	case Lexer::LEX_INTEGER_VALUE:
+		return MakeInteger(tv.intValue);
+	case Lexer::LEX_REAL_VALUE:
+		return MakeReal(tv.realValue);
+	case Lexer::LEX_STRING_VALUE:
+		return MakeString(tv.strValue);
+	case Lexer::LEX_UNDEFINED_VALUE:
+		return MakeUndefined();
+	case Lexer::LEX_ERROR_VALUE:
+		return MakeError();
+	default:
+		return nullptr;
+	}
 }
 
 } // classad

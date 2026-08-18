@@ -250,6 +250,28 @@ public:
 		  */
 	bool isLocal( void ) const			{ return _is_local; }
 
+		/** Return true if locate() found this daemon's address by reading a
+		  local file (its address file or daemon ad file) rather than by
+		  querying the collector.  This is a reliable indication that the
+		  daemon is running on this machine.  Only meaningful after locate().
+		  */
+	bool locatedViaLocalFile( void ) const	{ return _located_via_local_file; }
+
+		/** Specify the path to the address file, which will be used
+		*   if locate decides to use an address file and if it exists
+		*/
+	void specify_address_file(std::string_view address_file) {
+		if (address_file.empty()) { _specified_address_file.clear(); }
+		else {_specified_address_file = address_file;}
+	}
+
+		/** return the specified address file, or nullptr if one was not specified.
+		*/
+	const char * specified_address_file() const {
+		if (_specified_address_file.empty()) return nullptr;
+		return _specified_address_file.c_str();
+	}
+
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to
 		  describe the daemon, it's type, and it's location.  For
@@ -459,14 +481,13 @@ public:
 			@param st The type of the Sock you want to use.
 			@param sec The timeout you want to use on your Sock.
 			@param errstack NULL or error stack to dump errors into.
-			@param callback_fn function to call when finished
-			                   Must be non-NULL
-			@param misc_data any data caller wants passed to callback_fn
+			@param callback the std::function to call when finished; its
+			                closure owns any caller state.  Must not be empty.
 			@param raw_protocol to bypass all security negotiation, set to true
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -488,16 +509,15 @@ public:
 			@param sock The	Sock you want to use.
 			@param timeout The number of seconds you want to use on your Sock.
 			@param errstack NULL or errstack to dump errors into
-			@param callback_fn NULL or function to call when finished
-			                   If NULL and sock is UDP, will return
-							   StartCommandWouldBlock if TCP session key
-							   setup is in progress.
-			@param misc_data any data caller wants passed to callback_fn
+			@param callback the std::function to call when finished; its
+			                closure owns any caller state.  If empty and
+			                sock is UDP, will return StartCommandWouldBlock
+			                if TCP session key setup is in progress.
 			@param raw_protocol to bypass all security negotiation, set to true
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -679,8 +699,8 @@ public:
 	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
 	const std::string& getPreferredToken() { return m_preferred_token; }
 
-	void setForceAuthentication(bool force) { m_force_auth = force; }
-	bool getForceAuthentication() { return m_force_auth; }
+	void setRequestAuthentication(bool request) { m_request_auth = request; }
+	bool getRequestAuthentication() { return m_request_auth; }
 
 protected:
 	// Data members
@@ -694,6 +714,7 @@ protected:
 	std::string _platform;
 	std::string _pool;
 	std::string _error;
+	std::string _specified_address_file;
 	CAResult _error_code;
 	std::string _id_str;
 	std::string _subsys;
@@ -701,13 +722,14 @@ protected:
 	int _port;
 	daemon_t _type;
 	bool _is_local;
+	bool _located_via_local_file{false};
 	bool _tried_locate;
 	bool _tried_init_hostname;
 	bool _tried_init_version;
 	bool _is_configured;
 	bool _locate_local_only{false};
 	bool m_should_try_token_request{false};
-	bool m_force_auth{false};
+	bool m_request_auth{false};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
@@ -911,10 +933,10 @@ protected:
 	bool checkAddr( void );
 
 		/**
-           Helper method for commands to see if we've already
-           authenticated this socket, and if not, to try to do so.
+		   Helper method for commands to see if we've already
+		   authenticated this socket, and if not, to try to do so.
 		*/
-    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
+	bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -931,17 +953,11 @@ protected:
 
 		/**
 		   Internal function used by public versions of startCommand().
-		   It may be either blocking or nonblocking, depending on the
-		   nonblocking flag.  This version creates a socket of the
-		   specified type and connects it.
+		   This blocking version creates a socket of the specified type
+		   and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
-		/**
-		   Class used internally to handle non-blocking connects for
-		   startCommand().
-		*/
-	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
 
 private:

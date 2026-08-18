@@ -744,8 +744,8 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
 
         int count = 0;
         while ( adFileIter.next( transfer_file_ad ) > 0 ) {
-            transfer_file_ad.EvaluateAttrString( "LocalFileName", local_file_name );
-            transfer_file_ad.EvaluateAttrString( "Url", url );
+            if(! transfer_file_ad.EvaluateAttrString( "LocalFileName", local_file_name )) { continue; }
+            if(! transfer_file_ad.EvaluateAttrString( "Url", url )) { continue; }
             request_details.local_file_name = local_file_name;
 
             if (url.substr(0, 7) == "davs://") {
@@ -1172,7 +1172,7 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"" PLUGIN_VERSION "\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "ProtocolVersion = 2\n"
+                "ProtocolVersion = 4\n"
             );
             printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
 

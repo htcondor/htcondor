@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
+#include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "vanilla_proc.h"
@@ -182,7 +183,7 @@ static bool cgroup_controller_is_writeable(const std::string &controller, std::s
 		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
 
 		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
-			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is usable\n", controller.c_str(), relative_cgroup.c_str());
 			return true;
 		}
 	}
@@ -360,8 +361,10 @@ VanillaProc::StartJob()
 			std::string available_gpus;
 			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
 			classad::Value v;
-			starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
-			v.IsStringValue(available_gpus);
+			// if the expression does not evaluate to a string, available_gpus
+			// remains empty, which means hide all (see below)
+			std::ignore = starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			std::ignore = v.IsStringValue(available_gpus);
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
@@ -435,94 +438,7 @@ VanillaProc::StartJob()
 
 #endif
 
-// The chroot stuff really only works on linux
 #ifdef LINUX
-	{
-        // Have Condor manage a chroot
-       std::string requested_chroot_name;
-       JobAd->LookupString("RequestedChroot", requested_chroot_name);
-       const char * allowed_root_dirs = param("NAMED_CHROOT");
-       if (requested_chroot_name.size()) {
-               dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
-               bool acceptable_chroot = false;
-               std::string requested_chroot;
-               for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
-                       StringTokenIterator chroot_spec(next_chroot, "=");
-                       const char* tok;
-                       tok = chroot_spec.next();
-                       if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-                               continue;
-                       }
-                       std::string chroot_name = tok;
-                       tok = chroot_spec.next();
-                       if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-                               continue;
-                       }
-                       std::string next_dir = tok;
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot.c_str());
-                       if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
-                               acceptable_chroot = true;
-                               requested_chroot = next_dir;
-                       }
-               }
-               // TODO: path to chroot MUST be all root-owned, or we have a nice security exploit.
-               // Is this the responsibility of Condor to check, or the sysadmin who set it up?
-               if (!acceptable_chroot) {
-                       return FALSE;
-               }
-               dprintf(D_FULLDEBUG, "Will attempt to set the chroot to %s.\n", requested_chroot.c_str());
-
-               std::stringstream ss;
-               std::stringstream ss2;
-               ss2 << starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
-               std::string execute_dir = ss2.str();
-               ss << requested_chroot << DIR_DELIM_CHAR << ss2.str();
-               std::string full_dir_str = ss.str();
-               if (is_trivial_rootdir(requested_chroot)) {
-                   dprintf(D_FULLDEBUG, "Requested a trivial chroot %s; this is a no-op.\n", requested_chroot.c_str());
-               } else if (IsDirectory(execute_dir.c_str())) {
-                       {
-                           TemporaryPrivSentry sentry(PRIV_ROOT);
-                           if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
-                               dprintf( D_ERROR,
-                                   "Failed to create sandbox directory in chroot (%s): %s\n",
-                                   full_dir_str.c_str(),
-                                   strerror(errno) );
-                               return FALSE;
-                           }
-                           if (chown(full_dir_str.c_str(),
-                                     get_user_uid(),
-                                     get_user_gid()) == -1)
-                           {
-                               EXCEPT("chown error on %s: %s",
-                                      full_dir_str.c_str(),
-                                      strerror(errno));
-                           }
-                       }
-                       if (!fs_remap) {
-                           fs_remap.reset(new FilesystemRemap());
-                       }
-                       dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
-                       if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
-                               // FilesystemRemap object prints out an error message for us.
-                               return FALSE;
-                       }
-                       dprintf(D_FULLDEBUG, "Adding mapping %s -> %s.\n", requested_chroot.c_str(), "/");
-                       std::string root_str("/");
-                       if (fs_remap->AddMapping(requested_chroot, root_str)) {
-                               return FALSE;
-                       }
-               } else {
-                       dprintf(D_ALWAYS, "Unable to do chroot because working dir %s does not exist.\n", execute_dir.c_str());
-               }
-       } else {
-               dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
-       }
-	}
-// End of chroot 
-
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
 	std::string mount_under_scratch;
@@ -560,7 +476,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (! mount_under_scratch.empty() && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = starter->GetWorkingDir(0);
+		const char* working_dir = starter->GetWorkingDir(WD::OUTER);
 
 		if (IsDirectory(working_dir)) {
 			if (!fs_remap) {
@@ -637,7 +553,7 @@ VanillaProc::StartJob()
 			std::string arg_errors;
 			std::string filename;
 
-			filename = starter->GetWorkingDir(0);
+			filename = starter->GetWorkingDir(WD::OUTER);
 			filename += "/.condor_pid_ns_status";
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
@@ -914,7 +830,7 @@ void VanillaProc::killFamilyIfWarranted() {
 	}
 }
 
-void VanillaProc::restartCheckpointedJob() {
+bool VanillaProc::restartCheckpointedJob() {
 
 	// daemoncore unregisters the family
 	// after it calls the reaper, if it was registered.
@@ -952,6 +868,47 @@ void VanillaProc::restartCheckpointedJob() {
 			notifyFailedPeriodicCheckpoint(checkpointNumber);
 	}
 
+	//
+	// New semantic: restarting a checkpointed job is now considered
+	// equivalent to reactivating a claim, so ask the startd if a claim
+	// reactivation would succeed.
+	//
+	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", true ) )
+	{
+		DCStartd startd((const char *)nullptr);
+		if(! startd.locate()) {
+			dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
+
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		std::string claimID;
+		if(! starter->getJobClaimId(claimID)) {
+			dprintf( D_ERROR, "Unable to get my job's claim ID.\n" );
+
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		startd.setClaimId(claimID);
+
+		bool claim_is_closing = false;
+		bool OK = startd.reactivateClaimCheck(claim_is_closing);
+		if(! OK) {
+			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
+
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		if( claim_is_closing ) {
+			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
+
+			// We didn't restart the job (and didn't want to).
+			return false;
+		}
+    }
+
+    restart_job:;
+
 	// While it's arguably sensible to kill the process family
 	// before we restart the job, that would mean that checkpointing
 	// would behave differently during ssh-to-job, which seems bad.
@@ -959,6 +916,9 @@ void VanillaProc::restartCheckpointedJob() {
 
 	m_proc_exited = false;
 	StartJob();
+
+	// We started the job.
+	return true;
 }
 
 
@@ -991,9 +951,11 @@ VanillaProc::outOfMemoryEvent() {
 	// But sometimes the job dies before we can poll for memory on systems 
 	// that don't have a memory.peak, and we get 0 MB. Assume job hit
 	// memory limit, and report that number, not the confusing 0 bytes used.
-	if (usageMB == 0) {
+	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
+	if ((usageMB == 0) || (should_hold)) {
 		usageMB = m_memory_limit / (1024 * 1024);
 	}
+
 	//
 	//  Cgroup memory limits are limits, not reservations.
 	//  For many reasons, a job could be below the memory limit,
@@ -1016,7 +978,6 @@ VanillaProc::outOfMemoryEvent() {
 	// a quickly-growing job can have a last-reported memory significantly
 	// lower than the limit.  In this case we want to always hold the job
 	// and report and out-of-memory condition
-	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
 
 	if (!should_hold) {
 		if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
@@ -1046,7 +1007,7 @@ VanillaProc::outOfMemoryEvent() {
 	return 0;
 }
 
-bool
+ReapResult
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
@@ -1071,8 +1032,8 @@ VanillaProc::JobReaper(int pid, int status)
 	if( m_pid_ns_status_filename.length() > 0 ) {
 		status = pidNameSpaceReaper( status );
 	}
-	bool jobExited = OsProc::JobReaper( pid, status );
-	if( pid != JobPid ) { return jobExited; }
+	ReapResult result = OsProc::JobReaper( pid, status );
+	if( pid != JobPid ) { return result; }
 
 	//
 	// We have three cases to consider:
@@ -1092,12 +1053,37 @@ VanillaProc::JobReaper(int pid, int status)
 		if( exit_status == successfulCheckpointStatus ) {
 			if( isSoftKilling ) {
 				notifySuccessfulEvictionCheckpoint();
-				return true;
+				return ReapResult::JobDone;
 			}
 
-			restartCheckpointedJob();
-			isCheckpointing = false;
-			return false;
+			if( restartCheckpointedJob() ) {
+				isCheckpointing = false;
+				return ReapResult::JobShouldReExec;
+			} else {
+				// We need to prevent (final) output transfer from happening
+				// as well as ensure that the job is requeued.  The latter
+				// should happen automatically as a result of the former,
+				// but doesn't.
+				starter->jic->setOutputTransfer(true);
+				starter->SetVacateReason(
+					"Rescheduling self-checkpoint job after checkpoint upload because reactivating the claim would have failed.",
+					CONDOR_HOLD_CODE::SuccessfulCheckpoint, 0
+				);
+				starter->jicNotifyStarterError( true );
+				requested_exit = true;
+
+				// At this point, the shadow will ask the startd to deactivate
+				// the claim, but the startd will block waiting for the starter
+				// to exit, so we'll just exit first.  (Arguably, we should
+				// schedule a zero-second timer here to exit so that we can
+				// exit through the event loop.)
+				starter->StarterExit( JOB_SHOULD_REQUEUE );
+
+				// This job is done, but we want to avoid reporting a job
+				// exit here, because it will be misinterpreted as a job
+				// termination, and we need the job rescheduled.
+				return ReapResult::JobShouldReExec;
+			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
 			// anything, it will be reported as if the error code or signal
@@ -1129,17 +1115,42 @@ VanillaProc::JobReaper(int pid, int status)
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
 			starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
 			starter->Hold();
-			return true;
+			return ReapResult::JobDone;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() and the job self-checkpointed.\n" );
 
 		if( isSoftKilling ) {
 			notifySuccessfulEvictionCheckpoint();
-			return true;
+			return ReapResult::JobDone;
 		} else {
-			restartCheckpointedJob();
-			return false;
+			if( restartCheckpointedJob() ) {
+				return ReapResult::JobShouldReExec;
+			} else {
+				// We need to prevent (final) output transfer from happening
+				// as well as ensure that the job is requeued.  The latter
+				// should happen automatically as a result of the former,
+				// but doesn't.
+				starter->jic->setOutputTransfer(true);
+				starter->SetVacateReason(
+					"Rescheduling self-checkpoint job after checkpoint upload because reactivating the claim would have failed.",
+					CONDOR_HOLD_CODE::SuccessfulCheckpoint, 0
+				);
+				starter->jicNotifyStarterError( true );
+				requested_exit = true;
+
+				// At this point, the shadow will ask the startd to deactivate
+				// the claim, but the startd will block waiting for the starter
+				// to exit, so we'll just exit first.  (Arguably, we should
+				// schedule a zero-second timer here to exit so that we can
+				// exit through the event loop.)
+				starter->StarterExit( JOB_SHOULD_REQUEUE );
+
+				// This job is done, but we want to avoid reporting a job
+				// exit here, because it will be misinterpreted as a job
+				// termination, and we need the job rescheduled.
+				return ReapResult::JobShouldReExec;
+			}
 		}
 	} else {
 		// If the parent job process died, clean up all of the job's processes.
@@ -1155,7 +1166,7 @@ VanillaProc::JobReaper(int pid, int status)
 		// force that no
 		daemonCore->Unregister_subfamily(pid);
 
-		return jobExited;
+		return result;
 	}
 }
 

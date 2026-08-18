@@ -44,9 +44,13 @@ add_library(condor_version_obj STATIC condor_version.cpp)
 # Ideally, as we break dependencies, more of these move into just libcondor_utils
 set(CONDOR_API_AND_UTILS_SRC
 basename.cpp
+catalog_utils.h
+catalog_utils.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
+classad_string_utils.cpp
+classad_string_utils.h
 compat_classad.cpp
 compat_classad.h
 compat_classad_util.cpp
@@ -156,6 +160,10 @@ ad_printmask.h
 print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
+archive_reader.cpp
+archive_reader.h
+librarian_client.cpp
+librarian_client.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h
@@ -192,6 +200,7 @@ classad_oldnew.h
 classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
+classy_counted_ptr.cpp
 classy_counted_ptr.h
 command_strings.cpp
 command_strings.h
@@ -702,6 +711,7 @@ if (LINUX OR APPLE)
     endif()
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
+    target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
 endif(LINUX OR APPLE)
 
 if (LINUX)
@@ -729,6 +739,7 @@ endif()
 
 target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND})
 target_link_libraries(condor_utils PUBLIC ${SECURITY_LIBS})
+target_link_libraries(condor_utils PUBLIC ${SQLITE3_LIB})
 
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils PUBLIC ${LIBUUID_FOUND})
@@ -814,3 +825,4 @@ condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_classad_log "test_classad_log.cpp" "${CONDOR_TOOL_LIBS}" )

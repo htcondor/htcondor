@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <vector>
 
 #if defined(Darwin)
 #include <sys/sysctl.h>
@@ -304,29 +305,19 @@ init_utsname(void)
 	}
 
 	utsname_sysname = strdup( buf.sysname );
-	if( !utsname_sysname ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_sysname);
 
 	utsname_nodename = strdup( buf.nodename );
-	if( !utsname_nodename ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_nodename);
 
 	utsname_release = strdup( buf.release );
-	if( !utsname_release ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_release);
 
 	utsname_version = strdup( buf.version );
-	if( !utsname_version ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_version);
 
 	utsname_machine = strdup( buf.machine );
-	if( !utsname_machine ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_machine);
         
 	if ( utsname_sysname && utsname_nodename && utsname_release ) {
 		utsname_inited = true;
@@ -343,14 +334,10 @@ init_arch(void)
 	}
 
 	uname_arch = strdup( buf.machine );
-	if( !uname_arch ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(uname_arch);
 
 	uname_opsys = strdup( buf.sysname );
-	if( !uname_opsys ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(uname_opsys);
 
 	// 02-14-2012 bgietzel
 	// New section for determining OpSys related params
@@ -486,21 +473,23 @@ sysapi_get_darwin_info(void)
 
 	int major = 0, minor = 0, patch = 0;
 	int fields = sscanf(ver_str, "%d.%d.%d", &major, &minor, &patch);
-	if (major < 10 || major > 14 || fields < 2 || (major == 10 && fields != 3)) {
+	if (major < 10 || fields < 2 || (major == 10 && fields != 3)) {
 		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
 	}
 
     snprintf( tmp_info, sizeof(tmp_info), "%s%d.%d", os_name, major, minor);
     opsys_long_name = strdup( tmp_info );
 
-    if( !opsys_long_name ) {
-    	EXCEPT( "Out of memory!" );
-    }
+	ASSERT(opsys_long_name);
 
 	opsys_major_version = major;
 
 	const char *osname = "Unknown";
-	if ( major == 14 ) {
+	if ( major == 26 ) {
+		osname = "Tahoe";
+	} else if ( major == 15 ) {
+		osname = "Sequoia";
+	} else if ( major == 14 ) {
 		osname = "Sonoma";
 	} else if ( major == 13 ) {
 		osname = "Ventura";
@@ -518,9 +507,7 @@ sysapi_get_darwin_info(void)
 
 	opsys_name = strdup(osname);
 
-	if (!opsys_name) {
-		EXCEPT("Out of memory!");
-	}
+	ASSERT(opsys_name);
 }
 
 #elif defined( CONDOR_FREEBSD )
@@ -528,15 +515,13 @@ sysapi_get_darwin_info(void)
 const char * 
 sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release) 
 {
-    char tmp_info[strlen(tmp_opsys_short_name) + 1 + 10];
+    std::vector<char> tmp_info(strlen(tmp_opsys_short_name) + 1 + 10);
     char *info_str;
 
-    snprintf( tmp_info, sizeof(tmp_info), "%s%s", tmp_opsys_short_name, tmp_release);
-    info_str = strdup( tmp_info );
+    snprintf( tmp_info.data(), tmp_info.size(), "%s%s", tmp_opsys_short_name, tmp_release);
+    info_str = strdup( tmp_info.data() );
 
-    if( !info_str ) {
-    	EXCEPT( "Out of memory!" );
-    }
+	ASSERT(info_str);
 
     return info_str;
 }
@@ -628,9 +613,7 @@ sysapi_get_linux_info(void)
 		info_str = strdup( "Unknown" );
 	}
 
-	if( !info_str ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(info_str);
 
 	return info_str;
 }
@@ -705,10 +688,8 @@ sysapi_find_linux_name( const char *info_str )
 	{
                 distro = strdup("LINUX");
  	}
-	
-  	if( !distro ) {
-                EXCEPT( "Out of memory!" );
-        }
+
+	ASSERT(distro);
 	free( distro_name_lc );
 	return distro;
 }
@@ -783,9 +764,7 @@ sysapi_get_unix_info( const char *sysname,
         }
 
 	tmpopsys = strdup( tmp );
-	if( !tmpopsys ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(tmpopsys);
 	return( tmpopsys );
 }
 
@@ -823,16 +802,14 @@ sysapi_find_major_version ( const char *info_str )
 const char *
 sysapi_find_opsys_versioned( const char *tmp_opsys, int tmp_opsys_major_version )
 {
-        char tmp_opsys_versioned[strlen(tmp_opsys) + 1 + 10];
+        std::vector<char> tmp_opsys_versioned(strlen(tmp_opsys) + 1 + 10);
         char *my_opsys_versioned;
 
-        snprintf( tmp_opsys_versioned, sizeof(tmp_opsys_versioned), "%s%d", tmp_opsys, tmp_opsys_major_version);
+        snprintf( tmp_opsys_versioned.data(), tmp_opsys_versioned.size(), "%s%d", tmp_opsys, tmp_opsys_major_version);
 
-	my_opsys_versioned = strdup( tmp_opsys_versioned );
-        if( !my_opsys_versioned ) {
-                EXCEPT( "Out of memory!" );
-        }
-        return my_opsys_versioned;
+	my_opsys_versioned = strdup( tmp_opsys_versioned.data() );
+	ASSERT(my_opsys_versioned);
+	return my_opsys_versioned;
 }
 
 int

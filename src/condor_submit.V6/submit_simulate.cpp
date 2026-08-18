@@ -249,12 +249,3 @@ int SimScheddQ::send_Jobset(int cluster_id, const ClassAd * jobset_ad)
 	}
 	return 0;
 }
-
-int SimScheddQ::send_SpoolFile(char const * filename) {
-	if (fp) { fprintf(fp, "::send_SpoolFile: %s\n", filename); }
-	return 0;
-}
-int SimScheddQ::send_SpoolFileBytes(char const * filename) {
-	if (fp) { fprintf(fp, "::send_SpoolFileBytes: %s\n", filename); }
-	return 0;
-}

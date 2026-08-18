@@ -67,6 +67,11 @@ typedef struct hipUUID_t {
 //---
 // Common headers for both NVCC and HCC paths:
 
+//NOTE: the actual hip_runtime_api has these defines uncommented
+//#define hipGetDeviceProperties hipGetDevicePropertiesR0600
+//#define hipDeviceProp_t hipDeviceProp_tR0600
+//#define hipChooseDevice hipChooseDeviceR0600
+
 /**
  * hipDeviceProp
  * Copied from https://rocm.docs.amd.com/projects/HIP/en/latest/doxygen/html/structhip_device_prop__t.html
@@ -74,7 +79,7 @@ typedef struct hipUUID_t {
 
 typedef struct hipDeviceProp_t {
     char name[256];                   ///< Device name.
-    char uuid[16];                     ///< UUID of a device
+    hipUUID uuid;                     ///< UUID of a device
     char luid[8];                     ///< 8-byte unique identifier. Only valid on windows
     unsigned int luidDeviceNodeMask;  ///< LUID node mask
     size_t totalGlobalMem;            ///< Size of global memory region (in bytes).
@@ -354,8 +359,9 @@ typedef enum hipError_t {
 
 
 typedef hipError_t  (HIP_API_CALL* hipDeviceCount_t)(int *);
-typedef hipError_t  (HIP_API_CALL* hipDeviceProperties_t)(hipDeviceProp_t *, int);
-typedef hipError_t  (HIP_API_CALL * hipDriverGetVersion_t)(int*);
+typedef hipError_t  (HIP_API_CALL* hipDeviceProperties_t)(hipDeviceProp_t *, int dev);
+typedef hipError_t  (HIP_API_CALL* hipDriverGetVersion_t)(int*);
+typedef hipError_t  (HIP_API_CALL* hipDeviceGetUuid_t)(hipUUID_t *, int dev);
 
 
 //#if defined(__cplusplus)

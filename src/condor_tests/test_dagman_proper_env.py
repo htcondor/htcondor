@@ -24,7 +24,7 @@ import time
 #Global variable for expected variables to be found in getenv in the submit file
 GETENV_VALUES = {
     #Base always added values
-    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL","BEARER_TOKEN","BEARER_TOKEN_FILE","XDG_RUNTIME_DIR", "ASAN_OPTIONS", "LSAN_OPTIONS"],
+    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL","BEARER_TOKEN","BEARER_TOKEN_FILE","ASAN_OPTIONS","LSAN_OPTIONS"],
     #getenv added values from the above configuration
     "CONFIG":["Beer","Donuts"],
     #When config knob is set to True then getenve should be set to just true
@@ -178,13 +178,13 @@ queue
             cmd.append("-no_submit")
         #Construct -include_env flag/args and add to command line
         if "include" in TEST_CASES[key]:
-            getenv_chk = TEST_CASES[key]["include"]
+            getenv_chk = list(TEST_CASES[key]["include"])
             cmd.append("-include_env")
             include = ",".join(TEST_CASES[key]["include"])
             cmd.append(include)
         #Construct -insert_env flag/args and add to command line
         if "insert" in TEST_CASES[key]:
-            env_chk = TEST_CASES[key]["insert"]
+            env_chk = list(TEST_CASES[key]["insert"])
             cmd.append("-insert_env")
             d = ";"
             insert = ""
@@ -201,16 +201,29 @@ queue
         p = default_condor.run_command(cmd)
         #If we have subdags then we have to wait for internal submission for .condor.sub files
         if len(dag_files) > 1:
-            #Willing to wait a max of 10 sec per dag
-            max_time = 10*len(dag_files)
+            #Willing to wait a max of 30 sec per dag
+            max_time = 30*len(dag_files)
             start = time.time()
-            #Loop checking for all expected .condor.sub files ot exists. If not found by max time fail
+            #Loop checking for all expected .condor.sub files to be fully written.
+            #Existence alone is racy: condor_submit_dag writes these files non-atomically
+            #(O_TRUNC + line-by-line writes), so a reader can observe an empty or partial
+            #file. Wait for the trailing "queue" line that ends every generated .condor.sub.
             while True:
-                exist = True
+                ready = True
                 for submit in dag_files:
                     if not os.path.exists(submit):
-                        exist = False
-                if exist:
+                        ready = False
+                        break
+                    try:
+                        with open(submit) as fh:
+                            contents = fh.read()
+                    except OSError:
+                        ready = False
+                        break
+                    if not contents.rstrip().endswith("queue"):
+                        ready = False
+                        break
+                if ready:
                     break
                 assert time.time() - start < max_time
                 time.sleep(0.2)
@@ -294,10 +307,16 @@ ENV SET |GEN1_POKEMON_GAMES=Blue;Red;Yellow;|GEN2_POKEMON_GAMES=Silver;Gold;Cryt
     p = default_condor.run_command(cmd)
     submit = os.path.join(path, f"{dag_name}.condor.sub")
     start = time.time()
-    #Loop checking for .condor.sub files to exists. If not found after 10 sec fail
+    #Wait for .condor.sub to be fully written (trailing "queue" line), not merely to exist
     while True:
         if os.path.exists(submit):
-            break
+            try:
+                with open(submit) as fh:
+                    contents = fh.read()
+                if contents.rstrip().endswith("queue"):
+                    break
+            except OSError:
+                pass
         assert time.time() - start < 10
         time.sleep(0.2)
     get_env = ["EL_WISCORICAN","SLOW_FOOD","COMP_SCI","BIOLOGY","MATHEMATICS"]

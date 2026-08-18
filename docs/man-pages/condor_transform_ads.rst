@@ -108,30 +108,38 @@ Examples
 Here's a simple example that transforms the given input ClassAds
 according to the given rules:
 
+.. code-block:: condor-classad
+    :caption: Input file (my_input)
+
+    # File: my_input
+    ResidentSetSize = 500
+    DiskUsage = 2500000
+    NumCkpts = 0
+    TransferrErr = false
+    Err = "/dev/null"
+
 .. code-block:: text
+    :caption: Rules file (my_rules)
 
-      # File: my_input
-      ResidentSetSize = 500
-      DiskUsage = 2500000
-      NumCkpts = 0
-      TransferrErr = false
-      Err = "/dev/null"
+    # File: my_rules
+    EVALSET MemoryUsage ( ResidentSetSize / 100 )
+    EVALMACRO WantDisk = ( DiskUsage * 2 )
+    SET RequestDisk ( $(WantDisk) / 1024 )
+    RENAME NumCkpts NumCheckPoints
+    DELETE /(.+)Err/
 
-      # File: my_rules
-      EVALSET MemoryUsage ( ResidentSetSize / 100 )
-      EVALMACRO WantDisk = ( DiskUsage * 2 )
-      SET RequestDisk ( $(WantDisk) / 1024 )
-      RENAME NumCkpts NumCheckPoints
-      DELETE /(.+)Err/
+.. code-block:: console
+    :caption: Command execution
 
-      # Command:
-      condor_transform_ads -rules my_rules -in my_input
+    $ condor_transform_ads -rules my_rules -in my_input
 
-      # Output:
-      DiskUsage = 2500000
-      Err = "/dev/null"
-      MemoryUsage = 5
-      NumCheckPoints = 0
-      RequestDisk = ( 5000000 / 1024 )
-      ResidentSetSize = 500
+.. code-block:: condor-classad
+    :caption: Resulting ClassAd output
+
+    DiskUsage = 2500000
+    Err = "/dev/null"
+    MemoryUsage = 5
+    NumCheckPoints = 0
+    RequestDisk = ( 5000000 / 1024 )
+    ResidentSetSize = 500
 

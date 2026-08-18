@@ -343,9 +343,7 @@ JICLocal::initJobInfo( void )
 
 	std::string orig_job_iwd;
 
-	if( ! job_ad ) {
-		EXCEPT( "JICLocal::initJobInfo() called with NULL job ad!" );
-	}
+	ASSERT(job_ad);
 
 		// stash the executable name in orig_job_name
 	if( ! job_ad->LookupString(ATTR_JOB_CMD, &orig_job_name) ) {
@@ -361,8 +359,8 @@ JICLocal::initJobInfo( void )
 		// stash the iwd name in orig_job_iwd
 	if( ! job_ad->LookupString(ATTR_JOB_IWD, orig_job_iwd) ) {
 		dprintf(D_ALWAYS, "%s not found in job ad, setting to %s\n",
-				ATTR_JOB_IWD, starter->GetWorkingDir(0));
-		job_ad->Assign(ATTR_JOB_IWD, starter->GetWorkingDir(0));
+				ATTR_JOB_IWD, starter->GetWorkingDir(WD::OUTER));
+		job_ad->Assign(ATTR_JOB_IWD, starter->GetWorkingDir(WD::OUTER));
 	} else {
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
@@ -551,7 +549,7 @@ JICLocal::initUserCredentials()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	std::string sandbox_dir_name;
-	dircat(starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+	dircat(starter->GetWorkingDir(WD::OUTER), ".condor_creds", sandbox_dir_name);
 
 	htcondor::LocalUnivCredDirCreator creds(*job_ad, sandbox_dir_name);
 	CondorError err;

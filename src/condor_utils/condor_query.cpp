@@ -53,7 +53,7 @@ static const int command_int_from_adtype_table[NUM_AD_TYPES] = {
 	QUERY_GENERIC_ADS,	//DATABASE_AD
 	QUERY_GENERIC_ADS,	//TT_AD
 	QUERY_GRID_ADS,		//GRID_AD
-	0,//XFER_SERVICE_AD  /* No longer used */
+	QUERY_GENERIC_ADS,	//PLACEMENTD_AD
 	0,//LEASE_MANAGER_AD /* No longer used */
 	QUERY_GENERIC_ADS,	//DEFRAG_AD
 	QUERY_ACCOUNTING_ADS,//ACCOUNTING_AD = 23
@@ -325,6 +325,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_GENERIC_ADS;
 		break;
 
+	  case PLACEMENTD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_GENERIC_ADS;
+		break;
+
 	  case GENERIC_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -536,21 +543,21 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	bool orig_auth = collector.getForceAuthentication();
-	collector.setForceAuthentication(requireAuth);
+	bool orig_auth = collector.getRequestAuthentication();
+	collector.setRequestAuthentication(requestAuth);
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
-		collector.setForceAuthentication(orig_auth);
+		collector.setRequestAuthentication(orig_auth);
 		if (sock) {
 			delete sock;
 		}
 		return Q_COMMUNICATION_ERROR;
 	}
 
-	collector.setForceAuthentication(orig_auth);
+	collector.setRequestAuthentication(orig_auth);
 
 	// get result
 	sock->decode ();
@@ -582,22 +589,6 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 	delete sock;
 
 	return (Q_OK);
-}
-
-// callback used by fetchAds
-static bool fetchAds_callback(void* pv, ClassAd * ad) { ClassAdList * padList = (ClassAdList *)pv; padList->Insert (ad); return false; }
-
-// fetch all ads from the collector that satisfy the constraints
-QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
-{
-	return processAds(fetchAds_callback, &adList, poolName, errstack);
-}
-
-QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack)
-{
-	return processAds(fetchAds_callback, &adList, collector, errstack);
 }
 
 void CondorQuery::
@@ -732,9 +723,13 @@ getQueryAd (ClassAd &queryAd)
 		queryAd.Assign(ATTR_TARGET_TYPE, STORAGE_ADTYPE);
 		break;
 
-	  case CREDD_AD:
-		queryAd.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE);
-		break;
+	  case CREDD_AD: 
+		queryAd.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE); 
+		break; 
+
+	  case PLACEMENTD_AD: 
+		queryAd.Assign(ATTR_TARGET_TYPE, PLACEMENTD_ADTYPE); 
+		break; 
 
 	  case GENERIC_AD:
 		if ( genericQueryType ) {

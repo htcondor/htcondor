@@ -52,7 +52,7 @@ makeAdTypeToDaemonTable() {
 		{ CLUSTER_ADTYPE,		{      CLUSTER_AD, DT_CLUSTER } },
 		{ GENERIC_ADTYPE,		{      GENERIC_AD, DT_GENERIC } },
 		{ CREDD_ADTYPE,			{        CREDD_AD, DT_CREDD } },
-		{ XFER_SERVICE_ADTYPE,	{ XFER_SERVICE_AD, DT_TRANSFERD } },
+		{ PLACEMENTD_ADTYPE,	{   PLACEMENTD_AD, DT_PLACEMENTD } },
 		{ LEASE_MANAGER_ADTYPE,	{LEASE_MANAGER_AD, DT_LEASE_MANAGER } },
 		{ GRID_ADTYPE,			{         GRID_AD, DT_GRIDMANAGER } },
 		{ DEFRAG_ADTYPE,		{       DEFRAG_AD, DT_GENERIC } },   // Defrag ads go into the generic table in the collector
@@ -115,7 +115,7 @@ static const char* daemon_names[] = {
 	"starter",
 	"credd",
 	"gridmanager",
-	"transferd",
+	"placementd",
 	"lease_manager",
 	"had",
 	"generic"

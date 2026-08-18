@@ -60,7 +60,7 @@ SSHDProc::PublishUpdateAd( ClassAd* ad)
 }
 
 
-bool
+ReapResult
 SSHDProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in SSHDProc::JobReaper()\n");
@@ -78,11 +78,11 @@ SSHDProc::JobReaper(int pid, int status)
 	JobAd->LookupBool("WantDocker", isDocker);
 
 	if (interactive && isDocker) {
-		dprintf(D_ALWAYS, "Ssh exitting from interactive docker job, shutting down\n");
+		dprintf(D_ALWAYS, "Ssh exiting from interactive docker job, shutting down\n");
 		starter->RemoteRemove(0);
 		VanillaProc::JobReaper(pid, status);
 		starter->ShutdownFast();
-		return true;
+		return ReapResult::JobDone;
 	}
 
 	return VanillaProc::JobReaper( pid, status );

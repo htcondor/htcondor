@@ -29,6 +29,19 @@ logger.setLevel(logging.DEBUG)
 # obvious reasons.
 #
 
+
+def wait_until_gone(path, timeout=60):
+    # Poll for a path to disappear rather than sleeping a fixed (large)
+    # amount: this returns as soon as the deletion is done (usually well
+    # under a second) while still tolerating a slow runner.
+    deadline = time.monotonic() + timeout
+    while path.exists():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.25)
+    return True
+
+
 @action
 def the_condor(test_dir):
     with Condor(
@@ -372,10 +385,10 @@ def path_to_the_job_script(the_condor, test_dir):
     # The shadow updates the schedd on a timer (and not when the starter
     # sends an update), so there's a delay between the starter incrementing
     # the checkpoint number (before it restarts the job) and the update
-    # becoming visible in the schedd.  By default, we test with that interval
-    # set to two seconds, so sleep for three to make sure it passes before
-    # we try again.
-    for i in range(1,3):
+    # becoming visible in the schedd.  Poll for up to 60 seconds so a
+    # heavily-loaded CI runner has time to propagate the update.
+    deadline = time.monotonic() + 60
+    while True:
         the_checkpoint_number = -1
         rv = subprocess.run(
             ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
@@ -387,8 +400,9 @@ def path_to_the_job_script(the_condor, test_dir):
             the_checkpoint_number = int(rv.stdout.strip())
         if the_checkpoint_number == my_checkpoint_number:
             break
-        else:
-            time.sleep(3)
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(1)
     print(f"Found the checkpoint number {the_checkpoint_number}")
 
     # Dump the sandbox contents (when resuming after the first checkpoint)
@@ -654,24 +668,22 @@ def the_job_handle(the_job_pair):
 
 @action
 def the_completed_job(the_condor, the_job_handle):
-    # The job will evict itself part of the way through.  To avoid a long
-    # delay waiting for the schedd to reschedule it, call condor_reschedule.
-    the_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_running,
-        fail_condition=ClusterState.any_held,
-    )
-
-    the_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_idle,
-        fail_condition=ClusterState.any_held,
-    )
-
+    # The job evicts itself part of the way through and resumes from its
+    # checkpoint.  We only care that it eventually completes; wait directly
+    # for that.
+    #
+    # We deliberately do NOT gate on intermediate all_running/all_idle
+    # states.  For multi-proc clusters the procs evict and resume on
+    # staggered timelines, so "all procs idle (or running) at once" may
+    # never be observably true, and waiting for it just burns the full
+    # timeout (~60s each).  The negotiator runs every second in the test
+    # config, so evicted jobs are rescheduled promptly on their own; a
+    # single nudge covers the case where the first proc evicts before this
+    # fixture starts waiting.
     the_condor.run_command(['condor_reschedule'])
 
-    the_job_handle.wait(
-        timeout=60,
+    assert the_job_handle.wait(
+        timeout=180,
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
     )
@@ -704,17 +716,19 @@ class TestCheckpointDestination:
         schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_removed_job.clusterid}'
 
-        # Make sure the job has left the queue.  Might not happen right away, so retry
-        result = {1}
-        retries = 0
-        while ((len(result) != 0) and (retries < 5)):
+        # Make sure the job has left the queue.  Might not happen right away
+        # (the job may sit in the 'X' state for a bit after condor_rm), so
+        # poll for up to 60 seconds.
+        deadline = time.monotonic() + 60
+        result = [1]
+        while time.monotonic() < deadline:
             result = schedd.query(
                     constraint=constraint,
                     projection=["CheckpointDestination", "GlobalJobID"],
                     )
-            if len(result) != 0:
-                time.sleep(3)
-            retries += 1
+            if len(result) == 0:
+                break
+            time.sleep(1)
 
         assert(len(result) == 0)
 
@@ -779,19 +793,13 @@ class TestCheckpointDestination:
                     path = prefix / f"{i:04}"
 
                     # Did we remove the checkpoint destination?
-                    if path.exists():
-                        # Crass empiricism.
-                        time.sleep(20)
-                    assert(not path.exists())
+                    assert wait_until_gone(path)
 
                     # Did we remove the manifest file?
                     manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
-                    assert(not manifest_file.exists())
+                    assert wait_until_gone(manifest_file)
 
                 # Once we've removed all of the manifest files, we should also
                 # remove the directory we used to store them.
                 checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0"
-                if checkpoint_cleanup_subdir.exists():
-                    # Crass empiricism.
-                    time.sleep(20)
-                assert(not checkpoint_cleanup_subdir.exists())
+                assert wait_until_gone(checkpoint_cleanup_subdir)

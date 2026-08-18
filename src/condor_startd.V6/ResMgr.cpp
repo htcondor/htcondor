@@ -36,6 +36,9 @@
 
 #include "strcasestr.h"
 
+// Initialize broken item reference ID counter
+unsigned int BrokenItem::monotonic_id = 0;
+
 struct slotOrderSorter {
    bool operator()(const Resource *r1, const Resource *r2) {
 		if (r1->r_id < r2->r_id) {
@@ -253,6 +256,11 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
 	configInsert( config_classad, ATTR_MACHINE_MAX_VACATE_TIME, true );
 
+		// Guard expression for "condor_ep rehome --reboot".  Evaluated
+		// against the slot ad; the startd will only reboot the host on
+		// rehome if this evaluates to true.  Defaults to false (refuse).
+	configInsert( config_classad, "STARTD_REHOME_ALLOW_REBOOT", false );
+
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
 	configInsert( config_classad, "RunBenchmarks", false );
@@ -302,6 +310,55 @@ ResMgr::init_config_classad( void )
 		}
 	}
 	
+	// insert admin-defined requirements clauses that are STARTD wide
+	// and have STARTD wide expressions into the resmgr config ad.
+	// we will handle slot_type definitions for these knobs later.
+	classad::References clauses;
+	param_and_insert_attrs("SLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("PSLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("DSLOT_REQUIREMENTS_CLAUSES", clauses);
+	clauses.erase(ATTR_WITHIN_RESOURCE_LIMITS); // default for this is generated per-slot
+	clauses.erase(ATTR_START); // handled above with default value
+	for (auto & attr : clauses) {
+		configInsert(config_classad, attr.c_str(), false, nullptr);
+	}
+
+	// if there is a STARTD_HEALTH_EXPRS knob, then use it to set the Healthy expression
+	// If there is more than one expression, also set HealthExprs and HealthFactor
+	auto_free_ptr health_exprs(param("STARTD_HEALTH_EXPRS"));
+	if (health_exprs) {
+		std::string exprstr;
+		formatstr(exprstr, "{%s}", health_exprs.ptr());
+		ExprTree * tree = nullptr;
+		if (0 != ParseClassAdRvalExpr(exprstr.c_str(), tree) && 0 != ParseClassAdRvalExpr(health_exprs, tree)) {
+			dprintf(D_ERROR, "Parse error in STARTD_HEALTH_EXPRS: %s\n", exprstr.c_str());
+		} else {
+			classad::ExprList * health_checks = dynamic_cast<classad::ExprList*>(tree);
+			if ( ! health_checks) {
+				dprintf(D_ERROR, "STARTD_HEALTH_EXPRS: %s is not a list\n", exprstr.c_str());
+			} else {
+				if (health_checks->size() < 1) {
+					delete health_checks;
+					if ( ! config_classad->Lookup(ATTR_HEALTHY)) { config_classad->Assign(ATTR_HEALTHY, true); }
+				} else {
+					// append a literal 1 to the list of health expressions, so that when passed to min
+					// it will evaluate to true when all of the health expressions evaluate to undefined.
+					// then insert that as the argument list for a min function call. In effect, this becomes
+					// Healthy = min({$(STARTD_HEALTH_EXPRS),1})
+					// when STARTD_HEALTH_EXPRS is a valid list of classad expressions.
+					if (health_checks->size() > 0) {
+						config_classad->Insert(ATTR_HEALTH_EXPRS, health_checks->Copy());
+						formatstr(exprstr, "sum(" ATTR_HEALTH_EXPRS ") / %u.0", (unsigned int)health_checks->size());
+						config_classad->AssignExpr("HealthFactor", exprstr.c_str());
+					}
+					health_checks->push_back(classad::Literal::MakeInteger(1));
+					classad::ArgumentList args; args.push_back(health_checks);
+					config_classad->Insert(ATTR_HEALTHY, classad::FunctionCall::MakeFunctionCall("min", args));
+				}
+			}
+		}
+	}
+
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
@@ -373,7 +430,7 @@ ClassAd * BrokenItem::new_context_ad() const
 		for (auto const & attr : attrs) {
 			classad::Value val;
 			if (b_context->EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
-				ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
+				std::ignore = ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
 			}
 		}
 	}
@@ -436,7 +493,28 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 		volman->PublishDiskInfo(ad);
 	}
 
+	// Publish the number of leaked resources (that we are still periodically attempting cleanup)
+	std::map<std::string, size_t> cleanup_counts;
+	for (const auto& [reminder, _] : cleanup_reminders) {
+		std::string key(reminder.Type());
+		title_case(key);
+		key.push_back('s');
+		auto [start, end] = std::ranges::remove_if(key, ::isspace);
+		key.erase(start, end);
+		cleanup_counts[key]++;
+	}
+
+	if ( ! cleanup_counts.empty()) {
+		std::string value = "[";
+		for (const auto& [key, count] : cleanup_counts) {
+			formatstr_cat(value, " %s=%zu;", key.c_str(), count);
+		}
+		value += " ]";
+		ad.AssignExpr(ATTR_CLEANUP_CATEGORY_COUNTS, value.c_str());
+	}
+
 	m_attr->publish_static(&ad, nullptr);
+
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
@@ -469,16 +547,13 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	if ( ! broken_reasons.empty()) {
 		broken_reasons.insert(0,"{");
 		broken_reasons.push_back('}');
-		ad.AssignExpr("BrokenReasons", broken_reasons.c_str());
-		// for backward compat, assign a BrokenSlots attribute that just refs the new BrokenReasons attribute
-		// TODO: add add for compat with 24.2,  remove someday
-		ad.AssignExpr("BrokenSlots", "BrokenReasons");
+		ad.AssignExpr(ATTR_BROKEN_REASONS, broken_reasons.c_str());
 	}
 
 	if ( ! broken_contexts.empty()) {
 		broken_contexts.insert(0,"{");
 		broken_contexts.push_back('}');
-		ad.AssignExpr("BrokenContextAds", broken_contexts.c_str());
+		ad.AssignExpr(ATTR_BROKEN_CONTEXT_ADS, broken_contexts.c_str());
 	}
 
 	// static information about custom resources
@@ -487,7 +562,11 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 
 	// gloal dynamic information. offline resources, WINREG values
 	m_attr->publish_common_dynamic(&ad, true);
-	
+
+	// We want ATTR_HEALTHY and related attributes in the daemon ad
+	caCopyIfDefined(ad, *config_classad, ATTR_HEALTHY);
+	caCopyIfDefined(ad, *config_classad, "HealthExprs");
+	caCopyIfDefined(ad, *config_classad, "HealthFactor");
 
 	//PRAGMA_REMIND("TJ: write this")
 	// m_attr->publish_EP_dynamic(&ad);
@@ -743,7 +822,7 @@ ResMgr::init_resources( void )
 		for( i=0; i<num_res; i++ ) {
 			CpuAttributes * cpu_attrs = new_cpu_attrs[i];
 			if (cpu_attrs) {
-				Resource * rip = new Resource(cpu_attrs, i+1);
+				Resource * rip = new Resource(cpu_attrs, i+1, nullptr);
 				// create a broken_things record for each resource that is born broken
 				// TODO: maybe these things should not be added to the slots array?
 				if (cpu_attrs->is_broken()) {
@@ -791,6 +870,13 @@ ResMgr::init_resources( void )
 	m_hook_mgr->initialize();
 #endif
 
+	// register the "#coloring" namespace for extra ads for use by Starters
+	auto * coloringBaseAd = new StartdNamedClassAd(COLORING_NAMESPACE, nullptr, nullptr);
+	adlist_register(coloringBaseAd);
+
+	// register the '#catalog' namespace for extra ads for use by Starters
+	auto * catalogBaseAd = new StartdNamedClassAd(CATALOG_NAMESPACE, nullptr, nullptr);
+	adlist_register(catalogBaseAd);
 }
 
 
@@ -1126,6 +1212,22 @@ ResMgr::get_by_slot_id( int id )
 	return NULL;
 }
 
+
+CleanupReminder*
+ResMgr::findCleanupReminder(CleanupReminder::category cat, const std::string& name)
+{
+	if (name.empty()) { return nullptr; }
+
+	auto it = std::ranges::find_if(cleanup_reminders, [cat, name](const auto& pair) {
+		return pair.first.cat == cat && pair.first.name == name;
+	});
+
+	if (it == cleanup_reminders.end()) { return nullptr; }
+
+	return const_cast<CleanupReminder*>(&(it->first));
+}
+
+
 BrokenItem &
 ResMgr::get_broken_context(Resource * rip)
 {
@@ -1137,12 +1239,86 @@ ResMgr::get_broken_context(Resource * rip)
 	}
 
 	// no broken record, make a new one and partially initialize it
-	BrokenItem & brit = broken_things.emplace_back(BrokenItem());
+	BrokenItem & brit = broken_things.emplace_back();
 	brit.b_id = (int)broken_things.size();
 	brit.b_time = time(nullptr);
 	brit.b_refptr = rip;
 	brit.b_tag = rip->r_id_str;
 	return brit;
+}
+
+
+static void
+log_resource_restore(const BrokenItem& brit, Resource* rip)
+{
+	if (ep_eventlog.isEnabled()) {
+		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_MEND, rip);
+		event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
+		if ( ! brit.b_res.empty()) {
+			ClassAd* resad = new ClassAd();
+			brit.publish_resources(*resad, "");
+			event.Ad().Insert("Resources", resad);
+		}
+		ep_eventlog.flush();
+	}
+}
+
+
+void
+ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids)
+{
+	auto restore = [this, lock, &borked_ids](BrokenItem& item) -> bool {
+		bool restored = false;
+
+		// Only attempt restoration of specifc broken items reference by ID w/ specific lock type
+		if (lock == item.b_lock && borked_ids.contains(item.b_refid)) {
+			Resource* source = get_by_slot_id(item.b_srcid);
+
+			// If we fail to find a source log message and skip
+			if ( ! source) {
+				dprintf(D_ERROR, "ERROR: Failed to locate slot by id=%d associated with broken item %u\n",
+				        item.b_srcid, item.b_refid);
+				return false;
+			}
+
+			if (item.b_refptr) { // Broken slot still around
+				// TODO: Handle/check for broken and partitionable slots?
+				Resource* slot = (Resource*)(item.b_refptr);
+				slot->remove_broken_context();
+
+				log_resource_restore(item, slot);
+
+				if (slot->is_dynamic_slot()) { // dynamic slot
+					ASSERT(source == slot->get_parent());
+					removeResource(slot);
+					slot = nullptr;
+				} else { // static slot
+					slot->update_needed(Resource::WhyFor::wf_refreshRes);
+				}
+			} else { // Associated dynaminc slot is already gone
+				ASSERT(source->r_lost_child_res);
+
+				log_resource_restore(item, source);
+
+				source->restore_broken_resources(item.b_res, item.sub_id());
+
+				item.b_res.reset();
+
+				refresh_classad_resources(source);
+				source->update_needed(Resource::WhyFor::wf_refreshRes);
+			}
+
+			restored = true;
+		}
+
+		return restored;
+	};
+
+	size_t num_restored = std::erase_if(broken_things, restore);
+	if (num_restored) {
+		dprintf(D_ALWAYS, "Restored %zu broken items\n", num_restored);
+		resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+	}
 }
 
 
@@ -1377,8 +1553,16 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	for(Resource* rip : slots) {
 		if ( ! rip) continue;
-		if (rip->update_is_needed() ||
-			(send_backfill_slots && rip->is_partitionable_slot() && rip->r_backfill_slot)) {
+		bool is_backfill_pslot = rip->is_partitionable_slot() && rip->r_backfill_slot;
+		if (is_backfill_pslot && (rip->update_is_needed() || send_backfill_slots)) {
+			// when a backfill p-slot needs to refresh, first refresh its static resources
+			// against the updated primary_res_in_use collection, this needs to happen *after*
+			// the primary pslot has been updated and res conflicts have been recalculated.
+			// Which is why we do it here - just before we send updates.  This insures that the internal
+			// ad used for claiming matches the update ad. see HTCONDOR-3702
+			rip->refresh_classad_resources(primary_res_in_use);
+		}
+		if (rip->update_is_needed() || (send_backfill_slots && is_backfill_pslot)) {
 			public_ad.Clear(); private_ad.Clear();
 			rip->get_update_ads(public_ad, private_ad); // this clears update_is_needed
 			send_update(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
@@ -1559,6 +1743,7 @@ void ResMgr::compute_static()
 	long long virt_mem = m_attr->virt_mem();
 #else
 #endif
+
 	for(Resource* rip : slots) {
 		if (rip) {
 		#ifdef PROVISION_FRACTIONAL_DISK
@@ -2054,9 +2239,7 @@ ResMgr::start_update_timer( void )
 		(TimerHandlercpp)&ResMgr::eval_and_update_all,
 		"eval_and_update_all",
 		this );
-	if( up_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(up_tid >= 0);
 	return TRUE;
 }
 
@@ -2073,9 +2256,7 @@ ResMgr::start_poll_timer( void )
 							polling_interval,
 							(TimerHandlercpp)&ResMgr::eval_all,
 							"poll_resources", this );
-	if( poll_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(poll_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started polling timer.\n" );
 	return TRUE;
 }
@@ -2132,9 +2313,7 @@ ResMgr::reset_timers( void )
 void
 ResMgr::addResource( Resource *rip )
 {
-	if( !rip ) {
-		EXCEPT("Error: attempt to add a NULL resource");
-	}
+	ASSERT(rip);
 
 	calculateAffinityMask(rip);
 
@@ -2652,9 +2831,7 @@ ResMgr::startHibernateTimer( void )
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
 		"ResMgr::startHibernateTimer()", this );
-	if( m_hibernate_tid < 0 ) {
-		EXCEPT( "Can't register hibernation timer" );
-	}
+	ASSERT(m_hibernate_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started hibernation timer.\n" );
 	return TRUE;
 }
@@ -3363,6 +3540,113 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	releaseAllClaimsReversibly("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
+}
+
+bool
+ResMgr::rehomeRebootAllowed() const
+{
+		// Evaluate the STARTD_REHOME_ALLOW_REBOOT guard expression (inserted
+		// into each slot's config ad) against a slot.  A reboot affects the
+		// whole host, so be conservative: require at least one slot and that
+		// every slot's expression evaluate to true.  Undefined/error counts
+		// as "not allowed".
+	bool any_slot = false;
+	for (Resource * rip : slots) {
+		if (! rip) { continue; }
+		any_slot = true;
+		bool val = false;
+		if (! EvalBool("STARTD_REHOME_ALLOW_REBOOT", rip->r_classad, nullptr, val) || ! val) {
+			return false;
+		}
+	}
+	return any_slot;
+}
+
+void
+ResMgr::rebootAfterRehome(const std::string &reboot_command)
+{
+	m_reboot_after_rehome = true;
+	m_reboot_command = reboot_command;
+	dprintf(D_ALWAYS,
+		"rehome: host will reboot via '%s' once all claims have been evicted\n",
+		reboot_command.c_str());
+
+		// Mark every slot unavailable (Requirements -> False) now that a
+		// reboot is pending -- rehomeRebootPending() drives reqexp_restore()
+		// into the UNAVAIL_REQ state, the same way draining and shutdown do.
+		// Without this the negotiator immediately rematches the jobs we just
+		// evicted back onto this host, "all claims evicted" is never reached,
+		// and the reboot never fires.  update_all() pushes the now-unavailable
+		// slot ads to the collector so the next negotiation cycle skips us.
+	walk([](Resource* rip) { rip->reqexp_restore(); });
+	update_all();
+
+		// If nothing is running we can reboot right away.
+	checkForRehomeReboot();
+}
+
+void
+ResMgr::checkForRehomeReboot()
+{
+	if (! m_reboot_after_rehome) {
+		return;
+	}
+	if (m_reboot_timer_scheduled) {
+			// Timer is already queued; doRehomeReboot will run.
+		return;
+	}
+	if (hasAnyClaim()) {
+			// Still waiting for one or more starters to exit.
+		return;
+	}
+
+		// Note: m_reboot_after_rehome stays true until doRehomeReboot
+		// completes, so startd_exit_if_idle defers any concurrent
+		// fast-shutdown until after we have launched the reboot command.
+	m_reboot_timer_scheduled = true;
+
+	dprintf(D_ALWAYS, "rehome: all claims evicted; scheduling host reboot\n");
+
+		// Defer to a zero-delay timer: we are called from inside the
+		// starter-exit state-change callback, and the reconfig below can
+		// rebuild slot objects, which would invalidate the caller's state.
+	daemonCore->Register_Timer(0,
+		(TimerHandlercpp)&ResMgr::doRehomeReboot,
+		"ResMgr::doRehomeReboot", this);
+}
+
+void
+ResMgr::doRehomeReboot(int /*timerID*/)
+{
+	dprintf(D_ALWAYS,
+		"rehome: reconfiguring and rebooting host via '%s'\n",
+		m_reboot_command.c_str());
+
+		// Re-read configuration so the just-persisted direct-attach settings
+		// (e.g. STARTD_DIRECT_ATTACH_SCHEDD_NAME) are validated and in effect,
+		// then flush filesystem buffers so they survive the reboot and we come
+		// back attached to the right schedd.
+	main_config();
+
+	priv_state priv = set_root_priv();
+	dprintf(D_ALWAYS, "rehome: running reboot command '%s'\n",
+			m_reboot_command.c_str());
+	int status = system(m_reboot_command.c_str());
+	dprintf(D_ALWAYS, "rehome: reboot command returned status %d\n", status);
+	set_priv(priv);
+
+	if (status != 0) {
+		dprintf(D_ERROR,
+			"rehome: reboot command '%s' returned status %d\n",
+			m_reboot_command.c_str(), status);
+	}
+
+		// Clear the pending flag now that the reboot command has been
+		// launched.  If a fast-shutdown was deferred waiting on us,
+		// re-poke the idle-exit path so the startd can finish exiting.
+	m_reboot_after_rehome = false;
+	m_reboot_timer_scheduled = false;
+	startd_exit_if_idle();
 }
 
 void

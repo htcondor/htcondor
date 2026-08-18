@@ -92,7 +92,7 @@ foreach $file (@ARGV)
 	close(NEW);
 	system("cp $file.tmp $file");
 	system("chmod 755 $file");
-	system("rm -f $file.tmp");
+	unlink "$file.tmp";
 }
 exit(0);
 

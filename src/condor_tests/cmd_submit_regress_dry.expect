@@ -64,7 +64,7 @@ NextJobStartDelay=2 * 60
 NoopJobExitCode=5
 NoopJobExitSignal=false
 NotifyUser="bt@cs.wisc.edu"
-OutputDestination=/"/scratch/output/[0-9]+"/
+OutputDestination=/"url://scratch/output/[0-9]+"/
 ParallelScriptShadow="shadow.cmd"
 ParallelScriptStarter="starter.cmd"
 RemoteIwd="sandbox"
@@ -228,7 +228,7 @@ UserLog=/".+\d+.log"/
 ==xfer2.sub
 Err=/"\d+xfer2.err"/
 Out=/"\d+xfer2.out"/
-OutputDestination=/"\d+/0"/
+OutputDirectory=/"/\d+/0"/
 Requirements=/TARGET\.HasFileTransfer .+"HTTP",TARGET\.HasFileTransferPluginMethods.+"HTTPS",TARGET\.HasFileTransferPluginMethods/
 ShouldTransferFiles="YES"
 StreamErr=false
@@ -237,7 +237,7 @@ TransferInput="../Multilevel_Thesis_WheatData,HTTP://example.com/file1,HTTPS://e
 TransferOutput="results.out"
 ProcId=0
 .
-OutputDestination=/"\d+/1"/
+OutputDirectory=/"/\d+/1"/
 ProcId=1
 
 ==xfer3.sub
@@ -341,6 +341,23 @@ OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 JobMaxRetries=2
 JobSuccessExitCode=5
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
+
+==retry_disk1.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestDisk 20480"$/
+
+==retry_disk2.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+RetryRequestDisk={ 20480,81920 }
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestDisk RetryRequestDisk\[RetryRequestDiskIndex\?:0\]\x1eEVALSET RetryRequestDiskIndex .*"$/
+
+==retry_disk3.sub
+RequestDisk=10240
+TransformOnEvict="RequestDisk"
+RetryRequestDisk={ 20480,81920 }
+TransformBody_RequestDisk=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestDisk RetryRequestDisk\[RetryRequestDiskIndex\?:0\]\x1eEVALSET RetryRequestDiskIndex .*"$/
 
 ==retry_mem1.sub
 RequestMemory=1024
@@ -471,3 +488,24 @@ ProcId=3
 TransferInput="133.txt,grid_i.txt"
 UserLog=/".+data_240.log"/
 .
+
+==procexe.sub
+Cmd=/^".+basic.cmd"$/
+ProcId=0
+.
+Cmd=/^".+cmd_true.cmd"$/
+ProcId=1
+.
+Cmd=/^"/bin/echo"$/
+ProcId=2
+
+==procitemexe.sub
+Cmd=/^".+basic.cmd"$/
+ProcId=0
+.
+Cmd=/^".+cmd_true.cmd"$/
+ProcId=1
+.
+Cmd=/^"/bin/echo"$/
+ProcId=2
+

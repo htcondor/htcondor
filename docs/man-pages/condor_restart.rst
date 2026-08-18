@@ -77,7 +77,7 @@ Options
  **-drain**
     Send a *condor_drain* command with the *-exit-on-completion* option to all
     *condor_startd* daemons that are managed by this master. Then wait for all *condor_startd*
-    daemons to exit before before restarting.
+    daemons to exit before restarting.
  **-reason** *"reason-string"*
     Use with **-drain** to set a **-reason** *"reason-string"* value for the *condor_drain* command.
  **-request-id** *id*

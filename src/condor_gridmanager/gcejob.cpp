@@ -920,7 +920,7 @@ std::string GCEJob::build_instance_name()
 #ifdef WIN32
 	GUID guid;
 	if (S_OK != CoCreateGuid(&guid))
-		return NULL;
+		return "";
 	WCHAR wsz[40];
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];

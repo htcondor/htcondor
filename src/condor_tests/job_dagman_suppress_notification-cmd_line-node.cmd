@@ -3,7 +3,7 @@ Arguments            	= "Notification = $$([ifThenElse(JobNotification==0,""Neve
 Universe             	= vanilla
 log                  	= job_dagman_suppress_notification-cmd_line-node.$(cluster).log
 Notification         	= Always
-getenv               	= true
+getenv = CONDOR*,PATH
 output               	= job_dagman_suppress_notification-cmd_line-node.$(cluster).out
 error                	= job_dagman_suppress_notification-cmd_line-node.$(cluster).err
 Queue

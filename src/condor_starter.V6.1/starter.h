@@ -26,13 +26,17 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+enum class WD : bool {
+	INNER = true,
+	OUTER = false,
+};
+
 #if defined(LINUX) || defined(DARWIN)
     // We don't test on BSD, so don't claim the hardlink code works there.
     #define CFT_VERSION 2
 #else
     #define CFT_VERSION 0
 #endif
-
 
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
@@ -149,7 +153,7 @@ public:
 		/**
 		 * Before a job is spawned, this method checks whether
 		 * a job has a deferrral time, which means we will need
-		 * to register timer to call SpawnPreScript()
+		 * to register timer to call SpawnJobOrPreScript()
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
@@ -181,7 +185,7 @@ public:
 		 *
 		 *
 		 **/
-	virtual void SpawnPreScript( int timerID = -1 );
+	virtual void SpawnJobOrPreScript( int timerID = -1 );
 
 		/* timer to handle unwinding to pump while skipping job spawn */
 	virtual void SkipJobs( int timerID = -1 );
@@ -226,8 +230,8 @@ public:
 		/** Return the temporary directory under Execute for this job.
 		 *  If file transfer is used, this will also be the job's IWD.
 		 */
-	const char *GetWorkingDir(bool inner) const {
-		if (inner && ! InnerWorkingDir.empty()) {
+	const char *GetWorkingDir(WD which) const {
+		if (which == WD::INNER && ! InnerWorkingDir.empty()) {
 			return InnerWorkingDir.c_str();
 		}
 		return WorkingDir.c_str();
@@ -235,6 +239,13 @@ public:
 
 	const char *GetSlotDir() const {
 		return SlotDir.c_str();
+	}
+
+		/** Return the user's home directory for this job.
+		 *  Owned by the job user; same as WorkingDir when nested scratch is off.
+		 */
+	const char *GetJobHomeDir() const {
+		return JobHomeDir.c_str();
 	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?
@@ -254,7 +265,10 @@ public:
 	}
 
 	// Get job working directory disk usage: return bytes used & num dirs + files
-	DiskUsage GetDiskUsage(bool exiting=false) const;
+	void include_multilink_files_in_disk_usage(bool v) {
+	    m_skip_multilink_files = ! v;
+	}
+	DiskUsage GetDiskUsage(bool exiting) const;
 
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
@@ -357,8 +371,18 @@ public:
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 
 	void SetVacateReason(const std::string& msg, int code, int subcode);
+	int GetVacateSubcode() const { return m_vacateSubcode; }
+	void jicNotifyStarterError( bool critical );
 
 	void ExceptHandler(const char* errmsg);
+
+		/*
+		  @param result Buffer in which to store claim id string from job.
+		  Returns false if no claim id could be found.
+		 */
+	bool getJobClaimId(std::string &result) const;
+
+	void prepareJobHookDone();
 
 protected:
 	std::vector<UserProc *> m_job_list;
@@ -426,12 +450,6 @@ private:
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
 	void getJobOwnerFQUOrDummy(std::string &result) const;
-
-		/*
-		  @param result Buffer in which to store claim id string from job.
-		  Returns false if no claim id could be found.
-		 */
-	bool getJobClaimId(std::string &result) const;
 
 
 	bool WriteAdFiles() const;
@@ -515,6 +533,9 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
+
+		// Only data slots should count such files.
+	bool m_skip_multilink_files {true};
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

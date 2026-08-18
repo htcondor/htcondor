@@ -28,11 +28,13 @@ use CondorUtils;
 $cmd = 'job_dagman_splice-cat.dag';
 $testdesc =  'Condor submit dag - splice/category test - scheduler U';
 $testname = "job_dagman_splice-cat";
-$dagman_args = "-verbose -dumprescue";
+$dagman_args = "-verbose";
 
-@logfiles = ("job_dagman_splice-cat.dag.dagman.out");
+$debug_log = "job_dagman_splice-cat.dag.dagman.out";
 
-$rescuedag = "job_dagman_splice-cat.dag.rescue001";
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAGMAN_DEBUG = D_TEST
+CONDOR_TESTREQ_CONFIG
 
 my $killedchosen = 0;
 
@@ -81,110 +83,57 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
+	$locatedexitsuccess = 0;
+	$validcats = 1;
 
-	foreach $name (@logfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp;
-			if( /^*.EXITING WITH STATUS 0*.$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name: $_\n",1);
+	my %expected = (
+		'cat0' => [2, 10],
+		'+catS' => [4, 2],
+		'D0+cat1' => [2, 12],
+		'D0+D1+cat2' => [2, 33],
+		'D0+D1+cat3' => [2, 22],
+		'D0+E1+cat2' => [2, 32],
+		'D0+E1+cat3' => [2, 22],
+	);
+	my @categories = keys %expected;
+
+	open(my $fh, '<', $debug_log) or die "Can not open debug file $debug_log: $!";
+
+	while (my $line = <$fh>) {
+		chomp $line;
+
+		if($line =~ /^*.EXITING WITH STATUS 0*.$/) {
+			$locatedexitsuccess = 1;
+			CondorTest::debug("$line\n", 1);
+			last;
+		} elsif ($line =~ /^*.CHECK CATEGORY ([a-zA-Z0-9\+]+) (\d+) (\d+)/) {
+			if (exists $expected{$1}) {
+				$expectednum = $expected{$1}[0];
+				$expectedlimit = $expected{$1}[1];
+				if ($expectednum != $2 || $expectedlimit != $3) {
+					$diditpass = 0;
+					CondorTest::debug("Incorrect values for category $1: Total[$2|$expectednum] Limit[$3|$expectedlimit] > KEY[Found|Expected]\n", 1);
+				} else {
+					@categories = grep { $_ ne $1 } @categories;
+				}
+			} else {
+				$diditpass = 0;
+				CondorTest::debug("Unexpected category $1\n", 1);
 			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name: $line\n",1);
-			$diditpass = 0;
 		}
 	}
 
-	# Check for a bunch of lines in the rescue DAG.
-	# Hmm -- I'm not going to do this right now, but a nice way to do
-	# the checking would be to delete stuff from checklines as we find
-	# it, and then print the remaining stuff at the end if it's not all
-	# found.  wenger 2009-03-05.
-	@checklines = ("JOB A0 job_dagman_splice-cat.cmd",
-				"VARS A0 racer=\"Eddy Merckx\"",
-				"JOB B0 job_dagman_splice-cat.cmd",
-				"CATEGORY B0 cat0",
-				"JOB C0 job_dagman_splice-cat.cmd",
-				"CATEGORY C0 cat0",
-				"JOB E0 job_dagman_splice-cat.cmd",
-				"CATEGORY E0 \\+catS",
-				"JOB D0\\+A1 job_dagman_splice-cat.cmd",
-				"VARS D0\\+A1 racer=\"Bernard Hinault\"",
-				"JOB D0\\+B1 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+B1 D0\\+cat1",
-				"JOB D0\\+C1 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+C1 D0\\+cat1",
-				"JOB D0\\+F1 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+F1 \\+catS",
-				"JOB D0\\+D1\\+A2 job_dagman_splice-cat.cmd",
-				"VARS D0\\+D1\\+A2 racer=\"Fausto Coppi\"",
-				"JOB D0\\+D1\\+B2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+D1\\+B2 D0\\+D1\\+cat2",
-				"JOB D0\\+D1\\+C2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+D1\\+C2 D0\\+D1\\+cat2",
-				"JOB D0\\+D1\\+D2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+D1\\+D2 D0\\+D1\\+cat3",
-				"JOB D0\\+D1\\+E2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+D1\\+E2 D0\\+D1\\+cat3",
-				"JOB D0\\+D1\\+F2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+D1\\+F2 \\+catS",
-				"JOB D0\\+E1\\+A2 job_dagman_splice-cat.cmd",
-				"VARS D0\\+E1\\+A2 racer=\"Fausto Coppi\"",
-				"JOB D0\\+E1\\+B2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+E1\\+B2 D0\\+E1\\+cat2",
-				"JOB D0\\+E1\\+C2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+E1\\+C2 D0\\+E1\\+cat2",
-				"JOB D0\\+E1\\+D2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+E1\\+D2 D0\\+E1\\+cat3",
-				"JOB D0\\+E1\\+E2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+E1\\+E2 D0\\+E1\\+cat3",
-				"JOB D0\\+E1\\+F2 job_dagman_splice-cat.cmd",
-				"CATEGORY D0\\+E1\\+F2 \\+catS",
-				"MAXJOBS cat0 10",
-				"MAXJOBS D0\\+cat1 12",
-				"MAXJOBS D0\\+D1\\+cat2 33",
-				"MAXJOBS D0\\+D1\\+cat3 22",
-				"MAXJOBS D0\\+E1\\+cat2 32",
-				"MAXJOBS D0\\+E1\\+cat3 22",
-				"MAXJOBS \\+catS 2"
-				);
+	close($fh);
 
-	foreach $check (@checklines) {
-		$line = "";
-		$passed = 0;
-
-		$canopen = open(OUT,"<$rescuedag");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open rescue DAG <$rescuedag>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /$check/ ) {
-				$passed = 1;
-				CondorTest::debug("$rescuedag: $line\n",1);
-			}
-		}
-		close(OUT);
-	
-		if($passed) {
-			;
-		} else {
-			CondorTest::debug("failed $rescuedag: $check\n",1);
-				$diditpass = 0;
-		}
+	# Did we find a successful DAGMan daemoncore exit line?
+	if($locatedexitsuccess == 0) {
+		CondorTest::debug("Failed to locate successful daemon exit line\n", 1);
+		$diditpass = 0;
+	}
+	# Did we find all expected categories in log?
+	if (@categories) {
+		CondorTest::debug("Failed to find all categories: @categories\n", 1);
+		$diditpass = 0;
 	}
 
 	if($diditpass == 0) {

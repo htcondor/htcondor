@@ -23,9 +23,11 @@
 #include "shared_port_server.h"
 
 #include "daemon_command.h"
+#include "stl_string_utils.h"
 
 SharedPortServer::SharedPortServer():
 	m_registered_handlers(false),
+	m_registered_http_handler(false),
 	m_publish_addr_timer(-1)
 {
 }
@@ -71,6 +73,31 @@ SharedPortServer::InitAndReconfig() {
 		m_default_id = "collector";
 	}
 
+	std::string configured_http_id;
+	if (!param(configured_http_id, "SHARED_PORT_HTTP_FORWARDING_ID")) {
+		std::string daemon_list;
+		if (param(daemon_list, "DAEMON_LIST")) {
+			StringTokenIterator list_iter(daemon_list);
+			for (const char *tok = list_iter.first(); tok; tok = list_iter.next()) {
+				if (strcasecmp(tok, "HTTP_API") == 0) {
+					configured_http_id = "http_api"; // well-known shared port id for HTTP_API
+					break;
+				}
+			}
+		}
+	}
+
+	if (!configured_http_id.empty()) {
+		m_http_forward_id = configured_http_id;
+	}
+	if (!m_http_forward_id.empty() && !m_registered_http_handler) {
+		int rc = daemonCore->Register_HTTP_CommandHandler(
+			[this] (int com, Stream *s) {return this->HandleHttpRequest(com, s);},
+			"SharedPortServer::HandleHttpRequest");
+		ASSERT(rc >= 0);
+		m_registered_http_handler = true;
+	}
+
 	PublishAddress();
 
 	if( m_publish_addr_timer == -1 ) {
@@ -114,6 +141,13 @@ SharedPortServer::RemoveDeadAddressFile()
 		close( fd );
 		if( unlink(shared_port_server_ad_file.c_str()) == 0 ) {
 			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.c_str());
+		} else if( errno == ENOENT ) {
+			// Whatever left this behind (e.g. an orphaned shared_port
+			// instance self-exiting and cleaning up after itself once it
+			// notices its parent is gone) already removed it between our
+			// open() and unlink() above -- not a failure, just a race we
+			// lost harmlessly.
+			dprintf(D_ALWAYS,"%s was already removed by the time we tried to unlink it\n",shared_port_server_ad_file.c_str());
 		} else {
 			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.c_str() );
 		}
@@ -322,4 +356,17 @@ SharedPortServer::HandleDefaultRequest(int cmd,Stream *sock)
 	dprintf(D_FULLDEBUG, "SharedPortServer: Passing a request from %s for command %d to ID %s.\n",
 		sock->peer_description(), cmd, m_default_id.c_str()); 
 	return PassRequest(static_cast<Sock*>(sock), m_default_id.c_str());
+}
+
+int
+SharedPortServer::HandleHttpRequest(int cmd, Stream *sock)
+{
+	if (m_http_forward_id.empty()) {
+		dprintf(D_FULLDEBUG, "SharedPortServer: HTTP handler invoked for command %d from %s but no forward ID configured.\n",
+			cmd, sock->peer_description());
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortServer: Forwarding HTTP/TLS request from %s (cmd %d) to ID %s.\n",
+		sock->peer_description(), cmd, m_http_forward_id.c_str());
+	return PassRequest(static_cast<Sock*>(sock), m_http_forward_id.c_str());
 }

@@ -116,6 +116,8 @@ int		lv_name_uniqueness = 0;
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
 
+bool	aggressive_cleanup = false; // Ignore cleanup reminder backoff intervals
+
 char* Name = NULL;
 
 #define DEFAULT_PID_SNAPSHOT_INTERVAL 15
@@ -336,6 +338,10 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
+	daemonCore->Register_Command( REACTIVATE_CLAIM_CHECK,
+								  "REACTIVATE_CLAIM_CHECK",
+								  command_handler,
+								  "command_handler", DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -391,6 +397,10 @@ main_init( int, char* argv[] )
 								  command_coalesce_slots,
 								  "command_coalesce_slots", DAEMON );
 
+	daemonCore->Register_Command( COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT",
+								  command_data_slot,
+								  "command_data_slot", DAEMON );
+
 		// ex-OWNER permission commands, now ADMINISTRATOR
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
@@ -408,6 +418,10 @@ main_init( int, char* argv[] )
 								  "VACATE_CLAIM_FAST",
 								  command_name_handler,
 								  "command_name_handler", ADMINISTRATOR );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FINAL_XFER,
+								  "DEACTIVATE_CLAIM_FINAL_XFER",
+								  command_handler,
+								  "command_handler", DAEMON );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
@@ -444,6 +458,10 @@ main_init( int, char* argv[] )
 								  "DRAIN_JOBS",
 								  command_drain_jobs,
 											 "command_drain_jobs", ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( REHOME,
+								  "REHOME",
+								  command_rehome,
+											 "command_rehome", ADMINISTRATOR);
 	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
 								  "CANCEL_DRAIN_JOBS",
 								  command_cancel_drain_jobs,
@@ -540,6 +558,11 @@ init_params( int first_time)
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
+	} else {
+		if (ep_eventlog.isEnabled()) {
+			/* auto & reconfigEvent = */ ep_eventlog.composeEvent(ULOG_EP_RECONFIG,nullptr);
+			ep_eventlog.flush();
+		}
 	}
 
 	resmgr->init_config_classad();
@@ -634,6 +657,9 @@ init_params( int first_time)
 		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
 	}
 
+	// Skip cleanup reminder backoff and always attempt cleanup: Note for internal testing
+	aggressive_cleanup = param_boolean("AGGRESSIVE_CLEANUP_REMINDER", false);
+
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility
 #ifdef LINUX
@@ -719,11 +745,14 @@ void CleanupReminderTimerCallback()
 {
 	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
 
-	auto done = [](auto& pair) {
+	// Set of broken item IDs to restore if successfully cleaned up issue thing (logical volume)
+	std::set<unsigned int> broken_item_ids;
+
+	auto done = [&broken_item_ids](auto& pair) -> bool {
 		const CleanupReminder& cr = pair.first;
 		const int iteration = ++cleanup_reminders[cr];
 
-		if ( ! retry_on_this_iter(iteration, cr.cat)) { return false; }
+		if ( ! aggressive_cleanup && ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
 		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
 
@@ -739,6 +768,11 @@ void CleanupReminderTimerCallback()
 				break;
 			case CleanupReminder::category::logical_volume:
 				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
+				// If LV was removed and the CR had an associated broken item ID
+				// then add to set of broken item IDs to restore
+				if (success && cr.broken_id) {
+					broken_item_ids.insert(cr.broken_id);
+				}
 				break;
 			default:
 				EXCEPT("Unknown CleanupReminder Category: %d\n", cr.cat);
@@ -756,6 +790,10 @@ void CleanupReminderTimerCallback()
 	};
 
 	std::erase_if(cleanup_reminders, done);
+
+	if ( ! broken_item_ids.empty()) {
+		resmgr->RestoreBrokenResources(ResourceLockType::LV, broken_item_ids);
+	}
 
 	// if the collection of things to try and clean up is empty, turn off the timer
 	// it will get turned back on the next time an item is added to the collection
@@ -778,9 +816,7 @@ void register_cleanup_reminder_timer()
 								cleanup_reminder_timer_interval,
 								(TimerHandler)CleanupReminderTimerCallback,
 								"CleanupReminderTimerCallback");
-		if  (id < 0) {
-			EXCEPT( "Can't register DaemonCore timer for cleanup reminders" );
-		}
+		ASSERT(id >= 0);
 		cleanup_reminder_timer_id = id;
 	}
 }
@@ -991,6 +1027,12 @@ startd_exit_if_idle(int /* tid */)
 		return;
 	}
 	if ( bench_job_mgr && ( ! bench_job_mgr->ShutdownOk() ) ) {
+		return;
+	}
+	if ( resmgr && resmgr->rehomeRebootPending() ) {
+			// A rehome --reboot is queued or in flight.  Don't exit
+			// until doRehomeReboot has launched the reboot command;
+			// it will call back into us when it finishes.
 		return;
 	}
 	if ( ! resmgr ) {

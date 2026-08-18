@@ -246,7 +246,7 @@ is_valid_sinful( const char *sinful )
 
 		strncpy(addrbuf, addr_begin, addr_end - addr_begin);
 		addrbuf[addr_end - addr_begin] = '\0';
-		dprintf(D_HOSTNAME, "tring to convert %s using inet_pton, %s\n", sinful, addrbuf);
+		dprintf(D_HOSTNAME, "trying to convert %s using inet_pton, %s\n", sinful, addrbuf);
 		in6_addr tmp_addr;
 		if (inet_pton(AF_INET6, addrbuf, &tmp_addr) <= 0) {
 			dprintf(D_HOSTNAME, "%s is not a sinful address: inet_pton(AF_INET6, %s) failed\n", sinful, addrbuf);

@@ -47,3 +47,61 @@ _startd_cancel_drain_jobs(PyObject *, PyObject * args) {
     Py_RETURN_NONE;
 }
 
+static PyObject *
+_startd_rehome(PyObject *, PyObject * args) {
+    // _startd_rehome(addr, schedd_name, schedd_pool, timeout, cancel, reboot)
+
+    const char * addr = NULL;
+    const char * schedd_name = NULL;
+    const char * schedd_pool = NULL;
+    long timeout = 0;
+    int cancel = 0;
+    int reboot = 0;
+    if(! PyArg_ParseTuple( args, "szzlpp", & addr, & schedd_name, & schedd_pool, & timeout, & cancel, & reboot )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCStartd startd(addr);
+    bool r = startd.rehome( schedd_name, schedd_pool, timeout, cancel != 0, reboot != 0 );
+    if(! r) {
+        const char * err = startd.error();
+        PyErr_SetString( PyExc_HTCondorException, err ? err : "Startd failed to process rehome request." );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+_startd_vacate_slots(PyObject *, PyObject * args) {
+    // _startd_vacate_slots(addr, slot_name, vacate_fast)
+
+    const char * addr = NULL;
+    const char * slot_name = NULL;
+    long vacate_fast = 0; // 1 = fast
+    if(! PyArg_ParseTuple( args, "szl", & addr, & slot_name, & vacate_fast )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCStartd startd(addr);
+    if ( ! slot_name) {
+        // treat empty slot name as vacate all
+        bool r = startd.vacateAllClaims(vacate_fast == 1);
+        if(! r) {
+            PyErr_SetString( PyExc_HTCondorException, "Startd failed send to vacate all claims command." );
+            return NULL;
+        }
+    } else {
+        bool r = startd.vacateClaim(slot_name, vacate_fast == 1);
+        if(! r) {
+            PyErr_SetString( PyExc_HTCondorException, "Startd failed send to vacate claim command." );
+            return NULL;
+        }
+    }
+
+    Py_RETURN_NONE;
+}
+
+

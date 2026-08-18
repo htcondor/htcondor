@@ -22,9 +22,12 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "schedd_negotiate.h"
+#include "scheduler.h"
+#include "qmgmt.h"
 
 
 static int next_negotiate_instance_id = 1;
+extern Scheduler scheduler;
 
 ScheddNegotiate::ScheddNegotiate
 (
@@ -159,18 +162,40 @@ ScheddNegotiate::nextJob()
 
 		m_current_auto_cluster_id = cluster.getAutoClusterId();
 
+			// if this auto-cluster has already been rejected, skip it
 		if( !getAutoClusterRejected(m_current_auto_cluster_id) ) {
 			size_t clusterSize = cluster.size();
 			for (auto & jid : cluster) {
 				--clusterSize; // decrement as we iterate so we know how many jobs remain
-				if (!jid.isJobKey()) continue;
+
+					// if this is not a job (i.e. an OCU request), skip it
+				if (!jid.isJobKey() && (jid.proc != OCU_qkey2)) {
+					continue;
+				}
 				m_current_job_id = jid;
 
 				const char* because = "";
 				bool skip_all = false;
 				JobQueueJob * job = GetJobAd(m_current_job_id);
-				if ( ! job)
-				{
+				if (! job) {
+					// Is this an OCU request?
+					if (scheduler.getOCU(m_current_job_id.cluster)) {
+						m_current_job_ad = scheduler.getOCU(m_current_job_id.cluster)->ad;
+						m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT, 1);
+
+						// negotiator has to see clusterid and procid or it will not be happy.  Sad but true.
+						m_current_job_ad.Assign(ATTR_CLUSTER_ID, m_current_job_id.cluster);
+						m_current_job_ad.Assign(ATTR_PROC_ID, OCU_qkey2);
+						// Don't match OCU claims to draining slots
+						ExprTree *existing_req = m_current_job_ad.LookupExpr(ATTR_REQUIREMENTS);
+						if (existing_req) {
+							std::string req = std::string("(") + ExprTreeToString(existing_req) + ") && (Draining =!= true)";
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, req.c_str());
+						} else {
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, "Draining =!= true");
+						}
+						return true;
+					} 
 					dprintf(D_MATCH,
 						"skipping job %d.%d because it no longer exists\n",
 						m_current_job_id.cluster,m_current_job_id.proc);
@@ -188,26 +213,19 @@ ScheddNegotiate::nextJob()
 					}
 					else {
 						int count_max = INT_MAX;
+						if (job->Universe() != CONDOR_UNIVERSE_PARALLEL) { count_max = 1+clusterSize; }
 
 						if ( ! scheduler_getRequestConstraints(m_current_job_id, m_current_job_ad, &count_max)) {
 							dprintf(D_MATCH,
 								"skipping job %d.%d because scheduler_getRequestConstraints returned false\n",
 								m_current_job_id.cluster,m_current_job_id.proc);
 						}
-						// Insert the number of jobs remaining in this
-						// resource request cluster into the ad - the negotiator
+						// Insert the number of jobs for which we are willing to request matches
+						// in this resource request cluster into the ad - the negotiator
 						// may use this information to give us more than one match
 						// at a time.
-						// [[Future optimization idea: there may be jobs in this resource request
-						// cluster that no longer exist in the queue; perhaps we should
-						// iterate through them and make sure they still exist to prevent
-						// asking the negotiator for more resources than we can really
-						// use at the moment. ]]
-						// - Todd July 2013 <tannenba@cs.wisc.edu>
-						int universe = CONDOR_UNIVERSE_MIN;
-						m_current_job_ad.LookupInteger(ATTR_JOB_UNIVERSE,universe);
 						// For now, do not use request counts with the dedicated scheduler
-						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
+						if (job->Universe() != CONDOR_UNIVERSE_PARALLEL) {
 							// resource_count is the remaining un-iterated jobs plus this one.
 							int resource_count = 1+clusterSize;
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
@@ -295,7 +313,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	int64_t cpus = 0, memory = 0, disk = 0;
 
 	cpus = 1;
-	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
+	// if RequestCpus is not set, cpus keeps its default of 1
+	std::ignore = EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
 	match_ad->Assign(ATTR_CPUS, cpus);
 
 	memory = -1;
@@ -357,6 +376,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 bool
 ScheddNegotiate::sendResourceRequestList(Sock *sock)
 {
+		// The Negotiator wants us to send it a list of resource requests.
 	m_jobs_can_offer = scheduler_maxJobsToOffer();
 
 	while (m_num_resource_reqs_to_send > 0) {
@@ -440,6 +460,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		m_current_job_ad.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, count);
 		m_current_job_ad.LookupInteger(ATTR_AUTO_CLUSTER_ID, aid);
 		formatstr_cat(details, " %d |%d|%d.%d|", count, aid, m_current_job_id.cluster, m_current_job_id.proc);
+		if (m_curbed) { details += " (curb)"; }
 		dprintf(D_DYE, "\t%s\n", details.c_str());
 	}
 
@@ -635,6 +656,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		int rr_proc = -1;
 		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_CLUSTER, rr_cluster);
 		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_PROC, rr_proc);
+			// if we got a valid job id back, use it to update m_current_job_id
 		if (rr_cluster != -1 && rr_proc != -1) {
 			if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 				m_current_resources_delivered = 0;
@@ -672,7 +694,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 	case END_NEGOTIATE:
 		if (RRLRequestIsPending()) {
-			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
+			dprintf(D_FULLDEBUG, "Finished RRL prefetch to negotiator\n");
 		} else {
 			dprintf( D_ALWAYS, "Negotiation ended: %d jobs matched\n",
 					 m_jobs_matched );

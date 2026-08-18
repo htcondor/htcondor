@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-set(DAGSrcs 
+set(DAGSrcs
 dag.cpp
 dagman_classad.cpp
 dagman_commands.cpp
@@ -24,6 +24,7 @@ dagman_main.cpp
 dagman_metrics.cpp
 dagman_submit.cpp
 debug.cpp
+edge.cpp
 node.cpp
 jobstate_log.cpp
 parse.cpp

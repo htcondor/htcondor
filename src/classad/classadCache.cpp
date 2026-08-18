@@ -298,7 +298,17 @@ public:
 };
 
 
-static classad_shared_ptr<ClassAdCache> _cache;
+// The expression cache is a process-lifetime singleton.  It is intentionally
+// a never-freed raw pointer rather than a smart pointer with static storage
+// duration: other statics (e.g. SecMan::session_cache) own ClassAds whose
+// CachedExprEnvelopes hold strong refs to CacheEntries, and those ClassAds are
+// torn down by their own atexit destructors.  If the cache's destructor were
+// allowed to run, static-destruction order is unspecified and the cache could
+// be freed first; the subsequent CacheEntry destructors would then touch freed
+// memory (a use-after-free observed under ASan at daemon shutdown).  Leaking
+// the singleton keeps it valid for the entire process lifetime; it remains
+// reachable through this pointer, so it is not reported as a leak.
+static ClassAdCache * _cache = nullptr;
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -308,7 +318,7 @@ static classad_shared_ptr<ClassAdCache> _cache;
 
 CacheEntry::~CacheEntry()
 {
-	if (_cache && _cache.use_count()) {
+	if (_cache) {
 		_cache->flush(szName, szValue);
 	}
 	delete pData;
@@ -320,7 +330,7 @@ ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTre
 {
 	ExprTree * pRet = pTree;
 	if (cacheable(pTree)) {
-		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
+		if ( ! _cache) { _cache = new ClassAdCache(); }
 		CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
 		pRet = pNewEnv;
@@ -330,7 +340,7 @@ ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTre
 
 ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std::string & szValue)
 {
-	if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
+	if ( ! _cache) { _cache = new ClassAdCache(); }
 	CachedExprEnvelope *pEnv = new CachedExprEnvelope();
 	pEnv->m_pLetter = _cache->insert_lazy(pName, szValue);
 	return pEnv;
@@ -360,7 +370,7 @@ CachedExprEnvelope * CachedExprEnvelope::check_hit(const std::string & szName, c
 
    if (!_cache)
    {
-	_cache.reset(new ClassAdCache());
+	_cache = new ClassAdCache();
    }
 
    pCacheData cache_check = _cache->cache( szName, szValue, 0);

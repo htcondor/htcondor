@@ -345,6 +345,3 @@ int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, 
 }
 */
 
-int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
-int ActualScheddQ::send_SpoolFileBytes(char const *filename) { return SendSpoolFileBytes(filename); }
-

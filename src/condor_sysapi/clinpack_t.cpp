@@ -25,6 +25,7 @@
 #include "test.h"
 #include "stdio.h"
 #include "math.h"
+#include <vector>
 
 static int delta_check( int			blockno,
 						double		means[],
@@ -76,9 +77,9 @@ int kflops_test(int test_blocksize,
 	int	num_warnings = 0;
 	double mean, raw_mean;
 	double variance, raw_variance;
-	int test[test_blocksize], raw_test[test_blocksize];
-	double testblocks_sd[test_blocksize], raw_testblocks_sd[test_blocksize];
-	double testblocks_mean[test_blocksize], raw_testblocks_mean[test_blocksize];
+	std::vector<int> test(test_blocksize), raw_test(test_blocksize);
+	std::vector<double> testblocks_sd(test_blocksize), raw_testblocks_sd(test_blocksize);
+	std::vector<double> testblocks_mean(test_blocksize), raw_testblocks_mean(test_blocksize);
 
 	dprintf(D_ALWAYS, 
 		"SysAPI: Running kflops_test.\n");
@@ -129,7 +130,7 @@ int kflops_test(int test_blocksize,
 
 		/* Test if there were any unusually large jumps in the means of the testblocks */
 		num_tests++;
-		if ( delta_check( i, raw_testblocks_mean, max_sd_variation_ratio, "Raw" ) ) {
+		if ( delta_check( i, raw_testblocks_mean.data(), max_sd_variation_ratio, "Raw" ) ) {
 			num_warnings++;
 		}
 
@@ -145,7 +146,7 @@ int kflops_test(int test_blocksize,
 				i, (int)raw_testblocks_sd[i]);
 
 		num_tests++;
-		if ( sd_check( i, raw_mean, raw_testblocks_sd, max_sd_variation_ratio, "Raw" ) ) {
+		if ( sd_check( i, raw_mean, raw_testblocks_sd.data(), max_sd_variation_ratio, "Raw" ) ) {
 			num_warnings++;
 		}
 	}
@@ -189,7 +190,7 @@ int kflops_test(int test_blocksize,
 
 		/* Test if there were any unusually large jumps in the means of the testblocks */
 		num_tests++;
-		if ( delta_check( i, testblocks_mean, max_sd_variation_ratio, "Cooked" ) ) {
+		if ( delta_check( i, testblocks_mean.data(), max_sd_variation_ratio, "Cooked" ) ) {
 			num_warnings++;
 		}
 
@@ -205,7 +206,7 @@ int kflops_test(int test_blocksize,
 				(int)testblocks_sd[i]);
 
 		num_tests++;
-		if ( sd_check( i, mean, testblocks_sd, max_sd_variation_ratio, "Cooked" ) ) {
+		if ( sd_check( i, mean, testblocks_sd.data(), max_sd_variation_ratio, "Cooked" ) ) {
 			num_warnings++;
 		}
 	}

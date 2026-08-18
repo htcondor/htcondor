@@ -26,6 +26,10 @@ import re
 import textwrap
 import os
 import sys
+import getpass
+import socket
+import enum
+import signal
 
 from .try_os_set import (
     try_os_setegid,
@@ -40,16 +44,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 unique_identifier = 0
+true_exe = "/usr/bin/true" if sys.platform == "darwin" else "/bin/true"
+if sys.platform == "win32" : true_exe = "$(LOCAL_DIR)/condor_tests/success.exe"
 
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
     "SHARED_PORT_PORT": "0",
-    "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
-    "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
-    "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
-    "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
-    "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+    "MAIL": true_exe,
+    "SENDMAIL": true_exe,
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
@@ -62,7 +65,7 @@ DEFAULT_PARAMS = {
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
-    "STARTER_LIST": "STARTER",  # no standard universe starter
+    "PROCD_ADDRESS": "$(PROCD_ADDRESS)_$(PERSONAL_INSTANCE_ID)", # if we start multiple condors each must have a different PROCD_ADDRESS
     "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}",
     "SINGULARITY": "/usr/bin/false"
 }
@@ -99,6 +102,35 @@ def skip_if(condition):
     return decorator
 
 
+class RestartMode(enum.Enum):
+    """How ``Condor.restart()``/``Condor.restart_daemon()`` should interrupt daemons."""
+
+    #: Clean shutdown and restart (``condor_restart``/``condor_off -daemon``).
+    GRACEFUL = "graceful"
+    #: Abrupt but signaled shutdown and restart (``-fast``).
+    FAST = "fast"
+    #: SIGKILL the daemon process(es) directly, with no cleanup at all.
+    #: POSIX-only (needs real ``kill -9`` semantics); not supported on Windows.
+    CRASH = "crash"
+
+
+def _who_quick_field(who_quick_stdout: str, key: str) -> Optional[str]:
+    """Pull a ``KEY=value`` field (e.g. ``SCHEDD_PID``) out of ``condor_who -quick`` output."""
+    for line in who_quick_stdout.split("\n"):
+        if line.startswith(key):
+            return line.split("=", 1)[1].strip()
+    return None
+
+
+def _who_quick_is_alive(who_quick_stdout: str, subsystem: str) -> bool:
+    """Check whether ``condor_who -quick`` reports ``<SUBSYSTEM> = "alive"``."""
+    prefix = "{} =".format(subsystem.upper())
+    for line in who_quick_stdout.split("\n"):
+        if line.startswith(prefix) and '"alive"' in line.lower():
+            return True
+    return False
+
+
 class Condor:
     """
     A :class:`Condor` is responsible for managing the lifecycle of an HTCondor pool.
@@ -112,6 +144,7 @@ class Condor:
         clean_local_dir_before: bool = True,
         submit_user : str = None,
         condor_user : str = None,
+        use_sudo: Optional[bool] = None,
     ):
         """
         Parameters
@@ -130,11 +163,27 @@ class Condor:
             If set, the user to switch to when submitting a job.
         condor_user
             If set, the user that HTCondor will run as.
+        use_sudo
+            If ``True``, start condor_master with sudo. If ``None`` (default),
+            checks HTCONDOR_TEST_USE_SUDO environment variable. If ``False``,
+            never use sudo even if environment variable is set.
         """
         self.submit_user = submit_user
+        
+        # Auto-detect sudo mode from environment if not explicitly specified
+        if use_sudo is None:
+            use_sudo = os.environ.get("HTCONDOR_TEST_USE_SUDO") == "1"
+        
+        self.use_sudo = use_sudo
+        
+        # If using sudo but no condor_user specified, default to "condor"
+        if self.use_sudo and condor_user is None:
+            condor_user = "condor"
+        
         self.condor_user = condor_user
         self.local_dir = local_dir
 
+        # TODO: don't assume paths, get these from config
         self.execute_dir = self.local_dir / "execute"
         self.lock_dir = self.local_dir / "lock"
         self.log_dir = self.local_dir / "log"
@@ -186,6 +235,7 @@ class Condor:
             self._write_config()
             self._start_condor()
             self._wait_for_ready()
+            self._make_job_queue_log_public_if_root()
         except BaseException:
             logger.exception(
                 "Encountered error during setup of {}, cleaning up!".format(self)
@@ -197,10 +247,29 @@ class Condor:
 
     def _setup_local_dirs(self):
         if self.clean_local_dir_before and self.local_dir.exists():
-            shutil.rmtree(self.local_dir)
+            # _wait_for_master_to_terminate() only confirms condor_master
+            # itself has exited, not that every daemon it spawned (collector,
+            # schedd, negotiator, startd, shared_port) has too -- master's own
+            # fast-shutdown doesn't block its exit on that. On POSIX that's
+            # harmless (an unlinked-but-still-open file is fine), but on
+            # Windows a lingering child's still-open log handle makes this
+            # rmtree() fail with PermissionError ("used by another process")
+            # until that handle is released. Observed to take longer than a
+            # 10x1s budget on some CI runs (still failing after the full 10
+            # attempts), so retry longer instead of tracking down every
+            # child pid.
+            attempts = 20
+            for attempt in range(attempts):
+                try:
+                    shutil.rmtree(self.local_dir)
+                    break
+                except OSError:
+                    if attempt == attempts - 1:
+                        raise
+                    time.sleep(2)
             logger.debug("Removed existing local dir for {}".format(self))
 
-        for dir in (
+        condor_dirs_to_make = [
             self.local_dir,
             self.execute_dir,
             self.lock_dir,
@@ -209,16 +278,36 @@ class Condor:
             self.spool_dir,
             self.passwords_dir,
             self.tokens_dir,
-        ):
+        ]
+
+        # First make the dirs as non-privileged user
+        for dir in condor_dirs_to_make:
             dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
-            # logger.debug("Created dir {}".format(dir))
-            if self.condor_user:
-                try:
-                    shutil.chown(
-                        dir, user=self.condor_user, group=self.condor_user
-                    )
-                except PermissionError:
-                    pass
+
+        # Unprivileged users will write the condor_config file here, cheat by making world writable
+        if self.use_sudo:
+            # chmod 0777 condor dir so we can write config file there as non-root
+            cmd.run_command(
+                ["sudo", "chmod", "0777", f"{self.condor_user}:{self.condor_user}", self.local_dir.as_posix()],
+                echo=False,
+                suppress=True,
+            )
+        # Now chown them if needed
+        for dir in condor_dirs_to_make:
+            if self.use_sudo:
+                cmd.run_command(
+                    ["sudo", "chown", "-R", f"{self.condor_user}:{self.condor_user}", dir.as_posix()],
+                    echo=False,
+                    suppress=True,
+                )
+            else:
+                if self.condor_user:
+                    try:
+                        shutil.chown(
+                            dir, user=self.condor_user, group=self.condor_user
+                        )
+                    except PermissionError:
+                        pass
 
     def _write_config(self):
         # TODO: how to ensure that this always hits the right config?
@@ -235,24 +324,22 @@ class Condor:
 
         param_lines += ["#", "# ROLES", "#"]
         param_lines += [
-            "use ROLE: CentralManager",
-            "use ROLE: Submit",
-            "use ROLE: Execute",
+            "DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
         ]
 
         base_config = {
             "LOCAL_DIR": self.local_dir.as_posix(),
-            "EXECUTE": self.execute_dir.as_posix(),
-            "LOCK": self.lock_dir.as_posix(),
-            "LOG": self.log_dir.as_posix(),
-            "RUN": self.run_dir.as_posix(),
-            "SPOOL": self.spool_dir.as_posix(),
-            "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
-            "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
-            "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
+            #"EXECUTE": "$(LOCAL_DIR)/execute",
+            "LOCK": "$(LOCAL_DIR)/lock",
+            #"LOG": "$(LOCAL_DIR)/log",
+            "RUN": "$(LOCAL_DIR)/run",
+            #"SPOOL": "$(LOCAL_DIR)/spool",
+            "SEC_PASSWORD_DIRECTORY": "$(LOCAL_DIR)/passwords.d",
+            "SEC_TOKEN_SYSTEM_DIRECTORY": "$(LOCAL_DIR)/tokens.d",
+            # "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND:1",
         }
 
-        if self.condor_user:
+        if self.condor_user or self.use_sudo:
             try:
                 from pwd import getpwnam
                 from grp import getgrnam
@@ -265,16 +352,21 @@ class Condor:
                 # has user-switching privileges.
                 pass
 
-        # The need to do this is arguably a HTCondor bug.
+        if self.use_sudo:
+            username = getpass.getuser()
+            fqdn     = socket.getfqdn()
+            base_config["ALLOW_WRITE"] = f"{username}@{fqdn}"
+
+        # 
         global unique_identifier
         unique_identifier += 1
-        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
-            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
-                htcondor.param["PROCD_ADDRESS"],
-                os.getpid(),
-                time.time(),
-                unique_identifier,
-            )
+        base_config["PERSONAL_INSTANCE_ID"] = "{}".format(unique_identifier)
+
+        # win32 default for PROCD_ADDRESS can end up being too long when running tests
+        # so we want to use a different value than the default
+        # $Fddub() extracts the last 2 components of LOCAL_DIR as posix with no trailing /
+        if sys.platform == "win32":
+            base_config["PROCD_ADDRESS"] = r"\\.\pipe\$Fddub(LOCAL_DIR)/{}_$(PERSONAL_INSTANCE_ID)".format(os.getpid())
 
         param_lines += ["#", "# BASE PARAMS", "#"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
@@ -295,15 +387,27 @@ class Condor:
     @skip_if(condor_master_was_started)
     def _start_condor(self):
         with env.SetCondorConfig(self.config_file):
+            # If we invoke the condor_master via sudo, sudo won't use the path for
+            # security reasons, so we have to find the binary ourselves.
+            master_bin = shutil.which("condor_master")
+            cmd = [master_bin, "-f"]
+            
+            if self.use_sudo:
+                cmd = ["sudo", "-E"] + cmd
+                logger.info(
+                    f"Starting condor_master with sudo (will run as {self.condor_user or 'root'})"
+                )
+            
             self.condor_master = subprocess.Popen(
-                ["condor_master", "-f"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
+
             logger.debug(
                 "Started condor_master (pid {})".format(self.condor_master.pid)
             )
 
     @skip_if(condor_is_ready)
-    def _wait_for_ready(self, timeout: int = 120, dump_logs_if_fail: bool = False):
+    def _wait_for_ready(self, timeout: int = 600, dump_logs_if_fail: bool = False):
         daemons = set(
             self.run_command(["condor_config_val", "DAEMON_LIST"], echo=False)
             .stdout.replace(",", " ")
@@ -385,7 +489,7 @@ class Condor:
     @skip_if(master_is_not_alive)
     def _condor_off(self):
         off = self.run_command(
-            ["condor_off", "-daemon", "master"], timeout=30, echo=False
+            ["condor_off", "-fast", "-daemon", "master"], timeout=30, echo=False
         )
 
         if not off.returncode == 0:
@@ -411,7 +515,7 @@ class Condor:
         killed = False
         while True:
             try:
-                self.condor_master.communicate(timeout=5)
+                self.condor_master.wait(timeout=5)
                 break
             except subprocess.TimeoutExpired:
                 pass
@@ -460,6 +564,189 @@ class Condor:
         logger.debug(
             "Sent kill signal to condor_master (pid {})".format(self.condor_master.pid)
         )
+
+    def restart(self, mode: RestartMode = RestartMode.GRACEFUL, timeout: int = 120):
+        """
+        Restart every daemon in the pool (a full Access Point reboot/restart).
+
+        - :attr:`RestartMode.GRACEFUL`: ``condor_restart`` (clean shutdown/restart).
+        - :attr:`RestartMode.FAST`: ``condor_restart -fast`` (abrupt but signaled).
+        - :attr:`RestartMode.CRASH`: SIGKILL every daemon's process directly
+          (no cleanup at all), then relaunch ``condor_master`` in place.
+        """
+        self._restart(daemon_name=None, mode=mode, timeout=timeout)
+
+    def restart_daemon(
+        self, daemon_name: str, mode: RestartMode = RestartMode.GRACEFUL, timeout: int = 60
+    ):
+        """
+        Restart a single named daemon (e.g. ``"schedd"``) without disturbing
+        the rest of the pool. See :meth:`restart` for what each ``mode`` does;
+        for :attr:`RestartMode.CRASH`, the daemon (and its whole process
+        tree -- see :meth:`_crash`) is SIGKILLed directly and left for
+        ``condor_master``'s own child-monitoring to relaunch.
+
+        Use :meth:`restart` (not this method) to restart ``master`` itself:
+        ``_crash()``'s relaunch logic (killing and re-execing
+        ``condor_master``) only runs for a whole-pool restart
+        (``daemon_name is None``), so passing ``"master"`` here would
+        SIGKILL it without ever relaunching it, leaving the whole pool dead.
+        """
+        if daemon_name.lower() == "master":
+            raise ValueError(
+                "restart_daemon() can't target \"master\" -- its relaunch "
+                "logic only runs for a whole-pool restart; use restart() instead."
+            )
+        self._restart(daemon_name=daemon_name, mode=mode, timeout=timeout)
+
+    def _restart(self, daemon_name: Optional[str], mode: RestartMode, timeout: int):
+        # The daemon we watch to confirm a restart actually happened: for a
+        # whole-pool restart, condor_master commonly re-execs itself (same
+        # pid), so watching schedd -- which always gets a genuinely new pid
+        # when relaunched -- is the reliable signal, same as is done for a
+        # schedd-only restart.
+        watch_daemon = (daemon_name or "schedd").lower()
+
+        who = self.run_command(["condor_who", "-quick"], timeout=30, echo=False)
+        old_pid = _who_quick_field(who.stdout, "{}_PID".format(watch_daemon.upper()))
+
+        if mode is RestartMode.CRASH:
+            self._crash(daemon_name)
+        else:
+            args = ["condor_restart"]
+
+            if mode is RestartMode.FAST:
+                args.append("-fast")
+
+            if daemon_name:
+                args += ["-daemon", daemon_name]
+
+            self.run_command(args, timeout=30, echo=False)
+
+        # Require the same "new pid, alive" result on two consecutive
+        # checks (a short beat apart) before declaring the restart done --
+        # condor_who reporting a daemon alive doesn't guarantee it's done
+        # with its own internal startup (job-queue reload, security-session
+        # setup, etc.), just that it answered a query. A single, possibly
+        # premature "yes" here is exactly the kind of race that can bite a
+        # caller that immediately fires another restart or submission on
+        # the strength of it (see submit_with_retry() for the same class
+        # of race on the submission side).
+        start = time.time()
+        last_seen_pid = None
+        while True:
+            if time.time() - start > timeout:
+                raise TimeoutError(
+                    "{} did not come back (mode={}) within {}s".format(
+                        daemon_name or "pool", mode, timeout
+                    )
+                )
+
+            who = self.run_command(["condor_who", "-quick"], timeout=30, echo=False)
+            new_pid = _who_quick_field(who.stdout, "{}_PID".format(watch_daemon.upper()))
+            if (
+                new_pid is not None
+                and new_pid != old_pid
+                and _who_quick_is_alive(who.stdout, watch_daemon)
+            ):
+                if last_seen_pid == new_pid:
+                    break
+                last_seen_pid = new_pid
+            else:
+                last_seen_pid = None
+
+            time.sleep(0.5)
+
+        # The pid-debounce above only proves the new process answered a
+        # -quick query -- e.g. a schedd can show up there with an address
+        # that's still missing its real port/addrs (still mid-registration
+        # with shared_port) well before it's actually ready to take new
+        # submissions. IsReady is condor_master's own bookkeeping of
+        # whether every daemon it's watching has sent it a real alive
+        # message, which -- unlike the -quick address snapshot -- lags
+        # behind a daemon's own internal startup (job-queue reload,
+        # shared_port registration, etc.). It's the same signal
+        # _wait_for_ready() already trusts for the initial standup; a
+        # restart deserves the same bar.
+        while True:
+            remaining = timeout - (time.time() - start)
+            if remaining <= 0:
+                raise TimeoutError(
+                    "{} came back but never reported IsReady (mode={}) within {}s".format(
+                        daemon_name or "pool", mode, timeout
+                    )
+                )
+
+            who = self.run_command(
+                ["condor_who", f"-wait:{min(10, int(remaining)) or 1}", "IsReady"],
+                timeout=30,
+                echo=False,
+                suppress=True,
+            )
+            if who.stdout.strip():
+                who_ad = dict(kv.split(" = ") for kv in who.stdout.splitlines())
+                if who_ad.get("IsReady") == "true":
+                    break
+
+    def _crash(self, daemon_name: Optional[str]):
+        """
+        SIGKILL either one named daemon or every daemon in the pool.
+
+        Deliberately does *not* also kill schedd's job-process children
+        (e.g. DAGMan, or a local-universe node's starter): every
+        DaemonCore process except the master already polls its own
+        parent's pid and self-shuts-down (SIGQUIT) if it's gone --
+        check_parent()/daemon_core_main.cpp -- so an orphan of a crashed
+        schedd is expected to clean itself up within about 135s by
+        default (a 15s first check, then every 120s -- tunable via
+        PARENT_CHECK_FIRST_INTERVAL/PARENT_CHECK_INTERVAL, including
+        per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL) on its own,
+        the same as it would on a real machine. Killing it ourselves
+        would just mask that real self-healing path instead of
+        exercising it.
+        """
+        if sys.platform == "win32":
+            raise NotImplementedError(
+                "RestartMode.CRASH needs real kill -9 semantics; not supported on Windows"
+            )
+
+        # "master" is deliberately excluded here even for a whole-pool crash:
+        # _kill_condor_master() below already SIGKILLs it via its own Popen
+        # handle, which is also how we wait() on/relaunch it.
+        targets = (
+            {daemon_name.lower()}
+            if daemon_name is not None
+            else {"collector", "negotiator", "schedd", "startd"}
+        )
+
+        daemons_who = self.run_command(["condor_who", "-daemons"], timeout=30, echo=False)
+        for line in daemons_who.stdout.split("\n"):
+            fields = line.split()
+            if len(fields) < 3 or fields[0].lower() not in targets or not fields[2].isdigit():
+                # PID column is "no" for a daemon condor_who reports as
+                # already exited, or "?" if unknown -- neither is a real pid.
+                continue
+            try:
+                os.kill(int(fields[2]), signal.SIGKILL)
+            except ProcessLookupError:
+                # Already gone between the listing and the kill.
+                pass
+
+        if daemon_name is None:
+            self._kill_condor_master()
+            if self.condor_master is not None:
+                self.condor_master.wait(timeout=60)
+
+            # _start_condor()/_wait_for_ready() both no-op if they think a
+            # master is already up and ready (condor_master_was_started /
+            # condor_is_ready) -- true after the *original* standup, and
+            # never cleared just because that master got killed. Clear both
+            # so the relaunch below isn't silently skipped.
+            self.condor_master = None
+            self.condor_is_ready = False
+
+            self._start_condor()
+            self._wait_for_ready()
 
     def read_config(self) -> str:
         return self.config_file.read_text()
@@ -538,7 +825,10 @@ class Condor:
     def get_local_schedd(self):
         """Return the :class:`htcondor.Schedd` for this pool's schedd."""
         with self.use_config():
-            return htcondor.Schedd()
+            #htcondor.enable_debug("D_HOSTNAME D_CAT")
+            sched = htcondor.Schedd()
+            #htcondor.disable_debug()
+            return sched
 
     def get_local_collector(self):
         """Return the :class:`htcondor.Collector` for this pool's collector."""
@@ -752,6 +1042,14 @@ class Condor:
         """
         return self.submit(htcondor.Submit.from_dag(str(dagfile)))
 
+    def _make_job_queue_log_public_if_root(self):
+        if self.use_sudo:
+            # If we're running condor_master as root, then the job queue log will be owned by root and not readable by the unprivileged user running this code, so chmod it to be world-readable
+            cmd.run_command(
+                ["sudo", "chmod", "0666", self.job_queue_log.as_posix()],
+                echo=False,
+                suppress=True,
+            )
 
 RE_PORT_HOST = re.compile(r"\d+\.\d+\.\d+\.\d+:\d+")
 

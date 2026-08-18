@@ -1007,11 +1007,32 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				uint32_t token_length = 0;
 				m_auth_state->m_ssl_status = SSL_peek_ptr(m_auth_state->m_ssl,
 					static_cast<void*>(&token_length), sizeof(token_length));
-				if (m_auth_state->m_ssl_status >= 1) {
-					m_auth_state->m_token_length = ntohl(token_length);
+				if (m_auth_state->m_ssl_status == sizeof(token_length)) {
+					// The length is sent by an as-yet-unauthenticated peer, so
+					// validate it before we use it to size or index a buffer.
+					// Reject zero and anything implausibly large (a SciToken is
+					// at most a few KB).  Note ntohl() yields a uint32_t.
+					// value with the high bit set would otherwise become a
+					// negative int32_t and slip past the >0 check below, leaving
+					// token_contents empty while the indexing at the bottom of
+					// the loop reads far out of bounds.
+					uint32_t net_token_length = ntohl(token_length);
+					if (net_token_length == 0 || net_token_length > AUTH_SSL_BUF_SIZE) {
+						dprintf(D_SECURITY, "Received SciToken with invalid "
+							"length %u: quitting.\n", net_token_length);
+						m_auth_state->m_done = 1;
+						m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+						break;
+					}
+					m_auth_state->m_token_length = net_token_length;
 					dprintf(D_SECURITY|D_FULLDEBUG, "Peeked at the sent token; "
-						"%u bytes long; SSL status %d.\n",
+						"%d bytes long; SSL status %d.\n",
 						m_auth_state->m_token_length, m_auth_state->m_ssl_status);
+				} else if (m_auth_state->m_ssl_status >= 1) {
+					dprintf(D_SECURITY, "Received incomplete SciToken length, quitting.\n");
+					m_auth_state->m_done = 1;
+					m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+					break;
 				}
 			}
 			if (m_auth_state->m_token_length == 0) {
@@ -1552,7 +1573,7 @@ Condor_Auth_SSL :: receive_message( bool non_blocking, int &status, int &len, ch
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
-        || !(len <= AUTH_SSL_BUF_SIZE)
+        || !(len >= 0 && len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
@@ -1815,7 +1836,11 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 skip_san:
 	{
 		char cn_fqdn[256];
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		X509_NAME *subj = nullptr;
+#else
+		const X509_NAME *subj = nullptr;
+#endif
 		if (!success && (subj = X509_get_subject_name(cert)) &&
 			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
 		{
@@ -2362,10 +2387,15 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		FamilyInfo fi;
 		fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-		int pid = daemonCore->Create_Process(args.GetArg(0), args,
-					PRIV_CONDOR_FINAL, m_pluginReaperId, FALSE,
-					FALSE, &m_pluginState->m_env, nullptr, &fi, nullptr,
-					std_fds);
+		OptionalCreateProcessArgs cpArgs;
+		int pid = daemonCore->CreateProcessNew(args.GetArg(0), args,
+					cpArgs.priv(PRIV_CONDOR_FINAL)
+						.reaperID(m_pluginReaperId)
+						.wantCommandPort(FALSE)
+						.wantUDPCommandPort(FALSE)
+						.env(&m_pluginState->m_env)
+						.familyInfo(&fi)
+						.std(std_fds));
 		if (pid == 0) {
 			dprintf(D_ALWAYS, "AUTHENTICATE: Failed to spawn plugin %s.\n", plugin_name);
 			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (failed to spawn)", plugin_name);

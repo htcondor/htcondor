@@ -119,9 +119,5 @@ protected:
 	std::string pause_position; // holds the key that the iterator was pointing to before we paused.
 };
 
-AdAggregationResults<ClassAd*> * GroupAdsByProjection(ClassAdList & adlist, const char * projection, int result_limit, classad::ExprTree * constraint);
-
-
-
 #endif	// _adcluster_H_
 

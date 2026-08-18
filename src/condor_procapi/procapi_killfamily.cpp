@@ -554,10 +554,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, std::vector<pid_t>& pidFa
 		  // allocate that memory
 		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
 			sizeRqd);
-		  if (tokenData == NULL)
-		  {
-			EXCEPT("Unable to allocate memory.");
-		  }
+		  ASSERT(tokenData);
 
 		  // actually get the user info
 		  ret=GetTokenInformation(procToken, tic,
@@ -692,9 +689,7 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status ) {
 
         // create local copy of pids.
 	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
-	if (localpids == NULL) {
-		EXCEPT( "ProcAPI:getProcSetInfo: Out of Memory!");
-	}
+	ASSERT(localpids);
 
 	for( int i=0 ; i<numpids ; i++ ) {
 		localpids[i] = pids[i];

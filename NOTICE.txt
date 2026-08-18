@@ -1,6 +1,6 @@
 HTCondor
 
-Copyright 1990-2022, HTCondor Team, Center for High Througput Computing,
+Copyright 1990-2026, HTCondor Team, Center for High Througput Computing,
 Computer Sciences Deparment, University of Wisconsin-Madison, WI.
 
 This source code is covered by the Apache License, Version 2.0, which

@@ -25,6 +25,7 @@ manually construct a :ref:`condor_in_the_cloud` using :tool:`htcondor annex`.
    introduction-cloud-computing
    using-annex-first-time
    annex-customization-guide
-   annex-configuration
    condor-in-the-cloud
    google-cloud-hpc-toolkit
+.. Following section commented out until written
+   annex-configuration

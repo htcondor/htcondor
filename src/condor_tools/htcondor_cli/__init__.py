@@ -65,6 +65,39 @@ DagStatus = [
     "HALTED"
 ]
 
+class MutualExclusionArgs():
+    """Class for lower argparse arguments to declare mutually exclusive arguments"""
+    def __init__(self, arguments: dict, title: str = None, desc: str = None) -> None:
+        self.args = arguments
+        self.title = title
+        self.desc = desc
+
+    def make_group(self, parser):
+        """Make a mutual exclusion argument group within the provided argparser"""
+        group = parser.add_argument_group(self.title, self.desc)
+        return group.add_mutually_exclusive_group()
+
+    def __getitem__(self, key):
+        return self.args[key]
+
+    def __setitem__(self, key, value):
+        self.args[key] = value
+
+    def __len__(self):
+        return len(self.args)
+
+    def __iter__(self):
+        return iter(self.args)
+
+    def keys(self):
+        return self.args.keys()
+
+    def values(self):
+        return self.args.values()
+
+    def items(self):
+        return self.args.items()
+
 # Import all of the noun classes (do this section last) and then
 # create an OrderedDict of nouns, mapping the name to be used on the
 # command line to the name of the class containing the noun's verbs.
@@ -78,6 +111,9 @@ from htcondor_cli.server import Server
 from htcondor_cli.access_point import AccessPoint
 from htcondor_cli.central_manager import CentralManager
 from htcondor_cli.ocu import OCU
+from htcondor_cli.snake import Snake
+from htcondor_cli.ep import EP
+
 NOUNS = _OrderedDict()
 NOUNS["dag"] = DAG
 NOUNS["job"] = Job
@@ -86,9 +122,10 @@ NOUNS["eventlog"] = EventLog
 NOUNS["credential"] = Credential
 NOUNS["server"] = Server
 NOUNS["ap"] = AccessPoint
+NOUNS["ep"] = EP
 NOUNS["cm"] = CentralManager
 NOUNS["ocu"] = OCU
-
+NOUNS['snake'] = Snake
 # annex needs fcntl which does not exist on windows
 if _os_name != 'nt':
     from htcondor_cli.annex import Annex

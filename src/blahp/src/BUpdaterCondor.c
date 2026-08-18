@@ -570,7 +570,7 @@ IntStateQuery()
 				continue;
 			}
 			now=time(0);
-			string_now=make_message("%d",now);
+			string_now=make_message("%ld",(long)now);
 		
 			JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,token[0]);
 			JOB_REGISTRY_ASSIGN_ENTRY(en.updater_info,string_now);
@@ -681,7 +681,7 @@ FinalStateQuery(char *query)
 				}
 				
 				now=time(0);
-				string_now=make_message("%d",now);
+				string_now=make_message("%ld",(long)now);
 			
 				JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,token[0]);
 				JOB_REGISTRY_ASSIGN_ENTRY(en.updater_info,string_now);

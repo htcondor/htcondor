@@ -61,6 +61,7 @@ ReliSock::init()
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
+	m_read_broken = false;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
 	_bytes_sent = 0.0;
@@ -512,7 +513,18 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	return rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
+	// A previous read failure has left the stream in an inconsistent state.
+	if (m_read_broken) {
+		return FALSE;
+	}
+
+	int rc = rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
+	if (rc == 0) {
+		// Our read has failed and the stream is likely non-recoverable.
+		// Mark it as broken.
+		m_read_broken = true;
+	}
+	return rc;
 }
 
 int
@@ -789,7 +801,7 @@ void ReliSock::resetHeaderMD()
 	m_final_recv_header = false;
 }
 
-ReliSock::RcvMsg :: RcvMsg() : 
+ReliSock::RcvMsg :: RcvMsg() :
     mode_(MD_OFF),
     mdChecker_(0), 
 	p_sock(0),
@@ -799,7 +811,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_end(0),
 	m_tmp(NULL),
 	ready(0),
-	m_closed(false)
+	m_closed(false),
+	m_low_data_mode(false)
 {
 	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
@@ -838,7 +851,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, ti
 
 	header_filled = 0;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, CondorRWFlags::Read, p_sock->is_non_blocking());
 	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
 	                       // returns -2 if the socket has been closed.
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
@@ -862,7 +875,8 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, ti
 		memcpy(&len_t, &hdr[1], 4);
 		len = (int)ntohl(len_t);
 		m_end = (int) ((char *)hdr)[0];
-		if (m_end < 0 || m_end > 10 || len < 0 || len > max_packet_size) {
+		if (m_end < 0 || m_end > 10 || len < 0 || len > max_packet_size ||
+		    (m_low_data_mode && m_end == 0)) {
 			header_filled = retval;
 			goto check_header; // jump down to a check we now know will fail
 		}
@@ -894,6 +908,11 @@ check_header:
 		char hex[3 * NORMAL_HEADER_SIZE + 1];
 		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized : %s\n",
 				debug_hex_dump(hex, &hdr[0], MIN(NORMAL_HEADER_SIZE, header_filled)));
+		return FALSE;
+	}
+	// In low-data mode, reject multi-packet messages.
+	if (m_low_data_mode && m_end == 0) {
+		dprintf(D_ERROR, "IO: Multi-packet message received in low-data mode\n");
 		return FALSE;
 	}
 
@@ -1838,6 +1857,12 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	// If m_read_broken==true, the read stream is either closed or in a
+	// non-recoverable state. In that situation, we indicate a message is
+	// ready (i.e. attempting to read data won't block).
+	if (m_read_broken) {
+		return true;
+	}
 	while (!rcv_msg.ready)
 	{
 		// NOTE: 'true' here indicates non-blocking.
@@ -1848,6 +1873,9 @@ ReliSock::msgReady() {
 			m_read_would_block = true;
 			return false;
 		} else if (retval == 0) {
+			if (m_read_broken) {
+				return true;
+			}
 			// No data is available
 			return false;
 		}
@@ -2775,6 +2803,31 @@ ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorErro
 	if( !m_ccb_client->ReverseConnect(errorStack, nonblocking) ) {
 		dprintf(D_ALWAYS,"Failed to reverse connect to %s via CCB.\n",
 				peer_description());
+		return 0;
+	}
+	if( nonblocking ) {
+		return CEDAR_EWOULDBLOCK;
+	}
+
+	m_ccb_client = NULL; // in blocking case, we are done with ccb client
+	return 1;
+}
+
+int
+ReliSock::do_outbound_ccb_connect(char const *ccb_addr,char const *target,bool nonblocking,CondorError * errorStack,int ttl)
+{
+	ASSERT( !m_ccb_client.get() ); // only one reverse/outbound connect at a time!
+
+		// Ask the outbound CCB broker to dial `target` on our behalf and splice the
+		// connection back to us; on success we adopt the spliced socket exactly as
+		// a reverse connection does.
+	m_ccb_client = new CCBClient( ccb_addr, (ReliSock *)this );
+	m_ccb_client->SetOutboundTarget( target, ttl );
+
+	if( !m_ccb_client->ReverseConnect(errorStack, nonblocking) ) {
+		dprintf(D_ALWAYS,"Failed to reach %s via outbound CCB %s.\n",
+				target, ccb_addr);
+		m_ccb_client = NULL;
 		return 0;
 	}
 	if( nonblocking ) {

@@ -29,6 +29,7 @@
 #include <optional>
 #include "guidance.h"
 #include "catalog_utils.h"
+#include "condor_holdcodes.h"
 
 class ShadowHookMgr;
 
@@ -205,9 +206,22 @@ class UniShadow : public BaseShadow
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & cifName, const std::string & content
+	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
+		ClassAd * jobAd,
+		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
+
+	virtual bool computeCommonInputFiles(
+		ClassAd * jobAd,
+		ListOfCatalogs & commonFileCatalogs,
+		int & required_version,
+		std::map<std::string, std::string> * internalToSimpleNameMap
+	);
+
+	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
+		if( commonFTO == NULL ) { return {}; }
+		return commonFTO->GetInfo().stats;
+	}
 
  protected:
 
@@ -225,6 +239,9 @@ class UniShadow : public BaseShadow
 
 	void requestJobRemoval();
 
+	// Flag to track if we should do a final file transfer before removing
+	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
+	bool transfer_and_remove_requested = false;
 
 	//
 	// Internal implementation details specific to pseudo_request_guidance().
@@ -233,19 +250,43 @@ class UniShadow : public BaseShadow
 	ClassAd before_common_file_transfer(
 		const std::string & cifName, const std::string & commonInputFiles
 	);
+
 	bool after_common_file_transfer(
-	    const ClassAd & request,
-	    const std::string & cifName,
-	    std::string & stagingDir
+		const ClassAd & request,
+		const std::string & cifName,
+		std::string & stagingDir,
+		long long & size
 	);
 
 	ClassAd handle_wiring_failure();
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
-	    ClassAd request,
-	    ListOfCatalogs common_file_catalogs,
-	    bool print_waiting=true
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		bool print_waiting=true
 	);
+
+
+	// Use only with start_staging_only_conversation():
+	// 		co_return VACATE_REQEUEST_ABORT(...);
+	ClassAd vacate_requeue_abort(
+		const std::string & holdMessage, CONDOR_HOLD_CODE holdCode, int holdSubCode,
+		const char * file, int line
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> internalToSimpleNameMap
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> internalToSimpleNameMap
+	);
+
+
 
 	void set_provider_keep_alive( const std::string & cifName );
 	int producer_keep_alive = -1;

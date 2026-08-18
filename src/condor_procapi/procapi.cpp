@@ -410,7 +410,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	unsigned long u;
 	unsigned long long imgsize_bytes;
 	char c;
-	char s[256];
 	int num_attempts = 5;
 
 		// assume success
@@ -492,18 +491,18 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 			// fill the raw structure from the proc file
 			// ensure I read the right number of arguments....
-		if ( sscanf( line, "%d %s %c %d "
+		if ( sscanf( line, "%d %*s %c %d "
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
 			"%lu %lu %llu %llu %lu %lu %lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %lu",
-			&procRaw.pid, s, &c, &procRaw.ppid, 
+			&procRaw.pid, /* skip exec name */ &c, &procRaw.ppid,
 			&i, &i, &i, &i, 
 			&procRaw.proc_flags, &procRaw.minfault, &u, &procRaw.majfault, &u, 
 			&procRaw.user_time_1, &procRaw.sys_time_1, &i, &i, &i, &i, 
 			&u, &u, &procRaw.creation_time, &imgsize_bytes, &procRaw.rssize, &u, &u, &u, 
-			&u, &u, &u, &i, &i, &i, &i, &u ) != 35 )
+			&u, &u, &u, &i, &i, &i, &i, &u ) != 34 )
 		{
 			// couldn't read the right number of entries.
 			status = PROCAPI_UNSPECIFIED;
@@ -596,14 +595,10 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		do {
 			if (env_buffer == NULL) {
 				env_buffer = (char*)malloc(sizeof(char) * read_size);
-				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!");
-				}
+				ASSERT(env_buffer);
 			} else {
 				env_buffer = (char*)realloc(env_buffer, read_size * multiplier);
-				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!");
-				}
+				ASSERT(env_buffer);
 				multiplier++;
 			}
 
@@ -643,9 +638,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		// it mimics and environ variable. The addition +1 is for the end NULL;
 		char **env_environ;
 		env_environ = (char**)malloc(sizeof(char *) * (entries + 1));
-		if (env_environ == NULL) {
-			EXCEPT( "Procapi::getProcInfo: Out of memory!");
-		}
+		ASSERT(env_environ);
 
 		// set up the pointers from the env_environ into the env_buffer
 		index = 0;
@@ -707,7 +700,7 @@ ProcAPI::checkBootTime(long now)
 		// and use whichever measure of boot-time is older.
 
 		FILE *fp;
-		char s[256], junk[16];
+		char s[256];
 		unsigned long stat_boottime = 0;
 		unsigned long uptime_boottime = 0;
 
@@ -730,7 +723,7 @@ ProcAPI::checkBootTime(long now)
 			while( r && strstr(s, "btime") == NULL ) {
 				r = fgets( s, 256, fp );
 			}
-			(void) sscanf( s, "%s %lu", junk, &stat_boottime );
+			(void) sscanf( s, "%*s %lu", &stat_boottime );
 			fclose( fp );
 		}
 
@@ -1177,9 +1170,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
 	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
-	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!");
-	}
+	ASSERT(kp);
 
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
 		if (errno == ESRCH) {

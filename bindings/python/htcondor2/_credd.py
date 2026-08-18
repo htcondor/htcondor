@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from ._common_imports import (
     classad,
@@ -21,7 +21,7 @@ from ._param import _param as param
 
 class Credd():
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         '''
         The credd client.  Adds, deletes, and queries (legacy) passwords,
         user credentials (new passwords, Kerberos), and user service
@@ -51,7 +51,7 @@ class Credd():
         # self._version = location['CondorVersion']
 
 
-    def add_password(self, password : str, user : str = None) -> None:
+    def add_password(self, password : str, user : Optional[str] = None) -> None:
         '''
         Store the specified *password* in the credd for the specified *user*.
 
@@ -73,7 +73,7 @@ class Credd():
         _credd_do_store_cred(addr, user, password, mode, None, None, -1)
 
 
-    def delete_password(self, user : str = None) -> bool:
+    def delete_password(self, user : Optional[str] = None) -> bool:
         '''
         Delete the password stored in the credd for the specified *user*.
 
@@ -91,7 +91,7 @@ class Credd():
         return result == self._SUCCESS
 
 
-    def query_password(self, user : str = None) -> bool:
+    def query_password(self, user : Optional[str] = None) -> bool:
         '''
         Check if the credd has a password stored for the specified *user*.
 
@@ -111,7 +111,7 @@ class Credd():
         return result == self._SUCCESS
 
 
-    def add_user_cred(self, credtype : CredType, credential : bytes, user : str = None ) -> None:
+    def add_user_cred(self, credtype : CredType, credential : bytes, user : Optional[str] = None ) -> None:
         '''
         Store the specified *credential* of the specified *credtype*
         in the credd for the specified *user*.
@@ -148,7 +148,7 @@ class Credd():
         _credd_do_store_cred(self._addr, user, credential, mode, None, None, -1)
 
 
-    def delete_user_cred(self, credtype : CredType, user : str = None) -> None:
+    def delete_user_cred(self, credtype : CredType, user : Optional[str] = None) -> None:
         '''
         Delete the credential of the specified *credtype*
         stored in the credd for the specified *user*.
@@ -163,7 +163,7 @@ class Credd():
         _credd_do_store_cred(self._addr, user, None, mode, None, None, -1)
 
 
-    def query_user_cred(self, credtype : CredType, user : str = None) -> str:
+    def query_user_cred(self, credtype : CredType, user : Optional[str] = None) -> str:
         '''
         Check if the credd has a credential of the specific *credtype*
         stored in the credd for the specified *user*.
@@ -196,7 +196,7 @@ class Credd():
             return result
 
 
-    def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None, refresh : bool = None) -> None:
+    def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : Optional[str] = None, user : Optional[str] = None, refresh : Optional[bool] = None) -> None:
         '''
         Store the specified OAuth *credential* in the credd for the specified *user*.
 
@@ -239,7 +239,7 @@ class Credd():
         _credd_do_store_cred(self._addr, user, credential, mode, service, handle, refresh)
 
 
-    def delete_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> None:
+    def delete_user_service_cred(self, credtype : CredType, service : str, handle : Optional[str] = None, user : Optional[str] = None) -> None:
         '''
         Delete the OAuth credential stored in the credd for the specified *user*.
 
@@ -264,7 +264,7 @@ class Credd():
     # In version 1, this returned a CredStatus instance, but the CredStatus
     # class defined only __str__(), and no function in the API accepted a
     # CredStatus as an argument.
-    def query_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> str:
+    def query_user_service_cred(self, credtype : CredType, service : str, handle : Optional[str] = None, user : Optional[str] = None) -> str:
         '''
         Check if the credd has an OAuth credential stored for the
         specified *user*.
@@ -290,7 +290,7 @@ class Credd():
 
     # We should probably change the type of `services`, since they're not
     # defined by ClassAds anywhere else in the Python API.
-    def check_user_service_creds(self, credtype : CredType, serviceAds : List[classad.ClassAd], user : str = None) -> CredCheck:
+    def check_user_service_creds(self, credtype : CredType, serviceAds : List[classad.ClassAd], user : Optional[str] = None) -> CredCheck:
         '''
         :param credtype:  Must be :const:`CredType.OAuth`.
         :param serviceAds:  A list of ClassAds specifying which services
@@ -338,7 +338,7 @@ class Credd():
             return CredCheck(",".join(services), url)
 
 
-    def get_oauth2_credential(self, service : str, handle : str, user : str = None) -> str:
+    def get_oauth2_credential(self, service : str, handle : str, user : Optional[str] = None) -> str:
         '''
         Return the specified OAuth2 credential.
 

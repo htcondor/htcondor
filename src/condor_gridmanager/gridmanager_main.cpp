@@ -29,6 +29,7 @@
 #include "globus_utils.h"
 
 #include "gridmanager.h"
+#include "condorresource.h"
 
 char *myUserName = NULL;
 char *SelectionValue = NULL;
@@ -40,7 +41,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname@uid-domain>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
@@ -146,8 +147,14 @@ main_init( int argc, char ** const argv )
 	// not as user condor.
 	if (os_name) {
 		std::string buf;
-		const char *owner = name_of_user(os_name, buf);
-		const char *domain = domain_of_user(os_name, nullptr);
+		const char* owner = nullptr;
+		const char* domain = nullptr;
+#if defined(WIN32)
+		owner = name_of_user(os_name, buf);
+		domain = domain_of_user(os_name, nullptr);
+#else
+		owner = os_name;
+#endif
 		if ( !init_user_ids(owner, domain)) {
 			dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			// uids.cpp will EXCEPT when we set_user_priv() now
@@ -175,12 +182,14 @@ main_config()
 void
 main_shutdown_fast()
 {
+	CondorResource::CleanupAllResources();
 	DC_Exit(0);
 }
 
 void
 main_shutdown_graceful()
 {
+	CondorResource::CleanupAllResources();
 	DC_Exit(0);
 }
 

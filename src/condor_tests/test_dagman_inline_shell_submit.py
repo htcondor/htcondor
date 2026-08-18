@@ -18,6 +18,7 @@ import htcondor2
 import os
 from shutil import rmtree
 import re
+from time import sleep
 
 SUBDIR = "test_subdir"
 JOB_LOG = "check.log"
@@ -77,9 +78,16 @@ VARS CUSTOM_VAR_NODE PREPEND CUSTOM_VAR="True" """,
     "SPECIAL_NODES" : {
         "contents" : """
 PROVISIONER P {{
-    executable = {exit_exe}
-    arguments  = 0
+    # Ensure provisioner node is around long enough for DAGMan to read
+    # go ahead from ProvisionerState ClassAd attr (2)
+    executable = {sleep_exe}
+    arguments  = 600
+    My.ProvisionerState = 2
+    My.RemoveTag = True
 }}
+
+# >:(   Post script so that provisioner removal doesn't fail dag
+SCRIPT POST P {exit_exe} 0
 
 SERVICE S @=my-service-node
     executable = {exit_exe}
@@ -87,14 +95,23 @@ SERVICE S @=my-service-node
     queue 3
 @my-service-node
 
+# Job to remove provisioner job so we don't wait forever
+JOB A @=desc
+    executable = {rm_exe}
+    universe   = local
+    getenv     = PATH,_CONDOR*,CONDOR_CONFIG
+    output     = job.debug
+    error      = job.debug
+@desc
+
 FINAL F @=final-node
     executable = {exit_exe}
     arguments  = 0
 @final-node
         """,
         "SubmitMethod" : 0,
-        "TotalNodes" : 2, # Service nodes don't count towards node count
-        "SubmittedJobs" : 5,
+        "TotalNodes" : 3, # Service nodes don't count towards node count
+        "SubmittedJobs" : 6,
     }
 }
 
@@ -116,7 +133,16 @@ def write_exit_script(test_dir):
 
 #------------------------------------------------------------------
 @action
-def run_dags(condor, test_dir, path_to_sleep, write_exit_script):
+def write_remove_script(test_dir):
+    script = test_dir / "removal.sh"
+    with open(script, "w") as f:
+        f.write("#!/bin/bash\ncondor_rm -const 'RemoveTag==True'\nexit 0\n")
+        os.chmod(script, 0o755)
+        return script
+
+#------------------------------------------------------------------
+@action
+def run_dags(condor, test_dir, path_to_sleep, write_exit_script, write_remove_script):
     if os.path.exists(SUBDIR):
         rmtree(SUBDIR)
     os.mkdir(SUBDIR)
@@ -126,6 +152,7 @@ def run_dags(condor, test_dir, path_to_sleep, write_exit_script):
     fmt = {
         "sleep_exe" : path_to_sleep,
         "exit_exe" : write_exit_script,
+        "rm_exe" : write_remove_script,
         "log" : JOB_LOG,
         "dir" : SUBDIR,
     }
@@ -172,8 +199,29 @@ def test_get_history(condor, dag_wait, dag_num_nodes, dag_num_jobs):
     ads = list()
     const = f'(ClusterId=={dag_wait.clusterid} || DAGManJobId=={dag_wait.clusterid})'
     proj = ["DAGNodeName", "DAG_NodesTotal", "ClusterId", "HasCustomVar", "ExitCode"]
+
     with condor.use_config():
-        ads = htcondor2.Schedd().history(constraint=const, projection=proj)
+        # Attempt to get all job records from history archive
+        attempt = 0
+        while True:
+            ads = htcondor2.Schedd().history(constraint=const, projection=proj)
+            attempt += 1
+
+            if len(ads) > dag_num_jobs:
+                # We expect a record for each submitted job (dag_num_jobs) plus
+                # one for the schedule uni. job. Thus, only break out if we have
+                # more records than the submitted count.
+                # Note: Later check will verify the correct number of records
+                #       (greater than or less than) and contents
+                break
+            elif attempt >= 5:
+                # At this point something probably went wrong so return records
+                # for likely failure
+                break
+            else:
+                # Sleep for a little bit before attempting query once more
+                sleep(5)
+
     return (ads, dag_num_nodes, dag_num_jobs)
 
 #==================================================================

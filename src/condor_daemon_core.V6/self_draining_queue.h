@@ -22,7 +22,7 @@
 #define __SELF_DRAINING_QUEUE_H__
 
 #include "condor_daemon_core.h"
-#include <queue>
+#include <deque>
 
 /**
    This class implements a special kind of Queue: a Queue that can
@@ -49,20 +49,6 @@
 */
 
 
-class SelfDrainingHashItem {
-	ServiceData *m_service;
-
- public:
-	SelfDrainingHashItem(): m_service(0) {}
-	SelfDrainingHashItem(ServiceData *service):
-		m_service(service) {}
-
-	bool operator == (const SelfDrainingHashItem &other) const {
-		return m_service->ServiceDataCompare(other.m_service)==0;
-	}
-	static size_t HashFn(SelfDrainingHashItem const &);
-};
-
 class SelfDrainingQueue : public Service
 {
 public:
@@ -83,8 +69,7 @@ public:
 
 
 private:
-	std::queue<ServiceData*> queue;
-	HashTable<SelfDrainingHashItem,bool> m_hash;
+	std::deque<ServiceData*> queue;
 	ServiceDataHandler handler_fn;
 	ServiceDataHandlercpp handlercpp_fn;
 

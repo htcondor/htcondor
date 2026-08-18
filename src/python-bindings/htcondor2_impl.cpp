@@ -38,6 +38,9 @@ PyObject * PyExc_HTCondorException = NULL;
 #include "my_popen.h"
 #include "htcondor2/credd.cpp"
 
+// htcondor.Placementd
+#include "htcondor2/placementd.cpp"
+
 // htcondor.Submit
 #include "submit_utils.h"
 #include "dagman_utils.h"
@@ -142,12 +145,19 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_startd_drain_jobs", &_startd_drain_jobs, METH_VARARGS, NULL},
 	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
+	{"_startd_vacate_slots", &_startd_vacate_slots, METH_VARARGS, NULL},
+	{"_startd_rehome", &_startd_rehome, METH_VARARGS, NULL},
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
 	{"_credd_run_credential_producer", &_credd_run_credential_producer, METH_VARARGS, NULL},
 	{"_credd_get_oauth2_credential", &_credd_get_oauth2_credential, METH_VARARGS, NULL},
+
+	{"_placement_user_login", &_placement_user_login, METH_VARARGS, NULL},
+	{"_placement_query_users", &_placement_query_users, METH_VARARGS, NULL},
+	{"_placement_query_tokens", &_placement_query_tokens, METH_VARARGS, NULL},
+	{"_placement_query_authorizations", &_placement_query_authorizations, METH_VARARGS, NULL},
 
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 	{"_schedd_userrec_query", &_schedd_userrec_query, METH_VARARGS, NULL},
@@ -170,6 +180,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
 	{"_schedd_get_dag_contact_info", &_schedd_get_dag_contact_info, METH_VARARGS, NULL},
 	{"_schedd_get_claims", &_schedd_get_claims, METH_VARARGS, NULL},
+	{"_schedd_create_ocu", &_schedd_create_ocu, METH_VARARGS, NULL},
+	{"_schedd_query_ocu", &_schedd_query_ocu, METH_VARARGS, NULL},
+	{"_schedd_remove_ocu", &_schedd_remove_ocu, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},

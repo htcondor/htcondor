@@ -319,7 +319,7 @@ main(int argc, const char *argv[])
 				close_file = true;
 			}
 			CondorClassAdFileIterator adIter;
-			adIter.begin(fh, close_file, file_format);
+			std::ignore = adIter.begin(fh, close_file, file_format);
 			ClassAd * ad = adIter.next(NULL);
 			if ( ! ad) {
 				fprintf(stderr, "Unable to read file of edits: %s\n", file);
@@ -601,13 +601,6 @@ main(int argc, const char *argv[])
 		std::string count("all");
 		if (match_count > 0) formatstr(count, "%d", match_count);
 		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.c_str());
-	}
-
-	if ( ! transaction_aborted && jobids.empty() && (setflags & SetAttribute_QueryOnly)) {
-		#if 0 // this doesn't get only-my-jobs... <sigh>
-		ClassAdList ads;
-		GetAllJobsByConstraint(constraint.Str(), "ClusterId\nProcId", ads);
-		#endif
 	}
 
 bail:

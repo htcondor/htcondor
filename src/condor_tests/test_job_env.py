@@ -64,6 +64,32 @@ def completed_test_job(condor, test_job_hash):
     )
     return ctj
 
+@action
+def sleep_job_parameters(path_to_sleep):
+    return {
+        "executable": path_to_sleep,
+        "transfer_executable": "true",
+        "should_transfer_files": "true",
+        "universe": "vanilla",
+        "arguments": "0",
+        "request_cpus": "1",
+        "request_disk": "100",
+        "request_memory": "1024",
+        "starter_log": "starter.log",
+        "log": "sleep.log",
+    }
+
+@action
+def sleep_job(sleep_job_parameters, condor):
+    job = condor.submit( sleep_job_parameters)
+    assert job.wait(
+        condition=ClusterState.all_running,
+        timeout=600,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return job
+
 class TestJobEnv:
     def test_job_env(self, completed_test_job):
 
@@ -77,3 +103,7 @@ class TestJobEnv:
             # Next line is the SAMPLE_VAR from STARTER_JOB_ENVIRONMENT
             sampleVar = f.readline()
             assert sampleVar == "AnExample\n"
+
+    def test_starter_log(self, condor, sleep_job):
+        assert True
+

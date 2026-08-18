@@ -168,9 +168,8 @@ bool Regex::match(const std::string&, std::vector<std::string> *) {not_impl();re
 
 // CCB me harder
 BEGIN_C_DECLS
-void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
+void Generic_set_log_va([[maybe_unused]] void(*app_log_va)(int level,char*fmt,va_list args))
 {
-	(void) app_log_va;
 };
 END_C_DECLS
 

@@ -85,10 +85,10 @@ SetMasterProxy( Proxy *master, const Proxy *copy_src )
 
 // Initialize the ProxyManager module. proxy_dir is the directory in
 // which the module should place the "master" proxy files.
-bool InitializeProxyManager( const char *proxy_dir )
+void InitializeProxyManager( const char *proxy_dir )
 {
 	if ( proxymanager_initialized == true ) {
-		return false;
+		return;
 	}
 
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
@@ -100,8 +100,6 @@ bool InitializeProxyManager( const char *proxy_dir )
 	ReconfigProxyManager();
 
 	proxymanager_initialized = true;
-
-	return true;
 }	
 
 // Read config values from the config file. Call this function when the

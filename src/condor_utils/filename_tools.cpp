@@ -61,7 +61,7 @@ canonicalize_dir_delimiters( char *path ) {
 // Caller is responsible for calling free() on returned pointer if
 // returned pointer is not NULL.
 char *
-alternate_exec_pathname( const char *path ) 
+alternate_exec_pathname( [[maybe_unused]] const char *path ) 
 {
 	char *buf = NULL;
 
@@ -84,8 +84,6 @@ alternate_exec_pathname( const char *path )
 		free(buf);
 		buf = NULL;
 	}
-#else
-	(void) path;		// Quiet 'unused parameter' warning
 #endif
 
 	return buf;

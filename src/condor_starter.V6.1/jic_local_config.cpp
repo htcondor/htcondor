@@ -30,12 +30,8 @@
 JICLocalConfig::JICLocalConfig( const char* keyword, int cluster, 
 								int proc, int subproc ) : JICLocal()
 {
-	if( keyword ) {
-		key = strdup( keyword );
-	} else {
-		EXCEPT( "Can't instantiate a JICLocalConfig object without "
-				"a keyword" );
-	}
+	ASSERT(keyword);
+	key = strdup( keyword );
 	job_cluster = cluster;
 	job_proc = proc;
 	job_subproc = subproc;

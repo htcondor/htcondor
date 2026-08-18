@@ -50,6 +50,12 @@ parser.add_option('-l', '--live', action='store_const', const=True, dest='live',
                       default=False, help=(
     'Display results in a live, top-like mode.'))
 
+# schedd history
+parser.add_option('-H', '--history', action='store_true', dest='history',
+                      default=False, help=(
+    'Use the two most recent condor_schedd daemon ads from $(SPOOL)/schedd_daemon_history '
+    'instead of querying the daemon twice.'))
+
 # pool
 parser.add_option('-p', '--pool', dest='pool', default=None, help=(
     'Query the specified Central Manager instead of $(COLLECTOR_HOST). '
@@ -89,6 +95,7 @@ opts, args = parser.parse_args()
 FILES = args
 DAEMON = opts.daemon
 LIVE = opts.live
+HISTORY = opts.history
 POOL = opts.pool
 NAME = opts.name
 DELAY = opts.delay
@@ -116,7 +123,9 @@ if (NAME is None) and (POOL is None):
 # determine if we should do direct queries
 DIRECT = DAEMON in ['Schedd', 'Startd']
 
-# column names
+# column names. These are the stable identifiers used internally and
+# accepted by the -s/--sort option; the human-readable headers actually
+# printed are defined in COL_LABELS below.
 COL_NAMES = [
     'TotalRt',  # 0. Total Runtime
     'InstRt',   # 1. Runtime between ads
@@ -134,6 +143,32 @@ COL_NAMES = [
     'CtPctAvg', # 13. InstRate / AvgRate ("percent of mean count rate")
     'Item'      # 14. Attribute name
 ]
+
+# Human-readable, three-row headers for each column: (scope, metric, units).
+# The scope row names the time window (Recent = between the two ClassAds,
+# Lifetime/Total = since daemon start); the metric row names the quantity;
+# the units row gives its units (s = seconds, # = count, /s = count per
+# second, % = percentage). Stacking the words keeps each column only as
+# wide as its longest single word, so we get real words and units without
+# the cryptic abbreviations.
+COL_LABELS = {
+    #            scope        metric     units
+    'TotalRt':  ('Total',    'Runtime', '(s)'),
+    'InstRt':   ('Recent',   'Runtime', '(s)'),
+    'InstAvg':  ('Recent',   'Avg',     '(s)'),
+    'TotAvg':   ('Lifetime', 'Avg',     '(s)'),
+    'TotMax':   ('Lifetime', 'Max',     '(s)'),
+    'TotMin':   ('Lifetime', 'Min',     '(s)'),
+    'RtPctAvg': ('Pct of',   'Avg',     '(%)'),
+    'RtPctMax': ('Pct of',   'Max',     '(%)'),
+    'RtSigmas': ('Std',      'Devs',    ''),
+    'TotalCt':  ('Total',    'Count',   '(#)'),
+    'InstCt':   ('Recent',   'Count',   '(#)'),
+    'InstRate': ('Recent',   'Rate',    '(/s)'),
+    'AvgRate':  ('Lifetime', 'Rate',    '(/s)'),
+    'CtPctAvg': ('Pct of',   'Rate',    '(%)'),
+    'Item':     ('',         'Name',    ''),
+}
 
 # column sets
 COL_SETS = {
@@ -166,6 +201,9 @@ PIPE = not sys.stdout.isatty()
 
 # live mode does not apply when piped or using ClassAd files
 if PIPE or FILES:
+    LIVE = False
+
+if HISTORY:
     LIVE = False
 
 ###
@@ -259,6 +297,51 @@ def queryClassAd(pool, daemon, name, direct = False, statistics = 'All:2'):
         ad = ads[0]
 
     return ad
+
+def readScheddHistoryAds(history_path, count = 2):
+    """Returns the last <count> ClassAds from schedd_daemon_history."""
+
+    ads = []
+
+    def flush_block(lines):
+        if not lines:
+            return
+        text = '\n'.join(lines) + '\n\n'
+        try:
+            ad = classad.parseOne(text, parser=classad.Parser.Old)
+        except Exception as exc:
+            raise RuntimeError('Failed to parse schedd history ClassAd in {0}: {1}'.format(
+                history_path, exc))
+        ads.append(ad)
+        lines.clear()
+
+    with open(history_path) as history_file:
+        current_lines = []
+        for raw_line in history_file:
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith('***'):
+                flush_block(current_lines)
+                continue
+            current_lines.append(raw_line.rstrip('\n'))
+        flush_block(current_lines)
+
+    if len(ads) < count:
+        raise RuntimeError(
+            'History file {0} does not contain {1} ClassAds'.format(
+                history_path, count))
+
+    if count == 2:
+        for idx in range(len(ads) - 1, 0, -1):
+            older = ads[idx - 1]
+            newer = ads[idx]
+            if ('DaemonStartTime' in older and 'DaemonStartTime' in newer and
+                    older['DaemonStartTime'] == newer['DaemonStartTime']):
+                return [older, newer]
+        return ads[-2:]
+
+    return ads[-count:]
 
 ###
 
@@ -486,9 +569,10 @@ def getRuntimeColFmts(col_name, table, fmt_type):
     if fmt_type == 'str':
         return (column_fmt, number_fmt)
 
-    # for numerical data, compare the length of the column name
-    # to the length of the largest (in characters) number.
-    name_width = len(col_name)
+    # for numerical data, compare the width of the (multi-row) header
+    # to the length of the largest (in characters) number. The header
+    # width is the longest single word stacked in the column.
+    name_width = max(len(part) for part in COL_LABELS[col_name])
 
     # the "largest" number could be negative, so check both max and min
     i = COL_NAMES.index(col_name)
@@ -692,16 +776,31 @@ def printRuntimeTable(old, new, col_set = COL_SET, sort_col = SORT_COL, lines = 
     sys.stdout.write('Runtime stats from {0} to {1}:\n'.format(t_old, t_new))
     lines += 1
     
-    # print the header
-    cols = []
-    for col_name in col_names:
-        cols.append(col_fmts[col_name][0].format(col_name))
-    col_string = ' '.join(cols)
+    # print the multi-row header: scope, then metric, then units
+    for header_row in (0, 1, 2):
+        cols = []
+        for col_name in col_names:
+            label = COL_LABELS[col_name][header_row]
+            cols.append(col_fmts[col_name][0].format(label))
+        col_string = ' '.join(cols).rstrip()
 
-    # crop the header to the terminal window if needed
-    if (not PIPE) and (len(col_string) > width):
-        col_string = col_string[:width]
-    sys.stdout.write(col_string + '\n')
+        # crop the header to the terminal window if needed
+        if (not PIPE) and (len(col_string) > width):
+            col_string = col_string[:width]
+        sys.stdout.write(col_string + '\n')
+        lines += 1
+
+    # print a rule separating the header from the data, underlining each
+    # column to its own width
+    rule_cols = []
+    for col_name in col_names:
+        col_width = max(len(col_fmts[col_name][0].format(part))
+                            for part in COL_LABELS[col_name])
+        rule_cols.append('-' * col_width)
+    rule_string = ' '.join(rule_cols).rstrip()
+    if (not PIPE) and (len(rule_string) > width):
+        rule_string = rule_string[:width]
+    sys.stdout.write(rule_string + '\n')
     lines += 1
 
     # print the rows
@@ -737,7 +836,7 @@ def printRuntimeTable(old, new, col_set = COL_SET, sort_col = SORT_COL, lines = 
 
 def printCountdown(delay = DELAY):
     """Prints countdown to the next update to stderr"""
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     refresh_time = now + datetime.timedelta(seconds=delay)
     time_left = refresh_time - now
     while time_left > datetime.timedelta(seconds=0):
@@ -746,7 +845,7 @@ def printCountdown(delay = DELAY):
             time_left.seconds))
         sys.stderr.flush()
         sleep(1)
-        time_left = refresh_time - datetime.datetime.utcnow()
+        time_left = refresh_time - datetime.datetime.now(datetime.timezone.utc)
     sys.stderr.write('\rUpdating ClassAd ' + 10*'.' + '\n\n')
     sys.stderr.flush()
 
@@ -771,6 +870,10 @@ if __name__ == '__main__':
 
     # wrap everything to catch Ctrl-C
     try:
+
+        if HISTORY and FILES:
+            sys.stderr.write('Error: -history cannot be combined with ClassAd files.\n')
+            sys.exit(1)
 
         # if we have files, parse them into old and new ClassAds
         if FILES:
@@ -826,6 +929,40 @@ if __name__ == '__main__':
             NAME = new['Name']
 
         # if we're querying the Collector, first get the "old" ClassAd
+        elif HISTORY:
+            if DAEMON != 'Schedd':
+                sys.stderr.write('Error: -history is only supported for Schedd daemon ads.\n')
+                sys.exit(1)
+            if POOL is not None:
+                sys.stderr.write('Error: -history cannot be used with --pool.\n')
+                sys.exit(1)
+            spool = htcondor.param.get('SPOOL')
+            if not spool:
+                sys.stderr.write('Error: SPOOL is not defined in the configuration; cannot locate schedd history file.\n')
+                sys.exit(1)
+            history_path = os.path.join(spool, 'schedd_daemon_history')
+            try:
+                old, new = readScheddHistoryAds(history_path, 2)
+            except FileNotFoundError:
+                sys.stderr.write('Error: Unable to open {0}\n'.format(history_path))
+                sys.exit(1)
+            except RuntimeError as exc:
+                sys.stderr.write(str(exc) + '\n')
+                sys.exit(1)
+            except Exception as exc:
+                sys.stderr.write(str(exc) + '\n')
+                sys.exit(1)
+
+            if new['MyCurrentTime'] < old['MyCurrentTime']:
+                old, new = (new, old)
+
+            if NAME is None and ('Name' in new):
+                NAME = new['Name']
+
+            if len(getRuntimeAttrs(new)) == 0:
+                sys.stderr.write("Did not get any comparable runtime attributes from daemon ClassAd, exiting early.\n")
+                sys.exit(0)
+
         else:
             if NAME is None:
                 NAME = getDaemonName(POOL, DAEMON, MACHINE)

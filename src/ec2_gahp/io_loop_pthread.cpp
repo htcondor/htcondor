@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
+#include <vector>
 
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -474,26 +475,23 @@ IOProcess::stdinPipeHandler()
 				fflush( stdout );
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
 				std::vector<std::string> amazon_commands;
-				size_t num_commands = 0;
+				allAmazonCommands(amazon_commands);
 
-				num_commands = allAmazonCommands(amazon_commands);
-				num_commands += 7;
-
-				const char *commands[num_commands];
-				size_t i = 0;
-				commands[i++] = GAHP_RESULT_SUCCESS;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
-				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
-				commands[i++] = GAHP_COMMAND_RESULTS;
-				commands[i++] = GAHP_COMMAND_QUIT;
-				commands[i++] = GAHP_COMMAND_VERSION;
-				commands[i++] = GAHP_COMMAND_COMMANDS;
+				std::vector<const char *> commands = {
+					GAHP_RESULT_SUCCESS,
+					GAHP_COMMAND_ASYNC_MODE_ON,
+					GAHP_COMMAND_ASYNC_MODE_OFF,
+					GAHP_COMMAND_RESULTS,
+					GAHP_COMMAND_QUIT,
+					GAHP_COMMAND_VERSION,
+					GAHP_COMMAND_COMMANDS,
+				};
 
 				for (const auto& one_command : amazon_commands) {
-					commands[i++] = one_command.c_str();
+					commands.push_back(one_command.c_str());
 				}
 
-				gahp_output_return (commands, i);
+				gahp_output_return (commands.data(), commands.size());
 			} else {
 				// got new command
 				if( !addNewRequest(command) ) {
@@ -935,7 +933,7 @@ static void *worker_function( void *ptr )
 const unsigned int requestPoolSize = 4096;
 bool initializedRequestMap = false;
 unsigned char requestMap[ requestPoolSize ];
-unsigned char requests[ requestPoolSize * sizeof( Request ) ];
+alignas(Request) unsigned char requests[ requestPoolSize * sizeof( Request ) ];
 
 void * Request::operator new( size_t i ) noexcept {
 	static unsigned int index = 0;

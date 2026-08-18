@@ -48,7 +48,6 @@
  */
 typedef std::pair<std::string, std::string> pair_strings;
 typedef std::pair<std::string, bool> pair_str_bool;
-typedef std::vector<pair_strings> pair_strings_vector;
 
 class FilesystemRemap {
 
@@ -126,15 +125,5 @@ private:
 
 	bool m_remap_proc;
 };
-
-/**
- * Get a list of the named chroots
- */
-pair_strings_vector root_dir_list();
-
-/**
- * Given a chroot directory, make sure it isn't equivalent to "/"
- */
-bool is_trivial_rootdir(const std::string &root_dir);
 
 #endif

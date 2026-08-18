@@ -11,7 +11,7 @@ machines in very fine detail.  The configuration of an EP is responsible for:
 .. sidebar:: Execution Point (EP) Diagram
 
    .. mermaid::
-      :caption: Daemons for a Execution Point, one *condor_starter* per running job.
+      :caption: Daemons for an Execution Point, one *condor_starter* per running job.
       :align: center
 
       flowchart TD
@@ -22,7 +22,7 @@ machines in very fine detail.  The configuration of an EP is responsible for:
          condor_starter_for_slot2 --> job_in_slot2
 
 
-#. Dividing a single machine one or more *slots*, each of which can run at most
+#. Dividing a single machine into one or more *slots*, each of which can run at most
    one job at a time. These slots can protect the machine and other slots
    by limiting the amount of resources used by the job in the slot.  Different
    slots can support different policies.
@@ -83,7 +83,7 @@ all the detected resources on the machine.  Attributes like :ad-attr:`Memory`,
 :ad-attr:`Disk` and :ad-attr:`Cpus` describe how much is available.  However, no jobs run
 directly in Partitionable slots.  Rather, partitionable slots serve as a parent
 for Dynamic slots.  Partitionable slots have the attribute :ad-attr:`SlotType` set to
-``Partitionable``, and ``PartionableSlot`` set to ``True``, and are sometimes
+``Partitionable``, and ``PartitionableSlot`` set to ``True``, and are sometimes
 called p-slots for convenience.  p-slots are named slotN@startd_name, where N
 is usually 1.  Although possible, it is rare to have multiple p-slots on one
 machine.
@@ -100,10 +100,10 @@ of disk is started under that partitionable slot, the partitionable slot is left
 with 2 cores, 8 Gb of memory and 80 Gb of disk.  A new dynamic slot is created
 with the allocated resources.  When the job exits, if the AP has another job
 that fits in the dynamic slot (or d-slot), the AP can reuse the d-slot for
-another job.  At such time as it cannot reused the slot the d-slot is
+another job.  At such time as it cannot reuse the slot the d-slot is
 destroyed, and the resources allocated to it are returned to the parent p-slot.
 Depending on the configuration, the privilege level of HTCondor, and the OS,
-these slot may or may not enforce the resources limits they have allocated.
+these slots may or may not enforce the resource limits they have allocated.
 dslots are named slotN_M@startd_name, where N is the number of the parent
 partitionable slot (often "1"). Dynamic slots have the attribute
 :ad-attr:`DynamicSlot` set to ``True``, and the attribute :ad-attr:`SlotType` set to
@@ -121,7 +121,7 @@ Static Slots
 ''''''''''''
 :index:`Slot Types<single; Slot Type; Static>`
 
-Jobs run in static slots, in much they same way they do for dynamic slots.
+Jobs run in static slots, in much the same way they do for dynamic slots.
 However, the number of static slots in a *condor_startd*, and their size is
 fixed by configuration at boot time of the *condor_startd*, and cannot be
 changed without restarting the *condor_startd*.  By default, no static slots
@@ -204,9 +204,9 @@ Define slot types.
         NUM_SLOTS_TYPE_1 = 2
 
     Amounts of disk space and swap space are detected at startup and
-    may be different each time that the EP starts up. The the EP will
+    may be different each time that the EP starts up. The EP will
     use the detected free space as the amount that can be provisioned
-    to the slots.  So for disk, it is may be better to specify a percentage
+    to the slots.  So for disk, it may be better to specify a percentage
     or fraction of the available space that is allocated to each slot, instead of specifying absolute
     values. As the total values of these resources change on the
     machine, each slot will take its fraction of the total and report
@@ -232,8 +232,8 @@ Define slot types.
     -  disk, Disk, D, d
     -  swap, SWAP, S, s, VirtualMemory, V, v
 
-    Swap is treated as a resouce for backward compatibility, but in
-    modern computers, Swap should be be disabled for jobs and so
+    Swap is treated as a resource for backward compatibility, but in
+    modern computers, Swap should be disabled for jobs and so
     there is no need to explicitly provision the Swap resource to slots.
     On Windows, provisioning Swap has no effect.
 
@@ -438,7 +438,7 @@ than one job is or can be matched to a single slot. In this example,
 Slot1 is identified as a partitionable slot and has the following
 resources:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     cpu = 10
     memory = 10240
@@ -455,15 +455,14 @@ resource requests:
 
 The portion of the slot that is carved out is now known as a dynamic
 slot. This dynamic slot has its own machine ClassAd, and its ``Name``
-attribute distinguishes itself as a dynamic slot with incorporating the
-substring ``Slot1_1``.  Note that the startd may round up the resource
+attribute distinguishes itself as a dynamic slot by incorporating the substring ``Slot1_1``.  Note that the startd may round up the resource
 requests, so that subsequent jobs may also match this slot, but it
 will never run a job in a slot that won't fit the job.
 
 After allocation, the partitionable Slot1 advertises that it has the
 following resources still available, which might look like:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     cpu = 7
     memory = 9216
@@ -473,17 +472,15 @@ As each new job is allocated to Slot1, it breaks into ``Slot1_1``,
 ``Slot1_2``, ``Slot1_3`` etc., until the entire set of Slot1's available
 resources have been consumed by jobs.
 
-Dynamic provisioning is enabled by default, as of HTCondor version 23.0 In
-older versions, to enable dynamic provisioning, define a slot type, and declare
+Dynamic provisioning is enabled by default, as of HTCondor version 23.0. In older versions, to enable dynamic provisioning, define a slot type, and declare
 at least one slot of that type. Then, identify that slot type as partitionable
 by setting configuration variable :macro:`SLOT_TYPE_<N>_PARTITIONABLE` to
-``True``. The value of ``<N>`` within the configuration variable name is the
-same value as in slot type definition configuration variable
+``True``. The value of ``<N>`` within the configuration variable name is the same value as in the slot type definition configuration variable
 :macro:`SLOT_TYPE_<N>`. For the most common cases the machine should be
 configured for one slot, managing all the resources on the machine. To do so,
 set the following configuration variables:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NUM_SLOTS = 1
     NUM_SLOTS_TYPE_1 = 1
@@ -491,18 +488,16 @@ set the following configuration variables:
     SLOT_TYPE_1_PARTITIONABLE = TRUE
 
 In a pool using dynamic provisioning, jobs must express resources they need in
-the submit description file:
+the submit description file with the following JDL commands:
 
-.. code-block:: text
-
-    request_cpus
-    request_memory
-    request_disk (in kilobytes)
+    - :subcom:`request_cpus`
+    - :subcom:`request_memory`
+    - :subcom:`request_disk` (in kilobytes)
 
 This example shows a portion of the job submit description file for use
 when submitting a job to a pool with dynamic provisioning.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     universe = vanilla
 
@@ -536,7 +531,7 @@ Preemption of Partitionable Slots
 """""""""""""""""""""""""""""""""
 
 .. warning::
-   Partionable slot preemption is an experimental feature, and may not
+   Partitionable slot preemption is an experimental feature, and may not
    work as expected with all other HTCondor features.
 
 Another partial solution is a new matchmaking algorithm in the
@@ -559,7 +554,7 @@ returned to the partitionable slot for use by the new job.
 To enable pslot preemption, the following configuration variable must be
 set for the *condor_negotiator*:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       ALLOW_PSLOT_PREEMPTION = True
 
@@ -631,10 +626,10 @@ their defaults are
 Slot Isolation and Protection
 -----------------------------
 
-When multiple jobs, one in each slots, are running on the same machine,
+When multiple jobs, one in each slot, are running on the same machine,
 one job might negatively impact another.  This might happen by using too much
 cpu, or disk, or even sending a signal to a process in another job.  HTCondor
-provides several mechanism to protect jobs in slots from each other.
+provides several mechanisms to protect jobs in slots from each other.
 
 Per Job PID Namespaces
 ''''''''''''''''''''''
@@ -670,7 +665,7 @@ takes care of killing all child processes.
 To enable the use of per job PID namespaces, set the configuration to
 include
 
-.. code-block:: text
+.. code-block:: condor-config
 
       USE_PID_NAMESPACES = True
 
@@ -701,14 +696,13 @@ system, and the only remaining item is to set configuration variable
 Cgroup V2 Support
 '''''''''''''''''
 
-On Linux systems with cgroup v2 support, the *condor_starter* will put
-each job in it's own cgroup, and, by default, set the memory limit
+On Linux systems with cgroup v2 support, the *condor_starter* will put each job in its own cgroup, and, by default, set the memory limit
 of the cgroup to the memory provisioned by slot, which is usually
 the amount requested by the job, perhaps rounded up.
 
 This is not something an administrator usually needs to worry about,
 but it does mean that jobs can be monitored with the standard cgroup V2
-tools, like system-cgtop.
+tools, like systemd-cgtop.
 
 By default, HTCondor zeroes out the swap memory limit for the job cgroup,
 because if the job reaches the physical memory limit, and starts paging,
@@ -726,21 +720,20 @@ a subdirectory, and immediately move the job into that subdirectory. This
 is clunky, and prone to race conditions when the job might be spawning processes
 of its own.  Rather, the starter creates two, nested directories for the job.
 The direct child of the starter's cgroup is the job's "slice".  HTCondor puts
-resource limits on the slice (and implictly on all children of the slice),
+resource limits on the slice (and implicitly on all children of the slice),
 and measures resource usage of the job by measuring the resource of the slice
 (again, and implicitly measuring the sum of the resources of all the child
-subcgroups of that slice).  When it is time to clean up the job, the starter
+sub-cgroups of that slice).  When it is time to clean up the job, the starter
 removes the slice, and all sub-cgroups thereof.  The starter sets the Unix
 permissions on the slice so that the job can make subdirectories, and thus
 sub-cgroups of the job under the slice, and move processes into those sub-cgroups,
 without violating the kernel's rules about cgroup membership.  However, the
 permissions on the resource limits are set so that the job cannot change them.
 
-The Unix process of the job do not live in the slice, but rather in the
+The Unix processes of the job do not live in the slice, but rather in the
 "scope" cgroup, which is a child of the slice.  This is a leaf node, 
 so the job should never try to make a sub-cgroup of the scope.  This
-naming mimics the naming convention of systemd, but it is HTCondor, not systemd
-which creates and manages this cgroups.
+naming mimics the naming convention of systemd, but it is HTCondor, not systemd which creates and manages these cgroups.
 
 .. mermaid::
     :caption: Cgroup V2 Organization for jobs
@@ -756,7 +749,7 @@ which creates and manages this cgroups.
       style job_scope fill:lightgreen
       style job_slice fill:lightgreen
 
-In the diagram above, the starter's cgroup is red, as it is not modifiably by 
+In the diagram above, the starter's cgroup is red, as it is not modifiable by 
 the job, but the scope and slice are green to show that they are modifiable.
 
 Cgroup V1 Support
@@ -764,7 +757,7 @@ Cgroup V1 Support
 
 When cgroups are correctly configured and running, the virtual file
 system mounted on ``/sys/fs/cgroup`` should have several subdirectories under
-it, and there should an ``htcondor`` subdirectory under the directory
+it, and there should be an ``htcondor`` subdirectory under the directory
 ``/sys/fs/cgroup/cpu``, ``/sys/fs/cgroup/memory`` and some others.
 
 The *condor_starter* daemon uses cgroups v1 by default on Linux systems 
@@ -877,8 +870,7 @@ is no concept of ``soft`` or ``hard``, so this limit only applies when
 there is contention for the cpu. That is, on an eight core machine, with
 only a single, one-core slot running, and otherwise idle, the job
 running in the one slot could consume all eight cpus concurrently with
-this limit in play, if it is the only thing running. If, however, all
-eight slots where running jobs, with each configured for one cpu, the
+this limit in play, if it is the only thing running. If, however, all eight slots were running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
@@ -892,7 +884,7 @@ number of processes or threads in each job.
     tree.
 
     The ``nsenter`` command can be used to enter this namespace
-    in order inspect the job's sandbox:
+    in order to inspect the job's sandbox:
 
     .. code-block:: console
 
@@ -914,11 +906,10 @@ the following benefits:
 - Disk usage is more accurately monitored and enforced preventing the job from using more
   scratch space than provisioned.
 - HTCondor can get the current disk usage much quicker.
-- Creates more isolation for the jobs workspace.
-- HTCondor can cleanup the jobs workspace much quicker.
+- Creates more isolation for the job's workspace.
+- HTCondor can clean up the job's workspace much quicker.
 
-This feature will enable better handling of jobs that utilize more than the disk space
-than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
+This feature will enable better handling of jobs that utilize more disk space than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
 created for it, the starter will put the job on hold with the out of resources hold code (34).
 Otherwise, in a full filesystem, writes will fail with ENOSPC, and leave it up to the job
 to handle these errors internally at all places writes occur. Even in included third party
@@ -960,7 +951,7 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 
     .. note::
 
-        The minimum logical volume size is by default is 4MB.
+        The minimum logical volume size is by default 4MB.
 
 .. mermaid::
     :caption: Linux LVM Environment Setup
@@ -975,6 +966,34 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
       VG -- Thick --> Done(HTCondor Ready)
       Thinpool --> Done(HTCondor Ready)
 
+To verify HTCondor correctly initialized LVM disk enforcement for an Execution Point,
+execute the following :tool:`condor_status` query. Check to make sure the Execution Point
+appears in the list, has the correct backing device name, and has the expected amount of
+disk. Something is likely wrong if the disk column says ``0.0B``.
+
+.. code-block:: console
+
+    $ condor_status -startd -lvm
+
+.. code-block:: console
+    :caption: Sample command output
+
+    HOST                   DEVICE              PROVISION     DISK  LOOPBACK
+
+    ep1.chtc.wisc.edu      condor_vg           thick        0.0 B     false
+    ep2.chtc.wisc.edu      condor_vg           thick        1.2 TB    false
+    ep3.chtc.wisc.edu      condor_vg           thick        1.2 TB    false
+    ep4.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+    ep5.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+    ep6.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+
+A misconfigured Execution Point may also result in broken resources which can
+be seen with the following :tool:`condor_status` query
+
+.. code-block:: console
+
+    $ condor_status -startd -broken
+
 .. note::
 
     The condor_startd must be restarted rather than just reconfigured in order for
@@ -983,9 +1002,7 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 .. warning::
 
     When setup to use thin provisioning, if the backing thin pool logical volume fills
-    up completely then all writes to subsequent thin logical volumes carved from the thin
-    pool with pause for 60 seconds. If desired this behavior can be disabled by using
-    ``--errorwhenfull y`` option when creating the backing thin-pool type logical volume.
+    up completely then all writes to subsequent thin logical volumes carved from the thin pool will pause for 60 seconds. If desired this behavior can be disabled by using the ``--errorwhenfull y`` option when creating the backing thin-pool type logical volume.
 
 *condor_startd* Policy Configuration
 ------------------------------------
@@ -1164,8 +1181,7 @@ over those with the largest :ad-attr:`ImageSize`:
 
     RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 
-This :macro:`RANK` does not work if a job is submitted with an image size of
-more 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
+This :macro:`RANK` does not work if a job is submitted with an image size of more than 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
 expression preferring that job would not be HTCondor's only problem!
 
 .. _Machine States:
@@ -1565,7 +1581,9 @@ transition numbers referred to in this manual will be **bold**.
 
       subgraph ClaimedState
       cidle[Idle] -- Activate\nby shadow\n11 --> busy
-      busy -- job exit\n12 --> cidle
+      busy -- job exit\n12 --> cleaning[Cleaning]
+      cretiring -- job exit --> cleaning
+      cleaning -- starter reaped\n12a --> cidle
       busy -- RANK preemption\nfrom negotiator\n13 --> cretiring
       busy -- periodic\ncheck --> isPreempt
       isPreempt{PREEMPT\nexpression} -- true\n13 --> cretiring
@@ -1609,7 +1627,7 @@ This section traces through all possible state and activity transitions
 within a machine and describes the conditions under which each one
 occurs. Whenever a transition occurs, HTCondor records when the machine
 entered its new activity and/or new state. These times are often used to
-write expressions that determine when further transitions occurred. For
+write expressions that determine when further transitions occur. For
 example, enter the Killing activity if a machine has been in the
 Vacating activity longer than a specified amount of time.
 
@@ -2027,9 +2045,8 @@ If the machine enters the Killing activity, (because either
 ``True``), it attempts to force the *condor_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
-of which is defined by the :macro:`KILLING_TIMEOUT` macro
-(:ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros`). This macro is defined in seconds and defaults to 30. If this timer
+of which is defined by the :macro:`KILLING_TIMEOUT` macro.
+This macro is defined in seconds and defaults to 30. If this timer
 expires and the machine is still in the Killing activity, something has gone
 seriously wrong with the *condor_starter* and the startd tries to vacate the job
 immediately by sending SIGKILL to all of the *condor_starter* 's
@@ -2171,8 +2188,7 @@ It serves as a quick reference.
     is ``True``.
 
 :macro:`CONTINUE`
-    If the machine is in the Claimed/Suspended state, it enter the Busy
-    activity if :macro:`CONTINUE` is ``True``.
+    If the machine is in the Claimed/Suspended state, it enters the Busy activity if :macro:`CONTINUE` is ``True``.
 
 :macro:`PREEMPT`
     If the machine is either in the Claimed/Suspended activity, or is in
@@ -2181,9 +2197,7 @@ It serves as a quick reference.
 
 :macro:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
-    will stop accepting additional jobs. This configuration macro is
-    fully documented here: :ref:`admin-manual/configuration-macros:condor_startd
-    configuration file macros`.
+    will stop accepting additional jobs.
 
 :macro:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
@@ -2323,11 +2337,11 @@ Defining the Backfill Policy
 
 :index:`Defining HTCondor policy<single: Defining HTCondor policy; Backfill>`
 
-There are a small set of policy expressions that determine if a
+There is a small set of policy expressions that determine if a
 *condor_startd* will attempt to spawn a backfill client at all, and if
 so, to control the transitions in to and out of the Backfill state. This
 section briefly lists these expressions. More detail can be found in
-:ref:`admin-manual/configuration-macros:condor_startd configuration file macros`.
+:ref:`startd_config_options`.
 
 :macro:`ENABLE_BACKFILL`
     A boolean value to determine if any backfill functionality should be
@@ -2456,8 +2470,7 @@ HTCondor is not running as root, or a user defined via the
 Finally, HTCondor administrators wishing to use BOINC for backfill jobs
 must create accounts at the various BOINC projects they want to donate
 cycles to. The details of this process vary from project to project.
-Beware that this step must be done manually, as the *boinc_client* can
-not automatically register a user at a given project, unlike the more
+Beware that this step must be done manually, as the *boinc_client* cannot automatically register a user at a given project, unlike the more
 fancy GUI version of the BOINC client software which many users run as a
 screen saver. For example, to configure machines to perform work for the
 Einstein@home project (a physics experiment run by the University of
@@ -2564,7 +2577,7 @@ The following example shows one possible usage of these settings:
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Specify the user that the boinc_client should run as:
     BOINC_Owner = nobody
@@ -2652,7 +2665,7 @@ when dealing with the Windows installation:
    The Windows client is called *boinc.exe*. Therefore, the
    configuration variable :macro:`BOINC_Executable` is written:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
        BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
@@ -2666,7 +2679,7 @@ when dealing with the Windows installation:
    :macro:`BOINC_Arguments` configuration
    variable. For Windows, rewrite the argument line as:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
        BOINC_Arguments = --dir $(BOINC_HOME) \
                  --attach_project http://einstein.phys.uwm.edu [account_key]
@@ -2695,7 +2708,7 @@ when dealing with the Windows installation:
 
    Setting this option causes the addition of the job attribute
 
-   .. code-block:: text
+   .. code-block:: condor-classad
 
        RunAsUser = True
 
@@ -2705,10 +2718,7 @@ when dealing with the Windows installation:
    that the local *condor_starter* be able to run jobs in this manner.
    For more information on the ``RunAsUser`` attribute, see
    :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
-   user`. For more information on the the :macro:`STARTER_ALLOW_RUNAS_OWNER`
-   configuration variable, see
-   :ref:`admin-manual/configuration-macros:shared file system configuration
-   file macros`.
+   user`.
 
 Examples of Policy Configuration
 ''''''''''''''''''''''''''''''''
@@ -2749,11 +2759,11 @@ The following are macros to help write the expressions clearly.
     too busy, and eviction of the HTCondor job should start.
 
 ``StartIdleTime``
-    Amount of time the keyboard must to be idle before HTCondor will
+    Amount of time the keyboard must be idle before HTCondor will
     start a job.
 
 ``ContinueIdleTime``
-    Amount of time the keyboard must to be idle before resumption of a
+    Amount of time the keyboard must be idle before resumption of a
     suspended job.
 
 ``MaxSuspendTime``
@@ -3132,7 +3142,7 @@ Custom and system slot attributes
 The *condor_startd* advertises one classad per slot to the *condor_collector*.  Each of
 these ads has many attributes. See :ref:`classad-attributes/machine-classad-attributes:machine classad attributes`
 for the complete list of the attributes defined and used by the system.  These attributes,
-and the custom attributes describe below, which can be used exactly as the predefined ones,
+and the custom attributes described below, which can be used exactly as the predefined ones,
 have many uses.  Let's consider the machine classad attribute :ad-attr:`OpSysAndVer`. This is
 a more specific version of the attribute :ad-attr:`OpSys`, which will just be "Linux" on any
 Linux system, whereas :ad-attr:`OpSysAndVer` might be ``CentOS8`` on such a system.
@@ -3230,7 +3240,7 @@ and the *condor_startd* reconfigured, all slots on this EP will advertise
 this new attribute.  
 
 Beginning users may be tempted to hard-code, or assume the knowledge that
-certain well-known machines in their poool might have this database installed
+certain well-known machines in their pool might have this database installed
 at some path.  But, by advertising this value as a custom EP attribute,
 administrators have gained a level of indirection, and are free to move
 the database to a different path, or perhaps add machines to the pool without
@@ -3248,7 +3258,7 @@ combining the lists in this order:
 
 For example, consider the following configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     STARTD_ATTRS = favorite_color, favorite_season
     SLOT1_STARTD_ATTRS = favorite_movie
@@ -3262,7 +3272,7 @@ values for ``favorite_color``, ``favorite_season``, and
 Attributes themselves in the :macro:`STARTD_ATTRS` list can also be defined
 on a per-slot basis. Here is another example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     favorite_color = "blue"
     favorite_season = "spring"
@@ -3274,21 +3284,21 @@ For this example, the *condor_startd* ClassAds are
 
 slot1:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "blue"
     favorite_season = "spring"
 
 slot2:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "green"
     favorite_season = "spring"
 
 slot3:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "blue"
     favorite_season = "summer"
@@ -3349,8 +3359,7 @@ multiple ClassAds, using the mechanism defined below:
 -  An output line starting with ``'-'`` has always indicated
    end-of-ClassAd. The ``'-'`` can now be followed by a uniqueness tag
    to indicate the name of the ad that should be replaced by the new ad.
-   This name is joined to the name of the Startd Cron job to produced a
-   full name for the ad. This allows a single Startd Cron job to return
+   This name is joined to the name of the Startd Cron job to produce a full name for the ad. This allows a single Startd Cron job to return
    multiple ads by giving each a unique name, and to replace multiple
    ads by using the same unique name as a previous invocation. The
    optional uniqueness tag can also be followed by the optional keyword
@@ -3399,7 +3408,7 @@ Configuration
 """""""""""""
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-:ref:`admin-manual/configuration-macros:Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron`
+:ref:`daemon_hooks_config_options`.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark
@@ -3568,9 +3577,7 @@ In addition to installing the Docker service, the single configuration
 variable :macro:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor_starter* daemon has been given a password-less sudo permission
-to start the container as root. Details of the :macro:`DOCKER` configuration
-variable are in the :ref:`admin-manual/configuration-macros:condor_startd
-configuration file macros` section.
+to start the container as root.
 
 Docker must be installed as root by following these steps on an
 Enterprise Linux machine.
@@ -3619,19 +3626,18 @@ to run containers with root privilege, you may set the configuration parameter
 This expression is evaluated in the context of the machine ad (my) and the job
 ad (target).
 
-Docker support an enormous number of command line options when creating
+Docker supports an enormous number of command line options when creating
 containers. While HTCondor tries to map as many useful options from submit
 files and machine descriptions to command line options, an administrator may
 want additional options passed to the docker container create command. To do
 so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
 append these to the docker container create command.
 
-Docker universe jobs may use the chirp protoocl to read or write files
+Docker universe jobs may use the chirp protocol to read or write files
 and job ad attributes to or from the Access Point.  By default, HTCondor
 assumes that the network named "docker0" can communicate from inside
 the container to the starter outside the container.  If the docker runtime
-is configured to use a different network, the administrator can set
-the configuation know :macro:`DOCKER_NETWORK_NAME` to the appropriate
+is configured to use a different network, the administrator can set the configuration knob :macro:`DOCKER_NETWORK_NAME` to the appropriate
 network name.
 
 Docker universe jobs may fail to start on certain Linux machines when
@@ -3754,20 +3760,17 @@ to name the singularity image that must be run, :macro:`SINGULARITY_IMAGE_EXPR`.
 This also is evaluated in the context of the machine and the job ad, and must
 evaluate to a string.  This image name is passed to the singularity exec
 command, and can be any valid value for a singularity image name.  So, it
-may be a path to file on a local file system that contains an singularity
-image, in any format that singularity supports.  It may be a string that
+may be a path to file on a local file system that contains a singularity image, in any format that singularity supports.  It may be a string that
 begins with ``docker://``, and refer to an image located on docker hub,
 or other repository.  It can begin with ``http://``, and refer to an image
 to be fetched from an HTTP server.  In this case, singularity will fetch
 the image into the job's scratch directory, convert it to a .sif file and
-run it from there.  Note this may require the job to request more disk space
-that it otherwise would need. It can be a relative path, in which
+run it from there.  Note this may require the job to request more disk space than it otherwise would need. It can be a relative path, in which
 case it refers to a file in the scratch directory, so that the image
 can be transferred by HTCondor's file transfer mechanism.
 
 Here's the simplest possible configuration file.  It will force all
-jobs on this machine to run under Singularity, and to use an image
-that it located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+jobs on this machine to run under Singularity, and to use an image that is located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
 
 .. code-block:: condor-config
 
@@ -3868,7 +3871,7 @@ machine, or on a shared file system, this directory can be bind-mounted
 and be visible inside the container. This is controlled by the
 configuration parameter :macro:`SINGULARITY_BIND_EXPR`. This is an expression,
 which is evaluated in the context of the machine and job ads, and which
-should evaluated to a string which contains a space separated list of
+should evaluate to a string which contains a space separated list of
 directories to mount.
 
 So, to always bind mount a directory named /nfs into the image, and
@@ -3912,8 +3915,7 @@ If an administrator wants to pass additional arguments to the singularity exec
 command instead of the defaults used by HTCondor, several parameters exist to
 do this - see the *condor_starter* configuration parameters that begin with the
 prefix SINGULARITY in defined in section
-:ref:`admin-manual/configuration-macros:condor_starter configuration file
-entries`.  There you will find parameters to customize things such as the use
+:ref:`starter_config_options`.  There you will find parameters to customize things such as the use
 of PID namespaces, cache directory, and several other options.  However, should
 an administrator need to customize Singularity behavior that HTCondor does not
 currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
@@ -3948,7 +3950,8 @@ still map to the scratch directory outside the container.
 
 .. code-block:: condor-config
 
-      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      # Maps the parent of $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      # The job's scratch directory will be under this mount
       SINGULARITY_TARGET_DIR = /srv
 
 If :macro:`SINGULARITY_TARGET_DIR` is not specified by the admin,
@@ -4000,8 +4003,7 @@ What follows is not a comprehensive list of the options that help set up
 to use the **vm** universe; rather, it is intended to serve as a
 starting point for those users interested in getting **vm** universe
 jobs up and running quickly. Details of configuration variables are in
-the :ref:`admin-manual/configuration-macros:configuration file entries relating
-to virtual machines` section.
+the :ref:`virtual_machine_config_options` section.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions. We have successfully used
@@ -4011,8 +4013,7 @@ For Xen, there are three things that must exist on an execute machine to
 fully support **vm** universe jobs.
 
 #. A Xen-enabled kernel must be running. This running Xen kernel acts as
-   Dom0, in Xen terminology, under which all VMs are started, called
-   DomUs Xen terminology.
+   Dom0, in Xen terminology, under which all VMs are started, called DomUs in Xen terminology.
 #. The *libvirtd* daemon must be available, and *Xend* services must be
    running.
 #. The *pygrub* program must be available, for execution of VMs whose
@@ -4132,7 +4133,7 @@ machine ClassAd attributes advertise this availability. Both detection
 and advertisement are accomplished by having this configuration for each
 execute machine that has GPUs:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use feature : GPUs
 
@@ -4146,7 +4147,7 @@ This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
 which can be used to define additional command line arguments for the
 :tool:`condor_gpu_discovery` tool. For example, setting
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use feature : GPUs
       GPU_DISCOVERY_EXTRA = -extra
@@ -4225,7 +4226,7 @@ to the slot(s) to which those devices have been assigned.
 
 Please note that ``condor_gpu_utilization`` can not presently assign GPU
 utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
-device, or a GPU device being used by from outside HTCondor, will result
+device, or a GPU device being used from outside HTCondor, will result
 in GPU usage and utilization being misreported accordingly.
 
 However, this approach does simplify monitoring for the owner/administrator
@@ -4260,23 +4261,22 @@ All specification of the resources available is done by configuration of
 the partitionable slot. The machine is identified as having a resource
 consumption policy enabled with
 
-.. code-block:: text
+.. code-block:: condor-config
 
       CONSUMPTION_POLICY = True
 
 A defined slot type that is partitionable may override the machine value
 with
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
 
 A job seeking a match may always request a specific number of cores,
 amount of memory, and amount of disk space. Availability of these three
-resources on a machine and within the partitionable slot is always
-defined and have these default values:
+resources on a machine and within the partitionable slot is always defined and has these default values:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
       CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
@@ -4288,7 +4288,7 @@ that the resource this policy cares about allocating are the cores.
 Configuration for the machine includes the definition of the slot type
 and that it is partitionable.
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_1 = cpus=8
       SLOT_TYPE_1_PARTITIONABLE = True
@@ -4299,10 +4299,9 @@ allocating the job-requested number of cores to the dynamic slot, and
 use :macro:`SLOT_WEIGHT` to assess the user usage
 that will affect user priority by the number of cores allocated. Note
 that the only attributes valid within the 
-:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
-must the set to the same value on all machines in the pool.
+:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This must be set to the same value on all machines in the pool.
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_1_CONSUMPTION_POLICY = True
       SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
@@ -4313,7 +4312,7 @@ may be used in a consumption policy, by specifying the resource. Using a
 machine with 4 GPUs as an example custom resource, define the resource
 and include it in the definition of the partitionable slot:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       MACHINE_RESOURCE_NAMES = gpus
       MACHINE_RESOURCE_gpus = 4
@@ -4323,7 +4322,7 @@ and include it in the definition of the partitionable slot:
 
 Add the consumption policy to incorporate availability of the GPUs:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_2_CONSUMPTION_POLICY = True
       SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
@@ -4353,10 +4352,8 @@ through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
 A slot's readiness to hibernate is determined by the evaluating the
-:macro:`HIBERNATE` configuration variable (see
-the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros` section) within the context of the slot. Readiness is evaluated at
-fixed intervals, as determined by the
+:macro:`HIBERNATE` configuration variable within the context of the slot.
+Readiness is evaluated at fixed intervals, as determined by the
 :macro:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
@@ -4431,8 +4428,7 @@ low power state by sending a UDP Wake On LAN (WOL) packet. See the
 To automatically call :tool:`condor_power` under specific conditions,
 *condor_rooster* may be used. The configuration options for
 *condor_rooster* are described in the 
-:ref:`admin-manual/configuration-macros:condor_rooster configuration file
-macros` section.
+:ref:`rooster_config_options` section.
 
 Keeping a ClassAd for a Hibernating Machine
 '''''''''''''''''''''''''''''''''''''''''''
@@ -4443,15 +4439,10 @@ hibernation. This is required by *condor_rooster* so that it can
 evaluate the :macro:`UNHIBERNATE` expression of
 the offline machines.
 
-To do this, define a log file using the
-:macro:`COLLECTOR_PERSISTENT_AD_LOG` configuration variable. See
-the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros` section for the definition. An optional expiration time for each
-ClassAd can be specified with
-:macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
+To do this, define a log file using the :macro:`COLLECTOR_PERSISTENT_AD_LOG`
+configuration variable. An optional expiration time for each ClassAd can be
+specified with :macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
 the hibernating machine's ClassAd enters the *condor_collector* daemon.
-See the :ref:`admin-manual/configuration-macros:condor_startd configuration
-file macros` section for the definition.
 
 Linux Platform Details
 ''''''''''''''''''''''
@@ -4471,15 +4462,13 @@ for controlling a machine's power state. The methods:
    virtual files that can be used to detect and set the power states. In
    HTCondor, this is defined by the string "/proc".
 
-By default, the HTCondor attempts to detect the method to use in the
+By default, HTCondor attempts to detect the method to use in the
 order shown. The first method detected as usable on the system is
 chosen.
 
 This ordered detection may be bypassed, to use a specified method
-instead by setting the configuration variable
-:macro:`LINUX_HIBERNATION_METHOD` with one of the defined strings. This
-variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
-configuration file macros` section. If no usable methods are detected or the
+instead by setting the configuration variable :macro:`LINUX_HIBERNATION_METHOD`
+with one of the defined strings. If no usable methods are detected or the
 method specified by :macro:`LINUX_HIBERNATION_METHOD` is either not detected or
 invalid, hibernation is disabled.
 
@@ -4708,7 +4697,7 @@ what output is expected, and, when relevant, the exit status expected.
     ``IWD``
         IWD is an acronym for Initial Working Directory.
         :index:`IWD<single: IWD; optional attributes>`\ It defines the full path
-        to the directory where a given FetchWork application are to be run. Unless
+        to the directory where a given FetchWork application is to be run. Unless
         the application changes its current working directory, any relative
         path names used by the application will be relative to the IWD. If
         any other attributes that define file names (for example, ``In``,

@@ -95,29 +95,29 @@ bool parse_int64_bytes(
 
         // parse the multiplier postfix
         int64_t mult = 1;
-        if (parsed_unit) { *parsed_unit = *p; }
-        if (!*p || (separators && strchr(separators, *p))) { mult = base; }
-        else if (*p == 'k' || *p == 'K') mult = 1024;
-        else if (*p == 'm' || *p == 'M') mult = 1024*1024;
-        else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;
-        else if (*p == 't' || *p == 'T') mult = (int64_t)1024*1024*1024*1024;
-        else return false;
+        if (!*p || (separators && strchr(separators, *p))) {
+            mult = base;
+            if (parsed_unit) { *parsed_unit = 0; }
+        } else {
+            if (*p == 'k' || *p == 'K') mult = 1024;
+            else if (*p == 'm' || *p == 'M') mult = 1024*1024;
+            else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;
+            else if (*p == 't' || *p == 'T') mult = (int64_t)1024*1024*1024*1024;
+            else return false;
+
+            if (parsed_unit) { *parsed_unit = *p; }
+            ++p;
+            // Tolerate a b (as in Kb) and as part of the unit
+            if (*p == 'b' || *p == 'B') { ++p; }
+        }
 
         val = (int64_t)((val + fract) * mult + base-1) / base;
 
-        // if we to here and we are at the end of the string
-        // then the input is valid, return true;
-        if (!*p || !p[1]) {
-                if (endp) *endp = p;
-                value = val;
-                return true;
-        }
-
-        // Tolerate a b (as in Kb) and whitespace at the end, anything else and return false)
-        if (p[1] == 'b' || p[1] == 'B') p += 2;
+        // tolerate whispace at the end or before the separator
         while (isspace(*p)) ++p;
+
         // If optional separator and endp are passed, the input is valid if we are on
-        // a separator character
+        // a separator character now.
         if (endp && separators && strchr(separators, *p)) {
             if (endp) *endp = p;
             value = val;
@@ -125,9 +125,9 @@ bool parse_int64_bytes(
         }
         // otherwise the input is valid if we are on a \0 char
         if (!*p) {
-                if (endp) *endp = p;
-                value = val;
-                return true;
+            if (endp) *endp = p;
+            value = val;
+            return true;
         }
 
         return false;

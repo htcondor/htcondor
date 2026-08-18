@@ -33,6 +33,7 @@
 
 #define USE_STARTD_LATCHES 1
 
+enum class ResourceLockType;
 class BrokenItem;
 
 class SlotType
@@ -93,7 +94,12 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _donor = nullptr, bool take_donor_claim = false);
+	Resource(
+		CpuAttributes*, int id, const char * prefx,
+		Resource * _donor = nullptr,
+		bool take_donor_claim = false,
+		bool is_replacement_slot = false
+	);
 	~Resource();
 
 		// override param by slot_type
@@ -110,8 +116,11 @@ public:
 	int 	suspend_claim(); // suspend the claim
 	int 	continue_claim(); // continue the claim
 
-		// Gracefully kill starter but keep claim	
-	int		deactivate_claim( void );	
+		// Gracefully kill starter but keep claim
+	int		deactivate_claim( void );
+
+		// Gracefully kill starter with final file transfer, close claim
+	int		deactivate_claim_final_xfer( void );
 
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
@@ -174,6 +183,7 @@ public:
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
+	const char * isDeactivatingReason( void )	{return r_cur->isDeactivatingReason();};
 	bool	isSuspendedForCOD( void ) const {return r_suspended_for_cod;};
 	void	hackLoadForCOD( void );
 
@@ -280,14 +290,16 @@ public:
 	void	starterExited( Claim* cur_claim );
 
 		// save context for broken slots, this will take ownership of the job classad
-	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock);
+	void	remove_broken_context();
+	void	restore_broken_resources(const ResBag& broken, const int sub_id);
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our claim objects,
 		// we put all the actions and logic in one place that gets
 		// called whenever we're finally ready to leave the preempting
-		// state. 
+		// state.
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
@@ -420,6 +432,11 @@ public:
 			: (r_reqexp.rstate==COD_REQ ? "COD" 
 			: (r_reqexp.rstate==UNAVAIL_REQ ? "UNAVAIL" : "?"));
 	}
+	void add_reqexp_clauses(classad::References & clauses) const {
+		if ( ! r_reqexp.normal_clauses.empty()) {
+			clauses.insert(r_reqexp.normal_clauses.begin(), r_reqexp.normal_clauses.end());
+		}
+	}
 
 
 private:
@@ -433,6 +450,7 @@ public:
 	Claim*			r_cur;		// Info about the current claim
 	Claim*			r_pre;		// Info about the possibly preempting claim
 	Claim*			r_pre_pre;	// Info about the preempting preempting claim
+	bool			is_data_slot {false};
 
     // store multiple claims (currently > 1 for consumption policies)
     struct claimset_less {
@@ -448,6 +466,11 @@ public:
 	bool            r_no_collector_updates; // true for HIDDEN slots
 	bool            r_acceptedWhileDraining;// true when the job was started while draining
 	bool            r_do_not_delete{false}; // true when slot is broken and should not be deleted
+	// Set when a release/kill arrives while the slot is in Claimed/Cleaning
+	// (the starter has sent its final update but not yet been reaped).
+	// Survives Claim::resetClaim() and tells Resource::starterExited to
+	// route the reap into Preempting rather than back to Idle.
+	bool            r_cleaning_preempt_pending{false};
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
@@ -457,6 +480,7 @@ public:
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
+	unsigned int		r_broken_id{0}; // Reference ID for broken item slot is associated with
 
 	unsigned int type_id( void ) { return r_attr->type_id(); };
 
@@ -584,7 +608,7 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim, const char * new_slot_prefix = NULL, bool is_replacement_slot = false );
 
 /*
 Create multiple dynamic slots for a single request ad

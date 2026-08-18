@@ -139,19 +139,6 @@ FreeJobAd(ClassAd *&ad)
 	ad = nullptr;
 }
 
-int
-SendSpoolFileBytes(char const *filename)
-{
-	filesize_t	size = 0;
-	qmgmt_sock->encode();
-	if (qmgmt_sock->put_file(&size, filename) < 0) {		
-		return -1;
-	}
-
-	return 0;
-
-}
-
 
 void
 WalkJobQueue2(scan_func func, void* pv)

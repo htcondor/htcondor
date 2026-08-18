@@ -192,8 +192,9 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
             results = nullptr;
         }
         switch (rv) {
-            case 0: break;  // should never get here on success, this is just for clarity.
-            case -1: break; // error already set by python (in callback)
+            case 0:   // should never get here on success, this is just for clarity.
+            case -1:  // error already set by python (in callback)
+                break;
 
             case Q_UNSUPPORTED_OPTION_ERROR:
                 // This was HTCondorIOError in version 1.
@@ -449,7 +450,7 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
         if (list_of_ads) {
             PyErr_SetString(PyExc_HTCondorException, "Disable mixed users and projects not implemented.");
         } else if (is_project) {
-            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+            result = schedd.disableProjects(&name_vec[0], num_names, reason_string, &errstack);
         } else {
             result = schedd.disableUsers(&name_vec[0], num_names, reason_string, &errstack);
         }
@@ -464,6 +465,19 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
             result = schedd.removeUsers(&name_vec[0], num_names, reason_string, &errstack);
         }
         break;
+
+    case EDIT_USERREC:
+        if ( ! list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Edit requires a list of ads.");
+        } else {
+            if (is_project) {
+                result = schedd.updateProjectAds(ads, &errstack);
+            } else {
+                result = schedd.updateUserAds(ads, &errstack);
+            }
+        }
+        break;
+
 
     default:
         if (is_project) {
@@ -1651,5 +1665,104 @@ _schedd_get_claims(PyObject *, PyObject * args) {
     }
 
     return list;
+}
 
+// DCSchedd::createOCUs supports passing in multiple OCU ClassAds at once
+// but for now we just wrap it to create one at a time.
+// and thus return one at a time.
+static PyObject *
+_schedd_create_ocu(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+    PyObject_Handle *ocu_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "sO", &addr, (PyObject **)&ocu_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *ocu_ad = (ClassAd *)ocu_ad_handle->t;
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+
+	ClassAd result = schedd.createOCU(*ocu_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU creation request to schedd");
+        return nullptr;
+    }
+
+	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_remove_ocu(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+	long ocu_id;
+
+    if (!PyArg_ParseTuple( args, "zl", &addr, &ocu_id)) {
+        return nullptr;
+    }
+
+	ClassAd ocu_ad;
+	ocu_ad.Assign(ATTR_OCU_ID, ocu_id);
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+
+	ClassAd result = schedd.removeOCU(ocu_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU removal request to schedd");
+        return nullptr;
+    }
+
+	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_query_ocu(PyObject *, PyObject * args) {
+    char *addr = nullptr;
+    PyObject_Handle * ocu_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "zO", &addr, (PyObject **) &ocu_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *query_ad = (ClassAd *)ocu_ad_handle->t;
+
+    CondorError errStack;
+    DCSchedd schedd(addr);
+
+	std::vector<ClassAd> results = schedd.queryOCU(*query_ad, &errStack);
+
+    if (errStack.code() > 0) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU query request to schedd");
+        return nullptr;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu" );
+        return nullptr;
+    }
+
+    for (auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(classAd));
+        //PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        auto rv = PyList_Append(list, pyClassAd);
+        //Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return nullptr;
+        }
+    }
+
+    return list;
 }

@@ -43,10 +43,13 @@
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
 #include <utility> // for std::move
+#include <map>
 
 #include "classad_helpers.h"
 #include "history_utils.h"
 #include "backward_file_reader.h"
+#include "archive_reader.h"
+#include "librarian_client.h"
 #include <fcntl.h>  // for O_BINARY
 
 void Usage(const char* name, int iExitCode=1);
@@ -67,9 +70,11 @@ void Usage(const char* name, int iExitCode)
 		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
-		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
-		"   the SCHEDD configured by SCHEDD_HOST is queried.  If there\n"
-		"   is no configured SCHEDD (the default) the local history file(s) are read.\n"
+		"   If neither -file, -local, -userlog, nor -name is specified, then the\n"
+		"   schedd identified by SCHEDD_HOST or SCHEDD_NAME is located (as\n"
+		"   condor_q and condor_submit do).  If that schedd is on another host it\n"
+		"   is queried remotely; otherwise, or if no schedd can be located, the\n"
+		"   local history file(s) are read.\n"
 		"\n   and [restriction-list] is one or more of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
@@ -110,17 +115,19 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
 		"\t-extract <file>\t\tCopy historical ClassAd entries into the specified file\n"
+		"\t-no-librarian\t\tDisable librarian index lookups\n"
 		, name);
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
-static void printJobAds(ClassAdList & jobs);
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr, const std::vector<std::pair<int,int>>& job_ids);
+static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
 static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, classad::References & attrs, const char * streamid, bool is_filename);
@@ -198,6 +205,8 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
+// Tolerance for clock skew between the times individual history records were written
+static const time_t HISTORY_WRITE_DATE_SLOP_SECS = 5;
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -304,6 +313,7 @@ main(int argc, const char* argv[])
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool noLibrarian = false;
   bool transferAds = false;
   bool limitSet = false;
 
@@ -317,7 +327,11 @@ main(int argc, const char* argv[])
   set_priv_initialize(); // allow uid switching if root
   config();
 
-  readfromfile = ! param_defined("SCHEDD_HOST");
+  // Whether to read the local history file(s) versus querying a schedd is
+  // decided below.  Flags like -file/-userlog/-local force local reading and
+  // -name/-pool force a remote query; those set source_is_explicit so we skip
+  // the automatic local-vs-remote detection done after argument parsing.
+  bool source_is_explicit = false;
 
   for(i=1; i<argc; i++) {
     if (is_dash_arg_prefix(argv[i],"long",1)) {
@@ -390,21 +404,24 @@ main(int argc, const char* argv[])
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
     }
 	else if (is_dash_arg_prefix(argv[i],"userlog",1)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
+		source_is_explicit = true;
 		fileisuserlog = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"local",2)) {
-		// -local overrides the existance of SCHEDD_HOST and forces a local query
+		// -local overrides the existance of SCHEDD_HOST/SCHEDD_NAME and forces a local query
 		if ( ! g_name.empty()) {
 			fprintf(stderr, "Error: Arguments -local and -name cannot be used together\n");
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		dash_local = true;
 	}
 	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
@@ -451,6 +468,7 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
 		readfromfile = true;
+		source_is_explicit = true;
 		writetosocket = true;
 		backwards = true;
 		longformat = true;
@@ -729,6 +747,9 @@ main(int argc, const char* argv[])
           // dprintf to console
           diagnostic = true;
     }
+    else if (is_dash_arg_prefix(argv[i], "no-librarian", 12)) {
+          noLibrarian = true;
+    }
     else if (is_dash_arg_prefix(argv[i], "name", 1)) {
         i++;
         if (argc <= i)
@@ -745,6 +766,7 @@ main(int argc, const char* argv[])
         }
         g_name = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
     else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
         i++;    
@@ -758,6 +780,7 @@ main(int argc, const char* argv[])
         }       
         g_pool = argv[i];
         readfromfile = false;
+        source_is_explicit = true;
     }
 	else if (argv[i][0] == '-') {
 		fprintf(stderr, "Error: Unknown argument %s\n", argv[i]);
@@ -774,6 +797,27 @@ main(int argc, const char* argv[])
   if (i<argc) Usage(argv[0]);
 
   condenseJobFilterList(true);
+
+  // Build the Daemon we would query for a remote history read.  This same
+  // object is reused by readHistoryRemote() below, so we only ever locate once.
+  daemon_t history_dt = want_startd_history ? DT_STARTD : DT_SCHEDD;
+  Daemon history_daemon(history_dt,
+                        g_name.empty() ? nullptr : g_name.c_str(),
+                        g_pool.empty() ? nullptr : g_pool.c_str());
+
+  // If the user did not explicitly select a source (-file/-userlog/-local, or
+  // -name/-pool), decide between reading the local history file(s) and querying
+  // a schedd the same way condor_q and condor_submit choose their schedd:
+  // locate the daemon (honoring SCHEDD_HOST first, then SCHEDD_NAME).  If it
+  // resolves to a daemon on this machine (its address came from a local
+  // address file) then read the local file(s); if it resolves to a remote
+  // daemon, query it.  If no daemon can be located at all (e.g. nothing
+  // configured, or the daemon is not running), fall back to the local file(s).
+  if ( ! source_is_explicit) {
+    if (history_daemon.locate(Daemon::LOCATE_FOR_LOOKUP) && ! history_daemon.locatedViaLocalFile()) {
+      readfromfile = false;
+    }
+  }
 
   //If record source is still AUTO then set to original history based on want_startd_history
   if (recordSrc == HRS_AUTO) {
@@ -822,6 +866,29 @@ main(int argc, const char* argv[])
 	if ( ! limitSet && specifiedMatch < 0) { specifiedMatch = 100'000; }
   }
 
+  // When only cluster IDs or usernames are specified (no cluster.proc pairs),
+  // use the librarian DB record count as the match limit so we stop early.
+  if ( ! limitSet && readfromfile && recordSrc == HRS_SCHEDD_JOB_HIST
+	   && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
+	bool hasProc = false;
+	for (const auto& item : jobIdFilterInfo) {
+		if (item.jid.proc >= 0) { hasProc = true; break; }
+	}
+	if ( ! hasProc && ( ! jobIdFilterInfo.empty() || ! ownersList.empty())) {
+		LibrarianClient librarian;
+		if (librarian.IsValid()) {
+			int count = 0;
+			for (const auto& item : jobIdFilterInfo) {
+				count += librarian.CountByCluster(item.jid.cluster);
+			}
+			for (const auto& name : ownersList) {
+				count += librarian.CountByUser(name);
+			}
+			if (count > 0) { specifiedMatch = count; }
+		}
+	}
+  }
+
   if (writetosocket && streamresults) {
 	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
@@ -864,7 +931,24 @@ main(int argc, const char* argv[])
           }
       }
 
+      // Direct-seek path: when the user specifies only cluster.proc job IDs, use the
+      // librarian DB to find exact file offsets and seek directly to each record.
+      bool tookDirectPath = false;
+      if (ownersList.empty() && ! jobIdFilterInfo.empty() && recordSrc == HRS_SCHEDD_JOB_HIST
+          && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
+          bool allHaveProc = true;
+          std::vector<std::pair<int,int>> ids;
+          for (const auto& item : jobIdFilterInfo) {
+              if (item.jid.proc < 0) { allHaveProc = false; break; }
+              ids.emplace_back(item.jid.cluster, item.jid.proc);
+          }
+          if (allHaveProc) {
+              tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr, ids);
+          }
+      }
+
       // Read from single file, matching files, or a directory (if valid option)
+    if ( ! tookDirectPath) {
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
       } else if (readFromDir) { //Searching for files in a directory
@@ -872,9 +956,10 @@ main(int argc, const char* argv[])
       } else { //Normal search with files
       readHistoryFromFiles(searchPath ? searchPath : matchFileName, my_constraint.c_str(), constraintExpr);
       }
+    }
   }
   else {
-      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, history_daemon);
   }
   delete constraintExpr;
 
@@ -1003,7 +1088,7 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1034,7 +1119,9 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 		history_cmd = GET_HISTORY;
 	}
 
-	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
+	// daemon is supplied by the caller (already located when the local-vs-remote
+	// decision was made; locate() here is a no-op in that case, or performs the
+	// lookup for an explicit -name/-pool query).
 	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote %s (name=%s, pool=%s).\n", daemon_type, g_name.c_str(), g_pool.c_str());
 		exit(1);
@@ -1169,13 +1256,13 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 }
 
 static bool AddToClassAdList(void* pv, ClassAd* ad) {
-	ClassAdList * plist = (ClassAdList*)pv;
-	plist->Insert(ad);
+	std::vector<ClassAd*> * plist = (std::vector<ClassAd*>*)pv;
+	plist->push_back(ad);
 	return false; // return false to indicate we took ownership of the ad.
 }
 
 // Read the history from the specified history file, or from all the history files.
-// There are multiple history files because we do rotation. 
+// There are multiple history files because we do rotation.
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	ASSERT(recordSrc != HRS_AUTO);
@@ -1322,8 +1409,13 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 				}
 			}
 		}
-		//If the cluster submit time is greater than the current completion date remove from data structure
-		if (banner.completion > 0 && match.QDate > banner.completion) {
+		//If the cluster submit time is greater than the time this record was written, remove from
+		//data structure. Only applied for cluster-only searches: history files are appended in
+		//write order, so once we've scanned back to a record written before our target cluster was
+		//even submitted, nothing further back can match. banner.completion holds that write time
+		//(CurrentTime), not the ad's CompletionDate, since CompletionDate can lag write order
+		//arbitrarily (e.g. LeaveJobInQueue). A few seconds of slop absorb clock skew between writes.
+		if (match.jid.proc < 0 && banner.completion > 0 && match.QDate > banner.completion + HISTORY_WRITE_DATE_SLOP_SECS) {
 			match.isDoneMatching = true;
 		}
 	}
@@ -1339,6 +1431,58 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 }
 
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+
+// Use the librarian DB index to seek directly to each requested job record.
+// Groups records by archive file and reuses one ArchiveReader per file.
+// Returns false if the librarian is unavailable or has no records for these jobs,
+// allowing the caller to fall back to the normal file-scan path.
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr,
+                                     const std::vector<std::pair<int,int>>& job_ids)
+{
+	LibrarianClient librarian;
+	if ( ! librarian.IsValid()) { return false; }
+
+	printHeader();
+
+	auto records = librarian.GetRecords(job_ids);
+	if (records.size()) {
+		std::map<std::string, std::vector<int64_t>> file_offsets;
+		for (const auto& rec : records) {
+			file_offsets[rec.file_path].push_back(rec.offset);
+		}
+
+		for (auto& [file_path, offsets] : file_offsets) {
+			std::ranges::sort(offsets);
+
+			// Open reader for archive file
+			ArchiveReader reader(file_path, ArchiveReader::Direction::Forward);
+			if ( ! reader.IsOpen()) { continue; }
+
+			// For each offset of specified jobid found in this archive file
+			for (int64_t offset : offsets) {
+				if ( ! reader.SeekForward(offset)) { continue; }
+
+				// Read record
+				ArchiveRecord arec;
+				if ( ! reader.Next(arec)) { continue; }
+
+				// Turn record into ClassAd
+				ClassAd* ad = arec.GetAd();
+				if ( ! ad) { continue; }
+
+				// Print ClassAd
+				BannerInfo info;
+				parseBanner(info, arec.GetRawBanner());
+				printJobIfConstraint(*ad, constraint, constraintExpr, info);
+
+				delete ad;
+			}
+		}
+	}
+
+	printFooter();
+	return true;
+}
 
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
@@ -1452,17 +1596,27 @@ static void printJob(ClassAd & ad)
 	// maybe fix that someday, but as far as I know, the non-socket printing
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
+		classad::References order;
+		classad::References * proj = &projection;
+		if (projection.empty()) {
+			// fetch all attributes as a projection because this forces the print order
+			sGetAdAttrs(order, ad, false);
+			proj = &order;
+		}
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, proj);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, proj, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, proj, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
+			// dont use fPrintAd here because it does not print in projection order
+			std::string buffer;
+			sPrintAdAttrs(buffer, ad, *proj);
+			fputs(buffer.c_str(), stdout);
 		}
 		printf("\n");
 	} else {
@@ -1539,15 +1693,12 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 	return false;
 }
 
-static void printJobAds(ClassAdList & jobs)
+static void printJobAds(std::vector<ClassAd*> & jobs)
 {
-	jobs.Open();
-	ClassAd	*job;
-	while (( job = jobs.Next())) {
+	for (ClassAd *job : jobs) {
 		printJob(*job);
 		if (abort_transfer) break;
 	}
-	jobs.Close();
 }
 
 static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
@@ -1581,6 +1732,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 
 	const char * rhs;
 	std::string attr;
+	bool haveWriteTime = false; //Whether CurrentTime (the record's actual write time) has been parsed
 	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
 		int end = 0;
 		ExprTree * tree = parser.ParseExpression(rhs);
@@ -1600,8 +1752,17 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 				if (valueNum <= INT_MAX && valueNum >= 0)
 					newInfo.runId = static_cast<int>(valueNum);
 		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
-			ExprTreeIsLiteralString(tree,newInfo.owner);
-		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
+			// on failure owner is left unchanged, which is acceptable here
+			std::ignore = ExprTreeIsLiteralString(tree,newInfo.owner);
+		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum)) {
+				newInfo.completion = valueNum;
+				haveWriteTime = true;
+			}
+		//CurrentTime (the record's actual write time) always wins over CompletionDate (which can lag
+		//write order arbitrarily, e.g. via LeaveJobInQueue) regardless of which attr the banner lists
+		//first; only fall back to CompletionDate when this banner has no CurrentTime at all.
+		} else if (!haveWriteTime && strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}
@@ -1844,8 +2005,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		exit(1);
 	} else {
 		struct stat si = {};
-		stat(searchDirectory, &si);
-		if ( !(si.st_mode & S_IFDIR) ) {
+		if ( stat(searchDirectory, &si) != 0 || !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}
@@ -1892,13 +2052,17 @@ static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistory
 
 	//If we were passed a specific file name then read that.
 	if (fileisuserlog) {
-		ClassAdList jobs;
+		std::vector<ClassAd*> jobs;
 		if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
 			fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
 			exit(1);
 		}
 		printJobAds(jobs);
-		jobs.Clear();
+		
+		for (ClassAd* ad : jobs) {
+			delete ad;
+		}
+		jobs.clear();
 	} else {
 		// If the user specified the name of the file to read, we read that file only.
 		readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);

@@ -564,12 +564,6 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 }
 
 
-static size_t
-DWORDHash( const DWORD & n )
-{
-	return n;
-}
-
 #if 1 // def TIMER_TYPE_NAME_TABLE
 static const struct {
 	DWORD type;
@@ -813,8 +807,8 @@ static struct {
 	// and we hash name->index and index->name in two hashtables. 
 	char * pszzNames; // holds all of the strings that the two hash tables refer to.
 	std::map<YourStringNoCase, std::vector<const char *>> * pPerfTable;
-	HashTable<DWORD, const char *> * pNameTable;
-    HashTable<DWORD, WinPerf_QueryResult> * pQueries;
+	std::map<DWORD, const char *> * pNameTable;
+	std::map<DWORD, WinPerf_QueryResult> * pQueries;
 } rl = {0};
 
 // build a hashtable that maps all of the performance field names to their
@@ -850,9 +844,9 @@ static bool init_windows_performance_hashtable()
 	}
 	else if (REG_MULTI_SZ == vtype)
 	{
-		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(DWORDHash);
+		rl.pQueries   = new std::map<DWORD, WinPerf_QueryResult>();
 		rl.pPerfTable = new std::map<YourStringNoCase, std::vector<const char *>>();
-		rl.pNameTable = new HashTable<DWORD, const char *>(DWORDHash);
+		rl.pNameTable = new std::map<DWORD, const char *>();
 		if (rl.pPerfTable)
 		{
 			char * psz = rl.pszzNames;
@@ -865,7 +859,7 @@ static bool init_windows_performance_hashtable()
 				if (rl.pNameTable)
 				{
 					DWORD ix = atoi(pszIndex);
-					rl.pNameTable->insert(ix, pszName);
+					rl.pNameTable->emplace(ix, pszName);
 				}
 			}
 		}
@@ -1485,22 +1479,17 @@ int WinPerf_CounterValue::Print(char * psz, int cchMax, bool fIncludeUnits) cons
 	return cch;
 }
 
-static int free_query_data(WinPerf_QueryResult result) {
-	if (result.pdata1)
-		free((void*)result.pdata1);
-	if (result.pdata2)
-		free((void*)result.pdata2);
-	return true;
-}
-
 void release_all_WinPerf_results()
 {
-    if (rl.pQueries)
-    {
-        rl.pQueries->walk(free_query_data);
-        free (rl.pQueries);
-        rl.pQueries = NULL;
-    }
+	if (rl.pQueries)
+	{
+		for (auto& [key, result]: *rl.pQueries) {
+			free((void*)result.pdata1);
+			free((void*)result.pdata2);
+		}
+		delete rl.pQueries;
+		rl.pQueries = nullptr;
+	}
 }
 
 bool update_windows_performance_result(WinPerf_QueryResult & result)
@@ -1599,16 +1588,12 @@ bool update_windows_performance_result(WinPerf_QueryResult & result)
 
 void update_all_WinPerf_results()
 {
-    if (rl.pQueries)
-    {
-        rl.pQueries->startIterations();
-        WinPerf_QueryResult result;
-        while (rl.pQueries->iterate(result)) 
-        {
-            update_windows_performance_result(result);
-            rl.pQueries->insert(result.idObject, result, true);
-        }
-    }
+	if (rl.pQueries)
+	{
+		for (auto& [key, result]: *rl.pQueries) {
+			update_windows_performance_result(result);
+		}
+	}
 }
 
 static bool update_windows_performance_value(
@@ -1733,9 +1718,10 @@ bool update_WinPerf_Value(AttribValue *pav)
     WinPerf_Query * pquery = (WinPerf_Query *)pav->pquery;
     if (pquery && rl.pQueries)
     {
-        WinPerf_QueryResult result;
-        if (rl.pQueries->lookup(pquery->idKey, result) >= 0)
-            return update_windows_performance_value(result, *pquery, pav);
+		auto it = rl.pQueries->find(pquery->idKey);
+		if (it != rl.pQueries->end()) {
+			return update_windows_performance_value(it->second, *pquery, pav);
+		}
     }
 
     return false;
@@ -1779,7 +1765,7 @@ AttribValue * add_WinPerf_Query(
 
 		// add this this key to the list of queries
 		WinPerf_QueryResult result = {query.idKey, 0, NULL, NULL};
-		rl.pQueries->insert(query.idKey, result, true);
+		(*rl.pQueries)[query.idKey] = result;
         /*
         bool found = false;
         lst_WinPerf.Rewind();

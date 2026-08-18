@@ -18,9 +18,6 @@
  ***************************************************************/
 
 
-// Defining this before including winsock2.h gives us htonll() on Windows
-#define INCL_EXTRA_HTON_FUNCTIONS
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
@@ -570,16 +567,6 @@ Stream::put( unsigned int		i)
 	return put((unsigned long long)i);
 }
 
-// Pick the correct 64-bit convert-to/from-big-endian function for each
-// platform
-#if defined(LINUX)
-#  define htonLL(x) htobe64(x)
-#  define ntohLL(x) be64toh(x)
-#elif defined(DARWIN) || defined(WIN32)
-#  define htonLL(x) htonll(x)
-#  define ntohLL(x) htonll(x)
-#endif
-
 int 
 Stream::put( long	l)
 {
@@ -1007,6 +994,11 @@ Stream::get_string_ptr( char const *&s ) {
 			return FALSE;
 		}
 
+		if ((len < 0) || (len > 10'000'000)) {
+			dprintf(D_NETWORK, "Stream::get_string_ptr() got invalid length %d\n", len);
+			return FALSE;
+		}
+
 		if( !decrypt_buf || decrypt_buf_len < len ) {
 			free( decrypt_buf );
 			decrypt_buf = (char *)malloc(len);
@@ -1038,9 +1030,11 @@ Stream::get_secret( std::string& s )
 	prepare_crypto_for_secret();
 
 	retval = get_string_ptr(str, len);
-	if (retval) {
+	if (retval && len > 0) {
 		// len includes a NUL terminator, don't make that part of the string
 		s.assign(str ? str : "", len-1);
+	} else {
+		s.clear();
 	}
 
 	restore_crypto_after_secret();

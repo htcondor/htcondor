@@ -52,10 +52,17 @@ logger.setLevel(logging.DEBUG)
 #
 
 #
-# Please don't try to edit the constants to speed this test up.
+# 8) Does a job with no form of input file transfer go on hold once
+#    exceeding allowed execute duration?
 #
-# If you must, make sure, among other things, that this job takes
-# longer to complete than twice the specified AllowedExecuteDuration.
+
+#
+# If you edit the constants to speed this test up, make sure that:
+# 1. Normal step sleep * 5 (steps per checkpoint) < AllowedExecuteDuration
+# 2. Slow step sleep > AllowedExecuteDuration
+# 3. Total job runtime (total_steps * normal sleep) > 2 * AllowedExecuteDuration
+# 4. Job 6: execution time < AllowedExecuteDuration, transfer time > it
+# 5. Job 7: execution time > AllowedExecuteDuration
 #
 
 @action
@@ -85,9 +92,9 @@ def path_to_the_job_script(test_dir):
         print(f"Starting step {num_completed_steps}.")
 
         if num_completed_steps == opt_slow_step:
-            time.sleep(60)
+            time.sleep(30)
         else:
-            time.sleep(3)
+            time.sleep(2)
         num_completed_steps += 1
 
         if num_completed_steps % 5 == 0:
@@ -125,7 +132,7 @@ def the_job_description(path_to_the_job_script):
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",
 
-        "allowed_execute_duration":       "30",
+        "allowed_execute_duration":       "20",
     }
 
 
@@ -276,7 +283,7 @@ def final_job_two_handle(default_condor, job_two_handle):
 
     default_condor.run_command(
         ['condor_vacate_job', str(job_two_handle.job_ids[0])],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
     # In the wild, running condor_reschedule immediately after running
     # condor_vacate_job will sometimes not result in the job being
     # considered by the negotiator in its next cycle.  The basic problem --
@@ -448,7 +455,7 @@ def final_job_five_handle(default_condor, job_five_handle):
 
     default_condor.run_command(
         ['condor_vacate_job', str(job_five_handle.job_ids[0])],
-        timeout=5, echo=True)
+        timeout=60, echo=True)
     # See previous comment.
     time.sleep(1)
     default_condor.run_command(
@@ -485,7 +492,7 @@ def sleep_job_description(path_to_sleep):
         "should_transfer_files":        "true",
         "when_to_transfer_output":      "ON_EXIT",
 
-        "allowed_execute_duration":       "30",
+        "allowed_execute_duration":       "20",
     }
 
 
@@ -696,12 +703,12 @@ def job_six_handle(default_condor, test_dir, sleep_job_description, path_to_slee
     job_six_description = {
         ** sleep_job_description,
         ** {
-            "arguments":        "15",
+            "arguments":        "10",
             "log":              test_dir / "job_six.log",
             "output":           test_dir / "job_six.out",
             "error":            test_dir / "job_six.err",
             "transfer_plugins": f"sleep={path_to_sleep_transfer_plugin.as_posix()}",
-            "transfer_input_files": "sleep://30",
+            "transfer_input_files": "sleep://25",
         }
     }
 
@@ -737,7 +744,7 @@ def job_seven_handle(default_condor, test_dir, sleep_job_description):
     job_seven_description = {
         ** sleep_job_description,
         ** {
-            "arguments":    "45",
+            "arguments":    "25",
             "log":          test_dir / "job_seven.log",
             "output":       test_dir / "job_seven.out",
             "error":        test_dir / "job_seven.err",
@@ -770,6 +777,39 @@ def final_job_seven_handle(default_condor, job_seven_handle, all_job_handles):
 def job_seven_events(final_job_seven_handle):
     return final_job_seven_handle.event_log.events
 
+
+@action
+def job_eight_handle(default_condor, test_dir, path_to_sleep):
+    job_eight_handle = default_condor.submit(
+        description = {
+            "executable":  path_to_sleep,
+            "arguments":   10000000,
+            "log":         test_dir / "job_eight.log",
+            "allowed_execute_duration": 5,
+        },
+        count = 1,
+    )
+
+    yield job_eight_handle
+
+    job_eight_handle.remove()
+
+
+@action
+def final_job_eight_handle(job_eight_handle):
+    assert job_eight_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_eight_handle
+
+
+@action
+def job_eight_events(final_job_eight_handle):
+    return final_job_eight_handle.event_log.events
 
 
 #
@@ -904,4 +944,18 @@ class TestAllowedExecuteDuration:
                 JobEventType.JOB_HELD,
             ],
             job_seven_events
+        )
+
+    def test_job_eight_held(self, job_eight_events):
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_eight_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
+            ],
+            job_eight_events,
         )

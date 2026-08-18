@@ -12,7 +12,7 @@ read the other configuration-related sections:
 -  The :ref:`admin-manual/introduction-to-configuration:configuration templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  The :doc:`/admin-manual/configuration-macros` section contains
+-  The :doc:`/admin-manual/configuration/index` section contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
    using configuration templates before resorting to setting individual
@@ -136,6 +136,12 @@ specified here. In order:
    :macro:`LOCAL_CONFIG_DIR`, then :macro:`LOCAL_CONFIG_DIR` is processed for a
    second time, using the changed list of directories.
 
+.. note::
+
+    All files that do not match :macro:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`
+    within the :macro:`LOCAL_CONFIG_DIR` will be processed. Any file matching
+    the exclusion regular expression will be ignored.
+
 The parsing and use of configuration files may be bypassed by setting
 environment variable ``CONDOR_CONFIG`` with the string ``ONLY_ENV``.
 With this setting, there is no attempt to locate or read configuration
@@ -150,7 +156,7 @@ Configuration File Macros
 
 Macro definitions are of the form:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     <macro_name> = <macro_definition>
 
@@ -688,7 +694,7 @@ character (!) to represent the not operation, followed by
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
 
--  the version keyword, representing the version number of of the daemon
+-  the version keyword, representing the version number of the daemon
    or tool currently reading this conditional. This keyword is followed
    by an HTCondor version number. That version number can be of the form
    x.y.z or x.y. The version of the daemon or tool is compared to the
@@ -840,7 +846,7 @@ as given in these definitions.
 
 ``$BASENAME(filename, suffix-to-remove)`` expands to the basename without
     the file extension or extensions when the filename ends with suffix-to-remove.
-    It bahaves like ``$Fnx(filename)`` when the filename does not end with
+    It behaves like ``$Fnx(filename)`` when the filename does not end with
     suffix-to-remove.  Use this to remove nested suffixes like ``.tar.gz``.
 
 ``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
@@ -927,7 +933,7 @@ as given in these definitions.
 
 
 ``$EVAL(item-to-convert)``
-    Expands, evaluates, and returns an classad unparsed version of
+    Expands, evaluates, and returns a classad unparsed version of
     ``item-to-convert`` for any classad type, the resulting value is
     formatted using the equivalent of the "%v" format specifier - If it
     is a string it is printed without quotes, otherwise it is unparsed
@@ -964,7 +970,7 @@ so any change that would require undoing of work will require a restart before i
 few exceptions to this rule.  The :tool:`condor_master` will pick up changes to :macro:`DAEMON_LIST` on a reconfig.
 Although it may take hours for a *condor_startd* to drain and exit when it is removed from the daemon list.
 
-Examples of changes requiring a restart would any change to how HTCondor uses the network. A configuration change 
+Examples of changes requiring a restart would be any change to how HTCondor uses the network. A configuration change 
 to :macro:`NETWORK_INTERFACE`, :macro:`NETWORK_HOSTNAME`, :macro:`ENABLE_IPV4` and :macro:`ENABLE_IPV6` require a restart. A change in the
 way daemons locate each other, such as :macro:`PROCD_ADDRESS`, :macro:`BIND_ALL_INTERFACES`, :macro:`USE_SHARED_PORT` or :macro:`SHARED_PORT_PORT`
 require a restart of the :tool:`condor_master` and all of the daemons under it.
@@ -1049,13 +1055,13 @@ restart of HTCondor in order to use the changed value.
 
 ``$(DETECTED_PHYSICAL_CPUS)`` :index:`DETECTED_PHYSICAL_CPUS`
     The integer number of physical (non hyper-threaded) CPUs. This will
-    be equal the number of unique CPU IDs.
+    be equal to the number of unique CPU IDs.
 
 ``$(DETECTED_CPUS_LIMIT)`` :index:`DETECTED_CPUS_LIMIT`
     An integer value which is set to the minimum of ``$(DETECTED_CPUS)`` 
     and values from the environment variables ``OMP_THREAD_LIMIT`` and
-    ``SLURM_CPUS_ON_NODE``.  It intended for use as the value of
-    :macro:`NUM_CPUS` to insure that the number of CPUS that a *condor_startd* will
+    ``SLURM_CPUS_ON_NODE``.  It is intended for use as the value of
+    :macro:`NUM_CPUS` to ensure that the number of CPUS that a *condor_startd* will
     provision does not exceed the limits indicated by the environment.
     Defaults to ``$(DETECTED_CPUS)`` when there is no environment variable that sets a lower value.
 
@@ -1072,7 +1078,7 @@ determined automatically at run time but which can be overwritten.
     it must run on the same :ad-attr:`Arch` and :ad-attr:`OpSys` of the machine where
     it was submitted, unless the user specifies :ad-attr:`Arch` and/or
     :ad-attr:`OpSys` explicitly in their submit file. See the :tool:`condor_submit`
-    manual page (doc:`/man-pages/condor_submit`) for details.
+    manual page (:tool:`condor_submit`) for details.
 
 ``$(OPSYS)`` :index:`OPSYS`
     Defines the string used to identify the operating system of the
@@ -1117,17 +1123,16 @@ determined automatically at run time but which can be overwritten.
 
 ``$(FILESYSTEM_DOMAIN)`` :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section, Shared File
+    evaluated on. See the :ref:`shared_fs_config_options` section, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
 
 ``$(UID_DOMAIN)`` :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
-    description of this configuration variable.
+    evaluated on. See the :macro:`UID_DOMAIN`.
 
 ``$(CONFIG_ROOT)`` :index:`CONFIG_ROOT`
-   Set to the directory where the the main config file will be read prior to reading any 
+   Set to the directory where the main config file will be read prior to reading any 
    config files. The value will usually be ``/etc/condor`` for an RPM install,
    ``C:\Condor`` for a Windows MSI install and the directory part of the ``CONDOR_CONFIG`` environment
    variable for a tarball install. This variable will not be set when ``CONDOR_CONFIG`` is
@@ -1170,7 +1175,7 @@ Configuration Templates: Using Predefined Sets of Configuration
 Predefined sets of configuration can be identified and incorporated into
 the configuration using the syntax
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use <category name> : <template name>
 
@@ -1276,6 +1281,7 @@ incorporates.
        the default is to divide 100% of the machine resources evenly across the slots.
 
     -  :config-template:`AssignAccountingGroup( map_filename [, check_request] )<FEATURE>`
+       
        Sets up a
        *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting group is determined by
@@ -1288,17 +1294,19 @@ incorporates.
        is false, the requested accounting group will be ignored if it is not valid.
 
     -  :config-template:`ScheddUserMapFile( map_name, map_filename )<FEATURE>`
+       
        Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
 
     -  :config-template:`SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )<FEATURE>`
+       
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
        is determined by mapping the src_attr of the job using the
        usermap named map_name. If the optional map_filename argument
        is specified, then this metaknob also defines a *condor_schedd*
-       usermap named map_Name using the given map file.
+       usermap named map_name using the given map file.
 
     -  :config-template:`StartdCronOneShot( job_name, exe [, hook_args] )<FEATURE>`
 
@@ -1308,7 +1316,7 @@ incorporates.
 
     -  :config-template:`StartdCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
 
-       Create a periodic-shot *condor_startd* job hook.
+       Create a periodic *condor_startd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
@@ -1326,7 +1334,7 @@ incorporates.
 
     -  :config-template:`ScheddCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
 
-       Create a periodic-shot *condor_schedd* job hook.
+       Create a periodic *condor_schedd* job hook.
        (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
        about job hooks.)
 
@@ -1418,6 +1426,30 @@ incorporates.
        macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
        example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
        ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
+    
+    - :config-template:`PelicanRetryPolicy<FEATURE>`
+
+       Contains Access Point configuration settings that improve error handling
+       when using the Pelican Platform for job file transfers. Persistent
+       transfer errors put the job on hold. Errors that Pelican considers
+       transient, such as brief network interruptions, return the job to Idle in
+       a cool-down mode controlled by :macro:`SYSTEM_ON_VACATE_COOL_DOWN`. By
+       default, the job is rescheduled after a short delay of about 5 to 10
+       minutes. If errors continue after the configured number of retries, the
+       job is placed on hold.
+       
+       The configuration macro :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` is set to
+       ``True`` by default, meaning this template is automatically applied to Access Points.
+       To disable this behavior, set :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` to ``False``.
+
+    - :config-template:`Librarian([max_size], [file_path])<FEATURE>`
+
+        Sets configuration to enable the use of the archive librarian for an
+        Access Point to index historical archive records in a database. The
+        optional argument ``max_size`` can be provided to set the maximum size
+        of the SQLite3 database file. Additionally, the optional argument
+        ``file_path`` can be provided to inform the librarian where to create
+        and write the database.
 
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
@@ -1454,7 +1486,7 @@ incorporates.
 
     -  :config-template:`DESKTOP_HOURS(start_hour, end_hour [, workweek_first_day, workweek_last_day] )<POLICY>`
 
-       An variation on the ``Desktop`` policy that never suspends jobs
+       A variation on the ``Desktop`` policy that never suspends jobs
        and always runs jobs during non-work hours. Work start and end hour
        can be floating point hour of day values.  ``start_hour`` defaults to 8 for 8 AM
        and ``end_hour`` defaults to 12+5 for 5 PM. If ``workweek_first_day`` and
@@ -1463,11 +1495,11 @@ incorporates.
 
     -  :config-template:`DESKTOP_IDLE([start_hour, end_hour [, workweek_first_day, workweek_last_day]] )<POLICY>`
 
-       An variation on the ``Desktop`` policy that never suspends jobs.
+       A variation on the ``Desktop`` policy that never suspends jobs.
        This policy runs jobs when the keyboard and CPU are idle. If the optional
        work hours arguments are passed, It runs jobs during non-work hours and will
        only run jobs during work hours when keyboard and CPU are idle.
-       See the ``DESKTOP_HOURS`` policy for and explanation of the work hours arguments.
+       See the ``DESKTOP_HOURS`` policy for an explanation of the work hours arguments.
 
     -  :config-template:`Limit_Job_Runtimes( limit_in_seconds )<POLICY>`
 
@@ -1747,7 +1779,7 @@ An installation may want other configuration variables to be platform-specific.
 Perhaps a different policy is desired for one of the platforms.  Perhaps
 different people should get the e-mail about problems with the different
 platforms. There is nothing hard-coded about any of this. What is shared and
-what should not shared is entirely configurable.
+what should not be shared is entirely configurable.
 
 Since the :macro:`LOCAL_CONFIG_FILE` macro
 can be an arbitrary list of files, an installation can even break up the

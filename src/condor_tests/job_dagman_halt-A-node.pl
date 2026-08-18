@@ -34,7 +34,7 @@ if ($ARGV[1] eq "-sleep") {
 	print OUT "  $ARGV[0] found halt file\n";
 	sleep(40); # Time for next node to start if halt doesn't work...
 	print OUT "  $ARGV[0] removing halt file\n";
-	system("rm -f $halt_file");
+	unlink $halt_file;
 	# Avoid writing anything after removing the halt file, to make
 	# the test more deterministic.
 	exit(0);

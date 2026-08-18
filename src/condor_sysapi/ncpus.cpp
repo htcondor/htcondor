@@ -463,12 +463,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 						 new_size );
 				new_array = (Processor *)
 					realloc( array, new_size * sizeof(Processor) );
-				if ( ! new_array ) {
-					dprintf( D_ALWAYS, "Error growing processor array to %d\n",
-							 new_size );
-					EXCEPT( "Out of memory!" );
-					break;
-				}
+				ASSERT(new_array);
 				array = new_array;
 				array_size = new_size;
 			}

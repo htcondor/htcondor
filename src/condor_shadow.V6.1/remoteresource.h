@@ -107,17 +107,19 @@ class RemoteResource : public Service {
 			an ACTIVATE_CLAIM command on it.  The ClaimId, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
-			@param starterVersion The version number of the starter
-                   wanted. The default is 2.
+			@param refuse_code   returns the CONDOR_HOLD_CODE that indicates the reason for refusal
+			@param refuse_reason returns a string giving more detail about the refuse reason
 			@return true on success, false on failure
 		 */ 
-	bool activateClaim( int starterVersion = 2 );
+	bool activateClaim(int & refuse_code, std::string & refuse_reason);
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?
+			@param final_transfer If true, request final file transfer before vacating
+			       (used by condor_rm -transfer)
 			@return true on success, false if a problem occurred.
 		*/
-	virtual bool killStarter( bool graceful = false );
+	virtual bool killStarter( bool graceful = false, bool final_transfer = false );
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 
@@ -290,6 +292,9 @@ class RemoteResource : public Service {
 	virtual void updateFromStarter( ClassAd* update_ad );
 	virtual void incrementJobCompletionCount();
 
+	virtual void processResultAd( ClassAd * resultAd );
+	virtual void processInvocationAd( ClassAd * invocationAd );
+
 	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) const { 
 		memory_usage_out = memory_usage_mb;
 		rss = remote_rusage.ru_maxrss;
@@ -424,6 +429,10 @@ class RemoteResource : public Service {
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
 	std::string starter_version;
+
+	// Will be nullptr if the starter version isn't at least 25.12.
+	ClassAd * getSlotAd() { return slotAd; };
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -432,6 +441,7 @@ class RemoteResource : public Service {
 			for things like i/o, etc, we have to have one copy of 
 			the ClassAd for each resource...and thus, it's here. */
 	ClassAd *jobAd;
+	ClassAd *slotAd {nullptr};
 
 		/* internal data: if you can't figure the following out.... */
 	char *machineName;

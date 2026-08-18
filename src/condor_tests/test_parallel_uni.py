@@ -14,18 +14,18 @@ logger.setLevel(logging.DEBUG)
 # Standup a condor that can run parallel jobs
 @standup
 def condor(test_dir):
-    with Condor(test_dir / "condor", 
+    with Condor(test_dir / "condor",
             config={
-                "NUM_CPUS": "36",
-                "NUM_SLOTS_TYPE_1": "1",
+                "NUM_CPUS": "12",
+                "NUM_SLOTS_TYPE_1": "2",
                 "SLOT_TYPE_1_PARTITIONABLE": True,
-                "SLOT_TYPE_1": "cpus=12",
+                "SLOT_TYPE_1": "cpus=3",
                 "NUM_SLOTS_TYPE_2": "1",
                 "SLOT_TYPE_2_PARTITIONABLE": True,
-                "SLOT_TYPE_2": "cpus=12",
+                "SLOT_TYPE_2": "cpus=3",
                 "NUM_SLOTS_TYPE_3": "1",
                 "SLOT_TYPE_3_PARTITIONABLE": True,
-                "SLOT_TYPE_3": "cpus=12",
+                "SLOT_TYPE_3": "cpus=3",
 
                 "SCHEDD_NAME": "schedd",
                 "DedicatedScheduler": "\"DedicatedScheduler@schedd@$(FULL_HOSTNAME)\"",
@@ -38,12 +38,15 @@ def condor(test_dir):
 def submit_parallel_job(test_dir, condor):
     sub_description = """
         universe = parallel
-        executable = /bin/sleep 
+        executable = /bin/sleep
         arguments = 2
 
         should_transfer_files = yes
         when_to_transfer_output = on_exit_or_evict
-        
+
+        request_disk = 1024
+        request_memory = 100
+
         log = job.log
         machine_count = 4
         queue 

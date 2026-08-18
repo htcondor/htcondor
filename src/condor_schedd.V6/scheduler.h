@@ -48,7 +48,6 @@
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
-#include "named_classad_list.h"
 #include "env.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
@@ -61,6 +60,11 @@
 #include "history_queue.h"
 #include "live_job_counters.h"
 
+#include <utility>
+#include <string>
+#include <optional>
+#include "catalog_utils.h"
+
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
@@ -72,6 +76,14 @@ extern char const * const HOME_POOL_SUBMITTER_TAG;
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 bool removeOtherJobs(int cluster_id, int proc_id);
+
+// StartJobs() doesn't always try to start a shadow, and when it
+// doesn't, we need to know, so we don't report that it didn't.
+enum class SJ : int {
+	SUCCEEDED,
+	FAILED,
+	DID_NOT_TRY,
+};
 
 //
 // Given a ClassAd from the job queue, we check to see if it
@@ -116,9 +128,9 @@ class LocalJobRec {
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
-int init_user_ids(const JobQueueUserRec * user);
-
 class match_rec;
+
+#include "cxfer_state.h"
 
 struct shadow_rec
 {
@@ -145,9 +157,14 @@ struct shadow_rec
 	bool			exit_already_handled;
 	char*			secret; // Secret provided to spawned daemon for authorization of commands with tools
 
+	// Common transfer management.
+	ListOfCatalogs cxfer_catalogs;
+	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
+	ClassAd * matchInfo {nullptr};
+
 	shadow_rec();
 	~shadow_rec();
-}; 
+};
 
 
 struct SubmitterFlockCounters {
@@ -210,15 +227,16 @@ struct SubmitterData {
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
   // level.
-  int FlockLevel;
-  int OldFlockLevel;
-  time_t NegotiationTimestamp;
-  time_t lastUpdateTime; // the last time we sent updates to the collector
-  bool isOwnerName; // the name of this submitter record is the same as the name of an owner record.
-  bool absentUpdateSent;
+  int FlockLevel{0};
+  int OldFlockLevel{0};
+  time_t NegotiationTimestamp{0}; // used to grow the flock level because the near negotiators are not finding matches
+  time_t lastUpdateTime{0};  // the last time we sent updates to the collector
+  int  lastUpdateNumIdle{0}; // number of idle jobs sent with the last update
+  bool isOwnerName{false}; // the name of this submitter record is the same as the name of an owner record.
+  bool absentUpdateSent{false};
+  bool skipNegotiation{false};
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  SubmitterData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0)
-      , lastUpdateTime(0), isOwnerName(false), absentUpdateSent(false)  { }
+  SubmitterData() = default;
 };
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
@@ -235,25 +253,27 @@ constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 class match_rec
 {
  public:
-    match_rec(char const*, char const*, const JOB_ID_KEY & jid, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+	match_rec(char const* claimid, char const* peer, const JOB_ID_KEY & jid,
+		const ClassAd*, char const* user, char const* pool, bool is_dedicated);
 	~match_rec();
+
+	// match_rec cannot be safely copied or assigned or moved
+	match_rec(const match_rec &) = delete;
+	match_rec& operator=(const match_rec& other) = delete;
+	match_rec& operator=(match_rec&& other) = delete;
 
 	char * peer{nullptr}; //sinful address of startd
 	char * user{nullptr};
 	char * pool{nullptr}; // negotiator hostname if flocking; else empty
 	shadow_rec * shadowRec{nullptr};
 
-		// cluster of the job we used to obtain the match
-	int origcluster{0};
-
-		// if match is currently active, cluster and proc of the
+		// if match is currently active, this is the job id of the
 		// running job associated with this match; otherwise,
-		// cluster==origcluster and proc==-1
+		// it is {origcluster,-1}
 		// NOTE: use SetMrecJobID() to change cluster and proc,
 		// because this updates the index of matches by job id.
-	int cluster{0};
-	int proc{0};
-
+	PROC_ID jid{0,0};
+	int origcluster{0}; // cluster of the job we used to obtain the match (set in constructor)
 	int status{0};
 	int num_exceptions{0};
 	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
@@ -261,6 +281,7 @@ class match_rec
 	time_t entered_current_status{0};
 	time_t last_alive{time(0)};
 	PROC_ID m_now_job{0,0};
+	PROC_ID ocu_originator{0,0}; // procid of the ocu claimer job when is_ocu is true
 
 	ClassAd * my_match_ad{nullptr};
 	ClassAd m_added_attrs;
@@ -270,14 +291,11 @@ class match_rec
 	bool scheduled{false}; // For use by the DedicatedScheduler
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
-	bool			is_ocu {false}; // when true, hold forever, hand out to others
-    PROC_ID         ocu_originator;  // procid of the ocu claimer job
-									
+	bool is_ocu{false}; // when true, hold forever, hand out to others
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
-	ClaimIdParser claim_id;
-	classy_counted_ptr<DCMsgCallback> claim_requester{nullptr};
+	std::shared_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
@@ -288,51 +306,28 @@ class match_rec
 		// entered_current_status)
 	void	setStatus( int stat );
 
-	std::string m_description;
 	void makeDescription();
-	char const *description() const {
-		return m_description.c_str();
-	}
+	const char *description() const { return m_description.c_str(); }
+
+	const char *claimId() const { return claim_id ? claim_id : ""; } // empty rather than null to match old ClaimIdParser
+	const char *publicClaimId(std::string &buf) const { return claim_id_parser.publicClaimId(buf); }
+	const char *secSessionId(std::string &buf) const { return claim_id_parser.secSessionId(buf); }
+
+protected:
+	char * claim_id{nullptr}; // the claimid of a match rec is immutable
+	ClaimIdParserLite claim_id_parser; // a parser for the above claim_id
+	std::string m_description;
 
 };
 
-class GridUserIdentity {
-	public:
-			// The default constructor is not recommended as it
-			// has no real identity.  It only exists so
-			// we can put UserIdentities in various templates.
-		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
-		GridUserIdentity(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-		}
-		GridUserIdentity(JobQueueJob& job_ad);
-		const GridUserIdentity & operator=(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-			return *this;
-		}
-		bool operator==(const GridUserIdentity & rhs) {
-			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
-		}
-		const std::string& username() const { return m_username; }
-		const std::string& osname() const { return m_osname; }
-		const std::string& auxid() const { return m_auxid; }
-		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
+struct GridUserIdentity {
+	GridUserIdentity() = default;
+	GridUserIdentity(JobQueueJob& job_ad);
 
-			// For use in HashTables
-		static size_t HashFcn(const GridUserIdentity & index);
+	auto operator<=>(const GridUserIdentity&) const = default;
 	
-	private:
-		std::string m_username;
-		std::string m_osname;
-		std::string m_auxid;
-		const JobQueueUserRec* m_ownerinfo;
+	const JobQueueUserRec* m_ownerinfo{nullptr};
+	std::string m_auxid;
 };
 
 
@@ -394,6 +389,116 @@ private:
 	std::unordered_map<std::pair<std::string, std::string>, time_t> m_map;
 };
 
+class PreparingTaskInstance : public ServiceData
+{
+public:
+	/// Constructor
+	PreparingTaskInstance() = default;
+	PreparingTaskInstance (const JOB_ID_KEY & jid, std::string_view taskname)
+		: _jobid(jid), _task(taskname) {}
+
+	auto operator<=>(const PreparingTaskInstance& ti) const = default; // C++20 spaceship operator
+
+	// Comparison function for use with SelfDrainingQueue.
+	// Used to determine if another task is already in the queue.
+	// so we don't want to look at the whole class, only the job and task name.
+	virtual int ServiceDataCompare( ServiceData const* other ) const {
+		if ( ! other) return -1;
+		const PreparingTaskInstance & lhs = *(const PreparingTaskInstance *)(this);
+		const PreparingTaskInstance & rhs = *(const PreparingTaskInstance *)(other);
+		if (lhs._jobid < rhs._jobid) return -1;
+		if (lhs._jobid == rhs._jobid) {
+			if (lhs._task.size() < rhs._task.size()) return -1;
+			if (lhs._task < rhs._task) return -1;
+			if (lhs._task == rhs._task) return 0;
+		}
+		return 1;
+	}
+
+	JOB_ID_KEY _jobid{0,0};
+	std::string _task;
+};
+
+// Virtual class that each distinct Preparing task pattern derives from
+class PreparingTaskDescription
+{
+public:
+	// return the record scope for this task type. i.e. ClusterAd, UserAd/ProjectAd or JobAd scope
+	virtual bool in_scope(const JOB_ID_KEY & jid) = 0;
+	virtual bool matches(const ClassAd & ad) = 0;
+	// returns true if not needed or it was completed trivialy by this function
+	virtual bool do_trivialy(const JOB_ID_KEY & jid) = 0;
+	enum TaskResult { NotDone=0, Done=1, Pending=2, Abort=3 };
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr) = 0;
+	// returns a new preparing task to be queued
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid) = 0;
+	// config/reconfig the preparing task description
+	virtual void config() = 0;
+	PreparingTaskDescription(std::string_view tag) : _tag(tag) {};
+	virtual ~PreparingTaskDescription() {};
+	const std::string & tag() { return _tag; }
+protected:
+	std::string _tag{}; // param tag.  the task config tag
+};
+
+// the null preparing task is used for configured tasks that do not have a valid configuration
+// so we can be sure that all configured tasks have a task description object in the map.
+class NullPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & ) { return false; }
+	virtual bool matches(const ClassAd & ) { return false; }
+	virtual bool do_trivialy(const JOB_ID_KEY & ) { return true; }
+	virtual TaskResult do_task(JobQueueBase * , PreparingTaskInstance & , TransactionWatcher & , CondorError* =nullptr) { return Done; }
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid) { return new PreparingTaskInstance(jid, _tag); }
+	virtual void config() {}
+	NullPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~NullPreparingTask() {};
+};
+
+class UserTokenPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ad);
+	virtual bool do_trivialy(const JOB_ID_KEY & jid);
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	UserTokenPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~UserTokenPreparingTask() {};
+};
+
+// A preparing task that just delays, this is mostly for testing.
+class TimeDelayPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ) { return true; }
+	virtual bool do_trivialy(const JOB_ID_KEY & ) { return false; };
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	enum DelayScope { Cluster=-1, Job=0, User=2 };
+	TimeDelayPreparingTask(std::string_view tag, DelayScope _scope=Cluster) : PreparingTaskDescription(tag), delay_scope(_scope) {};
+	virtual ~TimeDelayPreparingTask() {};
+protected:
+	DelayScope delay_scope{DelayScope::Cluster};
+};
+
+class ExecProcessPreparingTask : public PreparingTaskDescription
+{
+public:
+	virtual bool in_scope(const JOB_ID_KEY & jid);
+	virtual bool matches(const ClassAd & ad);
+	virtual bool do_trivialy(const JOB_ID_KEY & jid);
+	virtual TaskResult do_task(JobQueueBase * ad, PreparingTaskInstance & ti, TransactionWatcher & txn, CondorError* errstack=nullptr);
+	virtual PreparingTaskInstance * new_task(const JOB_ID_KEY & jid);
+	virtual void config();
+	ExecProcessPreparingTask(std::string_view tag) : PreparingTaskDescription(tag) {};
+	virtual ~ExecProcessPreparingTask() {};
+};
+
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
 {
@@ -420,8 +525,8 @@ class VanillaMatchAd : public ClassAd
 {
 	public:
 		/// Default constructor
-		VanillaMatchAd() {};
-		virtual ~VanillaMatchAd() { Reset(); };
+	VanillaMatchAd() {};
+	virtual ~VanillaMatchAd();
 
 	bool Insert(const std::string &attr, ClassAd*ad);
 	bool EvalAsBool(ExprTree *expr, bool def_value);
@@ -433,6 +538,7 @@ private:
 };
 
 class JobSets; // forward reference - declared in jobsets.h
+class OCU; // forward reference - declared in qmgmt.h
 
 class Scheduler : public Service
 {
@@ -458,10 +564,12 @@ class Scheduler : public Service
 	// negotiation
 	int				negotiatorSocketHandler(Stream *);
 	int				negotiate(int, Stream *);
-	int				reschedule_negotiator(int, Stream *);
 	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
-	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(0, NULL); }
+	int				external_reschedule_request(int, Stream *);
+	int				reschedule_negotiator();
+	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(); }
+
 	void			release_claim(int, Stream *);
 	// I think this is actually a serious bug...
 	int				release_claim_command_handler(int i, Stream * s) { release_claim(i, s); return 0; }
@@ -537,6 +645,7 @@ class Scheduler : public Service
     int         	unlinkMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	match_rec*      FindMrecByClaimID(char const *claim_id);
+	void            CleanupMatchForJobExit(const shadow_rec *srec);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
 	void            SetMrecJobID(match_rec *match, PROC_ID job_id);
 	shadow_rec*		FindSrecByPid(int);
@@ -546,6 +655,7 @@ class Scheduler : public Service
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
+	void			StartJobFailed(match_rec * rec, PROC_ID id);
 	void			checkClaimLeases( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );
@@ -555,19 +665,19 @@ class Scheduler : public Service
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status );
 
-	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
-	bool			WriteAbortToUserLog( PROC_ID job_id );
-	bool			WriteHoldToUserLog( PROC_ID job_id );
-	bool			WriteReleaseToUserLog( PROC_ID job_id );
-	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
-	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
-	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
-	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
-	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+	WriteUserLog*	InitializeUserLog(const JobQueueJob* ad);
+	bool			WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning );
+	bool			WriteAbortToUserLog(const JobQueueJob* job);
+	bool			WriteHoldToUserLog(const JobQueueJob* job);
+	bool			WriteReleaseToUserLog(const JobQueueJob* job);
+	bool			WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful = NULL);
+	bool			WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed = false);
+	bool			WriteTerminateToUserLog(const JobQueueJob* job, int status);
+	bool			WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason);
+	bool			WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
@@ -612,7 +722,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( int timerID = -1 );
-	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+	void			makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
 	bool 	enqueueFinishedJob( int cluster, int proc );
@@ -639,7 +749,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the GridUserIdentity class and some others
-	const ExprTree*	getGridParsedSelectionExpr() const 
+	const ExprTree*	getGridParsedSelectionExpr() const
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
 					{ return m_unparsed_gridman_selection_expr; };
@@ -649,17 +759,18 @@ class Scheduler : public Service
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
-	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
+	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
-	int adlist_register( const char *name );
-	int adlist_replace( const char *name, ClassAd *newAd );
-	int adlist_delete( const char *name );
-	int adlist_publish( ClassAd *resAd );
+		// adlist_replace() assumes ownership of newAd object
+	void adlist_register( const char *name );
+	void adlist_replace( const char *name, ClassAd *newAd );
+	void adlist_delete( const char *name );
+	void adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -670,7 +781,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
-	bool            FindRunnableJobForClaim(match_rec* mrec);
+	bool            FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id);
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
@@ -690,7 +801,7 @@ class Scheduler : public Service
 
 	// fsync tracking by user
 	std::map<std::string, stats_entry_probe<double>> FsyncRuntimes;
-	
+
 
 	// the significant attributes that the schedd belives are absolutely required.
 	// This is NOT the effective set of sig attrs we get after we talk to negotiators
@@ -710,8 +821,10 @@ class Scheduler : public Service
 	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
-	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that the ownerInfo has a valid OsUser, assiging a generic one if needed.
+	const char *    solidify_os_user(const OwnerInfo *, CondorError* errstack=nullptr);
 	// make sure that a job object has a submitter record pointer
 	const SubmitterData * get_submitter(JobQueueJob * job) {
 		SubmitterData * subdat = nullptr;
@@ -724,10 +837,34 @@ class Scheduler : public Service
 	// find a project record or insert a pending project record
 	JobQueueProjectRec * insert_projectinfo(const char * project_name);
 
+	// called in CheckTransaction for each new job, to give a chance to add Preparing state tasks
+	// to the transaction. This function ads to the current transaction, and also modifies the ad to agree.
+	// The ad will be subsequently passed to transforms if post_transform is false.
+	// The ad can be a cluster ad.  New cluster ads in the transaction are guaranteed to be passed to
+	// this function before any job ads in the transaction. New proc ads passed to this function have
+	// been temporarily chained to a cluster ad (possibly a new, uncommitted one)
+	bool hasPreparingTasks() { return ! preptask_list.empty(); }
+	bool addPreparingTasksToNewJobInTransaction(const JOB_ID_KEY & jid, ClassAd & ad);
+	bool finalizePreparingTasksForNewJobInTransaction(const JOB_ID_KEY & jid, ClassAd & ad, bool has_spooling_hold);
+	void enqueueNextPreparingTask(JobQueueJob * job);
+	void completedPreparingTask(JobQueueJob * job);
+	void leavePreparingState(JobQueueJob * job);
+	bool addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time_t time);
+
+	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs);
+
+	void configGenericOsUsers();
+
+	bool m_useGenericOsUsers{false};
+	std::set<std::string> m_openGenericOsUsers;
+	std::set<std::string> m_claimedGenericOsUsers;
+
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
-	// Class to manage sets of Job 
+	// Class to manage sets of Job
 	JobSets *jobSets;
+
+	std::map<GridUserIdentity, GridJobCounts> GridJobOwners;
 
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir="##");
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo *user);
@@ -755,7 +892,56 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
+	OCU *getOCU(int ocu_id);
+	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
+
+	// Maintains the invariant that all entries in the map are valid pointers.
+	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
+
+	// If a shadow has gone away (or we know it's about to go way), remove
+	// the (soon to be) dangling pointers from the catalog-to-shadow map.
+	void unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid );
+
+	// Don't inadvertently create empty vectors.
+	// Note that the returned vector is a copy, and does not own the pointers.
+	std::optional<std::vector<match_rec *>> getMatchesBySinful( const std::string & sinful );
+
+	// Remove empty vectors from the map.
+	bool removeMatchFromSinful( const std::string & sinful, match_rec * match );
+
+	// Prevents duplicate entries.
+	bool addMatchToSinful( const std::string & sinful, match_rec * match );
+
+
+	// Start a timer to release the corresponding claim.
+	bool mark_catalog_dead( const std::string & catalogName );
+
+	// Stop the timer, if any, waiting to release the claim.
+	bool mark_catalog_live( const std::string & catalogName );
+
+	// When we delete a match record, we also check to see if the corresponding
+	// shadow is the last shadow to require any particular catalog, so that we
+	// can mark those catalogs dead.  In some cases, the schedd will delete a
+	// shadow record before it deletes the match record, so we need to check
+	// in both places.
+	void mark_catalogs_dead_if_last_consumer( shadow_rec * shadowRec, char * peer );
+
+
+	// After obtaining the final form of a job ad (after transforms), there's
+	// some C++ code we'd like to run to fix a few things up.
+	int post_transform_adjustments(
+		ClassAd *ad,
+		const PROC_ID & jid,
+		CondorError * errorStack,
+		bool is_late_mat = false,
+		bool project_is_cluster_attr = false
+	);
+
+
 private:
+
+	// Managing common transfers.
+	std::unordered_map<std::string, shadow_rec *> catalogToShadowMap;
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -798,9 +984,15 @@ private:
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
 
-	// The "Cron" manager (Hawkeye) & it's classads
+	// The "Cron" manager (Hawkeye) & its classads, which will be merged
+	// into the schedd's ads sent to the collector
 	ScheddCronJobMgr	*CronJobMgr;
-	NamedClassAdList	 extra_ads;
+	std::map<std::string, ClassAd> extra_ads;
+
+	// The Preparing task prototypes, set on startup and extended by config
+	std::map<std::string, std::unique_ptr<PreparingTaskDescription>, CaseIgnLTYourString> preptask_proto;
+	// Ordered list of preparing tasks that are enabled by config
+	std::vector<std::string> preptask_list;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
@@ -821,6 +1013,8 @@ private:
 	bool			EnablePersistentProjectInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
+	bool			EnablePerUserCurbMatchmaking{true};
+	int				MaxConcurrentUploadsPerUser{100}; // curb matchmaking for this user when they exceed this number
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
@@ -842,10 +1036,15 @@ private:
 	int				JobsTotalAds;
 	int				JobsFlocked;
 	int				JobsRemoved;
+	int				SchedUniverseCoolDownDuration; // Time in seconds a failed sched universe job will be on cool down
 	int				SchedUniverseJobsIdle;
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
+	int				TotalSubmitterPressure{0};
+	int				LastSubmitterPressure{0};
+	time_t			SubmitterUpdateTime{0}; // the last time we sent a submitter ad with no pressure to the primary collector
+	time_t			EnteredCurrentSubmitterPressure{0}; // the last time submitter pressure changed from true to false and v.v
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
@@ -859,7 +1058,6 @@ private:
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
-	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -885,6 +1083,17 @@ private:
 	std::vector<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
+		// queue for handling the JOB_STATUS_PREPARING tasks
+	SelfDrainingQueue prepare_job_queue;
+	int jobPreparingTaskHandler( ServiceData* job_id );
+	// returns true if a task was enqueued, false if not.
+	bool enqueuePreparingTask(const JOB_ID_KEY & jid, std::string_view taskname);
+
+		// timer and collection for the TimeDelayPreparingTask
+	std::map<time_t, std::deque<JOB_ID_KEY>> jobsToDelayPreparing;
+	int checkJobPrepareDelay_tid{-1};
+	void HandleTimeDelayPreparingCompletions(int timer_id);
+
 		// queue for sending hold/remove signals to shadows
 	SelfDrainingQueue stop_job_queue;
 		// queue for doing other "act_on_job_myself" calls
@@ -898,12 +1107,6 @@ private:
 
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;
-
-		// Get the associated GridJobCounts object for a given
-		// user identity.  If necessary, will create a new one for you.
-		// You can read or write the values, but don't go
-		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
 
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;
@@ -936,19 +1139,23 @@ private:
 
 	// utility functions
 	void		sumAllSubmitterData(SubmitterData &all);
-	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
+	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
-	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+	int			make_ad_list(std::vector<ClassAd>& ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	int			command_act_on_ocus(int, Stream* stream);
+    ClassAd     act_on_ocu_create(const ClassAd &request);
+    ClassAd     act_on_ocu_remove(const ClassAd &request);
+	std::vector<ClassAd>     act_on_ocu_query(const ClassAd &request);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
-	OwnerInfo     * insert_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
 	SubmitterData * insert_submitter(const char*);
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
@@ -963,7 +1170,7 @@ private:
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
-	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
+	void			scheduler_univ_job_leave_queue(JobQueueJob *job, int status);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown( int timerID = -1 );
@@ -971,7 +1178,9 @@ private:
 	void			tryNextJob();
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
-	bool			jobExitCode( PROC_ID job_id, int exit_code );
+	bool			shadowExitCode( PROC_ID job_id, int exit_code );
+	bool            transferShadowExitCode( PROC_ID job_id, int exit_code );
+	void			setJobCoolDown(const PROC_ID job_id, const long long duration);
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
 	
@@ -1018,21 +1227,33 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, PROC_ID*);
+	SJ				StartJob(match_rec*, const PROC_ID &);
 
-	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
-	shadow_rec*		start_sched_universe_job(PROC_ID*);
+	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
+	shadow_rec*		start_sched_universe_job(const PROC_ID &);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
-										Env const *env, 
+										Env const *env,
 										const char* name, bool want_udp );
-	void			check_zombie(int, PROC_ID*);
-	void			kill_zombie(int, PROC_ID*);
+	void			check_zombie(int, const PROC_ID &);
+	void			kill_zombie(int, const PROC_ID &);
 	int				is_alive(shadow_rec* srec);
-	
+
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
 
 	static void		token_request_callback(bool success, void *miscdata);
+
+	// This vector does NOT own its match records; it is an optimization.
+	// I'd indicate that with a shared_ptr<>, but that won't work if the
+	// owner doesn't hold onto one, and it doesn't.
+	std::vector<match_rec *> matchesHeldByBlockedJobs;
+
+	// This map does NOT own its match records; it is an optimization.
+	// I'd indicate that with a shared_ptr<>, but that won't work if the
+	// owner doesn't hold onto one, and it doesn't.
+	std::unordered_map<std::string, std::vector<match_rec *>> matchesBySinfulMap;
+
+	std::unordered_map<std::string, int> catalogToTimerMap;
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;
@@ -1102,13 +1323,6 @@ private:
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
 
-    int m_userlog_file_cache_max;
-    time_t m_userlog_file_cache_clear_last;
-    int m_userlog_file_cache_clear_interval;
-    WriteUserLog::log_file_cache_map_t m_userlog_file_cache;
-    void userlog_file_cache_clear(bool force = false);
-    void userlog_file_cache_erase(const int& cluster, const int& proc);
-
 	// State for the history helper queue.
 	// object to manage history queries in flight
 	HistoryHelperQueue HistoryQue;
@@ -1121,13 +1335,16 @@ private:
 	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
+	friend class JobQueueUserRec;
 };
 
 
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-extern void set_job_status(int cluster, int proc, int status);
+extern void set_job_status(const JOB_ID_KEY & jid, int status);
+extern void set_job_status(JobQueueJob * job, int status);
+inline void set_job_status(int cluster, int proc, int status) { return set_job_status({cluster,proc}, status); }
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
@@ -1171,10 +1388,12 @@ int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
 
 /** A helper function that wraps the call to jobPrepNeedsThread() and
 	invokes aboutToSpawnJobHandler() as appropriate, either in its own
-	thread using Create_Thread_Qith_Wata(), or calling it and then
-	aboutToSpawnJobHandlerDone() directly.
+	thread using Create_Thread_With_Data(), or calling it and then
+	aboutToSpawnJobHandlerDone() directly.  Returns false if srec was deleted
+	during a synchronous call (job no longer runnable, or no match); the
+	caller must not reuse srec once this returns false.
 */
-void callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
+bool callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
 
 
 /** Hook to call whenever a job enters a "finished" state, something
@@ -1196,13 +1415,13 @@ int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
 /* Returns true if an external manager (e.g. gridmanager, job router) has
  * indicated it is handling this job.
  */
-bool jobExternallyManaged(ClassAd * ad);
+bool jobExternallyManaged(const JobQueueJob * job);
 
 /* Returns true if an external manager (e.g. gridmanager, job router) has
  * finished handling this job, the job is now in a terminal state
  * (COMPELTED, REMOVED), and the manager doesn't need to see the job again.
  */
-bool jobManagedDone(ClassAd * ad);
+bool jobManagedDone(const JobQueueJob * ad);
 
 
 #endif /* _CONDOR_SCHED_H_ */

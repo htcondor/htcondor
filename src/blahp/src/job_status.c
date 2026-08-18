@@ -39,6 +39,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <sys/stat.h>
 
 #include "classad_c_helper.h"
 #include "blahpd.h"
@@ -49,6 +50,7 @@
 #define MAX_TEMP_ARRAY_SIZE              1000
 #define CAD_LEN                          1024
 
+extern char *my_username;
 extern char *blah_script_location;
 extern job_registry_handle *blah_jr_handle;
 extern pthread_mutex_t blah_jr_lock;
@@ -125,6 +127,52 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 		/* PUSH A FAILURE */
 		strncpy(*error_str, "Malformed jobId or out of memory", ERROR_MAX_LEN);
 		return(255);
+	}
+
+	char* filename = NULL;
+	char cached_jobid[64];
+	int cached_status = -1;
+	int found = 0;
+	/* For slurm, the job id can have an optional '@cluster-name' suffix.
+	 * The cluster-name is part of the cache filename and not part of the
+	 * job ids written in the file.
+	 */
+	char* at_pos = strchr(spid->proxy_id, '@');
+	if (my_username) {
+		if (at_pos) {
+			*at_pos = '\0';
+			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache-%s", spid->lrms, my_username, at_pos+1);
+		} else {
+			filename = make_message("/var/tmp/%s_cache_%s/blahp_results_cache", spid->lrms, my_username);
+		}
+	}
+	struct stat stbuf;
+	FILE* cache_fp = NULL;
+	if (filename && stat(filename, &stbuf) == 0 && stbuf.st_mtime > time(NULL)-60) {
+		cache_fp = fopen(filename, "r");
+	}
+	free(filename);
+	if (cache_fp) {
+		while (fscanf(cache_fp, "%63s %*s %d", cached_jobid, &cached_status) == 2) {
+			if (strcmp(cached_jobid, spid->proxy_id) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		fclose(cache_fp);
+	}
+	if (found && cached_status != 4 && cached_status != 0) {
+		cadstr = make_message("[JobStatus=%d;BatchJobId=\"%s\"]", cached_status, cached_jobid);
+		tmpcad = classad_parse(cadstr);
+		free(cadstr);
+		*job_nr = 1;
+		strncpy(error_str[0], "No Error", ERROR_MAX_LEN);
+		cad[0] = tmpcad;
+		job_registry_free_split_id(spid);
+		return 0;
+	}
+	if (at_pos) {
+		*at_pos = '@';
 	}
 
 	if (strcmp(spid->lrms, "pbs") == 0) {

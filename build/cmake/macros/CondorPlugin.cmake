@@ -35,10 +35,14 @@ MACRO (CONDOR_PLUGIN _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS )
     # disable the lib from name
     set_property( TARGET ${_CNDR_TARGET} PROPERTY PREFIX "" )
 
-    # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
+    # Install the .pdb alongside the shared library. The TARGET_PDB_FILE
+    # generator expression resolves the config-specific path and pdb name, and
+    # OPTIONAL keeps install from failing when a configuration produces no pdb.
     if ( WINDOWS )
-        if ( ${_COPY_PDBS} )
-            INSTALL(CODE "FILE(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" TYPE EXECUTABLE FILES \"${CMAKE_CURRENT_BINARY_DIR}/\${CMAKE_INSTALL_CONFIG_NAME}/${_CNDR_TARGET}.pdb\")")
+        if ( _COPY_PDBS )
+            install(FILES $<TARGET_PDB_FILE:${_CNDR_TARGET}>
+                    DESTINATION ${_INSTALL_LOC}
+                    OPTIONAL)
         endif ()
 
         set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "plugins" )

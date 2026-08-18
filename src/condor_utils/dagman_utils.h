@@ -34,8 +34,15 @@
 #define dagman_exe "condor_dagman.exe"
 #define valgrind_exe "valgrind.exe"
 #else
+
 #define dagman_exe "condor_dagman"
+
+#ifdef LINUX
 #define valgrind_exe "valgrind"
+#else
+#define valgrind_exe "leaks"
+#endif
+
 #endif
 
 const int UTIL_MAX_LINE_LENGTH = 1024;
@@ -148,8 +155,7 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool, DryRun,
-		OnlyDumpDot
+		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot, SetupOnly
 	);
 
 	BETTER_ENUM(slist, long,
@@ -210,7 +216,6 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
 	{"-Dot",           {"OnlyDumpDot", "True", "Have DAGMan dump DOT file and exit", DAG_OPT_DISP_DAGMAN}},
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
-	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
 	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
 	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
@@ -229,9 +234,13 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-Notification",  {"Notification", "<option>", "Set HTCondor email notification level for DAG", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-outfile_dir",   {"OutfileDir", "<path>", "Directory path to write *.dagman.out file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Priority",      {"Priority", "<priority>", "Default priority for all jobs submitted by DAGMan", DAG_OPT_DISP_ALL}},
-	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}}, // Note: -r works for this
+	{"-r",             {"RemoteSchedd", "<schedd name>", "See -Remote", 0}}, // Single letter flag to make -r equeal -remote
+	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}},
+	{"-RescueFile",    {"RescueFile", "<filename>", "Run DAG from specified rescue file", DAG_OPT_DISP_ALL}},
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	// -SetupOnly: Undocumented on purpose: fully set up DAG (parse, process, rescue, recover) then exit before execution
+	{"-SetupOnly",     {"SetupOnly", "True", "Set up DAG and exit before execution", 0}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
 	{"-SubmitMethod",  {"SubmitMethod", "<value>", "Specify how DAGMan submits jobs for execution (0=condor_submit|1=DirectSubmit)", DAG_OPT_DISP_ALL}},
 	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
@@ -240,6 +249,14 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-Valgrind",      {"RunValgrind", "True", "Run DAGMan under Valgrind (Linux Only)", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Verbose",       {"Verbose", "True", "Increase error message verbosity for condor_submit_dag", DAG_OPT_DISP_CSD}}, // Note: -v works for this
 	//{"-WaitForDebug",  {"WaitForDebug", "True", "Pause condor_dagman execution until debugger is attached", DAG_OPT_DISP_DAGMAN}}, // Note: Handled in condor_dagman
+};
+
+// Key -> Set of keys it does not work with
+static const std::map<std::string, std::set<std::string, KeyNoCaseCmp>, KeyNoCaseCmp> dagOptsMutualExclusions {
+	{"DoRecovery", {"SaveFile"}},
+	{"DoRescueFrom", {"SaveFile", "RescueFile"}},
+	{"RescueFile", {"SaveFile", "DoRescueFrom"}},
+	{"SaveFile", {"DoRecovery", "DoRescueFrom", "RescueFile"}},
 };
 
 enum class DagOptionSrc {
@@ -287,7 +304,6 @@ public:
 			param(appendFile, "DAGMAN_INSERT_SUB_FILE");
 			shallow.stringOpts[str::AppendFile] = appendFile;
 			shallow.boolOpts[b::DoSubmit] = true;
-			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 			shallow.intOpts[i::MaxIdle] = -1;
 			shallow.intOpts[i::MaxJobs] = -1;
 			shallow.intOpts[i::MaxPre] = -1;
@@ -356,15 +372,21 @@ public:
 	CLI_BOOL_FLAG & operator[]( DSO::b opt ) { return deep.boolOpts[opt._to_integral()]; }
 	int & operator[]( DSO::i opt ) { return deep.intOpts[opt._to_integral()]; }
 
+	// Check for option mutual exclusion (note if flag is provided then return conflicts as flags)
+	bool checkMutualExclusion(const std::string& opt, std::string& err, const std::string& flag = "");
+
 private:
 	//Shallow options used only by this DAG
 	DagOptionData<SSO> shallow;
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
-	bool is_MultiDag{false};
 	// Map of used bool options to prevent contradictary flags
 	// Used in AutoParse()
 	std::map<std::string, std::string> boolFlagCheck;
+	// Set of options used to check for mutual exclusion
+	std::set<std::string, KeyNoCaseCmp> setOptions;
+	// Multiple DAG files specified
+	bool is_MultiDag{false};
 };
 
 enum class DEBUG_MSG_STREAM {
@@ -407,6 +429,9 @@ public:
 
 	void RenameRescueDagsAfter(const std::string &primaryDagFile, bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
+	// Return rescue DAG number from file or 0 for not matching the rescue dag format
+	int ExtractRescueNum(const std::string& file, const std::string& primaryDagFile, bool multiDags);
+
 	static inline std::string HaltFileName(const std::string &primaryDagFile) { return primaryDagFile + ".halt"; }
 
 	void tolerant_unlink(const std::string &pathname);
@@ -425,20 +450,6 @@ public:
 	    @return The return status of the command
 	*/
 	int popen (ArgList &args);
-
-	/** Create the given lock file, containing the PID of this process.
-	    @param lockFileName: the name of the lock file to create
-	    @return: 0 if successful, -1 if not
-	*/
-	int create_lock_file(const char *lockFileName, bool abortDuplicates);
-
-	/** Check the given lock file and see whether the PID given in it
-	    does, in fact, exist.
-	    @param lockFileName: the name of the lock file to check
-	    @return: 0 if successful, -1 if there was an error, 1 if the
-	             relevant PID does exist and this DAGMan should abort
-	*/
-	int check_lock_file(const char *lockFileName);
 
 	/*
 	*	Function to print DAGMan options to stdout

@@ -13,18 +13,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+import os
 from pathlib import Path
 
+SCRIPT_EXT = ".cmd" if sys.platform == "win32" else ".py"
+
 SCRIPTS = {
-    path.stem: path.as_posix()
+    path.stem: path.with_suffix(SCRIPT_EXT).as_posix()
     for path in Path(__file__).parent.iterdir()
     if path.stem != "__init__"
 }
+
+WIN32_PY_SCRIPT_PROLOG = [
+    "0<0# : ^", "'''", "@echo off",
+    ("py.exe" if not sys.executable else '"{}"'.format(sys.executable)) + ' "%~f0" %*',
+    "@goto :EOF", "'''"
+]
+
+def prepare_script(path):
+    if os.path.isfile(path) : return
+
+    source = Path(path).with_suffix(".py")
+    if os.path.isfile(source):
+        try:
+            with open(source, 'rb') as f:
+                body = f.read()
+            if body:
+                # cmd.exe requires CRLF line endings; an LF-only batch file is
+                # mis-parsed (the caret line-continuation in the prolog breaks)
+                # and falls straight through without ever launching python, so
+                # the job exits immediately instead of honoring its argument.
+                # Emit CRLF throughout -- python accepts CRLF source via
+                # universal newlines, so the wrapped body still runs.
+                prolog = "\r\n".join(WIN32_PY_SCRIPT_PROLOG).encode('utf8')
+                body = body.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                with open(path,'wb') as f:
+                    f.write(prolog + body)
+                os.remove(source)
+        except IOError:
+            return # do nothing
+    return
 
 
 # Return a space separated list of all custom
 # fto plugins to be readily available to all tests
 def custom_fto_plugins() -> str:
+    if SCRIPT_EXT == ".cmd":
+       for name,path in SCRIPTS.items():
+          prepare_script(path)
+
     return " ".join([
         SCRIPTS["null_plugin"],  # null://
         SCRIPTS["debug_plugin"],  # debug://, encode://

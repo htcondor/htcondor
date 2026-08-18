@@ -414,9 +414,8 @@ FileLock::display( void ) const
 }
 
 int
-FileLock::lockViaMutex(LOCK_TYPE type)
+FileLock::lockViaMutex([[maybe_unused]] LOCK_TYPE type)
 {
-	(void) type;
 	int result = -1;
 
 #ifdef WIN32	// only implemented on Win32 so far...

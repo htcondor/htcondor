@@ -33,6 +33,11 @@
 #include "jobstate_log.h"
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
+#include "dag_commands.h"
+#include "dagman_submit.h"
+#include "throttles.hpp"
+#include "edge.h"
+#include <ranges>
 #include <filesystem>
 
 #include <queue>
@@ -41,6 +46,11 @@
 enum SpliceLayer {
 	SELF,
 	DESCENDENTS,
+};
+
+enum class RescueFileType {
+	DEFAULT = 0,          // Regular rescue file i.e. no more forward progress + clean exit
+	SAVE_POINT = 1,       // Save point file (which is rescue file format)
 };
 
 
@@ -67,9 +77,36 @@ static const char * DAG_STATUS_NAMES[] = {
 	"DAG_STATUS_HALTED"
 };
 
-namespace DAG {
-	extern const char *ALL_NODES;
-}
+// Find All Nodes Type Specifiers (i.e. ALL_NODES includes node types)
+const int ALL_NODES_REGULAR = (1 << 0);               // Regular worker nodes
+const int ALL_NODES_SERVICE = (1 << 1);               // Include service nodes (currently does nothing as service nodes are stored sperately)
+const int ALL_NODES_FINAL   = (1 << 2);               // Include the final node
+const int ALL_NODES_PROVISIONER = (1 << 3);           // Include the provisioner node
+const int ALL_NODES_EVERYTHING = std::numeric_limits<int>::max(); // All node types
+
+// Handle finding a node by name or ALL_NODES (based on type)
+// TODO: Add name prefix matching and category handling
+struct AllNodesMatcher {
+	AllNodesMatcher() = delete;
+	AllNodesMatcher(int m) : mask(m) {};
+
+	bool operator()(const Node* node) {
+		switch (node->GetType()) {
+			case NodeType::JOB:
+				return mask & ALL_NODES_REGULAR;
+			case NodeType::SERVICE: // Note: Currently we will never see since service nodes are not in main vector (FIX ME)
+				return mask & ALL_NODES_SERVICE;
+			case NodeType::FINAL:
+				return mask & ALL_NODES_FINAL;
+			case NodeType::PROVISIONER:
+				return mask & ALL_NODES_PROVISIONER;
+		}
+		return false;
+	}
+
+private:
+	int mask{ALL_NODES_REGULAR};
+};
 
 class Dagman;
 class DagmanMetrics;
@@ -127,7 +164,7 @@ public:
 	int HoldScriptReaper(Node *node);
 
 	// Add a node to be managed by this DAG
-	bool Add(Node& node);
+	bool Add(Node* node);
 	void PrefixAllNodeNames(const std::string &prefix);
 	// Defer setting node status to DONE when parsed from node line in file
 	void AddPreDoneNode(Node* node) { m_userDefinedDoneNodes.push_back(node); }
@@ -135,10 +172,14 @@ public:
 	void SetReject(const std::string &location); // Mark a DAG as rejected
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
 	// Set the DAGs working directory from DIR subcommand
-	void SetDirectory(std::string &dir) { m_directory = dir; }
+	void SetDirectory(const std::string &dir) { m_directory = dir; }
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
+	// Make Edge/DagArc connections between parent and child nodes. `meta` is the
+	// DagArc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
+	// callers are responsible for translating dependency strength into this bitmask.
+	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta = 0);
 	// Remove duplicate edges between nodes
 	void AdjustEdges();
 	// Prepare DAG for initial run. ONLY CALL FUNCTION ONCE!
@@ -170,10 +211,21 @@ public:
 	const char *GetStatusName() const { return DAG_STATUS_NAMES[_dagStatus]; }
 
 	// Functions to find Nodes
-	Node* FindNodeByNodeID(const NodeID_t nodeID) const;
+	Node* FindNodeByNodeID(const node_id_t nodeID) const;
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
+	auto FindAllNodes(const std::string& name, const int mask = ALL_NODES_REGULAR) const {
+		static const istring_view all_nodes(DAG::ALL_NODES.c_str());
+		if (name.c_str() == all_nodes) {
+			return _nodes | std::views::filter(AllNodesMatcher(mask));
+		} else {
+			static std::vector<Node*> lone;
+			if (lone.size()) { lone.clear(); }
+			lone.emplace_back(FindNodeByName(name.c_str()));
+			return lone | std::views::filter(AllNodesMatcher(ALL_NODES_EVERYTHING));
+		}
+	};
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
 
 	inline void SetStatus(DagStatus status, bool force = false) {
@@ -282,10 +334,7 @@ public:
 
 	void CheckAllJobs(); // Verify all job events good once DAG is finished
 
-	void Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool overwrite,
-	            bool parseFailed = false, bool isPartial = false);
-	void WriteRescue(const char * rescue_file, const char * headerInfo, bool parseFailed = false,
-	                 bool isPartial = false, bool isSavePoint = false);
+	void Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum) const;
 
 	// Print various node information
 	void PrintNodeList() const;
@@ -346,23 +395,24 @@ public:
 		return desc;
 	}
 
+	// NOTE: Has to be static global across DAG instances
+	//       as long as splices exist as they do
+	static EdgeTable edge_table; // Global edge table to connect nodes
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
+	const Throttles& throttles; // DAGMan configured throttles
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
+
+	std::string cif{}; // First discovered CommonInputTransfer list (hopefully temporary)
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
-	typedef enum {
-		SUBMIT_RESULT_OK,
-		SUBMIT_RESULT_FAILED,
-		SUBMIT_RESULT_NO_SUBMIT,
-	} submit_result_t;
-
 	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
@@ -390,8 +440,9 @@ private:
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
+	bool StartIfReady(Node *node); // Start `node` iff it's now STATUS_READY; used as a parent-completion callback
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
+	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -425,8 +476,6 @@ private:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void WriteSavePoint(Node* node); // Write a node save point file
-	void WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial);
-	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 	void PrintDagFiles(const std::list<std::string> &dagFiles);
 	void PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bool recovery);
@@ -446,6 +495,8 @@ private:
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(std::string &dot_file_name);
 
+	// Internal actual writing of rescue file
+	void WriteRescue(const std::string& rescue_file, const std::string& headerInfo, RescueFileType rescue_type) const;
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
@@ -457,7 +508,7 @@ private:
 	std::vector<int> _graph_widths{};
 
 	std::map<std::string, Node*> _nodeNameHash{};
-	std::map<NodeID_t, Node*> _nodeIDHash{};
+	std::map<node_id_t, Node*> _nodeIDHash{};
 	std::map<int, Node*> _condorIDHash{};
 	std::map<int, Node*> _noopIDHash{};
 
@@ -477,7 +528,8 @@ private:
 	ScriptQ* _postScriptQ{nullptr};
 	ScriptQ* _holdScriptQ{nullptr};
 
-	DagmanMetrics* _metrics{nullptr};
+	DagSubmit* submitter{nullptr}; // This does not own this pointer
+	DagmanMetrics* _metrics{nullptr}; // This does not own this pointer
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access

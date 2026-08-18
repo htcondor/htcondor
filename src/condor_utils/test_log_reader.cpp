@@ -76,9 +76,8 @@ const char *timestr( time_t );
 
 // Simple term signal handler
 static bool	global_done = false;
-void handle_sig(int sig)
+void handle_sig([[maybe_unused]] int sig)
 {
-	(void) sig;
 	printf( "Got signal; shutting down\n" );
 	global_done = true;
 }

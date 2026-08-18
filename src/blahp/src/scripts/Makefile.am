@@ -49,6 +49,8 @@ libexec_SCRIPTS = blah_load_config.sh blah_common_submit_functions.sh \
   blah.py __init__.py \
   pbs_status.py \
   slurm_status.py \
-  lsf_status.py
+  lsf_status.py \
+  flux_cancel.sh flux_hold.sh flux_local_submit_attributes.sh flux_ping.sh \
+  flux_resume.sh flux_status.sh flux_submit.sh flux_utils.sh
 
 EXTRA_DIST = $(bin_SCRIPTS)

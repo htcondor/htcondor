@@ -88,6 +88,11 @@ elif [[ $CONFIG = 'ap' ]]; then
     ROLE='submit'
 fi
 
+# Copy any default configuration from etc/condor/config.d.
+for file in `ls etc/condor/config.d`; do
+    cp -a etc/condor/config.d/${file} ${LOCAL_CONFIG_DIR}
+done
+
 #
 # Because user-based authentication includes the hostname as part of the
 # identity, we have to set CONDOR_HOST back to the hostname for condor_off

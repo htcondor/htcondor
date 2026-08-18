@@ -2,6 +2,7 @@
 usr/lib/condor/condor_tests-*.tar.gz
 #endif
 usr/bin/file_transfer_cli
+usr/libexec/condor/ccb_proxy_bench
 usr/libexec/condor/condor_sinful
 usr/libexec/condor/condor_testingd
 usr/libexec/condor/test_user_mapping
@@ -14,3 +15,7 @@ usr/libexec/condor/test_awaitable_deadline_socket_client
 usr/libexec/condor/test_generator
 usr/libexec/condor/memory_exerciser_dinner
 usr/libexec/condor/test_starter_guidance.exe
+usr/bin/common_transfer_savings.py
+# Experimental - not for wider deployment
+usr/bin/condor_login
+usr/sbin/condor_placementd

@@ -175,6 +175,11 @@ public:
 	*/
 	bool IsDomainSocket() const { return m_isDomainSocket; }
 
+	/** Determine if the file is a FIFO (named pipe)
+		@return true if the file is a FIFO, false if not
+	*/
+	bool IsFifo() const { return m_isFifo; }
+
 #ifndef WIN32
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
@@ -185,7 +190,10 @@ public:
 		@return the gid of the entry's group id
 	*/
 	gid_t GetGroup() const;
+
+	nlink_t GetLinkCount() const;
 #endif
+
 
 private:
 	si_error_t si_error;
@@ -194,12 +202,14 @@ private:
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
 	bool m_isDomainSocket;
+	bool m_isFifo;
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
 #ifndef WIN32
 	uid_t owner;
 	gid_t group;
+	nlink_t link_count {0};
 #endif
 	bool valid;
 	mode_t file_mode;

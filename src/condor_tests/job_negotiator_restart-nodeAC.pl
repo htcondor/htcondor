@@ -61,9 +61,11 @@ if ($ARGV[0] eq "A") {
 
 	# Save the priority factor so we can check it after the condor_restart.
 	if (-e $factorfile) {
-		system("rm $factorfile");
+		unlink $factorfile;
 	}
-	system("echo $priofactor > $factorfile");
+	open my $fh, ">", $factorfile or die "Cannot open $factorfile: $!";
+	print $fh "$priofactor\n";
+	close $fh;
 
 } elsif ($ARGV[0] eq "C") {
 

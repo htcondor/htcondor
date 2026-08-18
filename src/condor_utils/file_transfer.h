@@ -448,6 +448,13 @@ class FileTransfer final: public Service {
 	void setTransferFilePermissions( bool value )
 		{ TransferFilePermissions = value; }
 
+		// Control whether user-supplied transfer plugins are allowed
+		// 0 = allow
+		// 1 = is fail loudly
+		// 2 = ignore user plugins, and use only built-in plugins. transfer will fail if built-in plugins cannot handle the transfer
+	enum UserPluginDisableMode { Allow=0, Fail=1, Ignore=2 };
+	void setDisableUserSuppliedTransferPlugins(UserPluginDisableMode disable_mode);
+
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
@@ -490,14 +497,16 @@ class FileTransfer final: public Service {
 
 	TransferPluginResult InvokeMultipleFileTransferPlugin(
 		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
-		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		FileTransferPlugin & plugin,
+		std::vector<ClassAd> & pluginInputAds,
 		std::vector<ClassAd> & resultAds,
 		const char* proxy_filename, bool do_upload
 	);
 	TransferPluginResult InvokeMultiUploadPlugin(
 		FileTransferPlugin & plugin,
 		int &exit_code, bool &exit_by_signal, int &exit_signal,
-		const std::string &transfer_files_string, ReliSock &sock,
+		std::vector<ClassAd> & pluginInputAds,
+		ReliSock &sock,
 		bool send_trailing_eom, CondorError &err, long long &upload_bytes
 	);
 
@@ -559,9 +568,17 @@ class FileTransfer final: public Service {
 
   protected:
 
-    bool _fix_me_copy_initialized = false;
+	bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
+
+	typedef struct _walkargs {
+    	std::map<std::string, std::string> env;
+    	const char * prefix{nullptr};
+	} walkargs_t;
+	walkargs_t mergePluginSpecificEnvironment(
+		const FileTransferPlugin & plugin, Env & plugin_env
+	);
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.
@@ -717,6 +734,7 @@ class FileTransfer final: public Service {
 	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};
 	bool m_has_protected_url{false};
+	UserPluginDisableMode I_dont_allow_user_supplied_transfer_plugins{Allow};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
 #endif

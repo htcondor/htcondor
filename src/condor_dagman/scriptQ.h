@@ -22,7 +22,8 @@
 #define _SCRIPTQ_H
 
 #include <utility>
-#include <queue>
+#include <deque>
+#include <algorithm>
 
 #include "condor_daemon_core.h"
 
@@ -31,6 +32,17 @@ class Script;
 
 // external reaper function type
 typedef int (*extReaperFunc_t)(Node* node, int status);
+
+enum class ScriptDeferAction {
+	PUSH_QUEUE = 0,
+	DO_NOTHING,
+};
+
+enum class ScriptExecResult {
+	EXECUTED = 0,    // We Successfully executed the script
+	FAUX_REAPED,     // We failed to execute the script and faux reaped
+	DEFERRED,        // We deferred the script execution
+};
 
 // NOTE: the ScriptQ class must be derived from Service so we can
 // register ScriptReaper() as a reaper function with DaemonCore
@@ -47,7 +59,7 @@ public:
 	}
 
 	// Being executing a script
-	bool Run(Script *script);
+	ScriptExecResult Run(Script *script, ScriptDeferAction act = ScriptDeferAction::PUSH_QUEUE);
 
 	// Run waiting/deferred scripts. Return number of started scripts
 	int RunWaitingScripts(bool justOne = false);
@@ -68,7 +80,7 @@ private:
 	Dag* _dag{nullptr};
 
 	std::map<int, Script*> _scriptPidTable{}; // map script pids to Script* objects
-	std::queue<Script*> _waitingQueue{}; // queue of scripts waiting to be run
+	std::deque<Script*> _waitingQueue{}; // deque of scripts waiting to be run
 
 	int _scriptReaperId{-1};
 	int _numScriptsRunning{0};

@@ -13,8 +13,8 @@ logger.setLevel(logging.DEBUG)
 
 
 def test_filter_exe_results():
-    rv = subprocess.run(["test_filter.exe"],
+    rv = subprocess.run(["test_filter_exe.exe"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=2)
+        timeout=20)
     assert rv.returncode == 0

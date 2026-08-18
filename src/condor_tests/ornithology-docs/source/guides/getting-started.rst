@@ -12,7 +12,7 @@ of tools for inspecting the state of an HTCondor pool.
 
 Ornithology is designed to be flexible and extensible.  If you need a new tool
 that might be useful in other contexts, feel free to add such a tool to the
-`ornithology`` module itself.
+``ornithology`` module itself.
 
 An annotated version of a test file written using Ornithology,
 ``test_hold_and_release.py``, is shown below. The goal of the test is to walk

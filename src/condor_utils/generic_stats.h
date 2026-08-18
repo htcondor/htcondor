@@ -139,6 +139,7 @@ enum {
    IS_HISTOGRAM   = 0x0800, // is stats_entry_histgram class
    IS_CLS_EMA     = 0x0900, // is stats_entry_sum_ema_rate class
    IS_CLS_SUM_EMA_RATE = 0x0A00, // is stats_entry_sum_ema_rate class
+   IS_CLS_DAILY   = 0x0B00, // is stats_entry_daily (hourly and daily)
 
    // values above AS_TYPE_MASK are flags
    //
@@ -194,7 +195,7 @@ enum {
 //
 template <class T> class ring_buffer {
 public:
-   ring_buffer(int cSize=0) : cMax(0), cAlloc(0), ixHead(0), cItems(0), pbuf(0) {
+   ring_buffer(int cSize=0) : cMax(0), cAlloc(0), ixHead(cSize-1), cItems(0), pbuf(0) {
       if (cSize > 0) {
          pbuf = new T[cSize];
          cMax = cAlloc = cSize;
@@ -213,7 +214,7 @@ public:
    // this[1] is the last item in the ring, so is this[1-MaxSize()]
    // when Length() < MaxSize(), only items between [0] and [-Length()] will contain valid data
    // once Length() == MaxSize(), all indexes in the ring buffer are valid.
-   T& operator[](int ix) { 
+   T& operator[](int ix) {
       // yes, we do want to segfault if pbuf==NULL
       MSC_SUPPRESS_WARNING_FOREVER(6011) // dereferencing null pointer.
       if ( ! pbuf || ! cMax) return pbuf[0];
@@ -227,10 +228,27 @@ public:
       if (ixmod < 0) ixmod = (ixmod+cMax) % cMax;
       return pbuf[ixmod];
    }
+   const T& operator[](int ix) const {
+       // yes, we do want to segfault if pbuf==NULL
+       MSC_SUPPRESS_WARNING_FOREVER(6011) // dereferencing null pointer.
+       if ( ! pbuf || ! cMax) return pbuf[0];
+
+       // pbuf[ixHead] is this[0], and we need to use only positive indexes into pbuf
+       // we achieve that for all positive values and reasonable negative values (0 to -cMax)
+       // by adding cMax before we mod. this is the expected case and is branch-free.
+       int ixmod = (ixHead+ix+cMax) % cMax;
+       // if the moded index is STILL negative, it must be now between 0 and -cMax, so just
+       // add and mod again. This branch should be seldom (never?) be taken.
+       if (ixmod < 0) ixmod = (ixmod+cMax) % cMax;
+       return pbuf[ixmod];
+   }
+
 
    int Length() const { return cItems; } 
    int MaxSize() const { return cMax; }
+   bool WillWrap(int cAdvance=1) const { return cMax ? ((ixHead+cAdvance)%cMax) < ixHead : false; }
    bool empty() const { return cItems == 0; }
+   bool full() const { return cItems > 0 && cItems == cMax; }
 
    bool Clear() {
       bool ret = cItems > 0;
@@ -441,6 +459,8 @@ public:
    }
 };
 
+class StatsUndefinedValue {};
+
 // templatize publishing a value to ClassAd's so that we can specialize on types
 // that ClassAd's don't support and do the right thing.
 //
@@ -454,6 +474,12 @@ inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
    return ad.Assign(pattr, (int)value);
 }
 */
+
+template <>
+inline int ClassAdAssign(ClassAd & ad, const char * pattr, StatsUndefinedValue /*value*/) {
+    return ad.AssignExpr(pattr, "undefined");
+}
+
 
 template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
@@ -943,89 +969,145 @@ template <> void stats_entry_recent<int>::AdvanceBy(int cSlots);
 template <> void stats_entry_recent<int64_t>::AdvanceBy(int cSlots);
 template <> void stats_entry_recent<double>::AdvanceBy(int cSlots);
 
-// use timed_queue to keep track of recent windowed values.
-// obsolete: use stats_entry_tq for windowed values that need more time accuracy than
-// can be provided by the ring_buffer
-//
-#ifdef _timed_queue_h_
-
-template <class T> class stats_entry_tq : public stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> 
+class stats_entry_daily : public stats_entry_count<T> {
 public:
-   stats_entry_tq() : recent(0) {}
-   T recent;
-   timed_queue<T> tq;
+    stats_entry_daily(int hour_buckets=6, int num_days = 0) : hours(hour_buckets), days(num_days) {}
+    ring_buffer<T> hours;    // ring buffer of 24 hours in N buckets
+    ring_buffer<T> days;     // ring buffer of N days
 
-   static const int PubValue = 1;
-   static const int PubRecent = 2;
-   static const int PubDebug = 4;
-   static const int PubDecorateAttr = 0x100;
-   static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
-   static const int PubDefault = PubValueAndRecent;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
-      if ( ! flags) flags = PubDefault;
-      if (flags & this->PubValue)
-         ClassAdAssign(ad, pattr, this->value); 
-      if (flags & this->PubRecent) {
-         if (flags & this->PubDecorateAttr)
-            ClassAdAssign2(ad, "Recent", pattr, recent);
-         else
-            ClassAdAssign(ad, pattr, recent); 
-      }
-   }
-   void Unpublish(ClassAd & ad, const char * pattr) const {
-      ad.Delete(pattr);
-      std::string attr;
-      formatstr(attr, "Recent%s", pattr);
-      ad.Delete(attr);
-      };
+    static const int PubTotal = 1;
+    static const int PubCurr = 2;
+    static const int PubHours = 4;
+    static const int PubDays = 8;
+    static const int PubDetailMask = 0x7C; // control visibility of internal structure, use when T is Probe
+    static const int PubDebug = 0x80;
+    static const int PubDecorateAttr = 0x100;
+    static const int PubHoursAndDays = PubHours | PubDays | PubDecorateAttr;
+    static const int PutTotHoursDays = PubTotal | PubHoursAndDays;
+    static const int PubDefault = PubHoursAndDays;
+    void Publish(ClassAd & ad, const char * pattr, int flags) const {
+        if ( ! flags) flags = PubDefault;
+        if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
+        if (flags & this->PubTotal)
+            ClassAdAssign2(ad, "Total", pattr, this->value);
+        if (flags & this->PubCurr) {
+            if (hours.empty()) {
+                StatsUndefinedValue val;
+                ClassAdAssign(ad, pattr, val);
+            } else {
+                ClassAdAssign(ad, pattr, hours[0]);
+            }
+        }
+        if (flags & this->PubHours) {
+            PublishArray(hours, ad, "Hourly", pattr, flags);
+        }
+        if (flags & this->PubDays) {
+            PublishArray(days, ad, "Daily", pattr, flags);
+        }
+        if (flags & this->PubDebug) {
+            PublishDebug(ad, pattr, flags);
+        }
+    }
+    void Unpublish(ClassAd & ad, const char * pattr) const {
+        ad.Delete(pattr);
+        std::string attr("Total"); attr += pattr;
+        ad.Delete(attr);
+        attr = "Hourly"; attr += pattr;
+        ad.Delete(attr);
+        attr = "Daily"; attr += pattr;
+        ad.Delete(attr);
+    };
 
-   void Clear() {
-      this->value = 0;
-      recent = 0;
-      tq.clear();
-   }
-   void ClearRecent() {
-      recent = 0;
-      tq.clear();
-   }
+    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
 
-   T Add(T val, time_t now) { 
-      this->value += val; 
-      if (val != T(0)) {
-         if (tq.empty() || tq.front().first != now) 
-            tq.push_front(val, now);
-         else
-            tq.front().second += val;
-      }
-      return this->value; 
-   }
+    void PublishArray(const ring_buffer<T> & buf, ClassAd & ad, const char * prefix, const char * pattr, int flags) const {
+        std::string str("{"); str.reserve(buf.MaxSize()*10);
+        if (buf.pbuf) {
+            for (int ix = 0; ix < buf.cItems; ++ix) {
+                if (ix > 0) str += ",";
+                str += std::to_string(buf[0-ix]);
+            }
+        }
+        str += "}";
 
-   T Set(T val, time_t now) { 
-      T delta = val - this->value;
-      return Add(delta, now);
-   }
+        std::string attr;
+        if (flags & this->PubDecorateAttr) { attr = prefix; }
+        attr += pattr;
+        ad.AssignExpr(attr, str.c_str());
+    }
 
-   T Accumulate(time_t now, time_t window) {
-      tq.trim_time(now - window);
-      T ret(0);
-      for (typename timed_queue<T>::iterator jj(tq.begin());  jj != tq.end();  ++jj) {
-         ret += jj->second;
-         }
-      recent = ret;
-      return ret;
-   }
+    void Clear() {
+        this->value = 0;
+        hours.Clear();
+        days.Clear();
+    }
 
-   // the the max size of the 
-   void SetMaxTime(int size) { tq.max_time(size); }
+    T Add(T val) {
+        this->value += val;
+        if (hours.MaxSize() > 0) {
+            if (hours.empty()) { hours.PushZero(); }
+            hours.Add(val);
+        }
+        return this->value;
+    }
 
-   // callback methods/fetchers for use by the StatisticsPool class
-   static const int unit = IS_RECENTTQ | stats_entry_type<T>::id;
-   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_tq<T>::Unpublish; };
-   static void Delete(stats_entry_tq<T> * probe) { delete probe; }
+    // Advance by cBuckets time slots, then update daily by summing the remaining
+    void AdvanceBy(int cBuckets) {
+        if (cBuckets <= 0) 
+            return;
+        while (--cBuckets >= 0) {
+            // as we discard hours buckets, accumulate them into the days ring buffer
+            // when the day-of-week buffer wraps, we advance the weeks ring buffer
+            // just before we overwrite the last item in the hours ring, accumulate it into the days ring
+            if (hours.full()) {
+                if (hours.WillWrap(1)) { days.PushZero(); }
+                days.Add(hours[1]); // hours[1] is last item in the ring buffer
+            }
+            hours.PushZero();
+        }
+    }
+
+    // Advance both hour and day buckets
+    void AdvanceBy(int cHourBuckets, int cDayBuckets) {
+        if (--cDayBuckets >= 0) {
+            days.PushZero();
+            if ( ! hours.empty()) days.Add(hours.Sum());
+            while (--cDayBuckets >= 0) {
+                days.PushZero();
+            }
+        }
+        while (--cHourBuckets >= 0) {
+            hours.PushZero();
+        }
+    }
+
+
+    T Set(T val) { 
+        T delta = val - this->value;
+        return Add(delta);
+    }
+
+    void SetRecentMax(int /*cRecentMax*/) {
+        // we ignore this for Daily counters
+        // SetWindowSize(cRecentMax);
+    }
+
+    // operator overloads
+    stats_entry_daily<T>& operator=(T val)  { Set(val); return *this; }
+    stats_entry_daily<T>& operator+=(T val) { Add(val); return *this; }
+
+    // callback methods/fetchers for use by the StatisticsPool class
+    static const int unit = IS_CLS_DAILY | stats_entry_type<T>::id;
+    static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_daily<T>::AdvanceBy; };
+    static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_entry_daily<T>::SetRecentMax; };
+    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_daily<T>::Unpublish; };
+    static void Delete(stats_entry_daily<T> * probe) { delete probe; }
 };
 
+GCC_DIAG_ON(float-equal)
 
-#endif // _timed_queue_h_
 
 #include <limits>
 

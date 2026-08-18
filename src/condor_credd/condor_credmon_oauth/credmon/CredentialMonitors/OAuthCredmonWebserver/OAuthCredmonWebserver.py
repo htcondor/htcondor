@@ -8,6 +8,7 @@ import htcondor2 as htcondor
 import classad2 as classad
 import json
 import re
+import urllib.parse
 
 from requests_oauthlib import __version__ as _requests_oauthlib_version
 _requests_oauthlib_version = tuple([int(x) for x in _requests_oauthlib_version.split('.')])
@@ -27,6 +28,21 @@ app = Flask(__name__)
 
 # make sure the secret_key is randomized in case user fails to override before calling app.run()
 app.secret_key = os.urandom(24)
+
+# enable the CONDOR_WEB_PREFIX for URLs
+class CredmonWebPrefix(object):
+
+    def __init__(self, app):
+        self.app = app
+        self.prefix = urllib.parse.urlsplit(htcondor.param.get("CREDMON_WEB_PREFIX", "/")).path
+
+    def __call__(self, environ, start_response):
+        environ['SCRIPT_NAME'] = self.prefix
+        return self.app(environ, start_response)
+
+
+app.wsgi_app = CredmonWebPrefix(app.wsgi_app)
+
 
 def get_provider_str(provider, handle):
     return ' '.join((provider, handle)).rstrip(' ')
@@ -347,4 +363,4 @@ def oauth_return(provider):
         except OSError as e:
             sys.stderr.write('Could not remove session file {0}: {1}\n'.format(session['key_path'], str(e)))
 
-    return redirect("/")
+    return redirect(url_for("index"))

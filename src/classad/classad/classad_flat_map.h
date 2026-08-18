@@ -55,20 +55,18 @@ class ExprTree;
 
 // The ordering function
 struct ClassAdFlatMapOrder {
-	const size_t len = 0;
-	ClassAdFlatMapOrder(const std::string &s) : len(s.size()) {}
-	ClassAdFlatMapOrder(const char *s) : len(strlen(s)) {}
 	ClassAdFlatMapOrder()  = default;
 
 	bool operator()(const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) noexcept {
-		if (lhs.first.size() < this->len) return true;
-		if (lhs.first.size() > this->len) return false;
+		if (lhs.first.size() < rhs.size()) return true;
+		if (lhs.first.size() > rhs.size()) return false;
 		return strcasecmp(lhs.first.c_str(), rhs.c_str()) < 0;	
 	}
 
 	bool operator()(const std::pair<std::string, ExprTree *> &lhs, const char *rhs) noexcept {
-		if (lhs.first.size() < this->len) return true;
-		if (lhs.first.size() > this->len) return false;
+		size_t len = strlen(rhs);
+		if (lhs.first.size() < len) return true;
+		if (lhs.first.size() > len) return false;
 		return strcasecmp(lhs.first.c_str(), rhs) < 0;	
 	}
 
@@ -81,7 +79,11 @@ struct ClassAdFlatMapOrder {
 
 // note this needs to be inline for ODR reasons
 inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const std::string &rhs) {
-	return 0 == strcasecmp(lhs.first.c_str(), rhs.c_str());
+	// Length is stored inline in std::string, so check it first: it lets us
+	// reject a mismatch (e.g. when lower_bound overshot to a longer name)
+	// without the strcasecmp reading both character buffers, which for names
+	// longer than the SSO limit means chasing a heap pointer.
+	return lhs.first.size() == rhs.size() && 0 == strcasecmp(lhs.first.c_str(), rhs.c_str());
 }
 
 inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const char *rhs) {
@@ -119,7 +121,7 @@ class ClassAdFlatMap {
 
 		template <typename StringLike>
 		iterator find(const StringLike &key) {
-			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder(key));
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				return lb;
 			} else  {
@@ -129,7 +131,7 @@ class ClassAdFlatMap {
 
 		template <typename StringLike>
 		const_iterator find(const StringLike &key) const {
-			const_iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder(key));
+			const_iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				return lb;
 			} else  {
@@ -140,7 +142,7 @@ class ClassAdFlatMap {
 		// This is the hack for compat with clients who expect the hash interface
 		// Ideally should deprecate this in the future
 		ExprTree *&  operator[](const std::string &key) {
-			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder(key));
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				return lb->second;
 			} else {
@@ -166,7 +168,7 @@ class ClassAdFlatMap {
 
 		template <typename StringLike> 
 		std::pair<iterator, bool> emplace(const StringLike &key, ExprTree *value) {
-			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder(key));
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				return std::make_pair(lb, false);

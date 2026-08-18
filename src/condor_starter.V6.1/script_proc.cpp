@@ -40,11 +40,8 @@ extern class Starter *starter;
 ScriptProc::ScriptProc( ClassAd* ad, const char* proc_name )
 {
     dprintf ( D_FULLDEBUG, "In ScriptProc::ScriptProc()\n" );
-	if( proc_name ) {
-		name = strdup( proc_name );
-	} else {
-		EXCEPT( "Can't instantiate a ScriptProc without a name!" );
-	}
+	ASSERT(proc_name);
+	name = strdup( proc_name );
 	JobAd = ad;
 	is_suspended = false;
 	UserProc::initialize();
@@ -87,7 +84,7 @@ ScriptProc::StartJob()
 		// path to the binary, and don't try to chmod it.
 	std::string exe_path = "";
 	if( tmp != NULL && !fullpath( tmp ) ) {
-		exe_path += starter->GetWorkingDir(0);
+		exe_path += starter->GetWorkingDir(WD::OUTER);
 		exe_path += DIR_DELIM_CHAR;
 	}
 

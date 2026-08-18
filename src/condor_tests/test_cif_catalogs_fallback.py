@@ -1,7 +1,6 @@
 #!/usr/bin/env pytest
 
 import pytest
-import subprocess
 
 import logging
 
@@ -20,6 +19,14 @@ from ornithology import (
 import os
 from pathlib import Path
 import shutil
+
+from libcontainer import (
+    SingularityIsWorthy,
+    UserNamespacesFunctional,
+    SingularityIsWorking,
+    make_empty_sif,
+    EMPTY_SIF_BIND_EXPR,
+)
 
 import htcondor2
 
@@ -80,7 +87,7 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -147,13 +154,13 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
 
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY.CommonInputCatalogs":      '"A, C"',
         "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
     }
 
@@ -231,7 +238,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -282,13 +289,13 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     #     transer common files once).
     job_description_a = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
     }
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY.CommonInputCatalogs":      '"A, B"',
         "MY._x_catalog_B":                  '"C1.txt, C2.txt"',
     }
 
@@ -343,13 +350,10 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
 
 @action
-def the_container_image(test_dir, pytestconfig):
-    # This is a gross hack.
-    ctest_path = test_dir / ".." / "busybox.sif"
-    if ctest_path.exists():
-        return ctest_path
-    else:
-        return Path(pytestconfig.rootdir) / "busybox.sif"
+def the_container_image(test_dir):
+    sif = make_empty_sif(test_dir / "empty.sif")
+    assert sif is not None
+    return sif
 
 
 @action
@@ -383,16 +387,24 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "50",
             "SINGULARITY":              "/usr/bin/singularity",
-            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
+            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()} {EMPTY_SIF_BIND_EXPR}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 
@@ -451,12 +463,12 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
 
     # Wait for them all to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
@@ -469,13 +481,14 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
     (the_container_kill_dir / f"kill-cc-{job_handle_b.clusterid}.1").touch(exist_ok=True)
 
 
-    # Wait for them to finish.
+    # Wait for them to finish.  Container jobs (Singularity startup/teardown)
+    # need more headroom than plain shell jobs.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=240,
         condition=ClusterState.all_terminal
     )
 
@@ -542,55 +555,20 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
         assert common_transfer_waits == cf_waits
 
 
-def lock_dir_is_clean(the_lock_dir):
+def lock_dir_is_clean(the_lock_dir, timeout=30):
+    import time
     syndicate_dir = the_lock_dir / "syndicate"
 
     if syndicate_dir.exists():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            files = list(syndicate_dir.iterdir())
+            if len(files) == 0:
+                return
+            time.sleep(1)
+
         files = list(syndicate_dir.iterdir())
         assert len(files) == 0
-
-
-# ---- Singularity checks -----------------------------------------------------
-# All stolen from `test_singularity_sif.py`, and which should probably be made
-# Ornithology fixtures.
-
-def SingularityIsWorthy():
-    result = subprocess.run("singularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = result.stdout.decode('utf-8')
-
-    logger.debug(output)
-    if "apptainer" in output:
-        return True
-
-    if "3." in output:
-        return True
-
-    return False
-
-
-def SingularityIsWorking():
-    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr busybox.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = result.stdout.decode('utf-8')
-
-    logger.debug(output)
-
-    if result.returncode == 0:
-        return True
-    else:
-        return False
-
-
-# For the test to work, we need user namespaces to be working
-# and enough of them.  This is a race, but better to try
-# to test first.
-def UserNamespacesFunctional():
-    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
-    if result.returncode == 7:
-        print("unshare seems to work correctly, proceeding with test\n")
-        return True
-    else:
-        print("unshare command failed, test cannot work, skipping test\n")
-        return False
 
 
 # ---- Tests ------------------------------------------------------------------

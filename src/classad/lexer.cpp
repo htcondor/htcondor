@@ -75,6 +75,13 @@ Initialize(LexerSource *source)
 
 
 bool Lexer::
+Initialize(const char *str)
+{
+	ownedSource.SetNewSource(str);
+	return Initialize(&ownedSource);
+}
+
+bool Lexer::
 Reinitialize(void)
 {
 	ch = EMPTY;
@@ -713,6 +720,9 @@ tokenizePunctOperator (void)
 		case '?':	
 			tokenType = LEX_QMARK;
 			fetch();
+			while (isspace(ch)) {
+				wind();
+			}
 			if (ch == ':') {
 				tokenType = LEX_ELVIS;
 				wind (false);

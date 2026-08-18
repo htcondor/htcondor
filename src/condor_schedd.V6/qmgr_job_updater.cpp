@@ -116,6 +116,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_NUM_OUTPUT_XFER_STARTS,
 		ATTR_TRANSFER_INPUT_STATS,
 		ATTR_TRANSFER_OUTPUT_STATS,
+		ATTR_TRANSFER_COMMON_STATS,
 		ATTR_NUM_JOB_STARTS,
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
 		ATTR_CUMULATIVE_TRANSFER_TIME,
@@ -245,9 +246,7 @@ QmgrJobUpdater::startUpdateTimer( )
 		Register_Timer( q_interval, q_interval,
                         (TimerHandlercpp)&QmgrJobUpdater::periodicUpdateQ,
                         "periodicUpdateQ", this );
-    if( q_update_tid < 0 ) {
-        EXCEPT( "Can't register DC timer!" );
-    }
+	ASSERT(q_update_tid >= 0);
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
 			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );
 }

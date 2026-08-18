@@ -156,7 +156,7 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|opensuse|rocky|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|opensuse|sles|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
@@ -175,7 +175,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|opensuse|rocky|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|opensuse|sles|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -299,7 +299,7 @@ sub get_tarball_check_script {
 }
 
 sub get_extract_tarballs_script {
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|SLES|Rocky|SL)/) {
         return dirname($0) . "/make-tarball-from-rpms";
     }
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
@@ -320,7 +320,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|SLES|Rocky|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {

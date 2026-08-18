@@ -1,0 +1,56 @@
+# this is the defrag algorithm
+
+COLOR = $(LOCALNAME)
+DRAIN_BY_ME = (DrainReason is undefined || DrainReason=="Defrag $(COLOR)")
+BASE_SLOT_CONST = PartitionableSlot && Offline=!=True
+
+BASE_DRAINING_CONST = $(BASE_SLOT_CONST) && Draining && $(DRAIN_BY_ME)
+draining_machines = $(condor_status -const '$(BASE_DRAINING_CONST)')
+
+WHOLE_MACHINE_CONST = $(DEFRAG_WHOLE_MACHINE_EXPR) && $(BASE_SLOT_CONST) && $(DRAIN_BY_ME)
+whole_machines = $(condor_status -const '$(WHOLE_MACHINE_CONST)')
+
+print "Set of current whole machines " + whole_machines
+print "Set of current draining machines is " + draining_machines
+
+
+.. calc how many machines should be draining ..
+.. query draining machines and print some stats ..
+.. calculate num_to_drain for this iteration ..
+
+
+# first apply the DEFRAG_CANCEL_REQUIREMENTS
+#
+CANCEL_CONST = $(DEFRAG_CANCEL_REQUIREMENTS) && $(BASE_DRAINING_CONST)
+cancel_candidates = $(condor_status -const '$(CANCEL_CONST)')
+
+shuffle cancel_candidates
+sort cancel_candidates
+
+for (candidate : cancel_candidates) {
+    next if (candidate is cancelled)
+    cancel_drain candidate
+    last if (++num_cancelled >= num_to_cancel)
+}
+
+# some early out checks before we start any drains
+#
+Quit if num_to_drain <= 0 or num_to_drain_per_hour <= 0
+Quit if size(draining_machines) >= $(DEFRAG_MAX_CONCURRENT_DRAINING)
+Quit if size(whole_machines) > $(DEFRAG_MAX_WHOLE_MACHINES)
+
+# then apply the DEFRAG_REQUIREMENTS
+#
+CANDIDATE_CONST = $(DEFRAG_REQUREMENTS) && $(BASE_SLOT_CONSTRAINT) && Draining=!=True
+drain_candidates = $(condor_status -const $(CANDIDATE_CONST))
+
+shuffle drain_candidates
+sort drain_candidates
+
+for (candidate : drain_candidates) {
+    next if (candidate is cancelled)
+    next if (candidate is drained)
+    next if (candidate is whole)
+    drain candidate
+    last if (++num_drained >= num_to_drain)
+}
