@@ -226,6 +226,7 @@ JICShadow::~JICShadow()
 		if( m_proxy_expiration_tid != -1 ){
 			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
 		}
+		cancelStartdUpdateTimer();
 	}
 	if( shadow ) {
 		delete shadow;
@@ -514,6 +515,9 @@ JICShadow::Suspend( void )
 		// change, to pass in "true" to updateShadow() for that.
 	updateShadow( &update_ad );
 
+		// Suspend/Continue are important state changes; notify the startd
+		// immediately rather than waiting for the next periodic usage tick.
+	updateStartd( &update_ad, false );
 }
 
 
@@ -540,12 +544,31 @@ JICShadow::Continue( void )
 		// We want to confirm the update gets there on this important
 		// state change, to pass in "true" to updateShadow() for that.
 	updateShadow( &update_ad );
+
+		// Suspend/Continue are important state changes; notify the startd
+		// immediately rather than waiting for the next periodic usage tick.
+	updateStartd( &update_ad, false );
+}
+
+
+void JICShadow::allJobsSpawned( void )
+{
+		// Base class starts the periodic shadow-update timer.
+	JobInfoCommunicator::allJobsSpawned();
+
+		// Also start our separate, faster timer for pushing job resource
+		// usage to the startd.
+	startStartdUpdateTimer();
 }
 
 
 bool JICShadow::allJobsDone( void )
 {
 	ClassAd update_ad;
+
+		// No more jobs, so stop pushing usage to the startd.  (The final
+		// startd update is sent separately from notifyJobExit().)
+	cancelStartdUpdateTimer();
 
 	bool r1 = JobInfoCommunicator::allJobsDone();
 
@@ -1249,6 +1272,89 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 		m_job_startd_update_sock = NULL;
 	}
 }
+
+
+void
+JICShadow::startStartdUpdateTimer( void )
+{
+	if( m_startd_update_tid >= 0 ) {
+			// already registered
+		return;
+	}
+	if( ! m_job_startd_update_sock ) {
+			// no startd to talk to; nothing to do
+		return;
+	}
+
+	int interval = param_integer( "STARTER_UPDATE_INTERVAL_STARTD", 5, 1 );
+	int initial = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+	if( initial > interval ) {
+		initial = interval;
+	}
+
+	m_startd_update_tid = daemonCore->Register_Timer(
+		initial, interval,
+		[this](int tid) { this->updateStartdUsage(tid); },
+		"JICShadow::updateStartdUsage" );
+	ASSERT( m_startd_update_tid >= 0 );
+	dprintf( D_FULLDEBUG,
+	         "Registered startd usage-update timer (id=%d, initial=%ds, "
+	         "interval=%ds)\n", m_startd_update_tid, initial, interval );
+}
+
+
+void
+JICShadow::cancelStartdUpdateTimer( void )
+{
+	if( m_startd_update_tid >= 0 ) {
+		if( daemonCore ) {
+			daemonCore->Cancel_Timer( m_startd_update_tid );
+		}
+		m_startd_update_tid = -1;
+	}
+}
+
+
+void
+JICShadow::updateStartdUsage( int /* timerID */ )
+{
+		// Nothing to send if we have no connection to the startd.
+	if( ! m_job_startd_update_sock ) {
+		return;
+	}
+
+	ClassAd ad;
+
+		// Gather the job's resource usage from the proc classes.  This is the
+		// universe-aware measurement (cgroup/procd for vanilla, the Docker API
+		// for docker, the vmgahp/libvirt for vm), kept fresh by each proc
+		// class's own poll timer.  Unlike publishUpdateAd(), this deliberately
+		// does NOT drain m_delayed_updates (those belong to the shadow) nor
+		// trigger a sandbox du walk.  Even if there is no usage yet, we still
+		// send the update below so the startd learns the starter's address
+		// promptly.
+	starter->publishUpdateAd(&ad);
+
+		// The startd learns the starter's contact address ONLY from this update
+		// ad (it stashes ATTR_STARTER_IP_ADDR into m_starter_addr and relays it
+		// for GET_JOB_CONNECT_INFO, e.g. condor_ssh_to_job).  JICShadow's full
+		// publishUpdateAd() adds this, but starter->publishUpdateAd() (the
+		// proc-class walk) does not, so add it here -- otherwise the startd never
+		// gets the starter address and ssh_to_job hangs.  It's cheap and
+		// idempotent to send every tick.
+	ad.Assign( ATTR_STARTER_IP_ADDR, daemonCore->publicNetworkIpAddr() );
+
+		// Include the sandbox disk usage cached by the (slower) shadow-update
+		// path, so the startd sees disk usage without us walking the sandbox on
+		// every tick.
+	if( m_cached_disk_usage_kb >= 0 ) {
+		ad.Assign( ATTR_DISK_USAGE, m_cached_disk_usage_kb );
+		ad.Assign( ATTR_SCRATCH_DIR_FILE_COUNT, m_cached_scratch_file_count );
+	}
+
+	updateStartd( &ad, false );
+}
+
 
 bool
 JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
@@ -2363,6 +2469,12 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 
+		// Cache these on the (slow) shadow-update cadence so the (fast)
+		// startd-update path can report disk usage without repeating the
+		// potentially expensive du walk on every tick.
+		m_cached_disk_usage_kb = (execsz+1023) / 1024;
+		m_cached_scratch_file_count = file_count;
+
 		// Let's also send the stdout/stderr mtime, as a way for
 		// users to guess if their jobs are hung
 		struct stat buf;
@@ -2518,7 +2630,10 @@ JICShadow::updateShadow( ClassAd* update_ad )
 		ad->Assign("STARTER_DISCONNECTED_FROM_SUBMIT_NODE",true);
 	}
 
-	updateStartd(ad, false);
+	// NOTE: the startd is no longer updated here.  Periodic job usage is sent
+	// to the startd on its own (faster) timer via updateStartdUsage(); callers
+	// that need to propagate an important state change to the startd immediately
+	// (e.g. Suspend/Continue) call updateStartd() directly.
 
 	if (rval) {
 		dprintf(D_FULLDEBUG, "Leaving JICShadow::updateShadow(): success\n");

@@ -1639,31 +1639,17 @@ Claim::idMatches( const char* req_id )
 
 void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 {
-	percentCpuUsage = 0.0;
-	imageSize = 0;
-	long long cur_rss = 0;
-	long long peak_rss = 0;
-	if (c_starter_pid) {
-		Starter *starter = findStarterByPid(c_starter_pid);
-		if ( ! starter) {
-			EXCEPT( "Claim::updateUsage(): Could not find starter object for pid %d", c_starter_pid );
-		}
-		const ProcFamilyUsage & usage = starter->updateUsage();
-		percentCpuUsage = usage.percent_cpu;
-		imageSize = usage.total_image_size;
-		cur_rss = usage.total_resident_set_size; // TJ: v24.12 procd seems to be returning peak RSS on Windows
-		peak_rss = usage.max_image_size;
-		//dprintf(D_ZKM, "Claim::updateUsage (%u) TotImageSize=%lld, TotRss=%lld, max=%llu\n",
-		//	c_starter_pid, imageSize, cur_rss, peak_rss);
-	} else if (c_rip && ! c_rip->is_partitionable_slot()) {
-		//dprintf(D_ZKM, "Claim::updateUsage (no starter pid) ImageSize=%lld\n", imageSize);
-	}
-
-	// save off the last values so we can use them in the ::publish method
-	c_cpus_usage = percentCpuUsage / 100;
-	c_image_size = imageSize;
-	c_cur_rss = cur_rss;
-	c_peak_rss = peak_rss;
+	// Resource usage is now measured by the starter (which is universe-aware:
+	// cgroups/procd for vanilla, the Docker API for docker, the vmgahp/libvirt
+	// for vm) and pushed to us via receiveJobClassAdUpdate(), which caches the
+	// values below and derives an instantaneous CpusUsage.  We no longer poll
+	// Get_Family_Usage() on the starter's pid; we just hand back the cache.
+	//
+	// percentCpuUsage is returned in "percent" (100 == one full cpu) to match
+	// what Resource::compute_condor_usage() feeds into the load-average queue;
+	// c_cpus_usage is kept in cpus/cores (1.0 == one full cpu).
+	percentCpuUsage = c_cpus_usage * 100.0;
+	imageSize = c_image_size;
 }
 
 
@@ -2483,6 +2469,8 @@ Claim::resetClaim( void )
 	c_cpus_usage = 0;
 	c_peak_rss = 0;
 	c_cur_rss = 0;
+	c_prev_cpu_secs = -1.0;
+	c_prev_cpu_time = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
 		delete( c_jobad );
@@ -2827,6 +2815,39 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 		}
 	}
 	loadStatistics();
+
+		// Cache the resource-usage values the starter just pushed, and derive an
+		// instantaneous CpusUsage from successive cumulative cpu-second samples.
+		// This is what the startd used to obtain by polling
+		// Get_Family_Usage(starter_pid) every POLLING_INTERVAL; the starter is
+		// now the authoritative, universe-aware source (see updateUsage()).
+	long long img = 0;
+	if (c_jobad->LookupInteger(ATTR_IMAGE_SIZE, img)) {
+		c_image_size = img;
+	}
+	long long rss = 0;
+	if (c_jobad->LookupInteger(ATTR_RESIDENT_SET_SIZE, rss)) {
+		c_cur_rss = rss;
+		if (rss > c_peak_rss) { c_peak_rss = rss; }
+	}
+
+		// RemoteUserCpu + RemoteSysCpu are cumulative cpu-seconds; diffing two
+		// samples over wall-clock gives an instantaneous rate (in cpus/cores).
+		// We compute it here -- only when a fresh sample arrives -- rather than
+		// in updateUsage(), so a compute_condor_usage() tick that happens to
+		// land between updates doesn't see a zero delta and drop the load.
+	double user_cpu = 0.0, sys_cpu = 0.0;
+	c_jobad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, user_cpu);
+	c_jobad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, sys_cpu);
+	double cpu_secs = user_cpu + sys_cpu;
+	time_t now = resmgr ? resmgr->now() : time(nullptr);
+	if (c_prev_cpu_time > 0 && now > c_prev_cpu_time && cpu_secs >= c_prev_cpu_secs) {
+		double dwall = (double)(now - c_prev_cpu_time);
+		c_cpus_usage = (cpu_secs - c_prev_cpu_secs) / dwall;
+	}
+	c_prev_cpu_secs = cpu_secs;
+	c_prev_cpu_time = now;
+
 	if( IsDebugVerbose(D_JOB) ) {
 		std::string adbuf;
 		dprintf(D_JOB | D_VERBOSE,"Updated job ClassAd:\n%s", formatAd(adbuf, *c_jobad, "\t"));
