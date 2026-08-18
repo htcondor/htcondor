@@ -58,7 +58,7 @@ def the_submitted_jobs( the_condor, the_common_file ):
         "request_memory":           1,
         "request_disk":             256,
         "log":                      "the_running_jobs.log.$(ClusterID)",
-        "common_input_files":       f"{the_common_file.as_posix()}",
+        "transfer_common_input":    f"{the_common_file.as_posix()}",
         "hold":						True,
     }
 
