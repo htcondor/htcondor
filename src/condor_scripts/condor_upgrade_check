@@ -720,14 +720,14 @@ class SpecifyVersionAction(argparse.Action):
             parser.error("Invalid argparse value (expects string)")
 
         try:
-            major, minor, release = values.split(".")
+            major, minor, patch = values.split(".")
             major = int(major)
             minor = int(minor)
-            release = int(release)
+            patch = int(patch)
         except Exception as e:
             parser.error(f"Invalid version string ({values}) provided: {e}")
 
-        setattr(args, self.dest, (major, minor, release))
+        setattr(args, self.dest, (major, minor, patch))
 
 def parse_args(has_extend_action: bool):
     """Function to parse tool command line arguments"""
