@@ -591,6 +591,27 @@ attribute (prefixed by ``_x_catalog_``), identical in format to
 :ad-attr:`TransferInput`.  The corresponding attributes each define a catalog
 for transfer.
 
+Computing Actual Benefit
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+There is an `unsupported script
+<https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_ 
+available from the HTCondor GitHub repository which, given a cluster ID or a
+DAGMan job ID, determines both the size of the common file(s) tranferred by
+that cluster or DAG and how many transfers of those files did not happen
+because they were common, as a percentage of the total.  That is, for a
+cluster of a 1000 container universe jobs whose container image was 8 GB, you
+would normally expect to transfer 8 TB; if the cluster's job ran 100 times in
+a row on only 10 machines, and each run but the first re-used the common
+transfer, your AP only transferred 80GiB, for savings of just over 90%.
+
+This script examines (among other things) the job epoch history file, which
+the AP creates by default.  See :macro:`JOB_EPOCH_HISTORY`.
+
+.. note::
+    The non-normative sections of :ref:`admin_common_file_transfer` end
+    here.  (This is not obvious in all renderings of the manual.)
+
 .. _self-checkpointing-jobs:
 
 Self-Checkpointing Jobs
