@@ -496,6 +496,92 @@ Common File Transfer for Admnistrators
 The concept and limitations of :ref:`common_file_transfer` are explained in
 the user manual.
 
+.. I'm a little annoyed that sidebars must come _before_ the primary text
+   to which they are adjacent.
+
+.. sidebar:: Common File Transfer Notes
+
+    .. warning::
+        These sections are **not** normative.  They reflect the implementation
+        as released in version 26.0.1, and are subject to change without
+        warning.
+
+    .. rubric:: Data Slot job IDs
+
+    As you might expect, each data slot has a corresponding shadow.  Because
+    that shadow does not correspond to a specific job (the job which prompted
+    the transfer will of course run while that shadow is running), those
+    shadows -- which we refer to internally as "transfer" shadows -- do not have
+    valid job IDs.  Instead, their job IDs are constructed from the prompting
+    job's cluster ID (used unmodified) and proc ID (made negative and reduced
+    by 1000).  That is, if the prompting job was 123.45, the transfer shadow,
+    when required to record a job ID, will record 123.-1045.  This may cause
+    your monitoring tools grief.
+
+    .. rubric:: Job Ad and Slot Ad Attributes
+
+    A cluster (or DAG) with common files runs on the same resource(s) as the same
+    cluster (or DAG) would without them.  (Unless the common files save so much
+    disk space as to allow an EP to be more finely divided.)  As such, HTCondor
+    does not do match-making based on common files.  However, the present
+    implementation uses what would otherwise be match-making techniques to allocate
+    disk appropriately when creating job slots.
+
+    An EP advertises ``catalogs``, a list of ClassAd attributes each of which
+    refers to a nested ClassAd; the names are arbitrary, e.g., ``catalog_1``,
+    but should not repeat until the startd restarts.  Each advertised catalog
+    contains its ``id`` (a string representation of the attribute reference
+    in ``catalogs``), a ``Catalog`` name (unique within its scope), a
+    ``CatalogID`` (globally unique), the ``AP`` at which the cluster or
+    DAG was placed, the ``CatalogPath`` (where on the EP's disk to find the
+    common files), the ``CatalogSize`` (the size in bytes of the common files
+    on disk), the ``CatalogScope`` (a string representation of, presently, either
+    the cluster ID or the DAGMan job ID), and the ``CatalogScopeType`` (a string
+    specifying one of the previous two options).
+
+    The ``CatalogID`` is used by the expression which calculates how much less
+    disk to allocate to a job which will benefit from common files already
+    present at the EP.
+
+    (Presently, a single job may have require only two different "catalogs" of
+    common files: its container image and its common input files.  We expect to
+    relax this constraint in 26.x development series.)
+
+    These attributes are not documented elsewhere in this manual in case we find
+    it necessary to change them.
+
+    The size computation above relies on the job-ad attribute
+    ``RequestedCatalogIDs``, a ClassAd list of (the globally unique) catalog IDs.
+    The corresponding ``RequestedCatalogs`` is a ClassAd list of
+    (scoped) catalog names provided for your convenience.
+
+    The job-ad attribute ``CommonInputCatalogs`` is a string list of
+    (scoped) catalog names.  Each name has a corresponding ClassAd
+    attribute (prefixed by ``_x_catalog_``), identical in format to
+    :ad-attr:`TransferInput`.  The corresponding attributes each define a catalog
+    for transfer.
+
+    .. rubric:: Computing Actual Benefit
+
+    There is an `unsupported script
+    <https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_ 
+    available from the HTCondor GitHub repository which, given a cluster ID or a
+    DAGMan job ID, determines both the size of the common file(s) tranferred by
+    that cluster or DAG and how many transfers of those files did not happen
+    because they were common, as a percentage of the total.  That is, for a
+    cluster of a 1000 container universe jobs whose container image was 8 GB, you
+    would normally expect to transfer 8 TB; if the cluster's job ran 100 times in
+    a row on only 10 machines, and each run but the first re-used the common
+    transfer, your AP only transferred 80GiB, for savings of just over 90%.
+
+    This script examines (among other things) the job epoch history file, which
+    the AP creates by default.  See :macro:`JOB_EPOCH_HISTORY`.
+
+    .. note::
+        The non-normative sections of the common file transfer notes
+        end here.  (This is not obvious in all renderings of the manual.)
+
+
 Additional EP Requirements
 ''''''''''''''''''''''''''
 
@@ -525,92 +611,6 @@ As the administrator, you can control:
   (:macro:`DATA_SLOT_MAX_DISCONNECT_DURATION`).
 
 Hopefully, you'll never have any reason to turn any of these knobs.
-
-Implementation Notes
-''''''''''''''''''''
-
-.. note::
-    These sections are **not** normative.  They reflect the implementation
-    as released in version 26.0.1, and are subject to change without
-    warning.
-
-Data Slot job IDs
-^^^^^^^^^^^^^^^^^
-
-As you might expect, each data slot has a corresponding shadow.  Because
-that shadow does not correspond to a specific job (the job which prompted
-the transfer will of course run while that shadow is running), those
-shadows -- which we refer to internally as "transfer" shadows -- do not have
-valid job IDs.  Instead, their job IDs are constructed from the prompting
-job's cluster ID (used unmodified) and proc ID (made negative and reduced
-by 1000).  That is, if the prompting job was 123.45, the transfer shadow,
-when required to record a job ID, will record 123.-1045.  This may cause
-your monitoring tools grief.
-
-Job Ad and Slot Ad Attributes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A cluster (or DAG) with common files runs on the same resource(s) as the same
-cluster (or DAG) would without them.  (Unless the common files save so much
-disk space as to allow an EP to be more finely divided.)  As such, HTCondor
-does not do match-making based on common files.  However, the present
-implementation uses what would otherwise be match-making techniques to allocate
-disk appropriately when creating job slots.
-
-An EP advertises ``catalogs``, a list of ClassAd attributes each of which
-refers to a nested ClassAd; the names are arbitrary, e.g., ``catalog_1``,
-but should not repeat until the startd restarts.  Each advertised catalog
-contains its ``id`` (a string representation of the attribute reference
-in ``catalogs``), a ``Catalog`` name (unique within its scope), a
-``CatalogID`` (globally unique), the ``AP`` at which the cluster or
-DAG was placed, the ``CatalogPath`` (where on the EP's disk to find the
-common files), the ``CatalogSize`` (the size in bytes of the common files
-on disk), the ``CatalogScope`` (a string representation of, presently, either
-the cluster ID or the DAGMan job ID), and the ``CatalogScopeType`` (a string
-specifying one of the previous two options).
-
-The ``CatalogID`` is used by the expression which calculates how much less
-disk to allocate to a job which will benefit from common files already
-present at the EP.
-
-(Presently, a single job may have require only two different "catalogs" of
-common files: its container image and its common input files.  We expect to
-relax this constraint in 26.x development series.)
-
-These attributes are not documented elsewhere in this manual in case we find
-it necessary to change them.
-
-The size computation above relies on the job-ad attribute
-``RequestedCatalogIDs``, a ClassAd list of (the globally unique) catalog IDs.
-The corresponding ``RequestedCatalogs`` is a ClassAd list of
-(scoped) catalog names provided for your convenience.
-
-The job-ad attribute ``CommonInputCatalogs`` is a string list of
-(scoped) catalog names.  Each name has a corresponding ClassAd
-attribute (prefixed by ``_x_catalog_``), identical in format to
-:ad-attr:`TransferInput`.  The corresponding attributes each define a catalog
-for transfer.
-
-Computing Actual Benefit
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-There is an `unsupported script
-<https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_ 
-available from the HTCondor GitHub repository which, given a cluster ID or a
-DAGMan job ID, determines both the size of the common file(s) tranferred by
-that cluster or DAG and how many transfers of those files did not happen
-because they were common, as a percentage of the total.  That is, for a
-cluster of a 1000 container universe jobs whose container image was 8 GB, you
-would normally expect to transfer 8 TB; if the cluster's job ran 100 times in
-a row on only 10 machines, and each run but the first re-used the common
-transfer, your AP only transferred 80GiB, for savings of just over 90%.
-
-This script examines (among other things) the job epoch history file, which
-the AP creates by default.  See :macro:`JOB_EPOCH_HISTORY`.
-
-.. note::
-    The non-normative sections of :ref:`admin_common_file_transfer` end
-    here.  (This is not obvious in all renderings of the manual.)
 
 .. _self-checkpointing-jobs:
 
