@@ -5,6 +5,9 @@
   before it started, the same way less behaves.
   :jira:`3854`
 
+- Support detection and advertising of AMD GPUs on ROCM 7 systems.
+  :jira:`3880`
+
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
   finer control on what constitutes failure with a job list in a single
   node and whether DAGMan should immediately remove job list upon failure
