@@ -86,6 +86,7 @@ class SearchEngineSettings():
         self.settings = self.flatten_settings(self.existing_settings)
         self.update_settings = self.flatten_settings(custom_settings or {})
         self._calculate_update_settings_fields_limit()
+        self.settings.update(self.update_settings)
         self.index_template_name = f"{index_name}-template"
         self.index_definition = {
             "settings": self.settings,

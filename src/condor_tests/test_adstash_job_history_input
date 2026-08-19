@@ -5,7 +5,7 @@ CompletionDate = 1781013600
 CustomAttrFoo = 842
 CustomAttrKnown = 123
 EnteredCurrentStatus = 1781013590
-Env = "BEARER_TOKEN=1234567890abcdef"
+Env = "BEARER_TOKEN=NOT_A_REAL_TOKEN"
 GlobalJobId = "ap.example.edu#123.456#1781010000"
 IoHeavyProvisioned = 1
 JobStatus = 4
@@ -34,7 +34,7 @@ Cmd = "/usr/bin/sleep"
 CustomAttrFoo = 842
 CustomAttrKnown = 123
 EnteredCurrentStatus = 1781013590
-Env = "BEARER_TOKEN=1234567890abcdef"
+Env = "BEARER_TOKEN=NOT_A_REAL_TOKEN"
 GlobalJobId = "ap.example.edu#123.457#1781010000"
 IoHeavyProvisioned = 1
 JobStatus = 3

@@ -245,7 +245,7 @@ def classad_json_serializer(obj):
             # explicitly convert Error and Undefined to None
             # (otherwise they will get serialized to ints)
             v = obj.eval(k)
-            if isinstance(obj.eval(k), classad.Value):
+            if isinstance(v, classad.Value):
                 out[k] = None
             else:
                 out[k] = v
