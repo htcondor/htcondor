@@ -1,13 +1,14 @@
 #!/usr/bin/env pytest
 
 """
-Test condor_rm -hold, which restricts the removal to jobs in the held state.
+Test condor_rm -held, which restricts the removal to jobs in the held state.
+("-hold" is accepted as a synonym for -held.)
 
-The -hold option can be combined with the usual constraints (a cluster, a
+The -held option can be combined with the usual constraints (a cluster, a
 cluster.proc, a user, or -constraint); only the held jobs among those selected
 are removed.  These tests submit jobs that stay idle (unsatisfiable
 requirements), hold a subset of them with condor_hold, and then verify that
-condor_rm -hold removes exactly the held jobs that match the given constraint
+condor_rm -held removes exactly the held jobs that match the given constraint
 and leaves everything else untouched.
 """
 
@@ -64,7 +65,7 @@ def cluster_mixed(default_condor, test_dir):
 def rm_hold_cluster(default_condor, cluster_mixed):
     """Remove held jobs in the cluster with condor_rm -hold <cluster>."""
     cid = cluster_mixed.clusterid
-    result = default_condor.run_command(["condor_rm", "-hold", str(cid)])
+    result = default_condor.run_command(["condor_rm", "-held", str(cid)])
     # Wait for the two held jobs to be removed.
     cluster_mixed.wait(
         condition=lambda st: st.count_status(JobStatus.REMOVED) == 2,
@@ -111,11 +112,12 @@ def rm_hold_proc(default_condor, proc_mixed):
     """
     cid = proc_mixed.clusterid
 
-    # proc 1 is idle, so -hold should not remove it.
+    # proc 1 is idle, so -held should not remove it.  Also exercise the
+    # "-hold" synonym here to confirm it is still accepted.
     noop = default_condor.run_command(["condor_rm", "-hold", f"{cid}.1"])
 
-    # proc 0 is held, so -hold should remove it.
-    removed = default_condor.run_command(["condor_rm", "-hold", f"{cid}.0"])
+    # proc 0 is held, so -held should remove it.
+    removed = default_condor.run_command(["condor_rm", "-held", f"{cid}.0"])
     proc_mixed.wait(
         condition=lambda st: st.count_status(JobStatus.REMOVED) == 1,
         timeout=60,
@@ -162,7 +164,7 @@ def constraint_jobs(default_condor, test_dir):
 def rm_hold_constraint(default_condor, constraint_jobs):
     a, _b, _c = constraint_jobs
     result = default_condor.run_command(
-        ["condor_rm", "-hold", "-constraint", "RmHoldMarker == true"]
+        ["condor_rm", "-held", "-constraint", "RmHoldMarker == true"]
     )
     a.wait(
         condition=lambda st: st.count_status(JobStatus.REMOVED) == 2,

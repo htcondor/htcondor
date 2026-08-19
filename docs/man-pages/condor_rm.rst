@@ -12,7 +12,7 @@ Synopsis
 
 **condor_rm** [**-transfer**] [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
-**condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-hold**] [**-transfer**] [**-constraint** *expression*]
+**condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-held**] [**-transfer**] [**-constraint** *expression*]
 [**-forcex**][**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
 
 Description
@@ -55,11 +55,11 @@ Options
     Remove all jobs which match the job ClassAd expression constraint.
  **-all**
     Remove all the jobs in the queue.
- **-hold**
+ **-held**
     Only remove jobs that are in the held state. This may be combined with
     any of the other constraints (a *cluster*, a *cluster.process*, a *user*,
     or a **-constraint** *expression*); only the held jobs among those
-    selected are removed.
+    selected are removed. (**-hold** is accepted as a synonym.)
  *cluster*
     Remove all jobs in the specified cluster.
  *cluster.process*
@@ -117,19 +117,19 @@ Remove only your held jobs:
 
 .. code-block:: console
 
-    $ condor_rm -hold
+    $ condor_rm -held
 
 Remove a specific job, but only if it is held:
 
 .. code-block:: console
 
-    $ condor_rm -hold 123.45
+    $ condor_rm -held 123.45
 
 Remove held jobs in cluster 123 whose ``ExitCode`` was 2:
 
 .. code-block:: console
 
-    $ condor_rm -hold -constraint 'ExitCode == 2' 123
+    $ condor_rm -held -constraint 'ExitCode == 2' 123
 
 See Also
 --------

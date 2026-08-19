@@ -46,7 +46,7 @@ JobAction mode;
 bool had_error = false;
 bool dash_long = false;
 bool dash_totals = false;
-bool dash_hold = false;
+bool dash_held = false;
 
 DCSchedd* schedd = NULL;
 
@@ -171,7 +171,7 @@ usage(int iExitCode)
 	fprintf( stderr, "  -constraint expr    %s all jobs matching the boolean expression\n", word );
 	fprintf( stderr, "  -all                %s all jobs "
 			 "(cannot be used with other constraints)\n", word );
-	fprintf( stderr, "  -hold               %s only held jobs "
+	fprintf( stderr, "  -held               %s only held jobs "
 			 "(may be combined with the above constraints)\n", word );
 	exit( iExitCode );
 }
@@ -269,8 +269,11 @@ main( int argc, char *argv[] )
 					exit(1);
 				}
 				addConstraint(ATTR_CLUSTER_ID " >= 0", CT_ALL);
-			} else if (is_dash_arg_prefix(arg, "hold", 2)) {
-				dash_hold = true;
+			} else if (is_dash_arg_prefix(arg, "held", 3) ||
+					   is_dash_arg_prefix(arg, "hold", 3)) {
+					// "-held" is the documented spelling; "-hold" is accepted
+					// as a synonym.
+				dash_held = true;
 			} else if (is_dash_arg_prefix(arg, "addr", 2)) {
 				++argv; arg = *argv;
 				if( ! arg || *arg == '-') {
@@ -395,17 +398,17 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if( ! has_constraint && ! has_usercluster && job_ids.empty() && ! dash_hold ) {
+	if( ! has_constraint && ! has_usercluster && job_ids.empty() && ! dash_held ) {
 			// We got no indication of what to act on
 		fprintf( stderr, "You did not specify any jobs\n" );
 		usage();
 	}
 
-		// When -hold is given, we must filter on JobStatus == HELD, which
+		// When -held is given, we must filter on JobStatus == HELD, which
 		// requires everything to go through the constraint-based code path.
 		// Rewrite any fully-qualified job ids (cluster.proc) into constraints
 		// so the held filter applies to them as well.
-	if( dash_hold && ! job_ids.empty() ) {
+	if( dash_held && ! job_ids.empty() ) {
 		for( const auto& id : job_ids ) {
 			PROC_ID pid = getProcByString( id.c_str() );
 			addProcConstraint( pid.cluster, pid.proc );
@@ -814,7 +817,7 @@ handleConstraints( void )
 	if (has_usercluster) {
 		addConstraint(usercluster_constraint.c_str(), has_usercluster);
 	}
-	if ( ! has_constraint && ! dash_hold) {
+	if ( ! has_constraint && ! dash_held) {
 		return;
 	}
 
@@ -822,7 +825,7 @@ handleConstraints( void )
 	std::string cmsg;
 	switch(has_constraint) {
 		case CT_NONE:
-			// Only -hold was given, with no other constraint.
+			// Only -held was given, with no other constraint.
 			cmsg = "";
 			break;
 		case CT_USER:
@@ -839,17 +842,17 @@ handleConstraints( void )
 			break;
 	}
 
-		// -hold restricts the action to jobs in the held state.  AND the
+		// -held restricts the action to jobs in the held state.  AND the
 		// JobStatus filter onto whatever constraint we have built up (if any).
 	std::string constraint = global_constraint;
-	if (dash_hold) {
+	if (dash_held) {
 		if (constraint.empty()) {
 			formatstr(constraint, ATTR_JOB_STATUS " == %d", HELD);
 		} else {
 			formatstr_cat(constraint, " && (" ATTR_JOB_STATUS " == %d)", HELD);
 		}
 	}
-	const char * jobs_word = dash_hold ? "held jobs" : "jobs";
+	const char * jobs_word = dash_held ? "held jobs" : "jobs";
 
 	CondorError errstack;
 	if( doWorkByConstraint(constraint.c_str(), &errstack) ) {

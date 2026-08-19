@@ -1,6 +1,6 @@
 *** 25.14.0 features
 
-- :tool:`condor_rm` now accepts a **-hold** option that restricts the
+- :tool:`condor_rm` now accepts a **-held** option that restricts the
   removal to jobs in the held state. It may be combined with the usual
   constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
   so that only the held jobs among those selected are removed.
