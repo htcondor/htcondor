@@ -19,12 +19,15 @@ def the_condor(test_dir):
         local_dir=local_dir,
         config={
             "DAEMON_LIST":
-                "TEST_AWAITABLE_DEADLINE_SOCKETD COLLECTOR",
-            "TEST_AWAITABLE_DEADLINE_SOCKETD":
+                "TADSD COLLECTOR",
+            "TADSD":
                 "$(LIBEXEC)/test_awaitable_deadline_socketd",
-            # Ornithology needs this, for some reason.
-            "TEST_AWAITABLE_DEADLINE_SOCKETD_LOG":
-                f"$(LOG)/AwaitableDeadlineSocketLog",
+            # Ornithology needs this, for some reason.  It's also ignored
+            # by dprintf() for some reason; go figure.
+            "TADSD_LOG":
+                f"$(LOG)/TadsdLog",
+            "DC_DAEMON_LIST":
+                " +TADSD",
         },
     ) as condor:
         yield condor
@@ -34,7 +37,7 @@ def the_condor(test_dir):
 def the_hot_log(the_condor):
     with the_condor.use_config():
         libexec = htcondor2.param['LIBEXEC']
-    the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
+    the_log = the_condor._get_daemon_log('TADSD')
     log_stream = the_log.open()
     for line in log_stream.read():
         if line.message.startswith('DaemonCore: command socket at '):
@@ -59,7 +62,7 @@ def the_hot_log(the_condor):
 def the_timeout_log(the_condor):
     with the_condor.use_config():
         libexec = htcondor2.param['LIBEXEC']
-    the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
+    the_log = the_condor._get_daemon_log('TADSD')
     for line in the_log.open().read():
         if line.message.startswith('DaemonCore: command socket at '):
             [prefix, sinful] = line.message.split('DaemonCore: command socket at ')
@@ -75,7 +78,7 @@ class TestDCStdFunction:
 
     def test_hot_socket(self, the_condor, the_hot_log):
         # I'm not at all sure I can just re-open the_hot_log.
-        the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
+        the_log = the_condor._get_daemon_log('TADSD')
         for line in the_log.open().read():
             print(line)
             if line.message == "[hot] Exchange complete.":
@@ -85,7 +88,7 @@ class TestDCStdFunction:
 
     def test_timeout(self, the_condor, the_timeout_log):
         # I'm not at all sure I can just re-open the_timeout_log.
-        the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
+        the_log = the_condor._get_daemon_log('TADSD')
         for line in the_log.open().read():
             print(line)
             if line.message == "[timeout] Timed out waiting for third string.":
