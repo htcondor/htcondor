@@ -298,6 +298,7 @@ if (BUILD_TESTING)
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_adstash_conversion "Test adstash ClassAd conversion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/test_adstash_job_history_input;src/condor_tests/test_adstash_transfer_epoch_history_input;src/condor_scripts/adstash")
+			condor_pl_test(test_adstash_index_setup "Test adstash index setup" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/adstash")
 			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Note that ctest can NOT find this test if it's named
 			# test_AwaitableDeadlineReaper.  I can't even.

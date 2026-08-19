@@ -11,7 +11,13 @@ from pathlib import Path
 import pytest
 
 # Add the adstash package to the path
-sys.path.insert(0, str(Path(__file__).parent.parent / "condor_scripts"))
+# Try the source tree layout first, then fall back to the installed libexec location
+_source_path = Path(__file__).parent.parent / "condor_scripts"
+if (_source_path / "adstash").is_dir():
+    sys.path.insert(0, str(_source_path))
+else:
+    import htcondor2 as htcondor
+    sys.path.insert(0, htcondor.param.get("libexec", "/usr/libexec/condor"))
 
 from adstash.ad_sources.ad_file import FileAdSource
 from adstash.ad_converters.job import JobClassAdConverter
