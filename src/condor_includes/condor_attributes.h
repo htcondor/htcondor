@@ -444,6 +444,7 @@
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
 #define ATTR_JOB_ID  "JobId"
 #define ATTR_JOB_FINISHED_HOOK_DONE  "JobFinishedHookDone"
+#define ATTR_JOB_ABORT_EVENT_LOGGED  "JobAbortEventLogged"
 #define ATTR_JOB_INPUT  "In"
 #define ATTR_JOB_IWD  "Iwd"
 #define ATTR_JOB_IWD_FLUSH_NFS_CACHE  "IwdFlushNFSCache"
@@ -470,6 +471,7 @@
 #define ATTR_JOB_OS_HOME_DIR  "OSHomeDir"
 #define ATTR_JOB_OUTPUT_SIZE  "OutSize"
 #define ATTR_JOB_PID  "JobPid"
+#define ATTR_JOB_PREPARING_TASKS "JobPreparingTasks"
 #define ATTR_JOB_PRIMARY_UNIX_GROUP  "PrimaryUnixGroup"
 #define ATTR_PRE_JOB_PRIO1  "PreJobPrio1"
 #define ATTR_PRE_JOB_PRIO2  "PreJobPrio2"
@@ -505,6 +507,7 @@
 #define ATTR_JOB_START_DATE  "JobStartDate"
 #define ATTR_JOB_STATE  "JobState"
 #define ATTR_JOB_STATUS  "JobStatus"
+#define ATTR_INITIAL_JOB_STATUS "InitialJobStatus"
 #define ATTR_JOB_STDOUT_MTIME "StdoutMtime"
 #define ATTR_JOB_STDERR_MTIME "StderrMtime"
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
@@ -812,6 +815,7 @@
 #define ATTR_STREAM_INPUT  "StreamIn"
 #define ATTR_STREAM_OUTPUT  "StreamOut"
 #define ATTR_STREAM_ERROR  "StreamErr"
+#define ATTR_SUBMIT_ALWAYS_CHECK_CREDS  "SubmitAlwaysCheckCreds"
 #define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
 #define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
 #define ATTR_SUBMIT_EVENT_NOTES_ATTRS "SubmitEventNotesAttrs"
@@ -1228,6 +1232,15 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_DOWNLOADING  "Downloading"
 #define ATTR_TIMEOUT  "Timeout"
 #define ATTR_CCBID  "CCBID"
+#define ATTR_CCB_TTL  "CCBTTL"
+	// Inbound tunnel routing/audit: the remaining downstream CCBIDs to reach after
+	// this hop (space-separated; empty/absent at the final hop), and the audit
+	// trail -- the original (end) requester and the immediately-prior forwarding
+	// hop -- carried along each recursive rendezvous so inner CCBs can log who a
+	// tunneled connection is really for without authenticating the client.
+#define ATTR_CCB_ROUTE  "CCBRoute"
+#define ATTR_CCB_ORIGINAL_REQUESTER  "CCBOriginalRequester"
+#define ATTR_CCB_PRIOR_HOP  "CCBPriorHop"
 #define ATTR_REQUEST_ID  "RequestID"
 #define ATTR_SESSION_INFO  "SessionInfo"
 #define ATTR_SSH_PUBLIC_SERVER_KEY  "SSHPublicServerKey"

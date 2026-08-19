@@ -73,7 +73,9 @@ typedef struct PROC_ID {
 
 /*
 ** Warning!  Keep these consistent with the strings defined in the
-** JobStatusNames array defined in condor_util_lib/proc.c
+** JobStatusNames array in src/condor_utils/proc.cpp.  When you add a
+** new status here and bump JOB_STATUS_MAX, you MUST add a matching
+** string to that array.
 */
 #define JOB_STATUS_MIN		1 /* Smallest valid job status value */
 #define IDLE				1
@@ -85,7 +87,8 @@ typedef struct PROC_ID {
 #define SUSPENDED			7
 #define JOB_STATUS_FAILED	8  /* possible future use */
 #define JOB_STATUS_BLOCKED	9  /* possible future use */
-#define JOB_STATUS_MAX  	9 /* Largest valid job status value */
+#define JOB_STATUS_PREPARING 10
+#define JOB_STATUS_MAX     10 /* Largest valid job status value */
 
 // define more searchable aliases for old job status defines
 #define JOB_STATUS_IDLE                IDLE
@@ -98,6 +101,20 @@ typedef struct PROC_ID {
 //#define JOB_STATUS_FAILED
 //#define JOB_STATUS_BLOCKED
 
+
+enum JobBlockedCondition {
+	CommonTransfer=0x0001,
+};
+
+inline JobBlockedCondition operator|(JobBlockedCondition a, JobBlockedCondition b) {
+	return static_cast<JobBlockedCondition>(static_cast<int64_t>(a) | static_cast<int64_t>(b));
+}
+inline JobBlockedCondition operator&(JobBlockedCondition a, JobBlockedCondition b) {
+	return static_cast<JobBlockedCondition>(static_cast<int64_t>(a) & static_cast<int64_t>(b));
+}
+inline JobBlockedCondition operator~(JobBlockedCondition a) {
+	return static_cast<JobBlockedCondition>(~static_cast<int64_t>(a));
+}
 
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );

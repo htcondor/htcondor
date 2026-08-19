@@ -34,10 +34,8 @@
 // For BLOWFISH and 3DES
 #define SEC_SESSION_KEY_LENGTH_OLD 24
 
-typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
-
-// std::function replacement for StartCommandCallbackType. Caller state that the
-// legacy API passed via void *misc_data lives in the closure instead.
+// Callback invoked when a nonblocking startCommand() finishes.  Caller state
+// lives in the std::function's closure.
 using StartCommandCallback = std::function<void(bool success, Sock *sock, CondorError *errstack,
                                                 const std::string &trust_domain,
                                                 bool should_try_token_request)>;

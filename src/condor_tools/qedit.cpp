@@ -319,7 +319,7 @@ main(int argc, const char *argv[])
 				close_file = true;
 			}
 			CondorClassAdFileIterator adIter;
-			adIter.begin(fh, close_file, file_format);
+			std::ignore = adIter.begin(fh, close_file, file_format);
 			ClassAd * ad = adIter.next(NULL);
 			if ( ! ad) {
 				fprintf(stderr, "Unable to read file of edits: %s\n", file);

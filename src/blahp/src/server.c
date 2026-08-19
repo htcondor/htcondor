@@ -474,17 +474,21 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 		command = find_command("UNCACHE_PROXY");
 		if (command) command->cmd_handler = cmd_uncache_proxy;
 		/* Check that tmp_dir is group writable */
-		if (stat(tmp_dir, &tmp_stat) >= 0)
+		/* Open the dir and operate on the fd (fstat/fchmod) rather than */
+		/* the path, to avoid a TOCTOU race between the stat and the chmod. */
+		int tmp_dir_fd = open(tmp_dir, O_RDONLY | O_DIRECTORY);
+		if (tmp_dir_fd >= 0 && fstat(tmp_dir_fd, &tmp_stat) >= 0)
 		{
 			if ((tmp_stat.st_mode & S_IWGRP) == 0)
 			{
-				if (chmod(tmp_dir,tmp_stat.st_mode|S_IWGRP|S_IRGRP|S_IXGRP)<0)
+				if (fchmod(tmp_dir_fd,tmp_stat.st_mode|S_IWGRP|S_IRGRP|S_IXGRP)<0)
 				{
 					fprintf(stderr,"WARNING: cannot make %s group writable: %s\n",
 					        tmp_dir, strerror(errno));
 				}
 			}
 		}
+		if (tmp_dir_fd >= 0) close(tmp_dir_fd);
 	}
 
 	suplrms = config_get("supported_lrms", blah_config_handle);
@@ -842,11 +846,15 @@ cmd_use_cached_proxy(void *args)
 			if (proxy_name != NULL)
 			{
 				proxy_dir = dirname(proxy_name);
-				if (stat(proxy_dir, &proxy_stat) >= 0)
+				/* Open the dir and operate on the fd (fstat/fchmod) rather */
+				/* than the path, to avoid a TOCTOU race between the stat */
+				/* and the chmod. */
+				int dir_fd = open(proxy_dir, O_RDONLY | O_DIRECTORY);
+				if (dir_fd >= 0 && fstat(dir_fd, &proxy_stat) >= 0)
 				{
 					if ((proxy_stat.st_mode & S_IWGRP) == 0)
 					{
-						if (chmod(proxy_dir,proxy_stat.st_mode|S_IWGRP|S_IRGRP|S_IXGRP)<0)
+						if (fchmod(dir_fd,proxy_stat.st_mode|S_IWGRP|S_IRGRP|S_IXGRP)<0)
 						{
 							result = make_message("S Glexec\\ proxy\\ set\\ to\\ %s\\ (could\\ not\\ set\\ dir\\ IWGRP\\ bit)",
 									escaped_proxy);
@@ -863,6 +871,7 @@ cmd_use_cached_proxy(void *args)
 								escaped_proxy);
 
 				}
+				if (dir_fd >= 0) close(dir_fd);
 				free(proxy_name);
 			} else {
 				result = make_message("S Glexec\\ proxy\\ set\\ to\\ %s\\ (Out\\ of\\ memory)",

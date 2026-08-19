@@ -95,7 +95,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType=nullptr, void *miscdata=nullptr );
+	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallback callback = {} );
 
 	void reconfig( void );
 

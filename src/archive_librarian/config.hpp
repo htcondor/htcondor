@@ -14,6 +14,8 @@ namespace LibrarianConfigOptions {
 		DBMaxJobCacheSize = 0,                        // Maximum cache size for record JobId -> Job Table Unique Id
 		UpdateInterval,                               // Interval in seconds the librarian should process archive files
 		StatusRetentionSeconds,                       // How long (seconds) to retain Status rows in the DB
+		GCBackoffSeconds,                             // How long to wait before retrying GC after a pass that didn't shrink the DB
+		DBBusyTimeoutMs,                              // sqlite3_busy_timeout value (ms) for the librarian's DB connection
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -45,6 +47,8 @@ public:
 		intOpts[static_cast<size_t>(i::DBMaxJobCacheSize)] = 10'000;
 		intOpts[static_cast<size_t>(i::UpdateInterval)] = 5;
 		intOpts[static_cast<size_t>(i::StatusRetentionSeconds)] = 300;
+		intOpts[static_cast<size_t>(i::GCBackoffSeconds)] = 1800;
+		intOpts[static_cast<size_t>(i::DBBusyTimeoutMs)] = 30'000;
 		int64Opts[static_cast<size_t>(ll::DBMaxSizeBytes)] = 2LL * 1024 * 1024 * 1024;
 		doubleOpts[static_cast<size_t>(dbl::DBHighWaterMark)] = 0.97;
 		doubleOpts[static_cast<size_t>(dbl::DBLowWaterMark)] = 0.80;

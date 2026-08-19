@@ -471,7 +471,6 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 SubmitResult
 DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	int rval = 0;
-	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	long long max_materialize = INT_MAX;
 	int selected_job_count = 0; // number of jobs we will be submitting (including unmaterialized jobs)
@@ -565,9 +564,9 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
-		if (cred_result != 0) {
-			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
+		bool cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
+		if (cred_result == false) {
+			errmsg = "Failed to produce job credentials: " + errmsg;
 			rval = -1;
 			result = SubmitResult::FAILURE;
 			goto finis;
@@ -723,11 +722,23 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 			}
 
 			ClassAd *proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
+			std::string cif;
 			if ( ! proc_ad) {
 				errmsg = "failed to create job classad";
 				rval = -1;
 				result = SubmitResult::FAILURE;
 				goto finis;
+			}
+
+			if (proc_ad->EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
+				if ( ! dm.dag->cif.empty()) {
+					if (dm.dag->cif != cif) {
+						errmsg = "Multiple differing common input transfer lists declared in DAG";
+						rval = -1;
+						result = SubmitResult::FAILURE;
+						goto finis;
+					}
+				} else { dm.dag->cif = cif; }
 			}
 
 			if (send_cluster) { // we need to send the cluster ad

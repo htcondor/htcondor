@@ -104,6 +104,31 @@ std::string credentials_dir() {
 	return dir;
 }
 
+// Docker treats an image reference with no explicit tag as ":latest".  The
+// local image inventory (from "docker images") always reports an explicit tag
+// -- ":latest" for images that were pulled without one -- so to compare a
+// requested image name against that inventory we must apply the same implicit
+// ":latest" rule, otherwise a locally-present image looks absent and is
+// needlessly re-pulled.
+//
+// Two cases must be left alone:
+//   - a digest reference (contains '@', e.g. "ubuntu@sha256:...") pins an exact
+//     image and must not have a tag appended.
+//   - a registry host may contain a ':' for a port (e.g. "registry:5000/ubuntu"),
+//     so only a ':' in the final '/'-delimited component counts as a tag.
+static
+std::string normalizeDockerImageTag(const std::string &imageName) {
+	if (imageName.find('@') != std::string::npos) {
+		return imageName; // digest reference, no tag to add
+	}
+	size_t final_component = imageName.rfind('/');
+	final_component = (final_component == std::string::npos) ? 0 : final_component + 1;
+	if (imageName.find(':', final_component) != std::string::npos) {
+		return imageName; // already has an explicit tag
+	}
+	return imageName + ":latest";
+}
+
 int 
 DockerProc::StartJob() {
 	std::string imageID;
@@ -122,7 +147,9 @@ DockerProc::StartJob() {
 		imageID = imageID.substr(9);
 	}
 
-	imageName = imageID;
+	// Normalize an implicit tag to ":latest" so the local-image comparison
+	// below (and downstream pull/tag) matches Docker's own tag semantics.
+	imageName = normalizeDockerImageTag(imageID);
 
 	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
 	// construction is informative, but could be made even less likely
@@ -354,7 +381,8 @@ DockerProc::PullReaper(int pid, int status) {
 		std::string pull_stderror;
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
-			htcondor::readShortFile(DockerErrorFile(), pull_stderror);
+			// best-effort; if unreadable pull_stderror stays empty
+			std::ignore = htcondor::readShortFile(DockerErrorFile(), pull_stderror);
 		}
 		std::erase(pull_stderror, '\n');
 		message += ' ' + pull_stderror;

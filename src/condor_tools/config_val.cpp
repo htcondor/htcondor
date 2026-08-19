@@ -553,6 +553,15 @@ public:
 	}
 };
 
+
+// used by the "swap" option, which tests config swapping.
+struct config_set {
+	MACRO_SET mset;
+	std::string global_file;
+	std::vector<std::string> local_files;
+};
+std::map<std::string, config_set> Configs;
+
 int
 main( int argc, const char* argv[] )
 {
@@ -592,6 +601,7 @@ main( int argc, const char* argv[] )
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
+	bool    dash_swap_config = false;
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
@@ -703,6 +713,8 @@ main( int argc, const char* argv[] )
 			print_config_sources = true;
 		} else if (is_arg_prefix(arg, "reconfig", 5)) {
 			reconfig_source = use_next_arg("reconfig", argv, i);
+		} else if (is_arg_prefix(arg, "swap", 4)) {
+			dash_swap_config = true;
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			if (dash_default) {
 				fprintf(stderr, "-verbose cannot be used with -default\n");
@@ -909,8 +921,19 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
+
 	set_priv_initialize(); // allow uid switching if root
+	if (dash_swap_config && root_config) {
+		config_host(NULL, config_options, nullptr);
+		validate_config(false); // validate, but do not abort.
+		if (print_config_sources) {
+			PrintConfigSources();
+		}
+		auto & configset = Configs[global_config_source];
+		swap_global_config(configset.mset, configset.global_file, configset.local_files);
+	}
+
+	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
 	config_host(NULL, config_options, root_config);
 	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
@@ -920,6 +943,13 @@ main( int argc, const char* argv[] )
 	if (reconfig_source) {
 		if (dump_stats) {
 			do_dump_config_stats(stdout, verbose, dump_strings);
+		}
+
+		if (dash_swap_config) {
+			if (0 == Configs.count(global_config_source)) {
+				auto & configset = Configs[global_config_source];
+				swap_global_config(configset.mset, configset.global_file, configset.local_files);
+			}
 		}
 
 		extern const char * simulated_local_config;

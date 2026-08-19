@@ -1845,8 +1845,13 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 
 	unsigned int xform_flags = 0;
-	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS; }
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS | XFORM_UTILS_LOG_MACRO_ERRS; }
 	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS) { xform_flags |= XFORM_UTILS_LOG_STEPS; }
+	if ( ! m_operate_as_tool) {
+		// for non-tool, log macro errors ($func errors), but not overall errors inside TransformClassAd
+		// we log overall errors after TransformClassAd exits
+		xform_flags = XFORM_UTILS_LOG_TO_DPRINTF | XFORM_UTILS_LOG_MACRO_ERRS;
+	}
 
 	// The route ClassAd may change some things in the routed ad.
 	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms, xform_flags)) {
@@ -2892,6 +2897,12 @@ JobRoute::ApplyRoutingJobEdits(
 
 	if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying route: %s\n", m_route.getName()); }
 	rval = TransformClassAd(src_ad, m_route, mset, errmsg, xform_flags);
+	// report macro set errors (these come from $ functions)
+	if (mset.macros().errors && mset.macros().errors->message()) {
+		// TODO: figure out how to report the line number, maybe move this into TransformClassAd ?
+		dprintf(D_ALWAYS, "ERROR in route %s : %s\n", m_route.getName(), mset.macros().errors->message());
+		mset.macros().errors->clear();
+	}
 	if (rval < 0) {
 		// transform failed, errmsg says why.
 		dprintf(D_ALWAYS,"JobRouter failure (route=%s): %s.\n",Name(), errmsg.c_str());
