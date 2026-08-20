@@ -823,7 +823,7 @@ bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen)
 		}
 	} else if (options.pw && options.pw[0]) {
 		if (MATCH == strcmp(options.pw, "-")) {
-			int max_len = 1024; // max read from stdin is 1k
+			size_t max_len = 1024; // max read from stdin is 1k
 			cred = (char*)malloc(max_len+1);
 		#ifdef _WIN32
 			// disable CR+LF munging of the stdin stream, we want to treat it as binary data
