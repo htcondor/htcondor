@@ -110,6 +110,10 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			// using NAT and TCP_FORWARDING_HOST.
 			if (new_dir.back() == '_') {
 				ext = mySock_->peer_addr().to_ip_and_port_string();
+				Sinful sin(mySock_->get_connect_addr());
+				if (sin.getSharedPortID()) {
+					formatstr_cat(ext, "?sock=%s", sin.getSharedPortID());
+				}
 				new_dir += ext;
 				dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE_FS%s: Adding server ip:port to directory name: %s\n", (remote_?"_REMOTE":""), ext.c_str());
 			} else {
@@ -257,6 +261,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		// If the client added characters to the end of the filename, check
 		// that they represent a valid ip:port for contacting us.
 		bool client_ext_matches = false;
+		bool ip_port_matches = false;
 		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE_FS%s: Client sent extension '%s'\n", (remote_?"_REMOTE":""), client_ext.c_str());
 		// First, prevent directory escape via '/'.
 		if (condor_basename(client_ext.c_str()) != client_ext.c_str()) {
@@ -266,8 +271,10 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			server_result = -1;
 			goto send_reply;
 		}
+		size_t sock_pos = client_ext.find("?sock=");
+		std::string client_peer_str = client_ext.substr(0, sock_pos);
 		condor_sockaddr client_peer;
-		if (!client_peer.from_ip_and_port_string(client_ext.c_str())) {
+		if (!client_peer.from_ip_and_port_string(client_peer_str.c_str())) {
 			dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Client extension not valid ip:port (%s)\n", (remote_?"_REMOTE":""), client_ext.c_str());
 			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1004,
 		                "Client extension not valid ip:port (%s)", client_ext.c_str());
@@ -277,17 +284,35 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		// Check if the client's view of our endpoint of the TCP connection
 		// matches our own.
 		if (client_peer == mySock_->my_addr()) {
-			client_ext_matches = true;
+			ip_port_matches = true;
+			// If the client didn't include a shared_port id, then consider
+			// this a full match
+			if (sock_pos == std::string::npos) {
+				client_ext_matches = true;
+			}
 		}
 		// If we're a daemon, check if the client's view of our endpoint
 		// of the TCP connection appears in our command port sinful string.
 		// This check handles situations where we're using NAT and
 		// TCP_FORWARDING_HOST.
+		// This also checks whether the shared_port id used by the client
+		// matches ours.
 		if (!client_ext_matches && daemonCore && daemonCore->InfoCommandSinfulStringMyself(false)) {
 			Sinful myself(daemonCore->InfoCommandSinfulStringMyself(false));
-			myself.setSharedPortID(nullptr);
-			if (myself.addressPointsToMe(Sinful(client_peer.to_ip_and_port_string().c_str()))) {
-				client_ext_matches = true;
+			Sinful client_peer_sinful(client_ext.c_str());
+			if (sock_pos == std::string::npos) {
+				myself.setSharedPortID(nullptr);
+			}
+			if (ip_port_matches) {
+				// If the ip:port matches, then we just want to check if
+				// the shared_port id matches
+				if (myself.getSharedPortID() && strcmp(myself.getSharedPortID(), client_peer_sinful.getSharedPortID()) == 0) {
+					client_ext_matches = true;
+				}
+			} else {
+				if (myself.addressPointsToMe(client_peer_sinful)) {
+					client_ext_matches = true;
+				}
 			}
 		}
 		if (!client_ext_matches) {
