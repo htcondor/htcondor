@@ -134,13 +134,19 @@ class TestDAGManMultipleCommonFiles:
     @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
     @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
     def test_success(self, the_dag_dir, the_completed_dag):
+        # Previously, the fact that each job defined MY.CommonInputFiles
+        # caused each job to transfer common input files at least once
+        # because those weren't shared across jobs.  Now we can expect as
+        # few as three transfers: one for each container image and once for
+        # now globally-shared MY.CommonInputFiles.
+        common_files_transferred = 0
+
         for letter in "ABCDEFGH":
             print( f"Checking job `{letter}`..." )
             log = the_dag_dir / f"log.{letter}"
             assert log.exists()
 
             job_terminated_successfully = False
-            job_transferred_common_files = False
 
             jel = htcondor2.JobEventLog(str(log))
             for event in jel.events(stop_after=0):
@@ -150,7 +156,9 @@ class TestDAGManMultipleCommonFiles:
                             job_terminated_successfully = True
                 if event.type is htcondor2.JobEventType.COMMON_FILES:
                     if event['Type'] == "TransferFinished":
-                        job_transferred_common_files = True
+                        common_files_transferred += 1
 
             assert(job_terminated_successfully)
-            assert(job_transferred_common_files)
+
+        print(f"Transferred common files {common_files_transferred} times.")
+        assert common_files_transferred == 3

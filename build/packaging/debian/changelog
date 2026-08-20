@@ -1,3 +1,35 @@
+condor (25.13.2-1) stable; urgency=medium
+
+  * The condor_credmon_oauth now properly handles credentials with handles
+  * Improve providing OAuth credentials to all jobs on the Access Point
+  * Add WEAK dependencies to DAGman which only require finishing, not success
+  * Provides condor_scratch mount for Apptainer jobs with no file transfer
+  * condor_submit now recommends using condor_watch_q to monitor jobs
+  * Add CCB Tunneling for daemons with no outbound network connectivity
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:34:00 -0500
+
+condor (25.0.13-1) stable; urgency=medium
+
+  * Fix bug where condor_q crashes when given -batch and -af arguments
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:30:00 -0500
+
+condor (24.12.23-1) stable; urgency=medium
+
+  * All changes in HTCondor 24.0.23
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:25:00 -0500
+
+condor (24.0.23-1) stable; urgency=medium
+
+  * Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
+  * Fix bug where condor_history might not find a specific cluster or proc
+  * HTCondor tarballs now contain Apptainer 1.5.3 and Pelican 7.26.0
+  * Removing Pelican server code reduces tarball size by 10 megabytes
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:18:00 -0500
+
 condor (25.12.2-1) stable; urgency=medium
 
   * Maintains a job index to speed up condor history queries
@@ -6,6 +38,7 @@ condor (25.12.2-1) stable; urgency=medium
   * Improved column headers for condor_top
   * Audit log is now enabled by default on the Access Point
   * Fixed 25.11.0 bug that causes unbounded growth in the accountant log
+  * The CCB can now proxy connections with both ends on private networks
 
  -- Tim Theisen <tim@cs.wisc.edu>  Mon, 20 Jul 2026 14:07:00 -0500
 
