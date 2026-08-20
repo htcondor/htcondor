@@ -1,3 +1,18 @@
+condor (24.12.23-1) stable; urgency=medium
+
+  * All changes in HTCondor 24.0.23
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:25:00 -0500
+
+condor (24.0.23-1) stable; urgency=medium
+
+  * Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
+  * Fix bug where condor_history might not find a specific cluster or proc
+  * HTCondor tarballs now contain Apptainer 1.5.3 and Pelican 7.26.0
+  * Removing Pelican server code reduces tarball size by 10 megabytes
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:18:00 -0500
+
 condor (24.12.22-1) stable; urgency=medium
 
   * Fix rare job router crash when removing a recently routed job
