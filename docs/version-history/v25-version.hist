@@ -45,6 +45,10 @@
   configurations continue to work.
   :jira:`3784`
 
+- When storing passwords for Windows users, :tool:`condor_store_cred` can
+  now read the password from stdin.
+  :jira:`3881`
+
 - When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
