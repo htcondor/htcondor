@@ -63,7 +63,7 @@ def cluster_mixed(default_condor, test_dir):
 
 @action
 def rm_hold_cluster(default_condor, cluster_mixed):
-    """Remove held jobs in the cluster with condor_rm -hold <cluster>."""
+    """Remove held jobs in the cluster with condor_rm -held <cluster>."""
     cid = cluster_mixed.clusterid
     result = default_condor.run_command(["condor_rm", "-held", str(cid)])
     # Wait for the two held jobs to be removed.
