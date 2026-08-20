@@ -74,8 +74,12 @@ def common_transfer_bytes(entry):
         # Sum every "*SizeBytes" attribute in the stats ad (CedarSizeBytes plus
         # one per plugin protocol).  We iterate the ad's actual keys rather than
         # the "Protocols" list because some records -- e.g. plugin-driven
-        # transfers -- omit "Protocols"; iterating keys also avoids depending on
-        # attribute-name casing.
+        # transfers -- omit "Protocols".
+        #
+        # See https://github.com/PelicanPlatform/pelican/issues/3622 for a
+        # possible reason for `protocols` list to be incomplete.  It's arguably
+        # an HTCondor bug as well, since it knows which protocol(s) it invoked
+        # the plug-in to handle.
         total = 0
         for key in stats_ad:
             if key.endswith("SizeBytes"):
