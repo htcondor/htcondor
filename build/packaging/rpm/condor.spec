@@ -1491,6 +1491,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.23-1
+- Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
+- Fix bug where condor_history might not find a specific cluster or proc
+- HTCondor tarballs now contain Apptainer 1.5.3 and Pelican 7.26.0
+- Removing Pelican server code reduces tarball size by 10 megabytes
+
 * Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.22-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
