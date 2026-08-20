@@ -45,6 +45,10 @@
   configurations continue to work.
   :jira:`3784`
 
+- Enhance :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to verify that the
+  server's shared_port id matches.
+  :jira:`3883`
+
 - When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
