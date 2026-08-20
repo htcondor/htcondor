@@ -5,6 +5,9 @@
   before it started, the same way less behaves.
   :jira:`3854`
 
+- Support detection and advertising of AMD GPUs on ROCM 7 systems.
+  :jira:`3880`
+
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
   finer control on what constitutes failure with a job list in a single
   node and whether DAGMan should immediately remove job list upon failure
@@ -14,8 +17,8 @@
 - The *condor_schedd* now notifies the *condor_negotiator* via a ``RESCHEDULE``
   command that it wants expedited matchmaking when it changes from having
   no idle jobs to having some idle jobs. As a part of this change the
-   *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
-   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
+  *condor_schedd* will no longer forward ``RESCHEDULE`` commands that it receives,
+  and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
   :jira:`3836`
 
 - Added support for submitting jobs remotely to NERSC's Perlmutter HPC
@@ -31,8 +34,32 @@
   has been changed to an error by changing the default value for 
   :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``True``.
   :jira:`3878`
+  
+- The credmon can now obtain and renew OAuth2 access tokens from a
+  `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF), so
+  that jobs can read and write federation objects with ``osdf://`` and
+  ``pelican://`` URLs.  Services are declared with
+  ``PELICAN_CREDMON_PROVIDER_NAMES`` and a set of ``<ServiceName>_PELICAN_*``
+  options; see :ref:`installing_credmon_pelican`.
+  :jira:`3784`
+
+- The ``condor_vault_storer`` credential storer has been renamed to the
+  mode-neutral ``condor_credential_storer``, since it now services Vault and
+  Pelican credentials (and can be extended to others).  The old name is still
+  installed as a symlink, so existing :macro:`SEC_CREDENTIAL_STORER`
+  configurations continue to work.
+  :jira:`3784`
+
+- When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
+  without an explicit docker tag in the image name to be in the cache.
+  :jira:`3876`
 
 *** 25.14.0 bugs
+
+- Fixed a bug where an idle job removed from the queue could occasionally
+  fail to write a ``job aborted`` event to its job event log. This could
+  cause :tool:`condor_dagman` to wait indefinitely for the job to finish.
+  :jira:`3875`
 
 - Fixed a bug where a job with streaming output or error would not be
   able to reconnect to a restarted or rebooted schedd in some cases.
@@ -44,7 +71,6 @@
   ``-af`` arguments. This combination now produces an error message.
   :jira:`3833`
 
-*** 25.13.1 features
 *** 25.13.2 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
@@ -71,6 +97,18 @@
 - Add a helpful "how to monitor jobs" tip to stderr after
   :tool:`condor_submit` runs.
   :jira:`3173`
+
+- Added CCB tunneling, which lets an entire set of daemons on a restricted host
+  (for example an HPC worker node that cannot make direct outbound TCP
+  connections) send *and* receive all of their connections through a Connection
+  Broker. A daemon or tool routes its outbound connections through a broker with
+  :macro:`OUTBOUND_CCB_ADDRESS`; a broker relays them with
+  :macro:`CCB_OUTBOUND_PROXY`. The :tool:`condor_master` can run and orchestrate a
+  local inside CCB automatically with :macro:`USE_OUTBOUND_CCB`. Inbound
+  connections to a tunneled daemon route recursively through every broker in the
+  path while the end-to-end CEDAR security session is preserved, and a client
+  authenticates only to the entry broker.
+  :jira:`3828`
 
 *** 25.13.2 bugs
 

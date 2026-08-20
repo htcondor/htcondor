@@ -1273,6 +1273,7 @@ rm -rf %{buildroot}
 %files credmon-vault
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_vault
+%_bindir/condor_credential_storer
 %_bindir/condor_vault_storer
 %_libexecdir/condor/credmon
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
@@ -1280,6 +1281,7 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/pid
 
 %files credmon-multi
+%_bindir/condor_credential_storer
 %_bindir/condor_vault_storer
 
 %files -n minicondor
@@ -1333,6 +1335,26 @@ fi
 # configuration
 
 %changelog
+* Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 25.13.2-1
+- The condor_credmon_oauth now properly handles credentials with handles
+- Improve providing OAuth credentials to all jobs on the Access Point
+- Add WEAK dependencies to DAGman which only require finishing, not success
+- Provides condor_scratch mount for Apptainer jobs with no file transfer
+- condor_submit now recommends using condor_watch_q to monitor jobs
+- Add CCB Tunneling for daemons with no outbound network connectivity
+
+* Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.13-1
+- Fix bug where condor_q crashes when given -batch and -af arguments
+
+* Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.23-1
+- All changes in HTCondor 24.0.23
+
+* Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.23-1
+- Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
+- Fix bug where condor_history might not find a specific cluster or proc
+- HTCondor tarballs now contain Apptainer 1.5.3 and Pelican 7.26.0
+- Removing Pelican server code reduces tarball size by 10 megabytes
+
 * Mon Jul 20 2026 Tim Theisen <tim@cs.wisc.edu> - 25.12.2-1
 - Maintains a job index to speed up condor history queries
 - Can now set a duration for a user's floor or priority factor
@@ -1340,6 +1362,7 @@ fi
 - Improved column headers for condor_top
 - Audit log is now enabled by default on the Access Point
 - Fixed 25.11.0 bug that causes unbounded growth in the accountant log
+- The CCB can now proxy connections with both ends on private networks
 
 * Mon Jul 06 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.12-1
 - All changes in 24.12.22
