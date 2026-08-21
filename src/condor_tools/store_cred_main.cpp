@@ -764,7 +764,9 @@ usage()
 	fprintf( stderr, "  and where [options] is zero or more of:\n" );
 	fprintf( stderr, "    -u username       Use the specified username\n" );
 	fprintf( stderr, "    -c                Manage the condor pool password\n");
-	fprintf( stderr, "    -p <password>     Use the specified password rather than prompting\n" );
+	fprintf( stderr, "    -p <password>     Use the specified password rather than prompting\n"
+	                 "                         If <password> is -, read from stdin\n"
+	);
 	fprintf( stderr, "    -i <filename>     Read the credential from <filename>\n"
 	                 "                         If <filename> is -, read from stdin\n"
 	);
@@ -820,8 +822,24 @@ bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen)
 			}
 		}
 	} else if (options.pw && options.pw[0]) {
-		cred = strdup(options.pw);
-		credlen = strlen(options.pw);
+		if (MATCH == strcmp(options.pw, "-")) {
+			size_t max_len = 1024; // max read from stdin is 1k
+			cred = (char*)malloc(max_len+1);
+		#ifdef _WIN32
+			// disable CR+LF munging of the stdin stream, we want to treat it as binary data
+			_setmode(_fileno(stdin), _O_BINARY);
+		#endif
+			credlen = full_read(fileno(stdin), cred, max_len);
+			if (((ssize_t)credlen) < 0 || credlen > max_len) {
+				fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
+				free(cred);
+				return false;
+			}
+			cred[credlen] = 0;
+		} else {
+			cred = strdup(options.pw);
+			credlen = strlen(options.pw);
+		}
 	} else if (cred_type == STORE_CRED_USER_KRB) {
 		//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
 		return false;
