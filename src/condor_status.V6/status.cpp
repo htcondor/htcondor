@@ -1316,7 +1316,7 @@ main (int argc, char *argv[])
 		} else if (sdo_mode == SDO_StartD_GPUs) {
 			// for the STARTD daemon ad, DetectedGPUs might be 0, or it might be a string list of GPUIDs
 			// or it might be an array of GPU property ad refs (like AvailableGPUs)
-			mode_constraint = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			mode_constraint = STARTDAEMON_GPUS_CONSTRAINT;
 			projList.insert("DetectedGPUs");
 			projList.insert("OfflineGPUs");
 			projList.insert(ATTR_CONDOR_VERSION);
@@ -1356,6 +1356,23 @@ main (int argc, char *argv[])
 		}
 	}
 
+	// when using -tot -format -or -af, we want -gpus to behave like an additional constraint expression
+	// for -compact we will have already set that expression above.
+	// TODO: refactor handling of flags that are always constraint and sometimes format like -gpus -broken and -compact
+	if (dash_gpus && explicit_format && ! compactMode) {
+		const char * constr = nullptr;
+		switch (adType) {
+		case STARTDAEMON_AD: constr = STARTDAEMON_GPUS_CONSTRAINT; break;
+		case SLOT_AD:
+		case STARTD_AD: constr = PMODE_GPUS_CONSTRAINT; break;
+		default: break;
+		}
+		if (constr) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	}
+
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
 		printf ("----------\n");
@@ -1391,89 +1408,9 @@ main (int argc, char *argv[])
 	TrackTotals bothTotals(mainPP.ppTotalStyle);
 	TrackTotals leftTotals(mainPP.ppTotalStyle);
 
-	// in order to totals, the projection MUST have certain attributes
+	// in order to calculate totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
-	#if 1
 		rightTotals.addProjection(projList);
-		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
-			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-			query->addANDConstraint (constr);
-		}
-	#else
-		switch (mainPP.ppTotalStyle) {
-			case PP_SLOTS_SERVER:
-				projList.insert(ATTR_MEMORY);
-				projList.insert(ATTR_DISK);
-				// fall through
-			case PP_SLOTS_RUN:
-				projList.insert(ATTR_LOAD_AVG);
-				projList.insert(ATTR_MIPS);
-				projList.insert(ATTR_KFLOPS);
-				// fall through
-			case PP_SLOTS_NORMAL:
-			case PP_SLOTS_COD:
-				if (mainPP.ppTotalStyle == PP_SLOTS_COD) {
-					projList.insert(ATTR_CLAIM_STATE);
-					projList.insert(ATTR_COD_CLAIMS);
-				}
-				projList.insert(ATTR_STATE); // Norm, state, server
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS); // for key
-				break;
-
-			case PP_STARTDAEMON:
-				projList.insert(ATTR_TOTAL_SLOTS);
-				projList.insert(ATTR_NUM_DYNAMIC_SLOTS);
-				projList.insert(ATTR_TOTAL_CPUS);
-				projList.insert(ATTR_TOTAL_MEMORY);
-				projList.insert("TotalGPUs");
-				//projList.insert("TotalDisk");
-				// daemon ads have TotalInUse* and TotalBackfillInUse*
-				projList.insert("TotalInUseCpus");
-				projList.insert("TotalInUseMemory");
-				projList.insert("TotalInUseDisk");
-				projList.insert("TotalInUseGPUs");
-				projList.insert("TotalBackfillInUseCpus");
-				projList.insert("TotalBackfillInUseMemory");
-				projList.insert("TotalBackfillInUseDisk");
-				projList.insert("TotalBackfillInUseGPUs");
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS_AND_VER); // for key
-				projList.insert(ATTR_CONDOR_VERSION);
-				if (dash_gpus) {
-					const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-					if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-					query->addANDConstraint (constr);
-				}
-				break;
-
-			case PP_SLOTS_STATE:
-				projList.insert(ATTR_STATE);
-				projList.insert(ATTR_ACTIVITY); // for key
-				break;
-
-			case PP_SUBMITTER_NORMAL:
-				projList.insert(ATTR_NAME); // for key
-				projList.insert(ATTR_RUNNING_JOBS);
-				projList.insert(ATTR_IDLE_JOBS);
-				projList.insert(ATTR_HELD_JOBS);
-				break;
-
-			case PP_SCHEDD_NORMAL: // no key
-				projList.insert(ATTR_TOTAL_RUNNING_JOBS);
-				projList.insert(ATTR_TOTAL_IDLE_JOBS);
-				projList.insert(ATTR_TOTAL_HELD_JOBS);
-				break;
-
-			case PP_CKPT_SRVR_NORMAL:
-				projList.insert(ATTR_DISK);
-				break;
-
-			default:
-				break;
-		}
-	#endif
 	}
 
 	// fetch the query

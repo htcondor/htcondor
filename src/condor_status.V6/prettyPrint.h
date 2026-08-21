@@ -211,4 +211,7 @@ class PrettyPrinter {
 #define PMODE_SLOT_LV_USAGE_CONSTRAINT \
 	"IsEnforcingDiskUsage && PartitionableSlot=!=True"
 
+#define STARTDAEMON_GPUS_CONSTRAINT \
+	"TotalGPUs > 0 || size(DetectedGPUs) > 0"
+
 #endif /* _CONDOR_PRETTY_PRINT_H */
