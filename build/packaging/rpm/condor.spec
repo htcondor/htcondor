@@ -791,8 +791,10 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 mkdir -p %{buildroot}%{_sysusersdir}
 install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
 
+%if %uw_build
 mkdir -p %{buildroot}%{_datadir}/condor/
-cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
+cp %{SOURCE2} %{buildroot}%{_datadir}/condor/
+%endif
 
 #Fixups for packaged build, should have been done by cmake
 
@@ -1302,6 +1304,7 @@ rm -rf %{buildroot}
 
 %post
 /sbin/ldconfig
+%if %uw_build
 # Remove obsolete security configuration
 rm -f /etc/condor/config.d/00-htcondor-9.0.config
 %if 0%{?fedora}
@@ -1322,6 +1325,7 @@ if [ $? = 0 ]; then
 %endif
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
 fi
+%endif
 if [ $1 -eq 1 ] ; then
     # Initial installation 
     /bin/systemctl daemon-reload >/dev/null 2>&1 || :
