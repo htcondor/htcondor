@@ -59,6 +59,13 @@
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
 
+- :tool:`condor_adstash` obeys existing index properties and allows for
+  custom field properties, dynamic templates, index settings, and ignored
+  attributes. :tool:`condor_adstash` can also provide JSON resources (initial
+  index, index template, ILM policy) for new deployments to a search engine
+  (e.g. Elasticsearch).
+  :jira:`2909`
+
 *** 25.14.0 bugs
 
 - Fixed a bug where an idle job removed from the queue could occasionally

@@ -1952,47 +1952,62 @@ instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
 Invalidated ClassAds will instead be treated as if they expired, including when
 evaluating :macro:`ABSENT_REQUIREMENTS`.
 
-Elasticsearch
--------------
+Search engines (Elasticsearch and OpenSearch)
+---------------------------------------------
 
 :index:`Elasticsearch`
+:index:`OpenSearch`
 :index:`adstash`
 :index:`condor_adstash`
 
 HTCondor supports pushing *condor_schedd* and *condor_startd* job
-and job epoch ClassAds to Elasticsearch (and other targets) via the
+and job epoch ClassAds
+to search engines
+(currently Elasticsearch and OpenSearch are supported)
+and other targets via the
 :tool:`condor_adstash` tool/daemon.
 :tool:`condor_adstash` collects job ClassAds as specified by its
 configuration, either querying specified daemons
 or reading job ClassAds from a specified file,
 converts each ClassAd to a JSON document,
-and pushes each doc to the configured Elasticsearch index.
-The index is automatically created if it does not exist, and fields
-are added and configured based on well known job ClassAd attributes.
-(Custom attributes are also pushed, though always as keyword fields.)
+and pushes each doc to the configured search engine index.
+Fields are mapped based on well-known job ClassAd attributes,
+and mappings are updated each polling cycle to account for new attributes.
+Custom attributes are also pushed, typically as keyword (string) fields
+unless a custom field mapping is provided.
 
-:tool:`condor_adstash` is a Python 3.6+ script that uses the
-HTCondor :ref:`apis/python-bindings/index:Python Bindings`
-and the
-`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
-both of which must be available to the system Python 3 installation
+:tool:`condor_adstash` is a Python script
+that uses the HTCondor :ref:`apis/python-bindings/index:Python Bindings`
+and either the
+`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_
+or the
+`Python OpenSearch Client <https://opensearch.org/docs/latest/clients/python-low-level/>`_,
+both of which must be available to the system Python installation
 if using the daemonized version of :tool:`condor_adstash`.
-:tool:`condor_adstash` can also be run as a stand alone tool (e.g. in a
-Python 3 virtual environment containing the necessary libraries).
+:tool:`condor_adstash` can also be run as a standalone tool
+(e.g. in a Python virtual environment containing the necessary libraries).
 
 Running :tool:`condor_adstash` as a daemon (i.e. under the watch of the
 :tool:`condor_master`) can be enabled by adding
 ``use feature : adstash``
 to your HTCondor configuration.
-By default, this configuration will poll the job history on all
-*condor_schedds* that report to the ``$(CONDOR_HOST)`` *condor_collector*
-every 20 minutes and push the contents of the job history ClassAds to an
-Elasticsearch instance running on ``localhost`` to an index named
-``htcondor-000001``.
+By default, this configuration will,
+every 20 minutes,
+poll the job history on all *condor_schedds* that report to the ``$(CONDOR_HOST)`` *condor_collector*
+and push the contents of the job history ClassAds
+to a search engine instance running on ``localhost``
+to an index named ``htcondor``.
 Your situation and monitoring needs are likely different!
-See the ``condor_config.local.adstash`` example configuration file in
-the ``examples/`` directory for detailed information on how to modify
-your configuration.
+See the ``condor_config.local.adstash`` example configuration file
+in the ``examples/`` directory
+for detailed information on how to modify your configuration.
+
+Before running :tool:`condor_adstash` for the first time,
+consider using ``condor_adstash --init_index``
+to generate the JSON files needed
+to set up the search engine index, index template, and (for Elasticsearch) ILM policy.
+See the :doc:`../man-pages/condor_adstash` man page
+for details on index initialization and other options.
 
 If you prefer to run :tool:`condor_adstash` in standalone mode, or are
 curious about other ClassAd sources or targets, see the

@@ -1,0 +1,59 @@
+Args = "60"
+ClusterId = 123
+Cmd = "/usr/bin/sleep"
+CompletionDate = 1781013600
+CustomAttrFoo = 842
+CustomAttrKnown = 123
+EnteredCurrentStatus = 1781013590
+Env = "BEARER_TOKEN=NOT_A_REAL_TOKEN"
+GlobalJobId = "ap.example.edu#123.456#1781010000"
+IoHeavyProvisioned = 1
+JobStatus = 4
+JobUniverse = 5
+NumCookies = 0
+Owner = "testuser"
+PeriodicRemove = JobStatus == 4
+ProcId = 456
+QDate = 1781010000
+Rank = 12.34
+RemoteHost = "slot1_2@ep.example.edu"
+RequestDisk = 123456789
+RequestIoHeavy = 1
+RequestMemory = 123456
+Requirements = (TARGET.Disk >= RequestDisk) && (TARGET.Memory >= RequestMemory)
+StreamIn = true
+StreamOut = false
+TransferInputStats = [ PELICANSizeBytesTotal = 5000000000; CedarSizeBytesTotal = 100000; PELICANFilesCountTotal = 20; CedarFilesCountTotal = 20; OSDFSizeBytesLastRun = 500000000; CedarSizeBytesLastRun = 100000; OSDFFilesCountLastRun = 2; CedarFilesCountLastRun = 2; ContainerDurationTotal = 0; ContainerDurationLastRun = 0 ]
+TransferOutput = undefined
+TransformBody_RequestMemory = "REQUIREMENTS (VacateReasonCode==21 || VacateReasonCode == 34) && VacateReasonSubCode == 102SET RequestMemory 234567"
+WantFlocking = true
+*** Offset = 0 ClusterId = 123 ProcId = 456 Owner = "testuser" CompletionDate = 1781013600 CurrentTime = 1781013600
+Args = "60"
+ClusterId = 123
+Cmd = "/usr/bin/sleep"
+CustomAttrFoo = 842
+CustomAttrKnown = 123
+EnteredCurrentStatus = 1781013590
+Env = "BEARER_TOKEN=NOT_A_REAL_TOKEN"
+GlobalJobId = "ap.example.edu#123.457#1781010000"
+IoHeavyProvisioned = 1
+JobStatus = 3
+JobUniverse = 12
+NumCookies = 0
+Owner = "testuser"
+PeriodicRemove = JobStatus == 4
+ProcId = 457
+QDate = 1781010000
+Rank = 12.34
+RemoteHost = "slot1_2@ep.example.edu"
+RequestDisk = 123456789
+RequestIoHeavy = 1
+RequestMemory = 123456
+Requirements = (TARGET.Disk >= RequestDisk) && (TARGET.Memory >= RequestMemory)
+StreamIn = true
+StreamOut = false
+TransferInputStats = [ PELICANSizeBytesTotal = 5000000000; CedarSizeBytesTotal = 100000; PELICANFilesCountTotal = 20; CedarFilesCountTotal = 20; OSDFSizeBytesLastRun = 500000000; CedarSizeBytesLastRun = 100000; OSDFFilesCountLastRun = 2; CedarFilesCountLastRun = 2; ContainerDurationTotal = 0; ContainerDurationLastRun = 0 ]
+TransferOutput = undefined
+TransformBody_RequestMemory = "REQUIREMENTS (VacateReasonCode==21 || VacateReasonCode == 34) && VacateReasonSubCode == 102SET RequestMemory 234567"
+WantFlocking = true
+*** Offset = 0 ClusterId = 123 ProcId = 457 Owner = "testuser" CompletionDate = -1 CurrentTime = 1781013590
