@@ -217,4 +217,7 @@ class PrettyPrinter {
 #define PMODE_SLOT_HEALTH_CONSTRAINT \
 	"size(HealthExprs) > 0"
 
+#define STARTDAEMON_GPUS_CONSTRAINT \
+	"TotalGPUs > 0 || size(DetectedGPUs) > 0"
+
 #endif /* _CONDOR_PRETTY_PRINT_H */
