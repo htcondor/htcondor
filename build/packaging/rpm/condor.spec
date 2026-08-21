@@ -1,26 +1,41 @@
-%define condor_version 1.0.0
+# Set the version and release here
+%global condor_version 1.0.0
+%global version_ %(tr . _ <<< %{version})
+%global condor_release 1
 
 # set uw_build to 0 for downstream (Fedora or EPEL)
 # UW build includes stuff for testing and tarballs
-%define uw_build 0
+%global uw_build 0
+
+#######################
+Name: condor
+Version: %{condor_version}
+Release: %{condor_release}%{?dist}
+Summary: HTCondor: High Throughput Computing
+License: Apache-2.0
+URL: https://htcondor.org/
+Source0: %{name}-%{condor_version}.tar.gz
+Source1: %{name}.sysusers.conf
+%if %uw_build
+Source2: htcondor.pp
+%endif
+
+ExcludeArch: %{ix86}
+
+# Special arch for AlmaLinux 10
+%if 0%{?x86_64_v2}
+BuildArch: x86_64_v2
+%endif
 
 %if 0%{?rhel} == 8 || 0%{?rhel} == 9 || 0%{?rhel} == 10
 # Use gcc-toolset 15 for EL 8, 9, and 10
-%define gcctoolset 15
-%endif
-
-Summary: HTCondor: High Throughput Computing
-Name: condor
-Version: %{condor_version}
-%global version_ %(tr . _ <<< %{version})
-
-%if 0%{?x86_64_v2}
-BuildArch: x86_64_v2
+%global gcctoolset 15
 %endif
 
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
+# Hard code this special case
 %if "%{os_release_id}" == "sles"
 %global dist .sles15sp5
 %else
@@ -32,24 +47,11 @@ BuildArch: x86_64_v2
 %endif
 %endif
 
-# Edit the %condor_release to set the release number
-%define condor_release 1
-Release: %{condor_release}%{?dist}
-
-License: Apache-2.0
-Group: Applications/System
-URL: https://htcondor.org/
-
 # Do not check .so files in condor's library directory
+# We have an LD_PRELOAD for condor_ssh_to_job there
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-Source0: %{name}-%{condor_version}.tar.gz
-Source1: %{name}.sysusers.conf
-Source8: htcondor.pp
-
-BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-
-BuildRequires: cmake
+BuildRequires: cmake >= 3.20
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
@@ -66,7 +68,6 @@ BuildRequires: openldap2-devel
 %else
 BuildRequires: openldap-devel
 %endif
-BuildRequires: cmake >= 3.20
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 %if 0%{?suse_version}
@@ -241,9 +242,11 @@ Requires: systemd-libs
 %endif
 Requires: rsync
 
+%if %uw_build
 # Require tested Pelican packages
 Requires: (pelican >= 7.25.0 or pelican-debug >= 7.25.0)
 Requires: pelican-osdf-compat >= 7.25.0
+%endif
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
@@ -484,6 +487,7 @@ This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
+%if %uw_build
 #######################
 %package ap
 Summary: Configuration for an Access Point
@@ -505,6 +509,7 @@ Requires: python3-condor = %version-%release
 %description ep
 This example configuration is good for installing an Execution Point.
 After installation, one could join a pool or start an annex.
+%endif
 
 #######################
 %package annex-ec2
@@ -602,8 +607,8 @@ make -C docs man
 %endif
 
 %if %uw_build
-%define condor_build_id UW_development
-%define condor_git_sha -1
+%global condor_build_id UW_development
+%global condor_git_sha -1
 %endif
 
 # Any changes here should be synchronized with
@@ -1288,11 +1293,13 @@ rm -rf %{buildroot}
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
+%if %uw_build
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
 
 %files ep
 %config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
+%endif
 
 %post
 /sbin/ldconfig
