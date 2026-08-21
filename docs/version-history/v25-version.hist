@@ -54,6 +54,7 @@
 - Enhance :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to verify that the
   server's shared_port id matches.
   :jira:`3883`
+
 - When storing passwords for Windows users, :tool:`condor_store_cred` can
   now read the password from stdin.
   :jira:`3881`
