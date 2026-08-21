@@ -604,9 +604,8 @@ These settings affect the *condor_starter*.
     or -d.
 
 :macro-def:`SINGULARITY_ADD_ROCM_FLAG`
-    A boolean value that defaults to true.  When true, HTCondor will pass --rocm
-    flag to singularity, in order to support AMD gpus.  This should not cause problems
-    on machines without AMD gpus.
+    A boolean value that defaults to false.  When true, HTCondor will pass --rocm
+    flag to singularity, in order to support AMD gpus.
 
 :macro-def:`SINGULARITY_ALLOWED_JOB_ENV_VARS`
     A string value containing a space or comma separated list of additional
