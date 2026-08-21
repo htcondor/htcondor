@@ -1,6 +1,5 @@
 # Set the version and release here
 %global condor_version 1.0.0
-%global version_ %(tr . _ <<< %{version})
 %global condor_release 1
 
 # set uw_build to 0 for downstream (Fedora or EPEL)
@@ -10,6 +9,7 @@
 #######################
 Name: condor
 Version: %{condor_version}
+%global version_ %(tr . _ <<< %{version})
 Release: %{condor_release}%{?dist}
 Summary: HTCondor: High Throughput Computing
 License: Apache-2.0
