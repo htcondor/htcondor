@@ -396,16 +396,25 @@ Singularity::setup(ClassAd &machineAd,
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if (assignedGpus.length() > 0) {
-		sing_args.AppendArg("--nv");
 		static const char* open_cl_path = "/etc/OpenCL/vendors";
 		if (IsDirectory(open_cl_path)) {
 			additional_bind_mounts.emplace_back(open_cl_path);
 		}
 
-		// We don't really know if the GPUs are NVidia, but it doesn'to
-		// seem hurt to have both the nvidia and rocm bind mounts available
-		// if either is needed.  But knob it just to be sure.
-		if (param_boolean("SINGULARITY_ADD_ROCM_FLAG", true)) {
+		std::string nvidia_driver;
+		machineAd.LookupString("GPUs_NvidiaDriver", nvidia_driver);
+		
+		if (!nvidia_driver.empty()) {
+			sing_args.AppendArg("--nv");
+		}
+
+		// If --nv and --rocm are set (in any order), apptainer
+		// ignores --rocm.  Only set --rocm if we think we are on
+		// an amd gpu system or the knob is set to true.
+		int rocm_version = -1;
+		machineAd.LookupInteger("GPUs_Rocm", rocm_version);
+		if (rocm_version > 0 || 
+				param_boolean("SINGULARITY_ADD_ROCM_FLAG", false)) {
 			sing_args.AppendArg("--rocm");
 		}
 	}
