@@ -1,5 +1,11 @@
 *** 25.14.0 features
 
+- :tool:`condor_rm` now accepts a **-held** option that restricts the
+  removal to jobs in the held state. It may be combined with the usual
+  constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
+  so that only the held jobs among those selected are removed.
+  :jira:`3710`
+
 - :tool:`condor_watch_q` now draws its live display on the terminal's
   alternate screen, so quitting restores whatever was on the console
   before it started, the same way less behaves.
@@ -48,6 +54,9 @@
 - Enhance :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to verify that the
   server's shared_port id matches.
   :jira:`3883`
+- When storing passwords for Windows users, :tool:`condor_store_cred` can
+  now read the password from stdin.
+  :jira:`3881`
 
 - When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
   without an explicit docker tag in the image name to be in the cache.

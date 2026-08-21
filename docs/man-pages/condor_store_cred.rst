@@ -119,7 +119,7 @@ Options
     Apply the command on the given machine.
  **-p** *password*
     Stores *password*, rather than prompting the user to enter a
-    password.
+    password. If *password* is *-*, password is read from stdin.
  **-u** *username*
     Specify the user name.
 
