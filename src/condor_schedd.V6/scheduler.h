@@ -257,6 +257,11 @@ class match_rec
 		const ClassAd*, char const* user, char const* pool, bool is_dedicated);
 	~match_rec();
 
+	// match_rec cannot be safely copied or assigned or moved
+	match_rec(const match_rec &) = delete;
+	match_rec& operator=(const match_rec& other) = delete;
+	match_rec& operator=(match_rec&& other) = delete;
+
 	char * peer{nullptr}; //sinful address of startd
 	char * user{nullptr};
 	char * pool{nullptr}; // negotiator hostname if flocking; else empty
@@ -304,12 +309,13 @@ class match_rec
 	void makeDescription();
 	const char *description() const { return m_description.c_str(); }
 
-	const char *claimId() const { return claim_id.claimId(); }
-	const char *publicClaimId() { return claim_id.publicClaimId(); }
-	const char *secSessionId() { return claim_id.secSessionId(); }
+	const char *claimId() const { return claim_id ? claim_id : ""; } // empty rather than null to match old ClaimIdParser
+	const char *publicClaimId(std::string &buf) const { return claim_id_parser.publicClaimId(buf); }
+	const char *secSessionId(std::string &buf) const { return claim_id_parser.secSessionId(buf); }
 
 protected:
-	ClaimIdParser claim_id; // the claimid of a match rec is immutable
+	char * claim_id{nullptr}; // the claimid of a match rec is immutable
+	ClaimIdParserLite claim_id_parser; // a parser for the above claim_id
 	std::string m_description;
 
 };
@@ -912,6 +918,13 @@ class Scheduler : public Service
 
 	// Stop the timer, if any, waiting to release the claim.
 	bool mark_catalog_live( const std::string & catalogName );
+
+	// When we delete a match record, we also check to see if the corresponding
+	// shadow is the last shadow to require any particular catalog, so that we
+	// can mark those catalogs dead.  In some cases, the schedd will delete a
+	// shadow record before it deletes the match record, so we need to check
+	// in both places.
+	void mark_catalogs_dead_if_last_consumer( shadow_rec * shadowRec, char * peer );
 
 
 	// After obtaining the final form of a job ad (after transforms), there's

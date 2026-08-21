@@ -2359,6 +2359,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
 		auto [execsz, file_count] = starter->GetDiskUsage(false);
+		dprintf( D_TEST, "sizeOnDisk = %ld (publishUpdateAd())\n", (execsz+1023) / 1024 );
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 

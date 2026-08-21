@@ -184,6 +184,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
 		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
 		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		char * get() { return p; }                 // for compat with unique_ptr
+		char * release() { return detach(); }      // for compat with unique_ptr
+		const char * c_str() { return p?p:""; }    // return a printable pointer
 		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
 		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
 	private:
@@ -334,16 +337,48 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
 	// returns the number of macros that were skipped.
 	// used by submit_utils to selectively expand submit hash keys when creating the submit digest
-	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of skipped or < 0 for expansion error
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set,
+		MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
-	// returns the number of $() and $func() patterns that were skipped.
-	unsigned int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of $() and $func() patterns that were skipped or < 0 for expansion error
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the config
 	// returns the number of $() and $func() patterns that were skipped
 	// used by submit_utils to selectively submit templates against the config at load time
-	unsigned int expand_defined_config_macros (std::string &value);
+	// returns number of macros skipped or < 0 for expansion error
+	int expand_defined_config_macros (std::string &value);
+
+	// used to return pointers to a config macro
+	//
+	//  input                         right
+	//      |                         |
+	//      aaaa$ENV(PARAM:DEFAULTVAL)bbbb
+	//          |    |
+	//       left    body
+	//
+	struct UNEXPANDED_MACRO_EXTENTS {
+		const char* left{nullptr}; const char* body{nullptr}; const char*right{nullptr};
+		void clear() { left = body = right = nullptr; }
+	};
+	// scan a string for macros and return the start and end of the next one
+	// finds all $() $func() and $$ macros, including $(dollar)
+	// returns
+	//    0 if no next macro
+	//  < 0 for $ and $$
+	//  > 0 for $func
+	//  extent is set to point the the macro
+	// the use case for this function is when you want to split a string without splitting any of the macros.
+	int next_unexpanded_macro(const char * value, size_t pos, UNEXPANDED_MACRO_EXTENTS &extent);
+
+	// returns true if the input string has any unexpanded macros
+	// if ignore_dollor is true, then *any* macro including $(dollor)
+	// if false, then only config macros $(), $func and $$ are reported
+	bool has_unexpanded_macros(const char * value, bool ignore_dollor);
 
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does

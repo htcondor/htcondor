@@ -314,7 +314,8 @@ class VaultCredmon(AbstractCredentialMonitor):
                 provider_name == htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME") or
                 provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", "")) or
                 provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
-                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
+                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", "")) or
+                provider_name in re.compile(r"[\s,]+").split(htcondor.param.get("PELICAN_CREDMON_PROVIDER_NAMES", ""))
                 ):
                 self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name)
                 return

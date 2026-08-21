@@ -604,9 +604,22 @@ These settings affect the *condor_starter*.
     or -d.
 
 :macro-def:`SINGULARITY_ADD_ROCM_FLAG`
-    A boolean value that defaults to true.  When true, HTCONDOR will pass --rocm 
-    flag to singularity, in order to support AMD gpus.  This should not cause problems
-    on machines without AMD gpus.
+    A boolean value that defaults to false.  When true, HTCondor will pass --rocm
+    flag to singularity, in order to support AMD gpus.
+
+:macro-def:`SINGULARITY_ALLOWED_JOB_ENV_VARS`
+    A string value containing a space or comma separated list of additional
+    environment variable names.  Before launching a container, the starter
+    removes every ``APPTAINER_*`` and ``SINGULARITY_*`` variable from the job's
+    environment, so that a job cannot use them to reconfigure the container the
+    starter builds (for example, overriding the starter's bind mounts by setting
+    ``APPTAINER_BINDPATH``).  A built-in allowlist of the ``APPTAINER_DOCKER_USERNAME``,
+    ``APPTAINER_DOCKER_PASSWORD``, ``SINGULARITY_DOCKER_USERNAME`` and
+    ``SINGULARITY_DOCKER_PASSWORD`` credential variables is always preserved.  Any
+    variable names listed here are preserved in addition to those.  The default
+    value is the empty string.  Note that this does not affect the
+    ``APPTAINERENV_*`` / ``SINGULARITYENV_*`` mechanism a job uses to inject
+    variables into the container, which is always honored.
 
 :macro-def:`USE_DEFAULT_CONTAINER`
     A boolean value or classad expression evaluating to boolean in the context of the Slot

@@ -447,8 +447,13 @@ int main(int argc, char* argv[])
 						running_jobs_hitlimit++;
 					}
 					break;
-				  case ULOG_POST_SCRIPT_TERMINATED:
-					//printf("Post Script Terminated.........\n");
+				  // -maxjobs throttles jobs in the queue: DAGMan frees the
+				  // slot when the job terminates, not when the (later) POST
+				  // script finishes.  Decrement here so a POST script that
+				  // outlives the next node's submit is not miscounted.
+				  case ULOG_JOB_TERMINATED:
+				  case ULOG_JOB_ABORTED:
+					//printf("Job Terminated.........\n");
 					running_jobs--;
 					break;
 				  default:
