@@ -29,6 +29,8 @@
 #include "condor_sinful.h"
 #include "condor_daemon_core.h"
 
+#define SOCK_SUFFIX "?sock="
+
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
       remote_             ( remote )
@@ -112,7 +114,8 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				ext = mySock_->peer_addr().to_ip_and_port_string();
 				Sinful sin(mySock_->get_connect_addr());
 				if (sin.getSharedPortID()) {
-					formatstr_cat(ext, "?sock=%s", sin.getSharedPortID());
+					ext += SOCK_SUFFIX;
+					ext += sin.getSharedPortID();
 				}
 				new_dir += ext;
 				dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE_FS%s: Adding server ip:port to directory name: %s\n", (remote_?"_REMOTE":""), ext.c_str());
@@ -271,7 +274,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			server_result = -1;
 			goto send_reply;
 		}
-		size_t sock_pos = client_ext.find("?sock=");
+		size_t sock_pos = client_ext.find(SOCK_SUFFIX);
 		std::string client_peer_str = client_ext.substr(0, sock_pos);
 		condor_sockaddr client_peer;
 		if (!client_peer.from_ip_and_port_string(client_peer_str.c_str())) {
@@ -306,7 +309,12 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			if (ip_port_matches) {
 				// If the ip:port matches, then we just want to check if
 				// the shared_port id matches
-				if (myself.getSharedPortID() && strcmp(myself.getSharedPortID(), client_peer_sinful.getSharedPortID()) == 0) {
+				const char* my_shared_port_id = myself.getSharedPortID();
+				const char* client_shared_port_id = client_peer_sinful.getSharedPortID();
+				if (my_shared_port_id && my_shared_port_id[0] != '\0' &&
+				    client_shared_port_id && client_shared_port_id[0] != '\0' &&
+				    strcmp(my_shared_port_id, client_shared_port_id) == 0)
+				{
 					client_ext_matches = true;
 				}
 			} else {
