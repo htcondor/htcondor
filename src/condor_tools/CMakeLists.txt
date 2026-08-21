@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+condor_exe(file_transfer_cli "file_transfer_cli.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_manifest "manifest.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
