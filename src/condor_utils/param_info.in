@@ -1919,7 +1919,7 @@ type=bool
 tags=starter
 
 [SINGULARITY_ADD_ROCM_FLAG]
-default=true
+default=false
 type=bool
 tags=starter
 
