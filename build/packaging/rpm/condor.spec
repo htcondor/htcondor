@@ -335,7 +335,6 @@ completion.
 #######################
 %package devel
 Summary: Development files for HTCondor
-Group: Applications/System
 
 %description devel
 Development files for HTCondor
@@ -344,7 +343,6 @@ Development files for HTCondor
 #######################
 %package tarball
 Summary: Files needed to build an HTCondor tarball
-Group: Applications/System
 
 %description tarball
 Files needed to build an HTCondor tarball
@@ -354,7 +352,6 @@ Files needed to build an HTCondor tarball
 #######################
 %package kbdd
 Summary: HTCondor Keyboard Daemon
-Group: Applications/System
 Requires: %name = %version-%release
 
 %description kbdd
@@ -366,7 +363,6 @@ determine console idle time.
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %package vm-gahp
 Summary: HTCondor's VM Gahp
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: libvirt
 %if 0%{?fedora} >= 35 || 0%{?rhel} >= 9 || 0%{?suse_version} >= 1600
@@ -383,7 +379,6 @@ HTCondor's Startd.
 #######################
 %package test
 Summary: HTCondor Self Tests
-Group: Applications/System
 Requires: %name = %version-%release
 
 %description test
@@ -392,7 +387,6 @@ A collection of tests to verify that HTCondor is operating properly.
 #######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3
 Requires: python3-cryptography
@@ -405,7 +399,6 @@ the ClassAd library and HTCondor from python
 #######################
 %package credmon-local
 Summary: Local issuer credmon for HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-cryptography
@@ -421,7 +414,6 @@ credentials securely inside running jobs.
 #######################
 %package credmon-oauth
 Summary: OAuth2 credmon for HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
 Requires: python3-requests-oauthlib
@@ -437,7 +429,6 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 #######################
 %package credmon-vault
 Summary: Vault credmon for HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-cryptography
@@ -460,7 +451,6 @@ credential management.
 #######################
 %package credmon-multi
 Summary: Multi-credmon support for HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
 Requires: python3-urllib3
@@ -475,7 +465,6 @@ of condor-credmon-vault when concurrent support is needed.
 #######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
@@ -488,7 +477,6 @@ shortens many timers to be more responsive.
 #######################
 %package ap
 Summary: Configuration for an Access Point
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
@@ -499,7 +487,6 @@ After installation, one could join a pool or start an annex.
 #######################
 %package ep
 Summary: Configuration for an Execution Point
-Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
@@ -511,7 +498,6 @@ After installation, one could join a pool or start an annex.
 #######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
-Group: Applications/System
 Requires: %name = %version-%release
 Requires(post): /sbin/chkconfig
 Requires(preun): /sbin/chkconfig
@@ -797,8 +783,8 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 mkdir -p %{buildroot}%{_sysusersdir}
 install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
 
-%if %uw_build
 mkdir -p %{buildroot}%{_datadir}/condor/
+%if %uw_build
 cp %{SOURCE2} %{buildroot}%{_datadir}/condor/
 %endif
 
