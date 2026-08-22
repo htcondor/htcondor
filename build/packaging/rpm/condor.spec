@@ -6,6 +6,22 @@
 # UW build includes stuff for testing and tarballs
 %global uw_build 0
 
+# We need to define the dist for SUSE
+%if 0%{?suse_version}
+%global _libexecdir %{_exec_prefix}/libexec
+%if %{suse_version} == 1500
+# Hard code this special case
+%if "%{os_release_id}" == "sles"
+%global dist .sles15sp5
+%else
+%global dist .leap15
+%endif
+%endif
+%if %{suse_version} == 1600
+%global dist .leap16
+%endif
+%endif
+
 #######################
 Name: condor
 Version: %{condor_version}
@@ -30,21 +46,6 @@ BuildArch: x86_64_v2
 %if 0%{?rhel} == 8 || 0%{?rhel} == 9 || 0%{?rhel} == 10
 # Use gcc-toolset 15 for EL 8, 9, and 10
 %global gcctoolset 15
-%endif
-
-%if 0%{?suse_version}
-%global _libexecdir %{_exec_prefix}/libexec
-%if %{suse_version} == 1500
-# Hard code this special case
-%if "%{os_release_id}" == "sles"
-%global dist .sles15sp5
-%else
-%global dist .leap15
-%endif
-%endif
-%if %{suse_version} == 1600
-%global dist .leap16
-%endif
 %endif
 
 # Do not check .so files in condor's library directory
@@ -692,6 +693,11 @@ cd build
 make install DESTDIR=%{buildroot}
 %endif
 
+# TODO: Fix up cmake and remove this hack
+%ifarch s390x
+mv %{buildroot}/usr/lib/* %{buildroot}/usr/%{_lib}
+%endif
+
 %if %uw_build
 %if 0%{?fedora} >= 44
 %cmake_build -t tests-tar-pkg
@@ -799,10 +805,10 @@ cp %{SOURCE2} %{buildroot}%{_datadir}/condor/
 #Fixups for packaged build, should have been done by cmake
 
 mkdir -p %{buildroot}/usr/share/condor
-mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
-mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
-mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
+mv %{buildroot}/usr/%{_lib}/condor/Chirp.jar %{buildroot}/usr/share/condor
+mv %{buildroot}/usr/%{_lib}/condor/CondorJava*.class %{buildroot}/usr/share/condor
+mv %{buildroot}/usr/%{_lib}/condor/libchirp_client.so %{buildroot}/usr/%{_lib}
+mv %{buildroot}/usr/%{_lib}/condor/libcondor_utils_*.so %{buildroot}/usr/%{_lib}
 
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
@@ -838,7 +844,9 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
+%if %uw_build
 %_datadir/condor/htcondor.pp
+%endif
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
@@ -1257,10 +1265,10 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-/usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
-/usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
-/usr/lib64/python%{python3_version}/site-packages/classad2/
-/usr/lib64/python%{python3_version}/site-packages/htcondor2/
+/usr/%{_lib}/python%{python3_version}/site-packages/htcondor-*.egg-info/
+/usr/%{_lib}/python%{python3_version}/site-packages/htcondor_cli/
+/usr/%{_lib}/python%{python3_version}/site-packages/classad2/
+/usr/%{_lib}/python%{python3_version}/site-packages/htcondor2/
 
 %files credmon-local
 %doc examples/condor_credmon_oauth
