@@ -343,6 +343,7 @@ Development files for HTCondor
 #######################
 %package tarball
 Summary: Files needed to build an HTCondor tarball
+BuildArch: noarch
 
 %description tarball
 Files needed to build an HTCondor tarball
@@ -399,6 +400,7 @@ the ClassAd library and HTCondor from python
 #######################
 %package credmon-local
 Summary: Local issuer credmon for HTCondor
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-cryptography
@@ -414,6 +416,7 @@ credentials securely inside running jobs.
 #######################
 %package credmon-oauth
 Summary: OAuth2 credmon for HTCondor
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
 Requires: python3-requests-oauthlib
@@ -429,6 +432,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 #######################
 %package credmon-vault
 Summary: Vault credmon for HTCondor
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-cryptography
@@ -451,6 +455,7 @@ credential management.
 #######################
 %package credmon-multi
 Summary: Multi-credmon support for HTCondor
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
 Requires: python3-urllib3
@@ -465,6 +470,7 @@ of condor-credmon-vault when concurrent support is needed.
 #######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
@@ -473,10 +479,10 @@ This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
-%if %uw_build
 #######################
 %package ap
 Summary: Configuration for an Access Point
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
@@ -487,17 +493,18 @@ After installation, one could join a pool or start an annex.
 #######################
 %package ep
 Summary: Configuration for an Execution Point
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires: python3-condor = %version-%release
 
 %description ep
 This example configuration is good for installing an Execution Point.
 After installation, one could join a pool or start an annex.
-%endif
 
 #######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
+BuildArch: noarch
 Requires: %name = %version-%release
 Requires(post): /sbin/chkconfig
 Requires(preun): /sbin/chkconfig
@@ -1223,11 +1230,14 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
-%_libexecdir/condor/ccb_proxy_bench
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
 %_libexecdir/condor/test_offer_resources
+%{_bindir}/common_transfer_savings.py
+%if %uw_build
+%_libdir/condor/condor_tests-%{version}.tar.gz
+%_libexecdir/condor/ccb_proxy_bench
 %_libexecdir/condor/test_dc_std_functiond
 %_libexecdir/condor/test_stdf_timer_d
 %_libexecdir/condor/test_std_pipe_handlerd
@@ -1236,9 +1246,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_generator
 %_libexecdir/condor/memory_exerciser_dinner
 %_libexecdir/condor/test_starter_guidance.exe
-%{_bindir}/common_transfer_savings.py
-%if %uw_build
-%_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
 # Experimental - not for wider deployment
 %_bindir/condor_login
@@ -1288,13 +1295,11 @@ rm -rf %{buildroot}
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
-%if %uw_build
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
 
 %files ep
 %config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
-%endif
 
 %post
 /sbin/ldconfig
