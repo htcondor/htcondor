@@ -69,6 +69,16 @@
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
 
+- For **batch** grid universe jobs submitted to a local batch system,
+  restore the old behavior of creating a temporary directory in which to
+  run the job by default (``blah_run_in_workdir=no`` in the ``blah.config`` file).
+  When using ``condor_remote_cluster`` to submit jobs to a remote batch
+  system via ssh, disable creation of the temporary directory by default
+  (set ``blah_run_in_workdir=yes`` in the remote ``blah.config`` file).
+  Also fix a couple bugs with determining which files need to be copied
+  when a temporary directory isn't being created.
+  :jira:`3882`
+
 *** 25.14.0 bugs
 
 - Fixed a bug where an idle job removed from the queue could occasionally
