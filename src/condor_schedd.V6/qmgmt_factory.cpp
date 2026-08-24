@@ -183,6 +183,7 @@ JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * exte
 #endif
 	, ident(id)
 {
+	SubmitMacroSet.options |= CONFIG_OPT_NO_INCLUDE_FILE; // submit digests should be complete, and not use include
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
@@ -704,6 +705,7 @@ static bool EnableOverlappedIO() {
 
 int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id, std::string & errmsg)
 {
+	ASSERT(SubmitMacroSet.options & CONFIG_OPT_NO_INCLUDE_FILE);
 	char * qline = nullptr;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
 	if (rval == 0 && qline) {
