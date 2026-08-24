@@ -459,7 +459,9 @@ BuildArch: noarch
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
 Requires: python3-urllib3
+%if %uw_build
 Requires: htgettoken >= 1.1
+%endif
 
 %description credmon-multi
 Provides concurrent support for the Vault credmon alongside the Local
