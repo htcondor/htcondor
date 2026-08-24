@@ -76,6 +76,10 @@
   cause :tool:`condor_dagman` to wait indefinitely for the job to finish.
   :jira:`3875`
 
+- Fixed a bug where ``$$(CondorScratchDir)`` would not work for container universe
+  when file transfer was off and :macro:`SINGULARITY_TARGET_DIR` was set.
+  :jira:`3885`
+
 - Fixed a bug where a job with streaming output or error would not be
   able to reconnect to a restarted or rebooted schedd in some cases.
   :jira:`3869`
