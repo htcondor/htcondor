@@ -81,6 +81,10 @@
 
 *** 25.14.0 bugs
 
+- The Python bindings no longer assume that all ads in a legacy-style reply
+  from the negotiator contain only attributes present in the ad indexed #1.
+  :jira:`3884`
+
 - Fixed a bug where an idle job removed from the queue could occasionally
   fail to write a ``job aborted`` event to its job event log. This could
   cause :tool:`condor_dagman` to wait indefinitely for the job to finish.
