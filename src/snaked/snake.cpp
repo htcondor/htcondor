@@ -538,7 +538,7 @@ Snake::CallUpdateDaemonAd( const std::string & genus ) {
 
     PyObject * py_snake_module = PyImport_ImportModule( "snake" );
     if( py_snake_module == NULL ) {
-        dprintf( D_ALWAYS, "[timer]  Failed to import classad module, aborting.\n" );
+        dprintf( D_ALWAYS, "[timer]  Failed to import snake module, aborting.\n" );
 
         logPythonException();
         PyErr_Clear();
