@@ -2049,7 +2049,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 				// worse in this case.
 
 				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-				const char * msg = "Read failure during security negotiation.";
+					const char * msg = "This service is running, but did not respond in a reasonable time. It may be overloaded. Please try again in a few minutes.  If the problem persists, contact your administrator.";
 				int errcode = SECMAN_ERR_COMMUNICATIONS_ERROR;
 				ASSERT(m_sock->type() == Stream::reli_sock);
 				bool hung_up = dynamic_cast<ReliSock*>(m_sock)->is_closed();
