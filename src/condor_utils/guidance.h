@@ -36,6 +36,8 @@ enum class GuidanceResult : int {
 #define COMMAND_JOB_SETUP           "DoJobSetup"
 #define COMMAND_COLOR_SLOT          "ColorSlot"
 
+#define COMMAND_START_NEW_FILE_TRANSFER     "StartNewFileTransfer"
+
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
 #define RTYPE_JOB_ENVIRONMENT       "JobEnvironment"
