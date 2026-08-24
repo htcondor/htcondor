@@ -398,7 +398,7 @@ public:
 		: _jobid(jid), _task(taskname) {}
 
 	auto operator<=>(const PreparingTaskInstance& ti) const {
-		if (auto cmp = _jobid <=> ti._jobid; cmp != nullptr) { 
+		if (auto cmp = _jobid <=> ti._jobid; cmp != 0) {
 			return cmp;
 		}
 		return _task <=> ti._task;
