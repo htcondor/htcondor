@@ -3553,6 +3553,14 @@ second is the value inside the container. If a ":ro" is specified after
 the second directory name, the volume will be mounted read-only inside
 the container.
 
+These administrator-configured volumes are bind-mounted using Docker's
+``--mount`` option. Unlike the older ``--volume`` option, ``--mount``
+requires the source directory on the host to already exist; if it does
+not, the container will fail to start rather than the directory being
+silently created. Note also that ``--mount`` does not support the
+SELinux relabel shortcuts (``:z`` / ``:Z``); such options are ignored
+with a warning in the *condor_starter* log.
+
 These directories will be bind-mounted unconditionally inside the
 container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
@@ -3572,6 +3580,37 @@ Extending the above example,
 In this case, the directory /path1 will get mounted inside the container
 only for jobs owned by user "smith", and who set +WantSomeDirMounted =
 true in their submit file.
+
+By default each of these is a bind mount of a host directory. An
+administrator may instead mount a Docker-managed named volume by setting
+:macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, in which case the first
+field of :macro:`DOCKER_VOLUME_DIR_xxx` is a Docker volume name rather than a
+host path. Arbitrary additional ``--mount`` suboptions may be supplied with
+:macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`, and appended to the mount
+specification.
+
+Both :macro:`DOCKER_VOLUME_DIR_xxx` and
+:macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS` are evaluated as ClassAd expressions
+in the context of the slot and job ads (or used as a literal string if the
+value is not a valid expression). This allows per-job values, such as mounting
+each user's own home directory out of a shared Docker volume. For example,
+given a Docker named volume ``nfs_home`` whose per-user subdirectories hold each
+user's home directory,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = HOME
+    DOCKER_VOLUME_DIR_HOME = strcat("nfs_home:/home/", Owner)
+    DOCKER_VOLUME_DIR_HOME_TYPE = volume
+    DOCKER_VOLUME_DIR_HOME_MOUNT_OPTS = strcat("volume-subpath=", Owner)
+    DOCKER_MOUNT_VOLUMES = HOME
+
+For a job owned by user "smith" this produces the mount specification
+``type=volume,source=nfs_home,target=/home/smith,volume-subpath=smith``,
+so only that user's subdirectory of the volume is mounted, at
+``/home/smith``, and no other user's home directory is exposed. (The
+``volume-subpath`` option requires Docker Engine 26.0 or later, and the
+subdirectory must already exist within the volume.)
 
 In addition to installing the Docker service, the single configuration
 variable :macro:`DOCKER` must be set. It defines the
