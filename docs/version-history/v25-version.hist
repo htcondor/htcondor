@@ -81,6 +81,14 @@
 
 *** 25.14.0 bugs
 
+- Fixed a bug where the KERBEROS authentication method failed if the server
+  was IPv6-only.
+  :jira:`2863`
+
+- Fixed a bug where :macro:`DISABLE_AUTHENTICATION_IP_CHECK` disabled the
+  warning but not the check.
+  :jira:`2863`
+
 - Fixed a bug where an idle job removed from the queue could occasionally
   fail to write a ``job aborted`` event to its job event log. This could
   cause :tool:`condor_dagman` to wait indefinitely for the job to finish.

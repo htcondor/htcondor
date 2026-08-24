@@ -1522,28 +1522,27 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
                                       auth_context_, 
                                       localAddrs,
                                       remoteAddrs))) {
+        dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
+            error_message_ptr(code) );
         goto error;
     }
     dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%p, %p}\n", remoteAddrs[0], remoteAddrs[1]);
-    
-    if (remoteAddrs[0]) {
-        struct in_addr in;
-        memcpy(&(in.s_addr), (remoteAddrs[0])[0].contents, sizeof(in_addr));
-        setRemoteHost(inet_ntoa(in));
-    }
-    krb5_free_addresses_ptr(krb_context_, localAddrs);
-    krb5_free_addresses_ptr(krb_context_, remoteAddrs);
-    
-    dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
-    return;
+    if (remoteAddrs[0]) {
+        char buf[INET6_ADDRSTRLEN];
+        int family = ((remoteAddrs[0])[0].addrtype == ADDRTYPE_INET6) ? AF_INET6 : AF_INET;
+        if(! inet_ntop(family, (remoteAddrs[0])[0].contents, buf, sizeof(buf))) {
+            dprintf(D_ALWAYS, "KERBEROS: Unable to parse remote address\n");
+            goto error;
+        }
+        setRemoteHost(buf);
+    }
+
+    dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
  error:
     krb5_free_addresses_ptr(krb_context_, localAddrs);
     krb5_free_addresses_ptr(krb_context_, remoteAddrs);
-
-    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
-			 error_message_ptr(code) );
 }
 
 int Condor_Auth_Kerberos :: endTime() const
