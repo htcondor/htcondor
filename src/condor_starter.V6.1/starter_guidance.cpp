@@ -544,7 +544,7 @@ Starter::handleJobSetupCommand(
 			// quantize-disk expressions, the size here is in KiB
 			// (the units of `Disk`).
 			auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
-			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %ld (KiB)\n", sizeOnDisk );
+			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %lld (KiB)\n", (long long)sizeOnDisk );
 			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
 
 			//
@@ -786,7 +786,7 @@ Starter::handleJobSetupCommand(
 				const bool CORRECTLY = true;
 				auto usage = s->GetDiskUsage(CORRECTLY);
 				auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
-				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %ld (KiB)\n", sizeOnDisk );
+				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %lld (KiB)\n", (long long)sizeOnDisk );
 			}
 
 			ClassAd context;
