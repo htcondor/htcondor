@@ -146,7 +146,7 @@ we tell HTCondor which input file to send to each instance of the program.
 
 :index:`examples<single: examples; submit description file>`
 
-Submitting many similar jobs with one queue command
+Submitting many similar jobs with the queue command
 ---------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
@@ -219,13 +219,13 @@ to
 
       transfer_input_files = initial.dat
       arguments            = -infile initial.dat
-      queue
+      # generate the first job $(ClusterId).0
       transfer_input_files = middle.dat
       arguments            = -infile middle.dat
-      queue
+      # generate the second job $(ClusterId).1
       transfer_input_files = ending.dat
       arguments            = -infile ending.dat
-      queue
+      # generate the third job $(ClusterId).2
 
 **Example 2**
 
@@ -240,11 +240,11 @@ to
 .. code-block:: condor-submit
 
       input = A
-      queue
+      # generate the first job $(ClusterId).0
       input = B
-      queue
+      # generate the second job $(ClusterId).1
       input = C
-      queue
+      # generate the third job $(ClusterId).2
 
 
 **Example 3**
@@ -264,10 +264,10 @@ specified is given a value from the list of items. For this example the
 
       input = file1
       arguments = -a -b 26
-      queue
+      # generate the first job $(ClusterId).0
       input = file2
       arguments = -c -d 92
-      queue
+      # generate the second job $(ClusterId).1
 
 **Example 4**
 
@@ -280,11 +280,11 @@ feeds the list of items to queue with the output of ``seq 7 9``:
 .. code-block:: condor-submit
 
       item = 7
-      queue
+      # generate the first job $(ClusterId).0
       item = 8
-      queue
+      # generate the second job $(ClusterId).1
       item = 9
-      queue
+      # generate the third job $(ClusterId).2
 
 Variables in the Submit Description File
 ----------------------------------------
@@ -297,9 +297,9 @@ file.
 
 ``$(Cluster)`` or ``$(ClusterId)``
     Each set of queued jobs from a specific user, submitted from a
-    single submit host, sharing an executable have the same value of
+    single submit host have the same value of
     ``$(Cluster)`` or ``$(ClusterId)``. The first cluster of jobs are
-    assigned to cluster 0, and the value is incremented by one for each
+    assigned to cluster 1, and the value is incremented by one for each
     new cluster of jobs. ``$(Cluster)`` or ``$(ClusterId)`` will have
     the same value as the job ClassAd attribute :ad-attr:`ClusterId`.
 
@@ -1579,7 +1579,7 @@ submit description file that queues three jobs for this example:
                      (Arch == "aarch64" && OpSys == "LINUX")
 
       arguments    = +W1024 +H768 +Iimage1.pov
-      queue
+      queue 3
 
 
 These jobs are submitted to the vanilla universe to assure that once a
@@ -1594,7 +1594,7 @@ HTCondor will place the job in the held state until the problem is
 resolved.
 
 The second common error occurs due to an incomplete job set up. For
-example, the submit description file given above specifies three
+example, the submit description file given above specifies two
 available executables. If one is missing, HTCondor reports back that an
 executable is missing when it happens to match the job with a resource
 that requires the missing binary.
