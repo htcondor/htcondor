@@ -353,9 +353,10 @@ def check_job_transform_old_syntax(*args, **kwargs):
 
 
 def check_credmon_disallowed_characters(*args, **kwargs):
-    """Check configured token provideder names are valid"""
+    """Check configured token provider names are valid"""
     CONFIG_OPTIONS = [
         "LOCAL_CREDMON_PROVIDER_NAMES",
+        "LOCAL_CREDMON_PROVIDER_NAME",
         "OAUTH2_CREDMON_PROVIDER_NAMES",
         "CLIENT_CREDMON_PROVIDER_NAMES",
         "VAULT_CREDMON_PROVIDER_NAMES",
@@ -376,7 +377,8 @@ def check_credmon_disallowed_characters(*args, **kwargs):
     if has_invalid:
         format_print(
             """
-            The following token provider names are invalid due to use of
+            Unless CREDMON_ALLOW_SPECIAL_CHAR_NAMES is set to True,
+            the following token provider names are invalid due to use of
             non-alphanumeric/hyphen characters:
             """,
             offset=4,
