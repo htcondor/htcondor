@@ -33,6 +33,21 @@ _LAUNCH_TIME = int(time.time())
 
 
 def _normalize_target_bool_attr(attr: str) -> str:
+    """
+    Normalize a boolean attribute name matched by the target_bool_attrs
+    dynamic template (e.g. Want*, Has*, Is*) to a consistent casing.
+
+    ClassAd attribute names are case-insensitive, so the same attribute
+    may appear as "WantFlocking", "wantflocking", or "WANTFLOCKING"
+    across different ads. This function normalizes to UpperCamelCase
+    (i.e. the "WantFlocking" style).
+
+    Examples:
+        "wantflocking"   -> "WantFlocking"
+        "HASCONTAINER"   -> "HasContainer"
+        "is_resumable"   -> "Is_Resumable"
+        "WantGPU"        -> "WantGpu"
+    """
     attr = attr.lower()
     prefix = next((x for x in ["want", "has", "is"] if attr.startswith(x)), "")
     middle = "_" if len(attr) > len(prefix) and attr[len(prefix)] == "_" else ""
