@@ -1,9 +1,36 @@
 *** 25.14.0 features
 
+- Administrator-configured Docker universe bind mounts (the
+  :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
+  option instead of the older ``--volume`` option. A volume may now be a
+  Docker-managed named volume rather than a host directory by setting
+  :macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, and arbitrary additional
+  ``--mount`` suboptions may be supplied with the new
+  :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`. Both the volume source and the
+  mount options are evaluated as ClassAd expressions in the context of the
+  slot and job ads, allowing per-job values such as mounting each user's own
+  subdirectory of a shared volume.
+  :jira:`3879`
+
+- Container universe jobs that use the apptainer or singularity runtime
+  now detect AMD or nvidia gpus, and add --nv or --rocm appropriately
+  to the apptainer exec command line.  This should allow container
+  universe jobs on AMD GPU systems to properly access their GPUs.
+  :jira:`3887`
+
+- :tool:`condor_rm` now accepts a **-held** option that restricts the
+  removal to jobs in the held state. It may be combined with the usual
+  constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
+  so that only the held jobs among those selected are removed.
+  :jira:`3710`
+
 - :tool:`condor_watch_q` now draws its live display on the terminal's
   alternate screen, so quitting restores whatever was on the console
   before it started, the same way less behaves.
   :jira:`3854`
+
+- Support detection and advertising of AMD GPUs on ROCM 7 systems.
+  :jira:`3880`
 
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
   finer control on what constitutes failure with a job list in a single
@@ -27,6 +54,11 @@
   all cases.
   :jira:`3873`
 
+- The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
+  has been changed to an error by changing the default value for 
+  :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``True``.
+  :jira:`3878`
+  
 - The credmon can now obtain and renew OAuth2 access tokens from a
   `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF), so
   that jobs can read and write federation objects with ``osdf://`` and
@@ -42,6 +74,14 @@
   configurations continue to work.
   :jira:`3784`
 
+- Enhance :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to verify that the
+  server's shared_port id matches.
+  :jira:`3883`
+
+- When storing passwords for Windows users, :tool:`condor_store_cred` can
+  now read the password from stdin.
+  :jira:`3881`
+
 - When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
@@ -53,12 +93,30 @@
   (e.g. Elasticsearch).
   :jira:`2909`
 
+- For **batch** grid universe jobs submitted to a local batch system,
+  restore the old behavior of creating a temporary directory in which to
+  run the job by default (``blah_run_in_workdir=no`` in the ``blah.config`` file).
+  When using ``condor_remote_cluster`` to submit jobs to a remote batch
+  system via ssh, disable creation of the temporary directory by default
+  (set ``blah_run_in_workdir=yes`` in the remote ``blah.config`` file).
+  Also fix a couple bugs with determining which files need to be copied
+  when a temporary directory isn't being created.
+  :jira:`3882`
+
 *** 25.14.0 bugs
+
+- The Python bindings no longer assume that all ads in a legacy-style reply
+  from the negotiator contain only attributes present in the ad indexed #1.
+  :jira:`3884`
 
 - Fixed a bug where an idle job removed from the queue could occasionally
   fail to write a ``job aborted`` event to its job event log. This could
   cause :tool:`condor_dagman` to wait indefinitely for the job to finish.
   :jira:`3875`
+
+- Fixed a bug where ``$$(CondorScratchDir)`` would not work for container universe
+  when file transfer was off and :macro:`SINGULARITY_TARGET_DIR` was set.
+  :jira:`3885`
 
 - Fixed a bug where a job with streaming output or error would not be
   able to reconnect to a restarted or rebooted schedd in some cases.

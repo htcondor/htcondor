@@ -379,6 +379,7 @@ if (BUILD_TESTING)
 			endif()
 			condor_pl_test(test_negotiator_slot_const "Test NEGOTIATOR_SLOT_CONSTRAINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_ceiling_lease "Test condor_userprio ceiling leases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_py_prio "Verify bindings legacy ad read fix" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_negotiator_reaps_resource_records "Test that the negotiator reaps stale accountant resource records" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_io_ft_error_reporting "Verify that input failures are reported if a failure output transfer fails" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 if(LINUX)
@@ -386,6 +387,7 @@ if(LINUX)
 			condor_pl_test(test_cgroup_oom "Verify that a job exceeding memory request is OOM held if cgroup v2 is available" "quick;ctest;root" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_ocu_basic "Verify that ocus work" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_rm_transfer "Test condor_rm -transfer option" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_rm_held "Test condor_rm -held option" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# LVM startd disk enforcement regression tests: Linux-only, and require root
 			# (or HTCONDOR_TEST_USE_SUDO=1 with passwordless sudo) to create/mount logical
 			# volumes -- see src/condor_tests/liblvm.py and src/condor_startd.V6/VolumeManager.cpp.

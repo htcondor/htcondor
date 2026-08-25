@@ -110,15 +110,26 @@ class TestCIF:
                 num_data_slots += 1
         assert num_data_slots == 1
 
-        # Wait for KEEP_DATA_CLAIM_IDLE to pass and a little slop.
-        time.sleep(20+5)
+        # Wait for the data slot to go away.  This happens KEEP_DATA_CLAIM_IDLE
+        # (20s) after the catalog goes idle, but the end-to-end latency is
+        # considerably larger and load-dependent: the schedd's release only
+        # fires once the (single-threaded) startd has finished vacating the
+        # ordinary jobs, and then the collector has to drop the stale ad.  So
+        # don't sleep a fixed interval and check once -- poll for the eventual
+        # state so we don't lose a sub-second race on a slow/busy machine.
+        results = None
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            results = the_condor.status(
+                ad_type = htcondor2.AdType.Startd,
+                projection = ['Name', 'Disk'],
+            )
+            if len(results) == 1 and "data" not in results[0]['Name']:
+                break
+            time.sleep(2)
 
-        results = the_condor.status(
-            ad_type = htcondor2.AdType.Startd,
-            projection = ['Name', 'Disk'],
-        )
         print()
-        print("After waiting KEEP_DATA_CLAIM_IDLE:")
+        print("After waiting for the data slot to be released:")
         print(results)
 
         assert len(results) == 1
