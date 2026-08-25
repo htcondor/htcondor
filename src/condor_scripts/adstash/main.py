@@ -50,7 +50,7 @@ def _ckpt_updater(args, checkpoint_queue, ad_source, daemon_type="unknown daemon
     3. the value None is fetched from the queue.
     """
     set_up_logging(args)
-    timeout = vars(args).get(f"{daemon_type}_history_timeout")
+    timeout = vars(args).get(f"{daemon_type}_history_timeout", 2*60)  # default 120s
     while True:
         try:
             logging.debug(f"Waiting {timeout} seconds for checkpoint...")
@@ -118,7 +118,7 @@ def adstash(args):
             if vars(args)[read_daemon]:
                 daemon_type, ad_type = source_type.split("_", maxsplit=1)
                 if skip_daemons:
-                    logging.warning(f"Skipping querying {daemon_type}s since --read_ad_file was set.")
+                    logging.warning(f"Skipping querying {daemon_type}s since --ad_file was set.")
                     continue
 
                 mappings, _ = setup_index(interface=interface, ad_type=ad_type, args=args)

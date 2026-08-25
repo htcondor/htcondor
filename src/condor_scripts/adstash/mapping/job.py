@@ -83,7 +83,6 @@ INDEXED_KEYWORD_ATTRS = {
     "DontEncryptOutputFiles",
     "EncryptInputFiles",
     "EncryptOutputFiles",
-    "EpochAdType",
     "Err",
     "ExitReason",
     "FetchFiles",
@@ -411,7 +410,6 @@ DATE_ATTRS = {
     "DAG_AdUpdateTime",
     "DeferralTime",
     "EnteredCurrentStatus",
-    "EpochWriteDate",
     "FirstJobMatchDate",
     "JobCoolDownExpiration",
     "JobCurrentFinishTransferInputDate",
@@ -651,7 +649,7 @@ DYNAMIC_TEMPLATES = [
     {"num_attrs": {  # Attrs starting with Num are usually numbers
         "match_pattern": "regex",
         "match": r"Num[A-Z].*",
-     "mapping": {"type": "long"},
+        "mapping": {"type": "long"},
     }},
     {"stats_attrs": {  # Attrs ending with Stats are usually
         "match_pattern": "regex",  # ClassAds containing floating point numbers

@@ -128,7 +128,7 @@ class ElasticsearchInterface(GenericInterface):
         except elasticsearch.exceptions.AuthorizationException:
             logging.warning(f"Search engine user {self.username} does not have cluster-level access, cannot get health status")
         except Exception as e:
-            logging.exception(f"Cannot get health status due to error")
+            logging.exception(f"Cannot get health status due to error: {e}")
         return health
 
 
