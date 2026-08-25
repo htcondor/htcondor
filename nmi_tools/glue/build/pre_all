@@ -75,7 +75,7 @@ else {
 ######################################################################
 
 my $got_version = 0;
-my $got_prerelase = 0;
+my $got_prerelease = 0;
 my $condor_version;
 my $condor_prerelease;
 print "Creating official source tarball\n";
