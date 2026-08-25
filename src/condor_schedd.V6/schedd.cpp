@@ -11219,17 +11219,11 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 		return false;
 	}
 
-	// unregister_shadow_catalogs() needs the PID of the shadow currently responsible
-	// for the catalog so that it won't erase entries that have been made in the map
-	// since then.
-	auto shadow = getShadowForCatalog( catalogName );
-	int shadow_pid = (* shadow)->pid;
-
 	// Why do we use manifest constants for attributes but not config knobs?
 	int keep_common_idle = param_integer( "KEEP_DATA_CLAIM_IDLE", 300 );
 	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
 		keep_common_idle, TIMER_NEVER,
-		[this, catalogName, shadow_pid](int /* timerID */) -> void {
+		[this, catalogName](int /* timerID */) -> void {
 			auto shadow = getShadowForCatalog( catalogName );
 			if(! shadow) {
 				dprintf( D_ALWAYS, "Found no shadow for catalog scheduled for clean-up: '%s'\n", catalogName.c_str() );
