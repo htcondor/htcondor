@@ -53,8 +53,9 @@ check_version_string () {
 }
 
 # get the version and build id
-condor_build_id=$(<BUILD-ID)
 condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+condor_build_id=$(<BUILD-ID)
+condor_build_epoch=$(<BUILD-EPOCH)
 condor_git_sha=-1
 if [ -f GIT-SHA ]; then
     condor_git_sha=$(<GIT-SHA)
@@ -98,7 +99,7 @@ if [ "$PRE_RELEASE" = 'OFF' ]; then
 else
     # Set HTCondor base release for pre-release build
     update_spec_define condor_release "0.$condor_build_id"
-    sed -i "/%changelog/a * $(date '+%a %b %d %Y') HTCondor automated builds <htcondor-admin@cs.wisc.edu> - ${condor_version}-0.${condor_build_id}\n- HTCondor automated build\n" SOURCES/condor.spec
+    sed -i "/%changelog/a * $(date --date=@$condor_build_epoch '+%a %b %d %Y') Test build <htcondor-admin@cs.wisc.edu> - ${condor_version}-0.${condor_build_id}\n- Test build\n" SOURCES/condor.spec
 fi
 
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined

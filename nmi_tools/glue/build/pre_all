@@ -70,37 +70,27 @@ else {
   print "Automatically discovered that my build id is: $runid\n";
 }
 
-my $buildid_file="BUILD-ID";
-open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
-print BUILDID_FILE "$runid\n";
-close( BUILDID_FILE );
-
 ######################################################################
-# Step #2: Record the git sha if available (per commit builds)
+# Step #2: Create the official source tarball, before we add build files
 ######################################################################
 
-# Stash this in the common dir for remote_pre
-if (defined($opt_sha1)) {
-  print "Using the git sha1 from command-line: $opt_sha1\n";
-  my $gitsha_file="GIT-SHA";
-  open( GITSHA_FILE, ">$gitsha_file") || die "Can't open $gitsha_file: $!\n";
-  print GITSHA_FILE "$opt_sha1\n";
-  close( GITSHA_FILE );
-}
-
-######################################################################
-# Step #3: Create the official source tarball
-######################################################################
-
+my $got_version = 0;
+my $got_prerelase = 0;
+my $condor_version;
+my $condor_prerelease;
 print "Creating official source tarball\n";
-chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 mkdir("/tmp/$runid") || die "Can't mkdir(/tmp/$runid): $!\n";
 open(CM, "CMakeLists.txt") || die "Can't open CMakeLists.txt: $!\n";
 while (<CM>) {
     if (m/^set\(VERSION "(\d+\.\d+\.\d+)"\)/) {
         $condor_version = $1;
-        break;
+        $got_version = 1;
     }
+    if (m/^set\(PRE_RELEASE (.*)\)/) {
+        $condor_prerelease = $1;
+        $got_prerelease = 1;
+    }
+    break if $got_version && $got_prerelease;
 }
 close(CM);
 if (defined($opt_daily)) {
@@ -109,7 +99,7 @@ if (defined($opt_daily)) {
 mkdir("/tmp/$runid/condor-$condor_version") ||
     die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
-system("rsync -a . /tmp/$runid/condor-$condor_version --exclude .git --exclude $buildid_file");
+system("rsync -a . /tmp/$runid/condor-$condor_version --exclude .git");
 chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
 
 open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) ||
@@ -132,7 +122,51 @@ if( $tar_status ) {
 system("rm -rf /tmp/$runid");
 
 ######################################################################
-# Step #4: build nroff sources
+# Step #3: Record the BUILD-ID and BUILD-EPOCH
+######################################################################
+
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+my $buildid_file="BUILD-ID";
+open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
+print BUILDID_FILE "$runid\n";
+close( BUILDID_FILE );
+
+my $build_epoch = time();
+if ($condor_prerelease =~ /^OFF$/) {
+    # For release builds, take the source epcoch date from the Debian Changelog
+    open(CHANGELOG, "build/packaging/debian/changelog") || die "Can't open build/packaging/debian/changelog: $!\n";
+    while (<CHANGELOG>) {
+        if (m/^ -- .*<.*@.*> (.*)/) {
+            open(DATE, "date --date='$1' +%s |") || die "Can't run the date command: $!\n";
+            $build_epoch = <DATE>;
+            chomp $build_epoch;
+            close(DATE);
+            last;
+        }
+    }
+    close(CHANGELOG);
+}
+my $buildepoch_file="BUILD-EPOCH";
+open( BUILDEPOCH_FILE, ">$buildepoch_file") || die "Can't open $buildepoch_file: $!\n";
+print BUILDEPOCH_FILE "$build_epoch\n";
+close( BUILDEPOCH_FILE );
+
+######################################################################
+# Step #4: Record the git sha if available (per commit builds)
+######################################################################
+
+# Stash this in the common dir for remote_pre
+if (defined($opt_sha1)) {
+  print "Using the git sha1 from command-line: $opt_sha1\n";
+  my $gitsha_file="GIT-SHA";
+  open( GITSHA_FILE, ">$gitsha_file") || die "Can't open $gitsha_file: $!\n";
+  print GITSHA_FILE "$opt_sha1\n";
+  close( GITSHA_FILE );
+}
+
+######################################################################
+# Step #5: build nroff sources
 ######################################################################
 
 if(!(defined $opt_skip_doc)){

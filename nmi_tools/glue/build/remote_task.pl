@@ -247,6 +247,24 @@ elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
 }
 
 ######################################################################
+# Set the SOURCE_DATE_EPOCH for this build
+######################################################################
+print "Finding source date epoch of Condor\n";
+my $build_epoch;
+my $build_epoch_file = "BUILD-EPOCH";
+open( BUILDEPOCH, "$build_epoch_file" ) || die "Can't open $build_epoch_file: $!\n";
+my @stat = stat(BUILDEPOCH);
+while( <BUILDEPOCH> ) {
+    chomp;
+    $build_epoch = $_;
+}
+close( BUILDEPOCH );
+if( ! $build_epoch ) {
+    die "Can't find Condor source date epoch in $build_epoch_file!\n";
+}
+$ENV{SOURCE_DATE_EPOCH} = "$build_epoch";
+
+######################################################################
 # build
 ######################################################################
 
