@@ -1,5 +1,17 @@
 *** 25.14.0 features
 
+- Administrator-configured Docker universe bind mounts (the
+  :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
+  option instead of the older ``--volume`` option. A volume may now be a
+  Docker-managed named volume rather than a host directory by setting
+  :macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, and arbitrary additional
+  ``--mount`` suboptions may be supplied with the new
+  :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`. Both the volume source and the
+  mount options are evaluated as ClassAd expressions in the context of the
+  slot and job ads, allowing per-job values such as mounting each user's own
+  subdirectory of a shared volume.
+  :jira:`3879`
+
 - Container universe jobs that use the apptainer or singularity runtime
   now detect AMD or nvidia gpus, and add --nv or --rocm appropriately
   to the apptainer exec command line.  This should allow container
