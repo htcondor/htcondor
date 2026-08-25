@@ -134,7 +134,7 @@ close( BUILDID_FILE );
 
 my $build_epoch = time();
 if ($condor_prerelease =~ /^OFF$/) {
-    # For release builds, take the source epcoch date from the Debian Changelog
+    # For release builds, take the source epoch date from the Debian Changelog
     open(CHANGELOG, "build/packaging/debian/changelog") || die "Can't open build/packaging/debian/changelog: $!\n";
     while (<CHANGELOG>) {
         if (m/^ -- .*<.*@.*> (.*)/) {
