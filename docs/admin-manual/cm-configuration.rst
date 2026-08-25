@@ -2006,7 +2006,7 @@ Before running :tool:`condor_adstash` for the first time,
 consider using ``condor_adstash --init_index``
 to generate the JSON files needed
 to set up the search engine index, index template, and (for Elasticsearch) ILM policy.
-See the :doc:`../man-pages/condor_adstash` man page
+See the :tool:`condor_adstash` man page
 for details on index initialization and other options.
 
 If you prefer to run :tool:`condor_adstash` in standalone mode, or are
