@@ -14,12 +14,8 @@ docker://htcondor/nmi-build:x86_64_AlmaLinux9-25130100,x86-AL9,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_AlmaLinux10-25130100,x86-AL10,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-25130100,x86v2-AL10,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-25130100,x86-A23,ubuntu-latest,all
-docker://htcondor/nmi-build:x86_64_Debian12-25130100,x86-D12,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_Debian13-25130100,x86-D13,ubuntu-latest,all
-docker://htcondor/nmi-build:x86_64_openSUSE15-25130100,x86-OS15,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_openSUSE16-25130100,x86-OS16,ubuntu-latest,all
-docker://htcondor/nmi-build:x86_64_SLES15SP5-25130100,x86-SLES15,batlab,batlab
-docker://htcondor/nmi-build:x86_64_Ubuntu22-25130100,x86-U22,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_Ubuntu24-25130100,x86-U24,ubuntu-latest,all:ubunturoot
 docker://htcondor/nmi-build:x86_64_Ubuntu26-25130100,x86-U26,ubuntu-latest,all:ubunturoot
 x86_64_macOS13,macos,batlab,batlabonly
