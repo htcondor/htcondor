@@ -26,7 +26,7 @@ class JSONFileInterface(NullInterface):
 
 
     def __init__(self, json_dir=Path.cwd(), log_mappings=True, **kwargs):
-        self.json_dir = Path(json_dir)
+        self.json_dir = Path(kwargs.get("log_dir", json_dir))
         self.log_mappings = log_mappings
 
 
