@@ -567,6 +567,11 @@ match_rec::~match_rec()
 		// If we are shuting down, the daemonCore instance will be null
 		// and any use of it will cause a core dump.  At best.
 	if (!daemonCore) {
+			// Still free claim_id, which is normally freed at the end of
+			// this destructor (after the sec-session block that references
+			// it).  Without this, shutdown-time destruction leaks it.
+		claim_id_parser.clear(); // clear because this refs the claim_id we are about to free
+		if (claim_id) { free(claim_id); claim_id = nullptr; }
 		return;
 	}
 
