@@ -51,7 +51,7 @@ Options
  **-v/-verbose**
     Cause *condor_submit_dag* to give verbose error messages.
  **-terse**
-    Display only the resulting DAGMan job id.
+    Display only the resulting DAGMan job id on success.
  **-f/-force**
     Don't fail to place DAGMan job to AP if previous execution files
     are discovered. Previous execution files (except the ``*.dagman.out``)

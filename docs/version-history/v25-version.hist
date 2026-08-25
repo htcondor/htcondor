@@ -55,7 +55,7 @@
   :jira:`3873`
 
 - :tool:`condor_submit_dag` now has a ``-terse`` option to only display the
-  resulting DAGMan job id.
+  resulting DAGMan job id on success.
   :jira:`3890`
 
 - The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
