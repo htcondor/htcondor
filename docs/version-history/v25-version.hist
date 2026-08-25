@@ -54,6 +54,10 @@
   all cases.
   :jira:`3873`
 
+- :tool:`condor_submit_dag` now has a ``-terse`` option to only display the
+  resulting DAGMan job id.
+  :jira:`3890`
+
 - The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
   has been changed to an error by changing the default value for 
   :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``True``.
