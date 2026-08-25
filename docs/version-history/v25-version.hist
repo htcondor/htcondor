@@ -1,3 +1,9 @@
+*** 25.0.14 features
+
+- Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
+  and incompatibilities going to V26 of HTCondor.
+  :jira:`3453`
+
 *** 25.0.14 bugs
 
 - Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
