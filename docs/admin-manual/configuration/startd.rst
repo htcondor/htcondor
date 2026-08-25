@@ -1462,9 +1462,38 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     A list of volumes, defined in the macro above, that will unconditionally
     be mounted inside the docker container.
 
+:macro-def:`DOCKER_VOLUME_DIR_xxx`
+    Defines the volume named xxx, one of the volumes listed in
+    :macro:`DOCKER_VOLUMES`. The value is evaluated as a ClassAd expression in
+    the context of the slot (machine) ad and the job ad; if it is not a valid
+    ClassAd expression it is used as a literal string. By default the first
+    field of the value is a directory on the host execute machine, which is
+    bind-mounted into the container; if :macro:`DOCKER_VOLUME_DIR_xxx_TYPE` is
+    ``volume`` it is instead the name of a Docker-managed named volume. A
+    second field, separated by a colon, gives the path inside the container,
+    and may be followed by ``:ro`` to mount it read-only.
+
 :macro-def:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF`
     This is a class ad expression, evaluated in the context of the job ad and the
     machine ad. Only when it evaluated to TRUE, is the volume named xxx mounted.
+
+:macro-def:`DOCKER_VOLUME_DIR_xxx_TYPE`
+    The Docker ``--mount`` type used for the volume named xxx. The default is
+    ``bind``, which bind-mounts a host directory. Set this to ``volume`` to use
+    a Docker-managed named volume instead; in that case the first field of
+    :macro:`DOCKER_VOLUME_DIR_xxx` is interpreted as a Docker volume name rather
+    than a host path.
+
+:macro-def:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`
+    Additional ``--mount`` suboptions for the volume named xxx, appended
+    (comma-separated) to the generated mount specification. This value is
+    evaluated as a ClassAd expression in the context of the slot (machine) ad
+    and the job ad; if it is not a valid ClassAd expression it is used as a
+    literal string. The resulting text is not otherwise interpreted by HTCondor,
+    so it may be used to pass options such as ``volume-driver=...`` or
+    ``volume-opt=...`` that HTCondor does not otherwise expose. For example, a
+    literal ``volume-opt=type=nfs,volume-opt=device=:/path``, or an expression
+    such as ``strcat("volume-opt=o=uid=", Owner)``.
 
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on

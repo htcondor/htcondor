@@ -1511,7 +1511,7 @@ int submit_jobs (
 
 		// Error if any data (non-comment/blank lines) exist post queue for late materialization
 		// and if AP admin is preventing multi-queue statement submits
-		if (GotQueueCommand && (want_factory || param_boolean("SUBMIT_PREVENT_MULTI_QUEUE", false))) {
+		if (GotQueueCommand && (want_factory || param_boolean("SUBMIT_PREVENT_MULTI_QUEUE", true))) {
 			if ( ! CmdFileIsStdin) {
 				bool extra_data = false;
 				const char* line;

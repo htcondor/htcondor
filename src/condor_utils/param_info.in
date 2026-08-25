@@ -2202,6 +2202,12 @@ type=bool
 tags=submit
 description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
 
+[SUBMIT_PREVENT_MULTI_QUEUE]
+default=true
+type=bool
+tags=submit
+description=Submit will stop at the first QUEUE statement and warn if it sees anything after it.
+
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
 default=false
@@ -6453,7 +6459,7 @@ default=250
 [ADSTASH_SE_INDEX_NAME]
 description=What search engine index should condor_adstash push ads to
 type=string
-default=htcondor-000001
+default=htcondor
 [ADSTASH_SE_LOG_MAPPINGS]
 description=Should condor_adstash log mappings used with search engine interfaces
 type=bool

@@ -901,9 +901,9 @@ Each invocation of :tool:`condor_submit` assigns a single :ad-attr:`ClusterId` f
 what is considered the single parallel job submitted. The
 :subcom:`machine_count[example]`
 submit command identifies how many machines (slots) are to be allocated.
-Each instance of the :subcom:`queue[with parallel universe]`
+Each row of the table of the :subcom:`queue[with parallel universe]`
 submit command acquires and claims the number of slots specified by
-:subcom:`machine_count`. Each of these slots shares a common job ClassAd and
+:subcom:`machine_count` for that row. Each of these slots shares a common job ClassAd and
 will have the same :ad-attr:`ProcId` job ClassAd attribute value.
 
 Once the correct number of machines are claimed, the
@@ -1114,24 +1114,23 @@ command that also specifies the number of needed machines.
     ######################################
     universe = parallel
     executable = special.exe
-    machine_count = 1
-    requirements = ( machine == "machine1@example.com")
     request_cpus   = 1
     request_memory = 1024M
     request_disk   = 10240K
 
-    queue
+    queue machine_count,requirements from (
+      1, machine == "machine1@example.com"
+      3, machine =!= "machine1@example.com"
+    )
 
-    machine_count = 3
-    requirements = ( machine =!= "machine1@example.com")
-    queue
 
 The dedicated scheduler acquires and claims four machines. All four
 share the same value of :ad-attr:`ClusterId`, as this value is associated with
-this single parallel job. The existence of a second
+this single parallel job. The existence of a two rows for ``queue ... from``
 :subcom:`queue[with parallel universe]` command causes a total
 of two :ad-attr:`ProcId` values to be assigned for this parallel job. The
-:ad-attr:`ProcId` values are assigned based on ordering within the submit
+:ad-attr:`ProcId` values are assigned based on ordering of the rows of the
+``queue ... from`` statement in the submit
 description file. Value 0 will be assigned for the single executable
 that must be executed on machine1@example.com, and the value 1 will be
 assigned for the other three that must be executed elsewhere.

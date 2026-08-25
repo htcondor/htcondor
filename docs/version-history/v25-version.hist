@@ -1,5 +1,17 @@
 *** 25.14.0 features
 
+- Administrator-configured Docker universe bind mounts (the
+  :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
+  option instead of the older ``--volume`` option. A volume may now be a
+  Docker-managed named volume rather than a host directory by setting
+  :macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, and arbitrary additional
+  ``--mount`` suboptions may be supplied with the new
+  :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`. Both the volume source and the
+  mount options are evaluated as ClassAd expressions in the context of the
+  slot and job ads, allowing per-job values such as mounting each user's own
+  subdirectory of a shared volume.
+  :jira:`3879`
+
 - Container universe jobs that use the apptainer or singularity runtime
   now detect AMD or nvidia gpus, and add --nv or --rocm appropriately
   to the apptainer exec command line.  This should allow container
@@ -42,6 +54,11 @@
   all cases.
   :jira:`3873`
 
+- The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
+  has been changed to an error by changing the default value for 
+  :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``True``.
+  :jira:`3878`
+  
 - The credmon can now obtain and renew OAuth2 access tokens from a
   `Pelican <https://pelicanplatform.org/>`_ federation (such as the OSDF), so
   that jobs can read and write federation objects with ``osdf://`` and
@@ -68,6 +85,13 @@
 - When the knob :macro:`DOCKER_TRUST_LOCAL_IMAGES` is true, allow docker images
   without an explicit docker tag in the image name to be in the cache.
   :jira:`3876`
+
+- :tool:`condor_adstash` obeys existing index properties and allows for
+  custom field properties, dynamic templates, index settings, and ignored
+  attributes. :tool:`condor_adstash` can also provide JSON resources (initial
+  index, index template, ILM policy) for new deployments to a search engine
+  (e.g. Elasticsearch).
+  :jira:`2909`
 
 - For **batch** grid universe jobs submitted to a local batch system,
   restore the old behavior of creating a temporary directory in which to
