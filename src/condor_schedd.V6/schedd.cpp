@@ -18495,6 +18495,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	std::string job_claimid_buf;
 	char const *job_claimid = NULL;
 	char const *match_sec_session_id = NULL;
+	std::string match_sec_session_buf; // backs match_sec_session_id; must outlive its use below
 	int universe = -1;
 	std::string startd_name;
 	std::string starter_addr;
@@ -18679,8 +18680,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 		job_claimid = mrec->claimId();
 		if (mrec->use_sec_session) {
-			std::string sessbuf;
-			match_sec_session_id = mrec->secSessionId(sessbuf);
+			match_sec_session_id = mrec->secSessionId(match_sec_session_buf);
 		}
 	}
 
