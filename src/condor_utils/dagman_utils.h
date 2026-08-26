@@ -155,7 +155,8 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot, SetupOnly
+		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot, SetupOnly,
+		Terse
 	);
 
 	BETTER_ENUM(slist, long,
@@ -243,6 +244,7 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-SetupOnly",     {"SetupOnly", "True", "Set up DAG and exit before execution", 0}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
 	{"-SubmitMethod",  {"SubmitMethod", "<value>", "Specify how DAGMan submits jobs for execution (0=condor_submit|1=DirectSubmit)", DAG_OPT_DISP_ALL}},
+	{"-terse",         {"Terse", "True", "Display only the resulting DAGMan job id on success", DAG_OPT_DISP_CSD}}, // Only used in condor_submit_dag
 	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
 	{"-UseDagDir",     {"UseDagDir", "True", "Run DAGs in directories specified by DAG file paths", DAG_OPT_DISP_ALL}},
 	{"-v",             {"Verbose", "True", "See -Verbose", 0}}, // Single letter flag to make -v equal to -Verbose
