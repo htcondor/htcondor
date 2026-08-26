@@ -249,10 +249,39 @@ is set.
     ``LastHeardFrom`` value. Default is ``False``.
 
 :macro-def:`PROMETHEUS_DEFAULT_LABELS`
-    A label-set string applied as defaults to every Prometheus sample.
-    Example: ``pool="mypoolname"``. Per-metric labels supplied via the
-    ``PrometheusLabels`` keyword override defaults that share the same
-    key.
+    A ClassAd of label expressions applied as defaults to every Prometheus
+    sample. Each attribute name is a Prometheus label name, and each attribute
+    value is a ClassAd expression that is evaluated against the ad of the
+    daemon the sample came from. *condor_metricd* handles all quoting and
+    escaping of the resulting label values, so nothing in this ad ever needs
+    to be escaped by hand.
+
+    For a short label set, write the ad bracketed on a single line:
+
+    .. code-block:: condor-config
+
+          PROMETHEUS_DEFAULT_LABELS = [ pool = "mypoolname"; machine = Machine ]
+
+    For anything longer, use a configuration heredoc and the long ClassAd
+    form, one label per line:
+
+    .. code-block:: condor-config
+
+          PROMETHEUS_DEFAULT_LABELS @=end
+             pool    = "mypoolname"
+             machine = Machine
+             daemon  = MyType
+          @end
+
+    Because these are expressions rather than fixed text, a pool-wide default
+    can depend on the daemon being sampled -- ``machine = Machine`` above adds
+    the correct ``machine`` label to every sample without any per-metric
+    configuration.
+
+    Per-metric labels supplied via the ``PrometheusLabels`` keyword override
+    defaults that share the same label name. The label-name rules and the
+    value-evaluation rules described under ``PrometheusLabels`` apply here
+    as well.
 
 :macro-def:`PROMETHEUS_WANT_RESET_METRICS`
     Per-backend reset-metrics flag. Defaults to ``False``.
@@ -277,10 +306,68 @@ gangliad mode.
     the metric is exported to every enabled backend.
 
 ``PrometheusLabels``
-    A string ClassAd expression that evaluates to a label-set string,
-    e.g. ``strcat("machine=\"",Machine,"\"")``. The result is merged
-    with :macro:`PROMETHEUS_DEFAULT_LABELS`; same-keyed entries from this
-    expression override the pool-wide defaults.
+    A ClassAd whose attribute names are Prometheus label names and whose
+    attribute values are ClassAd expressions. Each expression is evaluated
+    against the ad of the daemon the sample came from, exactly like the
+    ``Value`` and ``Desc`` keywords are. For example:
+
+    .. code-block:: text
+
+          [
+            Name = "jobs_running";
+            Value = TotalRunningJobs;
+            Desc = "Number of running jobs";
+            TargetType = "Scheduler";
+            PrometheusLabels = [
+                machine = Machine;
+                pool    = "cm.example.edu";
+                version = CondorVersion;
+            ];
+          ]
+
+    which produces exposition lines such as::
+
+          jobs_running{machine="ap1.example.edu",pool="cm.example.edu",version="..."} 17
+
+    The result is merged with :macro:`PROMETHEUS_DEFAULT_LABELS`; labels
+    defined here override pool-wide defaults with the same label name.
+
+    *condor_metricd* quotes and escapes each label value when it writes the
+    exposition text, so a label value containing a comma, a double quote, or
+    a backslash is emitted correctly without any escaping in the metric
+    definition.
+
+    Label values are rendered according to the type each expression evaluates
+    to: strings are used verbatim, integers are rendered as decimal, real
+    numbers are rendered with ``%g``, and booleans are rendered as ``true``
+    or ``false``.
+
+    An expression that evaluates to ``UNDEFINED`` or ``ERROR`` -- or to a
+    non-scalar value such as a list or a nested ad -- causes that label to be
+    **omitted** from the sample rather than emitted with an empty value. This
+    is the intended way to make a label conditional:
+
+    .. code-block:: text
+
+          PrometheusLabels = [
+              machine = Machine;
+              tier    = ifThenElse(IsProductionMachine, "prod", undefined);
+          ];
+
+    Here the ``tier`` label appears only on samples from machines where
+    ``IsProductionMachine`` is true, and ``machine`` is simply absent from any
+    daemon ad that has no ``Machine`` attribute.
+
+    Label names must match the Prometheus grammar
+    ``[a-zA-Z_][a-zA-Z0-9_]*`` and must not begin with ``__``, which
+    Prometheus reserves for its own use. An illegal label name is reported
+    once in the *condor_metricd* log when the configuration is read, and that
+    label is not published.
+
+    Each label expression is evaluated against the daemon ad directly rather
+    than within the label ad, so ``machine = Machine`` means "the ``Machine``
+    attribute of the daemon ad" and is not a self-reference. One consequence
+    is that label expressions cannot refer to one another.
 
 ``Counter``
     A boolean. Synonym for ``Derivative``. Applies in both modes.

@@ -115,7 +115,7 @@ Metric
 | Keyword | Type | Description |
 |---|---|---|
 | `ExportMetric` | string expression | Comma-separated backend names: `"ganglia"`, `"prometheus"`, `"ganglia, prometheus"`. Empty/omitted = all enabled backends. Pool-wide default via `METRICD_DEFAULT_EXPORT_METRIC`. In legacy mode the field is parsed but never read (GangliaD's `publishMetric()` check passes when `export_systems` is empty). |
-| `PrometheusLabels` | ClassAd string expression | Evaluates to a label set, e.g. `strcat("machine=\"",Machine,"\"")`. Merged with `PROMETHEUS_DEFAULT_LABELS`; per-metric overrides same-key defaults. Ignored in legacy mode. |
+| `PrometheusLabels` | nested ClassAd | Attribute names are label names; attribute values are expressions evaluated against the daemon ad, e.g. `[ machine = Machine ]`. Merged with `PROMETHEUS_DEFAULT_LABELS`; per-metric overrides same-key defaults. `UNDEFINED`/`ERROR` omits the label. Ignored in legacy mode. |
 | `Counter` | boolean | Synonym for `Derivative`. Applies in both modes (harmless additive). |
 
 ---
@@ -165,7 +165,7 @@ In code (`gangliad.cpp`), each rename is a one-line picker: `const char *knob = 
 |---|---|---|
 | `PROMETHEUS_METRICS_FILE` | *(empty — disabled)* | Output file path; backend disabled if empty. |
 | `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` | `false` | Append ms timestamp to each sample line. |
-| `PROMETHEUS_DEFAULT_LABELS` | *(empty)* | Default label set, e.g. `pool="mypoolname"`. |
+| `PROMETHEUS_DEFAULT_LABELS` | *(empty)* | Default label ad, e.g. `[ pool = "mypoolname"; machine = Machine ]`, or the same in long form inside a `@=end` heredoc. |
 | `PROMETHEUS_WANT_RESET_METRICS` | **false** | Per-backend reset-metrics flag. |
 | `PROMETHEUS_RESET_METRICS_FILE` | spool-based | Used only if above is true. |
 
@@ -173,10 +173,14 @@ In code (`gangliad.cpp`), each rename is a one-line picker: `const char *knob = 
 
 ## Prometheus Label Merging
 
-`PrometheusD` stores `m_default_labels` parsed from `PROMETHEUS_DEFAULT_LABELS` as `std::map<std::string,std::string>`. For each sample, `buildEffectiveLabels(metric)`:
-1. Starts from `m_default_labels`
-2. Parses `metric.prometheus_labels` and overlays (per-metric overrides same-key defaults)
-3. Re-serializes sorted as `key="value",…` wrapped in `{…}`
+`PrometheusD` stores `m_default_labels` parsed from `PROMETHEUS_DEFAULT_LABELS` as a `classad::ClassAd` of label *expressions*, exposed to the base class via `StatsD::defaultLabelAd()`. Merging happens during metric evaluation, in `Metric::evaluateLabels()`, because that is where the daemon ad is in hand:
+1. Evaluate every attribute of the default label ad against the daemon ad into `metric.prometheus_labels`
+2. Evaluate every attribute of the metric's own `PrometheusLabels` ad and overlay (per-metric overrides same-name defaults)
+3. Each label expression is evaluated with the *daemon ad* as its scope, not the label ad — ClassAd lookup is case-insensitive, so evaluating in the label ad's own scope would make `machine = Machine` a circular self-reference. Labels therefore cannot refer to one another.
+4. `UNDEFINED`, `ERROR`, and non-scalar results omit the label rather than emitting it empty
+5. `PrometheusD::serializeLabels()` renders the resolved map sorted as `key="value",…` wrapped in `{…}`, quoting and escaping each value
+
+Because default-label expressions reference daemon-ad attributes, `PrometheusD::extraProjectionRefs()` contributes their external references to the collector projection. Per-metric label references are picked up by the existing metric-definition walk in `StatsD::ParseMetrics()`, which recurses into nested ads.
 
 Private helpers `parseLabels(string) → map` and `serializeLabels(map) → string` in `prometheusd.cpp`.
 
@@ -461,7 +465,7 @@ htcondor_jobs_running{pool="mypoolname",machine="submit.wisc.edu"} 42 1716163200
 htcondor_file_transfer_bytes_total{pool="mypoolname",machine="submit.wisc.edu"} 1234567890 1716163200000
 ```
 
-(Merged `PROMETHEUS_DEFAULT_LABELS = pool="mypoolname"` + per-metric `PrometheusLabels = strcat("machine=\"",Machine,"\"")`.)
+(Merged `PROMETHEUS_DEFAULT_LABELS = [ pool = "mypoolname" ]` + per-metric `PrometheusLabels = [ machine = Machine ]`.)
 
 ---
 

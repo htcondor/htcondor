@@ -64,7 +64,7 @@ def _ganglia_publish_line(log_text, metric_name):
 
 # NOTE: make both_backend_test_metric the last metric in the list to ensure it gets published to Ganglia before
 # we check the Ganglia log, since Metricd processes metrics in the order they are defined in the config directory.
-METRIC_DEFS = """
+METRIC_DEFS = r"""
 [
   Name = "ganglia_only_test_jobs";
   Value = 7;
@@ -78,7 +78,7 @@ METRIC_DEFS = """
   Desc = "Prometheus-only test metric";
   TargetType = "Scheduler";
   ExportMetric = "prometheus";
-  PrometheusLabels = strcat("machine=\\"",Machine,"\\"");
+  PrometheusLabels = [ machine = Machine ];
 ]
 [
   Name = "test_bytes_transferred";
@@ -129,6 +129,42 @@ METRIC_DEFS = """
   ExportMetric = "prometheus";
 ]
 [
+  Name = "label_syntax_test_metric";
+  Value = 23;
+  Desc = "Exercises the PrometheusLabels ClassAd syntax";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [
+      /* CondorVersion is a schedd-ad attribute that no other metric in this
+         file references and that is not in metricd's hardcoded projection
+         set, so this label only resolves if GetExternalReferences() recursed
+         into this nested ad when the collector projection was computed. */
+      version   = CondorVersion;
+      /* value rendering by evaluated type */
+      literal   = "plain";
+      computed  = strcat("v", string(2 + 3));
+      number    = 42;
+      flag      = true;
+      /* metricd, not the admin, is responsible for quoting and escaping */
+      tricky    = "a,b\"q\"c\\d";
+      /* UNDEFINED and ERROR omit the label rather than emitting it empty */
+      missing   = NoSuchAttributeOnASchedd;
+      bad_error = 1 / 0;
+      /* illegal label name: rejected and reported once at config-read time */
+      __reserved = "nope";
+      /* overrides the pool-wide default of the same name */
+      pool      = "override";
+  ];
+]
+[
+  Name = "legacy_label_syntax_metric";
+  Value = 3;
+  Desc = "The old string label syntax is no longer accepted";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = "machine=notalabel";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -152,7 +188,11 @@ def condor_with_metricd(test_dir):
         "GANGLIA_SEND_DATA_FOR_ALL_HOSTS":      "true",
         "PROMETHEUS_METRICS_FILE":              str(prom_file),
         "PROMETHEUS_METRICS_INCLUDE_TIMESTAMP": "true",
-        "PROMETHEUS_DEFAULT_LABELS":            'pool="testpool"',
+        # New-style label ad. CondorPlatform is deliberately an attribute that
+        # nothing else in this test references and that is not in metricd's
+        # hardcoded projection set, so the platform label only resolves if
+        # PrometheusD::extraProjectionRefs() contributed it to the projection.
+        "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform ]',
         "METRICD_INTERVAL":                     "5",
         "METRICD_METRICS_CONFIG_DIR":           str(metrics_dir),
         "METRICD_WANT_PROJECTION":              "true",
@@ -278,6 +318,100 @@ class TestPrometheusMetrics:
 
     def test_default_label_present(self, prom_file_contents):
         assert 'pool="testpool"' in prom_file_contents
+
+    # --- PrometheusLabels / PROMETHEUS_DEFAULT_LABELS as a ClassAd ---
+    #
+    # Labels are a nested ClassAd whose attribute names are label names and
+    # whose attribute values are expressions evaluated against the daemon ad.
+
+    def _labels(self, prom_text, sample_name):
+        # Return the raw label-set text (without the enclosing braces) of the
+        # first sample line for sample_name, or None. Label values may contain
+        # spaces (CondorVersion does), so match greedily up to the last "} ".
+        pattern = re.compile(re.escape(sample_name) + r"\{(.*)\} ")
+        for line in prom_text.splitlines():
+            if line.startswith("#") or not line.strip():
+                continue
+            m = pattern.match(line)
+            if m:
+                return m.group(1)
+        return None
+
+    def test_label_syntax_metric_present(self, prom_file_contents):
+        assert self._labels(prom_file_contents, "label_syntax_test_metric") is not None
+
+    def test_label_expression_evaluated_against_daemon_ad(self, prom_file_contents):
+        # PROJECTION REGRESSION: CondorVersion is referenced only from inside
+        # a nested PrometheusLabels ad, and METRICD_WANT_PROJECTION is on. If
+        # ClassAd::GetExternalReferences() did not recurse into the nested ad,
+        # CondorVersion would be dropped from the collector query, the label
+        # would evaluate to UNDEFINED, and it would be omitted entirely.
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        m = re.search(r'version="([^"]*)"', labels)
+        assert m is not None, "version label missing: " + labels
+        assert m.group(1).startswith("$CondorVersion:"), m.group(1)
+
+    def test_default_label_expression_evaluated_against_daemon_ad(self, prom_file_contents):
+        # Same check for PROMETHEUS_DEFAULT_LABELS, whose references reach the
+        # projection through PrometheusD::extraProjectionRefs() rather than
+        # through the metric-definition walk.
+        labels = self._labels(prom_file_contents, "prometheus_only_test_jobs")
+        m = re.search(r'platform="([^"]*)"', labels)
+        assert m is not None, "platform label missing: " + labels
+        assert m.group(1).startswith("$CondorPlatform:"), m.group(1)
+
+    def test_label_value_rendering_by_type(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        assert 'literal="plain"' in labels
+        assert 'computed="v5"' in labels     # strcat(...) of a string() of an int
+        assert 'number="42"' in labels       # integer
+        assert 'flag="true"' in labels       # boolean
+
+    def test_label_value_escaping_is_automatic(self, prom_file_contents):
+        # The label value is the 9 characters  a,b"q"c\d  . metricd must quote
+        # and escape it; nothing was escaped by hand in the metric definition.
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        assert r'tricky="a,b\"q\"c\\d"' in labels
+
+    def test_undefined_label_is_omitted(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        assert "missing=" not in labels
+
+    def test_error_label_is_omitted(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        assert "bad_error=" not in labels
+
+    def test_illegal_label_name_not_published(self, prom_file_contents):
+        assert "__reserved" not in prom_file_contents
+
+    def test_illegal_label_name_reported_at_config_time(self, ganglia_log_contents):
+        assert "'__reserved' in PrometheusLabels" in ganglia_log_contents
+
+    def test_illegal_label_name_reported_only_once(self, ganglia_log_contents):
+        # The complaint is issued from the one instance that walks every metric
+        # definition, so it must not be repeated once per backend or per cycle.
+        assert ganglia_log_contents.count("'__reserved' in PrometheusLabels") == 1
+
+    def test_per_metric_label_overrides_default(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "label_syntax_test_metric")
+        assert 'pool="override"' in labels
+        assert 'pool="testpool"' not in labels
+
+    def test_default_label_survives_on_other_metrics(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "prometheus_only_test_jobs")
+        assert 'pool="testpool"' in labels
+
+    def test_string_valued_labels_rejected(self, prom_file_contents):
+        # The old label-set-string syntax is gone; a string-valued
+        # PrometheusLabels contributes no labels at all.
+        labels = self._labels(prom_file_contents, "legacy_label_syntax_metric")
+        assert labels is not None
+        assert "notalabel" not in labels
+        # ...but the pool-wide defaults still apply to that metric.
+        assert 'pool="testpool"' in labels
+
+    def test_string_valued_labels_reported_at_config_time(self, ganglia_log_contents):
+        assert "must be a ClassAd of label expressions" in ganglia_log_contents
 
     def test_counter_gets_total_suffix(self, prom_file_contents):
         assert "test_bytes_transferred_bytes_total" in prom_file_contents
@@ -477,6 +611,85 @@ def _make_self_signed_cert(cert_path, key_path):
         check=True,
         capture_output=True,
     )
+
+
+# --- Standup: PROMETHEUS_DEFAULT_LABELS in config-heredoc long form ---------
+#
+# The main standup above writes the default label ad bracketed on one line,
+# which metricd parses with ClassAdParser. The long form inside a @=end
+# heredoc is a different code path (initAdFromString), and it is the form the
+# documentation recommends for more than a couple of labels, so give it its
+# own minimal pool.
+
+@standup
+def condor_with_heredoc_labels(test_dir):
+    metrics_dir = test_dir / "heredoc_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_heredoc_test_metrics",
+        """
+[
+  Name = "heredoc_test_gauge";
+  Value = 5;
+  Desc = "Heredoc default-labels test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file = test_dir / "heredoc_metrics.prom"
+
+    cfg = {
+        "DAEMON_LIST":                 "$(DAEMON_LIST) METRICD",
+        "METRICD":                     "$(LIBEXEC)/condor_metricd",
+        "GANGLIA_LIB":                 "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+        "PROMETHEUS_METRICS_FILE":     str(prom_file),
+        "METRICD_INTERVAL":            "5",
+        "METRICD_METRICS_CONFIG_DIR":  str(metrics_dir),
+        "METRICD_WANT_PROJECTION":     "true",
+        "METRICD_DEBUG":               "D_FULLDEBUG",
+    }
+    raw_config = r"""
+        PROMETHEUS_DEFAULT_LABELS @=end
+           pool     = "heredocpool"
+           platform = CondorPlatform
+           quoted   = "a,b\"q\"c"
+        @end
+    """
+    with Condor(test_dir / "condor_heredoc", config=cfg, raw_config=raw_config) as condor:
+        yield condor
+
+
+@action
+def heredoc_prom_contents(test_dir, condor_with_heredoc_labels):
+    prom_file = test_dir / "heredoc_metrics.prom"
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        if prom_file.exists():
+            text = prom_file.read_text()
+            if "heredoc_test_gauge" in text:
+                return text
+        time.sleep(2)
+    return None
+
+
+class TestPrometheusHeredocDefaultLabels:
+    def test_prom_file_written(self, heredoc_prom_contents):
+        assert heredoc_prom_contents is not None
+
+    def test_literal_default_label(self, heredoc_prom_contents):
+        assert 'pool="heredocpool"' in heredoc_prom_contents
+
+    def test_expression_default_label(self, heredoc_prom_contents):
+        # Evaluated against the daemon ad, and its reference reached the
+        # collector projection via PrometheusD::extraProjectionRefs().
+        m = re.search(r'platform="([^"]*)"', heredoc_prom_contents)
+        assert m is not None, heredoc_prom_contents
+        assert m.group(1).startswith("$CondorPlatform:"), m.group(1)
+
+    def test_default_label_value_escaped(self, heredoc_prom_contents):
+        assert r'quoted="a,b\"q\"c"' in heredoc_prom_contents
 
 
 def _https_get(host, port, path, headers=None, timeout=10):

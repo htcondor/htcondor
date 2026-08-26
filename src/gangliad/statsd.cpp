@@ -50,7 +50,6 @@
 
 Metric::Metric():
 	derivative(false),
-	prometheus_labels(""),
 	zero_value(false),
 	verbosity(0),
 	lifetime(-1),
@@ -165,6 +164,41 @@ Metric::whichMetric() const {
 	return result;
 }
 
+// Substitute \1, \2, ... in a string-valued result with the corresponding
+// capture group from a RegEx metric.  A no-op for non-strings and for metrics
+// that are not RegEx metrics.
+static void
+applyRegexGroups(classad::Value &result,std::vector<std::string> *regex_groups)
+{
+	if( !regex_groups || regex_groups->empty() ) return;
+
+	std::string str_value;
+	if( !result.IsStringValue(str_value) || str_value.find("\\")==std::string::npos ) return;
+
+	std::string new_str_value;
+	const char *ch = str_value.c_str();
+	while( *ch ) {
+		if( *ch == '\\' ) {
+			ch++;
+			if( !isdigit(*ch) ) {
+				new_str_value += *(ch++);
+			}
+			else {
+				char *endptr = NULL;
+				long index = strtol(ch,&endptr,10);
+				ch = endptr;
+				if( index < (ssize_t) regex_groups->size() ) {
+					new_str_value += (*regex_groups)[index];
+				}
+			}
+		}
+		else {
+			new_str_value += *(ch++);
+		}
+	}
+	result.SetStringValue(new_str_value);
+}
+
 bool
 Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr) const
 {
@@ -214,34 +248,7 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 	}
 	expr->SetParentScope(&metric_ad);
 
-	// do regex macro substitutions
-	if( regex_groups && regex_groups->size() > 0 ) {
-		std::string str_value;
-		if( result.IsStringValue(str_value) && str_value.find("\\")!=std::string::npos ) {
-			std::string new_str_value;
-			const char *ch = str_value.c_str();
-			while( *ch ) {
-				if( *ch == '\\' ) {
-					ch++;
-					if( !isdigit(*ch) ) {
-						new_str_value += *(ch++);
-					}
-					else {
-						char *endptr = NULL;
-						long index = strtol(ch,&endptr,10);
-						ch = endptr;
-						if( index < (ssize_t) regex_groups->size() ) {
-							new_str_value += (*regex_groups)[index];
-						}
-					}
-				}
-				else {
-					new_str_value += *(ch++);
-				}
-			}
-			result.SetStringValue(new_str_value);
-		}
-	}
+	applyRegexGroups(result,regex_groups);
 
 	return retval;
 }
@@ -258,6 +265,135 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 	}
 	ASSERT(val.IsStringValue(result) );
 	return true;
+}
+
+bool
+Metric::isValidLabelName(std::string const &label_name)
+{
+	// Prometheus label names must match [a-zA-Z_][a-zA-Z0-9_]* and names
+	// beginning with "__" are reserved for Prometheus' own internal use.
+	if( label_name.empty() ) return false;
+	if( label_name.starts_with("__") ) return false;
+	if( !isalpha((unsigned char)label_name[0]) && label_name[0] != '_' ) return false;
+	for( char c : label_name ) {
+		if( !isalnum((unsigned char)c) && c != '_' ) return false;
+	}
+	return true;
+}
+
+// Render an evaluated label expression as a label value string.  Returns
+// false for values that have no sensible scalar rendering (UNDEFINED, ERROR,
+// lists, nested ads, times), in which case the caller omits the label.
+static bool
+labelValueToString(classad::Value const &val,std::string &result)
+{
+	switch( val.GetType() ) {
+	case classad::Value::STRING_VALUE:
+		val.IsStringValue(result);
+		return true;
+	case classad::Value::INTEGER_VALUE: {
+		long long i = 0;
+		val.IsIntegerValue(i);
+		result = std::to_string(i);
+		return true;
+	}
+	case classad::Value::REAL_VALUE: {
+		double d = 0.0;
+		val.IsRealValue(d);
+		formatstr(result,"%g",d);
+		return true;
+	}
+	case classad::Value::BOOLEAN_VALUE: {
+		bool b = false;
+		val.IsBooleanValue(b);
+		result = b ? "true" : "false";
+		return true;
+	}
+	default:
+		return false;
+	}
+}
+
+void
+Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,std::map<std::string,std::string> &result) const
+{
+	for( auto const &[label_name,label_expr] : label_ad ) {
+		if( !label_expr ) continue;
+
+		// Bad label names are reported once at config-read time; here we
+		// just skip them rather than emitting invalid exposition text.
+		if( !isValidLabelName(label_name) ) continue;
+
+		// Evaluate each label expression directly against the daemon ad
+		// rather than in label_ad's own scope.  ClassAd attribute lookup is
+		// case-insensitive, so evaluating in label_ad's scope would turn the
+		// most natural thing an admin can write -- machine = Machine -- into
+		// a circular self-reference.  The consequence is that labels cannot
+		// refer to one another, which is intentional.
+		label_expr->SetParentScope(&daemon_ad);
+		classad::Value val;
+		bool ok = daemon_ad.EvaluateExpr(label_expr,val);
+		label_expr->SetParentScope(&label_ad);
+
+		if( !ok ) {
+			dprintf(D_FULLDEBUG,"Failed to evaluate Prometheus label %s of metric %s; omitting it\n",
+			        label_name.c_str(),name.c_str());
+			continue;
+		}
+
+		applyRegexGroups(val,regex_groups);
+
+		std::string label_value;
+		if( !labelValueToString(val,label_value) ) {
+			// UNDEFINED and ERROR land here, and that is the documented way
+			// to make a label conditional; do not emit an empty label.
+			dprintf(D_FULLDEBUG,"Prometheus label %s of metric %s did not evaluate to a scalar; omitting it\n",
+			        label_name.c_str(),name.c_str());
+			continue;
+		}
+
+		result[label_name] = label_value;
+	}
+}
+
+void
+Metric::evaluateLabels(char const *attr_name,classad::ClassAd const *default_label_ad,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,char const *regex_attr)
+{
+	prometheus_labels.clear();
+
+	// Honor backend-decorated overrides the same way evaluate() does.
+	classad::ExprTree *expr = NULL;
+	if( !backend.empty() ) {
+		std::string decorated_attr = backend + "_" + attr_name;
+		expr = metric_ad.Lookup(decorated_attr);
+	}
+	if( !expr ) {
+		expr = metric_ad.Lookup(attr_name);
+	}
+
+	if( !expr && !default_label_ad ) return;
+
+	classad::ClassAd const *ad = &daemon_ad;
+	ClassAd daemon_ad_copy;
+	if( regex_attr ) {
+		// as in evaluate(): let label expressions refer to the RegEx attribute
+		daemon_ad_copy = daemon_ad;
+		ad = &daemon_ad_copy;
+		daemon_ad_copy.AssignExpr(ATTR_REGEX,regex_attr);
+	}
+
+	// Pool-wide defaults first, so that same-named per-metric labels win.
+	if( default_label_ad ) {
+		evaluateLabelAd(*default_label_ad,*ad,regex_groups,prometheus_labels);
+	}
+
+	if( expr ) {
+		if( expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			// Already reported at config-read time by ParseMetrics().
+			return;
+		}
+		evaluateLabelAd(*static_cast<classad::ClassAd const *>(expr),*ad,regex_groups,prometheus_labels);
+	}
 }
 
 bool
@@ -415,7 +551,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	std::string export_str;
 	if( !evaluateOptionalString(ATTR_EXPORT_METRIC,export_str,metric_ad,daemon_ad,regex_groups) ) return false;
 	export_systems = split(export_str);
-	if( !evaluateOptionalString(ATTR_PROMETHEUS_LABELS,prometheus_labels,metric_ad,daemon_ad,regex_groups) ) return false;
+	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd ? statsd->defaultLabelAd() : NULL,metric_ad,daemon_ad,regex_groups,regex_attr);
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
@@ -1021,6 +1157,38 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				if( !export_systems.empty() && !contains_anycase(export_systems,backend) ) {
 					delete ad;
 					continue;
+				}
+			}
+		}
+
+		// Check the shape of PrometheusLabels and the legality of each label
+		// name once here, at config-read time, rather than silently dropping
+		// them on every publication cycle.  Only the instance that processes
+		// every metric (MetricD, i.e. exportFilterName()==nullptr) does this,
+		// so each problem is reported exactly once per reconfig rather than
+		// once per backend.
+		if( !g_legacy_gangliad_mode && !backend ) {
+			classad::ExprTree *labels_expr = ad->Lookup(ATTR_PROMETHEUS_LABELS);
+			if( labels_expr ) {
+				std::string metric_name;
+				if( !ad->EvaluateAttrString(ATTR_NAME,metric_name) ) {
+					metric_name = "(name is an expression)";
+				}
+				if( labels_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+					dprintf(D_ERROR,
+					        "CONFIGURATION ERROR: %s of metric %s defined in %s must be a ClassAd of "
+					        "label expressions, e.g. [ machine = Machine ]; ignoring it\n",
+					        ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+				} else {
+					for( auto const &[label_name,label_expr] : *static_cast<classad::ClassAd *>(labels_expr) ) {
+						if( !Metric::isValidLabelName(label_name) ) {
+							dprintf(D_ERROR,
+							        "CONFIGURATION ERROR: '%s' in %s of metric %s defined in %s is not a legal "
+							        "Prometheus label name ([a-zA-Z_][a-zA-Z0-9_]*, not starting with __); "
+							        "that label will not be published\n",
+							        label_name.c_str(),ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+						}
+					}
 				}
 			}
 		}

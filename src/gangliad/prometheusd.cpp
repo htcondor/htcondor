@@ -23,6 +23,8 @@
 #include "directory_util.h"
 #include "condor_regex.h"
 #include "condor_attributes.h"
+#include "condor_classad.h"     // initAdFromString()
+#include "stl_string_utils.h"
 #include "condor_auth_ssl.h"   // AUTH_SSL_SERVER_CERTFILE_STR / KEYFILE_STR, OpenSSL types
 #include "condor_base64.h"
 #include "safe_fopen.h"
@@ -271,9 +273,47 @@ PrometheusD::initAndReconfig()
 	param(m_output_file,"PROMETHEUS_METRICS_FILE");
 	m_include_timestamp = param_boolean("PROMETHEUS_METRICS_INCLUDE_TIMESTAMP", false);
 
+	// PROMETHEUS_DEFAULT_LABELS is a ClassAd of label expressions.  It may be
+	// written either bracketed on one line
+	//     PROMETHEUS_DEFAULT_LABELS = [ pool = "mypool"; machine = Machine ]
+	// or in the long form inside a config heredoc
+	//     PROMETHEUS_DEFAULT_LABELS @=end
+	//        pool = "mypool"
+	//        machine = Machine
+	//     @end
+	m_default_labels.Clear();
 	std::string default_labels_str;
 	param(default_labels_str,"PROMETHEUS_DEFAULT_LABELS");
-	m_default_labels = parseLabels(default_labels_str);
+	trim(default_labels_str);
+	if( !default_labels_str.empty() ) {
+		bool parsed;
+		if( default_labels_str[0] == '[' ) {
+			classad::ClassAdParser parser;
+			parsed = parser.ParseClassAd(default_labels_str,m_default_labels,true);
+		} else {
+			parsed = initAdFromString(default_labels_str.c_str(),m_default_labels);
+		}
+		if( !parsed ) {
+			dprintf(D_ERROR,
+			        "CONFIGURATION ERROR: PROMETHEUS_DEFAULT_LABELS is not a valid ClassAd of label "
+			        "expressions; no default labels will be published\n");
+			m_default_labels.Clear();
+		}
+		// Report illegal label names once here rather than on every cycle.
+		std::vector<std::string> bad_names;
+		for( auto const &[label_name,label_expr] : m_default_labels ) {
+			if( !Metric::isValidLabelName(label_name) ) {
+				dprintf(D_ERROR,
+				        "CONFIGURATION ERROR: '%s' in PROMETHEUS_DEFAULT_LABELS is not a legal Prometheus "
+				        "label name ([a-zA-Z_][a-zA-Z0-9_]*, not starting with __); it will be ignored\n",
+				        label_name.c_str());
+				bad_names.push_back(label_name);
+			}
+		}
+		for( auto const &bad : bad_names ) {
+			m_default_labels.Delete(bad);
+		}
+	}
 
 	m_reset_metrics_filename.clear();
 	if (param_boolean("PROMETHEUS_WANT_RESET_METRICS", false)) {
@@ -392,17 +432,6 @@ PrometheusD::buildPrometheusHelp(const Metric &m) const
 	return help;
 }
 
-std::string
-PrometheusD::buildEffectiveLabels(const Metric &m) const
-{
-	std::map<std::string,std::string> merged = m_default_labels;
-	std::map<std::string,std::string> per_metric = parseLabels(m.prometheus_labels);
-	for (const auto &kv : per_metric) {
-		merged[kv.first] = kv.second;
-	}
-	return serializeLabels(merged);
-}
-
 void
 PrometheusD::publishMetric(Metric const &m_in)
 {
@@ -436,7 +465,7 @@ PrometheusD::publishMetric(Metric const &m_in)
 
 	PendingMetric pm;
 	pm.name = prom_name;
-	pm.labels = buildEffectiveLabels(m_in);
+	pm.labels = serializeLabels(m_in.prometheus_labels);
 	pm.value = value;
 	pm.help = buildPrometheusHelp(m_in);
 	pm.prom_type = static_cast<const PrometheusMetric &>(m_in).prometheusType();
@@ -459,6 +488,23 @@ PrometheusD::extraProjectionRefs(classad::References &refs) const
 	// backend, is the one that issues the collector query.
 	if (!m_output_file.empty() && m_include_timestamp) {
 		refs.insert(ATTR_LAST_HEARD_FROM);
+	}
+
+	// PROMETHEUS_DEFAULT_LABELS expressions are evaluated against every daemon
+	// ad, so whatever they reference has to survive the collector projection.
+	// MetricD gathers these refs for per-metric PrometheusLabels ads when it
+	// walks the metric definitions, but the pool-wide defaults live only here.
+	//
+	// Gather the references against an empty scope rather than against
+	// m_default_labels itself: ClassAd attribute lookup is case-insensitive,
+	// so "machine = Machine" would otherwise resolve to the label being
+	// defined and recurse on itself.  With an empty root scope every
+	// reference is correctly classified as external.
+	if (m_default_labels.size()) {
+		classad::ClassAd empty_scope;
+		for (auto const &[label_name,label_expr] : m_default_labels) {
+			empty_scope.GetExternalReferences(label_expr, refs, false);
+		}
 	}
 }
 
@@ -517,61 +563,6 @@ PrometheusD::writeMetricsFile()
 		dprintf(D_ERROR, "Failed to rename %s to %s: %s\n",
 		        tmp.c_str(), m_output_file.c_str(), strerror(errno));
 	}
-}
-
-std::map<std::string,std::string>
-PrometheusD::parseLabels(const std::string &s)
-{
-	std::map<std::string,std::string> result;
-	const char *p = s.c_str();
-	const char *end = p + s.size();
-	while (p < end) {
-		// skip whitespace and commas
-		while (p < end && (*p == ' ' || *p == '\t' || *p == ',')) ++p;
-		if (p >= end) break;
-
-		// read key
-		const char *kstart = p;
-		while (p < end && *p != '=' && *p != ',' && *p != ' ' && *p != '\t') ++p;
-		std::string key(kstart, p - kstart);
-		if (key.empty()) break;
-
-		// skip whitespace
-		while (p < end && (*p == ' ' || *p == '\t')) ++p;
-		if (p >= end || *p != '=') {
-			// malformed: skip
-			while (p < end && *p != ',') ++p;
-			continue;
-		}
-		++p; // skip '='
-		while (p < end && (*p == ' ' || *p == '\t')) ++p;
-
-		// read value (optionally double-quoted)
-		std::string value;
-		if (p < end && *p == '"') {
-			++p;
-			while (p < end && *p != '"') {
-				if (*p == '\\' && (p + 1) < end) {
-					++p;
-					value += *p;
-				} else {
-					value += *p;
-				}
-				++p;
-			}
-			if (p < end && *p == '"') ++p;
-		} else {
-			while (p < end && *p != ',') {
-				value += *p;
-				++p;
-			}
-			while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) {
-				value.pop_back();
-			}
-		}
-		result[key] = value;
-	}
-	return result;
 }
 
 std::string

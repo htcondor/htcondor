@@ -44,6 +44,9 @@ class PrometheusD: public StatsD {
 	virtual void extraProjectionRefs(classad::References &refs) const;
 	virtual const char *exportFilterName() const { return "prometheus"; }
 	virtual const char *backendName() const { return "prometheus"; }
+	virtual const classad::ClassAd *defaultLabelAd() const {
+		return m_default_labels.size() ? &m_default_labels : nullptr;
+	}
 
  private:
 	struct PendingMetric {
@@ -63,7 +66,9 @@ class PrometheusD: public StatsD {
 
 	std::string m_output_file;
 	bool m_include_timestamp{false};
-	std::map<std::string,std::string> m_default_labels;
+	// PROMETHEUS_DEFAULT_LABELS as a ClassAd: attribute names are label names,
+	// attribute values are expressions evaluated against each daemon ad.
+	classad::ClassAd m_default_labels;
 	std::vector<PendingMetric> m_pending;
 	std::string m_reset_metrics_filename;
 
@@ -75,9 +80,12 @@ class PrometheusD: public StatsD {
 
 	std::string buildPrometheusName(const Metric &m) const;
 	std::string buildPrometheusHelp(const Metric &m) const;
-	std::string buildEffectiveLabels(const Metric &m) const;
 	void writeMetricsFile();
-	static std::map<std::string,std::string> parseLabels(const std::string &s);
+
+	// Render a resolved label map as a Prometheus label set, e.g.
+	// {machine="foo.example.edu",pool="bar"}.  Quoting and escaping of the
+	// label values happens here so that no label value ever has to be
+	// escaped by hand in the configuration.
 	static std::string serializeLabels(const std::map<std::string,std::string> &labels);
 
 	// HTTP command handler registered with DaemonCore.

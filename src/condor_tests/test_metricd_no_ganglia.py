@@ -48,7 +48,7 @@ METRIC_DEFS = """
   Desc = "Prometheus-only metric";
   TargetType = "Scheduler";
   ExportMetric = "prometheus";
-  PrometheusLabels = strcat("machine=\\"",Machine,"\\"");
+  PrometheusLabels = [ machine = Machine ];
 ]
 [
   Name = "prometheus_only_bytes";

@@ -65,6 +65,10 @@ public:
 
 	bool isAggregateMetric() const { return aggregate != NO_AGGREGATE; }
 
+	// True if name is a legal Prometheus label name: [a-zA-Z_][a-zA-Z0-9_]*
+	// and not beginning with "__" (that prefix is reserved by Prometheus).
+	static bool isValidLabelName(std::string const &name);
+
 	// This is called to contribute another datapoint to an aggregate
 	// metric (e.g. SUM, AVG, MIN, MAX)
 	void addToAggregateValue(Metric const &datapoint);
@@ -92,7 +96,12 @@ public:
 	std::string cluster;
 	bool derivative;
 	std::vector<std::string> export_systems;
-	std::string prometheus_labels;
+	// Fully resolved Prometheus label set for this metric: the pool-wide
+	// defaults from PROMETHEUS_DEFAULT_LABELS merged with the metric's own
+	// PrometheusLabels ad, with each label expression already evaluated
+	// against the daemon ad and stringified.  Same-named entries in the
+	// metric's own ad win.  Populated by evaluateDaemonAd().
+	std::map<std::string,std::string> prometheus_labels;
 	int64_t timestamp{0};
 	bool zero_value;
 	int verbosity;
@@ -141,6 +150,18 @@ private:
 	// into strings that reference them.
 	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr=NULL) const;
 	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+
+	// Resolve prometheus_labels from the pool-wide default label ad (may be
+	// NULL) and the metric ad's attr_name attribute, which must be a nested
+	// ClassAd whose attributes are label names and whose values are
+	// expressions evaluated against the daemon ad.  Defaults are applied
+	// first so that same-named per-metric labels override them.
+	void evaluateLabels(char const *attr_name,classad::ClassAd const *default_label_ad,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,char const *regex_attr);
+
+	// Evaluate every attribute of label_ad against daemon_ad and merge the
+	// results into result.  Labels whose expressions evaluate to UNDEFINED or
+	// ERROR (or to a non-scalar type) are omitted rather than emitted empty.
+	void evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,std::map<std::string,std::string> &result) const;
 };
 
 /* StatsD: base class for gathering and publishing condor statistics
@@ -210,6 +231,13 @@ class StatsD: public Service {
 	// exportFilterName(), this is independent of as-backend filtering: legacy
 	// condor_gangliad still reports "ganglia" here.
 	virtual const char *backendName() const { return nullptr; }
+
+	// Backends that support per-sample labels (currently only Prometheus)
+	// return a ClassAd of pool-wide default label expressions here; the
+	// attribute names are label names and the values are expressions
+	// evaluated against each daemon ad.  Returns nullptr when there are no
+	// pool-wide defaults.  Consulted by Metric::evaluateDaemonAd().
+	virtual const classad::ClassAd *defaultLabelAd() const { return nullptr; }
 
 	// Given a machine name or daemon name, return the IP address of it,
 	// using information gathered from the collector.
