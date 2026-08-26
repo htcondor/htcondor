@@ -1,5 +1,15 @@
 *** 25.14.0 features
 
+- The *condor_starter* can now optionally set a limit on the amount of
+  compressed swap (zswap) a job may use, via the new
+  :macro:`CGROUP_ZSWAP_MAX_EXPR`. It is a ClassAd expression, evaluated in
+  the context of the slot and job ads, whose value in megabytes is written
+  to the job's cgroup ``memory.zswap.max``. When it is unset, which is the
+  default, HTCondor does not write to that control file at all, and the job
+  gets whatever the system default is. Requires cgroup v2 and a kernel with
+  zswap support.
+  :jira:`3898`
+
 - Administrator-configured Docker universe bind mounts (the
   :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
   option instead of the older ``--volume`` option. A volume may now be a
