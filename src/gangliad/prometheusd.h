@@ -71,6 +71,7 @@ class PrometheusD: public StatsD {
 	bool  m_http_handler_registered{false};
 	std::string m_http_auth_file;
 	void *m_ssl_ctx{nullptr};       // SSL_CTX* when TLS is configured
+	ReliSock *m_http_listen_sock{nullptr}; // extra listen socket when PROMETHEUS_HTTP_PORT != SHARED_PORT_PORT
 
 	std::string buildPrometheusName(const Metric &m) const;
 	std::string buildPrometheusHelp(const Metric &m) const;

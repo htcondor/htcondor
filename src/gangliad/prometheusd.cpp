@@ -300,8 +300,35 @@ PrometheusD::initAndReconfig()
 
 	// Register the HTTP command handler exactly once per process lifetime.
 	// DaemonCore only allows a single HTTP handler so we guard with a flag.
-	if (!m_http_handler_registered && !m_output_file.empty()) {
-		int rc = daemonCore->Register_HTTP_CommandHandler(
+	// PROMETHEUS_HTTP_PORT is the only knob that controls whether we want HTTP
+	// at all; if it is -1, we don't register the handler.  Default value is 
+	// SHARED_PORT_PORT, which is normally 9618, but in a testing environment it may be 0 to
+	// have the shared port pick an ephemeral port. 
+	int shared_port_port = param_boolean("USE_SHARED_PORT", true) ? param_integer("SHARED_PORT_PORT") : -1;
+	int http_port = param_integer("PROMETHEUS_HTTP_PORT", shared_port_port);
+	if (http_port >= 0 && !m_http_handler_registered && !m_output_file.empty()) {
+		// if http_port != shared_port_port, then Register_Command_Socket() on a ReliSock bound to the
+		// port specified by http_port.  When the ports match, DaemonCore's normal command
+		// socket already carries connections destined for http_port, so no extra socket is needed.
+		if (shared_port_port > 0 && http_port != shared_port_port && !m_http_listen_sock) {
+			ReliSock *rsock = new ReliSock;
+			if (rsock->listen(CP_IPV4, http_port)) {
+				daemonCore->Register_Command_Socket((Stream*)rsock,
+					"PrometheusD HTTP listen socket");
+				rsock->set_inheritable(false);
+				m_http_listen_sock = rsock;
+				dprintf(D_ALWAYS,
+				        "PrometheusD: listening for HTTP requests on port %d\n", http_port);
+			} else {
+				dprintf(D_ERROR,
+				        "PrometheusD: failed to listen on HTTP port %d; HTTP disabled\n",
+				        http_port);
+				delete rsock;
+				http_port = -1; // don't register the handler below
+			}
+		}
+
+		int rc = http_port < 0 ? -9 : daemonCore->Register_HTTP_CommandHandler(
 			[this](int cmd, Stream *s) { return this->handleHttpCommand(cmd, s); },
 			"PrometheusD::handleHttpCommand");
 		if (rc >= 0) {
@@ -846,6 +873,15 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 	Sock *sock = static_cast<Sock*>(s);
 	int   fd   = sock->get_file_desc();
 
+	// Admin only wants HTTP/HTTPS if PROMETHEUS_HTTP_PORT is set to a positive value.
+	int shared_port_port = param_integer("SHARED_PORT_PORT", 0);
+	int http_port = param_integer("PROMETHEUS_HTTP_PORT", shared_port_port);
+	if (http_port < 0 || m_output_file.empty()) {
+		dprintf(D_ERROR,
+		        "HTTP handler called but not desired;"
+		        " perhaps PROMETHEUS_HTTP_PORT was changed to 0 without doing a restart? \n");
+		return FALSE;
+	}
 	// Peek at the first 3 bytes to decide plain HTTP vs TLS.
 	// DaemonCore already confirmed these bytes are available (it peeked them
 	// before routing here), so MSG_PEEK|MSG_DONTWAIT should succeed immediately.

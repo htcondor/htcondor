@@ -15,10 +15,13 @@ import hashlib
 import http.client
 import logging
 import re
+import signal
 import socket
 import ssl
 import subprocess
 import time
+
+from contextlib import contextmanager
 
 from ornithology import (
     config, standup, action,
@@ -859,4 +862,389 @@ class TestPrometheusHTTPS:
         status, body = _http_get(host, port, "/metrics")
         assert status == 200
         assert "https_test_gauge" in body
+
+
+# ---------------------------------------------------------------------------
+# PROMETHEUS_HTTP_PORT: dedicated-port serving, and disabling HTTP entirely
+# ---------------------------------------------------------------------------
+#
+# The tests above serve HTTP over metricd's normal command socket. Here we
+# cover the two PROMETHEUS_HTTP_PORT special cases:
+#
+#   * PROMETHEUS_HTTP_PORT = <nonzero port different from SHARED_PORT_PORT>
+#     -> metricd opens its OWN listening socket on that exact port and serves
+#        /metrics there directly. metricd only takes this path when a shared
+#        port is configured (SHARED_PORT_PORT > 0), so the standup sets that up.
+#   * PROMETHEUS_HTTP_PORT = <negative> (e.g. -1)
+#     -> HTTP is disabled: no handler is registered and no socket is opened,
+#        but the metrics FILE is still written normally.
+#
+# Picking the "specific port" without flaking is the hard part, especially when
+# many copies of this test run at once on one host. Safeguards:
+#   1. We never hard-code a port. We ask the OS for a currently-free ephemeral
+#      port (bind to port 0, read it back, close) so each test instance gets a
+#      distinct port.
+#   2. There is an unavoidable (tiny) race between us releasing the probed port
+#      and metricd binding it, so we do not trust the probe blindly: we read
+#      MetricdLog and CONFIRM metricd actually bound the port. If it lost the
+#      race (metricd logs a bind failure), we stand the pool back up on a fresh
+#      port. This makes the test deterministic rather than occasionally-failing.
+#   3. Standing up a pool can wedge, and a retry loop could in principle run for
+#      a very long time. Every standup here is wrapped in a HARD wall-clock
+#      deadline (_hard_deadline) so these tests can never run longer than ~1
+#      minute no matter what goes wrong.
+
+
+def _pick_free_tcp_port():
+    """Return a TCP port that is free right now.
+
+    Binding to port 0 lets the kernel hand us an unused port from the ephemeral
+    range; we read it back and immediately close the socket so metricd can claim
+    it. Callers must still verify metricd bound it (see the retry loop below),
+    because the port could in principle be taken by another process in between.
+    We bind to all interfaces (host "") so the port is free on every interface
+    metricd might choose, not just loopback.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+    finally:
+        s.close()
+
+
+class _HardTimeout(BaseException):
+    """Raised by _hard_deadline when its wall-clock budget is exceeded.
+
+    Deliberately a BaseException, not Exception: helper code and the ornithology
+    Condor bring-up use broad ``except Exception`` blocks, and the deadline must
+    not be silently swallowed by them. (Condor._start's ``except BaseException``
+    does catch it, but only to clean up and re-raise -- which is what we want.)
+    """
+
+
+@contextmanager
+def _hard_deadline(seconds):
+    """Guarantee the wrapped block cannot run longer than `seconds` wall-clock.
+
+    Uses a one-shot SIGALRM timer, which fires even while blocked in a syscall,
+    subprocess, or poll loop, so a wedged standup can never make this test run
+    forever. SIGALRM is delivered on the main thread, which is where pytest
+    drives fixtures. On platforms without SIGALRM (e.g. Windows) this degrades
+    to a best-effort no-op.
+    """
+    if not hasattr(signal, "SIGALRM"):
+        yield
+        return
+
+    def _fire(signum, frame):
+        raise _HardTimeout("exceeded hard %d-second deadline" % seconds)
+
+    previous = signal.signal(signal.SIGALRM, _fire)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def _metricd_bound_http_port(condor, port, timeout=15):
+    """Poll MetricdLog until metricd reports success or failure binding its
+    dedicated HTTP listen socket on `port`.
+
+    Returns True once the success line appears, False on an explicit bind
+    failure (lost the port race) or if neither appears within `timeout`.
+    """
+    log_file = condor.log_dir / "MetricdLog"
+    ok_line   = "listening for HTTP requests on port %d" % port
+    fail_line = "failed to listen on HTTP port"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if log_file.exists():
+            text = log_file.read_text(errors="replace")
+            if ok_line in text:
+                return True
+            if fail_line in text:
+                return False
+        time.sleep(0.5)
+    return False
+
+
+def _bring_up_condor(condor, ready_timeout):
+    """Mirror Condor._start() but with a bounded readiness wait.
+
+    Condor.__enter__ waits up to 600s for the pool to be ready. That is far too
+    long here: if a probed port was taken between our probe and a daemon binding
+    it, the pool never comes up and we want to fail fast and retry on a fresh
+    port, all within our overall time budget. Returns True if the pool became
+    ready, or False (after cleaning up) if it did not.
+    """
+    try:
+        condor._setup_local_dirs()
+        condor._write_config()
+        condor._start_condor()
+        condor._wait_for_ready(timeout=ready_timeout)
+        return True
+    except Exception:
+        # Note: _HardTimeout is a BaseException, so it is NOT caught here -- the
+        # outer deadline handler cleans up and re-raises.
+        try:
+            condor._cleanup()
+        except Exception:
+            pass
+        return False
+
+
+# --- Standup: metricd serving on a dedicated PROMETHEUS_HTTP_PORT ------------
+
+@standup
+def condor_dedicated_http_port(test_dir):
+    metrics_dir = test_dir / "port_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_port_test_metrics",
+        """
+[
+  Name = "port_test_gauge";
+  Value = 55;
+  Desc = "Dedicated-port HTTP test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file = test_dir / "port_metrics.prom"
+
+    def make_config(shared_port, http_port):
+        return {
+            "DAEMON_LIST":                     "$(DAEMON_LIST) METRICD",
+            "METRICD":                         "$(LIBEXEC)/condor_metricd",
+            "GANGLIA_LIB":                     "NOOP",
+            "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+            "PROMETHEUS_METRICS_FILE":         str(prom_file),
+            # metricd opens its own listening socket only when a shared port is
+            # configured (SHARED_PORT_PORT > 0) AND the HTTP port differs from
+            # it. The harness default SHARED_PORT_PORT=0 means "pick a dynamic
+            # port", which metricd reads as 0 and so never takes this path, so we
+            # must pin SHARED_PORT_PORT to a specific port. condor_shared_port
+            # then actually binds it, so both this port and the HTTP port must be
+            # free (the retry loop below secures and confirms them).
+            "SHARED_PORT_PORT":                str(shared_port),
+            "PROMETHEUS_HTTP_PORT":            str(http_port),
+            "METRICD_INTERVAL":                "5",
+            "METRICD_METRICS_CONFIG_DIR":      str(metrics_dir),
+            "METRICD_DEBUG":                   "D_FULLDEBUG D_COMMAND",
+        }
+
+    # Stand up the pool and CONFIRM metricd bound the dedicated HTTP port. Two
+    # distinct probed ports are in play -- the shared port and the HTTP port --
+    # and either could be taken between our probe and the daemon binding it. A
+    # lost shared port keeps the pool from coming ready (fast-failed by the
+    # bounded readiness wait); a lost HTTP port merely disables HTTP (logged).
+    # Either way we just retry on fresh ports. The whole loop runs under a hard
+    # wall-clock deadline so it can never run away.
+    condor = None
+    chosen_port = None
+    pending = None
+    try:
+        with _hard_deadline(55):
+            for attempt in range(5):
+                shared_port = _pick_free_tcp_port()
+                http_port = _pick_free_tcp_port()
+                while http_port == shared_port:
+                    http_port = _pick_free_tcp_port()
+                pending = Condor(
+                    test_dir / ("condor_port_%d" % attempt),
+                    config=make_config(shared_port, http_port),
+                )
+                if _bring_up_condor(pending, ready_timeout=25) and \
+                        _metricd_bound_http_port(pending, http_port, timeout=10):
+                    condor, chosen_port = pending, http_port
+                    pending = None
+                    break
+                logger.warning(
+                    "dedicated HTTP standup attempt %d (shared_port=%d, http_port=%d) "
+                    "did not come up cleanly; retrying on fresh ports",
+                    attempt, shared_port, http_port,
+                )
+                try:
+                    pending._cleanup()
+                except Exception:
+                    pass
+                pending = None
+    except _HardTimeout:
+        # Tear down whatever we managed to start before the deadline fired.
+        for c in (pending, condor):
+            if c is not None:
+                try:
+                    c._cleanup()
+                except Exception:
+                    pass
+        raise
+
+    if condor is None:
+        raise RuntimeError(
+            "metricd never bound a dedicated PROMETHEUS_HTTP_PORT within the time budget"
+        )
+
+    try:
+        yield condor, chosen_port
+    finally:
+        condor._cleanup()
+
+
+@action
+def dedicated_host_port(condor_dedicated_http_port):
+    # Connect on the same interface metricd binds its command socket to; the
+    # dedicated HTTP socket uses that same interface, on the port we chose.
+    condor, port = condor_dedicated_http_port
+    host, _cmd_port = _metricd_http_port(condor)
+    return host, port
+
+
+@action
+def dedicated_metrics_ready(test_dir, condor_dedicated_http_port):
+    prom_file = test_dir / "port_metrics.prom"
+    deadline = time.time() + 25
+    while time.time() < deadline:
+        if prom_file.exists() and "port_test_gauge" in prom_file.read_text():
+            return True
+        time.sleep(1)
+    return False
+
+
+# --- Standup: metricd with HTTP disabled (PROMETHEUS_HTTP_PORT < 0) ----------
+
+@standup
+def condor_http_disabled(test_dir):
+    metrics_dir = test_dir / "noport_metrics.d"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    write_file(
+        metrics_dir / "00_noport_test_metrics",
+        """
+[
+  Name = "noport_test_gauge";
+  Value = 66;
+  Desc = "HTTP-disabled test gauge";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+""",
+    )
+    prom_file = test_dir / "noport_metrics.prom"
+    cfg = {
+        "DAEMON_LIST":                     "$(DAEMON_LIST) METRICD",
+        "METRICD":                         "$(LIBEXEC)/condor_metricd",
+        "GANGLIA_LIB":                     "NOOP",
+        "GANGLIA_SEND_DATA_FOR_ALL_HOSTS": "true",
+        "PROMETHEUS_METRICS_FILE":         str(prom_file),
+        # A negative port disables HTTP serving entirely.
+        "PROMETHEUS_HTTP_PORT":            "-1",
+        "METRICD_INTERVAL":                "5",
+        "METRICD_METRICS_CONFIG_DIR":      str(metrics_dir),
+        "METRICD_DEBUG":                   "D_FULLDEBUG D_COMMAND",
+    }
+    # Bounded by a hard deadline so a wedged standup can't run forever.
+    condor = None
+    try:
+        with _hard_deadline(55):
+            condor = Condor(test_dir / "condor_noport", config=cfg)
+            condor.__enter__()
+    except _HardTimeout:
+        if condor is not None:
+            try:
+                condor.__exit__(None, None, None)
+            except Exception:
+                pass
+        raise
+
+    try:
+        yield condor
+    finally:
+        condor.__exit__(None, None, None)
+
+
+@action
+def disabled_metrics_ready(test_dir, condor_http_disabled):
+    prom_file = test_dir / "noport_metrics.prom"
+    deadline = time.time() + 25
+    while time.time() < deadline:
+        if prom_file.exists() and "noport_test_gauge" in prom_file.read_text():
+            return True
+        time.sleep(1)
+    return False
+
+
+class TestPrometheusHTTPDedicatedPort:
+    """When PROMETHEUS_HTTP_PORT is a nonzero port that differs from
+    SHARED_PORT_PORT, metricd opens its own listening socket on that exact port
+    and serves /metrics there directly (independent of shared port)."""
+
+    def test_metrics_file_written(self, dedicated_metrics_ready):
+        assert dedicated_metrics_ready
+
+    def test_metricd_logged_dedicated_listen(self, condor_dedicated_http_port):
+        condor, port = condor_dedicated_http_port
+        log_text = (condor.log_dir / "MetricdLog").read_text(errors="replace")
+        assert ("listening for HTTP requests on port %d" % port) in log_text
+
+    def test_get_metrics_returns_200(self, dedicated_host_port, dedicated_metrics_ready):
+        host, port = dedicated_host_port
+        status, _ = _http_get(host, port, "/metrics")
+        assert status == 200
+
+    def test_get_metrics_body_contains_metric(self, dedicated_host_port, dedicated_metrics_ready):
+        host, port = dedicated_host_port
+        _, body = _http_get(host, port, "/metrics")
+        assert "port_test_gauge" in body
+
+    def test_get_metrics_body_has_help_and_type(self, dedicated_host_port, dedicated_metrics_ready):
+        host, port = dedicated_host_port
+        _, body = _http_get(host, port, "/metrics")
+        assert "# HELP port_test_gauge" in body
+        assert "# TYPE port_test_gauge gauge" in body
+
+    def test_unknown_path_returns_404(self, dedicated_host_port, dedicated_metrics_ready):
+        host, port = dedicated_host_port
+        status, _ = _http_get(host, port, "/notfound")
+        assert status == 404
+
+    def test_multiple_requests_served(self, dedicated_host_port, dedicated_metrics_ready):
+        host, port = dedicated_host_port
+        for _ in range(3):
+            status, body = _http_get(host, port, "/metrics")
+            assert status == 200
+            assert "port_test_gauge" in body
+
+
+class TestPrometheusHTTPDisabled:
+    """When PROMETHEUS_HTTP_PORT is negative, metricd must not serve HTTP at all:
+    no handler is registered and no listening socket is opened. File-based
+    publication of the metrics must keep working."""
+
+    def test_metrics_file_still_written(self, disabled_metrics_ready):
+        # Disabling HTTP must not affect the Prometheus metrics file.
+        assert disabled_metrics_ready
+
+    def test_no_http_handler_registered(self, condor_http_disabled, disabled_metrics_ready):
+        log_text = (condor_http_disabled.log_dir / "MetricdLog").read_text(errors="replace")
+        assert "registered HTTP handler for /metrics endpoint" not in log_text
+
+    def test_no_dedicated_listen_socket(self, condor_http_disabled, disabled_metrics_ready):
+        log_text = (condor_http_disabled.log_dir / "MetricdLog").read_text(errors="replace")
+        assert "listening for HTTP requests on port" not in log_text
+
+    def test_command_port_does_not_serve_metrics(self, condor_http_disabled, disabled_metrics_ready):
+        # A GET to metricd's command port must NOT yield a Prometheus response,
+        # since HTTP handling is off. The command socket drops or otherwise
+        # fails to answer the request as HTTP; any of those outcomes is fine, as
+        # long as we never get a 200 carrying our metric.
+        host, port = _metricd_http_port(condor_http_disabled)
+        try:
+            status, body = _http_get(host, port, "/metrics", timeout=5)
+        except Exception:
+            # Connection refused/reset or not valid HTTP -> HTTP disabled. Good.
+            return
+        assert status != 200 or "noport_test_gauge" not in body
 
