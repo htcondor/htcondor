@@ -5126,6 +5126,12 @@ type=string
 description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup low limit
 tags=starter
 
+[CGROUP_ZSWAP_MAX_EXPR]
+default=
+type=string
+description=A classad expression, evaluated in the context of the slot and job ad, which sets the job's cgroup memory.zswap.max limit in megabytes.  When unset, HTCondor does not write to memory.zswap.max
+tags=starter
+
 [CGROUP_IGNORE_CACHE_MEMORY]
 type=bool
 default=true
