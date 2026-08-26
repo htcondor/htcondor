@@ -6,6 +6,8 @@ from pathlib import Path
 import stat
 import subprocess
 
+import pytest
+
 from ornithology import (
     config,
     standup,
@@ -18,6 +20,27 @@ from ornithology import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+def strace_is_usable():
+    # This test traces condor_shadow with strace to verify that no plaintext
+    # leaks onto the wire.  strace requires ptrace, which is disabled on some
+    # (security-hardened) machines, so check that strace actually works rather
+    # than just that the binary is installed.  If strace is not installed,
+    # subprocess.run raises FileNotFoundError (an OSError).
+    try:
+        result = subprocess.run(
+            ["strace", "-o", os.devnull, "true"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+STRACE_USABLE = strace_is_usable()
 
 
 @standup
@@ -93,6 +116,10 @@ def aes_file_transfer_job(condor, transfer_filename, path_to_sleep, strace_condo
     return job
 
 
+@pytest.mark.skipif(
+    not STRACE_USABLE,
+    reason="strace is unavailable or unusable (ptrace may be disabled)",
+)
 class TestAESFileTransfer:
     def test_aes_file_transfer_job_succeeds(self, aes_file_transfer_job):
         assert aes_file_transfer_job.state[0] == JobStatus.COMPLETED

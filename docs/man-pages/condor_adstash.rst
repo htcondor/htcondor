@@ -14,28 +14,37 @@ Synopsis
 
 **condor_adstash** [**-\-process_name** *NAME*] [**-\-standalone** ]
 [**-\-sample_interval** *SECONDS*] [**-\-checkpoint_file** *PATH*]
-[**-\-log_file** *PATH*] [**-\-log_level** *LEVEL*]
-[**-\-threads** *THREADS*] [**-\-interface** *{null,elasticsearch,jsonfile}*]
-[**-\-collectors** *COLLECTORS*] [**-\-schedds** *SCHEDDS*] [**-\-startds** *STARTDS*]
+[**-\-log_file** *PATH*] [**-\-log_level** *LEVEL*] [**-\-quiet** ]
+[**-\-threads** *THREADS*]
+[**-\-interface** *{null,elasticsearch,opensearch,jsonfile}*]
+[**-\-collectors** *COLLECTORS*]
+[**-\-schedds** *SCHEDDS*] [**-\-ignore_schedds** *SCHEDDS*]
+[**-\-startds** *STARTDS*] [**-\-ignore_startds** *STARTDS*]
 [**-\-schedd_history** ] [**-\-startd_history** ]
 [**-\-schedd_job_epoch_history** ] [**-\-schedd_transfer_epoch_history** ]
-[**-\-ad_file** *PATH*]
+[**-\-ad_file** *PATH*] [**-\-ad_file_type** *{history,job_epoch_history,transfer_epoch_history}*]
 [**-\-schedd_history_max_ads** *NUM_ADS*] [**-\-startd_history_max_ads** *NUM_ADS*]
 [**-\-schedd_history_timeout** *SECONDS*] [**-\-startd_history_timeout** *SECONDS*]
 [**-\-schedd_history_projection** *ATTRIBUTES*]
 [**-\-startd_history_projection** *ATTRIBUTES*]
 [**-\-se_host** *HOST[:PORT]*] [**-\-se_url_prefix** *PREFIX*]
-[**-\-se_username** *USERNAME*] [**-\-se_use_https** ] [**-\-se_timeout** SECONDS]
-[**-\-se_bunch_size** *NUM_DOCS*] [**-\-es_index_name** *INDEX_NAME*]
+[**-\-se_username** *USERNAME*] [**-\-se_use_https** ] [**-\-se_timeout** *SECONDS*]
+[**-\-se_bunch_size** *NUM_DOCS*] [**-\-se_index_name** *INDEX_NAME*]
 [**-\-se_no_log_mappings**] [**-\-se_ca_certs** *PATH*]
 [**-\-json_dir** *PATH*]
+[**-\-custom_field_properties** *PATH*] [**-\-custom_dynamic_templates** *PATH*]
+[**-\-custom_ignore_attrs** *ATTRIBUTES*] [**-\-custom_index_settings** *PATH*]
+[**-\-init_index** ] [**-\-init_ad_type** *{history,job_epoch_history,transfer_epoch_history}*]
+[**-\-init_output_directory** *PATH*]
+[**-\-no_alias** ] [**-\-no_ilm** ] [**-\-no_template** ]
 
 Description
 -----------
 
 **condor_adstash** is a tool that assists in monitoring usage by gathering job
 ClassAds (typically from *condor_schedd* and/or *condor_startd* history queries)
-and pushing the ClassAds as documents to some target (typically Elasticsearch).
+and pushing the ClassAds as documents to some target (typically a search engine
+such as Elasticsearch or OpenSearch).
 
 Unless run in ``--standalone`` mode, *condor_adstash* expects to be invoked
 as a daemon by a *condor_master*, i.e. *condor_adstash* should be invoked in
@@ -49,11 +58,11 @@ then environment variables, and finally command-line options.
 persistent location so that duplicate job ClassAds are not fetched from the
 daemons' histories in consecutive polls.
 
-A named Elasticsearch index will be created if it doesn't exist, and may be
-modified if new fields (corresponding to ClassAd attribute names) need to be
-added.
-It is up to the administrator of the Elasticsearch instance to install rollover
-policies (e.g. ILM) on the named index and/or to set up the index as an alias.
+When using a search engine interface, *condor_adstash* will push index
+mappings and settings each polling cycle to ensure that well-known ClassAd
+attributes are mapped to the correct field types. The index must already exist;
+use ``--init_index`` to generate the JSON files and instructions needed to
+create a new index, index template, and (for Elasticsearch) ILM policy.
 
 Options
 -------
@@ -76,9 +85,11 @@ Options
  **-\-log_level** *LEVEL*
     Log level (uses Python logging library levels:
     CRITICAL/ERROR/WARNING/INFO/DEBUG)
+ **-q**, **-\-quiet**
+    Don't print log messages to stdout
  **-\-threads** *THREADS*
     Number of parallel threads to use when polling for job ClassAds and when
-    pushing documents to Elasticsearch
+    pushing documents to the search engine
  **-\-interface** *{null,elasticsearch,opensearch,jsonfile}*
     Push ads via the chosen interface
 
@@ -91,11 +102,14 @@ ClassAd source options
     Poll and push *condor_startd* job histories
  **-\-schedd_job_epoch_history**
     Poll and push *condor_schedd* job epoch histories
- **-\-schedd_job_epoch_history**
+ **-\-schedd_transfer_epoch_history**
     Poll and push *condor_schedd* transfer epoch histories
  **-\-ad_file** *PATH*
-    Load Job ClassAds from a file instead of querying daemons (Ignores
-    *-\-schedd_history* and *-\-startd_history*.)
+    Load ClassAds from a file instead of querying daemons (ignores
+    *-\-schedd_history*, *-\-startd_history*, etc.)
+ **-\-ad_file_type** *{history,job_epoch_history,transfer_epoch_history}*
+    Ad type for ``--ad_file`` (determines mappings and converter).
+    Default: ``history``
 
 Options for HTCondor daemon (Schedd, Startd, etc.) history sources
 ------------------------------------------------------------------
@@ -105,8 +119,12 @@ Options for HTCondor daemon (Schedd, Startd, etc.) history sources
     *condor_schedd* and *condor_startd* daemons
  **-\-schedds** *SCHEDDS*
     Comma-separated list of *condor_schedd* names to poll job histories from
+ **-\-ignore_schedds** *SCHEDDS*
+    Comma-separated list of *condor_schedd* names to skip
  **-\-startds** *STARTDS*
     Comma-separated list of *condor_startd* machines to poll job histories from
+ **-\-ignore_startds** *STARTDS*
+    Comma-separated list of *condor_startd* machines to skip
  **-\-schedd_history_max_ads** *NUM_ADS*
     Abort after reading NUM_ADS from a *condor_schedd*
  **-\-startd_history_max_ads** *NUM_ADS*
@@ -138,7 +156,7 @@ Search engine (Elasticsearch, OpenSearch, etc.) interface options
  **-\-se_index_name** *INDEX_NAME*
     Push ads to this search engine index or alias
  **-\-se_no_log_mappings**
-    Don't write a JSON file with mappings to the log directory
+    Don't write a JSON file with mappings and settings to the log directory
  **-\-se_ca_certs** *PATH*
     Path to root certificate authority file (will use certifi's CA if not set)
 
@@ -147,6 +165,40 @@ JSON file interface options
 
  **-\-json_dir** *PATH*
     Directory to store JSON files, which are named by timestamp
+
+Field mapping and index setting customization options
+-----------------------------------------------------
+
+ **-\-custom_field_properties** *PATH*
+    Path to a JSON file containing additional field properties to merge
+    into the default mappings
+ **-\-custom_dynamic_templates** *PATH*
+    Path to a JSON file containing additional dynamic templates
+ **-\-custom_ignore_attrs** *ATTRIBUTES*
+    Comma-separated list of ClassAd attributes to ignore
+ **-\-custom_index_settings** *PATH*
+    Path to a JSON file containing additional index settings
+
+Index initialization options
+----------------------------
+
+ **-\-init_index**
+    Write out JSON files to set up a new index for the search engine,
+    then exit. The output includes an initial index, an index template,
+    and (for Elasticsearch) an ILM policy, along with a README file
+    with curl commands to push each to the search engine.
+ **-\-init_ad_type** *{history,job_epoch_history,transfer_epoch_history}*
+    Ad type to use for default mappings in ``--init_index`` output.
+    Default: ``history``
+ **-\-init_output_directory** *PATH*
+    Directory to write index JSON and README files.
+    Default: current working directory
+ **-\-no_alias**
+    Do not use index aliases (not recommended)
+ **-\-no_ilm**
+    Do not use an index lifecycle management policy (not recommended)
+ **-\-no_template**
+    Do not use an index template (not recommended)
 
 Examples
 --------
@@ -190,3 +242,14 @@ The values will be listed as the default values for each command-line option:
 
       $ condor_adstash --help
       $ condor_adstash --process_name=FOO --help
+
+To generate the JSON files needed to set up a new Elasticsearch or OpenSearch
+index, use ``--init_index``:
+
+.. code-block:: console
+
+      $ condor_adstash --init_index --init_output_directory /tmp/my_index_setup
+
+This will write out an ILM policy, index template, and initial index JSON file,
+along with a README containing the curl commands to push each to the search
+engine. Review the generated files, then follow the instructions in the README.

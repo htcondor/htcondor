@@ -61,10 +61,15 @@ def completed_job(condor, test_dir, path_to_sleep):
     """Submit a job, kill its starter to trigger a failed reconnect,
     then let the job be requeued and run to completion."""
 
+    # Sleep long enough that the starter is guaranteed to still be alive
+    # by the time we look up its PID and SIGKILL it. On slow runners (e.g.
+    # ppc64le) the sequence "wait-for-running -> sleep(3) -> condor_config_val
+    # LOG -> read StarterLog -> os.kill" can take well over 5s, so a
+    # short-sleep job will exit on its own and the kill fails with ESRCH.
     handle = condor.submit(
         description={
             "executable": path_to_sleep,
-            "arguments": "5",
+            "arguments": "60",
             "log": (test_dir / "job.log").as_posix(),
             "+JobLeaseDuration": "40",
         },
@@ -105,10 +110,12 @@ def completed_job(condor, test_dir, path_to_sleep):
     os.kill(starter_pid, signal.SIGKILL)
 
     # The job should be requeued and eventually re-run to completion.
+    # Allowance: JobLeaseDuration (40s) for the shadow to give up, plus
+    # re-match + a fresh 60s sleep on a slow runner.
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
-        timeout=90,
+        timeout=240,
         verbose=True,
     )
 

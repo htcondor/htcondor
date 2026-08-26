@@ -109,7 +109,7 @@ OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *jo
 		}
 		else if ( starter->jic->usingFileTransfer() && transfer_exe ) {
 			formatstr( JobName, "%s%c%s",
-					starter->GetWorkingDir(0),
+					starter->GetWorkingDir(WD::OUTER),
 					DIR_DELIM_CHAR,
 					condor_basename(JobName.c_str()) );
 		}
@@ -467,7 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
 				launcher = htcondor::Singularity::USE_LAUNCHER;
 			}
-			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(0), job_env, launcher);
+			sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(WD::OUTER), job_env, launcher);
 		} else {
 			sing_result = htcondor::Singularity::DISABLE;
 		}
@@ -729,7 +729,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-bool
+ReapResult
 OsProc::JobReaper( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
@@ -745,7 +745,7 @@ OsProc::JobReaper( int pid, int status )
 			if (droppedContainerLaunched) {
 				TemporaryPrivSentry sentry(PRIV_USER);
 				
-				std::string launchFilePath = starter->GetWorkingDir(0);
+				std::string launchFilePath = starter->GetWorkingDir(WD::OUTER);
 				launchFilePath += "/.condor_container_launched";
 				struct stat unused;
 				int r = stat(launchFilePath.c_str(), &unused);
@@ -934,22 +934,26 @@ OsProc::ShutdownGraceful()
 		Continue();
 	}
 	requested_exit = true;
-	if ( findRmKillSig(JobAd) != -1 ) {
-		daemonCore->Send_Signal(JobPid, rm_kill_sig);
-	} else {
-		bool sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
-		if (!sent) {
-			dprintf(D_ALWAYS, "Send (softkill) signal failed, retrying...\n");
-			sleep(1);
-			sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
-			if (!sent) {
-				dprintf(D_ALWAYS, "Send (softkill) signal failed twice, hardkill will fire after timeout\n");
-			} else {
-				dprintf(D_ALWAYS, "Send (softkill) signal worked the second time\n");
-			}
-		}
+
+	// Pick the signal to send: prefer the job's remove-kill signal if it is set
+	// always returns SIGTERM (there are no real signals), so this always
+	// resolves to a soft kill delivered via condor_softkill.
+	int kill_sig = (findRmKillSig(JobAd) != -1) ? rm_kill_sig : soft_kill_sig;
+
+	// If we can't even deliver the graceful kill signal, don't wait for the
+	// (distant) vacate deadline to expire -- hard-kill the job now.  On Windows
+	// condor_softkill can fail to find a window owned by the job process
+	// (SOFTKILL_WINDOW_NOT_FOUND), e.g. when a job is removed so soon after it
+	// starts that it has not yet created its window; the job would otherwise
+	// linger until the startd's kill timeout.  ShutdownFast() is virtual, so
+	// VanillaProc::ShutdownFast() tears down the whole process family via
+	// Kill_Family().
+	if (!daemonCore->Send_Signal(JobPid, kill_sig)) {
+		dprintf(D_ALWAYS, "Failed to send graceful kill signal %d to pid %d; escalating to hard kill now\n", kill_sig, JobPid);
+		return ShutdownFast();
 	}
-	return false;	// return false says shutdown is pending	
+
+	return false;	// return false says shutdown is pending
 }
 
 
@@ -1104,16 +1108,48 @@ OsProc::SetupSingularitySsh() {
 	sshListener.close();
 	sshListener.assignDomainSocket(uds);
 
-	// and bind it to a filename in the scratch directory
+	// Bind the socket to .docker_sock in the scratch directory.
+	//
+	// AF_UNIX sun_path is only 108 bytes on Linux, but HTCondor's execute
+	// directory path can be longer than that, so the naive
+	// "workingDir + /.docker_sock" overflows sun_path and bind() returns
+	// ENAMETOOLONG.
+	//
+	// Workaround: open the working directory as a fd and bind() through
+	// /proc/self/fd/<N>/.docker_sock.  /proc/self/fd/<N> is a magic
+	// symlink to whatever the fd points at, so the kernel resolves the
+	// lookup starting from our dirfd and creates the socket inode in the
+	// real (long-path) directory.  The string we actually copy into
+	// sun_path is short -- a small fixed prefix plus an int and the
+	// filename -- so it always fits.  See the matching comment in
+	// docker_proc.cpp::SetupDockerSsh for more detail.
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	// O_PATH suffices: the fd is only used as a directory reference for
+	// /proc/self/fd lookup, never read or written through.
+	int dirfd = -1;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	dirfd = open(workingDir.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+	}
+	if (dirfd < 0) {
+		dprintf(D_ALWAYS, "Cannot open working dir %s for singularity ssh_to_job: %d\n", workingDir.c_str(), errno);
+		return;
+	}
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		dprintf(D_ALWAYS, "Cannot format /proc/self/fd path for singularity ssh_to_job\n");
+		close(dirfd);
+		return;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	{
@@ -1121,9 +1157,11 @@ OsProc::SetupSingularitySsh() {
 	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
 	if (rc < 0) {
 		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for singularity ssh_to_job: %d\n", pipeName.c_str(), errno);
+		close(dirfd);
 		return;
 	}
 	}
+	close(dirfd);
 
 	listen(uds, 50);
 	sshListener._state = Sock::sock_special;

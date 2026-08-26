@@ -13,14 +13,14 @@
 #
 # 26-Oct-2012  Created 
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 if(CONDOR_PACKAGE_NAME)
     set(BIN_DIR "${C_BIN}")
     set(SBIN_DIR "${C_SBIN}")
     set(LIBEXEC_DIR "${C_LIBEXEC_BLAHP}")
 
-    set(ClassAd_LIBRARY "classads")
+    set(ClassAd_LIBRARY "classad")
 else()
     set(BIN_DIR "bin")
     set(SBIN_DIR "sbin")
@@ -71,20 +71,21 @@ add_library(libblahp STATIC
 # a warning.  Turn off that warning
 set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-stringop-truncation")
 
-# programs for 'sbin'
-add_executable(blahpd_daemon main_daemon.c)
-target_link_libraries(blahpd_daemon libblahp)
-install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
-
-if(NOT CONDOR_PACKAGE_NAME)
-    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
-endif()
-target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
-
 add_library(libbfunctions STATIC Bfunctions.c)
-add_executable(blah_check_config blah_check_config.c)
-target_link_libraries(blah_check_config libbfunctions libblahp)
-install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+
+# programs for 'sbin'
+if(NOT CONDOR_PACKAGE_NAME)
+    add_executable(blahpd_daemon main_daemon.c)
+    target_link_libraries(blahpd_daemon libblahp)
+    install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
+
+    set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
+    target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
+
+    add_executable(blah_check_config blah_check_config.c)
+    target_link_libraries(blah_check_config libbfunctions libblahp)
+    install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
+endif()
 
 # These binaries aren't needed by OSG, so let's not build them
 if(WITH_FULL_BLAHP)
@@ -237,6 +238,9 @@ set(blah_scripts
 	scripts/flux_cancel.sh scripts/flux_hold.sh
 	scripts/flux_ping.sh scripts/flux_resume.sh scripts/flux_status.sh
 	scripts/flux_submit.sh scripts/flux_utils.sh
+    scripts/sfapi_cancel.sh scripts/sfapi_helpers.py
+    scripts/sfapi_ping.sh scripts/sfapi_setup.sh
+    scripts/sfapi_status.sh scripts/sfapi_submit.sh
    )
 
 install(FILES
@@ -251,6 +255,7 @@ set(local_attr_scripts
     pbs_local_submit_attributes.sh
     lsf_local_submit_attributes.sh
     sge_local_submit_attributes.sh
+    sfapi_local_submit_attributes.sh
     slurm_local_submit_attributes.sh
     nqs_local_submit_attributes.sh
     kubernetes_local_submit_attributes.sh

@@ -45,6 +45,10 @@ Options
  **-num** *number-of-jobs*
     Wait for the integer *number-of-jobs* jobs to end. The default is
     all jobs in the log file.
+ **-allevents**
+    Continue reading the log even after all jobs have ended. Most useful
+    in combination with **-echo** to transcribe an entire job event log
+    to standard output. May not be combined with **-num**.
  *log-file*
     The name of the log file to watch for information about the job.
  *job-ID*

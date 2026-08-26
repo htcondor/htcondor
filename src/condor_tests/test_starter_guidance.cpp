@@ -93,7 +93,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual bool registerStarterInfo( void ) { EXCEPT("MOCK"); return false; }
         virtual bool initUserPriv( void ) { EXCEPT("MOCK"); return false; }
         virtual bool publishUpdateAd( ClassAd* ) { EXCEPT("MOCK"); return false; }
-
+        virtual void updateStartd( ClassAd *, bool ) { EXCEPT("MOCK");}
 };
 
 
@@ -147,7 +147,7 @@ class MockStarter : public Starter {
 
         virtual void prepareJobHookDone();
 
-        // The "carry on" action if the job environmet is unready.
+        // The "carry on" action if the job environment is unready.
         virtual bool skipJobImmediately();
 
         bool jwuet_called = false;
@@ -287,14 +287,14 @@ test_main( int /* argv */, char ** /* argv */ ) {
 
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentReady( & ms );
         ASSERT( ms.jwuet_called && ! ms.sji_called );
     }
 
     dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
-    for( auto test_function : the_test_functions ) {
+    for( const auto& test_function : the_test_functions ) {
         MockStarter ms( test_function );
         Starter::requestGuidanceJobEnvironmentUnready( & ms );
         ASSERT( ms.sji_called && ! ms.jwuet_called );
@@ -382,7 +382,7 @@ bool Starter::skipJobImmediately() { EXCEPT("MOCK"); return false; }
 bool Starter::removeDeferredJobs() { EXCEPT("MOCK"); return false; }
 int Starter::jobEnvironmentReady() { EXCEPT("MOCK"); return -1; }
 int Starter::jobEnvironmentCannotReady(int i, UnreadyReason const&) { EXCEPT("MOCK"); return i; }
-void Starter::SpawnPreScript(int) { EXCEPT("MOCK"); }
+void Starter::SpawnJobOrPreScript(int) { EXCEPT("MOCK"); }
 void Starter::SkipJobs(int) { EXCEPT("MOCK"); }
 bool Starter::allJobsDone() { EXCEPT("MOCK"); return false; }
 int Starter::Reaper(int, int) { EXCEPT("MOCK"); }
@@ -390,6 +390,8 @@ bool Starter::transferOutput() { EXCEPT("MOCK"); return false; }
 bool Starter::cleanupJobs() { EXCEPT("MOCK"); return false; }
 void Starter::RecordJobExitStatus(int) { EXCEPT("MOCK"); }
 bool Starter::removeTempExecuteDir(int&,const char*) { EXCEPT("MOCK"); return false; }
+DiskUsage Starter::GetDiskUsage(bool) const { EXCEPT("MOCK"); return {0,0}; }
+
 
 #if       defined(LINUX)
 VolumeManager::Handle::~Handle() { }

@@ -187,5 +187,6 @@ void	startd_exit_if_idle(int tid = -1);
 void	main_config();
 
 #define COLORING_NAMESPACE "#coloring"
+#define CATALOG_NAMESPACE "#catalog"
 
 #endif /* _CONDOR_STARTD_H */

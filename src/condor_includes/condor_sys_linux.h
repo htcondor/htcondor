@@ -42,10 +42,7 @@
 #	undef dprintf
 #endif
 
-#define SignalHandler _hide_SignalHandler
 #include <signal.h>
-#undef SignalHandler
-
 #include <sys/time.h>
 
 /* Need these to get statfs and friends defined */
@@ -54,13 +51,6 @@
 
 #include <sys/resource.h>
 #include <sys/wait.h>
-
-#include <search.h>
-
-/* include stuff for malloc control */
-#include <malloc.h>
-
-#include <sys/mman.h>
 
 #include <sys/syscall.h>
 

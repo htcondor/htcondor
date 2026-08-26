@@ -42,10 +42,10 @@ TEST_CASES = {
     "CURLE_COULDNT_RESOLVE_HOST": {
         "expected": {
             "ErrorType":        "Resolution",
-            "FailedName":       "no-such.tld",
+            "FailedName":       "nonexistent.invalid",
             "FailureType":      "Unknown",
         },
-        "url":    "http://no-such.tld/file",
+        "url":    "http://nonexistent.invalid/file",
     },
     # I don't know how to generate this one, actually.
     # CURLE_REMOTE_ACCESS_DENIED

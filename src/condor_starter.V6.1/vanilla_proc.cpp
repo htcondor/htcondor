@@ -361,8 +361,10 @@ VanillaProc::StartJob()
 			std::string available_gpus;
 			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
 			classad::Value v;
-			starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
-			v.IsStringValue(available_gpus);
+			// if the expression does not evaluate to a string, available_gpus
+			// remains empty, which means hide all (see below)
+			std::ignore = starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			std::ignore = v.IsStringValue(available_gpus);
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
@@ -474,7 +476,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (! mount_under_scratch.empty() && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = starter->GetWorkingDir(0);
+		const char* working_dir = starter->GetWorkingDir(WD::OUTER);
 
 		if (IsDirectory(working_dir)) {
 			if (!fs_remap) {
@@ -551,7 +553,7 @@ VanillaProc::StartJob()
 			std::string arg_errors;
 			std::string filename;
 
-			filename = starter->GetWorkingDir(0);
+			filename = starter->GetWorkingDir(WD::OUTER);
 			filename += "/.condor_pid_ns_status";
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
@@ -1005,7 +1007,7 @@ VanillaProc::outOfMemoryEvent() {
 	return 0;
 }
 
-bool
+ReapResult
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
@@ -1030,8 +1032,8 @@ VanillaProc::JobReaper(int pid, int status)
 	if( m_pid_ns_status_filename.length() > 0 ) {
 		status = pidNameSpaceReaper( status );
 	}
-	bool jobExited = OsProc::JobReaper( pid, status );
-	if( pid != JobPid ) { return jobExited; }
+	ReapResult result = OsProc::JobReaper( pid, status );
+	if( pid != JobPid ) { return result; }
 
 	//
 	// We have three cases to consider:
@@ -1051,12 +1053,12 @@ VanillaProc::JobReaper(int pid, int status)
 		if( exit_status == successfulCheckpointStatus ) {
 			if( isSoftKilling ) {
 				notifySuccessfulEvictionCheckpoint();
-				return true;
+				return ReapResult::JobDone;
 			}
 
 			if( restartCheckpointedJob() ) {
 				isCheckpointing = false;
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1080,18 +1082,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
-
-
-
-				// FIXME: but doesn't.
-
-
-
-				starter->jic->setOutputTransfer(true);
-
-				// This job is done.
-				return true;
+				return ReapResult::JobShouldReExec;
 			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
@@ -1124,17 +1115,17 @@ VanillaProc::JobReaper(int pid, int status)
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
 			starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
 			starter->Hold();
-			return true;
+			return ReapResult::JobDone;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() and the job self-checkpointed.\n" );
 
 		if( isSoftKilling ) {
 			notifySuccessfulEvictionCheckpoint();
-			return true;
+			return ReapResult::JobDone;
 		} else {
 			if( restartCheckpointedJob() ) {
-				return false;
+				return ReapResult::JobShouldReExec;
 			} else {
 				// We need to prevent (final) output transfer from happening
 				// as well as ensure that the job is requeued.  The latter
@@ -1158,7 +1149,7 @@ VanillaProc::JobReaper(int pid, int status)
 				// This job is done, but we want to avoid reporting a job
 				// exit here, because it will be misinterpreted as a job
 				// termination, and we need the job rescheduled.
-				return false;
+				return ReapResult::JobShouldReExec;
 			}
 		}
 	} else {
@@ -1175,7 +1166,7 @@ VanillaProc::JobReaper(int pid, int status)
 		// force that no
 		daemonCore->Unregister_subfamily(pid);
 
-		return jobExited;
+		return result;
 	}
 }
 

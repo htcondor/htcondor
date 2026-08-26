@@ -155,6 +155,12 @@ private:
 	class daemon  *controllees[MAX_CONTROLLEES];
 
 	std::string m_after_startup_wait_for_file;
+		// If set, hold off starting the daemons after this one until this daemon has
+		// signalled readiness (DC_SET_READY -> SetReadyState).  Used for a tunneling
+		// inside CCB (collector), which signals ready only once it has registered with
+		// its next-hop broker -- so its dependents start with a working tunnel address
+		// without a separate ready file.
+	bool m_after_startup_wait_for_ready{false};
 	bool m_reload_shared_port_addr_after_startup;
 	bool m_never_use_shared_port;
 	bool m_waiting_for_startup;
@@ -257,9 +263,13 @@ private:
 	std::list<DeferredQuery*> deferred_queries;
 	DCTokenRequester m_token_requester;
 
-	void ScheduleRetryStartAllDaemons();
+		// min_delay: floor (seconds) on when the retry fires; used to back off the
+		// otherwise 0-second startup fast-poll while waiting on an external event
+		// (e.g. an off-host CCB becoming tunnel-ready) so we do not busy-loop.
+	void ScheduleRetryStartAllDaemons( int min_delay = 0 );
 	void CancelRetryStartAllDaemons();
 	void RetryStartAllDaemons( int timerID = -1 );
+
 	void DeferredQueryReadyReply( int timerID = -1 );
 	bool InitDaemonReadyAd(ClassAd & readyAd, bool include_addrs);
 	//bool GetDaemonReadyStates(std::string & ready);

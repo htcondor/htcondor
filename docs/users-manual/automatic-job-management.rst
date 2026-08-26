@@ -11,8 +11,8 @@ Automatically rerunning a failed job
 By default, when a job exits, HTCondor considers it completed, removes it from 
 the job queue and places it in the history file.  If a job exits
 with a non-zero exit code, this usually means that some error has happened.
-If this error is ephemeral, a user might want to re-run the job again, to see 
-if the job succeeds on a second invocation.  HTCondor can does this automatically with the 
+If this error is ephemeral, a user might want to re-run the job, to see
+if the job succeeds on a second invocation.  HTCondor can do this automatically with the
 :subcom:`max_retries` option in the submit file, to tell HTCondor the maximum
 number of times to restart the job from scratch.  In the rare case where some
 value other than zero indicates success, a submit file can set :subcom:`success_exit_code`
@@ -44,7 +44,7 @@ to the integer value that is considered successful.
 Automatically rerunning a job that used too much memory
 -------------------------------------------------------
 
-When a job users more memory that it requested, HTCondor will put the job on hold;
+When a job uses more memory than it requested, HTCondor will put the job on hold;
 but many times the amount of memory needed for a job is not well known at submit time.
 For some jobs the memory depends on the data that is being processed. In that case you
 can request that a job retry with more memory rather than being put on hold when the
@@ -52,7 +52,7 @@ job exceeds the initial request memory.
 By using :subcom:`retry_request_memory` a list of increasing memory values can be
 specified and the job will not go on hold until it has been run with the last value
 and still exceeds that memory request.  There is a trade-off here between wasting
-Memory in the typical case and wasting time in the worst case.  In most cases it is
+memory in the typical case and wasting time in the worst case.  In most cases it is
 best to specify only the single worst-case value for :subcom:`retry_request_memory` rather than
 a list of gradually increasing values.
 
@@ -155,7 +155,7 @@ again, the submit file could have
 Holding a completed job
 -----------------------
 
-A job may exit, and HTCondor consider it completed, even though something has
+A job may exit, and HTCondor considers it completed, even though something has
 gone wrong with the job.  A submit file may contain a :subcom:`on_exit_hold` expression
 to tell HTCondor to put the job on hold, instead of moving it to the history.  A held
 job informs users that there may have been a problem with the job that should be investigated.

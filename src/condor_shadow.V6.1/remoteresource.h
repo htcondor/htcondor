@@ -421,6 +421,10 @@ class RemoteResource : public Service {
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
 	std::string starter_version;
+
+	// Will be nullptr if the starter version isn't at least 25.12.
+	ClassAd * getSlotAd() { return slotAd; };
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -429,6 +433,7 @@ class RemoteResource : public Service {
 			for things like i/o, etc, we have to have one copy of 
 			the ClassAd for each resource...and thus, it's here. */
 	ClassAd *jobAd;
+	ClassAd *slotAd {nullptr};
 
 		/* internal data: if you can't figure the following out.... */
 	char *machineName;

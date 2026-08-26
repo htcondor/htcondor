@@ -49,6 +49,8 @@ catalog_utils.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
+classad_string_utils.cpp
+classad_string_utils.h
 compat_classad.cpp
 compat_classad.h
 compat_classad_util.cpp
@@ -151,6 +153,10 @@ ad_printmask.h
 print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
+archive_reader.cpp
+archive_reader.h
+librarian_client.cpp
+librarian_client.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h
@@ -812,3 +818,4 @@ condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_classad_log "test_classad_log.cpp" "${CONDOR_TOOL_LIBS}" )

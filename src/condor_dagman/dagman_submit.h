@@ -23,16 +23,63 @@
 
 #include "condor_id.h"
 
-bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err);
+enum class SubmitResult {
+	SUCCESS = 0,     // Successfully submitted jobs
+	FAILURE = 1,     // Hard failure that will never work
+	RETRY   = 2,     // Transient failure that should be retried
+};
 
-bool send_reschedule(const Dagman &dm);
+struct CustomVar {
+	CustomVar(std::string k, std::string v, bool a) : key(k), value(v), append(a) {};
+	std::string key{};
+	std::string value{};
+	bool append{false};
+};
 
-void set_fake_condorID(int subprocID);
+class DagSubmit {
+public:
+	DagSubmit() = delete;
+	DagSubmit(const Dagman& dagman) : dm(dagman) {}
+	virtual ~DagSubmit() = default;
+	virtual SubmitResult Submit(Node& node, CondorID& condorID, std::string& err, const std::string& log_file);
+	virtual bool Reschedule();
 
-int get_fake_condorID();
+	bool PreSkipSubmit(Node& node, const std::string& log_file);
+	void SetFakeId(const int id);
 
-bool fake_condor_submit(CondorID& condorID, Node* node, const char* DAGNodeName, const char* directory, const char *logFile);
+protected:
+	virtual SubmitResult SubmitInternal(Node& node, CondorID& condorID, std::string& err) = 0;
+	SubmitResult FakeSubmit(Node& node, CondorID& condorID, const std::string& log_file);
 
-bool writePreSkipEvent(CondorID& condorID, Node* node, const char* DAGNodeName, const char* directory, const char *logFile);
+	int GetFakeId();
+	std::string GetMask();
+
+	std::vector<CustomVar> InitVars(const Node& node);
+	virtual bool DeferVar(std::vector<CustomVar>& deferred, const CustomVar& var, const std::set<std::string>& key_filter);
+
+	const Dagman& dm;
+	std::string m_eventmask{};
+	int m_subprocid{0};
+};
+
+class DirectSubmit : public DagSubmit {
+public:
+	DirectSubmit() = delete;
+	DirectSubmit(const Dagman& dagman) : DagSubmit(dagman) {}
+
+	virtual bool Reschedule();
+
+private:
+	virtual SubmitResult SubmitInternal(Node& node, CondorID& condorID, std::string& err);
+};
+
+class ShellSubmit : public DagSubmit {
+public:
+	ShellSubmit() = delete;
+	ShellSubmit(const Dagman& dagman) : DagSubmit(dagman) {}
+
+private:
+	virtual SubmitResult SubmitInternal(Node& node, CondorID& condorID, std::string& err);
+};
 
 #endif /* #ifndef DAGMAN_SUBMIT_H */

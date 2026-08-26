@@ -116,14 +116,14 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 
 
 std::string
-claim_specific_ad_name( const char * publicClaimID ) {
+claim_specific_ad_name( const char * scope, const char * publicClaimID ) {
 	std::string s( publicClaimID );
 
 	// Dots have special meaning in named ClassAd names.
 	std::replace( s.begin(), s.end(), '.', '_' );
 
 	// For stupid reasons, extra ads must each have a cron job.
-	return COLORING_NAMESPACE "." + s;
+	return scope + ("." + s);
 }
 
 Claim::~Claim()
@@ -138,8 +138,56 @@ Claim::~Claim()
 	// If the starter colored this slot, uncolor it now.
 	const char * publicClaimID = publicClaimId();
 	if( publicClaimID ) {
-		std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
-		resmgr->adlist_delete( claimSpecificAdName.c_str() );
+		std::string coloringName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
+		resmgr->adlist_delete( coloringName.c_str() );
+
+		std::string catalogName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+
+		// If this claim was declaring a list of catalogs, remove
+		// them from the global list of catalogs.  We can do and determine
+		// this by removing the name of every attribute in our ad from
+		// the list, although this is slightly magical.
+		classad::ExprList * catalogList = nullptr;
+		std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+		StartdNamedClassAd * snca_g = resmgr->adlist_find( catalog_list_name.c_str() );
+		if( snca_g ) {
+			ClassAd * catalogListAd = snca_g->GetAd();
+
+			if( catalogListAd ) {
+				classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+				if( e ) {
+					e = catalogListAd->Lookup( "catalogs" );
+					catalogList = dynamic_cast<classad::ExprList *>(e);
+				}
+			}
+		}
+
+		if( catalogList ) {
+			StartdNamedClassAd * snca_l = resmgr->adlist_find( catalogName.c_str() );
+			if( snca_l ) {
+				ClassAd * catalogsAd = snca_l->GetAd();
+
+				if( catalogsAd ) {
+					for( auto i = catalogsAd->begin(); i != catalogsAd->end(); ++i ) {
+						for( auto j = catalogList->begin(); j != catalogList->end(); ++j ) {
+
+							auto * ar = dynamic_cast<classad::AttributeReference *>(* j);
+							if(! ar) { continue; }
+							ExprTree * e = nullptr; std::string attr; bool abs = false;
+							ar->GetComponents(e, attr, abs);
+
+							if( attr == i->first ) {
+								catalogList->erase(j);
+								// Of course our hand-written iterators aren't erasure-safe.
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		resmgr->adlist_delete( catalogName.c_str() );
 	}
 
 
@@ -286,7 +334,7 @@ Claim::publish( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -440,7 +488,7 @@ Claim::publishPreemptingClaim( ClassAd* cad )
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
 			if ( !c_client->c_user.empty() ) {
-				uidDom = strchr(c_client->c_user.c_str(), '@');
+				uidDom = strrchr(c_client->c_user.c_str(), '@');
 			}
 			line = c_client->c_acctgrp;
 			if ( uidDom ) {
@@ -1722,6 +1770,7 @@ Claim::starterExited( Starter* starter, int status)
 	int orphanedJob = 0;
 	bool still_broken = true;
 	CleanupReminder* reminder = nullptr;
+	c_reaping = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -2461,6 +2510,7 @@ Claim::resetClaim( void )
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
 	c_schedd_reported_job_done = false;
+	c_reaping = false;
 }
 
 
@@ -2796,6 +2846,18 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
 			resmgr->startd_stats.bytes_recvd += bytes_recvd;
 		}
+
+		// Job is done running on the EP. Move the slot into Claimed/Cleaning
+		// so it stops matching new work and absorbs preempts while the
+		// starter winds down. Skip if we're already being reaped (the
+		// upcoming starter reap will handle the post-run transition
+		// directly) or if the slot is no longer in a running activity.
+		if (c_rip && !c_reaping && c_rip->state() == claimed_state) {
+			Activity a = c_rip->activity();
+			if (a == busy_act || a == retiring_act || a == suspended_act) {
+				c_rip->change_state(cleaning_act);
+			}
+		}
 	}
 }
 
@@ -2803,6 +2865,7 @@ void Claim::receiveUpdateCommand( int c,
 	const ClassAd & payloadAd, ClassAd & replyAd
 ) {
 	STARTER_COMMAND command{c};
+	static unsigned int catalogIndex = 0;
 
 	switch( command ) {
 		case STARTER_COMMAND::UPDATE:
@@ -2813,6 +2876,99 @@ void Claim::receiveUpdateCommand( int c,
 			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
 			break;
 
+		case STARTER_COMMAND::ANNOUNCE_CATALOG: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				const char * reason = "Claim object has NULL resource pointer during attempt to announce a catalog, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			//
+			// We don't need to validate the payload ad; the following code
+			// doesn't depend on the payload ad in any way, so it can't screw
+			// up the startd internals, and the only other thing we do with
+			// it is make in a uniquely-named nested ad, so it can't overwrite
+			// any other values, even if it were malicious.
+			//
+
+
+			//
+			// Make the announcement.
+			//
+
+			// Update the global list of catalogs.  (This can't be in the
+			// claim-specific ad because then it collides.)
+			std::string catalog_id;
+			formatstr( catalog_id, "catalog_%d", ++catalogIndex );
+
+			ClassAd * catalogListAd = nullptr;
+			std::string catalog_list_name( CATALOG_NAMESPACE ".catalog_list_ad" );
+			StartdNamedClassAd * namedCatalogListAd = resmgr->adlist_find( catalog_list_name.c_str() );
+			if( namedCatalogListAd == NULL ) {
+				catalogListAd = new ClassAd();
+				resmgr->adlist_replace( catalog_list_name.c_str(), catalogListAd );
+			} else {
+				catalogListAd = namedCatalogListAd->GetAd();
+			}
+
+			classad::ExprTree * e = catalogListAd->Lookup( "catalogs" );
+			if( e == NULL ) {
+				catalogListAd->AssignExpr( "catalogs", "{}" );
+				e = catalogListAd->Lookup( "catalogs" );
+			}
+
+			auto * catalogList = dynamic_cast<classad::ExprList *>(e);
+			// Should we really have to type AttributeReference twice?
+			auto * ref = classad::AttributeReference::MakeAttributeReference(
+				NULL /* unscoped */, catalog_id, false /* relative */
+			);
+			catalogList->push_back( ref );
+
+
+			// Update the claim-specific ad.  (Strictly speaking, this should
+			// happen first, so that the attribute above is always defined,
+			// but the startd is single-threaded.)
+			ClassAd * catalogsAd = nullptr;
+			std::string claimSpecificAdName = claim_specific_ad_name( CATALOG_NAMESPACE, publicClaimID );
+			StartdNamedClassAd * namedCatalogsAd = resmgr->adlist_find( claimSpecificAdName.c_str() );
+			if( namedCatalogsAd == NULL ) {
+				catalogsAd = new ClassAd();
+				resmgr->adlist_replace( claimSpecificAdName.c_str(), catalogsAd );
+			} else {
+				catalogsAd = namedCatalogsAd->GetAd();
+			}
+
+			ClassAd * catalogAd = new ClassAd( payloadAd );
+			catalogAd->InsertAttr( "id", catalog_id );
+			catalogsAd->Insert( catalog_id, catalogAd );
+
+			//
+			// Successfully-advertised catalogs need to show up immediately
+			// in the internal ads used to determine the size of new slots.
+			//
+			resmgr->adlist_updated( NULL, false );
+
+
+			//
+			// Success.
+			//
+			replyAd.InsertAttr( ATTR_RESULT, true );
+		} break;
+
+
 		case STARTER_COMMAND::COLOR: {
 			const char * publicClaimID = publicClaimId();
 			if(! publicClaimID) {
@@ -2822,18 +2978,14 @@ void Claim::receiveUpdateCommand( int c,
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
-			std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+			std::string claimSpecificAdName = claim_specific_ad_name( COLORING_NAMESPACE, publicClaimID );
 
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );
 
-			// It seems brave to allow random strangers to determine which
-			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
-			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
-			std::string assignment;
-			if( this->rip() != NULL ) {
-				formatstr( assignment, "SlotMergeConstraint = SlotID == %d", this->rip()->r_id );
-			} else {
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
 				delete copy;
 
 				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
@@ -2842,11 +2994,29 @@ void Claim::receiveUpdateCommand( int c,
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
+
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			formatstr( assignment, "SlotMergeConstraint = SlotID == %d", rip->r_id );
+
 			// Presumably this is actually insert-or-update.
 			copy->Insert( assignment );
 
-			resmgr->adlist_replace( claimSpecificAdName.c_str(), copy );
 
+			// It's not enough to give this coloring ad its own name in the
+			// table of extra ads; we need to make sure that the coloring
+			// attributes from different starters don't collide with each
+			// other in the resulting machine ads.
+			ClassAd * shim = new ClassAd();
+			// This is awful.
+			std::string slot_name = rip->r_name;
+			slot_name = "colors_of_" + slot_name.substr( 0, slot_name.find("@") );
+			shim->Insert( slot_name.c_str(), copy );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), shim );
 			replyAd.InsertAttr( ATTR_RESULT, true );
 			} break;
 

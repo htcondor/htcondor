@@ -36,7 +36,7 @@ use feature: adstash
 #ADSTASH_SE_USERNAME = 
 #ADSTASH_SE_PASSWORD_FILE = 
 #ADSTASH_SE_USE_HTTPS = False
-#ADSTASH_SE_INDEX_NAME = htcondor-000001
+#ADSTASH_SE_INDEX_NAME = htcondor
 
 ###
 ### Rarely changed macros

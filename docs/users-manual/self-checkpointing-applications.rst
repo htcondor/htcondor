@@ -15,9 +15,9 @@ How To Run Self-Checkpointing Jobs
 ----------------------------------
 
 The best way to run self-checkpointing code is to set :subcom:`checkpoint_exit_code[definition]`
-HTCondor in your submit file.  (Any exit code will work, but if you can choose,
+in your submit file.  (Any exit code will work, but if you can choose,
 consider error code ``85``.  On Linux systems, this is ``ERESTART``, which
-seems appropriate.)  If the :subcom:`executable[and self-checkpointing]` exits HTCondor
+seems appropriate.)  If the :subcom:`executable[and self-checkpointing]` exits
 with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
 the submit node, and then immediately restart the :subcom:`executable` in the
 same sandbox on the same machine, with the same :subcom:`arguments`.  This
@@ -102,10 +102,9 @@ with code 0 when complete.
 The following submit file (``example.submit``) commands HTCondor to transfer the
 file ``example.checkpoint`` to the submit node whenever the script exits with code
 85.  If interrupted, the job will resume from the most recent of those
-checkpoints.  Before version 8.9.8, you *must* include your checkpoint file(s)
-in :subcom:`transfer_output_files`; otherwise HTCondor will not transfer it
-(them).  Starting with version 8.9.8, you may instead use
-:subcom:`transfer_checkpoint_files`.
+checkpoints.  Include your checkpoint file(s) in
+:subcom:`transfer_checkpoint_files` (or :subcom:`transfer_output_files`);
+otherwise HTCondor will not transfer them.
 
 .. code-block:: condor-submit
 
@@ -131,7 +130,7 @@ timestep 9 when the executable completes.  This could be done in
 ``example.py`` immediately before it exits, but that would cause the
 final file transfer to fail, if you specified the file in
 :subcom:`transfer_output_files`.  The script could instead remove the file
-and then re-create it empty, it desired.
+and then re-create it empty, if desired.
 
 How Frequently to Checkpoint
 ----------------------------
@@ -191,7 +190,7 @@ the somewhat mis-named **condor_evicted_files** program to ask where they are.
        
 For example, if your job is ID ``635.0``, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
-the current as follows:
+the current directory as follows:
 
 .. code-block:: console
 
@@ -320,7 +319,7 @@ script. The idea is that renaming a file is an atomic operation, so if
 your code writes checkpoints to one file, call it ``checkpoint``, your
 wrapper script -- when it detects that the checkpoint is complete --
 would rename that file ``checkpoint.atomic``. That way,
-``checkpoint.atomic`` always has a complete checkpoint in it. With a
+``checkpoint.atomic`` always has a complete checkpoint in it. With
 such a script, instead of putting ``checkpoint`` in
 :subcom:`transfer_output_files`, you would put ``checkpoint.atomic``, and
 HTCondor would never see a partially-complete checkpoint file. (The
@@ -381,7 +380,7 @@ used; if taking and transferring your checkpoint file(s) is fast enough
 to reliably complete during an eviction, you're not losing much by doing
 so periodically, and it's unlikely that a code which takes small
 checkpoints quickly takes a long time to start up. However, this method
-will work even with very old version of HTCondor.
+will work even with very old versions of HTCondor.
 
 To use this method, set :subcom:`when_to_transfer_output` to
 ``ON_EXIT_OR_EVICT`` and :ad-attr:`KillSig` to the particular signal that

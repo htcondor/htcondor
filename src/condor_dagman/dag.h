@@ -34,7 +34,9 @@
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
 #include "dag_commands.h"
+#include "dagman_submit.h"
 #include "throttles.hpp"
+#include "edge.h"
 #include <ranges>
 #include <filesystem>
 
@@ -174,6 +176,10 @@ public:
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
+	// Make Edge/DagArc connections between parent and child nodes. `meta` is the
+	// DagArc metadata (e.g. ARC_WEAK) to apply to each created children-edge arc;
+	// callers are responsible for translating dependency strength into this bitmask.
+	bool Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta = 0);
 	// Remove duplicate edges between nodes
 	void AdjustEdges();
 	// Prepare DAG for initial run. ONLY CALL FUNCTION ONCE!
@@ -205,7 +211,7 @@ public:
 	const char *GetStatusName() const { return DAG_STATUS_NAMES[_dagStatus]; }
 
 	// Functions to find Nodes
-	Node* FindNodeByNodeID(const NodeID_t nodeID) const;
+	Node* FindNodeByNodeID(const node_id_t nodeID) const;
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
@@ -389,6 +395,10 @@ public:
 		return desc;
 	}
 
+	// NOTE: Has to be static global across DAG instances
+	//       as long as splices exist as they do
+	static EdgeTable edge_table; // Global edge table to connect nodes
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
 	const Throttles& throttles; // DAGMan configured throttles
@@ -396,17 +406,13 @@ public:
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
+	std::string cif{}; // First discovered CommonInputTransfer list (hopefully temporary)
+
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
-	typedef enum {
-		SUBMIT_RESULT_OK,
-		SUBMIT_RESULT_FAILED,
-		SUBMIT_RESULT_NO_SUBMIT,
-	} submit_result_t;
-
 	using PinNodes = std::vector<Node *>;
 	using PinList = std::vector<PinNodes *>;
 
@@ -434,8 +440,9 @@ private:
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
+	bool StartIfReady(Node *node); // Start `node` iff it's now STATUS_READY; used as a parent-completion callback
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
+	SubmitResult SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -501,7 +508,7 @@ private:
 	std::vector<int> _graph_widths{};
 
 	std::map<std::string, Node*> _nodeNameHash{};
-	std::map<NodeID_t, Node*> _nodeIDHash{};
+	std::map<node_id_t, Node*> _nodeIDHash{};
 	std::map<int, Node*> _condorIDHash{};
 	std::map<int, Node*> _noopIDHash{};
 
@@ -521,7 +528,8 @@ private:
 	ScriptQ* _postScriptQ{nullptr};
 	ScriptQ* _holdScriptQ{nullptr};
 
-	DagmanMetrics* _metrics{nullptr};
+	DagSubmit* submitter{nullptr}; // This does not own this pointer
+	DagmanMetrics* _metrics{nullptr}; // This does not own this pointer
 	ProvisionerClassad* _provisionerClassad{nullptr}; // Provisioner node ClassAd functionality
 	// NOTE: Provisioner and Final nodes exist in _jobs vector.
 	//       These pointers are for quick access

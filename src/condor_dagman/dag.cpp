@@ -40,6 +40,7 @@
 #include "enum_utils.h"
 #include "tmp_dir.h"
 #include "condor_q.h"
+#include "transfer_proc.h"
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
@@ -48,6 +49,7 @@ namespace conf = DagmanConfigOptions;
 using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
+EdgeTable Dag::edge_table;
 
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
@@ -55,6 +57,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	config                 (dm.config),
 	throttles              (dm.throttles),
 	_schedd                (dm._schedd),
+	submitter              (dm.submitter),
 	_metrics               (dm.metrics),
 	_DAGManJobId           (&dm.DAGManJobId),
 	_spliceScope           (spliceScope),
@@ -222,7 +225,7 @@ bool Dag::Bootstrap(bool recovery)
 			}
 		}
 
-		set_fake_condorID(_recoveryMaxfakeID);
+		submitter->SetFakeId(_recoveryMaxfakeID);
 
 		debug_cache_stop_caching();
 
@@ -287,7 +290,7 @@ void Dag::SetPreDoneNodes() {
 }
 
 //-------------------------------------------------------------------------
-Node* Dag::FindNodeByNodeID(const NodeID_t nodeID) const {
+Node* Dag::FindNodeByNodeID(const node_id_t nodeID) const {
 	Node* node = nullptr;
 	auto findResult = _nodeIDHash.find(nodeID);
 	if (findResult == _nodeIDHash.end()) {
@@ -535,8 +538,21 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event, boo
 			bool submitEventIsSane;
 			Node *node = LogEventNodeLookup(event, submitEventIsSane);
 			PrintEvent(DEBUG_VERBOSE, event, node, recovery);
+
 			// event is for a job outside this DAG; ignore it
 			if ( ! node) { break; }
+
+			// Common transfer shadows reuse the job's ClassAd (and thus its
+			// DAGMan log) with a reserved proc id (<= FIRST_TRANSFER_PROC_ID);
+			// their events are not real job procs, so skip them.  Note: cluster
+			// level events (ULOG_CLUSTER_SUBMIT/REMOVE) also carry proc id -1 but
+			// must NOT be skipped -- they are dispatched normally below.
+			if (isTransferShadowProcID(event->proc)) {
+				debug_printf(DEBUG_NORMAL, "Warning: Skipping event due to non-job proc id %d: Common Transfer Shadow\n",
+				             event->proc);
+				break;
+			}
+
 			if ( ! EventSanityCheck(event, node, &result)) {
 				// this event is "impossible"; we will either abort the DAG (if result was set to false) or
 				// ignore it and hope for the best...
@@ -690,7 +706,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 			node->SetStatus(Node::STATUS_ERROR); // Mostly for late materialization
 			node->MarkFailed();
 
-			if (node->GetQueuedJobs() > 0) {
+			if (node->RemoveOnBatchFailure(config[conf::b::RemoveJobListOnFailure])) {
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.",
@@ -715,7 +731,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 		const JobTerminatedEvent* termEvent = (const JobTerminatedEvent*) event;
 
 		bool job_failed = !(termEvent->normal && termEvent->returnValue == 0);
-		bool batch_failed = false;
 
 		node->RecordJobExitCode(termEvent->proc, termEvent->returnValue);
 
@@ -750,23 +765,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 					node->_scriptPost->_retValJob = node->GetReturnValue();
 				}
 			}
-
-			batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
-
-			// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
-			if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
-				node->SetStatus(Node::STATUS_ERROR); // Mostly for late materialization
-				node->MarkFailed();
-
-				if (node->GetQueuedJobs() > 0) {
-					// once one job proc fails, remove the whole cluster
-					std::string rm_reason;
-					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) reached failure tolerance after %d failures.",
-					          node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, node->TotalJobsFailed());
-					RemoveBatchJob(node, rm_reason);
-				}
-			}
-
 		} else { // job succeeded
 			ASSERT(termEvent->returnValue == 0);
 			_totalJobsSuccessful++;
@@ -784,6 +782,22 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 			}
 			debug_printf(DEBUG_NORMAL, "Node %s job proc (%d.%d.%d) completed successfully.\n",
 			             node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc);
+		}
+
+		bool batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
+
+		// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
+		if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
+			node->SetStatus(Node::STATUS_ERROR); // Mostly for late materialization
+			node->MarkFailed();
+
+			if (node->RemoveOnBatchFailure(config[conf::b::RemoveJobListOnFailure])) {
+				// once one job proc fails, remove the whole cluster
+				std::string rm_reason;
+				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) reached failure tolerance after %d failures.",
+				          node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, node->TotalJobsFailed());
+				RemoveBatchJob(node, rm_reason);
+			}
 		}
 
 		ProcessJobProcEnd(node, recovery, batch_failed);
@@ -879,8 +893,11 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 				node->TerminateFailure();
 				SetStatus(DAG_STATUS_NODE_FAILED);
 
-				// Set descendants to Futile
-				_numNodesFutile += node->SetDescendantsToFutile(*this);
+				// Set descendants to Futile; weak-dep children are notified/started
+				// instead (StartIfReady no-ops on its own during recovery)
+				_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+						return dag.StartIfReady(child);
+					});
 			}
 		} else if (node->GetStatus() != Node::STATUS_ERROR) { // Terminate node if successful
 			TerminateNode(node, recovery);
@@ -947,7 +964,9 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 			} else {
 				// no more retries -- node failed
 				if (node->GetType() != NodeType::SERVICE) {
-					_numNodesFutile += node->SetDescendantsToFutile(*this);
+					_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+							return dag.StartIfReady(child);
+						});
 					_numNodesFailed++;
 					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 				} else {
@@ -1607,20 +1626,25 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 			// constructor here.  wenger 2015-09-25
 			CondorID condorID(0, 0, 0);
 			std::string error;
-			submit_result_t submit_result = SubmitNodeJob(dm, node, condorID, error);
-	
-			// Note: if instead of switch here so we can use break
-			// to break out of while loop.
-			if (submit_result == SUBMIT_RESULT_OK) {
-				ProcessSuccessfulSubmit(node, condorID);
-				numSubmitsThisCycle++;
+			bool break_loop = false;
+			int max_attempts = config[conf::i::MaxSubmitAttempts];
 
-			} else if (submit_result == SUBMIT_RESULT_FAILED || submit_result == SUBMIT_RESULT_NO_SUBMIT) {
-				ProcessFailedSubmit(node, config[conf::i::MaxSubmitAttempts], error);
-				break; // break out of while loop
-			} else {
-				EXCEPT("Illegal submit_result_t value: %d", submit_result);
+			SubmitResult result = SubmitNodeJob(dm, node, condorID, error);
+			switch (result) {
+				case SubmitResult::SUCCESS:
+					ProcessSuccessfulSubmit(node, condorID);
+					numSubmitsThisCycle++;
+					break;
+				case SubmitResult::FAILURE:
+					max_attempts = 0; // Short circuit ProcessFailedSubmit to fail node now
+					[[fallthrough]];
+				case SubmitResult::RETRY:
+					ProcessFailedSubmit(node, max_attempts, error);
+					break_loop = true;
+					break;
 			}
+
+			if (break_loop) { break; }
 		}
 	}
 
@@ -1629,7 +1653,9 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun]) {
 		// If DAGMan submitted jobs without error invalidate state for queue checking
 		_validatedState = false;
-		send_reschedule(dm);
+		if (config[conf::b::SubmitSendReschedule] && ! submitter->Reschedule()) {
+			debug_printf(DEBUG_NORMAL, "Warning: Failed to send reschedule to schedd\n");
+		}
 	}
 
 	// Put any deferred nodes back into the ready queue for next time.
@@ -1688,9 +1714,7 @@ Dag::PreScriptReaper(Node *node, int status)
 			             node->GetReturnValue(), node->GetNodeName() );
 
 			// Mark the node as a skipped node.
-			CondorID id;
-			std::string logFile = DefaultNodeLog();
-			if ( ! writePreSkipEvent(id, node, node->GetNodeName(), node->GetDirectory(), logFile.c_str())) {
+			if ( ! submitter->PreSkipSubmit(*node, DefaultNodeLog())) {
 				debug_printf(DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
 				             node->GetNodeName());
 				main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
@@ -1716,7 +1740,9 @@ Dag::PreScriptReaper(Node *node, int status)
 			node->MarkFailed();
 			node->TerminateFailure();
 			if (node->GetType() != NodeType::SERVICE) {
-				_numNodesFutile += node->SetDescendantsToFutile(*this);
+				_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+						return dag.StartIfReady(child);
+					});
 				_numNodesFailed++;
 				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 			} else {
@@ -2134,8 +2160,13 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 		// Never mark a FINAL node as done.
 		// Also avoid a possible race condition where the node
 		// has been skipped but is not yet marked as DONE.
-		if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
-			fprintf(fp, "DONE %s\n", node->GetNodeName());
+		if (node->GetType() != NodeType::FINAL) {
+			if (node->GetStatus() == Node::STATUS_DONE) {
+				fprintf(fp, "DONE %s\n", node->GetNodeName());
+			} else if (node->GetStatus() == Node::STATUS_ERROR && node->AllChildrenWeak(this)) {
+				fprintf(fp, "# Failed node with only weak child dependencies:\n");
+				fprintf(fp, "DONE %s\n", node->GetNodeName());
+			}
 		}
 
 		if (node->GetRetryMax() > 0 && !reset_retries) {
@@ -2157,6 +2188,23 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 	}
 
 	fclose(fp);
+}
+
+//-------------------------------------------------------------------------
+// Start `node` iff it's now STATUS_READY. Used as the parent-completion
+// callback for both normal (success) and weak-dependency-on-failure notification.
+// Never starts anything during recovery -- normal processing restarts nodes
+// once recovery finishes; the caller's NotifyChildren/SetDescendantsToFutile
+// bookkeeping still needs to run either way, so callers pass this unconditionally.
+bool
+Dag::StartIfReady(Node *node) {
+	if (Recovery()) { return false; }
+
+	if (node->GetStatus() == Node::STATUS_READY) {
+		return StartNode(node, false);
+	}
+
+	return false;
 }
 
 //-------------------------------------------------------------------------
@@ -2196,18 +2244,14 @@ Dag::TerminateNode(Node* node, bool recovery, bool bootstrap)
 
 	// Report termination to all child nodes by removing parent's ID from
 	// each child's waiting queue.
-	if (bootstrap || recovery) {
+	if (bootstrap) {
 		// notify children of parent completion, but don't start any nodes
 		node->NotifyChildren(*this, nullptr);
 	} else {
 		// notify children of parent completion, and start any nodes that are no longer idle
+		// (StartIfReady no-ops on its own during recovery)
 		node->NotifyChildren(*this, [](Dag& dag, Node* child) -> bool {
-				// this is invoked after child->ParentComplete(node) returns true
-				if (child->GetStatus() == Node::STATUS_READY) {
-					return dag.StartNode(child, false);
-				} else {
-					return false;
-				}
+				return dag.StartIfReady(child);
 			});
 	}
 }
@@ -2324,11 +2368,10 @@ Dag::DFSVisit(Node * node, int depth)
 		int plus_one = depth + 1;
 		while ((int)_graph_widths.size() <= plus_one) { _graph_widths.push_back(0); }
 
-		node->VisitChildren(*this, [](Dag& dag, Node* /*parent*/, Node* child, void* pv) -> int {
-				dag.DFSVisit(child, *(int*)pv);
+		std::ignore = node->VisitChildren(*this, [plus_one](Dag& dag, Node* /*parent*/, Node* child) -> int {
+				dag.DFSVisit(child, plus_one);
 				return 1;
-			},
-			&plus_one);
+			});
 	}
 
 	node->SetDfsOrder(++DFS_ORDER);
@@ -2357,7 +2400,7 @@ Dag::isCycle ()
 
 	//Detect cycle
 	for (auto & node : _nodes) {
-		if (node->VisitChildren(*this, [](Dag&, Node* parent, Node* child, void*) -> int {
+		if (node->VisitChildren(*this, [](Dag&, Node* parent, Node* child) -> int {
 				if (child->GetDfsOrder() >= parent->GetDfsOrder()) {
 		#ifdef REPORT_CYCLE
 					debug_printf(DEBUG_QUIET, "Cycle in the graph possibly involving nodes %s and %s\n",
@@ -2366,7 +2409,7 @@ Dag::isCycle ()
 					return 1; // increment the cycle count
 				}
 				return 0;
-			}, nullptr)) {
+			})) {
 			// the return value of VisitChildren is the number of children with _dfsOrder
 			// greater that that of their parents.  If *any* have this, then we have a cycle.
 			cycle = true;
@@ -3115,15 +3158,13 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 {
 	for (auto & node : _nodes) {
 		if (node->GetNodeName()) {
-			node->VisitChildren(*this, [](Dag&, Node* parent, Node* child, void* pv) -> int {
-					FILE* fp = (FILE*)pv;
+			node->VisitChildren(*this, [temp_dot_file](Dag&, Node* parent, Node* child) -> int {
 					const char * child_name = child->GetNodeName();
 					if (child_name) {
-						fprintf(fp, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name);
+						fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name);
 					}
 					return 1;
-				},
-				temp_dot_file);
+				});
 		}
 	}
 	
@@ -3244,37 +3285,49 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 	// a submit event.
 	if (event->eventNumber == ULOG_SUBMIT) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
-		if ( ! submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID(condorID);
+		std::string nodeName;
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in submit event notes: <%s>\n",
-				             submit_event->submitEventLogNotes.c_str());
+		if (submit_event->hasStructuredNotes()) {
+			submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method (We need this for fake condor submits i.e. no-ops)
+		if (nodeName.empty() && ! submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 
@@ -3317,39 +3370,50 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 
 	if (event->eventNumber == ULOG_CLUSTER_SUBMIT) {
 		const ClusterSubmitEvent* cluster_submit_event = (const ClusterSubmitEvent*)event;
-		if ( ! cluster_submit_event->submitEventLogNotes.empty()) {
-			char nodeName[1024] = "";
-			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", nodeName) == 1) {
-				node = FindNodeByName(nodeName);
-				if (node) {
-					submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
-					node->SetCondorID( condorID );
 
-					// Insert this node into the CondorID->node hash
-					// table if we don't already have it (e.g., recovery
-					// mode).  (In "normal" mode we should have already
-					// inserted it when we did the condor_submit.)
-					bool isNoop = NodeIsNoop(condorID);
-					ASSERT(isNoop == node->GetNoop());
-					int id = GetIndexID(condorID);
-					std::map<int, Node*> *ht = GetEventIDHash(isNoop);
-					auto findResult = ht->find(id);
-					// std::map::find() returns an iterator pointing to the desired element, or end() if not found
-					if (findResult == ht->end()) {
-						// Node not found.
-						auto insertResult = ht->emplace(id, node);
-						// std::map::insert() returns a pair, second element is the success bool
-						ASSERT(insertResult.second == true);
-					} else {
-						// Node was found.
-						ASSERT((*findResult).second == node);
-					}
-				}
-			} else {
-				debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in cluster submit event notes: <%s>\n",
-				             cluster_submit_event->submitEventLogNotes.c_str());
+		std::string nodeName;
+
+		if (cluster_submit_event->hasStructuredNotes()) {
+			cluster_submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
+		}
+
+		// Fall back to old method
+		if (nodeName.empty() && ! cluster_submit_event->submitEventLogNotes.empty()) {
+			char buf[1024] = "";
+			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
+				nodeName = buf;
 			}
 		}
+
+		if (nodeName.empty()) {
+			debug_printf(DEBUG_QUIET, "ERROR: DAG node name not located in cluster submit event!\n");
+			return nullptr;
+		}
+
+		node = FindNodeByName(nodeName.c_str());
+		if (node) {
+			submitEventIsSane = SanityCheckSubmitEvent(condorID, node);
+			node->SetCondorID(condorID);
+
+			// Insert this node into the CondorID->node hash
+			// table if we don't already have it (e.g., recovery
+			// mode).  (In "normal" mode we should have already
+			// inserted it when we did the condor_submit.)
+			bool isNoop = NodeIsNoop(condorID);
+			ASSERT(isNoop == node->GetNoop());
+			int id = GetIndexID(condorID);
+			std::map<int, Node*> *ht = GetEventIDHash(isNoop);
+			auto findResult = ht->find(id);
+			if (findResult == ht->end()) {
+				// Node not found.
+				auto insertResult = ht->emplace(id, node);
+				ASSERT(insertResult.second == true);
+			} else {
+				// Node was found.
+				ASSERT((*findResult).second == node);
+			}
+		}
+
 		return node;
 	}
 	return node;
@@ -3478,11 +3542,9 @@ Dag::GetEventIDHash(bool isNoop) const
 }
 
 //---------------------------------------------------------------------------
-Dag::submit_result_t
+SubmitResult
 Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err)
 {
-	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
-
 	// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if (node->GetCluster() != _defaultCondorId._cluster) {
 		// Remove the "previous" HTCondor ID for this node from
@@ -3509,28 +3571,21 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string
 		if (dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->GetEffectivePrio(), isRetry) != 0) {
 			node->AttemptedSubmit();
 			debug_printf(DEBUG_QUIET, "ERROR: condor_submit_dag -no_submit failed for node %s.\n", node->GetNodeName());
-			// Hmm -- should this be a node failure, since it probably
-			// won't work on retry?  wenger 2010-03-26
 			err = "Failed to submit Sub-DAG";
-			return SUBMIT_RESULT_NO_SUBMIT;
+			return SubmitResult::FAILURE;
 		}
 	}
 
 	debug_printf(DEBUG_NORMAL, "Submitting HTCondor Node %s job(s)...\n", node->GetNodeName());
 
-	bool submit_success = false;
-	std::string logFile = DefaultNodeLog();
-
 	node->AttemptedSubmit();
+
+	std::string logFile;
 	if (node->GetNoop()) {
-		submit_success = fake_condor_submit(condorID, 0, node->GetNodeName(), node->GetDirectory(), logFile.c_str());
-	} else {
-		submit_success = condor_submit(dm, node, condorID, err);
+		logFile = DefaultNodeLog();
 	}
 
-	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
-
-	return result;
+	return submitter->Submit(*node, condorID, err, logFile);
 }
 
 //---------------------------------------------------------------------------
@@ -3640,10 +3695,15 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err)
 			SetStatus(DAG_STATUS_NODE_FAILED);
 		}
 		//If no post script ran then set all descendants to Futile
-		if ( ! ranPostScript) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
+		if ( ! ranPostScript) {
+			_numNodesFutile += node->SetDescendantsToFutile(*this, [](Dag& dag, Node* child) -> bool {
+					return dag.StartIfReady(child);
+				});
+		}
 	} else {
-		// We have more submit attempts left, put this node back into the
-		// ready queue.
+		// We have more submit attempts left, put this node back into the ready queue.
+		dprintf(D_TEST, "Node %s submit failed %d/%d. RETRYING NODE SUBMISSION\n",
+		        node->GetNodeName(), node->GetSubmitAttempts(), max_submit_attempts);
 		debug_printf(DEBUG_NORMAL, "Job submit try %d/%d failed, will try again in >= %d second%s.\n",
 		             node->GetSubmitAttempts(), max_submit_attempts, thisSubmitDelay, thisSubmitDelay == 1 ? "" : "s");
 
@@ -3855,8 +3915,9 @@ Dag::ConnectSplices(Dag *parentSplice, Dag *childSplice)
 
 		for (auto parentNode : *parentPNs) {
 				for (auto childNode : *childPNs) {
-					std::vector<Node*> lst = { childNode };
-				if ( ! parentNode->AddChildren(lst, failReason)) {
+				std::vector<Node*> parents_lst = { parentNode };
+				std::vector<Node*> children_lst = { childNode };
+				if ( ! parentSplice->Connect(parents_lst, children_lst)) {
 					debug_printf(DEBUG_QUIET, "ERROR: unable to add parent/child dependency for pin %d\n", pinNum);
 					return false;
 				}
@@ -3993,7 +4054,6 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintNodeList();
-	OwnedMaterials *om = nullptr;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
 	if (layer == DESCENDENTS && _splices.size() == 0) {
@@ -4003,7 +4063,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& [splice_name, splice]: _splices) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
-		om = splice->LiftSplices(DESCENDENTS);
+		OwnedMaterials *om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice_name, om);
 		delete om;
@@ -4039,15 +4099,22 @@ Dag::LiftSplices(SpliceLayer layer)
 void
 Dag::AdjustEdges()
 {
-	for (auto & node : _nodes) {
-		node->BeginAdjustEdges(this);
+	// Compact promoted-out slots from the direct-arc pool and get old->new offset mapping
+	std::vector<size_t> offset_map = edge_table.CompactDirectPool();
+
+	// Update nodes still holding direct arc IDs to use the new compacted offsets
+	for (auto& node : _nodes) {
+		edge_id_t eid = node->GetEdgeID();
+		if (EdgeTable::IsDirect(eid)) {
+			size_t old_offset = EdgeTable::DirectIdToOffset(eid);
+			size_t new_offset = offset_map[old_offset];
+			ASSERT(new_offset != SIZE_MAX); // promoted arcs already carry positive edge IDs
+			node->SetEdgeID(EdgeTable::DirectOffsetToId(new_offset));
+		}
 	}
-	for (auto & node : _nodes) {
-		node->AdjustEdges(this);
-	}
-	for (auto & node : _nodes) {
-		node->FinalizeAdjustEdges(this);
-	}
+
+	// Initialize m_waiting on all wait edges now that Connect() has fully populated them
+	edge_table.ResetWaitEdges();
 }
 
 //---------------------------------------------------------------------------
@@ -4061,7 +4128,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 	Node *node = nullptr;
 	unsigned int i;
 	std::string key;
-	NodeID_t key_id;
+	node_id_t key_id;
 
 	std::vector<Node*> *nodes = om->nodes;
 
@@ -4172,4 +4239,243 @@ void Dag::SetNodePriorities()
 			node->AddDagPrio(dagPrior);
 		}
 	}
+}
+
+
+bool
+Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& children, unsigned int meta) {
+	// Verify we have parent(s)/child(ren) to make dependencies
+	if (parents.empty() || children.empty()) {
+		debug_printf(DEBUG_NORMAL, "ERROR: No %s%s%s nodes provided for dependency creation\n",
+		             parents.empty() ? "parent" : "",
+		             (parents.empty() && children.empty()) ? " nor " : "",
+		             children.empty() ? "child" : "");
+		return false;
+	}
+
+	// Verify valid parents
+	for (auto p : parents) {
+		ASSERT(p != nullptr);
+		std::string whynot("Unable to add child dependecies for node");
+		if ( ! p->CanAddChildren(whynot)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s %s\n", whynot.c_str(), p->GetNodeName());
+			return false;
+		}
+	}
+
+	// Verify valid children
+	for (auto c : children) {
+		ASSERT(c != nullptr);
+		std::string whynot("Unable to add parent dependenies for node");
+		if ( ! c->CanAddParent(whynot)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s %s\n", whynot.c_str(), c->GetNodeName());
+			return false;
+		}
+	}
+
+	// Update parent tracking on a child: set inline single parent, or promote to/append wait edge
+	auto update_parent = [](Node* c, node_id_t pid) {
+		ASSERT(c != nullptr);
+		ASSERT(pid != NO_ID);
+
+		if (c->HasSingleParent()) {
+			edge_id_t wedge_id = edge_table.NewWaitEdge();
+			ASSERT(wedge_id != NO_EDGE_ID);
+
+			Edge& wedge = edge_table.GetWaitEdge(wedge_id);
+			std::ignore = wedge.AddArc(c->GetParentsID());
+			std::ignore = wedge.AddArc(pid);
+
+			c->SetWaitEdge(wedge_id);
+		} else if (c->HasMultipleParents()) {
+			std::ignore = edge_table.GetWaitEdge(c->GetParentsID()).AddArc(pid);
+		} else {
+			c->SetSingleParent(pid);
+		}
+	};
+
+	// Bulk form of update_parent: wire up an entire (already deduplicated by the DAG file
+	// parser) group of new parents for a child in one shot. Building a fresh wait edge one
+	// arc at a time via update_parent() forces an O(size) dedupe scan per arc, which makes
+	// wiring up a single large fan-in/mxm/convergence group O(n^2). Since `parents` is
+	// internally duplicate-free, a brand-new or newly-promoted wait edge can be populated
+	// with AppendArc() (no scan) instead. A child that already has an established wait edge
+	// from an earlier, unrelated Connect() call still goes through the dedupe-safe per-arc
+	// path, since we can't assume `parents` has no overlap with that edge's existing arcs.
+	auto update_parents = [&update_parent](Node* c, const std::vector<Node*>& parents) {
+		ASSERT(c != nullptr);
+
+		if (c->HasMultipleParents()) {
+			for (auto p : parents) { update_parent(c, p->GetNodeID()); }
+		} else if (c->HasSingleParent()) {
+			node_id_t old_parent = c->GetParentsID();
+			edge_id_t wedge_id = edge_table.NewWaitEdge();
+
+			Edge& wedge = edge_table.GetWaitEdge(wedge_id);
+			wedge.Reserve(parents.size() + 1);
+			std::ignore = wedge.AppendArc(old_parent);
+
+			for (auto p : parents) {
+				node_id_t pid = p->GetNodeID();
+				if (pid != old_parent) { std::ignore = wedge.AppendArc(pid); }
+			}
+
+			c->SetWaitEdge(wedge_id);
+		} else if (parents.size() == 1) {
+			c->SetSingleParent(parents[0]->GetNodeID());
+		} else {
+			edge_id_t wedge_id = edge_table.NewWaitEdge();
+			Edge& wedge = edge_table.GetWaitEdge(wedge_id);
+			wedge.Reserve(parents.size());
+
+			for (auto p : parents) { std::ignore = wedge.AppendArc(p->GetNodeID()); }
+
+			c->SetWaitEdge(wedge_id);
+		}
+	};
+
+	// Fast track for shared edges between multiple parents
+	if (parents.size() > 1) {
+		edge_id_t check_edge_id = parents[0]->GetEdgeID();
+
+		bool share_edge = check_edge_id > 0 && std::ranges::all_of(parents, [check_edge_id](Node* n) {
+			return n->GetEdgeID() == check_edge_id;
+		});
+
+		bool no_edges = !share_edge && std::ranges::all_of(parents, [](Node* n) {
+			return n->GetEdgeID() == NO_EDGE_ID;
+		});
+
+		if (share_edge) {
+			// Collect children not yet present, and (only when this declaration is
+			// strong) children already present via a weak arc that needs upgrading.
+			std::vector<Node*> new_children;
+			std::vector<Node*> upgrade_children;
+			for (auto c : children) {
+				if ( ! edge_table[check_edge_id].Contains(c->GetNodeID())) {
+					new_children.push_back(c);
+				} else if ( ! (meta & ARC_WEAK) &&
+				           edge_table[check_edge_id].GetArc(c->GetNodeID()).IsWeak()) {
+					upgrade_children.push_back(c);
+				}
+			}
+
+			if (new_children.empty() && upgrade_children.empty()) { return true; }
+
+			// Single COW if other nodes also hold a reference; otherwise extend in-place
+			ASSERT(edge_table[check_edge_id].GetRefCount() >= parents.size());
+			edge_id_t id = check_edge_id;
+			if (edge_table[check_edge_id].GetRefCount() > parents.size()) {
+				Edge copy = edge_table[check_edge_id]; // local copy — stable after emplace_back
+				id = edge_table.NewEdge(&copy);
+				edge_table[id].SetRefCount(0);
+				for (auto p : parents) {
+					--edge_table[check_edge_id]; // index re-resolves after any realloc
+					p->SetEdgeID(id);
+					++edge_table[id];
+				}
+			}
+
+			Edge& target = edge_table[id];
+
+			if ( ! upgrade_children.empty()) {
+				for (auto c : upgrade_children) {
+					target.GetArc(c->GetNodeID()).metadata &= ~ARC_WEAK;
+				}
+			}
+
+			if ( ! new_children.empty()) {
+				// new_children only holds ids not already in target (Contains() filtered above)
+				// and has no internal duplicates (subset of the parser-deduplicated children
+				// list), so appending here needs no further dedupe scan.
+				target.Reserve(target.size() + new_children.size());
+				for (auto c : new_children) {
+					std::ignore = target.AppendArc(c->GetNodeID(), meta);
+					update_parents(c, parents);
+				}
+			}
+
+			return true;
+		} else if (no_edges) {
+			// All nodes have no edges so just make a shared one right now
+			edge_id_t id = edge_table.NewEdge();
+			Edge& edge = edge_table[id];
+
+			for (auto p : parents) {
+				p->SetEdgeID(id);
+				++edge;
+			}
+
+			// edge is brand-new and children is already deduplicated, so no dedupe scan needed
+			edge.Reserve(children.size());
+			for (auto c : children) {
+				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
+				update_parents(c, parents);
+			}
+
+			return true;
+		}
+	}
+
+	// Create/Add new dependency arcs/edges
+	for (auto p : parents) {
+		edge_id_t curr = p->GetEdgeID();
+		edge_id_t id = NO_EDGE_ID;
+		bool fresh_edge = false; // true only when `id` was just created with zero prior arcs
+
+		if (curr == NO_EDGE_ID) {
+			if (children.size() == 1) {
+				Node* child = children[0];
+				id = edge_table.AddDirectArc(child->GetNodeID(), meta);
+				ASSERT(EdgeTable::IsDirect(id));
+				p->SetEdgeID(id);
+				update_parent(child, p->GetNodeID());
+				continue;
+			}
+
+			id = edge_table.NewEdge();
+			++edge_table[id];
+			fresh_edge = true;
+		} else if (EdgeTable::IsDirect(curr)) {
+			if (children.size() == 1) {
+				DagArc& direct = edge_table.GetDirectArc(curr);
+				// Do manual updates if same child is specified and don't promote to multiple
+				if (direct.id == children[0]->GetNodeID()) {
+					// Strongest-wins: a strong re-declaration upgrades an existing weak arc.
+					if ( ! (meta & ARC_WEAK) && direct.IsWeak()) { direct.metadata &= ~ARC_WEAK; }
+					continue;
+				}
+			}
+
+			id = edge_table.PromoteDirect(curr);
+			ASSERT(id > 0); // promoted arc must become a multi-child edge
+		} else if (edge_table[curr].GetRefCount() > 1) {
+				// Copy-On-Write (COW) edge (i.e. other nodes reference this edge)
+				Edge copy = edge_table[curr]; // local copy — stable after emplace_back
+				--edge_table[curr];
+				id = edge_table.NewEdge(&copy);
+		} else {
+			id = curr;
+		}
+
+		ASSERT(id != NO_EDGE_ID);
+
+		p->SetEdgeID(id);
+		Edge& edge = edge_table[id];
+		if (fresh_edge) { edge.Reserve(children.size()); }
+
+		// children is already deduplicated by the parser, so a genuinely fresh edge
+		// (nothing to collide with) can skip AddArc's dedupe scan entirely.
+		node_id_t pid = p->GetNodeID();
+		for (auto c : children) {
+			if (fresh_edge) {
+				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
+			} else {
+				std::ignore = edge.AddArc(c->GetNodeID(), meta); // strongest-wins handled inside AddArc
+			}
+			update_parent(c, pid);
+		}
+	}
+
+	return true;
 }

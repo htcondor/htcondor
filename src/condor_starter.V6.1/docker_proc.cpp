@@ -38,7 +38,7 @@
 
 extern class Starter *starter;
 
-static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
+static void buildExtraVolumes(std::vector<std::string> &extras, std::vector<std::string> &mounts, ClassAd &machAd, ClassAd &jobAd);
 
 static bool handleFTL(int error) {
 	if (error != 0) {
@@ -104,6 +104,31 @@ std::string credentials_dir() {
 	return dir;
 }
 
+// Docker treats an image reference with no explicit tag as ":latest".  The
+// local image inventory (from "docker images") always reports an explicit tag
+// -- ":latest" for images that were pulled without one -- so to compare a
+// requested image name against that inventory we must apply the same implicit
+// ":latest" rule, otherwise a locally-present image looks absent and is
+// needlessly re-pulled.
+//
+// Two cases must be left alone:
+//   - a digest reference (contains '@', e.g. "ubuntu@sha256:...") pins an exact
+//     image and must not have a tag appended.
+//   - a registry host may contain a ':' for a port (e.g. "registry:5000/ubuntu"),
+//     so only a ':' in the final '/'-delimited component counts as a tag.
+static
+std::string normalizeDockerImageTag(const std::string &imageName) {
+	if (imageName.find('@') != std::string::npos) {
+		return imageName; // digest reference, no tag to add
+	}
+	size_t final_component = imageName.rfind('/');
+	final_component = (final_component == std::string::npos) ? 0 : final_component + 1;
+	if (imageName.find(':', final_component) != std::string::npos) {
+		return imageName; // already has an explicit tag
+	}
+	return imageName + ":latest";
+}
+
 int 
 DockerProc::StartJob() {
 	std::string imageID;
@@ -122,7 +147,9 @@ DockerProc::StartJob() {
 		imageID = imageID.substr(9);
 	}
 
-	imageName = imageID;
+	// Normalize an implicit tag to ":latest" so the local-image comparison
+	// below (and downstream pull/tag) matches Docker's own tag semantics.
+	imageName = normalizeDockerImageTag(imageID);
 
 	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
 	// construction is informative, but could be made even less likely
@@ -218,7 +245,7 @@ DockerProc::LaunchContainer() {
 	std::string innerdir("/test/execute/");
 	starter->SetInnerWorkingDir(innerdir.c_str());
 	#else
-	const char * outerdir = starter->GetWorkingDir(false);
+	const char * outerdir = starter->GetWorkingDir(WD::OUTER);
 	std::string innerdir(outerdir);
 	const char * tmp = strstr(outerdir, "\\execute\\");
 	if (tmp) {
@@ -269,7 +296,7 @@ DockerProc::LaunchContainer() {
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string workingDir = starter->GetWorkingDir(0);
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 
 	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -286,7 +313,8 @@ DockerProc::LaunchContainer() {
 	
 	ClassAd *machineAd = starter->jic->machClassAd();
 
-	std::list<std::string> extras;
+	std::vector<std::string> extras;
+	std::vector<std::string> mounts;
 	std::string slotDir = starter->GetSlotDir();
 
 	// map the slot dir inside the container
@@ -297,7 +325,7 @@ DockerProc::LaunchContainer() {
 	std::string iwd = starter->jic->jobRemoteIWD();
 	extras.push_back(iwd + ":" + iwd);
 
-	buildExtraVolumes(extras, *machineAd, *JobAd);
+	buildExtraVolumes(extras, mounts, *machineAd, *JobAd);
 
 	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
@@ -307,7 +335,7 @@ DockerProc::LaunchContainer() {
 			containerName, imageName,
 			command, args, job_env,
 			sandboxPath, innerdir,
-			extras, credentials_dir(), JobPid, childFDs,
+			extras, mounts, credentials_dir(), JobPid, childFDs,
 			shouldAskForServicePorts, err, affinity_mask);
 
 	if( rv < 0 ) {
@@ -331,7 +359,7 @@ DockerProc::PullImage() {
 	CondorError err;
 	int pullReaperId = daemonCore->Register_Reaper("PullReaper", (ReaperHandlercpp)&DockerProc::PullReaper,
 			"PullReaper", this);
-	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(0), *JobAd, pullReaperId, err);
+	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(WD::OUTER), *JobAd, pullReaperId, err);
 	if (r == 0) {
 		return TRUE;
 	} else {
@@ -354,7 +382,8 @@ DockerProc::PullReaper(int pid, int status) {
 		std::string pull_stderror;
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
-			htcondor::readShortFile(DockerErrorFile(), pull_stderror);
+			// best-effort; if unreadable pull_stderror stays empty
+			std::ignore = htcondor::readShortFile(DockerErrorFile(), pull_stderror);
 		}
 		std::erase(pull_stderror, '\n');
 		message += ' ' + pull_stderror;
@@ -381,7 +410,7 @@ DockerProc::ExecReaper(int pid, int status) {
 	return 1;
 }
 
-bool DockerProc::JobReaper( int pid, int status ) {
+ReapResult DockerProc::JobReaper( int pid, int status ) {
 	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d status is %d wait_for_Create is %d\n", pid, status, waitForCreate);
 
 	if (waitForCreate) {
@@ -454,27 +483,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// for search service (if any) before we actually started the job,
 		// but (understandably) Docker doesn't do that.
 
-	#ifdef WIN32 
-		#ifdef COPY_INPUT_SANDBOX
-		// copy the input sandbox into the container
-		{
-			std::string workingDir = starter->GetWorkingDir(0);
-			std::string innerPath = starter->GetWorkingDir(true);
-			std::vector<std::string> opts{"-a"};
-
-			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
-			//TemporaryPrivSentry sentry(PRIV_ROOT);
-
-			int rv = DockerAPI::copyToContainer(workingDir, containerName, innerPath, &opts);
-			if (rv < 0) {
-				dprintf(D_ERROR, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
-					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
-				return FALSE;
-			}
-		}
-		#endif
-	#endif
-
 		// It seems like this should be done _after_ we call start Container().
 		starter->SetJobEnvironmentReady(true);
 
@@ -492,20 +500,25 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdin.\n" );
-			return FALSE;
+			starter->SetVacateReason("Failed to open stdin for docker job", CONDOR_HOLD_CODE::UnableToOpenInput, errno);
+			starter->ShutdownFast();
+			return ReapResult::JobDone;
 		}
 
 		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
-
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdout.\n" );
 			daemonCore->Close_FD( childFDs[0] );
-			return FALSE;
+			starter->SetVacateReason("Failed to open stdout for docker job", CONDOR_HOLD_CODE::UnableToOpenOutput, errno);
+			starter->ShutdownFast();
+			return ReapResult::JobDone;
 		}
 		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stderr.\n" );
 			daemonCore->Close_FD( childFDs[0] );
 			daemonCore->Close_FD( childFDs[1] );
-			return FALSE;
+			starter->SetVacateReason("Failed to open stderr for docker job", CONDOR_HOLD_CODE::UnableToOpenOutput, errno);
+			starter->ShutdownFast();
+			return ReapResult::JobDone;
 		}
 		}
 
@@ -519,7 +532,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "DockerProc::StartJob(): Image Architecture %s not compatible with this machine.", arch.c_str());
 			dprintf(D_ALWAYS, "%s\n", message.c_str());
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
-			return false;
+			return ReapResult::JobDone;
 		}
 
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
@@ -538,7 +551,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		}
 
 		++num_pids; // Used by OsProc::PublishUpdateAd().
-		return false; // don't exit
+		return ReapResult::JobShouldReExec; // docker create exited, container starting
 	}
 
 
@@ -644,13 +657,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 			DockerAPI::rm( containerName, error );
 
-			if ( starter->Hold( ) ) {
-				starter->allJobsDone();
-				this->JobExit();
-			}
-
-			starter->ShutdownFast();
-			return 0;
+			starter->StarterExit(starter->GetShutdownExitCode());
+			return ReapResult::JobDone;
 		}
 
 			// See if docker could not run the job
@@ -675,7 +683,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 
 			starter->ShutdownFast();
-			return 0;
+			return ReapResult::JobDone;
 		}
 
 		int dockerStatus;
@@ -695,7 +703,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		return VanillaProc::JobReaper( pid, status );
 	}
 
-	return 0;
+	return ReapResult::JobNotFound;
 }
 
 void
@@ -719,16 +727,53 @@ DockerProc::SetupDockerSsh() {
 	listener.close();
 	listener.assignDomainSocket(uds);
 
-	// and bind it to a filename in the scratch directory
+	// Bind the socket to .docker_sock in the scratch directory.
+	//
+	// The catch: AF_UNIX bind() copies the path out of sun_path, which on
+	// Linux is only 108 bytes.  HTCondor's execute directory path can
+	// easily exceed that (e.g. with long machine/slot names or deeply
+	// nested per-job subdirs), so the obvious "workingDir + /.docker_sock"
+	// does not fit and bind() returns ENAMETOOLONG.
+	//
+	// The Linux-only trick: open the working directory and refer to the
+	// socket via /proc/self/fd/<N>/.docker_sock.  /proc/self/fd/<N> is a
+	// magic symlink that resolves to whatever the open fd points at, so
+	// the kernel does the path lookup starting from our dirfd and creates
+	// the socket inode under the real (long) directory.  The string we
+	// actually place in sun_path is bounded by the width of an int's
+	// decimal representation plus a fixed prefix/suffix -- well under 108
+	// bytes regardless of how deep the working directory is.
+	//
+	// On the wire / on disk the socket still lives at workingDir/.docker_sock
+	// (that is what readdir / stat will show); only the address we hand to
+	// the kernel during bind() is the /proc/self/fd indirection.
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = starter->GetWorkingDir(0);
-	std::string pipeName = workingDir + "/.docker_sock";	
+	std::string workingDir = starter->GetWorkingDir(WD::OUTER);
+	std::string pipeName = workingDir + "/.docker_sock";
 
-	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	// O_PATH is enough: we only need the fd as a directory reference for
+	// the /proc/self/fd lookup; we never read or write through it.
+	int dirfd = -1;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	dirfd = open(workingDir.c_str(), O_PATH | O_DIRECTORY | O_CLOEXEC);
+	}
+	if (dirfd < 0) {
+		dprintf(D_ALWAYS, "Cannot open working dir %s for docker ssh_to_job: %d\n", workingDir.c_str(), errno);
+		return;
+	}
+	int n = snprintf(pipe_addr.sun_path, sizeof(pipe_addr.sun_path),
+		"/proc/self/fd/%d/.docker_sock", dirfd);
+	if (n < 0 || (size_t)n >= sizeof(pipe_addr.sun_path)) {
+		// Unreachable in practice: the formatted path is ~30 bytes.
+		dprintf(D_ALWAYS, "Cannot format /proc/self/fd path for docker ssh_to_job\n");
+		close(dirfd);
+		return;
+	}
 	pipe_addr_len = SUN_LEN(&pipe_addr);
 
 	{
@@ -736,9 +781,13 @@ DockerProc::SetupDockerSsh() {
 	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
 	if (rc < 0) {
 		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for docker ssh_to_job: %d\n", pipeName.c_str(), errno);
+		close(dirfd);
 		return;
 	}
 	}
+	// The socket file now exists at workingDir/.docker_sock; the dirfd
+	// was only needed to dodge the sun_path length limit during bind().
+	close(dirfd);
 
 	listen(uds, 50);
 	listener._state = Sock::sock_special;
@@ -1017,7 +1066,7 @@ DockerProc::getStats( int /* timerID */ ) {
 
 			// Append serviceAd to the sandbox's copy of the job ad.
 			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", starter->GetWorkingDir(0) );
+			formatstr( jobAdFileName, "%s/.job.ad", starter->GetWorkingDir(WD::OUTER) );
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				// ... sigh ...
@@ -1143,9 +1192,81 @@ DockerProc::restartCheckpointedJob() {
 	return VanillaProc::restartCheckpointedJob();
 }
 
-// Generate a list of strings that are suitable arguments to
-// docker run --volume
-static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd) {
+// Convert a legacy docker --volume specification of the form
+// source[:target[:options]] into the equivalent docker --mount spec
+// "type=<type>,source=...,target=...[,readonly][,bind-propagation=...][,<extraOpts>]".
+//
+// "type" is the --mount mount type, normally "bind" (a host directory) but
+// "volume" (a docker-managed named volume) when the administrator sets
+// DOCKER_VOLUME_DIR_xxx_TYPE = volume; for type=volume the source field is a
+// volume name rather than a host path.
+//
+// The options HTCondor has historically documented for DOCKER_VOLUME_DIR_* are
+// translated: "ro" -> readonly and "rw" (the default) are handled, and the
+// bind-propagation modes are passed through.  Any other option (e.g. the SELinux
+// "z"/"Z" relabel shortcuts, which --mount does not support) is dropped with a
+// warning.
+//
+// extraOpts, from DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS, is appended verbatim as
+// additional comma-separated --mount suboptions (e.g. volume-driver=...,
+// volume-opt=...); it is not interpreted by HTCondor.
+static std::string volumeToMountSpec(const std::string &vol, const std::string &type, const std::string &extraOpts) {
+	std::string source;
+	std::string target;
+	std::string options;
+
+	size_t firstColon = vol.find(':');
+	if (firstColon == std::string::npos) {
+		// No colon: mount the source onto itself.
+		source = vol;
+		target = vol;
+	} else {
+		source = vol.substr(0, firstColon);
+		size_t secondColon = vol.find(':', firstColon + 1);
+		if (secondColon == std::string::npos) {
+			target = vol.substr(firstColon + 1);
+		} else {
+			target = vol.substr(firstColon + 1, secondColon - (firstColon + 1));
+			options = vol.substr(secondColon + 1);
+		}
+	}
+
+	std::string spec = "type=";
+	spec += type;
+	spec += ",source=";
+	spec += source;
+	spec += ",target=";
+	spec += target;
+
+	// The --volume option list is comma-separated.
+	for (const auto &opt: StringTokenIterator(options, ",")) {
+		if (opt == "ro") {
+			spec += ",readonly";
+		} else if (opt == "rw") {
+			// read-write is the default; nothing to add
+		} else if (opt == "shared" || opt == "slave" || opt == "private" ||
+				   opt == "rshared" || opt == "rslave" || opt == "rprivate") {
+			spec += ",bind-propagation=";
+			spec += opt;
+		} else {
+			dprintf(D_ALWAYS, "WARNING: docker volume option '%s' in '%s' has no "
+					"--mount equivalent and will be ignored\n", opt.c_str(), vol.c_str());
+		}
+	}
+
+	// Append any administrator-supplied raw suboptions verbatim.
+	if (!extraOpts.empty()) {
+		spec += ',';
+		spec += extraOpts;
+	}
+
+	return spec;
+}
+
+// Generate a list of strings that are suitable arguments to docker run --volume
+// (extras), plus a list of --mount specs for administrator-configured volumes
+// (mounts).
+static void buildExtraVolumes(std::vector<std::string> &extras, std::vector<std::string> &mounts, ClassAd &machAd, ClassAd &jobAd) {
 	// Bind mount items from MOUNT_UNDER_SCRATCH into working directory
 	std::string scratchNames;
 	if (!param_eval_string(scratchNames, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
@@ -1172,7 +1293,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 #endif
 
 	if (scratchNames.length() > 0) {
-		std::string workingDir = starter->GetWorkingDir(0);
+		std::string workingDir = starter->GetWorkingDir(WD::OUTER);
 			// Foreach scratch name...
 		for (const auto &scratchName: StringTokenIterator(scratchNames)) {
 			std::string hostdirbuf;
@@ -1202,18 +1323,41 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 	for (const auto &volumeName: StringTokenIterator(volumeNames)) {
 		std::string paramName("DOCKER_VOLUME_DIR_");
 		paramName += volumeName;
-		char *volumePath = param(paramName.c_str());
-		if (volumePath) {
-			if (strchr(volumePath, ':') == 0) {
-				// Must have a colon.  If none, assume we meant
-				// source:source
-				char *volumePath2 = (char *)malloc(2 + 2 * strlen(volumePath));
-				strcpy(volumePath2, volumePath);
-				strcat(volumePath2, ":");
-				strcat(volumePath2, volumePath);
-				free(volumePath);
-				volumePath = volumePath2;
+		std::string volumePath;
+		if (param(volumePath, paramName.c_str())) {
+			// The path value is evaluated as a ClassAd expression in the
+			// context of the slot (machine) and job ads; if it is not a valid
+			// expression the literal value is used as-is.
+			std::string evaluatedPath;
+			if (param_eval_string(evaluatedPath, paramName.c_str(), "", &machAd, &jobAd)) {
+				volumePath = evaluatedPath;
 			}
+
+			// The mount type defaults to "bind" (a host directory), but the
+			// administrator may set DOCKER_VOLUME_DIR_xxx_TYPE = volume to use
+			// a docker-managed named volume instead.
+			std::string mountType = "bind";
+			char *typeValue = param((paramName + "_TYPE").c_str());
+			if (typeValue) {
+				mountType = typeValue;
+				free(typeValue);
+			}
+
+			// DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS, if set, is appended verbatim
+			// as additional --mount suboptions.  It is evaluated as a ClassAd
+			// expression in the context of the slot (machine) and job ads; if
+			// it is not a valid expression it is used as a literal string.
+			std::string mountOpts;
+			std::string mountOptsParam = paramName + "_MOUNT_OPTS";
+			if (!param_eval_string(mountOpts, mountOptsParam.c_str(), "", &machAd, &jobAd)) {
+				// Not an expression, maybe a literal
+				param(mountOpts, mountOptsParam.c_str());
+			}
+
+			// Translate the legacy source[:target[:options]] value into a
+			// docker --mount spec.  volumeToMountSpec() handles the no-colon
+			// (source onto itself) case.
+			std::string mountSpec = volumeToMountSpec(volumePath, mountType, mountOpts);
 
 			// If there's a DOCKER_VOLUME_DIR_XXX_MOUNT_IF
 			// param, and it evals to true, add it to the list
@@ -1224,19 +1368,18 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 
 			if (mountIfValue == NULL) {
 				// there's no MOUNT_IF, assume true
-				extras.push_back(volumePath);
-				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+				mounts.push_back(mountSpec);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath.c_str());
 			} else if (param_boolean(paramNameConst.c_str(), false /*deflt*/,
 				false /*do_log*/, &machAd, &jobAd)) {
 
 				// There is a MOUNT_IF, and it is true
-				extras.push_back(volumePath);
-				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+				mounts.push_back(mountSpec);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath.c_str());
 			} else {
 				// There is a MOUNT_IF, and it is false/undef
-				dprintf(D_ALWAYS, "Not adding %s as a docker volume to mount -- ...MOUNT_IF evaled to false.\n", volumePath);
+				dprintf(D_ALWAYS, "Not adding %s as a docker volume to mount -- ...MOUNT_IF evaled to false.\n", volumePath.c_str());
 			}
-			free(volumePath);
 			free(mountIfValue);
 		} else {
 			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName.c_str());

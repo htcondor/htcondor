@@ -446,6 +446,23 @@ DedicatedScheduler::~DedicatedScheduler()
 		delete mrec;
 	}
 
+		// Pending matches (claim sent to startd, not yet activated) are
+		// NOT in all_matches -- AddMrec puts a mrec in one or the other.
+		// Free them directly: do NOT go through DelMrec/releaseClaim here.
+		// DelMrec has assertions that don't hold mid-shutdown, and
+		// releaseClaim sends a network message that needs daemonCore.
+		// ~match_rec is shutdown-safe (it bails when daemonCore is null).
+		// The startd reclaims the claim via its unused-claim timeout, the
+		// same as today's shutdown_graceful behavior for these claims.
+	for (const auto& [cid, mrec] : pending_matches) {
+		delete mrec;
+	}
+	pending_matches.clear();
+	for (const auto& [cid, ad] : pending_requests) {
+		delete ad;
+	}
+	pending_requests.clear();
+
 		// Clear out the resource_requests queue
 	clearResourceRequests();  	// Delete classads in the queue
 }
@@ -654,10 +671,21 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 	// There's a race condition with partitionable slots where we can get the same
 	// mrec twice, if we are claiming partitionable leftovers at the same time
 	// as we are claiming.  If there's a dup, just drop it here instead of
-	// messing up all our data structures.
-	//
+	// messing up all our data structures.  Check both completed matches and
+	// in-flight (pending) matches: the negotiator may re-present a pslot whose
+	// claim id we have already requested but for which we have not yet received
+	// the post-split dslot ad. Claiming again would issue a duplicate
+	// REQUEST_CLAIM that the startd rejects (slot already in Claimed state),
+	// which then causes us to DelMrec the original and lose the claim.
 
-	if (dedicated_scheduler.all_matches_by_id.find(claim_id) != dedicated_scheduler.all_matches_by_id.end()) {
+	if (dedicated_scheduler.all_matches_by_id.find(claim_id) != dedicated_scheduler.all_matches_by_id.end() ||
+	    dedicated_scheduler.pending_matches.find(claim_id) != dedicated_scheduler.pending_matches.end()) {
+		if (IsFulldebug(D_FULLDEBUG)) {
+			std::string publicId = ClaimIdParserLite(claim_id).publicClaimId();
+			dprintf(D_FULLDEBUG,
+		        "DedicatedScheduler: ignoring duplicate match for claim %s (already claimed or in flight)\n",
+		        publicId.c_str());
+		}
 		return false;
 	}
 
@@ -821,15 +849,14 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec )
 
 	rsock.encode();
     d.startCommand( RELEASE_CLAIM, &rsock);
-	rsock.put( m_rec->claim_id.claimId() );
+	rsock.put( m_rec->claimId() );
 	rsock.end_of_message();
 
-	if( IsFulldebug(D_FULLDEBUG) ) { 
-		char name_buf[256];
-		name_buf[0] = '\0';
-		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
+	if( IsFulldebug(D_FULLDEBUG) ) {
+		std::string name_buf;
+		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
 		dprintf( D_FULLDEBUG, "DedicatedScheduler: releasing claim on %s\n", 
-				 name_buf );
+				 name_buf.c_str() );
 	}
 
 	DelMrec( m_rec );
@@ -867,9 +894,10 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	sock.encode();
 
-	if( !sock.put(m_rec->claim_id.claimId()) ) {
+	if( !sock.put(m_rec->claimId()) ) {
+		std::string idbuf;
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code ClaimId (%s)\n", m_rec->claim_id.publicClaimId() );
+				 "Can't code ClaimId (%s)\n", m_rec->publicClaimId(idbuf) );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -913,9 +941,9 @@ DedicatedScheduler::checkClaimLeases( )
 				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
 				renew_time = now;
 			} else {
-				GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+				GetAttributeInt(mrec->jid, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
 			}
-			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
+			SetAttributeInt( mrec->jid, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
 
@@ -1127,12 +1155,12 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 
 	if( strcmp(alloc->claim_id, id) ) {
 			// No match, abort
-		ClaimIdParser alloc_claim_id_p(alloc->claim_id);
-		ClaimIdParser id_p(id);
+		std::string pubId = ClaimIdParserLite(id).publicClaimId();
+		std::string pubAlloc = ClaimIdParserLite(alloc->claim_id).publicClaimId();
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
 				 "incorrect ClaimId (%s) given for cluster %d "
-				 "- aborting (expecting: %s)\n", id_p.publicClaimId(),
-				 cluster, alloc_claim_id_p.publicClaimId() );
+				 "- aborting (expecting: %s)\n", pubId.c_str(),
+				 cluster, pubAlloc.c_str() );
 			// TODO: other cleanup?
 		free( id );
 		return FALSE;
@@ -1192,7 +1220,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->put( (*matches)[i]->claim_id.claimId() ) ) {
+			if( ! stream->put( (*matches)[i]->claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "ClaimId for match %zu of proc %d\n", i, p );
 				return FALSE;
@@ -1744,7 +1772,7 @@ DedicatedScheduler::sortResources( )
 				mr->needs_release_claim = false;
 				scheduler.unlinkMrec(mr);
 				mr->is_dedicated = true; // it is now!
-				mr->cluster = -1; // dissociate from previous job
+				mr->jid.cluster = -1; // dissociate from previous job
 				auto *resource = new ClassAd(*mr->my_match_ad);
 				dPrintAd(D_ALWAYS, *resource);
 				
@@ -1753,7 +1781,7 @@ DedicatedScheduler::sortResources( )
 				resource->LookupString(ATTR_NAME, &slot_name);
 				auto [it1, success1] = all_matches.emplace(slot_name, mr);
 				ASSERT(success1);
-				auto [it2, success2] = all_matches_by_id.emplace(mr->claim_id.claimId(), mr);
+				auto [it2, success2] = all_matches_by_id.emplace(mr->claimId(), mr);
 				ASSERT(success2);
 				free(slot_name);
 			}
@@ -1920,7 +1948,7 @@ DedicatedScheduler::spawnJobs( )
 			  aboutToSpawnJobHandler() hook to complete.
 			*/
 		allocation->status = A_RUNNING;
-		allocation->setClaimId( mrec->claim_id.claimId() );
+		allocation->setClaimId( mrec->claimId() );
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -1939,6 +1967,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 {
 		// foreach proc in this cluster...
 
+		std::string publicId;
 		std::vector<std::string> allRemoteHosts;
 
 		for( int p=0; p<allocation->num_procs; p++ ) {
@@ -1952,8 +1981,8 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				// Foreach node within this proc...
 			for( int i=0; i < n; i++ ) {
 					// Grab the claim from the mrec
-				char const *claim = (*(*allocation->matches)[p])[i]->claim_id.claimId();
-				char const *publicClaim = (*(*allocation->matches)[p])[i]->claim_id.publicClaimId();
+				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId(publicId);
 
 				std::string claim_buf;
 				if( strchr(claim,',') ) {
@@ -2790,8 +2819,8 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// and mark it scheduled & allocated
 		mrec->scheduled = true;
 		mrec->allocated = true;
-		mrec->cluster   = cluster;
-		mrec->proc      = proc;
+		mrec->jid.cluster   = cluster;
+		mrec->jid.proc      = proc;
 
 			// We're now at a new proc
 		if( proc != last_proc) {
@@ -2857,7 +2886,37 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		// allocation node from our table.
 	allocations.erase( srec->job_id.cluster );
 
-		// Finally, delete the object itself so we don't leak it. 
+		// Finally, delete the object itself so we don't leak it.
+	delete alloc;
+}
+
+
+void
+DedicatedScheduler::removeOrphanedAllocation( int cluster )
+{
+	auto alloc_it = allocations.find(cluster);
+	if (alloc_it == allocations.end()) {
+		return;
+	}
+	AllocationNode* alloc = alloc_it->second;
+
+		// Reset any match_recs still referenced by this allocation.
+		// In the typical case (startd rejected all claim activations)
+		// DelMrec has already erased them from these MRecArrays, so
+		// this is a no-op; we do it for safety in case we arrive from
+		// a different cleanup path.
+	for (int i = 0; i < alloc->num_procs; i++) {
+		MRecArray* matches = (*alloc->matches)[i];
+		for (match_rec* m : *matches) {
+			deallocMatchRec( m );
+		}
+	}
+
+	dprintf( D_FULLDEBUG,
+	         "DedicatedScheduler::removeOrphanedAllocation: "
+	         "removed allocation for cluster %d\n", cluster );
+
+	allocations.erase(alloc_it);
 	delete alloc;
 }
 
@@ -3157,6 +3216,19 @@ DedicatedScheduler::AddMrec(
 		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
 		return nullptr;
 	}
+		// Also reject if this claim id is already in flight (pending_matches)
+		// or already fully claimed (all_matches_by_id). Without this guard,
+		// the partitionable path below would silently overwrite the existing
+		// pending_matches[claim_id] entry and orphan the original match_rec,
+		// then issue a duplicate REQUEST_CLAIM that the startd rejects.
+	if (pending_matches.find(claim_id) != pending_matches.end() ||
+	    all_matches_by_id.find(claim_id) != all_matches_by_id.end()) {
+		std::string pubId = ClaimIdParserLite(claim_id).publicClaimId();
+		dprintf(D_ALWAYS,
+		        "DedicatedScheduler: negotiator sent match for %s with claim %s already in use, ignoring\n",
+		        slot_name, pubId.c_str());
+		return nullptr;
+	}
 		// Now, create a match_rec for this resource
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
@@ -3185,12 +3257,13 @@ DedicatedScheduler::AddMrec(
     if (slot_type == "Static") {
 		auto [it1, success1] = all_matches.emplace(slot_name, mrec);
 		ASSERT(success1);
-		auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+		auto [it2, success2] = all_matches_by_id.emplace(mrec->claimId(), mrec);
 		ASSERT(success2);
     } else {
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
-        pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
+        std::string publicId;
+        pending_claims[mrec->publicClaimId(publicId)] = claim_id;
     }
 
 	removeRequest( job_id );
@@ -3207,7 +3280,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 				 "match not deleted\n" );
 		return false;
 	}
-	return DelMrec( rec->claim_id.claimId() );
+	return DelMrec( rec->claimId() );
 }
 
 
@@ -3216,31 +3289,30 @@ DedicatedScheduler::DelMrec( char const* id )
 {
 	match_rec* rec = nullptr;
 
-	char name_buf[256];
-	name_buf[0] = '\0';
+	std::string name_buf, publicId;
 
 	if( ! id ) {
 		dprintf( D_ALWAYS, "Null parameter to DelMrec() -- "
 				 "match not deleted\n" );
 		return false;
 	}
-	ClaimIdParser cid(id);
 	// Check pending_matches
 	std::map<std::string,match_rec*>::iterator it;
 	if((it = pending_matches.find(id)) != pending_matches.end()){
-		rec = it->second;	
-		dprintf(D_FULLDEBUG, "Found record for claim %s in pending matches\n",
-		        cid.publicClaimId());
+		rec = it->second;
+		const char * publicClaimId = rec->publicClaimId(publicId);
+		dprintf(D_FULLDEBUG, "Found record for claim %s in pending matches\n", publicClaimId);
+
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
-		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
+		if((rit = pending_requests.find(publicClaimId)) != pending_requests.end()){
 			if(rit->second){
 				delete rit->second;
 				pending_requests.erase(rit);
 			}
 		}
 		std::map<std::string,std::string>::iterator cit;
-		if((cit = pending_claims.find(rec->claim_id.publicClaimId())) != pending_claims.end()){
+		if((cit = pending_claims.find(publicClaimId)) != pending_claims.end()){
 			pending_claims.erase(cit);
 		}
 		delete rec;
@@ -3249,8 +3321,11 @@ DedicatedScheduler::DelMrec( char const* id )
 		// First, delete it from our table hashed on ClaimId.
 	auto it2 = all_matches_by_id.find(id);
 	if (it2 == all_matches_by_id.end()) {
-		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
-				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
+		if (IsFulldebug(D_FULLDEBUG)) {
+			publicId = ClaimIdParserLite(id).publicClaimId();
+			dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- "
+					 "match not deleted (but perhaps it was deleted previously)\n", publicId.c_str() );
+		}
 		return false;
 	}
 	rec = it2->second;
@@ -3264,12 +3339,12 @@ DedicatedScheduler::DelMrec( char const* id )
 		// have dangling pointers, etc.  We can look it up w/ the
 		// cluster from the mrec.
 	AllocationNode* alloc = nullptr;
-	auto alloc_it = allocations.find(rec->cluster);
+	auto alloc_it = allocations.find(rec->jid.cluster);
 	if (alloc_it == allocations.end()) {
 			// Cool, this match wasn't allocated to anyone, so we
 			// don't have to worry about it.  If the match isn't
 			// allocated to anyone, the cluster better be -1.
-		ASSERT( rec->cluster == -1 );
+		ASSERT( rec->jid.cluster == -1 );
 	} else {
 			// Bummer, this match was allocated to one of our jobs.
 			// We don't have to worry about shutting it down, since
@@ -3298,16 +3373,16 @@ DedicatedScheduler::DelMrec( char const* id )
 				// we couldn't find the match record in the allocation
 				// node.  This must be a programmer error...
 			dprintf( D_ALWAYS, "ERROR deleting match record for cluster %d\n",
-					 rec->cluster );  
+					 rec->jid.cluster );
 			dprintf( D_ALWAYS, "Allocation node for this cluster doesn't "
 					 "include the match rec\n" );
 			EXCEPT( "Can't delete m_rec from allocation node for cluster %d",
-					rec->cluster );
+					rec->jid.cluster );
 		}
 	}
 
 		// Now, we can delete it from the main table hashed on name.
-	rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
+	rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
 	all_matches.erase(name_buf);
 
 		// If this match record is associated with a shadow record,
@@ -3320,7 +3395,7 @@ DedicatedScheduler::DelMrec( char const* id )
 		// Finally, delete the match rec itself.
 	delete rec;
 
-	dprintf( D_FULLDEBUG, "Deleted match rec for %s\n", name_buf );
+	dprintf( D_FULLDEBUG, "Deleted match rec for %s\n", name_buf.c_str() );
 
 	return true;
 }
@@ -3724,7 +3799,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 {
 	ClassAd* candidate = nullptr;
 	std::vector<std::string> names;
-	char name_buf[512];
 	
 	dprintf( D_FULLDEBUG, 
 			 "Trying to satisfy job with all possible resources\n" );
@@ -3747,8 +3821,8 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
             if (satisfies(job, candidate)) {
 				candidate_resources.DeleteCurrent();
 				matchCount++;
-				name_buf[0] = '\0';
-				candidate->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
+				std::string name_buf;
+				candidate->LookupString( ATTR_NAME, name_buf );
 				names.emplace_back( name_buf );
 				jobs->DeleteCurrent();
 
@@ -3914,6 +3988,9 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		nprocs++;
 
 		ClassAd *job = GetJobAd(id.cluster, id.proc);
+		if (!job) {
+			continue;
+		}
 			// Foreach node of each job
 			// 1.) create mrec
 			// 2.) add to all_matches, and all_matches_by_name
@@ -3997,8 +4074,11 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 				continue;
 			}
 
-			ClaimIdParser cid(claim);
-			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
+			if (IsFulldebug(D_FULLDEBUG)) {
+				std::string publicId = ClaimIdParserLite(claim).publicClaimId();
+				dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n",
+					sinful, publicId.c_str());
+			}
 
 			auto *mrec = 
 				new match_rec(claim, sinful, id,
@@ -4008,7 +4088,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 			auto [it1, success1] = all_matches.emplace(host, mrec);
 			ASSERT(success1);
-			auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+			auto [it2, success2] = all_matches_by_id.emplace(mrec->claimId(), mrec);
 			ASSERT(success2);
 
 			jobsToAllocate.Append(job);
@@ -4130,15 +4210,15 @@ void
 deallocMatchRec( match_rec* mrec )
 {
 	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec(%d.%d)\n",
-	         mrec ? mrec->cluster : -1, mrec ? mrec->proc : -1);
+	         mrec ? mrec->jid.cluster : -1, mrec ? mrec->jid.proc : -1);
 		// We might call this with a NULL mrec, so don't seg fault.
 	if( ! mrec ) {
 		return;
 	}
 	mrec->allocated = false;
 	mrec->scheduled = false;
-	mrec->cluster = -1;
-	mrec->proc = -1;
+	mrec->jid.cluster = -1;
+	mrec->jid.proc = -1;
 	mrec->shadowRec = nullptr;
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
@@ -4166,7 +4246,7 @@ DedicatedScheduler::GetMatchRequestAd( match_rec* qmrec ) {
         return nullptr;
     }
 
-    auto f(pending_requests.find(qmrec->claim_id.claimId()));
+    auto f(pending_requests.find(qmrec->claimId()));
     if (f == pending_requests.end()) {
         dprintf(D_ALWAYS, "DedicatedScheduler::GetMatchRequestAd -- failed to find job assigned to claim\n");
         return nullptr;

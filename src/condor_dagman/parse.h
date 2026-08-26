@@ -70,6 +70,7 @@ private:
 	bool ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag_munge_id);
 	bool ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, int dag_munge_id);
 	bool ProcessPreSkip(const PreSkipCommand* skip, Dag& dag, int dag_munge_id);
+	bool ProcessTolerance(const ToleranceCommand* cmd, Dag& dag, int dag_munge_id);
 	bool ProcessPriority(const PriorityCommand* prio, Dag& dag, int dag_munge_id);
 	bool ProcessVars(const VarsCommand* vars, Dag& dag, int dag_munge_id);
 	bool ProcessDone(const DoneCommand* cmd, Dag& dag, int dag_munge_id);

@@ -62,6 +62,7 @@ Access Point Configuration
 
     schedd.rst
     shadow.rst
+    librarian.rst
     submit.rst
     dagman.rst
     gridmanager.rst
@@ -98,7 +99,7 @@ All Options
 -----------
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :glob:
 
     all.rst

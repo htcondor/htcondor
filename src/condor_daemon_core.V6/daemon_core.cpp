@@ -85,6 +85,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
+#include "condor_random_num.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
 #include "valgrind.h"
@@ -290,7 +291,6 @@ DaemonCore::DaemonCore()
 	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ) {
 		m_wants_dc_udp_self = false;
 	}
-	m_invalidate_sessions_via_tcp = true;
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
 #ifdef WIN32
 	m_never_use_kill_for_dc_signals = true;
@@ -1829,9 +1829,16 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
-	if (handler_f) {
-		sockTable[i].std_handler = *handler_f;
-	}
+		// Always (re)assign std_handler -- including clearing it when this
+		// registration does not supply one.  Cancel_Socket does not clear a slot's
+		// std_handler, so a slot freed by a std::function-handler socket keeps that
+		// std::function until the slot is reused.  If the slot is then reused by a
+		// registration with only a C/C++ handler (or none, e.g. a command socket via
+		// Register_Command_Socket), the stale std_handler would otherwise linger and,
+		// because CallSocketHandler_worker dispatches std_handler when handler and
+		// handlercpp are both null, be invoked on the wrong socket -- a use-after-free
+		// of whatever the stale std::function captured.
+	sockTable[i].std_handler = handler_f ? *handler_f : StdSocketHandler();
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
@@ -2240,9 +2247,11 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
 	pipeTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		pipeTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally: this slot may be reused from a
+	// prior registration that installed a std::function, and Cancel_Pipe
+	// does not reset it.  Leaving a stale std_handler here would let dispatch
+	// call a dead captured object (heap-use-after-free).
+	pipeTable[i].std_handler = handler_f ? *handler_f : StdPipeHandler();
 	pipeTable[i].is_cpp = (bool)is_cpp;
 	pipeTable[i].service = s;
 	pipeTable[i].data_ptr = NULL;
@@ -2673,9 +2682,12 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
-	if( handler_f != nullptr ) {
-		reapTable[i].std_handler = * handler_f;
-	}
+	// Assign std_handler unconditionally.  Besides the reuse-of-cancelled-slot
+	// case, this path also replaces a live entry in place (rid > 0), and the
+	// reaper table explicitly permits all-null handlers (use the default
+	// reaper).  Leaving a stale std_handler here would let dispatch call a
+	// dead captured object (heap-use-after-free) instead of the default reaper.
+	reapTable[i].std_handler = handler_f ? *handler_f : StdReaperHandler();
 	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = nullptr;
@@ -2708,6 +2720,19 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 		}
 	}
 	return -1;
+}
+
+bool DaemonCore::Set_Socket_Handler_Type( Stream *iosock, HandlerType handler_type )
+{
+	int i = Lookup_Socket( iosock );
+	if ( i < 0 ) {
+		return false;
+	}
+	sockTable[i].handler_type = handler_type;
+	// Wake up the main select loop so the new interest takes effect promptly
+	// rather than waiting for the current timeout to expire.
+	Wake_up_select();
+	return true;
 }
 
 int DaemonCore::Cancel_Reaper( int rid )
@@ -3032,6 +3057,9 @@ DaemonCore::reconfig(void) {
 	secman->reconfig();
 	secman->getIpVerify()->Init();
 
+		// the connect path caches OUTBOUND_CCB_ADDRESS; re-read it on reconfig
+	Sock::invalidateOutboundCCBAddressCache();
+
         // invoke reconfig method on our class to handle timer events
     t.reconfig();
 
@@ -3130,8 +3158,6 @@ DaemonCore::reconfig(void) {
 	}
 #endif /* HAVE CLONE */
 
-	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
-
 	// DaemonCore::Send_Signal behaviors
 	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
 #ifdef WIN32
@@ -3166,6 +3192,24 @@ DaemonCore::reconfig(void) {
 		}
 
 		char *ccb_addresses = param("CCB_ADDRESS");
+		if( !ccb_addresses || !ccb_addresses[0] ) {
+				// No explicit inbound CCB.  If this daemon tunnels its *outbound*
+				// connections through a CCB (OUTBOUND_CCB_ADDRESS), it almost certainly
+				// cannot be dialed directly either, so default its *inbound* CCB to that
+				// same broker: the inside CCB serves both directions and stamps the
+				// tunnel nesting into the contact it hands out.  Under the master this is
+				// already injected (and gated on the tunnel being ready); this makes a
+				// daemon started standalone self-configure the same way.  An explicit
+				// CCB_ADDRESS overrides.
+			free( ccb_addresses );
+			ccb_addresses = param("OUTBOUND_CCB_ADDRESS");
+			if( ccb_addresses && ccb_addresses[0] ) {
+				dprintf( D_ALWAYS,
+						 "No CCB_ADDRESS configured; defaulting inbound CCB to "
+						 "OUTBOUND_CCB_ADDRESS=%s (outbound-CCB tunnel).\n",
+						 ccb_addresses );
+			}
+		}
 		if( m_shared_port_endpoint ) {
 				// if we are using a shared port, then we don't need our
 				// own ccb listener; SharedPortServer will have its own
@@ -3605,6 +3649,10 @@ void DaemonCore::Driver()
 				} else {
 					int sockfd = sockEnt.iosock->get_file_desc();
 					switch( sockEnt.handler_type ) {
+					case HANDLE_NONE:
+						// registered but not currently polled (e.g. a relay
+						// pausing reads to apply backpressure)
+						break;
 					case HANDLE_READ:
 						selector.add_fd( sockfd, Selector::IO_READ );
 						break;
@@ -3644,6 +3692,8 @@ void DaemonCore::Driver()
 			if ( pipeTable[i].index != -1 ) {	// if a valid entry....
 				int pipefd = pipeHandleTable[pipeTable[i].index];
 				switch( pipeTable[i].handler_type ) {
+				case HANDLE_NONE:
+					break;
 				case HANDLE_READ:
 					selector.add_fd( pipefd, Selector::IO_READ );
 					break;
@@ -3859,17 +3909,25 @@ void DaemonCore::Driver()
 								sockEnt.call_handler = true;
 							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+					} else {
+						// NOTE: read and write interest are checked with
+						// independent ifs (not else-if) so that a
+						// HANDLE_READ_WRITE socket fires its handler on EITHER
+						// read or write readiness.  (As an else-if chain the
+						// write check would be unreachable for READ_WRITE.)
+						if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
-					} else if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
-							 sock_timed_out )
-						{
-							sockEnt.call_handler = true;
+						if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
+							if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
+								 sock_timed_out )
+							{
+								sockEnt.call_handler = true;
+							}
 						}
 					}
 				}	// end of if valid sock entry
@@ -9812,16 +9870,26 @@ pidWatcherThread( void* arg )
 	// which exited.
 	if ( (result < numentries) && (result >= 0) ) {
 
+		// Cache the PidEntry we are processing.  For a pipe that becomes
+		// ready, we must signal the PipeEnd's watched-event (watcher_done())
+		// as the very last thing we do, because that signal is what releases
+		// a concurrent Cancel_Pipe to delete this PidEntry.  post_wait() used
+		// to signal it directly, but the watcher then went on to write the
+		// PidEntry's pipeReady/watcherEvent fields, racing with that delete
+		// (a use-after-free seen at daemon/starter shutdown).
+		DaemonCore::PidEntry *pidentry = entry->pidentries[result];
+		bool signal_watcher_done = false;
+
 		last_pidentry_exited = result;
-		InterlockedExchange(&(entry->pidentries[result]->process_exited), true);
+		InterlockedExchange(&(pidentry->process_exited), true);
 
 		// notify our main thread which process exited
 		// note: if it was a thread which exited, the entry's
 		// pid contains the tid.  if we are talking about a pipe,
 		// set the exited_pid to be zero.
-		if ( entry->pidentries[result]->pipeEnd ) {
+		if ( pidentry->pipeEnd ) {
 			exited_pid = 0;
-			if (entry->pidentries[result]->deallocate) {
+			if (pidentry->deallocate) {
 				// this entry should be deallocated.  set things up so
 				// it will be done at the top of the loop; no need to send
 				// a signal to break out of select in the main thread, so we
@@ -9829,10 +9897,14 @@ pidWatcherThread( void* arg )
 				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 			} else {
 				// pipe is ready and has not been deallocated.
-				if (entry->pidentries[result]->pipeEnd->post_wait()) {
+				if (pidentry->pipeEnd->post_wait()) {
 					// the handler is ready to be fired
-					InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
+					InterlockedExchange(&(pidentry->pipeReady),1L);
 					must_send_signal = true;
+					// post_wait() reported ready but (unlike before) did not
+					// signal the watched-event; we must do that via
+					// watcher_done() once we are done with the PidEntry.
+					signal_watcher_done = true;
 				}
 				else {
 					// not ready yet...
@@ -9840,12 +9912,12 @@ pidWatcherThread( void* arg )
 				}
 			}
 		} else {
-			exited_pid = entry->pidentries[result]->pid;
+			exited_pid = pidentry->pid;
 		}
 
 		if ( exited_pid ) {
 			// a pid exited.  add it to MyExitedQueue, which is a queue of
-			// exited pids local to our thread that are waiting to be 
+			// exited pids local to our thread that are waiting to be
 			// added to the main thread WaitpidQueue.
 			wait_entry.child_pid = exited_pid;
 			wait_entry.exit_status = 0;  // we'll get the status later
@@ -9855,7 +9927,15 @@ pidWatcherThread( void* arg )
 
 		// we will no longer be watching this PidEntry, so detach
 		// it from our watcherEvent
-		entry->pidentries[result]->watcherEvent = NULL;
+		pidentry->watcherEvent = NULL;
+
+		// If the pipe became ready, this is the last point at which we touch
+		// the PidEntry.  Signal the watched-event now so that a concurrent
+		// Cancel_Pipe (blocked in PipeEnd::cancel()) may safely delete it.
+		// WARNING: after this call we must not reference pidentry again.
+		if ( signal_watcher_done ) {
+			pidentry->pipeEnd->watcher_done();
+		}
 
 	} else {
 		// no pid/thread/pipe was signaled; we were signaled because our
@@ -10979,13 +11059,13 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 	return true;
 }
 
-bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
+bool DaemonCore :: cookie_is_valid( const unsigned char* data, int len ) {
 
 	if ( data == NULL || _cookie_data == NULL ) {
 		return false;
 	}
 
-	if ( strcmp((const char*)_cookie_data, (const char*)data) == 0 ) {
+	if ( len == _cookie_len && timing_safe_compare(_cookie_data, data, len) ) {
 		// we have a match... trust this command.
 		return true;
 	} else if ( _cookie_data_old != NULL ) {
@@ -10994,7 +11074,7 @@ bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 		// rotated the cookie. So check it with
 		// the old cookie.
 
-		if ( strcmp((const char*)_cookie_data_old, (const char*)data) == 0 ) {
+		if ( len == _cookie_len_old && timing_safe_compare(_cookie_data_old, data, len) ) {
 			return true;
 		} else {
 
@@ -11449,42 +11529,6 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	return 0;
 }
 
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) const {
-	if ( !sinful ) {
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
-		return;
-	}
-
-	std::string the_msg = sessid;
-
-	// If given a non-empty ad, add it to our message.
-	// This extra information is understood in version 8.8.0
-	// and above.
-	if ( info_ad && info_ad->size() > 0 ) {
-		the_msg += "\n";
-		classad::ClassAdUnParser unparser;
-		unparser.Unparse(the_msg, info_ad);
-	}
-
-	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
-
-	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg(
-		DC_INVALIDATE_KEY,
-		the_msg.c_str() );
-
-	msg->setSuccessDebugLevel(D_SECURITY);
-	msg->setRawProtocol(true);
-
-	if( !daemon->hasUDPCommandPort() || m_invalidate_sessions_via_tcp ) {
-		msg->setStreamType(Stream::reli_sock);
-	}
-	else {
-		msg->setStreamType(Stream::safe_sock);
-	}
-
-	daemon->sendMsg( msg.get() );
-}
-
 
 void DaemonCore::SockPair::add_relisock() {
 	if(!m_rsock) {
@@ -11521,6 +11565,18 @@ int DaemonCore::CreateProcessNew(
 		ocpa.affinity_mask, ocpa.daemon_sock,
 		& ocpa.err_return_msg,
 		ocpa._remap, ocpa.as_hard_limit );
+
+		// If the caller asked us to arm the hung-child backstop now (rather
+		// than waiting for the child's first DC_CHILDALIVE), set the initial
+		// deadline on the child's PidEntry.  This lets a child safely delay
+		// its first alive without opening a window in which the parent would
+		// never reap it if it hung early.  The first alive overwrites this.
+	if ( rv > 0 && ocpa.initial_hung_timeout > 0 ) {
+		auto itr = pidTable.find(rv);
+		if ( itr != pidTable.end() ) {
+			itr->second.hung_past_this_time = time(nullptr) + ocpa.initial_hung_timeout;
+		}
+	}
 	return rv;
 }
 

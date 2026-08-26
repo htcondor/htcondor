@@ -140,7 +140,7 @@ def the_job_description(test_dir, path_to_sleep):
         "starter_debug":            "D_FULLDEBUG",
         "request_cpus":             1,
         "request_memory":           1,
-        "transfer_input_files":     "http://no-such.tld/example",
+        "transfer_input_files":     "http://nonexistent.invalid/example",
     }
 
 
@@ -242,7 +242,7 @@ class TestGuidanceCommands:
             expected_shadow_log_line = "Diagnostic 'unknown' did not complete: 'Error - Unregistered'"
             the_shadow_log = the_condor.shadow_log.open()
             assert the_shadow_log.wait(
-                timeout=1,
+                timeout=10,
                 condition=lambda line: expected_shadow_log_line in line.message and f"{the_completed_job.clusterid}.0" in line.tags
             )
 

@@ -32,6 +32,11 @@ static int hip_device_count = 0;
 static int hip_was_initialized = 0;
 static std::vector<hipDeviceProp_t> hip_platforms;
 
+// The ROCm/HIP major version of the library we actually loaded.  This is
+// advertised via the "Rocm" machine ClassAd attribute.  0 until a library
+// has been loaded and its version determined.
+static int hip_lib_major_version = 0;
+
 int hip_Init(void) {
 
 	print_error(MODE_DIAGNOSTIC_MSG, "diag: hip_Init()\n");
@@ -104,10 +109,6 @@ dlopen_return_t
 loadHipLibrary() {
 #if       defined(WIN32)
 	const char * hip_library = "amdhip64.dll";
-#else  /* defined(WIN32) */
-	const char * hip_library = "libamdhip64.so.6";
-#endif /* defined(WIN32) */
-
 	dlopen_return_t hip_handle = dlopen( hip_library, RTLD_LAZY );
 	if(! hip_handle) {
 		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", hip_library, dlerror());
@@ -117,6 +118,34 @@ loadHipLibrary() {
 
 	dlerror(); // reset error
 	return hip_handle;
+#else  /* defined(WIN32) */
+	// Prefer the versioned SONAMEs, newest first, so that we find the library
+	// on nodes that have only the ROCm runtime (not the -devel package)
+	// installed -- the unversioned symlink is typically shipped only by -devel.
+	// Fall back to the unversioned name last.  This mirrors the NVML loader in
+	// cuda_device_enumeration.cpp.  The number in the versioned name is also a
+	// first hint at which ROCm major version we loaded (refined below from the
+	// driver itself).
+	static const struct { const char * name; int major; } candidates[] = {
+		{ "libamdhip64.so.7", 7 },
+		{ "libamdhip64.so.6", 6 },
+		{ "libamdhip64.so",   0 },
+	};
+
+	for (const auto & candidate : candidates) {
+		dlopen_return_t hip_handle = dlopen( candidate.name, RTLD_LAZY );
+		if( hip_handle ) {
+			print_error(MODE_DIAGNOSTIC_MSG, "Loaded HIP library '%s'\n", candidate.name);
+			hip_lib_major_version = candidate.major;
+			dlerror(); // reset error
+			return hip_handle;
+		}
+		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", candidate.name, dlerror());
+		dlerror(); // reset error
+	}
+
+	return NULL;
+#endif /* defined(WIN32) */
 }
 
 
@@ -143,8 +172,20 @@ hipError_t HIP_API_CALL sim_hipDeviceProperties(hipDeviceProp_t * props, int dev
 	return hipSuccess;
 }
 
-// so we can add hipDetection via ROCM 6 to the gpu properties
-#define HIP_LIB_MAJOR_VERSION 6
+// Query the loaded HIP runtime for its version and record the ROCm/HIP major
+// version, which we advertise via the "Rocm" ClassAd attribute.  HIP encodes
+// the version as major*10000000 + minor*100000 + patch (e.g. 60342131 -> 6).
+// This works regardless of which library filename we loaded, and corrects the
+// hint derived from the versioned SONAME.
+static void
+setHipMajorVersionFromDriver() {
+	if (! hip.hipDriverGetVersion) { return; }
+	int driver_version = 0;
+	hipError_t err = hip.hipDriverGetVersion(&driver_version);
+	if (err == hipSuccess && driver_version > 0) {
+		hip_lib_major_version = driver_version / 10000000;
+	}
+}
 
 dlopen_return_t
 setHIPFunctionPointers(int simulate) {
@@ -153,6 +194,7 @@ setHIPFunctionPointers(int simulate) {
 		hip.hipDriverGetVersion = sim_hipDriverVersion;
 		hip.hipGetDeviceProperties = sim_hipDeviceProperties;
 		hip_device_count = simulate;
+		setHipMajorVersionFromDriver();
 		return (dlopen_return_t)1;
 	}
 
@@ -163,6 +205,7 @@ setHIPFunctionPointers(int simulate) {
 	hip.hipGetDeviceProperties = (hipDeviceProperties_t) dlsym(hip_handle, "hipGetDevicePropertiesR0600");
 	hip.hipDriverGetVersion = (hipDriverGetVersion_t) dlsym(hip_handle,"hipDriverGetVersion");
 	hip.hipDeviceGetUuid = (hipDeviceGetUuid_t) dlsym(hip_handle,"hipDeviceGetUuid");
+	setHipMajorVersionFromDriver();
 	print_error(MODE_DIAGNOSTIC_MSG, "diag: HIP function pointers:\n"
 		"\t%p : hipGetDeviceCount\n"
 		"\t%p : hipGetDevicePropertiesR0600\n"
@@ -251,7 +294,7 @@ hipError_t hip_getBasicProps(int dev, BasicProps *bp, int fix_guid_magic){
 
 	const hipDeviceProp_t & dev_props = hip_platforms[dev];
 
-	bp->hipDetection = HIP_LIB_MAJOR_VERSION; // what version of hip (ROCM) libraries we used to get properties.
+	bp->hipDetection = hip_lib_major_version; // what version of hip (ROCM) libraries we used to get properties.
 
 	if (is_null_uuid(dev_props.uuid)) {
 		print_error(MODE_DIAGNOSTIC_MSG, "diag: dev(%d) UUID is NULL-GUID, ignoring\n", dev);

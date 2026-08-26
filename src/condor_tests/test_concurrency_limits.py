@@ -349,10 +349,17 @@ def num_busy_slots_history(startd_log_file, limit_exceeded, concurrency_limit):
     active_claims_history = track_quantity(
         startd_log_file.read(),
         increment_condition=lambda msg: "Changing activity: Idle -> Busy" in msg,
+        # All exits from Claimed/Busy: normal completion via Cleaning,
+        # starter crash (no final update) via Idle, or direct preempt
+        # (before any final update) via Preempting/Killing or Vacating.
+        # Do NOT decrement on later transitions like
+        # "Preempting/Vacating -> Owner/Idle" -- those would double-count
+        # when a job goes Busy -> Cleaning -> Preempting/Vacating -> Owner/Idle.
         decrement_condition=lambda msg:
+            "Changing activity: Busy -> Cleaning" in msg or
             "Changing activity: Busy -> Idle" in msg or
             "Changing state and activity: Claimed/Busy -> Preempting/Killing" in msg or
-            "Changing state and activity: Preempting/Vacating -> Owner/Idle" in msg,
+            "Changing state and activity: Claimed/Busy -> Preempting/Vacating" in msg,
         max_quantity=concurrency_limit["max-running"],
         expected_quantity=concurrency_limit["max-running"],
     )

@@ -116,6 +116,7 @@ usage(int retval = 1)
 		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
 		"\t-verbose\tPrint source, raw, expanded, and default values\n"
+		"\t-trace\t\tPrint source and value for all config files that set <var>\n"
 		//"\t-info\t\tPrint help and usage info for variables\n" // TODO: tj uncomment this for 8.7
 		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
 		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
@@ -499,6 +500,68 @@ static const char * RemotePrintValue(const char * val, const char * indent, std:
 	return buf.c_str();
 }
 
+class ConfigMetaTracer : public macro_meta_tracer {
+public:
+	ConfigMetaTracer(std::vector<std::string> & params, FILE* _out, bool _verbose=false, bool _dump=false)
+		: names(params.begin(), params.end())
+		, out(_out)
+		, verbose(_verbose)
+		, dump(_dump)
+	{
+		if (dump) {
+			// since we know that the names collection cannot change
+			// we can just use a static vector of Regex for the compiled part
+			patterns.resize(names.size()); // resize to make sure that we don't try and move any Regex
+			int ix = 0;
+			for (const auto &restr : names) {
+				auto & re = patterns[ix++];
+				int errcode, errindex;
+				if (! re.compile(restr.c_str(), &errcode, &errindex, PCRE2_CASELESS)) {
+					fprintf(stderr, "warning: failed to compile trace pattern '%s' (PCRE2 error %d at offset %d); ignoring it.\n",
+						restr.c_str(), errcode, errindex);
+					// re is left uninitialized; match() already skips
+					// patterns where re.isInitialized() is false.
+				}
+			}
+		}
+	}
+	~ConfigMetaTracer() {
+		// Tie the global tracer registration to this object's lifetime, so
+		// the global doesn't outlive the wrapped state.
+		enable_config_tracing(nullptr);
+	}
+	std::set<std::string, CaseIgnLTYourString> names;
+	std::vector<Regex> patterns;
+	FILE* out{nullptr};
+	bool verbose{false};
+	bool dump{false};
+	virtual bool match(const char * name) {
+		if (dump) {
+			for (auto &re : patterns) {
+				if (re.isInitialized() && re.match(name)) return true;
+			}
+		}
+		return names.count(name);
+	}
+	virtual void log(const char * name, const char * old_value, [[maybe_unused]] const char * new_value, MACRO_META & meta) {
+		std::string location;
+		fprintf(out, " # trace: %s\n", name?name:"");
+		if (old_value) fprintf(out, "  # was: %s\n", old_value);
+		param_get_location(&meta, location);
+		fprintf(out, "  # set at: %s\n", location.c_str());
+		//if (verbose) fprintf(out, "  # now: %s\n", new_value?new_value:"");
+	}
+};
+
+
+// used by the "swap" option, which tests config swapping.
+struct config_set {
+	MACRO_SET mset;
+	std::string global_file;
+	std::vector<std::string> local_files;
+};
+std::map<std::string, config_set> Configs;
+
 int
 main( int argc, const char* argv[] )
 {
@@ -519,6 +582,8 @@ main( int argc, const char* argv[] )
 	bool    dash_usage = false;
 	bool    dash_dump_both = false;
 	bool    dump_all_variables = false;
+	bool    trace_config_changes = false; // log file and line for self-substitution while loading config
+	std::unique_ptr<ConfigMetaTracer> config_tracer{nullptr}; // param names that should be traced
 	bool    dump_stats = false;
 	bool    show_param_info = false; // show info from param table
 	bool    expand_dumped_variables = false;
@@ -536,6 +601,7 @@ main( int argc, const char* argv[] )
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
+	bool    dash_swap_config = false;
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
@@ -647,6 +713,8 @@ main( int argc, const char* argv[] )
 			print_config_sources = true;
 		} else if (is_arg_prefix(arg, "reconfig", 5)) {
 			reconfig_source = use_next_arg("reconfig", argv, i);
+		} else if (is_arg_prefix(arg, "swap", 4)) {
+			dash_swap_config = true;
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			if (dash_default) {
 				fprintf(stderr, "-verbose cannot be used with -default\n");
@@ -689,6 +757,8 @@ main( int argc, const char* argv[] )
 			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
+		} else if (is_arg_prefix(arg, "trace", 2)) {
+			trace_config_changes = true;
 		} else if (is_arg_colon_prefix(arg, "stats", &pcolon, 4)) {
 			dump_stats = true;
 			if (pcolon && is_arg_prefix(pcolon+1, "keep_defaults", 2)) {
@@ -836,7 +906,13 @@ main( int argc, const char* argv[] )
 					 "condor's home directory\n" );
 			my_exit( 1 );
 		}
-	}		
+	}
+
+		// if -trace was passed, give the config system a tracer before we load config.
+	if (trace_config_changes) {
+		config_tracer.reset(new ConfigMetaTracer(params, stdout, verbose, dump_all_variables));
+		enable_config_tracing(config_tracer.get());
+	}
 
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
@@ -845,8 +921,19 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
+
 	set_priv_initialize(); // allow uid switching if root
+	if (dash_swap_config && root_config) {
+		config_host(NULL, config_options, nullptr);
+		validate_config(false); // validate, but do not abort.
+		if (print_config_sources) {
+			PrintConfigSources();
+		}
+		auto & configset = Configs[global_config_source];
+		swap_global_config(configset.mset, configset.global_file, configset.local_files);
+	}
+
+	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
 	config_host(NULL, config_options, root_config);
 	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
@@ -856,6 +943,13 @@ main( int argc, const char* argv[] )
 	if (reconfig_source) {
 		if (dump_stats) {
 			do_dump_config_stats(stdout, verbose, dump_strings);
+		}
+
+		if (dash_swap_config) {
+			if (0 == Configs.count(global_config_source)) {
+				auto & configset = Configs[global_config_source];
+				swap_global_config(configset.mset, configset.global_file, configset.local_files);
+			}
 		}
 
 		extern const char * simulated_local_config;
@@ -1097,8 +1191,9 @@ main( int argc, const char* argv[] )
 			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_ADMIN) ) {
-			fprintf( stderr, "Can't find address for this %s\n", 
-					 daemonString(dt) );
+			fprintf( stderr, "Can't find address for %s '%s' in %s\n",
+					 daemonString(dt), name ? name : "default",
+					 pool ? pool : "local pool" );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}

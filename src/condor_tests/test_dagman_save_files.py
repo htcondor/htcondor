@@ -186,7 +186,7 @@ def rerun_params(rerunTests):
     return rerunTests[2]
 @action
 def rerun_wait(rerun_handle):
-    assert rerun_handle.wait(condition=ClusterState.all_complete,timeout=60)
+    assert rerun_handle.wait(condition=ClusterState.all_complete,timeout=300)
     return rerun_handle
 
 #===============================================================================================

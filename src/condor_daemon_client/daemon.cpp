@@ -49,6 +49,7 @@ Daemon::common_init() {
 	_type = DT_NONE;
 	_port = -1;
 	_is_local = false;
+	_located_via_local_file = false;
 	_tried_locate = false;
 	_tried_init_hostname = false;
 	_tried_init_version = false;
@@ -210,6 +211,7 @@ Daemon::deepCopy( const Daemon &copy )
 	_port = copy._port;
 	_type = copy._type;
 	_is_local = copy._is_local;
+	_located_via_local_file = copy._located_via_local_file;
 	_tried_locate = copy._tried_locate;
 	_tried_init_hostname = copy._tried_init_hostname;
 	_tried_init_version = copy._tried_init_version;
@@ -580,7 +582,7 @@ Daemon::startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout,
 
 	// If caller wants non-blocking with no callback function,
 	// we _must_ be using UDP.
-	ASSERT(!req.m_nonblocking || req.m_callback_fn || req.m_sock->type() == Stream::safe_sock);
+	ASSERT(!req.m_nonblocking || req.m_callback || req.m_sock->type() == Stream::safe_sock);
 
 	// set up the timeout
 	if( timeout ) {
@@ -612,30 +614,20 @@ Daemon::makeConnectedSocket( Stream::stream_type st,
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
-	// This function may be either blocking or non-blocking, depending on
-	// the flag that was passed in.
-
-	// If caller wants non-blocking with no callback function and we're
-	// creating the Sock, there's no way for the caller to finish the
-	// command (since it doesn't have the Sock), which makes no sense.
-	// Also, there's no one to delete the Sock.
-	ASSERT(!nonblocking || callback_fn);
+	// This is the blocking helper used by the public blocking versions of
+	// startCommand().  It creates a socket of the specified type, connects
+	// it, and runs the command to completion.
 
 	if (IsDebugLevel(D_COMMAND)) {
 		const char * addr = this->addr();
 		dprintf (D_COMMAND, "Daemon::startCommand(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
 	}
 
-	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
+	*sock = makeConnectedSocket(st,timeout,0,errstack,/*non_blocking=*/false);
 	if( ! *sock ) {
-		if ( callback_fn ) {
-			(*callback_fn)( false, NULL, errstack, "", false, misc_data );
-			return StartCommandSucceeded;
-		} else {
-			return StartCommandFailed;
-		}
+		return StartCommandFailed;
 	}
 
 	// Prepare the request.
@@ -646,9 +638,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
-	req.m_callback_fn = callback_fn;
-	req.m_misc_data = misc_data;
-	req.m_nonblocking = nonblocking;
+	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_preferred_token = m_preferred_token;
@@ -670,8 +660,6 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
-	req.m_callback_fn = nullptr;
-	req.m_misc_data = nullptr;
 	// This is a blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
@@ -702,9 +690,8 @@ Sock*
 Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
-	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -727,9 +714,8 @@ Sock*
 Daemon::startCommand( int cmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
-	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -748,18 +734,29 @@ Daemon::startCommand( int cmd, Stream::stream_type st, time_t timeout, CondorErr
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
-	// This is a nonblocking version of startCommand.
-	const int nonblocking = true;
-	Sock *sock = NULL;
-	// We require that callback_fn be non-NULL. The startCommand() we call
-	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
+	// Nonblocking version of startCommand that owns its callback state via
+	// the std::function closure (no paired void *misc_data).
+	ASSERT(callback);
+
+	if (IsDebugLevel(D_COMMAND)) {
+		const char * addr = this->addr();
+		dprintf (D_COMMAND, "Daemon::startCommand_nonblocking(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
+	}
+
+	Sock *sock = makeConnectedSocket(st, timeout, 0, errstack, /*non_blocking=*/true);
+	if( !sock ) {
+		callback(false, nullptr, errstack, "", false);
+		return StartCommandSucceeded;
+	}
+
+	return startCommand_nonblocking(cmd, sock, timeout, errstack, std::move(callback),
+		cmd_description, raw_protocol, sec_session_id, resume_response);
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallback callback, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
@@ -768,8 +765,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
-	req.m_callback_fn = callback_fn;
-	req.m_misc_data = misc_data;
+	req.m_callback = std::move(callback);
 	// This is the nonblocking version of startCommand().
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
@@ -792,8 +788,6 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
-	req.m_callback_fn = nullptr;
-	req.m_misc_data = nullptr;
 	// This is the blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
@@ -1328,6 +1322,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			if ( ! foundLocalAd) {
 				readAddressFile( _subsys.c_str() );
 			}
+		}
+		// If a local address file / daemon ad gave us the address, then the
+		// daemon is running on this machine.  Record that so callers can
+		// distinguish a locally-resolved daemon from one found via the collector.
+		if ( ! _addr.empty()) {
+			_located_via_local_file = true;
 		}
 	}
 

@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[ALLOW_COMMON_FILES_ON_LVS]
+default=false
+type=bool
+
 [CHECK_REACTIVATE_AFTER_CHECKPOINT]
 default=true
 type=bool
@@ -1092,6 +1096,12 @@ default=false
 type=bool
 tags=startd
 
+[STARTD_REBOOT_COMMAND]
+# Command the startd runs to reboot the host on "condor_ep rehome --reboot" (gated by STARTD_REHOME_ALLOW_REBOOT)
+default=/sbin/reboot
+type=string
+tags=startd
+
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
 default=0
@@ -1155,7 +1165,7 @@ type=string
 tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
-default=NumShadowStarts
+default=NumShadowStarts,DAGManJobId,DAGNodeName
 type=string
 
 [MAX_TRANSFER_LIFETIME]
@@ -1218,6 +1228,12 @@ default=2000
 type=int
 tags=starter
 
+[LVM_THICK_LV_MARGIN]
+default=0.98
+range=0.0,1.0
+type=double
+tags=starter
+
 [LVM_HIDE_MOUNT]
 default=auto
 description=Inform LVM to mount per job LV in hidden mount namespace
@@ -1259,6 +1275,18 @@ tags=daemon_core,HookClientMgr
 default=60
 type=int
 description=Pid Snapshot Interval for the Master
+tags=daemon_core
+
+[PARENT_CHECK_FIRST_INTERVAL]
+default=15
+type=int
+description=Seconds after startup before a daemon's first check of whether its parent process is still alive. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_FIRST_INTERVAL.
+tags=daemon_core
+
+[PARENT_CHECK_INTERVAL]
+default=120
+type=int
+description=Seconds between checks of whether a daemon's parent process is still alive; if not, the daemon shuts itself down. Not used by the master. May be overridden per-subsystem, e.g. DAGMAN.PARENT_CHECK_INTERVAL.
 tags=daemon_core
 
 [SEC_DEBUG_PRINT_KEYS]
@@ -1320,11 +1348,6 @@ default=true
 type=bool
 tags=daemon_core
 
-[SEC_INVALIDATE_SESSIONS_VIA_TCP]
-default=true
-type=bool
-tags=daemon_core
-
 [SEC_USE_FAMILY_SESSION]
 default=true
 type=bool
@@ -1349,6 +1372,12 @@ tags=daemon_core
 [NOT_RESPONDING_TIMEOUT]
 default=3600
 range=1,
+type=int
+tags=daemon_core
+
+[STARTER_FIRST_CHILDALIVE_DELAY]
+default=30
+range=0,
 type=int
 tags=daemon_core
 
@@ -1890,8 +1919,16 @@ type=bool
 tags=starter
 
 [SINGULARITY_ADD_ROCM_FLAG]
-default=true
+default=false
 type=bool
+tags=starter
+
+[SINGULARITY_ALLOWED_JOB_ENV_VARS]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Additional APPTAINER_/SINGULARITY_ env vars a job may set
 tags=starter
 
 [UPDATE_INTERVAL]
@@ -2160,9 +2197,16 @@ tags=submit
 usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
 [SUBMIT_SEND_RESCHEDULE]
+default=false
+type=bool
+tags=submit
+description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
+
+[SUBMIT_PREVENT_MULTI_QUEUE]
 default=true
 type=bool
 tags=submit
+description=Submit will stop at the first QUEUE statement and warn if it sees anything after it.
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
@@ -2776,6 +2820,10 @@ default=false
 type=bool
 tags=io,condor_auth_fs
 
+[FS_ROOT_TO_CONDOR]
+default=true
+type=bool
+
 [KERBEROS_MAP_FILE]
 default=
 type=string
@@ -3288,7 +3336,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User OsUser
+default=Owner ClusterId JobUniverse ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -3369,7 +3417,7 @@ customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
 [QUEUE_CLEAN_INTERVAL]
-default=86400
+default=28800
 type=int
 tags=Schedd
 
@@ -3627,6 +3675,12 @@ type=int
 description=Maximum number of schedd forked workers
 tags=schedd
 
+[SCHEDD_NOW_JOB_VACATE_TIMEOUT]
+default=20
+type=int
+description=Number of seconds the schedd will wait for the targeted job(s) of a condor_now (coalesce) request to vacate before giving up on the now job
+tags=schedd
+
 [HA_LOCK_URL]
 default=
 type=string
@@ -3718,6 +3772,12 @@ type=path
 description=Path to log file for KBDD
 tags=kbdd,log
 
+[LIBRARIAN_LOG]
+default=$(LOG)/LibrarianLog
+type=path
+description=Path to log file for the archive Librarian
+tags=librarian,log
+
 [MASTER_LOG]
 default=$(LOG)/MasterLog
 type=path
@@ -3740,6 +3800,11 @@ tags=negotiator,log
 default=$(LOG)/SchedLog
 type=path
 description=Path to log file for the Schedd
+tags=sched,log
+
+[SCHEDD_AUDIT_LOG]
+default=$(LOG)/SchedAuditLog
+type=path
 tags=sched,log
 
 [SHADOW_LOG]
@@ -4340,6 +4405,97 @@ type=int
 description=Interval between CCB protocol heartbeats
 tags=ccb
 
+[CCB_SERVER_STREAMING]
+default=true
+version=25.12.0
+type=bool
+description=When true, a CCB server (broker) will proxy private-to-private connections: if a requester that is itself behind a CCB asks to reach another CCB-routed daemon, the broker has the target reverse-connect to the broker and splices the two sockets into a transparent relay.
+tags=ccb
+
+[CCB_SERVER_STREAMING_HANDSHAKE_TIMEOUT]
+default=300
+version=25.12.0
+type=int
+description=How long (in seconds) a CCB server (broker) waits for the target of a streaming (proxy) request to connect back and be spliced before abandoning the half-open session, freeing the requester's socket, and reporting a failure. This bounds only the handshake; once the relay is established it has no idle timeout. Set to 0 to disable handshake reaping.
+tags=ccb
+
+[CCB_TUNNEL_REGISTRATION_TIMEOUT]
+default=300
+version=25.12.0
+type=int
+description=How long (in seconds) a tunneling inside CCB will hold a registrant's CCB_REGISTER reply while waiting to complete its own upstream registration. Replies are deferred so a registrant only ever learns a reachable, nested tunnel contact; if the tunnel does not come up within this time, the broker disconnects the waiting registrant, which reconnects and re-registers after CCB_RECONNECT_TIME. Set to 0 to wait indefinitely.
+tags=ccb
+
+[CCB_SERVER_MAX_STREAMING_SESSIONS]
+default=0
+version=25.12.0
+type=int
+description=The maximum number of concurrent CCB streaming (proxy) sessions a broker will maintain, counting both in-progress handshakes and established relays. Requests beyond the limit are rejected with a clear failure. The default of 0 means unlimited.
+tags=ccb
+
+[CCB_SERVER_MAX_STREAMING_HANDSHAKES]
+default=0
+version=25.12.0
+type=int
+description=The maximum number of CCB streaming (proxy) sessions a broker will keep in the handshake state (waiting for the target to connect back) at once. This bounds the more easily abused, never-completing requests separately from established relays; requests beyond the limit are rejected. The default of 0 means unlimited.
+tags=ccb
+
+[CCB_CLIENT_STREAMING]
+default=true
+version=25.12.0
+type=bool
+description=When true, a daemon that is itself behind a CCB will attempt to reach another CCB-routed (private) peer by asking a streaming-capable broker to proxy the connection, instead of giving up. The attempt is only made when the broker advertises support, so this is safe to leave enabled.
+tags=ccb
+
+[OUTBOUND_CCB_ADDRESS]
+default=
+version=25.13.0
+type=string
+description=When set, this daemon or tool routes its outbound connections through the named CCB broker instead of dialing targets directly: it asks the broker to dial the target on its behalf and splice the two connections into a transparent relay, over which the normal end-to-end CEDAR handshake proceeds. Intended for hosts (such as HPC worker nodes) that cannot make direct outbound TCP connections. Like CCB_ADDRESS, this may be a space-separated list of brokers, which are tried in randomized order for failover and load-balancing. Loopback and same-host targets are still connected directly. Unlike CCB_ADDRESS, this concerns making outbound connections rather than being reachable, so it embeds no CCBID into this daemon's address. If CCB_ADDRESS is not set, a daemon defaults its inbound CCB to this value as well: a host that cannot dial out directly usually cannot be dialed either, and the same broker serves both directions. Set CCB_ADDRESS explicitly to override.
+tags=ccb
+
+[CCB_OUTBOUND_PROXY]
+default=false
+version=25.13.0
+type=bool
+description=When true, this CCB server (broker) will act as an outbound proxy: on an authorized CCB_PROXY_CONNECT request it dials the requested target and splices the two sockets into a transparent relay. Because this makes the broker an outbound proxy, it is disabled by default and is gated by DAEMON authorization and CCB_OUTBOUND_TARGET_ALLOWLIST. This mode is also enabled implicitly on an inside CCB (one with CCB_OUTBOUND_NEXT_HOP set), which is a forwarding outbound proxy by definition; such a broker only ever forwards to its configured next hop, so it needs no allow-list of its own.
+tags=ccb
+
+[CCB_OUTBOUND_TARGET_ALLOWLIST]
+default=*
+version=25.13.0
+type=string
+description=Comma or space separated list of host or CIDR patterns a CCB server's outbound proxy (CCB_OUTBOUND_PROXY) is permitted to dial. Host patterns may use wildcards (for example *.example.com), matched case-insensitively; an IP target may also match a CIDR/network entry. The default of a single asterisk permits every target not excluded by CCB_OUTBOUND_TARGET_DENYLIST; an empty list permits nothing. The deny-list is consulted first, so it takes precedence.
+tags=ccb
+
+[CCB_OUTBOUND_TARGET_DENYLIST]
+default=127.0.0.0/8 ::1 fe80::/10 169.254.0.0/16 localhost
+version=25.13.0
+type=string
+description=Comma or space separated list of host or CIDR patterns a CCB server's outbound proxy (CCB_OUTBOUND_PROXY) will refuse to dial, even when CCB_OUTBOUND_TARGET_ALLOWLIST would permit them. Uses the same wildcard/CIDR matching as the allow-list. The default refuses loopback and link-local targets, so the broker cannot be used to reach services bound to its own host (an SSRF guard); it is exposed here as an overridable default rather than hard-coded so it is visible via condor_config_val.
+tags=ccb
+
+[CCB_OUTBOUND_TTL]
+default=8
+version=25.13.0
+type=int
+description=Time-to-live for an outbound-proxy (CCB_PROXY_CONNECT) request, set by the originating daemon or tool. Each broker that forwards the request to its next hop decrements the TTL and refuses once it reaches zero, bounding the chain length (and catching next-hop loops) at the originator rather than at any intermediate broker. Rarely needs changing.
+tags=ccb
+
+[CCB_OUTBOUND_NEXT_HOP]
+default=
+version=25.13.0
+type=string
+description=When set, this CCB server (an inside broker in a tunnel) registers with the named next-hop (outside) broker so it is itself reachable through the tunnel, and stamps the resulting tunnel address into the CCBIDs it hands out so inbound connections to its local registrants route through both brokers. Also selects the next-hop transport for outbound proxying. In most deployments this is set automatically by the condor_master (see USE_OUTBOUND_CCB) and rarely needs to be configured by hand.
+tags=ccb
+
+[USE_OUTBOUND_CCB]
+default=false
+version=25.13.0
+type=bool
+description=When true, the condor_master runs a local collector as an inside CCB (adding COLLECTOR to DAEMON_LIST if absent), waits for it to register with the next-hop broker named by CCB_OUTBOUND_NEXT_HOP and signal readiness, and then points the other daemons it starts at that local collector for both directions: as their CCB_ADDRESS (so their inbound connections route through the tunnel, with their advertised contacts stamped with the tunnel address by the inside CCB) and as their OUTBOUND_CCB_ADDRESS (so their outbound connections tunnel through it too). A node that cannot dial out directly is thus fully tunneled from this single knob. Analogous to USE_SHARED_PORT.
+tags=ccb
+
 [ROOSTER_INTERVAL]
 default=300
 version=7.4.0
@@ -4746,8 +4902,32 @@ type=string
 description=Default modification to a memory resource request
 tags=startd
 
+[SUM_OF_CATALOGS]
+default : @fin
+    ifthenelse(
+        RequestedCatalogs is undefined || catalogs is undefined,
+        0,
+        sum(
+            evalInEachContext(
+                member(CatalogID, RequestedCatalogIDs)
+                ? CatalogSize : 0,
+                catalogs
+            )
+        )
+    )
+@fin
+
+[CATALOG_SPACE]
+default : @fin
+    ifthenelse(
+        MappingMethod ?: "" != "Copy",
+        $(SUM_OF_CATALOGS),
+        0
+)
+@fin
+
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk,{Target.DiskQuantum?:1024})
+default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1024})
 version=24.12.18
 type=string
 description=Default modification to a disk resource request
@@ -4888,6 +5068,12 @@ default=72000
 version=10.2.0
 type=int
 description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
+tags=file_transfer
+
+[STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS]
+default=
+version=25.11
+description=Conditionally disable user-supplied transfer plugins, MY is slot and TARGET is job.
 tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
@@ -5119,6 +5305,12 @@ range=0,
 default=100
 type=int
 range=0,
+
+[MAX_CONCURRENT_UPLOADS_PER_USER]
+default=$(MAX_CONCURRENT_UPLOADS:100)/5
+type=int
+range=0,
+
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=2.0
@@ -5652,6 +5844,12 @@ description=Debug logging options for the kbdd
 [MAX_KBDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
+[LIBRARIAN_DEBUG]
+default=
+description=Debug logging options for the archive librarian
+[MAX_LIBRARIAN_LOG]
+default=$(MAX_DEFAULT_LOG)
+
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 description=Debug logging options for the negotiator
@@ -5664,6 +5862,7 @@ default=$(MAX_DEFAULT_LOG)
 [SCHEDD_DEBUG]
 default=D_PID
 description=Debug logging options for the schedd
+
 [MAX_SCHEDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
@@ -5843,6 +6042,88 @@ type=string
 [TRUSTED_VAULT_HOSTS]
 default=
 type=string
+
+[CREDMON_ALLOW_SPECIAL_CHAR_NAMES]
+default=false
+type=bool
+description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
+
+# Archive librarian configuration options
+[LIBRARIAN]
+default=$(SBIN)/condor_librarian
+win32_default=$(SBIN)\condor_librarian.exe
+type=path
+customization=devel
+description=Path to the HTCondor archive librarian daemon binary
+tags=master
+
+[LIBRARIAN_UPDATE_INTERVAL]
+default=5
+type=int
+description=Archive librarians update interval in seconds
+tags=librarian
+
+[LIBRARIAN_DATABASE]
+default=$(SPOOL)/library.db
+type=path
+description=Path to the archive librarians SQLite3 database
+tags=librarian
+
+[LIBRARIAN_MAX_JOBS_CACHED]
+default=10000
+type=int
+description=Maximum number of cached job entries within the archive librarian
+tags=librarian
+
+[LIBRARIAN_STATUS_RETENTION_SECONDS]
+default=300
+type=int
+description=Time in seconds per update status rows will stay in the archive librarians database
+tags=librarian
+
+[LIBRARIAN_MAX_UPDATES_PER_CYCLE]
+default=100000
+#type=longlong
+description=The upper limit of records indexed in one update interval for the archive librarian.
+tags=librarian
+
+[LIBRARIAN_GC_BACKOFF_SECONDS]
+default=1800
+type=int
+range=0,
+description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
+tags=librarian
+
+[LIBRARIAN_MAX_DATABASE_SIZE]
+default=2 * 1024 * 1024 * 1024
+#type=longlong
+description=Maximum size of the archive librarians indexing SQLite3 database
+tags=librarian
+
+[LIBRARIAN_HIGH_WATER_MARK]
+default=0.97
+type=double
+description=The percentage of the database size to use as the upper threshold to trigger garbage collection.
+tags=librarian
+
+[LIBRARIAN_LOW_WATER_MARK]
+default=0.8
+type=double
+description=The percentage of the database size that the librarian aims to reduce to during garbage collection.
+tags=librarian
+
+[LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS]
+default=30000
+type=int
+range=0,
+description=How long, in milliseconds, the archive librarian will wait on a locked SQLite3 database before giving up.
+tags=librarian
+
+[USING_LIBRARIAN]
+default=False
+type=bool
+description=Boolean to denote archive librarian indexing in use for tools to utilize for quick reference.
+tags=librarian
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6182,7 +6463,7 @@ default=250
 [ADSTASH_SE_INDEX_NAME]
 description=What search engine index should condor_adstash push ads to
 type=string
-default=htcondor-000001
+default=htcondor
 [ADSTASH_SE_LOG_MAPPINGS]
 description=Should condor_adstash log mappings used with search engine interfaces
 type=bool
@@ -6247,6 +6528,11 @@ type=bool
 [SEC_ACCEPT_CAPABILITY_TOKENS]
 default=false
 type=bool
+
+[KEEP_DATA_CLAIM_IDLE]
+default=300
+type=int
+description=How long should a common object catalog persiste after its last use?
 
 ######
 ## add metaknobs below this banner
@@ -6750,6 +7036,14 @@ default : @fin
 	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
+[$FEATURE.AssignProjectName]
+description=Set the ProjectName of the job by mapping the job's Owner attribute args:(map_name [, map_file])
+default : @fin
+	if ! $(1?)
+	  error : use FEATURE : AssignProjectName requires a map_name argument
+	endif
+	use FEATURE : SetJobAttrFromUsermap(ProjectName, Owner, $(1+))
+@fin
 
 [$FEATURE.SetJobAttrFromUsermap]
 description=Set a job attribute from a usermap of another job attribute args:(dest_attr, src_attr, map_name [, map_file])
@@ -6760,9 +7054,9 @@ default : @fin
 	if $(4?)
 	   use FEATURE : ScheddUsermapFile($(3), $(4))
 	endif
-	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) Set$(1)
-	JOB_TRANSFORM_Set$(1) = [ eval_set_$(1)=usermap("$(3)",$(2),$(1)); ]
-	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) Require$(1)
+	JOB_TRANSFORM_NAMES += Set$(1)
+	JOB_TRANSFORM_Set$(1) = EVALSET $(1) usermap("$(3)",$(2),$(1))
+	SUBMIT_REQUIREMENT_NAMES += Require$(1)
 	SUBMIT_REQUIREMENT_Require$(1) = $(1) isnt undefined
 	SUBMIT_REQUIREMENT_Require$(1)_REASON = strcat("Submit requirement Require$(1) not met - Could not map '", $(2)?:"undefined", "' to a $(1)")
 @fin
@@ -7223,14 +7517,28 @@ win32_default : @end
 @end
 
 
+[$FEATURE.LIBRARIAN]
+description=Enable a database that indexes historical archive records args:(max_size, file_path).
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) LIBRARIAN
+	USING_LIBRARIAN=True
+	if $(1?)
+		LIBRARIAN_MAX_DATABASE_SIZE=$(1)
+	endif
+	if $(2?)
+		LIBRARIAN_DATABASE=$(2)
+	endif
+@end
+
+
 [$FEATURE.KRB]
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_KRB
 	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
 	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
-	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	USE_KEYRING_SESSIONS=True
 @end
 
@@ -7240,7 +7548,7 @@ description=Enable the daemons and features need to support running jobs with OA
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
 	CREDMON_OAUTH_LOG=$(LOG)/CredMonOAuthLog
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	DAEMON_LIST=$(DAEMON_LIST) CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
 @end
@@ -7249,7 +7557,7 @@ default : @end
 description=Enable sending of schedd job history ads to unauthenticated Elasticsearch on localhost
 default : @end
 	ADSTASH_SCHEDD_HISTORY=True
-	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
+	DAEMON_LIST=$(DAEMON_LIST) ADSTASH
 @end
 
 [$FEATURE.CommonCloudAttributesGoogle]
@@ -7419,7 +7727,7 @@ default : @fin
 [$FEATURE.GANGLIA]
 description=Enable condor_gangliad daemon
 default : @end
-	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+	DAEMON_LIST=$(DAEMON_LIST) GANGLIAD
 @end
 
 [$FEATURE.DefaultCheckpointDestination]

@@ -2479,7 +2479,8 @@ Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
 		std::string peer_ip = _who.to_ip_string();
-		strcpy(_peer_ip_buf, peer_ip.c_str());
+		strncpy(_peer_ip_buf, peer_ip.c_str(), IP_STRING_BUF_SIZE);
+		_peer_ip_buf[IP_STRING_BUF_SIZE - 1] = '\0';
 	}
 	return _peer_ip_buf;
 		/*
@@ -2520,7 +2521,9 @@ condor_sockaddr
 Sock::my_addr_wildcard_okay() const
 {
 	condor_sockaddr addr;
-	condor_getsockname(_sock, addr);
+	// If condor_getsockname() fails, addr is left as a default-constructed
+	// (wildcard) address, which is acceptable for this caller (hence the name).
+	std::ignore = condor_getsockname(_sock, addr);
 	return addr;
 }
 
@@ -2962,7 +2965,131 @@ Sock::get_sinful_public() const
 	return get_sinful();
 }
 
-int 
+	// True if `addr` refers to one of this daemon's own command sockets, using the
+	// canonical same-endpoint test (Sinful::addressPointsToMe -- host, port, addrs,
+	// and shared-port id).
+static bool
+addressIsMyself( const Sinful &addr )
+{
+	if( !daemonCore ) {
+		return false;
+	}
+	for( const Sinful &mine : daemonCore->InfoCommandSinfulStringsMyself() ) {
+		if( mine.addressPointsToMe( addr ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+	// OUTBOUND_CCB_ADDRESS is consulted on every outbound CEDAR connect, so cache
+	// it rather than doing a param lookup (hashtable + string alloc) per connect.
+	// DaemonCore::reconfig() calls invalidateOutboundCCBAddressCache() so config
+	// changes are picked up; non-DaemonCore processes (tools) simply param once
+	// lazily.  Like the ALWAYS_REUSEADDR static in Sock::bind(), this assumes the
+	// connect path runs on the DaemonCore main thread, so no locking is needed.
+static std::string _outbound_ccb_address_cache;
+static bool _outbound_ccb_address_cached = false;
+
+const std::string &
+Sock::outboundCCBAddress()
+{
+	if( !_outbound_ccb_address_cached ) {
+		_outbound_ccb_address_cache.clear();
+		param( _outbound_ccb_address_cache, "OUTBOUND_CCB_ADDRESS" );
+		_outbound_ccb_address_cached = true;
+	}
+	return _outbound_ccb_address_cache;
+}
+
+void
+Sock::invalidateOutboundCCBAddressCache()
+{
+	_outbound_ccb_address_cached = false;
+}
+
+bool
+Sock::bypassOutboundCCBForTarget( char const *target_sinful, char const *outbound_ccb )
+{
+	Sinful target( target_sinful );
+	char const *target_host = target.getHost();
+
+		// No usable target host -> connect directly.
+	if( !target_host || !*target_host ) {
+		return true;
+	}
+
+		// A host in outbound-CCB mode can always reach itself directly, so never
+		// route loopback or same-host targets (any port) through the broker.
+		// Loopback and the primary address of each family are cheap compares and
+		// catch the common cases; they do NOT cover a multi-homed host's secondary
+		// interfaces, so a miss falls through to the bind test below.
+	condor_sockaddr taddr;
+	if( taddr.from_ip_string( target_host ) ) {
+		if( taddr.is_loopback() ) {
+			return true;
+		}
+		if( taddr.compare_address( get_local_ipaddr(CP_IPV4) ) ||
+			taddr.compare_address( get_local_ipaddr(CP_IPV6) ) )
+		{
+			return true;
+		}
+			// Not a primary address: ask the kernel whether the target belongs to
+			// any local interface (addr_is_local() binds a UDP socket to it, which
+			// covers every interface in both families).  This only runs when
+			// outbound CCB is configured and the fast paths above missed, so the
+			// bind test is not on the common connect path.
+		if( addr_is_local( taddr ) ) {
+			return true;
+		}
+	}
+	else {
+			// Not an IP literal: the target is a hostname.  Compare it against our
+			// own cached names.  DNS aliases/CNAMEs are deliberately NOT resolved
+			// here -- we will not do a blocking DNS lookup on the connect path.  An
+			// aliased same-host target simply goes through the broker, which is
+			// reachable-but-suboptimal rather than wrong.
+		if( strcasecmp( target_host, get_local_hostname().c_str() ) == 0 ||
+			strcasecmp( target_host, get_local_fqdn().c_str() ) == 0 )
+		{
+			return true;
+		}
+	}
+		// The target is one of my own command sockets (any address family).
+	if( addressIsMyself( target ) ) {
+		return true;
+	}
+
+		// OUTBOUND_CCB_ADDRESS may be a space-separated list of brokers (failover /
+		// load-balance, like CCB_ADDRESS); check the target and self against every
+		// broker in it.
+	if( outbound_ccb && *outbound_ccb ) {
+		for( const auto &entry : StringTokenIterator( outbound_ccb, " " ) ) {
+			Sinful broker( entry.c_str() );
+			if( !broker.valid() ) {
+				continue;
+			}
+				// Never tunnel the connection to the broker *through* the broker: if
+				// the target is an outbound broker itself, connect to it directly.
+				// (Otherwise a master querying the off-host broker for its tunnel
+				// address would ask the broker to dial itself.)
+			if( broker.addressPointsToMe( target ) ) {
+				return true;
+			}
+				// If *I* am an outbound broker (OUTBOUND_CCB_ADDRESS points at one of
+				// my own addresses), reach targets directly rather than self-proxying.
+				// This lets an inside CCB register upstream and dial exit targets while
+				// OUTBOUND_CCB_ADDRESS is set in shared config.
+			if( addressIsMyself( broker ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+int
 Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError * errorStack)
 {
 	if( !host || *host != '<' ) {
@@ -3040,6 +3167,32 @@ Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError
 			ASSERT( sharedPortIP );
 
 			return do_shared_port_local_connect( shared_port_id, nonblocking, sharedPortIP );
+		}
+	}
+
+		// Outbound-CCB (tunneling) mode: if this daemon routes its outbound
+		// connections through a broker, this socket has not opted out, and the
+		// target is not local, ask the broker to dial the target on our behalf and
+		// splice the connection.  This takes precedence over both a direct connect
+		// and the target's own CCB contact, because a host in this mode may have no
+		// direct outbound TCP at all.
+		//
+		// For that same reason there is deliberately NO fallback from here to a
+		// direct or reverse-CCB connect: those paths cannot be presumed to work on a
+		// host with no outbound TCP, so a failure to reach the broker is reported as
+		// a failure rather than silently retried on a path that would also fail.
+		//
+		// Nothing is lost by ignoring the target's own CCB contact and shared-port
+		// routing here: the tunnel's exit broker dials the target through the
+		// standard connect path (see CCBServer::StartOutgoingProxyRequest in
+		// src/ccb/ccb_server.cpp), so a CCB-routed or shared-port target is handled
+		// at the exit point, where direct connectivity exists.
+	if( !m_bypass_outbound_ccb ) {
+		const std::string &outbound_ccb = outboundCCBAddress();
+		if( !outbound_ccb.empty()
+			&& !bypassOutboundCCBForTarget( host, outbound_ccb.c_str() ) )
+		{
+			return do_outbound_ccb_connect( outbound_ccb.c_str(), host, nonblocking, errorStack );
 		}
 	}
 

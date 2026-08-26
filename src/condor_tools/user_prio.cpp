@@ -37,7 +37,9 @@
 #include "generic_query.h"
 #include "dc_collector.h"
 // for std::sort
-#include <algorithm> 
+#include <algorithm>
+#include <charconv>
+#include <limits>
 #include <vector>
 
 //-----------------------------------------------------------------
@@ -363,6 +365,10 @@ main(int argc, const char* argv[])
   int SetPrio=0;
   int SetFloor=0;
   int SetCeiling=0;
+  int LeaseDuration=0;              // seconds; >0 when -duration supplied
+  int CancelCeilingLeaseArg=0;      // argv index of -cancelceilinglease, 0 if unused
+  int CancelFloorLeaseArg=0;        // argv index of -cancelfloorlease, 0 if unused
+  int CancelFactorLeaseArg=0;       // argv index of -cancelfactorlease, 0 if unused
   int SetAccum=0;
   int SetBegin=0;
   int SetLast=0;
@@ -404,6 +410,34 @@ main(int argc, const char* argv[])
       if (i+2>=argc) usage(argv[0]);
       SetCeiling=i;
       i+=2;
+    }
+    else if (IsArg(argv[i],"duration")) {
+      if (i+1>=argc) usage(argv[0]);
+      const std::string_view sv{argv[i+1]};
+      int v = 0;
+      auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), v);
+      if (ec != std::errc{} || ptr != sv.data() + sv.size() ||
+          v <= 0 || v == std::numeric_limits<int>::max()) {
+        fprintf(stderr, "%s: -duration requires a positive integer number of seconds\n", argv[0]);
+        exit(1);
+      }
+      LeaseDuration = v;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelceilinglease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelCeilingLeaseArg=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelfloorlease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelFloorLeaseArg=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"cancelfactorlease")) {
+      if (i+1>=argc) usage(argv[0]);
+      CancelFactorLeaseArg=i;
+      i+=1;
     }
     else if (IsArg(argv[i],"setbegin")) {
       if (i+2>=argc) usage(argv[0]);
@@ -596,8 +630,9 @@ main(int argc, const char* argv[])
 	  // Get info on our negotiator
   Daemon negotiator(DT_NEGOTIATOR, neg_name, pool_name);
   if (!negotiator.locate(Daemon::LOCATE_FOR_ADMIN)) {
-	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
-              argv[0], pool_name ? pool_name : "local pool");
+	  fprintf(stderr, "%s: Can't locate negotiator '%s' in %s\n",
+              argv[0], neg_name ? neg_name : "default",
+              pool_name ? pool_name : "local pool");
 	  // If we are getting userprio info from the collector, don't exit,
 	  // as we don't need to talk to the negotiator. If we do, we'll
 	  // exit with an approriate error later.
@@ -644,14 +679,14 @@ main(int argc, const char* argv[])
 
   }
 
-  else if (SetFactor) { // set priority
+  else if (SetFactor) { // set priority factor
 
 	const char* tmp;
 	if( ! (tmp = strchr(argv[SetFactor+1], '@')) ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
-		fprintf( stderr, "\tto update the priority of (%s or %s)\n", 
+		fprintf( stderr, "\tto update the priority of (%s or %s)\n",
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
@@ -661,6 +696,43 @@ main(int argc, const char* argv[])
 				 "1.\n");
 		exit(1);
 	}
+
+    if (LeaseDuration > 0) {
+      Sock* sock = negotiator.startCommand(MANAGE_PRIORITY_FACTOR,
+                                           Stream::reli_sock, 0);
+      if (!sock) {
+        fprintf(stderr, "failed to start MANAGE_PRIORITY_FACTOR command to negotiator\n");
+        exit(1);
+      }
+      ClassAd req;
+      req.Assign(ATTR_SUBMITTER, argv[SetFactor+1]);
+      req.Assign("Action", "set");
+      req.Assign("PriorityFactor", Factor);
+      req.Assign("Duration", LeaseDuration);
+      if (!putClassAd(sock, req) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to send MANAGE_PRIORITY_FACTOR request to negotiator\n");
+        exit(1);
+      }
+      sock->decode();
+      ClassAd reply;
+      if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to read MANAGE_PRIORITY_FACTOR reply from negotiator\n");
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      bool success = false;
+      std::string err;
+      reply.LookupBool("Success", success);
+      reply.LookupString("ErrorString", err);
+      if (!success) {
+        fprintf(stderr, "negotiator rejected priority-factor lease: %s\n",
+                err.empty() ? "unknown error" : err.c_str());
+        exit(1);
+      }
+      printf("Set priority-factor lease on %s to %f for %d seconds\n",
+             argv[SetFactor+1], Factor, LeaseDuration);
+    } else {
 
     // send request
     Sock* sock;
@@ -701,6 +773,7 @@ main(int argc, const char* argv[])
     delete sock;
 
     printf("The priority factor of %s was set to %f\n",argv[SetFactor+1],Factor);
+    }
 
   }
 
@@ -715,20 +788,20 @@ main(int argc, const char* argv[])
 	if (SetFloor) {
 		argIndex = SetFloor;
 		name = "floor";
-		command = SET_FLOOR;
+		command = (LeaseDuration > 0) ? MANAGE_FLOOR : SET_FLOOR;
 		minValue = 0;
 	} else {
 		argIndex = SetCeiling;
 		name = "ceiling";
-		command = SET_CEILING;
+		command = (LeaseDuration > 0) ? MANAGE_CEILING : SET_CEILING;
 		minValue = -1;
 	}
 	const char* tmp;
 	if( ! (tmp = strchr(argv[argIndex+1], '@')) ) {
-		fprintf( stderr, 
+		fprintf( stderr,
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
-		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n", 
+		fprintf( stderr, "\tto update the %s of (%s or %s) (not %s)\n",
 				 name, "user@uid.domain", "user@full.host.name", argv[argIndex+1] );
 		exit(1);
 	}
@@ -740,20 +813,112 @@ main(int argc, const char* argv[])
 	}
 
     // send request
-    Sock* sock;
-    if( !(sock = negotiator.startCommand(command,
-										 Stream::reli_sock, 0) ) ||
-        !sock->put(argv[argIndex+1]) ||
-        !sock->put(value) ||
-        !sock->end_of_message()) {
-      fprintf( stderr, "failed to send SET_%s command to negotiator\n", name);
+    Sock* sock = negotiator.startCommand(command, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
       exit(1);
     }
 
+    if (command == MANAGE_CEILING || command == MANAGE_FLOOR) {
+      ClassAd req;
+      req.Assign(ATTR_SUBMITTER, argv[argIndex+1]);
+      req.Assign("Action", "set");
+      req.Assign(command == MANAGE_CEILING ? "Ceiling" : "Floor", (int)value);
+      req.Assign("Duration", LeaseDuration);
+      if (!putClassAd(sock, req) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to send MANAGE_%s request to negotiator\n", name);
+        exit(1);
+      }
+      sock->decode();
+      ClassAd reply;
+      if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+        fprintf(stderr, "failed to read MANAGE_%s reply from negotiator\n", name);
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      bool success = false;
+      std::string err;
+      reply.LookupBool("Success", success);
+      reply.LookupString("ErrorString", err);
+      if (!success) {
+        fprintf(stderr, "negotiator rejected %s lease: %s\n",
+                name, err.empty() ? "unknown error" : err.c_str());
+        exit(1);
+      }
+      printf("Set %s lease on %s to %ld for %d seconds\n",
+             name, argv[argIndex+1], value, LeaseDuration);
+    } else {
+      if (!sock->put(argv[argIndex+1]) ||
+          !sock->put(value) ||
+          !sock->end_of_message()) {
+        fprintf(stderr, "failed to send SET_%s command to negotiator\n", name);
+        exit(1);
+      }
+      sock->close();
+      delete sock;
+      printf("The %s of %s was set to %ld\n", name, argv[argIndex+1], value);
+    }
+  }
+
+  else if (CancelCeilingLeaseArg || CancelFloorLeaseArg || CancelFactorLeaseArg) {
+    int argIndex;
+    int command;
+    const char* name;
+    const char* flag;
+    if (CancelCeilingLeaseArg) {
+      argIndex = CancelCeilingLeaseArg;
+      command = MANAGE_CEILING;
+      name = "ceiling";
+      flag = "-cancelceilinglease";
+    } else if (CancelFloorLeaseArg) {
+      argIndex = CancelFloorLeaseArg;
+      command = MANAGE_FLOOR;
+      name = "floor";
+      flag = "-cancelfloorlease";
+    } else {
+      argIndex = CancelFactorLeaseArg;
+      command = MANAGE_PRIORITY_FACTOR;
+      name = "priority-factor";
+      flag = "-cancelfactorlease";
+    }
+    const char* submitter = argv[argIndex+1];
+    if (!strchr(submitter, '@')) {
+      fprintf(stderr,
+              "%s: %s requires a full submitter name (user@domain)\n",
+              argv[0], flag);
+      exit(1);
+    }
+    Sock* sock = negotiator.startCommand(command, Stream::reli_sock, 0);
+    if (!sock) {
+      fprintf(stderr, "failed to start %s lease cancel command to negotiator\n", name);
+      exit(1);
+    }
+    ClassAd req;
+    req.Assign(ATTR_SUBMITTER, submitter);
+    req.Assign("Action", "cancel");
+    if (!putClassAd(sock, req) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to send %s lease cancel request to negotiator\n", name);
+      exit(1);
+    }
+    sock->decode();
+    ClassAd reply;
+    if (!getClassAd(sock, reply) || !sock->end_of_message()) {
+      fprintf(stderr, "failed to read %s lease cancel reply from negotiator\n", name);
+      exit(1);
+    }
     sock->close();
     delete sock;
-
-    printf("The %s of %s was set to %ld\n",name, argv[argIndex+1],value);
+    bool success = false;
+    std::string err;
+    reply.LookupBool("Success", success);
+    reply.LookupString("ErrorString", err);
+    if (!success) {
+      fprintf(stderr, "negotiator rejected cancel: %s\n",
+              err.empty() ? "unknown error" : err.c_str());
+      exit(1);
+    }
+    printf("Cancelled %s lease for %s\n", name, submitter);
   }
 
   else if (SetAccum) { // set accumulated usage
@@ -1025,6 +1190,13 @@ main(int argc, const char* argv[])
 		CondorQuery query(ACCOUNTING_AD);
 		CondorError errstack;
 		QueryResult q;
+
+		// the global -constraint flag
+		if (!constraint.empty()) {
+			std::string toConstrain;
+			constraint.makeQuery(toConstrain);
+			query.addANDConstraint(toConstrain.c_str());
+		}
 
 		if (neg_name) {
 			std::string constraint;
@@ -1909,6 +2081,15 @@ static void usage(const char* name) {
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
      "\t-setfloor <user> <val>\tSet floor for <user>\n"
      "\t-setceiling <user> <val>\tSet ceiling for <user>\n"
+     "\t-setceiling <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary ceiling lease on <user> for <secs> seconds\n"
+     "\t-cancelceilinglease <user>\tCancel an in-effect ceiling lease for <user>\n"
+     "\t-setfloor <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary floor lease on <user> for <secs> seconds\n"
+     "\t-cancelfloorlease <user>\tCancel an in-effect floor lease for <user>\n"
+     "\t-setfactor <user> <val> -duration <secs>\n"
+     "\t\t\t\tSet a temporary priority-factor lease on <user> for <secs> seconds\n"
+     "\t-cancelfactorlease <user>\tCancel an in-effect priority-factor lease for <user>\n"
      "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
      "\t-setbegin <user> <val>\tset last first date for <user>\n"
      "\t-setlast <user> <val>\tset last active date for <user>\n"
@@ -1983,7 +2164,9 @@ static void PrintResList(ClassAd* ad)
             break;
 
     char* p=strrchr(name,'@');
-    *p='\0';
+	if (p) {
+		*p='\0';
+	}
     time_t Now=time(0)-StartTime;
 	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }

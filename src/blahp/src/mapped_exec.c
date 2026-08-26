@@ -267,7 +267,7 @@ execute_cmd(exec_cmd_t *cmd)
 	int fdpipe_stdout[2];
 	int fdpipe_stderr[2];
 	struct pollfd pipe_poll[2];
-	int poll_timeout = 30000; /* 30 seconds by default */
+	int poll_timeout = 60000; /* 60 seconds by default */
 	pid_t pid, process_group;
 	int child_running, status, exitcode;
 	char *killed_format = "%s <blah> killed by signal %s %d.\n";

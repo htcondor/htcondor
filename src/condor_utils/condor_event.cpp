@@ -1531,7 +1531,12 @@ SubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
@@ -2321,7 +2326,8 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line)) {
 		return 0;
 	}
-	sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
+	// Code/Subcode are optional; if absent, reason_code/reason_subcode keep their defaults
+	std::ignore = sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5276,10 +5282,10 @@ AttributeUpdate::readEvent(ULogFile& file, bool & got_sync_line)
 		return 0;
 	}
 
-	int retval = sscanf(line.c_str(), "Changing job attribute %s from %s to %s", buf1, buf2, buf3);
+	int retval = sscanf(line.c_str(), "Changing job attribute %4095s from %4095s to %4095s", buf1, buf2, buf3);
 	if (retval < 0)
 	{
-		retval = sscanf(line.c_str(), "Setting job attribute %s to %s", buf1, buf3);
+		retval = sscanf(line.c_str(), "Setting job attribute %4095s to %4095s", buf1, buf3);
 		if (retval < 0)
 		{
 			return 0;
@@ -5468,7 +5474,12 @@ ClusterSubmitEvent::formatBody( std::string &out )
 	{
 		return false;
 	}
-	if( !submitEventLogNotes.empty() ) {
+	if (hasStructuredNotes()) {
+		std::string ad_str;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(ad_str, structuredNotes);
+		formatstr_cat(out, "    %s\n", ad_str.c_str());
+	} else if ( !submitEventLogNotes.empty() ) {
 		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;

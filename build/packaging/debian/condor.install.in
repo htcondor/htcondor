@@ -6,10 +6,10 @@ usr/bin/classad_functional_tester
 usr/bin/classad_version
 usr/bin/condor_adstash
 usr/bin/condor_check_config
-usr/bin/condor_check_password
 usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
+usr/bin/condor_credential_storer
 usr/bin/condor_dagman
 usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
@@ -20,7 +20,6 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
-usr/bin/condor_librarian
 usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
@@ -134,8 +133,6 @@ usr/libexec/condor/singularity_test_sandbox
 usr/libexec/condor/sshd.sh
 usr/sbin/AzureGAHPServer
 usr/sbin/arc_gahp
-usr/sbin/blah_check_config
-usr/sbin/blahpd_daemon
 usr/sbin/condor_advertise
 usr/sbin/condor_aklog
 usr/sbin/condor_c-gahp
@@ -150,6 +147,7 @@ usr/sbin/condor_fetchlog
 usr/sbin/condor_ft-gahp
 usr/sbin/condor_gridmanager
 usr/sbin/condor_had
+usr/sbin/condor_librarian
 usr/sbin/condor_master
 usr/sbin/condor_negotiator
 usr/sbin/condor_off

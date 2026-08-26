@@ -86,8 +86,6 @@ TestVar3 = "Hello World"
             "TransferSuccess" : False,
             "TransferFileBytes" : 10,
             "TransferTotalBytes" : 9,
-            "TransferStartTime" : 1234,
-            "TransferEndTime" : 1235,
             "ConnectionTimeSeconds" : 1,
             "TestVar1" : True,
         },
@@ -100,8 +98,6 @@ echo 'TestVar1 = True'
 echo 'TransferFileBytes = 10'
 echo 'TransferTotalBytes = 9'
 echo 'ConnectionTimeSeconds = 1'
-echo 'TransferStartTime = 1234'
-echo 'TransferEndTime = 1235'
 """
         ),
     ),
@@ -176,7 +172,7 @@ echo "TestVar2 = $2"
                     "ErrorType" : "Parameter",
                     "ErrorCode": -1,
                     "ErrorString": "Invalid plugin parameters",
-                    "PluginVersion": "1.1.0",
+                    "PluginVersion": "1.2.0",
                     "PluginLaunched": True,
                 },
             ],
@@ -199,7 +195,7 @@ echo "TestVar2 = $2"
                     "ErrorType" : "Parameter",
                     "ErrorCode": 19,
                     "ErrorString": "Custom failure occurred!",
-                    "PluginVersion": "1.1.0",
+                    "PluginVersion": "1.2.0",
                     "PluginLaunched": False,
                     "DeveloperData" : {
                         "TestVar1" : False,
@@ -655,20 +651,25 @@ echo 'IgnoreHostInFuture = True'
         ("not_a_script", "Derp"),
         None,
     ),
+    "exit_no_ad" : (
+        "debug://exitnoad/0",
+        {},
+        0,
+        None,
+        None,
+    ),
 }
 
-FIRST_TEST_CASE = True
-DEBUG_AD_FILE = "result_ads.txt"
+@action
+def results_file(test_dir):
+    results = test_dir / "result_ads.txt"
+    if os.path.exists(results):
+        os.remove(results)
+    return results
 
 @action(params={name: name for name in ENCODING_TEST_CASES})
-def test_url_encoding(request, path_to_debug_plugin):
-    global FIRST_TEST_CASE
+def test_url_encoding(request, path_to_debug_plugin, results_file):
     url, expected_ad, expected_exit, file_info, script_info = ENCODING_TEST_CASES[request.param]
-
-    if FIRST_TEST_CASE:
-        FIRST_TEST_CASE = False
-        if os.path.exists(DEBUG_AD_FILE):
-            os.remove(DEBUG_AD_FILE)
 
     if file_info is not None:
         f_name, f_contents = file_info
@@ -679,15 +680,20 @@ def test_url_encoding(request, path_to_debug_plugin):
         Path(name).write_text(contents)
         os.chmod(name, 0o755)
 
-    p = subprocess.run([path_to_debug_plugin, "-test", url], stdout=subprocess.PIPE)
+    p = subprocess.run([path_to_debug_plugin, "-test", url], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p_err = p.stderr.rstrip().decode()
     p_ad = classad2.parseOne(p.stdout.rstrip().decode())
 
     if request.param[:7] == "bad_url":
         assert "TransferErrorData" not in p_ad
 
-    with open(DEBUG_AD_FILE, "a") as f:
+    with open(results_file, "a") as f:
         f.write(f"{request.param}: {url} result ad:\n")
-        f.write(f"{p_ad}\n###########################\n")
+        f.write(f"{p_ad}\n")
+        if len(p_err) > 0:
+            f.write(f"---------------------------\n")
+            f.write(f"{p_err}\n")
+        f.write(f"###########################\n")
 
     return (expected_ad, expected_exit, p_ad, p.returncode)
 
@@ -712,6 +718,8 @@ EXIT_TEST_CASES = {
     "exit_trailing_info" : ("debug://exit/42/foo/bar/baz", 42),
     "exit_negative" : ("debug://exit/-64", 64),
     "exit_out_of_range" : ("debug://exit/9999", 123),
+    "exit_no_ad": ("debug://exitnoad/3", 3),
+    "exit_bad_ad": ("debug://exitbadad/5", 5),
     "default_signal" : ("debug://signal", 0 - signal.SIGTERM),
     "sig_hangup" : ("debug://signal/SIGHUP", 0 - signal.SIGHUP),
     #"sig_interrupt" : ("debug://signal/SIGINT", 0 - signal.SIGINT),  # This exits 1 on some Linux OS for some reason
@@ -751,6 +759,15 @@ def test_plugin_sleep(path_to_debug_plugin):
         return True
 
 
+@action
+def test_plugin_bad_ad(path_to_debug_plugin):
+    return subprocess.run(
+        [path_to_debug_plugin, "-test", "debug://exitbadad/0"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def compare_ads(expected, result):
     for key, val in expected.items():
         assert key in result
@@ -779,3 +796,7 @@ class TestDebugPlugin:
 
     def test_sleep(self, test_plugin_sleep):
         assert test_plugin_sleep == True
+
+    def test_exit_bad_ad(self, test_plugin_bad_ad):
+        assert test_plugin_bad_ad.returncode == 0
+        assert test_plugin_bad_ad.stdout.rstrip().decode() == "This is not a ClassAd!!!"

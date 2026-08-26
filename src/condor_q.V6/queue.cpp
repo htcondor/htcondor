@@ -156,18 +156,17 @@ static int parse_append_format_args(int argc, const char * argv[], AttrListPrint
 			return 1;
 		}, &lastcol);
 
-	ClassAd ad;
+	//ClassAd ad;
 	const char * pcolon;
 	for (int i = 0; i < argc; ++i)
 	{
 		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
 			const char * format_char = nullptr;
 			if (pcolon) {
-				++pcolon; // check to see if rV formating options have been passed
-				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
-				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
 				if (*pcolon) {
-					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aff:V are permitted.\n", pcolon);
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V,r,T, or Y is permitted.\n", pcolon);
 					return -1;
 				}
 			}
@@ -1632,7 +1631,11 @@ processCommandLineArguments (int argc, const char *argv[])
 					}
 				}
 			}
-			qdo_mode = QDO_Progress;
+			// Don't clobber a custom output format (-af/-format/-print-format) that was
+			// we will eventually error out because of this, but we don't do it here.
+			if ((qdo_mode & QDO_BaseMask) < QDO_Custom) {
+				qdo_mode = QDO_Progress;
+			}
 			if( g_stream_results  ) {
 				fprintf( stderr, "-stream-results and -batch are incompatible\n" );
 				usage( argv[0] );
@@ -1780,6 +1783,11 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 	}
 
+	if (dash_batch_specified && dash_batch && !autoformat_args.empty()) {
+		fprintf( stderr, "Error: -batch conflicts with -format and -af\n" );
+		exit(1);
+	}
+
 	if (dash_long) {
 		customHeadFoot = HF_BARE;
 		if (dash_tot) {
@@ -1813,7 +1821,8 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		constexpr const char * amo[]{ "", "normal", "run", "idle", "grid", "grid:ec2", "hold", "holdcodes", "io",
+			"factory", "dag", "totals", "batch", "autocluster", "jobset", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -2230,22 +2239,24 @@ usage (const char *myName, int other)
 		"\t-version\t\t Print the HTCondor version and exit\n"
 		"\t-wide[:<width>]\t\t Don't truncate data to fit in 80 columns.\n"
 		"\t\t\t\t Truncates to console width or <width> argument.\n"
-		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-autoformat[:jlhVrTY,tng] <attr> [<attr2> [...]]\n"
 		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
 		"\t        j   Display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
-		"\t-aaf[:Vr] <attr> [attr2 [...]]\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
 		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
 		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
@@ -3251,7 +3262,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 			if ( ! pcolval) continue;
 
 			const char * name = NULL;
-			pcolval->IsStringValue(name);
+			if ( ! pcolval->IsStringValue(name) || ! name) continue;
 			int cch = (int)strlen(name);
 
 			buf.clear();
@@ -3490,6 +3501,23 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 	return 1;
 }
 
+// helpers for writing the baked batch-mode values into a row.  The column will not
+// exist if the output format has fewer columns than the built-in batch format, so we
+// must check for NULL before writing. (see reduce_results)
+static void set_int_column(JobRowOfData & jr, int ixCol, int value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetIntegerValue(value);
+	jr.rov.set_col_valid(ixCol, (bool)(value > 0));
+}
+
+static void set_string_column(JobRowOfData & jr, int ixCol, const char * value) {
+	classad::Value * pval = jr.rov.Column(ixCol);
+	if ( ! pval) return;
+	pval->SetStringValue(value);
+	jr.rov.set_col_valid(ixCol, true);
+}
+
 // reduce the data by summarizing all of the procs in a cluster
 // and all of the nodes in a dag into a single line of output.
 //
@@ -3537,28 +3565,23 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		if (num_held > 0) wids.any_held = true;
 
 		int ixCol = ixFirstCounterCol; // starting column for counters
-		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
-		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+		set_int_column(jr, ixCol, num_done);
 		wids.count_widths[0] = MAX(wids.count_widths[0], number_width(num_done));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
-		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+		set_int_column(jr, ixCol, num_active);
 		wids.count_widths[1] = MAX(wids.count_widths[1], number_width(num_active));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
-		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+		set_int_column(jr, ixCol, num_idle);
 		wids.count_widths[2] = MAX(wids.count_widths[2], number_width(num_idle));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
-		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+		set_int_column(jr, ixCol, num_held);
 		wids.count_widths[3] = MAX(wids.count_widths[3], number_width(num_held));
 
 		++ixCol;
-		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
-		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+		set_int_column(jr, ixCol, num_total);
 		wids.count_widths[4] = MAX(wids.count_widths[4], number_width(num_total));
 
 		int name_width = 0;
@@ -3586,8 +3609,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
 				formatstr(tmp, "ID: %d", jid.cluster);
-				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
-				jr.rov.set_col_valid(ixBatchNameCol, true);
+				set_string_column(jr, ixBatchNameCol, tmp.c_str());
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
 			}
 		}
@@ -3602,8 +3624,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		} else {
 			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
-		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
-		jr.rov.set_col_valid(ixJobIdsCol, true);
+		set_string_column(jr, ixJobIdsCol, tmp.c_str());
 		wids.ids_width = MAX(wids.ids_width, (int)tmp.length());
 	}
 
@@ -4074,7 +4095,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			break;
 		default:
 			fprintf(stderr,
-				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				"\n-- Failed to fetch ads from: %s : %s\n\n%s\n",
 				scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 		}
 		return false;
@@ -4769,7 +4790,13 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	StringLiteralInputStream stream(sumyformat.c_str());
 	dummySettings.reset();
 	app.sumymask.clearFormats();
-	SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	// These summary formats are compiled-in constants, so any parse failure is
+	// a programming bug.  The return value is always 0; errors (if any) are
+	// reported via the messages string, so EXCEPT on that instead.
+	std::ignore = SetAttrListPrintMaskFromStream(stream, &LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
+	if ( ! messages.empty()) {
+		EXCEPT("Failed to parse built-in summary format: %s", messages.c_str());
+	}
 
 	// dont' actually want to display headings for the summary lines when using standard_summary2 or standard_summary3
 	app.sumymask.clear_headings();

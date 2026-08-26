@@ -221,7 +221,7 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
 }
 
 
-bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out)
 {
 	bool success = false;
 	int cluster = -1;
@@ -336,14 +336,20 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 		}
 	}
 
+	if (RemoteCommitTransaction(0, &errstack) < 0) {
+		dprintf(D_ERROR, "Failed to commit job submission : %s\n",
+		        errstack.getFullText(true).c_str());
+		goto submit_done;
+	}
+
+	if (GetAttributeString(cluster, proc, ATTR_USER, user_out) == -1) {
+		dprintf(D_ERROR, "Failed to query User attribute of routed job.\n");
+	}
+
 	success = true;
 
  submit_done:
-	bool commit = success;
-	if( qmgr && ! DisconnectQ(qmgr, commit, &errstack)) {
-		dprintf(D_ERROR, "Failed to commit job submission : %s\n", errstack.getFullText(true).c_str());
-		return false;
-	}
+	DisconnectQ(qmgr, false);
 	if (!success) {
 		return false;
 	}
@@ -373,8 +379,8 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 
 	schedd.reschedule();
 
-	if(cluster_out) { *cluster_out = cluster; }
-	if(proc_out) { *proc_out = proc; }
+	cluster_out = cluster;
+	proc_out = proc;
 
 	return true;
 }

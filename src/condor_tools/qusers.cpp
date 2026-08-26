@@ -227,6 +227,34 @@ static void initOutputMask(AttrListPrintMask & prmask, classad::References & att
 	for (auto & attr : propt.attrs) { attrs.insert(attr); }
 }
 
+static int parse_append_format_args(int argc, const char * argv[], AttrListPrintMask & prmask, classad::References & attrs, bool diagnostic)
+{
+	const char * pcolon;
+	for (int i = 0; i < argc; ++i)
+	{
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V,r,T, or Y is permitted.\n", pcolon);
+					return -1;
+				}
+			}
+			int ixNext = parse_autoformat_args(argc, argv, i+1, format_char, prmask, attrs, diagnostic, true);
+			if (ixNext < 0) {
+				return -ixNext;
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	return 0;
+}
+
+
 int store_ads(void*pv, ClassAd* ad)
 {
 	AD_MAP_BY_KEY & ads = *(AD_MAP_BY_KEY*)pv;
@@ -488,8 +516,8 @@ int process_daily_ads(void* pv, ClassAd* ad)
 			{
 				MyRowOfValues & rov = pp2.first->second;
 				rov.SetMaxCols(1+cols);
-				
-				ad->EvaluateExpr("formattime(time() - time()%(24*3600) - (24*3600),\"    %A\")", val);
+
+				val.SetStringValue("    Day Before");
 				rov += val;
 
 				if (ad->EvaluateExpr("DailyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
@@ -593,6 +621,7 @@ main( int argc, const char *argv[] )
 	const char * pcolon = nullptr;
 	std::vector<const char*> usernames; // will be project names if -project is passed??
 	std::vector<const char*> edit_args;
+	std::vector<const char *> append_autoformat_args;
 	const char* pool = nullptr;
 	const char* name = nullptr;
 	const char* disableReason = nullptr;
@@ -812,6 +841,24 @@ main( int argc, const char *argv[] )
 			}
 		}
 		else
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+				// make sure we have at least one more argument
+			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: -aaf requires at least one attribute parameter\n" );
+				exit( 1 );
+			}
+			// process all arguments that don't begin with "-" as part of appendautoformat.
+			append_autoformat_args.push_back(argv[i]);
+			while (i+1 < argc && *(argv[i+1]) != '-') {
+				++i;
+				append_autoformat_args.push_back(argv[i]);
+			}
+			// if list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+		}
+		else
 		if (is_dash_arg_prefix(argv[i], "pool", 1)) {
 			if( i+1 >= argc ) {
 				fprintf( stderr, "Error: -pool requires a hostname argument\n"); 
@@ -860,6 +907,14 @@ main( int argc, const char *argv[] )
 			attrs.insert("HourlyStatsUnitPhase");
 		}
 		initOutputMask(prmask, attrs, qdo_mode, dash_wide);
+
+		if ( ! append_autoformat_args.empty()) {
+			int nargs = (int)append_autoformat_args.size();
+			append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[cargs] is.
+			if (parse_append_format_args(nargs, &append_autoformat_args[0], prmask, attrs, false) < 0) {
+				exit(2);
+			}
+		}
 	}
 
 	DCSchedd schedd(name, pool);
@@ -1239,19 +1294,23 @@ usage(FILE *out, const char *appname)
 	fprintf(out, "    -debug[:<level>]\t Write a debug log to stderr. <level> overrides TOOL_DEBUG.\n");
 	//fprintf(out, "    -verbose\t\t Narrate the process\n" );
 	fprintf(out, "    -long[:format]\t Display full classads. format can long,json,xml,new or auto\n" );
-	fprintf(out, "    -af[:jlhVr,tng] <attr> [attr2 [...]]\n"
+	fprintf(out, "    -af[:lhVrTY,tng] <attr> [attr2 [...]]\n"
 		"        Print attr(s) with automatic formatting\n"
-		"        the [jlhVr,tng] options modify the formatting\n"
+		"        the [lhVr,tng] options modify the formatting\n"
 		"            l   attribute labels\n"
 		"            h   attribute column headings\n"
 		"            V   %%V formatting (string values are quoted)\n"
 		"            r   %%r formatting (raw/unparsed values)\n"
+		"            T   %%T formatting (elapsed time values)\n"
+		"            Y   %%Y formatting (time and date values)\n"
 		"            ,   comma after each value\n"
 		"            t   tab before each value (default is space)\n"
 		"            n   newline after each value\n"
 		"            g   newline between ClassAds, no space before values\n"
 		"        use -af:h to get tabular values with headings\n"
 		"        use -af:lrng to get -long equivalent format\n"
+		"    -aaf[:VrTY] <attr> [attr2 [...]]\n"
+		"        Like -af, but appends attr(s) after the standard columns\n"
 		"    -format <fmt> <attr> Print attribute attr using format fmt\n"
 		);
 	fprintf(out, "    -usage\t\t Display CPU and slot usage\n");

@@ -122,7 +122,7 @@ Resource::reqexp_restore()
 	} else {
 		caDeleteThruParent(r_classad, ATTR_RUNNING_COD_JOB );
 	}
-	if (resmgr->isShuttingDown() || isDraining()) {
+	if (resmgr->isShuttingDown() || isDraining() || resmgr->rehomeRebootPending()) {
 		if (r_reqexp.rstate != UNAVAIL_REQ) {
 			reqexp_unavail( isDraining() ? getDrainingExpr() : nullptr );
 			return true;
@@ -198,7 +198,8 @@ Resource::publish_requirements( ClassAd* ca )
 		// broken slots set Requirements equal to the broken reason
 		// this prevents matching while also making the reason visible to -analyze
 		std::string broken_reason;
-		r_attr->is_broken(&broken_reason);
+		// brokenness already confirmed by is_broken() above; here we just want the reason
+		std::ignore = r_attr->is_broken(&broken_reason);
 		if (broken_reason.empty()) { broken_reason = "Broken"; }
 		ca->Assign(ATTR_REQUIREMENTS, broken_reason);
 	} else if (r_reqexp.rstate == COD_REQ) {

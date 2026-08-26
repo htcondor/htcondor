@@ -93,6 +93,7 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
     :glob:
 
     classads
+    htcondor-jdl
 
 Job Management Commands
 -----------------------
@@ -186,7 +187,6 @@ General Administrator Commands
     :maxdepth: 1
     :glob:
 
-    condor_check_password
     condor_config_val
     condor_configure
     condor_fetchlog

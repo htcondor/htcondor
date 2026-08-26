@@ -16,15 +16,16 @@ def _set_null_config():
 
     if _platform.system() in ["Linux", "Darwin"]:
         condor_config_paths = (
-            _os.path.expanduser("~/.condor/condor_config"),
+            # This list comes from condor_config.cpp's find_global(); see
+            # also the list in the manual (
+            #      https://htcondor.readthedocs.io/en/latest/admin-manual/introduction-to-configuration.html
+            # ) which mentions the environment variable above.
             "/etc/condor/condor_config",
             "/usr/local/etc/condor_config",
             _os.path.expanduser("~condor/condor_config"),
         )
 
         if not any(_os.path.isfile(path) for path in condor_config_paths):
-            message = "The environment variable CONDOR_CONFIG is unset and none of the default locations contain a condor_config file.  Using /dev/null, instead."
-            _warnings.warn(message)
             _os.environ["CONDOR_CONFIG"] = "/dev/null"
 
 

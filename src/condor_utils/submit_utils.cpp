@@ -54,6 +54,8 @@
 #include "condor_base64.h"
 #include "zkm_base64.h"
 
+#include "AWSv4-impl.h"
+
 #include <algorithm>
 #include <charconv>
 #include <string>
@@ -83,6 +85,41 @@ MapFile* getProtectedURLMap() {
 	}
 	return map;
 }
+
+// returns the expr tree from the parent ad if it is of the given node kind.
+// otherwise returns NULL.
+inline ExprTree * AdHasTree(ClassAd * parent, const std::string & attr, classad::ExprTree::NodeKind kind)
+{
+	if (parent) {
+		ExprTree * expr = parent->Lookup(attr);
+		if (expr) {
+			expr = SkipExprEnvelope(expr);
+			if (kind == expr->GetKind()) {
+				return expr;
+			}
+		}
+	}
+	return nullptr;
+}
+
+inline classad::Value * AdHasValue(ClassAd* parent, const std::string & attr, classad::Value::ValueType vt)
+{
+	if (parent) {
+		ExprTree * expr = parent->Lookup(attr);
+		if (expr) {
+			expr = SkipExprEnvelope(expr);
+			if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
+				static classad::Value v;
+				((classad::Literal *)expr)->GetValue(v);
+				if (v.GetType() == vt) {
+					return &v;
+				}
+			}
+		}
+	}
+	return nullptr;
+}
+
 // When this class is wrapped around a classad that has a chained parent ad
 // inserts and assignments will check to see if the value being assigned
 // is the same as the value in the chained parent, and if so will NOT do
@@ -112,53 +149,41 @@ public:
 	classad::Value::ValueType LookupType(const std::string attr);
 	classad::Value::ValueType LookupType(const std::string attr, classad::Value & val);
 
+	void set_taskad(ClassAd* tad) { taskad = tad; }
+	// we need a set of input files that we are already planning to transfer
+	//bool has_input_file(const std::string & file) { return exist_input_files.count(file); }
+	bool add_task_file(const std::string & file) {
+		auto inserted = task_input_files.insert(file);
+		return inserted.second;
+	}
+	const std::set<std::string> task_files() const { return task_input_files; }
+
 protected:
 	ClassAd& ad;
+	ClassAd* taskad{nullptr};
+	std::set<std::string> task_input_files;
 
-	ExprTree * HasParentTree(const std::string & attr, classad::ExprTree::NodeKind kind);
-	const classad::Value * HasParentValue(const std::string & attr, classad::Value::ValueType vt);
+	ExprTree * HasParentTree(const std::string & attr, classad::ExprTree::NodeKind kind) {
+		return AdHasTree( ad.GetChainedParentAd(), attr, kind);
+	}
+	// returns a pointer to the value from the parent ad if the parent ad has a Literal node
+	// of the given value type.
+	const classad::Value * HasParentValue(const std::string & attr, classad::Value::ValueType vt) {
+		return AdHasValue( ad.GetChainedParentAd(), attr, vt);
+	}
 };
 
-// returns the expr tree from the parent ad if it is of the given node kind.
-// otherwise returns NULL.
-ExprTree * DeltaClassAd::HasParentTree(const std::string & attr, classad::ExprTree::NodeKind kind)
-{
-	classad::ClassAd * parent = ad.GetChainedParentAd();
-	if (parent) {
-		ExprTree * expr = parent->Lookup(attr);
-		if (expr) {
-			expr = SkipExprEnvelope(expr);
-			if (kind == expr->GetKind()) {
-				return expr;
-			}
-		}
-	}
-	return NULL;
-}
-
-// returns a pointer to the value from the parent ad if the parent ad has a Literal node
-// of the given value type.
-const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, classad::Value::ValueType vt)
-{
-	classad::ClassAd * parent = ad.GetChainedParentAd();
-	if (parent) {
-		ExprTree * expr = parent->Lookup(attr);
-		if (expr) {
-			expr = SkipExprEnvelope(expr);
-			if (dynamic_cast<classad::Literal *>(expr) != nullptr) {
-				static classad::Value v;
-				((classad::Literal *)expr)->GetValue(v);
-				if (v.GetType() == vt) {
-					return &v;;
-				}
-			}
-		}
-	}
-	return nullptr;
-}
 
 bool DeltaClassAd::Insert(const std::string & attr, ExprTree * tree)
 {
+	if (taskad) {
+		ExprTree * t3 = AdHasTree(&ad, attr, tree->GetKind());
+		if (t3 && tree->SameAs(t3)) {
+			delete tree;
+			return true;
+		}
+		return taskad->Insert(attr, tree);
+	}
 	ExprTree * t2 = HasParentTree(attr, tree->GetKind());
 	if (t2 && tree->SameAs(t2)) {
 		delete tree;
@@ -171,6 +196,14 @@ bool DeltaClassAd::Insert(const std::string & attr, ExprTree * tree)
 bool DeltaClassAd::Assign(const char* attr, bool val)
 {
 	bool bval = ! val;
+	if (taskad) {
+		const classad::Value * jval = AdHasValue(&ad, attr, classad::Value::BOOLEAN_VALUE);
+		if (jval && jval->IsBooleanValue(bval) && (val == bval)) {
+			return true;
+		} else {
+			return taskad->Assign(attr, val);
+		}
+	}
 	const classad::Value * pval = HasParentValue(attr, classad::Value::BOOLEAN_VALUE);
 	if (pval && pval->IsBooleanValue(bval) && (val == bval)) {
 		ad.PruneChildAttr(attr, false);
@@ -182,6 +215,14 @@ bool DeltaClassAd::Assign(const char* attr, bool val)
 bool DeltaClassAd::Assign(const char* attr, double val)
 {
 	double dval = -val;
+	if (taskad) {
+		const classad::Value * jval = AdHasValue(&ad, attr, classad::Value::REAL_VALUE);
+		if (jval && jval->IsRealValue(dval) && (val == dval)) {
+			return true;
+		} else {
+			return taskad->Assign(attr, val);
+		}
+	}
 	const classad::Value * pval = HasParentValue(attr, classad::Value::REAL_VALUE);
 	if (pval && pval->IsRealValue(dval) && (val == dval)) {
 		ad.PruneChildAttr(attr, false);
@@ -193,6 +234,14 @@ bool DeltaClassAd::Assign(const char* attr, double val)
 bool DeltaClassAd::Assign(const char* attr, long long val)
 {
 	long long ival = -val;
+	if (taskad) {
+		const classad::Value * jval = AdHasValue(&ad, attr,  classad::Value::INTEGER_VALUE);
+		if (jval && jval->IsIntegerValue(ival) && (val == ival)) {
+			return true;
+		} else {
+			return taskad->Assign(attr, val);
+		}
+	}
 	const classad::Value * pval = HasParentValue(attr, classad::Value::INTEGER_VALUE);
 	if (pval && pval->IsIntegerValue(ival) && (val == ival)) {
 		ad.PruneChildAttr(attr, false);
@@ -204,6 +253,14 @@ bool DeltaClassAd::Assign(const char* attr, long long val)
 bool DeltaClassAd::Assign(const char* attr, const char * val)
 {
 	const char * cstr = NULL;
+	if (taskad) {
+		const classad::Value * jval = AdHasValue(&ad, attr,  classad::Value::STRING_VALUE);
+		if (jval && jval->IsStringValue(cstr) && cstr && (MATCH == strcmp(cstr, val))) {
+			return true;
+		} else {
+			return taskad->Assign(attr, val);
+		}
+	}
 	const classad::Value * pval = HasParentValue(attr, classad::Value::STRING_VALUE);
 	if (val && pval && pval->IsStringValue(cstr) && cstr && (MATCH == strcmp(cstr, val))) {
 		ad.PruneChildAttr(attr, false);
@@ -269,6 +326,7 @@ static condor_params::string_value UnliveNodeMacroDef = { UnsetString, 0 };
 static condor_params::string_value UnliveClusterMacroDef = { OneString, 0 };
 static condor_params::string_value UnliveProcessMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveStepMacroDef = { ZeroString, 0 };
+static condor_params::string_value UnliveTaskIdMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveRowMacroDef = { ZeroString, 0 };
 
 static condor_params::string_value UnliveSubmitTimeMacroDef = { UnsetString, 0 };
@@ -369,6 +427,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "Step",      &UnliveStepMacroDef },
 	{ "SUBMIT_FILE", &UnliveSubmitFileMacroDef },
 	{ "SUBMIT_TIME", &UnliveSubmitTimeMacroDef },
+	{ "TaskId",    &UnliveTaskIdMacroDef },
 	{ "VM_MEMORY", &VMMemoryMacroDef },
 	{ "VM_VCPUS",  &VMVCPUSMacroDef },
 	{ "Year",       &UnliveYearMacroDef },
@@ -433,6 +492,52 @@ condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const
 	return NewDef;
 }
 
+static std::string_view trim(std::string_view sv) {
+	while ( ! sv.empty() && isspace(sv.front())) sv.remove_prefix(1);
+	while ( ! sv.empty() && isspace(sv.back())) sv.remove_suffix(1);
+	return sv;
+}
+
+// Split a string on commas while avoiding splitting on commas that are within a macro.
+// Returned substrings are trimmed. Keep in mind that substrings may contain macros
+// and those that do may have additional commas once the macros are expanded.
+void macro_aware_split(std::string_view input, std::deque<std::string_view> & sections)
+{
+	if (input.empty()) return;
+
+	const char * p = input.data();
+	ASSERT(input.back()==0 || p[input.size()] == 0); // macro scanning code currently needs a null terminator
+	size_t offset = 0, ix;
+	UNEXPANDED_MACRO_EXTENTS ext;
+
+	// look for commas before and between macros
+	std::string_view remain(input);
+	while (next_unexpanded_macro(remain.data(), offset, ext)) {
+		std::string_view tmp(remain.data(), ext.left);
+		while ((ix = tmp.find(',', offset)) != std::string_view::npos) {
+			std::string_view section = trim({tmp.data(),tmp.data()+ix});
+			if ( ! section.empty()) { sections.push_back(section); }
+			tmp.remove_prefix(ix+1);
+			remain.remove_prefix(ix+1);
+			offset = 0;
+		}
+		offset = ext.right - remain.data();
+	}
+
+	// look for commas after the last macro
+	while ((ix = remain.find(',',offset)) != std::string_view::npos) {
+		std::string_view section = trim({remain.data(),remain.data()+ix});
+		if ( ! section.empty()) { sections.push_back(section); }
+		remain.remove_prefix(ix+1);
+		offset = 0;
+	}
+
+	// add stuff after the last comma
+	std::string_view section = trim(remain);
+	if ( ! section.empty()) { sections.push_back(section); }
+}
+
+
 // setup a MACRO_DEFAULTS table for the macro set, we have to re-do this each time we clear
 // the macro set, because we allocate the defaults from the ALLOCATION_POOL.
 void SubmitHash::setup_macro_defaults()
@@ -452,6 +557,7 @@ void SubmitHash::setup_macro_defaults()
 	LiveProcessString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveProcessMacroDef, 24)->psz);
 	LiveRowString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveRowMacroDef, 24)->psz);
 	LiveStepString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveStepMacroDef, 24)->psz);
+	LiveTaskIdString = const_cast<char*>(allocate_live_default_string(SubmitMacroSet, UnliveTaskIdMacroDef, 24)->psz);
 }
 
 // set the value that $(SUBMIT_FILE) will expand to. (set into the defaults table, not the submit hash table)
@@ -547,11 +653,6 @@ SubmitHash::SubmitHash()
 	, FnCheckFile(NULL)
 	, CheckFileArg(NULL)
 	, CheckProxyFile(true)
-	, LiveNodeString(NULL)
-	, LiveClusterString(NULL)
-	, LiveProcessString(NULL)
-	, LiveRowString(NULL)
-	, LiveStepString(NULL)
 	, JobUniverse(CONDOR_UNIVERSE_MIN)
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
@@ -574,6 +675,8 @@ SubmitHash::SubmitHash()
 
 	// TODO: move this to condor_submit? or expose a method on the class to set this?
 	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
+	// Default to the C++-level initial value.
+	SynthesizeCommonInputFiles = param_boolean("SUBMIT_SYNTHESIZE_COMMON_INPUT_FILES", SynthesizeCommonInputFiles);
 
 	mctx.init("SUBMIT", 3);
 }
@@ -1409,7 +1512,7 @@ int SubmitHash::SetJavaVMArgs()
 }
 
 
-int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
+int SubmitHash::check_open(_submit_file_role role,  const std::string &name, int flags )
 {
 	std::string strPathname;
 
@@ -1419,19 +1522,18 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 	if ( JobDisableFileChecks ) return 0;
 
 	/* No need to check for existence of the Null file. */
-	if( strcmp(name, NULL_FILE) == MATCH ) {
+	if( name == NULL_FILE ) {
 		return 0;
 	}
 
-	if ( IsUrl( name ) || strstr(name, "$$(") ) {
+	if ( IsUrl( name.c_str() ) || name.find("$$(") != std::string::npos ) {
 		return 0;
 	}
 
-	strPathname = full_path(name);
+	strPathname = full_path(name.c_str());
 
 	// is the last character a path separator?
-	int namelen = (int)strlen(name);
-	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+	bool trailing_slash = !name.empty() && IS_ANY_DIR_DELIM_CHAR(name.back());
 
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
@@ -1524,7 +1626,7 @@ int SubmitHash::CheckStdFile(
 		}
 
 		if (transfer_it && ! JobDisableFileChecks) {
-			check_open(role, file.c_str(), access);
+			check_open(role, file, access);
 			RETURN_IF_ABORT();
 		}
 	}
@@ -4852,6 +4954,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserNotes
 	{SUBMIT_KEY_UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_NotesAttrsCommand, ATTR_SUBMIT_EVENT_NOTES_ATTRS, SimpleSubmitKeyword::f_as_string},
 	// formerly SetStackSize
 	{SUBMIT_KEY_StackSize, ATTR_STACK_SIZE, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJarFiles
@@ -5118,6 +5221,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 	// invoke SetContainerSpecial
 	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
 
@@ -6029,7 +6133,14 @@ int SubmitHash::SetRequirements()
 		if (expr) {
 			double disk = 0;
 			if ( ! ExprTreeIsLiteralNumber(expr, disk) || (disk > 0.0)) {
-				answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				if( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+					// Sufficiently recent versions of the starter will adjust
+					// RequestDisk to reflect common files usage, so the job
+					// shouldn't try to enforce WithinResourceLimits.
+					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+				} else {
+					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+				}
 			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
@@ -6661,9 +6772,14 @@ int SubmitHash::SetAccountingGroup()
 int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
-	std::string tokens;
+	classad::References tokens;
 	if (NeedsOAuthServices(false, tokens)) {
-		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
+		std::string tokens_str;
+		for (const auto& name: tokens) {
+			if (!tokens_str.empty()) tokens_str += ',';
+			tokens_str += name;
+		}
+		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens_str.c_str());
 	}
 
 	return 0;
@@ -6994,17 +7110,49 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		} else {
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
-			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+
+			// To avoid colliding inside a DAG when container images are
+			// common, the catalog name we generate here must depend on
+			// the full path to the container image.  The could make for
+			// very long and rather ugly attribute name, so instead use
+			// (a short prefix of) the hash of that path.
+			std::string hash_key;
+			if(! IsUrl(container_image.ptr())) {
+				hash_key = full_path( container_image.ptr() );
+			} else {
+				hash_key = container_image.ptr();
+			}
+
+			unsigned int mdLength = 0;
+			unsigned char messageDigest[EVP_MAX_MD_SIZE];
+			if(! AWSv4Impl::doSha256( hash_key, messageDigest, & mdLength )) {
+				// There's doesn't seem to be a failure path out of this
+				// function, so for now, just fail catastrophically.
+				push_error( stderr, "Failed to hash container image ('%s', hashed as '%s'), aborting.\n", container_image.ptr(), hash_key.c_str() );
+				ABORT_AND_RETURN(2);
+			}
+
+			std::string catalogName;
+			std::string containerHash;
+			AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, containerHash );
+			formatstr( catalogName, "container_%s", containerHash.substr(0, 8).c_str() );
+
+
+			std::string attributeName;
+			formatstr( attributeName, "_x_catalog_%s", catalogName.c_str() );
+			AssignJobString( attributeName.c_str(), container_image.ptr() );
 
 			std::string xcip;
-			job->LookupString( "_x_common_input_catalogs", xcip );
+			// if the attribute is absent, xcip stays empty (handled below)
+			std::ignore = job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
 			// Don't duplicate entries.  This can't be the right way to do
 			// this; this function may be in the wrong place (unless we want
 			// to allow a different container image per proc).
-			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+			if( xcip.find( catalogName ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
-				xcip += "condor_container_image";
-				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+				xcip += catalogName;
+				AssignJobString( ATTR_COMMON_INPUT_CATALOGS, xcip.c_str() );
 			}
 		}
 
@@ -7042,7 +7190,7 @@ int SubmitHash::process_input_file_list(std::vector<std::string>& input_list, lo
 	for (auto& tmp: input_list) {
 		count++;
 		check_and_universalize_path(tmp);
-		check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+		check_open(SFR_INPUT, tmp, O_RDONLY);
 		// get file size, but only if the caller requests it.
 		// in practice, we will check the sizes of files here in submit
 		// but not when doing late materialization
@@ -7104,6 +7252,22 @@ int SubmitHash::SetTransferFiles()
 		macro_value.clear();
 	}
 	RETURN_IF_ABORT();
+
+	// canonicalize CommonInputFiles and store in the job
+	if ( ! clusterAd && AllowCommonInputFiles ) {
+		macro_value.set(submit_param(SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES));
+		if (macro_value) {
+			const char * files = trim_and_strip_quotes_in_place(macro_value.ptr());
+			std::string common;
+			for (const auto & file : StringTokenIterator(files, ",")) {
+				if (common.size()) common += ",";
+				common += file;
+			}
+			// TODO: universalise paths and determine size of common input files??
+			AssignJobString(ATTR_COMMON_INPUT_FILES, common.c_str());
+			macro_value.clear();
+		}
+	}
 
 	if (process_input_file_list(input_file_list, pInputFilesSizeKb) > 0) {
 		in_files_specified = true;
@@ -7408,7 +7572,7 @@ int SubmitHash::SetTransferFiles()
 		if (job->LookupString(ATTR_JOB_CMD, tmp) && tmp != "java") {
 			if ( ! contains(input_file_list, tmp)) {
 				input_file_list.emplace_back(tmp);
-				check_open(SFR_INPUT, tmp.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, tmp, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(tmp.c_str());
 				}
@@ -7421,7 +7585,7 @@ int SubmitHash::SetTransferFiles()
 				filepath = file;
 				check_and_universalize_path(filepath);
 				input_file_list.emplace_back(filepath);
-				check_open(SFR_INPUT, filepath.c_str(), O_RDONLY);
+				check_open(SFR_INPUT, filepath, O_RDONLY);
 				if (pInputFilesSizeKb) {
 					*pInputFilesSizeKb += calc_image_size_kb(filepath.c_str());
 				}
@@ -7785,13 +7949,10 @@ int SubmitHash::FixupTransferInputFiles()
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
 	bool add_local,	// in: Add local issuer/client services mentioned in configuration
-	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
-	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
-	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
+	classad::References & service_names)   // out: set of services names for OAuthServicesNeeded job attribute
+	const
 {
-	if (request_ads) { request_ads->clear(); }
-	if (ads_error) { ads_error->clear(); }
-	services.clear();
+	service_names.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
 	if (tokens_needed.empty() && !add_local) {
@@ -7806,10 +7967,6 @@ bool SubmitHash::NeedsOAuthServices(
 	for (auto name = sti.first(); name != NULL; name = sti.next()) {
 		enabled_services.insert(name);
 	}
-
-	// this will be populated with the fully qualifed service names
-	// that have been enabled, these names will include the handle suffix
-	classad::References service_names;
 
 	// scan the submit keys for things that match the form
 	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
@@ -7875,37 +8032,32 @@ bool SubmitHash::NeedsOAuthServices(
 	// service names mentioned in our configuration.
 	if (add_local) {
 		std::string names;
-		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
-			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
-		}
-		for (const auto& name: StringTokenIterator(names)) {
-			service_names.insert(name);
-		}
-		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		if (param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES")) {
 			for (const auto& name: StringTokenIterator(names)) {
 				service_names.insert(name);
+			}
+		} else {
+			if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+				param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+			}
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+			if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+				for (const auto& name: StringTokenIterator(names)) {
+					service_names.insert(name);
+				}
 			}
 		}
 	}
 
-	// return the string that we will use for the OAuthServicesNeeded job attribute
-	for (auto name = service_names.begin(); name != service_names.end(); ++name){
-		if (!services.empty()) services += ",";
-		services += *name;
-	}
-
-	// at this point, service_names has the list fully qualified service names, including the handle suffix
-	// now we need to build services ads for these
-	if (request_ads) {
-		build_oauth_service_ads(service_names, *request_ads, *ads_error);
-	}
 	return !service_names.empty();
 }
 
 // fill out token request ads for the needed oauth services
 // returns -1 and fills out error if the SubmitHash is missing a required field
 // returns 0 on success
-int SubmitHash::build_oauth_service_ads (
+bool SubmitHash::build_oauth_service_ads (
 	classad::References & unique_names,
 	std::vector<ClassAd> & requests,
 	std::string & error) const
@@ -7950,7 +8102,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_SCOPES", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7970,7 +8122,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_AUDIENCE", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -7990,7 +8142,7 @@ int SubmitHash::build_oauth_service_ads (
 			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
-				return -1;
+				return false;
 			}
 			formatstr(config_param_name, "%s_DEFAULT_OPTIONS", service_name.c_str());
 			param(param_val, config_param_name.c_str());
@@ -8013,7 +8165,7 @@ int SubmitHash::build_oauth_service_ads (
 		// request_ad->Assign("Username", "<username>");
 	}
 
-	return 0;
+	return true;
 }
 
 
@@ -8042,6 +8194,8 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, jid.proc);
 	ad->LookupInteger(ATTR_Q_DATE, submit_time);
+	// Force Year,Month,Day, etc to be stored in the submit hash
+	setup_submit_time_defaults(submit_time);
 	if (ad->LookupString(ATTR_JOB_IWD, JobIwd) && ! JobIwd.empty()) {
 		JobIwdInitialized = true;
 		if ( ! this->lookup_exact("FACTORY.Iwd")) {
@@ -8068,6 +8222,13 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	delete procAd; procAd = NULL;
 	baseJob.Clear();
 	base_job_is_cluster_ad = 0;
+
+	// Schedds older than 25.14 don't know what the CommonInputFiles attribute is.
+	// so flip the default once we know the schedd version.
+	CondorVersionInfo cvi(getScheddVersion());
+	if ( ! cvi.built_since_version(25, 14, 0)) {
+		AllowCommonInputFiles = false;
+	}
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
@@ -8262,6 +8423,7 @@ ClassAd* SubmitHash::make_job_ad (
 	{ auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, job_id.proc);    *p = '\0';}
 	{ auto [p, ec] = std::to_chars(LiveRowString, LiveRowString + 12, item_index);             *p = '\0';}
 	{ auto [p, ec] = std::to_chars(LiveStepString, LiveStepString + 12, step);                 *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveTaskIdString, LiveTaskIdString + 12, 0);                *p = '\0';}
 
 	// calling this function invalidates the job returned from the previous call
 	delete job; job = NULL;
@@ -8413,6 +8575,135 @@ ClassAd* SubmitHash::make_job_ad (
 	return procAd;
 }
 
+#ifdef SUPPORT_FOR_TASK_PACKING
+
+int SubmitHash::add_job_task (
+	int taskid,     //
+	int item_index, // Row or ItemIndex
+	int step)       // Step
+{
+	std::string buf;
+
+	{ auto [p, ec] = std::to_chars(LiveRowString, LiveRowString + 12, item_index);             *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveStepString, LiveStepString + 12, step);                 *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveTaskIdString, LiveTaskIdString + 12, taskid);           *p = '\0';}
+
+	// give the DeltaClassAd a task ad to insert attributes into
+	ClassAd taskad;
+	job->set_taskad(&taskad);
+
+	// The useful parts of SetExecutable()
+	if ( ! submit_param_exists(SUBMIT_KEY_Shell,nullptr, buf)) {
+		auto_free_ptr ename(submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD ));
+		if (ename) {
+			bool transfer_it = true;
+			job->LookupBool(ATTR_TRANSFER_EXECUTABLE, transfer_it);
+			bool ignore_it = (IsDockerJob || IsContainerJob);
+			_submit_file_role role = ignore_it ? SFR_PSEUDO_EXECUTABLE :SFR_EXECUTABLE;
+			std::string full_ename;
+			if (transfer_it) {
+				full_ename = full_path( ename, false );
+			} else {
+				full_ename = ename ? ename.ptr() : "";
+			}
+			if ( ! ignore_it) {
+				check_and_universalize_path(full_ename);
+			}
+			if (FnCheckFile) {
+				int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
+				if (rval) {
+					ABORT_AND_RETURN(rval);
+				}
+			}
+			AssignJobString (ATTR_JOB_CMD, full_ename.c_str());
+			if (transfer_it && taskad.Lookup(ATTR_JOB_CMD)) {
+				job->add_task_file(full_ename);
+			}
+		}
+	}
+
+	SetArguments();
+	SetEnvironment();
+
+	// The useful parts of SetStdin();
+	//
+	auto_free_ptr stdin_file(submit_param(SUBMIT_KEY_Input, SUBMIT_KEY_Stdin));
+	if (stdin_file) {
+		bool transfer_it = true;
+		job->LookupBool(ATTR_TRANSFER_INPUT, transfer_it);
+
+		bool stream_it = false;
+		job->LookupBool(ATTR_STREAM_INPUT, stream_it);
+		if (stdin_file || ! job->Lookup(ATTR_JOB_INPUT)) {
+			std::string file;
+			if (CheckStdFile(SFR_INPUT, stdin_file, O_RDONLY, file, transfer_it, stream_it) != 0) {
+				ABORT_AND_RETURN(1);
+			}
+			AssignJobString(ATTR_JOB_INPUT, file.c_str());
+			RETURN_IF_ABORT();
+		}
+
+		if (transfer_it && taskad.Lookup(ATTR_JOB_INPUT)) {
+			job->add_task_file(stdin_file.ptr());
+		}
+	}
+
+	// the useful bits of SetTransferFiles()
+	auto_free_ptr input_files(submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt));
+	if (input_files) {
+		const char * in_files = trim_and_strip_quotes_in_place(input_files.ptr());
+		for (auto file : StringTokenIterator(in_files, ",")) {
+			check_and_universalize_path(file);
+			if (FnCheckFile) {
+				FnCheckFile(CheckFileArg, this, SFR_INPUT, file.c_str(), O_RDONLY);
+			}
+			job->add_task_file(file);
+		}
+	}
+
+	// detach the task ad so we are now changing the proc ad
+	job->set_taskad(nullptr);
+
+	// and store the task ad
+	std::string taskidAttr = "Task" + std::to_string(taskid);
+	job->Insert(taskidAttr, taskad.Copy());
+	return 0;
+}
+
+int SubmitHash::finalize_job_tasks (int /*max_tasks*/)
+{
+	job->set_taskad(nullptr); // just to be sure
+
+	std::string input_files;
+	job->LookupString(ATTR_TRANSFER_INPUT_FILES, input_files);
+
+	std::set<std::string> exist;
+	for (const auto & file : StringTokenIterator(input_files, ",")) { exist.insert(file); }
+
+	long long exist_input_mb = 0;
+	job->LookupInt(ATTR_TRANSFER_INPUT_SIZE_MB, exist_input_mb);
+
+	int new_files = 0;
+	long long new_kb = 0;
+	for (const auto & file : job->task_files()) {
+		if (exist.count(file)) continue; // this is already being transferred
+		new_kb += calc_image_size_kb(file.c_str());
+		if ( ! input_files.empty()) input_files += ",";
+		input_files += file;
+		new_files += 1;
+	}
+
+	if (new_files) {
+		if (new_kb > 0) {
+			AssignJobVal(ATTR_TRANSFER_INPUT_SIZE_MB, exist_input_mb + (new_kb+1023)/1024);
+		}
+		AssignJobString(ATTR_TRANSFER_INPUT_FILES, input_files.c_str());
+		RETURN_IF_ABORT();
+	}
+
+	return 0;
+}
+#endif // SUPPORT_FOR_TASK_PACKING
 
 void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
 {
@@ -8480,7 +8771,8 @@ bool SubmitHash::is_dag_command(const char * line) {
 	};
 
 	StringTokenIterator l(line, " \t");
-	return dag_commands.contains(l.first());
+	const char * first = l.first();
+	return first && dag_commands.contains(first);
 }
 
 
@@ -9515,6 +9807,137 @@ bool SubmitHash::want_factory_submit(long long & max_materialize)
 	return false;
 }
 
+bool SubmitHash::want_task_packing(int & packing)
+{
+#ifdef SUPPORT_FOR_TASK_PACKING
+	long long val = 0;
+	if (submit_param_long_exists("tasks_per_job", nullptr, val, true)) {
+		packing = (int)val;
+		return true;
+	}
+#endif
+	packing = 1;
+	return false;
+}
+
+// modify the dictionary to set common_input_files from the other submit commands
+bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, bool force)
+{
+	if ( ! AllowCommonInputFiles ) {
+		return false;
+	}
+
+	if ( ! SynthesizeCommonInputFiles) {
+		return false;
+	}
+
+	// check for an existing common input keyword, if there is none when we have work to do.
+	const char * common_key = SUBMIT_KEY_CommonInputFiles;
+	const char * exist_common = lookup(common_key);
+	if ( ! exist_common) {
+		exist_common = lookup(ATTR_COMMON_INPUT_FILES);
+		if (exist_common) common_key = ATTR_COMMON_INPUT_FILES;
+	}
+	if (exist_common && ! force) {
+		return true;
+	}
+	if ( ! exist_common) {
+		// start by setting an empty common files list
+		// we may give this a non-empty value later
+		set_submit_param(common_key, "");
+		optimize_macros(SubmitMacroSet);
+	}
+
+	const char * xfer_key = SUBMIT_KEY_TransferInputFiles;
+	const char * tif = lookup(xfer_key);
+	if ( ! tif) {
+		tif = lookup(ATTR_TRANSFER_INPUT_FILES);
+		if (tif) xfer_key = ATTR_TRANSFER_INPUT_FILES;
+	}
+	if ( ! tif) {
+		// no files, no common files
+		return false;
+	}
+
+	std::string common(exist_common ? exist_common : "");
+	std::string uncommon;
+	if (extract_per_proc_items(tif, vars, common, uncommon)) {
+		// save the common and uncommon transfer lists back into the submit hash
+		set_submit_param(common_key, common.c_str());
+		set_submit_param(xfer_key, uncommon.c_str());
+	}
+
+	return ! common.empty();
+}
+
+bool SubmitHash::extract_per_proc_items(
+	const char * input_list,        // in: process this list
+	const std::vector<std::string> & vars,
+	std::string & per_cluster_list, // in,out: per-cluster items are appended to this list if they are not already present
+	std::string & per_proc_list)    // out: per-proc items are appended to this list
+{
+	// Get the per-proc keys so we can do selective expansion.
+	// We do not keep the result of these expansions, so we don't care
+	// what the clusterId is set to.
+	auto skip_knobs = per_proc_keys(vars, -1);
+	skip_knobs.erase("Cluster");
+	skip_knobs.erase("ClusterId");
+
+	// split on comma in a macro-aware fashion.
+	std::deque<std::string_view> sections;
+	std::string_view tif(input_list);
+	macro_aware_split(tif, sections);
+
+	// build a collection of existing common items (if any)
+	// so we can know what items from the transfer_input_files list
+	// are also mentioned in the existing common_input_files list.
+	std::set<std::string> exist;
+	size_t per_cluster_size = per_cluster_list.size();
+	if (per_cluster_size) {
+		for (const auto & item : StringTokenIterator(per_cluster_list, ",")) { exist.insert(item); }
+	}
+
+	// put each sections into either the per-cluster or per-proc list
+	for (auto sv : sections) {
+		std::string buf(sv); // null terminate so we can do a macro check
+
+		// we can skip items in the existing per-cluster list
+		if (exist.count(buf)) {
+			continue;
+		}
+
+		// we characterize an item as common or uncommon based on whether it has
+		// unexpanded macros or not.
+
+		bool is_macro = has_unexpanded_macros(buf.c_str(), true);
+		if ( ! is_macro) {
+			// no macros, we can just add it to the common list
+			if (per_cluster_list.size()) { per_cluster_list += ", "; }
+			per_cluster_list += buf;
+			continue;
+		}
+		// if there are macros, do a selective expansion and then check for macros again
+		if (selective_expand_macro(buf, skip_knobs, mctx) > 0) {
+			// return > 0 indicates that we skipped some expansions, so this is uncommon
+			if (per_proc_list.size()) { per_proc_list += ", "; }
+			per_proc_list += sv;
+			continue;
+		}
+		// if, after expansion we have only $(dollor), then this is per-cluster
+		is_macro = has_unexpanded_macros(buf.c_str(), true);
+		if ( ! is_macro) {
+			if (per_cluster_list.size()) { per_cluster_list += ", "; }
+			per_cluster_list += sv; // add the unexpanded value
+			continue;
+		}
+		// otherwise this is per-proc
+		if (per_proc_list.size()) { per_proc_list += ", "; }
+		per_proc_list += sv; // add the unexpanded value
+	}
+
+	// return how much we grew the per-cluster list.
+	return per_cluster_list.size() - per_cluster_size;
+}
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
 {
@@ -9762,6 +10185,22 @@ bool SubmitHash::key_is_prunable(const char * key)
 	return false;
 }
 
+classad::References SubmitHash::per_proc_keys(const std::vector<std::string> & vars, int cluster_id)
+{
+	classad::References skip_knobs{"Process","ProcId","Step","Row","Node","Item","TaskId"};
+	for (const auto& var: vars) {
+		skip_knobs.insert(var);
+	}
+
+	if (cluster_id > 0) {
+		{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, cluster_id); *p = '\0';}
+	} else {
+		skip_knobs.insert("Cluster");
+		skip_knobs.insert("ClusterId");
+	}
+	return skip_knobs;
+}
+
 const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std::vector<std::string> & vars, int options)
 {
 	int flags = HASHITER_NO_DEFAULTS;
@@ -9789,28 +10228,29 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		}
 	}
 
+
 	// tell the job factory to skip processing SetRequirements and just use the cluster requirements for all jobs
 	out += "FACTORY.Requirements=MY.Requirements\n";
 
+#if 0 // for testing
+	const char * raw_cif = lookup(SUBMIT_KEY_CommonInputFiles);
+	if (raw_cif) {
+		out += "Raw." SUBMIT_KEY_CommonInputFiles "=";
+		out += raw_cif;
+		out += "\n";
+	}
+	const char * raw_tif = lookup(SUBMIT_KEY_TransferInputFiles);
+	if (raw_tif) {
+		out += "Raw." SUBMIT_KEY_TransferInputFiles "=";
+		out += raw_tif;
+		out += "\n";
+	}
+#endif
+
 	// when we selectively expand the submit hash, we want to skip over some knobs
 	// because their values can change as we materialize jobs.
-	classad::References skip_knobs;
-	skip_knobs.insert("Process");
-	skip_knobs.insert("ProcId");
-	skip_knobs.insert("Step");
-	skip_knobs.insert("Row");
-	skip_knobs.insert("Node");
-	skip_knobs.insert("Item");
-	for (const auto& var: vars) {
-		skip_knobs.insert(var);
-	}
-
-	if (cluster_id > 0) {
-		{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, cluster_id); *p = '\0';}
-	} else {
-		skip_knobs.insert("Cluster");
-		skip_knobs.insert("ClusterId");
-	}
+	classad::References skip_knobs = per_proc_keys(vars, cluster_id);
+	classad::References skipped_names;
 
 	// some knobs should never appear in the digest (i'm looking at you getenv)
 	// we build of set of those knobs here
@@ -9852,7 +10292,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		const char * val = hash_iter_value(it);
 		if (val) {
 			rhs = val;
-			int iret = selective_expand_macro(rhs, skip_knobs, SubmitMacroSet, mctx);
+			int iret = ::selective_expand_macro(rhs, skip_knobs, SubmitMacroSet, mctx, skipped_names);
 			if (iret < 0) {
 				// there was an error in selective expansion.
 				// the SubmitMacroSet will have the error message already
@@ -9894,7 +10334,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 bool
 credd_has_tokens(
-	const std::string & token_names,
+	const classad::References & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
 	Daemon* credd,
@@ -9905,7 +10345,12 @@ credd_has_tokens(
 
 	if (IsDebugLevel(D_SECURITY)) {
 		char *myname = my_username();
-		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", token_names.c_str(), myname);
+		std::string creds_str;
+		for (const auto& name: token_names) {
+			if (!creds_str.empty()) creds_str += ',';
+			creds_str += name;
+		}
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", creds_str.c_str(), myname);
 		free(myname);
 	}
 
@@ -9917,7 +10362,7 @@ credd_has_tokens(
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
 		size_t i = 0;
-		for (const auto& name: StringTokenIterator(token_names)) {
+		for (const auto& name: token_names) {
 			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, token_ads[i], "\t"));
 			buf.clear();
 			i++;
@@ -9942,16 +10387,16 @@ credd_has_tokens(
 		// do_check_oauth_creds will also dprintf the same(ish) messages
 		switch (rv) {
 		case -1:
-			formatstr( error_string, "CRED: invalid request to credd!\n");
+			formatstr( error_string, "CRED: invalid request to credd!");
 			break;
 		case -2: // could not locate
-			formatstr( error_string, "CRED: locate(credd) failed!\n");
+			formatstr( error_string, "CRED: locate(credd) failed!");
 			break;
 		case -3: // start command failed
-			formatstr( error_string, "CRED: startCommand to CredD failed!\n");
+			formatstr( error_string, "CRED: startCommand to CredD failed!");
 			break;
 		case -4: // communication failure (timeout of protocol mismatch)
-			formatstr( error_string, "CRED: communication failure!\n");
+			formatstr( error_string, "CRED: communication failure!");
 			break;
 		}
 
@@ -9962,7 +10407,7 @@ credd_has_tokens(
 }
 
 
-int
+bool
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
@@ -9971,78 +10416,14 @@ process_job_credentials(
 	std::string & URL,
 	std::string & error_string
 ) {
-	std::string token_names;
+	classad::References token_names;
 	std::vector<ClassAd> token_ads;
 	CredSorter sorter;
 
 	error_string.clear();
 
 	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
-
-	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
-		if ( !error_string.empty()) {
-			return 1;
-		}
-	}
-
-	std::string storer;
-	if(param(storer, "SEC_CREDENTIAL_STORER")) {
-		// SEC_CREDENTIAL_STORER is a script to run that calls
-		// condor_store_cred when it has new credentials to store.
-		// Pass it parameters of the service requests needed as
-		// defined in the submit file.
-		// It's used for Vault-managed tokens, so ignore other token
-		// types.
-		bool call_storer = false;
-		ArgList storer_args;
-
-		storer_args.AppendArg(storer);
-
-		for (const auto& request: token_ads) {
-			std::string request_arg;
-			std::string str;
-			request.LookupString("Service", str);
-			if (str.empty()) {
-				continue;
-			}
-			if (sorter.Sort(str) != CredSorter::VaultType) {
-				continue;
-			}
-
-			request_arg = str;
-			std::string keys[] = { "handle", "scopes", "audience", "options" };
-			for (const auto& key : keys) {
-				if (!request.LookupString(key, str) || str.empty()) {
-					continue;
-				}
-				if (key == "scopes") {
-					// make the value only comma-separated
-					std::string new_val;
-					for (const auto& item : StringTokenIterator(str)) {
-						if (!new_val.empty()) {
-							new_val += ',';
-						}
-						new_val += item;
-					}
-					str = new_val;
-				}
-				request_arg += "&" + key + "=" + str;
-			}
-			call_storer = true;
-			storer_args.AppendArg(request_arg);
-		}
-
-		if (call_storer) {
-			int rc = my_system(storer_args);
-			if (rc < 0) {
-				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
-				return 1;
-			} else if (rc > 0) {
-				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
-				return 1;
-			}
-		}
-	}
+	bool always_check_credd = false;
 
 	Daemon credd(DT_CREDD);
 
@@ -10067,12 +10448,94 @@ process_job_credentials(
 					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
 				}
 			}
+			ClassAd* schedd_ad = schedd->locationAd();
+			if (schedd_ad && schedd_ad->LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, always_check_credd)) {
+				add_local = false;
+			}
 		} else if (schedd_or_credd->type() == DT_CREDD) {
 			credd = *schedd_or_credd;
 		}
 	}
 
-	if (!token_ads.empty()) {
+	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
+		if (!submit_hash.build_oauth_service_ads(token_names, token_ads, error_string)) {
+			return false;
+		}
+	}
+
+	std::string storer;
+	if(param(storer, "SEC_CREDENTIAL_STORER")) {
+		// SEC_CREDENTIAL_STORER is a script to run that calls
+		// condor_store_cred when it has new credentials to store.
+		// Pass it parameters of the service requests needed as
+		// defined in the submit file.  A single storer handles credentials
+		// of several kinds (Vault, Pelican, ...); group the requests by kind
+		// and invoke the storer once per kind, telling it which mode to run in
+		// via the CONDOR_CREDENTIAL_STORER_MODE environment variable.  Older or
+		// custom storers ignore that variable and detect the kind themselves,
+		// so this remains backward compatible.  Services owned by the
+		// local/oauth2/client credmons are not handled by the storer.
+		std::map<std::string, std::vector<std::string>> requests_by_mode;
+
+		for (const auto& request: token_ads) {
+			std::string str;
+			request.LookupString("Service", str);
+			if (str.empty()) {
+				continue;
+			}
+			const char *mode = CredSorter::StorerMode(sorter.Sort(str));
+			if (!mode) {
+				continue;
+			}
+
+			std::string request_arg = str;
+			std::string keys[] = { "handle", "scopes", "audience", "options" };
+			for (const auto& key : keys) {
+				if (!request.LookupString(key, str) || str.empty()) {
+					continue;
+				}
+				if (key == "scopes") {
+					// make the value only comma-separated
+					std::string new_val;
+					for (const auto& item : StringTokenIterator(str)) {
+						if (!new_val.empty()) {
+							new_val += ',';
+						}
+						new_val += item;
+					}
+					str = new_val;
+				}
+				request_arg += "&" + key + "=" + str;
+			}
+			requests_by_mode[mode].push_back(request_arg);
+		}
+
+		for (const auto& mode_requests : requests_by_mode) {
+			const std::string& mode = mode_requests.first;
+			ArgList storer_args;
+			storer_args.AppendArg(storer);
+			for (const auto& request_arg : mode_requests.second) {
+				storer_args.AppendArg(request_arg);
+			}
+
+			// Tell the storer which kind of credential these services are.
+			// Old/custom storers ignore this and fall back to self-detection.
+			Env storer_env;
+			storer_env.Import();
+			storer_env.SetEnv("CONDOR_CREDENTIAL_STORER_MODE", mode.c_str());
+
+			int rc = my_system(storer_args, &storer_env);
+			if (rc < 0) {
+				formatstr(error_string, "Failed to run '%s': errno %d (%s)", storer.c_str(), errno, strerror(errno));
+				return false;
+			} else if (rc > 0) {
+				formatstr(error_string, "'%s' failed: exit code %d", storer.c_str(), rc);
+				return false;
+			}
+		}
+	}
+
+	if (!token_ads.empty() || always_check_credd) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
 		// The credd can send one of three responses:
@@ -10082,22 +10545,22 @@ process_job_credentials(
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
 		if (!credd.locate()) {
-			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-			return 1;
+			formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
+			return false;
 		}
 		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
-					return 0;
+					return true;
 				} else {
-					formatstr(error_string, "OAuth error: %s\n\n", URL.c_str() );
-					return 1;
+					formatstr(error_string, "OAuth error: %s", URL.c_str() );
+					return false;
 				}
 			}
-			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", token_names.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything\n");
 
 		} else if(! error_string.empty()) {
-			return 1;
+			return false;
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
@@ -10108,7 +10571,7 @@ process_job_credentials(
 	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
 		// nothing to do
-		return 0;
+		return true;
 	}
 
 	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
@@ -10127,8 +10590,8 @@ process_job_credentials(
 		FILE* uber_file = my_popen(args, "r", 0);
 		unsigned char *uber_ticket = NULL;
 		if (!uber_file) {
-			formatstr( error_string, "ERROR: (%i) invoking %s\n", errno, producer.c_str() );
-			return 1;
+			formatstr( error_string, "Failed to launch %s: %s", producer.c_str(), strerror(errno) );
+			return false;
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
 			ASSERT(uber_ticket);
@@ -10137,8 +10600,8 @@ process_job_credentials(
 			my_pclose(uber_file);
 
 			if(bytes_read == 0) {
-				formatstr( error_string, "ERROR: failed to read any data from %s!\n", producer.c_str() );
-				return 1;
+				formatstr( error_string, "Failed to read any data from %s!", producer.c_str() );
+				return false;
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
@@ -10157,17 +10620,17 @@ process_job_credentials(
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
-						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
-						return 1;
+						formatstr( error_string, "store_cred of Kerberos credential failed - %s", err ? err : "" );
+						return false;
 					}
 				} else {
-					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
+					formatstr( error_string, "Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", credd.version());
-					return 1;
+					return false;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
-				return 1;
+				formatstr( error_string, "Can't find address of credd %s", credd.name() ? credd.name() : "" );
+				return false;
 			}
 		}
 	}  // end of block to run a credential producer
@@ -10181,7 +10644,7 @@ process_job_credentials(
 	// it is also available to the submit file parser itself (i.e. can be used in If statements)
 	submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 
-	return 0;
+	return true;
 }
 
 

@@ -3710,10 +3710,10 @@ static bool test_string_list_size_error_end() {
 	emit_param("BOOL", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("BOOL Value", "%d", actual?"true":"false");
+	emit_param("BOOL Value", "%s", actual?"true":"false");
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("BOOL Value", "%d", expect?"true":"false");
+	emit_param("BOOL Value", "%s", expect?"true":"false");
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}

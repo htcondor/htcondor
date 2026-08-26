@@ -1829,7 +1829,9 @@ doSquawkReconnect( char *addr ) {
 		d.setSubsystem( subsys );
 	}
 	if( ! d.locate(Daemon::LOCATE_FOR_LOOKUP) ) {
-		printf ( "Failed to contact daemon.\n" );
+		printf ( "Failed to contact %s '%s' in %s\n",
+				 daemonString(dt), hostname ? hostname : "default",
+				 pool ? pool->name() : "local pool" );
 		free( hostname );
 		return FALSE;
 	}

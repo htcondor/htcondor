@@ -190,6 +190,7 @@ std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored f
 bool explicit_format = false;
 bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
 std::vector<const char *> append_autoformat_args;
+static void add_aaf_columns_to_print_mask();
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 int			sdo_mode = SDO_NotSet;
@@ -207,7 +208,7 @@ bool        multipleAdsTest = false;
 const char* multipleAdsTestOpts = nullptr;
 CondorQuery *query;
 char		buffer[1024];
-char		*myName;
+const char* myName;
 ClassadSortSpecs sortSpecs;
 bool			noSort = false; // set to true to disable sorting entirely
 bool			naturalSort = true;
@@ -221,7 +222,7 @@ AdCluster<std::string> ad_groups; // does the actually grouping
 std::string get_ad_name_string(ClassAd &ad) { std::string name; ad.LookupString(ATTR_NAME, name); return name; }
 
 
-char *			target = NULL;
+const char *	target = NULL;
 bool			print_attrs_in_hash_order = false;
 
 
@@ -235,6 +236,7 @@ bool			annexMode = false;
 bool			compactMode = false;
 bool			dash_gpus = false;
 bool			dash_broken = false;
+int				dash_healthy = 0;
 
 // Merge-mode globals.
 const char * rightFileName = NULL;
@@ -255,54 +257,9 @@ PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
 
 // function declarations
 void usage 		(const char * opts=NULL);
-void firstPass  (int, char *[]);
-void secondPass (int, char *[]);
+void firstPass  (int, const char *[]);
+void secondPass (int, const char *[]);
 
-// incorporate the -aaf (append autoformat) columns into the output format.
-static void add_aaf_columns_to_print_mask()
-{
-	if (append_autoformat_args.empty())
-		return;
-
-	// if the last column of the existing format has width 0, set it to a non-zero width
-	// so that the column gets auto-width adjusted to match the data.
-	int lastcol = mainPP.pm.ColCount()-1;
-	mainPP.pm.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
-		if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
-			fmt->width = 3;
-			fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
-		}
-		return 1;
-		}, &lastcol);
-
-	int nargs = (int)append_autoformat_args.size();
-	append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
-	classad::References refs;
-	const char * pcolon;
-	for (int i = 0; i < nargs; ++i) {
-		if (is_dash_arg_colon_prefix(append_autoformat_args[i], "aaf", &pcolon, 3)) {
-			const char * format_char = nullptr;
-			if (pcolon) {
-				++pcolon;
-				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
-				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
-				if (*pcolon) {
-					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aaf:V are permitted.\n", pcolon);
-					exit(1);
-				}
-			}
-			int ixNext = parse_autoformat_args(nargs, &append_autoformat_args[0], i+1, format_char, mainPP.pm, refs, diagnose, true);
-			if (ixNext < 0) {
-				exit(-ixNext);
-			}
-			if (ixNext > i) {
-				i = ixNext-1;
-			}
-		}
-	}
-	projList.insert(refs.begin(), refs.end());
-	mainPP.wide_display = true;
-}
 
 // prototype for CollectorList:query, CondorQuery::processAds,
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
@@ -626,14 +583,14 @@ bool local_render_gpus_names ( classad::Value & value, ClassAd* ad, Formatter & 
 
 // arguments passed to the process_ads_callback
 struct _process_ads_info {
-   ROD_MAP_BY_KEY * pmap;
-   TrackTotals *  totals;
-   TrackGPUs *    gpusInfo;
-   unsigned int  ordinal;
-   int           columns;
-   FILE *        hfDiag; // write raw ads to this file for diagnostic purposes
-   unsigned int  diag_flags;
-   PrettyPrinter * pp;
+   ROD_MAP_BY_KEY * pmap{nullptr};
+   TrackTotals *  totals{nullptr};
+   TrackGPUs *    gpusInfo{nullptr};
+   unsigned int  ordinal{1};
+   int           columns{0};
+   FILE *        hfDiag{nullptr}; // write raw ads to this file for diagnostic purposes
+   unsigned int  diag_flags{0};
+   PrettyPrinter * pp{nullptr};
 };
 
 static bool store_ads_callback( void * arg, ClassAd * ad ) {
@@ -772,6 +729,19 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				}
 			} else if (ad->LookupBool(ATTR_SLOT_DYNAMIC, fDynSlot) && fDynSlot) {
 				srod.flags |= SROD_DYNAMIC_SLOT;
+			}
+
+			// when in -healthy mode, skip healthy EPs and/or slots.
+			if (dash_healthy) {
+				bool fBroken = ad->Lookup(ATTR_BROKEN_REASONS) || ad->Lookup(ATTR_SLOT_BROKEN_REASON);
+				bool fHealthy = false;
+				if (ad->LookupBool(ATTR_HEALTHY, fHealthy) && ! fBroken) {
+					// don't print rows that are healthy and unbroken
+					if(fHealthy && dash_healthy==1) { srod.flags |= SROD_SKIP;}
+				} else if ( ! ad->Lookup(ATTR_HEALTH_EXPRS)) {
+					// don't print rows which are unbroken and don't support HealthExprs, since we have nothing to print here.
+					if ( ! fBroken && dash_healthy==1) srod.flags |= SROD_SKIP;
+				}
 			}
 
 			{
@@ -1053,7 +1023,8 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 
 			if (diagnose && gpulist) {
 				const char * machine = "";
-				aa.rov.Column(0)->IsStringValue(machine);
+				// diagnostic output only; machine stays "" if not a string
+				std::ignore = aa.rov.Column(0)->IsStringValue(machine);
 				fprintf(stderr, "fixup gpu cap for %s %s : %s\n", machine, aa.label.c_str(), gpulist);
 			}
 			// TODO: what if column is no longer the default width?
@@ -1217,7 +1188,7 @@ void doNormalOutput( struct _process_ads_info & ai, AdTypes & adType );
 void doMergeOutput( struct _process_ads_info & ai );
 
 int
-main (int argc, char *argv[])
+main (int argc, const char *argv[])
 {
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
@@ -1363,7 +1334,7 @@ main (int argc, char *argv[])
 		} else if (sdo_mode == SDO_StartD_GPUs) {
 			// for the STARTD daemon ad, DetectedGPUs might be 0, or it might be a string list of GPUIDs
 			// or it might be an array of GPU property ad refs (like AvailableGPUs)
-			mode_constraint = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			mode_constraint = STARTDAEMON_GPUS_CONSTRAINT;
 			projList.insert("DetectedGPUs");
 			projList.insert("OfflineGPUs");
 			projList.insert(ATTR_CONDOR_VERSION);
@@ -1392,9 +1363,23 @@ main (int argc, char *argv[])
 	} else if (dash_broken && explicit_format) {
 		mode_constraint = nullptr;
 		if (sdo_mode == SDO_StartD_Broken) {
-			mode_constraint = "size(BrokenReasons?:BrokenSlots) > 0";
+			mode_constraint = "size(BrokenReasons) > 0";
 		} else if (sdo_mode == SDO_Slots_Broken) {
 			mode_constraint = "size(SlotBrokenReason) > 0";
+		}
+		if (mode_constraint) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
+		}
+	} else if (dash_healthy && explicit_format) {
+		mode_constraint = nullptr;
+		if (sdo_mode == SDO_StartD_Health) {
+			// we want to look at all machines
+			//mode_constraint = PMODE_STARTD_HEALTH_CONSTRAINT;
+		} else if (sdo_mode == SDO_Slots_Health) {
+			// we want to look at all slots
+			//mode_constraint = PMODE_SLOT_HEALTH_CONSTRAINT;
 		}
 		if (mode_constraint) {
 			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
@@ -1404,6 +1389,23 @@ main (int argc, char *argv[])
 	}
 
 	projList.insert(ATTR_OCU);
+
+	// when using -tot -format -or -af, we want -gpus to behave like an additional constraint expression
+	// for -compact we will have already set that expression above.
+	// TODO: refactor handling of flags that are always constraint and sometimes format like -gpus -broken and -compact
+	if (dash_gpus && explicit_format && ! compactMode) {
+		const char * constr = nullptr;
+		switch (adType) {
+		case STARTDAEMON_AD: constr = STARTDAEMON_GPUS_CONSTRAINT; break;
+		case SLOT_AD:
+		case STARTD_AD: constr = PMODE_GPUS_CONSTRAINT; break;
+		default: break;
+		}
+		if (constr) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	}
 
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
@@ -1440,89 +1442,9 @@ main (int argc, char *argv[])
 	TrackTotals bothTotals(mainPP.ppTotalStyle);
 	TrackTotals leftTotals(mainPP.ppTotalStyle);
 
-	// in order to totals, the projection MUST have certain attributes
+	// in order to calculate totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
-	#if 1
 		rightTotals.addProjection(projList);
-		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
-			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-			query->addANDConstraint (constr);
-		}
-	#else
-		switch (mainPP.ppTotalStyle) {
-			case PP_SLOTS_SERVER:
-				projList.insert(ATTR_MEMORY);
-				projList.insert(ATTR_DISK);
-				// fall through
-			case PP_SLOTS_RUN:
-				projList.insert(ATTR_LOAD_AVG);
-				projList.insert(ATTR_MIPS);
-				projList.insert(ATTR_KFLOPS);
-				// fall through
-			case PP_SLOTS_NORMAL:
-			case PP_SLOTS_COD:
-				if (mainPP.ppTotalStyle == PP_SLOTS_COD) {
-					projList.insert(ATTR_CLAIM_STATE);
-					projList.insert(ATTR_COD_CLAIMS);
-				}
-				projList.insert(ATTR_STATE); // Norm, state, server
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS); // for key
-				break;
-
-			case PP_STARTDAEMON:
-				projList.insert(ATTR_TOTAL_SLOTS);
-				projList.insert(ATTR_NUM_DYNAMIC_SLOTS);
-				projList.insert(ATTR_TOTAL_CPUS);
-				projList.insert(ATTR_TOTAL_MEMORY);
-				projList.insert("TotalGPUs");
-				//projList.insert("TotalDisk");
-				// daemon ads have TotalInUse* and TotalBackfillInUse*
-				projList.insert("TotalInUseCpus");
-				projList.insert("TotalInUseMemory");
-				projList.insert("TotalInUseDisk");
-				projList.insert("TotalInUseGPUs");
-				projList.insert("TotalBackfillInUseCpus");
-				projList.insert("TotalBackfillInUseMemory");
-				projList.insert("TotalBackfillInUseDisk");
-				projList.insert("TotalBackfillInUseGPUs");
-				projList.insert(ATTR_ARCH);  // for key
-				projList.insert(ATTR_OPSYS_AND_VER); // for key
-				projList.insert(ATTR_CONDOR_VERSION);
-				if (dash_gpus) {
-					const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-					if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-					query->addANDConstraint (constr);
-				}
-				break;
-
-			case PP_SLOTS_STATE:
-				projList.insert(ATTR_STATE);
-				projList.insert(ATTR_ACTIVITY); // for key
-				break;
-
-			case PP_SUBMITTER_NORMAL:
-				projList.insert(ATTR_NAME); // for key
-				projList.insert(ATTR_RUNNING_JOBS);
-				projList.insert(ATTR_IDLE_JOBS);
-				projList.insert(ATTR_HELD_JOBS);
-				break;
-
-			case PP_SCHEDD_NORMAL: // no key
-				projList.insert(ATTR_TOTAL_RUNNING_JOBS);
-				projList.insert(ATTR_TOTAL_IDLE_JOBS);
-				projList.insert(ATTR_TOTAL_HELD_JOBS);
-				break;
-
-			case PP_CKPT_SRVR_NORMAL:
-				projList.insert(ATTR_DISK);
-				break;
-
-			default:
-				break;
-		}
-	#endif
 	}
 
 	// fetch the query
@@ -2396,7 +2318,53 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "TOTAL_GPUS", "GPUs", 0, local_render_totgpus, "AssignedGPUs\0OfflineGPUs\0" },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
+static const CustomAutoformatColumns CustomAfColumns{{}, &LocalPrintFormatsTable};
 
+// incorporate the -aaf (append autoformat) columns into the output format.
+static void add_aaf_columns_to_print_mask()
+{
+	if (append_autoformat_args.empty())
+		return;
+
+	// if the last column of the existing format has width 0, set it to a non-zero width
+	// so that the column gets auto-width adjusted to match the data.
+	int lastcol = mainPP.pm.ColCount()-1;
+	mainPP.pm.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
+		if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
+			fmt->width = 3;
+			fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
+		}
+		return 1;
+		}, &lastcol);
+
+	int nargs = (int)append_autoformat_args.size();
+	append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
+	auto argv = &append_autoformat_args[0];
+	classad::References refs;
+	const char * pcolon;
+	for (int i = 0; i < nargs; ++i) {
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon; // check to see if a valid default column formatting option is given
+				if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V, r, T or Y is permitted.\n", pcolon);
+					exit(1);
+				}
+			}
+			int ixNext = parse_autoformat_args(nargs, argv, i+1, format_char, mainPP.pm, refs, diagnose, true, &CustomAfColumns);
+			if (ixNext < 0) {
+				exit(-ixNext);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	projList.insert(refs.begin(), refs.end());
+	mainPP.wide_display = true;
+}
 
 int PrettyPrinter::set_print_mask_from_stream (
 	SimpleInputStream & stream,
@@ -2583,6 +2551,7 @@ usage (const char * opts)
 		"\t-slot\t\t\tDisplay slot resource attributes\n"
 		"\t-startd\t\t\tDisplay STARTD daemon attributes\n"
 		"\t-broken\t\t\tDisplay broken machine resources\n"
+		"\t-healthy[:verbose]\tDisplay machine or slot health factor\n"
 		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
@@ -2614,21 +2583,23 @@ usage (const char * opts)
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-format <fmt> <attr>\tDisplay <attr> values with formatting\n"
 		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
-		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
+		"\t-af[:jlhVrTY,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [lhVr,tng] options modify the formatting\n"
-		//"\t        j   display Job id\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
+		"\t        j   display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
-		"\t-aaf[:Vr] <attr> [attr2 [...]]\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
 		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-merge <file>\t\tCompare ads in file and query by sort key\n"
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
@@ -2655,7 +2626,7 @@ usage (const char * opts)
 
 
 void
-firstPass (int argc, char *argv[])
+firstPass (int argc, const char *argv[])
 {
 	int had_pool_error = 0;
 	int had_direct_error = 0;
@@ -2981,7 +2952,11 @@ firstPass (int argc, char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			mainPP.setMode (SDO_Slots, i, argv[i]);
+			if (sdo_mode == SDO_StartD_Health || sdo_mode == SDO_Slots_Health) {
+				mainPP.resetMode(SDO_Slots_Health, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots, i, argv[i]);
+			}
 			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
@@ -3013,6 +2988,17 @@ firstPass (int argc, char *argv[])
 				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
 			}
 		} else
+		if( is_dash_arg_colon_prefix (argv[i], "healthy", &pcolon, 4) ) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Health, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots) {
+				mainPP.resetMode (SDO_Slots_Health, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_StartD_Health, i, argv[i]);
+			}
+			dash_healthy = 1;
+			if (pcolon && is_arg_prefix(pcolon+1, "verbose")) { dash_healthy = 2; }
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -3038,6 +3024,8 @@ firstPass (int argc, char *argv[])
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_LvUsage) {
 				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else if (sdo_mode == SDO_StartD_Health) {
+				// already correct, -health before -startd.
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}
@@ -3198,7 +3186,7 @@ firstPass (int argc, char *argv[])
 
 
 void
-secondPass (int argc, char *argv[])
+secondPass (int argc, const char *argv[])
 {
 	const char * pcolon = NULL;
 	char *daemonname;
@@ -3269,6 +3257,16 @@ secondPass (int argc, char *argv[])
 				exit( 1 );
 			}
 
+#if 1
+			if (pcolon) ++pcolon;
+			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mainPP.pm, projList, diagnose, false);
+			if (ixNext < 0) {
+				exit(1);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+#else
 			bool flabel = false;
 			bool fCapV  = false;
 			bool fRaw = false;
@@ -3328,6 +3326,7 @@ secondPass (int argc, char *argv[])
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
+#endif
 			continue;
 		}
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {

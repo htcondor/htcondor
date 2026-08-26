@@ -283,7 +283,7 @@ bool PlacementDaemon::ReadUserMapFile()
 			continue;
 		}
 		if (items[1] == "*") {
-			auto at = items[0].find('@');
+			auto at = items[0].find_last_of('@');
 			items[1] = items[0].substr(0, at);
 		}
 		if (items[1].find('@') == std::string::npos) {
@@ -476,10 +476,8 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 	if (bounding_set.empty()) {
-		dprintf(D_FULLDEBUG, "Client didn't request any authorizations\n");
-		result_ad.Assign(ATTR_ERROR_STRING, "Missing Authorizations");
-		result_ad.Assign(ATTR_ERROR_CODE, 5);
-		goto send_reply;
+		dprintf(D_FULLDEBUG, "Client didn't request any authorizations, giving full set\n");
+		bounding_set = full_authz_list;
 	}
 	authz_list = join(bounding_set, ",");
 

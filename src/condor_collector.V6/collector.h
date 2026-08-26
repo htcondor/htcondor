@@ -78,7 +78,6 @@ public:
 	static int receive_update(int, Stream*);
     static int receive_update_expect_ack(int, Stream*);
 
-#if 1
 	struct collect_op {
 		ClassAd* __query__ = nullptr;
 		std::deque<CollectorRecord*> * __results__;
@@ -97,22 +96,8 @@ public:
 		int expiration_scanFunc(CollectorRecord*);
 		int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 	};
-#else
-	static void process_query_public(AdTypes, ClassAd*, List<CollectorRecord>*);
-	static void process_invalidation(AdTypes, ClassAd&, Stream*);
-	static int query_scanFunc(CollectorRecord*);
-	static int invalidation_scanFunc(CollectorRecord*);
-	static int expiration_scanFunc(CollectorRecord*);
-#endif
 	static ClassAd * process_global_query( const char *constraint, void *arg );
 	static int select_by_match( ClassAd *cad );
-
-#if 1
-#else
-	static int reportStartdScanFunc(CollectorRecord*);
-	static int reportSubmittorScanFunc(CollectorRecord*);
-	static int reportMiniStartdScanFunc(CollectorRecord*);
-#endif
 
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();

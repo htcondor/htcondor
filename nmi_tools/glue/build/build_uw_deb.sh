@@ -4,6 +4,9 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
+# Pin umask so file modes baked into the package are reproducible
+umask 022
+
 # build_uw_deb
 
 usage () {
@@ -24,8 +27,9 @@ check_version_string () {
 }
 
 # get the version and build id
-condor_build_id=$(<BUILD-ID)
 condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+condor_build_id=$(<BUILD-ID)
+condor_build_epoch=$(<BUILD-EPOCH)
 
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
@@ -70,12 +74,12 @@ fi
 echo "Distribution is $dist"
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
-    # Changelog entry is present for final release build
-    dch --release --distribution $dist ignored
+    # Changelog entry is already present for final release build
     sed -i s/$condor_version-[0-9]*/\&+SYS99/ debian/changelog
 else
     # Generate a changelog entry
-    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Automated build"
+    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Test build"
+    sed -i "0,/^ -- /s/^ -- .*/ -- Test build <htcondor-admin@cs.wisc.edu> $(date --date=@$condor_build_epoch '+%a, %d %b %Y %H:%M:%S %z')/" debian/changelog
 fi
 
 . /etc/os-release
@@ -85,12 +89,16 @@ elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
     SYS99='deb12'
 elif [ "$VERSION_CODENAME" = 'trixie' ]; then
     SYS99='deb13'
+elif [ "$VERSION_CODENAME" = 'forky' ]; then
+    SYS99='deb14'
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
     SYS99='ubu20'
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     SYS99='ubu22'
 elif [ "$VERSION_CODENAME" = 'noble' ]; then
     SYS99='ubu24'
+elif [ "$VERSION_CODENAME" = 'resolute' ]; then
+    SYS99='ubu26'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
     SYS99='dev04'
 else

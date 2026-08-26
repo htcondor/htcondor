@@ -145,7 +145,7 @@ and `shared_fs_config_options`_.
     log files. The names of the log files themselves are defined with
     other macros, which use the ``$(LOG)`` macro by default. The log
     directory also acts as the current working directory of the HTCondor
-    daemons as the run, so if one of them should produce a core file for
+    daemons as they run, so if one of them should produce a core file for
     any reason, it would be placed in the directory defined by this
     macro. The default value is ``$(LOCAL_DIR)``/log.
 
@@ -334,7 +334,7 @@ and `shared_fs_config_options`_.
     looking for configuration files within the directories specified via
     :macro:`LOCAL_CONFIG_DIR`. The default expression ignores files with
     names beginning with a '.' or a '#', as well as files with names
-    ending in '˜'. This avoids accidents that can be caused by treating
+    ending in '~'. This avoids accidents that can be caused by treating
     temporary files created by text editors as configuration files.
 
 :macro-def:`CONDOR_IDS`
@@ -636,7 +636,7 @@ and `shared_fs_config_options`_.
     uid and group information in large pools. In order to avoid this
     problem, HTCondor caches UID and group information internally. This
     integer value allows pool administrators to specify (in seconds) how
-    long HTCondor should wait until refreshes a cache entry. The default
+    long HTCondor should wait until it refreshes a cache entry. The default
     is set to 72000 seconds, or 20 hours, plus a random number of
     seconds between 0 and 60 to avoid having lots of processes
     refreshing at the same time. This means that if a pool administrator
@@ -1242,8 +1242,7 @@ subsystem corresponding to the daemon.
     ``D_ALWAYS:1``, unless ``D_ALWAYS:0`` is added to this list.  Category and option names are:
 
     ``D_ANY``
-        This flag turns on all categories of messages Be
-        warned: this will generate about a HUGE amount of output. To
+        This flag turns on all categories of messages. Be warned: this will generate about a HUGE amount of output. To
         obtain a higher level of output than the default, consider using
         ``D_FULLDEBUG`` before using this option.
 
@@ -1255,7 +1254,7 @@ subsystem corresponding to the daemon.
 
      ``D_FAILURE``
         This category is used for messages that indicate the daemon is unable
-        to continue running. These message are "always" printed unless
+        to continue running. These messages are "always" printed unless
         ``D_FAILURE:0`` is added to the list
 
      ``D_STATUS``
@@ -1265,8 +1264,7 @@ subsystem corresponding to the daemon.
 
     ``D_ALWAYS``
         This category is used for messages that are "always" printed unless
-        ``D_ALWAYS:0`` is configured.  These can be progress or status
-        message, as well as failures that do not prevent the daemon from
+        ``D_ALWAYS:0`` is configured.  These can be progress or status messages, as well as failures that do not prevent the daemon from
         continuing to operate such as a failure to start a job.  At verbosity
         2 this category is equivalent to ``D_FULLDEBUG`` below.
 
@@ -1508,7 +1506,7 @@ a file that receives job events, but across all users and user's jobs.
     Controls the maximum number of rotations of the event log that will
     be stored. If this value is 1 (the default), the event log will be
     rotated to a ".old" file as described above. However, if this is
-    greater than 1, then multiple rotation files will be stores, up to
+    greater than 1, then multiple rotation files will be stored, up to
     :macro:`EVENT_LOG_MAX_ROTATIONS` of them. These files will be named,
     instead of the ".old" suffix, ".1", ".2", with the ".1" being the
     most recent rotation. This is an integer parameter with a default
@@ -1672,9 +1670,21 @@ that DaemonCore uses which affect all HTCondor daemons.
     specific to these macros.
 
 :macro-def:`SHUTDOWN_GRACEFUL_TIMEOUT`
-    Determines how long HTCondor will allow daemons try their graceful
-    shutdown methods before they do a hard shutdown. It is defined in
+    Determines how long HTCondor will allow daemons to try their graceful shutdown methods before they do a hard shutdown. It is defined in
     terms of seconds. The default is 1800 (30 minutes).
+
+:macro-def:`PARENT_CHECK_FIRST_INTERVAL`
+    Every HTCondor daemon that uses DaemonCore, other than
+    *condor_master*, periodically checks whether its parent process
+    is still alive, and shuts itself down if not. This macro
+    determines how many seconds after startup a daemon waits before
+    its first such check. The default is 15.
+
+:macro-def:`PARENT_CHECK_INTERVAL`
+    The number of seconds between each of a daemon's checks of
+    whether its parent process is still alive, after the first check
+    controlled by :macro:`PARENT_CHECK_FIRST_INTERVAL`. The default is
+    120.
 
 :macro-def:`<SUBSYS>_ADDRESS_FILE`
     :index:`NEGOTIATOR_ADDRESS_FILE`
@@ -1878,8 +1888,7 @@ that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`MAX_TIMER_EVENTS_PER_CYCLE`
     An integer value that defaults to 3. It is a rarely changed
-    performance tuning parameter to set the max number of internal
-    timer events will be dispatched per DaemonCore event cycle.
+    performance tuning parameter to set the max number of internal timer events that will be dispatched per DaemonCore event cycle.
     A value of zero means no limit, so that all timers that are due
     at the start of the event cycle should be dispatched.
 
@@ -1903,8 +1912,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     Defaults to ``core.$(SUBSYSTEM).WIN32``.
 
 :macro-def:`PIPE_BUFFER_MAX`
-    The maximum number of bytes read from a ``stdout`` or ``stdout``
-    pipe. The default value is 10240. A rare example in which the value
+    The maximum number of bytes read from a ``stdout`` or ``stderr`` pipe. The default value is 10240. A rare example in which the value
     would need to increase from its default value is when a hook must
     output an entire ClassAd, and the ClassAd may be larger than the
     default.
@@ -1949,6 +1957,51 @@ More information about networking in HTCondor can be found in
     need to go through CCB. For more information about CCB, see
     :ref:`admin-manual/networking:htcondor connection brokering (ccb)`.
 
+:macro-def:`CCB_SERVER_STREAMING[Networking]`
+    A boolean value that controls whether a CCB server (broker) will proxy
+    private-to-private connections (CCB streaming mode). When ``True`` (the
+    default), if a daemon that is itself behind a CCB asks to reach another
+    CCB-routed daemon, the broker has the target reverse-connect to the broker
+    and then splices the two connections into a transparent TCP relay. The
+    end-to-end security handshake between the two daemons rides over the relay,
+    so the broker never decrypts the traffic. See
+    :ref:`admin-manual/networking:htcondor connection brokering (ccb)`.
+
+:macro-def:`CCB_SERVER_STREAMING_HANDSHAKE_TIMEOUT[Networking]`
+    The number of seconds a CCB server (broker) waits for the target of a
+    streaming request to connect back before canceling the connection reporting
+    a failure. The default is 300 (5 minutes). Set to 0 to disable handshake
+    reaping.
+
+:macro-def:`CCB_TUNNEL_REGISTRATION_TIMEOUT[Networking]`
+    The number of seconds a tunneling inside CCB server will hold a registrant's
+    registration reply while waiting to complete its own upstream registration.
+    The reply is deferred so that the registrant only ever learns a reachable,
+    nested tunnel contact; if the tunnel has not come up within this time, the
+    broker disconnects the waiting registrant, which then retries the
+    registration later. The default is 300 (5 minutes). Set to 0 to wait
+    indefinitely.
+
+:macro-def:`CCB_SERVER_MAX_STREAMING_SESSIONS[Networking]`
+    The maximum number of concurrent CCB streaming (proxy) sessions a broker will
+    maintain, counting both in-progress handshakes and established relays.
+    Requests beyond the limit are rejected with a clear failure. The default of
+    0 means unlimited.
+
+:macro-def:`CCB_SERVER_MAX_STREAMING_HANDSHAKES[Networking]`
+    The maximum number of CCB streaming (proxy) sessions a broker will keep in
+    the handshake state (waiting for the target to connect back) at once. This
+    bounds the more easily abused, never-completing requests separately from
+    established relays. The default of 0 means unlimited.
+
+:macro-def:`CCB_CLIENT_STREAMING[Networking]`
+    A boolean value that controls whether a daemon that is itself behind a CCB
+    will attempt to reach another CCB-routed (private) daemon by asking a
+    streaming-capable broker to proxy the connection, rather than giving up.
+    When ``True`` (the default), the attempt is only made when the broker
+    advertises support for streaming, so it is safe to leave enabled even in a
+    mixed-version pool.
+
 :macro-def:`CCB_HEARTBEAT_INTERVAL[Networking]`
     This is the maximum number of seconds of silence on a daemon's
     connection to the CCB server after which it will ping the server to
@@ -1982,7 +2035,7 @@ More information about networking in HTCondor can be found in
     CCB running time used on polling to check on already connected
     clients. The default value is 0.05.
 
-:macro-def:`CCB_READ_BUFFER[Networking]`
+:macro-def:`CCB_SERVER_READ_BUFFER[Networking]`
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
 
@@ -1995,7 +2048,7 @@ More information about networking in HTCondor can be found in
     The length, in seconds, that we wait for any CCB operation to complete.
     The default value is 300.
 
-:macro-def:`CCB_WRITE_BUFFER[Networking]`
+:macro-def:`CCB_SERVER_WRITE_BUFFER[Networking]`
     The size of the kernel TCP write buffer in bytes for all sockets
     used by CCB. The default value is 2 KiB.
 
@@ -2010,6 +2063,23 @@ More information about networking in HTCondor can be found in
     its information about open TCP connections to a file. Crash recovery
     is accomplished using the information. The default value is
     ``$(SPOOL)/<ip address>-<shared port ID or port number>.ccb_reconnect``.
+
+:macro-def:`CCB_RECONNECT_TIME[Networking]`
+    The length, in seconds, that a target daemon waits before attempting
+    to reconnect to a CCB server after its connection to that server has
+    failed. The default value is 60.
+
+:macro-def:`CCB_RECONNECT_ALLOWED_FROM_ANY_IP[Networking]`
+    A boolean value that controls whether the CCB server permits a
+    registered target daemon to reconnect from an IP address that differs
+    from the one it originally used to register. When ``False``, the
+    default, a reconnect request whose source IP does not match the
+    address recorded at registration is denied, which protects against
+    another host attempting to hijack a target daemon's CCB
+    registration. Set this to ``True`` only when target daemons are
+    expected to legitimately change IP addresses between connections,
+    such as when they roam between networks or sit behind a NAT that
+    reassigns addresses. The default value is ``False``.
 
 :macro-def:`COLLECTOR_USES_SHARED_PORT[Networking]`
     A boolean value that specifies whether the *condor_collector* uses
@@ -2312,7 +2382,7 @@ Shared Filesystem Configuration Options
 ---------------------------------------
 
 These macros control how HTCondor interacts with various shared and
-network file systems.For information on submitting jobs under shared
+network file systems. For information on submitting jobs under shared
 file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Shared File System`.
 
 :macro-def:`UID_DOMAIN[Filesystem]`
@@ -2381,8 +2451,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     This parameter works like :macro:`TRUST_UID_DOMAIN`, but is only applied
     when the *condor_starter* and *condor_shadow* are on the same
     machine. If this parameter is set to ``True``, then the
-    *condor_shadow* 's :macro:`UID_DOMAIN` doesn't have to be a substring
-    its hostname. If this parameter is set to ``False``, then
+    *condor_shadow* 's :macro:`UID_DOMAIN` doesn't have to be a substring of its hostname. If this parameter is set to ``False``, then
     :macro:`UID_DOMAIN` controls whether this substring requirement is
     enforced by the *condor_starter*. The default is ``True``.
 
@@ -2442,8 +2511,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     HTCondor slot, and no non-condor processes will ever be run by these
     accounts, then this pattern should match the names of all
     :macro:`SLOT<N>_USER` accounts. Jobs run under a dedicated execute
-    account are reliably tracked by HTCondor, whereas other jobs, may
-    spawn processes that HTCondor fails to detect. Therefore, a
+    account are reliably tracked by HTCondor, whereas other jobs may spawn processes that HTCondor fails to detect. Therefore, a
     dedicated execution account provides more reliable tracking of CPU
     usage by the job and it also guarantees that when the job exits, no
     "lurker" processes are left behind. When the job exits, condor will
@@ -2498,8 +2566,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     the job expects to be there.
 
 :macro-def:`FILESYSTEM_DOMAIN[Filesystem]`
-    An arbitrary string that is used to decide if the two machines, a
-    access point and an execute machine, share a file system. Although
+    An arbitrary string that is used to decide if the two machines, an access point and an execute machine, share a file system. Although
     this configuration variable name contains the word "DOMAIN", its
     value is not required to be a domain name. It often is a domain
     name.

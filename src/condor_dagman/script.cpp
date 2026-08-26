@@ -58,9 +58,13 @@ void Script::WriteDebug(int status) {
 		         (long long)now, _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
-		if (buffer) { output += *buffer; }
+		if (_output == DAG::ScriptOutput::STDOUT || _output == DAG::ScriptOutput::ALL) {
+			if (buffer) { output += *buffer; }
+		}
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDERR);
-		if (buffer) { output += *buffer; }
+		if (_output == DAG::ScriptOutput::STDERR || _output == DAG::ScriptOutput::ALL) {
+			if (buffer) { output += *buffer; }
+		}
 
 		FILE* debug_fp = safe_fopen_wrapper(_debugFile.c_str(), "a");
 		if ( ! debug_fp) {
@@ -225,26 +229,29 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 	      .fdInheritList(0);
 	int std_fds[3] = {-1, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
+	int null_fd = -1;
 	if (_output != DAG::ScriptOutput::NONE) {
-		bool unknown = FALSE;
-		switch (_output) {
-			case DAG::ScriptOutput::STDOUT: // Want stdout
-				std_fds[STDERR] = -1;
-				break;
-			case DAG::ScriptOutput::STDERR: // Want stderr
-				std_fds[STDOUT] = -1;
-				break;
-			case DAG::ScriptOutput::ALL: // Want both stdout & stderr
-				break;
-			default: // Unknown
-				unknown = TRUE;
-				debug_printf(DEBUG_NORMAL, "ERROR: Unknown Script output stream type: %d\n",
-				             (int)_output);
-				break;
+		if (_output == DAG::ScriptOutput::STDOUT) {
+			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
+			if (null_fd < 0) {
+				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stderr of %s script: %s\n",
+				             NULL_FILE, GetScriptName(), strerror(errno));
+			} else {
+				std_fds[STDERR] = null_fd;
+			}
+		} else if (_output == DAG::ScriptOutput::STDERR) {
+			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
+			if (null_fd < 0) {
+				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stdout of %s script: %s\n",
+				             NULL_FILE, GetScriptName(), strerror(errno));
+			} else {
+				std_fds[STDOUT] = null_fd;
+			}
 		}
-		if ( ! unknown) { cpArgs.std(std_fds); }
+		cpArgs.std(std_fds);
 	}
 	_pid = daemonCore->CreateProcessNew(executable, args, cpArgs);
+	if (null_fd >= 0) { close(null_fd); }
 
 	if ( ! tmpDir.Cd2MainDir(errMsg)) {
 		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n",

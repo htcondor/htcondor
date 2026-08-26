@@ -26,7 +26,7 @@ set of leased resources an *annex*.
 HTCondor provides access to annexes through the :tool:`htcondor annex`
 tool, which supports both AWS' EC2 and a number of HPC systems.  The former
 is described in some detail in the :doc:`../cloud-computing/index` section;
-we'll only discuss the former here.
+we'll only discuss the latter here.
 
 Recipes
 '''''''
@@ -47,7 +47,7 @@ and your AP administrator has
 ``htcondor annex`` Overview
 '''''''''''''''''''''''''''
 
-A HTCondor pool (normally) runs the jobs you submit on resources that
+An HTCondor pool (normally) runs the jobs you submit on resources that
 were provisioned by the pool administrator.  Even if the pool administrator
 doesn't own or operate the resources, they had to coordinate with the
 person who does in order to make them available to you.  An "HPC" annex,

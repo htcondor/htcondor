@@ -4,6 +4,12 @@
 
 TBD (To be documented)
 
+## Adding Examples
+
+When adding examples it is good practice to add a link that points back the the examples source for users to
+reference. Given our documentation can change or break links please use stable links described in [Stable Links](STABLE-LINKS.md)
+so that we can easily move example code locations without old copies being broken.
+
 ## Syntax and markup
 
 The current manual, in Sphinx format, with some custom extensions, has been automatically converted from LaTeX sources,
@@ -299,6 +305,16 @@ Example: **:tool:\`condor_q\`** -- makes a reference from here to the condor\_q 
 Example: **:tool:\`condor_q[using Autoformatting]\`** -- does the above plus makes an index entry under condor\_q.
 
 Example: **:tool:\`htcondor job status\`** -- will make a reference link as *htcondor job status* that links to the htcondor tool man page.
+
+---
+
+**:docman:** creates a cross-reference to another HTCondor manual page that works correctly for both HTML and man-page builds. In an HTML build it emits a **:doc:** link to the target page; in a man-page build it emits a **:manpage:** reference with the correct section number. The man page section defaults to `1` if not specified. An explicit display title can be given with the standard Sphinx `title <target>` syntax.
+
+Example: **:docman:\`condor_submit\`** -- links to the condor_submit HTML page or renders as `condor_submit(1)` in a man page.
+
+Example: **:docman:\`htcondor-jdl(1)\`** -- links to the htcondor-jdl HTML page or renders as `htcondor-jdl(1)` in a man page.
+
+Example: **:docman:\`the JDL reference \<htcondor-jdl(1)\>\`** -- uses "the JDL reference" as the display title in HTML and renders as `htcondor-jdl(1)` in a man page.
 
 ---
 

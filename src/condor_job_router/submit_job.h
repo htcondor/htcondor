@@ -80,7 +80,7 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
   condor_config file claims".
 
 */
-bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
+bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int & cluster_out, int & proc_out, std::string & user_out );
 
 
 /*

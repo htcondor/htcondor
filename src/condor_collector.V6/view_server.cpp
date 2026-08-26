@@ -990,7 +990,7 @@ int ViewServer::StartdScanFunc(CollectorRecord* record)
 
 		NumSamples=DataSet[StartdData][j].NumSamples;
 		GenRec->Data[0]=(GenRec->Data[0]*NumSamples+KbdIdle)/(NumSamples+1);
-		GenRec->Data[1]=(GenRec->Data[1]*NumSamples+LoadAvg)/(NumSamples+1);
+		GenRec->Data[1]=(static_cast<double>(GenRec->Data[1]) * NumSamples+LoadAvg)/(NumSamples+1);
 		GenRec->Data[2]=st;
 	}
 
@@ -1054,10 +1054,10 @@ int ViewServer::CkptScanFunc(CollectorRecord* record)
 	for (int j=0; j<HistoryLevels; j++) {
 		GenRec=GetAccData(DataSet[CkptData][j].AccData, Name);
 		NumSamples=DataSet[CkptData][j].NumSamples;
-		GenRec->Data[0]=(GenRec->Data[0]*NumSamples+BytesReceived)/(NumSamples+1);
-		GenRec->Data[1]=(GenRec->Data[1]*NumSamples+BytesSent)/(NumSamples+1);
-		GenRec->Data[2]=(GenRec->Data[2]*NumSamples+AvgReceiveBandwidth)/(NumSamples+1);
-		GenRec->Data[3]=(GenRec->Data[3]*NumSamples+AvgSendBandwidth)/(NumSamples+1);
+		GenRec->Data[0]=(static_cast<double>(GenRec->Data[0]) * NumSamples+BytesReceived)/(NumSamples+1);
+		GenRec->Data[1]=(static_cast<double>(GenRec->Data[1]) * NumSamples+BytesSent)/(NumSamples+1);
+		GenRec->Data[2]=(static_cast<double>(GenRec->Data[2]) * NumSamples+AvgReceiveBandwidth)/(NumSamples+1);
+		GenRec->Data[3]=(static_cast<double>(GenRec->Data[3]) * NumSamples+AvgSendBandwidth)/(NumSamples+1);
 	}
 
 	return 1;

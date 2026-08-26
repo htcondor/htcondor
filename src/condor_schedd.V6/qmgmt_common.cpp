@@ -34,41 +34,54 @@
 extern Scheduler scheduler;
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int64_t val, SetAttributeFlags_t flags )
+SetAttributeInt(const JOB_ID_KEY & jid, const char *name, int64_t val, SetAttributeFlags_t flags )
 {
 	char buf[24] = { 0 };
 	int rval = 0;
 
 	std::to_chars(buf, buf+sizeof(buf)-1, val);
-	rval = SetAttribute(cl,pr,name,buf,flags);
+	rval = SetAttribute(jid,name,buf,flags);
 	return(rval);
 }
 
 int
-SetAttributeFloat(int cl, int pr, const char *name, double val, SetAttributeFlags_t flags )
+SetAttributeFloat(const JOB_ID_KEY & jid, const char *name, double val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval = 0;
 
 	snprintf(buf,100,"%f",val);
-	rval = SetAttribute(cl,pr,name,buf,flags);
+	rval = SetAttribute(jid,name,buf,flags);
 	return(rval);
 }
 
 int
-SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
+SetAttributeString(const JOB_ID_KEY & jid, const char *name, std::string_view val, SetAttributeFlags_t flags )
 {
 	std::string buf;
 	int rval = 0;
 
-	QuoteAdStringValue(val,buf);
+	if (val.empty()) {
+		rval = SetAttribute(jid,name,"\"\"",flags);
+	} else {
+		// we arrange to quote the string by storing it and then unparsing the result
+		classad::Value tmpValue;
+		classad::ClassAdUnParser unparse;
+		unparse.SetOldClassAd( true, true );
+		if (val.back() == 0) { // if null terminated, treat it as a const char *
+			tmpValue.SetStringValue(val.data());
+		} else {
+			tmpValue.SetStringValue(val.data(), val.size());
+		}
+		unparse.Unparse(buf, tmpValue);
+		rval = SetAttribute(jid,name,buf.c_str(),flags);
+	}
 
-	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
 	return(rval);
 }
 
 int
-SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
+SetAttributeExpr(const JOB_ID_KEY & jid, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
 {
 	std::string buf;
 	int rval = 0;
@@ -77,7 +90,7 @@ SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttri
 	unp.SetOldClassAd( true, true );
 	unp.Unparse( buf, val );
 
-	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
+	rval = SetAttribute(jid,name,buf.c_str(),flags);
 	return(rval);
 }
 

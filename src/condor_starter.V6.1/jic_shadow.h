@@ -269,6 +269,9 @@ public:
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
 	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+	virtual bool announceCatalog( const ClassAd & catalogAd, ClassAd & replyAd );
+
+	virtual void updateStartd( ClassAd *ad, bool final_update );
 
 private:
 
@@ -299,11 +302,6 @@ private:
 			@return true if success, false if failure
 		*/
 	bool updateShadow( ClassAd* update_ad );
-
-		/** Send an update ClassAd to the startd.
-			@param ad Update ad
-		 */
-	void updateStartd( ClassAd *ad, bool final_update );
 
 		/** Send a command to the startd and get a classad reply
 		*/
@@ -520,6 +518,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
+	FileTransfer::UserPluginDisableMode m_ft_user_plugin_disable{FileTransfer::UserPluginDisableMode::Allow};
 	bool m_did_output_transfer;
 	bool m_output_transfer_active{false};
 

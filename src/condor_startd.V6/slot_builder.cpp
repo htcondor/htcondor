@@ -612,6 +612,8 @@ const int UNSET_SHARE = -9998;
 	const long long minimum_swap = 0;
 	const long long minimum_disk = 1024; // 1 MB in KB
 
+	const auto & machres = m_attr->machres();
+
 	if ( list.empty()) {
 		// give everything the default share and return
 
@@ -625,9 +627,7 @@ const int UNSET_SHARE = -9998;
 		request.num_disk = compute_local_resource(m_attr->free_disk(partition_id), default_share, minimum_disk);
 	#endif
 
-		for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
-			request.slotres[j->first] = default_share;
-		}
+		for (const auto &[tag,_] : machres) { request.slotres[tag] = default_share; }
 
 		return true;
 	}
@@ -649,9 +649,7 @@ const int UNSET_SHARE = -9998;
 	// the default share for any items not explicitly defined.  Example:
 	// "c=1, 25%"
 
-	for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
-		request.slotres[j->first] = UNSET_SHARE;
-	}
+	for (const auto &[tag,_] : machres) { request.slotres[tag] = UNSET_SHARE; }
 
 	const char* delim = ", \t\r\n"; // default delim is whitespace or ,
 	if (list.find('\n') != std::string::npos) {
@@ -718,8 +716,8 @@ const int UNSET_SHARE = -9998;
 		// Figure out what attribute we're dealing with.
 		std::string attr = attr_expr.substr(0, eqpos);
 		trim(attr);
-		slotres_map_t::const_iterator f(m_attr->machres().find(attr));
-		if (f != m_attr->machres().end()) {
+		auto f = machres.find(attr);
+		if (f != machres.end()) {
 			request.slotres[f->first] = compute_local_resource(f->second, share);
 			if ( ! constr.empty()) {
 				request.slotres_constr[f->first] = constr;
@@ -843,11 +841,12 @@ const int UNSET_SHARE = -9998;
 	request.num_disk = disk;
 #endif
 
+	// compute local resources for request.slotres
 	for (slotres_map_t::iterator j(request.slotres.begin());  j != request.slotres.end();  ++j) {
 		if (IS_UNSET_SHARE(j->second)) {
 			slotres_map_t::const_iterator f(m_attr->machres().find(j->first));
 			// it shouldn't be possible to get here with keys in slotres that aren't in machres
-			// but if it should happen it's a benign error, just allocate 0 of the unknown resource.
+			// but if it should happen it is a benign error, just allocate 0 of the unknown resource.
 			double avail = (f != m_attr->machres().end()) ? f->second : 0;
 			j->second = compute_local_resource(avail, default_share);
 		}

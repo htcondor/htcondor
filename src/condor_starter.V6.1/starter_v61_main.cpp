@@ -41,6 +41,7 @@
 #include "singularity.h"
 #include "which.h"
 #include "../condor_startd.V6/VolumeManager.h"
+#include "staging_directory.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -103,7 +104,14 @@ printClassAd( void )
 	// Include HasCommonFilesTransfer has an integer (version number)
 	// that therefore always also evaluates to boolean true.
 	if( CFT_VERSION != 0 ) {
-		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
+		bool lv_enabled = param_boolean( "STARTD_ENFORCE_DISK_LIMITS", false );
+		bool allow_cif_on_lvs =  param_boolean( "ALLOW_COMMON_FILES_ON_LVS", false );
+		if( (! lv_enabled) || allow_cif_on_lvs ) {
+			printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
+
+			StagingDirectoryFactory sdf;
+			printf( "%s = \"%s\"\n", ATTR_MAPPING_METHOD, sdf.type().c_str() );
+		}
 	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {
@@ -269,6 +277,11 @@ printClassAd( void )
 	std::string method_list = ft.GetSupportedMethods(e);
 	if (!method_list.empty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.c_str());
+	}
+
+	auto_free_ptr disable_user_plugins(param("STARTER_DISABLE_USER_SUPPLIED_TRANSFER_PLUGINS"));
+	if (disable_user_plugins && IsValidClassAdExpression(disable_user_plugins)) {
+		printf("HasDisableUserTransferPlugins = %s\n", disable_user_plugins.ptr());
 	}
 
 	// even if we have no transfer plugin methods, we may want to

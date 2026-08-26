@@ -30,6 +30,13 @@ Machine ClassAd Attributes
     ``"Retiring"``
         Waiting for a job to finish or for the maximum retirement time to expire
 
+    ``"Cleaning"``
+        The job has finished running and the *condor_starter* has sent
+        its final update, but the starter process has not yet been
+        reaped. When the starter exits, the slot leaves this activity
+        and returns to ``"Idle"`` (or moves to the ``"Preempting"``
+        state if a release, kill, or preempting claim is pending).
+
 :classad-attribute-def:`Arch`
     String with the architecture of the machine. Currently supported
     architectures have the following string definitions:
@@ -328,6 +335,10 @@ Machine ClassAd Attributes
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
+
+:classad-attribute-def:`IsDataSlot`
+    When ``True``, the slot is in use by the AP to transfer and then store
+    common files, rather than run a job.
 
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
@@ -1116,6 +1127,12 @@ Machine ClassAd Attributes
 :classad-attribute-def:`TotalTimeClaimedBusy`
     The number of seconds that this machine (slot) has accumulated
     within the claimed busy state and activity pair since the
+    *condor_startd* began executing. This attribute will only be
+    defined if it has a value greater than 0.
+
+:classad-attribute-def:`TotalTimeClaimedCleaning`
+    The number of seconds that this machine (slot) has accumulated
+    within the claimed cleaning state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 

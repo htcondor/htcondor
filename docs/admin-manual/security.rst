@@ -102,7 +102,7 @@ Introducing: AES
 """"""""""""""""
 
 We also support AES, a widely-used encryption
-method that has hardware support in most modern CPUS.  Because the overhead of
+method that has hardware support in most modern CPUs.  Because the overhead of
 encryption is so much lower, we have turned it on by default.  We use AES in
 such a way (called AESGCM mode) that it provides integrity checks (checksums)
 on transmitted data, and this method is now on by default and is the preferred
@@ -180,10 +180,9 @@ the :ref:`admin-manual/security:token authentication` section.
 Daemon-to-Daemon Connections (Daemon Authentication)
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
-HTCondor daemons need to trust each other to pass information security from one
-to the other.  This information may contain important attributes about a job to
+HTCondor daemons need to trust each other to pass information securely from one to the other.  This information may contain important attributes about a job to
 run, such as which executable to run, the arguments, and which user to run the
-job as.  Obviously, being able to tamper those could allow an impersonator to
+job as.  Obviously, being able to tamper with those could allow an impersonator to
 perform all sorts of nefarious tasks.
 
 For daemons that run on the same machine, for example a :tool:`condor_master`,
@@ -205,7 +204,7 @@ is the string set by the token issuer, and is usually equal to the
 ``$(UID_DOMAIN)`` setting on the central manager.  (Note that setting
 :macro:`UID_DOMAIN` has other consequences.)
 
-Once HTCondor has determined the authenticate principal, it checks the
+Once HTCondor has determined the authenticated principal, it checks the
 authorization lists as mentioned above in
 :ref:`admin-manual/security:general security flow`.  For daemon-to-daemon
 authorization, there are a few lists that may be consulted.
@@ -688,7 +687,7 @@ the understanding of this scenario. Some HTCondor commands, such as the
 use of :tool:`condor_submit` to submit jobs always require authentication of
 the submitter, no matter what the policy says. This is because the
 identity of the submitter needs to be known in order to carry out the
-operation. Others commands, such as :tool:`condor_q`, do not always require
+operation. Other commands, such as :tool:`condor_q`, do not always require
 authentication, so in the above example, the server's policy would force
 Frida's :tool:`condor_q` queries to be authenticated, whereas a different
 policy could allow :tool:`condor_q` to happen without any authentication.
@@ -1031,7 +1030,7 @@ Similarly, a daemon authenticating as a client against a remote server will
 record the result of the authentication in a system-wide trust whose location
 is kept in the configuration variable :macro:`SEC_SYSTEM_KNOWN_HOSTS`.  Since a
 daemon cannot prompt the administrator for a decision, it will always deny
-unknown CAs _unless_ :macro:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
+unknown CAs *unless* :macro:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
 
 The first time any daemon is authenticated, even if it's not through SSL, it will be noted in the
 ``known_hosts`` file.
@@ -1043,7 +1042,7 @@ The format of the ``known_hosts`` file is line-oriented and has three fields,
    HOSTNAME METHOD CERTIFICATE_DATA
 
 Any blank line or line prefixed with ``#`` will be ignored.
-Any line prefixed with ``!`` will result in the CA certificate to _not_ be trusted.  To easily switch
+Any line prefixed with ``!`` will result in the CA certificate to *not* be trusted.  To easily switch
 an untrusted CA to be trusted, simply delete the ``!`` prefix.
 
 For example, collector.wisc.edu would be trusted with this file entry using SSL:
@@ -1053,7 +1052,7 @@ For example, collector.wisc.edu would be trusted with this file entry using SSL:
    collector.wisc.edu SSL MIIBvjCCAWSgAwIBAgIJAJRheVnN5ZDyMAoGCCqGSM49BAMCMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTAeFw0yMTA1MTcxOTQ3MjRaFw0zMTA1MTUxOTQ3MjNaMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPN7qu+qdsfP6WR++UucrZYvMhssre8jvgWsnPBdzCYU/EqHYp+wri/aAKyDrLM5R1lWX44jSykgIpTOCLJUS/ajYzBhMB0GA1UdDgQWBBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAfBgNVHSMEGDAWgBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwICBDAKBggqhkjOPQQDAgNIADBFAiARfW+suELxSzSdi9u20hFs/aSXpd+gwJ6Ne8jjG+y/2AIhAO6f3ff9nnYRmesFbvt1lv+LosOMbeiUdVoaKFOGIyuJ
 
 
-The following line would cause collector.wisc.edu to _not_ be trusted:
+The following line would cause collector.wisc.edu to *not* be trusted:
 
 .. code-block:: text
 
@@ -1137,7 +1136,7 @@ write or administrator access level.
 Kerberos authentication on Unix platforms requires access to various
 files that usually are only accessible by the root user. At this time,
 the only supported way to use KERBEROS authentication on Unix platforms
-is to start daemons HTCondor as user root.
+is to start HTCondor daemons as user root.
 
 Password Authentication
 '''''''''''''''''''''''
@@ -1172,7 +1171,7 @@ the **-c** option when using to :tool:`condor_store_cred` **add**. Running
 
     $ condor_store_cred -c add
 
-prompts for the pool password and store it on the local machine, making
+prompts for the pool password and stores it on the local machine, making
 it available for daemons to use in authentication. The :tool:`condor_master`
 must be running for this command to work.
 
@@ -1211,8 +1210,7 @@ cancellation, if the channel is not encrypted for whatever reason
 (typically because common accounts do not exist or HTCondor's security
 is misconfigured).
 
-When a daemon is authenticated using a pool password, its security
-principle is condor_pool@$(UID_DOMAIN), where $(UID_DOMAIN) is taken
+When a daemon is authenticated using a pool password, its security principal is condor_pool@$(UID_DOMAIN), where $(UID_DOMAIN) is taken
 from the daemon's configuration. The ALLOW_DAEMON and ALLOW_NEGOTIATOR
 configuration variables for authorization should restrict access using
 this name. For example,
@@ -1415,7 +1413,7 @@ token given the user's authenticated identity.  Unlike ``condor_token_create``,
 the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in :macro:`SEC_PASSWORD_DIRECTORY`).
 
-If no security authentication methods specified by the administrator - and the
+If no security authentication methods are specified by the administrator - and the
 daemon or user has access to at least one token - then ``IDTOKENS`` authentication
 is automatically added to the list of valid authentication methods. Otherwise,
 to setup ``IDTOKENS`` authentication, enable it in the list of authentication methods:
@@ -1425,7 +1423,7 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
-**Revoking Token**: If a token is lost, stolen, or accidentally exposed,
+**Revoking Tokens**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token revocation mechanism in order
 to prevent unauthorized use.  Revocation can be accomplished by setting the
 :macro:`SEC_TOKEN_REVOCATION_EXPR` configuration parameter;
@@ -2355,8 +2353,7 @@ HTCondor can be registered with:
     daemons. For example, they can view the status of the pool, see the
     job queue(s), and view user permissions. ``READ`` access does not
     allow a machine to alter any information, and does not allow job
-    submission. A machine listed with ``READ`` permission will be unable
-    join an HTCondor pool; the machine can only view information about
+    submission. A machine listed with ``READ`` permission will be unable to join an HTCondor pool; the machine can only view information about
     the pool.
 
 ``WRITE``

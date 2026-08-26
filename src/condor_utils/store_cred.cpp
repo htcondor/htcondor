@@ -93,7 +93,7 @@ bool store_cred_failed(long long ret, int mode, const char ** errstring /*=NULL*
 static bool username_is_pool_password(const char *user, int * domain_pos = NULL)
 {
 	const int pool_name_len = sizeof(POOL_PASSWORD_USERNAME) - 1;
-	const char *at = strchr(user, '@');
+	const char *at = strrchr(user, '@');
 	int len;
 	if (at) {
 		len = (int)(at - user);
@@ -1113,7 +1113,7 @@ int store_cred_password(const char *user, const char *pw, int mode)
 				if ( !pw_wc ) {
 					answer = FAILURE_NOT_FOUND;
 				} else {
-					sprintf(passw, "%S", pw_wc);
+					snprintf(passw, MAX_PASSWORD_LENGTH, "%S", pw_wc);
 					SecureZeroMemory(pw_wc, wcslen(pw_wc));
 					delete[] pw_wc;
 					
@@ -1156,7 +1156,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
-	dom = strchr(user, '@');
+	dom = strrchr(user, '@');
 
 	if ( dom ) {
 		*dom = '\0';
@@ -1555,8 +1555,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		if ( ! sock->get(credlen)) {
 			got_message = false;
 		} else if (credlen) {
-			if (credlen > 0x1000000 * 100) {
-				dprintf(D_ALWAYS, "store_cred: ERROR cred too large (%d). possible protocol mismatch\n", credlen);
+			if (credlen < 0 || credlen > 100 * 1024 * 1024) {
+				dprintf(D_ALWAYS, "store_cred: ERROR cred size invalid (%d). possible protocol mismatch\n", credlen);
 				got_message = false;
 			} else {
 				cred.set((char*)malloc(credlen));
@@ -1602,7 +1602,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
-		size_t ix_at = fulluser.find('@');
+		size_t ix_at = fulluser.find_last_of('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
 			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;
@@ -2126,7 +2126,8 @@ do_store_cred (
 
 	if ( is_root() && d == NULL ) {
 		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
-		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
+		bool is_pool_pwd = username_is_pool_password(user) && ((mode & CRED_TYPE_MASK) == STORE_CRED_USER_PWD);
+		if (is_pool_pwd || (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE)) {
 			std::string pw;
 			if (cred) pw.assign((const char *)cred, credlen);
 			return_val = store_cred_password(user, pw.c_str(), mode);
@@ -2305,9 +2306,6 @@ int do_check_oauth_creds (
 	std::string daemonid;
 
 	outputURL.clear();
-	if (request_ads.empty()) {
-		return 0;
-	}
 
 	if (! d) {
 		Daemon my_credd(DT_CREDD);
@@ -2787,6 +2785,13 @@ void CredSorter::Init()
 			m_vault_names.clear();
 		}
 	}
+	// Pelican services must be enumerated explicitly; unlike Vault, an empty or
+	// unset list means there are no Pelican services (no wildcard).  Naming a
+	// service here keeps the Vault wildcard below from claiming it, and lets the
+	// submit side tell the storer to run in Pelican mode.
+	if (!param(m_pelican_names, "PELICAN_CREDMON_PROVIDER_NAMES")) {
+		m_pelican_names.clear();
+	}
 	std::string storer;
 	if (param(storer, "SEC_CREDENTIAL_STORER")) {
 		m_vault_enabled = true;
@@ -2817,6 +2822,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 			return VaultType;
 		}
 	}
+	// Explicitly-named Pelican services are claimed here, before the Vault
+	// wildcard below, so they are not misclassified as Vault.
+	for (const auto& str: StringTokenIterator(m_pelican_names)) {
+		if (cred_name == str) {
+			return PelicanType;
+		}
+	}
 	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
 	bool client_id_defined = param(param_val, param_name.c_str());
 	if (m_oauth2_names.empty() && client_id_defined) {
@@ -2826,4 +2838,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 		return VaultType;
 	}
 	return UnknownType;
+}
+
+const char *CredSorter::StorerMode(CredType type)
+{
+	switch (type) {
+	case VaultType:   return "vault";
+	case PelicanType: return "pelican";
+	default:          return nullptr;
+	}
 }

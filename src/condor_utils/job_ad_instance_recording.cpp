@@ -27,6 +27,7 @@
 #include "directory_util.h"
 #include "job_ad_instance_recording.h"
 #include "proc.h"
+#include "transfer_proc.h"
 
 //--------------------------------------------------------------
 //                       Data members
@@ -140,6 +141,11 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
 
     std::vector<std::string> attributeList = split(attributes);
 
+    // Hardcode list of attributes to always copy over into transfers
+    attributeList.emplace_back(ATTR_PROJECT_NAME);
+    attributeList.emplace_back(ATTR_USER);
+    attributeList.emplace_back(ATTR_GLOBAL_JOB_ID);
+
     // Special case attributes to copy into all transfer records
     if( isXfer ) {
         attributeList.emplace_back(ATTR_REMOTE_HOST);
@@ -186,7 +192,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	info.runId--;
 
 	//If any attributes are set to -1 write to shadow log and return
-	if (info.jid.cluster < 0 || info.jid.proc < 0 || info.runId < 0){
+	if (info.jid.cluster < 0 || isInvalidProcID(info.jid.proc) || info.runId < 0){
 		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),info.buffer.c_str());
 		return false;
 	}

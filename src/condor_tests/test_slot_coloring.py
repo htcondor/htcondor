@@ -9,6 +9,7 @@ from ornithology import (
     Condor,
     action,
     ClusterState,
+    JobStatus,
 )
 
 import time
@@ -53,7 +54,7 @@ def the_running_job(test_dir, the_lock_file, the_condor):
 
 	# Wait for the job to be marked running...
 	assert job_handle.wait(
-		timeout=20,
+		timeout=60,
 		condition=ClusterState.all_running,
 	)
 
@@ -69,12 +70,13 @@ def the_running_job(test_dir, the_lock_file, the_condor):
 
 @action
 def the_slot_ads(the_condor, the_running_job):
-	# Poll until the collector has slot ads with ColorAttr set.
+    # Wait no more than thirty seconds for the coloring to propagate.
+    # (It is not a set-up error if the coloring does not propagate.)
 	for i in range(0, 30):
 		result = the_condor.status(
 			ad_type=htcondor2.AdType.Slot,
 		)
-		if len(result) > 0 and all(ad.get('ColorAttr', 0) == 7 for ad in result):
+		if len(result) > 0 and all(ad.get('colors_of_slot1_1', 0) == 7 for ad in result):
 			break
 		time.sleep(1)
 
@@ -108,12 +110,19 @@ def the_cleaned_up_ads(
 	result_ad = the_running_job.remove()
 	# assert something about the result_ad here
 
-	# Poll until the collector has slot ads with ColorAttr removed.
+	# Make sure the job has been removed before starting the clean-up timer.
+	assert the_running_job.wait(
+		timeout=20,
+		condition=lambda cs: cs.all_status(JobStatus.REMOVED),
+	)
+
+    # Wait no more than thirty seconds for the uncoloring to propagate.
+    # (It is not a set-up error if the uncoloring does not propagate.)
 	for i in range(0, 30):
 		result = the_condor.status(
 			ad_type=htcondor2.AdType.Slot,
 		)
-		if len(result) > 0 and all(ad.get('ColorAttr', -1) == -1 for ad in result):
+		if len(result) > 0 and all(ad.get('colors_of_slot1_1', -1) == -1 for ad in result):
 			break
 		time.sleep(1)
 
@@ -124,17 +133,22 @@ def the_cleaned_up_ads(
 
 class TestSlotColoring:
 
-	# This is an implementation details, but may be useful for debugging.
+	# This is an implementation detail, but may be useful for debugging.
 	def test_extra_ads(self, the_extra_ads):
 		for extra_ad in the_extra_ads:
-			assert extra_ad.get('ColorAttr', 0) == 7
+			colorAd = extra_ad.get('colors_of_slot1_1')
+			assert colorAd != None
+			assert colorAd.get('ColorAttr', 0) == 7
 
 
 	def test_slot_ads(self, the_slot_ads):
 		for slot_ad in the_slot_ads:
-			assert slot_ad.get('ColorAttr', 0) == 7
+			colorAd = slot_ad.get('colors_of_slot1_1', None)
+			assert colorAd != None
+			assert colorAd.get('ColorAttr', 0) == 7
 
 
 	def test_color_cleanup(self, the_cleaned_up_ads):
 		for slot_ad in the_cleaned_up_ads:
-			assert slot_ad.get('ColorAttr', -1) == -1
+			colorAd = slot_ad.get('colors_of_slot1_1', None)
+			assert colorAd is None

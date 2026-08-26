@@ -151,9 +151,11 @@ public:
 	void setXferQueue(const std::string &queue) { m_xfer_queue = queue; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
 	void setDomainSocket(bool value) { is_domainsocket = value; }
+	void setFifo(bool value) { is_fifo = value; }
 	void setSymlink(bool value) { is_symlink = value; }
 	void setDirectory(bool value) { is_directory = value; }
 	bool isDomainSocket() const {return is_domainsocket;}
+	bool isFifo() const {return is_fifo;}
 	bool isSymlink() const {return is_symlink;}
 	bool isDirectory() const {return is_directory;}
 	bool isSrcUrl() const {return !m_src_scheme.empty();}
@@ -267,6 +269,7 @@ private:
 	std::string m_dest_url;
 	std::string m_xfer_queue;
 	bool is_domainsocket{false};
+	bool is_fifo{false};
 	bool is_directory{false};
 	bool is_symlink{false};
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
@@ -2014,7 +2017,7 @@ FileTransfer::ReadTransferPipeMsg()
 		while( total_read < size_of_ad ) {
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 			                           plugin_output_ad_string + total_read,
-			                           size_of_ad );
+			                           size_of_ad - total_read );
 			if( n <= 0 ) { delete [] plugin_output_ad_string; goto read_failed; }
 			total_read += n;
 		}
@@ -3932,7 +3935,6 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 									sizeof(cmd) );
 		if(n != sizeof(cmd)) write_failed = true;
 	}
-
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&total_bytes,
@@ -4302,7 +4304,7 @@ createCheckpointManifest(
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
-		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
+		if( fileitem.isDirectory() || fileitem.isDomainSocket() || fileitem.isFifo() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
 		std::string sourceHash;
@@ -4991,6 +4993,16 @@ FileTransfer::uploadFileList(
 	// (Of course, it would arguably be better not to generate such entries
 	// in the first place, but that's scary for other reasons.)
 	//
+
+	// If the file list is empty, the loop below never runs and we would
+	// never report XFER_STATUS_ACTIVE.  The shadow logs a transfer-started
+	// userlog event when it first sees the transfer become active, so an
+	// empty transfer would otherwise log a finished event with no matching
+	// started event.  Report active here so that an empty transfer still
+	// logs its start.
+	if( filelist.empty() ) {
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+	}
 
 	for (auto &fileitem : filelist)
 	{
@@ -6238,6 +6250,22 @@ FileTransfer::abortActiveTransfer()
 		daemonCore->Kill_Thread(ActiveTransferTid);
 		TransThreadTable.erase(ActiveTransferTid);
 		ActiveTransferTid = -1;
+
+// This conditional makes me sad, but such is the life of bad abstractions.
+#ifndef   WINDOWS
+		// Given that we just shot the forked child in the head, we should
+		// consider splitting FileTransfer::Reap() into the section that
+		// prevents us from hanging and the section that we can/must do
+		// after we receive its SIGCHLD.
+		if( daemonCore && (TransferPipe[0] >= 0) ) {
+			if( registered_xfer_pipe ) {
+				registered_xfer_pipe = false;
+				daemonCore->Cancel_Pipe(TransferPipe[0]);
+			}
+			daemonCore->Close_Pipe(TransferPipe[0]);
+			TransferPipe[0] = -1;
+		}
+#endif /* WINDOWS */
 	}
 }
 
@@ -6403,6 +6431,11 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
+}
+
+void FileTransfer::setDisableUserSuppliedTransferPlugins(UserPluginDisableMode disable_mode)
+{
+	I_dont_allow_user_supplied_transfer_plugins = disable_mode;
 }
 
 
@@ -6840,10 +6873,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	const char * label = plugin.path.c_str();
 	if (plugin.bad_plugin) {
-		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
-		// e.pushf(...)
 		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNotOperational;
+		if (plugin.from_job) {
+			e.pushf("FILETRANSFER", 1, "user-supplied plugin %s not allowed", label);
+		} else {
+			e.pushf("FILETRANSFER", 1, "plugin %s is not operational", label);
+		}
 		return TransferPluginResult::Error;
 	}
 
@@ -7548,7 +7583,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const {
 
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins || I_dont_allow_user_supplied_transfer_plugins) {
 		return 0;
 	}
 
@@ -7578,7 +7613,7 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 
 int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 {
-	if ( ! I_support_filetransfer_plugins ) {
+	if ( ! I_support_filetransfer_plugins) {
 		return 0;
 	}
 
@@ -7590,6 +7625,14 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	// start with the system table
 	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
+	}
+
+	bool fail_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Fail;
+	bool skip_job_plugins = I_dont_allow_user_supplied_transfer_plugins == UserPluginDisableMode::Ignore;
+	if (skip_job_plugins) {
+		// If mode is ignore, just don't load the user supplied plugins and assume that
+		// one of the built-in plugins will handle things.
+		return 0;
 	}
 
 	// process the user plugins
@@ -7604,8 +7647,11 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			std::string plugin_path(equals + 1);
 			trim(plugin_path);
 			auto & plugin = InsertPlugin(plugin_path, true);
+			if (fail_job_plugins) plugin.bad_plugin = true;
 			std::string dummy;
 			AddPluginMappings(methods, plugin, false, dummy);
+			//dprintf(D_ZKM, "AddPluginMappings(%s=%s)%s\n",
+			//	methods.c_str(), plugin_path.c_str(), fail_job_plugins ? " DISABLED" : "");
 			multifile_plugins_enabled = true;
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
@@ -8145,6 +8191,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #ifndef WIN32
 	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
 	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
+	file_xfer_item.setFifo( S_ISFIFO(st.st_mode) );
 #endif
 
 	file_xfer_item.setDirectory( st.st_mode & S_IFDIR );
@@ -8153,6 +8200,15 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		// also not an error. Remove the entry from the list and return true.
 	if( file_xfer_item.isDomainSocket() ) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
+			"from transfer list\n", UrlSafePrint(full_src_path) );
+		expanded_list.pop_back();
+		return true;
+	}
+
+		// Likewise, named pipes (FIFOs) must not be sent: reading from one
+		// with no writer will block forever and hang the transfer.
+	if( file_xfer_item.isFifo() ) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a FIFO, excluding "
 			"from transfer list\n", UrlSafePrint(full_src_path) );
 		expanded_list.pop_back();
 		return true;
@@ -8443,6 +8499,8 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 
 	ASSERT( path );
 	ASSERT( sandbox );
+
+	if( !path[0] ) { return false; }
 
 	std::string buf = path;
 	canonicalize_dir_delimiters( buf );

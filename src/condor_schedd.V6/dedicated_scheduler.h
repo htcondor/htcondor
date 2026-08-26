@@ -225,6 +225,17 @@ class DedicatedScheduler : public Service {
 		/// Returns true if there are idle dedicated clusters.
 	bool hasDedicatedClusters( void );
 
+		/** Drop the AllocationNode for `cluster` if one is present.
+			Unlike removeAllocation(), this does NOT EXCEPT when the
+			allocation is absent. Intended for paths where the shadow
+			was never spawned -- e.g. all match_recs for the allocation
+			were torn down by a startd claim rejection before
+			spawnShadow() could run, leaving an orphaned allocation
+			that would otherwise trip createAllocations()'s ASSERT on
+			the next rematch of the same cluster.
+		*/
+	void removeOrphanedAllocation( int cluster );
+
 		/** Called by the Scheduler class when an MPI shadow is
 			finally running (after waiting in the RunnableJobQueue).
 		*/ 
@@ -303,7 +314,7 @@ class DedicatedScheduler : public Service {
 		// Deactivate the claim on all resources used by this shadow
 	void shutdownMpiJob( shadow_rec* srec , bool kill = false);
 
-		/** Update internal data structures to remove the allocation  
+		/** Update internal data structures to remove the allocation
 			associated with this shadow.
 			@param srec Shadow record of the allocation to remove
 		*/

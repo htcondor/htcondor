@@ -155,7 +155,8 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot
+		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot, SetupOnly,
+		Terse
 	);
 
 	BETTER_ENUM(slist, long,
@@ -239,8 +240,11 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-RescueFile",    {"RescueFile", "<filename>", "Run DAG from specified rescue file", DAG_OPT_DISP_ALL}},
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	// -SetupOnly: Undocumented on purpose: fully set up DAG (parse, process, rescue, recover) then exit before execution
+	{"-SetupOnly",     {"SetupOnly", "True", "Set up DAG and exit before execution", 0}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
 	{"-SubmitMethod",  {"SubmitMethod", "<value>", "Specify how DAGMan submits jobs for execution (0=condor_submit|1=DirectSubmit)", DAG_OPT_DISP_ALL}},
+	{"-terse",         {"Terse", "True", "Display only the resulting DAGMan job id on success", DAG_OPT_DISP_CSD}}, // Only used in condor_submit_dag
 	{"-update_submit", {"UpdateSubmit", "True", "Update *.condor.sub file if it exists", DAG_OPT_DISP_ALL}},
 	{"-UseDagDir",     {"UseDagDir", "True", "Run DAGs in directories specified by DAG file paths", DAG_OPT_DISP_ALL}},
 	{"-v",             {"Verbose", "True", "See -Verbose", 0}}, // Single letter flag to make -v equal to -Verbose
@@ -448,20 +452,6 @@ public:
 	    @return The return status of the command
 	*/
 	int popen (ArgList &args);
-
-	/** Create the given lock file, containing the PID of this process.
-	    @param lockFileName: the name of the lock file to create
-	    @return: 0 if successful, -1 if not
-	*/
-	int create_lock_file(const char *lockFileName, bool abortDuplicates);
-
-	/** Check the given lock file and see whether the PID given in it
-	    does, in fact, exist.
-	    @param lockFileName: the name of the lock file to check
-	    @return: 0 if successful, -1 if there was an error, 1 if the
-	             relevant PID does exist and this DAGMan should abort
-	*/
-	int check_lock_file(const char *lockFileName);
 
 	/*
 	*	Function to print DAGMan options to stdout

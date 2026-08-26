@@ -25,7 +25,7 @@
 
 void usage()
 {
-	fprintf(stderr, "Usage: condor_login login <user name>\n");
+	fprintf(stderr, "Usage: condor_login login [-authz <authz-list>] [-project <project>] <user name>\n");
 	fprintf(stderr, "       condor_login query-users\n");
 	fprintf(stderr, "       condor_login query-tokens\n");
 	exit(1);
@@ -34,39 +34,46 @@ void usage()
 int main(int argc, char** argv)
 {
 	const char* placementd_name = nullptr;
-	const char* cmd_name = nullptr;
 	const char* user_name = nullptr;
+	const char* authz = nullptr;
+	const char* project = nullptr;
 	int cmd_int = -1;
 
-	if (argc < 2) {
-		usage();
-	}
-
-	cmd_name = argv[1];
-	if (argc > 2) {
-		user_name = argv[2];
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "add") == 0 || strcmp(argv[i], "login") == 0) {
+			if (cmd_int != -1) { usage(); }
+			cmd_int = PLACEMENT_USER_LOGIN;
+		} else if (strcmp(argv[i], "query-users") == 0) {
+			if (cmd_int != -1) { usage(); }
+			cmd_int = PLACEMENT_QUERY_USERS;
+		} else if (strcmp(argv[i], "query-tokens") == 0) {
+			if (cmd_int != -1) { usage(); }
+			cmd_int = PLACEMENT_QUERY_TOKENS;
+		} else if (strcmp(argv[i], "-authz") == 0) {
+			if (argc <= i+1) {
+				usage();
+			}
+			authz = argv[i+1];
+			i++;
+		} else if (strcmp(argv[i], "-project") == 0) {
+			if (argc <= i+1) {
+				usage();
+			}
+			project = argv[i+1];
+			i++;
+		} else {
+			if (user_name != nullptr) { usage(); }
+			user_name = argv[i];
+		}
 	}
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
-		if (argc != 3) {
-			usage();
-		}
-		cmd_int = PLACEMENT_USER_LOGIN;
-		user_name = argv[2];
-	} else if (!strcmp(cmd_name, "query-users")) {
-		cmd_int = PLACEMENT_QUERY_USERS;
-	} else if (!strcmp(cmd_name, "query-tokens")) {
-		cmd_int = PLACEMENT_QUERY_TOKENS;
-	} else {
-		usage();
-	}
-
 	Daemon placementd(DT_PLACEMENTD, placementd_name);
 	if (placementd.locate(Daemon::LOCATE_FOR_LOOKUP) == false) {
-		fprintf(stderr, "Failed to locate PlacementD\n");
+		fprintf(stderr, "Failed to locate PlacementD '%s'\n",
+				placementd_name ? placementd_name : "default");
 		exit(1);
 	}
 
@@ -79,6 +86,12 @@ int main(int argc, char** argv)
 	if (cmd_int == PLACEMENT_USER_LOGIN) {
 		ClassAd cmd_ad;
 		cmd_ad.Assign("UserName", user_name);
+		if (authz) {
+			cmd_ad.Assign("Authorizations", authz);
+		}
+		if (project) {
+			cmd_ad.Assign("Project", project);
+		}
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
 			fprintf(stderr, "Failed to send request to PlacementD\n");

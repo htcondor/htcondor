@@ -14,7 +14,8 @@
 std::optional<ListOfCatalogs>
 computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
-	const std::string & startdAddress
+	const std::string & startdAddress,
+	std::map< std::string, std::string > * internalToSimpleNameMap
 ) {
 	ListOfCatalogs common_file_catalogs;
 
@@ -22,7 +23,7 @@ computeCommonInputFileCatalogs(
 	// Which common files, if any, were we asked for?
 	//
 	std::string commonInputCatalogs;
-	jobAd->LookupString("_x_common_input_catalogs", commonInputCatalogs);
+	jobAd->LookupString(ATTR_COMMON_INPUT_CATALOGS, commonInputCatalogs);
 	for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
 		std::string commonInputFiles;
 		jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
@@ -34,6 +35,10 @@ computeCommonInputFileCatalogs(
 
 		common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
 		// dprintf( D_ZKM, "Found common file catalog '%s' = '%s'\n", cifName.c_str(), commonInputFiles.c_str() );
+
+		if( internalToSimpleNameMap != NULL ) {
+		    (*internalToSimpleNameMap)[* internal_catalog_name] = cifName;
+		}
 	}
 
 	return common_file_catalogs;
@@ -45,7 +50,8 @@ computeCommonInputFiles(
 	ClassAd * jobAd,
 	const std::string & startdAddress,
 	ListOfCatalogs & common_file_catalogs,
-	int & required_version
+	int & required_version,
+	std::map< std::string, std::string > * internalToSimpleNameMap
 ) {
 	std::string common_input_files;
 	bool found_htc25_plumbing =
@@ -58,14 +64,21 @@ computeCommonInputFiles(
 	// Contrary to best practice, this may partially modify the i/o argument.
 	if( found_htc25_plumbing ) {
 		std::string default_name;
-		long long int clusterID = 0;
-		ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
-		formatstr( default_name, "clusterID_%lld", clusterID );
+		auto r = determineCIFScopeAndType(* jobAd);
+		if(! r) {
+		    return false;
+		}
+		auto [scope, type] = * r;
+		formatstr( default_name, "%s_%s", type.c_str(), scope.c_str() );
 		auto internal_catalog_name = makeCIFName(* jobAd, default_name, startdAddress, common_input_files);
 		if(! internal_catalog_name) {
 			return false;
 		}
 		common_file_catalogs.push_back({* internal_catalog_name, common_input_files});
+
+		if( internalToSimpleNameMap != NULL ) {
+		    (*internalToSimpleNameMap)[* internal_catalog_name] = default_name;
+		}
 	}
 
 	return true;

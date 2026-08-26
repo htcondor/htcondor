@@ -1,3 +1,187 @@
+condor (25.13.2-1) stable; urgency=medium
+
+  * The condor_credmon_oauth now properly handles credentials with handles
+  * Improve providing OAuth credentials to all jobs on the Access Point
+  * Add WEAK dependencies to DAGman which only require finishing, not success
+  * Provides condor_scratch mount for Apptainer jobs with no file transfer
+  * condor_submit now recommends using condor_watch_q to monitor jobs
+  * Add CCB Tunneling for daemons with no outbound network connectivity
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:34:00 -0500
+
+condor (25.0.13-1) stable; urgency=medium
+
+  * Fix bug where condor_q crashes when given -batch and -af arguments
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:30:00 -0500
+
+condor (24.12.23-1) stable; urgency=medium
+
+  * All changes in HTCondor 24.0.23
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:25:00 -0500
+
+condor (24.0.23-1) stable; urgency=medium
+
+  * Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
+  * Fix bug where condor_history might not find a specific cluster or proc
+  * HTCondor tarballs now contain Apptainer 1.5.3 and Pelican 7.26.0
+  * Removing Pelican server code reduces tarball size by 10 megabytes
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:18:00 -0500
+
+condor (25.12.2-1) stable; urgency=medium
+
+  * Maintains a job index to speed up condor history queries
+  * Can now set a duration for a user's floor or priority factor
+  * DAGMan will go into cool-down if it fails to launch
+  * Improved column headers for condor_top
+  * Audit log is now enabled by default on the Access Point
+  * Fixed 25.11.0 bug that causes unbounded growth in the accountant log
+  * The CCB can now proxy connections with both ends on private networks
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 20 Jul 2026 14:07:00 -0500
+
+condor (25.0.12-1) stable; urgency=medium
+
+  * All changes in 24.12.22
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 22:18:00 -0500
+
+condor (24.12.22-1) stable; urgency=medium
+
+  * Fix rare job router crash when removing a recently routed job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 22:06:00 -0500
+
+condor (24.0.22-1) stable; urgency=medium
+
+  * Fix for security issue
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
+  * Fix a bug that could cause the arc_gahp to crash
+  * Reduce the size of Python wheels by 84% by removing debug symbols
+  * Fix issue when tools could infinitely loop when using trust on first use
+  * HTCondor tarballs now contain Apptainer 1.5.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 21:41:00 -0500
+
+condor (25.11.1-1) stable; urgency=medium
+
+  * Fix for security issue
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0001.html
+  * Fixed bug where the negotiator's accountant log grows without bound
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Jul 2026 22:38:00 -0500
+
+condor (25.11.0-1) stable; urgency=medium
+
+  * Prevent one user's many file transfers from halting matches for all users
+  * condor_watch_q will gather DAGs that started after it did
+  * condor_dag_checker can now check submit files, sub-DAGs, and scripts
+  * Gangliad can now aggregate deltas of monotonically increasing values
+  * condor_config_val --trace finds a definition in a complex configuration
+  * Now able to set a duration to a user's running jobs ceiling
+  * Multi-call binaries can now be used with DAGMan
+  * Initial support for EP health checks
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 10:15:00 -0500
+
+condor (25.0.11-1) stable; urgency=medium
+
+  * All changes in HTCondor 24.12.21
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 10:08:00 -0500
+
+condor (24.12.21-1) stable; urgency=medium
+
+  * Fix rare EP crash when using a custom docker wrapper script
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 09:41:00 -0500
+
+condor (24.0.21-1) stable; urgency=medium
+
+  * Fix rare issue where condor_dagman would abort after a system reboot
+  * HTCondor tarballs now contain Apptainer 1.5.0 and Pelican 7.25.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 10 Jun 2026 09:35:00 -0500
+
+condor (25.10.1-1) stable; urgency=medium
+
+  * Several improvements to throttle and monitor DAGMan resource usage
+  * Can now automatically retry a job with a larger disk request
+  * .chirp.config has been moved out of the job's scratch directory
+  * Disables swap for jobs on cgroup v1 systems by default
+  * Can now append columns to condor_(qusers|status|who) output
+  * Allow URL style container images when file transfer is off
+  * Improvements to handling batch universe jobs
+  * All changes in HTCondor 25.0.10
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 12:55:00 -0500
+
+condor (25.0.10-1) stable; urgency=medium
+
+  * Add support for Ubuntu 26.04 (Resolute Raccoon)
+  * All changes in HTCondor 24.12.20
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 11:25:00 -0500
+
+condor (24.12.20-1) stable; urgency=medium
+
+  * Fixed Access Point spooled X.509 job proxy refresh
+  * All changes in HTCondor 24.0.20
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:53:00 -0500
+
+condor (24.0.20-1) stable; urgency=medium
+
+  * Fix reporting of RemoteUserCPU in parallel universe
+  * condor_ssh_to_job can now execute one-shot commands when using containers
+  * condor_ssh_to_job now enters the proper cgroup when using containers
+  * HTCondor tarballs now contain Pelican 7.24.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 May 2026 09:23:00 -0500
+
+condor (25.8.2-1) stable; urgency=medium
+
+  * Fix detection and reporting of NVIDIA MIG GPU attributes
+  * Add '--rocm' flag to Apptainer GPU jobs to support AMD GPUs
+  * Can now use 'condor_rm -transfer' to fetch whatever output is available
+  * Can now use 'condor_q -aaf' to append columns to the standard output
+  * Can now run 'condor_top --history' to get fast response from stored data
+  * htcondor dag status now includes information about file transfers
+  * htcondor job status and condor_q now report cool down state information
+  * condor_run no longer passes 'getenv = true' to the submit file
+  * Fix condor_ssh_to_job for setuid Apptainer or Singularity runtimes
+  * The negotiator now knows the user's floor to avoid improper preemption
+  * The condor_shadow now logs information about reconnect attempts
+  * condor_config_val can now report configuration option's default value
+  * All changes in 25.0.9
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 16:37:00 -0500
+
+condor (25.0.9-1) stable; urgency=medium
+
+  * All changes in 24.12.19
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 15:03:00 -0500
+
+condor (24.12.19-1) stable; urgency=medium
+
+  * Fix crash when a user provided Docker script produces unexpected output
+  * All changes in 24.0.19
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 14:43:00 -0500
+
+condor (24.0.19-1) stable; urgency=medium
+
+  * Now properly reports NVIDIA MIG GPU device names
+  * Fix performance problem in the htcondor2 Python ClassAd parser
+  * Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+  * Batch grid universe jobs now tolerate a dot in the username
+  * Fix huge reported job execution times when an AP restarts
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 13:00:00 -0500
+
 condor (25.7.2-1) stable; urgency=medium
 
   * Improve schedd performance with large job records by sizing pipe buffers
@@ -721,7 +905,7 @@ condor (23.7.2-1) stable; urgency=medium
 
 condor (23.0.10-1) stable; urgency=medium
 
-  * Preliminary support for Ubuntu 22.04 (Noble Numbat)
+  * Preliminary support for Ubuntu 24.04 (Noble Numbat)
   * Warns about deprecated multiple queue statements in a submit file
   * Fix bug where plugins could not signify to retry a file transfer
   * The condor_upgrade_check script checks for proper token file permissions
@@ -2015,14 +2199,14 @@ condor (8.6.11) unstable; urgency=medium
 
   * Nightly build
 
- -- Tim Theisen <tim@exec-23.batlab.org>  Thu, 31 May 2018 15:01:37 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 31 May 2018 15:01:37 -0500
 
 condor (8.6.8~dfsg.1-2) unstable; urgency=medium
 
   * Disable GSOAP (Closes: #890007) (GSOAP will be dropped from HTCondor soon)
   * Package Apache NOTICE file (fix up lintian error)
 
- -- Tim Theisen <tim@exec-23.batlab.org>  Mon, 19 Mar 2018 18:28:58 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 19 Mar 2018 18:28:58 -0500
 
 condor (8.6.8~dfsg.1-1) unstable; urgency=medium
 

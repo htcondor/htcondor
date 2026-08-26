@@ -31,6 +31,7 @@
 #include "condor_uid.h"
 #include "condor_email.h"
 #include "shared_port_endpoint.h"
+#include "set_user_priv_from_ad.h"
 #include "scheduler.h"
 #include "qmgmt.h"
 
@@ -322,7 +323,7 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 	const char *scratchdir = scratchFilePath(gman_node, scratchdirbuf);
 	ASSERT(scratchdir);
 	if ( IsDirectory(scratchdir) && 
-		 init_user_ids(gman_node->ownerinfo) )
+		 init_user_ids_from_ad(*gman_node->ownerinfo) )
 	{
 		priv_state saved_priv = set_user_priv();
 			// Must put this in braces so the Directory object
@@ -497,7 +498,7 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	args.AppendArg(Name);
 
 	std::string tmp;
-	if (!init_user_ids(userident.m_ownerinfo)) {
+	if (!init_user_ids_from_ad(*userident.m_ownerinfo)) {
 		dprintf(D_ERROR,"ERROR - init_user_ids(%s) failed in GRIDMANAGER\n", osname);
 		free(gman_binary);
 		return nullptr;
@@ -611,10 +612,7 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	}
 	gman_node->ownerinfo = userident.m_ownerinfo;
 	gman_node->pid = pid;
-	gman_node->user[0] = '\0';
-	if ( user ) {
-		strcpy(gman_node->user, user);
-	}
+	gman_node->user = user ? user : "";
 	std::string user_key(user);
 	if(attr_value && *attr_value){
 		user_key += '#';
