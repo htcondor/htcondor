@@ -102,6 +102,8 @@ arch=$(uname -m)
 distro_raw=$(. /etc/os-release; echo $ID)
 distro_ver=$(. /etc/os-release; echo $VERSION_ID | cut -d. -f1)
 
+# TODO Recognize Amazon Linux
+# TODO Allow user to dictate distro name?
 if [[ $distro_raw =~ (rhel|centos|almalinux|rocky) ]]; then
     distro="AlmaLinux${distro_ver}"
 elif [[ $distro_raw =~ opensuse-leap ]]; then
