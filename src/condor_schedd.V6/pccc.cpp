@@ -186,7 +186,8 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	classy_counted_ptr<TwoClassAdMsg> cMsg = new TwoClassAdMsg( COALESCE_SLOTS, commandAd, * jobAd );
 	cMsg->setStreamType( Stream::reli_sock );
 	if (match->use_sec_session) {
-		cMsg->setSecSessionId( match->secSessionId() );
+		std::string sessbuf; // todo: change setSecSessionId take a string_view?
+		cMsg->setSecSessionId( match->secSessionId(sessbuf) );
 	}
 	cMsg->setSuccessDebugLevel( D_FULLDEBUG );
 	pcccStopCallback * pcs = new pcccStopCallback( nowJob, cMsg, match->description(), match->peer, retriesRemaining );

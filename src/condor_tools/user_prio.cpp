@@ -1191,6 +1191,13 @@ main(int argc, const char* argv[])
 		CondorError errstack;
 		QueryResult q;
 
+		// the global -constraint flag
+		if (!constraint.empty()) {
+			std::string toConstrain;
+			constraint.makeQuery(toConstrain);
+			query.addANDConstraint(toConstrain.c_str());
+		}
+
 		if (neg_name) {
 			std::string constraint;
 			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);

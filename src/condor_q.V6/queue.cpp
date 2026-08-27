@@ -4095,7 +4095,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			break;
 		default:
 			fprintf(stderr,
-				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				"\n-- Failed to fetch ads from: %s : %s\n\n%s\n",
 				scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 		}
 		return false;

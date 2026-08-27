@@ -544,8 +544,21 @@ Starter::handleJobSetupCommand(
 			// quantize-disk expressions, the size here is in KiB
 			// (the units of `Disk`).
 			auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
-			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %ld (KiB)\n", sizeOnDisk );
+			dprintf( D_TEST, "cxfer: sizeOnDisk (staging) = %lld (KiB)\n", (long long)sizeOnDisk );
 			context.InsertAttr( ATTR_SIZE, sizeOnDisk );
+
+			//
+			// We're wibbling in and out of the event loop, but we never call
+			// JobInfoCommunicator::allJobsSpawned(), so it never starts the
+			// timer to do updates.  That's fine, and probably good -- it's
+			// less confusing for a jobless starter this way -- but that
+			// also means that we never update the "job's" DiskUsage -- we
+			// can't -- and thus never update the slot's DiskUsage -- which
+			// is confusing.
+			//
+			ClassAd updateAd;
+			updateAd.Assign( ATTR_DISK_USAGE, sizeOnDisk );
+			s->jic->updateStartd( & updateAd, false );
 
 			continue_conversation(context);
 			return true;
@@ -773,7 +786,7 @@ Starter::handleJobSetupCommand(
 				const bool CORRECTLY = true;
 				auto usage = s->GetDiskUsage(CORRECTLY);
 				auto sizeOnDisk = (usage.execute_size + 1023) / 1024;
-				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %ld (KiB)\n", sizeOnDisk );
+				dprintf( D_TEST, "cxfer: sizeOnDisk (mapping) = %lld (KiB)\n", (long long)sizeOnDisk );
 			}
 
 			ClassAd context;

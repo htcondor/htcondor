@@ -3,6 +3,7 @@
 import pytest
 
 import os
+import hashlib
 from pathlib import Path
 import subprocess
 
@@ -22,7 +23,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "container_is_common = true",
-        "expected": "_x_catalog_container_busybox_sif",
+        "expected": "_x_catalog_container_{hash}",
     },
     "on_and_off": {
         "env": {
@@ -36,7 +37,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "",
-        "expected": "_x_catalog_container_busybox_sif",
+        "expected": "_x_catalog_container_{hash}",
     },
 
     "off_and_on": {
@@ -44,7 +45,7 @@ TEST_CASES = {
             '_CONDOR_CONTAINER_IMAGES_COMMON_BY_DEFAULT': 'TRUE'
         },
         "sub": "container_is_common = true",
-        "expected": "_x_catalog_container_busybox_sif",
+        "expected": "_x_catalog_container_{hash}",
     },
     "off_and_off": {
         "env": {
@@ -76,6 +77,13 @@ def the_test_name(the_test_pair):
 @action
 def the_test_case(the_test_pair):
     return the_test_pair[1]
+
+
+@action
+def the_hash():
+    full_path = Path.cwd() / "busybox.sif"
+    bytes = str(full_path).encode('utf-8')
+    return hashlib.sha256(bytes).hexdigest()[0:8]
 
 
 @action
@@ -113,5 +121,6 @@ def the_test_result(the_test_name, the_test_case):
 
 class TestCIFKnob:
 
-    def test_correct_job_ad(self, the_test_case, the_test_result):
-        assert the_test_result == the_test_case['expected']
+    def test_correct_job_ad(self, the_test_case, the_test_result, the_hash):
+        the_expected = the_test_case['expected'].format(hash=the_hash)
+        assert the_test_result == the_expected

@@ -472,7 +472,7 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"A1.txt, A2.txt"',
+        "transfer_common_input":    "A1.txt, A2.txt",
 
         "should_transfer_files":    True,
 

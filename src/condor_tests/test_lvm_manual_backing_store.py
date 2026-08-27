@@ -15,6 +15,7 @@ from liblvm import (
     LVM_SKIP_REASON,
     ManualLVMStore,
     SMALL_BACKING_FILE_MB,
+    JOB_REQUEST_MEMORY_MB,
 )
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def manual_store_job_hash():
         "error": "error",
         "log": "manual_store_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
     }
 
