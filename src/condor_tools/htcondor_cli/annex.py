@@ -327,12 +327,16 @@ class Status(Verb):
             if job["JobStatus"] == htcondor.JobStatus.IDLE:
                 status[annex_name][request_id] = "granted"
 
+        # TODO Remove this default value and just complain if ANNEX_COLLECTOR
+        #   isn't set.
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
 
         constraint = 'AnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'AnnexName == "{the_annex_name}"'
+        # TODO Remove this default value and just complain if ANNEX_TOKEN_DOMAIN
+        #   isn't set.
         annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
         constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@{annex_token_domain}"'
 
