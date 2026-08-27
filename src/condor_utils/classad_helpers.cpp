@@ -360,6 +360,19 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 }
 
 // tokenize the input string, and insert tokens into the attrs set
+bool isBundleSubmitter(const std::string & submitter_name)
+{
+	// Compare the name up to the '@' domain separator exactly against the
+	// reserved bundle submitter name.  An exact (not prefix) match avoids
+	// misclassifying an unrelated submitter such as "condor_bundlers".
+	size_t at = submitter_name.find('@');
+	std::string_view bare(submitter_name);
+	if (at != std::string::npos) {
+		bare = bare.substr(0, at);
+	}
+	return bare == BUNDLE_SUBMITTER_NAME;
+}
+
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL)
 {
 	if (str && str[0]) {

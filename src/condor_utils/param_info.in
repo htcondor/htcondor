@@ -3070,6 +3070,11 @@ default=false
 type=bool
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH]
+default=false
+type=bool
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT]
 default=true
 type=bool
@@ -4820,6 +4825,11 @@ tags=schedd,startd,claim
 [ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS]
 default=false
 type=bool
+
+[ENABLE_SLOT_BUNDLES]
+default=false
+type=bool
+tags=schedd
 
 [MAX_PARTITIONABLE_SLOT_CLAIM_TIME]
 default=3600

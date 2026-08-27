@@ -13,6 +13,36 @@ Negotiator ClassAd Attributes
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
+:classad-attribute-def:`BundlesInProgress`
+    The integer number of slot bundles the *condor_negotiator* is currently
+    working to fill. A bundle is counted from the first negotiation cycle in
+    which it is seen until a few cycles after the *condor_schedd* stops asking
+    for it, which happens once the bundle is satisfied or its jobs are gone.
+
+:classad-attribute-def:`BundleSlotsWanted`
+    The integer total number of slots the bundles counted by
+    :ad-attr:`BundlesInProgress` still need. Zero while every known bundle is
+    satisfied.
+
+:classad-attribute-def:`BundleSlotsMatchedTotal`
+    The integer number of slots this *condor_negotiator* has matched to slot
+    bundles since it started. Unlike :ad-attr:`BundlesInProgress` this is never
+    aged out, so it is the attribute to watch to see whether slot bundles are
+    used in a pool at all.
+
+:classad-attribute-def:`BundleMaxWaitSeconds`
+    The number of seconds since the *condor_negotiator* first saw the
+    longest-outstanding of the bundles counted by :ad-attr:`BundlesInProgress`.
+    A slot bundle is all-or-nothing, so one that asks for more slots than the
+    pool can ever offer at once will never be satisfied; this attribute
+    climbing without bound is how that shows up.
+
+:classad-attribute-def:`LastNegotiationCycleActiveBundles<X>`
+    The integer number of distinct slot bundles the *condor_negotiator*
+    negotiated for in the negotiation cycle. The number ``<X>`` appended to the
+    attribute name indicates how many negotiation cycles ago this cycle
+    happened.
+
 :classad-attribute-def:`LastNegotiationCycleActiveSubmitterCount`
     The integer number of submitters the *condor_negotiator* attempted
     to negotiate with in the negotiation cycle. The number ``<X>``
@@ -20,6 +50,30 @@ Negotiator ClassAd Attributes
     ago this cycle happened.
 
 :index:`NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`
+
+:classad-attribute-def:`LastNegotiationCycleBundleDuration<X>`
+    The number of seconds the *condor_negotiator* spent in the slot bundle
+    round of the negotiation cycle. Slot bundles are negotiated first, in a
+    round of their own, before all other submitters. The number ``<X>``
+    appended to the attribute name indicates how many negotiation cycles ago
+    this cycle happened.
+
+:classad-attribute-def:`LastNegotiationCycleBundleMatches<X>`
+    The integer number of slots matched to slot bundles in the negotiation
+    cycle. The number ``<X>`` appended to the attribute name indicates how many
+    negotiation cycles ago this cycle happened.
+
+:classad-attribute-def:`LastNegotiationCycleBundleSlotsWanted<X>`
+    The integer number of slots the cycle's slot bundles still needed. The
+    number ``<X>`` appended to the attribute name indicates how many
+    negotiation cycles ago this cycle happened.
+
+:classad-attribute-def:`LastNegotiationCycleBundleSubmitters<X>`
+    The integer number of submitters negotiated with in the cycle's slot bundle
+    round. This counts *condor_schedd* daemons with an unsatisfied slot bundle,
+    not bundles; see ``LastNegotiationCycleActiveBundles<X>`` for those. The
+    number ``<X>`` appended to the attribute name indicates how many negotiation
+    cycles ago this cycle happened.
 
 :classad-attribute-def:`LastNegotiationCycleCandidateSlots`
     The number of slot ClassAds after filtering by

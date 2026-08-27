@@ -304,6 +304,7 @@ static void ScheduleJobQueueLogFlush();
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
 std::vector<std::string> ocu_super_users;
+bool SlotBundlesEnabled = false;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -1541,6 +1542,15 @@ InitQmgmt()
 			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
 		}
 	}
+
+	// Whether this schedd honors "+IsBundle = true" at all.  A bundle grabs
+	// slots off-the-books at the best possible priority and holds them until
+	// all of its jobs can run, so it is off unless an admin turns it on.  It is
+	// a single schedd-wide switch rather than a list of who may create one:
+	// everyone who can submit to a schedd with bundles enabled can use them.
+	SlotBundlesEnabled = param_boolean("ENABLE_SLOT_BUNDLES", false);
+	dprintf(D_FULLDEBUG, "Slot bundles are %s\n",
+		SlotBundlesEnabled ? "enabled" : "disabled");
 
 	delete queue_super_user_may_impersonate_regex;
 	queue_super_user_may_impersonate_regex = nullptr;
@@ -9263,6 +9273,16 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
+	}
+
+	// A job of a slot bundle ("+IsBundle = true") is negotiated for only
+	// through the reserved bundle submitter, and runs only on a slot that
+	// bundle is holding.  Keep it out of the prio-rec array so it is never
+	// offered to the negotiator, or started on a claim, as an ordinary job.
+	// Check the job as well as the bundle table: a cluster submitted since the
+	// last count_jobs() is a bundle before the schedd has recorded it as one.
+	if (scheduler.getBundle(jid.cluster) || jobIsBundleJob(job)) {
+		return 0;
 	}
 
 	// --- Insert this job into the PrioRec array ---
