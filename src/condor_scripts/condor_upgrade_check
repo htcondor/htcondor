@@ -134,9 +134,9 @@ def warn_multi_q_deprecation(*args, **kwargs):
         """
         Warning:
             The use of multiple queue statements in a single submit
-            description file is now deprecated. This functionality
-            will be removed during the lifetime of the V25 feature
-            series.
+            description file is disabled as of v25.14.0. This functionality
+            is planned to finally be removed during the lifetime of
+            the V26 feature series.
         """,
         offset=4,
         newline=True,
