@@ -1165,7 +1165,7 @@ type=string
 tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
-default=NumShadowStarts
+default=NumShadowStarts,DAGManJobId,DAGNodeName
 type=string
 
 [MAX_TRANSFER_LIFETIME]
