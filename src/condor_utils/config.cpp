@@ -1715,7 +1715,7 @@ Parse_macros(
 			}
 		} else if (is_include) {
 			// if the caller disables the include keyword (late materialization), then just fail here
-			if (options & CONFIG_OPT_NO_INCLUDE_FILE) {
+			if ((options | macro_set.options) & CONFIG_OPT_NO_INCLUDE_FILE) {
 				macro_set.push_error(stderr, retval, source_type,
 					"Error \"%s\", Line %d, include statement is not allowed in this context\n",
 					source_file, FileSource.line);

@@ -1289,6 +1289,14 @@ fi
 # configuration
 
 %changelog
+* Thu Aug 27 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.24-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
+* Thu Aug 27 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.24-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.23-1
 - All changes in HTCondor 24.0.23
 
