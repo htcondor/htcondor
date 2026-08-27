@@ -1491,6 +1491,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 27 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.24-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.23-1
 - Fix bug where FS authentication fails when TCP_FORWARDING_HOST is set
 - Fix bug where condor_history might not find a specific cluster or proc

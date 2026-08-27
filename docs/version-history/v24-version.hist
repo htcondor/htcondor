@@ -1,5 +1,11 @@
 *** 24.0.24 bugs
 
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002>`_.
+
+  :jira:`3808`
+
 *** 24.0.23 features
 
 - HTCondor tarballs now contain `Pelican 7.26.0 <https://pelicanplatform.org/releases>`_
