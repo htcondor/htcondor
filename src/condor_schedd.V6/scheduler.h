@@ -292,6 +292,8 @@ class match_rec
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
 	bool is_ocu{false}; // when true, hold forever, hand out to others
+	bool is_bundle{false}; // when true, this claim is held for a slot bundle
+	std::string bundle_id; // id of the bundle this claim belongs to
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -547,6 +549,21 @@ private:
 
 class JobSets; // forward reference - declared in jobsets.h
 class OCU; // forward reference - declared in qmgmt.h
+
+// A slot bundle request: N slots that all match one resource request, held by
+// the schedd as idle claims.  The schedd is authoritative: it re-injects each
+// incomplete bundle into the negotiation Resource Request List every cycle with
+// a count of N minus the claims already held, and stops when the bundle is full.
+struct BundleRequest {
+	std::string bundle_id;      // <schedd-name>#<n>
+	std::string name;           // optional human-readable name
+	std::string owner;          // owner/submitter identity of the request
+	classad::ClassAd request_ad; // the resource-request template ("like this")
+	int req_id = 0;             // small int used as the RRL PROC_ID cluster
+	int num_requested = 0;      // N: total slots wanted
+	int num_satisfied = 0;      // claims currently held (claimed) for this bundle
+	int num_inflight = 0;       // matches granted but not yet claimed (in flight)
+};
 
 class Scheduler : public Service
 {
@@ -903,6 +920,10 @@ class Scheduler : public Service
 	OCU *getOCU(int ocu_id);
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
+	// Look up an in-flight slot bundle by its small RRL req_id (BUNDLE_qkey2
+	// requests).  Returns nullptr if none.
+	BundleRequest *getBundleByReqId(int req_id);
+
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
 
@@ -1161,6 +1182,10 @@ private:
     ClassAd     act_on_ocu_create(const ClassAd &request);
     ClassAd     act_on_ocu_remove(const ClassAd &request);
 	std::vector<ClassAd>     act_on_ocu_query(const ClassAd &request);
+	int			command_act_on_bundles(int, Stream* stream);
+	ClassAd     act_on_bundle_create(const ClassAd &request);
+	ClassAd     act_on_bundle_remove(const ClassAd &request);
+	std::vector<ClassAd>     act_on_bundle_query(const ClassAd &request);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
 	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
@@ -1265,6 +1290,11 @@ private:
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;
+
+	// In-flight slot bundle requests, keyed by bundle_id.  The schedd is the
+	// authoritative owner of these.
+	std::map<std::string, BundleRequest> m_bundles;
+	int m_next_bundle_id = 1;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;

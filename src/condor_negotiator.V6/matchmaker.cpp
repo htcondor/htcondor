@@ -341,6 +341,15 @@ struct submitterLessThan {
 		// nameless submitters are filtered elsewhere
 		ad1->LookupString(ATTR_NAME, subname1);
 		ad2->LookupString(ATTR_NAME, subname2);
+
+		// Slot bundle requests are negotiated first, ahead of all real
+		// submitters, regardless of accountant priority.  Key on the explicit
+		// marker the schedd sets, not the submitter name.
+		bool bundle1 = false, bundle2 = false;
+		ad1->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle1);
+		ad2->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle2);
+		if (bundle1 != bundle2) return bundle1;
+
 		double prio1 = mm->accountant.GetPriority(subname1);
 		double prio2 = mm->accountant.GetPriority(subname2);
 
@@ -473,6 +482,7 @@ Matchmaker ()
 
 		// just assign default values
 	want_inform_startd = true;
+	want_inform_startd_of_bundle = false;
 	preemption_req_unstable = true;
 	preemption_rank_unstable = true;
 	NegotiatorTimeout = 30;
@@ -824,6 +834,7 @@ reinitialize ()
 	}
 	MatchWorkingCmSlots = param_boolean("MATCH_WORKING_CM_SLOTS", false);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", false);
+	want_inform_startd_of_bundle = param_boolean("NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH", false);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
 	// we should figure these out automatically someday ....
@@ -2678,7 +2689,19 @@ negotiateWithGroup ( bool isFloorRound,
 			if (submitterCeiling < 0) {
 				submitterCeiling = 0;
 			}
-			// So by here, submitterCeiling is "ceiling left"  maybe, "headroom" 
+			// So by here, submitterCeiling is "ceiling left"  maybe, "headroom"
+
+			// Slot bundle requests are matched off-the-books at best priority:
+			// give the reserved bundle submitter the full remaining pie and no
+			// ceiling, so it can grab its N slots ahead of fair share.  The
+			// accountant is not charged for these matches (see AddMatch below).
+			bool is_bundle_submitter = false;
+			submitter_ad->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, is_bundle_submitter);
+			if (is_bundle_submitter) {
+				submitterLimit = pieLeft;
+				submitterLimitUnclaimed = pieLeft;
+				submitterCeiling = INT_MAX;
+			}
 
 			if ( num_idle_jobs > 0 ) {
 				dprintf (D_FULLDEBUG, "  Calculating submitter limit with the "
@@ -5301,6 +5324,15 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
+	// Is this the match for a slot-bundle request?  The schedd marks bundle
+	// resource requests explicitly.  Used to keep the match off the
+	// accountant's books and to optionally inform the startd of the match
+	// (carrying the bundle id along).
+	bool is_bundle_request = false;
+	request.LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle_request);
+	std::string bundle_id;
+	request.LookupString(ATTR_BUNDLE_ID, bundle_id);
+
 	bool offline = false;
 	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
@@ -5409,7 +5441,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
-	if (want_claiming && want_inform_startd) {
+	// Inform the startd of the match when configured to, or -- for slot-bundle
+	// matches specifically -- when NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH is
+	// set, even if the general NEGOTIATOR_INFORM_STARTD is off.
+	if (want_claiming &&
+		(want_inform_startd || (is_bundle_request && want_inform_startd_of_bundle))) {
 			// The following sends a message to the startd to inform it
 			// of the match.  Although it is a UDP message, it still may
 			// block, because if there is no cached security session,
@@ -5419,7 +5455,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
 				startdName.c_str(),startdAddr.c_str(),NegotiatorTimeout,
-				claim_id.c_str(),want_nonblocking_startd_contact);
+				claim_id.c_str(),want_nonblocking_startd_contact,
+				is_bundle_request, bundle_id.c_str());
 
 		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
@@ -5499,8 +5536,14 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
     }
 
     // 4. notifiy the accountant
-	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
-	accountant.AddMatch(submitterName, offer);
+	// Slot bundle matches are off-the-books: don't charge the accountant for
+	// them.  Key on the explicit request marker, not the submitter name.
+	if (is_bundle_request) {
+		dprintf(D_FULLDEBUG,"      Not notifying the accountant (slot bundle match)\n");
+	} else {
+		dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
+		accountant.AddMatch(submitterName, offer);
+	}
 
 	// done
 	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",

@@ -168,8 +168,8 @@ ScheddNegotiate::nextJob()
 			for (auto & jid : cluster) {
 				--clusterSize; // decrement as we iterate so we know how many jobs remain
 
-					// if this is not a job (i.e. an OCU request), skip it
-				if (!jid.isJobKey() && (jid.proc != OCU_qkey2)) {
+					// if this is not a job (i.e. an OCU or bundle request), skip it
+				if (!jid.isJobKey() && (jid.proc != OCU_qkey2) && (jid.proc != BUNDLE_qkey2)) {
 					continue;
 				}
 				m_current_job_id = jid;
@@ -195,7 +195,37 @@ ScheddNegotiate::nextJob()
 							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, "Draining =!= true");
 						}
 						return true;
-					} 
+					}
+					// Is this a slot bundle request?  Like OCUs, build the
+					// resource request ad from the stored bundle template and
+					// ask for the number of slots still needed.
+					// Only treat this as a bundle if the proc marker says so;
+					// otherwise a real job removed mid-negotiation whose cluster
+					// id happens to equal a bundle's small req_id would be
+					// misrouted here.
+					BundleRequest *bundle = nullptr;
+					if (m_current_job_id.proc == BUNDLE_qkey2) {
+						bundle = scheduler.getBundleByReqId(m_current_job_id.cluster);
+					}
+					if (bundle) {
+						m_current_job_ad = bundle->request_ad;
+						int remaining = bundle->num_requested - bundle->num_satisfied - bundle->num_inflight;
+						if (remaining < 0) { remaining = 0; }
+						m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT, remaining);
+
+						// negotiator has to see clusterid and procid or it will not be happy.
+						m_current_job_ad.Assign(ATTR_CLUSTER_ID, m_current_job_id.cluster);
+						m_current_job_ad.Assign(ATTR_PROC_ID, BUNDLE_qkey2);
+						// Don't match bundle claims to draining slots
+						ExprTree *existing_req = m_current_job_ad.LookupExpr(ATTR_REQUIREMENTS);
+						if (existing_req) {
+							std::string req = std::string("(") + ExprTreeToString(existing_req) + ") && (Draining =!= true)";
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, req.c_str());
+						} else {
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, "Draining =!= true");
+						}
+						return true;
+					}
 					dprintf(D_MATCH,
 						"skipping job %d.%d because it no longer exists\n",
 						m_current_job_id.cluster,m_current_job_id.proc);

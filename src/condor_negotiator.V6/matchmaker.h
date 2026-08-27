@@ -340,7 +340,10 @@ class Matchmaker : public Service
 		bool ConsiderEarlyPreemption; // if false, do not preempt slots that still have retirement time
 		bool MatchWorkingCmSlots;
 		/// Should the negotiator inform startds of matches?
-		bool want_inform_startd;	
+		bool want_inform_startd;
+		/// Should the negotiator inform startds of slot-bundle matches even
+		/// when want_inform_startd is false?
+		bool want_inform_startd_of_bundle;
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
 		bool MatchPasswordEnabled{false};

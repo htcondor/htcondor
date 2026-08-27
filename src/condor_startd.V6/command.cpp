@@ -709,6 +709,22 @@ command_match_info(int cmd, Stream* stream )
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		return FALSE;
 	}
+	// Newer negotiators send a trailing ClassAd of match metadata (currently
+	// slot-bundle info) after the claim id.  Read it only when the peer is new
+	// enough to have sent it; an older negotiator's MATCH_INFO ends right after
+	// the claim id.  The send side is gated on our version the same way.
+	bool is_bundle = false;
+	std::string bundle_id;
+	const CondorVersionInfo *vi = stream->get_peer_version();
+	if( vi && vi->built_since_version(25, 14, 0) ) {
+		ClassAd match_ad;
+		if( getClassAd(stream, match_ad) ) {
+			match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle);
+			match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
+		} else {
+			dprintf( D_ALWAYS, "Error: can't read MATCH_INFO metadata ad.\n" );
+		}
+	}
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: can't read end of message for MATCH_INFO.\n" );
 		return FALSE;
@@ -719,9 +735,23 @@ command_match_info(int cmd, Stream* stream )
 	Resource* rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		return FALSE;
+	}
+
+		// If the negotiator told us this match is for a slot bundle, remember
+		// it on the matching claim so the slot advertises IsBundle/BundleId
+		// while it is Matched, before the claim is even activated.
+	if( is_bundle ) {
+		Claim *claim = (rip->r_cur && rip->r_cur->idMatches(id)) ? rip->r_cur :
+			((rip->r_pre && rip->r_pre->idMatches(id)) ? rip->r_pre : nullptr);
+		if( claim ) {
+			claim->setBundle(true);
+			claim->setBundleId(bundle_id);
+			rip->dprintf( D_ALWAYS, "MATCH_INFO: match is for slot bundle %s\n",
+						  bundle_id.c_str() );
+		}
 	}
 
 	if( resmgr->isShuttingDown() ) {
@@ -1585,6 +1615,16 @@ accept_request_claim(
 		claim->setOCU(ocu_holder);
 		claim->ad()->LookupString(ATTR_OCU_NAME, ocu_name);
 		claim->setOCUName(ocu_name);
+
+		// The schedd stamps a slot-bundle request ad with IsBundleRequest and
+		// BundleId; remember them so the slot advertises that it is held for a
+		// bundle.
+		bool is_bundle = false;
+		std::string bundle_id;
+		claim->ad()->LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle);
+		claim->setBundle(is_bundle);
+		claim->ad()->LookupString(ATTR_BUNDLE_ID, bundle_id);
+		claim->setBundleId(bundle_id);
 	}
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.

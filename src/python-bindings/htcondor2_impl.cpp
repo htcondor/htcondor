@@ -183,6 +183,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_create_ocu", &_schedd_create_ocu, METH_VARARGS, NULL},
 	{"_schedd_query_ocu", &_schedd_query_ocu, METH_VARARGS, NULL},
 	{"_schedd_remove_ocu", &_schedd_remove_ocu, METH_VARARGS, NULL},
+	{"_schedd_create_bundle", &_schedd_create_bundle, METH_VARARGS, NULL},
+	{"_schedd_query_bundle", &_schedd_query_bundle, METH_VARARGS, NULL},
+	{"_schedd_remove_bundle", &_schedd_remove_bundle, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},

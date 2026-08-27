@@ -52,6 +52,9 @@ from .htcondor2_impl import (
     _schedd_create_ocu,
     _schedd_remove_ocu,
     _schedd_query_ocu,
+    _schedd_create_bundle,
+    _schedd_remove_bundle,
+    _schedd_query_bundle,
 )
 
 
@@ -1113,6 +1116,46 @@ class Schedd():
         :return:  A list of OCU ClassAds
         """
         return _schedd_query_ocu(self._addr, request._handle)
+
+
+    def create_bundle(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing a slot bundle request to the schedd.
+
+        A bundle is a request for N slots that all match one resource
+        request, held by the schedd as idle claims.
+
+        :param request: ClassAd representing the bundle request; must contain
+            ``BundleNumRequested`` and the ``Request*`` resource attributes.
+        :return:  A ClassAd with ``Result`` and, on success, ``BundleId``.
+        """
+        return _schedd_create_bundle(self._addr, request._handle)
+
+
+    def remove_bundle(self,
+        bundle_id : str
+    ) -> classad.ClassAd:
+        """
+        Remove an existing slot bundle request from the schedd.
+
+        :param bundle_id: the id of the bundle to remove.
+        :return:  A ClassAd containing information about the remove operation.
+        """
+        return _schedd_remove_bundle(self._addr, bundle_id)
+
+
+    def query_bundle(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Query the schedd for all the slot bundle request ads.
+
+        :param request: ClassAd representing the query
+        :return:  A list of bundle ClassAds
+        """
+        return _schedd_query_bundle(self._addr, request._handle)
 
 
 def _add_line_from_itemdata(submit_file, item, separator, projection):

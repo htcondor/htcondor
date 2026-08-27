@@ -2564,6 +2564,161 @@ DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
 	return result;
 }
 
+// Slot bundle requests.  These mirror the OCU commands above: a single request
+// ClassAd out, a single result ClassAd back (create/remove) or a count-prefixed
+// list of ClassAds back (query).
+ClassAd
+DCSchedd::createBundle(const ClassAd &bundle_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(CREATE_BUNDLE_REQUEST, Stream::reli_sock, 20, errstack))) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::createBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	if (!putClassAd((Sock *)sock, bundle_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending bundle ad");
+		}
+		return {};
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	sock->decode();
+	ClassAd result;
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting bundle result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting end of message");
+		}
+		return result;
+	}
+	return result;
+}
+
+ClassAd
+DCSchedd::removeBundle(const ClassAd &bundle_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(REMOVE_BUNDLE_REQUEST, Stream::reli_sock, 20, errstack))) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	if (!putClassAd((Sock *)sock, bundle_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending bundle ad");
+		}
+		return {};
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	sock->decode();
+	ClassAd result;
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting bundle result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting end of message");
+		}
+		return result;
+	}
+	return result;
+}
+
+std::vector<ClassAd>
+DCSchedd::queryBundle(const ClassAd &bundle_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(QUERY_BUNDLE_REQUEST, Stream::reli_sock, 20, errstack))) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	if (!putClassAd((Sock *)sock, bundle_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending bundle ad");
+		}
+		return {};
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	sock->decode();
+	std::vector<ClassAd> result;
+	size_t bundle_count = 0;
+	if (!sock->code(bundle_count)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting bundle count");
+		}
+		return result;
+	}
+	for (size_t i = 0; i < bundle_count; i++) {
+		ClassAd ad;
+		if (!getClassAd((Sock *)sock, ad)) {
+			if (errstack) {
+				errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting bundle ad");
+			}
+			return {};
+		}
+		result.push_back(std::move(ad));
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryBundle", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting end of message");
+		}
+		return {};
+	}
+	return result;
+}
+
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,
 	const char * constraint,

@@ -638,6 +638,13 @@ public:
 	ClassAd removeOCU(const ClassAd &ocu_ad, CondorError *errstack);
 	std::vector<ClassAd> queryOCU(const ClassAd &ocu_ad, CondorError *errstack);
 
+	// Slot bundle requests: N slots matching one resource request, held by the
+	// schedd as idle claims.
+	// The request ad must contain BundleNumRequested and the Request_* attrs.
+	ClassAd createBundle(const ClassAd &bundle_ad, CondorError *errstack);
+	ClassAd removeBundle(const ClassAd &bundle_ad, CondorError *errstack);
+	std::vector<ClassAd> queryBundle(const ClassAd &bundle_ad, CondorError *errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
