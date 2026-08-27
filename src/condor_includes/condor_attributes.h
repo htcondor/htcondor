@@ -412,6 +412,26 @@
 #define ATTR_OCU_NAME  "OCUName"
 #define ATTR_OCU_WANTED  "OCUWanted"
 #define ATTR_OCU_STATE  "OCUState"
+#define ATTR_IS_BUNDLE_REQUEST  "IsBundleRequest" // marks a resource request as a slot-bundle request
+// Job attr ("+IsBundle = true"): this job's cluster is a slot bundle.  Also the
+// startd slot attr saying the claim on that slot is held for a slot bundle.
+#define ATTR_IS_BUNDLE  "IsBundle"
+#define ATTR_IS_BUNDLE_SUBMITTER  "IsBundleSubmitter" // submitter-ad marker: the reserved slot-bundle submitter
+#define ATTR_BUNDLE_ID  "BundleId"                // <schedd-name>#<cluster> identifying the bundle
+#define ATTR_BUNDLE_NUM_REQUESTED  "BundleNumRequested" // cluster ad: N, the slots the bundle wants
+#define ATTR_BUNDLE_NUM_SATISFIED  "BundleNumSatisfied" // cluster ad: claims already held for the bundle
+// The reserved submitter under which the schedd advertises/negotiates slot
+// bundle requests (best priority, off-the-books).  Use isBundleSubmitter()
+// (classad_helpers.h) to test a name against it; the negotiator keys on the
+// ATTR_IS_BUNDLE_SUBMITTER marker rather than the name.
+#define BUNDLE_SUBMITTER_NAME    "condor_bundle"
+// Negotiator ad: current slot-bundle state, as the negotiator sees it.  These
+// describe bundles being filled right now, not a per-cycle history (for that
+// see the ATTR_LAST_NEGOTIATION_CYCLE_*BUNDLE* attributes below).
+#define ATTR_BUNDLES_IN_PROGRESS  "BundlesInProgress"       // bundles the negotiator is watching fill
+#define ATTR_BUNDLE_SLOTS_WANTED  "BundleSlotsWanted"       // slots those bundles still want
+#define ATTR_BUNDLE_SLOTS_MATCHED_TOTAL "BundleSlotsMatchedTotal" // slots matched for bundles since startup
+#define ATTR_BUNDLE_MAX_WAIT_SECONDS "BundleMaxWaitSeconds" // age of the longest-outstanding bundle
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
@@ -1285,6 +1305,12 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE2_CPU_TIME  "LastNegotiationCyclePhase2CpuTime"
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE3_CPU_TIME  "LastNegotiationCyclePhase3CpuTime"
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE4_CPU_TIME  "LastNegotiationCyclePhase4CpuTime"
+// Slot bundles are negotiated in a round of their own at the top of each cycle.
+#define ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_BUNDLES  "LastNegotiationCycleActiveBundles"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SUBMITTERS  "LastNegotiationCycleBundleSubmitters"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED  "LastNegotiationCycleBundleSlotsWanted"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES  "LastNegotiationCycleBundleMatches"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION  "LastNegotiationCycleBundleDuration"
 
 #define ATTR_JOB_MACHINE_ATTRS  "JobMachineAttrs"
 #define ATTR_MACHINE_ATTR_PREFIX  "MachineAttr"

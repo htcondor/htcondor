@@ -292,6 +292,9 @@ class match_rec
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
 	bool is_ocu{false}; // when true, hold forever, hand out to others
+	bool is_bundle{false}; // when true, this claim is held for a slot bundle
+	int  bundle_cluster{-1}; // job cluster of the bundle this claim belongs to
+	bool bundle_counted{false}; // true once this claim was counted as satisfied
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -545,8 +548,46 @@ private:
 	ClassAd owner_ad;
 };
 
+// True if this job asked to join a slot bundle ("+IsBundle = true") and its
+// owner is permitted to create one.  Defined in schedd.cpp.
+bool jobIsBundleJob(JobQueueJob * job);
+
 class JobSets; // forward reference - declared in jobsets.h
 class OCU; // forward reference - declared in qmgmt.h
+
+// A slot bundle: N slots that all match one resource request, held by the
+// schedd as idle claims until all N are in hand, at which point the bundle's
+// jobs are allowed to run on them.
+//
+// A bundle is not created explicitly; it *is* a job cluster whose jobs carry
+// IsBundle = true (a normal submission with "+IsBundle = true").  N is the
+// number of live (idle or running) jobs in the cluster, so the bundle lives
+// exactly as long as its jobs do: as each job leaves the queue its slot is
+// released, and when the last one goes the bundle disappears.
+//
+// The schedd is authoritative: it re-injects each incomplete bundle into the
+// negotiation Resource Request List every cycle with a count of N minus the
+// claims already held, and stops when the bundle is full.
+struct BundleRequest {
+	int cluster = 0;            // the job cluster that *is* this bundle
+	std::string bundle_id;      // <schedd-name>#<cluster>, for display/slot ads
+	std::string owner;          // owner of the bundle's jobs
+	PROC_ID rep_jid{-1,-1};     // a live job of the cluster, used as the
+	                            // resource-request template for negotiating
+	                            // and claiming
+	int num_requested = 0;      // N: live jobs in the cluster == slots wanted
+	int num_satisfied = 0;      // claims currently held (claimed) for this bundle
+	int num_inflight = 0;       // matches granted but not yet claimed (in flight)
+	int census = 0;             // live jobs counted by the in-progress queue walk
+
+	// Slots we still need the negotiator to hand us this cycle.
+	int remaining() const {
+		int r = num_requested - num_satisfied - num_inflight;
+		return r > 0 ? r : 0;
+	}
+	// True once every job of the bundle has a slot waiting for it.
+	bool isComplete() const { return num_satisfied >= num_requested; }
+};
 
 class Scheduler : public Service
 {
@@ -903,6 +944,48 @@ class Scheduler : public Service
 	OCU *getOCU(int ocu_id);
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
+	// Look up a slot bundle by the job cluster that defines it.
+	// Returns nullptr if that cluster is not a bundle.
+	BundleRequest *getBundle(int cluster);
+
+	// A user may have only one slot bundle at a time.  Returns that user's
+	// bundle (ignoring ignore_cluster, if given), or nullptr if they have
+	// none.  The user may be named either as a job's User attribute or as an
+	// owner-record name; both are canonicalized through the user record.
+	BundleRequest *findBundleForUser(const std::string & user, int ignore_cluster = -1);
+
+	// True if this user is permitted to create slot bundles at all; for
+	// anybody else IsBundle is ignored, so they can never have one.
+	bool userMayCreateBundle(const std::string & user);
+
+	// Note a newly committed cluster that is a bundle, so the
+	// one-bundle-per-user rule sees it before the next census does.
+	void registerBundleCluster(JobQueueCluster * clusterad);
+
+	// Bundle discovery.  Bundles are found by walking the job queue in
+	// count_jobs(): beginBundleCensus() clears the per-cycle counts,
+	// countBundleJob() is called for each live job carrying IsBundle, and
+	// endBundleCensus() applies the new sizes -- releasing claims for jobs
+	// that have left the queue and forgetting bundles whose jobs are all gone.
+	void beginBundleCensus();
+	void countBundleJob(JobQueueJob * job);
+	void endBundleCensus();
+
+	// Release (and destroy) up to num_to_release of this bundle's *idle* held
+	// claims; a claim running a job is left for the next census, after its
+	// shadow exits.  Returns the number released.
+	int releaseBundleClaims(BundleRequest & bundle, int num_to_release);
+
+	// Pick an idle job of the bundle's cluster to run on a held bundle claim.
+	// Returns false (leaving the claim idle) while the bundle is incomplete.
+	bool findBundleJobForClaim(match_rec * mrec, PROC_ID & new_job_id);
+
+	// Turn a copy of one of a bundle's job ads into the bundle's resource
+	// request: mark it as a bundle request and attribute the resulting claim
+	// to the reserved bundle submitter.  Used both when negotiating for the
+	// bundle and when claiming a slot it was granted.
+	void stampBundleRequestAd(ClassAd & ad, const BundleRequest & bundle);
+
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
 
@@ -1157,6 +1240,9 @@ private:
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	// Get (creating if need be) the bundle for a job cluster.
+	BundleRequest & makeBundle(int cluster, const OwnerInfo * owner);
+
 	int			command_act_on_ocus(int, Stream* stream);
     ClassAd     act_on_ocu_create(const ClassAd &request);
     ClassAd     act_on_ocu_remove(const ClassAd &request);
@@ -1265,6 +1351,10 @@ private:
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;
+
+	// Slot bundles, keyed by the job cluster that defines them.  The schedd is the
+	// authoritative owner of these.
+	std::map<int, BundleRequest> m_bundles;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;

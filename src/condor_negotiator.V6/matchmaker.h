@@ -41,6 +41,31 @@ typedef struct MapEntry {
 	ClassAd *oldAd;
 } MapEntry;
 
+// Cross-cycle progress tracking for a slot-bundle request the schedd is filling.
+//
+// The negotiator is otherwise stateless about bundles: the schedd re-injects
+// every incomplete bundle into the resource-request list each negotiation
+// cycle, carrying the count of slots it still needs.  This record lets the
+// negotiator recognize the *same* bundle across cycles (keyed by BundleId +
+// schedd) and watch it fill -- how many slots it still wants, how many we
+// matched this cycle, and how many we have matched for it in total -- so it can
+// tell an in-progress bundle from a satisfied one that has stopped injecting.
+struct BundleProgress {
+	std::string bundle_id;       // ATTR_BUNDLE_ID, "<schedd-name>#<cluster>"
+	std::string schedd_name;     // owning schedd (ATTR_SCHEDD_NAME)
+	std::string submitter;       // reserved bundle submitter name
+	int last_remaining = 0;      // slots the schedd last said it still needs
+	int matched_this_cycle = 0;  // slots matched for it in the current cycle
+	int matched_total = 0;       // slots matched for it across all cycles seen
+	long first_cycle = 0;        // negotiation cycle when first observed
+	long last_cycle = 0;         // negotiation cycle when last observed
+	time_t first_seen = 0;
+	time_t last_seen = 0;
+};
+
+// A bundle is identified by (schedd name, bundle id).
+typedef std::pair<std::string, std::string> BundleKey;
+
 /* Disable floating-point equality warnings */
 GCC_DIAG_OFF(float-equal)
 
@@ -191,9 +216,25 @@ class Matchmaker : public Service
                                       double limitUsed, double limitUsedUnclaimed,
                                       double submitterLimit, double submitterLimitUnclaimed, 
                                       double pieLeft, bool only_for_startdrank);
-		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
+		int matchmakingProtocol(ClassAd &request, ClassAd *offer,
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* submitterName, const char* scheddAddr);
+
+		// Slot-bundle progress tracking (see BundleProgress / m_bundle_progress).
+		// Note that a request that is not a bundle request is silently ignored
+		// by both track* methods, so callers need not pre-check.
+		//   trackBundleRequest -- a bundle resource request was seen this cycle.
+		//   trackBundleMatch   -- a bundle resource request was matched to a slot.
+		//   ageBundleProgress  -- at cycle start: reset per-cycle counters and
+		//                         forget bundles that have stopped injecting.
+		//   updateBundleCycleStats -- at cycle end: roll m_bundle_progress up
+		//                         into this cycle's NegotiationCycleStats.
+		//   publishBundleStats -- put the current bundle state on an ad.
+		void trackBundleRequest(const ClassAd &request, const std::string &schedd_name, const std::string &submitter);
+		void trackBundleMatch(const ClassAd &request, const std::string &schedd_name);
+		void ageBundleProgress();
+		void updateBundleCycleStats();
+		void publishBundleStats(ClassAd *ad);
 		void calculateNormalizationFactor (std::vector<ClassAd *> &submitterAds, double &max, double &normalFactor,
 										   double &maxAbs, double &normalAbsFactor);
 
@@ -340,7 +381,10 @@ class Matchmaker : public Service
 		bool ConsiderEarlyPreemption; // if false, do not preempt slots that still have retirement time
 		bool MatchWorkingCmSlots;
 		/// Should the negotiator inform startds of matches?
-		bool want_inform_startd;	
+		bool want_inform_startd;
+		/// Should the negotiator inform startds of slot-bundle matches even
+		/// when want_inform_startd is false?
+		bool want_inform_startd_of_bundle;
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
 		bool MatchPasswordEnabled{false};
@@ -551,6 +595,21 @@ class Matchmaker : public Service
 		#define MAX_NEGOTIATION_CYCLE_STATS 100
 		class NegotiationCycleStats *negotiation_cycle_stats[MAX_NEGOTIATION_CYCLE_STATS];
 		int num_negotiation_cycle_stats;
+
+		// Monotonic negotiation-cycle counter, bumped once at the start of each
+		// cycle.  Used to age out slot-bundle progress records.
+		long m_negotiation_cycle_num{0};
+
+		// Cross-cycle slot-bundle progress, keyed by (schedd name, bundle id).
+		// Populated as the negotiator observes bundle resource requests; an
+		// entry not re-injected for BUNDLE_PROGRESS_STALE_CYCLES cycles is
+		// presumed satisfied (the schedd stopped injecting it) and pruned.
+		std::map<BundleKey, BundleProgress> m_bundle_progress;
+
+		// Slots matched for slot bundles since this negotiator started.  Unlike
+		// m_bundle_progress this is not aged out when a bundle completes, so it
+		// answers "are bundles being used in this pool at all".
+		int m_bundle_slots_matched_total{0};
 
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
