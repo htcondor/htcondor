@@ -5016,6 +5016,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// The special processing for require_cuda_version is in SetRequirements().
 	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
+	// The special processing for [max|min]_condor_version is in SetRequirements().
+	{SUBMIT_KEY_MaxCondorVersion, ATTR_MAX_CONDOR_VERSION, SimpleSubmitKeyword::f_as_string },
+	{SUBMIT_KEY_MinCondorVersion, ATTR_MIN_CONDOR_VERSION, SimpleSubmitKeyword::f_as_string },
 
 	// Dataflow jobs
 	{SUBMIT_KEY_SkipIfDataflow, ATTR_SKIP_IF_DATAFLOW, SimpleSubmitKeyword::f_as_bool },
@@ -5999,6 +6002,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_hsct = false;
+	bool	checks_condor_version = machine_refs.count( ATTR_VERSION );
 
 	if( mightTransfer(JobUniverse) ) {
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
@@ -6624,6 +6628,16 @@ int SubmitHash::SetRequirements()
 				" must be of the form 'x' or 'x.y',"
 				" where x and y are positive integers.\n" );
 			ABORT_AND_RETURN(1);
+		}
+	}
+
+	if(! checks_condor_version) {
+		std::string requiredCondorVersion;
+		if( job->LookupString( ATTR_MIN_CONDOR_VERSION, requiredCondorVersion ) ) {
+			answer += "&& versionGE(split(TARGET.CondorVersion)[1], " ATTR_MIN_CONDOR_VERSION ")";
+		}
+		if( job->LookupString( ATTR_MAX_CONDOR_VERSION, requiredCondorVersion ) ) {
+			answer += "&& versionLT(split(TARGET.CondorVersion)[1], " ATTR_MAX_CONDOR_VERSION ")";
 		}
 	}
 
