@@ -53,11 +53,11 @@ if (WINDOWS)
 		CondorSystrayNotifier.windows.cpp
 		winreg.windows.cpp
 	)
-endif(WINDOWS)
+endif()
 
 if (LINUX)
 	set_source_files_properties(ResAttributes.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-endif(LINUX)
+endif()
 
 
 if (HAVE_BOINC)

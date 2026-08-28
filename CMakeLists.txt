@@ -68,7 +68,7 @@ set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #   cmake ... -DFORCE_PRE_RELEASE:STRING=PRE-RELEASE-NMI
 if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
-endif( FORCE_PRE_RELEASE )
+endif()
 
 set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
@@ -89,7 +89,10 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH
+	${CONDOR_SOURCE_DIR}/build/cmake/macros
+	${CONDOR_SOURCE_DIR}/build/cmake
+)
 
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
@@ -126,7 +129,7 @@ include (TarGz) # Must be after include(CondorPackageConfig)
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif ( WINDOWS )
+endif()
 ##########################################################################
 # we only include the single sub to allow make at two levels.
 # root - includes externals
