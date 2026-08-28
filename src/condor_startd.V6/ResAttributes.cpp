@@ -28,7 +28,6 @@
 
 #include <set>
 #include <algorithm>
-#include <sstream>
 #include <charconv>
 
 #ifdef WIN32

@@ -34,7 +34,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_state.h"
-#include "condor_string.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"
