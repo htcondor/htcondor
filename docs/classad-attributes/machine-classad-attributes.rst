@@ -336,6 +336,21 @@ Machine ClassAd Attributes
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
+:classad-attribute-def:`Healthy`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``min({$(STARTD_HEALTH_EXPRS),1})`` so that
+    it evaluates to 0 if any of the expressions listed in the list evaluates
+    to ``False``.
+
+:classad-attribute-def:`HealthExprs`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``{$(STARTD_HEALTH_EXPRS)}``.
+
+:classad-attribute-def:`HealthFactor`
+    A ClassAd expression configured by the :macro:`STARTD_HEALTH_EXPRS` option.
+    The value will be the expression ``sum(HealthExprs) / N.0``, where N is the
+    size of the HealthExprs list.
+
 :classad-attribute-def:`IsDataSlot`
     When ``True``, the slot is in use by the AP to transfer and then store
     common files, rather than run a job.
@@ -1259,6 +1274,16 @@ Machine ClassAd Attributes
     version number (currently 0, 1, or 2) for a Windows operating
     system. This attribute only exists on Windows machines.
 
+:classad-attribute-def:`WithinResourceLimits`
+    A ClassAd expression which compares each of provisioned
+    resources such as :ad-attr:`Cpus` and :ad-attr:`Memory` to the `Request*`
+    attributes of the job. It evaluates to ``True`` when each of Requested
+    values is less than or equal to the slot value.  The value is generated
+    by the *condor_startd* so that all resource types defined in the
+    Startd configuration are checked. It will include custom resource types
+    that are declared in the Startd configuration using :macro:`MACHINE_RESOURCE_<name>`
+    and related configuration. This attribute is used by the :ad-attr:`Requirements`
+    expression.
 
 In addition, there are a few attributes that are automatically inserted
 into the machine ClassAd whenever a resource is in the Claimed state:

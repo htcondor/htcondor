@@ -24,6 +24,11 @@ section.
     to replace it with one that will generate a better rank for the
     *condor_startd* daemon, or a user with a higher priority.
 
+:macro_def:`STARTD_HEALTH_EXPRS`
+    A comma separated list of expressions that must each evaluate to ``True`` in
+    order for the machine to be considered healthy. A machine that is not
+    healthy will not start any HTCondor job.
+
 :macro-def:`DEFAULT_DRAINING_START_EXPR`
     An alternate :macro:`START` expression to use while draining when the
     drain command is sent without a ``-start`` argument.  When this
@@ -405,6 +410,29 @@ section.
 
 :macro-def:`SLOT<N>_STARTD_ATTRS`
     Like the above, but only applies to the numbered slot.
+
+:macro-def:`SLOT_REQUIREMENTS_CLAUSES`
+    A list of startd attributes that should be included in the :ad-attr:`Requirements` expression of
+    each slot.  :ad-attr:`START`, and :ad-attr:`WithinResourceLimits` are always included in
+    Requirements and do not need to be listed here. Defaults to :ad-attr:`Healthy` when
+    there are :macro:`STARTD_HEALTH_EXPRS` configured.
+
+    Example:
+
+    .. code-block:: condor-config
+
+          # jobs must have a project name and type 2 slots are reserved for project bluebook
+          SLOT_REQUIREMENTS_CLAUSES += ProjectRequirement
+          ProjectRequirement = TARGET.ProjectName isnt undefined
+          SLOT_TYPE_2_ProjectRequirement = TARGET.ProjectName == "bluebook"
+
+:macro-def:`PSLOT_REQUIREMENTS_CLAUSES`
+    A list of attributes that should be included in the :ad-attr:`Requirements` expression of
+    each partitionable slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
+
+:macro-def:`DSLOT_REQUIREMENTS_CLAUSES`
+    A list of Attributes that should be included in the :ad-attr:`Requirements` expression of
+    each dynamic slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
 
 :macro-def:`STARTD_DEBUG`
     This macro (and other settings related to debug logging in the

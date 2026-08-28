@@ -1019,12 +1019,18 @@ submitting their jobs to HTCondor).  Understanding the configuration requires
 an understanding of ClassAd expressions, which are detailed in the
 :doc:`/classads/classad-mechanism` section.
 
-The START Expression
-''''''''''''''''''''
+START and other Requirements expressions
+''''''''''''''''''''''''''''''''''''''''
+
+The ``Requirements`` expression is used for matching machines with jobs; it is set
+to reference other expressions that are controlled by configuration.
+All of the attributes referenced by ``Requirements`` must evaluate to ``True`` in order for a job to match.
+``Requirements`` will reference :macro:`START`, :ad-attr:`Healthy`,
+and :ad-attr:`WithinResourceLimits`.
 
 The most important expression to the *condor_startd* is the
 :macro:`START` expression. This expression describes the
-conditions that must be met for a machine or slot to run a job. This
+policy conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
 :ad-attr:`KeyboardIdle` and :ad-attr:`LoadAvg`) and attributes in a job ClassAd (such
 as :ad-attr:`Owner`, :ad-attr:`ImageSize`, and :ad-attr:`Cmd`, the name of the executable the
@@ -1036,14 +1042,12 @@ role in determining the state and activity of a machine.
     policies; see information on policy templates here:
     :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
 
-
-The ``Requirements`` expression is used for matching machines with jobs.
-
-In situations where a machine wants to make itself unavailable for
-further matches, the ``Requirements`` expression is set to ``False``.
-When the :macro:`START` expression locally evaluates to ``True``, the machine
-advertises the ``Requirements`` expression as ``True`` and does not
-publish the :macro:`START` expression.
+Often there are resources like shared a file system that are needed to run jobs and that
+can fail or be termporarily unavaible.  The :ad-attr:`Healthy` expression is meant
+to represent the availability of these global resources. When the :ad-attr:`Healthy` expression
+does not evaluate to ``True``, ``Requirements`` does not evaluate to ``True`` and no
+job will match. In older configurations, ``START`` was used for these health check conditions
+because :ad-attr:`Health` was not available.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the *condor_negotiator* to see if there is
@@ -1096,6 +1100,74 @@ priority, interactive response on the machines will not suffer. A
 machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
+
+The Healthy Expression
+''''''''''''''''''''''
+
+The :ad-attr:`Healthy` attribute consists of a list of expressions that reference other
+attributes of the *condor_startd* each of which indicates the result of a health check.
+All heath check expressions must evaluate to ``True`` or non-zero in order for the overall
+:ad-attr:`Healthy` expression to be ``True``.  When :ad-attr:`Healthy` is not ``True`` no job will match.
+
+The list of health check expressions is configured by adding comma separated expressions
+to the :macro:`STARTD_HEALTH_EXPRS`.  These expressions will normally reference attributes
+set either by the configuration or by :macro:`STARTD_CRON_` scripts.  It is generally
+a good idea to force attributes referenced by these expressions to be *condor_startd* attributes
+by using the ``MY.`` prefix. 
+
+    .. code-block:: condor-config
+
+        # Two health checks:
+        #  PreventJobsReason is an admin controlled attribute set by config
+        #  SHARED_FS_MOUNTED is set by a STARTD_CRON script that is not shown in this example
+        STARTD_HEALTH_EXPRS = size(MY.PreventJobsReason ?: "") == 0, MY.SHARED_FS_MOUNTED ?: false
+
+        # Admins should configure PreventJobsReason to a string and reconfig to disable all new job starts.
+        STARTD_ATTRS = $(STARTD_ATTRS), PreventJobsReason
+        PreventJobsReason =
+        #PreventJobsReason = "Down for maintenance by bob"
+
+Composing the list of health check expressions over multiple configuration files is simplified by the new ``+,=``
+feature of the configuration language.  Using this new language feature, the above example could be written
+
+    .. code-block:: condor-config
+
+        # Add PreventJobsReason health expression
+        #
+        STARTD_HEALTH_EXPRS +,= size(MY.PreventJobsReason ?: "") == 0
+        STARTD_ATTRS += PreventJobsReason
+
+        # Add SHARED_FS_MOUNTED health expression.
+        # SHARED_FS_MOUNTED will be set by STARTD_CRON script configured elsewhere
+        #
+        STARTD_HEALTH_EXPRS +,=  MY.SHARED_FS_MOUNTED ?: false
+
+        # Admins should configure PreventJobsReason to a string and reconfig to disable all new job starts.
+        PreventJobsReason =
+
+Optional Requirements clauses
+''''''''''''''''''''''''''''''''''''''''''
+
+In addition to :macro:`START`, :ad-attr:`Healthy` and :ad-attr:`WithinResourceLimits` additional
+attribute references can be added to the `Requirements` expression of the partitionable slots by
+adding the attributes names to :macro:`PSLOT_REQUIREMENTS_CLAUSES`. Attributes can be added to
+the dynamic slot `Requirements` expression by adding the attribute names to :macro:`DSLOT_REQUIREMENTS_CLAUSES`.
+
+These configuration macros were added in 25.10 to simplify and clairify the use of policy expressions
+that would formerly have been be added to the :macro:`START` expression but which must evaluate only
+in partitionable or only in dynamic slots to work correctly.
+
+For example, an expression that is intended to restrict a dynamic slot that has GPUs to only match jobs that
+request the  same number of GPUs is difficult to express in the :macro:`START` expression, but fairly
+simple to write as a expression that exists only in the dynamic slot.
+
+    .. code-block:: condor-config
+
+        # A dynamic slot with GPUs should only match jobs that request that many GPUs
+        #
+        DSLOT_REQUIREMENTS_CLAUSES += JobFillsSlot
+        JobFillsSlot = MY.GPUs?:0 == TARGET.RequestGpus?:0
+
 
 The RANK Expression
 '''''''''''''''''''
