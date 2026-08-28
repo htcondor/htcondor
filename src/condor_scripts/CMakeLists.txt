@@ -34,7 +34,7 @@ install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/delta.fragmen
 
 if (WINDOWS)
   install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-endif(WINDOWS)
+endif()
 
 if (NOT WINDOWS)
 
@@ -57,7 +57,7 @@ if (NOT WINDOWS)
     if (NOT CONDOR_PACKAGE_BUILD)
         install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ./sbin/condor_install \${CMAKE_INSTALL_PREFIX}/condor_install)" )
         install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ./sbin/condor_configure \${CMAKE_INSTALL_PREFIX}/condor_configure)" )
-    endif(NOT CONDOR_PACKAGE_BUILD)
+    endif()
 
     install ( FILES condor_ssh sshd.sh get_orted_cmd.sh orted_launcher.sh set_batchtok_cmd cred_producer_krb DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
@@ -72,8 +72,8 @@ if (NOT WINDOWS)
         install ( FILES common-cloud-attributes-aws.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_aklog condor_credmon_krb DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_docker_pat_producer DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-    endif(LINUX)
+    endif()
 
     install ( FILES condor_qsub DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-endif (NOT WINDOWS)
+endif()

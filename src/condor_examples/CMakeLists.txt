@@ -29,7 +29,7 @@ install(FILES		master_shutdown_script.sh
 		DESTINATION	"${C_CONFIGD}/.."
 		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
 )
-endif (RPM_SYSTEM_NAME)
+endif()
 
 # Only install the small shadow configuration on RHEL
 if (RPM_SYSTEM_NAME AND (${BIT_MODE} MATCHES "32"))
@@ -160,4 +160,4 @@ else()
 			DESTINATION	"${C_ETC}")
 
 
-endif(NOT WINDOWS)
+endif()
