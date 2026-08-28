@@ -94,6 +94,11 @@ public:
 	std::string machine;
 	std::string ip;
 	std::string cluster;
+	// Name of the pool this metric's daemon ad came from: the collector name
+	// stashed into the ad when several pools are monitored, otherwise the
+	// collector host of our own pool.  Exposed to label expressions as
+	// MetricPool; for an aggregate metric it is also the machine.
+	std::string pool;
 	bool derivative;
 	std::vector<std::string> export_systems;
 	// Fully resolved Prometheus label set for this metric: the pool-wide
@@ -251,6 +256,19 @@ class StatsD: public Service {
 
 	// Returns the collector host name.
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
+
+	// Copy the per-cycle state derived from the collector query (the default
+	// aggregate host and the collector host->IP mappings) from src into this
+	// instance.  MetricD is the only instance that queries the collector, but
+	// its backends are the ones that evaluate metrics, so MetricD must hand
+	// this state over at the start of each publication cycle -- otherwise
+	// aggregate metrics resolve no machine name at all.  Note that per-pool
+	// aggregate names under MONITOR_MULTIPLE_COLLECTORS / MONITOR_COLLECTOR
+	// do NOT come through here: those ride along in each daemon ad as
+	// ATTR_STASH_COLLECTOR_NAME and so survive the hand-off on their own.
+	// This also resets the receiver's IP map each cycle, which is what keeps
+	// it from accumulating stale entries for daemons that have gone away.
+	void adoptCollectorState(StatsD const &src);
 
 	// Apply an aggregate function to a data point.
 	void addToAggregateValue(Metric const &metric);

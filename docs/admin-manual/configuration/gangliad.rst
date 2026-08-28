@@ -279,9 +279,11 @@ is set.
     configuration.
 
     Per-metric labels supplied via the ``PrometheusLabels`` keyword override
-    defaults that share the same label name. The label-name rules and the
-    value-evaluation rules described under ``PrometheusLabels`` apply here
-    as well.
+    defaults that share the same label name. The label-name rules, the
+    value-evaluation rules, and the ``MetricMachine`` / ``MetricPool``
+    pseudo-attributes described under ``PrometheusLabels`` apply here as well,
+    so a pool-wide ``[ pool = MetricPool ]`` labels every sample with the
+    central manager of the pool it came from.
 
 :macro-def:`PROMETHEUS_WANT_RESET_METRICS`
     Per-backend reset-metrics flag. Defaults to ``False``.
@@ -295,8 +297,8 @@ Metric-Definition Keywords
 --------------------------
 
 The following keywords may appear inside individual metric definitions
-read from the metric config dir. They are silently ignored in legacy
-gangliad mode.
+read from the metric config dir. Except where noted below, they have no
+effect in legacy gangliad mode.
 
 ``ExportMetric``
     A string ClassAd expression that evaluates to a comma-separated list
@@ -304,6 +306,13 @@ gangliad mode.
     are ``"ganglia"`` and ``"prometheus"``. If empty or omitted (and no
     pool-wide default is set via :macro:`METRICD_DEFAULT_EXPORT_METRIC`),
     the metric is exported to every enabled backend.
+
+    This keyword also applies in legacy gangliad mode, where the only
+    backend is Ganglia: a metric whose ``ExportMetric`` is non-empty and
+    does not name ``"ganglia"`` is not published at all. An empty or
+    omitted ``ExportMetric`` publishes normally. Note that
+    :macro:`METRICD_DEFAULT_EXPORT_METRIC` is *not* consulted in legacy
+    mode, so in that mode this keyword can only be set per metric.
 
 ``PrometheusLabels``
     A ClassAd whose attribute names are Prometheus label names and whose
@@ -368,6 +377,37 @@ gangliad mode.
     than within the label ad, so ``machine = Machine`` means "the ``Machine``
     attribute of the daemon ad" and is not a self-reference. One consequence
     is that label expressions cannot refer to one another.
+
+    Two pseudo-attributes are supplied by *condor_metricd* itself and may be
+    used in any label expression:
+
+    ``MetricMachine``
+        The host this metric is associated with -- the same value the Ganglia
+        backend uses as the spoof host, as described under the ``Machine``
+        keyword. For a metric gathered from a single daemon this is that
+        daemon's name; for an aggregate metric it is the pool's central
+        manager.
+
+    ``MetricPool``
+        The name of the pool the metric came from: the central manager of the
+        pool whose *condor_collector* supplied the daemon ad. When several
+        pools are being monitored via :macro:`MONITOR_MULTIPLE_COLLECTORS` or
+        :macro:`MONITOR_COLLECTOR`, this is the name configured for that pool,
+        which is what makes a per-pool label correct on aggregate metrics.
+
+    On an aggregate metric ``MetricMachine`` and ``MetricPool`` are the same
+    value; on a non-aggregate metric they usually differ.
+
+    .. warning::
+
+        Prefer ``MetricMachine`` over a bare ``Machine`` reference when
+        labeling an **aggregate** metric. An aggregate is published from the
+        metric built for whichever contributing daemon ad happened to be
+        processed first, so a label such as ``machine = Machine`` resolves to
+        an arbitrary one of the daemons that fed the aggregate, and which one
+        may change from cycle to cycle. ``MetricMachine`` and ``MetricPool``
+        are well defined for aggregates; attributes read straight from the
+        daemon ad are not.
 
 ``Counter``
     A boolean. Synonym for ``Derivative``. Applies in both modes.

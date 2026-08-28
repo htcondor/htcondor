@@ -74,6 +74,19 @@ MetricD::newMetric(Metric const * /*unused*/ )
 void
 MetricD::publishMetricsFromAds(std::vector<ClassAd> &daemon_ads)
 {
+	// MetricD is the only instance that talks to the collector, so the state
+	// that StatsD::mapCollectorIPs() derives from that query lives here, while
+	// the backends below are what actually evaluate metrics.  Hand it over
+	// before they run: without it an aggregate metric in a single-pool setup
+	// resolves an empty machine name, since Metric::evaluateDaemonAd() asks
+	// its own StatsD for getDefaultAggregateHost().  When several pools are
+	// being monitored via MONITOR_MULTIPLE_COLLECTORS or MONITOR_COLLECTOR,
+	// the per-pool name instead travels in each daemon ad as
+	// ATTR_STASH_COLLECTOR_NAME and takes precedence over this default, so
+	// per-pool aggregation is unaffected either way.
+	if (m_ganglia_active)    m_ganglia.adoptCollectorState(*this);
+	if (m_prometheus_active) m_prometheus.adoptCollectorState(*this);
+
 	if (m_ganglia_active)    m_ganglia.publishMetricsFromAds(daemon_ads);
 	if (m_prometheus_active) m_prometheus.publishMetricsFromAds(daemon_ads);
 }

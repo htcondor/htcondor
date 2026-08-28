@@ -114,8 +114,8 @@ Metric
 
 | Keyword | Type | Description |
 |---|---|---|
-| `ExportMetric` | string expression | Comma-separated backend names: `"ganglia"`, `"prometheus"`, `"ganglia, prometheus"`. Empty/omitted = all enabled backends. Pool-wide default via `METRICD_DEFAULT_EXPORT_METRIC`. In legacy mode the field is parsed but never read (GangliaD's `publishMetric()` check passes when `export_systems` is empty). |
-| `PrometheusLabels` | nested ClassAd | Attribute names are label names; attribute values are expressions evaluated against the daemon ad, e.g. `[ machine = Machine ]`. Merged with `PROMETHEUS_DEFAULT_LABELS`; per-metric overrides same-key defaults. `UNDEFINED`/`ERROR` omits the label. Ignored in legacy mode. |
+| `ExportMetric` | string expression | Comma-separated backend names: `"ganglia"`, `"prometheus"`, `"ganglia, prometheus"`. Empty/omitted = all enabled backends. Pool-wide default via `METRICD_DEFAULT_EXPORT_METRIC` (modern mode only — not consulted in legacy mode). In legacy mode the field is still parsed and honored: `GangliaD::publishMetric()` drops any metric whose non-empty `export_systems` does not name `"ganglia"`. |
+| `PrometheusLabels` | nested ClassAd | Attribute names are label names; attribute values are expressions evaluated against the daemon ad, e.g. `[ machine = Machine ]`. Metricd also supplies the pseudo-attributes `MetricMachine` (Metric::machine) and `MetricPool` (the pool the ad came from), which are the well-defined choices for aggregate metrics. Merged with `PROMETHEUS_DEFAULT_LABELS`; per-metric overrides same-key defaults. `UNDEFINED`/`ERROR` omits the label. Ignored in legacy mode. |
 | `Counter` | boolean | Synonym for `Derivative`. Applies in both modes (harmless additive). |
 
 ---

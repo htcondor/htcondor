@@ -48,6 +48,14 @@
 #define ATTR_PROMETHEUS_LABELS "PrometheusLabels"
 #define ATTR_COUNTER "Counter"
 
+// Pseudo-attributes that metricd itself supplies when evaluating a label
+// expression.  They are not attributes of any daemon ad; they carry the
+// metric's own resolved identity into the label, so that a label can say
+// what Metric::machine says rather than only what the sampled daemon ad
+// says.  See Metric::evaluateLabelAd().
+#define ATTR_METRIC_MACHINE "MetricMachine"
+#define ATTR_METRIC_POOL "MetricPool"
+
 Metric::Metric():
 	derivative(false),
 	zero_value(false),
@@ -317,6 +325,20 @@ labelValueToString(classad::Value const &val,std::string &result)
 void
 Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,std::map<std::string,std::string> &result) const
 {
+	// Label expressions are evaluated against a small overlay ad whose parent
+	// scope is the daemon ad, so an unqualified reference finds a pseudo-
+	// attribute here if there is one and otherwise falls through to the
+	// daemon ad.  The overlay holds no copy of the daemon ad, so this costs
+	// nothing per ad; EvalState::SetRootScope() walks to the top of the
+	// parent chain, which keeps the daemon ad reachable.
+	//
+	// Only non-empty values are inserted: an unresolvable pseudo-attribute
+	// should evaluate to UNDEFINED and drop its label, not emit an empty one.
+	classad::ClassAd overlay;
+	if( !machine.empty() ) overlay.InsertAttr(ATTR_METRIC_MACHINE,machine);
+	if( !pool.empty() )    overlay.InsertAttr(ATTR_METRIC_POOL,pool);
+	overlay.SetParentScope(&daemon_ad);
+
 	for( auto const &[label_name,label_expr] : label_ad ) {
 		if( !label_expr ) continue;
 
@@ -324,15 +346,15 @@ Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const 
 		// just skip them rather than emitting invalid exposition text.
 		if( !isValidLabelName(label_name) ) continue;
 
-		// Evaluate each label expression directly against the daemon ad
-		// rather than in label_ad's own scope.  ClassAd attribute lookup is
-		// case-insensitive, so evaluating in label_ad's scope would turn the
-		// most natural thing an admin can write -- machine = Machine -- into
-		// a circular self-reference.  The consequence is that labels cannot
-		// refer to one another, which is intentional.
-		label_expr->SetParentScope(&daemon_ad);
+		// Evaluate in the overlay/daemon-ad scope rather than in label_ad's
+		// own scope.  ClassAd attribute lookup is case-insensitive, so
+		// evaluating in label_ad's scope would turn the most natural thing an
+		// admin can write -- machine = Machine -- into a circular
+		// self-reference.  The consequence is that labels cannot refer to one
+		// another, which is intentional.
+		label_expr->SetParentScope(&overlay);
 		classad::Value val;
-		bool ok = daemon_ad.EvaluateExpr(label_expr,val);
+		bool ok = overlay.EvaluateExpr(label_expr,val);
 		label_expr->SetParentScope(&label_ad);
 
 		if( !ok ) {
@@ -551,7 +573,6 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	std::string export_str;
 	if( !evaluateOptionalString(ATTR_EXPORT_METRIC,export_str,metric_ad,daemon_ad,regex_groups) ) return false;
 	export_systems = split(export_str);
-	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd ? statsd->defaultLabelAd() : NULL,metric_ad,daemon_ad,regex_groups,regex_attr);
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
@@ -627,10 +648,18 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
         }
     }
 
+	// Which pool this daemon ad came from.  When several pools are monitored
+	// (MONITOR_MULTIPLE_COLLECTORS / MONITOR_COLLECTOR) the name was stashed
+	// into the ad as it came back from that pool's collector; otherwise it is
+	// the collector host of our own pool.
+	if( !daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,pool) ) {
+		pool = statsd ? statsd->getDefaultAggregateHost() : "";
+	}
+
 	if( isAggregateMetric() ) {
-		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,machine)) {
-			machine = statsd->getDefaultAggregateHost();
-		}
+		// An aggregate is not associated with any single daemon, so it is
+		// published against the pool's central manager.
+		machine = pool;
 	}
 	else {
 		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
@@ -653,6 +682,10 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 
 	statsd->getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
+
+	// Labels are evaluated last so that they can refer to the metric's own
+	// resolved machine and pool, which are only settled above.
+	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd ? statsd->defaultLabelAd() : NULL,metric_ad,daemon_ad,regex_groups,regex_attr);
 
 	if ( isAggregateMetric() && 
 		 derivative && 
@@ -993,6 +1026,12 @@ StatsD::base_initAndReconfig(char const *service_name, bool as_backend)
 		// In addition to the projection attributes discovered by ParseMetrics, we always want
 		// these metrics since we look them up during metric evaluation, for example the daemon name
 		// so we know which machine to associate the metric with.
+		// MetricMachine / MetricPool are supplied by metricd itself when it
+		// evaluates a label expression; they are not collector attributes, so
+		// asking the collector for them would just be noise in the query.
+		m_projection_references.erase(ATTR_METRIC_MACHINE);
+		m_projection_references.erase(ATTR_METRIC_POOL);
+
 		m_projection_references.insert(ATTR_TYPE);
 		m_projection_references.insert(ATTR_MY_TYPE);
 		m_projection_references.insert(ATTR_TARGET_TYPE);
@@ -1844,6 +1883,17 @@ StatsD::mapDaemonIPs(std::vector<ClassAd> &daemon_ads) {
 			m_daemon_ips.insert( std::map< std::string,std::string >::value_type(name,ip) );
 		}
 	}
+}
+
+void
+StatsD::adoptCollectorState(StatsD const &src) {
+	// See the comment on the declaration in statsd.h.  The assignment (rather
+	// than a merge) is deliberate: it gives this instance a fresh snapshot
+	// each cycle, so m_daemon_ips does not grow without bound or keep serving
+	// the IP a daemon had the first time we ever saw it.  mapDaemonIPs() then
+	// layers this cycle's daemon ads on top.
+	m_default_aggregate_host = src.m_default_aggregate_host;
+	m_daemon_ips = src.m_daemon_ips;
 }
 
 void

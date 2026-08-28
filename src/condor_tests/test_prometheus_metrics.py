@@ -23,6 +23,10 @@ import time
 
 from contextlib import contextmanager
 
+import pytest
+
+import htcondor2 as htcondor
+
 from ornithology import (
     config, standup, action,
     Condor,
@@ -49,6 +53,18 @@ def _prom_sample_value(prom_text, sample_name):
             except (IndexError, ValueError):
                 return None
     return None
+
+
+def _ganglia_machine(log_text, metric_name):
+    # Return the "machine=" field of the Ganglia noop publish line for
+    # metric_name, i.e. the value of Metric::machine, or None if the metric
+    # was never published to Ganglia. An aggregate metric with no resolved
+    # machine logs "machine= <>", which yields "".
+    line = _ganglia_publish_line(log_text, metric_name)
+    if line is None:
+        return None
+    m = re.search(r", machine=(\S*) <", line)
+    return m.group(1) if m is not None else None
 
 
 def _ganglia_publish_line(log_text, metric_name):
@@ -165,6 +181,21 @@ METRIC_DEFS = r"""
   PrometheusLabels = "machine=notalabel";
 ]
 [
+  Name = "machine_label_nonaggregate";
+  Value = 31;
+  Desc = "Non-aggregate metric labeled with MetricMachine and MetricPool";
+  TargetType = "Scheduler";
+  PrometheusLabels = [ machine = MetricMachine; metric_pool = MetricPool ];
+]
+[
+  Name = "machine_label_aggregate";
+  Value = 37;
+  Desc = "SUM aggregate metric labeled with MetricMachine and MetricPool";
+  TargetType = "Scheduler";
+  Aggregate = "SUM";
+  PrometheusLabels = [ machine = MetricMachine; metric_pool = MetricPool ];
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -216,6 +247,26 @@ def prom_file_contents(test_dir, condor_with_metricd):
                 break
         time.sleep(2)
     return contents
+
+
+@action
+def schedd_ad(condor_with_metricd):
+    # The schedd is the TargetType of every metric in METRIC_DEFS, so its ad is
+    # the one the label expressions are evaluated against.
+    ads = condor_with_metricd.status(
+        ad_type=htcondor.AdTypes.Schedd, projection=["Machine", "Name"]
+    )
+    assert len(ads) >= 1
+    return ads[0]
+
+
+@action
+def collector_ad(condor_with_metricd):
+    ads = condor_with_metricd.status(
+        ad_type=htcondor.AdTypes.Collector, projection=["Machine", "Name"]
+    )
+    assert len(ads) >= 1
+    return ads[0]
 
 
 @action
@@ -412,6 +463,79 @@ class TestPrometheusMetrics:
 
     def test_string_valued_labels_reported_at_config_time(self, ganglia_log_contents):
         assert "must be a ClassAd of label expressions" in ganglia_log_contents
+
+    # --- MetricMachine and MetricPool in label expressions ------------------
+    #
+    # A label expression normally sees only the daemon ad, so it cannot reach
+    # the metric's own identity: Metric::machine (the "host associated with
+    # this metric", which Ganglia publishes as the spoof host) and the pool
+    # the ad came from. metricd supplies those to label expressions as the
+    # MetricMachine and MetricPool pseudo-attributes.
+    #
+    # MetricMachine differs between the two kinds of metric: a non-aggregate
+    # Scheduler metric is associated with the schedd daemon, an aggregate with
+    # the pool's central manager. MetricPool is the central manager either way,
+    # so on an aggregate the two coincide.
+
+    def test_metric_machine_label_on_nonaggregate(self, prom_file_contents, schedd_ad):
+        labels = self._labels(prom_file_contents, "machine_label_nonaggregate")
+        assert labels is not None
+        assert 'machine="{}"'.format(schedd_ad["Name"]) in labels
+
+    def test_metric_pool_label_on_nonaggregate(self, prom_file_contents, collector_ad):
+        labels = self._labels(prom_file_contents, "machine_label_nonaggregate")
+        assert 'metric_pool="{}"'.format(collector_ad["Machine"]) in labels
+
+    def test_nonaggregate_machine_and_pool_labels_differ(
+        self, prom_file_contents, schedd_ad, collector_ad
+    ):
+        # The whole point of having both: on a non-aggregate metric the daemon
+        # and the central manager are different things.
+        if schedd_ad["Name"] == collector_ad["Machine"]:
+            pytest.skip("schedd Name and collector Machine coincide in this pool")
+        labels = self._labels(prom_file_contents, "machine_label_nonaggregate")
+        machine = re.search(r'\bmachine="([^"]*)"', labels).group(1)
+        metric_pool = re.search(r'\bmetric_pool="([^"]*)"', labels).group(1)
+        assert machine != metric_pool
+
+    def test_metric_machine_label_on_aggregate_is_central_manager(
+        self, prom_file_with_aggregate, collector_ad
+    ):
+        # An aggregate is not associated with any one daemon, so MetricMachine
+        # is the central manager rather than whichever daemon ad happened to be
+        # first into the aggregate group.
+        labels = self._labels(prom_file_with_aggregate, "machine_label_aggregate")
+        assert labels is not None
+        assert 'machine="{}"'.format(collector_ad["Machine"]) in labels
+
+    def test_aggregate_machine_and_pool_labels_agree(self, prom_file_with_aggregate):
+        labels = self._labels(prom_file_with_aggregate, "machine_label_aggregate")
+        machine = re.search(r'\bmachine="([^"]*)"', labels).group(1)
+        metric_pool = re.search(r'\bmetric_pool="([^"]*)"', labels).group(1)
+        assert machine == metric_pool
+
+    def test_metric_machine_label_matches_what_ganglia_publishes(
+        self, prom_file_contents, prom_file_with_aggregate, ganglia_log_with_aggregate
+    ):
+        # MetricMachine must be the same value Ganglia uses as the spoof host
+        # for the same metric; that equivalence is the reason the pseudo-
+        # attribute exists.
+        for name, prom_text in (
+            ("machine_label_nonaggregate", prom_file_contents),
+            ("machine_label_aggregate", prom_file_with_aggregate),
+        ):
+            labels = self._labels(prom_text, name)
+            label_machine = re.search(r'\bmachine="([^"]*)"', labels).group(1)
+            assert label_machine == _ganglia_machine(ganglia_log_with_aggregate, name)
+
+    def test_bare_machine_still_means_the_daemon_ad_attribute(
+        self, prom_file_contents, schedd_ad
+    ):
+        # prometheus_only_test_jobs uses [ machine = Machine ]. An unqualified
+        # reference must keep resolving against the daemon ad; only the
+        # MetricMachine / MetricPool names are supplied by metricd.
+        labels = self._labels(prom_file_contents, "prometheus_only_test_jobs")
+        assert 'machine="{}"'.format(schedd_ad["Machine"]) in labels
 
     def test_counter_gets_total_suffix(self, prom_file_contents):
         assert "test_bytes_transferred_bytes_total" in prom_file_contents
