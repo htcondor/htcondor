@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include <set>
 #include <string>
-#include <fstream>
 #include <filesystem>
 #include <optional>
 

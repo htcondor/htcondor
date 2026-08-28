@@ -19,6 +19,7 @@
 
 #include "node.h"
 #include "condor_debug.h"
+#include "basename.h"
 #include "dag.h"
 #include "directory_util.h"
 
