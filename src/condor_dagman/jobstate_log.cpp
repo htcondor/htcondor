@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,12 +18,12 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "debug.h"
 #include "jobstate_log.h"
 #include "dagman_main.h"
+#include "debug.h"
 
-	// The names of the pseudo-events we're going to write (for "real"
-	// events, we use the event names defined in condor_event.h).
+// The names of the pseudo-events we're going to write (for "real"
+// events, we use the event names defined in condor_event.h).
 static const char *JOB_SUCCESS_NAME = "JOB_SUCCESS";
 static const char *JOB_FAILURE_NAME = "JOB_FAILURE";
 static const char *PRE_SCRIPT_STARTED_NAME = "PRE_SCRIPT_STARTED";
@@ -40,39 +40,35 @@ static const char *RECOVERY_FINISHED_NAME = "RECOVERY_FINISHED";
 static const char *RECOVERY_FAILURE_NAME = "RECOVERY_FAILURE";
 static const char *SUBMIT_FAILURE_NAME = "SUBMIT_FAILURE";
 
-	// Default HTCondor ID to use to check for invalid IDs.
+// Default HTCondor ID to use to check for invalid IDs.
 static const CondorID DEFAULT_CONDOR_ID;
 
 //---------------------------------------------------------------------------
-JobstateLog::JobstateLog()
-{
+JobstateLog::JobstateLog() {
 	_jobstateLogFile = NULL;
 	_outfile = NULL;
 	_lastTimestampWritten = 0;
 }
 
 //---------------------------------------------------------------------------
-JobstateLog::~JobstateLog()
-{
-	free( _jobstateLogFile );
-	if ( _outfile ) {
-		fclose( _outfile );
+JobstateLog::~JobstateLog() {
+	free(_jobstateLogFile);
+	if (_outfile) {
+		fclose(_outfile);
 		_outfile = NULL;
 	}
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::Flush()
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::Flush() {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
-	if ( fflush( _outfile ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"Error flushing output to jobstate log file %s.\n",
-					_jobstateLogFile );
+	if (fflush(_outfile) != 0) {
+		debug_printf(DEBUG_QUIET,
+					 "Error flushing output to jobstate log file %s.\n",
+					 _jobstateLogFile);
 		main_shutdown_graceful();
 	}
 }
@@ -94,32 +90,30 @@ JobstateLog::Flush()
 // in recovery mode exactly match how they were output in "non-recovery"
 // mode, so we can compare timestamps, and, if the timestamp matches
 // the last pre-recovery timestamp, the entire event string.
-void
-JobstateLog::InitializeRecovery()
-{
-	debug_printf( DEBUG_DEBUG_2, "JobstateLog::InitializeRecovery()\n" );
+void JobstateLog::InitializeRecovery() {
+	debug_printf(DEBUG_DEBUG_2, "JobstateLog::InitializeRecovery()\n");
 
-	if ( !_jobstateLogFile ) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
-		//
-		// Find the timestamp of the last "real" event written to the
-		// jobstate.log file.  Any events that we see in recovery mode
-		// that have an earlier timestamp should *not* be re-written
-		// to the jobstate.log file.  Any events with later timestamps
-		// should be written.  Events with equal timestamps need to be
-		// tested individually.
-		//
+	//
+	// Find the timestamp of the last "real" event written to the
+	// jobstate.log file.  Any events that we see in recovery mode
+	// that have an earlier timestamp should *not* be re-written
+	// to the jobstate.log file.  Any events with later timestamps
+	// should be written.  Events with equal timestamps need to be
+	// tested individually.
+	//
 
-	FILE *infile = safe_fopen_wrapper_follow( _jobstateLogFile, "r" );
-	if ( !infile ) {
-			// This is a fatal error, because by the time we get here,
-			// we should, at the very least, have written the
-			// DAGMAN_STARTED "event".
-		debug_printf( DEBUG_QUIET,
-					"Could not open jobstate log file %s for reading.\n",
-					_jobstateLogFile );
+	FILE *infile = safe_fopen_wrapper_follow(_jobstateLogFile, "r");
+	if (!infile) {
+		// This is a fatal error, because by the time we get here,
+		// we should, at the very least, have written the
+		// DAGMAN_STARTED "event".
+		debug_printf(DEBUG_QUIET,
+					 "Could not open jobstate log file %s for reading.\n",
+					 _jobstateLogFile);
 		main_shutdown_graceful();
 		return;
 	}
@@ -127,29 +121,29 @@ JobstateLog::InitializeRecovery()
 	std::string line;
 	off_t startOfLastTimestamp = 0;
 
-	while ( true ) {
-		off_t currentOffset = ftell( infile );
+	while (true) {
+		off_t currentOffset = ftell(infile);
 		if (currentOffset < 0) {
-			debug_printf( DEBUG_QUIET,
-					"Could not seek jobstate log file %s for reading.\n",
-					_jobstateLogFile );
+			debug_printf(DEBUG_QUIET,
+						 "Could not seek jobstate log file %s for reading.\n",
+						 _jobstateLogFile);
 			main_shutdown_graceful();
 		}
-		if ( !readLine( line, infile ) ) {
+		if (!readLine(line, infile)) {
 			break;
 		}
 
 		time_t newTimestamp;
 		std::string nodeName;
 		int seqNum;
-		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
-				// We don't want to look at "INTERNAL" events here, or we'll
-				// get goofed up by our own DAGMAN_STARTED event, etc.
-			if ( nodeName != INTERNAL_NAME ) {
-					// Note: we don't absolutely rely on the timestamps
-					// being in order -- the > below rather than == is
-					// important in that case.
-				if ( newTimestamp > _lastTimestampWritten ) {
+		if (ParseLine(line, newTimestamp, nodeName, seqNum)) {
+			// We don't want to look at "INTERNAL" events here, or we'll
+			// get goofed up by our own DAGMAN_STARTED event, etc.
+			if (nodeName != INTERNAL_NAME) {
+				// Note: we don't absolutely rely on the timestamps
+				// being in order -- the > below rather than == is
+				// important in that case.
+				if (newTimestamp > _lastTimestampWritten) {
 					startOfLastTimestamp = currentOffset;
 					_lastTimestampWritten = newTimestamp;
 				}
@@ -157,57 +151,54 @@ JobstateLog::InitializeRecovery()
 		}
 	}
 
-	debug_printf( DEBUG_DEBUG_2, "_lastTimestampWritten: %lu\n",
-				(unsigned long)_lastTimestampWritten );
+	debug_printf(DEBUG_DEBUG_2, "_lastTimestampWritten: %lu\n",
+				 (unsigned long)_lastTimestampWritten);
 
-		//
-		// Now find all lines that match the last timestamp, and put
-		// them into a hash table for future reference.
-		//
-	if ( fseek( infile, startOfLastTimestamp, SEEK_SET ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"Error seeking in jobstate log file %s.\n",
-					_jobstateLogFile );
+	//
+	// Now find all lines that match the last timestamp, and put
+	// them into a hash table for future reference.
+	//
+	if (fseek(infile, startOfLastTimestamp, SEEK_SET) != 0) {
+		debug_printf(DEBUG_QUIET, "Error seeking in jobstate log file %s.\n",
+					 _jobstateLogFile);
 	}
 
-	while ( readLine( line, infile ) ) {
+	while (readLine(line, infile)) {
 		time_t newTimestamp;
 		std::string nodeName;
 		int seqNum;
-		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
-			if ( (newTimestamp == _lastTimestampWritten) &&
-						(nodeName != INTERNAL_NAME) ) {
-				_lastTimestampLines.insert( line );
-				debug_printf( DEBUG_DEBUG_2,
-							"Appended <%s> to _lastTimestampLines\n",
-							line.c_str() );
+		if (ParseLine(line, newTimestamp, nodeName, seqNum)) {
+			if ((newTimestamp == _lastTimestampWritten) &&
+				(nodeName != INTERNAL_NAME)) {
+				_lastTimestampLines.insert(line);
+				debug_printf(DEBUG_DEBUG_2,
+							 "Appended <%s> to _lastTimestampLines\n",
+							 line.c_str());
 			}
 		}
 	}
 
-	fclose( infile );
+	fclose(infile);
 }
 
 //---------------------------------------------------------------------------
 // Here we re-read the jobstate.log file to find out what sequence number
 // we should start with when running a rescue DAG.
-void
-JobstateLog::InitializeRescue()
-{
-	debug_printf( DEBUG_DEBUG_2, "JobstateLog::InitializeRescue()\n" );
+void JobstateLog::InitializeRescue() {
+	debug_printf(DEBUG_DEBUG_2, "JobstateLog::InitializeRescue()\n");
 
-	if ( !_jobstateLogFile ) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
-	FILE *infile = safe_fopen_wrapper_follow( _jobstateLogFile, "r" );
-	if ( !infile ) {
-			// This is a fatal error, because by the time we get here,
-			// we should, at the very least, have written the
-			// DAGMAN_STARTED "event".
-		debug_printf( DEBUG_QUIET,
-					"Could not open jobstate log file %s for reading.\n",
-					_jobstateLogFile );
+	FILE *infile = safe_fopen_wrapper_follow(_jobstateLogFile, "r");
+	if (!infile) {
+		// This is a fatal error, because by the time we get here,
+		// we should, at the very least, have written the
+		// DAGMAN_STARTED "event".
+		debug_printf(DEBUG_QUIET,
+					 "Could not open jobstate log file %s for reading.\n",
+					 _jobstateLogFile);
 		main_shutdown_graceful();
 		return;
 	}
@@ -215,292 +206,271 @@ JobstateLog::InitializeRescue()
 	int maxSeqNum = 0;
 	std::string line;
 
-	while ( readLine( line, infile ) ) {
+	while (readLine(line, infile)) {
 		time_t newTimestamp;
 		std::string nodeName;
 		int seqNum;
-		if ( ParseLine( line, newTimestamp, nodeName, seqNum ) ) {
-			maxSeqNum = MAX( maxSeqNum, seqNum );
+		if (ParseLine(line, newTimestamp, nodeName, seqNum)) {
+			maxSeqNum = MAX(maxSeqNum, seqNum);
 		}
 	}
 
-	fclose( infile );
+	fclose(infile);
 
-	debug_printf( DEBUG_DEBUG_2,
-				"Max sequence num in jobstate.log file: %d\n", maxSeqNum );
+	debug_printf(DEBUG_DEBUG_2, "Max sequence num in jobstate.log file: %d\n",
+				 maxSeqNum);
 
-	Node::SetJobstateNextSequenceNum( maxSeqNum + 1 );
+	Node::SetJobstateNextSequenceNum(maxSeqNum + 1);
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteDagmanStarted(const CondorID &DAGManJobId) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	std::string info;
-	formatstr( info, "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME,
-				DAGManJobId._cluster, DAGManJobId._proc );
+	formatstr(info, "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME,
+			  DAGManJobId._cluster, DAGManJobId._proc);
 
-	Write( NULL, info );
+	Write(NULL, info);
 	Flush();
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteDagmanFinished( int exitCode )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteDagmanFinished(int exitCode) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	std::string info;
-	formatstr( info, "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME,
-				exitCode );
+	formatstr(info, "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME,
+			  exitCode);
 
-	Write( NULL, info );
+	Write(NULL, info);
 	Flush();
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteRecoveryStarted()
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteRecoveryStarted() {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	std::string info;
-	formatstr( info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME );
-	Write( NULL, info );
+	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME);
+	Write(NULL, info);
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteRecoveryFinished()
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteRecoveryFinished() {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	std::string info;
-	formatstr( info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME );
-	Write( NULL, info );
+	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME);
+	Write(NULL, info);
 	Flush();
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteRecoveryFailure()
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteRecoveryFailure() {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	std::string info;
-	formatstr( info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME );
-	Write( NULL, info );
+	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME);
+	Write(NULL, info);
 	Flush();
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteEvent( const ULogEvent *event, Node *node )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteEvent(const ULogEvent *event, Node *node) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
-	ASSERT( node );
+	ASSERT(node);
 
 	const char *prefix = "ULOG_";
 	const char *eventName = event->eventName();
-	if ( eventName != nullptr ) {
-		if ( strstr( eventName, prefix ) != eventName ) {
-			debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
-					"%s in event name %s\n", prefix, eventName );
-			check_warning_strictness( DAG_STRICT_1 );
+	if (eventName != nullptr) {
+		if (strstr(eventName, prefix) != eventName) {
+			debug_printf(DEBUG_QUIET,
+						 "Warning: didn't find expected prefix "
+						 "%s in event name %s\n",
+						 prefix, eventName);
+			check_warning_strictness(DAG_STRICT_1);
 		} else {
-			eventName = eventName + strlen( prefix );
+			eventName = eventName + strlen(prefix);
 		}
 
 		std::string condorID;
-		CondorID2Str( event->cluster, event->proc, condorID );
+		CondorID2Str(event->cluster, event->proc, condorID);
 		time_t eventTime = event->GetEventclock();
-		Write( &eventTime, node, eventName, condorID.c_str() );
+		Write(&eventTime, node, eventName, condorID.c_str());
 	}
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteJobSuccessOrFailure( Node *node )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteJobSuccessOrFailure(Node *node) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
-	ASSERT( node );
+	ASSERT(node);
 
-	const char *eventName = node->GetReturnValue() == 0 ? JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
+	const char *eventName =
+		node->GetReturnValue() == 0 ? JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
 	std::string retval;
-	formatstr( retval, "%d", node->GetReturnValue() );
+	formatstr(retval, "%d", node->GetReturnValue());
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, retval.c_str() );
+	Write(&timestamp, node, eventName, retval.c_str());
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteScriptStarted( Node *node, ScriptType type )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteScriptStarted(Node *node, ScriptType type) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	// Do not log any HOLD script events
-	if ( type == ScriptType::HOLD ) return;
+	if (type == ScriptType::HOLD)
+		return;
 
-	ASSERT( node );
+	ASSERT(node);
 
 	const char *eventName = NULL;
-	if ( type == ScriptType::POST ) {
+	if (type == ScriptType::POST) {
 		eventName = POST_SCRIPT_STARTED_NAME;
-	} else if ( type == ScriptType::PRE ) {
+	} else if (type == ScriptType::PRE) {
 		eventName = PRE_SCRIPT_STARTED_NAME;
 	}
 
-	std::string condorID( "-" );
-	if ( type == ScriptType::POST ) {
-			// See Dag::PostScriptReaper().
+	std::string condorID("-");
+	if (type == ScriptType::POST) {
+		// See Dag::PostScriptReaper().
 		int procID = node->GetNoop() ? node->GetProc() : 0;
-		CondorID2Str( node->GetCluster(), procID, condorID );
+		CondorID2Str(node->GetCluster(), procID, condorID);
 	}
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, condorID.c_str() );
+	Write(&timestamp, node, eventName, condorID.c_str());
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteScriptSuccessOrFailure( Node *node, ScriptType type )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteScriptSuccessOrFailure(Node *node, ScriptType type) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	// Do not log any HOLD script events
-	if ( type == ScriptType::HOLD ) return;
+	if (type == ScriptType::HOLD)
+		return;
 
-	ASSERT( node );
+	ASSERT(node);
 
 	const char *eventName = NULL;
-	if ( type == ScriptType::POST ) {
-		eventName = (node->GetReturnValue() == 0) ? POST_SCRIPT_SUCCESS_NAME :
-					POST_SCRIPT_FAILURE_NAME;
-	} else if ( type == ScriptType::PRE ) {
-		eventName = (node->GetReturnValue() == 0) ? PRE_SCRIPT_SUCCESS_NAME :
-					PRE_SCRIPT_FAILURE_NAME;
+	if (type == ScriptType::POST) {
+		eventName = (node->GetReturnValue() == 0) ? POST_SCRIPT_SUCCESS_NAME
+												  : POST_SCRIPT_FAILURE_NAME;
+	} else if (type == ScriptType::PRE) {
+		eventName = (node->GetReturnValue() == 0) ? PRE_SCRIPT_SUCCESS_NAME
+												  : PRE_SCRIPT_FAILURE_NAME;
 	}
 
-	std::string condorID( "-" );
-	if ( type == ScriptType::POST ) {
-			// See Dag::PostScriptReaper().
+	std::string condorID("-");
+	if (type == ScriptType::POST) {
+		// See Dag::PostScriptReaper().
 		int procID = node->GetNoop() ? node->GetProc() : 0;
-		CondorID2Str( node->GetCluster(), procID, condorID );
+		CondorID2Str(node->GetCluster(), procID, condorID);
 	}
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, condorID.c_str() );
+	Write(&timestamp, node, eventName, condorID.c_str());
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::WriteSubmitFailure( Node *node )
-{
-	if ( !_jobstateLogFile ) {
+void JobstateLog::WriteSubmitFailure(Node *node) {
+	if (!_jobstateLogFile) {
 		return;
 	}
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, SUBMIT_FAILURE_NAME, "-" );
+	Write(&timestamp, node, SUBMIT_FAILURE_NAME, "-");
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::Write( const time_t *eventTimeP, Node *node,
-			const char *eventName, const char *condorID )
-{
+void JobstateLog::Write(const time_t *eventTimeP, Node *node,
+						const char *eventName, const char *condorID) {
 	std::string info;
 
-	formatstr( info, "%s %s %s %s - %d", node->GetNodeName(), eventName,
-				condorID, node->GetJobstateJobTag(),
-				node->GetJobstateSequenceNum() );
-	Write( eventTimeP, info );
+	formatstr(info, "%s %s %s %s - %d", node->GetNodeName(), eventName,
+			  condorID, node->GetJobstateJobTag(),
+			  node->GetJobstateSequenceNum());
+	Write(eventTimeP, info);
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::Write( const time_t *eventTimeP, const std::string &info )
-{
-		//
-		// Here for "fake" events like JOB_SUCCESS, the event will get
-		// the timestamp of the last "real" event from the job; this is
-		// so that we can correctly avoid re-writing the "fake" events
-		// in recovery mode.
-		//
+void JobstateLog::Write(const time_t *eventTimeP, const std::string &info) {
+	//
+	// Here for "fake" events like JOB_SUCCESS, the event will get
+	// the timestamp of the last "real" event from the job; this is
+	// so that we can correctly avoid re-writing the "fake" events
+	// in recovery mode.
+	//
 	time_t eventTime;
-	if ( eventTimeP != NULL && *eventTimeP != 0 ) {
+	if (eventTimeP != NULL && *eventTimeP != 0) {
 		eventTime = *eventTimeP;
 	} else {
-		eventTime = time( NULL );
+		eventTime = time(NULL);
 	}
 
-		// Avoid "re-writing" events in recovery mode:
-		// If the event time is *after* _lastTimestampWritten, we
-		// write the event.  If the event time is *before*
-		// _lastTimestampWritten, we don't write the event.  If
-		// the times are equal, we have to do a further test down
-		// below.
-	if ( eventTime < _lastTimestampWritten ) {
+	// Avoid "re-writing" events in recovery mode:
+	// If the event time is *after* _lastTimestampWritten, we
+	// write the event.  If the event time is *before*
+	// _lastTimestampWritten, we don't write the event.  If
+	// the times are equal, we have to do a further test down
+	// below.
+	if (eventTime < _lastTimestampWritten) {
 		return;
 	}
 
 	std::string outline;
-	formatstr( outline, "%lu %s", (unsigned long)eventTime, info.c_str() );
+	formatstr(outline, "%lu %s", (unsigned long)eventTime, info.c_str());
 
-		//
-		// If this event's time matches the time of the last "real"
-		// event in the pre-recovery part of the file, we check whether
-		// this line is already in the pre-recovery part of the file,
-		// and if it is we don't write it again.
-		//
-	if ( (eventTime == _lastTimestampWritten) &&
-				(_lastTimestampLines.count( outline ) > 0) ) {
+	//
+	// If this event's time matches the time of the last "real"
+	// event in the pre-recovery part of the file, we check whether
+	// this line is already in the pre-recovery part of the file,
+	// and if it is we don't write it again.
+	//
+	if ((eventTime == _lastTimestampWritten) &&
+		(_lastTimestampLines.count(outline) > 0)) {
 		return;
 	}
 
-	if ( !_outfile ) {
-		_outfile = safe_fopen_wrapper_follow( _jobstateLogFile, "a" );
-		if ( !_outfile ) {
-       		debug_printf( DEBUG_QUIET,
-						"Could not open jobstate log file %s for writing.\n",
-						_jobstateLogFile );
+	if (!_outfile) {
+		_outfile = safe_fopen_wrapper_follow(_jobstateLogFile, "a");
+		if (!_outfile) {
+			debug_printf(DEBUG_QUIET,
+						 "Could not open jobstate log file %s for writing.\n",
+						 _jobstateLogFile);
 			main_shutdown_graceful();
 			return;
 		}
 	}
 
-	fprintf( _outfile, "%s\n", outline.c_str() );
+	fprintf(_outfile, "%s\n", outline.c_str());
 }
 
 //---------------------------------------------------------------------------
-void
-JobstateLog::CondorID2Str( int cluster, int proc, std::string &idStr )
-{
-		// Make sure HTCondor ID is valid.
-	if ( cluster != DEFAULT_CONDOR_ID._cluster ) {
-		formatstr( idStr, "%d.%d", cluster, proc );
+void JobstateLog::CondorID2Str(int cluster, int proc, std::string &idStr) {
+	// Make sure HTCondor ID is valid.
+	if (cluster != DEFAULT_CONDOR_ID._cluster) {
+		formatstr(idStr, "%d.%d", cluster, proc);
 	} else {
 		idStr = "-";
 	}
@@ -509,50 +479,52 @@ JobstateLog::CondorID2Str( int cluster, int proc, std::string &idStr )
 //---------------------------------------------------------------------------
 // This does only partial parsing -- only what we need for recovery mode
 // and rescue initialization.
-bool
-JobstateLog::ParseLine( std::string &line, time_t &timestamp,
-			std::string &nodeName, int &seqNum )
-{
-	chomp( line );
-	Tokenize( line );
-	const char* timestampTok = GetNextToken( " ", false );
-	const char* nodeNameTok = GetNextToken( " ", false );
-	(void)GetNextToken( " ", false ); // event name
-	(void)GetNextToken( " ", false ); // condor id
-	(void)GetNextToken( " ", false ); // job tag (pegasus site)
-	(void)GetNextToken( " ", false ); // unused
-	const char* seqNumTok = GetNextToken( " ", false );
+bool JobstateLog::ParseLine(std::string &line, time_t &timestamp,
+							std::string &nodeName, int &seqNum) {
+	chomp(line);
+	Tokenize(line);
+	const char *timestampTok = GetNextToken(" ", false);
+	const char *nodeNameTok = GetNextToken(" ", false);
+	(void)GetNextToken(" ", false); // event name
+	(void)GetNextToken(" ", false); // condor id
+	(void)GetNextToken(" ", false); // job tag (pegasus site)
+	(void)GetNextToken(" ", false); // unused
+	const char *seqNumTok = GetNextToken(" ", false);
 
-	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
-		debug_printf( DEBUG_QUIET, "Warning: error parsing "
-					"jobstate.log file line <%s>\n", line.c_str() );
-		check_warning_strictness( DAG_STRICT_1 );
+	if ((timestampTok == NULL) || (nodeNameTok == NULL)) {
+		debug_printf(DEBUG_QUIET,
+					 "Warning: error parsing "
+					 "jobstate.log file line <%s>\n",
+					 line.c_str());
+		check_warning_strictness(DAG_STRICT_1);
 		return false;
 	}
 
-		// fetch the number, and get a pointer to the first char after
-		// if the pointer did not advance, then there was no number to parse.
+	// fetch the number, and get a pointer to the first char after
+	// if the pointer did not advance, then there was no number to parse.
 	char *pend;
 	timestamp = (time_t)strtoll(timestampTok, &pend, 10);
 
 	if (pend == timestampTok) {
-		debug_printf( DEBUG_QUIET, "Warning: error reading "
-					"timestamp in jobstate.log file line <%s>\n",
-					line.c_str() );
-		check_warning_strictness( DAG_STRICT_1 );
+		debug_printf(DEBUG_QUIET,
+					 "Warning: error reading "
+					 "timestamp in jobstate.log file line <%s>\n",
+					 line.c_str());
+		check_warning_strictness(DAG_STRICT_1);
 		return false;
 	}
 
 	nodeName = nodeNameTok;
 
 	seqNum = 0;
-	if ( seqNumTok ) {
+	if (seqNumTok) {
 		seqNum = (int)strtol(seqNumTok, &pend, 10);
 		if (pend == seqNumTok) {
-			debug_printf( DEBUG_QUIET, "Warning: error reading "
-						"sequence number in jobstate.log file line <%s>\n",
-						line.c_str() );
-			check_warning_strictness( DAG_STRICT_1 );
+			debug_printf(DEBUG_QUIET,
+						 "Warning: error reading "
+						 "sequence number in jobstate.log file line <%s>\n",
+						 line.c_str());
+			check_warning_strictness(DAG_STRICT_1);
 			return false;
 		}
 	}
