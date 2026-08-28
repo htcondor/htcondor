@@ -1,3 +1,11 @@
+*** 25.13.3 bugs
+
+- *Security Item*: This release of HTCondor fixes a security-related bug described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002>`_.
+
+  :jira:`3889`
+
 *** 25.13.2 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
