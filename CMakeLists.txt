@@ -70,7 +70,7 @@ if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
 endif()
 
-set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
+set(PACKAGE_BUGREPORT "htcondor-users@g-groups.wisc.edu")
 set(PACKAGE_NAME ${PACKAGE} )
 set(TEST_PACKAGE_NAME ${TEST_PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
