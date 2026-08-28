@@ -75,26 +75,6 @@ if(WIN32)
 
     # Compilers
 	# taken from http://predef.sourceforge.net/precomp.html#sec34
-	IF (MSVC)
-       if(MSVC_VERSION EQUAL 1200)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-6.0")
-       endif()
-       if(MSVC_VERSION EQUAL 1300)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-7.0")
-       endif()
-       if(MSVC_VERSION EQUAL 1310)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-7.1-2003") #Visual Studio 2003
-       endif()
-       if(MSVC_VERSION EQUAL 1400)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-8.0-2005") #Visual Studio 2005
-       endif()
-       if(MSVC_VERSION EQUAL 1500)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-9.0-2008") #Visual Studio 2008
-       endif()
-	   if(MSVC_VERSION EQUAL 1600)
-	     set(SPECIFIC_COMPILER_NAME "MSVC-10.0-2008") #Visual Studio 2008
-       endif()
-	endif()
 	IF (MINGW)
 	   set(SPECIFIC_COMPILER_NAME "MinGW")
 	endif()

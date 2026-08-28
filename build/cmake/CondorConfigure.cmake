@@ -775,10 +775,6 @@ endif()
 include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
 link_directories( ${CONDOR_EXTERNAL_LINK_DIRS} )
 
-if ( $ENV{JAVA_HOME} )
-	include_directories($ENV{JAVA_HOME}/include)
-endif()
-
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_includes)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_utils)
