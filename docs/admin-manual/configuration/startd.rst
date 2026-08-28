@@ -24,7 +24,7 @@ section.
     to replace it with one that will generate a better rank for the
     *condor_startd* daemon, or a user with a higher priority.
 
-:macro_def:`STARTD_HEALTH_EXPRS`
+:macro-def:`STARTD_HEALTH_EXPRS`
     A comma separated list of expressions that must each evaluate to ``True`` in
     order for the machine to be considered healthy. A machine that is not
     healthy will not start any HTCondor job.
