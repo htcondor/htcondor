@@ -46,6 +46,6 @@ MACRO (CONDOR_PLUGIN _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS )
         endif ()
 
         set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "plugins" )
-    endif( WINDOWS )
+    endif()
 
 ENDMACRO(CONDOR_PLUGIN)

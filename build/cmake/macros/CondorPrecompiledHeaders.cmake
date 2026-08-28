@@ -82,7 +82,7 @@ MACRO(ADD_PRECOMPILED_HEADER)
 			COMPILE_FLAGS "/Yc\"condor_common.h\" /Fp\"${PrecompiledBinary}\""
 			OBJECT_OUTPUTS "${PrecompiledBinary}"
 			)
-	endif(UseCondorCommon)
+	endif()
 
   endif()  # of if MSVC and project has enough targets to be worth our time
 

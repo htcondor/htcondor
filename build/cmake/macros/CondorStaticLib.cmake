@@ -36,7 +36,7 @@ endif()
 
 if ( WINDOWS )
 	set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "libraries" )
-endif ( WINDOWS )
+endif()
 
 ENDMACRO(CONDOR_SHARED_LIB)
 
@@ -57,6 +57,6 @@ endif()
 
 if ( WINDOWS )
 	set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "libraries" )
-endif ( WINDOWS )
+endif()
 
 ENDMACRO(CONDOR_STATIC_LIB)

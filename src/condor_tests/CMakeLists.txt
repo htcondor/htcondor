@@ -133,7 +133,7 @@ if (BUILD_TESTING)
             TARGETS memory_exerciser_dinner
             DESTINATION "${C_LIBEXEC}"
         )
-    endif(NOT WINDOWS)
+    endif()
 
 	##########################################################
 	# exe test targets
@@ -148,15 +148,15 @@ if (BUILD_TESTING)
 		condor_exe_test(test_for_AwaitableDeadlineReaper "test_for_AwaitableDeadlineReaper.cpp" condor_utils EXE)
 		condor_exe_test(test_for_AwaitableDeadlineSignal "test_for_AwaitableDeadlineSignal.cpp" condor_utils EXE)
 		set_property(SOURCE test_for_AwaitableDeadlineSignal.cpp  PROPERTY SKIP_UNITY_BUILD_INCLUSION True)
-	endif(NOT WINDOWS)
+	endif()
 
 	condor_exe_test(x_job_mem_checker "x_job_mem_checker.c" "" EXE)
 	condor_exe_test(x_complete_params "x_complete_params.cpp" "" EXE)
 	if( WINDOWS )
 		add_dependencies(x_complete_params utils_genparams)
-	else( WINDOWS )
+	else()
 		add_dependencies(x_complete_params utils_genparams)
-	endif( WINDOWS)
+	endif()
 	condor_exe_test(x_conditional_params "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS}" EXE)
 	condor_exe_test(startup_limit_ctl "startup_limit_ctl.cpp" "${CONDOR_TOOL_LIBS}" EXE)
 
@@ -168,11 +168,11 @@ if (BUILD_TESTING)
 	if(WINDOWS)
 		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to build it anyway.
 		# condor_exe_test(sleep "sleep.cpp" "")
-	endif(WINDOWS)
+	endif()
 
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig "x_trapsig.cpp" "" EXE)
-	endif(NOT WINDOWS)
+	endif()
 
 	##########################################################
 	# platform specific tests
@@ -272,7 +272,7 @@ if (BUILD_TESTING)
 
 			condor_pl_test (test_ccb_tunnel_3hop "Test the inbound CCB tunnel through three chained brokers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-		endif (NOT WINDOWS)
+		endif()
 
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -552,7 +552,7 @@ endif()
 					if (NOT WINDOWS)
 						condor_pl_test(test_checkpoint_destination_two "Test checkpoint_destination_two" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 					endif()
-				endif(NOT APPLE)
+				endif()
 
 				if (NOT WINDOWS)
 					condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -563,7 +563,7 @@ endif()
 				# This trips a race condition that causes friction but isn't
 				# actually a bug, and may not ever be fixed, so just skip it.
 				# condor_pl_test(test_common_transfer_savings "Test common_transfer_savings.py" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/common_transfer_savings.py;src/condor_tests/libcontainer.py")
-			endif(NOT EMULATED_PLATFORM)
+			endif()
 
 			condor_pl_test(test_default_checkpoint_destination "Test use feature:DefaultCheckpointDestination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			if (NOT WINDOWS)
@@ -640,7 +640,7 @@ endif()
 			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
 			if( NOT EMULATED_PLATFORM )
 				condor_pl_test(test_singularity_sif "Test container uni with sif file" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcontainer.py")
-			endif( NOT EMULATED_PLATFORM )
+			endif()
 			# The manifest code should work on macos, but
 			# the tests are failing.
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
@@ -659,7 +659,7 @@ endif()
 			# And strace is only available on linux.
 			if( NOT EMULATED_PLATFORM )
 				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-			endif( NOT EMULATED_PLATFORM )
+			endif()
 
 			condor_pl_test(test_slot_coloring "Test slot coloring" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -686,8 +686,8 @@ endif()
 			if (${BIT_MODE} MATCHES "32")
 				condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 			endif()
-		endif(NOT EMULATED_PLATFORM)
-	endif(LINUX)
+		endif()
+	endif()
 
 	##########################################################
 	# now all the common tests.
@@ -859,7 +859,7 @@ endif()
 
 	if (NOT WINDOWS)
 		condor_pl_test(cmd_drain_scavenging "condor_drain -start" "quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
-	endif(NOT WINDOWS)
+	endif()
 
 	condor_pl_test(cmd_drain_scavenging_vacation "condor_drain -start with lazy job" "quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
 
@@ -935,7 +935,7 @@ endif()
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_getmyprocinfo.pl;src/condor_tests/x_sleep.pl")
-	endif ( LINUX )
+	endif()
 
 	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_include "config include mechanism" "quick;ctest" CTEST DEPENDS "src/condor_tests/Includes")
@@ -996,7 +996,7 @@ endif()
 			condor_pl_test(job_core_input_java "Java Universe: basic output test" "quick;ctest;java" CTEST DEPENDS "src/condor_tests/x_java_ReadStdin.class;src/condor_tests/job_core_input_java.cmd;src/condor_tests/job_core_input.in" JAVA)
 		endif()
 		#condor_pl_test(job_core_plus_java "Java Universe: basic output test" "quick;ctest;java")
-	endif ( ENABLE_JAVA_TESTS )
+	endif()
 
 	condor_pl_test(job_filexfer_streamerr_van "Vanilla: test for streaming of error when both stream_error is true and false" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_stream.pl")
 	condor_pl_test(job_condorc_ab_van "Condor-C AB test" "condorc;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
@@ -1295,6 +1295,6 @@ endif()
 		add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe tests)
 		set_target_properties(sleepw_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
-	endif(WINDOWS)
+	endif()
 
-endif(BUILD_TESTING)
+endif()
