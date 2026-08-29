@@ -22,7 +22,6 @@
 
 #include <climits>
 #include <math.h>
-#include <iomanip>
 
 #include "condor_accountant.h"
 #include "AccountantDB.h"

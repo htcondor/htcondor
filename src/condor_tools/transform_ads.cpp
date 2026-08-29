@@ -21,6 +21,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_string.h" // for getline_trim
+#include "basename.h"
 #include "subsystem_info.h"
 #include <time.h>
 #include "condor_classad.h"
