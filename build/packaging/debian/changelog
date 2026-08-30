@@ -1,3 +1,12 @@
+condor (25.0.14-1) stable; urgency=medium
+
+  * Fix for security issue
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+  * condor_q no longer crashes when using both the -batch and -af options
+
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 27 Aug 2026 12:45:00 -0500
+
 condor (24.12.24-1) stable; urgency=medium
 
   * Fix for security issue
@@ -14,7 +23,7 @@ condor (24.0.24-1) stable; urgency=medium
 
 condor (25.0.13-1) stable; urgency=medium
 
-  * Fix bug where condor_q crashes when given -batch and -af arguments
+  * All changes in HTCondor 24.12.23
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Aug 2026 22:30:00 -0500
 
