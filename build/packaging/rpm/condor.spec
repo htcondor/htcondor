@@ -1358,6 +1358,11 @@ fi
 # configuration
 
 %changelog
+* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+- condor_q no longer crashes when using both the -batch and -af options
+
 * Fri Aug 28 2026 Tim Theisen <tim@cs.wisc.edu> - 25.13.3-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
@@ -1379,7 +1384,7 @@ fi
 - Add CCB Tunneling for daemons with no outbound network connectivity
 
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.13-1
-- Fix bug where condor_q crashes when given -batch and -af arguments
+- All changes in HTCondor 24.12.23
 
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.23-1
 - All changes in HTCondor 24.0.23
