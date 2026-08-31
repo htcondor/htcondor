@@ -199,7 +199,7 @@ retrySetupJobEnvironment(JobInfoCommunicator * jic) {
 }
 
 
-bool
+std::optional<bool>
 Starter::requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context ) {
 	ClassAd request;
 	ClassAd guidance;
@@ -215,14 +215,15 @@ Starter::requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context ) 
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
 			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceCheckpointTaken(s, c); };
-			if( handleCheckpointTakenCommand( s, guidance, lambda ) ) { return true; }
+
+			return handleCheckpointTakenCommand( s, guidance, lambda );
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance about a checkpoint taken from AP (%d); carrying on.\n", static_cast<int>(rv) );
-			return false;
+			return std::nullopt;
 		}
 	}
 
-	return false;
+	return std::nullopt;
 }
 
 
@@ -279,7 +280,7 @@ Starter::requestGuidanceCommandJobSetup(
 }
 
 
-bool
+std::optional<bool>
 Starter::handleCheckpointTakenCommand(
   Starter * /* s */,
   const ClassAd & guidance,
@@ -290,22 +291,26 @@ Starter::handleCheckpointTakenCommand(
 		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
 		dPrintAd( D_ALWAYS, guidance );
 
-		return false;
+		return std::nullopt;
 	} else {
 		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
 
 		if( command == COMMAND_DONT_RESTART ) {
-			dprintf( D_ALWAYS, "As guided, will not restart after checkpoint.\n" );
+			dprintf( D_ALWAYS, "Not restarting according to guidance.\n" );
 
-			return true;
+			return {true};
+		} else if( command == COMMAND_RESTART ) {
+			dprintf( D_ALWAYS, "Restarting according to guidance.\n" );
+
+			return {false};
 		} else if( command == COMMAND_CARRY_ON ) {
 			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
 
-			return false;
+			return std::nullopt;
 		} else {
 			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
 
-			return false;
+			return std::nullopt;
 		}
 	}
 }

@@ -37,6 +37,7 @@ enum class GuidanceResult : int {
 #define COMMAND_JOB_SETUP           "DoJobSetup"
 #define COMMAND_COLOR_SLOT          "ColorSlot"
 #define COMMAND_DONT_RESTART        "DontRestart"
+#define COMMAND_RESTART             "Restart"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 

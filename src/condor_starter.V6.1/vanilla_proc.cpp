@@ -904,12 +904,14 @@ bool VanillaProc::restartCheckpointedJob() {
 		// Ask the AP what it thinks, given what the EP said.
 		ClassAd context;
 		context.InsertAttr( ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
-		bool no_restart = Starter::requestGuidanceCheckpointTaken(
+		auto guidance = Starter::requestGuidanceCheckpointTaken(
 			starter, context
 		);
+        if( guidance ) {
+            claim_is_closing = * guidance;
+        }
 
-
-		if( no_restart ) {
+		if( claim_is_closing ) {
 			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
 
 			// We didn't restart the job (and didn't want to).
