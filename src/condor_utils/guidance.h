@@ -24,6 +24,7 @@ enum class GuidanceResult : int {
 #define ATTR_RETRY_DELAY            "RetryDelay"
 #define ATTR_JOB_ENVIRONMENT_READY  "JobEnvironmentReady"
 #define ATTR_COLOR_AD               "ColorAd"
+#define ATTR_EP_CHECKPOINT_RESTART  "EPCheckpointRestart"
 
 #define COMMAND_RUN_DIAGNOSTIC      "RunDiagnostic"
 #define COMMAND_RETRY_TRANSFER      "RetryTransfer"
@@ -35,11 +36,13 @@ enum class GuidanceResult : int {
 #define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
 #define COMMAND_JOB_SETUP           "DoJobSetup"
 #define COMMAND_COLOR_SLOT          "ColorSlot"
+#define COMMAND_DONT_RESTART        "DontRestart"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
 #define RTYPE_JOB_ENVIRONMENT       "JobEnvironment"
 #define RTYPE_JOB_SETUP             "JobSetup"
+#define RTYPE_CHECKPOINT_TAKEN      "CheckpointTaken"
 
 #define ETYPE_DIAGNOSTIC_RESULT     "DiagnosticResult"
 

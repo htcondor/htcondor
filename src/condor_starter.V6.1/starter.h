@@ -180,6 +180,7 @@ public:
 
 	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
 	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
+	static bool requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context );
 
 		/**
 		 *
@@ -393,6 +394,12 @@ protected:
 		Starter * s,
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation
+	);
+
+	static bool handleCheckpointTakenCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
 	);
 
 	static bool handleJobSetupCommand(
