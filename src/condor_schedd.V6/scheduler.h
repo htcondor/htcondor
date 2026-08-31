@@ -859,7 +859,7 @@ class Scheduler : public Service
 	void leavePreparingState(JobQueueJob * job);
 	bool addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time_t time);
 
-	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs);
+	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs, int num_new_idle_dag_or_local_jobs);
 
 	void configGenericOsUsers();
 
