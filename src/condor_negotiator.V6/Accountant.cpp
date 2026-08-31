@@ -1316,8 +1316,17 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     db->BeginTransaction();
     db->ForEachInTable( AccountantTable::Customer,
         [&](const std::string& resName, ClassAd* /* resAd */) -> bool {
+            // All three of these are re-accumulated by the AddMatch() loop
+            // below, so all three must be zeroed here, or they grow without
+            // bound by the number of claimed slots on every cycle.
+            db->SetAttributeInt( AccountantTable::Customer,
+                resName, ResourcesUsedAttr, 0
+            );
             db->SetAttributeFloat( AccountantTable::Customer,
                 resName, WeightedResourcesUsedAttr, 0
+            );
+            db->SetAttributeFloat( AccountantTable::Customer,
+                resName, HierWeightedResourcesUsedAttr, 0
             );
             return true;
         }
