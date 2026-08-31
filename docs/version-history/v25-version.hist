@@ -125,6 +125,8 @@
 - Fixed a bug where a job with streaming output or error would not be
   able to reconnect to a restarted or rebooted schedd in some cases.
   :jira:`3869`
+*** 25.0.15 bugs
+
 *** 25.0.14 features
 
 - Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
