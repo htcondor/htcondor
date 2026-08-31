@@ -412,6 +412,17 @@
 #define ATTR_OCU_NAME  "OCUName"
 #define ATTR_OCU_WANTED  "OCUWanted"
 #define ATTR_OCU_STATE  "OCUState"
+#define ATTR_IS_BUNDLE_REQUEST  "IsBundleRequest" // marks a resource request as a slot-bundle request
+#define ATTR_IS_BUNDLE  "IsBundle"                // startd slot attr: this claim is held for a slot bundle
+#define ATTR_IS_BUNDLE_SUBMITTER  "IsBundleSubmitter" // submitter-ad marker: the reserved slot-bundle submitter
+#define ATTR_BUNDLE_ID  "BundleId"                // <schedd-name>#<n> identifying the bundle
+#define ATTR_BUNDLE_NUM_REQUESTED  "BundleNumRequested" // N: total slots wanted in the bundle
+#define ATTR_BUNDLE_NUM_SATISFIED  "BundleNumSatisfied" // claims already held for the bundle
+// The reserved submitter under which the schedd advertises/negotiates slot
+// bundle requests (best priority, off-the-books).  Use isBundleSubmitter()
+// (classad_helpers.h) to test a name against it; the negotiator keys on the
+// ATTR_IS_BUNDLE_SUBMITTER marker rather than the name.
+#define BUNDLE_SUBMITTER_NAME    "condor_bundle"
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"

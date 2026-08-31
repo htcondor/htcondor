@@ -87,6 +87,7 @@ htcondor_cli/access_point.py
 htcondor_cli/annex.py
 htcondor_cli/annex_create.py
 htcondor_cli/annex_validate.py
+htcondor_cli/bundle.py
 htcondor_cli/central_manager.py
 htcondor_cli/cli.py
 htcondor_cli/conf.py

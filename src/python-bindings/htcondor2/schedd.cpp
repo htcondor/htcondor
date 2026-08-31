@@ -1766,3 +1766,93 @@ _schedd_query_ocu(PyObject *, PyObject * args) {
 
     return list;
 }
+
+// Slot bundle requests.  These mirror the OCU bindings above.
+static PyObject *
+_schedd_create_bundle(PyObject *, PyObject * args) {
+    char *addr = nullptr;
+    PyObject_Handle *bundle_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "sO", &addr, (PyObject **)&bundle_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *bundle_ad = (ClassAd *)bundle_ad_handle->t;
+
+    CondorError errStack;
+    DCSchedd schedd(addr);
+
+    ClassAd result = schedd.createBundle(*bundle_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send bundle creation request to schedd");
+        return nullptr;
+    }
+
+    PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_remove_bundle(PyObject *, PyObject * args) {
+    char *addr = nullptr;
+    char *bundle_id = nullptr;
+
+    if (!PyArg_ParseTuple( args, "zz", &addr, &bundle_id)) {
+        return nullptr;
+    }
+
+    ClassAd bundle_ad;
+    bundle_ad.Assign(ATTR_BUNDLE_ID, bundle_id ? bundle_id : "");
+
+    CondorError errStack;
+    DCSchedd schedd(addr);
+
+    ClassAd result = schedd.removeBundle(bundle_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send bundle removal request to schedd");
+        return nullptr;
+    }
+
+    PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_query_bundle(PyObject *, PyObject * args) {
+    char *addr = nullptr;
+    PyObject_Handle * bundle_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "zO", &addr, (PyObject **) &bundle_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *query_ad = (ClassAd *)bundle_ad_handle->t;
+
+    CondorError errStack;
+    DCSchedd schedd(addr);
+
+    std::vector<ClassAd> results = schedd.queryBundle(*query_ad, &errStack);
+
+    if (errStack.code() > 0) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send bundle query request to schedd");
+        return nullptr;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_query_bundle" );
+        return nullptr;
+    }
+
+    for (auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(classAd));
+        auto rv = PyList_Append(list, pyClassAd);
+        if( rv != 0 ) {
+            return nullptr;
+        }
+    }
+
+    return list;
+}

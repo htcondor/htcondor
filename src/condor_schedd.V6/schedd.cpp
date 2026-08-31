@@ -902,6 +902,18 @@ Scheduler::getOCU(int ocu_id) {
 		return nullptr;
 	}
 
+// Brute force search over in-flight slot bundles by their small RRL req_id.
+// N is expected to be small.
+BundleRequest *
+Scheduler::getBundleByReqId(int req_id) {
+	for (auto &[id, bundle]: m_bundles) {
+		if (bundle.req_id == req_id) {
+			return &bundle;
+		}
+	}
+	return nullptr;
+}
+
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
 {
@@ -1334,6 +1346,13 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	} else {
 		formatstr(str, "%s@%s", Owner.Name(), AccountingDomain.c_str());
 		pAd.Assign(ATTR_NAME, str);
+	}
+
+	// Mark the reserved slot-bundle submitter with an explicit attribute so the
+	// negotiator can recognize it without string-matching the submitter name
+	// (which is fragile across the user_is_the_new_owner '@'-qualification).
+	if (isBundleSubmitter(Owner.Name())) {
+		pAd.Assign(ATTR_IS_BUNDLE_SUBMITTER, true);
 	}
 
 	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
@@ -1955,6 +1974,24 @@ Scheduler::count_jobs()
 	}
 
 	time_t time_now = time(nullptr);
+
+	// If we have outstanding slot bundle requests, advertise a reserved
+	// submitter for them so the negotiator will negotiate (and satisfy) them.
+	// The negotiator gives this submitter best priority and matches it
+	// off-the-books
+	if (!m_bundles.empty()) {
+		int outstanding = 0;
+		for (auto &[id, bundle]: m_bundles) {
+			int remaining = bundle.num_requested - bundle.num_satisfied - bundle.num_inflight;
+			if (remaining > 0) { outstanding += remaining; }
+		}
+		if (outstanding > 0) {
+			SubmitterData *bundle_sub = insert_submitter(BUNDLE_SUBMITTER_NAME);
+			bundle_sub->num.Hits++;
+			bundle_sub->num.JobsIdle += outstanding;
+			bundle_sub->LastHitTime = time_now;
+		}
+	}
 
 	if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
 		// The usual case -- send one submitter ad per submitter
@@ -3130,6 +3167,202 @@ Scheduler::command_act_on_ocus(int cmd, Stream* stream)
 			return true;
 			}
 			break;
+		default:
+			ClassAd errorAd;
+			errorAd.Assign(ATTR_RESULT, -1);
+			errorAd.Assign(ATTR_ERROR_STRING, std::string("Invalid Command: ") + cmd_name);
+			if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+	}
+
+	return true;
+}
+
+// Slot bundle request commands.  A bundle is a request for N slots that all
+// match one resource request, held by the schedd as idle claims.  The schedd
+// is authoritative: it stores the request and re-injects it into the
+// negotiation Resource Request List each cycle until N claims are held.
+ClassAd
+Scheduler::act_on_bundle_create(const ClassAd &request)
+{
+	ClassAd result;
+
+	int num_requested = 0;
+	if (!request.LookupInteger(ATTR_BUNDLE_NUM_REQUESTED, num_requested) || num_requested <= 0) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "Missing or invalid attribute: " ATTR_BUNDLE_NUM_REQUESTED);
+		return result;
+	}
+
+	BundleRequest bundle;
+	bundle.num_requested = num_requested;
+	bundle.request_ad = request;
+	request.LookupString(ATTR_OWNER, bundle.owner);
+
+	// Assign a unique id: <schedd-name>#<n>.  The int req_id is used as the
+	// RRL PROC_ID cluster when the request is injected into negotiation.
+	bundle.req_id = m_next_bundle_id++;
+	formatstr(bundle.bundle_id, "%s#%d", Name ? Name : "schedd", bundle.req_id);
+	bundle.name = bundle.bundle_id;
+
+	// Stamp the request ad so the RRL and negotiator recognize it.
+	bundle.request_ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	bundle.request_ad.Assign(ATTR_BUNDLE_ID, bundle.bundle_id);
+
+	// Attribute the held claims to the reserved bundle submitter by setting
+	// ATTR_USER on the request ad.  The startd copies this into the slot's
+	// RemoteUser, so the negotiator sees a held bundle slot as claimed (by
+	// condor_bundle) and carves a fresh slot for the next request instead of
+	// re-handing -- and priority-preempting -- one the bundle already holds.
+	std::string bundle_user = std::string(BUNDLE_SUBMITTER_NAME) + "@" + AccountingDomain;
+	bundle.request_ad.Assign(ATTR_USER, bundle_user);
+
+	m_bundles[bundle.bundle_id] = bundle;
+
+	dprintf(D_ALWAYS, "Created slot bundle %s requesting %d slots\n",
+		bundle.bundle_id.c_str(), num_requested);
+
+	result.Assign(ATTR_RESULT, 0);
+	result.Assign(ATTR_BUNDLE_ID, bundle.bundle_id);
+	return result;
+}
+
+ClassAd
+Scheduler::act_on_bundle_remove(const ClassAd &request)
+{
+	ClassAd result;
+	std::string id;
+	request.LookupString(ATTR_BUNDLE_ID, id);
+
+	auto it = m_bundles.find(id);
+	if (it == m_bundles.end()) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "No such bundle: " + id);
+		return result;
+	}
+
+	dprintf(D_ALWAYS, "Removing slot bundle %s (%d of %d slots were held)\n",
+		id.c_str(), it->second.num_satisfied, it->second.num_requested);
+
+	// Release and destroy any claims we are holding for this bundle.  DelMrec
+	// sends RELEASE_CLAIM to the startd and frees the match record.  Collect
+	// the matches first because DelMrec erases from the matches map.
+	std::vector<match_rec *> to_release;
+	for (auto &[claim_id, mrec] : matches) {
+		if (mrec->is_bundle && mrec->bundle_id == id) {
+			to_release.push_back(mrec);
+		}
+	}
+	for (match_rec *mrec : to_release) {
+		dprintf(D_ALWAYS, "Releasing slot bundle %s claim %s\n",
+			id.c_str(), mrec->description());
+		DelMrec(mrec);
+	}
+
+	m_bundles.erase(it);
+
+	result.Assign(ATTR_RESULT, 0);
+	result.Assign("BundleClaimsReleased", (long long)to_release.size());
+	return result;
+}
+
+std::vector<ClassAd>
+Scheduler::act_on_bundle_query(const ClassAd & /*request*/)
+{
+	std::vector<ClassAd> results;
+	for (const auto &[id, bundle] : m_bundles) {
+		ClassAd ad = bundle.request_ad;
+		ad.Assign(ATTR_BUNDLE_ID, bundle.bundle_id);
+		ad.Assign(ATTR_BUNDLE_NUM_REQUESTED, bundle.num_requested);
+		ad.Assign(ATTR_BUNDLE_NUM_SATISFIED, bundle.num_satisfied);
+		results.emplace_back(std::move(ad));
+	}
+	return results;
+}
+
+int
+Scheduler::command_act_on_bundles(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	dprintf( D_FULLDEBUG, "In command_act_on_bundles for %s\n", cmd_name);
+
+	stream->decode();
+	stream->timeout(30);
+
+	// All of the bundle commands send exactly one request ClassAd
+	ClassAd requestAd;
+	if (!getClassAd(stream, requestAd)) {
+		dprintf( D_ALWAYS, "Failed to receive request ad for %s command: aborting\n", cmd_name);
+		return false;
+	}
+	if (!stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return false;
+	}
+
+	stream->encode();
+
+	switch (cmd) {
+		case CREATE_BUNDLE_REQUEST: {
+			// Creating a bundle is a privileged, off-the-books, best-priority
+			// operation (like an OCU), so require the same super-user status.
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			}
+			ClassAd resultAd = act_on_bundle_create(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+		}
+		case REMOVE_BUNDLE_REQUEST: {
+			// Removing a bundle is privileged for the same reason creating one
+			// is; gate it on the same OCU super-user status.
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			}
+			ClassAd resultAd = act_on_bundle_remove(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+		}
+		case QUERY_BUNDLE_REQUEST: {
+			std::vector<ClassAd> results = act_on_bundle_query(requestAd);
+			size_t query_size = results.size();
+			if (!stream->code(query_size)) {
+				dprintf( D_ALWAYS, "Error sending size of results for %s command\n", cmd_name );
+				return false;
+			}
+			for (const auto &ad: results) {
+				if (!putClassAd(stream, ad)) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+					return false;
+				}
+			}
+			if( !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending eom for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+		}
 		default:
 			ClassAd errorAd;
 			errorAd.Assign(ATTR_RESULT, -1);
@@ -8679,13 +8912,15 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
 
-	// Maybe it isn't a job at all, but an OCU request
+	// Maybe it isn't a job at all, but an OCU or slot bundle request
 	bool is_ocu_request = false;
+	bool is_bundle_request = false;
 	if (job == nullptr) {
 		is_ocu_request = job_id.proc == OCU_qkey2;
-	} 
+		is_bundle_request = job_id.proc == BUNDLE_qkey2;
+	}
 
-	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+	if (!is_ocu_request && !is_bundle_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
 		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool(), /*is_ocu=*/false, /*is_new_match=*/true);
@@ -8728,6 +8963,9 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (job_id.proc == OCU_qkey2) {
 		match_ad.Assign(ATTR_OCU, true);
 	}
+	if (is_bundle_request) {
+		match_ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	}
 
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), job_id, &match_ad,
@@ -8740,6 +8978,17 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if (job_id.proc == OCU_qkey2) {
 		mrec->is_ocu = true;
+	}
+	if (is_bundle_request) {
+		mrec->is_bundle = true;
+		BundleRequest *bundle = scheduler.getBundleByReqId(job_id.cluster);
+		if (bundle) {
+			mrec->bundle_id = bundle->bundle_id;
+			// Count this grant as in-flight until the claim completes (or is
+			// lost), so a later negotiation cycle doesn't re-request a slot the
+			// negotiator has already handed us but we haven't claimed yet.
+			bundle->num_inflight++;
+		}
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
@@ -9197,6 +9446,20 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
 	int max_matches_for_this_submitter = INT_MAX;
+
+	// If the negotiator is negotiating for our reserved slot-bundle submitter,
+	// inject the outstanding bundle requests into the RRL as non-job requests
+	// (like OCUs).  These have no PrioRec entries.  The negotiator matches them
+	// first, at best priority and off-the-books.
+	if (isBundleSubmitter(owner)) {
+		for (auto &[id, bundle]: m_bundles) {
+			int remaining = bundle.num_requested - bundle.num_satisfied - bundle.num_inflight;
+			if (remaining > 0) {
+				PROC_ID bundle_request = {bundle.req_id, BUNDLE_qkey2};
+				resource_requests->add(bundle.req_id, bundle_request);
+			}
+		}
+	}
 
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
@@ -9673,6 +9936,15 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		}
 	}
 
+	if (! jobAd && mrec->is_bundle ) {
+		// Likewise, if this request is a slot bundle, use the bundle
+		// request ad for claiming purposes.
+		BundleRequest *bundle = scheduler.getBundleByReqId(mrec->jid.cluster);
+		if (bundle) {
+			jobAd = new ClassAd(bundle->request_ad);
+		}
+	}
+
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
 			// was put on hold in GetJobAd().  Capture the job id before
@@ -10056,7 +10328,24 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
 			OCU *ocu = scheduler.getOCU(slot->jid);
-			if (ocu != nullptr) {
+			// Gate on the match flag so an OCU id that happens to equal a
+			// bundle req_id can't be misrouted.
+			BundleRequest *bundle = slot->is_bundle ? scheduler.getBundleByReqId(slot->jid.cluster) : nullptr;
+			if (bundle != nullptr) {
+				// This claim satisfies one slot of a bundle.  Hold it idle
+				// (no job runs on it) and count it toward the bundle.  Set
+				// cluster/proc to -1 so it isn't mistaken for a job.
+				slot->keep_while_idle = std::numeric_limits<int>::max();
+				slot->is_bundle = true;
+				slot->bundle_id = bundle->bundle_id;
+				slot->jid.cluster = slot->jid.proc = -1;
+				bundle->num_satisfied++;
+				// This grant is no longer in flight now that it is claimed.
+				if (bundle->num_inflight > 0) { bundle->num_inflight--; }
+				dprintf(D_ALWAYS, "Slot bundle %s satisfied %d of %d slots with %s\n",
+					bundle->bundle_id.c_str(), bundle->num_satisfied,
+					bundle->num_requested, slot->description());
+			} else if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
 				// another job could start here.
@@ -10672,6 +10961,13 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id)
 
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
+
+	// A slot bundle claim is held idle forever and never runs a job.
+	// Return false (no job found) without deleting the match so the schedd
+	// keeps the claim.
+	if (mrec->is_bundle) {
+		return false;
+	}
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu, /*is_new_match=*/false);
@@ -17026,6 +17322,17 @@ Scheduler::Register()
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
 		"command_act_on_ocus", this, READ, true /*force authentication*/);
 
+	// commands for creating/removing/querying slot bundle requests
+	daemonCore->Register_CommandWithPayload(CREATE_BUNDLE_REQUEST, "CREATE_BUNDLE_REQUEST",
+		(CommandHandlercpp)&Scheduler::command_act_on_bundles,
+		"command_act_on_bundles", this, WRITE, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(REMOVE_BUNDLE_REQUEST, "REMOVE_BUNDLE_REQUEST",
+		(CommandHandlercpp)&Scheduler::command_act_on_bundles,
+		"command_act_on_bundles", this, WRITE, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_BUNDLE_REQUEST, "QUERY_BUNDLE_REQUEST",
+		(CommandHandlercpp)&Scheduler::command_act_on_bundles,
+		"command_act_on_bundles", this, READ, true /*force authentication*/);
+
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
@@ -17795,6 +18102,28 @@ Scheduler::unlinkMrec(match_rec* match)
 			ocu->state = 'U';
 		}
 		dirtyJobQueue();
+	}
+
+	// If this match was holding (or on its way to holding) a slot for a bundle,
+	// release its count so the schedd re-requests the lost slot on the next
+	// negotiation cycle.  The jid.cluster/proc == -1 marker (set together with
+	// the increment in claimedStartd) means the claim had completed and was
+	// counted as satisfied; otherwise the grant was still in flight.
+	if (match->is_bundle) {
+		auto bundle_it = m_bundles.find(match->bundle_id);
+		if (bundle_it != m_bundles.end()) {
+			BundleRequest &bundle = bundle_it->second;
+			bool was_counted = (match->jid.cluster == -1 && match->jid.proc == -1);
+			if (was_counted) {
+				if (bundle.num_satisfied > 0) { bundle.num_satisfied--; }
+			} else {
+				if (bundle.num_inflight > 0) { bundle.num_inflight--; }
+			}
+			dprintf(D_ALWAYS, "Slot bundle %s lost a %s claim (%s); now %d held + %d in flight of %d slots\n",
+				bundle.bundle_id.c_str(), was_counted ? "satisfied" : "pending",
+				match->description(), bundle.num_satisfied, bundle.num_inflight,
+				bundle.num_requested);
+		}
 	}
 
 	matches.erase(match->claimId());

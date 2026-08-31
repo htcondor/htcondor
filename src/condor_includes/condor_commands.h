@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 212> makeCommandTable() {
+std::array<std::pair<int, const char *>, 215> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -426,6 +426,12 @@ std::array<std::pair<int, const char *>, 212> makeCommandTable() {
 		{REHOME, "REHOME"},
 #define COMMAND_DATA_SLOT (SCHED_VERS+163)
 		{COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT"},
+#define CREATE_BUNDLE_REQUEST (SCHED_VERS+164) // Create a slot bundle request on the schedd
+		{CREATE_BUNDLE_REQUEST, "CREATE_BUNDLE_REQUEST"},
+#define REMOVE_BUNDLE_REQUEST (SCHED_VERS+165) // Remove a slot bundle request from the schedd
+		{REMOVE_BUNDLE_REQUEST, "REMOVE_BUNDLE_REQUEST"},
+#define QUERY_BUNDLE_REQUEST  (SCHED_VERS+166) // Query slot bundle requests on the schedd
+		{QUERY_BUNDLE_REQUEST, "QUERY_BUNDLE_REQUEST"},
 
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)

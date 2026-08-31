@@ -308,6 +308,9 @@ public:
 	void setOCU( bool ocu ) { c_ocu = ocu; }
 	void setOCUName(const std::string &name) { c_ocu_name = name; }
 
+	void setBundle( bool bundle ) { c_bundle = bundle; }
+	void setBundleId(const std::string &id) { c_bundle_id = id; }
+
 	bool waitingForActivation() const;
 	void invalidateID();
 
@@ -379,6 +382,8 @@ private:
 	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 	std::string c_ocu_name;
+	bool        c_bundle{false}; // when true, this claim is held for a slot bundle
+	std::string c_bundle_id;     // id of the bundle this claim belongs to
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage

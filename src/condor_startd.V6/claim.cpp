@@ -427,7 +427,14 @@ Claim::publish( ClassAd* cad )
 		if (!c_ocu_name.empty()) {
 			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
 		}
-	} 
+	}
+
+	if (c_bundle) {
+		cad->Assign(ATTR_IS_BUNDLE, true);
+		if (!c_bundle_id.empty()) {
+			cad->Assign(ATTR_BUNDLE_ID, c_bundle_id);
+		}
+	}
 
 	publishStateTimes( cad );
 
