@@ -109,6 +109,14 @@ Machine ClassAd Attributes
     or console mouse has last been detected. The value can be modified
     with :macro:`SLOTS_CONNECTED_TO_CONSOLE`.
 
+:classad-attribute-def:`Controller`
+    The name of the access point (*condor_schedd*) that has been
+    designated this execution point's *controller*: the AP permitted to
+    evict any claim on this EP, regardless of which AP owns the claim. This
+    attribute is published only when a controller has been set, via the
+    *htcondor ep controller* command (see :doc:`/man-pages/htcondor`). It
+    is configured by :macro:`STARTD_CONTROLLER_NAME`.
+
 :classad-attribute-def:`Cpus`
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
     slot, 2 for a dual CPU slot, etc. For a partitionable slot, it is
