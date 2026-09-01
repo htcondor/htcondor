@@ -2392,7 +2392,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 	} else if( requestType == RTYPE_CHECKPOINT_TAKEN ) {
 		// dprintf( D_ZKM, "Received request for guidance about checkpoint taken.\n" );
 
-		// For now, if the startd thinks the job should be revicted, then
+		// For now, if the startd thinks the job should be evicted, then
 		// don't restart after the checkpoint.  Otherwise, restart.
 		bool claim_is_closing = false;
 		LookupBoolInContext( request, ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
