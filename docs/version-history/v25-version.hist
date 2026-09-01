@@ -130,6 +130,12 @@
   *condor_negotiator* and as reported by :tool:`condor_userprio`
   :jira:`3904`
 
+- Fixed a bug where the submit description files written by the
+  ``htcondor2.dags`` module each contained two ``queue`` statements. A
+  ``queue`` statement given in the layer's submit description is now
+  preserved instead of being overridden.
+  :jira:`3613`
+
 *** 25.0.14 features
 
 - Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
