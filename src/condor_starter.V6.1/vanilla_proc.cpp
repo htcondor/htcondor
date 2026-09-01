@@ -907,9 +907,9 @@ bool VanillaProc::restartCheckpointedJob() {
 		auto guidance = Starter::requestGuidanceCheckpointTaken(
 			starter, context
 		);
-        if( guidance ) {
-            claim_is_closing = * guidance;
-        }
+		if( guidance ) {
+			claim_is_closing = * guidance;
+		}
 
 		if( claim_is_closing ) {
 			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
