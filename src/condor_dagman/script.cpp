@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,12 +17,11 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
 
-#include "script.h"
-#include "node.h"
 #include "dag.h"
+#include "node.h"
+#include "script.h"
 #include "tmp_dir.h"
 
 #include "condor_daemon_core.h"
@@ -31,19 +30,20 @@ extern DLL_IMPORT_MAGIC char **environ;
 constexpr int STDOUT = 1;
 constexpr int STDERR = 2;
 
-const char* Script::GetNodeName() { return _node->GetNodeName(); }
+const char *Script::GetNodeName() { return _node->GetNodeName(); }
 
 void Script::WriteDebug(int status) {
-	if (_output != DAG::ScriptOutput::NONE && ! _debugFile.empty()) {
+	if (_output != DAG::ScriptOutput::NONE && !_debugFile.empty()) {
 		TmpDir tmpDir;
 		std::string errMsg;
-		if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
-			debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n",
-			             _node->GetDirectory(), errMsg.c_str());
+		if (!tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
+			debug_printf(DEBUG_QUIET,
+						 "Could not change to node directory %s: %s\n",
+						 _node->GetDirectory(), errMsg.c_str());
 		}
 
 		int return_value = WEXITSTATUS(status);
-		const char* return_type = "ExitCode";
+		const char *return_type = "ExitCode";
 		if (WIFSIGNALED(status)) {
 			return_value = status;
 			return_type = "Signal";
@@ -53,58 +53,73 @@ void Script::WriteDebug(int status) {
 		std::string *buffer;
 
 		time_t now = time(nullptr);
-		formatstr(output, "*** Node=%s Type=%s %s=%d Completion=%lld Cmd='%s'\n",
-		          _node->GetNodeName(), GetScriptName(), return_type, return_value,
-		         (long long)now, _executedCMD.c_str());
+		formatstr(output,
+				  "*** Node=%s Type=%s %s=%d Completion=%lld Cmd='%s'\n",
+				  _node->GetNodeName(), GetScriptName(), return_type,
+				  return_value, (long long)now, _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
-		if (_output == DAG::ScriptOutput::STDOUT || _output == DAG::ScriptOutput::ALL) {
-			if (buffer) { output += *buffer; }
+		if (_output == DAG::ScriptOutput::STDOUT ||
+			_output == DAG::ScriptOutput::ALL) {
+			if (buffer) {
+				output += *buffer;
+			}
 		}
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDERR);
-		if (_output == DAG::ScriptOutput::STDERR || _output == DAG::ScriptOutput::ALL) {
-			if (buffer) { output += *buffer; }
+		if (_output == DAG::ScriptOutput::STDERR ||
+			_output == DAG::ScriptOutput::ALL) {
+			if (buffer) {
+				output += *buffer;
+			}
 		}
 
-		FILE* debug_fp = safe_fopen_wrapper(_debugFile.c_str(), "a");
-		if ( ! debug_fp) {
+		FILE *debug_fp = safe_fopen_wrapper(_debugFile.c_str(), "a");
+		if (!debug_fp) {
 			// don't return here in case we need to cd back to main working dir
-			debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s to write %s script output for %s\n",
-			             _debugFile.c_str(), GetScriptName(), _node->GetNodeName());
+			debug_printf(
+				DEBUG_NORMAL,
+				"ERROR: Failed to open %s to write %s script output for %s\n",
+				_debugFile.c_str(), GetScriptName(), _node->GetNodeName());
 		} else {
 			int debug_fd = fileno(debug_fp);
 			if (write(debug_fd, output.c_str(), output.length()) == -1) {
-				debug_printf(DEBUG_NORMAL, "ERROR (%d): Failed to write %s %s Script output to %s | %s\n",
-				             errno, _node->GetNodeName(), GetScriptName(),
-				             _debugFile.c_str(), strerror(errno));
+				debug_printf(DEBUG_NORMAL,
+							 "ERROR (%d): Failed to write %s %s Script output "
+							 "to %s | %s\n",
+							 errno, _node->GetNodeName(), GetScriptName(),
+							 _debugFile.c_str(), strerror(errno));
 			}
 			fclose(debug_fp);
 		}
 
-		if ( ! tmpDir.Cd2MainDir(errMsg)) {
-			debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n",
-			             errMsg.c_str());
+		if (!tmpDir.Cd2MainDir(errMsg)) {
+			debug_printf(DEBUG_QUIET,
+						 "Could not change to original directory: %s\n",
+						 errMsg.c_str());
 		}
 	}
 };
 
-// Helper funtion to check if the script is type PRE to prevent expanding of certain macros
-static bool checkIsPre(const ScriptType& type, const std::string& macro) {
+// Helper funtion to check if the script is type PRE to prevent expanding of
+// certain macros
+static bool checkIsPre(const ScriptType &type, const std::string &macro) {
 	if (type == ScriptType::PRE) {
-		debug_printf(DEBUG_QUIET, "Warning: %s macro should not be used as a PRE script argument!\n",
-		             macro.c_str());
+		debug_printf(
+			DEBUG_QUIET,
+			"Warning: %s macro should not be used as a PRE script argument!\n",
+			macro.c_str());
 		check_warning_strictness(DAG_STRICT_1);
 		return true;
 	}
 	return false;
 }
 
-int Script::BackgroundRun(const Dag& dag, int reaperId) {
+int Script::BackgroundRun(const Dag &dag, int reaperId) {
 	TmpDir tmpDir;
 	std::string errMsg;
-	if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
+	if (!tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
 		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n",
-		             _node->GetDirectory(), errMsg.c_str());
+					 _node->GetDirectory(), errMsg.c_str());
 		return 0;
 	}
 
@@ -116,9 +131,12 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 	size_t proc = 0;
 	for (const auto [_, val] : _node->GetJobInfo()) {
-		if ( ! exitList.empty()) { exitList += ","; }
+		if (!exitList.empty()) {
+			exitList += ",";
+		}
 		if (val == JOB_EXIT_UNKNOWN) {
-			debug_printf(DEBUG_NORMAL, "Error: Job proc %zu exit is unknown!\n", proc);
+			debug_printf(DEBUG_NORMAL, "Error: Job proc %zu exit is unknown!\n",
+						 proc);
 		} else if (val == JOB_EXIT_ABORT) {
 			numAborted++;
 		} else {
@@ -128,11 +146,15 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		proc++;
 	}
 
-	for (const auto& [code, count] : exit_codes) {
-		if ( ! exitCodes.empty()) { exitCodes += ","; }
+	for (const auto &[code, count] : exit_codes) {
+		if (!exitCodes.empty()) {
+			exitCodes += ",";
+		}
 		exitCodes += std::to_string(code);
 
-		if ( ! exitFreq.empty()) { exitFreq += ","; }
+		if (!exitFreq.empty()) {
+			exitFreq += ",";
+		}
 		exitFreq += std::to_string(code) + ":" + std::to_string(count);
 	}
 
@@ -176,22 +198,30 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$DAGID") {
 			arg = std::to_string(dag.DAGManJobId()->_cluster);
 
-		// Macros available for POST & HOLD scripts
+			// Macros available for POST & HOLD scripts
 		} else if (cmp_arg == "$JOBID") {
-			std::string id = std::to_string(_node->GetCluster()) + "." + std::to_string(_node->GetProc());
+			std::string id = std::to_string(_node->GetCluster()) + "." +
+							 std::to_string(_node->GetProc());
 			arg = checkIsPre(_type, "$JOBID") ? token : id;
 
 		} else if (cmp_arg == "$CLUSTERID") {
-			arg = checkIsPre(_type, "$CLUSTERID") ? token : std::to_string(_node->GetCluster());
+			arg = checkIsPre(_type, "$CLUSTERID")
+					  ? token
+					  : std::to_string(_node->GetCluster());
 
 		} else if (cmp_arg == "$JOB_COUNT") {
-			arg = checkIsPre(_type, "$JOB_COUNT") ? token : std::to_string(_node->NumSubmitted());
+			arg = checkIsPre(_type, "$JOB_COUNT")
+					  ? token
+					  : std::to_string(_node->NumSubmitted());
 
 		} else if (cmp_arg == "$SUCCESS") {
-			arg = checkIsPre(_type, "$SUCCESS") ? token : (_node->IsSuccessful() ? "True" : "False");
+			arg = checkIsPre(_type, "$SUCCESS")
+					  ? token
+					  : (_node->IsSuccessful() ? "True" : "False");
 
 		} else if (cmp_arg == "$RETURN") {
-			arg = checkIsPre(_type, "$RETURN") ? token : std::to_string(_retValJob);
+			arg = checkIsPre(_type, "$RETURN") ? token
+											   : std::to_string(_retValJob);
 
 		} else if (cmp_arg == "$EXIT_CODES") {
 			arg = checkIsPre(_type, "$EXIT_CODES") ? token : exitCodes;
@@ -203,15 +233,21 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			arg = checkIsPre(_type, "$EXIT_CODE_LIST") ? token : exitList;
 
 		} else if (cmp_arg == "$PRE_SCRIPT_RETURN") {
-			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
+			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN")
+					  ? token
+					  : std::to_string(_retValScript);
 
 		} else if (cmp_arg == "$JOB_ABORT_COUNT") {
-			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(numAborted);
+			arg = checkIsPre(_type, "$JOB_ABORT_COUNT")
+					  ? token
+					  : std::to_string(numAborted);
 
-		// Non DAGMan sanctioned script macros
+			// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
-			debug_printf(DEBUG_QUIET, "Warning: unrecognized macro %s in node %s %s script arguments\n",
-			             token.c_str(), _node->GetNodeName(), GetScriptName());
+			debug_printf(DEBUG_QUIET,
+						 "Warning: unrecognized macro %s in node %s %s script "
+						 "arguments\n",
+						 token.c_str(), _node->GetNodeName(), GetScriptName());
 			check_warning_strictness(DAG_STRICT_1);
 			arg = token;
 		} else {
@@ -220,30 +256,40 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 		args.AppendArg(arg);
 
-		if (executable.empty()) { executable = arg; }
+		if (executable.empty()) {
+			executable = arg;
+		}
 	}
 
 	args.GetArgsStringForDisplay(_executedCMD);
 
 	OptionalCreateProcessArgs cpArgs;
-	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
-	      .fdInheritList(0);
+	cpArgs.reaperID(reaperId)
+		.wantCommandPort(FALSE)
+		.wantUDPCommandPort(FALSE)
+		.fdInheritList(0);
 	int std_fds[3] = {-1, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
 	int null_fd = -1;
 	if (_output != DAG::ScriptOutput::NONE) {
 		if (_output == DAG::ScriptOutput::STDOUT) {
-			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
+			null_fd =
+				safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
 			if (null_fd < 0) {
-				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stderr of %s script: %s\n",
-				             NULL_FILE, GetScriptName(), strerror(errno));
+				debug_printf(
+					DEBUG_NORMAL,
+					"ERROR: Failed to open %s for stderr of %s script: %s\n",
+					NULL_FILE, GetScriptName(), strerror(errno));
 			} else {
 				std_fds[STDERR] = null_fd;
 			}
 		} else if (_output == DAG::ScriptOutput::STDERR) {
-			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
+			null_fd =
+				safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
 			if (null_fd < 0) {
-				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stdout of %s script: %s\n",
-				             NULL_FILE, GetScriptName(), strerror(errno));
+				debug_printf(
+					DEBUG_NORMAL,
+					"ERROR: Failed to open %s for stdout of %s script: %s\n",
+					NULL_FILE, GetScriptName(), strerror(errno));
 			} else {
 				std_fds[STDOUT] = null_fd;
 			}
@@ -251,11 +297,14 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		cpArgs.std(std_fds);
 	}
 	_pid = daemonCore->CreateProcessNew(executable, args, cpArgs);
-	if (null_fd >= 0) { close(null_fd); }
+	if (null_fd >= 0) {
+		close(null_fd);
+	}
 
-	if ( ! tmpDir.Cd2MainDir(errMsg)) {
-		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n",
-		             errMsg.c_str());
+	if (!tmpDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET,
+					 "Could not change to original directory: %s\n",
+					 errMsg.c_str());
 		return 0;
 	}
 

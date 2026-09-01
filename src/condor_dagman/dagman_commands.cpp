@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,20 +18,21 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "dagman_commands.h"
 #include "dagman_main.h"
 #include "debug.h"
 #include "parse.h"
-#include "dagman_commands.h"
 
-static void
-command_halt(const ClassAd& request, Dagman& dm) {
+static void command_halt(const ClassAd &request, Dagman &dm) {
 	bool pause = false;
 
 	if (request.LookupBool("IsPause", pause) && pause) {
-		debug_printf(DEBUG_NORMAL, dm.paused ? "DAG Pause: Already-paused DAG\n" : "DAG Pause: Freezing all work...\n");
+		debug_printf(DEBUG_NORMAL, dm.paused
+									   ? "DAG Pause: Already-paused DAG\n"
+									   : "DAG Pause: Freezing all work...\n");
 		dm.paused = true;
 	} else if (dm.dag->IsHalted()) {
-		debug_printf(DEBUG_NORMAL,  "DAGMan is already halted\n");
+		debug_printf(DEBUG_NORMAL, "DAGMan is already halted\n");
 	} else {
 		debug_printf(DEBUG_NORMAL, "Halting DAGMan progess...\n");
 		dm.dag->Halt();
@@ -40,13 +41,14 @@ command_halt(const ClassAd& request, Dagman& dm) {
 
 	std::string reason;
 	if (request.LookupString("HaltReason", reason)) {
-		debug_printf(DEBUG_NORMAL, "%s reason: %s\n", pause ? "Pause" : "Halt", reason.c_str());
+		debug_printf(DEBUG_NORMAL, "%s reason: %s\n", pause ? "Pause" : "Halt",
+					 reason.c_str());
 	}
 }
 
-static void
-command_resume(Dagman& dm) {
-	// Resume clear both pause and halt (in case both have been set for some reason)
+static void command_resume(Dagman &dm) {
+	// Resume clear both pause and halt (in case both have been set for some
+	// reason)
 	if (dm.paused) {
 		debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
 		dm.paused = false;
@@ -59,8 +61,8 @@ command_resume(Dagman& dm) {
 	}
 }
 
-static void
-command_set_throttles(const ClassAd& request, ClassAd& response, Dagman& dm) {
+static void command_set_throttles(const ClassAd &request, ClassAd &response,
+								  Dagman &dm) {
 	Throttles new_throttles = dm.throttles;
 
 	// Lookup throttles in request ad
@@ -80,11 +82,12 @@ command_set_throttles(const ClassAd& request, ClassAd& response, Dagman& dm) {
 	}
 }
 
-bool
-handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
+bool handle_command_generic(const ClassAd &request, ClassAd &response,
+							Dagman &dm) {
 	int cmd = 0;
-	if ( ! request.LookupInteger("DagCommand", cmd)) {
-		response.InsertAttr(ATTR_ERROR_STRING, "No DAG command provided in request");
+	if (!request.LookupInteger("DagCommand", cmd)) {
+		response.InsertAttr(ATTR_ERROR_STRING,
+							"No DAG command provided in request");
 		return false;
 	}
 
@@ -94,78 +97,73 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 		formatstr(error, "Unknown DAG command (%d) provided", cmd);
 	} else {
 		switch (static_cast<DAG_GENERIC_CMD>(cmd)) {
-			case DAG_GENERIC_CMD::HALT:
-				command_halt(request, dm);
-				break;
-			case DAG_GENERIC_CMD::RESUME:
-				command_resume(dm);
-				break;
-			case DAG_GENERIC_CMD::SET_THROTTLES:
-				command_set_throttles(request, response, dm);
-				break;
-			default:
-				formatstr(error, "DAG command (%d) not implemented", cmd);
-				break;
+		case DAG_GENERIC_CMD::HALT:
+			command_halt(request, dm);
+			break;
+		case DAG_GENERIC_CMD::RESUME:
+			command_resume(dm);
+			break;
+		case DAG_GENERIC_CMD::SET_THROTTLES:
+			command_set_throttles(request, response, dm);
+			break;
+		default:
+			formatstr(error, "DAG command (%d) not implemented", cmd);
+			break;
 		}
 	}
 
-	if ( ! error.empty()) {
+	if (!error.empty()) {
 		response.InsertAttr(ATTR_ERROR_STRING, error);
 	}
 
 	return error.empty();
 }
 
-Node*
-AddNode( Dag *dag, const char *name,
-		 const char* directory,
-		 const char* submitFileOrSubmitDesc,
-		 bool noop,
-		 bool done, NodeType type,
-		 std::string &failReason )
-{
+Node *AddNode(Dag *dag, const char *name, const char *directory,
+			  const char *submitFileOrSubmitDesc, bool noop, bool done,
+			  NodeType type, std::string &failReason) {
 	std::string why;
-	if( !IsValidNodeName( dag, name, why ) ) {
+	if (!IsValidNodeName(dag, name, why)) {
 		failReason = why;
 		return NULL;
 	}
-	if( !IsValidSubmitName( submitFileOrSubmitDesc, why ) ) {
+	if (!IsValidSubmitName(submitFileOrSubmitDesc, why)) {
 		failReason = why;
 		return NULL;
 	}
-	if( done && type == NodeType::FINAL ) {
-		formatstr( failReason, "Warning: FINAL Node %s cannot be set to DONE\n",
-					name );
-        debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
-		(void)check_warning_strictness( DAG_STRICT_1, false );
+	if (done && type == NodeType::FINAL) {
+		formatstr(failReason, "Warning: FINAL Node %s cannot be set to DONE\n",
+				  name);
+		debug_printf(DEBUG_QUIET, "%s", failReason.c_str());
+		(void)check_warning_strictness(DAG_STRICT_1, false);
 		done = false;
 	}
-	if( done && type == NodeType::SERVICE ) {
-		formatstr( failReason, "Warning: SERVICE node %s cannot be set to DONE\n",
-					name );
-        debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
-		(void)check_warning_strictness( DAG_STRICT_1, false );
+	if (done && type == NodeType::SERVICE) {
+		formatstr(failReason,
+				  "Warning: SERVICE node %s cannot be set to DONE\n", name);
+		debug_printf(DEBUG_QUIET, "%s", failReason.c_str());
+		(void)check_warning_strictness(DAG_STRICT_1, false);
 		done = false;
 	}
-	Node* node = new Node( name, directory, submitFileOrSubmitDesc );
-	if( !node ) {
-		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
-			// we already know we're out of memory, so filling in
-			// FailReason will likely fail, but give it a shot...
+	Node *node = new Node(name, directory, submitFileOrSubmitDesc);
+	if (!node) {
+		dprintf(D_ALWAYS, "ERROR: out of memory!\n");
+		// we already know we're out of memory, so filling in
+		// FailReason will likely fail, but give it a shot...
 		failReason = "out of memory!";
 		return NULL;
 	}
-	node->SetNoop( noop );
-	if( done ) {
+	node->SetNoop(noop);
+	if (done) {
 		dag->AddPreDoneNode(node);
 	}
-	node->SetType( type );
+	node->SetType(type);
 
-	ASSERT( dag != NULL );
-	if( !dag->Add( node ) ) {
+	ASSERT(dag != NULL);
+	if (!dag->Add(node)) {
 		failReason = "unknown failure adding ";
-		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
-		failReason += ( node->GetType() == NodeType::SERVICE )? "SERVICE " : "";
+		failReason += (node->GetType() == NodeType::FINAL) ? "Final " : "";
+		failReason += (node->GetType() == NodeType::SERVICE) ? "SERVICE " : "";
 		failReason += "node to DAG";
 		delete node;
 		return NULL;
@@ -174,13 +172,11 @@ AddNode( Dag *dag, const char *name,
 	return node;
 }
 
-bool
-SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile, 
-            std::string &whynot )
-{
-	Node *node = dag->FindNodeByName( nodeName );
-	if ( node ) {
-		node->SetDagFile( dagFile );
+bool SetNodeDagFile(Dag *dag, const char *nodeName, const char *dagFile,
+					std::string &whynot) {
+	Node *node = dag->FindNodeByName(nodeName);
+	if (node) {
+		node->SetDagFile(dagFile);
 		return true;
 	} else {
 		whynot = "Node " + std::string(nodeName) + " not found!";
@@ -188,38 +184,34 @@ SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
 	}
 }
 
-bool
-IsValidNodeName( Dag *dag, const char *name, std::string &whynot )
-{
-	if( name == NULL ) {
+bool IsValidNodeName(Dag *dag, const char *name, std::string &whynot) {
+	if (name == NULL) {
 		whynot = "missing node name";
 		return false;
 	}
-	if( strlen( name ) == 0 ) {
+	if (strlen(name) == 0) {
 		whynot = "empty node name (name == \"\")";
 		return false;
 	}
-	if( isReservedWord( name ) ) {
+	if (isReservedWord(name)) {
 		whynot = "invalid node name: '" + std::string(name) + "'" +
-			"is a DAGMan reserved word";
+				 "is a DAGMan reserved word";
 		return false;
 	}
-	ASSERT( dag != NULL );
-	if( dag->NodeExists( name ) ) {
+	ASSERT(dag != NULL);
+	if (dag->NodeExists(name)) {
 		whynot = "node name '" + std::string(name) + "' already exists in DAG";
 		return false;
 	}
 	return true;
 }
 
-bool
-IsValidSubmitName( const char *name, std::string &whynot )
-{
-	if( name == NULL ) {
+bool IsValidSubmitName(const char *name, std::string &whynot) {
+	if (name == NULL) {
 		whynot = "missing submit file name";
 		return false;
 	}
-	if( strlen( name ) == 0 ) {
+	if (strlen(name) == 0) {
 		whynot = "empty submit file name (name == \"\")";
 		return false;
 	}
