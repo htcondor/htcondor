@@ -145,21 +145,15 @@ class TestCCBOutboundProxyBench:
         assert "outbound-proxy relay throughput" in result.stdout
 
         # Both directions of the splice must actually carry bytes (guards against a
-        # relay that establishes but pumps only one way).  NOTE: the absolute rates
-        # are an unreliable measure here -- like the streaming bench under shared
-        # port, this raw-listener setup produces a lopsided bidirectional
-        # measurement -- so we assert liveness (each direction > 0), not symmetry.
-        import re
-
-        rates = {
-            m.group(1): float(m.group(2))
-            for m in re.finditer(
-                r"(requester -> target|target -> requester)\s*:\s*([\d.]+)\s*MiB/s",
-                result.stdout,
-            )
-        }
-        assert rates.get("requester -> target", 0) > 0, "req->tgt direction carried no data"
-        assert rates.get("target -> requester", 0) > 0, "tgt->req direction carried no data"
+        # relay that establishes but pumps only one way).  This is enforced INSIDE the
+        # bench, which primes each direction with a byte before the throughput blast
+        # and exits non-zero if either direction never delivers -- so the returncode
+        # check above is the bidirectional-liveness assertion.  We deliberately do NOT
+        # assert on the printed per-direction rates or byte counts: the blast is a
+        # saturating, winner-take-all measurement (systematically lopsided under
+        # shared port), so the losing direction can deliver zero bytes *within the
+        # fixed window* even though the relay carries it -- the priming, not the
+        # blast, is the reliable liveness signal.
 
         # Confirm the broker actually dialed the target and relayed (guards against a
         # silent loopback bypass making the test pass without using the proxy).
@@ -263,17 +257,10 @@ class TestCCBOutboundTunnelBench:
         )
         assert "outbound-proxy relay throughput" in result.stdout
 
-        import re
-
-        rates = {
-            m.group(1): float(m.group(2))
-            for m in re.finditer(
-                r"(requester -> target|target -> requester)\s*:\s*([\d.]+)\s*MiB/s",
-                result.stdout,
-            )
-        }
-        assert rates.get("requester -> target", 0) > 0, "req->tgt carried no data"
-        assert rates.get("target -> requester", 0) > 0, "tgt->req carried no data"
+        # Both directions carried bytes end-to-end.  Liveness is enforced inside the
+        # bench (it primes each direction and exits non-zero otherwise), so the
+        # returncode check above covers it; the winner-take-all rates/byte counts are
+        # not asserted on -- see _run_outbound_bench for why.
 
         # Confirm it really went through both brokers: the inside broker forwarded
         # to its next hop (rather than dialing) and the outside broker dialed the

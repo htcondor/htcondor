@@ -5307,7 +5307,7 @@ type=int
 range=0,
 
 [MAX_CONCURRENT_UPLOADS_PER_USER]
-default=$(MAX_CONCURRENT_UPLOADS:100)/5
+default=($(MAX_CONCURRENT_UPLOADS:0))/5
 type=int
 range=0,
 
