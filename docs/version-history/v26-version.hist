@@ -2,3 +2,8 @@
 
 *** 26.0.1 bugs
 
+- Fixed a bug where :ad-attr:`ResourcesUsed' would grow without bounds in the
+  *condor_negotiator* and as reported by :tool:`condor_userprio`
+  :jira:`3904`
+
+
