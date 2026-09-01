@@ -111,6 +111,10 @@
   when a temporary directory isn't being created.
   :jira:`3882`
 
+- Fixed the default for :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` so it evaluates to 0
+  (no limit) when :macro:`MAX_CONCURRENT_UPLOADS` is not set.
+  :jira:`3664`
+
 *** 25.14.0 bugs
 
 - The Python bindings no longer assume that all ads in a legacy-style reply

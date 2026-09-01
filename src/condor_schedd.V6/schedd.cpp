@@ -1147,9 +1147,10 @@ Scheduler::timeout( int /* timerID */ )
 	daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 }
 
-void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs)
+void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs, int num_new_idle_dag_or_local_jobs)
 {
-	dprintf(D_FULLDEBUG, "endSubmitTransaction new_jobs=%d idle=%d\n", num_new_jobs, num_new_idle_jobs);
+	dprintf(D_FULLDEBUG, "endSubmitTransaction new_jobs=%d idle=%d dag_or_local=%d\n",
+		num_new_jobs, num_new_idle_jobs, num_new_idle_dag_or_local_jobs);
 
 	// when we get new idle jobs and we had no submitter pressure before (i.e no idle jobs)
 	// we want to consider re-running count_jobs and sending a RESCHEDULE to the negotiator
@@ -1158,6 +1159,18 @@ void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs)
 			dprintf(D_STATUS,
 				"%d new idle jobs submitted, and last update had no job pressure. Triggering a rechedule.\n",
 				num_new_idle_jobs);
+			needReschedule();
+		} else if (num_new_idle_dag_or_local_jobs > 0) {
+			dprintf(D_STATUS,
+				"%d new idle dag or local jobs submitted. Triggering a rechedule.\n",
+				num_new_idle_jobs);
+			// TODO: do less than a full reschdule here
+			needReschedule();
+		} else if ( ! cronTabClusterIds.empty()) {
+			dprintf(D_STATUS,
+				"%d new CRONDOR jobs submitted. Triggering a rechedule.\n",
+				(int)cronTabClusterIds.size());
+			// TODO: do less than a full reschdule here
 			needReschedule();
 		}
 	}
