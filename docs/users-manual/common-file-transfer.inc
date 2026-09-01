@@ -107,13 +107,13 @@ The usual HTCondor accounting applies to a data slot.
 The Blocked State
 """""""""""""""""
 
-A job which has reserved computational resources but which is waiting for
+A job which has reserved (computational) resources but which is waiting for
 common file transfer to finish is in the "blocked" state, displayed in
 :tool:`condor_q` as ``B``.  A job in the blocked state is not idle: its AP has
 already provisioned the resources to run it.  It is also not running: it
 has not yet started (its own) file transfer.
 
-A job may enter the blocked stated without creating a new data slot if a
+A job may enter the blocked state without creating a new data slot if a
 common file transfer (to the corresponding EP) is already scheduled or in
 progress when the AP decides to run that job on that EP.  (If the common
 file transfer(s) to that EP have already completed, then the job immediately
@@ -122,7 +122,8 @@ goes into the running state.)
 Jobs With Very Large Inputs
 """""""""""""""""""""""""""
 
-[FIXME: did we get this working in practice?]
+.. `test_cif_disk_size.py` is in the regression suite and validates, at least
+   partially, that this feature is working.  We've not tested it in anger.
 
 In addition to faster turn-around times, common input files may enable you to
 run more jobs simultaneously.  Because common files must be immutable, HTCondor
@@ -142,7 +143,7 @@ Common Files and Checkpointing
 [FIXME: test this.]
 
 You should (for efficiency and clarity) already be omitting input files that
-the job doesn't change from subcom:`transfer_checkpoint_files`; continue to
+the job doesn't change from :subcom:`transfer_checkpoint_files`; continue to
 do so by not including files any files from subcom:`transfer_common_input` either.
 
 Job Event Logs
