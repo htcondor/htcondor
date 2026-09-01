@@ -20,6 +20,8 @@
 #ifndef DAGMAN_COMMANDS_H
 #define DAGMAN_COMMANDS_H
 
+#include "dagman_main.h"
+
 enum class DAG_GENERIC_CMD {
 	MIN = 0, // Must be first!
 	HALT,

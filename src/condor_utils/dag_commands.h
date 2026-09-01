@@ -20,6 +20,8 @@
 #ifndef DAG_COMMANDS_H
 #define DAG_COMMANDS_H
 
+#include "condor_debug.h"
+
 #include <set>
 #include <map>
 #include <algorithm>

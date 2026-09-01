@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_classad.h"
 #include "dagman_commands.h"
 #include "dagman_main.h"
 #include "debug.h"
