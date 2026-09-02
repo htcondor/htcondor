@@ -52,9 +52,16 @@ const CondorID Dag::_defaultCondorId;
 EdgeTable Dag::edge_table;
 
 //---------------------------------------------------------------------------
-Dag::Dag(const Dagman& dm, bool isSplice, const std::string& spliceScope)
-	: dagOpts(dm.options), config(dm.config), throttles(dm.throttles), _schedd(dm._schedd), submitter(dm.submitter),
-	  _metrics(dm.metrics), _DAGManJobId(&dm.DAGManJobId), _spliceScope(spliceScope), _isSplice(isSplice) {
+Dag::Dag(const Dagman& dm, bool isSplice, const std::string& spliceScope) :
+	dagOpts(dm.options),
+	config(dm.config),
+	throttles(dm.throttles),
+	_schedd(dm._schedd),
+	submitter(dm.submitter),
+	_metrics(dm.metrics),
+	_DAGManJobId(&dm.DAGManJobId),
+	_spliceScope(spliceScope),
+	_isSplice(isSplice) {
 	debug_printf(DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str());
 
 	_defaultNodeLog.assign(dm.config[conf::str::NodesLog]);

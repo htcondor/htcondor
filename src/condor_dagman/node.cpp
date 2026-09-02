@@ -42,8 +42,19 @@ const std::set<Node::status_t> Node::ACTIVE_STATES = {
 };
 
 // NOTE: this must be kept in sync with the status_t enum
-const char* Node::status_t_names[] = {"STATUS_NOT_READY", "STATUS_READY    ", "STATUS_PRERUN   ", "STATUS_SUBMITTED",
-									  "STATUS_POSTRUN  ", "STATUS_DONE     ", "STATUS_ERROR    ", "STATUS_FUTILE   "};
+// clang-format off
+// Names are space-padded to a common width so they align in log output.
+const char* Node::status_t_names[] = {
+	"STATUS_NOT_READY",
+	"STATUS_READY    ",
+	"STATUS_PRERUN   ",
+	"STATUS_SUBMITTED",
+	"STATUS_POSTRUN  ",
+	"STATUS_DONE     ",
+	"STATUS_ERROR    ",
+	"STATUS_FUTILE   "
+};
+// clang-format on
 
 //---------------------------------------------------------------------------
 Node::Node(const char* nodeName, const char* directory, const char* cmdFile) {
