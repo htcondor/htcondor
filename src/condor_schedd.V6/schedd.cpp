@@ -11946,17 +11946,17 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// something in $$() that doesn't exist in the machine
 			// ad and/or if the machine ad is already gone for some
 			// reason.  so, verify the job is still here...
-		if( ! GetJobAd(job_id) ) {
+		if( ! GetJobAd(real_job_id) ) {
 			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d "
 					"but that job is already known to exist",
-					job_id.cluster, job_id.proc );
+					real_job_id.cluster, real_job_id.proc );
 		}
 
 			// the job is still there, it just failed b/c of $$()
 			// woes... abort.
 		dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
 				 "%d.%d, can't spawn %s, aborting\n",
-				 job_id.cluster, job_id.proc, name );
+				 real_job_id.cluster, real_job_id.proc, name );
 			// our caller will deal with cleaning up the srec
 			// as appropriate...
 		return false;
