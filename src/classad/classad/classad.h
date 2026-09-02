@@ -78,7 +78,7 @@ class ClassAd : public ExprTree
 		/**@name Constructors/Destructor */
 		//@{
 		/// Default constructor 
-		ClassAd () : alternateScope(nullptr), do_dirty_tracking(false), chained_parent_ad(nullptr), parentScope(nullptr) {}
+		ClassAd () : alternateScope(nullptr), do_dirty_tracking(false), chained_parent_ad(nullptr), parentAd(nullptr) {}
 
 		/** Copy constructor
             @param ad The ClassAd to copy
@@ -634,31 +634,23 @@ class ClassAd : public ExprTree
 			this->alternateScope = rhs.alternateScope;
 
 			std::swap(this->attrList, rhs.attrList);
-			for( auto & entry : attrList ) {
-				// I wonder what other invariants were forgotten?
-				entry.second->SetParentScope(this);
-			}
 			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
 
 			this->do_dirty_tracking = rhs.do_dirty_tracking;
 			this->chained_parent_ad = rhs.chained_parent_ad;
-			this->parentScope = rhs.parentScope;
+			this->parentAd = rhs.parentAd;
 
 			return *this;
 		}
 
-		ClassAd(ClassAd &&rhs) : 
+		ClassAd(ClassAd &&rhs) :
    				alternateScope(rhs.alternateScope),
 				attrList(std::move(rhs.attrList)),
 				dirtyAttrList(std::move(rhs.dirtyAttrList)),
 				do_dirty_tracking(rhs.do_dirty_tracking),
 				chained_parent_ad(rhs.chained_parent_ad),
-				parentScope(rhs.parentScope)
+				parentAd(rhs.parentAd)
 		{
-				for(auto &entry: attrList ) {
-					// I wonder what other invariants were forgotten?
-					entry.second->SetParentScope(this);
-			}
 		}
 
         /** Fill in this ClassAd with the contents of the other ClassAd.
@@ -835,7 +827,12 @@ class ClassAd : public ExprTree
 		 */
 		ClassAd *alternateScope;
 
-		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+		/** Populate scope map entries in EvalState for this ClassAd.
+		    Default implementation walks up parentAd chain and delegates
+		    to the topmost ad's PopulateScopeMap. MatchClassAd overrides
+		    to set up the scope chain for LEFT/RIGHT ads.
+		*/
+		virtual void PopulateScopeMap(EvalState& state) const;
 
 		static bool _GetExternalReferences( const ExprTree *, const ClassAd *,
 					EvalState &, References&, bool fullNames );
@@ -844,6 +841,7 @@ class ClassAd : public ExprTree
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
+		friend	class MatchClassAd;
 
 
 		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
@@ -855,17 +853,20 @@ class ClassAd : public ExprTree
 		ClassAd *_GetDeepScope( const std::string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;
 
-		virtual void _SetParentScope( const ClassAd* p );
 		virtual bool _Evaluate( EvalState& , Value& ) const;
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
-	
+
 		int LookupInScope( const std::string&, ExprTree*&, EvalState& ) const;
 		AttrList	  attrList;
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;
 		ClassAd       *chained_parent_ad;
-		const ClassAd *parentScope;
+
+		// Back-pointer to the ClassAd this ad was inserted into as a
+		// child (e.g. LEFT/RIGHT in a MatchClassAd). Used by
+		// PopulateScopeMap to walk up to the containing ad.
+		const ClassAd *parentAd;
 };
 
 } // classad

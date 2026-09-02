@@ -3123,11 +3123,9 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	std::unique_ptr<ExprTree> fnCall(classad::FunctionCall::MakeFunctionCall("userMap", args));
 
 	classad::Value val;
-	fnCall->SetParentScope(&ad);
-	if (!fnCall->Evaluate(val)) {
+	if (!classad::ClassAd::EvaluateExpr(&ad, fnCall.get(), val)) {
 		return true;
 	}
-	fnCall->SetParentScope(nullptr);
 
 	std::string new_prefix;
 	if (!val.IsStringValue(new_prefix)) {
