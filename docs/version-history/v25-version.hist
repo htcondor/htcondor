@@ -1,5 +1,11 @@
 *** 25.15.15 bugs
 
+- Fixed a bug where the submit description files written by the
+  ``htcondor2.dags`` module each contained two ``queue`` statements. A
+  ``queue`` statement given in the layer's submit description is now
+  preserved instead of being overridden.
+  :jira:`3613`
+
 *** 25.0.15 bugs
 
 *** 25.14.0 features
