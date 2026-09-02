@@ -599,6 +599,8 @@
 #define ATTR_DETECTED_CPUS  "DetectedCpus"
 #define ATTR_DETECTED_DISK  "DetectedDisk"
 #define ATTR_MIN_HOSTS  "MinHosts"
+#define ATTR_MIN_CONDOR_VERSION "MinCondorVersion"
+#define ATTR_MAX_CONDOR_VERSION "MaxCondorVersion"
 #define ATTR_MIPS  "Mips"
 #define ATTR_MPI_IS_MASTER  "MPIIsMaster"
 #define ATTR_MPI_MASTER_ADDR  "MPIMasterAddr"
