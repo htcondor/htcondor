@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,15 +37,13 @@
 namespace deep = DagmanDeepOptions;
 namespace conf = DagmanConfigOptions;
 
-SubmitResult
-DagSubmit::Submit(Node& node, CondorID& condorID, std::string& err, const std::string& log_file) {
+SubmitResult DagSubmit::Submit(Node& node, CondorID& condorID, std::string& err, const std::string& log_file) {
 	TmpDir tmpDir;
 	std::string errMsg;
 	const char* directory = node.GetDirectory();
 
-	if ( ! tmpDir.Cd2TmpDir(directory, errMsg)) {
-		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n",
-		             directory, errMsg.c_str());
+	if (!tmpDir.Cd2TmpDir(directory, errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to node directory %s: %s\n", directory, errMsg.c_str());
 		return SubmitResult::RETRY;
 	}
 
@@ -57,21 +55,16 @@ DagSubmit::Submit(Node& node, CondorID& condorID, std::string& err, const std::s
 		result = FakeSubmit(node, condorID, log_file);
 	}
 
-	if ( ! tmpDir.Cd2MainDir(errMsg)) {
-		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n",
-		             errMsg.c_str());
+	if (!tmpDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n", errMsg.c_str());
 	}
 
 	return result;
 }
 
-bool
-DagSubmit::Reschedule() {
-	return true;
-}
+bool DagSubmit::Reschedule() { return true; }
 
-SubmitResult
-DagSubmit::FakeSubmit(Node& node, CondorID& condorID, const std::string& log_file) {
+SubmitResult DagSubmit::FakeSubmit(Node& node, CondorID& condorID, const std::string& log_file) {
 	// Special HTCondorID for NOOP nodes -- actually indexed by otherwise-unused subprocID.
 	condorID._cluster = 0;
 	condorID._proc = Node::NOOP_NODE_PROCID;
@@ -94,7 +87,7 @@ DagSubmit::FakeSubmit(Node& node, CondorID& condorID, const std::string& log_fil
 
 	subEvent.submitEventLogNotes = std::string("DAG Node: ") + node.GetNodeName();
 
-	if ( ! ulog.writeEvent(&subEvent)) {
+	if (!ulog.writeEvent(&subEvent)) {
 		EXCEPT("Error: writing dummy submit event for NOOP node failed!");
 		return SubmitResult::FAILURE;
 	}
@@ -107,7 +100,7 @@ DagSubmit::FakeSubmit(Node& node, CondorID& condorID, const std::string& log_fil
 	termEvent.returnValue = 0;
 	termEvent.signalNumber = 0;
 
-	if ( ! ulog.writeEvent(&termEvent)) {
+	if (!ulog.writeEvent(&termEvent)) {
 		EXCEPT("Error: writing dummy terminated event for NOOP node failed!");
 		return SubmitResult::FAILURE;
 	}
@@ -115,18 +108,11 @@ DagSubmit::FakeSubmit(Node& node, CondorID& condorID, const std::string& log_fil
 	return SubmitResult::SUCCESS;
 }
 
-void
-DagSubmit::SetFakeId(const int id) {
-	m_subprocid = id;
-}
+void DagSubmit::SetFakeId(const int id) { m_subprocid = id; }
 
-int
-DagSubmit::GetFakeId() {
-	return ++m_subprocid;
-}
+int DagSubmit::GetFakeId() { return ++m_subprocid; }
 
-bool
-DagSubmit::PreSkipSubmit(Node& node, const std::string& log_file) {
+bool DagSubmit::PreSkipSubmit(Node& node, const std::string& log_file) {
 	// Special HTCondorID for NOOP nodes -- actually indexed by otherwise-unused subprocID.
 	CondorID condorID(0, Node::NOOP_NODE_PROCID, GetFakeId());
 
@@ -143,7 +129,7 @@ DagSubmit::PreSkipSubmit(Node& node, const std::string& log_file) {
 
 	pEvent.skipEventLogNotes = std::string("DAG Node: ") + node.GetNodeName();
 
-	if ( ! ulog.writeEvent(&pEvent)) {
+	if (!ulog.writeEvent(&pEvent)) {
 		EXCEPT("Error: writing PRESKIP event failed!");
 		return false;
 	}
@@ -151,9 +137,8 @@ DagSubmit::PreSkipSubmit(Node& node, const std::string& log_file) {
 	return true;
 }
 
-std::string
-DagSubmit::GetMask() {
-	if ( ! m_eventmask.empty()) {
+std::string DagSubmit::GetMask() {
+	if (!m_eventmask.empty()) {
 		return m_eventmask;
 	}
 
@@ -182,16 +167,16 @@ DagSubmit::GetMask() {
 	};
 
 	for (const auto& event : desiredEvents) {
-		if ( ! m_eventmask.empty()) { m_eventmask += ","; }
+		if (!m_eventmask.empty()) {
+			m_eventmask += ",";
+		}
 		m_eventmask += std::to_string(event);
 	}
 
 	return m_eventmask;
 }
 
-
-bool
-DagSubmit::DeferVar(std::vector<CustomVar>& deferred, const CustomVar& var, const std::set<std::string>& key_filter) {
+bool DagSubmit::DeferVar(std::vector<CustomVar>& deferred, const CustomVar& var, const std::set<std::string>& key_filter) {
 	if (key_filter.contains(var.key)) {
 		deferred.push_back(var);
 		return true;
@@ -200,26 +185,25 @@ DagSubmit::DeferVar(std::vector<CustomVar>& deferred, const CustomVar& var, cons
 	return false;
 }
 
-//Create a vector of variable keys and values to be added to the node job(s).
-std::vector<CustomVar>
-DagSubmit::InitVars(const Node& node) {
+// Create a vector of variable keys and values to be added to the node job(s).
+std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	std::vector<CustomVar> vars;
 
 	const char* nodeName = node.GetNodeName();
 	int retry = node.GetRetries();
 	std::string parents, batchName, batchId;
 
-	if ( ! node.NoParents()) {
+	if (!node.NoParents()) {
 		parents.reserve(2048);
 		node.PrintParents(parents, 2000, dm.dag, ",");
 	}
 
-	if ( ! node.GetDagFile() && dm.options[deep::str::BatchName] == " ") {
+	if (!node.GetDagFile() && dm.options[deep::str::BatchName] == " ") {
 		batchName = "";
 	} else {
 		batchName = dm.options[deep::str::BatchName];
 	}
-	if ( ! node.GetDagFile() && dm.options[deep::str::BatchId] == " ") {
+	if (!node.GetDagFile() && dm.options[deep::str::BatchId] == " ") {
 		batchId = "";
 	} else {
 		batchId = dm.options[deep::str::BatchId];
@@ -232,13 +216,15 @@ DagSubmit::InitVars(const Node& node) {
 	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
 	// Only Add Parents Macro if not empty. Custom Attr will resolve to ""
-	if ( ! parents.empty()) { vars.emplace_back("DAG_PARENT_NAMES", parents, false); }
+	if (!parents.empty()) {
+		vars.emplace_back("DAG_PARENT_NAMES", parents, false);
+	}
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
-	if ( ! batchName.empty()) {
+	if (!batchName.empty()) {
 		vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false);
 	}
-	if ( ! batchId.empty()) {
+	if (!batchId.empty()) {
 		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false);
 	}
 
@@ -255,19 +241,19 @@ DagSubmit::InitVars(const Node& node) {
 		vars.emplace_back(SUBMIT_KEY_Hold, "true", false);
 	}
 
-	if ( ! node.NoChildren() && dm.config[conf::i::HoldClaimTime] > 0) {
+	if (!node.NoChildren() && dm.config[conf::i::HoldClaimTime] > 0) {
 		vars.emplace_back(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm.config[conf::i::HoldClaimTime]), false);
 	}
 
-	if ( ! dm.options[deep::str::AcctGroup].empty()) {
+	if (!dm.options[deep::str::AcctGroup].empty()) {
 		vars.emplace_back(SUBMIT_KEY_AcctGroup, dm.options[deep::str::AcctGroup], false);
 	}
 
-	if ( ! dm.options[deep::str::AcctGroupUser].empty()) {
+	if (!dm.options[deep::str::AcctGroupUser].empty()) {
 		vars.emplace_back(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false);
 	}
 
-	if ( ! dm.config[conf::str::MachineAttrs].empty()) {
+	if (!dm.config[conf::str::MachineAttrs].empty()) {
 		vars.emplace_back(SUBMIT_KEY_JobAdInformationAttrs, dm.config[conf::str::UlogMachineAttrs], false);
 		vars.emplace_back(SUBMIT_KEY_JobMachineAttrs, dm.config[conf::str::MachineAttrs], false);
 	}
@@ -304,7 +290,7 @@ DagSubmit::InitVars(const Node& node) {
 		vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true);
 	}
 
-	for (const auto &dagVar : node.GetVars()) {
+	for (const auto& dagVar : node.GetVars()) {
 		vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend);
 	}
 
@@ -312,8 +298,7 @@ DagSubmit::InitVars(const Node& node) {
 }
 
 //-------------------------------------------------------------------------
-SubmitResult
-ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
+SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	std::string cmdFile = node.GetCmdFile();
 	auto vars = InitVars(node);
 
@@ -322,21 +307,21 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	if (desc.size()) {
 		formatstr(cmdFile, "%s-inline.%d.temp", node.GetNodeName(), daemonCore->getpid());
 		if (dagmanUtils.fileExists(cmdFile)) {
-			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n",
-			             cmdFile.c_str());
+			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n", cmdFile.c_str());
 		}
-		FILE *temp_fp = safe_fopen_wrapper_follow(cmdFile.c_str(), "w");
-		if ( ! temp_fp) {
-			debug_printf(DEBUG_QUIET, "Error: Failed to create temporary submit file '%s'\n",
-			             cmdFile.c_str());
+		FILE* temp_fp = safe_fopen_wrapper_follow(cmdFile.c_str(), "w");
+		if (!temp_fp) {
+			debug_printf(DEBUG_QUIET, "Error: Failed to create temporary submit file '%s'\n", cmdFile.c_str());
 			err = "Failed to create temporary submit file";
 			return SubmitResult::FAILURE;
 		}
 
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
-			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
-			             cmdFile.c_str(), desc.data());
-			if (dm.config[conf::b::RemoveTempSubFiles]) { dagmanUtils.tolerant_unlink(cmdFile); }
+			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n", cmdFile.c_str(),
+						 desc.data());
+			if (dm.config[conf::b::RemoveTempSubFiles]) {
+				dagmanUtils.tolerant_unlink(cmdFile);
+			}
 			fclose(temp_fp);
 			err = "Failed to write temporary submit file";
 			return SubmitResult::FAILURE;
@@ -352,8 +337,12 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	static const std::set<std::string> defer_list = {"DAG_PARENT_NAMES", "MY.DAGParentNodeNames"};
 	std::vector<CustomVar> deferred;
 	for (const auto& var : vars) {
-		if (DeferVar(deferred, var, defer_list)) { continue; }
-		if (var.append) { args.AppendArg("-a"); }
+		if (DeferVar(deferred, var, defer_list)) {
+			continue;
+		}
+		if (var.append) {
+			args.AppendArg("-a");
+		}
 		std::string cmd = var.key + "=" + var.value;
 		args.AppendArg(cmd);
 	}
@@ -361,7 +350,9 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	// Hold on adding parent nodes list incase command exceeds max size
 	ArgList extraArgs;
 	for (const auto& var : deferred) {
-		if (var.append) { extraArgs.AppendArg("-a"); }
+		if (var.append) {
+			extraArgs.AppendArg("-a");
+		}
 		std::string cmd = var.key + "=" + var.value;
 		extraArgs.AppendArg(cmd);
 	}
@@ -380,9 +371,10 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 	// if we don't have room for DAGParentNodeNames, leave it unset
 	if ((cmdLineSize + reserveNeeded + DAGParentNodeNamesLen) > _POSIX_ARG_MAX) {
-		debug_printf(DEBUG_NORMAL,
-		             "Warning: node %s has too many parents to list in its classad; leaving its DAGParentNodeNames attribute undefined\n",
-		             node.GetNodeName());
+		debug_printf(
+			DEBUG_NORMAL,
+			"Warning: node %s has too many parents to list in its classad; leaving its DAGParentNodeNames attribute undefined\n",
+			node.GetNodeName());
 		check_warning_strictness(DAG_STRICT_3);
 	} else {
 		args.AppendArgsFromArgList(extraArgs);
@@ -406,13 +398,13 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		dagmanUtils.tolerant_unlink(cmdFile);
 	}
 
-	if ( ! output) {
+	if (!output) {
 		if (exit_status != 0) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s with status %d\n",
-			             node.GetNodeName(), exit_status);
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s with status %d\n", node.GetNodeName(),
+						 exit_status);
 		} else {
-			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n",
-			             errno, node.GetNodeName(), strerror(errno));
+			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n", errno, node.GetNodeName(),
+						 strerror(errno));
 		}
 		err = "Failed to run condor_submit";
 		return SubmitResult::RETRY;
@@ -429,7 +421,7 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	bool successful_submit = false;
 	for (const auto& line : StringTokenIterator(output.ptr(), "\n")) {
 		debug_printf(DEBUG_VERBOSE, "From submit: %s\n", line.c_str());
-		if ( ! successful_submit && line.find(" job(s) submitted to cluster ") != std::string::npos) {
+		if (!successful_submit && line.find(" job(s) submitted to cluster ") != std::string::npos) {
 			if (2 != sscanf(line.c_str(), " %d job(s) submitted to cluster %d", &jobProcCount, &condorID._cluster)) {
 				debug_printf(DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n", line.c_str());
 				return SubmitResult::FAILURE;
@@ -438,9 +430,8 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		}
 	}
 
-	if ( ! successful_submit) {
-		debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s:\n%s\n",
-		             node.GetNodeName(), output.ptr());
+	if (!successful_submit) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s:\n%s\n", node.GetNodeName(), output.ptr());
 		err = "condor_submit failed : " + std::string(output.ptr());
 		return SubmitResult::RETRY;
 	}
@@ -450,15 +441,12 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		if (dm.config[conf::b::ProhibitMultiJobs]) {
 			// Other nodes may be single proc so fail and make forward progress
 			err = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
-			debug_printf(DEBUG_NORMAL, "%s (TotalProcs = %d)\n",
-			             err.c_str(), jobProcCount);
+			debug_printf(DEBUG_NORMAL, "%s (TotalProcs = %d)\n", err.c_str(), jobProcCount);
 			return SubmitResult::FAILURE;
 		} else if (node.GetType() == NodeType::PROVISIONER) {
 			// Required first node so abort (note: debug_error calls DC_EXIT)
-			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-			             node.GetNodeName());
+			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n", node.GetNodeName());
 		}
-
 	}
 
 	node.SetNumSubmitted(jobProcCount);
@@ -468,8 +456,7 @@ ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 //-------------------------------------------------------------------------
 // TJ's new direct submit w/ late-materialization.
-SubmitResult
-DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
+SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	int rval = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	long long max_materialize = INT_MAX;
@@ -481,7 +468,8 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	auto_free_ptr owner(my_username());
 
 	const char* cmdFile = node.GetCmdFile(); // used when submit source is an actual file
-	const std::string_view inline_desc = dm.dag->get_inline_desc(cmdFile);;
+	const std::string_view inline_desc = dm.dag->get_inline_desc(cmdFile);
+	;
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
@@ -493,7 +481,8 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	SubmitHash submitHash;
 	SubmitStepFromQArgs ssi(submitHash);
 
-	DCSchedd schedd; schedd.locate(); // TODO: use locate_local() ?
+	DCSchedd schedd;
+	schedd.locate();	  // TODO: use locate_local() ?
 	CondorError errstack; // errstack for general qmgr commands
 	AbstractScheddQ* MyQ = nullptr;
 
@@ -507,9 +496,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 	struct AddVar {
 		AddVar(SubmitHash& h) : hash(h) {};
-		void operator()(CustomVar v) {
-			hash.set_arg_variable(v.key.c_str(), v.value.c_str());
-		}
+		void operator()(CustomVar v) { hash.set_arg_variable(v.key.c_str(), v.value.c_str()); }
 		SubmitHash& hash;
 	};
 
@@ -523,8 +510,9 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		submitHash.insert_submit_filename(cmdFile, msm_source);
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node.GetNodeName());
 	} else {
-		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node.GetNodeName(), node.GetCmdFile());
-		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
+		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node.GetNodeName(),
+					 node.GetCmdFile());
+		if (!msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
 			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
 			err = "Failed to open submit file: " + errmsg;
@@ -545,7 +533,9 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	// capture queue line permanantly. tmp_qline is a pointer to global line buffer
 	if (tmp_qline) {
 		const char* qargs = submitHash.is_queue_statement(tmp_qline);
-		if (qargs) { queue_args = qargs; }
+		if (qargs) {
+			queue_args = qargs;
+		}
 	}
 
 	// Add node vars (append)
@@ -570,7 +560,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 			rval = -1;
 			result = SubmitResult::FAILURE;
 			goto finis;
-		} else if ( ! URL.empty()) {
+		} else if (!URL.empty()) {
 			errmsg = "Failed to submit job(s) due to credential setup. Please visit: " + URL;
 			rval = -1;
 			goto finis;
@@ -584,19 +574,18 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		goto finis;
 	}
 
-	//if (dry_run) {
+	// if (dry_run) {
 	//	const int sim_starting_cluster = 1;
 	//	auto * SimQ = new SimScheddQ(sim_starting_cluster);
 	//	FILE * outfile = nullptr;
 	//	SimQ->Connect(outfile, false, false);
 	//	MyQ = SimQ;
-	//} else
+	// } else
 	{
-		auto * ScheddQ = new ActualScheddQ();
+		auto* ScheddQ = new ActualScheddQ();
 		if (ScheddQ->Connect(schedd, errstack) == 0) {
 			delete ScheddQ;
-			debug_printf(DEBUG_NORMAL, "ERROR: Failed to connect to local queue manager: %s\n",
-			             errstack.getFullText(true).c_str());
+			debug_printf(DEBUG_NORMAL, "ERROR: Failed to connect to local queue manager: %s\n", errstack.getFullText(true).c_str());
 			errstack.clear();
 			goto finis;
 		}
@@ -617,8 +606,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	selected_job_count = ssi.selected_job_count();
 	if (submitHash.want_factory_submit(max_materialize)) {
 		int late_ver = 0;
-		if (MyQ->allows_late_materialize() &&
-			MyQ->has_late_materialize(late_ver) && late_ver >= 2) {
+		if (MyQ->allows_late_materialize() && MyQ->has_late_materialize(late_ver) && late_ver >= 2) {
 			is_factory = true;
 		} else if (selected_job_count > 1) {
 			// TODO: fail the submit here??
@@ -634,8 +622,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 			goto finis;
 		} else if (node.GetType() == NodeType::PROVISIONER) {
 			// Required first node so abort (note: debug_error calls DC_EXIT)
-			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-				node.GetNodeName());
+			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n", node.GetNodeName());
 		}
 	} else {
 		// TODO: ignore factory submit request if number of jobs is 1 ??
@@ -654,15 +641,15 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		int proc_id = 0, item_index = 0, step = 0;
 
 		JOB_ID_KEY jid(cluster_id, proc_id);
-		ssi.begin(jid, ! is_factory);
+		ssi.begin(jid, !is_factory);
 
 		// for late-mat we want to iter all items, for regular submit we iter only selected ones
-		bool iter_selected = ! is_factory;
+		bool iter_selected = !is_factory;
 
 		while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
 			bool send_cluster = (rval == 2); // rval tells us when we need to send the cluster ad
 
-			if ( ! is_factory) {
+			if (!is_factory) {
 				proc_id = MyQ->get_NewProc(cluster_id);
 				if (proc_id != jid.proc) {
 					formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, proc_id);
@@ -682,7 +669,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 					} else if (node.GetType() == NodeType::PROVISIONER) {
 						// Required first node so abort (note: debug_error calls DC_EXIT)
 						debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-							node.GetNodeName());
+									node.GetNodeName());
 					}
 				}
 
@@ -698,7 +685,9 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 				// send submit itemdata (if any)
 				rval = MyQ->send_Itemdata(cluster_id, ssi.m_fea, errmsg);
-				if (rval < 0) { goto finis; }
+				if (rval < 0) {
+					goto finis;
+				}
 
 				// append the revised queue statement to the submit digest
 				rval = append_queue_statement(submit_digest, ssi.m_fea);
@@ -708,22 +697,26 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 				}
 
 				int total_procs = ssi.selected_job_count();
-				if (max_materialize <= 0) { max_materialize = INT_MAX; }
+				if (max_materialize <= 0) {
+					max_materialize = INT_MAX;
+				}
 				max_materialize = MIN(max_materialize, total_procs);
 				max_materialize = MAX(max_materialize, 1);
 
 				// send the submit digest
 				rval = MyQ->set_Factory(cluster_id, (int)max_materialize, "", submit_digest.c_str());
-				if (rval < 0) { goto finis; }
+				if (rval < 0) {
+					goto finis;
+				}
 
 				// we can now set the live vars from the ssqa.next_impl() call above
 				// and fall down to the common code below that sends the cluster ad
 				ssi.set_live_vars();
 			}
 
-			ClassAd *proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
+			ClassAd* proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
 			std::string cif;
-			if ( ! proc_ad) {
+			if (!proc_ad) {
 				errmsg = "failed to create job classad";
 				rval = -1;
 				result = SubmitResult::FAILURE;
@@ -731,22 +724,24 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 			}
 
 			if (proc_ad->EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
-				if ( ! dm.dag->cif.empty()) {
+				if (!dm.dag->cif.empty()) {
 					if (dm.dag->cif != cif) {
 						errmsg = "Multiple differing common input transfer lists declared in DAG";
 						rval = -1;
 						result = SubmitResult::FAILURE;
 						goto finis;
 					}
-				} else { dm.dag->cif = cif; }
+				} else {
+					dm.dag->cif = cif;
+				}
 			}
 
 			if (send_cluster) { // we need to send the cluster ad
-				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+				classad::ClassAd* clusterad = proc_ad->GetChainedParentAd();
 				if (clusterad) {
 
 					// If there is also a jobset ad, send it before the cluster ad.
-					const ClassAd * jobsetAd = submitHash.getJOBSET();
+					const ClassAd* jobsetAd = submitHash.getJOBSET();
 					if (jobsetAd) {
 						int jobset_version = 0;
 						if (MyQ->has_send_jobset(jobset_version)) {
@@ -762,7 +757,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 					// send the cluster ad
 					errmsg = MyQ->send_JobAttributes(JOB_ID_KEY(cluster_id, -1), *clusterad, SetAttribute_NoAck);
-					if ( ! errmsg.empty()) {
+					if (!errmsg.empty()) {
 						// TODO: is convering errmsg to error_stack() desirable here?
 						submitHash.error_stack()->pushf("Submit", SCHEDD_ERR_SET_ATTRIBUTE_FAILED, "%s", errmsg.c_str());
 						errmsg.clear();
@@ -783,7 +778,7 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 			// send procad attributes
 			errmsg = MyQ->send_JobAttributes(jid, *proc_ad, SetAttribute_NoAck);
-			if ( ! errmsg.empty()) {
+			if (!errmsg.empty()) {
 				// TODO: is convering errmsg to error_stack() desirable here?
 				submitHash.error_stack()->pushf("Submit", SCHEDD_ERR_SET_ATTRIBUTE_FAILED, "%s", errmsg.c_str());
 				errmsg.clear();
@@ -796,16 +791,16 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 
 		// commit transaction and disconnect queue
 		success = MyQ->disconnect(true, errstack);
-		if ( ! success) {
+		if (!success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node.GetNodeName(), errstack.getFullText().c_str());
 			// NOTE: Transaction commit failures are likely never transient
 			result = SubmitResult::FAILURE;
 		} else {
-			node.SetNumSubmitted(proc_id+1);
+			node.SetNumSubmitted(proc_id + 1);
 			result = SubmitResult::SUCCESS;
 
 			// Print Schedd Warnings
-			if ( ! errstack.empty()) {
+			if (!errstack.empty()) {
 				debug_printf(DEBUG_NORMAL, " Queue warning: %s\n", errstack.message());
 			}
 		}
@@ -819,11 +814,11 @@ finis:
 	if (MyQ) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		MyQ->disconnect(false, errstack);
-		delete MyQ; MyQ = nullptr;
+		delete MyQ;
+		MyQ = nullptr;
 
-		if ( ! errstack.empty()) {
-			debug_printf(DEBUG_NORMAL, "ERROR: Issue disconnecting from local queue manager: %s\n",
-			             errstack.getFullText().c_str());
+		if (!errstack.empty()) {
+			debug_printf(DEBUG_NORMAL, "ERROR: Issue disconnecting from local queue manager: %s\n", errstack.getFullText().c_str());
 		}
 	}
 
@@ -833,7 +828,7 @@ finis:
 		if (submitHash.error_stack()) {
 			err = errmsg;
 			std::string errstk(submitHash.error_stack()->getFullText());
-			if ( ! errstk.empty()) {
+			if (!errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "submit error: %s", errstk.c_str());
 				err += ": " + errstk;
 			}
@@ -843,7 +838,7 @@ finis:
 		// If submit succeeded, we still need to log any warning messages
 		submitHash.warn_unused(stderr, "DAGMAN");
 		std::string errstk(submitHash.error_stack()->getFullText());
-		if ( ! errstk.empty()) {
+		if (!errstk.empty()) {
 			debug_printf(DEBUG_QUIET, "Submit warning: %s", errstk.c_str());
 		}
 		submitHash.error_stack()->clear();
@@ -852,8 +847,7 @@ finis:
 	return result;
 }
 
-bool
-DirectSubmit::Reschedule() {
+bool DirectSubmit::Reschedule() {
 	DCSchedd schedd;
 	Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	return schedd.sendCommand(RESCHEDULE, st, 0);

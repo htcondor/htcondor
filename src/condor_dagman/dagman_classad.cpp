@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,23 +31,19 @@ namespace shallow = DagmanShallowOptions;
 namespace conf = DagmanConfigOptions;
 
 //---------------------------------------------------------------------------
-Qmgr_connection *
-ScheddClassad::OpenConnection() const
-{
-		// Open job queue
+Qmgr_connection* ScheddClassad::OpenConnection() const {
+	// Open job queue
 	CondorError errstack;
-	if ( !_schedd ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Queue manager not initialized, "
-			"cannot publish updates to ClassAd.\n");
-		check_warning_strictness( DAG_STRICT_3 );
+	if (!_schedd) {
+		debug_printf(DEBUG_QUIET, "ERROR: Queue manager not initialized, "
+								  "cannot publish updates to ClassAd.\n");
+		check_warning_strictness(DAG_STRICT_3);
 		return NULL;
 	}
-	Qmgr_connection *queue = ConnectQ( *_schedd, 0, false, &errstack );
-	if ( !queue ) {
-		debug_printf( DEBUG_QUIET,
-					"WARNING: failed to connect to queue manager (%s)\n",
-					errstack.getFullText().c_str() );
-		check_warning_strictness( DAG_STRICT_3 );
+	Qmgr_connection* queue = ConnectQ(*_schedd, 0, false, &errstack);
+	if (!queue) {
+		debug_printf(DEBUG_QUIET, "WARNING: failed to connect to queue manager (%s)\n", errstack.getFullText().c_str());
+		check_warning_strictness(DAG_STRICT_3);
 		return NULL;
 	}
 
@@ -55,83 +51,58 @@ ScheddClassad::OpenConnection() const
 }
 
 //---------------------------------------------------------------------------
-void
-ScheddClassad::CloseConnection( Qmgr_connection *queue )
-{
-	if ( !DisconnectQ( queue ) ) {
-		debug_printf( DEBUG_QUIET,
-					"WARNING: queue transaction failed.  No attributes were set.\n" );
-		check_warning_strictness( DAG_STRICT_3 );
+void ScheddClassad::CloseConnection(Qmgr_connection* queue) {
+	if (!DisconnectQ(queue)) {
+		debug_printf(DEBUG_QUIET, "WARNING: queue transaction failed.  No attributes were set.\n");
+		check_warning_strictness(DAG_STRICT_3);
 	}
 }
 
 //---------------------------------------------------------------------------
-void
-ScheddClassad::SetAttribute( const char *attrName, int64_t attrVal ) const
-{
-	if ( SetAttributeInt( _jobId._cluster, _jobId._proc,
-						  attrName, attrVal ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
+void ScheddClassad::SetAttribute(const char* attrName, int64_t attrVal) const {
+	if (SetAttributeInt(_jobId._cluster, _jobId._proc, attrName, attrVal) != 0) {
+		debug_printf(DEBUG_QUIET, "WARNING: failed to set attribute %s\n", attrName);
+		check_warning_strictness(DAG_STRICT_3);
 	}
 }
 
 //---------------------------------------------------------------------------
-void
-ScheddClassad::SetAttribute( const char *attrName, const std::string &value ) const
-{
-	if ( SetAttributeString( _jobId._cluster, _jobId._proc,
-						  attrName, value.c_str() ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
+void ScheddClassad::SetAttribute(const char* attrName, const std::string& value) const {
+	if (SetAttributeString(_jobId._cluster, _jobId._proc, attrName, value.c_str()) != 0) {
+		debug_printf(DEBUG_QUIET, "WARNING: failed to set attribute %s\n", attrName);
+		check_warning_strictness(DAG_STRICT_3);
 	}
 }
 
 //---------------------------------------------------------------------------
-void
-ScheddClassad::SetAttribute( const char *attrName, const ClassAd &ad ) const
-{
-	if ( SetAttributeExpr( _jobId._cluster, _jobId._proc,
-						  attrName, &ad ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
+void ScheddClassad::SetAttribute(const char* attrName, const ClassAd& ad) const {
+	if (SetAttributeExpr(_jobId._cluster, _jobId._proc, attrName, &ad) != 0) {
+		debug_printf(DEBUG_QUIET, "WARNING: failed to set attribute %s\n", attrName);
+		check_warning_strictness(DAG_STRICT_3);
 	}
 }
 
 //---------------------------------------------------------------------------
-bool
-ScheddClassad::GetAttribute( const char *attrName, std::string &attrVal,
-			bool printWarning ) const
-{
-	char *val;
-	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
-				attrName, &val ) == -1 ) {
-		if ( printWarning ) {
-			debug_printf( DEBUG_QUIET,
-					"Warning: failed to get attribute %s\n", attrName );
+bool ScheddClassad::GetAttribute(const char* attrName, std::string& attrVal, bool printWarning) const {
+	char* val;
+	if (GetAttributeStringNew(_jobId._cluster, _jobId._proc, attrName, &val) == -1) {
+		if (printWarning) {
+			debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName);
 		}
 		return false;
 	}
 
 	attrVal = val;
-	free( val );
+	free(val);
 	return true;
 }
 
 //---------------------------------------------------------------------------
-bool
-ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
-			bool printWarning ) const
-{
+bool ScheddClassad::GetAttribute(const char* attrName, int& attrVal, bool printWarning) const {
 	int val = 0;
-	if ( GetAttributeInt( _jobId._cluster, _jobId._proc,
-				attrName, &val ) == -1 ) {
-		if ( printWarning ) {
-			debug_printf( DEBUG_QUIET,
-				"Warning: failed to get attribute %s\n", attrName );
+	if (GetAttributeInt(_jobId._cluster, _jobId._proc, attrName, &val) == -1) {
+		if (printWarning) {
+			debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName);
 		}
 		return false;
 	}
@@ -153,11 +124,12 @@ bool ScheddClassad::GetAttributeExpr(const char* attrName, std::string& attrVal)
 }
 
 //---------------------------------------------------------------------------
-DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd )
-{
+DagmanClassad::DagmanClassad(const CondorID& DAGManJobId, DCSchedd* schedd) {
 	CondorID defaultCondorId;
-	if ( DAGManJobId == defaultCondorId ) {
-		debug_printf( DEBUG_QUIET, "No HTCondor ID available for DAGMan (running on command line?); DAG status will not be reported to ClassAd\n" );
+	if (DAGManJobId == defaultCondorId) {
+		debug_printf(
+			DEBUG_QUIET,
+			"No HTCondor ID available for DAGMan (running on command line?); DAG status will not be reported to ClassAd\n");
 		return;
 	}
 
@@ -167,17 +139,16 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd )
 }
 
 //---------------------------------------------------------------------------
-DagmanClassad::~DagmanClassad()
-{
-	_valid = false;
-}
+DagmanClassad::~DagmanClassad() { _valid = false; }
 
 //---------------------------------------------------------------------------
 int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	int parentDAG = 0;
 
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return parentDAG; }
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
+		return parentDAG;
+	}
 
 	const char* addr = daemonCore->InfoCommandSinfulString();
 	if (addr) {
@@ -187,7 +158,7 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	if (_valid) {
 		using namespace DagmanDeepOptions;
 		std::string batchId, batchName, acctGroup, acctUser;
-		if ( ! GetAttribute(ATTR_JOB_BATCH_ID, batchId, false)) {
+		if (!GetAttribute(ATTR_JOB_BATCH_ID, batchId, false)) {
 			batchId = std::to_string(_jobId._cluster);
 			batchId += ".";
 			batchId += std::to_string(_jobId._proc);
@@ -196,7 +167,7 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 		dagOpts[str::BatchId] = batchId;
 		debug_printf(DEBUG_VERBOSE, "Workflow batch-id: <%s>\n", batchId.c_str());
 
-		if ( ! GetAttribute(ATTR_JOB_BATCH_NAME, batchName, false)) {
+		if (!GetAttribute(ATTR_JOB_BATCH_NAME, batchName, false)) {
 			// Default batch name is top-level DAG's primary DAG file (base name only).
 			batchName = condor_basename(dagOpts.primaryDag().c_str());
 			batchName += "+";
@@ -233,8 +204,10 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return; }
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
+		return;
+	}
 
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
 		SetAttribute(THROTTLE_ATTR[i], throttles[i]);
@@ -244,10 +217,11 @@ void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanClassad::RecoverThrottles(Throttles& throttles) {
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return; }
+void DagmanClassad::RecoverThrottles(Throttles& throttles) {
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
+		return;
+	}
 
 	Throttles recovered;
 
@@ -263,22 +237,20 @@ DagmanClassad::RecoverThrottles(Throttles& throttles) {
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanClassad::Update(const Dagman &dagman)
-{
-	if ( ! _valid) {
+void DagmanClassad::Update(const Dagman& dagman) {
+	if (!_valid) {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd update -- DagmanClassad object is invalid\n");
 		return;
 	}
 
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) {
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
 		return;
 	}
 
-	//Get counts for DAG job process states: idle, held, running
+	// Get counts for DAG job process states: idle, held, running
 	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
-	dagman.dag->NumJobProcStates(&jobProcsHeld,&jobProcsIdle,&jobProcsRunning);
+	dagman.dag->NumJobProcStates(&jobProcsHeld, &jobProcsIdle, &jobProcsRunning);
 
 	SetAttribute(ATTR_DAG_AD_UPDATE_TIME, time(nullptr)); // Set the time that update occurred
 	SetAttribute(ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes(true));
@@ -308,21 +280,23 @@ DagmanClassad::Update(const Dagman &dagman)
 }
 
 //---------------------------------------------------------------------------
-void DagmanClassad::GetInfo(std::string &owner, std::string &nodeName) {
-	if ( ! _valid) {
+void DagmanClassad::GetInfo(std::string& owner, std::string& nodeName) {
+	if (!_valid) {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
 		return;
 	}
 
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return; }
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
+		return;
+	}
 
-	if ( ! GetAttribute(ATTR_OWNER, owner)) {
+	if (!GetAttribute(ATTR_OWNER, owner)) {
 		check_warning_strictness(DAG_STRICT_1);
 		owner = "undef";
 	}
 
-	if ( ! GetAttribute(ATTR_DAG_NODE_NAME, nodeName)) {
+	if (!GetAttribute(ATTR_DAG_NODE_NAME, nodeName)) {
 		// We should only get this value if we're a sub-DAG.
 		nodeName = "undef";
 	}
@@ -334,10 +308,10 @@ void DagmanClassad::GetInfo(std::string &owner, std::string &nodeName) {
 
 //---------------------------------------------------------------------------
 void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix) {
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! _valid || ! queue) {
+	Qmgr_connection* queue = OpenConnection();
+	if (!_valid || !queue) {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- %s: No ClassAd attributes will be inherited",
-		             queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
+					 queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
 		check_warning_strictness(DAG_STRICT_1);
 		inheritAttrs.clear();
 		return;
@@ -346,31 +320,35 @@ void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheri
 	std::vector<std::string> removeList;
 	for (auto& [key, val] : inheritAttrs) {
 		std::string queryKey(key);
-		if ( ! isSubDag && prefix) {
+		if (!isSubDag && prefix) {
 			// Remove any prefixes if this is the root DAG
 			queryKey.erase(0, strlen(prefix));
 		}
-		if ( ! GetAttributeExpr(queryKey.c_str(), val)) {
+		if (!GetAttributeExpr(queryKey.c_str(), val)) {
 			// Failure to query removes key from map
 			removeList.push_back(key);
 		}
 	}
 
-	for (const auto& key : removeList) { inheritAttrs.erase(key); }
+	for (const auto& key : removeList) {
+		inheritAttrs.erase(key);
+	}
 
 	CloseConnection(queue);
 }
 
 //---------------------------------------------------------------------------
 int DagmanClassad::GetStatus() {
-	if ( ! _valid) {
+	if (!_valid) {
 		debug_printf(DEBUG_NORMAL, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
 		check_warning_strictness(DAG_STRICT_1);
 		return -1;
 	}
 
-	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return -1; }
+	Qmgr_connection* queue = OpenConnection();
+	if (!queue) {
+		return -1;
+	}
 
 	int status = -1;
 	GetAttribute(ATTR_DAG_STATUS, status);
@@ -380,11 +358,10 @@ int DagmanClassad::GetStatus() {
 }
 
 //---------------------------------------------------------------------------
-ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd )
-{
+ProvisionerClassad::ProvisionerClassad(const CondorID& JobId, DCSchedd* schedd) {
 	CondorID defaultCondorId;
-	if ( JobId == defaultCondorId ) {
-		debug_printf( DEBUG_QUIET, "No HTCondor ID available for this job." );
+	if (JobId == defaultCondorId) {
+		debug_printf(DEBUG_QUIET, "No HTCondor ID available for this job.");
 		return;
 	}
 
@@ -394,34 +371,27 @@ ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd 
 }
 
 //---------------------------------------------------------------------------
-ProvisionerClassad::~ProvisionerClassad()
-{
-	_valid = false;
-}
+ProvisionerClassad::~ProvisionerClassad() { _valid = false; }
 
 //---------------------------------------------------------------------------
-int
-ProvisionerClassad::GetProvisionerState()
-{
+int ProvisionerClassad::GetProvisionerState() {
 	int state = -1;
 
-	if ( !_valid ) {
-		debug_printf( DEBUG_VERBOSE,
-					"Skipping ClassAd query -- ProvisionerClassad object is invalid\n" );
+	if (!_valid) {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- ProvisionerClassad object is invalid\n");
 		return state;
 	}
 
-	Qmgr_connection *queue = OpenConnection();
+	Qmgr_connection* queue = OpenConnection();
 
-	if ( !queue ) {
+	if (!queue) {
 		return state;
 	}
 
-	GetAttribute( ATTR_PROVISIONER_STATE, state, false );
-	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%d>\n",
-				state );
+	GetAttribute(ATTR_PROVISIONER_STATE, state, false);
+	debug_printf(DEBUG_VERBOSE, "Provisioner job state: <%d>\n", state);
 
-	CloseConnection( queue );
+	CloseConnection(queue);
 
 	return state;
 }

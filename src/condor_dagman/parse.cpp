@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,6 @@
  * limitations under the License.
  *
  ***************************************************************/
-
 
 //----------------------------------------------------------------
 // IMPORTANT NOTE:  Any changes in the DAG file implemented here
@@ -40,9 +39,9 @@
 namespace deep = DagmanDeepOptions;
 namespace conf = DagmanConfigOptions;
 
-static const char   COMMENT    = '#';
-static const char * DELIMITERS = " \t";
-static const char * ILLEGAL_CHARS = "+";
+static const char COMMENT = '#';
+static const char* DELIMITERS = " \t";
+static const char* ILLEGAL_CHARS = "+";
 
 static const std::set<istring> NODE_KEYWORDS = {
 	"JOB",
@@ -55,7 +54,7 @@ static const std::set<istring> NODE_KEYWORDS = {
 // not supported when running in deprecated old parse mode
 // (DAGMAN_USE_OLD_FILE_PARSER=True). Add new entries here to have them
 // cleanly rejected rather than falling through to the generic bad-input error.
-static constexpr std::array<const char *, 2> UNSUPPORTED_OLD_PARSER_KEYWORDS = {
+static constexpr std::array<const char*, 2> UNSUPPORTED_OLD_PARSER_KEYWORDS = {
 	"WEAK",
 	"TOLERANCE",
 };
@@ -73,98 +72,71 @@ static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
 // DAGMan global schedd object. Only used here to hand off to a splice DAG.
-DCSchedd *_schedd = NULL;
+DCSchedd* _schedd = NULL;
 
-static bool parse_subdag( Dag *dag,
-						const char* nodeTypeKeyword,
-						const char* dagFile, int lineNum,
-						const char *directory);
+static bool parse_subdag(Dag* dag, const char* nodeTypeKeyword, const char* dagFile, int lineNum, const char* directory);
 
-static bool parse_node( Dag *dag, const char * nodeName, 
-						const char * submitFileOrSubmitDesc,
-						const char* nodeTypeKeyword,
-						const char* dagFile, int lineNum,
-						const char *directory, const char *inlineOrExt,
-						const char *submitOrDagFile);
+static bool parse_node(Dag* dag, const char* nodeName, const char* submitFileOrSubmitDesc, const char* nodeTypeKeyword,
+					   const char* dagFile, int lineNum, const char* directory, const char* inlineOrExt,
+					   const char* submitOrDagFile);
 
-static bool pre_parse_node(std::string & nodename, const char * &submitFile);
+static bool pre_parse_node(std::string& nodename, const char*& submitFile);
 
-static bool parse_script(const char *endline, Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_parent(Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_retry(Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_abort(Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_dot(Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_vars(Dag *dag,
-		const char *filename, int lineNumber);
-static bool parse_priority(Dag *dag, 
-		const char *filename, int lineNumber);
-static bool parse_category(Dag *dag, const char *filename, int lineNumber);
-static bool parse_maxjobs(Dag *dag, const char *filename, int lineNumber);
-static bool parse_splice(const Dagman& dm, Dag *dag, const char *filename, int lineNumber);
-static bool parse_node_status_file(Dag  *dag, const char *filename,
-		int  lineNumber);
-static bool parse_save_point_file(Dag *dag, const char* filename, int lineNumber);
-static bool parse_reject(Dag  *dag, const char *filename,
-		int  lineNumber);
-static bool parse_jobstate_log(Dag  *dag, const char *filename,
-		int  lineNumber);
-static bool parse_pre_skip(Dag *dag, const char* filename,
-		int lineNumber);
-static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
-static bool parse_connect( Dag  *dag, const char *filename, int  lineNumber );
-static bool parse_pin_in_out( Dag  *dag, const char *filename,
-			int  lineNumber, bool isPinIn );
-static bool parse_include(const Dagman& dm, Dag  *dag, const char *filename, int  lineNumber );
-static std::string munge_node_name(const char *nodeName);
+static bool parse_script(const char* endline, Dag* dag, const char* filename, int lineNumber);
+static bool parse_parent(Dag* dag, const char* filename, int lineNumber);
+static bool parse_retry(Dag* dag, const char* filename, int lineNumber);
+static bool parse_abort(Dag* dag, const char* filename, int lineNumber);
+static bool parse_dot(Dag* dag, const char* filename, int lineNumber);
+static bool parse_vars(Dag* dag, const char* filename, int lineNumber);
+static bool parse_priority(Dag* dag, const char* filename, int lineNumber);
+static bool parse_category(Dag* dag, const char* filename, int lineNumber);
+static bool parse_maxjobs(Dag* dag, const char* filename, int lineNumber);
+static bool parse_splice(const Dagman& dm, Dag* dag, const char* filename, int lineNumber);
+static bool parse_node_status_file(Dag* dag, const char* filename, int lineNumber);
+static bool parse_save_point_file(Dag* dag, const char* filename, int lineNumber);
+static bool parse_reject(Dag* dag, const char* filename, int lineNumber);
+static bool parse_jobstate_log(Dag* dag, const char* filename, int lineNumber);
+static bool parse_pre_skip(Dag* dag, const char* filename, int lineNumber);
+static bool parse_done(Dag* dag, const char* filename, int lineNumber);
+static bool parse_connect(Dag* dag, const char* filename, int lineNumber);
+static bool parse_pin_in_out(Dag* dag, const char* filename, int lineNumber, bool isPinIn);
+static bool parse_include(const Dagman& dm, Dag* dag, const char* filename, int lineNumber);
+static std::string munge_node_name(const char* nodeName);
 
 static std::string current_splice_scope(void);
 
-static bool get_next_var( const char *filename, int lineNumber, char *&str,
-			std::string &varName, std::string &varValue );
+static bool get_next_var(const char* filename, int lineNumber, char*& str, std::string& varName, std::string& varValue);
 
-void exampleSyntax (const char * example) {
-    debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
-}
+void exampleSyntax(const char* example) { debug_printf(DEBUG_QUIET, "Example syntax is: %s\n", example); }
 
-bool
-isReservedWord( const char *token )
-{
-    static const char * keywords[] = { "PARENT", "CHILD", DAG::ALL_NODES.c_str() };
-    for (auto & keyword : keywords) {
-        if (!strcasecmp (token, keyword)) {
-    		debug_printf( DEBUG_QUIET,
-						"ERROR: token (%s) is a reserved word\n", token );
+bool isReservedWord(const char* token) {
+	static const char* keywords[] = {"PARENT", "CHILD", DAG::ALL_NODES.c_str()};
+	for (auto& keyword : keywords) {
+		if (!strcasecmp(token, keyword)) {
+			debug_printf(DEBUG_QUIET, "ERROR: token (%s) is a reserved word\n", token);
 			return true;
 		}
-    }
-    return false;
+	}
+	return false;
 }
 
-bool
-isDelimiter( char c ) {
-	char const* tmp = strchr( DELIMITERS, (int)c );
+bool isDelimiter(char c) {
+	char const* tmp = strchr(DELIMITERS, (int)c);
 	return tmp ? true : false;
 }
 
-std::string
-makeString(char *s) { 
-	return std::string(s ? s : "");
-}
+std::string makeString(char* s) { return std::string(s ? s : ""); }
 
 //-----------------------------------------------------------------------------
-void parseSetDoNameMunge(bool doit)
-{
-	_mungeNames = doit;
-}
+void parseSetDoNameMunge(bool doit) { _mungeNames = doit; }
 
 static bool get_inline_desc_end(const char* desc, std::string& end) {
-	if ( ! desc) { return false; }
-	else if (*desc == '{') { end = "}"; return true; }
+	if (!desc) {
+		return false;
+	} else if (*desc == '{') {
+		end = "}";
+		return true;
+	}
 
 	std::string start(desc);
 	if (starts_with(start, "@=")) {
@@ -175,7 +147,8 @@ static bool get_inline_desc_end(const char* desc, std::string& end) {
 	return false;
 }
 
-static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const std::string& end, std::string& error, char* endline) {
+static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const std::string& end, std::string& error,
+									 char* endline) {
 	std::string desc;
 	char* line;
 	bool found_end = false;
@@ -185,9 +158,11 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 		return desc;
 	}
 
-	while ((line=ms.getline(gl_opts)) != nullptr) {
-		if (line[0] == 0)       continue;  // Ignore blank lines
-		if (line[0] == COMMENT) continue;  // Ignore comments
+	while ((line = ms.getline(gl_opts)) != nullptr) {
+		if (line[0] == 0)
+			continue; // Ignore blank lines
+		if (line[0] == COMMENT)
+			continue; // Ignore comments
 		if (starts_with(line, end) && (strlen(line) == end.size() || starts_with(line, end + " "))) {
 			endline = line;
 			found_end = true;
@@ -198,7 +173,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 
 	debug_printf(DEBUG_DEBUG_1, "Inline Description Parse End Line<%s>\n", endline);
 
-	if ( ! found_end) {
+	if (!found_end) {
 		error = "Missing inline description closing token: " + end;
 	}
 
@@ -206,11 +181,10 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 }
 
 //-----------------------------------------------------------------------------
-bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagNum)
-{
-	ASSERT( dag != NULL );
+bool parse(const Dagman& dm, Dag* dag, const char* filename, bool incrementDagNum) {
+	ASSERT(dag != NULL);
 
-	if ( incrementDagNum ) {
+	if (incrementDagNum) {
 		++_thisDagNum;
 	}
 
@@ -221,46 +195,45 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 	useJoinNodes = dm.config[conf::b::UseJoinNodes];
 	_schedd = dm._schedd;
 
-		//
-		// If useDagDir is true, we have to cd into the directory so we can
-		// parse the submit files correctly.
-		// 
-	std::string		tmpDirectory;
-	const char *	tmpFilename = filename;
-	TmpDir		dagDir;
+	//
+	// If useDagDir is true, we have to cd into the directory so we can
+	// parse the submit files correctly.
+	//
+	std::string tmpDirectory;
+	const char* tmpFilename = filename;
+	TmpDir dagDir;
 
-	if ( _useDagDir ) {
-		tmpDirectory = condor_dirname( filename );
+	if (_useDagDir) {
+		tmpDirectory = condor_dirname(filename);
 
-		std::string	errMsg;
-		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {
-			debug_printf( DEBUG_QUIET,
-					"ERROR: Could not change to DAG directory %s: %s\n",
-					tmpDirectory.c_str(), errMsg.c_str() );
+		std::string errMsg;
+		if (!dagDir.Cd2TmpDir(tmpDirectory.c_str(), errMsg)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Could not change to DAG directory %s: %s\n", tmpDirectory.c_str(), errMsg.c_str());
 			return false;
 		}
-		tmpFilename = condor_basename( filename );
+		tmpFilename = condor_basename(filename);
 	}
 	std::string tmpcwd;
-	condor_getcwd( tmpcwd );
+	condor_getcwd(tmpcwd);
 
-	FILE *fp = safe_fopen_wrapper_follow(tmpFilename, "r");
-	if(fp == NULL) {
+	FILE* fp = safe_fopen_wrapper_follow(tmpFilename, "r");
+	if (fp == NULL) {
 		std::string cwd;
-		condor_getcwd( cwd );
-		debug_printf( DEBUG_QUIET, "ERROR: Could not open file %s for input "
-					"(cwd %s) (errno %d, %s)\n", tmpFilename,
-					cwd.c_str(), errno, strerror(errno));
+		condor_getcwd(cwd);
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: Could not open file %s for input "
+					 "(cwd %s) (errno %d, %s)\n",
+					 tmpFilename, cwd.c_str(), errno, strerror(errno));
 		return false;
-   	}
+	}
 
-	char *line;
-	//int lineNumber = 0;
+	char* line;
+	// int lineNumber = 0;
 
-	MACRO_SOURCE src = { false, false, 0, 0, 0, 0 };
+	MACRO_SOURCE src = {false, false, 0, 0, 0, 0};
 	MacroStreamYourFile ms(fp, src);
 	src.line = 0;
-	src.id = 4; // index into macro_set.sources. 4 is the first index after the pre-defined ones
+	src.id = 4;		 // index into macro_set.sources. 4 is the first index after the pre-defined ones
 	int gl_opts = 3; // CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
 
 	//
@@ -274,26 +247,28 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 	// PASS 1.
 	// This loop will read every line of the input file
 	//
-	while ( ((line=ms.getline(gl_opts)) != NULL) ) {
-		//std::string varline(line);
+	while (((line = ms.getline(gl_opts)) != NULL)) {
+		// std::string varline(line);
 		int lineNumber = src.line;
 
 		//
 		// Find the terminating '\0'
 		//
-		//char * endline = line;
-		//while (*endline != '\0') endline++;
-
+		// char * endline = line;
+		// while (*endline != '\0') endline++;
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
-		if (line[0] == 0)       continue;  // Ignore blank lines
-		if (line[0] == COMMENT) continue;  // Ignore comments
+		if (line[0] == 0)
+			continue; // Ignore blank lines
+		if (line[0] == COMMENT)
+			continue; // Ignore comments
 
-		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		debug_printf(DEBUG_DEBUG_3, "Parsing line <%s>\n", line);
 
-		char *token = strtok(line, DELIMITERS);
-		if ( !token ) continue; // so Coverity is happy
+		char* token = strtok(line, DELIMITERS);
+		if (!token)
+			continue; // so Coverity is happy
 
 		bool parsed_line_successfully = false;
 
@@ -313,7 +288,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				std::string desc = parse_inline_desc(ms, gl_opts, inline_end, err, line);
 				std::string key = nodename + "-InlineDesc" + std::to_string(inline_count++);
 
-				if ( ! err.empty()) {
+				if (!err.empty()) {
 					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 					pre_parse_success = false;
 				} else {
@@ -324,33 +299,29 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			}
 
 			if (pre_parse_success) {
-				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, keyword.c_str(),
-				                                      filename, lineNumber, tmpDirectory.c_str(),
-				                                      "", "submitfile");
+				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, keyword.c_str(), filename, lineNumber,
+													  tmpDirectory.c_str(), "", "submitfile");
 				std::string temp_nodename = munge_node_name(nodename.c_str());
-				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
-				if ( ! node) {
-					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
-					             nodename.c_str());
+				Node* node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
+				if (!node) {
+					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n", nodename.c_str());
 					parsed_line_successfully = false;
 				}
 			}
 		}
 
 		// Handle a SUBDAG spec
-		else if	(strcasecmp(token, "SUBDAG") == 0) {
-			parsed_line_successfully = parse_subdag( dag, 
-						token, filename, lineNumber, tmpDirectory.c_str() );
+		else if (strcasecmp(token, "SUBDAG") == 0) {
+			parsed_line_successfully = parse_subdag(dag, token, filename, lineNumber, tmpDirectory.c_str());
 		}
 
 		// Handle a Splice spec
-		else if(strcasecmp(token, "SPLICE") == 0) {
-			parsed_line_successfully = parse_splice(dm, dag, filename,
-						lineNumber);
+		else if (strcasecmp(token, "SPLICE") == 0) {
+			parsed_line_successfully = parse_splice(dm, dag, filename, lineNumber);
 		}
 
 		// Handle a SUBMIT-DESCRIPTION spec
-		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
+		else if (strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
 			std::string descName;
 			const char* desc;
 			bool success = pre_parse_node(descName, desc);
@@ -358,7 +329,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			if (success && get_inline_desc_end(desc, desc_end)) {
 				std::string err;
 				std::string data = parse_inline_desc(ms, gl_opts, desc_end, err, line);
-				if ( ! err.empty()) {
+				if (!err.empty()) {
 					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 				} else {
 					std::ignore = dag->add_inline_desc(descName, data);
@@ -368,8 +339,8 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		}
 
 		else {
-				// Just accept everything for now -- we'll detect unknown
-				// command names in the second pass.
+			// Just accept everything for now -- we'll detect unknown
+			// command names in the second pass.
 			parsed_line_successfully = true;
 		}
 
@@ -383,40 +354,41 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 	// PASS 2.
 	// Seek back to the beginning of the DAG file.
 	//
-	if ( fseek( fp, 0, SEEK_SET ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"Error (%d, %s) seeking back to beginning of DAG file\n",
-					errno, strerror( errno ) );
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		debug_printf(DEBUG_QUIET, "Error (%d, %s) seeking back to beginning of DAG file\n", errno, strerror(errno));
 		fclose(fp);
 		return false;
 	}
 
 	// reset line number because we seeked back to the start of the file.
-	//lineNumber = 0;
+	// lineNumber = 0;
 	src.line = 0;
 
 	//
 	// This loop will read every line of the input file
 	//
-	while ( ((line=ms.getline(gl_opts)) != NULL) ) {
-		//std::string varline(line);
+	while (((line = ms.getline(gl_opts)) != NULL)) {
+		// std::string varline(line);
 		int lineNumber = src.line;
 		//
 		// Find the terminating '\0'
 		//
-		char * endline = line;
-		while (*endline != '\0') endline++;
-
+		char* endline = line;
+		while (*endline != '\0')
+			endline++;
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
-		if (line[0] == 0)       continue;  // Ignore blank lines
-		if (line[0] == COMMENT) continue;  // Ignore comments
+		if (line[0] == 0)
+			continue; // Ignore blank lines
+		if (line[0] == COMMENT)
+			continue; // Ignore comments
 
-		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+		debug_printf(DEBUG_DEBUG_3, "Parsing line <%s>\n", line);
 
-		char *token = strtok(line, DELIMITERS);
-		if ( !token ) continue; // so Coverity is happy
+		char* token = strtok(line, DELIMITERS);
+		if (!token)
+			continue; // so Coverity is happy
 
 		bool parsed_line_successfully;
 
@@ -424,7 +396,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		if (NODE_KEYWORDS.contains(token)) {
 			parsed_line_successfully = true;
 			std::string nodename;
-			const char * subfile = NULL;
+			const char* subfile = NULL;
 			pre_parse_node(nodename, subfile);
 			std::string inline_end;
 			if (get_inline_desc_end(subfile, inline_end)) {
@@ -434,16 +406,15 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		}
 
 		// Handle a SUBDAG spec
-		else if	(strcasecmp(token, "SUBDAG") == 0) {
-				// Parsed in first pass.
+		else if (strcasecmp(token, "SUBDAG") == 0) {
+			// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
 		// Handle a SCRIPT spec
 		// Example Syntax is:  SCRIPT (PRE|POST|HOLD) [DEFER status time] NodeName ScriptName Args ...
-		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
-			parsed_line_successfully = parse_script(endline, dag, 
-				filename, lineNumber);
+		else if (strcasecmp(token, "SCRIPT") == 0) {
+			parsed_line_successfully = parse_script(endline, dag, filename, lineNumber);
 		}
 
 		// Handle a Dependency spec
@@ -454,69 +425,67 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		// Keywords explicitly not supported with old parse mode due to deprecation
 		else if (std::any_of(UNSUPPORTED_OLD_PARSER_KEYWORDS.begin(), UNSUPPORTED_OLD_PARSER_KEYWORDS.end(),
-		                      [token](const char * kw) { return strcasecmp(token, kw) == 0; })) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s:%d %s is not supported in deprecated parse mode (DAGMAN_USE_OLD_FILE_PARSER=True)\n",
-			             filename, lineNumber, token);
+							 [token](const char* kw) { return strcasecmp(token, kw) == 0; })) {
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s:%d %s is not supported in deprecated parse mode (DAGMAN_USE_OLD_FILE_PARSER=True)\n", filename,
+						 lineNumber, token);
 			parsed_line_successfully = false;
 		}
 
 		// Handle a Retry spec
 		// Example Syntax is:  Retry NodeName 3 UNLESS-EXIT 42
-		else if( strcasecmp( token, "RETRY" ) == 0 ) {
+		else if (strcasecmp(token, "RETRY") == 0) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
-		} 
+		}
 
 		// Handle an Abort spec
 		// Example Syntax is:  ABORT-DAG-ON NodeName 2
-		else if( strcasecmp( token, "ABORT-DAG-ON" ) == 0 ) {
+		else if (strcasecmp(token, "ABORT-DAG-ON") == 0) {
 			parsed_line_successfully = parse_abort(dag, filename, lineNumber);
-		} 
+		}
 
 		// Handle a Dot spec
-		// Example syntax is: Dot dotfile [UPDATE | DONT-UPDATE] 
+		// Example syntax is: Dot dotfile [UPDATE | DONT-UPDATE]
 		//                    [OVERWRITE | DONT-OVERWRITE]
 		//                    [INCLUDE dot-file-header]
-		else if( strcasecmp( token, "DOT" ) == 0 ) {
+		else if (strcasecmp(token, "DOT") == 0) {
 			parsed_line_successfully = parse_dot(dag, filename, lineNumber);
-		} 
+		}
 
 		// Handle a Vars spec
 		// Example syntax is: Vars NodeName var1="val1" var2="val2"
-		else if(strcasecmp(token, "VARS") == 0) {
+		else if (strcasecmp(token, "VARS") == 0) {
 			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
 		}
 
 		// Handle a Priority spec
 		// Example syntax is: Priority NodeName 2
-		else if(strcasecmp(token, "PRIORITY") == 0) {
-			parsed_line_successfully = parse_priority(dag, filename,
-						lineNumber);
+		else if (strcasecmp(token, "PRIORITY") == 0) {
+			parsed_line_successfully = parse_priority(dag, filename, lineNumber);
 		}
 
 		// Handle a Category spec
 		// Example syntax is: Category NodeName Simulation
-		else if(strcasecmp(token, "CATEGORY") == 0) {
-			parsed_line_successfully = parse_category(dag, filename,
-						lineNumber);
+		else if (strcasecmp(token, "CATEGORY") == 0) {
+			parsed_line_successfully = parse_category(dag, filename, lineNumber);
 		}
 
 		// Handle a MaxJobs spec
 		// Example syntax is: MaxJobs Category 10
-		else if(strcasecmp(token, "MAXJOBS") == 0) {
-			parsed_line_successfully = parse_maxjobs(dag, filename,
-						lineNumber);
+		else if (strcasecmp(token, "MAXJOBS") == 0) {
+			parsed_line_successfully = parse_maxjobs(dag, filename, lineNumber);
 		}
 
 		// Allow a CONFIG spec, but ignore it here because it
 		// is actually parsed by condor_submit_dag (config
 		// files must be processed before any other code runs)
-		else if(strcasecmp(token, "CONFIG") == 0) {
+		else if (strcasecmp(token, "CONFIG") == 0) {
 			parsed_line_successfully = true;
 		}
 
 		// Allow a SET_JOB_ATTR spec, but ignore it here because it
 		// is actually parsed by condor_submit_dag.
-		else if (strcasecmp( token, "SET_JOB_ATTR" ) == 0 ) {
+		else if (strcasecmp(token, "SET_JOB_ATTR") == 0) {
 			parsed_line_successfully = true;
 		}
 
@@ -526,77 +495,68 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		}
 
 		// Handle a Splice spec
-		else if(strcasecmp(token, "SPLICE") == 0) {
-				// Parsed in first pass.
+		else if (strcasecmp(token, "SPLICE") == 0) {
+			// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
 		// Handle a NODE_STATUS_FILE spec
-		else if(strcasecmp(token, "NODE_STATUS_FILE") == 0) {
-			parsed_line_successfully = parse_node_status_file(dag,
-						filename, lineNumber);
+		else if (strcasecmp(token, "NODE_STATUS_FILE") == 0) {
+			parsed_line_successfully = parse_node_status_file(dag, filename, lineNumber);
 		}
 
 		// Handle a SAVE_POINT_FILE spec
-		else if(strcasecmp(token, "SAVE_POINT_FILE") == MATCH) {
+		else if (strcasecmp(token, "SAVE_POINT_FILE") == MATCH) {
 			parsed_line_successfully = parse_save_point_file(dag, filename, lineNumber);
 		}
 
 		// Handle a REJECT spec
-		else if(strcasecmp(token, "REJECT") == 0) {
-			parsed_line_successfully = parse_reject(dag,
-						filename, lineNumber);
+		else if (strcasecmp(token, "REJECT") == 0) {
+			parsed_line_successfully = parse_reject(dag, filename, lineNumber);
 		}
-		
+
 		// Handle a JOBSTATE_LOG spec
-		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
-			parsed_line_successfully = parse_jobstate_log(dag,
-				filename, lineNumber);
+		else if (strcasecmp(token, "JOBSTATE_LOG") == 0) {
+			parsed_line_successfully = parse_jobstate_log(dag, filename, lineNumber);
 		}
-		
+
 		// Handle a PRE_SKIP
-		else if(strcasecmp(token, "PRE_SKIP") == 0) {
-			parsed_line_successfully = parse_pre_skip(dag,
-				filename, lineNumber);
+		else if (strcasecmp(token, "PRE_SKIP") == 0) {
+			parsed_line_successfully = parse_pre_skip(dag, filename, lineNumber);
 		}
 
 		// Handle a DONE spec
-		else if(strcasecmp(token, "DONE") == 0) {
-			parsed_line_successfully = parse_done(dag,
-						filename, lineNumber);
+		else if (strcasecmp(token, "DONE") == 0) {
+			parsed_line_successfully = parse_done(dag, filename, lineNumber);
 		}
 
 		// Handle a CONNECT spec
-		else if(strcasecmp(token, "CONNECT") == 0) {
-			parsed_line_successfully = parse_connect( dag,
-						filename, lineNumber );
+		else if (strcasecmp(token, "CONNECT") == 0) {
+			parsed_line_successfully = parse_connect(dag, filename, lineNumber);
 		}
 
 		// Handle a PIN_IN spec
-		else if(strcasecmp(token, "PIN_IN") == 0) {
-			parsed_line_successfully = parse_pin_in_out( dag,
-						filename, lineNumber, true );
+		else if (strcasecmp(token, "PIN_IN") == 0) {
+			parsed_line_successfully = parse_pin_in_out(dag, filename, lineNumber, true);
 		}
 
 		// Handle a PIN_OUT spec
-		else if(strcasecmp(token, "PIN_OUT") == 0) {
-			parsed_line_successfully = parse_pin_in_out( dag,
-						filename, lineNumber, false );
+		else if (strcasecmp(token, "PIN_OUT") == 0) {
+			parsed_line_successfully = parse_pin_in_out(dag, filename, lineNumber, false);
 		}
 
 		// Handle a INCLUDE spec
-		else if(strcasecmp(token, "INCLUDE") == 0) {
-			parsed_line_successfully = parse_include(dm, dag,
-						filename, lineNumber );
+		else if (strcasecmp(token, "INCLUDE") == 0) {
+			parsed_line_successfully = parse_include(dm, dag, filename, lineNumber);
 		}
 
 		// Handle a SUBMIT-DESCRIPTION spec
-		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
-				// Parsed in first pass.
-				// However we still need to advance the line parser.
+		else if (strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
+			// Parsed in first pass.
+			// However we still need to advance the line parser.
 			parsed_line_successfully = true;
 			std::string descName;
-			const char *desc = NULL;
+			const char* desc = NULL;
 			pre_parse_node(descName, desc);
 			std::string desc_end;
 			if (get_inline_desc_end(desc, desc_end)) {
@@ -607,18 +567,19 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		// None of the above means that there was bad input.
 		else {
-			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
-				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
-				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, SERVICE, "
-				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
-				"CONNECT, PIN_IN, PIN_OUT, INCLUDE, SAVE_POINT_FILE or"
-				"SUBMIT-DESCRIPTION token "
-				"(found %s)\n",
-				filename, lineNumber, token );
+			debug_printf(DEBUG_QUIET,
+						 "%s (line %d): "
+						 "ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
+						 "RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
+						 "MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, SERVICE, "
+						 "NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
+						 "CONNECT, PIN_IN, PIN_OUT, INCLUDE, SAVE_POINT_FILE or"
+						 "SUBMIT-DESCRIPTION token "
+						 "(found %s)\n",
+						 filename, lineNumber, token);
 			parsed_line_successfully = false;
 		}
-		
+
 		if (!parsed_line_successfully) {
 			fclose(fp);
 			return false;
@@ -632,13 +593,11 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 	// important to preserve when building dependancy links.
 	dag->LiftSplices(SELF);
 	dag->RecordInitialAndTerminalNodes();
-	
-	if ( _useDagDir ) {
-		std::string	errMsg;
-		if ( !dagDir.Cd2MainDir( errMsg ) ) {
-			debug_printf( DEBUG_QUIET,
-					"ERROR: Could not change to original directory: %s\n",
-					errMsg.c_str() );
+
+	if (_useDagDir) {
+		std::string errMsg;
+		if (!dagDir.Cd2MainDir(errMsg)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Could not change to original directory: %s\n", errMsg.c_str());
 			return false;
 		}
 	}
@@ -646,54 +605,50 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 	return true;
 }
 
-static bool 
-parse_subdag( Dag *dag, 
-			const char* nodeTypeKeyword,
-			const char* dagFile, int lineNum, const char *directory )
-{
-	const char *inlineOrExt = strtok( NULL, DELIMITERS );
-	if ( !inlineOrExt ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): SUBDAG needs "
-					"EXTERNAL keyword\n", dagFile, lineNum);
+static bool parse_subdag(Dag* dag, const char* nodeTypeKeyword, const char* dagFile, int lineNum, const char* directory) {
+	const char* inlineOrExt = strtok(NULL, DELIMITERS);
+	if (!inlineOrExt) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): SUBDAG needs "
+					 "EXTERNAL keyword\n",
+					 dagFile, lineNum);
 		return false;
 	}
-	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
+	if (!strcasecmp(inlineOrExt, "EXTERNAL")) {
 		std::string nodename;
-		const char * subfile;
+		const char* subfile;
 		pre_parse_node(nodename, subfile);
-		return parse_node( dag, nodename.c_str(), subfile, nodeTypeKeyword, dagFile,
-					lineNum, directory, " EXTERNAL", "dagfile" );
+		return parse_node(dag, nodename.c_str(), subfile, nodeTypeKeyword, dagFile, lineNum, directory, " EXTERNAL", "dagfile");
 	}
 
-	debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
-				"EXTERNAL is supported at this time\n", dagFile, lineNum);
+	debug_printf(DEBUG_QUIET,
+				 "ERROR: %s (line %d): only SUBDAG "
+				 "EXTERNAL is supported at this time\n",
+				 dagFile, lineNum);
 	return false;
 }
 
-static const char* next_possibly_quoted_token( void )
-{
-	char *remainder = strtok( NULL, "" );
-	if ( !remainder ) {
+static const char* next_possibly_quoted_token(void) {
+	char* remainder = strtok(NULL, "");
+	if (!remainder) {
 		return NULL;
 	}
-	while ( remainder[0] == ' ' || remainder[0] == '\t' )
+	while (remainder[0] == ' ' || remainder[0] == '\t')
 		remainder++;
-	if ( remainder[0] == '"' )
-		return strtok( ++remainder, "\"" );
+	if (remainder[0] == '"')
+		return strtok(++remainder, "\"");
 	else
-		return strtok( remainder, DELIMITERS );
+		return strtok(remainder, DELIMITERS);
 }
 
 //-----------------------------------------------------------------------------
 // parse just enough of the line to know if this is an inline submit file or a submit filename
-static bool
-pre_parse_node(std::string & nodename, const char * &submitFile)
-{
+static bool pre_parse_node(std::string& nodename, const char*& submitFile) {
 	nodename.clear();
 	submitFile = NULL;
 
 	// first token is the node name
-	const char *nodeName = strtok(NULL, DELIMITERS);
+	const char* nodeName = strtok(NULL, DELIMITERS);
 	if (nodeName) {
 		nodename = nodeName;
 	}
@@ -710,99 +665,99 @@ pre_parse_node(std::string & nodename, const char * &submitFile)
 }
 
 //-----------------------------------------------------------------------------
-static bool 
-parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc,
-			const char* nodeTypeKeyword,
-			const char* dagFile, int lineNum, const char *directory,
-			const char *inlineOrExt, const char *submitOrDagFile)
-{
-	std::string example = std::string(nodeTypeKeyword) + 
-		std::string(inlineOrExt) + " <nodename> " +
-		submitOrDagFile + " [DIR directory] [NOOP] [DONE]";
+static bool parse_node(Dag* dag, const char* nodeName, const char* submitFileOrSubmitDesc, const char* nodeTypeKeyword,
+					   const char* dagFile, int lineNum, const char* directory, const char* inlineOrExt,
+					   const char* submitOrDagFile) {
+	std::string example = std::string(nodeTypeKeyword) + std::string(inlineOrExt) + " <nodename> " + submitOrDagFile +
+						  " [DIR directory] [NOOP] [DONE]";
 	std::string whynot;
 	bool done = false;
 
 	NodeType type = NodeType::JOB;
-	if ( strcasecmp ( nodeTypeKeyword, "FINAL" ) == 0 ) type = NodeType::FINAL;
-	if ( strcasecmp ( nodeTypeKeyword, "PROVISIONER" ) == 0 ) type = NodeType::PROVISIONER;
-	if ( strcasecmp ( nodeTypeKeyword, "SERVICE" ) == 0 ) type = NodeType::SERVICE;
+	if (strcasecmp(nodeTypeKeyword, "FINAL") == 0)
+		type = NodeType::FINAL;
+	if (strcasecmp(nodeTypeKeyword, "PROVISIONER") == 0)
+		type = NodeType::PROVISIONER;
+	if (strcasecmp(nodeTypeKeyword, "SERVICE") == 0)
+		type = NodeType::SERVICE;
 
-		// NOTE: fear not -- any missing tokens resulting in NULL
-		// strings will be error-handled correctly by AddNode()
+	// NOTE: fear not -- any missing tokens resulting in NULL
+	// strings will be error-handled correctly by AddNode()
 
-		// first token is the node name
-	if ( !nodeName ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
-					"specified\n", dagFile, lineNum );
-		exampleSyntax( example.c_str() );
+	// first token is the node name
+	if (!nodeName) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): no node name "
+					 "specified\n",
+					 dagFile, lineNum);
+		exampleSyntax(example.c_str());
 		return false;
 	}
 
-	if ( isReservedWord( nodeName ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): NodeName cannot be a reserved word\n",
-					  dagFile, lineNum );
-		exampleSyntax( example.c_str() );
+	if (isReservedWord(nodeName)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): NodeName cannot be a reserved word\n", dagFile, lineNum);
+		exampleSyntax(example.c_str());
 		return false;
 	}
 
-	if ( !allowIllegalChars && ( strcspn ( nodeName, ILLEGAL_CHARS ) < strlen ( nodeName ) ) ) {
-        std::string errorMessage = "ERROR: " + std::string(dagFile) + 
-			" (line " + std::to_string(lineNum) + "): NodeName " +
-			std::string(nodeName) + " contains one or more illegal characters (";
-        for( unsigned int i = 0; i < strlen( ILLEGAL_CHARS ); i++ ) {
-            errorMessage += "'";
-            errorMessage += ILLEGAL_CHARS[i];
-            errorMessage += "'";         
-            if( i < strlen( ILLEGAL_CHARS ) - 1 ) {
-                errorMessage += ", ";
-            }
-        }
-        errorMessage += ")\n";
-        debug_error( 1, DEBUG_QUIET, "%s", errorMessage.c_str() );
-        return false;
-    }
+	if (!allowIllegalChars && (strcspn(nodeName, ILLEGAL_CHARS) < strlen(nodeName))) {
+		std::string errorMessage = "ERROR: " + std::string(dagFile) + " (line " + std::to_string(lineNum) + "): NodeName " +
+								   std::string(nodeName) + " contains one or more illegal characters (";
+		for (unsigned int i = 0; i < strlen(ILLEGAL_CHARS); i++) {
+			errorMessage += "'";
+			errorMessage += ILLEGAL_CHARS[i];
+			errorMessage += "'";
+			if (i < strlen(ILLEGAL_CHARS) - 1) {
+				errorMessage += ", ";
+			}
+		}
+		errorMessage += ")\n";
+		debug_error(1, DEBUG_QUIET, "%s", errorMessage.c_str());
+		return false;
+	}
 
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
-		// next token is the either the submit file name,
-		// or an inline submit description
-	if ( !submitFileOrSubmitDesc ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file or "
-					"submit description specified\n", dagFile, lineNum );
-		exampleSyntax( example.c_str() );
+	// next token is the either the submit file name,
+	// or an inline submit description
+	if (!submitFileOrSubmitDesc) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): no submit file or "
+					 "submit description specified\n",
+					 dagFile, lineNum);
+		exampleSyntax(example.c_str());
 		return false;
 	}
 
-		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
+	// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	TmpDir nodeDir;
-	const char* nextTok = strtok( NULL, DELIMITERS );
-	if ( nextTok ) {
+	const char* nextTok = strtok(NULL, DELIMITERS);
+	if (nextTok) {
 		if (strcasecmp(nextTok, "DIR") == 0) {
-			if ( strcmp(directory, "") ) {
-				debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
-							"lines not allowed with -UseDagDir command-line "
-							"argument\n");
+			if (strcmp(directory, "")) {
+				debug_printf(DEBUG_QUIET, "ERROR: DIR specification in node "
+										  "lines not allowed with -UseDagDir command-line "
+										  "argument\n");
 				return false;
 			}
 
 			directory = next_possibly_quoted_token();
-			if ( !directory ) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
-							"specified after DIR keyword\n", dagFile, lineNum );
-				exampleSyntax( example.c_str() );
+			if (!directory) {
+				debug_printf(DEBUG_QUIET,
+							 "ERROR: %s (line %d): no directory "
+							 "specified after DIR keyword\n",
+							 dagFile, lineNum);
+				exampleSyntax(example.c_str());
 				return false;
 			}
 
 			std::string errMsg;
-			if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
-				debug_printf( DEBUG_QUIET,
-							"ERROR: can't change to directory %s: %s\n",
-							directory, errMsg.c_str() );
+			if (!nodeDir.Cd2TmpDir(directory, errMsg)) {
+				debug_printf(DEBUG_QUIET, "ERROR: can't change to directory %s: %s\n", directory, errMsg.c_str());
 				return false;
 			}
-			nextTok = strtok( NULL, DELIMITERS );
+			nextTok = strtok(NULL, DELIMITERS);
 		} else {
 			// Fall through to check for NOOP.
 		}
@@ -810,41 +765,45 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 
 	bool noop = false;
 
-	if ( nextTok ) {
-		if ( strcasecmp( nextTok, "NOOP" ) == 0 ) {
+	if (nextTok) {
+		if (strcasecmp(nextTok, "NOOP") == 0) {
 			noop = true;
-			nextTok = strtok( NULL, DELIMITERS );
+			nextTok = strtok(NULL, DELIMITERS);
 		} else {
 			// Fall through to check for DONE.
 		}
 	}
 
-	if ( nextTok ) {
-		if ( strcasecmp( nextTok, "DONE" ) == 0 ) {
+	if (nextTok) {
+		if (strcasecmp(nextTok, "DONE") == 0) {
 			done = true;
 		} else {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			exampleSyntax( example.c_str() );
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d): invalid "
+						 "parameter \"%s\"\n",
+						 dagFile, lineNum, nextTok);
+			exampleSyntax(example.c_str());
 			return false;
 		}
-		nextTok = strtok( NULL, DELIMITERS );
+		nextTok = strtok(NULL, DELIMITERS);
 	}
 
-		// anything else is garbage
-	if ( nextTok ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			exampleSyntax( example.c_str() );
-			return false;
+	// anything else is garbage
+	if (nextTok) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): invalid "
+					 "parameter \"%s\"\n",
+					 dagFile, lineNum, nextTok);
+		exampleSyntax(example.c_str());
+		return false;
 	}
 
 	// check to see if this node name is also a splice name for this dag.
 	if (dag->LookupSplice(nodeName)) {
-		debug_printf( DEBUG_QUIET, 
-			  "ERROR: %s (line %d): "
-			  "Node name '%s' must not also be a splice name.\n",
-			  dagFile, lineNum, nodeName );
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 "Node name '%s' must not also be a splice name.\n",
+					 dagFile, lineNum, nodeName);
 		return false;
 	}
 
@@ -852,20 +811,20 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	// This can only be done with real submit files, not inline descriptions.
 	std::string nestedDagFile("");
 	std::string dagSubmitFile(""); // must be outside if so it stays in scope
-	if ( submitFileOrSubmitDesc ) {
-		if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
-				// Save original DAG file name (needed for rescue DAG).
+	if (submitFileOrSubmitDesc) {
+		if (strcasecmp(nodeTypeKeyword, "SUBDAG") == MATCH) {
+			// Save original DAG file name (needed for rescue DAG).
 			nestedDagFile = submitFileOrSubmitDesc;
 
-				// Generate the "real" submit file name (append ".condor.sub"
-				// to the DAG file name).
+			// Generate the "real" submit file name (append ".condor.sub"
+			// to the DAG file name).
 			dagSubmitFile = submitFileOrSubmitDesc;
 			dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
 			submitFileOrSubmitDesc = dagSubmitFile.c_str();
 
-		} else if ( strstr( submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX) ) {
+		} else if (strstr(submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX)) {
 			// Assume JOB commands submit file ending with '.condor.sub' is a DAG submit file.
-			if (strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH) {
+			if (strcasecmp(nodeTypeKeyword, "FINAL") == MATCH) {
 				nestedDagFile = submitFileOrSubmitDesc;
 				nestedDagFile.replace(nestedDagFile.find(DAG_SUBMIT_FILE_SUFFIX), sizeof(DAG_SUBMIT_FILE_SUFFIX) - 1, "");
 			} else {
@@ -877,29 +836,22 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	}
 
 	// looks ok, so add it
-	if( !AddNode( dag, nodeName, directory,
-				submitFileOrSubmitDesc, noop, done, type, whynot ) )
-	{
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-					dagFile, lineNum, whynot.c_str() );
-		exampleSyntax( example.c_str() );
+	if (!AddNode(dag, nodeName, directory, submitFileOrSubmitDesc, noop, done, type, whynot)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s\n", dagFile, lineNum, whynot.c_str());
+		exampleSyntax(example.c_str());
 		return false;
 	}
 
-	if ( nestedDagFile != "" ) {
-		if ( !SetNodeDagFile( dag, nodeName, nestedDagFile.c_str(),
-					whynot ) ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-					  	dagFile, lineNum, whynot.c_str() );
+	if (nestedDagFile != "") {
+		if (!SetNodeDagFile(dag, nodeName, nestedDagFile.c_str(), whynot)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s\n", dagFile, lineNum, whynot.c_str());
 			return false;
 		}
 	}
 
 	std::string errMsg;
-	if ( !nodeDir.Cd2MainDir(errMsg) ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: can't change to original directory: %s\n",
-					errMsg.c_str() );
+	if (!nodeDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET, "ERROR: can't change to original directory: %s\n", errMsg.c_str());
 		return false;
 	}
 
@@ -913,73 +865,55 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 //             SCRIPT [DEFER status time] (PRE|POST|HOLD) NodeName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
-static bool 
-parse_script(
-	const char *endline,
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "SCRIPT [DEFER status time] [DEBUG file (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) NodeName Script Args ...";
+static bool parse_script(const char* endline, Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "SCRIPT [DEFER status time] [DEBUG file (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) NodeName Script Args ...";
 
 	//
 	// Second keyword is either PRE, POST or DEFER
 	//
-	char * type_name = strtok( NULL, DELIMITERS );
-	if ( !type_name ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): Missing PRE, POST, HOLD, or DEFER\n",
-					filename, lineNumber );
-		exampleSyntax( example );
+	char* type_name = strtok(NULL, DELIMITERS);
+	if (!type_name) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRE, POST, HOLD, or DEFER\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	int defer_status = SCRIPT_DEFER_STATUS_NONE;
 	int defer_time = 0;
-	if ( !strcasecmp( type_name, "DEFER" ) ) {
-			// Our script has a defer statement.
-		char *token = strtok( NULL, DELIMITERS );
-		if ( token == NULL ) {
-			debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): Missing DEFER status value\n",
-					filename, lineNumber );
-			exampleSyntax( example );
+	if (!strcasecmp(type_name, "DEFER")) {
+		// Our script has a defer statement.
+		char* token = strtok(NULL, DELIMITERS);
+		if (token == NULL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing DEFER status value\n", filename, lineNumber);
+			exampleSyntax(example);
 			return false;
 		}
-		char *tmp;
-		defer_status = (int)strtol( token, &tmp, 10 );
-		if ( tmp == token || defer_status <= 0 ) {
-			debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): Invalid DEFER status value \"%s\"\n",
-				filename, lineNumber, token );
-			exampleSyntax( example );
+		char* tmp;
+		defer_status = (int)strtol(token, &tmp, 10);
+		if (tmp == token || defer_status <= 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid DEFER status value \"%s\"\n", filename, lineNumber, token);
+			exampleSyntax(example);
 			return false;
 		}
 
-		token = strtok( NULL, DELIMITERS );
-		if ( token == NULL ) {
-			debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): Missing DEFER time value\n",
-				filename, lineNumber );
-			exampleSyntax( example );
+		token = strtok(NULL, DELIMITERS);
+		if (token == NULL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing DEFER time value\n", filename, lineNumber);
+			exampleSyntax(example);
 			return false;
 		}
-		defer_time = (int)strtol( token, &tmp, 10 );
-		if ( tmp == token || defer_time < 0 ) {
-			debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): Invalid DEFER time value \"%s\"\n",
-				filename, lineNumber, token );
-			exampleSyntax( example );
+		defer_time = (int)strtol(token, &tmp, 10);
+		if (tmp == token || defer_time < 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid DEFER time value \"%s\"\n", filename, lineNumber, token);
+			exampleSyntax(example);
 			return false;
 		}
 
-			// The next token must be PRE, POST or HOLD.
-		type_name = strtok( NULL, DELIMITERS );
-		if ( !type_name ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): Missing PRE, POST, HOLD or optional DEBUG\n",
-						filename, lineNumber );
-			exampleSyntax( example );
+		// The next token must be PRE, POST or HOLD.
+		type_name = strtok(NULL, DELIMITERS);
+		if (!type_name) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRE, POST, HOLD or optional DEBUG\n", filename, lineNumber);
+			exampleSyntax(example);
 			return false;
 		}
 	}
@@ -988,17 +922,16 @@ parse_script(
 	std::string debugFile;
 	if (strcasecmp(type_name, "DEBUG") == MATCH) {
 		const char* token = strtok(NULL, DELIMITERS);
-		if ( ! token) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Script DEBUG missing filename\n",
-			             filename, lineNumber);
+		if (!token) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Script DEBUG missing filename\n", filename, lineNumber);
 			exampleSyntax(example);
 			return false;
 		}
 		debugFile = token;
 		token = strtok(NULL, DELIMITERS);
-		if ( ! token) {
+		if (!token) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Script DEBUG missing output stream type (STDOUT,STDERR,ALL)\n",
-			             filename, lineNumber);
+						 filename, lineNumber);
 			exampleSyntax(example);
 			return false;
 		}
@@ -1009,50 +942,50 @@ parse_script(
 		} else if (strcasecmp(token, "ALL") == MATCH) {
 			debugType = DAG::ScriptOutput::ALL;
 		} else {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Script output stream type (%s) expected STDOUT, STDERR, or ALL\n",
-			            filename, lineNumber, token);
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d): Unknown Script output stream type (%s) expected STDOUT, STDERR, or ALL\n", filename,
+						 lineNumber, token);
 			exampleSyntax(example);
 			return false;
 		}
 		type_name = strtok(NULL, DELIMITERS);
-		if ( ! type_name) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRE, POST or HOLD\n",
-						filename, lineNumber);
+		if (!type_name) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRE, POST or HOLD\n", filename, lineNumber);
 			exampleSyntax(example);
 			return false;
 		}
 	}
 
 	ScriptType scriptType;
-	if ( !strcasecmp (type_name, "PRE" ) ) {
+	if (!strcasecmp(type_name, "PRE")) {
 		scriptType = ScriptType::PRE;
-	} else if ( !strcasecmp (type_name, "POST") ) {
+	} else if (!strcasecmp(type_name, "POST")) {
 		scriptType = ScriptType::POST;
-	} else if ( !strcasecmp (type_name, "HOLD") ) {
+	} else if (!strcasecmp(type_name, "HOLD")) {
 		scriptType = ScriptType::HOLD;
 	} else {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
-					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\", \"POST\", \"HOLD\" "
-					  "(or DEFER)\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 "After specifying \"SCRIPT\", you must "
+					 "indicate if you want \"PRE\", \"POST\", \"HOLD\" "
+					 "(or DEFER)\n",
+					 filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Next token is the NodeName
 	//
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
-	const char *rest = nodeName; // For subsequent tokens
+	const char* nodeNameOrig = nodeName; // for error output
+	const char* rest = nodeName;		 // For subsequent tokens
 
 	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
 	std::string tmpNodeName = munge_node_name(nodeName);
@@ -1061,107 +994,98 @@ parse_script(
 	//
 	// The rest of the line is the script and args
 	//
-	
+
 	// first, skip over the token we already read...
 	// Why not just call strtok() again here? wenger 2016-10-13
-	while (*rest != '\0') rest++;
-	
+	while (*rest != '\0')
+		rest++;
+
 	// if we're not at the end of the line, move forward
 	// one character so we're looking at the rest of the
 	// line...
-	if( rest < endline ) {
+	if (rest < endline) {
 		rest++;
 	} else {
 		// if we're already at the end of the line, they
 		// must not have given us any path to the script,
-		// arguments, etc.  
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
-					  "You named a %s script for node %s but "
-					  "didn't provide a script filename\n",
-					  filename, lineNumber, type_name, 
-					  nodeNameOrig );
-		exampleSyntax( example );
+		// arguments, etc.
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 "You named a %s script for node %s but "
+					 "didn't provide a script filename\n",
+					 filename, lineNumber, type_name, nodeNameOrig);
+		exampleSyntax(example);
 		return false;
 	}
-	
+
 	// quick hack to get this working for extra
 	// whitespace: make sure the "rest" of the line isn't
 	// starting with any delimiter...
-	while( rest[0] && isDelimiter(rest[0]) ) {
+	while (rest[0] && isDelimiter(rest[0])) {
 		rest++;
 	}
-	
-	if( ! rest[0] ) {
+
+	if (!rest[0]) {
 		// this means we only saw whitespace after the
 		// script.  however, because of how getline()
 		// works and our comparison to endline above, we
 		// should never hit this case.
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
-					  "You named a %s script for node %s but "
-					  "didn't provide a script filename\n",
-					  filename, lineNumber, type_name, 
-					  nodeNameOrig );
-		exampleSyntax( example );
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 "You named a %s script for node %s but "
+					 "didn't provide a script filename\n",
+					 filename, lineNumber, type_name, nodeNameOrig);
+		exampleSyntax(example);
 		return false;
 	}
 
-
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while ((node = dag->FindAllNodesByName(
+				nodeName, "In parse_script(): skipping node %s because final nodes must have SCRIPT set explicitly (%s: %d)\n",
+				filename, lineNumber))) {
 		nodeName = NULL;
 
 		Script* script = new Script(scriptType, rest, defer_status, defer_time);
-		if(! script) {
+		if (!script) {
 			debug_printf(DEBUG_SILENT, "ERROR: Failed to make script object: out of memory!\n");
 			return false;
 		}
 		if (debugType != DAG::ScriptOutput::NONE)
 			script->SetDebug(debugFile, debugType);
-		if(! node->AddScript(script)) {
-			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n",
-			             filename, lineNumber, type_name, node->GetNodeName());
+		if (!node->AddScript(script)) {
+			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n", filename, lineNumber, type_name,
+						 node->GetNodeName());
 			return false;
 		}
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Node %s\n",
-					  filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
 	return true;
 }
 
-
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_parent
 // Purpose:  parse a line of the format PARENT node-name+ CHILD node-name+
 //           where there can be one or more parent nodes and one or more
 //           children nodes.
 //
 //-----------------------------------------------------------------------------
-static bool 
-parse_parent(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
+static bool parse_parent(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
 	std::string failReason = "";
-	const char *nodeName;
-	
+	const char* nodeName;
+
 	// get the node objects for the parents
 	std::vector<Node*> parents;
-	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL &&
-		   strcasecmp (nodeName, "CHILD") != 0) {
-		const char *nodeNameOrig = nodeName; // for error output
+	while ((nodeName = strtok(NULL, DELIMITERS)) != NULL && strcasecmp(nodeName, "CHILD") != 0) {
+		const char* nodeNameOrig = nodeName; // for error output
 		std::string tmpNodeName = munge_node_name(nodeName);
-		const char *nodeName2 = tmpNodeName.c_str();
+		const char* nodeName2 = tmpNodeName.c_str();
 
 		// if splice name then deal with that first...
 		Dag* splice_dag = dag->LookupSplice(nodeName2);
@@ -1169,37 +1093,36 @@ parse_parent(
 
 			// grab all of the final nodes of the splice and make them parents
 			// for this node.
-			std::vector<Node*> *splice_final;
+			std::vector<Node*>* splice_final;
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
 			for (auto node : *splice_final) {
-					parents.push_back(node);
+				parents.push_back(node);
 			}
 
 		} else {
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			Node *node = dag->FindNodeByName( nodeName2 );
+			Node* node = dag->FindNodeByName(nodeName2);
 			if (node == NULL) {
 				// oops, it was neither a splice nor a parent name, bail
-				debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Node %s\n",
-						  filename, lineNumber, nodeNameOrig );
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 				return false;
 			}
 			parents.push_back(node);
 		}
 	}
-	
+
 	// There must be one or more parent node names before
 	// the CHILD token
 	if (parents.empty()) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
-					  "Missing Parent Node names\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 "Missing Parent Node names\n",
+					 filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
@@ -1210,61 +1133,56 @@ parse_parent(
 	parents.erase(duplicate_parents.begin(), duplicate_parents.end());
 
 	if (nodeName == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Expected CHILD token\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Expected CHILD token\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
-	
+
 	std::vector<Node*> children;
-	
+
 	// get the node objects for the children
-	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL) {
-		const char *nodeNameOrig = nodeName; // for error output
+	while ((nodeName = strtok(NULL, DELIMITERS)) != NULL) {
+		const char* nodeNameOrig = nodeName; // for error output
 		std::string tmpNodeName = munge_node_name(nodeName);
-		const char *nodeName2 = tmpNodeName.c_str();
+		const char* nodeName2 = tmpNodeName.c_str();
 
 		// if splice name then deal with that first...
-		Dag *splice_dag = dag->LookupSplice(nodeName2);
+		Dag* splice_dag = dag->LookupSplice(nodeName2);
 		if (splice_dag) {
-			// grab all of the initial nodes of the splice and make them 
+			// grab all of the initial nodes of the splice and make them
 			// children for this node.
 
-			debug_printf( DEBUG_DEBUG_1, "%s (line %d): "
-				"Detected splice %s as a child....\n", filename, lineNumber,
-					nodeName2);
+			debug_printf(DEBUG_DEBUG_1,
+						 "%s (line %d): "
+						 "Detected splice %s as a child....\n",
+						 filename, lineNumber, nodeName2);
 
-			std::vector<Node*> *splice_initial;
+			std::vector<Node*>* splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
-			debug_printf( DEBUG_DEBUG_1, "Adding %zu initial nodes\n", 
-				splice_initial->size());
+			debug_printf(DEBUG_DEBUG_1, "Adding %zu initial nodes\n", splice_initial->size());
 
 			// now add each initial node as a child
 			for (auto node : *splice_initial) {
-					children.push_back(node);
+				children.push_back(node);
 			}
 
 		} else {
 
 			// orig code
 			// if the name is not a splice, then see if it is a true node name.
-			Node *node = dag->FindNodeByName( nodeName2 );
+			Node* node = dag->FindNodeByName(nodeName2);
 			if (node == NULL) {
 				// oops, it was neither a splice nor a child name, bail
-				debug_printf( DEBUG_QUIET, 
-						  "ERROR: %s (line %d): Unknown Node %s\n",
-						  filename, lineNumber, nodeNameOrig );
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 				return false;
 			}
 			children.push_back(node);
 		}
 	}
-	
+
 	if (children.empty()) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Node names\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing Child Node names\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
@@ -1275,7 +1193,7 @@ parse_parent(
 	//
 	// Now add all the dependencies
 	//
-	
+
 	static int numJoinNodes = 0;
 
 	// If this statement has multiple parent nodes and multiple child nodes, we
@@ -1285,18 +1203,19 @@ parse_parent(
 		// First create the join node and add it
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
-		Node* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
-			false, NodeType::JOB, failReason);
+		Node* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, false, NodeType::JOB, failReason);
 		if (!joinNode) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
-				" add join node\n", failReason.c_str(), lineNumber);
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d) while attempting to"
+						 " add join node\n",
+						 failReason.c_str(), lineNumber);
 			return false;
 		}
 
-		std::vector<Node*> join = { joinNode };
-		if ( ! dag->Connect(parents, join)) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to join node %s\n",
-			             filename, lineNumber, joinNode ? joinNode->GetNodeName() : "unknown");
+		std::vector<Node*> join = {joinNode};
+		if (!dag->Connect(parents, join)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to join node %s\n", filename, lineNumber,
+						 joinNode ? joinNode->GetNodeName() : "unknown");
 			return false;
 		}
 
@@ -1305,9 +1224,8 @@ parse_parent(
 		parents.push_back(joinNode);
 	}
 
-	if ( ! dag->Connect(parents, children)) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to between nodes\n",
-		             filename, lineNumber);
+	if (!dag->Connect(parents, children)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed to add dependency to between nodes\n", filename, lineNumber);
 		return false;
 	}
 
@@ -1315,119 +1233,99 @@ parse_parent(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_retry
 // Purpose:  Parse a line of the format "Retry nodename num-times [UNLESS-EXIT 42]"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_retry(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char *example = "Retry NodeName 3 [UNLESS-EXIT 42]";
-	
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+static bool parse_retry(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "Retry NodeName 3 [UNLESS-EXIT 42]";
+
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
-	
-	char *token = strtok( NULL, DELIMITERS );
-	if( token == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing Retry value\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	}
-	
-	char *tmp;
-	int retryMax = (int)strtol( token, &tmp, 10 );
-	if( tmp == token ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid Retry value \"%s\"\n",
-					  filename, lineNumber, token );
-		exampleSyntax( example );
-		return false;
-	}
-	if ( retryMax < 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid Retry value \"%d\" "
-					  "(cannot be negative)\n",
-					  filename, lineNumber, retryMax );
-		exampleSyntax( example );
+
+	char* token = strtok(NULL, DELIMITERS);
+	if (token == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing Retry value\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-    // Check for optional retry-abort value
+	char* tmp;
+	int retryMax = (int)strtol(token, &tmp, 10);
+	if (tmp == token) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid Retry value \"%s\"\n", filename, lineNumber, token);
+		exampleSyntax(example);
+		return false;
+	}
+	if (retryMax < 0) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): Invalid Retry value \"%d\" "
+					 "(cannot be negative)\n",
+					 filename, lineNumber, retryMax);
+		exampleSyntax(example);
+		return false;
+	}
+
+	// Check for optional retry-abort value
 	int unless_exit = 0;
-    token = strtok( NULL, DELIMITERS );
-    if ( token != NULL ) {
-        if ( strcasecmp ( token, "UNLESS-EXIT" ) != 0 ) {
-            debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Invalid retry option: %s\n", 
-                          filename, lineNumber, token );
-            exampleSyntax( example );
-            return false;
-        }
-        else {
-            token = strtok( NULL, DELIMITERS );
-            if ( token == NULL ) {
-                debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Missing parameter for UNLESS-EXIT\n",
-                              filename, lineNumber);
-                exampleSyntax( example );
-                return false;
-            } 
-            char *unless_exit_end;
-            unless_exit = strtol( token, &unless_exit_end, 10 );
-            if (*unless_exit_end != 0) {
-                debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
-                              filename, lineNumber, token );
-                exampleSyntax( example );
-                return false;
-            }
-        }
-    }
+	token = strtok(NULL, DELIMITERS);
+	if (token != NULL) {
+		if (strcasecmp(token, "UNLESS-EXIT") != 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Invalid retry option: %s\n", filename, lineNumber, token);
+			exampleSyntax(example);
+			return false;
+		} else {
+			token = strtok(NULL, DELIMITERS);
+			if (token == NULL) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Missing parameter for UNLESS-EXIT\n", filename, lineNumber);
+				exampleSyntax(example);
+				return false;
+			}
+			char* unless_exit_end;
+			unless_exit = strtol(token, &unless_exit_end, 10);
+			if (*unless_exit_end != 0) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for UNLESS-EXIT: %s\n", filename, lineNumber, token);
+				exampleSyntax(example);
+				return false;
+			}
+		}
+	}
 
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while ((node = dag->FindAllNodesByName(
+				nodeName, "In parse_retry(): skipping node %s because final nodes cannot have RETRY specifications (%s: %d)\n",
+				filename, lineNumber))) {
 		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found node %s\n",
-					node->GetNodeName() );
+		debug_printf(DEBUG_DEBUG_3, "parse_retry(): found node %s\n", node->GetNodeName());
 
-		if ( node->GetType() == NodeType::FINAL ) {
-			debug_printf( DEBUG_QUIET, 
-						"ERROR: %s (line %d): Final Node %s cannot have RETRY specification\n",
-						filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::FINAL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Final Node %s cannot have RETRY specification\n", filename, lineNumber,
+						 node->GetNodeName());
 			return false;
 		}
-		if ( node->GetType() == NodeType::SERVICE ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): SERVICE node %s cannot have RETRY specification\n",
-						filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::SERVICE) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): SERVICE node %s cannot have RETRY specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
 
 		node->SetMaxRetries(retryMax, unless_exit);
 
-		debug_printf(DEBUG_DEBUG_1, "Retry %s %d times unless exit=%d\n",
-		             node->GetNodeName(), retryMax, unless_exit);
+		debug_printf(DEBUG_DEBUG_1, "Retry %s %d times unless exit=%d\n", node->GetNodeName(), retryMax, unless_exit);
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
-					filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
@@ -1435,116 +1333,97 @@ parse_retry(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_abort
 // Purpose:  Parse a line of the format
 // "ABORT-DAG-ON nodename node_exit_value [RETURN dag_return_value]"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_abort(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char *example = "ABORT-DAG-ON NodeName 3 [RETURN 1]";
-	
-		// Node name.
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+static bool parse_abort(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "ABORT-DAG-ON NodeName 3 [RETURN 1]";
+
+	// Node name.
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
-	
-		// Node abort value.
-	char *abortValStr = strtok( NULL, DELIMITERS );
-	if ( abortValStr == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing ABORT-ON node value\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
-		return false;
-	}
-	
-	int abortVal;
-	char *tmp;
-	abortVal = (int)strtol( abortValStr, &tmp, 10 );
-	if( tmp == abortValStr ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid ABORT-ON node value \"%s\"\n",
-					  filename, lineNumber, abortValStr );
-		exampleSyntax( example );
+
+	// Node abort value.
+	char* abortValStr = strtok(NULL, DELIMITERS);
+	if (abortValStr == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing ABORT-ON node value\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-		// RETURN keyword.
+	int abortVal;
+	char* tmp;
+	abortVal = (int)strtol(abortValStr, &tmp, 10);
+	if (tmp == abortValStr) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid ABORT-ON node value \"%s\"\n", filename, lineNumber, abortValStr);
+		exampleSyntax(example);
+		return false;
+	}
+
+	// RETURN keyword.
 	int returnVal = std::numeric_limits<int>::max(); // assign value to avoid compiler warning
-	const char *nextWord = strtok( NULL, DELIMITERS );
-	if ( nextWord != NULL ) {
-		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d) Invalid ABORT-ON option: %s\n",
-						filename, lineNumber, nextWord);
-			exampleSyntax( example );
+	const char* nextWord = strtok(NULL, DELIMITERS);
+	if (nextWord != NULL) {
+		if (strcasecmp(nextWord, "RETURN") != 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Invalid ABORT-ON option: %s\n", filename, lineNumber, nextWord);
+			exampleSyntax(example);
 			return false;
 		} else {
 
-				// DAG return value.
-			nextWord = strtok( NULL, DELIMITERS );
-			if ( nextWord == NULL ) {
-				debug_printf( DEBUG_QUIET,
-							"ERROR: %s (line %d) Missing parameter for ABORT-ON\n",
-							filename, lineNumber);
-				exampleSyntax( example );
+			// DAG return value.
+			nextWord = strtok(NULL, DELIMITERS);
+			if (nextWord == NULL) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Missing parameter for ABORT-ON\n", filename, lineNumber);
+				exampleSyntax(example);
 				return false;
 			}
 
 			returnVal = strtol(nextWord, &tmp, 10);
-			if ( tmp == nextWord ) {
-				debug_printf( DEBUG_QUIET,
-							"ERROR: %s (line %d) Bad parameter for ABORT_ON: %s\n",
-							filename, lineNumber, nextWord);
-				exampleSyntax( example );
+			if (tmp == nextWord) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) Bad parameter for ABORT_ON: %s\n", filename, lineNumber, nextWord);
+				exampleSyntax(example);
 				return false;
-			} else if ( (returnVal < 0) || (returnVal > 255) ) {
-				debug_printf( DEBUG_QUIET,
-							"ERROR: %s (line %d) Bad return value for ABORT_ON "
-							"(must be between 0 and 255): %s\n",
-							filename, lineNumber, nextWord);
+			} else if ((returnVal < 0) || (returnVal > 255)) {
+				debug_printf(DEBUG_QUIET,
+							 "ERROR: %s (line %d) Bad return value for ABORT_ON "
+							 "(must be between 0 and 255): %s\n",
+							 filename, lineNumber, nextWord);
 				return false;
 			}
 		}
 	}
 
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while (
+		(node = dag->FindAllNodesByName(
+			 nodeName, "In parse_abort(): skipping node %s because final nodes cannot have ABORT-DAG-ON specification (%s: %d)s\n",
+			 filename, lineNumber))) {
 		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found node %s\n",
-					node->GetNodeName() );
+		debug_printf(DEBUG_DEBUG_3, "parse_abort(): found node %s\n", node->GetNodeName());
 
-		if ( node->GetType() == NodeType::FINAL ) {
-			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final Node %s cannot have ABORT-DAG-ON specification\n",
-			  			filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::FINAL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Final Node %s cannot have ABORT-DAG-ON specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
 
 		node->SetAbortDagOn(abortVal, returnVal);
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
-					filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
@@ -1552,32 +1431,29 @@ parse_abort(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_dot
 // Purpose:  Parse a line of the format:
 //             Dot dotfile [UPDATE | DONT-UPDATE] [OVERWRITE | DONT-OVERWRITE]
 //                 [INCLUDE dot-file-header]
 //           This command will tell DAGMan to generate dot files the show the
-//           state of the DAG. 
-// 
+//           state of the DAG.
+//
 //-----------------------------------------------------------------------------
-static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
-{
-	const char *example = "Dot dotfile [UPDATE | DONT-UPDATE] "
-		                  "[OVERWRITE | DONT-OVERWRITE] "
-		                  "[INCLUDE <dot-file-header>]";
-	
-	char *dot_file_name = strtok( NULL, DELIMITERS );
-	if ( dot_file_name == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing dot file name,\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+static bool parse_dot(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "Dot dotfile [UPDATE | DONT-UPDATE] "
+						  "[OVERWRITE | DONT-OVERWRITE] "
+						  "[INCLUDE <dot-file-header>]";
+
+	char* dot_file_name = strtok(NULL, DELIMITERS);
+	if (dot_file_name == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing dot file name,\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	char *token;
-	while ( (token = strtok( NULL, DELIMITERS ) ) != NULL ) {
+	char* token;
+	while ((token = strtok(NULL, DELIMITERS)) != NULL) {
 		if (strcasecmp(token, "UPDATE") == 0) {
 			dag->SetDotFileUpdate(true);
 		} else if (strcasecmp(token, "DONT-UPDATE") == 0) {
@@ -1589,8 +1465,10 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 		} else if (strcasecmp(token, "INCLUDE") == 0) {
 			token = strtok(NULL, DELIMITERS);
 			if (token == NULL) {
-				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing include"
-							 " file name.\n", filename, lineNumber);
+				debug_printf(DEBUG_QUIET,
+							 "ERROR: %s (line %d): Missing include"
+							 " file name.\n",
+							 filename, lineNumber);
 				exampleSyntax(example);
 				return false;
 			} else {
@@ -1604,7 +1482,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_vars
 // Purpose:  Parses a line of named variables that will be made available to a node's
 //           submit description file
@@ -1612,152 +1490,133 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //           Vars NodeName VarName1="value1" VarName2="value2" etc
 //           Whitespace surrounding the = sign is permissible
 //-----------------------------------------------------------------------------
-static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
-{
+static bool parse_vars(Dag* dag, const char* filename, int lineNumber) {
 	const char* example = "Vars NodeName [PREPEND | APPEND] VarName1=\"value1\" VarName2=\"value2\"";
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
-					filename, lineNumber);
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
 		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
 	std::string varName;
 	std::string varValue;
-	bool prepend; //Bool for if variable is prepended or appended. Default is false
+	bool prepend; // Bool for if variable is prepended or appended. Default is false
 
-	char *varsStr = strtok( NULL, "\n" ); // just get all the rest and we will manually parse vars
+	char* varsStr = strtok(NULL, "\n"); // just get all the rest and we will manually parse vars
 
-/*	
-*	Check to see if PREPEND or APPEND was specified before variables to be passed.
-*	If option is found then we set prepend boolean appropriately and increment
-*	the original varsStr pointer to point at char after option. -Cole Bollig
-*/
+	/*
+	 *	Check to see if PREPEND or APPEND was specified before variables to be passed.
+	 *	If option is found then we set prepend boolean appropriately and increment
+	 *	the original varsStr pointer to point at char after option. -Cole Bollig
+	 */
 
-	if (starts_with(varsStr,"PREPEND") ){//See if PREPEND is at beginning of token
+	if (starts_with(varsStr, "PREPEND")) { // See if PREPEND is at beginning of token
 		prepend = true;
 		varsStr += 7;
-	} else if ( starts_with(varsStr,"APPEND") ){//See if APPEND is at beginning of token
+	} else if (starts_with(varsStr, "APPEND")) { // See if APPEND is at beginning of token
 		prepend = false;
 		varsStr += 6;
 	} else {
-		//If options aren't found then set to global knob
-		// !append -> prepend
+		// If options aren't found then set to global knob
+		//  !append -> prepend
 		prepend = !_appendVars;
 	}
 
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while ((node = dag->FindAllNodesByName(
+				nodeName, "In parse_vars(): skipping node %s because final nodes must have VARS set explicitly (%s: %d)\n",
+				filename, lineNumber))) {
 		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_vars(): found node %s\n",
-					node->GetNodeName() );
+		debug_printf(DEBUG_DEBUG_3, "parse_vars(): found node %s\n", node->GetNodeName());
 
-			// Note:  this re-parses most of the VARS line for every node...
-			// wenger 2016-10-13
-		char *str = varsStr;
+		// Note:  this re-parses most of the VARS line for every node...
+		// wenger 2016-10-13
+		char* str = varsStr;
 
 		int numPairs;
-		for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
-			if ( str == NULL ) { // this happens when the above strtok returns NULL
+		for (numPairs = 0;; numPairs++) { // for each name="value" pair
+			if (str == NULL) {			  // this happens when the above strtok returns NULL
 				break;
 			}
 
 			varName.clear();
 			varValue.clear();
 
-			if ( !get_next_var( filename, lineNumber, str, varName,
-						varValue ) ) {
+			if (!get_next_var(filename, lineNumber, str, varName, varValue)) {
 				return false;
 			}
-			if ( varName.empty() ) {
+			if (varName.empty()) {
 				break;
 			} else if (varName[0] == '+') {
-				//convert + syntax vars to 'My.' syntax
+				// convert + syntax vars to 'My.' syntax
 				varName = "My." + varName.substr(1);
 			}
 
 			node->AddVar(varName, varValue, prepend);
-			debug_printf(DEBUG_DEBUG_1,
-				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
-				varName.c_str(), varValue.c_str());
+			debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.c_str(), varValue.c_str());
 		}
 
-		if ( numPairs == 0 ) {
-			debug_printf(DEBUG_QUIET,
-						"ERROR: %s (line %d): No valid name-value pairs\n",
-						filename, lineNumber);
+		if (numPairs == 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No valid name-value pairs\n", filename, lineNumber);
 			return false;
 		}
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
-					filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
-	
+
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_priority
 // Purpose:  Parses a line specifying the priority of a node
 //           The format of this line must be
 //           Priority <NodeName> <Value>
 //-----------------------------------------------------------------------------
-static bool 
-parse_priority(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "PRIORITY NodeName Value";
+static bool parse_priority(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "PRIORITY NodeName Value";
 
 	//
 	// Next token is the NodeName
 	//
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
 	//
 	// Next token is the priority value.
 	//
-	const char *valueStr = strtok(NULL, DELIMITERS);
-	if ( valueStr == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing PRIORITY value\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* valueStr = strtok(NULL, DELIMITERS);
+	if (valueStr == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing PRIORITY value\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	int priorityVal;
-	char *tmp;
-	priorityVal = (int)strtol( valueStr, &tmp, 10 );
-	if( tmp == valueStr ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid PRIORITY value \"%s\"\n",
-					  filename, lineNumber, valueStr );
-		exampleSyntax( example );
+	char* tmp;
+	priorityVal = (int)strtol(valueStr, &tmp, 10);
+	if (tmp == valueStr) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid PRIORITY value \"%s\"\n", filename, lineNumber, valueStr);
+		exampleSyntax(example);
 		return false;
 	}
 
@@ -1765,53 +1624,48 @@ parse_priority(
 	// Check for illegal extra tokens.
 	//
 	valueStr = strtok(NULL, DELIMITERS);
-	if ( valueStr != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on PRIORITY line\n",
-					  filename, lineNumber, valueStr );
-		exampleSyntax( example );
+	if (valueStr != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on PRIORITY line\n", filename, lineNumber, valueStr);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Actually assign priorities to the relevant node(s).
 	//
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while (
+		(node = dag->FindAllNodesByName(
+			 nodeName, "In parse_priority(): skipping node %s because final nodes cannot have PRIORITY specifications (%s: %d)\n",
+			 filename, lineNumber))) {
 		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found node %s\n",
-					node->GetNodeName() );
+		debug_printf(DEBUG_DEBUG_3, "parse_priority(): found node %s\n", node->GetNodeName());
 
-		if ( node->GetType() == NodeType::FINAL ) {
-			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final Node %s cannot have PRIORITY specification\n",
-			  			filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::FINAL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Final Node %s cannot have PRIORITY specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
-		if ( node->GetType() == NodeType::SERVICE ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): SERVICE node %s cannot have PRIORITY specification\n",
-						filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::SERVICE) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): SERVICE node %s cannot have PRIORITY specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
 
 		int currPrio = node->GetExplicitPrio();
 
 		if (currPrio != 0 && currPrio != priorityVal) {
-			debug_printf(DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
-			             priorityVal, node->GetNodeName(), currPrio);
-			check_warning_strictness( DAG_STRICT_2 );
+			debug_printf(DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n", priorityVal,
+						 node->GetNodeName(), currPrio);
+			check_warning_strictness(DAG_STRICT_2);
 		}
 
 		node->SetPrio(priorityVal);
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
-					filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
@@ -1819,33 +1673,27 @@ parse_priority(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_category
 // Purpose:  Parses a line specifying the type of a node
 //           The format of this line must be
 //           Category <NodeName> <Category>
 //			 No whitespace is allowed in the category name
 //-----------------------------------------------------------------------------
-static bool 
-parse_category(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "CATEGORY NodeName TypeName";
+static bool parse_category(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "CATEGORY NodeName TypeName";
 
 	//
 	// Next token is the NodeName
 	//
-	const char *nodeName = strtok(NULL, DELIMITERS);
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
@@ -1853,58 +1701,51 @@ parse_category(
 	//
 	// Next token is the category name.
 	//
-	const char *categoryName = strtok(NULL, DELIMITERS);
-	if ( categoryName == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing CATEGORY name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* categoryName = strtok(NULL, DELIMITERS);
+	if (categoryName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing CATEGORY name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Check for illegal extra tokens.
 	//
-	const char *tmpStr = strtok(NULL, DELIMITERS);
-	if ( tmpStr != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on CATEGORY line\n",
-					  filename, lineNumber, tmpStr );
-		exampleSyntax( example );
+	const char* tmpStr = strtok(NULL, DELIMITERS);
+	if (tmpStr != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on CATEGORY line\n", filename, lineNumber, tmpStr);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Actually assign categories to the relevant node(s).
 	//
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while (
+		(node = dag->FindAllNodesByName(
+			 nodeName, "In parse_category(): skipping node %s because final nodes cannot have CATEGORY specifications (%s: %d)\n",
+			 filename, lineNumber))) {
 		nodeName = NULL;
 
-		debug_printf( DEBUG_DEBUG_3, "parse_category(): found node %s\n",
-					node->GetNodeName() );
+		debug_printf(DEBUG_DEBUG_3, "parse_category(): found node %s\n", node->GetNodeName());
 
-		if ( node->GetType() == NodeType::FINAL ) {
-			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final node %s cannot have CATEGORY specification\n",
-			  			filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::FINAL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Final node %s cannot have CATEGORY specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
-		if ( node->GetType() == NodeType::SERVICE ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): SERVICE node %s cannot have CATEGORY specification\n",
-						filename, lineNumber, node->GetNodeName() );
+		if (node->GetType() == NodeType::SERVICE) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): SERVICE node %s cannot have CATEGORY specification\n", filename,
+						 lineNumber, node->GetNodeName());
 			return false;
 		}
 
-		node->SetCategory( categoryName, dag->_catThrottles );
+		node->SetCategory(categoryName, dag->_catThrottles);
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Unknown Node %s\n",
-					filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
@@ -1912,43 +1753,35 @@ parse_category(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_splice
 // Purpose:  Parses a splice (subdag internal) line.
 //           The format of this line must be
 //           SPLICE <SpliceName> <SpliceFileName> [DIR <directory>]
 //-----------------------------------------------------------------------------
-static bool
-parse_splice(
-	const Dagman& dm,
-	Dag *dag,
-	const char *filename,
-	int lineNumber)
-{
-	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
-	Dag *splice_dag = NULL;
+static bool parse_splice(const Dagman& dm, Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "SPLICE SpliceName SpliceFileName [DIR directory]";
+	Dag* splice_dag = NULL;
 	std::string errMsg;
 
 	//
 	// Next token is the splice name
-	// 
-	std::string spliceName = strtok( NULL, DELIMITERS );
+	//
+	std::string spliceName = strtok(NULL, DELIMITERS);
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if ( spliceName.empty() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing SPLICE name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	if (spliceName.empty()) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing SPLICE name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	// Check to make sure we don't already have a node with the name of the
 	// splice.
-	if ( dag->NodeExists(spliceName.c_str()) ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): "
-					  " Splice name '%s' must not also be a node name.\n",
-					  filename, lineNumber, spliceName.c_str() );
+	if (dag->NodeExists(spliceName.c_str())) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): "
+					 " Splice name '%s' must not also be a node name.\n",
+					 filename, lineNumber, spliceName.c_str());
 		return false;
 	}
 
@@ -1960,14 +1793,12 @@ parse_splice(
 
 	//
 	// Next token is the splice file nameMyStrstding
-	// 
-	std::string spliceFile = makeString(strtok( NULL, DELIMITERS ));
+	//
+	std::string spliceFile = makeString(strtok(NULL, DELIMITERS));
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if ( spliceFile.empty() ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing SPLICE file name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	if (spliceFile.empty()) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing SPLICE file name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
@@ -1975,43 +1806,43 @@ parse_splice(
 	// next token (if any) is "DIR"
 	//
 	TmpDir spliceDir;
-	std::string dirTok = makeString( strtok( NULL, DELIMITERS ) );
+	std::string dirTok = makeString(strtok(NULL, DELIMITERS));
 	std::string directory = ".";
 
 	std::string dirTokUpper = dirTok;
 	upper_case(dirTokUpper);
 
 	// Note: this if is okay even if strtok() returns NULL. wenger 2014-10-07
-	if ( dirTokUpper == "DIR" ) {
+	if (dirTokUpper == "DIR") {
 		// parse the directory name
-		directory = strtok( NULL, DELIMITERS );
+		directory = strtok(NULL, DELIMITERS);
 		// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-		if ( directory == "" ) {
-			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): DIR requires a directory "
-						"specification\n", filename, lineNumber);
-			exampleSyntax( example );
+		if (directory == "") {
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d): DIR requires a directory "
+						 "specification\n",
+						 filename, lineNumber);
+			exampleSyntax(example);
 			return false;
 		}
-	} else if ( dirTok != "" ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): illegal token (%s) on SPLICE line\n",
-					filename, lineNumber, dirTok.c_str() );
-		exampleSyntax( example );
+	} else if (dirTok != "") {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): illegal token (%s) on SPLICE line\n", filename, lineNumber, dirTok.c_str());
+		exampleSyntax(example);
 		return false;
 	}
 
-	// 
+	//
 	// anything else is garbage
 	//
-	std::string garbage = makeString( strtok( 0, DELIMITERS ) );
+	std::string garbage = makeString(strtok(0, DELIMITERS));
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if (garbage != "") {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", filename, lineNumber, 
-						  garbage.c_str() );
-			exampleSyntax( example );
-			return false;
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): invalid "
+					 "parameter \"%s\"\n",
+					 filename, lineNumber, garbage.c_str());
+		exampleSyntax(example);
+		return false;
 	}
 
 	/* make a new dag to put everything into */
@@ -2020,46 +1851,44 @@ parse_splice(
 	// We can pass in NULL for submitDagOpts because the splice DAG
 	// object will never actually do a submit.  wenger 2010-03-25
 	splice_dag = new Dag(dm, true, current_splice_scope());
-	
+
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);
 
-	debug_printf(DEBUG_VERBOSE, "Parsing Splice %s in directory %s with "
-		"file %s\n", spliceName.c_str(), directory.c_str(),
-		spliceFile.c_str());
+	debug_printf(DEBUG_VERBOSE,
+				 "Parsing Splice %s in directory %s with "
+				 "file %s\n",
+				 spliceName.c_str(), directory.c_str(), spliceFile.c_str());
 
 	// CD into the DIR directory so we can continue parsing.
 	// This must be done AFTER the DAG is created due to the DAG object
 	// doing its own chdir'ing while looking for log files.
-	if ( !spliceDir.Cd2TmpDir(directory.c_str(), errMsg) ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: can't change to directory %s: %s\n",
-					directory.c_str(), errMsg.c_str() );
+	if (!spliceDir.Cd2TmpDir(directory.c_str(), errMsg)) {
+		debug_printf(DEBUG_QUIET, "ERROR: can't change to directory %s: %s\n", directory.c_str(), errMsg.c_str());
 		delete splice_dag;
 		return false;
 	}
 
 	// parse the splice file into a separate dag.
 	if (!parse(dm, splice_dag, spliceFile.c_str(), false)) {
-		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
-			spliceName.c_str(), spliceFile.c_str());
+		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n", spliceName.c_str(), spliceFile.c_str());
 		delete splice_dag;
 		return false;
 	}
 
 	// CD back to main dir to keep processing.
-	if ( !spliceDir.Cd2MainDir(errMsg) ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: can't change to original directory: %s\n",
-					errMsg.c_str() );
+	if (!spliceDir.Cd2MainDir(errMsg)) {
+		debug_printf(DEBUG_QUIET, "ERROR: can't change to original directory: %s\n", errMsg.c_str());
 		delete splice_dag;
 		return false;
 	}
 
 	// Splices cannot have final nodes.
-	if ( splice_dag->HasFinalNode() ) {
-		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
-					"splices cannot have final nodes\n", spliceName.c_str() );
+	if (splice_dag->HasFinalNode()) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: splice %s has a final node; "
+					 "splices cannot have final nodes\n",
+					 spliceName.c_str());
 		delete splice_dag;
 		return false;
 	}
@@ -2068,29 +1897,29 @@ parse_splice(
 	spliceName = munge_node_name(spliceName.c_str());
 
 	// XXX I'm not sure this goes here quite yet....
-	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", 
-		current_splice_scope().c_str());
+	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", current_splice_scope().c_str());
 	splice_dag->PrefixAllNodeNames(current_splice_scope());
 	splice_dag->_catThrottles.PrefixAllCategoryNames(current_splice_scope());
 
 	// Print out a useful piece of debugging...
-	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
+	if (DEBUG_LEVEL(DEBUG_DEBUG_1)) {
 		splice_dag->PrintNodeList();
 	}
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
 	if (!dag->InsertSplice(spliceName, splice_dag)) {
-		debug_printf( DEBUG_QUIET, "ERROR: Splice name '%s' used for multiple "
-			"splices. Splice names must be unique per dag file.\n", 
-			spliceName.c_str());
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: Splice name '%s' used for multiple "
+					 "splices. Splice names must be unique per dag file.\n",
+					 spliceName.c_str());
 		delete splice_dag;
 		return false;
 	}
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.c_str());
 
 	// pop the just pushed value off of the end of the vector and free it
-	char *tmp = _spliceScope.back();
+	char* tmp = _spliceScope.back();
 	_spliceScope.pop_back();
 	free(tmp);
 
@@ -2100,7 +1929,7 @@ parse_splice(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_maxjobs
 // Purpose:  Parses a line specifying the maximum number of jobs for
 //           a given node category.
@@ -2108,52 +1937,39 @@ parse_splice(
 //           MaxJobs <Category> <Value>
 //			 No whitespace is allowed in the category name
 //-----------------------------------------------------------------------------
-static bool 
-parse_maxjobs(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "MAXJOBS TypeName Value";
+static bool parse_maxjobs(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "MAXJOBS TypeName Value";
 
 	//
 	// Next token is the category name.
 	//
-	const char *categoryName = strtok(NULL, DELIMITERS);
-	if ( categoryName == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing MAXJOBS category name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* categoryName = strtok(NULL, DELIMITERS);
+	if (categoryName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing MAXJOBS category name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Next token is the maxjobs value.
 	//
-	const char *valueStr = strtok(NULL, DELIMITERS);
-	if ( valueStr == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Missing MAXJOBS value\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* valueStr = strtok(NULL, DELIMITERS);
+	if (valueStr == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing MAXJOBS value\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	int maxJobsVal;
-	char *tmp;
-	maxJobsVal = (int)strtol( valueStr, &tmp, 10 );
-	if( tmp == valueStr ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid MAXJOBS value \"%s\"\n",
-					  filename, lineNumber, valueStr );
-		exampleSyntax( example );
+	char* tmp;
+	maxJobsVal = (int)strtol(valueStr, &tmp, 10);
+	if (tmp == valueStr) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid MAXJOBS value \"%s\"\n", filename, lineNumber, valueStr);
+		exampleSyntax(example);
 		return false;
 	}
-	if ( maxJobsVal < 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): MAXJOBS value must be non-negative\n",
-					  filename, lineNumber );
+	if (maxJobsVal < 0) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): MAXJOBS value must be non-negative\n", filename, lineNumber);
 		return false;
 	}
 
@@ -2161,22 +1977,20 @@ parse_maxjobs(
 	// Check for illegal extra tokens.
 	//
 	valueStr = strtok(NULL, DELIMITERS);
-	if ( valueStr != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on MAXJOBS line\n",
-					  filename, lineNumber, valueStr );
-		exampleSyntax( example );
+	if (valueStr != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on MAXJOBS line\n", filename, lineNumber, valueStr);
+		exampleSyntax(example);
 		return false;
 	}
 
-	std::string tmpName( categoryName );
-	dag->_catThrottles.SetThrottle( &tmpName, maxJobsVal );
+	std::string tmpName(categoryName);
+	dag->_catThrottles.SetThrottle(&tmpName, maxJobsVal);
 
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_node_status_file
 // Purpose:  Parses a line specifying the a node_status_file for the DAG.
 //           The format of this line must be
@@ -2187,47 +2001,40 @@ parse_maxjobs(
 // Defined in seconds...
 #define DEFAULT_MIN_NODE_STATUS_UPDATE_TIME 60
 
-static bool 
-parse_node_status_file(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "NODE_STATUS_FILE StatusFile [min update time] [ALWAYS-UPDATE]";
+static bool parse_node_status_file(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "NODE_STATUS_FILE StatusFile [min update time] [ALWAYS-UPDATE]";
 
-	char *statusFileName = strtok(NULL, DELIMITERS);
+	char* statusFileName = strtok(NULL, DELIMITERS);
 	if (statusFileName == NULL) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing node status file name,\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node status file name,\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	int minUpdateTime = DEFAULT_MIN_NODE_STATUS_UPDATE_TIME;
-	char *minUpdateStr = strtok(NULL, DELIMITERS);
-	if ( minUpdateStr != NULL ) {
-		char *tmp;
-		minUpdateTime = (int)strtol( minUpdateStr, &tmp, 10 );
-		if ( tmp == minUpdateStr ) {
-			debug_printf( DEBUG_QUIET,
-					  	"ERROR: %s (line %d): Invalid min update time value \"%s\"\n",
-					  	filename, lineNumber, minUpdateStr );
-			exampleSyntax( example );
+	char* minUpdateStr = strtok(NULL, DELIMITERS);
+	if (minUpdateStr != NULL) {
+		char* tmp;
+		minUpdateTime = (int)strtol(minUpdateStr, &tmp, 10);
+		if (tmp == minUpdateStr) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid min update time value \"%s\"\n", filename, lineNumber,
+						 minUpdateStr);
+			exampleSyntax(example);
 			return false;
 		}
 	}
 
 	bool alwaysUpdate = false;
-	char *alwaysUpdateStr = strtok( NULL, DELIMITERS );
-	if ( alwaysUpdateStr != NULL ) {
-		if ( strcasecmp( alwaysUpdateStr, "ALWAYS-UPDATE" ) == 0) {
+	char* alwaysUpdateStr = strtok(NULL, DELIMITERS);
+	if (alwaysUpdateStr != NULL) {
+		if (strcasecmp(alwaysUpdateStr, "ALWAYS-UPDATE") == 0) {
 			alwaysUpdate = true;
 		} else {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", filename, lineNumber,
-						  alwaysUpdateStr );
-			exampleSyntax( example );
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d): invalid "
+						 "parameter \"%s\"\n",
+						 filename, lineNumber, alwaysUpdateStr);
+			exampleSyntax(example);
 			return false;
 		}
 	}
@@ -2235,16 +2042,14 @@ parse_node_status_file(
 	//
 	// Check for illegal extra tokens.
 	//
-	char *token = strtok( NULL, DELIMITERS );
-	if ( token != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n",
-					  filename, lineNumber, token );
-		exampleSyntax( example );
+	char* token = strtok(NULL, DELIMITERS);
+	if (token != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n", filename, lineNumber, token);
+		exampleSyntax(example);
 		return false;
 	}
 
-	dag->SetNodeStatusFileName( statusFileName, minUpdateTime, alwaysUpdate );
+	dag->SetNodeStatusFileName(statusFileName, minUpdateTime, alwaysUpdate);
 	return true;
 }
 
@@ -2257,54 +2062,50 @@ parse_node_status_file(
 //           includes a path then we respect that. Otherwise, we write save file
 //           to save_files subdir created near all other DAG files.
 //-----------------------------------------------------------------------------
-static bool
-parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
-{
+static bool parse_save_point_file(Dag* dag, const char* filename, int lineNumber) {
 	std::string example = "SAVE_POINT_FILE NodeName [Filename]";
-	//Get node name to apply save file info to
+	// Get node name to apply save file info to
 	const char* nodeName = strtok(NULL, DELIMITERS);
 	if (nodeName == NULL) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No Node specified for SAVE_POINT_FILE.\n",
-					 filename, lineNumber);
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No Node specified for SAVE_POINT_FILE.\n", filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
-	} else if (strcasecmp(nodeName, DAG::ALL_NODES.c_str()) == MATCH) { //It is redundant to use all nodes for save files
-		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n",
-					 filename, lineNumber);
+	} else if (strcasecmp(nodeName, DAG::ALL_NODES.c_str()) == MATCH) { // It is redundant to use all nodes for save files
+		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n", filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
+	const char* nodeNameOrig = nodeName; // for error output
 	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
-	//Get save file name/path&name
+	// Get save file name/path&name
 	const char* p = strtok(NULL, DELIMITERS);
 	std::string saveFile = p ? p : "";
-	if (!saveFile.empty()) { //Name was specified
-		//Check for any extra invalid tokens
+	if (!saveFile.empty()) { // Name was specified
+		// Check for any extra invalid tokens
 		char* token = strtok(NULL, DELIMITERS);
 		if (token != NULL) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) found in SAVE_POINT_FILE declaration.\n",
-						 filename, lineNumber, token);
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) found in SAVE_POINT_FILE declaration.\n", filename,
+						 lineNumber, token);
 			exampleSyntax(example.c_str());
 			return false;
 		}
-	} else { //No name given so create one using node name and associated dag filename
-		formatstr(saveFile,"%s-%s.save",nodeNameOrig,condor_basename(filename));
+	} else { // No name given so create one using node name and associated dag filename
+		formatstr(saveFile, "%s-%s.save", nodeNameOrig, condor_basename(filename));
 	}
 
-	//Find node and set save file
-	Node *node = dag->FindNodeByName(nodeName);
+	// Find node and set save file
+	Node* node = dag->FindNodeByName(nodeName);
 	if (node == NULL) {
-		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Node %s\n",
-								  filename, lineNumber, nodeNameOrig);
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return !check_warning_strictness(DAG_STRICT_1, false);
 	} else {
 		if (node->GetType() == NodeType::SERVICE || node->GetType() == NodeType::PROVISIONER) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): SAVE_POINT_FILE can not be declared with neither SERVICE nor PROVISIONER nodes.\n",
-									  filename, lineNumber);
+			debug_printf(DEBUG_QUIET,
+						 "ERROR: %s (line %d): SAVE_POINT_FILE can not be declared with neither SERVICE nor PROVISIONER nodes.\n",
+						 filename, lineNumber);
 			return false;
 		}
 		node->SetSaveFile(saveFile);
@@ -2313,161 +2114,142 @@ parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_reject
 // Purpose:  Parses a line specifying the REJECT directive for a DAG.
 //           The format of this line must be
 //           REJECT
 //-----------------------------------------------------------------------------
-static bool 
-parse_reject(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "REJECT";
+static bool parse_reject(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "REJECT";
 
-	char *token = strtok(NULL, DELIMITERS);
-	if ( token != NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): REJECT should have "
-					"no additional tokens.\n",
-					filename, lineNumber );
-		exampleSyntax( example );
+	char* token = strtok(NULL, DELIMITERS);
+	if (token != NULL) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): REJECT should have "
+					 "no additional tokens.\n",
+					 filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	std::string location;
-	formatstr( location, "%s (line %d)", filename, lineNumber );
-	debug_printf( DEBUG_QUIET, "REJECT specification at %s "
-				"will cause this DAG to fail\n", location.c_str() );
+	formatstr(location, "%s (line %d)", filename, lineNumber);
+	debug_printf(DEBUG_QUIET,
+				 "REJECT specification at %s "
+				 "will cause this DAG to fail\n",
+				 location.c_str());
 
-	dag->SetReject( location );
+	dag->SetReject(location);
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_jobstate_log
 // Purpose:  Parses a line specifying the a jobstate.log for the DAG.
 //           The format of this line must be
 //           JOBSTATE_LOG <filename>
 //			 No whitespace is allowed in the file name
 //-----------------------------------------------------------------------------
-static bool 
-parse_jobstate_log(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "JOBSTATE_LOG JobstateLogFile";
+static bool parse_jobstate_log(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "JOBSTATE_LOG JobstateLogFile";
 
-	char *logFileName = strtok(NULL, DELIMITERS);
+	char* logFileName = strtok(NULL, DELIMITERS);
 	if (logFileName == NULL) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing jobstate log file name,\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing jobstate log file name,\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Check for illegal extra tokens.
 	//
-	char *extraTok = strtok( NULL, DELIMITERS );
-	if ( extraTok != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on JOBSTATE_LOG line\n",
-					  filename, lineNumber, extraTok );
-		exampleSyntax( example );
+	char* extraTok = strtok(NULL, DELIMITERS);
+	if (extraTok != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on JOBSTATE_LOG line\n", filename, lineNumber, extraTok);
+		exampleSyntax(example);
 		return false;
 	}
 
-	dag->SetJobstateLogFileName( logFileName );
+	dag->SetJobstateLogFileName(logFileName);
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_pre_skip
 // Purpose:  Tell dagman to skip execution if the PRE script exits with a
 //           a certain code
 //-----------------------------------------------------------------------------
-bool 
-parse_pre_skip( Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char * example = "PRE_SKIP NodeName Exitcode";
+bool parse_pre_skip(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "PRE_SKIP NodeName Exitcode";
 	std::string whynot;
 
-		//
-		// second token is the NodeName
-		//
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n",
-				filename, lineNumber );
-		exampleSyntax( example );
+	//
+	// second token is the NodeName
+	//
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
-	debug_printf( DEBUG_DEBUG_1, "nodeName: %s\n", nodeName );
-	std::string tmpNodeName = munge_node_name( nodeName );
+	const char* nodeNameOrig = nodeName; // for error output
+	debug_printf(DEBUG_DEBUG_1, "nodeName: %s\n", nodeName);
+	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
-		//
-		// The rest of the line consists of the exitcode
-		//
-	const char *exitCodeStr = strtok( NULL, DELIMITERS );
-	if ( exitCodeStr == NULL ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing exit code\n",
-				filename, lineNumber );
-		exampleSyntax( example );
+	//
+	// The rest of the line consists of the exitcode
+	//
+	const char* exitCodeStr = strtok(NULL, DELIMITERS);
+	if (exitCodeStr == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing exit code\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	char *tmp;
-	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
-	if ( tmp == exitCodeStr ) {
-		debug_printf( DEBUG_QUIET,
-				"ERROR: %s (line %d): Invalid exit code \"%s\"\n",
-				filename, lineNumber, exitCodeStr );
-		exampleSyntax( example );
+	char* tmp;
+	int exitCode = (int)strtol(exitCodeStr, &tmp, 10);
+	if (tmp == exitCodeStr) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid exit code \"%s\"\n", filename, lineNumber, exitCodeStr);
+		exampleSyntax(example);
 		return false;
 	}
 
-		//
-		// Anything else is garbage
-		//
-	const char *nextTok = strtok( NULL, DELIMITERS );
-	if ( nextTok ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-				"parameter \"%s\"\n", filename, lineNumber, nextTok );
-		exampleSyntax( example );
+	//
+	// Anything else is garbage
+	//
+	const char* nextTok = strtok(NULL, DELIMITERS);
+	if (nextTok) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: %s (line %d): invalid "
+					 "parameter \"%s\"\n",
+					 filename, lineNumber, nextTok);
+		exampleSyntax(example);
 		return false;
 	}
 
-	Node *node;
-	while ( ( node = dag->FindAllNodesByName( nodeName,
-				"In parse_pre_skip(): skipping node %s because final nodes must have PRE_SKIP set explicitly (%s: %d)\n",
-				filename, lineNumber ) ) ) {
+	Node* node;
+	while ((node = dag->FindAllNodesByName(
+				nodeName, "In parse_pre_skip(): skipping node %s because final nodes must have PRE_SKIP set explicitly (%s: %d)\n",
+				filename, lineNumber))) {
 		nodeName = NULL;
 
 		std::string whynot;
-		if( !node->AddPreSkip( exitCode, whynot ) ) {
-			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
-					  	"failed to add PRE_SKIP to node %s: %s\n",
-					  	filename, lineNumber, node->GetNodeName(),
-						whynot.c_str() );
+		if (!node->AddPreSkip(exitCode, whynot)) {
+			debug_printf(DEBUG_SILENT,
+						 "ERROR: %s (line %d): "
+						 "failed to add PRE_SKIP to node %s: %s\n",
+						 filename, lineNumber, node->GetNodeName(), whynot.c_str());
 			return false;
 		}
 	}
 
-	if ( nodeName ) {
-		debug_printf( DEBUG_QUIET, 
-					  "ERROR: %s (line %d): Unknown Node %s\n",
-					  filename, lineNumber, nodeNameOrig );
+	if (nodeName) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
 		return false;
 	}
 
@@ -2475,138 +2257,108 @@ parse_pre_skip( Dag  *dag,
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_done
 // Purpose:  Parse a line of the format "Done nodename"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_done(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber)
-{
-	const char *example = "Done NodeName";
-	
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	if ( nodeName == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+static bool parse_done(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "Done NodeName";
+
+	const char* nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	const char *nodeNameOrig = nodeName; // for error output
-	std::string tmpNodeName = munge_node_name( nodeName );
+	const char* nodeNameOrig = nodeName; // for error output
+	std::string tmpNodeName = munge_node_name(nodeName);
 	nodeName = tmpNodeName.c_str();
 
 	//
 	// Check for illegal extra tokens.
 	//
-	char *extraTok = strtok( NULL, DELIMITERS );
-	if ( extraTok != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on DONE line\n",
-					  filename, lineNumber, extraTok );
-		exampleSyntax( example );
+	char* extraTok = strtok(NULL, DELIMITERS);
+	if (extraTok != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on DONE line\n", filename, lineNumber, extraTok);
+		exampleSyntax(example);
 		return false;
 	}
 
-	Node *node = dag->FindNodeByName( nodeName );
-	if( node == NULL ) {
-		debug_printf( DEBUG_QUIET, 
-					  "Warning: %s (line %d): Unknown Node %s\n",
-					  filename, lineNumber, nodeNameOrig );
-		return !check_warning_strictness( DAG_STRICT_1, false );
+	Node* node = dag->FindNodeByName(nodeName);
+	if (node == NULL) {
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Node %s\n", filename, lineNumber, nodeNameOrig);
+		return !check_warning_strictness(DAG_STRICT_1, false);
 	}
 
-	if ( node->GetType() == NodeType::FINAL ) {
-		debug_printf( DEBUG_QUIET, 
-					"Warning: %s (line %d): FINAL Node %s cannot be set to DONE\n",
-					filename, lineNumber, nodeNameOrig );
-		return !check_warning_strictness( DAG_STRICT_1, false );
+	if (node->GetType() == NodeType::FINAL) {
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): FINAL Node %s cannot be set to DONE\n", filename, lineNumber,
+					 nodeNameOrig);
+		return !check_warning_strictness(DAG_STRICT_1, false);
 	}
-	if ( node->GetType() == NodeType::SERVICE ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning: %s (line %d): SERVICE node %s cannot be set to DONE\n",
-					filename, lineNumber, nodeNameOrig );
-		return !check_warning_strictness( DAG_STRICT_1, false );
+	if (node->GetType() == NodeType::SERVICE) {
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): SERVICE node %s cannot be set to DONE\n", filename, lineNumber,
+					 nodeNameOrig);
+		return !check_warning_strictness(DAG_STRICT_1, false);
 	}
 
-	node->SetStatus( Node::STATUS_DONE );
-	
+	node->SetStatus(Node::STATUS_DONE);
+
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_connect
 // Purpose:  Parse a line of the format "Connect splice1 splice2"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_connect(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber )
-{
-	const char *example = "CONNECT splice1 splice2";
+static bool parse_connect(Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "CONNECT splice1 splice2";
 
-	const char *splice1 = strtok( NULL, DELIMITERS );
-	if ( splice1 == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing splice1 name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* splice1 = strtok(NULL, DELIMITERS);
+	if (splice1 == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing splice1 name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
-	std::string splice1Name = munge_node_name( splice1 );
+	std::string splice1Name = munge_node_name(splice1);
 	splice1 = splice1Name.c_str();
 
-	const char *splice2 = strtok( NULL, DELIMITERS );
-	if ( splice2 == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing splice2 name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* splice2 = strtok(NULL, DELIMITERS);
+	if (splice2 == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing splice2 name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
-	std::string splice2Name = munge_node_name( splice2 );
+	std::string splice2Name = munge_node_name(splice2);
 	splice2 = splice2Name.c_str();
 
 	//
 	// Check for illegal extra tokens.
 	//
-	char *extraTok = strtok( NULL, DELIMITERS );
-	if ( extraTok != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on CONNECT line\n",
-					  filename, lineNumber, extraTok );
-		exampleSyntax( example );
+	char* extraTok = strtok(NULL, DELIMITERS);
+	if (extraTok != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on CONNECT line\n", filename, lineNumber, extraTok);
+		exampleSyntax(example);
 		return false;
 	}
 
-	Dag *parentSplice = dag->LookupSplice( splice1 );
-	if ( !parentSplice ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Splice %s not found!\n",
-					  filename, lineNumber, splice1 );
+	Dag* parentSplice = dag->LookupSplice(splice1);
+	if (!parentSplice) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Splice %s not found!\n", filename, lineNumber, splice1);
 		return false;
 	}
 
-	Dag *childSplice = dag->LookupSplice( splice2 );
-	if ( !childSplice ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Splice %s not found!\n",
-					  filename, lineNumber, splice2 );
+	Dag* childSplice = dag->LookupSplice(splice2);
+	if (!childSplice) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Splice %s not found!\n", filename, lineNumber, splice2);
 		return false;
 	}
 
-	if ( !Dag::ConnectSplices( parentSplice, childSplice ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): (see previous line)\n",
-					  filename, lineNumber );
+	if (!Dag::ConnectSplices(parentSplice, childSplice)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): (see previous line)\n", filename, lineNumber);
 		return false;
 	}
 
@@ -2614,73 +2366,56 @@ parse_connect(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_pin_in_out
 // Purpose:  Parse a line of the format "Pin_in|pin_out node pin_num"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_pin_in_out(
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber, bool isPinIn )
-{
-	const char *example = "PIN_IN|PIN_OUT node pin_number";
+static bool parse_pin_in_out(Dag* dag, const char* filename, int lineNumber, bool isPinIn) {
+	const char* example = "PIN_IN|PIN_OUT node pin_number";
 
-	const char *node = strtok( NULL, DELIMITERS );
-	if ( node == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing node name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* node = strtok(NULL, DELIMITERS);
+	if (node == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing node name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
-	std::string nodeName = munge_node_name( node );
+	std::string nodeName = munge_node_name(node);
 	node = nodeName.c_str();
 
-	const char *pinNumber = strtok( NULL, DELIMITERS );
-	if ( pinNumber == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing pin_number\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* pinNumber = strtok(NULL, DELIMITERS);
+	if (pinNumber == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing pin_number\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	int pinNum;
-	char *tmp;
-	pinNum = (int)strtol( pinNumber, &tmp, 10 );
-	if ( tmp == pinNumber ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Invalid pin_number value \"%s\"\n",
-					  filename, lineNumber, pinNumber );
-		exampleSyntax( example );
+	char* tmp;
+	pinNum = (int)strtol(pinNumber, &tmp, 10);
+	if (tmp == pinNumber) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Invalid pin_number value \"%s\"\n", filename, lineNumber, pinNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
-	if ( pinNum < 1 ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): pin_number value must be positive\n",
-					  filename, lineNumber );
+	if (pinNum < 1) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): pin_number value must be positive\n", filename, lineNumber);
 		return false;
 	}
 
 	//
 	// Check for illegal extra tokens.
 	//
-	char *extraTok = strtok( NULL, DELIMITERS );
-	if ( extraTok != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on PIN_IN/PIN_OUT line\n",
-					  filename, lineNumber, extraTok );
-		exampleSyntax( example );
+	char* extraTok = strtok(NULL, DELIMITERS);
+	if (extraTok != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on PIN_IN/PIN_OUT line\n", filename, lineNumber, extraTok);
+		exampleSyntax(example);
 		return false;
 	}
-	
-	if ( !dag->SetPinInOut( isPinIn, node, pinNum ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): (see previous line)\n",
-					  filename, lineNumber );
+
+	if (!dag->SetPinInOut(isPinIn, node, pinNum)) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): (see previous line)\n", filename, lineNumber);
 		return false;
 	}
 
@@ -2688,59 +2423,48 @@ parse_pin_in_out(
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 // Function: parse_include
 // Purpose:  Parse a line of the format "Include filename"
-// 
+//
 //-----------------------------------------------------------------------------
-static bool 
-parse_include(
-	const Dagman& dm,
-	Dag  *dag, 
-	const char *filename, 
-	int  lineNumber )
-{
-	const char *example = "INCLUDE filename";
+static bool parse_include(const Dagman& dm, Dag* dag, const char* filename, int lineNumber) {
+	const char* example = "INCLUDE filename";
 
-	const char *includeFile = strtok( NULL, DELIMITERS );
-	if ( includeFile == NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Missing include file name\n",
-					  filename, lineNumber );
-		exampleSyntax( example );
+	const char* includeFile = strtok(NULL, DELIMITERS);
+	if (includeFile == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing include file name\n", filename, lineNumber);
+		exampleSyntax(example);
 		return false;
 	}
 
 	//
 	// Check for illegal extra tokens.
 	//
-	char *extraTok = strtok( NULL, DELIMITERS );
-	if ( extraTok != NULL ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: %s (line %d): Extra token (%s) on INCLUDE line\n",
-					  filename, lineNumber, extraTok );
-		exampleSyntax( example );
+	char* extraTok = strtok(NULL, DELIMITERS);
+	if (extraTok != NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) on INCLUDE line\n", filename, lineNumber, extraTok);
+		exampleSyntax(example);
 		return false;
 	}
 
-		// Note:  we save the filename here because otherwise it gets
-		// goofed up by the tokenizing in parse().
-	std::string tmpFilename( includeFile );
-		// Note:  false here for useDagDir argument means that the
-		// include file path is always relative to the submit directory,
-		// *not* relative to the DAG file's directory, even if
-		// 'condor_submit -usedagdir' is specified.
+	// Note:  we save the filename here because otherwise it gets
+	// goofed up by the tokenizing in parse().
+	std::string tmpFilename(includeFile);
+	// Note:  false here for useDagDir argument means that the
+	// include file path is always relative to the submit directory,
+	// *not* relative to the DAG file's directory, even if
+	// 'condor_submit -usedagdir' is specified.
 	return parse(dm, dag, tmpFilename.c_str(), false);
 }
 
-static std::string munge_node_name(const char *nodeName)
-{
-		//
-		// Munge the node name if necessary.
-		//
+static std::string munge_node_name(const char* nodeName) {
+	//
+	// Munge the node name if necessary.
+	//
 	std::string newName;
 
-	if ( _mungeNames ) {
+	if (_mungeNames) {
 		newName = std::to_string(_thisDagNum) + "." + nodeName;
 	} else {
 		newName = nodeName;
@@ -2749,11 +2473,10 @@ static std::string munge_node_name(const char *nodeName)
 	return newName;
 }
 
-static std::string current_splice_scope(void)
-{
+static std::string current_splice_scope(void) {
 	std::string tmp;
 	std::string scope;
-	if(_spliceScope.size() > 0) {
+	if (_spliceScope.size() > 0) {
 		// While a natural choice might have been : as a splice scoping
 		// separator, this character was chosen because it is a valid character
 		// on all the file systems we use (whereas : can't be a file system
@@ -2773,14 +2496,12 @@ static std::string current_splice_scope(void)
 	@param varValue (returned) the value of the variable
 	@return true means success; false means error
  */
-static bool
-get_next_var( const char *filename, int lineNumber, char *&str,
-			std::string &varName, std::string &varValue ) {
-	while ( isspace( *str ) ) {
+static bool get_next_var(const char* filename, int lineNumber, char*& str, std::string& varName, std::string& varValue) {
+	while (isspace(*str)) {
 		str++;
 	}
 
-	if ( *str == '\0' ) {
+	if (*str == '\0') {
 		return true;
 	}
 
@@ -2788,12 +2509,11 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 	// names are limited to alphanumerics and underscores (except
 	// that '+' is legal as the first character)
 	int varnamestate = 0; // 0 means not within a varname
-	while ( isalnum( *str ) || *str == '_' || *str == '+' || *str == '.') {
-		if ( *str == '+' ) {
-			if ( varnamestate != 0 ) {
-				debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n",
-						filename, lineNumber, varName.c_str() );
+	while (isalnum(*str) || *str == '_' || *str == '+' || *str == '.') {
+		if (*str == '+') {
+			if (varnamestate != 0) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): '+' can only be first character of macroname (%s)\n", filename,
+							 lineNumber, varName.c_str());
 				return false;
 			}
 		}
@@ -2801,95 +2521,95 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 		varName += *str++;
 	}
 
-	if ( varName.length() == '\0' ) { // no alphanumeric symbols at all were written into name,
-	                      // just something weird, which we'll print
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
-			lineNumber, *str);
+	if (varName.length() == '\0') { // no alphanumeric symbols at all were written into name,
+									// just something weird, which we'll print
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename, lineNumber, *str);
 		return false;
 	}
 
-	if ( varName == "+" ) {
-		debug_printf(DEBUG_QUIET,
-			"ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
-			filename, lineNumber, varName.c_str() );
+	if (varName == "+") {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
+					 filename, lineNumber, varName.c_str());
 		return false;
 	}
-		
+
 	// Burn through any whitespace between var name and "=".
-	while ( isspace( *str ) ) {
+	while (isspace(*str)) {
 		str++;
 	}
 
-	if ( *str != '=' ) {
-		if ( varName.compare("PREPEND") == 0 || varName.compare("APPEND") == 0){
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s not declared before all passed variables.\n"
-						,filename,lineNumber,varName.c_str());
+	if (*str != '=') {
+		if (varName.compare("PREPEND") == 0 || varName.compare("APPEND") == 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s not declared before all passed variables.\n", filename, lineNumber,
+						 varName.c_str());
 		} else {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.c_str() );
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename,
+						 lineNumber, *str, varName.c_str());
 		}
 		return false;
 	}
 	str++;
 
 	// Burn through any whitespace between "=" and var value.
-	while ( isspace( *str ) ) {
+	while (isspace(*str)) {
 		str++;
 	}
-	
-	if ( *str != '"' ) {
-		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename,
-			lineNumber, varName.c_str());
+
+	if (*str != '"') {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename, lineNumber, varName.c_str());
 		return false;
 	}
 
 	// now it's time to read in all the data until the next double quote, while handling
 	// the two escape sequences: \\ and \"
 	bool stillInQuotes = true;
-	bool escaped       = false;
+	bool escaped = false;
 	do {
 		varValue += *(++str);
-		
-		if ( *str == '\0' ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename,
-				lineNumber );
+
+		if (*str == '\0') {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing end quote\n", filename, lineNumber);
 			return false;
 		}
-			
-		if ( !escaped ) {
-			if ( *str == '"' ) {
+
+		if (!escaped) {
+			if (*str == '"') {
 				// we don't want that last " in the string
-				varValue = varValue.substr( 0, varValue.length() - 1 );
+				varValue = varValue.substr(0, varValue.length() - 1);
 				stillInQuotes = false;
-			} else if ( *str == '\\' ) {
+			} else if (*str == '\\') {
 				// on the next pass it will be filled in appropriately
-				varValue = varValue.substr( 0, varValue.length() - 1 );
+				varValue = varValue.substr(0, varValue.length() - 1);
 				escaped = true;
 				continue;
 			}
 		} else {
-			if ( *str != '\\' && *str != '"' ) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Unknown escape sequence "
-					"\"\\%c\"\n", filename, lineNumber, *str );
+			if (*str != '\\' && *str != '"') {
+				debug_printf(DEBUG_QUIET,
+							 "ERROR: %s (line %d): Unknown escape sequence "
+							 "\"\\%c\"\n",
+							 filename, lineNumber, *str);
 				return false;
 			}
 			escaped = false; // being escaped only lasts for one character
 		}
-	} while ( stillInQuotes );
+	} while (stillInQuotes);
 
 	str++;
 
-		// Check for illegal variable name.
-	std::string tmpName( varName );
-	lower_case( tmpName );
-	if ( tmpName.find( "queue" ) == 0 ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
-					"names cannot begin with \"queue\"\n", varName.c_str() );
+	// Check for illegal variable name.
+	std::string tmpName(varName);
+	lower_case(tmpName);
+	if (tmpName.find("queue") == 0) {
+		debug_printf(DEBUG_QUIET,
+					 "ERROR: Illegal variable name: %s; variable "
+					 "names cannot begin with \"queue\"\n",
+					 varName.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id) {
 	if (config[conf::b::UseOldDagParser]) { // Use old parser/processing :(
@@ -2899,14 +2619,14 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	}
 
 	// DAG Commands only parsed at DAG submit time (in DAGManUtils)
-	static const std::set<DAG::CMD> ignore_commands {
+	static const std::set<DAG::CMD> ignore_commands{
 		DAG::CMD::CONFIG,
 		DAG::CMD::SET_JOB_ATTR,
 		DAG::CMD::ENV,
 	};
 
 	// Commands to parse on the first pass (i.e. node types and splices)
-	static const std::set<DAG::CMD> pre_parse_commands {
+	static const std::set<DAG::CMD> pre_parse_commands{
 		DAG::CMD::SUBMIT_DESCRIPTION,
 		DAG::CMD::JOB,
 		DAG::CMD::FINAL,
@@ -2926,9 +2646,8 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	if (useDagDir) {
 		std::string tmpDir = condor_dirname(file.c_str());
 		std::string error;
-		if ( ! dagDir.Cd2TmpDir(tmpDir.c_str(), error)) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to change into DAG directory %s: %s\n",
-			             tmpDir.c_str(), error.c_str());
+		if (!dagDir.Cd2TmpDir(tmpDir.c_str(), error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to change into DAG directory %s: %s\n", tmpDir.c_str(), error.c_str());
 			return false;
 		}
 
@@ -2939,7 +2658,9 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	DagParser parser(file_to_parse);
 
 	parser.SearchFor(pre_parse_commands).Ignore(ignore_commands);
-	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
+	if (config[conf::b::AllowIllegalChars]) {
+		parser.AllowIllegalChars();
+	}
 
 	if (parser.failed()) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to open %s: %s\n", file.c_str(), parser.c_error());
@@ -2949,7 +2670,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	// Verify that we are not recursively parsing a DAG file (i.e. INCLUDE/SPLICE)
 	const std::string full_file_path = parser.GetAbsolutePath();
 	auto [_, added] = parsed_file_check.insert(full_file_path);
-	if ( ! added) {
+	if (!added) {
 		debug_printf(DEBUG_QUIET, "ERROR: Recursive DAG file parsing detected with %s\n", full_file_path.c_str());
 		return false;
 	}
@@ -2959,7 +2680,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 
 	// Pre Parse Loop
 	for (const auto cmd : parser) {
-		if (cmd && ! ProcessCommand(dm, cmd, dag, dag_munge_id)) {
+		if (cmd && !ProcessCommand(dm, cmd, dag, dag_munge_id)) {
 			location = cmd->Location();
 			goto processing_failed;
 		}
@@ -2984,7 +2705,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 
 		// Second pass parse loop
 		for (const auto cmd : parser) {
-			if (cmd && ! ProcessCommand(dm, cmd, dag, dag_munge_id)) {
+			if (cmd && !ProcessCommand(dm, cmd, dag, dag_munge_id)) {
 				location = cmd->Location();
 				goto processing_failed;
 			}
@@ -3011,7 +2732,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	success = true;
 
 processing_failed:
-	if ( ! success && location.size()) {
+	if (!success && location.size()) {
 		debug_printf(DEBUG_QUIET, "Processing error at %s\n", location.c_str());
 	}
 
@@ -3019,10 +2740,9 @@ processing_failed:
 	parsed_file_check.erase(full_file_path);
 
 	if (useDagDir) {
-		std::string	error;
-		if ( ! dagDir.Cd2MainDir(error)) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to change back to original directory: %s\n",
-			             error.c_str());
+		std::string error;
+		if (!dagDir.Cd2MainDir(error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to change back to original directory: %s\n", error.c_str());
 			success = false;
 		}
 	}
@@ -3030,137 +2750,121 @@ processing_failed:
 	return success;
 }
 
-
 bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag, int dag_munge_id) {
 	bool all_good = true;
 
 	switch (cmd->GetCommand()) {
-		case DAG::CMD::SUBMIT_DESCRIPTION:
-			{
-				const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
-				std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
-			}
-			break;
-		case DAG::CMD::SUBDAG:
-		case DAG::CMD::JOB:
-		case DAG::CMD::FINAL:
-		case DAG::CMD::PROVISIONER:
-		case DAG::CMD::SERVICE:
-			all_good = ProcessNode(DAG::DERIVE_CMD<NodeCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::SPLICE:
-			all_good = ProcessSplice(dm, dag, DAG::DERIVE_CMD<SpliceCommand>(cmd), dag_munge_id);
-			break;
-		case DAG::CMD::DOT:
-			{
-				const DotCommand* dot = DAG::DERIVE_CMD<DotCommand>(cmd);
-				dag.SetDotFileUpdate(dot->Update());
-				dag.SetDotFileOverwrite(dot->Overwrite());
-				if (dot->HasInclude()) {
-					dag.SetDotIncludeFileName(dot->GetInclude().c_str());
-				}
-				dag.SetDotFileName(dot->GetFile().c_str());
-			}
-			break;
-		case DAG::CMD::INCLUDE:
-			all_good = process(dm, dag, (DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile(), dag_munge_id);
-			break;
-		case DAG::CMD::NODE_STATUS_FILE:
-			{
-				const NodeStatusCommand* status = DAG::DERIVE_CMD<NodeStatusCommand>(cmd);
-				dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
-			}
-			break;
-		case DAG::CMD::JOBSTATE_LOG:
-			dag.SetJobstateLogFileName((DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile().c_str());
-			break;
-		case DAG::CMD::REJECT:
-			debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
-			all_good = false;
-			break;
-		case DAG::CMD::CATEGORY:
-			all_good = ProcessCategory(DAG::DERIVE_CMD<CategoryCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::PARENT_CHILD:
-			all_good = ProcessDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::SCRIPT:
-			all_good = ProcessScript(DAG::DERIVE_CMD<ScriptCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::RETRY:
-			all_good = ProcessRetry(DAG::DERIVE_CMD<RetryCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::ABORT_DAG_ON:
-			all_good = ProcessAbortDagOn(DAG::DERIVE_CMD<AbortDagCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::VARS:
-			all_good = ProcessVars(DAG::DERIVE_CMD<VarsCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::PRIORITY:
-			all_good = ProcessPriority(DAG::DERIVE_CMD<PriorityCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::PRE_SKIP:
-			all_good = ProcessPreSkip(DAG::DERIVE_CMD<PreSkipCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::TOLERANCE:
-			all_good = ProcessTolerance(DAG::DERIVE_CMD<ToleranceCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::DONE:
-			all_good = ProcessDone(DAG::DERIVE_CMD<DoneCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::SAVE_POINT_FILE:
-			all_good = ProcessSaveFile(DAG::DERIVE_CMD<SavePointCommand>(cmd), dag, dag_munge_id);
-			break;
-		case DAG::CMD::MAXJOBS:
-			{
-				const MaxJobsCommand* mjc = DAG::DERIVE_CMD<MaxJobsCommand>(cmd);
-				std::string category = mjc->GetCategory();
-				dag._catThrottles.SetThrottle(&category, mjc->GetLimit());
-			}
-			break;
-		case DAG::CMD::CONNECT:
-			{
-				const auto& [s1, s2] = (DAG::DERIVE_CMD<ConnectCommand>(cmd))->GetSplices();
-				Dag* parent = dag.LookupSplice(MakeFullName(s1, dag_munge_id));
-				Dag* child = dag.LookupSplice(MakeFullName(s2, dag_munge_id));
+	case DAG::CMD::SUBMIT_DESCRIPTION: {
+		const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
+		std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
+	} break;
+	case DAG::CMD::SUBDAG:
+	case DAG::CMD::JOB:
+	case DAG::CMD::FINAL:
+	case DAG::CMD::PROVISIONER:
+	case DAG::CMD::SERVICE:
+		all_good = ProcessNode(DAG::DERIVE_CMD<NodeCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::SPLICE:
+		all_good = ProcessSplice(dm, dag, DAG::DERIVE_CMD<SpliceCommand>(cmd), dag_munge_id);
+		break;
+	case DAG::CMD::DOT: {
+		const DotCommand* dot = DAG::DERIVE_CMD<DotCommand>(cmd);
+		dag.SetDotFileUpdate(dot->Update());
+		dag.SetDotFileOverwrite(dot->Overwrite());
+		if (dot->HasInclude()) {
+			dag.SetDotIncludeFileName(dot->GetInclude().c_str());
+		}
+		dag.SetDotFileName(dot->GetFile().c_str());
+	} break;
+	case DAG::CMD::INCLUDE:
+		all_good = process(dm, dag, (DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile(), dag_munge_id);
+		break;
+	case DAG::CMD::NODE_STATUS_FILE: {
+		const NodeStatusCommand* status = DAG::DERIVE_CMD<NodeStatusCommand>(cmd);
+		dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
+	} break;
+	case DAG::CMD::JOBSTATE_LOG:
+		dag.SetJobstateLogFileName((DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile().c_str());
+		break;
+	case DAG::CMD::REJECT:
+		debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
+		all_good = false;
+		break;
+	case DAG::CMD::CATEGORY:
+		all_good = ProcessCategory(DAG::DERIVE_CMD<CategoryCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::PARENT_CHILD:
+		all_good = ProcessDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::SCRIPT:
+		all_good = ProcessScript(DAG::DERIVE_CMD<ScriptCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::RETRY:
+		all_good = ProcessRetry(DAG::DERIVE_CMD<RetryCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::ABORT_DAG_ON:
+		all_good = ProcessAbortDagOn(DAG::DERIVE_CMD<AbortDagCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::VARS:
+		all_good = ProcessVars(DAG::DERIVE_CMD<VarsCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::PRIORITY:
+		all_good = ProcessPriority(DAG::DERIVE_CMD<PriorityCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::PRE_SKIP:
+		all_good = ProcessPreSkip(DAG::DERIVE_CMD<PreSkipCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::TOLERANCE:
+		all_good = ProcessTolerance(DAG::DERIVE_CMD<ToleranceCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::DONE:
+		all_good = ProcessDone(DAG::DERIVE_CMD<DoneCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::SAVE_POINT_FILE:
+		all_good = ProcessSaveFile(DAG::DERIVE_CMD<SavePointCommand>(cmd), dag, dag_munge_id);
+		break;
+	case DAG::CMD::MAXJOBS: {
+		const MaxJobsCommand* mjc = DAG::DERIVE_CMD<MaxJobsCommand>(cmd);
+		std::string category = mjc->GetCategory();
+		dag._catThrottles.SetThrottle(&category, mjc->GetLimit());
+	} break;
+	case DAG::CMD::CONNECT: {
+		const auto& [s1, s2] = (DAG::DERIVE_CMD<ConnectCommand>(cmd))->GetSplices();
+		Dag* parent = dag.LookupSplice(MakeFullName(s1, dag_munge_id));
+		Dag* child = dag.LookupSplice(MakeFullName(s2, dag_munge_id));
 
-				if ( ! parent) {
-					debug_printf(DEBUG_QUIET, "ERROR: Connect parent splice %s does not exist\n", s1.c_str());
-				}
-				if ( ! child) {
-					debug_printf(DEBUG_QUIET, "ERROR: Connect child splice %s does not exist\n", s2.c_str());
-				}
+		if (!parent) {
+			debug_printf(DEBUG_QUIET, "ERROR: Connect parent splice %s does not exist\n", s1.c_str());
+		}
+		if (!child) {
+			debug_printf(DEBUG_QUIET, "ERROR: Connect child splice %s does not exist\n", s2.c_str());
+		}
 
-				all_good = (parent && child) ? Dag::ConnectSplices(parent, child) : false;
-			}
-			break;
-		case DAG::CMD::PIN_IN:
-		case DAG::CMD::PIN_OUT:
-			{
-				const PinCommand* pin = DAG::DERIVE_CMD<PinCommand>(cmd);
-				std::string node = MakeFullName(pin->GetNode(), dag_munge_id);
-				all_good = dag.SetPinInOut( ! pin->IsPinOut(), node.c_str(), pin->GetPinNum());
-			}
-			break;
-		default:
-			// TODO: Fail or ignore?
-			debug_printf(DEBUG_NORMAL, "DAGMan does not know how to process %s command yet...\n",
-			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
-			break;
+		all_good = (parent && child) ? Dag::ConnectSplices(parent, child) : false;
+	} break;
+	case DAG::CMD::PIN_IN:
+	case DAG::CMD::PIN_OUT: {
+		const PinCommand* pin = DAG::DERIVE_CMD<PinCommand>(cmd);
+		std::string node = MakeFullName(pin->GetNode(), dag_munge_id);
+		all_good = dag.SetPinInOut(!pin->IsPinOut(), node.c_str(), pin->GetPinNum());
+	} break;
+	default:
+		// TODO: Fail or ignore?
+		debug_printf(DEBUG_NORMAL, "DAGMan does not know how to process %s command yet...\n",
+					 DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+		break;
 	} // End switch statement
 
 	return all_good;
 }
 
-
 bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_id) {
-	static const std::map<DAG::CMD, NodeType> CMD_TO_NODE_TYPE = {
-		{DAG::CMD::SUBDAG, NodeType::JOB},
-		{DAG::CMD::JOB, NodeType::JOB},
-		{DAG::CMD::FINAL, NodeType::FINAL},
-		{DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
-		{DAG::CMD::SERVICE, NodeType::SERVICE}
-	};
+	static const std::map<DAG::CMD, NodeType> CMD_TO_NODE_TYPE = {{DAG::CMD::SUBDAG, NodeType::JOB},
+																  {DAG::CMD::JOB, NodeType::JOB},
+																  {DAG::CMD::FINAL, NodeType::FINAL},
+																  {DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
+																  {DAG::CMD::SERVICE, NodeType::SERVICE}};
 
 	ASSERT(CMD_TO_NODE_TYPE.contains(cmd->GetCommand()));
 
@@ -3171,8 +2875,7 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 	}
 
 	if (dag.LookupSplice(name)) {
-		debug_printf(DEBUG_QUIET, "ERROR: Node name %s already associated with a splice in DAG\n",
-		             name.c_str());
+		debug_printf(DEBUG_QUIET, "ERROR: Node name %s already associated with a splice in DAG\n", name.c_str());
 		return false;
 	}
 
@@ -3214,8 +2917,8 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 
 	if (cmd->IsDone()) {
 		if (node->GetType() != NodeType::JOB) {
-			debug_printf(DEBUG_QUIET, "WARNING: %s node %s can not be marked as DONE\n",
-			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()), name.c_str());
+			debug_printf(DEBUG_QUIET, "WARNING: %s node %s can not be marked as DONE\n", DAG::GET_KEYWORD_STRING(cmd->GetCommand()),
+						 name.c_str());
 			std::ignore = check_warning_strictness(DAG_STRICT_1, false);
 		} else {
 			dag.AddPreDoneNode(node.get());
@@ -3224,11 +2927,11 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 
 	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
 		node->SetDagFile(cmd->GetSubmit().c_str());
-	} else if ( ! final_node_dag.empty()) {
+	} else if (!final_node_dag.empty()) {
 		node->SetDagFile(final_node_dag.c_str());
 	}
 
-	if ( ! dag.Add(node.release())) {
+	if (!dag.Add(node.release())) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to add node %s to DAG.\n", name.c_str());
 		return false;
 	}
@@ -3236,19 +2939,16 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 	return true;
 }
 
-
 bool DagProcessor::ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand* cmd, int dag_munge_id) {
 	std::string name = MakeFullName(cmd->GetName(), dag_munge_id);
 
-	if (dag.NodeExists(name.c_str()) ) {
-		debug_printf(DEBUG_QUIET, "ERROR: Splice name %s already associated with a node in DAG.\n",
-		             cmd->GetName().c_str());
+	if (dag.NodeExists(name.c_str())) {
+		debug_printf(DEBUG_QUIET, "ERROR: Splice name %s already associated with a node in DAG.\n", cmd->GetName().c_str());
 		return false;
 	}
 
 	if (dag.LookupSplice(name)) {
-		debug_printf(DEBUG_QUIET, "ERROR: Splice named %s already exists in DAG.\n",
-		             cmd->GetName().c_str());
+		debug_printf(DEBUG_QUIET, "ERROR: Splice named %s already exists in DAG.\n", cmd->GetName().c_str());
 		return false;
 	}
 
@@ -3257,34 +2957,33 @@ bool DagProcessor::ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand
 	std::unique_ptr<Dag> splice_dag(new Dag(dm, true, scope));
 	ASSERT(splice_dag);
 
-	if (cmd->HasDir()) { splice_dag->SetDirectory(cmd->GetDir()); }
+	if (cmd->HasDir()) {
+		splice_dag->SetDirectory(cmd->GetDir());
+	}
 
 	std::string error;
 	TmpDir spliceDir;
-	if (cmd->HasDir() && ! spliceDir.Cd2TmpDir(cmd->GetDir().c_str(), error)) {
-		debug_printf(DEBUG_QUIET, "ERROR: Failed to change to directory %s: %s\n",
-		             cmd->GetDir().c_str(), error.c_str());
+	if (cmd->HasDir() && !spliceDir.Cd2TmpDir(cmd->GetDir().c_str(), error)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to change to directory %s: %s\n", cmd->GetDir().c_str(), error.c_str());
 		return false;
 	}
 
-	debug_printf(DEBUG_VERBOSE, "Parsing Splice %s in directory %s with file %s\n",
-	            cmd->GetName().c_str(), cmd->HasDir() ? cmd->GetDir().c_str() : ".",
-	            cmd->GetDagFile().c_str());
+	debug_printf(DEBUG_VERBOSE, "Parsing Splice %s in directory %s with file %s\n", cmd->GetName().c_str(),
+				 cmd->HasDir() ? cmd->GetDir().c_str() : ".", cmd->GetDagFile().c_str());
 
-	if ( ! process(dm, *splice_dag, cmd->GetDagFile(), dag_munge_id)) {
-		debug_printf(DEBUG_QUIET, "ERROR: Failed to parse splice %s's DAG file %s\n",
-		             cmd->GetName().c_str(), cmd->GetDagFile().c_str());
+	if (!process(dm, *splice_dag, cmd->GetDagFile(), dag_munge_id)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to parse splice %s's DAG file %s\n", cmd->GetName().c_str(),
+					 cmd->GetDagFile().c_str());
 		return false;
 	}
 
-	if (cmd->HasDir() && ! spliceDir.Cd2MainDir(error)) {
+	if (cmd->HasDir() && !spliceDir.Cd2MainDir(error)) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to return to original directory: %s\n", error.c_str());
 		return false;
 	}
 
 	if (splice_dag->HasFinalNode()) {
-		debug_printf(DEBUG_QUIET, "ERROR: Splice %s has a FINAL node. This is not permitted.\n",
-		             cmd->GetName().c_str());
+		debug_printf(DEBUG_QUIET, "ERROR: Splice %s has a FINAL node. This is not permitted.\n", cmd->GetName().c_str());
 		return false;
 	}
 
@@ -3297,14 +2996,13 @@ bool DagProcessor::ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand
 	}
 
 	// Add splice to current DAG
-	if ( ! dag.InsertSplice(name, splice_dag.release())) {
+	if (!dag.InsertSplice(name, splice_dag.release())) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to insert splice %s into DAG\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 size_t DagProcessor::join_node_id = 0;
 
@@ -3321,7 +3019,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 			}
 		} else {
 			Node* node = dag.FindNodeByName(name.c_str());
-			if ( ! node) {
+			if (!node) {
 				debug_printf(DEBUG_QUIET, "ERROR: Unknown parent node %s specified\n", n.data());
 				return false;
 			}
@@ -3338,7 +3036,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 			}
 		} else {
 			Node* node = dag.FindNodeByName(name.c_str());
-			if ( ! node) {
+			if (!node) {
 				debug_printf(DEBUG_QUIET, "ERROR: Unknown child node %s specified\n", n.data());
 				return false;
 			}
@@ -3375,7 +3073,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 
 		node->SetNoop(true);
 
-		if ( ! dag.Add(node.release())) {
+		if (!dag.Add(node.release())) {
 			debug_printf(DEBUG_QUIET, "ERROR: Failed to add join node %s to DAG.\n", name.c_str());
 			return false;
 		}
@@ -3385,10 +3083,9 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		// Connect parents to the join node -- this is where the requested dependency
 		// strength actually applies. The join node is a NOOP that can't itself fail
 		// once unblocked, so join -> children below always stays strong.
-		std::vector<Node*> lst = { join };
-		if ( ! dag.Connect(parents, lst, meta)) {
-			debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency to join node %s\n",
-			             join ? join->GetNodeName() : "unknown");
+		std::vector<Node*> lst = {join};
+		if (!dag.Connect(parents, lst, meta)) {
+			debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency to join node %s\n", join ? join->GetNodeName() : "unknown");
 			return false;
 		}
 
@@ -3398,14 +3095,13 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		meta = 0;
 	}
 
-	if ( ! dag.Connect(parents, children, meta)) {
+	if (!dag.Connect(parents, children, meta)) {
 		debug_printf(DEBUG_QUIET, "ERROR: failed to add dependency between nodes\n");
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessDone(const DoneCommand* cmd, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
@@ -3414,7 +3110,7 @@ bool DagProcessor::ProcessDone(const DoneCommand* cmd, Dag& dag, int dag_munge_i
 	if (node) {
 		if (node->GetType() != NodeType::JOB) {
 			debug_printf(DEBUG_QUIET, "WARNING: %s node(s) can not be referenced by the DONE command\n",
-			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+						 DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
 			return !check_warning_strictness(DAG_STRICT_1, false);
 		}
 		node->SetStatus(Node::STATUS_DONE);
@@ -3426,17 +3122,15 @@ bool DagProcessor::ProcessDone(const DoneCommand* cmd, Dag& dag, int dag_munge_i
 	return true;
 }
 
-
 bool DagProcessor::ProcessSaveFile(const SavePointCommand* sp, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(sp->GetNodeName(), dag_munge_id);
 	bool all_good = false;
 
 	Node* node = dag.FindNodeByName(name.c_str());
-	if ( ! node) {
+	if (!node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
 	} else if (node->GetType() != NodeType::JOB) {
-		debug_printf(DEBUG_QUIET, "ERROR: Save file can not be applied to %s node(s)\n",
-		             DAG::GET_KEYWORD_STRING(sp->GetCommand()));
+		debug_printf(DEBUG_QUIET, "ERROR: Save file can not be applied to %s node(s)\n", DAG::GET_KEYWORD_STRING(sp->GetCommand()));
 	} else {
 		node->SetSaveFile(sp->GetFilename());
 		all_good = true;
@@ -3445,31 +3139,30 @@ bool DagProcessor::ProcessSaveFile(const SavePointCommand* sp, Dag& dag, int dag
 	return all_good;
 }
 
-
 bool DagProcessor::ProcessVars(const VarsCommand* vars, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(vars->GetNodeName(), dag_munge_id);
 
-	bool prepend = ! config[conf::b::AppendVars];
-	if (vars->ExplicitPlacement()) { prepend = vars->WantPrepend(); }
+	bool prepend = !config[conf::b::AppendVars];
+	if (vars->ExplicitPlacement()) {
+		prepend = vars->WantPrepend();
+	}
 
 	bool found_a_node = false;
 	for (Node* node : dag.FindAllNodes(name)) {
 		found_a_node = true;
 		for (const auto& [key, value] : vars->GetPairs()) {
 			std::ignore = node->AddVar(key.data(), value.data(), prepend);
-			debug_printf(DEBUG_DEBUG_1, "Adding %s='%s' to %s\n",
-			             key.data(), value.data(), node->GetNodeName());
+			debug_printf(DEBUG_DEBUG_1, "Adding %s='%s' to %s\n", key.data(), value.data(), node->GetNodeName());
 		}
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessScript(const ScriptCommand* cmd, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
@@ -3495,21 +3188,19 @@ bool DagProcessor::ProcessScript(const ScriptCommand* cmd, Dag& dag, int dag_mun
 			script->SetDebug(file, when);
 		}
 
-		if ( ! node->AddScript(script.release())) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to add %s script to node %s\n",
-			             cmd->GetTypeStr(), node->GetNodeName());
+		if (!node->AddScript(script.release())) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add %s script to node %s\n", cmd->GetTypeStr(), node->GetNodeName());
 			return false;
 		}
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessRetry(const RetryCommand* retry, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(retry->GetNodeName(), dag_munge_id);
@@ -3520,21 +3211,20 @@ bool DagProcessor::ProcessRetry(const RetryCommand* retry, Dag& dag, int dag_mun
 
 		if (node->GetType() != NodeType::JOB) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not have a retry specification\n",
-			             DAG::GET_KEYWORD_STRING(retry->GetCommand()), node->GetNodeName());
+						 DAG::GET_KEYWORD_STRING(retry->GetCommand()), node->GetNodeName());
 			return false;
 		}
 
 		node->SetMaxRetries(retry->GetMaxRetries(), retry->GetBreakCode());
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessAbortDagOn(const AbortDagCommand* ado, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(ado->GetNodeName(), dag_munge_id);
@@ -3544,22 +3234,20 @@ bool DagProcessor::ProcessAbortDagOn(const AbortDagCommand* ado, Dag& dag, int d
 		found_a_node = true;
 
 		if (node->GetType() == NodeType::FINAL) {
-			debug_printf(DEBUG_QUIET, "ERROR: FINAL node %s cannot have an ABORT-DAG-ON specification.\n",
-			             node->GetNodeName());
+			debug_printf(DEBUG_QUIET, "ERROR: FINAL node %s cannot have an ABORT-DAG-ON specification.\n", node->GetNodeName());
 			return false;
 		}
 
 		node->SetAbortDagOn(ado->GetCondition(), ado->GetExitValue());
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessPreSkip(const PreSkipCommand* skip, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(skip->GetNodeName(), dag_munge_id);
@@ -3569,21 +3257,19 @@ bool DagProcessor::ProcessPreSkip(const PreSkipCommand* skip, Dag& dag, int dag_
 		found_a_node = true;
 
 		std::string error;
-		if ( ! node->AddPreSkip(skip->GetExitCode(), error)) {
-			debug_printf(DEBUG_QUIET, "ERROR: Failed to add pre skip to %s: %s\n",
-			             node->GetNodeName(), error.c_str());
+		if (!node->AddPreSkip(skip->GetExitCode(), error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add pre skip to %s: %s\n", node->GetNodeName(), error.c_str());
 			return false;
 		}
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessTolerance(const ToleranceCommand* cmd, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
@@ -3595,14 +3281,13 @@ bool DagProcessor::ProcessTolerance(const ToleranceCommand* cmd, Dag& dag, int d
 		node->SetTolerance(cmd->GetTolerance(), cmd->GetMode(), cmd->IsPercentage());
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessPriority(const PriorityCommand* prio, Dag& dag, int dag_munge_id) {
 	std::string name = MakeFullName(prio->GetNodeName(), dag_munge_id);
@@ -3612,29 +3297,28 @@ bool DagProcessor::ProcessPriority(const PriorityCommand* prio, Dag& dag, int da
 		found_a_node = true;
 
 		if (node->GetType() != NodeType::JOB) {
-			debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not have a priority\n",
-			             DAG::GET_KEYWORD_STRING(prio->GetCommand()), node->GetNodeName());
+			debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not have a priority\n", DAG::GET_KEYWORD_STRING(prio->GetCommand()),
+						 node->GetNodeName());
 			return false;
 		}
 
 		int current = node->GetExplicitPrio();
 		if (current && current != prio->GetPriority()) {
-			debug_printf(DEBUG_NORMAL, "WARNING: New priority %d for node %s overrides old value %d\n",
-			             prio->GetPriority(), node->GetNodeName(), current);
+			debug_printf(DEBUG_NORMAL, "WARNING: New priority %d for node %s overrides old value %d\n", prio->GetPriority(),
+						 node->GetNodeName(), current);
 			check_warning_strictness(DAG_STRICT_2);
 		}
 
 		node->SetPrio(prio->GetPriority());
 	}
 
-	if ( ! found_a_node) {
+	if (!found_a_node) {
 		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
 		return false;
 	}
 
 	return true;
 }
-
 
 bool DagProcessor::ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag_munge_id) {
 	for (const auto& n : cat->GetNodes()) {
@@ -3646,14 +3330,14 @@ bool DagProcessor::ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag
 
 			if (node->GetType() != NodeType::JOB) {
 				debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not be added to a category\n",
-				             DAG::GET_KEYWORD_STRING(cat->GetCommand()), node->GetNodeName());
+							 DAG::GET_KEYWORD_STRING(cat->GetCommand()), node->GetNodeName());
 				return false;
 			}
 
 			node->SetCategory(cat->GetCategory().c_str(), dag._catThrottles);
 		}
 
-		if ( ! found_a_node) {
+		if (!found_a_node) {
 			debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
 			return false;
 		}
@@ -3661,4 +3345,3 @@ bool DagProcessor::ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag
 
 	return true;
 }
-
