@@ -1680,10 +1680,14 @@ UniShadow::start_staging_only_conversation(
 	);
 	free( originalClaimID );
 
-	if(! rval) {
-		// Assuming that it's most likely that offerResources() failed
-		// because the schedd was busy, we should try again later when
-		// it isn't.
+	if( rval != OK ) {
+		//
+		// Arguably, we should retry `rval == -1` a few times, because it's
+		// likely that the schedd is just busy, and redoing the transfer
+		// because of that just makes the problem worse.  However, if
+		// `rval == NOT_OK`, then we should just give up right away and let
+		// the schedd get its act together.
+		//
 		co_return VACATE_REQUEUE_ABORT(
 			"Failed to offer schedd resources, aborting to try again when it's less busy.\n",
 			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed
