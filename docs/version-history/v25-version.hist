@@ -156,6 +156,10 @@
   ``-af`` arguments. This combination now produces an error message.
   :jira:`3833`
 
+- Fixed a bug which could cause the *condor_startd* to crash when using
+  the common input files feature.
+  :jira:`3911`
+
 *** 25.13.2 features
 
 - DAGMan :dag-cmd:`PARENT/CHILD` dependencies can now be declared *WEAK*,
