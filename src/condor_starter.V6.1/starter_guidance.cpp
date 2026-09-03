@@ -199,6 +199,34 @@ retrySetupJobEnvironment(JobInfoCommunicator * jic) {
 }
 
 
+std::optional<bool>
+Starter::requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context ) {
+	ClassAd request;
+	ClassAd guidance;
+	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_CHECKPOINT_TAKEN);
+
+	// ClassAds assume they own their attribute's value, so (a) you have
+	// to copy them to avoid changing them and (b) you can't copy them to
+	// locals, because then their destructor will be called twice.  *sigh*
+	ClassAd * my_context = new ClassAd(context);
+	request.Insert(ATTR_CONTEXT_AD, my_context);
+
+	GuidanceResult rv = GuidanceResult::Invalid;
+	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == GuidanceResult::Command ) {
+			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceCheckpointTaken(s, c); };
+
+			return handleCheckpointTakenCommand( s, guidance, lambda );
+		} else {
+			dprintf( D_ALWAYS, "Problem requesting guidance about a checkpoint taken from AP (%d); carrying on.\n", static_cast<int>(rv) );
+			return std::nullopt;
+		}
+	}
+
+	return std::nullopt;
+}
+
+
 void
 Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	ClassAd request;
@@ -211,7 +239,7 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentReady(s); };
 			if( handleJobEnvironmentCommand( s, guidance, lambda ) ) { return; }
 		} else {
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+			dprintf( D_ALWAYS, "Problem requesting guidance about a ready job environment from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
@@ -242,7 +270,7 @@ Starter::requestGuidanceCommandJobSetup(
 			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceCommandJobSetup(s, c, continue_conversation); };
 			if( handleJobSetupCommand( s, guidance, lambda ) ) { return; }
 		} else {
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+			dprintf( D_ALWAYS, "Problem requesting guidance about job setup from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
@@ -250,6 +278,43 @@ Starter::requestGuidanceCommandJobSetup(
 	s->jic->resetInputFileCatalog();
 	continue_conversation();
 }
+
+
+std::optional<bool>
+Starter::handleCheckpointTakenCommand(
+  Starter * /* s */,
+  const ClassAd & guidance,
+  std::function<void(const ClassAd & context)> /* continue_conversation */
+) {
+	std::string command;
+	if(! guidance.LookupString( ATTR_COMMAND, command )) {
+		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
+		dPrintAd( D_ALWAYS, guidance );
+
+		return std::nullopt;
+	} else {
+		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+
+		if( command == COMMAND_DONT_RESTART ) {
+			dprintf( D_ALWAYS, "Not restarting according to guidance.\n" );
+
+			return {true};
+		} else if( command == COMMAND_RESTART ) {
+			dprintf( D_ALWAYS, "Restarting according to guidance.\n" );
+
+			return {false};
+		} else if( command == COMMAND_CARRY_ON ) {
+			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
+
+			return std::nullopt;
+		} else {
+			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
+
+			return std::nullopt;
+		}
+	}
+}
+
 
 bool
 Starter::handleJobEnvironmentCommand(
@@ -378,7 +443,7 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentUnready(s); };
 			if( handleJobEnvironmentCommand( s, guidance, lambda ) ) { return; }
 		} else {
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+			dprintf( D_ALWAYS, "Problem requesting guidance about job environment unready from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
@@ -845,7 +910,7 @@ Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & contex
 			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceSetupJobEnvironment(s, c); };
 			if( handleJobSetupCommand( s, guidance, lambda ) ) { return; }
 		} else {
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+			dprintf( D_ALWAYS, "Problem requesting guidance about setting up the job environment from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
