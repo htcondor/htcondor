@@ -181,6 +181,11 @@ public:
 	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
 	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
 
+	// The shadow will return a bool meant to overwrite `claim_is_closing`
+	// in VanillaProc::restartCheckpointedJob()... if all goes well.  The
+	// optional part is for when it doesn't.
+	static std::optional<bool> requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context );
+
 		/**
 		 *
 		 *
@@ -393,6 +398,12 @@ protected:
 		Starter * s,
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation
+	);
+
+	static std::optional<bool> handleCheckpointTakenCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
 	);
 
 	static bool handleJobSetupCommand(
