@@ -469,7 +469,6 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 
 	const char* cmdFile = node.GetCmdFile(); // used when submit source is an actual file
 	const std::string_view inline_desc = dm.dag->get_inline_desc(cmdFile);
-	;
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
