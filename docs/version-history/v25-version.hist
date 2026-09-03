@@ -121,6 +121,10 @@
   (no limit) when :macro:`MAX_CONCURRENT_UPLOADS` is not set.
   :jira:`3664`
 
+- Improved the error message when :tool:`condor_q` or tool:`condor_rm` cannot
+  communicate with an overloaded *condor_schedd*.
+  :jira:`3619`
+
 *** 25.14.0 bugs
 
 - The Python bindings no longer assume that all ads in a legacy-style reply
