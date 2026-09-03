@@ -879,15 +879,15 @@ bool VanillaProc::restartCheckpointedJob() {
 		if(! startd.locate()) {
 			dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
 		std::string claimID;
 		if(! starter->getJobClaimId(claimID)) {
 			dprintf( D_ERROR, "Unable to get my job's claim ID.\n" );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
 		startd.setClaimId(claimID);
 
@@ -896,9 +896,21 @@ bool VanillaProc::restartCheckpointedJob() {
 		if(! OK) {
 			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
 
-	        // Fall back to the semantics from before this check was added.
-	        goto restart_job;
+			// Fall back to the semantics from before this check was added.
+			goto restart_job;
 		}
+
+
+		// Ask the AP what it thinks, given what the EP said.
+		ClassAd context;
+		context.InsertAttr( ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
+		auto guidance = Starter::requestGuidanceCheckpointTaken(
+			starter, context
+		);
+		if( guidance ) {
+			claim_is_closing = * guidance;
+		}
+
 		if( claim_is_closing ) {
 			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
 

@@ -55,6 +55,13 @@
   and the default for :macro:`SUBMIT_SEND_RESCHEDULE` was changed to ``False``.
   :jira:`3836`
 
+- If :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` is set, the EP now tells the
+  AP about its decision and asks what to do.  In 25.x and 26.0.x, the AP will
+  always tell the EP to do what it decided to do, so this change will have no
+  visible effect.  However, this allows 26.0 EPs to react to any change(s)
+  made in 26.x APs.
+  :jira:`3906`
+
 - Added support for submitting jobs remotely to NERSC's Perlmutter HPC
   system using their Superfacility REST API.
   Use the grid universe **batch** type with a scheduler name of ``sfapi``.
@@ -155,6 +162,10 @@
 - Fixed a bug where :tool:`condor_q` would crash when given both ``-batch`` and
   ``-af`` arguments. This combination now produces an error message.
   :jira:`3833`
+
+- Fixed a bug which could cause the *condor_startd* to crash when using
+  the common input files feature.
+  :jira:`3911`
 
 *** 25.13.2 features
 
