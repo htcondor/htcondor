@@ -76,9 +76,7 @@ Node::Node(const char* nodeName, const char* directory, const char* cmdFile) {
 
 //---------------------------------------------------------------------------
 void Node::PrefixDirectory(const std::string& prefix) {
-	if (prefix == "." || fullpath(_directory.data())) {
-		return;
-	}
+	if (prefix == "." || fullpath(_directory.data())) { return; }
 
 	std::string newDir;
 	dircat(prefix.c_str(), _directory.data(), newDir);
@@ -96,25 +94,15 @@ void Node::Dump(const Dag* dag) const {
 	dprintf(D_ALWAYS, "    Node Status: %s\n", GetStatusName());
 	dprintf(D_ALWAYS, "Node return val: %d\n", retval);
 
-	if (_Status == STATUS_ERROR) {
-		dprintf(D_ALWAYS, "          Error: %s\n", error_text.c_str());
-	}
+	if (_Status == STATUS_ERROR) { dprintf(D_ALWAYS, "          Error: %s\n", error_text.c_str()); }
 
 	dprintf(D_ALWAYS, "Job Submit File: %s\n", _cmdFile.data());
 
-	if (_scriptPre) {
-		dprintf(D_ALWAYS, "     PRE Script: %s\n", _scriptPre->GetCmd());
-	}
-	if (_scriptPost) {
-		dprintf(D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd());
-	}
-	if (_scriptHold) {
-		dprintf(D_ALWAYS, "    HOLD Script: %s\n", _scriptHold->GetCmd());
-	}
+	if (_scriptPre) { dprintf(D_ALWAYS, "     PRE Script: %s\n", _scriptPre->GetCmd()); }
+	if (_scriptPost) { dprintf(D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd()); }
+	if (_scriptHold) { dprintf(D_ALWAYS, "    HOLD Script: %s\n", _scriptHold->GetCmd()); }
 
-	if (retry_max > 0) {
-		dprintf(D_ALWAYS, "          Retry: %d\n", retry_max);
-	}
+	if (retry_max > 0) { dprintf(D_ALWAYS, "          Retry: %d\n", retry_max); }
 
 	if (_CondorID._cluster == -1) {
 		dprintf(D_ALWAYS, " HTCondor Job ID: [not yet submitted]\n");
@@ -195,9 +183,7 @@ bool Node::CheckBatchFailed(int tolerance) {
 	if (m_failure_tolerance > -1) {
 		check = m_failure_tolerance;
 
-		if (m_tolerance_is_percentage) {
-			check = (numJobsSubmitted * m_failure_tolerance) / 100;
-		}
+		if (m_tolerance_is_percentage) { check = (numJobsSubmitted * m_failure_tolerance) / 100; }
 	}
 
 	return totalJobsFailed > check;
@@ -205,9 +191,7 @@ bool Node::CheckBatchFailed(int tolerance) {
 
 //---------------------------------------------------------------------------
 bool Node::RemoveOnBatchFailure(bool config_rm_on_fail) {
-	if (_queuedNodeJobProcs <= 0) {
-		return false;
-	}
+	if (_queuedNodeJobProcs <= 0) { return false; }
 
 	bool rm = config_rm_on_fail;
 
@@ -247,12 +231,8 @@ int Node::PrintParents(std::string& buf, size_t bufmax, const Dag* dag, const ch
 			Node* parent = dag->FindNodeByNodeID(id);
 			ASSERT(parent != nullptr);
 
-			if (buf.size() >= bufmax) {
-				break;
-			}
-			if (count > 0) {
-				buf += sep;
-			}
+			if (buf.size() >= bufmax) { break; }
+			if (count > 0) { buf += sep; }
 			buf += parent->GetNodeName();
 			++count;
 		}
@@ -279,12 +259,8 @@ int Node::PrintChildren(std::string& buf, size_t bufmax, const Dag* dag, const c
 				Node* child = dag->FindNodeByNodeID(id);
 				ASSERT(child != nullptr);
 
-				if (buf.size() >= bufmax) {
-					break;
-				}
-				if (count > 0) {
-					buf += sep;
-				}
+				if (buf.size() >= bufmax) { break; }
+				if (count > 0) { buf += sep; }
 				buf += child->GetNodeName();
 				++count;
 			}
@@ -308,9 +284,7 @@ bool Node::MarkParentDone(Dag& dag, Node* child, node_id_t parent) {
 	}
 
 	bool done = dag.edge_table.GetWaitEdge(child->GetParentsID()).MarkDone(parent);
-	if (done) {
-		child->_parents_done = true;
-	}
+	if (done) { child->_parents_done = true; }
 
 	return done;
 }
@@ -350,9 +324,7 @@ void Node::NotifyChildren(Dag& dag, const std::function<bool(Dag& dag, Node* chi
 			ASSERT(child != nullptr);
 
 			if (MarkParentDone(dag, child, GetNodeID())) {
-				if (fn) {
-					fn(dag, child);
-				}
+				if (fn) { fn(dag, child); }
 			}
 		} else {
 			for (auto& [id, _] : dag.edge_table[m_children]) {
@@ -360,9 +332,7 @@ void Node::NotifyChildren(Dag& dag, const std::function<bool(Dag& dag, Node* chi
 				ASSERT(child != nullptr);
 
 				if (MarkParentDone(dag, child, GetNodeID())) {
-					if (fn) {
-						fn(dag, child);
-					}
+					if (fn) { fn(dag, child); }
 				}
 			}
 		}
@@ -378,9 +348,7 @@ int Node::SetDescendantsToFutile(Dag& dag, const std::function<bool(Dag& dag, No
 	int count = 0;
 
 	auto weak_complete = [this, &dag, &on_weak_unblocked](Node* child) {
-		if (MarkParentDone(dag, child, GetNodeID()) && on_weak_unblocked) {
-			on_weak_unblocked(dag, child);
-		}
+		if (MarkParentDone(dag, child, GetNodeID()) && on_weak_unblocked) { on_weak_unblocked(dag, child); }
 	};
 
 	if (m_children != NO_EDGE_ID) {
@@ -422,18 +390,14 @@ int Node::CascadeFutile(Dag& dag) {
 			ASSERT(direct.id != NO_ID);
 			Node* child = dag.FindNodeByNodeID(direct.id);
 
-			if (!InvalidateChild(child, count)) {
-				return 0;
-			}
+			if (!InvalidateChild(child, count)) { return 0; }
 
 			count += child->CascadeFutile(dag);
 		} else {
 			for (auto& [id, _] : dag.edge_table[m_children]) {
 				Node* child = dag.FindNodeByNodeID(id);
 
-				if (!InvalidateChild(child, count)) {
-					continue;
-				}
+				if (!InvalidateChild(child, count)) { continue; }
 
 				count += child->CascadeFutile(dag);
 			}
@@ -446,13 +410,9 @@ int Node::CascadeFutile(Dag& dag) {
 //---------------------------------------------------------------------------
 // True if this node has at least one child and every child dependency is weak.
 bool Node::AllChildrenWeak(const Dag* dag) const {
-	if (m_children == NO_EDGE_ID) {
-		return false;
-	}
+	if (m_children == NO_EDGE_ID) { return false; }
 
-	if (EdgeTable::IsDirect(m_children)) {
-		return dag->edge_table.GetDirectArc(m_children).IsWeak();
-	}
+	if (EdgeTable::IsDirect(m_children)) { return dag->edge_table.GetDirectArc(m_children).IsWeak(); }
 
 	return std::ranges::all_of(dag->edge_table[m_children], &DagArc::IsWeak);
 }
@@ -541,9 +501,7 @@ bool Node::AddVar(const std::string& name, const std::string& value, bool prepen
 
 //---------------------------------------------------------------------------
 bool Node::AddScript(Script* script) {
-	if (!script) {
-		return false;
-	}
+	if (!script) { return false; }
 
 	script->SetNode(this);
 
@@ -585,9 +543,7 @@ bool Node::AddPreSkip(int exitCode, std::string& whynot) {
 		return false;
 	}
 
-	if (exitCode == 0) {
-		debug_printf(DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP value is weird.\n");
-	}
+	if (exitCode == 0) { debug_printf(DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP value is weird.\n"); }
 
 	if (_preskip != PRE_SKIP_INVALID) {
 		debug_printf(DEBUG_NORMAL, "Warning: new PRE_SKIP value  %d for node %s overrides old value %d\n", exitCode, GetNodeName(),
@@ -627,9 +583,7 @@ void Node::SetCategory(const char* categoryName, ThrottleByCategory& catThrottle
 	}
 
 	if (oldInfo != _throttleInfo) {
-		if (oldInfo != nullptr) {
-			oldInfo->_totalJobs--;
-		}
+		if (oldInfo != nullptr) { oldInfo->_totalJobs--; }
 		_throttleInfo->_totalJobs++;
 	}
 }
@@ -666,9 +620,7 @@ const char* Node::GetJobstateJobTag() {
 
 //---------------------------------------------------------------------------
 int Node::GetJobstateSequenceNum() {
-	if (_jobstateSeqNum == 0) {
-		_jobstateSeqNum = _nextJobstateSeqNum++;
-	}
+	if (_jobstateSeqNum == 0) { _jobstateSeqNum = _nextJobstateSeqNum++; }
 
 	return _jobstateSeqNum;
 }

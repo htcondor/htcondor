@@ -61,9 +61,7 @@ JobstateLog::~JobstateLog() {
 
 //---------------------------------------------------------------------------
 void JobstateLog::Flush() {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	if (fflush(_outfile) != 0) {
 		debug_printf(DEBUG_QUIET, "Error flushing output to jobstate log file %s.\n", _jobstateLogFile);
@@ -91,9 +89,7 @@ void JobstateLog::Flush() {
 void JobstateLog::InitializeRecovery() {
 	debug_printf(DEBUG_DEBUG_2, "JobstateLog::InitializeRecovery()\n");
 
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	//
 	// Find the timestamp of the last "real" event written to the
@@ -123,9 +119,7 @@ void JobstateLog::InitializeRecovery() {
 			debug_printf(DEBUG_QUIET, "Could not seek jobstate log file %s for reading.\n", _jobstateLogFile);
 			main_shutdown_graceful();
 		}
-		if (!readLine(line, infile)) {
-			break;
-		}
+		if (!readLine(line, infile)) { break; }
 
 		time_t newTimestamp;
 		std::string nodeName;
@@ -176,9 +170,7 @@ void JobstateLog::InitializeRecovery() {
 void JobstateLog::InitializeRescue() {
 	debug_printf(DEBUG_DEBUG_2, "JobstateLog::InitializeRescue()\n");
 
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	FILE* infile = safe_fopen_wrapper_follow(_jobstateLogFile, "r");
 	if (!infile) {
@@ -197,9 +189,7 @@ void JobstateLog::InitializeRescue() {
 		time_t newTimestamp;
 		std::string nodeName;
 		int seqNum;
-		if (ParseLine(line, newTimestamp, nodeName, seqNum)) {
-			maxSeqNum = MAX(maxSeqNum, seqNum);
-		}
+		if (ParseLine(line, newTimestamp, nodeName, seqNum)) { maxSeqNum = MAX(maxSeqNum, seqNum); }
 	}
 
 	fclose(infile);
@@ -211,9 +201,7 @@ void JobstateLog::InitializeRescue() {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteDagmanStarted(const CondorID& DAGManJobId) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	std::string info;
 	formatstr(info, "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME, DAGManJobId._cluster, DAGManJobId._proc);
@@ -224,9 +212,7 @@ void JobstateLog::WriteDagmanStarted(const CondorID& DAGManJobId) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteDagmanFinished(int exitCode) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	std::string info;
 	formatstr(info, "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME, exitCode);
@@ -237,9 +223,7 @@ void JobstateLog::WriteDagmanFinished(int exitCode) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteRecoveryStarted() {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	std::string info;
 	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME);
@@ -248,9 +232,7 @@ void JobstateLog::WriteRecoveryStarted() {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteRecoveryFinished() {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	std::string info;
 	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME);
@@ -260,9 +242,7 @@ void JobstateLog::WriteRecoveryFinished() {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteRecoveryFailure() {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	std::string info;
 	formatstr(info, "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME);
@@ -272,9 +252,7 @@ void JobstateLog::WriteRecoveryFailure() {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteEvent(const ULogEvent* event, Node* node) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	ASSERT(node);
 
@@ -300,9 +278,7 @@ void JobstateLog::WriteEvent(const ULogEvent* event, Node* node) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteJobSuccessOrFailure(Node* node) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	ASSERT(node);
 
@@ -316,13 +292,10 @@ void JobstateLog::WriteJobSuccessOrFailure(Node* node) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteScriptStarted(Node* node, ScriptType type) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	// Do not log any HOLD script events
-	if (type == ScriptType::HOLD)
-		return;
+	if (type == ScriptType::HOLD) return;
 
 	ASSERT(node);
 
@@ -345,13 +318,10 @@ void JobstateLog::WriteScriptStarted(Node* node, ScriptType type) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteScriptSuccessOrFailure(Node* node, ScriptType type) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	// Do not log any HOLD script events
-	if (type == ScriptType::HOLD)
-		return;
+	if (type == ScriptType::HOLD) return;
 
 	ASSERT(node);
 
@@ -375,9 +345,7 @@ void JobstateLog::WriteScriptSuccessOrFailure(Node* node, ScriptType type) {
 
 //---------------------------------------------------------------------------
 void JobstateLog::WriteSubmitFailure(Node* node) {
-	if (!_jobstateLogFile) {
-		return;
-	}
+	if (!_jobstateLogFile) { return; }
 
 	time_t timestamp = node->GetLastEventTime();
 	Write(&timestamp, node, SUBMIT_FAILURE_NAME, "-");
@@ -413,9 +381,7 @@ void JobstateLog::Write(const time_t* eventTimeP, const std::string& info) {
 	// _lastTimestampWritten, we don't write the event.  If
 	// the times are equal, we have to do a further test down
 	// below.
-	if (eventTime < _lastTimestampWritten) {
-		return;
-	}
+	if (eventTime < _lastTimestampWritten) { return; }
 
 	std::string outline;
 	formatstr(outline, "%lu %s", (unsigned long)eventTime, info.c_str());
@@ -426,9 +392,7 @@ void JobstateLog::Write(const time_t* eventTimeP, const std::string& info) {
 	// this line is already in the pre-recovery part of the file,
 	// and if it is we don't write it again.
 	//
-	if ((eventTime == _lastTimestampWritten) && (_lastTimestampLines.count(outline) > 0)) {
-		return;
-	}
+	if ((eventTime == _lastTimestampWritten) && (_lastTimestampLines.count(outline) > 0)) { return; }
 
 	if (!_outfile) {
 		_outfile = safe_fopen_wrapper_follow(_jobstateLogFile, "a");

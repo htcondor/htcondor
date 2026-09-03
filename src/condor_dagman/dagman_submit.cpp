@@ -55,9 +55,7 @@ SubmitResult DagSubmit::Submit(Node& node, CondorID& condorID, std::string& err,
 		result = FakeSubmit(node, condorID, log_file);
 	}
 
-	if (!tmpDir.Cd2MainDir(errMsg)) {
-		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n", errMsg.c_str());
-	}
+	if (!tmpDir.Cd2MainDir(errMsg)) { debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n", errMsg.c_str()); }
 
 	return result;
 }
@@ -138,9 +136,7 @@ bool DagSubmit::PreSkipSubmit(Node& node, const std::string& log_file) {
 }
 
 std::string DagSubmit::GetMask() {
-	if (!m_eventmask.empty()) {
-		return m_eventmask;
-	}
+	if (!m_eventmask.empty()) { return m_eventmask; }
 
 	// IMPORTANT NOTE:  see all events that we deal with in
 	// Dag::ProcessOneEvent() -- all of those need to be in the
@@ -167,9 +163,7 @@ std::string DagSubmit::GetMask() {
 	};
 
 	for (const auto& event : desiredEvents) {
-		if (!m_eventmask.empty()) {
-			m_eventmask += ",";
-		}
+		if (!m_eventmask.empty()) { m_eventmask += ","; }
 		m_eventmask += std::to_string(event);
 	}
 
@@ -216,25 +210,15 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
 	// Only Add Parents Macro if not empty. Custom Attr will resolve to ""
-	if (!parents.empty()) {
-		vars.emplace_back("DAG_PARENT_NAMES", parents, false);
-	}
+	if (!parents.empty()) { vars.emplace_back("DAG_PARENT_NAMES", parents, false); }
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
-	if (!batchName.empty()) {
-		vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false);
-	}
-	if (!batchId.empty()) {
-		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false);
-	}
+	if (!batchName.empty()) { vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false); }
+	if (!batchId.empty()) { vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false); }
 
-	if (dm.config[conf::b::JobInsertRetry] && retry > 0) {
-		vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false);
-	}
+	if (dm.config[conf::b::JobInsertRetry] && retry > 0) { vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false); }
 
-	if (node.GetEffectivePrio() != 0) {
-		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node.GetEffectivePrio()), false);
-	}
+	if (node.GetEffectivePrio() != 0) { vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node.GetEffectivePrio()), false); }
 
 	if (node.GetHold()) {
 		debug_printf(DEBUG_VERBOSE, "Submitting node %s job(s) on hold\n", nodeName);
@@ -258,9 +242,7 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 		vars.emplace_back(SUBMIT_KEY_JobMachineAttrs, dm.config[conf::str::MachineAttrs], false);
 	}
 
-	for (const auto& [key, val] : dm.inheritAttrs) {
-		vars.emplace_back(std::string("My.") + key, val, false);
-	}
+	for (const auto& [key, val] : dm.inheritAttrs) { vars.emplace_back(std::string("My.") + key, val, false); }
 
 	vars.emplace_back(ATTR_DAG_NODE_NAME_ALT, nodeName, true);
 	vars.emplace_back(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true);
@@ -278,21 +260,13 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 		vars.emplace_back(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true);
 	}
 
-	if (dm.config[conf::b::SuppressJobLogs]) {
-		vars.emplace_back(SUBMIT_KEY_UserLogFile, "", true);
-	}
+	if (dm.config[conf::b::SuppressJobLogs]) { vars.emplace_back(SUBMIT_KEY_UserLogFile, "", true); }
 
-	if (dm.options[deep::b::SuppressNotification]) {
-		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
-	}
+	if (dm.options[deep::b::SuppressNotification]) { vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true); }
 
-	if (node.GetType() == NodeType::SERVICE) {
-		vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true);
-	}
+	if (node.GetType() == NodeType::SERVICE) { vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true); }
 
-	for (const auto& dagVar : node.GetVars()) {
-		vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend);
-	}
+	for (const auto& dagVar : node.GetVars()) { vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend); }
 
 	return vars;
 }
@@ -319,9 +293,7 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n", cmdFile.c_str(),
 			             desc.data());
-			if (dm.config[conf::b::RemoveTempSubFiles]) {
-				dagmanUtils.tolerant_unlink(cmdFile);
-			}
+			if (dm.config[conf::b::RemoveTempSubFiles]) { dagmanUtils.tolerant_unlink(cmdFile); }
 			fclose(temp_fp);
 			err = "Failed to write temporary submit file";
 			return SubmitResult::FAILURE;
@@ -337,12 +309,8 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	static const std::set<std::string> defer_list = {"DAG_PARENT_NAMES", "MY.DAGParentNodeNames"};
 	std::vector<CustomVar> deferred;
 	for (const auto& var : vars) {
-		if (DeferVar(deferred, var, defer_list)) {
-			continue;
-		}
-		if (var.append) {
-			args.AppendArg("-a");
-		}
+		if (DeferVar(deferred, var, defer_list)) { continue; }
+		if (var.append) { args.AppendArg("-a"); }
 		std::string cmd = var.key + "=" + var.value;
 		args.AppendArg(cmd);
 	}
@@ -350,9 +318,7 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	// Hold on adding parent nodes list incase command exceeds max size
 	ArgList extraArgs;
 	for (const auto& var : deferred) {
-		if (var.append) {
-			extraArgs.AppendArg("-a");
-		}
+		if (var.append) { extraArgs.AppendArg("-a"); }
 		std::string cmd = var.key + "=" + var.value;
 		extraArgs.AppendArg(cmd);
 	}
@@ -394,9 +360,7 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
 
-	if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) {
-		dagmanUtils.tolerant_unlink(cmdFile);
-	}
+	if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) { dagmanUtils.tolerant_unlink(cmdFile); }
 
 	if (!output) {
 		if (exit_status != 0) {
@@ -532,9 +496,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 	// capture queue line permanantly. tmp_qline is a pointer to global line buffer
 	if (tmp_qline) {
 		const char* qargs = submitHash.is_queue_statement(tmp_qline);
-		if (qargs) {
-			queue_args = qargs;
-		}
+		if (qargs) { queue_args = qargs; }
 	}
 
 	// Add node vars (append)
@@ -684,9 +646,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 
 				// send submit itemdata (if any)
 				rval = MyQ->send_Itemdata(cluster_id, ssi.m_fea, errmsg);
-				if (rval < 0) {
-					goto finis;
-				}
+				if (rval < 0) { goto finis; }
 
 				// append the revised queue statement to the submit digest
 				rval = append_queue_statement(submit_digest, ssi.m_fea);
@@ -696,17 +656,13 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 				}
 
 				int total_procs = ssi.selected_job_count();
-				if (max_materialize <= 0) {
-					max_materialize = INT_MAX;
-				}
+				if (max_materialize <= 0) { max_materialize = INT_MAX; }
 				max_materialize = MIN(max_materialize, total_procs);
 				max_materialize = MAX(max_materialize, 1);
 
 				// send the submit digest
 				rval = MyQ->set_Factory(cluster_id, (int)max_materialize, "", submit_digest.c_str());
-				if (rval < 0) {
-					goto finis;
-				}
+				if (rval < 0) { goto finis; }
 
 				// we can now set the live vars from the ssqa.next_impl() call above
 				// and fall down to the common code below that sends the cluster ad
@@ -799,9 +755,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 			result = SubmitResult::SUCCESS;
 
 			// Print Schedd Warnings
-			if (!errstack.empty()) {
-				debug_printf(DEBUG_NORMAL, " Queue warning: %s\n", errstack.message());
-			}
+			if (!errstack.empty()) { debug_printf(DEBUG_NORMAL, " Queue warning: %s\n", errstack.message()); }
 		}
 
 		// Clear out any error/warning messages as we have already printed them
@@ -837,9 +791,7 @@ finis:
 		// If submit succeeded, we still need to log any warning messages
 		submitHash.warn_unused(stderr, "DAGMAN");
 		std::string errstk(submitHash.error_stack()->getFullText());
-		if (!errstk.empty()) {
-			debug_printf(DEBUG_QUIET, "Submit warning: %s", errstk.c_str());
-		}
+		if (!errstk.empty()) { debug_printf(DEBUG_QUIET, "Submit warning: %s", errstk.c_str()); }
 		submitHash.error_stack()->clear();
 	}
 

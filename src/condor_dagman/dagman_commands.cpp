@@ -63,18 +63,14 @@ static void command_set_throttles(const ClassAd& request, ClassAd& response, Dag
 	// Lookup throttles in request ad
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
 		int new_value = 0;
-		if (request.LookupInteger(THROTTLE_ATTR[i], new_value)) {
-			new_throttles[i] = new_value;
-		}
+		if (request.LookupInteger(THROTTLE_ATTR[i], new_value)) { new_throttles[i] = new_value; }
 	}
 
 	// Update throttles (with admin limits)
 	dm.SetThrottles(new_throttles);
 
 	// Fill response ad with all set throttles
-	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
-		response.InsertAttr(THROTTLE_ATTR[i], dm.throttles[i]);
-	}
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) { response.InsertAttr(THROTTLE_ATTR[i], dm.throttles[i]); }
 }
 
 bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
@@ -105,9 +101,7 @@ bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& d
 		}
 	}
 
-	if (!error.empty()) {
-		response.InsertAttr(ATTR_ERROR_STRING, error);
-	}
+	if (!error.empty()) { response.InsertAttr(ATTR_ERROR_STRING, error); }
 
 	return error.empty();
 }
@@ -144,9 +138,7 @@ Node* AddNode(Dag* dag, const char* name, const char* directory, const char* sub
 		return NULL;
 	}
 	node->SetNoop(noop);
-	if (done) {
-		dag->AddPreDoneNode(node);
-	}
+	if (done) { dag->AddPreDoneNode(node); }
 	node->SetType(type);
 
 	ASSERT(dag != NULL);

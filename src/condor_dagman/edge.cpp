@@ -39,9 +39,7 @@ size_t Edge::AddArc(const node_id_t id, const unsigned int meta) {
 
 	// Strongest-wins: a strong (re-)declaration upgrades an existing weak arc.
 	// A weak (re-)declaration never downgrades an existing strong arc.
-	if (!(meta & ARC_WEAK) && (it->metadata & ARC_WEAK)) {
-		it->metadata &= ~ARC_WEAK;
-	}
+	if (!(meta & ARC_WEAK) && (it->metadata & ARC_WEAK)) { it->metadata &= ~ARC_WEAK; }
 
 	return static_cast<size_t>(it - m_arcs.begin());
 }
@@ -55,9 +53,7 @@ size_t Edge::AppendArc(const node_id_t id, const unsigned int meta) {
 DagArc& Edge::GetArc(const node_id_t id) {
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 
-	if (it != m_arcs.end()) {
-		return *it;
-	}
+	if (it != m_arcs.end()) { return *it; }
 
 	EXCEPT("Invalid node id provided");
 }
@@ -69,23 +65,17 @@ bool Edge::Contains(const node_id_t id) {
 
 bool Edge::MarkDone(node_id_t parent_id) {
 	auto it = std::ranges::find(m_arcs, parent_id, &DagArc::id);
-	if (it == m_arcs.end()) {
-		return false;
-	}
+	if (it == m_arcs.end()) { return false; }
 	if (!(it->metadata & ARC_DONE)) {
 		it->metadata |= ARC_DONE;
-		if (m_waiting > 0) {
-			--m_waiting;
-		}
+		if (m_waiting > 0) { --m_waiting; }
 		return m_waiting == 0;
 	}
 	return false; // already marked done, no new completion event
 }
 
 void Edge::Reset() {
-	for (auto& arc : m_arcs) {
-		arc.metadata &= ~ARC_DONE;
-	}
+	for (auto& arc : m_arcs) { arc.metadata &= ~ARC_DONE; }
 	m_waiting = static_cast<uint32_t>(m_arcs.size());
 }
 
@@ -161,9 +151,7 @@ std::vector<size_t> Edge::CompactPool() {
 std::vector<size_t> EdgeTable::CompactDirectPool() { return m_edges[0].CompactPool(); }
 
 void EdgeTable::ResetWaitEdges() {
-	for (auto& e : m_wait_edges) {
-		e.Reset();
-	}
+	for (auto& e : m_wait_edges) { e.Reset(); }
 }
 
 edge_id_t EdgeTable::PromoteDirect(const edge_id_t id) {

@@ -63,13 +63,9 @@ int main(int argc, char* argv[]) {
 	// won't be able to find those files when it tries to communicate
 	/// with the schedd.  wenger 2013-03-11
 	std::string param_val;
-	if (param(param_val, "SCHEDD_DAEMON_AD_FILE")) {
-		dagOpts.set("ScheddDaemonAdFile", param_val);
-	}
+	if (param(param_val, "SCHEDD_DAEMON_AD_FILE")) { dagOpts.set("ScheddDaemonAdFile", param_val); }
 
-	if (param(param_val, "SCHEDD_ADDRESS_FILE")) {
-		dagOpts.set("ScheddAddressFile", param_val);
-	}
+	if (param(param_val, "SCHEDD_ADDRESS_FILE")) { dagOpts.set("ScheddAddressFile", param_val); }
 
 	parseCommandLine(dagOpts, argc, argv);
 
@@ -86,9 +82,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (!dagmanUtils.setUpOptions(dagOpts, dagFileAttrLines)) {
-		exit(1);
-	}
+	if (!dagmanUtils.setUpOptions(dagOpts, dagFileAttrLines)) { exit(1); }
 
 	// Post setUpOptions() will determine custom dagman configuration file
 	// If we have a config file then process it for further DAGMan setup options
@@ -110,9 +104,7 @@ int main(int argc, char* argv[]) {
 	// Check whether the output files already exist; if so, we may
 	// abort depending on the -f flag and whether we're running
 	// a rescue DAG.
-	if (!dagmanUtils.ensureOutputFilesExist(dagOpts)) {
-		exit(1);
-	}
+	if (!dagmanUtils.ensureOutputFilesExist(dagOpts)) { exit(1); }
 
 	// Make sure that all node jobs have log files, the files
 	// aren't on NFS, etc.
@@ -122,14 +114,11 @@ int main(int argc, char* argv[]) {
 	// file.
 	if (dagOpts[deep::b::UpdateSubmit]) {
 		tmpResult = getOldSubmitFlags(dagOpts);
-		if (tmpResult != 0)
-			return tmpResult;
+		if (tmpResult != 0) return tmpResult;
 	}
 
 	// Write the actual submit file for DAGMan.
-	if (!dagmanUtils.writeSubmitFile(dagOpts, dagFileAttrLines)) {
-		exit(1);
-	}
+	if (!dagmanUtils.writeSubmitFile(dagOpts, dagFileAttrLines)) { exit(1); }
 
 	return submitDag(dagOpts);
 }
@@ -194,9 +183,7 @@ int doRecursionNew(DagmanOptions& dagOpts) {
 					}
 				}
 
-				if (dagmanUtils.runSubmitDag(dagOpts, nestedDagFile, directory, priority, false) != 0) {
-					result = 1;
-				}
+				if (dagmanUtils.runSubmitDag(dagOpts, nestedDagFile, directory, priority, false) != 0) { result = 1; }
 			}
 		}
 
@@ -231,9 +218,7 @@ int submitDag(DagmanOptions& dagOpts) {
 			args.AppendArg(dagOpts[shallow::str::RemoteSchedd]);
 		}
 
-		if (dagOpts[shallow::b::Terse]) {
-			args.AppendArg("-terse");
-		}
+		if (dagOpts[shallow::b::Terse]) { args.AppendArg("-terse"); }
 
 		args.AppendArg(dagOpts[shallow::str::SubFile]);
 
@@ -265,9 +250,7 @@ int submitDag(DagmanOptions& dagOpts) {
 		printf("\"condor_submit %s\"\n", dagOpts[shallow::str::SubFile].c_str());
 	}
 
-	if (!dagOpts[shallow::b::Terse]) {
-		printf("-----------------------------------------------------------------------\n");
-	}
+	if (!dagOpts[shallow::b::Terse]) { printf("-----------------------------------------------------------------------\n"); }
 
 	return 0;
 }
@@ -297,9 +280,7 @@ int getOldSubmitFlags(DagmanOptions& dagOpts) {
 
 			const char* first = tokens.first();
 			if (first && strcasecmp(first, "arguments") == MATCH) {
-				if (parseArgumentsLine(subLine, dagOpts) != 0) {
-					return 1;
-				}
+				if (parseArgumentsLine(subLine, dagOpts) != 0) { return 1; }
 			}
 		}
 
@@ -340,9 +321,7 @@ int parseArgumentsLine(const std::string& subLine, DagmanOptions& dagOpts) {
 	for (size_t argNum = 0; argNum < arglist.Count(); argNum++) {
 		std::string strArg = arglist.GetArg(argNum);
 		// Check if arg is a preserved one
-		if (strncasecmp(strArg.c_str(), "-Max", 4) != MATCH) {
-			continue;
-		}
+		if (strncasecmp(strArg.c_str(), "-Max", 4) != MATCH) { continue; }
 		std::string errMsg;
 		if (!dagOpts.AutoParse(strArg, argNum, arglist.Count(), args, errMsg)) {
 			fprintf(stderr, "%s\n", errMsg.c_str());

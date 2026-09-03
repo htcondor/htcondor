@@ -86,9 +86,7 @@ void ScheddClassad::SetAttribute(const char* attrName, const ClassAd& ad) const 
 bool ScheddClassad::GetAttribute(const char* attrName, std::string& attrVal, bool printWarning) const {
 	char* val;
 	if (GetAttributeStringNew(_jobId._cluster, _jobId._proc, attrName, &val) == -1) {
-		if (printWarning) {
-			debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName);
-		}
+		if (printWarning) { debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName); }
 		return false;
 	}
 
@@ -101,9 +99,7 @@ bool ScheddClassad::GetAttribute(const char* attrName, std::string& attrVal, boo
 bool ScheddClassad::GetAttribute(const char* attrName, int& attrVal, bool printWarning) const {
 	int val = 0;
 	if (GetAttributeInt(_jobId._cluster, _jobId._proc, attrName, &val) == -1) {
-		if (printWarning) {
-			debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName);
-		}
+		if (printWarning) { debug_printf(DEBUG_QUIET, "Warning: failed to get attribute %s\n", attrName); }
 		return false;
 	}
 
@@ -146,14 +142,10 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	int parentDAG = 0;
 
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return parentDAG;
-	}
+	if (!queue) { return parentDAG; }
 
 	const char* addr = daemonCore->InfoCommandSinfulString();
-	if (addr) {
-		SetAttribute(ATTR_DAG_ADDRESS, addr);
-	}
+	if (addr) { SetAttribute(ATTR_DAG_ADDRESS, addr); }
 
 	if (_valid) {
 		using namespace DagmanDeepOptions;
@@ -205,13 +197,9 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 //---------------------------------------------------------------------------
 void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return;
-	}
+	if (!queue) { return; }
 
-	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
-		SetAttribute(THROTTLE_ATTR[i], throttles[i]);
-	}
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) { SetAttribute(THROTTLE_ATTR[i], throttles[i]); }
 
 	CloseConnection(queue);
 }
@@ -219,9 +207,7 @@ void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
 //---------------------------------------------------------------------------
 void DagmanClassad::RecoverThrottles(Throttles& throttles) {
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return;
-	}
+	if (!queue) { return; }
 
 	Throttles recovered;
 
@@ -244,9 +230,7 @@ void DagmanClassad::Update(const Dagman& dagman) {
 	}
 
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return;
-	}
+	if (!queue) { return; }
 
 	// Get counts for DAG job process states: idle, held, running
 	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
@@ -287,9 +271,7 @@ void DagmanClassad::GetInfo(std::string& owner, std::string& nodeName) {
 	}
 
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return;
-	}
+	if (!queue) { return; }
 
 	if (!GetAttribute(ATTR_OWNER, owner)) {
 		check_warning_strictness(DAG_STRICT_1);
@@ -330,9 +312,7 @@ void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheri
 		}
 	}
 
-	for (const auto& key : removeList) {
-		inheritAttrs.erase(key);
-	}
+	for (const auto& key : removeList) { inheritAttrs.erase(key); }
 
 	CloseConnection(queue);
 }
@@ -346,9 +326,7 @@ int DagmanClassad::GetStatus() {
 	}
 
 	Qmgr_connection* queue = OpenConnection();
-	if (!queue) {
-		return -1;
-	}
+	if (!queue) { return -1; }
 
 	int status = -1;
 	GetAttribute(ATTR_DAG_STATUS, status);
@@ -384,9 +362,7 @@ int ProvisionerClassad::GetProvisionerState() {
 
 	Qmgr_connection* queue = OpenConnection();
 
-	if (!queue) {
-		return state;
-	}
+	if (!queue) { return state; }
 
 	GetAttribute(ATTR_PROVISIONER_STATE, state, false);
 	debug_printf(DEBUG_VERBOSE, "Provisioner job state: <%d>\n", state);

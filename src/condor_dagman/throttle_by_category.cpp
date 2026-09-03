@@ -29,9 +29,7 @@ ThrottleByCategory::ThrottleByCategory() : _throttles({}) {}
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::~ThrottleByCategory() {
-	for (const auto& throttle : _throttles) {
-		delete throttle.second;
-	}
+	for (const auto& throttle : _throttles) { delete throttle.second; }
 }
 
 //---------------------------------------------------------------------------
@@ -40,9 +38,7 @@ ThrottleByCategory::ThrottleInfo* ThrottleByCategory::AddCategory(const std::str
 
 	ThrottleInfo* info = new ThrottleInfo(category, maxJobs);
 	auto insertResult = _throttles.insert(std::make_pair(*(info->_category), info));
-	if (insertResult.second == false) {
-		EXCEPT("Error adding new throttle category");
-	}
+	if (insertResult.second == false) { EXCEPT("Error adding new throttle category"); }
 
 	return info;
 }
@@ -106,9 +102,7 @@ void ThrottleByCategory::PrefixAllCategoryNames(const std::string& prefix) {
 			info->_category = newCat;
 		}
 		auto insertResult = tmpThrottles.insert(std::make_pair(*(info->_category), info));
-		if (!insertResult.second) {
-			EXCEPT("Error inserting temporary throttle");
-		}
+		if (!insertResult.second) { EXCEPT("Error inserting temporary throttle"); }
 	}
 
 	// Get rid of old hash buckets.

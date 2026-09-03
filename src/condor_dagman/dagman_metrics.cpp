@@ -37,9 +37,7 @@ void DagmanMetrics::Init(const Dagman& dm) {
 	// Get the "main" part of the HTCondor version string (e.g. "8.1.0").
 	const char* cv = CondorVersion();
 	const char* ptr = cv;
-	while (*ptr && !isdigit(*ptr)) {
-		++ptr;
-	}
+	while (*ptr && !isdigit(*ptr)) { ++ptr; }
 	while (*ptr && !isspace(*ptr)) {
 		_version += *ptr;
 		++ptr;
@@ -110,9 +108,7 @@ bool DagmanMetricsV1::Report(int exitCode, Dagman& dm) {
 		int height, width;
 		height = width = 0;
 		if (status != DagStatus::DAG_STATUS_CYCLE) {
-			if (!dm.dag->_graph_width) {
-				dm.dag->isCycle();
-			}
+			if (!dm.dag->_graph_width) { dm.dag->isCycle(); }
 			height = dm.dag->_graph_height;
 			width = dm.dag->_graph_width;
 		}
@@ -184,9 +180,7 @@ bool DagmanMetricsV2::Report(int exitCode, Dagman& dm) {
 		int height, width;
 		height = width = 0;
 		if (status != DagStatus::DAG_STATUS_CYCLE) {
-			if (!dm.dag->_graph_width) {
-				dm.dag->isCycle();
-			}
+			if (!dm.dag->_graph_width) { dm.dag->isCycle(); }
 			height = dm.dag->_graph_height;
 			width = dm.dag->_graph_width;
 		}

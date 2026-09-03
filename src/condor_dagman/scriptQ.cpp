@@ -65,9 +65,7 @@ ScriptExecResult ScriptQ::Run(Script* script, ScriptDeferAction act) {
 
 	if (deferScript) {
 		_scriptDeferredCount++;
-		if (act == ScriptDeferAction::PUSH_QUEUE) {
-			_waitingQueue.push_back(script);
-		}
+		if (act == ScriptDeferAction::PUSH_QUEUE) { _waitingQueue.push_back(script); }
 		return ScriptExecResult::DEFERRED;
 	}
 
@@ -97,9 +95,7 @@ ScriptExecResult ScriptQ::Run(Script* script, ScriptDeferAction act) {
 
 int ScriptQ::RunWaitingScripts(bool justOne) {
 	// Just return if the queue is empty
-	if (_waitingQueue.empty()) {
-		return 0;
-	}
+	if (_waitingQueue.empty()) { return 0; }
 
 	time_t now = time(nullptr);
 
@@ -122,9 +118,7 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
 			if (res != ScriptExecResult::DEFERRED) {
 				it = _waitingQueue.erase(it);
-				if (res == ScriptExecResult::EXECUTED) {
-					return 1;
-				}
+				if (res == ScriptExecResult::EXECUTED) { return 1; }
 			} else {
 				it++;
 			}

@@ -197,9 +197,7 @@ void debug_cache_insert(int flags, const char* fmt, va_list args) {
 	cache += (tstamp + fds + line + cid);
 
 	// if the cache has surpassed the highwater mark, then flush it.
-	if (cache.length() > cache_size) {
-		debug_cache_flush();
-	}
+	if (cache.length() > cache_size) { debug_cache_flush(); }
 }
 
 /*--------------------------------------------------------------------------*/
@@ -219,9 +217,7 @@ void debug_cache_flush(void) {
 /*--------------------------------------------------------------------------*/
 void debug_cache_set_size(size_t size) {
 	// Get rid of what is there, if anything.
-	if (cache_enabled && cache_is_caching) {
-		debug_cache_flush();
-	}
+	if (cache_enabled && cache_is_caching) { debug_cache_flush(); }
 
 	cache_size = size;
 }
@@ -231,9 +227,7 @@ bool check_warning_strictness(strict_level_t strictness, bool quit_if_error) {
 	if (Dagman::_strict >= strictness) {
 		debug_printf(DEBUG_QUIET, "ERROR: Warning is fatal "
 		                          "error because of DAGMAN_USE_STRICT setting\n");
-		if (quit_if_error) {
-			main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
-		}
+		if (quit_if_error) { main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR); }
 
 		return true;
 	}

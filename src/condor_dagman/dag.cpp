@@ -100,23 +100,15 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string& spliceScope) :
 Dag::~Dag() {
 	debug_printf(DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.c_str());
 
-	if (_condorLogRdr.activeLogFileCount() > 0) {
-		(void)UnmonitorLogFile();
-	}
+	if (_condorLogRdr.activeLogFileCount() > 0) { (void)UnmonitorLogFile(); }
 
 	// Delete all node objects in _nodes
-	for (auto* node : _nodes) {
-		delete node;
-	}
+	for (auto* node : _nodes) { delete node; }
 
 	// Delete all service node objects in _service_nodes
-	for (auto* node : _service_nodes) {
-		delete node;
-	}
+	for (auto* node : _service_nodes) { delete node; }
 
-	for (auto& [_, splice] : _splices) {
-		delete splice;
-	}
+	for (auto& [_, splice] : _splices) { delete splice; }
 
 	// And remove them from the vector
 	_nodes.clear();
@@ -156,9 +148,7 @@ bool Dag::Bootstrap(bool recovery) {
 	// update dependencies for pre-completed nodes (nodes marked DONE in
 	// the DAG input file)
 	for (auto& node : _nodes) {
-		if (node->GetStatus() == Node::STATUS_DONE) {
-			TerminateNode(node, false, true);
-		}
+		if (node->GetStatus() == Node::STATUS_DONE) { TerminateNode(node, false, true); }
 	}
 	int nodesDone = NumNodesDone(true);
 	debug_printf(DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n", nodesDone);
@@ -168,18 +158,14 @@ bool Dag::Bootstrap(bool recovery) {
 	int count = 0;
 	for (auto& node : _nodes) {
 		bool done = node->GetStatus() == Node::STATUS_DONE;
-		if (done) {
-			count++;
-		}
+		if (done) { count++; }
 		if (node->IsWaiting() && done && !node->NoChildren()) {
 			debug_printf(DEBUG_VERBOSE,
 			             "Warning: Node %s was marked as done even though parent nodes aren't complete."
 			             " Child nodes may run out of order.\n",
 			             node->GetNodeName());
 		}
-		if (count >= nodesDone) {
-			break;
-		}
+		if (count >= nodesDone) { break; }
 	}
 
 	_recovery = recovery;
@@ -261,9 +247,7 @@ bool Dag::Bootstrap(bool recovery) {
 	} else {
 		// Note: we're bypassing the ready queue here...
 		for (auto& node : _nodes) {
-			if (node->CanSubmit()) {
-				StartNode(node, false);
-			}
+			if (node->CanSubmit()) { StartNode(node, false); }
 		}
 	}
 
@@ -302,9 +286,7 @@ Node* Dag::FindNodeByNodeID(const node_id_t nodeID) const {
 	}
 
 	if (node) {
-		if (nodeID != node->GetNodeID()) {
-			EXCEPT("Searched for node ID %d; got %d!!", nodeID, node->GetNodeID());
-		}
+		if (nodeID != node->GetNodeID()) { EXCEPT("Searched for node ID %d; got %d!!", nodeID, node->GetNodeID()); }
 	}
 
 	return node;
@@ -328,9 +310,7 @@ static bool StoreQueueInformation(void* pv, ClassAd* ad) {
 	}
 
 	// If missing an attribute don't store and return
-	if (missing_attr) {
-		return true;
-	} // Don't take ownership of classad
+	if (missing_attr) { return true; } // Don't take ownership of classad
 
 	if (info->contains(ClusterId)) {
 		(*info)[ClusterId].insert(ProcId);
@@ -352,9 +332,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	// If query failed then don't query again for a minimum of 10 minutes
 	time_t now;
 	time(&now);
-	if (now - queryFailTime < 600) {
-		return;
-	}
+	if (now - queryFailTime < 600) { return; }
 
 	debug_printf(DEBUG_VERBOSE, "Querying local schedd for associated jobs in queue\n");
 	// Setup variables for queue query
@@ -419,9 +397,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	}
 
 	// Lost track of entire cluster or a particular job so abort.
-	if (abort_dag) {
-		main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR);
-	}
+	if (abort_dag) { main_shutdown_rescue(EXIT_ERROR, DAG_STATUS_ERROR); }
 	if (!valid_state) {
 		_validatedState = false;
 		return;
@@ -441,9 +417,7 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 	time(&currentTime);
 	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
 
-	if (status == ReadUserLog::LOG_STATUS_GROWN) {
-		_lastEventTime = currentTime;
-	}
+	if (status == ReadUserLog::LOG_STATUS_GROWN) { _lastEventTime = currentTime; }
 	auto log_size = std::filesystem::file_size(_defaultNodeLog);
 
 	time_t elapsedEventTime = currentTime - _lastEventTime;
@@ -461,9 +435,7 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 			auto nodeIsSubmitted = [](const Node* n) { return n->GetStatus() == Node::STATUS_SUBMITTED; };
 			bool hasSubmittedJobs = std::find_if(_nodes.begin(), _nodes.end(), nodeIsSubmitted) != _nodes.end();
 
-			if (hasSubmittedJobs && !_validatedState && elapsedCheckQTime >= checkQInterval) {
-				VerifyJobsInQueue(log_size);
-			}
+			if (hasSubmittedJobs && !_validatedState && elapsedCheckQTime >= checkQInterval) { VerifyJobsInQueue(log_size); }
 		}
 	}
 
@@ -489,9 +461,7 @@ bool Dag::ProcessLogEvents(bool recovery) {
 		result = result && tmpResult;
 
 		// event allocated earlier by _condorLogRdr.readEvent()
-		if (e) {
-			delete e;
-		}
+		if (e) { delete e; }
 	}
 
 	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
@@ -504,9 +474,7 @@ bool Dag::ProcessLogEvents(bool recovery) {
 	// log file in recovery mode.  Outside of recovery mode, though
 	// we want to do that so that the jobstate log file stays
 	// current with the status of the workflow.
-	if (!_recovery) {
-		_jobstateLog.Flush();
-	}
+	if (!_recovery) { _jobstateLog.Flush(); }
 
 	return result;
 }
@@ -521,9 +489,7 @@ bool Dag::ProcessOneEvent(ULogEventOutcome outcome, const ULogEvent* event, bool
 
 	debug_printf(DEBUG_DEBUG_4, "Log outcome: %s\n", ULogEventOutcomeNames[outcome]);
 
-	if (outcome != ULOG_UNK_ERROR) {
-		log_unk_count = 0;
-	}
+	if (outcome != ULOG_UNK_ERROR) { log_unk_count = 0; }
 
 	switch (outcome) {
 	case ULOG_NO_EVENT:
@@ -557,9 +523,7 @@ bool Dag::ProcessOneEvent(ULogEventOutcome outcome, const ULogEvent* event, bool
 		PrintEvent(DEBUG_VERBOSE, event, node, recovery);
 
 		// event is for a job outside this DAG; ignore it
-		if (!node) {
-			break;
-		}
+		if (!node) { break; }
 
 		// Common transfer shadows reuse the job's ClassAd (and thus its
 		// DAGMan log) with a reserved proc id (<= FIRST_TRANSFER_PROC_ID);
@@ -643,9 +607,7 @@ bool Dag::ProcessOneEvent(ULogEventOutcome outcome, const ULogEvent* event, bool
 
 		case ULOG_PRESKIP:
 			TerminateNode(node, recovery);
-			if (!recovery) {
-				--_preRunNodeCount;
-			}
+			if (!recovery) { --_preRunNodeCount; }
 			// TEMP -- we probably need to write something to the
 			// jobstate.log file here, but JOB_SUCCESS is not the
 			// right thing.  wenger 2011-09-01
@@ -700,9 +662,7 @@ void Dag::ProcessAbortEvent(const ULogEvent* event, Node* node, bool recovery) {
 		// don't get a released event for that job.  This may not
 		// work exactly right if some procs of a cluster are held
 		// and some are not.  wenger 2010-08-26
-		if (node->GetJobsOnHold() > 0) {
-			node->Release(event->proc, false);
-		}
+		if (node->GetJobsOnHold() > 0) { node->Release(event->proc, false); }
 
 		DecrementProcCount(node);
 
@@ -713,9 +673,7 @@ void Dag::ProcessAbortEvent(const ULogEvent* event, Node* node, bool recovery) {
 			node->SetReturnValue(DAG_ERROR_CONDOR_JOB_ABORTED);
 
 			// Set first exit value for post script
-			if (node->_scriptPost) {
-				node->_scriptPost->_retValJob = node->GetReturnValue();
-			}
+			if (node->_scriptPost) { node->_scriptPost->_retValJob = node->GetReturnValue(); }
 		}
 
 		bool batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
@@ -775,9 +733,7 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 				}
 
 				// Set first exit value for post script
-				if (node->_scriptPost) {
-					node->_scriptPost->_retValJob = node->GetReturnValue();
-				}
+				if (node->_scriptPost) { node->_scriptPost->_retValJob = node->GetReturnValue(); }
 			}
 		} else { // job succeeded
 			ASSERT(termEvent->returnValue == 0);
@@ -817,9 +773,7 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 		ProcessJobProcEnd(node, recovery, batch_failed);
 
 		if (node->_scriptPost == nullptr) {
-			if (CheckForDagAbort(node, "job")) {
-				return;
-			}
+			if (CheckForDagAbort(node, "job")) { return; }
 		}
 
 		PrintReadyQ(DEBUG_DEBUG_2);
@@ -1017,9 +971,7 @@ void Dag::ProcessPostTermEvent(const ULogEvent* event, Node* node, bool recovery
 		}
 
 		// if dag abort happened, we never return here!
-		if (CheckForDagAbort(node, "POST script")) {
-			return;
-		}
+		if (CheckForDagAbort(node, "POST script")) { return; }
 
 		PrintReadyQ(DEBUG_DEBUG_4);
 	}
@@ -1027,17 +979,13 @@ void Dag::ProcessPostTermEvent(const ULogEvent* event, Node* node, bool recovery
 
 //---------------------------------------------------------------------------
 void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 
 	// If we're in recovery mode, we need to keep track of the
 	// maximum subprocID for NOOP jobs, so we can start out at
 	// the next value instead of zero.
 	if (recovery) {
-		if (NodeIsNoop(node->GetID())) {
-			_recoveryMaxfakeID = MAX(_recoveryMaxfakeID, GetIndexID(node->GetID()));
-		}
+		if (NodeIsNoop(node->GetID())) { _recoveryMaxfakeID = MAX(_recoveryMaxfakeID, GetIndexID(node->GetID())); }
 	}
 
 	if (node->IsWaiting()) {
@@ -1068,9 +1016,7 @@ void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane)
 	if (recovery) {
 		if (submitEventIsSane || node->GetStatus() != Node::STATUS_SUBMITTED) {
 			// Only increment the submitted job count on the *first* proc of a job.
-			if (node->IsFirstProc()) {
-				UpdateNodeCounts(node, 1);
-			}
+			if (node->IsFirstProc()) { UpdateNodeCounts(node, 1); }
 		}
 
 		node->SetStatus(Node::STATUS_SUBMITTED);
@@ -1120,9 +1066,7 @@ void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane)
 
 //---------------------------------------------------------------------------
 void Dag::ProcessIsIdleEvent(Node* node, int proc) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 
 	// Note:  we need to make sure here that the job proc isn't already
 	// idle so we don't count it twice if, for example, we get a hold
@@ -1147,9 +1091,7 @@ void Dag::ProcessIsIdleEvent(Node* node, int proc) {
 
 //---------------------------------------------------------------------------
 void Dag::ProcessNotIdleEvent(Node* node, int proc) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 
 	if (node->GetProcIsIdle(proc) && (node->GetStatus() == Node::STATUS_SUBMITTED || node->GetStatus() == Node::STATUS_ERROR)) {
 		node->SetProcIsIdle(proc, false);
@@ -1179,9 +1121,7 @@ void Dag::ProcessNotIdleEvent(Node* node, int proc) {
 // We need the event here so we can tell which process has been held for
 // multi-process jobs.
 void Dag::ProcessHeldEvent(Node* node, const ULogEvent* event) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 	ASSERT(event);
 
 	const JobHeldEvent* heldEvent = (const JobHeldEvent*)event;
@@ -1208,25 +1148,19 @@ void Dag::ProcessHeldEvent(Node* node, const ULogEvent* event) {
 //---------------------------------------------------------------------------
 void Dag::ProcessReleasedEvent(Node* node, const ULogEvent* event) {
 	ASSERT(event);
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 	node->Release(event->proc);
 }
 
 //---------------------------------------------------------------------------
 void Dag::ProcessClusterSubmitEvent(Node* node) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 	node->SetIsFactory();
 }
 
 //---------------------------------------------------------------------------
 void Dag::ProcessClusterRemoveEvent(Node* node, bool recovery) {
-	if (!node) {
-		return;
-	}
+	if (!node) { return; }
 
 	// Make sure the job is a multi-proc cluster, and has no more queued procs.
 	// Otherwise something is wrong.
@@ -1271,9 +1205,7 @@ void Dag::ProcessClusterRemoveEvent(Node* node, bool recovery) {
 
 //---------------------------------------------------------------------------
 Node* Dag::FindNodeByName(const char* nodeName) const {
-	if (!nodeName) {
-		return nullptr;
-	}
+	if (!nodeName) { return nullptr; }
 
 	Node* node = nullptr;
 	auto findResult = _nodeNameHash.find(nodeName);
@@ -1338,9 +1270,7 @@ Node* Dag::FindAllNodesByName(const char* nodeName, const char* finalSkipMsg, co
 
 //---------------------------------------------------------------------------
 bool Dag::NodeExists(const char* nodeName) const {
-	if (!nodeName) {
-		return false;
-	}
+	if (!nodeName) { return false; }
 
 	// Note:  we don't just call FindNodeByName() here because that would print
 	// an error message if the node doesn't exist.
@@ -1363,9 +1293,7 @@ bool Dag::NodeExists(const char* nodeName) const {
 
 //---------------------------------------------------------------------------
 Node* Dag::FindNodeByEventID(const CondorID condorID) const {
-	if (condorID._cluster == -1) {
-		return nullptr;
-	}
+	if (condorID._cluster == -1) { return nullptr; }
 
 	Node* node = nullptr;
 	bool isNoop = NodeIsNoop(condorID);
@@ -1405,9 +1333,7 @@ void Dag::PrintDagFiles(const std::list<std::string>& dagFiles) {
 	if (dagFiles.size() > 1) {
 		debug_printf(DEBUG_VERBOSE, "All DAG files:\n");
 		int thisDagNum = 0;
-		for (auto& dagFile : dagFiles) {
-			debug_printf(DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile.c_str(), thisDagNum++);
-		}
+		for (auto& dagFile : dagFiles) { debug_printf(DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile.c_str(), thisDagNum++); }
 	}
 }
 
@@ -1418,13 +1344,9 @@ bool Dag::StartNode(Node* node, bool isRetry) {
 	ASSERT(!_finalNodeRun);
 	ASSERT(node != nullptr);
 
-	if (!node->CanSubmit()) {
-		EXCEPT("Node %s not ready to submit!", node->GetNodeName());
-	}
+	if (!node->CanSubmit()) { EXCEPT("Node %s not ready to submit!", node->GetNodeName()); }
 
-	if (!isRetry) {
-		WriteSavePoint(node);
-	}
+	if (!isRetry) { WriteSavePoint(node); }
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will start the
@@ -1490,9 +1412,7 @@ bool Dag::StartServiceNodes() {
 	for (auto& node : _service_nodes) {
 		if (node->GetStatus() == Node::STATUS_READY) {
 			debug_printf(DEBUG_QUIET, "Starting service node %s...\n", node->GetNodeName());
-			if (!StartNode(node, false)) {
-				return false;
-			}
+			if (!StartNode(node, false)) { return false; }
 		}
 	}
 
@@ -1515,9 +1435,7 @@ bool Dag::RemoveServiceNodes() {
 bool Dag::StartProvisionerNode() {
 	if (_provisioner_node && _provisioner_node->GetStatus() == Node::STATUS_READY) {
 		debug_printf(DEBUG_QUIET, "Starting provisioner node...\n");
-		if (StartNode(_provisioner_node, false)) {
-			return true;
-		}
+		if (StartNode(_provisioner_node, false)) { return true; }
 	}
 
 	return false;
@@ -1526,9 +1444,7 @@ bool Dag::StartProvisionerNode() {
 //-------------------------------------------------------------------------
 int Dag::GetProvisionerJobAdState() {
 	int provisionerState = -1;
-	if (_provisionerClassad) {
-		provisionerState = _provisionerClassad->GetProvisionerState();
-	}
+	if (_provisionerClassad) { provisionerState = _provisionerClassad->GetProvisionerState(); }
 	return provisionerState;
 }
 
@@ -1566,9 +1482,7 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 		if (GetProvisionerJobAdState() == ProvisionerState::PROVISIONING_COMPLETE) {
 			_provisioner_ready = true;
 			for (auto& node : _nodes) {
-				if (node->CanSubmit()) {
-					StartNode(node, false);
-				}
+				if (node->CanSubmit()) { StartNode(node, false); }
 			}
 		}
 	}
@@ -1576,9 +1490,7 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 	while (dm.throttles.WithinLimit(Throttle::MAX_INT_SUBMITS, numSubmitsThisCycle)) {
 
 		// no nodes ready to submit
-		if (_readyQ->empty()) {
-			break;
-		}
+		if (_readyQ->empty()) { break; }
 
 		// max jobs already submitted
 		if (!dm.throttles.WithinLimit(Throttle::MAX_NODES, _numNodesSubmitted)) {
@@ -1655,9 +1567,7 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 				break;
 			}
 
-			if (break_loop) {
-				break;
-			}
+			if (break_loop) { break; }
 		}
 	}
 
@@ -1683,9 +1593,7 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 //---------------------------------------------------------------------------
 int Dag::PreScriptReaper(Node* node, int status) {
 	ASSERT(node != nullptr);
-	if (node->GetStatus() != Node::STATUS_PRERUN) {
-		EXCEPT("Error: node %s is not in PRERUN state", node->GetNodeName());
-	}
+	if (node->GetStatus() != Node::STATUS_PRERUN) { EXCEPT("Error: node %s is not in PRERUN state", node->GetNodeName()); }
 
 	_preRunNodeCount--;
 
@@ -1705,9 +1613,7 @@ int Dag::PreScriptReaper(Node* node, int status) {
 		node->SetReturnValue(WEXITSTATUS(status));
 	} else {
 		// if script succeeded
-		if (node->_scriptPost != nullptr) {
-			node->_scriptPost->_retValScript = 0;
-		}
+		if (node->_scriptPost != nullptr) { node->_scriptPost->_retValScript = 0; }
 		node->SetReturnValue(SUCCESS);
 	}
 
@@ -1787,15 +1693,11 @@ bool Dag::RunPostScript(Node* node, bool ignore_status, int status, bool increme
 	// A little defensive programming. Just check that we are
 	// allowed to run this script.  Because callers can be a little
 	// sloppy...
-	if ((!ignore_status && status != 0) || !node->_scriptPost) {
-		return false;
-	}
+	if ((!ignore_status && status != 0) || !node->_scriptPost) { return false; }
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	node->SetStatus(Node::STATUS_POSTRUN);
-	if (incrementRunCount) {
-		_postRunNodeCount++;
-	}
+	if (incrementRunCount) { _postRunNodeCount++; }
 	_postScriptQ->Run(node->_scriptPost);
 
 	return true;
@@ -1808,9 +1710,7 @@ bool Dag::RunPostScript(Node* node, bool ignore_status, int status, bool increme
 int Dag::PostScriptReaper(Node* node, int status) {
 	ASSERT(node != nullptr);
 
-	if (node->GetStatus() != Node::STATUS_POSTRUN) {
-		EXCEPT("Node %s is not in POSTRUN state", node->GetNodeName());
-	}
+	if (node->GetStatus() != Node::STATUS_POSTRUN) { EXCEPT("Node %s is not in POSTRUN state", node->GetNodeName()); }
 
 	PostScriptTerminatedEvent event;
 	event.dagNodeName = node->GetNodeName();
@@ -1858,14 +1758,10 @@ int Dag::PostScriptReaper(Node* node, int status) {
 // Run a HOLD script.
 bool Dag::RunHoldScript(Node* node, bool incrementRunCount) {
 	// Make sure we are allowed to run this script.
-	if (!node->_scriptHold) {
-		return false;
-	}
+	if (!node->_scriptHold) { return false; }
 	// Run the HOLD script. This is a best-effort attempt that does not change
 	// the node status.
-	if (incrementRunCount) {
-		_holdRunNodeCount++;
-	}
+	if (incrementRunCount) { _holdRunNodeCount++; }
 	_holdScriptQ->Run(node->_scriptHold);
 
 	return true;
@@ -1881,18 +1777,14 @@ int Dag::HoldScriptReaper(Node* node) {
 
 //---------------------------------------------------------------------------
 void Dag::PrintNodeList() const {
-	for (auto& node : _nodes) {
-		node->Dump(this);
-	}
+	for (auto& node : _nodes) { node->Dump(this); }
 	dprintf(D_ALWAYS, "---------------------------------------\t<END>\n");
 }
 
 //---------------------------------------------------------------------------
 void Dag::PrintNodeList(Node::status_t status) const {
 	for (auto& node : _nodes) {
-		if (node->GetStatus() == status) {
-			node->Dump(this);
-		}
+		if (node->GetStatus() == status) { node->Dump(this); }
 	}
 	dprintf(D_ALWAYS, "---------------------------------------\t<END>\n");
 }
@@ -1983,18 +1875,14 @@ bool Dag::DoneCycle(bool includeFinalNode) const {
 //---------------------------------------------------------------------------
 int Dag::NumNodes(bool includeFinal) const {
 	int result = _nodes.size();
-	if (!includeFinal && HasFinalNode()) {
-		result--;
-	}
+	if (!includeFinal && HasFinalNode()) { result--; }
 	return result;
 }
 
 //---------------------------------------------------------------------------
 int Dag::NumNodesDone(bool includeFinal) const {
 	int result = _numNodesDone;
-	if (!includeFinal && HasFinalNode() && _final_node->GetStatus() == Node::STATUS_DONE) {
-		result--;
-	}
+	if (!includeFinal && HasFinalNode() && _final_node->GetStatus() == Node::STATUS_DONE) { result--; }
 
 	return result;
 }
@@ -2006,9 +1894,7 @@ void Dag::RemoveRunningScripts() const {
 
 		// if node is running a PRE script, hard kill it
 		if (node->GetStatus() == Node::STATUS_PRERUN) {
-			if (!node->_scriptPre) {
-				EXCEPT("Node %s has no PRE script!", node->GetNodeName());
-			}
+			if (!node->_scriptPre) { EXCEPT("Node %s has no PRE script!", node->GetNodeName()); }
 			if (node->_scriptPre->_pid != 0) {
 				debug_printf(DEBUG_DEBUG_1, "Killing PRE script %d\n", node->_scriptPre->_pid);
 				if (daemonCore->Shutdown_Fast(node->_scriptPre->_pid) == FALSE) {
@@ -2018,9 +1904,7 @@ void Dag::RemoveRunningScripts() const {
 			}
 		} else if (node->GetStatus() == Node::STATUS_POSTRUN) {
 			// if node is running a POST script, hard kill it
-			if (!node->_scriptPost) {
-				EXCEPT("Node %s has no POST script!", node->GetNodeName());
-			}
+			if (!node->_scriptPost) { EXCEPT("Node %s has no POST script!", node->GetNodeName()); }
 			if (node->_scriptPost->_pid != 0) {
 				debug_printf(DEBUG_DEBUG_1, "Killing POST script %d\n", node->_scriptPost->_pid);
 				if (daemonCore->Shutdown_Fast(node->_scriptPost->_pid) == FALSE) {
@@ -2039,9 +1923,7 @@ void Dag::Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum
 
 	if (rescue_dag.empty()) {
 		int nextRescue = dagmanUtils.FindLastRescueDagNum(dagFile, multiDags, maxRescueDagNum) + 1;
-		if (nextRescue > maxRescueDagNum) {
-			nextRescue = maxRescueDagNum;
-		}
+		if (nextRescue > maxRescueDagNum) { nextRescue = maxRescueDagNum; }
 		rescue_dag = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
 	}
 
@@ -2057,13 +1939,9 @@ void Dag::Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum
 
 //-----------------------------------------------------------------------------
 void Dag::WriteSavePoint(Node* node) {
-	if (!node || !node->IsSavePoint()) {
-		return;
-	}
+	if (!node || !node->IsSavePoint()) { return; }
 	auto [saveFile, success] = dagmanUtils.ResolveSaveFile(dagOpts.primaryDag(), node->GetSaveFile(), true);
-	if (!success) {
-		return;
-	}
+	if (!success) { return; }
 	TmpDir tmpDir;
 	std::string errMsg;
 	// If using useDagDir then switch to directory to write save files
@@ -2143,9 +2021,7 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 	// Print the names of failed nodes
 	fprintf(fp, "#   ");
 	for (const auto& node : _nodes) {
-		if (node->GetStatus() == Node::STATUS_ERROR) {
-			fprintf(fp, "%s,", node->GetNodeName());
-		}
+		if (node->GetStatus() == Node::STATUS_ERROR) { fprintf(fp, "%s,", node->GetNodeName()); }
 	}
 	fprintf(fp, "<ENDLIST>\n\n");
 
@@ -2173,9 +2049,7 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 			fprintf(fp, "# %d of %d retries already performed; %d remaining\n", curr, max, remaining);
 
 			fprintf(fp, "RETRY %s %d", node->GetNodeName(), remaining);
-			if (node->HasAbortRetry(retry_abort_val)) {
-				fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
-			}
+			if (node->HasAbortRetry(retry_abort_val)) { fprintf(fp, " UNLESS-EXIT %d", retry_abort_val); }
 			fprintf(fp, "\n");
 		}
 	}
@@ -2190,13 +2064,9 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 // once recovery finishes; the caller's NotifyChildren/SetDescendantsToFutile
 // bookkeeping still needs to run either way, so callers pass this unconditionally.
 bool Dag::StartIfReady(Node* node) {
-	if (Recovery()) {
-		return false;
-	}
+	if (Recovery()) { return false; }
 
-	if (node->GetStatus() == Node::STATUS_READY) {
-		return StartNode(node, false);
-	}
+	if (node->GetStatus() == Node::STATUS_READY) { return StartNode(node, false); }
 
 	return false;
 }
@@ -2207,9 +2077,7 @@ void Dag::TerminateNode(Node* node, bool recovery, bool bootstrap) {
 	ASSERT(node != nullptr);
 
 	node->TerminateSuccess(); // marks node as STATUS_DONE
-	if (node->GetStatus() != Node::STATUS_DONE) {
-		EXCEPT("Node %s is not in DONE state", node->GetNodeName());
-	}
+	if (node->GetStatus() != Node::STATUS_DONE) { EXCEPT("Node %s is not in DONE state", node->GetNodeName()); }
 
 	// If this was a service node, set the node as done and exit
 	if (node->GetType() == NodeType::SERVICE) {
@@ -2275,9 +2143,7 @@ void Dag::PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bo
 void Dag::RestartNode(Node* node, bool recovery) {
 	ASSERT(node != nullptr);
 
-	if (node->GetStatus() != Node::STATUS_ERROR) {
-		EXCEPT("Node %s is not in ERROR state", node->GetNodeName());
-	}
+	if (node->GetStatus() != Node::STATUS_ERROR) { EXCEPT("Node %s is not in ERROR state", node->GetNodeName()); }
 
 	if (_finalNodeRun || (node->AbortRetry())) {
 		const char* finalRun = _finalNodeRun ? "because final node is running " : "";
@@ -2319,9 +2185,7 @@ void Dag::RestartNode(Node* node, bool recovery) {
 		// should *always* be true here, but checking just to be safe.
 		if (node->GetID() != _defaultCondorId) {
 			int id = GetIndexID(node->GetID());
-			if (GetEventIDHash(node->GetNoop())->erase(id) != 1) {
-				EXCEPT("Event ID hash table error!");
-			}
+			if (GetEventIDHash(node->GetNoop())->erase(id) != 1) { EXCEPT("Event ID hash table error!"); }
 		}
 
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
@@ -2335,9 +2199,7 @@ void Dag::RestartNode(Node* node, bool recovery) {
 // Number the nodes according to DFS order
 void Dag::DFSVisit(Node* node, int depth) {
 	// Check whether node has been numbered already
-	if (!node || node->WasVisited()) {
-		return;
-	}
+	if (!node || node->WasVisited()) { return; }
 
 	// Remember that the node has been numbered
 	node->MarkVisited();
@@ -2353,9 +2215,7 @@ void Dag::DFSVisit(Node* node, int depth) {
 	// visit the children of the current node, marking their first visitation order
 	if (!node->NoChildren()) {
 		int plus_one = depth + 1;
-		while ((int)_graph_widths.size() <= plus_one) {
-			_graph_widths.push_back(0);
-		}
+		while ((int)_graph_widths.size() <= plus_one) { _graph_widths.push_back(0); }
 
 		std::ignore = node->VisitChildren(*this, [plus_one](Dag& dag, Node* /*parent*/, Node* child) -> int {
 			dag.DFSVisit(child, plus_one);
@@ -2381,8 +2241,7 @@ bool Dag::isCycle() {
 
 	// Visit all nodes in DAG and number them
 	for (auto& node : _nodes) {
-		if (!node->WasVisited() && node->NoParents())
-			DFSVisit(node, 0);
+		if (!node->WasVisited() && node->NoParents()) DFSVisit(node, 0);
 	}
 
 	// Detect cycle
@@ -2469,9 +2328,7 @@ void Dag::DumpDotFile(void) {
 			time(&current_time);
 			time_string = ctime(&current_time);
 			newline = strchr(time_string, '\n');
-			if (newline != nullptr) {
-				*newline = 0;
-			}
+			if (newline != nullptr) { *newline = 0; }
 
 			fprintf(temp_dot_file, "digraph DAG {\n");
 			fprintf(temp_dot_file, "    label=\"DAGMan Job status at %s\";\n\n", time_string);
@@ -2528,9 +2385,7 @@ void Dag::SetNodeStatusFileName(const char* statusFileName, int minUpdateTime, b
 // #4316.)  wenger 2014-04-16
 void Dag::DumpNodeStatus(bool held, bool removed) {
 	// Decide whether to update the file.
-	if (_statusFileName == nullptr) {
-		return;
-	}
+	if (_statusFileName == nullptr) { return; }
 
 	if (!_alwaysUpdateStatus && !_statusFileOutdated && !held && !removed) {
 		debug_printf(DEBUG_DEBUG_1, "Node status file not updated because it is not yet outdated\n");
@@ -2692,9 +2547,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 			// Note:  Node::STATUS_READY only means that the job is
 			// ready to submit if it doesn't have any unfinished
 			// parents.
-			if (!node->CanSubmit()) {
-				status = Node::STATUS_NOT_READY;
-			}
+			if (!node->CanSubmit()) { status = Node::STATUS_NOT_READY; }
 
 		} else if (status == Node::STATUS_SUBMITTED) {
 			if (markNodesError) {
@@ -2835,9 +2688,7 @@ bool Dag::UnmonitorLogFile() {
 
 //-------------------------------------------------------------------------
 void Dag::SetReject(const std::string& location) {
-	if (_firstRejectLoc.empty()) {
-		_firstRejectLoc = location;
-	}
+	if (_firstRejectLoc.empty()) { _firstRejectLoc = location; }
 	_reject = true;
 }
 
@@ -2945,26 +2796,16 @@ void Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_term
 		             idle + held, NumIdleJobProcs());
 	}
 	// If passed counter then set to totals found in DAG
-	if (n_held) {
-		*n_held = held;
-	}
-	if (n_idle) {
-		*n_idle = idle;
-	}
-	if (n_terminated) {
-		*n_terminated = term;
-	}
-	if (n_running) {
-		*n_running = run;
-	}
+	if (n_held) { *n_held = held; }
+	if (n_idle) { *n_idle = idle; }
+	if (n_terminated) { *n_terminated = term; }
+	if (n_running) { *n_running = run; }
 }
 
 //-------------------------------------------------------------------------
 int Dag::NumHeldJobProcs() {
 	int numHeldProcs = 0;
-	for (auto& node : _nodes) {
-		numHeldProcs += node->GetJobsOnHold();
-	}
+	for (auto& node : _nodes) { numHeldProcs += node->GetJobsOnHold(); }
 	return numHeldProcs;
 }
 
@@ -3055,15 +2896,11 @@ void Dag::IncludeExtraDotCommands(FILE* dot_file) {
 
 	include_file = safe_fopen_wrapper_follow(_dot_include_file_name, "r");
 	if (include_file == nullptr) {
-		if (_dot_include_file_name) {
-			debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n", _dot_include_file_name);
-		}
+		if (_dot_include_file_name) { debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n", _dot_include_file_name); }
 	} else {
 		char line[100];
 		fprintf(dot_file, "// Beginning of commands included from %s.\n", _dot_include_file_name);
-		while (fgets(line, 100, include_file) != nullptr) {
-			fputs(line, dot_file);
-		}
+		while (fgets(line, 100, include_file) != nullptr) { fputs(line, dot_file); }
 		fprintf(dot_file, "// End of commands included from %s.\n\n", _dot_include_file_name);
 		fclose(include_file);
 	}
@@ -3120,9 +2957,7 @@ void Dag::DumpDotFileArcs(FILE* temp_dot_file) {
 		if (node->GetNodeName()) {
 			node->VisitChildren(*this, [temp_dot_file](Dag&, Node* parent, Node* child) -> int {
 				const char* child_name = child->GetNodeName();
-				if (child_name) {
-					fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name);
-				}
+				if (child_name) { fprintf(temp_dot_file, "    \"%s\" -> \"%s\";\n", parent->GetNodeName(), child_name); }
 				return 1;
 			});
 		}
@@ -3214,9 +3049,7 @@ Node* Dag::LogEventNodeLookup(const ULogEvent* event, bool& submitEventIsSane) {
 
 	if (event->eventNumber != ULOG_SUBMIT && event->eventNumber != ULOG_PRESKIP) {
 		node = FindNodeByEventID(condorID);
-		if (node) {
-			return node;
-		}
+		if (node) { return node; }
 	}
 
 	// if the job ID wasn't familiar and we didn't find a node
@@ -3244,16 +3077,12 @@ Node* Dag::LogEventNodeLookup(const ULogEvent* event, bool& submitEventIsSane) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
 		std::string nodeName;
 
-		if (submit_event->hasStructuredNotes()) {
-			submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName);
-		}
+		if (submit_event->hasStructuredNotes()) { submit_event->structuredNotes->LookupString(ATTR_DAG_NODE_NAME, nodeName); }
 
 		// Fall back to old method (We need this for fake condor submits i.e. no-ops)
 		if (nodeName.empty() && !submit_event->submitEventLogNotes.empty()) {
 			char buf[1024] = "";
-			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
-				nodeName = buf;
-			}
+			if (sscanf(submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) { nodeName = buf; }
 		}
 
 		if (nodeName.empty()) {
@@ -3337,9 +3166,7 @@ Node* Dag::LogEventNodeLookup(const ULogEvent* event, bool& submitEventIsSane) {
 		// Fall back to old method
 		if (nodeName.empty() && !cluster_submit_event->submitEventLogNotes.empty()) {
 			char buf[1024] = "";
-			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) {
-				nodeName = buf;
-			}
+			if (sscanf(cluster_submit_event->submitEventLogNotes.c_str(), "DAG Node: %1023s", buf) == 1) { nodeName = buf; }
 		}
 
 		if (nodeName.empty()) {
@@ -3453,9 +3280,7 @@ bool Dag::SanityCheckSubmitEvent(const CondorID condorID, const Node* node) cons
 		return true;
 	}
 
-	if (condorID._cluster == node->GetCluster()) {
-		return true;
-	}
+	if (condorID._cluster == node->GetCluster()) { return true; }
 
 	std::string message;
 	formatstr(
@@ -3481,17 +3306,13 @@ bool Dag::SanityCheckSubmitEvent(const CondorID condorID, const Node* node) cons
 
 //---------------------------------------------------------------------------
 std::map<int, Node*>* Dag::GetEventIDHash(bool isNoop) {
-	if (isNoop) {
-		return &_noopIDHash;
-	}
+	if (isNoop) { return &_noopIDHash; }
 	return &_condorIDHash;
 }
 
 //---------------------------------------------------------------------------
 const std::map<int, Node*>* Dag::GetEventIDHash(bool isNoop) const {
-	if (isNoop) {
-		return &_noopIDHash;
-	}
+	if (isNoop) { return &_noopIDHash; }
 	return &_condorIDHash;
 }
 
@@ -3534,9 +3355,7 @@ SubmitResult Dag::SubmitNodeJob(const Dagman& dm, Node* node, CondorID& condorID
 	node->AttemptedSubmit();
 
 	std::string logFile;
-	if (node->GetNoop()) {
-		logFile = DefaultNodeLog();
-	}
+	if (node->GetNoop()) { logFile = DefaultNodeLog(); }
 
 	return submitter->Submit(*node, condorID, err, logFile);
 }
@@ -3666,9 +3485,7 @@ void Dag::DecrementProcCount(Node* node) {
 	node->JobLeftQueue();
 	ASSERT(node->GetQueuedJobs() >= 0);
 
-	if (node->AllProcsDone()) {
-		UpdateNodeCounts(node, -1);
-	}
+	if (node->AllProcsDone()) { UpdateNodeCounts(node, -1); }
 }
 
 //---------------------------------------------------------------------------
@@ -3689,14 +3506,10 @@ void Dag::UpdateNodeCounts(Node* node, int change) {
 
 //---------------------------------------------------------------------------
 void Dag::PropagateDirectoryToAllNodes(void) {
-	if (m_directory == ".") {
-		return;
-	}
+	if (m_directory == ".") { return; }
 
 	// Propagate the directory setting to all nodes in the DAG.
-	for (auto& node : _nodes) {
-		node->PrefixDirectory(m_directory);
-	}
+	for (auto& node : _nodes) { node->PrefixDirectory(m_directory); }
 
 	// I wipe out m_directory here. If this gets called multiple
 	// times for a specific DAG, it'll prefix multiple times, and that is most
@@ -3730,9 +3543,7 @@ bool Dag::SetPinInOut(bool isPinIn, const char* nodeName, int pinNum) {
 //---------------------------------------------------------------------------
 bool Dag::SetPinInOut(PinList& pinList, Node* node, int pinNum) {
 	--pinNum; // Pin numbers start with 1
-	if (pinNum >= static_cast<int>(pinList.size())) {
-		pinList.resize(pinNum + 1, nullptr);
-	}
+	if (pinNum >= static_cast<int>(pinList.size())) { pinList.resize(pinNum + 1, nullptr); }
 	PinNodes* pn = pinList[pinNum];
 	if (!pn) {
 		pinList[pinNum] = new PinNodes();
@@ -3789,17 +3600,13 @@ bool Dag::ConnectSplices(Dag* parentSplice, Dag* childSplice) {
 	// Trim trailing '+' from parentName.
 	int last = parentName.length() - 1;
 	ASSERT(last >= 0);
-	if (parentName[last] == '+') {
-		parentName = parentName.substr(0, last);
-	}
+	if (parentName[last] == '+') { parentName = parentName.substr(0, last); }
 
 	std::string childName = childSplice->_spliceScope;
 	// Trim trailing '+' from childName.
 	last = childName.length() - 1;
 	ASSERT(last >= 0);
-	if (childName[last] == '+') {
-		childName = childName.substr(0, last);
-	}
+	if (childName[last] == '+') { childName = childName.substr(0, last); }
 
 	// Make sure the parent and child splices have pin_ins/pin_outs
 	// as appropriate, and that the number of pin_ins and pin_outs matches.
@@ -3872,18 +3679,14 @@ void Dag::PrefixAllNodeNames(const std::string& prefix) {
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames() with prefix %s\n", prefix.c_str());
 
-	for (auto& node : _nodes) {
-		node->PrefixName(prefix);
-	}
+	for (auto& node : _nodes) { node->PrefixName(prefix); }
 
 	// Here we must reindex the hash view with the prefixed name.
 	// also fix my node name hash view of the nodes
 
 	// First, wipe out the index.
 	auto it = _nodeNameHash.begin();
-	while (it != _nodeNameHash.end()) {
-		it = _nodeNameHash.erase(it);
-	}
+	while (it != _nodeNameHash.end()) { it = _nodeNameHash.erase(it); }
 
 	// Then, reindex all the nodes keyed by their new name
 	for (auto& node : _nodes) {
@@ -3909,9 +3712,7 @@ bool Dag::InsertSplice(std::string spliceName, Dag* splice_dag) {
 //---------------------------------------------------------------------------
 Dag* Dag::LookupSplice(std::string name) {
 	auto findResult = _splices.find(name);
-	if (findResult == _splices.end()) {
-		return nullptr;
-	}
+	if (findResult == _splices.end()) { return nullptr; }
 	return (*findResult).second;
 }
 
@@ -3934,14 +3735,10 @@ void Dag::RecordInitialAndTerminalNodes(void) {
 	for (auto& node : _nodes) {
 
 		// record the initial nodes
-		if (node->NoParents()) {
-			_splice_initial_nodes.push_back(node);
-		}
+		if (node->NoParents()) { _splice_initial_nodes.push_back(node); }
 
 		// record the final nodes
-		if (node->NoChildren()) {
-			_splice_terminal_nodes.push_back(node);
-		}
+		if (node->NoChildren()) { _splice_terminal_nodes.push_back(node); }
 	}
 }
 
@@ -3962,9 +3759,7 @@ OwnedMaterials* Dag::LiftSplices(SpliceLayer layer) {
 	// PrintNodeList();
 
 	// if this splice contains no other splices, then relinquish the nodes I own
-	if (layer == DESCENDENTS && _splices.size() == 0) {
-		return RelinquishNodeOwnership();
-	}
+	if (layer == DESCENDENTS && _splices.size() == 0) { return RelinquishNodeOwnership(); }
 
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& [splice_name, splice] : _splices) {
@@ -3987,9 +3782,7 @@ OwnedMaterials* Dag::LiftSplices(SpliceLayer layer) {
 	}
 
 	// Now delete all of them.
-	for (auto& nv_pair : _splices) {
-		delete nv_pair.second;
-	}
+	for (auto& nv_pair : _splices) { delete nv_pair.second; }
 	_splices.clear();
 
 	ASSERT(_splices.size() == 0);
@@ -4066,9 +3859,7 @@ void Dag::AssumeOwnershipofNodes(const std::string& spliceName, OwnedMaterials* 
 			_splice_initial_nodes.push_back((*nodes)[i]);
 			continue;
 		}
-		if ((*nodes)[i]->NoChildren()) {
-			_splice_terminal_nodes.push_back((*nodes)[i]);
-		}
+		if ((*nodes)[i]->NoChildren()) { _splice_terminal_nodes.push_back((*nodes)[i]); }
 	}
 
 	// 1. Take ownership of the nodes
@@ -4086,9 +3877,7 @@ void Dag::AssumeOwnershipofNodes(const std::string& spliceName, OwnedMaterials* 
 	}
 
 	// 1c. Copy the nodes into _nodes.
-	for (i = 0; i < nodes->size(); i++) {
-		_nodes.push_back((*nodes)[i]);
-	}
+	for (i = 0; i < nodes->size(); i++) { _nodes.push_back((*nodes)[i]); }
 
 	// 2. Update our name hash to include the new nodes.
 	for (i = 0; i < nodes->size(); i++) {
@@ -4124,9 +3913,7 @@ void Dag::AssumeOwnershipofNodes(const std::string& spliceName, OwnedMaterials* 
 	}
 
 	// 4. Copy any reject info from the splice.
-	if (om->_reject) {
-		SetReject(om->_firstRejectLoc);
-	}
+	if (om->_reject) { SetReject(om->_firstRejectLoc); }
 }
 
 //---------------------------------------------------------------------------
@@ -4134,9 +3921,7 @@ void Dag::AssumeOwnershipofNodes(const std::string& spliceName, OwnedMaterials* 
 void Dag::SetNodePriorities() {
 	const int dagPrior = dagOpts[shallow::i::Priority];
 	if (dagPrior != 0) {
-		for (auto& node : _nodes) {
-			node->AddDagPrio(dagPrior);
-		}
+		for (auto& node : _nodes) { node->AddDagPrio(dagPrior); }
 	}
 }
 
@@ -4201,9 +3986,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 		ASSERT(c != nullptr);
 
 		if (c->HasMultipleParents()) {
-			for (auto p : parents) {
-				update_parent(c, p->GetNodeID());
-			}
+			for (auto p : parents) { update_parent(c, p->GetNodeID()); }
 		} else if (c->HasSingleParent()) {
 			node_id_t old_parent = c->GetParentsID();
 			edge_id_t wedge_id = edge_table.NewWaitEdge();
@@ -4214,9 +3997,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 
 			for (auto p : parents) {
 				node_id_t pid = p->GetNodeID();
-				if (pid != old_parent) {
-					std::ignore = wedge.AppendArc(pid);
-				}
+				if (pid != old_parent) { std::ignore = wedge.AppendArc(pid); }
 			}
 
 			c->SetWaitEdge(wedge_id);
@@ -4227,9 +4008,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 			Edge& wedge = edge_table.GetWaitEdge(wedge_id);
 			wedge.Reserve(parents.size());
 
-			for (auto p : parents) {
-				std::ignore = wedge.AppendArc(p->GetNodeID());
-			}
+			for (auto p : parents) { std::ignore = wedge.AppendArc(p->GetNodeID()); }
 
 			c->SetWaitEdge(wedge_id);
 		}
@@ -4257,9 +4036,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 				}
 			}
 
-			if (new_children.empty() && upgrade_children.empty()) {
-				return true;
-			}
+			if (new_children.empty() && upgrade_children.empty()) { return true; }
 
 			// Single COW if other nodes also hold a reference; otherwise extend in-place
 			ASSERT(edge_table[check_edge_id].GetRefCount() >= parents.size());
@@ -4278,9 +4055,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 			Edge& target = edge_table[id];
 
 			if (!upgrade_children.empty()) {
-				for (auto c : upgrade_children) {
-					target.GetArc(c->GetNodeID()).metadata &= ~ARC_WEAK;
-				}
+				for (auto c : upgrade_children) { target.GetArc(c->GetNodeID()).metadata &= ~ARC_WEAK; }
 			}
 
 			if (!new_children.empty()) {
@@ -4341,9 +4116,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 				// Do manual updates if same child is specified and don't promote to multiple
 				if (direct.id == children[0]->GetNodeID()) {
 					// Strongest-wins: a strong re-declaration upgrades an existing weak arc.
-					if (!(meta & ARC_WEAK) && direct.IsWeak()) {
-						direct.metadata &= ~ARC_WEAK;
-					}
+					if (!(meta & ARC_WEAK) && direct.IsWeak()) { direct.metadata &= ~ARC_WEAK; }
 					continue;
 				}
 			}
@@ -4363,9 +4136,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 
 		p->SetEdgeID(id);
 		Edge& edge = edge_table[id];
-		if (fresh_edge) {
-			edge.Reserve(children.size());
-		}
+		if (fresh_edge) { edge.Reserve(children.size()); }
 
 		// children is already deduplicated by the parser, so a genuinely fresh edge
 		// (nothing to collide with) can skip AddArc's dedupe scan entirely.

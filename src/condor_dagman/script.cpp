@@ -56,15 +56,11 @@ void Script::WriteDebug(int status) {
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
 		if (_output == DAG::ScriptOutput::STDOUT || _output == DAG::ScriptOutput::ALL) {
-			if (buffer) {
-				output += *buffer;
-			}
+			if (buffer) { output += *buffer; }
 		}
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDERR);
 		if (_output == DAG::ScriptOutput::STDERR || _output == DAG::ScriptOutput::ALL) {
-			if (buffer) {
-				output += *buffer;
-			}
+			if (buffer) { output += *buffer; }
 		}
 
 		FILE* debug_fp = safe_fopen_wrapper(_debugFile.c_str(), "a");
@@ -113,9 +109,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 	size_t proc = 0;
 	for (const auto [_, val] : _node->GetJobInfo()) {
-		if (!exitList.empty()) {
-			exitList += ",";
-		}
+		if (!exitList.empty()) { exitList += ","; }
 		if (val == JOB_EXIT_UNKNOWN) {
 			debug_printf(DEBUG_NORMAL, "Error: Job proc %zu exit is unknown!\n", proc);
 		} else if (val == JOB_EXIT_ABORT) {
@@ -128,14 +122,10 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	}
 
 	for (const auto& [code, count] : exit_codes) {
-		if (!exitCodes.empty()) {
-			exitCodes += ",";
-		}
+		if (!exitCodes.empty()) { exitCodes += ","; }
 		exitCodes += std::to_string(code);
 
-		if (!exitFreq.empty()) {
-			exitFreq += ",";
-		}
+		if (!exitFreq.empty()) { exitFreq += ","; }
 		exitFreq += std::to_string(code) + ":" + std::to_string(count);
 	}
 
@@ -223,9 +213,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 		args.AppendArg(arg);
 
-		if (executable.empty()) {
-			executable = arg;
-		}
+		if (executable.empty()) { executable = arg; }
 	}
 
 	args.GetArgsStringForDisplay(_executedCMD);
@@ -255,9 +243,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		cpArgs.std(std_fds);
 	}
 	_pid = daemonCore->CreateProcessNew(executable, args, cpArgs);
-	if (null_fd >= 0) {
-		close(null_fd);
-	}
+	if (null_fd >= 0) { close(null_fd); }
 
 	if (!tmpDir.Cd2MainDir(errMsg)) {
 		debug_printf(DEBUG_QUIET, "Could not change to original directory: %s\n", errMsg.c_str());

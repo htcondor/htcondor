@@ -159,10 +159,8 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	}
 
 	while ((line = ms.getline(gl_opts)) != nullptr) {
-		if (line[0] == 0)
-			continue; // Ignore blank lines
-		if (line[0] == COMMENT)
-			continue; // Ignore comments
+		if (line[0] == 0) continue;       // Ignore blank lines
+		if (line[0] == COMMENT) continue; // Ignore comments
 		if (starts_with(line, end) && (strlen(line) == end.size() || starts_with(line, end + " "))) {
 			endline = line;
 			found_end = true;
@@ -173,9 +171,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 
 	debug_printf(DEBUG_DEBUG_1, "Inline Description Parse End Line<%s>\n", endline);
 
-	if (!found_end) {
-		error = "Missing inline description closing token: " + end;
-	}
+	if (!found_end) { error = "Missing inline description closing token: " + end; }
 
 	return desc;
 }
@@ -184,9 +180,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 bool parse(const Dagman& dm, Dag* dag, const char* filename, bool incrementDagNum) {
 	ASSERT(dag != NULL);
 
-	if (incrementDagNum) {
-		++_thisDagNum;
-	}
+	if (incrementDagNum) { ++_thisDagNum; }
 
 	_useDagDir = dm.options[deep::b::UseDagDir];
 	_useDirectSubmit = dm.options[deep::i::SubmitMethod] == 1;
@@ -259,16 +253,13 @@ bool parse(const Dagman& dm, Dag* dag, const char* filename, bool incrementDagNu
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
-		if (line[0] == 0)
-			continue; // Ignore blank lines
-		if (line[0] == COMMENT)
-			continue; // Ignore comments
+		if (line[0] == 0) continue;       // Ignore blank lines
+		if (line[0] == COMMENT) continue; // Ignore comments
 
 		debug_printf(DEBUG_DEBUG_3, "Parsing line <%s>\n", line);
 
 		char* token = strtok(line, DELIMITERS);
-		if (!token)
-			continue; // so Coverity is happy
+		if (!token) continue; // so Coverity is happy
 
 		bool parsed_line_successfully = false;
 
@@ -374,21 +365,17 @@ bool parse(const Dagman& dm, Dag* dag, const char* filename, bool incrementDagNu
 		// Find the terminating '\0'
 		//
 		char* endline = line;
-		while (*endline != '\0')
-			endline++;
+		while (*endline != '\0') endline++;
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
-		if (line[0] == 0)
-			continue; // Ignore blank lines
-		if (line[0] == COMMENT)
-			continue; // Ignore comments
+		if (line[0] == 0) continue;       // Ignore blank lines
+		if (line[0] == COMMENT) continue; // Ignore comments
 
 		debug_printf(DEBUG_DEBUG_3, "Parsing line <%s>\n", line);
 
 		char* token = strtok(line, DELIMITERS);
-		if (!token)
-			continue; // so Coverity is happy
+		if (!token) continue; // so Coverity is happy
 
 		bool parsed_line_successfully;
 
@@ -630,15 +617,10 @@ static bool parse_subdag(Dag* dag, const char* nodeTypeKeyword, const char* dagF
 
 static const char* next_possibly_quoted_token(void) {
 	char* remainder = strtok(NULL, "");
-	if (!remainder) {
-		return NULL;
-	}
-	while (remainder[0] == ' ' || remainder[0] == '\t')
-		remainder++;
-	if (remainder[0] == '"')
-		return strtok(++remainder, "\"");
-	else
-		return strtok(remainder, DELIMITERS);
+	if (!remainder) { return NULL; }
+	while (remainder[0] == ' ' || remainder[0] == '\t') remainder++;
+	if (remainder[0] == '"') return strtok(++remainder, "\"");
+	else return strtok(remainder, DELIMITERS);
 }
 
 //-----------------------------------------------------------------------------
@@ -649,16 +631,12 @@ static bool pre_parse_node(std::string& nodename, const char*& submitFile) {
 
 	// first token is the node name
 	const char* nodeName = strtok(NULL, DELIMITERS);
-	if (nodeName) {
-		nodename = nodeName;
-	}
+	if (nodeName) { nodename = nodeName; }
 
 	// next token is the either the submit file name,
 	// or an inline submit description
 	submitFile = next_possibly_quoted_token();
-	if (!submitFile) {
-		return false;
-	}
+	if (!submitFile) { return false; }
 
 	// return success for pre-parse. we have two tokens, we don't yet know if they have valid values though!!!
 	return true;
@@ -674,12 +652,9 @@ static bool parse_node(Dag* dag, const char* nodeName, const char* submitFileOrS
 	bool done = false;
 
 	NodeType type = NodeType::JOB;
-	if (strcasecmp(nodeTypeKeyword, "FINAL") == 0)
-		type = NodeType::FINAL;
-	if (strcasecmp(nodeTypeKeyword, "PROVISIONER") == 0)
-		type = NodeType::PROVISIONER;
-	if (strcasecmp(nodeTypeKeyword, "SERVICE") == 0)
-		type = NodeType::SERVICE;
+	if (strcasecmp(nodeTypeKeyword, "FINAL") == 0) type = NodeType::FINAL;
+	if (strcasecmp(nodeTypeKeyword, "PROVISIONER") == 0) type = NodeType::PROVISIONER;
+	if (strcasecmp(nodeTypeKeyword, "SERVICE") == 0) type = NodeType::SERVICE;
 
 	// NOTE: fear not -- any missing tokens resulting in NULL
 	// strings will be error-handled correctly by AddNode()
@@ -707,9 +682,7 @@ static bool parse_node(Dag* dag, const char* nodeName, const char* submitFileOrS
 			errorMessage += "'";
 			errorMessage += ILLEGAL_CHARS[i];
 			errorMessage += "'";
-			if (i < strlen(ILLEGAL_CHARS) - 1) {
-				errorMessage += ", ";
-			}
+			if (i < strlen(ILLEGAL_CHARS) - 1) { errorMessage += ", "; }
 		}
 		errorMessage += ")\n";
 		debug_error(1, DEBUG_QUIET, "%s", errorMessage.c_str());
@@ -997,8 +970,7 @@ static bool parse_script(const char* endline, Dag* dag, const char* filename, in
 
 	// first, skip over the token we already read...
 	// Why not just call strtok() again here? wenger 2016-10-13
-	while (*rest != '\0')
-		rest++;
+	while (*rest != '\0') rest++;
 
 	// if we're not at the end of the line, move forward
 	// one character so we're looking at the rest of the
@@ -1021,9 +993,7 @@ static bool parse_script(const char* endline, Dag* dag, const char* filename, in
 	// quick hack to get this working for extra
 	// whitespace: make sure the "rest" of the line isn't
 	// starting with any delimiter...
-	while (rest[0] && isDelimiter(rest[0])) {
-		rest++;
-	}
+	while (rest[0] && isDelimiter(rest[0])) { rest++; }
 
 	if (!rest[0]) {
 		// this means we only saw whitespace after the
@@ -1050,8 +1020,7 @@ static bool parse_script(const char* endline, Dag* dag, const char* filename, in
 			debug_printf(DEBUG_SILENT, "ERROR: Failed to make script object: out of memory!\n");
 			return false;
 		}
-		if (debugType != DAG::ScriptOutput::NONE)
-			script->SetDebug(debugFile, debugType);
+		if (debugType != DAG::ScriptOutput::NONE) script->SetDebug(debugFile, debugType);
 		if (!node->AddScript(script)) {
 			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n", filename, lineNumber, type_name,
 			             node->GetNodeName());
@@ -1097,9 +1066,7 @@ static bool parse_parent(Dag* dag, const char* filename, int lineNumber) {
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (auto node : *splice_final) {
-				parents.push_back(node);
-			}
+			for (auto node : *splice_final) { parents.push_back(node); }
 
 		} else {
 
@@ -1162,9 +1129,7 @@ static bool parse_parent(Dag* dag, const char* filename, int lineNumber) {
 			debug_printf(DEBUG_DEBUG_1, "Adding %zu initial nodes\n", splice_initial->size());
 
 			// now add each initial node as a child
-			for (auto node : *splice_initial) {
-				children.push_back(node);
-			}
+			for (auto node : *splice_initial) { children.push_back(node); }
 
 		} else {
 
@@ -1548,9 +1513,7 @@ static bool parse_vars(Dag* dag, const char* filename, int lineNumber) {
 			varName.clear();
 			varValue.clear();
 
-			if (!get_next_var(filename, lineNumber, str, varName, varValue)) {
-				return false;
-			}
+			if (!get_next_var(filename, lineNumber, str, varName, varValue)) { return false; }
 			if (varName.empty()) {
 				break;
 			} else if (varName[0] == '+') {
@@ -1902,9 +1865,7 @@ static bool parse_splice(const Dagman& dm, Dag* dag, const char* filename, int l
 	splice_dag->_catThrottles.PrefixAllCategoryNames(current_splice_scope());
 
 	// Print out a useful piece of debugging...
-	if (DEBUG_LEVEL(DEBUG_DEBUG_1)) {
-		splice_dag->PrintNodeList();
-	}
+	if (DEBUG_LEVEL(DEBUG_DEBUG_1)) { splice_dag->PrintNodeList(); }
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
@@ -2497,13 +2458,9 @@ static std::string current_splice_scope(void) {
     @return true means success; false means error
  */
 static bool get_next_var(const char* filename, int lineNumber, char*& str, std::string& varName, std::string& varValue) {
-	while (isspace(*str)) {
-		str++;
-	}
+	while (isspace(*str)) { str++; }
 
-	if (*str == '\0') {
-		return true;
-	}
+	if (*str == '\0') { return true; }
 
 	// copy name char-by-char until we hit a symbol or whitespace
 	// names are limited to alphanumerics and underscores (except
@@ -2534,9 +2491,7 @@ static bool get_next_var(const char* filename, int lineNumber, char*& str, std::
 	}
 
 	// Burn through any whitespace between var name and "=".
-	while (isspace(*str)) {
-		str++;
-	}
+	while (isspace(*str)) { str++; }
 
 	if (*str != '=') {
 		if (varName.compare("PREPEND") == 0 || varName.compare("APPEND") == 0) {
@@ -2551,9 +2506,7 @@ static bool get_next_var(const char* filename, int lineNumber, char*& str, std::
 	str++;
 
 	// Burn through any whitespace between "=" and var value.
-	while (isspace(*str)) {
-		str++;
-	}
+	while (isspace(*str)) { str++; }
 
 	if (*str != '"') {
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): %s's value must be quoted\n", filename, lineNumber, varName.c_str());
@@ -2658,9 +2611,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	DagParser parser(file_to_parse);
 
 	parser.SearchFor(pre_parse_commands).Ignore(ignore_commands);
-	if (config[conf::b::AllowIllegalChars]) {
-		parser.AllowIllegalChars();
-	}
+	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
 
 	if (parser.failed()) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to open %s: %s\n", file.c_str(), parser.c_error());
@@ -2732,9 +2683,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	success = true;
 
 processing_failed:
-	if (!success && location.size()) {
-		debug_printf(DEBUG_QUIET, "Processing error at %s\n", location.c_str());
-	}
+	if (!success && location.size()) { debug_printf(DEBUG_QUIET, "Processing error at %s\n", location.c_str()); }
 
 	// Once we are done parsing the file remove it from recursive checking set
 	parsed_file_check.erase(full_file_path);
@@ -2772,9 +2721,7 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 		const DotCommand* dot = DAG::DERIVE_CMD<DotCommand>(cmd);
 		dag.SetDotFileUpdate(dot->Update());
 		dag.SetDotFileOverwrite(dot->Overwrite());
-		if (dot->HasInclude()) {
-			dag.SetDotIncludeFileName(dot->GetInclude().c_str());
-		}
+		if (dot->HasInclude()) { dag.SetDotIncludeFileName(dot->GetInclude().c_str()); }
 		dag.SetDotFileName(dot->GetFile().c_str());
 	} break;
 	case DAG::CMD::INCLUDE:
@@ -2834,12 +2781,8 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 		Dag* parent = dag.LookupSplice(MakeFullName(s1, dag_munge_id));
 		Dag* child = dag.LookupSplice(MakeFullName(s2, dag_munge_id));
 
-		if (!parent) {
-			debug_printf(DEBUG_QUIET, "ERROR: Connect parent splice %s does not exist\n", s1.c_str());
-		}
-		if (!child) {
-			debug_printf(DEBUG_QUIET, "ERROR: Connect child splice %s does not exist\n", s2.c_str());
-		}
+		if (!parent) { debug_printf(DEBUG_QUIET, "ERROR: Connect parent splice %s does not exist\n", s1.c_str()); }
+		if (!child) { debug_printf(DEBUG_QUIET, "ERROR: Connect child splice %s does not exist\n", s2.c_str()); }
 
 		all_good = (parent && child) ? Dag::ConnectSplices(parent, child) : false;
 	} break;

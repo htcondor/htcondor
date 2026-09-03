@@ -84,17 +84,13 @@ void Dagman::SetThrottles(Throttles userThrottles) {
 	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
 		std::string padded(THROTTLE_DISPLAY[i]);
-		if (padded.length() < 30) {
-			padded.append(30 - padded.length(), '-');
-		}
+		if (padded.length() < 30) { padded.append(30 - padded.length(), '-'); }
 		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[i]);
 	}
 
 	int limit = throttles[Throttle::MAX_NODES];
 	if (config[conf::b::EnforceNewJobLimits] && limit && limit != oldMaxNodes) {
-		if (dag) {
-			dag->EnforceNewJobsLimit();
-		}
+		if (dag) { dag->EnforceNewJobsLimit(); }
 	}
 }
 
@@ -290,9 +286,7 @@ bool Dagman::Config() {
 			std::string mutable_info{info};
 			trim(mutable_info);
 			lower_case(mutable_info);
-			if (mutable_info.compare("retry") == MATCH) {
-				config[conf::b::JobInsertRetry] = true;
-			}
+			if (mutable_info.compare("retry") == MATCH) { config[conf::b::JobInsertRetry] = true; }
 		}
 	}
 
@@ -368,15 +362,11 @@ bool Dagman::Config() {
 
 	std::string debug;
 	param(debug, "ALL_DEBUG");
-	if (!debug.empty()) {
-		debug_printf(DEBUG_NORMAL, "ALL_DEBUG setting: %s\n", debug.c_str());
-	}
+	if (!debug.empty()) { debug_printf(DEBUG_NORMAL, "ALL_DEBUG setting: %s\n", debug.c_str()); }
 
 	debug.clear();
 	param(debug, "DAGMAN_DEBUG");
-	if (!debug.empty()) {
-		debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG setting: %s\n", debug.c_str());
-	}
+	if (!debug.empty()) { debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG setting: %s\n", debug.c_str()); }
 
 	config[conf::b::SuppressJobLogs] = param_boolean("DAGMAN_SUPPRESS_JOB_LOGS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n", config[conf::b::SuppressJobLogs] ? "True" : "False");
@@ -452,19 +442,13 @@ void Dagman::RemoveRunningJobs(const std::string& reason, const bool rm_all) {
 		args.AppendArg(reason);
 	}
 
-	if (dagmanUtils.popen(args) != 0) {
-		debug_printf(DEBUG_NORMAL, "ERROR: Failed to remove HTCondor jobs\n");
-	}
+	if (dagmanUtils.popen(args) != 0) { debug_printf(DEBUG_NORMAL, "ERROR: Failed to remove HTCondor jobs\n"); }
 }
 
 void Dagman::RemoveLock() {
 	// Note: This is call the FileLock::release() not the std::unique_ptr::release()
-	if (lock) {
-		lock->release();
-	}
-	if (dagman.m_lock_fd >= 0) {
-		close(dagman.m_lock_fd);
-	}
+	if (lock) { lock->release(); }
+	if (dagman.m_lock_fd >= 0) { close(dagman.m_lock_fd); }
 	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
 }
 
@@ -479,9 +463,7 @@ void main_config() {
 
 // this is called by DC when the schedd is shutdown fast
 void main_shutdown_fast() {
-	if (dagman.dag) {
-		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_RESTART);
-	}
+	if (dagman.dag) { dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_RESTART); }
 	// Don't report metrics here because we should restart.
 	DC_Exit(EXIT_RESTART);
 }
@@ -516,9 +498,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus, bool removeCondorJob
 	// Avoid possible infinite recursion if you hit a fatal error
 	// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
-	if (inShutdownRescue) {
-		return;
-	}
+	if (inShutdownRescue) { return; }
 
 	inShutdownRescue = true;
 
@@ -547,13 +527,9 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus, bool removeCondorJob
 		debug_printf(DEBUG_NORMAL, "Removing submitted jobs...\n");
 
 		const char* rm_reason = "DAG Abort: DAG is exiting and writing rescue file.";
-		if (dagStatus == DagStatus::DAG_STATUS_RM) {
-			rm_reason = "DAG Removed: User removed scheduler job from queue.";
-		}
+		if (dagStatus == DagStatus::DAG_STATUS_RM) { rm_reason = "DAG Removed: User removed scheduler job from queue."; }
 
-		if (removeCondorJobs) {
-			dagman.RemoveRunningJobs(rm_reason);
-		}
+		if (removeCondorJobs) { dagman.RemoveRunningJobs(rm_reason); }
 
 		if (dagman.dag->NumScriptsRunning() > 0) {
 			debug_printf(DEBUG_NORMAL, "Removing running scripts...\n");
@@ -705,9 +681,7 @@ void main_init(int argc, char** const argv) {
 
 	DagmanOptions& dagOpts = dagman.options;
 
-	for (int i = 0; i < argc; i++) {
-		debug_printf(DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i]);
-	}
+	for (int i = 0; i < argc; i++) { debug_printf(DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i]); }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Minimum legal version for a .condor.sub file to be compatible
@@ -769,14 +743,10 @@ void main_init(int argc, char** const argv) {
 
 	debug_level = (debug_level_t)dagOpts[shallow::i::DebugLevel];
 
-	if (!dagOpts[shallow::str::CsdVersion].empty()) {
-		csdVersion = dagOpts[shallow::str::CsdVersion];
-	}
+	if (!dagOpts[shallow::str::CsdVersion].empty()) { csdVersion = dagOpts[shallow::str::CsdVersion]; }
 
 	// If no user specified BatchName and no ClassAd information set batchname = primary DAG
-	if (dagOpts[deep::str::BatchName].empty()) {
-		dagOpts[deep::str::BatchName] = dagOpts.primaryDag();
-	}
+	if (dagOpts[deep::str::BatchName].empty()) { dagOpts[deep::str::BatchName] = dagOpts.primaryDag(); }
 
 	// We expect at the very least to have a dag filename specified
 	// If not, show the Usage details and exit now.
@@ -845,9 +815,7 @@ void main_init(int argc, char** const argv) {
 	// might not have been provided.
 
 	// If lockFileName not provided in arguments, set a default
-	if (dagOpts[shallow::str::LockFile].empty()) {
-		dagOpts[shallow::str::LockFile] = dagOpts.primaryDag() + ".lock";
-	}
+	if (dagOpts[shallow::str::LockFile].empty()) { dagOpts[shallow::str::LockFile] = dagOpts.primaryDag() + ".lock"; }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	if (dagOpts[shallow::i::MaxJobs] < 0) {
@@ -946,9 +914,7 @@ void main_init(int argc, char** const argv) {
 	debug_printf(DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n", dagOpts[shallow::str::LockFile].c_str());
 	if (dagOpts.isMultiDag()) {
 		std::string msg = "DAG Input files are";
-		for (const auto& dagFile : dagOpts.dagFiles()) {
-			msg += " " + dagFile;
-		}
+		for (const auto& dagFile : dagOpts.dagFiles()) { msg += " " + dagFile; }
 		msg += "\n";
 		debug_printf(DEBUG_VERBOSE, "%s", msg.c_str());
 	} else {
@@ -960,16 +926,12 @@ void main_init(int argc, char** const argv) {
 
 	{
 		std::string cwd;
-		if (!condor_getcwd(cwd)) {
-			cwd = "<null>";
-		}
+		if (!condor_getcwd(cwd)) { cwd = "<null>"; }
 		debug_printf(DEBUG_DEBUG_1, "Current path is %s\n", cwd.c_str());
 
 		char* temp = my_username();
 		debug_printf(DEBUG_DEBUG_1, "Current user is %s\n", temp ? temp : "<null>");
-		if (temp) {
-			free(temp);
-		}
+		if (temp) { free(temp); }
 	}
 
 	// Figure out the rescue DAG to run, if any (this is with "new-style" rescue DAGs).
@@ -980,9 +942,7 @@ void main_init(int argc, char** const argv) {
 	if (!dagman.rescueFileToRun.empty()) {
 		rescueDagMsg = "Rescue DAG file specified";
 		rescueDagNum = dagmanUtils.ExtractRescueNum(dagman.rescueFileToRun, dagOpts.primaryDag(), dagOpts.isMultiDag());
-		if (rescueDagNum) {
-			debug_printf(DEBUG_NORMAL, "Extracted rescue DAG number: %d\n", rescueDagNum);
-		}
+		if (rescueDagNum) { debug_printf(DEBUG_NORMAL, "Extracted rescue DAG number: %d\n", rescueDagNum); }
 		dagmanUtils.RenameRescueDagsAfter(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum,
 		                                  dagman.config[conf::i::MaxRescueNum]);
 		dagman.inheritOpts[deep::i::DoRescueFrom] = dagOpts[deep::i::DoRescueFrom] = rescueDagNum;
@@ -1017,9 +977,7 @@ void main_init(int argc, char** const argv) {
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
 
-	if (!dagOpts.isMultiDag()) {
-		dagman.config[conf::b::MungeNodeNames] = false;
-	}
+	if (!dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
 	const bool parse_timing = dagman.config[conf::b::ParseTimingDebug];
@@ -1202,9 +1160,7 @@ void main_init(int argc, char** const argv) {
 	}
 
 	int recoveryStatus = -1;
-	if (recovery) {
-		recoveryStatus = dagman._dagmanClassad->GetStatus();
-	}
+	if (recovery) { recoveryStatus = dagman._dagmanClassad->GetStatus(); }
 
 	dagman.m_lock_fd = safe_open_wrapper_follow(lock_file.c_str(), O_CREAT | O_RDWR, 0600);
 	if (dagman.m_lock_fd < 0) {
@@ -1234,16 +1190,12 @@ void main_init(int argc, char** const argv) {
 		char buf[32];
 		ssize_t nread = -1;
 
-		if (lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) {
-			nread = full_read(dagman.m_lock_fd, buf, sizeof(buf) - 1);
-		}
+		if (lseek(dagman.m_lock_fd, 0, SEEK_SET) == 0) { nread = full_read(dagman.m_lock_fd, buf, sizeof(buf) - 1); }
 
 		if (nread > 0) {
 			buf[nread] = '\0';
 			try {
-				if (std::stoi(buf) == dagman.DAGManJobId._cluster) {
-					exitCode = EXIT_RESTART;
-				}
+				if (std::stoi(buf) == dagman.DAGManJobId._cluster) { exitCode = EXIT_RESTART; }
 			} catch (const std::exception&) {}
 		}
 
@@ -1400,12 +1352,8 @@ void Dagman::PublishStats() {
 }
 
 void Dagman::ReportMetrics(const int exitCode) {
-	if (!metrics) {
-		return;
-	}
-	if (!metrics->Report(exitCode, *this)) {
-		debug_printf(DEBUG_QUIET, "Failed to report metrics.\n");
-	}
+	if (!metrics) { return; }
+	if (!metrics->Report(exitCode, *this)) { debug_printf(DEBUG_QUIET, "Failed to report metrics.\n"); }
 }
 
 void print_status(bool forceScheddUpdate) {
@@ -1431,9 +1379,7 @@ void print_status(bool forceScheddUpdate) {
 
 	dagman.PublishStats();
 
-	if (forceScheddUpdate) {
-		dagman.UpdateAd();
-	}
+	if (forceScheddUpdate) { dagman.UpdateAd(); }
 }
 
 void condor_event_timer(int /* tid */) {
@@ -1458,9 +1404,7 @@ void condor_event_timer(int /* tid */) {
 
 	// TEMP: Allow halt file creation to halt DAG (note deletion of file does nothing)
 	static std::string halt_file = dagmanUtils.HaltFileName(dagman.options.primaryDag());
-	if (!dagman.dag->IsHalted() && dagmanUtils.fileExists(halt_file)) {
-		dagman.dag->Halt();
-	}
+	if (!dagman.dag->IsHalted() && dagmanUtils.fileExists(halt_file)) { dagman.dag->Halt(); }
 
 	static int prevNodesDone = 0;
 	static int prevNodes = 0;
@@ -1482,9 +1426,7 @@ void condor_event_timer(int /* tid */) {
 
 	// Gather some statistics
 	eventTimerStartTime = condor_gettimestamp_double();
-	if (eventTimerEndTime > 0) {
-		dagman.stats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
-	}
+	if (eventTimerEndTime > 0) { dagman.stats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime); }
 
 	dagman.dag->RunWaitingScripts();
 
@@ -1541,9 +1483,7 @@ void condor_event_timer(int /* tid */) {
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		prevJobsHeld = currJobsHeld;
 
-		if (dagman.dag->GetDotFileUpdate()) {
-			dagman.dag->DumpDotFile();
-		}
+		if (dagman.dag->GetDotFileUpdate()) { dagman.dag->DumpDotFile(); }
 	}
 
 	time_t printJobTableDelay = (time_t)dagman.config[conf::i::JobStateTableInterval];
@@ -1565,9 +1505,7 @@ void condor_event_timer(int /* tid */) {
 	double currentTime = condor_gettimestamp_double();
 
 	static double nextScheddUpdateTime = 0.0;
-	if (nextScheddUpdateTime <= 0.0) {
-		nextScheddUpdateTime = currentTime;
-	}
+	if (nextScheddUpdateTime <= 0.0) { nextScheddUpdateTime = currentTime; }
 
 	if (dagman.update_ad || (currentTime > nextScheddUpdateTime)) {
 		dagman.UpdateAd();
@@ -1658,9 +1596,7 @@ void condor_event_timer(int /* tid */) {
 				debug_printf(DEBUG_QUIET, "... ERROR: no cycle found; unknown error condition\n");
 				dagStatus = DagStatus::DAG_STATUS_ERROR;
 			}
-			if (debug_level >= DEBUG_NORMAL) {
-				dagman.dag->PrintNodeList();
-			}
+			if (debug_level >= DEBUG_NORMAL) { dagman.dag->PrintNodeList(); }
 		}
 
 		main_shutdown_rescue(EXIT_ERROR, dagStatus);
