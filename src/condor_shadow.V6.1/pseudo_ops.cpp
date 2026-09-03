@@ -2389,6 +2389,24 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		guidance.LookupString(ATTR_COMMAND, command);
 		dprintf( D_TEST, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_CHECKPOINT_TAKEN ) {
+		// dprintf( D_ZKM, "Received request for guidance about checkpoint taken.\n" );
+
+		// For now, if the startd thinks the job should be evicted, then
+		// don't restart after the checkpoint.  Otherwise, restart.
+		bool claim_is_closing = false;
+		LookupBoolInContext( request, ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
+		dprintf( D_ZKM, "Received request for guidance about checkpoint taken; claim_is_closing is %s\n", claim_is_closing ? "true" : "false" );
+		if( claim_is_closing ) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_DONT_RESTART );
+		} else {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_RESTART );
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ZKM, "Sending (checkpoint taken) guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
 	}
 
 	return GuidanceResult::UnknownRequest;
