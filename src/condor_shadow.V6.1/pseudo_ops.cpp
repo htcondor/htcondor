@@ -1689,7 +1689,7 @@ UniShadow::start_staging_only_conversation(
 		// the schedd get its act together.
 		//
 		co_return VACATE_REQUEUE_ABORT(
-			"Failed to offer schedd resources, aborting to try again when it's less busy.\n",
+			"Failed to tell schedd that the common file transfer completed (probably because it's too busy).  The schedd will try to run the corresponding job(s) again later.\n",
 			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed
 		);
 	}
