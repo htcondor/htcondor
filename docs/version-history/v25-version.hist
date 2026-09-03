@@ -144,6 +144,10 @@
   preserved instead of being overridden.
   :jira:`3613`
 
+- Fixed a bug which could cause the *condor_startd* to crash when using
+  the common input files feature.
+  :jira:`3911`
+
 *** 25.0.14 features
 
 - Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
