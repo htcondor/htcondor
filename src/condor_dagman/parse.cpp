@@ -2811,6 +2811,7 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 		{DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
 		{DAG::CMD::SERVICE, NodeType::SERVICE}
 	};
+	// clang-format on
 
 	ASSERT(CMD_TO_NODE_TYPE.contains(cmd->GetCommand()));
 
