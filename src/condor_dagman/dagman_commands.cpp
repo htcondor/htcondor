@@ -113,7 +113,7 @@ bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& d
 }
 
 Node* AddNode(Dag* dag, const char* name, const char* directory, const char* submitFileOrSubmitDesc, bool noop, bool done,
-			  NodeType type, std::string& failReason) {
+              NodeType type, std::string& failReason) {
 	std::string why;
 	if (!IsValidNodeName(dag, name, why)) {
 		failReason = why;

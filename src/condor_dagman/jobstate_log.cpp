@@ -283,9 +283,9 @@ void JobstateLog::WriteEvent(const ULogEvent* event, Node* node) {
 	if (eventName != nullptr) {
 		if (strstr(eventName, prefix) != eventName) {
 			debug_printf(DEBUG_QUIET,
-						 "Warning: didn't find expected prefix "
-						 "%s in event name %s\n",
-						 prefix, eventName);
+			             "Warning: didn't find expected prefix "
+			             "%s in event name %s\n",
+			             prefix, eventName);
 			check_warning_strictness(DAG_STRICT_1);
 		} else {
 			eventName = eventName + strlen(prefix);
@@ -388,7 +388,7 @@ void JobstateLog::Write(const time_t* eventTimeP, Node* node, const char* eventN
 	std::string info;
 
 	formatstr(info, "%s %s %s %s - %d", node->GetNodeName(), eventName, condorID, node->GetJobstateJobTag(),
-			  node->GetJobstateSequenceNum());
+	          node->GetJobstateSequenceNum());
 	Write(eventTimeP, info);
 }
 
@@ -468,9 +468,9 @@ bool JobstateLog::ParseLine(std::string& line, time_t& timestamp, std::string& n
 
 	if ((timestampTok == NULL) || (nodeNameTok == NULL)) {
 		debug_printf(DEBUG_QUIET,
-					 "Warning: error parsing "
-					 "jobstate.log file line <%s>\n",
-					 line.c_str());
+		             "Warning: error parsing "
+		             "jobstate.log file line <%s>\n",
+		             line.c_str());
 		check_warning_strictness(DAG_STRICT_1);
 		return false;
 	}
@@ -482,9 +482,9 @@ bool JobstateLog::ParseLine(std::string& line, time_t& timestamp, std::string& n
 
 	if (pend == timestampTok) {
 		debug_printf(DEBUG_QUIET,
-					 "Warning: error reading "
-					 "timestamp in jobstate.log file line <%s>\n",
-					 line.c_str());
+		             "Warning: error reading "
+		             "timestamp in jobstate.log file line <%s>\n",
+		             line.c_str());
 		check_warning_strictness(DAG_STRICT_1);
 		return false;
 	}
@@ -496,9 +496,9 @@ bool JobstateLog::ParseLine(std::string& line, time_t& timestamp, std::string& n
 		seqNum = (int)strtol(seqNumTok, &pend, 10);
 		if (pend == seqNumTok) {
 			debug_printf(DEBUG_QUIET,
-						 "Warning: error reading "
-						 "sequence number in jobstate.log file line <%s>\n",
-						 line.c_str());
+			             "Warning: error reading "
+			             "sequence number in jobstate.log file line <%s>\n",
+			             line.c_str());
 			check_warning_strictness(DAG_STRICT_1);
 			return false;
 		}

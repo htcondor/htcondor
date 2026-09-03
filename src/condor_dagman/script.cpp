@@ -52,7 +52,7 @@ void Script::WriteDebug(int status) {
 
 		time_t now = time(nullptr);
 		formatstr(output, "*** Node=%s Type=%s %s=%d Completion=%lld Cmd='%s'\n", _node->GetNodeName(), GetScriptName(),
-				  return_type, return_value, (long long)now, _executedCMD.c_str());
+		          return_type, return_value, (long long)now, _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
 		if (_output == DAG::ScriptOutput::STDOUT || _output == DAG::ScriptOutput::ALL) {
@@ -71,12 +71,12 @@ void Script::WriteDebug(int status) {
 		if (!debug_fp) {
 			// don't return here in case we need to cd back to main working dir
 			debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s to write %s script output for %s\n", _debugFile.c_str(),
-						 GetScriptName(), _node->GetNodeName());
+			             GetScriptName(), _node->GetNodeName());
 		} else {
 			int debug_fd = fileno(debug_fp);
 			if (write(debug_fd, output.c_str(), output.length()) == -1) {
 				debug_printf(DEBUG_NORMAL, "ERROR (%d): Failed to write %s %s Script output to %s | %s\n", errno,
-							 _node->GetNodeName(), GetScriptName(), _debugFile.c_str(), strerror(errno));
+				             _node->GetNodeName(), GetScriptName(), _debugFile.c_str(), strerror(errno));
 			}
 			fclose(debug_fp);
 		}
@@ -214,7 +214,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
 			debug_printf(DEBUG_QUIET, "Warning: unrecognized macro %s in node %s %s script arguments\n", token.c_str(),
-						 _node->GetNodeName(), GetScriptName());
+			             _node->GetNodeName(), GetScriptName());
 			check_warning_strictness(DAG_STRICT_1);
 			arg = token;
 		} else {
@@ -239,7 +239,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
 			if (null_fd < 0) {
 				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stderr of %s script: %s\n", NULL_FILE, GetScriptName(),
-							 strerror(errno));
+				             strerror(errno));
 			} else {
 				std_fds[STDERR] = null_fd;
 			}
@@ -247,7 +247,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			null_fd = safe_open_wrapper_follow(NULL_FILE, O_WRONLY | O_APPEND, 0666);
 			if (null_fd < 0) {
 				debug_printf(DEBUG_NORMAL, "ERROR: Failed to open %s for stdout of %s script: %s\n", NULL_FILE, GetScriptName(),
-							 strerror(errno));
+				             strerror(errno));
 			} else {
 				std_fds[STDOUT] = null_fd;
 			}

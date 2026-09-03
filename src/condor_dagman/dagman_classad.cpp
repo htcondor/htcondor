@@ -36,7 +36,7 @@ Qmgr_connection* ScheddClassad::OpenConnection() const {
 	CondorError errstack;
 	if (!_schedd) {
 		debug_printf(DEBUG_QUIET, "ERROR: Queue manager not initialized, "
-								  "cannot publish updates to ClassAd.\n");
+		                          "cannot publish updates to ClassAd.\n");
 		check_warning_strictness(DAG_STRICT_3);
 		return NULL;
 	}
@@ -311,7 +311,7 @@ void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheri
 	Qmgr_connection* queue = OpenConnection();
 	if (!_valid || !queue) {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- %s: No ClassAd attributes will be inherited",
-					 queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
+		             queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
 		check_warning_strictness(DAG_STRICT_1);
 		inheritAttrs.clear();
 		return;

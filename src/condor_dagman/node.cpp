@@ -331,7 +331,7 @@ bool Node::InvalidateChild(Node* child, int& count) {
 			count++;
 		} else {
 			debug_printf(DEBUG_NORMAL, "Error: Failed to set node %s to status %s\n", child->GetNodeName(),
-						 status_t_names[Node::STATUS_FUTILE]);
+			             status_t_names[Node::STATUS_FUTILE]);
 		}
 	}
 
@@ -570,7 +570,7 @@ bool Node::AddScript(Script* script) {
 
 	if (old_script) {
 		debug_printf(DEBUG_NORMAL, "Warning: node %s already has %s script <%s> assigned; changing to <%s>\n", GetNodeName(),
-					 type_name, old_script->GetCmd(), script->GetCmd());
+		             type_name, old_script->GetCmd(), script->GetCmd());
 		delete old_script;
 		old_script = nullptr;
 	}
@@ -591,7 +591,7 @@ bool Node::AddPreSkip(int exitCode, std::string& whynot) {
 
 	if (_preskip != PRE_SKIP_INVALID) {
 		debug_printf(DEBUG_NORMAL, "Warning: new PRE_SKIP value  %d for node %s overrides old value %d\n", exitCode, GetNodeName(),
-					 _preskip);
+		             _preskip);
 		check_warning_strictness(DAG_STRICT_3);
 	}
 	_preskip = exitCode;
@@ -609,9 +609,9 @@ void Node::SetCategory(const char* categoryName, ThrottleByCategory& catThrottle
 
 	if ((_throttleInfo != nullptr) && (tmpName != *(_throttleInfo->_category))) {
 		debug_printf(DEBUG_NORMAL,
-					 "Warning: new category %s for node %s "
-					 "overrides old value %s\n",
-					 categoryName, GetNodeName(), _throttleInfo->_category->c_str());
+		             "Warning: new category %s for node %s "
+		             "overrides old value %s\n",
+		             categoryName, GetNodeName(), _throttleInfo->_category->c_str());
 		check_warning_strictness(DAG_STRICT_3);
 	}
 
@@ -678,7 +678,7 @@ bool Node::SetCondorID(const CondorID& cid) {
 	bool ret = true;
 	if (GetCluster() != -1) {
 		debug_printf(DEBUG_NORMAL, "Reassigning the id of job %s from (%d.%d.%d) to (%d.%d.%d)\n", GetNodeName(), GetCluster(),
-					 GetProc(), GetSubProc(), cid._cluster, cid._proc, cid._subproc);
+		             GetProc(), GetSubProc(), cid._cluster, cid._proc, cid._subproc);
 		ret = false;
 	}
 	_CondorID = cid;
@@ -699,7 +699,7 @@ bool Node::Hold(int proc) {
 		return true;
 	} else {
 		dprintf(D_FULLDEBUG, "Received hold event for node %s, and job %d.%d is already on hold!\n", GetNodeName(), GetCluster(),
-				proc);
+		        proc);
 	}
 
 	return false;
@@ -712,7 +712,7 @@ bool Node::Release(int proc, bool warn) {
 	if (proc >= static_cast<int>(jobs.size()) || (jobs[proc].events & HOLD_MASK) != HOLD_MASK) {
 		if (warn) {
 			dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n", GetNodeName(), GetCluster(),
-					GetProc());
+			        GetProc());
 		}
 		return false; // We never marked this as being on hold
 	}
@@ -732,7 +732,7 @@ void Node::Cleanup() {
 	for (auto [state, _] : jobs) {
 		if (state != (EXEC_MASK | ABORT_TERM_MASK)) {
 			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected job event value for proc %d: %d!\n", GetNodeName(), proc,
-						 (int)state);
+			             (int)state);
 			check_warning_strictness(DAG_STRICT_2);
 		}
 		++proc;
@@ -743,10 +743,10 @@ void Node::Cleanup() {
 
 //---------------------------------------------------------------------------
 /*
-	Verify internal job states agree with queue query such that jobs found in
-	queue don't have ABORT_TERM_MASK and jobs not found in queue do have ABORT_TERM_MASK
-	return True for everything matches
-	return False for one job has differring state
+    Verify internal job states agree with queue query such that jobs found in
+    queue don't have ABORT_TERM_MASK and jobs not found in queue do have ABORT_TERM_MASK
+    return True for everything matches
+    return False for one job has differring state
 */
 bool Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	bool good_state = true;
@@ -763,12 +763,12 @@ bool Node::VerifyJobStates(std::set<int>& queuedJobs) {
 		if (queuedJobs.contains(proc)) {
 			if (state & ABORT_TERM_MASK) {
 				debug_printf(DEBUG_NORMAL, "ERROR: Node %s (%d.%d) located in queue but internally marked as exited.\n", nodeName,
-							 cluster, proc);
+				             cluster, proc);
 				good_state = false;
 			}
 		} else if (!(state & ABORT_TERM_MASK)) { // If abort/term mask bit not set
 			debug_printf(DEBUG_NORMAL, "ERROR: Node %s (%d.%d) not located in queue and not internally marked as exited.\n",
-						 nodeName, cluster, proc);
+			             nodeName, cluster, proc);
 			good_state = false;
 		}
 		proc++;

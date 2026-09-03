@@ -59,7 +59,7 @@ ScriptExecResult ScriptQ::Run(Script* script, ScriptDeferAction act) {
 	if (!_dag->throttles.WithinLimit(throttle, _numScriptsRunning)) {
 		// max scripts already running
 		debug_printf(DEBUG_DEBUG_1, "Max %s scripts (%d) already running; deferring %s script of node %s\n", prefix,
-					 _dag->throttles[throttle], prefix, script->GetNodeName());
+		             _dag->throttles[throttle], prefix, script->GetNodeName());
 		deferScript = true;
 	}
 
@@ -188,7 +188,7 @@ int ScriptQ::ScriptReaper(int pid, int status) {
 		script->_nextRunTime = time(nullptr) + script->_deferTime;
 		_waitingQueue.push_back(script);
 		debug_printf(DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
-					 script->GetScriptName(), script->GetNodeName(), script->_deferTime, script->_deferStatus);
+		             script->GetScriptName(), script->GetNodeName(), script->_deferTime, script->_deferStatus);
 	} else {
 		script->_done = TRUE;
 		ReapScript(*script, status);

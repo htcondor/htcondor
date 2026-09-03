@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 	// If we have a config file then process it for further DAGMan setup options
 	if (!dagOpts[shallow::str::ConfigFile].empty()) {
 		if (access(dagOpts[shallow::str::ConfigFile].c_str(), R_OK) != 0 &&
-			!is_piped_command(dagOpts[shallow::str::ConfigFile].c_str())) {
+		    !is_piped_command(dagOpts[shallow::str::ConfigFile].c_str())) {
 			fprintf(stderr, "ERROR: Can't read DAGMan config file: %s\n", dagOpts[shallow::str::ConfigFile].c_str());
 			exit(1);
 		}
@@ -103,8 +103,8 @@ int main(int argc, char* argv[]) {
 
 	if (!param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true)) {
 		fprintf(stdout, "WARNING: DAGMAN_WRITE_PARTIAL_RESCUE = False.\n"
-						"   The use of full Rescue DAG's is deprecated and slated\n"
-						"   for removal during the lifetime of V24 feature series of HTCondor.\n\n");
+		                "   The use of full Rescue DAG's is deprecated and slated\n"
+		                "   for removal during the lifetime of V24 feature series of HTCondor.\n\n");
 	}
 
 	// Check whether the output files already exist; if so, we may
@@ -136,8 +136,8 @@ int main(int argc, char* argv[]) {
 
 //---------------------------------------------------------------------------
 /** Recursively call condor_submit_dag on nested DAGs.
-	@param dagOpts: the condor_submit_dag DAGMan options
-	@return 0 if successful, 1 if failed
+    @param dagOpts: the condor_submit_dag DAGMan options
+    @return 0 if successful, 1 if failed
 */
 int doRecursionNew(DagmanOptions& dagOpts) {
 	int result = 0;
@@ -208,8 +208,8 @@ int doRecursionNew(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 /** Submit the DAGMan submit file unless the -no_submit option was given.
-	@param dagOpts: the condor_submit_dag DAGMan options
-	@return 0 if successful, 1 if failed
+    @param dagOpts: the condor_submit_dag DAGMan options
+    @return 0 if successful, 1 if failed
 */
 int submitDag(DagmanOptions& dagOpts) {
 	if (!dagOpts[shallow::b::Terse]) {
@@ -274,10 +274,10 @@ int submitDag(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 /** Get the command-line options we want to preserve from the .condor.sub
-	file we're overwriting, and plug them into the shallowOpts structure.
-	Note that it's *not* an error for the .condor.sub file to not exist.
-	@param shallowOpts: the condor_submit_dag shallow options
-	@return 0 if successful, 1 if failed
+    file we're overwriting, and plug them into the shallowOpts structure.
+    Note that it's *not* an error for the .condor.sub file to not exist.
+    @param shallowOpts: the condor_submit_dag shallow options
+    @return 0 if successful, 1 if failed
 */
 int getOldSubmitFlags(DagmanOptions& dagOpts) {
 	// It's not an error for the submit file to not exist.
@@ -311,10 +311,10 @@ int getOldSubmitFlags(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 /** Parse the arguments line of an existing .condor.sub file, extracing
-	the arguments we want to preserve when updating the .condor.sub file.
-	@param subLine: the arguments line from the .condor.sub file
-	@param dagOpts: the condor_submit_dag DAGMan options
-	@return 0 if successful, 1 if failed
+    the arguments we want to preserve when updating the .condor.sub file.
+    @param subLine: the arguments line from the .condor.sub file
+    @param dagOpts: the condor_submit_dag DAGMan options
+    @return 0 if successful, 1 if failed
 */
 int parseArgumentsLine(const std::string& subLine, DagmanOptions& dagOpts) {
 	const char* line = subLine.c_str();
@@ -381,7 +381,7 @@ void parseCommandLine(DagmanOptions& dagOpts, size_t argc, const char* const arg
 					static bool flagUsed = false;
 					if (!flagUsed && !dagOpts[shallow::str::AppendFile].empty()) {
 						printf("Note: -insert_sub_file value (%s) overriding DAGMAN_INSERT_SUB_FILE setting (%s)\n", argv[iArg + 1],
-							   dagOpts[shallow::str::AppendFile].c_str());
+						       dagOpts[shallow::str::AppendFile].c_str());
 					}
 					flagUsed = true;
 				}

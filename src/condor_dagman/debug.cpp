@@ -30,7 +30,7 @@ const char* debug_progname = NULL;
 // sometimes we want to keep a cache for our log message when DAGMan is
 // emitting thousands of them quickly and we could be writing the log to
 // and NFS server.
-static bool cache_enabled = false;	  // do I honor start/stop requests?
+static bool cache_enabled = false;    // do I honor start/stop requests?
 static bool cache_is_caching = false; // have I started caching or stopped it?
 static std::string cache;
 
@@ -230,7 +230,7 @@ void debug_cache_set_size(size_t size) {
 bool check_warning_strictness(strict_level_t strictness, bool quit_if_error) {
 	if (Dagman::_strict >= strictness) {
 		debug_printf(DEBUG_QUIET, "ERROR: Warning is fatal "
-								  "error because of DAGMAN_USE_STRICT setting\n");
+		                          "error because of DAGMAN_USE_STRICT setting\n");
 		if (quit_if_error) {
 			main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_ERROR);
 		}
@@ -265,5 +265,5 @@ void time_to_str(time_t timestamp, std::string& tstr) {
 /*--------------------------------------------------------------------------*/
 void time_to_str(const struct tm* tm, std::string& tstr) {
 	formatstr(tstr, "%02d/%02d/%02d %02d:%02d:%02d ", tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100, tm->tm_hour, tm->tm_min,
-			  tm->tm_sec);
+	          tm->tm_sec);
 }

@@ -318,7 +318,7 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n", cmdFile.c_str(),
-						 desc.data());
+			             desc.data());
 			if (dm.config[conf::b::RemoveTempSubFiles]) {
 				dagmanUtils.tolerant_unlink(cmdFile);
 			}
@@ -401,10 +401,10 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	if (!output) {
 		if (exit_status != 0) {
 			debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s with status %d\n", node.GetNodeName(),
-						 exit_status);
+			             exit_status);
 		} else {
 			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n", errno, node.GetNodeName(),
-						 strerror(errno));
+			             strerror(errno));
 		}
 		err = "Failed to run condor_submit";
 		return SubmitResult::RETRY;
@@ -481,7 +481,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 	SubmitStepFromQArgs ssi(submitHash);
 
 	DCSchedd schedd;
-	schedd.locate();	  // TODO: use locate_local() ?
+	schedd.locate();      // TODO: use locate_local() ?
 	CondorError errstack; // errstack for general qmgr commands
 	AbstractScheddQ* MyQ = nullptr;
 
@@ -510,7 +510,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node.GetNodeName());
 	} else {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node.GetNodeName(),
-					 node.GetCmdFile());
+		             node.GetCmdFile());
 		if (!msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
 			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
@@ -668,7 +668,7 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 					} else if (node.GetType() == NodeType::PROVISIONER) {
 						// Required first node so abort (note: debug_error calls DC_EXIT)
 						debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-									node.GetNodeName());
+						            node.GetNodeName());
 					}
 				}
 

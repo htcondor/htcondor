@@ -79,10 +79,10 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string& spliceScope) :
 	ASSERT(_submitQ);
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
-		regulated and precious resource. Since we *know* we will never need
-		this object when we are parsing a splice, we don't allocate it.
-		In the other codes that expect this pointer to be valid, there is
-		either an ASSERT or other checks to ensure it is valid. */
+	    regulated and precious resource. Since we *know* we will never need
+	    this object when we are parsing a splice, we don't allocate it.
+	    In the other codes that expect this pointer to be valid, there is
+	    either an ASSERT or other checks to ensure it is valid. */
 	if (_isSplice == false) {
 		_preScriptQ = new ScriptQ(this);
 		_postScriptQ = new ScriptQ(this);
@@ -93,7 +93,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string& spliceScope) :
 	}
 
 	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
-				 dm.throttles[Throttle::MAX_NODES], dm.throttles[Throttle::MAX_PRE], dm.throttles[Throttle::MAX_POST]);
+	             dm.throttles[Throttle::MAX_NODES], dm.throttles[Throttle::MAX_PRE], dm.throttles[Throttle::MAX_POST]);
 }
 
 //-------------------------------------------------------------------------
@@ -173,9 +173,9 @@ bool Dag::Bootstrap(bool recovery) {
 		}
 		if (node->IsWaiting() && done && !node->NoChildren()) {
 			debug_printf(DEBUG_VERBOSE,
-						 "Warning: Node %s was marked as done even though parent nodes aren't complete."
-						 " Child nodes may run out of order.\n",
-						 node->GetNodeName());
+			             "Warning: Node %s was marked as done even though parent nodes aren't complete."
+			             " Child nodes may run out of order.\n",
+			             node->GetNodeName());
 		}
 		if (count >= nodesDone) {
 			break;
@@ -370,7 +370,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 
 	// Query the local schedd queue
 	int ret = queue.fetchQueueFromHostAndProcess(_schedd->addr(), attrs, QueryFetchOpts::fetch_Jobs, /*MatchLimit*/ -1,
-												 StoreQueueInformation, &job_info, 2, &errstack, nullptr);
+	                                             StoreQueueInformation, &job_info, 2, &errstack, nullptr);
 
 	auto log_size = std::filesystem::file_size(_defaultNodeLog);
 
@@ -384,7 +384,7 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 			break;
 		default:
 			debug_printf(DEBUG_NORMAL, "ERROR(%d): Failed to fetch job ads from local Schedd: %s\n", ret,
-						 errstack.getFullText().c_str());
+			             errstack.getFullText().c_str());
 		}
 		queryFailTime = now;
 		return;
@@ -450,7 +450,7 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
 
 	if (elapsedEventTime >= (time_t)config[conf::i::PendingReportInverval] &&
-		elapsedPrintTime >= (time_t)config[conf::i::PendingReportInverval]) {
+	    elapsedPrintTime >= (time_t)config[conf::i::PendingReportInverval]) {
 		_lastPendingNodePrintTime = currentTime;
 		debug_printf(DEBUG_NORMAL, "%zu seconds since last log event\n", elapsedEventTime);
 		PrintPendingNodes();
@@ -535,9 +535,9 @@ bool Dag::ProcessOneEvent(ULogEventOutcome outcome, const ULogEvent* event, bool
 			result = false;
 		} else {
 			debug_printf(DEBUG_NORMAL, "ERROR: failure to read job log\n"
-									   "\tA log event may be corrupt.  DAGMan will skip the event and try to\n\tcontinue, but "
-									   "information may have been lost.  If DAGMan exits\n\tunfinished, but reports no failed "
-									   "nodes, re-submit the rescue file\n\tto complete the DAG.\n");
+			                           "\tA log event may be corrupt.  DAGMan will skip the event and try to\n\tcontinue, but "
+			                           "information may have been lost.  If DAGMan exits\n\tunfinished, but reports no failed "
+			                           "nodes, re-submit the rescue file\n\tto complete the DAG.\n");
 		}
 		done = true;
 		break;
@@ -709,7 +709,7 @@ void Dag::ProcessAbortEvent(const ULogEvent* event, Node* node, bool recovery) {
 		// Set first failure information
 		if (node->TotalJobsFailed() == 1) {
 			node->SetErrorMsg("HTCondor reported %s event for job proc (%d.%d.%d)", event->eventName(), event->cluster, event->proc,
-							  event->subproc);
+			                  event->subproc);
 			node->SetReturnValue(DAG_ERROR_CONDOR_JOB_ABORTED);
 
 			// Set first exit value for post script
@@ -729,7 +729,7 @@ void Dag::ProcessAbortEvent(const ULogEvent* event, Node* node, bool recovery) {
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.", node->GetNodeName(), event->cluster,
-						  event->proc, event->subproc, event->eventName());
+				          event->proc, event->subproc, event->eventName());
 				RemoveBatchJob(node, rm_reason);
 			}
 		}
@@ -756,21 +756,21 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 			node->JobFailure();
 			if (termEvent->normal) {
 				debug_printf(DEBUG_QUIET, "Node %s job proc (%d.%d.%d) failed with status %d.\n", node->GetNodeName(),
-							 event->cluster, event->proc, event->subproc, termEvent->returnValue);
+				             event->cluster, event->proc, event->subproc, termEvent->returnValue);
 			} else {
 				debug_printf(DEBUG_QUIET, "Node %s job proc (%d.%d.%d) failed with signal %d.\n", node->GetNodeName(),
-							 event->cluster, event->proc, event->subproc, termEvent->signalNumber);
+				             event->cluster, event->proc, event->subproc, termEvent->signalNumber);
 			}
 
 			// Set first failure information
 			if (node->TotalJobsFailed() == 1) {
 				if (termEvent->normal) {
 					node->SetErrorMsg("Job proc (%d.%d.%d) failed with status %d", termEvent->cluster, termEvent->proc,
-									  termEvent->subproc, termEvent->returnValue);
+					                  termEvent->subproc, termEvent->returnValue);
 					node->SetReturnValue(termEvent->returnValue);
 				} else {
 					node->SetErrorMsg("Job proc (%d.%d.%d) failed with signal %d", termEvent->cluster, termEvent->proc,
-									  termEvent->subproc, termEvent->signalNumber);
+					                  termEvent->subproc, termEvent->signalNumber);
 					node->SetReturnValue(0 - termEvent->signalNumber);
 				}
 
@@ -792,10 +792,10 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 				}
 			} else {
 				debug_printf(DEBUG_NORMAL, "Node %s job proc (%d.%d.%d) completed successfully, but status is STATUS_ERROR\n",
-							 node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc);
+				             node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc);
 			}
 			debug_printf(DEBUG_NORMAL, "Node %s job proc (%d.%d.%d) completed successfully.\n", node->GetNodeName(),
-						 termEvent->cluster, termEvent->proc, termEvent->subproc);
+			             termEvent->cluster, termEvent->proc, termEvent->subproc);
 		}
 
 		bool batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
@@ -809,7 +809,7 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) reached failure tolerance after %d failures.",
-						  node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, node->TotalJobsFailed());
+				          node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, node->TotalJobsFailed());
 				RemoveBatchJob(node, rm_reason);
 			}
 		}
@@ -864,7 +864,7 @@ void Dag::ProcessJobProcEnd(Node* node, bool recovery, bool failed) {
 	// a go ahead then fail here
 	if (node->GetType() == PROVISIONER && !_provisioner_ready) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Provisioner node %s job exited before giving DAGMan the go ahead!\n",
-					node->GetNodeName());
+		            node->GetNodeName());
 	}
 
 	// If not late materialization (handled else where) do final node processing
@@ -882,7 +882,7 @@ void Dag::ProcessJobProcEnd(Node* node, bool recovery, bool failed) {
 			} else {
 				(void)RunPostScript(node, dagOpts[shallow::b::PostRun], 0);
 			}
-		} else if (failed) {	   // Job list has failed
+		} else if (failed) {       // Job list has failed
 			if (node->DoRetry()) { // Can node be retries
 				RestartNode(node, recovery);
 			} else if (config[conf::b::HoldFailedJobs]) { // Resubmit failed job(s) in held state
@@ -1042,12 +1042,12 @@ void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane)
 
 	if (node->IsWaiting()) {
 		debug_printf(DEBUG_QUIET, "Error: DAG semantics violated! Node %s was submitted but has unfinished parents!\n",
-					 node->GetNodeName());
+		             node->GetNodeName());
 		std::string dagFile = dagOpts.primaryDag();
 		debug_printf(DEBUG_QUIET,
-					 "This may indicate log file corruption; you may want to check the log files and re-run the "
-					 "DAG in recovery mode by giving the command 'condor_submit %s.condor.sub'\n",
-					 dagFile.c_str());
+		             "This may indicate log file corruption; you may want to check the log files and re-run the "
+		             "DAG in recovery mode by giving the command 'condor_submit %s.condor.sub'\n",
+		             dagFile.c_str());
 		node->Dump(this);
 		// We do NOT want to create a rescue DAG here, because it
 		// would probably be invalid.
@@ -1092,7 +1092,7 @@ void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane)
 			Node* expectedNode = nullptr;
 			if (_submitQ->empty()) {
 				debug_printf(DEBUG_QUIET, "Unrecognized submit event (for node \"%s\") found in log (none expected)\n",
-							 node->GetNodeName());
+				             node->GetNodeName());
 				return;
 			}
 			expectedNode = _submitQ->front();
@@ -1100,7 +1100,7 @@ void Dag::ProcessSubmitEvent(Node* node, bool recovery, bool& submitEventIsSane)
 			if (node != expectedNode) {
 				ASSERT(expectedNode != nullptr);
 				debug_printf(DEBUG_QUIET, "Unexpected submit event (for node \"%s\") found in log; node \"%s\" was expected.\n",
-							 node->GetNodeName(), expectedNode->GetNodeName());
+				             node->GetNodeName(), expectedNode->GetNodeName());
 				// put expectedNode back onto submit queue
 				_submitQ->push(expectedNode);
 				return;
@@ -1135,9 +1135,9 @@ void Dag::ProcessIsIdleEvent(Node* node, int proc) {
 	// Do some consistency checks here.
 	if (_numIdleJobProcs > 0 && TotalSubmittedNodes() < 1) {
 		debug_printf(DEBUG_NORMAL,
-					 "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting "
-					 "idle count to 0 so DAG continues.\n",
-					 _numIdleJobProcs);
+		             "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting "
+		             "idle count to 0 so DAG continues.\n",
+		             _numIdleJobProcs);
 		check_warning_strictness(DAG_STRICT_2);
 		_numIdleJobProcs = 0;
 	}
@@ -1163,9 +1163,9 @@ void Dag::ProcessNotIdleEvent(Node* node, int proc) {
 
 	if (_numIdleJobProcs > 0 && TotalSubmittedNodes() < 1) {
 		debug_printf(DEBUG_NORMAL,
-					 "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting "
-					 "idle count to 0 so DAG continues.\n",
-					 _numIdleJobProcs);
+		             "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting "
+		             "idle count to 0 so DAG continues.\n",
+		             _numIdleJobProcs);
 		check_warning_strictness(DAG_STRICT_2);
 		_numIdleJobProcs = 0;
 	}
@@ -1191,9 +1191,9 @@ void Dag::ProcessHeldEvent(Node* node, const ULogEvent* event) {
 	if (node->Hold(event->proc)) {
 		if (config[conf::i::MaxJobHolds] > 0 && node->GetJobsOnHold() >= config[conf::i::MaxJobHolds]) {
 			debug_printf(DEBUG_VERBOSE,
-						 "Total hold count for job %d (node %s)has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
-						 "proc(s) for this node will now be removed\n",
-						 event->cluster, node->GetNodeName(), config[conf::i::MaxJobHolds]);
+			             "Total hold count for job %d (node %s)has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+			             "proc(s) for this node will now be removed\n",
+			             event->cluster, node->GetNodeName(), config[conf::i::MaxJobHolds]);
 			std::string rm_reason = "DAG Limit: Max number of held jobs was reached.";
 			RemoveBatchJob(node, rm_reason);
 		}
@@ -1251,7 +1251,7 @@ void Dag::ProcessClusterRemoveEvent(Node* node, bool recovery) {
 		}
 	} else {
 		debug_printf(DEBUG_NORMAL, "ERROR: ProcessClusterRemoveEvent() called for node %s although %d procs still queued.\n",
-					 node->GetNodeName(), node->GetQueuedJobs());
+		             node->GetNodeName(), node->GetQueuedJobs());
 	}
 
 	// If this cluster did not complete successfully, restart it.
@@ -1377,7 +1377,7 @@ Node* Dag::FindNodeByEventID(const CondorID condorID) const {
 		// figures out whether the node was not found because of a
 		// retry.  (See gittrac #1957 and #1961.)
 		debug_printf(DEBUG_VERBOSE, "ERROR: node for condor ID %d.%d.%d not found! (might be because of node retries)\n",
-					 condorID._cluster, condorID._proc, condorID._subproc);
+		             condorID._cluster, condorID._proc, condorID._subproc);
 	} else {
 		node = (*findResult).second;
 	}
@@ -1390,7 +1390,7 @@ Node* Dag::FindNodeByEventID(const CondorID condorID) const {
 				// Note: we can get here if we get an aborted event after a terminated event for the same job (see
 				// gittrac #744 and the job_dagman_abnormal_term_recovery_retries test).
 				debug_printf(DEBUG_QUIET, "Warning: searched for node for cluster %d; got %d!!\n", condorID._cluster,
-							 node->GetCluster());
+				             node->GetCluster());
 				check_warning_strictness(DAG_STRICT_3);
 			}
 		}
@@ -1583,14 +1583,14 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 		// max jobs already submitted
 		if (!dm.throttles.WithinLimit(Throttle::MAX_NODES, _numNodesSubmitted)) {
 			debug_printf(DEBUG_DEBUG_1, "Max jobs (%d) already running; deferring submission of %d ready node%s.\n",
-						 dm.throttles[Throttle::MAX_NODES], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_NODES], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
 
 		if (!dm.throttles.WithinLimit(Throttle::MAX_IDLE, _numIdleJobProcs)) {
 			debug_printf(DEBUG_DEBUG_1, "Hit max number of idle DAG nodes (%d); deferring submission of %d ready node%s.\n",
-						 dm.throttles[Throttle::MAX_IDLE], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
+			             dm.throttles[Throttle::MAX_IDLE], _readyQ->size(), _readyQ->size() == 1 ? "" : "s");
 			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
@@ -1602,9 +1602,9 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 			time_t elapsed = now - cycleStart;
 			if (elapsed > config[conf::i::LogScanInterval]) {
 				debug_printf(DEBUG_QUIET,
-							 "Warning: Submit cycle elapsed time (%lld s) has exceeded log scan interval (%d s); bailing out of "
-							 "submit loop\n",
-							 (long long)elapsed, config[conf::i::LogScanInterval]);
+				             "Warning: Submit cycle elapsed time (%lld s) has exceeded log scan interval (%d s); bailing out of "
+				             "submit loop\n",
+				             (long long)elapsed, config[conf::i::LogScanInterval]);
 				break; // break out of while loop
 			}
 		}
@@ -1623,7 +1623,7 @@ int Dag::SubmitReadyNodes(const Dagman& dm) {
 		ThrottleByCategory::ThrottleInfo* catThrottle = node->GetThrottleInfo();
 		if (catThrottle && catThrottle->isSet() && catThrottle->_currentJobs >= catThrottle->_maxJobs) {
 			debug_printf(DEBUG_DEBUG_1, "Node %s deferred by category throttle (%s, %d)\n", node->GetNodeName(),
-						 catThrottle->_category->c_str(), catThrottle->_maxJobs);
+			             catThrottle->_category->c_str(), catThrottle->_maxJobs);
 			deferredNodes.push_back(node);
 			_catThrottleDeferredCount++;
 		} else if (dagOpts[shallow::b::DryRun]) {
@@ -1694,7 +1694,7 @@ int Dag::PreScriptReaper(Node* node, int status) {
 		// if script was killed by a signal
 		preScriptFailed = true;
 		debug_printf(DEBUG_QUIET, "PRE Script of node %s died on %s\n", node->GetNodeName(),
-					 daemonCore->GetExceptionString(status));
+		             daemonCore->GetExceptionString(status));
 		node->SetErrorMsg("PRE Script died on %s", daemonCore->GetExceptionString(status));
 		node->SetReturnValue(0 - WTERMSIG(status));
 	} else if (WEXITSTATUS(status) != 0) {
@@ -1721,7 +1721,7 @@ int Dag::PreScriptReaper(Node* node, int status) {
 			// we're skipping the node job and the POST script
 			// and considering the node successful.
 			debug_printf(DEBUG_NORMAL, "PRE_SKIP return value %d indicates we are done (successfully) with node %s\n",
-						 node->GetReturnValue(), node->GetNodeName());
+			             node->GetReturnValue(), node->GetNodeName());
 
 			// Mark the node as a skipped node.
 			if (!submitter->PreSkipSubmit(*node, DefaultNodeLog())) {
@@ -1732,7 +1732,7 @@ int Dag::PreScriptReaper(Node* node, int status) {
 			// We are not running this again, but we want to keep the tables correct.
 			// The log reading code will take  care of this in a moment.
 			node->_scriptPre->_done = TRUE; // So the pre script is not run again.
-			node->SetReturnValue(SUCCESS);	// Job _is_ successful!
+			node->SetReturnValue(SUCCESS);  // Job _is_ successful!
 		} else if (dagOpts[shallow::b::PostRun] && node->_scriptPost != nullptr) {
 			// Check for POST script. PRE script Failed.  The return code is in retval member.
 			node->_scriptPost->_retValScript = node->GetReturnValue();
@@ -1835,7 +1835,7 @@ int Dag::PostScriptReaper(Node* node, int status) {
 
 	std::string logFile = DefaultNodeLog();
 	debug_printf(DEBUG_QUIET, "Initializing user log writer for %s, (%d.%d.%d)\n", logFile.c_str(), event.cluster, event.proc,
-				 event.subproc);
+	             event.subproc);
 	ulog.initialize(logFile.c_str(), event.cluster, event.proc, event.subproc);
 
 	for (int write_attempts = 0;; ++write_attempts) {
@@ -1977,7 +1977,7 @@ bool Dag::DoneFailed(bool includeFinalNode) const {
 //---------------------------------------------------------------------------
 bool Dag::DoneCycle(bool includeFinalNode) const {
 	return FinishedRunning(includeFinalNode) && !DoneSuccess(includeFinalNode) && NumNodesFailed() == 0 && !IsHalted() &&
-		   !_dagIsAborted;
+	       !_dagIsAborted;
 }
 
 //---------------------------------------------------------------------------
@@ -2013,7 +2013,7 @@ void Dag::RemoveRunningScripts() const {
 				debug_printf(DEBUG_DEBUG_1, "Killing PRE script %d\n", node->_scriptPre->_pid);
 				if (daemonCore->Shutdown_Fast(node->_scriptPre->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET, "WARNING: shutdown_fast() failed on pid %d: %s\n", node->_scriptPre->_pid,
-								 strerror(errno));
+					             strerror(errno));
 				}
 			}
 		} else if (node->GetStatus() == Node::STATUS_POSTRUN) {
@@ -2025,7 +2025,7 @@ void Dag::RemoveRunningScripts() const {
 				debug_printf(DEBUG_DEBUG_1, "Killing POST script %d\n", node->_scriptPost->_pid);
 				if (daemonCore->Shutdown_Fast(node->_scriptPost->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET, "WARNING: shutdown_fast() failed on pid %d: %s\n", node->_scriptPost->_pid,
-								 strerror(errno));
+					             strerror(errno));
 				}
 			}
 		}
@@ -2133,7 +2133,7 @@ void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerI
 	const struct tm* tm = gmtime(&timestamp);
 
 	fprintf(fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1, tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
-			tm->tm_sec);
+	        tm->tm_sec);
 	fprintf(fp, "# Rescue DAG version: %s\n", RESCUE_DAG_VERSION);
 	fprintf(fp, "#\n");
 	fprintf(fp, "# Total number of Nodes: %d\n", NumNodes(true));
@@ -2264,10 +2264,10 @@ void Dag::PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bo
 	if (node) {
 		// NOTE: Keep inline with ProcessFailedSubmit debug message
 		debug_printf(level, "Event: %s for HTCondor Node %s (%d.%d.%d) {%s}%s\n", event->eventName(), node->GetNodeName(),
-					 event->cluster, event->proc, event->subproc, timestr.c_str(), recovStr);
+		             event->cluster, event->proc, event->subproc, timestr.c_str(), recovStr);
 	} else {
 		debug_printf(level, "Event: %s for unknown Node (%d.%d.%d) {%s}: ignoring...%s\n", event->eventName(), event->cluster,
-					 event->proc, event->subproc, timestr.c_str(), recovStr);
+		             event->proc, event->subproc, timestr.c_str(), recovStr);
 	}
 }
 
@@ -2282,7 +2282,7 @@ void Dag::RestartNode(Node* node, bool recovery) {
 	if (_finalNodeRun || (node->AbortRetry())) {
 		const char* finalRun = _finalNodeRun ? "because final node is running " : "";
 		debug_printf(DEBUG_NORMAL, "Aborting further retries of node %s %s(last attempt returned %d)\n", node->GetNodeName(),
-					 finalRun, node->GetReturnValue());
+		             finalRun, node->GetReturnValue());
 		if (node->GetType() != NodeType::SERVICE) {
 			_numNodesFailed++;
 			_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
@@ -2307,11 +2307,11 @@ void Dag::RestartNode(Node* node, bool recovery) {
 
 	if (!recovery) {
 		debug_printf(DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n", node->GetNodeName(), node->GetRetries(),
-					 node->GetRetryMax());
+		             node->GetRetryMax());
 		StartNode(node, true);
 	} else {
 		debug_printf(DEBUG_VERBOSE, "Looking for retry of node %s (retry #%d of %d)...\n", node->GetNodeName(), node->GetRetries(),
-					 node->GetRetryMax());
+		             node->GetRetryMax());
 
 		// Remove the "old" Condor ID from the ID->node hash table
 		// here to fix gittrac #1957.
@@ -2391,7 +2391,7 @@ bool Dag::isCycle() {
 				if (child->GetDfsOrder() >= parent->GetDfsOrder()) {
 #ifdef REPORT_CYCLE
 					debug_printf(DEBUG_QUIET, "Cycle in the graph possibly involving nodes %s and %s\n", parent->GetNodeName(),
-								 child->GetNodeName());
+				                 child->GetNodeName());
 #endif
 					return 1; // increment the cycle count
 				}
@@ -2493,7 +2493,7 @@ void Dag::DumpDotFile(void) {
 			dagmanUtils.tolerant_unlink(current_dot_file_name);
 			if (rename(temp_dot_file_name.c_str(), current_dot_file_name.c_str()) != 0) {
 				debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary dot file (%s) to permanent file (%s): %s\n",
-							 temp_dot_file_name.c_str(), current_dot_file_name.c_str(), strerror(errno));
+				             temp_dot_file_name.c_str(), current_dot_file_name.c_str(), strerror(errno));
 				check_warning_strictness(DAG_STRICT_1);
 			}
 		}
@@ -2502,14 +2502,14 @@ void Dag::DumpDotFile(void) {
 }
 
 /** Set the filename of the node status file.
-	@param the filename to which to dump node status information
-	@param the minimum interval, in seconds, at which to update the
-		status file (0 means no limit)
+    @param the filename to which to dump node status information
+    @param the minimum interval, in seconds, at which to update the
+        status file (0 means no limit)
 */
 void Dag::SetNodeStatusFileName(const char* statusFileName, int minUpdateTime, bool alwaysUpdate) {
 	if (_statusFileName) {
 		debug_printf(DEBUG_NORMAL, "Warning: Attempt to set NODE_STATUS_FILE to %s does not override existing value of %s\n",
-					 statusFileName, _statusFileName);
+		             statusFileName, _statusFileName);
 		check_warning_strictness(DAG_STRICT_3);
 		return;
 	}
@@ -2520,8 +2520,8 @@ void Dag::SetNodeStatusFileName(const char* statusFileName, int minUpdateTime, b
 
 //-------------------------------------------------------------------------
 /** Dump the node status.
-	@param whether the DAG has just been held
-	@param whether the DAG has just been removed
+    @param whether the DAG has just been held
+    @param whether the DAG has just been removed
 */
 // Note:  We might eventually want to change this to actually creating
 // classad objects and calling the unparser on them.  (See gittrac
@@ -2780,7 +2780,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 	if (rename(tmpStatusFile.c_str(), statusFileName.c_str()) != 0) {
 		debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary node status file (%s) to permanent file (%s): %s\n",
-					 tmpStatusFile.c_str(), statusFileName.c_str(), strerror(errno));
+		             tmpStatusFile.c_str(), statusFileName.c_str(), strerror(errno));
 		check_warning_strictness(DAG_STRICT_1);
 		return;
 	}
@@ -2825,7 +2825,7 @@ bool Dag::UnmonitorLogFile() {
 	CondorError errstack;
 	if (!_condorLogRdr.unmonitorLogFile(nodesLog, errstack)) {
 		errstack.pushf("DAGMan::UnmonitorLogFile", DAGMAN_ERR_LOG_FILE, "ERROR: Unable to unmonitor log file <%s>\n",
-					   nodesLog.c_str());
+		               nodesLog.c_str());
 		debug_printf(DEBUG_QUIET, "%s\n", errstack.getFullText().c_str());
 		EXCEPT("Fatal log file monitoring error!");
 	}
@@ -2865,12 +2865,12 @@ void Dag::EnforceNewJobsLimit() {
 
 //-------------------------------------------------------------------------
 /** Set the filename of the jobstate.log file.
-	@param the filename to which to write the jobstate log
+    @param the filename to which to write the jobstate log
 */
 void Dag::SetJobstateLogFileName(const char* logFileName) {
 	if (_jobstateLog.LogFile() != nullptr) {
 		debug_printf(DEBUG_NORMAL, "Warning: Attempt to set JOBSTATE_LOG to %s does not override existing value of %s\n",
-					 logFileName, _jobstateLog.LogFile());
+		             logFileName, _jobstateLog.LogFile());
 		check_warning_strictness(DAG_STRICT_3);
 		return;
 	}
@@ -2929,9 +2929,9 @@ void Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_term
 			// Perform some sanity checks per Node
 			if (node_held != node->GetJobsOnHold()) { // Held job procs check
 				debug_printf(DEBUG_NORMAL,
-							 "Warning: Number of counted held job processes (%d) is not equivalent to Node %s's internal count of "
-							 "held job processes count (%d).\n",
-							 held, node->GetNodeName(), node->GetJobsOnHold());
+				             "Warning: Number of counted held job processes (%d) is not equivalent to Node %s's internal count of "
+				             "held job processes count (%d).\n",
+				             held, node->GetNodeName(), node->GetJobsOnHold());
 			}
 		}
 	}
@@ -2940,9 +2940,9 @@ void Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_term
 	// Internal DAG counts held job procs as idle
 	if ((idle + held) != NumIdleJobProcs()) { // Idle job procs check
 		debug_printf(DEBUG_NORMAL,
-					 "Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes "
-					 "count (%d).\n",
-					 idle + held, NumIdleJobProcs());
+		             "Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes "
+		             "count (%d).\n",
+		             idle + held, NumIdleJobProcs());
 	}
 	// If passed counter then set to totals found in DAG
 	if (n_held) {
@@ -2976,12 +2976,12 @@ void Dag::PrintDeferrals(debug_level_t level, bool force) const {
 
 	if (_maxJobsDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxJobs limit (%d)\n", _maxJobsDeferredCount,
-					 throttles[Throttle::MAX_NODES]);
+		             throttles[Throttle::MAX_NODES]);
 	}
 
 	if (_maxIdleDeferredCount > 0 || force) {
 		debug_printf(level, "Note: %d total node deferrals because of -MaxIdle limit (%d)\n", _maxIdleDeferredCount,
-					 throttles[Throttle::MAX_IDLE]);
+		             throttles[Throttle::MAX_IDLE]);
 	}
 
 	if (_catThrottleDeferredCount > 0 || force) {
@@ -2990,17 +2990,17 @@ void Dag::PrintDeferrals(debug_level_t level, bool force) const {
 
 	if (_preScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total PRE script deferrals because of -MaxPre limit (%d) or DEFER\n",
-					 _preScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_PRE]);
+		             _preScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_PRE]);
 	}
 
 	if (_postScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total POST script deferrals because of -MaxPost limit (%d) or DEFER\n",
-					 _postScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_POST]);
+		             _postScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_POST]);
 	}
 
 	if (_holdScriptQ->GetScriptDeferredCount() > 0 || force) {
 		debug_printf(level, "Note: %d total HOLD script deferrals because of -MaxHold limit (%d) or DEFER\n",
-					 _holdScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_HOLD]);
+		             _holdScriptQ->GetScriptDeferredCount(), throttles[Throttle::MAX_HOLD]);
 	}
 }
 
@@ -3014,7 +3014,7 @@ void Dag::PrintPendingNodes() const {
 		case Node::STATUS_SUBMITTED:
 		case Node::STATUS_POSTRUN:
 			dprintf(D_ALWAYS, "  Node %s, HTCondor ID %d, status %s\n", node->GetNodeName(), node->GetCluster(),
-					node->GetStatusName());
+			        node->GetStatusName());
 			break;
 
 		default:
@@ -3029,14 +3029,14 @@ void Dag::CheckThrottleCats() {
 	for (const auto& throttle : *_catThrottles.GetThrottles()) {
 		ThrottleByCategory::ThrottleInfo* info = throttle.second;
 		debug_dprintf(D_TEST, DEBUG_NORMAL, "CHECK CATEGORY %s %d %d\n", info->_category->c_str(), info->_totalJobs,
-					  info->_maxJobs);
+		              info->_maxJobs);
 		debug_printf(DEBUG_DEBUG_1, "Category %s has %d jobs, throttle setting of %d\n", info->_category->c_str(), info->_totalJobs,
-					 info->_maxJobs);
+		             info->_maxJobs);
 		ASSERT(info->_totalJobs >= 0);
 		if (info->_totalJobs < 1) {
 			debug_printf(DEBUG_NORMAL,
-						 "Warning: category %s has no assigned nodes, so the throttle setting (%d) will have no effect\n",
-						 info->_category->c_str(), info->_maxJobs);
+			             "Warning: category %s has no assigned nodes, so the throttle setting (%d) will have no effect\n",
+			             info->_category->c_str(), info->_maxJobs);
 			check_warning_strictness(DAG_STRICT_2);
 		}
 
@@ -3174,7 +3174,7 @@ bool Dag::Add(Node* node) {
 	if (node->GetType() == NodeType::FINAL) {
 		if (_final_node) {
 			debug_printf(DEBUG_QUIET, "Error: DAG already has a final node %s; attempting to add final node %s\n",
-						 _final_node->GetNodeName(), node->GetNodeName());
+			             _final_node->GetNodeName(), node->GetNodeName());
 			return false;
 		}
 		node->SetStatus(Node::STATUS_NOT_READY);
@@ -3184,7 +3184,7 @@ bool Dag::Add(Node* node) {
 	if (node->GetType() == NodeType::PROVISIONER) {
 		if (_provisioner_node) {
 			debug_printf(DEBUG_QUIET, "Error: DAG already has a provisioner node %s; attempting to add provisioner node %s\n",
-						 _provisioner_node->GetNodeName(), node->GetNodeName());
+			             _provisioner_node->GetNodeName(), node->GetNodeName());
 			return false;
 		}
 		_provisioner_node = node;
@@ -3320,7 +3320,7 @@ Node* Dag::LogEventNodeLookup(const ULogEvent* event, bool& submitEventIsSane) {
 			}
 		} else {
 			debug_printf(DEBUG_QUIET, "ERROR: 'DAG Node:' not found in skip event notes: <%s>\n",
-						 skip_event->skipEventLogNotes.c_str());
+			             skip_event->skipEventLogNotes.c_str());
 		}
 		return node;
 	}
@@ -3420,7 +3420,7 @@ bool Dag::EventSanityCheck(const ULogEvent* event, const Node* node, bool* resul
 
 	if (checkResult == CheckEvents::EVENT_BAD_EVENT) {
 		debug_printf(DEBUG_NORMAL, "Continuing with DAG in spite of bad event (%s) because of allow_events setting\n",
-					 eventError.c_str());
+		             eventError.c_str());
 
 		// Don't do any further processing of this event,
 		// because it can goof us up (e.g., decrement count
@@ -3473,8 +3473,8 @@ bool Dag::SanityCheckSubmitEvent(const CondorID condorID, const Node* node) cons
 		return true;
 	} else {
 		debug_printf(DEBUG_QUIET,
-					 "%s  Trusting the userlog for now (because of DAGMAN_ABORT_ON_SCARY_SUBMIT setting), but this is scary!\n",
-					 message.c_str());
+		             "%s  Trusting the userlog for now (because of DAGMAN_ABORT_ON_SCARY_SUBMIT setting), but this is scary!\n",
+		             message.c_str());
 	}
 	return false;
 }
@@ -3511,7 +3511,7 @@ SubmitResult Dag::SubmitNodeJob(const Dagman& dm, Node* node, CondorID& condorID
 	// sleep for a specified time before submitting
 	if (config[conf::i::SubmitDelay] != 0) {
 		debug_printf(DEBUG_VERBOSE, "Sleeping for %d s (DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
-					 config[conf::i::SubmitDelay]);
+		             config[conf::i::SubmitDelay]);
 		sleep(config[conf::i::SubmitDelay]);
 	}
 
@@ -3521,7 +3521,7 @@ SubmitResult Dag::SubmitNodeJob(const Dagman& dm, Node* node, CondorID& condorID
 	if (!node->GetNoop() && node->GetDagFile() != nullptr && config[conf::b::GenerateSubdagSubmit]) {
 		bool isRetry = node->GetRetries() > 0;
 		if (dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->GetEffectivePrio(), isRetry) !=
-			0) {
+		    0) {
 			node->AttemptedSubmit();
 			debug_printf(DEBUG_QUIET, "ERROR: condor_submit_dag -no_submit failed for node %s.\n", node->GetNodeName());
 			err = "Failed to submit Sub-DAG";
@@ -3593,7 +3593,7 @@ void Dag::ProcessFailedSubmit(Node* node, int max_submit_attempts, std::string e
 	// NOTE: Keep inline with PrintEvent() message
 	// NOTE: The ULOG_ prefix is a lie asked for directly by pegasus *sigh*
 	debug_printf(DEBUG_VERBOSE, "Event: ULOG_SUBMIT_FAILURE for HTCondor Node %s (-1.-1.-1) {%s} %s\n", node->GetNodeName(),
-				 timestr.c_str(), err.c_str());
+	             timestr.c_str(), err.c_str());
 
 	// Flag the status file as outdated so it gets updated soon.
 	_statusFileOutdated = true;
@@ -3614,7 +3614,7 @@ void Dag::ProcessFailedSubmit(Node* node, int max_submit_attempts, std::string e
 		_nextSubmitDelay = 1;
 
 		debug_printf(DEBUG_QUIET, "Node submit failed after %d tr%s.\n", node->GetSubmitAttempts(),
-					 node->GetSubmitAttempts() == 1 ? "y" : "ies");
+		             node->GetSubmitAttempts() == 1 ? "y" : "ies");
 
 		node->SetErrorMsg("Job submit failed");
 
@@ -3649,9 +3649,9 @@ void Dag::ProcessFailedSubmit(Node* node, int max_submit_attempts, std::string e
 	} else {
 		// We have more submit attempts left, put this node back into the ready queue.
 		dprintf(D_TEST, "Node %s submit failed %d/%d. RETRYING NODE SUBMISSION\n", node->GetNodeName(), node->GetSubmitAttempts(),
-				max_submit_attempts);
+		        max_submit_attempts);
 		debug_printf(DEBUG_NORMAL, "Job submit try %d/%d failed, will try again in >= %d second%s.\n", node->GetSubmitAttempts(),
-					 max_submit_attempts, thisSubmitDelay, thisSubmitDelay == 1 ? "" : "s");
+		             max_submit_attempts, thisSubmitDelay, thisSubmitDelay == 1 ? "" : "s");
 
 		if (config[conf::b::RetrySubmitFirst]) {
 			_readyQ->prepend(node);
@@ -3764,7 +3764,7 @@ const Dag::PinNodes* Dag::GetPinInOut(const PinList& pinList, const char* inOutS
 	--pinNum; // Pin numbers start with 1
 	if (pinNum >= static_cast<int>(pinList.size())) {
 		debug_printf(DEBUG_QUIET, "ERROR: pin %s number %d specified; max is %d\n", inOutStr, pinNum + 1,
-					 static_cast<int>(pinList.size()));
+		             static_cast<int>(pinList.size()));
 		return nullptr;
 	} else {
 		return pinList[pinNum];
@@ -3783,7 +3783,7 @@ int Dag::GetPinCount(bool isPinIn) {
 //---------------------------------------------------------------------------
 bool Dag::ConnectSplices(Dag* parentSplice, Dag* childSplice) {
 	debug_printf(DEBUG_DEBUG_1, "Dag::ConnectSplices(%s, %s)\n", parentSplice->_spliceScope.c_str(),
-				 childSplice->_spliceScope.c_str());
+	             childSplice->_spliceScope.c_str());
 
 	std::string parentName = parentSplice->_spliceScope;
 	// Trim trailing '+' from parentName.
@@ -3817,7 +3817,7 @@ bool Dag::ConnectSplices(Dag* parentSplice, Dag* childSplice) {
 
 	if (pinOutCount != pinInCount) {
 		debug_printf(DEBUG_QUIET, "ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
-					 parentName.c_str(), pinOutCount, childName.c_str(), pinInCount);
+		             parentName.c_str(), pinOutCount, childName.c_str(), pinInCount);
 		return false;
 	}
 
@@ -3857,8 +3857,8 @@ bool Dag::ConnectSplices(Dag* parentSplice, Dag* childSplice) {
 	for (auto& node : childSplice->_nodes) {
 		if (node->NoParents()) {
 			debug_printf(DEBUG_QUIET,
-						 "ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
-						 node->GetNodeName());
+			             "ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
+			             node->GetNodeName());
 			return false;
 		}
 	}
@@ -4048,9 +4048,9 @@ void Dag::AssumeOwnershipofNodes(const std::string& spliceName, OwnedMaterials* 
 		ThrottleByCategory::ThrottleInfo* mainThrottle = _catThrottles.GetThrottleInfo(spliceThrottle->_category);
 		if (mainThrottle && mainThrottle->isSet() && mainThrottle->_maxJobs != spliceThrottle->_maxJobs) {
 			debug_printf(DEBUG_NORMAL,
-						 "Warning: higher-level (%s) maxjobs value of %d for category %s overrides splice %s value of %d\n",
-						 _spliceScope.c_str(), mainThrottle->_maxJobs, mainThrottle->_category->c_str(), spliceName.c_str(),
-						 spliceThrottle->_maxJobs);
+			             "Warning: higher-level (%s) maxjobs value of %d for category %s overrides splice %s value of %d\n",
+			             _spliceScope.c_str(), mainThrottle->_maxJobs, mainThrottle->_category->c_str(), spliceName.c_str(),
+			             spliceThrottle->_maxJobs);
 			check_warning_strictness(DAG_STRICT_2);
 		} else {
 			_catThrottles.SetThrottle(spliceThrottle->_category, spliceThrottle->_maxJobs);
@@ -4144,7 +4144,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 	// Verify we have parent(s)/child(ren) to make dependencies
 	if (parents.empty() || children.empty()) {
 		debug_printf(DEBUG_NORMAL, "ERROR: No %s%s%s nodes provided for dependency creation\n", parents.empty() ? "parent" : "",
-					 (parents.empty() && children.empty()) ? " nor " : "", children.empty() ? "child" : "");
+		             (parents.empty() && children.empty()) ? " nor " : "", children.empty() ? "child" : "");
 		return false;
 	}
 

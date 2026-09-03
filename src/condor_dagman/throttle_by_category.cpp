@@ -63,9 +63,9 @@ void ThrottleByCategory::SetThrottle(const std::string* category, int maxJobs) {
 		ThrottleInfo* info = (*findResult).second;
 		if (info->isSet() && info->_maxJobs != maxJobs) {
 			debug_printf(DEBUG_NORMAL,
-						 "Warning: new maxjobs value %d "
-						 "for category %s overrides old value %d\n",
-						 maxJobs, category->c_str(), info->_maxJobs);
+			             "Warning: new maxjobs value %d "
+			             "for category %s overrides old value %d\n",
+			             maxJobs, category->c_str(), info->_maxJobs);
 			check_warning_strictness(DAG_STRICT_3);
 		}
 		info->_maxJobs = maxJobs;
