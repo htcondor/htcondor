@@ -2860,11 +2860,14 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 }
 
 bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_id) {
-	static const std::map<DAG::CMD, NodeType> CMD_TO_NODE_TYPE = {{DAG::CMD::SUBDAG, NodeType::JOB},
-																  {DAG::CMD::JOB, NodeType::JOB},
-																  {DAG::CMD::FINAL, NodeType::FINAL},
-																  {DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
-																  {DAG::CMD::SERVICE, NodeType::SERVICE}};
+	// clang-format off
+	static const std::map<DAG::CMD, NodeType> CMD_TO_NODE_TYPE = {
+		{DAG::CMD::SUBDAG, NodeType::JOB},
+		{DAG::CMD::JOB, NodeType::JOB},
+		{DAG::CMD::FINAL, NodeType::FINAL},
+		{DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
+		{DAG::CMD::SERVICE, NodeType::SERVICE}
+	};
 
 	ASSERT(CMD_TO_NODE_TYPE.contains(cmd->GetCommand()));
 
