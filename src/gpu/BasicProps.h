@@ -16,10 +16,11 @@ class BasicProps {
 		int           multiProcessorCount {-1};
 		int           clockRate {-1};
 		int           ECCEnabled {-1};
-		int	      xNACK {-1};
-		int	      warpSize {-1};
-		int	      driverVersion {-1};
-		int       hipDetection{0};
+		int           integrated {-1};
+		int           xNACK {-1};
+		int           warpSize {-1};
+		int           driverVersion {-1};
+		int           hipDetection{0};
 
 		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };

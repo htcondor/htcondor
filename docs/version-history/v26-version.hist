@@ -1,5 +1,10 @@
 *** 26.2.0 features
 
+- :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
+  attribute that is true for NVIDIA GPUs that share their memory with the
+  host, such as unified-memory devices like the NVIDIA DGX Spark.
+  :jira:`3899`
+
 *** 26.2.0 bugs
 
 *** 26.1.0 bugs

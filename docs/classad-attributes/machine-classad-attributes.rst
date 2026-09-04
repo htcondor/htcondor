@@ -1457,6 +1457,12 @@ substituted with the *prefix string* assigned for the GPU.
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
 
+:classad-attribute-def:`<name>Integrated`
+    For CUDA devices, a boolean value that is true when the GPU shares
+    its memory with the host rather than having discrete device memory.
+    This is the case for unified-memory devices such as the NVIDIA
+    DGX Spark.
+
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
