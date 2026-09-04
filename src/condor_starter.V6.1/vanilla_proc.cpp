@@ -427,6 +427,34 @@ VanillaProc::StartJob()
 			}
 		}
 
+		// If the admin has set CGROUP_ZSWAP_MAX_EXPR, and it evaluates to a
+		// non-negative number (of megabytes) in the context of the slot and job
+		// ads, set the job's memory.zswap.max.  If unset, or it doesn't evaluate
+		// to such a number, we leave the control file alone.  Note that
+		// param_longlong returns true whenever the knob is *defined*, even when
+		// the expression fails to parse or evaluate, in which case it hands back
+		// the default value -- so we pass a negative sentinel as the default and
+		// reject anything negative below.  Zero is meaningful (it disables zswap
+		// for the job), so we must not confuse it with a failed evaluation.
+		const long long zswap_max_megabytes = std::numeric_limits<long long>::max() / (1024 * 1024);
+		long long zswap_value = -1;
+		if (param_longlong("CGROUP_ZSWAP_MAX_EXPR", zswap_value,
+					true,  // use_default
+					-1,    // default_value (sentinel for failed evaluation)
+					false, // check_ranges
+					0,     // min_value
+					std::numeric_limits<long long>::max(), // max_value
+					starter->jic->machClassAd(), // my ad
+					JobAd)) {
+			if (zswap_value < 0) {
+				dprintf(D_ALWAYS, "CGROUP_ZSWAP_MAX_EXPR did not evaluate to a non-negative number, ignoring\n");
+			} else if (zswap_value > zswap_max_megabytes) {
+				dprintf(D_ALWAYS, "CGROUP_ZSWAP_MAX_EXPR evaluated to %lld megabytes, which overflows, ignoring\n", zswap_value);
+			} else {
+				fi.cgroup_zswap_max = (uint64_t) zswap_value * 1024 * 1024;
+			}
+		}
+
 		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
 		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", true);
 		if (disable_swap && fi.cgroup_memory_limit > 0) {

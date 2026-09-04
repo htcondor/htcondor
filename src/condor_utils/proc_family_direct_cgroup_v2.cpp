@@ -387,6 +387,25 @@ ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
 		}
 	}
 
+	// Set the compressed swap (zswap) limit, if the admin has configured one.
+	// Note that zero is a meaningful value here (it disables zswap for the job),
+	// so only write to the control file when we actually have a value.
+	if (cgroup_zswap_max.has_value()) {
+		stdfs::path zswap_max_path = leaf / "memory.zswap.max";
+		int fd = open(zswap_max_path.c_str(), O_WRONLY, 0666);
+		if (fd >= 0) {
+			std::string buf;
+			formatstr(buf, "%lu", *cgroup_zswap_max);
+			int r = write(fd, buf.data(), buf.size());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error setting cgroup zswap limit of %s in cgroup %s: %s\n", buf.c_str(), leaf.c_str(), strerror(errno));
+			}
+			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error setting cgroup zswap limit of %lu in cgroup %s: %s\n", *cgroup_zswap_max, leaf.c_str(), strerror(errno));
+		}
+	}
+
 	// Set cpu limits, if any
 	if (cgroup_cpu_shares > 0) {
 		// write memory limits
@@ -660,6 +679,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
 	this->cgroup_memory_limit_low = fi->cgroup_memory_limit_low;
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
+	this->cgroup_zswap_max = fi->cgroup_zswap_max;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
 	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 
