@@ -352,7 +352,9 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 	int ret = queue.fetchQueueFromHostAndProcess(_schedd->addr(), attrs, QueryFetchOpts::fetch_Jobs, /*MatchLimit*/ -1,
 	                                             StoreQueueInformation, &job_info, 2, &errstack, nullptr);
 
-	auto log_size = std::filesystem::file_size(_defaultNodeLog);
+	std::error_code log_size_ec;
+	auto log_size = std::filesystem::file_size(_defaultNodeLog, log_size_ec);
+	if (log_size_ec) { log_size = 0; }
 
 	// Check for query failure. If failure then write error and return
 	if (ret != Q_OK) {
@@ -420,7 +422,10 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
 
 	if (status == ReadUserLog::LOG_STATUS_GROWN) { _lastEventTime = currentTime; }
-	auto log_size = std::filesystem::file_size(_defaultNodeLog);
+
+	std::error_code log_size_ec;
+	auto log_size = std::filesystem::file_size(_defaultNodeLog, log_size_ec);
+	if (log_size_ec) { log_size = 0; }
 
 	time_t elapsedEventTime = currentTime - _lastEventTime;
 	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;

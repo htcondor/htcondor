@@ -408,13 +408,15 @@ private:
 		path = p;
 
 		bool setup_failure = false;
+
+		std::error_code fs_ec;
 		if (path.empty()) {
 			err = "No file path provided";
 			setup_failure = true;
-		} else if ( ! std::filesystem::exists(path)) {
+		} else if ( ! std::filesystem::exists(path, fs_ec)) {
 			err = "Provided file path does not exist";
 			setup_failure = true;
-		} else if ( ! std::filesystem::is_regular_file(path)) {
+		} else if ( ! std::filesystem::is_regular_file(path, fs_ec)) {
 			err = "Provided file path is not a file";
 			setup_failure = true;
 		}
