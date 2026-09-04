@@ -497,6 +497,8 @@ def the_job_description(test_dir, path_to_the_job_script):
         # in the queue until it's removed, which is convenient.
         "LeaveJobInQueue":              "true",
 
+        "job_lease_duration":           "60",
+
         "executable":                   path_to_the_job_script.as_posix(),
         "arguments":                    "$(CLUSTER).$(PROCESS)",
         "transfer_executable":          "true",

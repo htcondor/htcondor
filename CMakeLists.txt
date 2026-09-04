@@ -18,7 +18,7 @@
 
 ##########################################################################
 # Set project
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)
 project(CONDOR LANGUAGES C CXX)
 
 # Exactly c++ 20 for all platforms
@@ -50,7 +50,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "26.1.0")
+set(VERSION "26.2.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -68,9 +68,9 @@ set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #   cmake ... -DFORCE_PRE_RELEASE:STRING=PRE-RELEASE-NMI
 if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
-endif( FORCE_PRE_RELEASE )
+endif()
 
-set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
+set(PACKAGE_BUGREPORT "htcondor-users@g-groups.wisc.edu")
 set(PACKAGE_NAME ${PACKAGE} )
 set(TEST_PACKAGE_NAME ${TEST_PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
@@ -89,7 +89,10 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH
+	${CONDOR_SOURCE_DIR}/build/cmake/macros
+	${CONDOR_SOURCE_DIR}/build/cmake
+)
 
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
@@ -126,7 +129,7 @@ include (TarGz) # Must be after include(CondorPackageConfig)
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif ( WINDOWS )
+endif()
 ##########################################################################
 # we only include the single sub to allow make at two levels.
 # root - includes externals

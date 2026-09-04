@@ -7334,6 +7334,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	std::string owner;
 	int has_new_idle_jobs = 0;
+	int has_new_idle_dag_or_local_jobs = 0;
 
 	// get sorted vectors of keys that are new and of keys that are modifications to existing ads
 	std::vector<JobQueueKey> new_keys, exist_keys;
@@ -7674,6 +7675,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				// so do that now (this is where it should always have been...)
 				if (job_status == JOB_STATUS_IDLE) {
 					has_new_idle_jobs += 1;
+					if (procad->Universe() == CONDOR_UNIVERSE_SCHEDULER || procad->Universe() == CONDOR_UNIVERSE_LOCAL) {
+						has_new_idle_dag_or_local_jobs += 1;
+					}
 				}
 
 				// handle initial counts of jobs by state in various places for this new job
@@ -7761,8 +7765,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	if (jobs_added_this_transaction) {
 		// because of Preparing state, the ProcAd may be inheriting IDLE from the cluster ad
 		// which would have resulted in the Dirty trigger in SetAttribute being skipped.
-		if (has_new_idle_jobs && ! PrioRecArrayIsDirty) DirtyPrioRecArray();
-		scheduler.endSubmitTransaction(jobs_added_this_transaction, has_new_idle_jobs);
+		int new_idle_priorec_jobs = has_new_idle_jobs - has_new_idle_dag_or_local_jobs;
+		if (new_idle_priorec_jobs > 0 && ! PrioRecArrayIsDirty) DirtyPrioRecArray();
+		scheduler.endSubmitTransaction(jobs_added_this_transaction, has_new_idle_jobs, has_new_idle_dag_or_local_jobs);
 	}
 
 	xact_start_time = 0;

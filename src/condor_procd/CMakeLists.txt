@@ -38,7 +38,7 @@ list(APPEND ProcdElements
 	group_tracker.linux.cpp
 	../condor_utils/perf_counter.linux.cpp
 	)
-endif(LINUX)
+endif()
 
 set(ProcClientElements
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_client.cpp
@@ -61,12 +61,12 @@ else()
 		${CMAKE_CURRENT_SOURCE_DIR}/local_server.UNIX.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/local_client.UNIX.cpp
 	)
-endif(WINDOWS)
+endif()
 
 set( ProcdUtilsSrcs "${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;../condor_utils/condor_blkng_full_disk_io.cpp;../condor_utils/selector.cpp;../condor_procapi/procapi.cpp;../condor_procapi/processid.cpp;../condor_procapi/procapi_killfamily.cpp" )
 if (WINDOWS)
 	set( ProcdUtilsSrcs "${ProcdUtilsSrcs};../condor_utils/process_control.WINDOWS.cpp;../condor_utils/ntsysinfo.WINDOWS.cpp" )
-endif(WINDOWS)
+endif()
 condor_static_lib( procdutils "${ProcdUtilsSrcs}" )
 condor_daemon(EXE condor_procd SOURCES "${ProcdElements};${ProcClientElements}" LIBRARIES "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
@@ -74,10 +74,10 @@ if (LINUX)
 	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;dprintf_lite.cpp" ${C_SBIN} "procdutils" OFF)
 
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "" OFF)
-endif(LINUX)
+endif()
 
 if (WINDOWS)
 	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp" ${C_SBIN} "procdutils;condor_utils" OFF)
-endif(WINDOWS)
+endif()
 
 set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

@@ -436,15 +436,24 @@ command_request_claim(int cmd, Stream* stream )
 		else {
 			claim = rip->r_pre;
 		}
-		// d-slots can have a split-claim id stored in the r_claims collection
-		auto j(rip->r_claims.begin());
-		if (j != rip->r_claims.end() && (*j)->idMatches(id)) {
-			claim = *j;
+		// d-slots can have a split-claim id stored in the r_claims collection.
+		// Scan the whole collection, matching how get_by_any_id() found this
+		// resource; the matching claim is not necessarily at the front.
+		if (Claim * split = rip->is_split_claim_id(id)) {
+			claim = split;
 		}
 	} else {
 		claim = rip->r_cur;
 	}
-	ASSERT( claim );
+	if( !claim ) {
+			// get_by_any_id() found this resource by a claim id we can no
+			// longer resolve to a live claim here (e.g. a claimed d-slot whose
+			// preempting claim is gone, or a stale/racing request during
+			// preemption).  Reject gracefully rather than aborting the startd.
+		rip->log_ignore( REQUEST_CLAIM, s );
+		reply(stream, NOT_OK);
+		return FALSE;
+	}
 	if( !claim->idMatches(id) ) {
 			// This request doesn't match the right claim ID.  It must
 			// match one of the other claim IDs associated with this

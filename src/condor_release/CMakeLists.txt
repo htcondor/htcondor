@@ -25,4 +25,4 @@ if (NOT WINDOWS)
 	install(FILES ../../LICENSE ../../NOTICE.txt README
 			DESTINATION ${C_DOC})
 
-endif (NOT WINDOWS)
+endif()

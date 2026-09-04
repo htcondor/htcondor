@@ -106,7 +106,7 @@ if (NOT WINDOWS)
 		dprintf_syslog.h
 		largestOpenFD.cpp
 	)
-endif(NOT WINDOWS)
+endif()
 
 if(WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
@@ -124,13 +124,13 @@ if(WINDOWS)
 		truncate.WINDOWS.cpp
 		uids.windows.credd.cpp
 	)
-endif(WINDOWS)
+endif()
 
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
 		lock_file.unix.cpp
 	)
-endif(NOT WINDOWS)
+endif()
 
 # These sources compile to .o's which only go into libcondorapi
 if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
@@ -522,7 +522,7 @@ if(NOT WINDOWS)
 		sig_install.unix.cpp
 		sleep.unix.cpp
 	)
-endif(NOT WINDOWS)
+endif()
 
 if(LINUX)
 	list(APPEND CONDOR_UTILS_SRC
@@ -546,7 +546,7 @@ if(LINUX)
 	endif()
 
 
-endif(LINUX)
+endif()
 
 if(WINDOWS)
 	list(APPEND CONDOR_UTILS_SRC
@@ -565,7 +565,7 @@ if(WINDOWS)
 		system_info.WINDOWS.cpp
 		uuid_lib.WINDOWS.cpp
 	)
-endif(WINDOWS)
+endif()
 
 
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
@@ -583,7 +583,7 @@ if(UNIX)
 
 	# ditto for this file
 	set_source_files_properties(ipv6_hostname.cpp PROPERTIES COMPILE_FLAGS -Wno-cast-align)
-endif(UNIX)
+endif()
 
 ############ end generate params
 # These sources depend on the generated param_info_tables.  Everything else can build in parallel
@@ -595,7 +595,7 @@ set( EXTRA_SRCS "${SAFE_OPEN_SRC};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${DAEMON_C
 if (UNIX)
 set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-endif(UNIX)
+endif()
 
 # Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
 if (APPLE)
@@ -614,37 +614,23 @@ endif()
 add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 
 # The utils need pcre2
-# Older cmakes don't allow target_link_libraries to OBJECT libraries
-# remove this when we drop Ubuntu 18
 include_directories(${PCRE2_INCLUDE})
 include_directories(${OPENSSL_INCLUDE})
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(condor_api_and_utils_objects INTERFACE pcre2-8)
-endif()
+target_link_libraries(condor_api_and_utils_objects INTERFACE pcre2-8)
 
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(condor_utils_objects INTERFACE pcre2-8)
-	if (WITH_SCITOKENS)
-		target_link_libraries(condor_utils_objects PRIVATE SciTokens-headers)
-	endif()
+target_link_libraries(condor_utils_objects INTERFACE pcre2-8)
+if (WITH_SCITOKENS)
+	target_link_libraries(condor_utils_objects PRIVATE SciTokens-headers)
 endif()
 
 add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 
 # The extra libraries also need pcre2
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(condor_extra_objects PUBLIC pcre2-8)
-	if (WITH_SCITOKENS)
-		target_link_libraries(condor_extra_objects PRIVATE SciTokens-headers)
-	endif()
+target_link_libraries(condor_extra_objects PUBLIC pcre2-8)
+if (WITH_SCITOKENS)
+	target_link_libraries(condor_extra_objects PRIVATE SciTokens-headers)
 endif()
 
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
@@ -705,7 +691,7 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
     target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
-endif(LINUX OR APPLE)
+endif()
 
 if (LINUX)
 target_link_options(condor_utils_s PRIVATE "-Wno-error")
@@ -753,11 +739,7 @@ endif()
 
 if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
 add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(condor_api_objects pcre2-8)
-endif()
+target_link_libraries(condor_api_objects pcre2-8)
 endif()
 
 if (HAVE_OLD_SCANDIR)

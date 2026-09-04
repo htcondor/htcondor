@@ -28,4 +28,4 @@ if(WINDOWS)
 	install(FILES ${C_WIN_BIN}/condor_mail.exe
 			DESTINATION "${C_BIN}")
 
-endif(WINDOWS)
+endif()

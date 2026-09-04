@@ -23,18 +23,14 @@ if("${OS_NAME}" MATCHES "^WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
-	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
+	# lowest common denominator is Windows 7.
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
 	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
 
 	# Turn on coroutine support
 	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/await:strict>)
 
-	if (MSVC90)
-	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
-	else()
-	    add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
-	endif()
+	add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 	set(CMD_TERM \r\n)
@@ -159,36 +155,33 @@ if(NOT WINDOWS)
 			message(STATUS "Python3 library found at ${PYTHON3_LIB}")
 		endif()
 
-	endif(WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
+	endif()
 
-else(NOT WINDOWS)
+else()
     #if(WINDOWS)
 
-    if (NOT (MSVC_VERSION LESS 1900))
-        if (WANT_PYTHON36)
-            # look for a 32 bit python 3.6 before looking for the 64 python 3.6
-            message(STATUS "  WANT_PYTHON36 no longer supported, remove this from your cmake config")
-        else (WANT_PYTHON36)
-            # look for python 3.9 or later
-            message(STATUS "  Looking for python 3.x")
+    if (WANT_PYTHON36)
+        # look for a 32 bit python 3.6 before looking for the 64 python 3.6
+        message(STATUS "  WANT_PYTHON36 no longer supported, remove this from your cmake config")
+    else()
+        # look for python 3.9 or later
+        message(STATUS "  Looking for python 3.x")
 
-            # Use the FindPython module to find the python interpreter, since it
-            # can find the interpreter even if it is not in the registry via the "py.exe" launcher.
-            # This module was introduced in CMake 3.12
-            set(Python3_FIND_UNVERSIONED_NAMES FIRST)
-            include(FindPython)
-            find_package(Python3 COMPONENTS Interpreter Development)
+        # Use the FindPython module to find the python interpreter, since it
+        # can find the interpreter even if it is not in the registry via the "py.exe" launcher.
+        set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+        include(FindPython)
+        find_package(Python3 COMPONENTS Interpreter Development)
 
-            if (Python3_FOUND)
-                set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
-                get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
-                message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-            else()
-                message(STATUS "  No Python 3.x found")
-                set(PYTHON3_INSTALL_DIR "registry")
-            endif()
-        endif (WANT_PYTHON36)
-    endif(NOT (MSVC_VERSION LESS 1900))
+        if (Python3_FOUND)
+            set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
+            get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
+            message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
+        else()
+            message(STATUS "  No Python 3.x found")
+            set(PYTHON3_INSTALL_DIR "registry")
+        endif()
+    endif()
 
     unset(PYTHON_INSTALL_DIR) # no python 2.7 support
     unset(PYTHON_EXECUTABLE)  # no python 2.7 support
@@ -273,12 +266,12 @@ else(NOT WINDOWS)
                 message(STATUS "Got PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
                 message(STATUS "Got PYTHON3_VERSION_MINOR = ${PYTHON3_VERSION_MINOR}")
             endif()
-        endif(${PYTHON_LIBRARY_SUFFIX} LESS 9)
+        endif()
 
-    endif (WANT_PYTHON3_BINDINGS AND PYTHON3_INSTALL_DIR)
+    endif()
     message(STATUS "=======================================================")
 
-endif(NOT WINDOWS)
+endif()
 
 include (FindThreads)
 if (WINDOWS)
@@ -307,16 +300,16 @@ if(PRE_RELEASE)
   add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
 else()
   add_definitions( -DPRE_RELEASE_STR="" )
-endif(PRE_RELEASE)
+endif()
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
 if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
-endif(PACKAGEID)
+endif()
 
 if(CONDOR_GIT_SHA)
   add_definitions( -DCONDOR_GIT_SHA=${CONDOR_GIT_SHA} )
-endif(CONDOR_GIT_SHA)
+endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
@@ -546,7 +539,7 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 option(WITH_PLACEMENT "Support for placement tokens and tokens database" ON)
 if (LINUX)
 	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-endif(LINUX)
+endif()
 
 #####################################
 # PROPER option
@@ -647,7 +640,7 @@ endif()
 
 if (BUILD_TESTING)
 	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
-endif(BUILD_TESTING)
+endif()
 
 ##################################################
 ##################################################
@@ -731,7 +724,7 @@ else ()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
 	endif()
 
-endif(WINDOWS)
+endif()
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
@@ -755,11 +748,11 @@ if (CONDOR_EXTERNALS)
 if (NOT WINDOWS)
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
-else (NOT WINDOWS)
+else()
 	add_custom_target( ALL_EXTERN DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
-endif (NOT WINDOWS)
-endif(CONDOR_EXTERNALS)
+endif()
+endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
@@ -781,10 +774,6 @@ endif()
 # include and link locations
 include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
 link_directories( ${CONDOR_EXTERNAL_LINK_DIRS} )
-
-if ( $ENV{JAVA_HOME} )
-	include_directories($ENV{JAVA_HOME}/include)
-endif()
 
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_includes)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes)
@@ -866,7 +855,7 @@ if(MSVC)
 		# turn on code analysis.
 		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
 		add_compile_options(/analyze /wd6211) # turn on code analysis (level 6 warnings)
-	endif(MSVC_ANALYZE)
+	endif()
 
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4251")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4275")  #
@@ -875,12 +864,12 @@ if(MSVC)
 	add_compile_options(/wd6334) # turn on code analysis (level 6 warnings)
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
-else(MSVC)
+else()
 
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
 		add_compile_options(-Wall)
-	endif(c_Wall)
+	endif()
 
 	# This generates a million warnings, some of which represent
 	# serious bugs.  At your leisure, uncomment and fix some 
@@ -893,17 +882,17 @@ else(MSVC)
 	check_c_compiler_flag(-W c_W)
 	if (c_W)
 		add_compile_options(-W)
-	endif(c_W)
+	endif()
 
 	check_c_compiler_flag(-Wextra c_Wextra)
 	if (c_Wextra)
 		add_compile_options(-Wextra)
-	endif(c_Wextra)
+	endif()
 
 	check_c_compiler_flag(-Wfloat-equal c_Wfloat_equal)
 	if (c_Wfloat_equal)
 		add_compile_options(-Wfloat-equal)
-	endif(c_Wfloat_equal)
+	endif()
 
 	#check_c_compiler_flag(-Wshadow c_Wshadow)
 	#if (c_Wshadow)
@@ -919,33 +908,33 @@ else(MSVC)
 	check_c_compiler_flag(-Wendif-labels c_Wendif_labels)
 	if (c_Wendif_labels)
 		add_compile_options(-Wendif-labels)
-	endif(c_Wendif_labels)
+	endif()
 
 	check_c_compiler_flag(-Wpointer-arith c_Wpointer_arith)
 	if (c_Wpointer_arith)
 		add_compile_options(-Wpointer-arith)
-	endif(c_Wpointer_arith)
+	endif()
 
 	check_c_compiler_flag(-Wcast-qual c_Wcast_qual)
 	if (c_Wcast_qual)
 		add_compile_options(-Wcast-qual)
-	endif(c_Wcast_qual)
+	endif()
 
 	check_c_compiler_flag(-Wcast-align c_Wcast_align)
 	if (c_Wcast_align)
 		add_compile_options(-Wcast-align)
-	endif(c_Wcast_align)
+	endif()
 
 	check_c_compiler_flag(-Wvolatile-register-var c_Wvolatile_register_var)
 	if (c_Wvolatile_register_var)
 		add_compile_options(-Wvolatile-register-var)
-	endif(c_Wvolatile_register_var)
+	endif()
 
 	check_c_compiler_flag(-Wunused-local-typedefs c_Wunused_local_typedefs)
 	if (c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		add_compile_options(-Wno-error=unused-local-typedefs)
-	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+	endif()
 
 	# check compiler flag not working for this flag.
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
@@ -953,17 +942,17 @@ else(MSVC)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
 		add_compile_options(-Wdeprecated-declarations -Wno-error=deprecated-declarations)
-	endif(c_Wdeprecated_declarations)
+	endif()
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
 		add_compile_options(-Wno-nonnull-compare -Wno-error=nonnull-compare)
-	endif(c_Wnonnull_compare)
+	endif()
 
 	check_c_compiler_flag(-fstack-protector c_fstack_protector)
 	if (c_fstack_protector)
 		add_compile_options(-fstack-protector)
-	endif(c_fstack_protector)
+	endif()
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
@@ -972,7 +961,7 @@ else(MSVC)
 		check_c_compiler_flag(-rdynamic c_rdynamic)
 		if (c_rdynamic)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
-		endif(c_rdynamic)
+		endif()
 	endif()
 
 
@@ -992,16 +981,16 @@ else(MSVC)
 		if ( "${LINUX_NAME}" STREQUAL "Ubuntu" )
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 		endif()
-	endif(LINUX)
+	endif()
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
-	endif(LINUX)
+	endif()
 
 	if (HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	endif()
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
@@ -1024,7 +1013,7 @@ else(MSVC)
 	# Currently, there are no flags that are only valid for C files.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}")
 
-endif(MSVC)
+endif()
 
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
@@ -1115,7 +1104,7 @@ if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
 	dprint ( "MSVC_VERSION: ${MSVC_VERSION}" )
 	dprint ( "MSVC_IDE: ${MSVC_IDE}" )
-endif(WINDOWS)
+endif()
 
 # set this to true if you don't want to rebuild the object files if the rules have changed,
 # but not the actual source files or headers (e.g. if you changed the some compiler switches)

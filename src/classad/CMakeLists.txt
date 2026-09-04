@@ -17,7 +17,6 @@
  ############################################################### 
  
 project(CLASSADS LANGUAGES CXX)
-cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -75,7 +74,7 @@ else()
 	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND}" OFF)
 	if (UNIX)
 		set_source_files_properties(classad_unit_tester.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-	endif(UNIX)
+	endif()
 
 	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND}" OFF)
 endif()
@@ -172,13 +171,7 @@ if (UNIX)
 target_compile_definitions(classads_objects PRIVATE UNIX)
 endif()
 
-# Older cmakes don't allow target_link_libraries to OBJECT libraries
-# remove this when we drop Ubuntu 18
-if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	include_directories(${PCRE2_INCLUDE})
-else()
-	target_link_libraries(classads_objects pcre2-8)
-endif()
+target_link_libraries(classads_objects pcre2-8)
 
 set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon

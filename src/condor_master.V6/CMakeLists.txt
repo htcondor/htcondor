@@ -25,6 +25,6 @@ MasterPluginManager.cpp
 
 if (WINDOWS)
 list(APPEND masterElements service.WINDOWS.cpp)
-endif(WINDOWS)
+endif()
 
 condor_daemon(EXE condor_master SOURCES "${masterElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")

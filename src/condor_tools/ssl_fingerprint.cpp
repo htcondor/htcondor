@@ -29,7 +29,6 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-#include <iomanip>
 #include <memory>
 #include <string>
 #include <unordered_set>

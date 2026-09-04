@@ -1680,12 +1680,16 @@ UniShadow::start_staging_only_conversation(
 	);
 	free( originalClaimID );
 
-	if(! rval) {
-		// Assuming that it's most likely that offerResources() failed
-		// because the schedd was busy, we should try again later when
-		// it isn't.
+	if( rval != OK ) {
+		//
+		// Arguably, we should retry `rval == -1` a few times, because it's
+		// likely that the schedd is just busy, and redoing the transfer
+		// because of that just makes the problem worse.  However, if
+		// `rval == NOT_OK`, then we should just give up right away and let
+		// the schedd get its act together.
+		//
 		co_return VACATE_REQUEUE_ABORT(
-			"Failed to offer schedd resources, aborting to try again when it's less busy.\n",
+			"Failed to tell schedd that the common file transfer completed (probably because it's too busy).  The schedd will try to run the corresponding job(s) again later.\n",
 			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed
 		);
 	}
@@ -2388,6 +2392,24 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
 		dprintf( D_TEST, "Sending (job setup) guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_CHECKPOINT_TAKEN ) {
+		// dprintf( D_ZKM, "Received request for guidance about checkpoint taken.\n" );
+
+		// For now, if the startd thinks the job should be evicted, then
+		// don't restart after the checkpoint.  Otherwise, restart.
+		bool claim_is_closing = false;
+		LookupBoolInContext( request, ATTR_EP_CHECKPOINT_RESTART, claim_is_closing );
+		dprintf( D_ZKM, "Received request for guidance about checkpoint taken; claim_is_closing is %s\n", claim_is_closing ? "true" : "false" );
+		if( claim_is_closing ) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_DONT_RESTART );
+		} else {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_RESTART );
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ZKM, "Sending (checkpoint taken) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 

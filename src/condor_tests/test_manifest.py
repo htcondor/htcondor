@@ -45,7 +45,7 @@ def test_job_hash(test_dir, path_to_python, test_script):
     return {
         "executable": path_to_python,
         "arguments": test_script,
-        "transfer_executable": "true",
+        "transfer_executable": "false",
         "should_transfer_files": "true",
         "transfer_input_files": input_file,
         "universe": "vanilla",

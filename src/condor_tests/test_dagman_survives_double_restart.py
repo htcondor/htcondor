@@ -89,6 +89,9 @@ def condor(test_dir):
         local_dir=test_dir / "condor",
         config={
             "SCHEDULER_UNIVERSE_COOL_DOWN_DURATION": 3,
+            "SCHEDD_INTERVAL": 5,
+            "SCHEDD_INTERVAL_TIMESLICE": 1.0,
+            "SCHEDD_MIN_INTERVAL": 2,
             # See test_dagman_survives_ap_restart.py: speed up DAGMan's own
             # orphan self-detection so a crashed/restarted schedd is
             # noticed quickly instead of after up to ~135s.

@@ -26,6 +26,7 @@
 #include "param_info.h"
 #include "param_info_tables.h"
 #include "condor_string.h"
+#include "basename.h"
 #include "condor_random_num.h"
 #include "condor_uid.h"
 #include "my_popen.h"
