@@ -158,6 +158,7 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 	p->clockRate = dpi->clockRate;
 	p->multiProcessorCount = dpi->multiProcessorCount;
 	p->ECCEnabled = dpi->ECCEnabled;
+	p->integrated = dpi->integrated;
 	p->setUUIDFromBuffer( dps->uuid );
 	if (dpi->pciBusID || dpi->pciDeviceID) {
 		snprintf(p->pciId, sizeof(p->pciId), "%04X:%02X:%02X.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
@@ -235,6 +236,7 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
+		cuDeviceGetAttribute(&p->integrated, CU_DEVICE_ATTRIBUTE_INTEGRATED, dev);
 		cudaDriverGetVersion(&p->driverVersion);
 
 		char driver[80];
