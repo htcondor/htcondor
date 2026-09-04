@@ -1153,6 +1153,14 @@ void main_init(int argc, char** const argv) {
 
 	std::error_code lock_ec;
 	bool recovery = std::filesystem::exists(lock_file, lock_ec);
+	if (lock_ec) {
+		// We can't tell whether the lock file exists. Don't silently assume
+		// "no lock" -- that would bootstrap the DAG in the wrong mode and
+		// could re-run already-completed nodes. Exit cleanly with an error
+		// instead of guessing (or crashing on the throwing overload).
+		debug_error(1, DEBUG_QUIET, "ERROR: Failed to check for lock file %s: %s\n",
+		            lock_file.c_str(), lock_ec.message().c_str());
+	}
 
 	if (recovery) {
 		debug_printf(DEBUG_VERBOSE, "Lock file %s detected\n", lock_file.c_str());

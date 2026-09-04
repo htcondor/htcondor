@@ -354,7 +354,15 @@ void Dag::VerifyJobsInQueue(const std::uintmax_t before_size) {
 
 	std::error_code log_size_ec;
 	auto log_size = std::filesystem::file_size(_defaultNodeLog, log_size_ec);
-	if (log_size_ec) { log_size = 0; }
+	if (log_size_ec) {
+		// Defer validation rather than assume a size of 0: a zero here would
+		// make the possible_race check below always false, which could
+		// falsely abort a valid DAG when a job's event is appended to the
+		// node log during the queue query. Retry on the next check interval.
+		debug_printf(DEBUG_NORMAL, "Unable to read node log size while validating jobs (%s); deferring validation\n",
+		             log_size_ec.message().c_str());
+		return;
+	}
 
 	// Check for query failure. If failure then write error and return
 	if (ret != Q_OK) {
@@ -423,9 +431,12 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 
 	if (status == ReadUserLog::LOG_STATUS_GROWN) { _lastEventTime = currentTime; }
 
+	// log_size feeds VerifyJobsInQueue() below as its before_size baseline.
+	// If we can't read it (e.g. the node log was deleted -- which is already
+	// reflected in status), skip that validation this cycle rather than pass
+	// a bogus size; status is still returned so the caller shuts down cleanly.
 	std::error_code log_size_ec;
 	auto log_size = std::filesystem::file_size(_defaultNodeLog, log_size_ec);
-	if (log_size_ec) { log_size = 0; }
 
 	time_t elapsedEventTime = currentTime - _lastEventTime;
 	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
@@ -442,7 +453,7 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 			auto nodeIsSubmitted = [](const Node* n) { return n->GetStatus() == Node::STATUS_SUBMITTED; };
 			bool hasSubmittedJobs = std::find_if(_nodes.begin(), _nodes.end(), nodeIsSubmitted) != _nodes.end();
 
-			if (hasSubmittedJobs && !_validatedState && elapsedCheckQTime >= checkQInterval) { VerifyJobsInQueue(log_size); }
+			if (!log_size_ec && hasSubmittedJobs && !_validatedState && elapsedCheckQTime >= checkQInterval) { VerifyJobsInQueue(log_size); }
 		}
 	}
 

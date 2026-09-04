@@ -414,10 +414,15 @@ private:
 			err = "No file path provided";
 			setup_failure = true;
 		} else if ( ! std::filesystem::exists(path, fs_ec)) {
-			err = "Provided file path does not exist";
+			// exists() clears fs_ec for a genuine "not found" and sets it
+			// only on a real lookup failure (permission/IO error). Preserve
+			// that diagnostic so an inaccessible path isn't reported as absent.
+			err = fs_ec ? "Cannot access provided file path: " + fs_ec.message()
+			            : "Provided file path does not exist";
 			setup_failure = true;
 		} else if ( ! std::filesystem::is_regular_file(path, fs_ec)) {
-			err = "Provided file path is not a file";
+			err = fs_ec ? "Cannot access provided file path: " + fs_ec.message()
+			            : "Provided file path is not a file";
 			setup_failure = true;
 		}
 
