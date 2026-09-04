@@ -1,5 +1,9 @@
 *** 26.0.1 bugs
 
+- Fixed a rare bug that could cause *condor_dagman* to crash when the
+  AP is restarted.
+  :jira:`3915`
+
 - Fixed a bug where the *condor_schedd* could crash if it lost a match after
   deciding to start a transfer shadow but before managing to do so.
   :jira:`3913`
