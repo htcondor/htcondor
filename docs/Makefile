@@ -54,7 +54,7 @@ clean:
 
 auto:
 	# Ignore sphinx build generated static files to prevent infinite build recursion
-	sphinx-autobuild --ignore '_static/generated' --ignore '*.DS_Store' -E . _build/html
+	sphinx-autobuild --ignore '__pycache__' --ignore '_static/generated' --ignore '*.DS_Store' -E . _build/html
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
