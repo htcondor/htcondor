@@ -39,6 +39,7 @@
 #include "edge.h"
 #include <ranges>
 #include <filesystem>
+#include <system_error>
 
 #include <queue>
 
