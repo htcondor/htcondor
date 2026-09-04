@@ -187,7 +187,9 @@ bool Dag::Bootstrap(bool recovery) {
 
 		debug_cache_start_caching();
 
-		auto log_size = std::filesystem::file_size(_defaultNodeLog);
+		std::error_code log_size_ec;
+		auto log_size = std::filesystem::file_size(_defaultNodeLog, log_size_ec);
+		if (log_size_ec) { log_size = 0; }
 
 		if (CondorLogFileCount() > 0) {
 			if (!ProcessLogEvents(recovery)) {
