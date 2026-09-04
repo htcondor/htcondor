@@ -1042,12 +1042,12 @@ role in determining the state and activity of a machine.
     policies; see information on policy templates here:
     :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
 
-Often there are resources like shared a file system that are needed to run jobs and that
-can fail or be termporarily unavaible.  The :ad-attr:`Healthy` expression is meant
+Often there are resources like a shared file system that are needed to run jobs and that
+can fail or be temporarily unavailable.  The :ad-attr:`Healthy` expression is meant
 to represent the availability of these global resources. When the :ad-attr:`Healthy` expression
 does not evaluate to ``True``, ``Requirements`` does not evaluate to ``True`` and no
 job will match. In older configurations, ``START`` was used for these health check conditions
-because :ad-attr:`Health` was not available.
+because :ad-attr:`Healthy` was not available.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the *condor_negotiator* to see if there is
@@ -1106,14 +1106,14 @@ The Healthy Expression
 
 The :ad-attr:`Healthy` attribute consists of a list of expressions that reference other
 attributes of the *condor_startd* each of which indicates the result of a health check.
-All heath check expressions must evaluate to ``True`` or non-zero in order for the overall
+All health check expressions must evaluate to ``True`` or non-zero in order for the overall
 :ad-attr:`Healthy` expression to be ``True``.  When :ad-attr:`Healthy` is not ``True`` no job will match.
 
 The list of health check expressions is configured by adding comma separated expressions
 to the :macro:`STARTD_HEALTH_EXPRS`.  These expressions will normally reference attributes
-set either by the configuration or by :macro:`STARTD_CRON_` scripts.  It is generally
+set either by the configuration or by ``STARTD_CRON`` scripts.  It is generally
 a good idea to force attributes referenced by these expressions to be *condor_startd* attributes
-by using the ``MY.`` prefix. 
+by using the ``MY.`` prefix.
 
     .. code-block:: condor-config
 
@@ -1140,7 +1140,7 @@ feature of the configuration language.  Using this new language feature, the abo
         # Add SHARED_FS_MOUNTED health expression.
         # SHARED_FS_MOUNTED will be set by STARTD_CRON script configured elsewhere
         #
-        STARTD_HEALTH_EXPRS +,=  MY.SHARED_FS_MOUNTED ?: false
+        STARTD_HEALTH_EXPRS +,= MY.SHARED_FS_MOUNTED ?: false
 
         # Admins should configure PreventJobsReason to a string and reconfig to disable all new job starts.
         PreventJobsReason =
@@ -1149,24 +1149,24 @@ Optional Requirements clauses
 ''''''''''''''''''''''''''''''''''''''''''
 
 In addition to :macro:`START`, :ad-attr:`Healthy` and :ad-attr:`WithinResourceLimits` additional
-attribute references can be added to the `Requirements` expression of the partitionable slots by
-adding the attributes names to :macro:`PSLOT_REQUIREMENTS_CLAUSES`. Attributes can be added to
-the dynamic slot `Requirements` expression by adding the attribute names to :macro:`DSLOT_REQUIREMENTS_CLAUSES`.
+attribute references can be added to the :ad-attr:`Requirements[type=Machine]` expression of the partitionable slots by
+adding the attribute names to :macro:`PSLOT_REQUIREMENTS_CLAUSES`. Attributes can be added to
+the dynamic slot :ad-attr:`Requirements[type=Machine]` expression by adding the attribute names to :macro:`DSLOT_REQUIREMENTS_CLAUSES`.
 
-These configuration macros were added in 25.10 to simplify and clairify the use of policy expressions
-that would formerly have been be added to the :macro:`START` expression but which must evaluate only
+These configuration macros were added in 25.10 to simplify and clarify the use of policy expressions
+that would formerly have been added to the :macro:`START` expression but which must evaluate only
 in partitionable or only in dynamic slots to work correctly.
 
 For example, an expression that is intended to restrict a dynamic slot that has GPUs to only match jobs that
-request the  same number of GPUs is difficult to express in the :macro:`START` expression, but fairly
-simple to write as a expression that exists only in the dynamic slot.
+request the same number of GPUs is difficult to express in the :macro:`START` expression, but fairly
+simple to write as an expression that exists only in the dynamic slot.
 
     .. code-block:: condor-config
 
         # A dynamic slot with GPUs should only match jobs that request that many GPUs
         #
         DSLOT_REQUIREMENTS_CLAUSES += JobFillsSlot
-        JobFillsSlot = MY.GPUs?:0 == TARGET.RequestGpus?:0
+        JobFillsSlot = MY.GPUs?:0 == TARGET.RequestGPUs?:0
 
 
 The RANK Expression

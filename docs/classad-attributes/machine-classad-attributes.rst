@@ -1275,14 +1275,14 @@ Machine ClassAd Attributes
     system. This attribute only exists on Windows machines.
 
 :classad-attribute-def:`WithinResourceLimits`
-    A ClassAd expression which compares each of provisioned
-    resources such as :ad-attr:`Cpus` and :ad-attr:`Memory` to the `Request*`
-    attributes of the job. It evaluates to ``True`` when each of Requested
+    A ClassAd expression which compares each of the provisioned
+    resources such as :ad-attr:`Cpus` and :ad-attr:`Memory` to the ``Request*``
+    attributes of the job. It evaluates to ``True`` when each of the Requested
     values is less than or equal to the slot value.  The value is generated
     by the *condor_startd* so that all resource types defined in the
     Startd configuration are checked. It will include custom resource types
     that are declared in the Startd configuration using :macro:`MACHINE_RESOURCE_<name>`
-    and related configuration. This attribute is used by the :ad-attr:`Requirements`
+    and related configuration. This attribute is used by the :ad-attr:`Requirements[type=Machine]`
     expression.
 
 In addition, there are a few attributes that are automatically inserted

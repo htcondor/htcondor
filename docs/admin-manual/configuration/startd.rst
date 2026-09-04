@@ -412,8 +412,8 @@ section.
     Like the above, but only applies to the numbered slot.
 
 :macro-def:`SLOT_REQUIREMENTS_CLAUSES`
-    A list of startd attributes that should be included in the :ad-attr:`Requirements` expression of
-    each slot.  :ad-attr:`START`, and :ad-attr:`WithinResourceLimits` are always included in
+    A list of startd attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
+    each slot.  :macro:`START`, and :ad-attr:`WithinResourceLimits` are always included in
     Requirements and do not need to be listed here. Defaults to :ad-attr:`Healthy` when
     there are :macro:`STARTD_HEALTH_EXPRS` configured.
 
@@ -427,11 +427,11 @@ section.
           SLOT_TYPE_2_ProjectRequirement = TARGET.ProjectName == "bluebook"
 
 :macro-def:`PSLOT_REQUIREMENTS_CLAUSES`
-    A list of attributes that should be included in the :ad-attr:`Requirements` expression of
+    A list of attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
     each partitionable slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
 
 :macro-def:`DSLOT_REQUIREMENTS_CLAUSES`
-    A list of Attributes that should be included in the :ad-attr:`Requirements` expression of
+    A list of attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
     each dynamic slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
 
 :macro-def:`STARTD_DEBUG`
