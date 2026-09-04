@@ -2355,23 +2355,118 @@ It serves as a quick reference.
 :index:`transitions<single: transitions; machine activity>`
 :index:`transitions<single: transitions; state>` :index:`transitions<single: transitions; activity>`
 
-Configuring HTCondor for Running Backfill Jobs
-----------------------------------------------
+Configuring HTCondor for Backfill
+---------------------------------
 
 :index:`Backfill`
 
-HTCondor can be configured to run backfill jobs whenever the
-*condor_startd* has no other work to perform. These jobs are considered
+HTCondor has two types of backfill, There is an older type of backfill where
+any slot can enter a backfill state and run backfill tasks when there are no jobs for it to run.
+There is a newer form of backfill where a slot type can be configured as a
+backfill slot.  Backfill slots will run ordinary HTCondor jobs from an AP,
+and will evict those jobs when a non-backfill slot on the same EP begins to use the
+same resources.
+
+Configuring a Backfill Partitionable slot
+-----------------------------------------
+
+HTCondor can be configured to have both normal and backfill partitionable slots
+using the same set of resources.  Slots that are designated backfill slots will
+keep track of the resource usage of normal slots and can evict jobs when
+any normal slot is using the same resources as the backfill slot.
+
+Use :macro:`SLOT_TYPE_<N>_BACKFILL` to designate a slot type as backfill. This
+currently works only when the slot type is also partitionable.
+
+When the *condor_startd* creates slots at startup time, it provisions them from the
+set of available resources like :macro:`DETECTED_CPUS` and :macro:`DETECTED_MEMORY`.
+When it creates a slot designated backfill, it uses a second set of resources that
+shadows the normal resource and starts with the same quantites.  This allows the creation of
+a primary p-slot and a backfill p-slot that each start with 100% of available resources.
+
+For example:
+
+.. code-block:: condor-config
+
+    # Create a normal p-slot that uses 100% of resources as SLOT_TYPE_1
+    use FEATURE : PartitionableSlot(1, 100%)
+
+    # Create a backfill p-slot also that uses 100% as SLOT_TYPE_2
+    use FEATURE : PartitionableSlot(2, 100%)
+    SLOT_TYPE_2_BACKFILL = true
+    SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
+
+When backfill slots are configured, the daemon ad of the *condor_startd* will have 
+attributes that report the aggrate backfill usage of the machine in addition to the normal
+usage attributes. The :tool:`condor_status` tool uses these attributes to accurately report the actual
+number of CPUs in the pool, as well as how many are assigned to active normal slots and
+how many are assigned to active backfill slots.  use ``condor_status -startd`` to see this summary.
+
+
+Backfill Partitionable slots track all Dynamic slots
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The advertised resource quanties of a backfill p-slot will be the original quanties
+minus the quanties assigned to all dynamic slots, both backfill and non-backfill.
+
+If machine has both backfill and normal p-slots and each starts with
+16 Cpus, when a 2 Cpu dynamic slot is created from the normal p-slot both the normal
+and backfill p-slots will then advertise 14 Cpus.  2 Cpus are deducted from the normal
+p-slot because the dynamic slot was created from it.  2 Cpus are deducted from the backfill
+p-slot because a 2 Cpu dynamic slot exists. This applies to all resource types - :ad-attr:'Cpus',
+:ad-attr:`Disk`, :ad-attr:`Memory`, :ad-attr:`GPUs` as well as custom resources.
+
+Backfill dynamic slots track resource conflicts
+'''''''''''''''''''''''''''''''''''''''''''''''
+
+Each backfill dynamic slot will have an attribute that is empty or undefined when
+no other dynamic slot is using the same resources. The attribute is :ad-attr:`ResourceConflict`.
+When this attribute is not empty, it will have the name of the type of resource
+that conflicts with another dynamic slot.  For instance when another slot is
+using the same memory, the value will be ``"Memory"``.  Policy expressions will
+generally only care if this attribute is empty or non-empty.
+
+Backfill and Non-Backfill slots should be configured for sets ofjobs
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+It is generally best to configure backfill slots to only match jobs that
+are willing to be evicted; and to configure non-backfill slots so that they will
+not run those jobs.  If you do not do this, The Negotiator will match the
+jobs from a single joblist to both non-backfill and backfill slots. The jobs on
+the backfill slots will then start and the get evicted a few seconds later when
+other jobs from that job list arrive to up the non-backfill slot.
+
+.. code-block:: condor-config
+
+    # Assume TYPE_1 slots are non-backfill and TYPE_2 slots are backfill
+    # and that jobs will set MY.BackfillJob = true to op-in to backfill slots.
+    # any give job will match only one slot type.
+    SLOT_TYPE_1_START = ! (TARGET.BackfillJob?:false)
+    SLOT_TYPE_2_START = TARGET.BackfillJob
+
+Note that the configuration above assumes that :macro:`START` is set to ``True``.
+Otherwise the `TARGET.BackfillJob` should be ``&&``-ed to the :macro:`START`
+expression rather than replacing it.
+
+
+Running backfill tasks while in the Backfill state (deprecated)
+---------------------------------------------------------------
+
+This form of backfill has been deprecated and may be removed in a the future.
+
+HTCondor can be configured to run enter a backfill state and run backfill tasks
+when the *condor_startd* has no other work to perform. The *condor_start* will
+leave the backfill state when asked to run a HTCondor job. Backfill task are considered
 the lowest possible priority, but when machines would otherwise be idle,
 the resources can be put to good use.
 
 Currently, HTCondor only supports using the Berkeley Open Infrastructure
-for Network Computing (BOINC) to provide the backfill jobs. More
+for Network Computing (BOINC) to provide the backfill tasks. More
 information about BOINC is available at
 `http://boinc.berkeley.edu <http://boinc.berkeley.edu>`_.
 
-The rest of this section provides an overview of how backfill jobs work
-in HTCondor, details for configuring the policy for when backfill jobs
+The rest of this section provides an overview of how backfill tasks work
+in HTCondor, details for configuring the policy for when backfill tasks
 are started or killed, and details on how to configure HTCondor to spawn
 the BOINC client to perform the work.
 
@@ -2395,7 +2490,7 @@ for the new, higher priority task.  More details about the different
 states an HTCondor resource can enter and all of the possible
 transitions between them are described in :ref:`Machine States`, above.
 
-At this point, the only backfill system supported by HTCondor is BOINC.
+At this point, the only backfill task generator supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client
 program at the appropriate times, but otherwise provides no additional
 services to configure the BOINC computations themselves. Future versions
