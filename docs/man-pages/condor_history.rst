@@ -63,7 +63,7 @@ Options
     Display ClassAds that satisfy the expression.
 **-since** *jobid or expr*
     Stop scanning when the ClassAd contains the specified JobId or when
-    the expresion evaluates to ``True``.
+    the expression evaluates to ``True``.
 **-completedsince** *timestamp*
     Scan until the first ClassAd that completed on or before the given unix
     timestamp. The argument can be any expression that evaluates to a unix timestamp.
@@ -166,7 +166,7 @@ Options
     Display ClassAds in long format.
 **-attributes** *Attribute[,Attribute,...]*
     Display only the *Attribute*\s specified when using the **-long** option.
-    Display only the given attributes when the **-long** *o* ption is
+    Display only the given attributes when the **-long** option is
     used.
 **-xml**
     Display job ClassAds in XML format.
@@ -178,7 +178,7 @@ Options
     Restrict output to the given column width.  Default width is 80 columns, if **-wide** is
     used without the optional *N* argument, the width of the output is not restricted.
 **-extract** *filename*
-    Copy all constraint matching ClassAd entries from history files into the spceifed
+    Copy all constraint matching ClassAd entries from history files into the specified
     *filename* to create a miniature history file for faster queries via **-file** *filename*.
     By default this option will copy up to ``100,000`` matching ads. To increase or decrease
     this limit use the **-limit** option. To disable the limit use **-limit -1**.

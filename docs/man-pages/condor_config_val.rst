@@ -102,7 +102,7 @@ Options
     by the file that last set the variable, and in the order that they
     were set in that file. If the ``detected`` option is added, then variables
     such as ``$(OPSYSANDVER)`` that are detected at runtime are included
-    in the ouput.
+    in the output.
  **-dump**
     (view option) For all configuration variables that match *vars*,
     display the variables and their values. If no *vars* are listed,
@@ -146,14 +146,14 @@ Options
     (view option) For the configuration read from files (the default),
     write to file *filename* all configuration variables. Values that
     are the same as internal, compile-time defaults will be preceded by
-    the comment character. If the **:upgrade** *o* ption is
+    the comment character. If the **:upgrade** option is
     specified, then values that are the same as the internal,
     compile-time defaults are omitted. Variables are in the same order
     as the they were read from the original configuration files.
  **-macro[:path]**
     (view option) Macro expand the text in *vars* as the configuration
     language would. You can use expansion functions such as
-    ``$F(<var>)``. If the **:path** *o* ption is specified, treat the
+    ``$F(<var>)``. If the **:path** option is specified, treat the
     result as a path and return the canonical form.
  **-mixedcase**
     (view option) Applied only when the configuration is read from files

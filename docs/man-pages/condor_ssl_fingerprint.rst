@@ -12,7 +12,7 @@ Synopsis
 Description
 -----------
 
-*condor_ssl_fingerprint* parses provided file for X.509 certificcates and prints
+*condor_ssl_fingerprint* parses provided file for X.509 certificates and prints
 prints them to ``stdout``.  If no file is provided, then it defaults to printing
 out the user's ``known_hosts`` file (typically, in ``~/.condor/known_hosts``).
 
