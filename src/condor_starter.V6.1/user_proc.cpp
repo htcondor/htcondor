@@ -55,7 +55,6 @@ UserProc::initialize( void )
 	exit_status = -1;
 	requested_exit = false;
 	m_proc_exited = false;
-	m_dedicated_account = NULL;
 	m_deleteJobAd = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
 	timerclear( &job_start_time );
