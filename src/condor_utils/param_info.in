@@ -1165,7 +1165,7 @@ type=string
 tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
-default=NumShadowStarts
+default=NumShadowStarts,DAGManJobId,DAGNodeName
 type=string
 
 [MAX_TRANSFER_LIFETIME]
@@ -4183,6 +4183,10 @@ type=string
 description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
 
+[ANNEX_USE_OLD_CREATE]
+default=False
+type=bool
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
@@ -5126,6 +5130,12 @@ type=string
 description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup low limit
 tags=starter
 
+[CGROUP_ZSWAP_MAX_EXPR]
+default=
+type=string
+description=A classad expression, evaluated in the context of the slot and job ad, which sets the job's cgroup memory.zswap.max limit in megabytes.  When unset, HTCondor does not write to memory.zswap.max
+tags=starter
+
 [CGROUP_IGNORE_CACHE_MEMORY]
 type=bool
 default=true
@@ -5303,7 +5313,7 @@ type=int
 range=0,
 
 [MAX_CONCURRENT_UPLOADS_PER_USER]
-default=$(MAX_CONCURRENT_UPLOADS:100)/5
+default=($(MAX_CONCURRENT_UPLOADS:0))/5
 type=int
 range=0,
 

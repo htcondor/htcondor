@@ -43,7 +43,7 @@ def check_interface_health(interface: GenericInterface) -> None:
 
 def compute_index_mappings(
         interface: GenericInterface,
-        index: str,
+        active_index: str,
         ad_type: str,
         custom_properties: dict,
         custom_templates: OrderedDict,
@@ -52,7 +52,6 @@ def compute_index_mappings(
     existing_mappings = {}
     if interface.is_search_engine:
         logging.info(f"Getting existing index mappings from {interface.__class__.__name__}")
-        active_index = interface.get_active_index(index)
         existing_mappings = interface.get_mappings(active_index)
     mappings = existing_mappings.copy()
 
@@ -69,16 +68,14 @@ def compute_index_mappings(
 
 def set_index_settings(
         interface: GenericInterface,
-        index: str,
+        active_index: str,
         mappings: dict,
         custom_settings: dict,
     ) -> dict:
 
-
     existing_settings = {}
     if interface.is_search_engine:
         logging.info(f"Getting existing index settings from {interface.__class__.__name__}")
-        active_index = interface.get_active_index(index)
         existing_settings = interface.get_settings(active_index)
 
     # Only pass along the field limit, other settings are likely to be immutable
@@ -98,7 +95,7 @@ def set_index_settings(
     existing_settings = field_limit_settings
 
     ses = SearchEngineSettings(
-        index_name=index,
+        index_name=active_index,
         mappings=mappings,
         custom_settings=custom_settings,
         existing_settings=existing_settings)
@@ -106,7 +103,7 @@ def set_index_settings(
     if interface.is_search_engine:
         logging.info(f"Pushing computed index settings to {interface.__class__.__name__}")
         interface.update_settings(
-            index=index,
+            index=active_index,
             settings=ses.update_settings)
 
     return ses.settings
@@ -132,7 +129,7 @@ def init_index(ad_type: str, args: Namespace) -> None:
 
     mappings = compute_index_mappings(
         interface=interface,
-        index=args.se_index_name,
+        active_index=args.se_index_name,
         ad_type=ad_type,
         custom_properties=args.custom_field_properties or {},
         custom_templates=args.custom_dynamic_templates or OrderedDict(),
@@ -157,10 +154,16 @@ def init_index(ad_type: str, args: Namespace) -> None:
 def setup_index(interface: GenericInterface, ad_type: str, args: Namespace) -> Tuple[dict]:
     test_interface(interface=interface)
     check_interface_health(interface=interface)
+    # Resolve the active index once if using aliases
+    # All index mutations must only target this index
+    if interface.is_search_engine:
+        active_index = interface.get_active_index(args.se_index_name)
+    else:
+        active_index = args.se_index_name
     # Compute mappings
     mappings = compute_index_mappings(
         interface=interface,
-        index=args.se_index_name,
+        active_index=active_index,
         ad_type=ad_type,
         custom_properties=args.custom_field_properties or {},
         custom_templates=args.custom_dynamic_templates or OrderedDict(),
@@ -168,7 +171,7 @@ def setup_index(interface: GenericInterface, ad_type: str, args: Namespace) -> T
     # Update settings (including total_fields.limit) before pushing mappings.
     settings = set_index_settings(
         interface=interface,
-        index=args.se_index_name,
+        active_index=active_index,
         mappings=mappings,
         custom_settings=args.custom_index_settings or {},
     )
@@ -176,10 +179,9 @@ def setup_index(interface: GenericInterface, ad_type: str, args: Namespace) -> T
     if interface.is_search_engine:
         logging.info(f"Pushing computed index mappings to {interface.__class__.__name__}")
         try:
-            interface.update_mappings(args.se_index_name, mappings)
+            interface.update_mappings(active_index, mappings)
         except Exception as e:
             if "total fields" in str(e).lower() and "exceeded" in str(e).lower():
-                active_index = interface.get_active_index(args.se_index_name)
                 current_settings = interface.get_settings(active_index)
                 current_limit = int(current_settings["index"]["mapping"]["total_fields"]["limit"])
                 new_limit = max(calculate_field_limit(mappings), current_limit * 2)
@@ -187,8 +189,8 @@ def setup_index(interface: GenericInterface, ad_type: str, args: Namespace) -> T
                     f"Field limit exceeded pushing mappings (limit may have reset after rollover), "
                     f"bumping to {new_limit} and retrying"
                 )
-                interface.update_settings(args.se_index_name, {"index.mapping.total_fields.limit": new_limit})
-                interface.update_mappings(args.se_index_name, mappings)
+                interface.update_settings(active_index, {"index.mapping.total_fields.limit": new_limit})
+                interface.update_mappings(active_index, mappings)
             else:
                 raise
     if args.se_log_mappings:

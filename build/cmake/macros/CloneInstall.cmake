@@ -43,7 +43,7 @@ else()
 		endif()
 		install (CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"${PATH_DIFF}/${_ORIG_TARGET}\" \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${new_target})")
 	endforeach(new_target)
-endif(WINDOWS)
+endif()
 
 ENDMACRO (CLONE_INSTALL)
 

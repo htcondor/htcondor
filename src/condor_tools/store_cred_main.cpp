@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "dynuser.h"
 #include "get_daemon_name.h"
-#include "condor_string.h"
 #include "secure_file.h"
 #include "match_prefix.h"
 #include "iso_dates.h"

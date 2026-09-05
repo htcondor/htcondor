@@ -20,9 +20,9 @@ MACRO (APPEND_VAR _VAR _VAL)
 
 	if(${_VAR})
 		set (${_VAR} "${${_VAR}};${_VAL}")
-	else(${_VAR})
+	else()
 		set (${_VAR} ${_VAL})
-	endif(${_VAR})
+	endif()
 
 	set (${_VAR} ${${_VAR}} PARENT_SCOPE )
 
@@ -40,10 +40,10 @@ MACRO (APPEND_UNIQUE_VAR _VAR _VAL)
 		endforeach (v)
 		if (_not_found)
 			set (${_VAR} "${${_VAR}};${_VAL}")
-		endif(_not_found)
-	else(${_VAR})
+		endif()
+	else()
 		set (${_VAR} ${_VAL})
-	endif(${_VAR})
+	endif()
 
 	set (${_VAR} ${${_VAR}} PARENT_SCOPE )
 

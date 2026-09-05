@@ -1,0 +1,30 @@
+*** 26.2.0 features
+
+*** 26.2.0 bugs
+
+- The *condor_starter* can now optionally set a limit on the amount of
+  compressed swap (zswap) a job may use, via the new
+  :macro:`CGROUP_ZSWAP_MAX_EXPR`. It is a ClassAd expression, evaluated in
+  the context of the slot and job ads, whose value in megabytes is written
+  to the job's cgroup ``memory.zswap.max``. When it is unset, which is the
+  default, HTCondor does not write to that control file at all, and the job
+  gets whatever the system default is. Requires cgroup v2 and a kernel with
+  zswap support.
+  :jira:`3898`
+
+*** 26.1.0 bugs
+
+*** 26.0.1 bugs
+
+- Fixed a rare bug that could cause *condor_dagman* to crash when the
+  AP is restarted.
+  :jira:`3915`
+
+- Fixed a bug where the *condor_schedd* could crash if it lost a match after
+  deciding to start a transfer shadow but before managing to do so.
+  :jira:`3913`
+
+- Fixed a bug where :ad-attr:`ResourcesUsed` would grow without bounds in the
+  *condor_negotiator* and as reported by :tool:`condor_userprio`
+  :jira:`3904`
+
