@@ -3594,10 +3594,10 @@ static const char * evaluate_macro_func (
 			if ( ! mval) mval = name;
 			tvalue = NULL;
 
-			char * tmp2 = NULL;
+			auto_free_ptr tmp2;
 			if (strchr(mval, '$')) {
-				tmp2 = expand_macro(mval, macro_set, ctx);
-				mval = tmp2;
+				tmp2.set(expand_macro(mval, macro_set, ctx));
+				mval = tmp2.ptr();
 			}
 
 			if (special_id == SPECIAL_MACRO_ID_INT) {
@@ -3625,7 +3625,6 @@ static const char * evaluate_macro_func (
 				if (fmt && ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
 			}
 
-			if (tmp2) {free(tmp2);} tmp2 = NULL;
 		}
 		break;
 
