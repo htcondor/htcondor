@@ -844,7 +844,7 @@ characters other than these as options are ignored.
 
 :classad-function-def:`String userHome(String userName [ , String default ])`
     Returns the home directory of the given user as configured on the
-    current system (determined using the getpwdnam() call). (Returns
+    current system (determined using the getpwnam() call). (Returns
     ``default`` if the ``default`` argument is passed and the home
     directory of the user is not defined.)
 

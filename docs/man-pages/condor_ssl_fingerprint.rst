@@ -12,8 +12,8 @@ Synopsis
 Description
 -----------
 
-*condor_ssl_fingerprint* parses provided file for X.509 certificcates and prints
-prints them to ``stdout``.  If no file is provided, then it defaults to printing
+*condor_ssl_fingerprint* parses provided file for X.509 certificates and prints them
+to ``stdout``.  If no file is provided, then it defaults to printing
 out the user's ``known_hosts`` file (typically, in ``~/.condor/known_hosts``).
 
 If a single PEM-formatted X.509 certificate is found, then its fingerprint is printed.

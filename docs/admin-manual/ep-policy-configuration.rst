@@ -3881,7 +3881,7 @@ case it refers to a file in the scratch directory, so that the image
 can be transferred by HTCondor's file transfer mechanism.
 
 Here's the simplest possible configuration file.  It will force all
-jobs on this machine to run under Singularity, and to use an image that is located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+jobs on this machine to run under Singularity, and to use an image that is located in the file system in the path ``/cvmfs/cernvm-prod.cern.ch/cvm3``:
 
 .. code-block:: condor-config
 

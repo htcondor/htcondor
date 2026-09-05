@@ -32,7 +32,7 @@ Recipes
 '''''''
 
 The following recipes assume you have an
-`OSG Portal <https://portal.osg-htc.org/applicatio>`_
+`OSG Portal <https://portal.osg-htc.org/application>`_
 account and password.  If you're using a different AP,
 and your AP administrator has
 :ref:`enabled <enabling htcondor annex>`

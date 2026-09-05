@@ -38,7 +38,7 @@ all attributes.
     This is how much time HTCondor's fair-share mechanism will charge the job.
 
     This attribute may not be used in startd policy expressions and is
-    not computed until complete.  If a job is prempted or evicted and 
+    not computed until complete.  If a job is preempted or evicted and 
     restarted, this attribute measure the most recently completed activation
     attempt, it does not contain the sum of all prior launches.
 
@@ -235,7 +235,7 @@ all attributes.
 
 :classad-attribute-def:`ContainerImageSource`
     For Container universe jobs, the string that names the container image source
-    Is "local" for non-transfered images or "cedar" for transfered files.  "docker"
+    Is "local" for non-transferred images or "cedar" for transferred files.  "docker"
     or "http" might be other common values.
 
 :classad-attribute-def:`ContainerTargetDir`
@@ -1681,7 +1681,7 @@ all attributes.
 
 :classad-attribute-def:`JobStarterLog`
     When the *condor_starter* is creating a job-specific copy of its
-    dameon log (see :ad-attr:`JobStarterDebug`), this attribute causes
+    daemon log (see :ad-attr:`JobStarterDebug`), this attribute causes
     the log to be transferred to the Access Point with the job's
     output sandbox, and written to the given pathname.
 

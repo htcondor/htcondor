@@ -324,7 +324,7 @@ failed constraints, insufficient priority, resource owner preferences
 and prevention of preemption by the
 :macro:`PREEMPTION_REQUIREMENTS` expression. If the slot being analyzed
 is partitionable, and the job does not fit within the current resources
-of the slot, the analysis will simulate draining of the slot and proceeed
+of the slot, the analysis will simulate draining of the slot and proceed
 using the simulated drained slot. If the analyze option
 **-verbose** is specified along with the **-analyze** option, progress
 information is printed and the names of the first ten machines that match

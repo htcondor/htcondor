@@ -15,14 +15,14 @@ Jobs that use :mod:`htcondor2.htchirp` module must have the attribute
 ``WantIOProxy`` set to ``true`` in the job ClassAd
 (``want_io_proxy = true`` in the submit description).
 :mod:`htcondor2.htchirp` only works for jobs run in the
-vanilla, paralllel, and java universes.
+vanilla, parallel, and java universes.
 
 :mod:`htcondor2.htchirp` provides two objects for interacting with the
 *condor_starter* Chirp proxy server, :class:`HTChirp` and
 :func:`condor_chirp`.
 
 We recommend using :class:`HTChirp` as a context manager,
-which automatically handles openining and closing the connection
+which automatically handles opening and closing the connection
 to the *condor_starter* Chirp proxy server:
 
 .. code-block:: python

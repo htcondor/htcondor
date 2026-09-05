@@ -81,7 +81,7 @@ Options
 Dealing with Short Reads
 ------------------------
 
-For unknown reasons, on Linux, attemps to read the list of PIDs from the
+For unknown reasons, on Linux, attempts to read the list of PIDs from the
 /proc filesystem do not always return all of the PIDs on the system.  The
 *condor_procd* attempts to detect when this occurs, using two methods.
 

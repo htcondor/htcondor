@@ -141,7 +141,7 @@ STEP 7: Access Permission Settings.
         Administrator access is for starting and stopping the daemons
         and sending administrative commands such as reconfig and drain.
         By default the installer will give this permission to the Windows
-        user that runs the installer and to the Windows ``Adminstrator`` account.
+        user that runs the installer and to the Windows ``Administrator`` account.
         See ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR`
 
     For more details on these access permissions, and others that can be
