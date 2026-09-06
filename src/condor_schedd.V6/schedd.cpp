@@ -17855,9 +17855,19 @@ Scheduler::unlinkMrec(match_rec* match)
 		match->auth_hole_id = NULL;
 	}
 
-		// Remove this match from the associated shadowRec.
-	if (match->shadowRec)
+	// Remove this match from the associated shadowRec.
+	if( match->shadowRec ) {
+		// If we don't delete the shadow record now, we're assuming that
+		// it's going to be deleted when the shadow exits and triggers the
+		// reaper.  Of course, that can only happen if there's shadow process
+		// to reap...
+		if( match->shadowRec->pid == 0 ){
+			dprintf( D_ALWAYS, "Deleting this match record's shadow record because it has no PID.\n" );
+			delete_shadow_rec( match->shadowRec );
+		}
+
 		match->shadowRec->match = NULL;
+	}
 
 	numMatches--;
 	return 0;
