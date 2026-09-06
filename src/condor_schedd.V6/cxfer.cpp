@@ -186,6 +186,13 @@ command_data_slot_callback(
 
 void
 call_StartJobFailure( const std::string & claimID ) {
+	match_rec * m = scheduler.FindMrecByClaimID( claimID.c_str() );
+	shadow_rec * s = NULL;
+	if( m ) {
+		s = m->shadowRec;
+	}
+
+
 	//
 	// There's a race condition here.  StartJobFailed() call del_mrec(),
 	// which calls unlink_mrec(), which calls send_vacate().  This can
@@ -197,7 +204,8 @@ call_StartJobFailure( const std::string & claimID ) {
 	// Instead, let's wait a few seconds before vacating the claim.
 	//
 
-	auto lambda = [claimID](int /* timerID */) -> void {
+	auto lambda = [claimID, m, s](int /* timerID */) -> void {
+		dprintf( D_ALWAYS, "call_StartJobFailure(): m = %p, s = %p\n", m, s );
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
 		if( mrec != nullptr ) {
 			// StartJobFailed() indirectly deletes mrec.  We don't want to
@@ -206,13 +214,17 @@ call_StartJobFailure( const std::string & claimID ) {
 			// is a transfer shadow's.
 			auto * shadow_record = mrec->shadowRec;
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
+			dprintf( D_ALWAYS, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
 			scheduler.StartJobFailed( mrec, id );
 
 			if( shadow_record != nullptr ) {
-				dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
+				dprintf( D_ALWAYS, "call_StartJobFailure(): deleting shadow record after failure to create data slot.\n" );
 				scheduler.delete_shadow_rec( shadow_record );
+			} else {
+				dprintf( D_ALWAYS, "call_StartJobFailure(): match record %p did not have a shadow record!\n", mrec );
 			}
-
+		} else {
+			dprintf( D_ALWAYS, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
 		}
 	};
 
