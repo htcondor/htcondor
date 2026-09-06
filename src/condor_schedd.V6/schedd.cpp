@@ -17857,6 +17857,8 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	// Remove this match from the associated shadowRec.
 	if( match->shadowRec ) {
+		match->shadowRec->match = NULL;
+
 		// If we don't delete the shadow record now, we're assuming that
 		// it's going to be deleted when the shadow exits and triggers the
 		// reaper.  Of course, that can only happen if there's shadow process
@@ -17865,8 +17867,6 @@ Scheduler::unlinkMrec(match_rec* match)
 			dprintf( D_ALWAYS, "Deleting this match record's shadow record because it has no PID.\n" );
 			delete_shadow_rec( match->shadowRec );
 		}
-
-		match->shadowRec->match = NULL;
 	}
 
 	numMatches--;
@@ -22051,13 +22051,12 @@ Scheduler::post_transform_adjustments(
 
 void
 Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
-	// If the blocked job is a prompting job, the transfer shadow should
-	// have a match record, right?
+	// If the blocked job is a prompting job, we will have set it blocking
+	// only after we marked the match as belonging to the transfer shadow,
+	// and before we yield control.  (We could move set_job_status() up
+	// to before start_command_data_slot() to make this clearer, although
+	// the latter doesn't yield control either.)
 	PROC_ID transferID{ jid.cluster, promptingToTransferProcID(jid.proc) };
-dprintf( D_ALWAYS, "Looking for match record for %d.%d\n", transferID.cluster, transferID.proc );
-for( auto [jobID, mr] : matchesByJobID ) {
-    dprintf( D_ALWAYS, "[dump] match record for %d.%d / %d.%d\n", jobID.cluster, jobID.proc, mr->jid.cluster, mr->jid.proc );
-}
 	match_rec * mrec = FindMrecByJobID( transferID );
 	if( mrec ) {
 		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
@@ -22116,6 +22115,15 @@ for( auto [jobID, mr] : matchesByJobID ) {
 			DelMrec( mrec );
 
 			return;
+		}
+
+		if( (* sr)->pid == 0 ) {
+		    // This doesn't necessarily mean that we won't start the shadow
+		    // corresponding to this record, but it could mean that we didn't
+		    // and never will (because of a failure to start the shadow,
+		    // including a command_data_slot() failure).  We could try setting
+		    // the PID to -1 in call_StartJobFailure() before the delay, so
+		    // that neither unlinkMrec() nor this function will become confused.
 		}
 	}
 
