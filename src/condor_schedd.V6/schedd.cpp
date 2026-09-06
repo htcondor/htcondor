@@ -17957,7 +17957,8 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 	matchesByJobID.erase(old_job_id);
 
 	match->jid = job_id;
-	if (JobQueueBase::IsJobId(match->jid)) {
+	// TJ, quit breaking things.
+	if( JobQueueBase::IsJobId(match->jid) || isTransferShadowProcID(match->jid) ) {
 		auto [it, success] = matchesByJobID.emplace(job_id, match);
 		if(! success) {
 			dprintf( D_ALWAYS | D_BACKTRACE, "SetMrecJobID() called for job ID %d.%d, which could not be emplaced.\n", job_id.cluster, job_id.proc );
@@ -22020,4 +22021,78 @@ Scheduler::post_transform_adjustments(
 	}
 
 	return 0;
+}
+
+
+void
+Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
+	// If the blocked job is a prompting job, the transfer shadow should
+	// have a match record, right?
+	PROC_ID transferID{ jid.cluster, promptingToTransferProcID(jid.proc) };
+dprintf( D_ALWAYS, "Looking for match record for %d.%d\n", transferID.cluster, transferID.proc );
+for( auto [jobID, mr] : matchesByJobID ) {
+    dprintf( D_ALWAYS, "[dump] match record for %d.%d / %d.%d\n", jobID.cluster, jobID.proc, mr->jid.cluster, mr->jid.proc );
+}
+	match_rec * mrec = FindMrecByJobID( transferID );
+	if( mrec ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
+		return;
+	}
+
+
+	// If the blocked job isn't a prompting job, it should have an entry
+	// in matchesHeldByBlockedJobs.
+	for( match_rec * m : matchesHeldByBlockedJobs ) {
+		if( m == nullptr ) {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null, which is definitely wrong.\n", jid.cluster, jid.proc );
+			continue;
+		}
+
+		if( jid.cluster == m->jid.cluster && jid.proc == m->jid.proc ) {
+			mrec = m;
+		}
+	}
+	if( mrec == nullptr ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): no matches held for nonprompting job, unbocking it.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"no matches held for nonprompting job"
+		);
+
+		return;
+	}
+
+
+	// The match held by this blocked job should have a shadowrec, each of
+	// whose required catalogs has a corresponding shadow.
+	shadow_rec * srec = mrec->shadowRec;
+	if( srec == nullptr ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match held by blocked job does not have a shadow rec; unblocking.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"match held by blocked job had no shadow rec"
+		);
+		DelMrec( mrec );
+
+		return;
+	}
+
+	for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+		auto sr = getShadowForCatalog( catalogName );
+		if(! sr) {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): No shadow for found catalog '%s', unblocking job\n", jid.cluster, jid.proc, catalogName.c_str() );
+
+			std::ignore = release_block_condition(
+				{jid.cluster, jid.proc}, CommonTransfer,
+				"no shadow found for a blocked job's catalog"
+			);
+			DelMrec( mrec );
+
+			return;
+		}
+	}
+
+	dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
 }

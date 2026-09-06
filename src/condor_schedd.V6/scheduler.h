@@ -614,7 +614,7 @@ class Scheduler : public Service
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);
 	static int		generalJobFilesWorkerThread(void *, Stream *);
-	int				spoolJobFilesReaper(int,int);	
+	int				spoolJobFilesReaper(int,int);
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( int timerID = -1 );
 	void			addCronTabClassAd( JobQueueJob* );
@@ -913,6 +913,31 @@ class Scheduler : public Service
 	// Don't inadvertently create empty vectors.
 	// Note that the returned vector is a copy, and does not own the pointers.
 	std::optional<std::vector<match_rec *>> getMatchesBySinful( const std::string & sinful );
+
+	// A blocked job must either (a) be a prompting job with a matching transfer
+	// shadow or (b) had a match record in matchesHeldByBlockedJobs _and_ have
+	// a transfer shadow for each catalog.
+	void checkBlockedJob( JobQueueJob * job, const JOB_ID_KEY & jid );
+
+	//
+	// This is not well-named.
+	//
+	// This function checks, for every match held by a blocked job, for each
+	// catalog required by that job, if a shadow is registerd as providing
+	// that catalog (to that starter).  If not, the job is unblocked and
+	// the match yielded.  (See HTCONDOR-3610: it's obviously more efficient
+	// to to just start a transfer shadow on the match and treat the newly-
+	// unblocked job as the new prompting job).  If so, as a configuration
+	// option, we check the registered shadow for liveness....
+	//
+	// As a configuration option, we can also check every job in the queue
+	// to make sure that if it's blocked, it's either in the list of matches
+	// held by blocked jobs or a prompting job (meaning that some shadow rec
+	// has the corresponding ID).   Arguably, this check would be better done
+	// when rebuilding the prio-rec array, since we're iterating over all job
+	// ads there anyway...
+	//
+	void unblock_transferless_jobs();
 
 	// Remove empty vectors from the map.
 	bool removeMatchFromSinful( const std::string & sinful, match_rec * match );
