@@ -13526,6 +13526,8 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
 		return;
 	}
+
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): begin.\n" );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
