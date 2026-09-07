@@ -192,10 +192,25 @@ call_StartJobFailure( const std::string & claimID ) {
 		s = m->shadowRec;
 	}
 
-    // FIXME: consider calling unregister_shadow_catalogs() here, immediately,
-    // to avoid sticking jobs in the blocked state because they think there's
-    // a live shadow they're waiting for; this would be safer than (also)
-    // deleting the shadow record in unlinkMrec().
+
+	//
+	// We really need to replace how we manage match and shadow records,
+	// but until we do, the problem we really need to solve is that the
+	// transfer shadow isn't unregistering its catalogs.  As of
+	// a79e7188e4a064f092744009aa5f14facddd4cdd, we still have
+	// unregister_shadow_catalog() segfaulting (when called via
+	// delete_shadow_rec() from StartJobHandler()); this is probably
+	// happening because unlinkMrec() can't tell the difference between
+	// shadows which haven't started yet and ones which never will.
+	//
+	// This problem shouldn't intractable, but it seems like it is, so
+	// for now ignore the inevitable memory leaks and just fix the problem
+	// leading to jobs being held indefinitely.
+	//
+	if( s ) {
+		// Since this shadow failed to start, its PID field should still be 0.
+		scheduler.unregister_shadow_catalogs( s, 0 );
+	}
 
 
 	//
