@@ -11072,7 +11072,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				}
 
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
-					transfer_job_id, universe, mrec, -1 , nullptr
+					transfer_job_id, universe, mrec, -1, nullptr
 				);
 
 
@@ -13536,17 +13536,24 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		return;
 	}
 
-dprintf( D_ALWAYS, "unregister_shadow_catalogs(): begin.\n" );
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): begin.\n", srec );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
 
 for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
-    dprintf( D_ALWAYS, "%s = %s\n", catalogName.c_str(), contents.c_str() );
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): unregistering catalog %s = %s\n", catalogName.c_str(), contents.c_str() );
+}
+for( const auto & [catalogName, shadow] : catalogToShadowMap ) {
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): [map entry] %s = %p\n", catalogName.c_str(), shadow );
 }
 
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
-			if(! other) { continue; }
+			if(! other) {
+dprintf( D_ALWAYS, "Found no shadow for catalog %s\n", catalogName.c_str() );
+				continue;
+			}
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
 			if( * other == srec && (* other)->pid == shadow_pid ) {
 				catalogToShadowMap.erase( catalogName );
 				removedCatalogs.push_back( catalogName );
