@@ -11062,6 +11062,28 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					promptingToTransferProcID( job_id.proc )
 				);
 
+				//
+				// If there's no registered shadow for a catalog required by
+				// this job, it's possible that we've unregistered the catalog
+				// but not yet deleted the match record (see the disaster in
+				// `call_StartJobFailed()`).  In that case, the schedd can
+				// asplode when we call SetMrecJobID(), below, because some
+				// other match record has the transfer shadow's job ID (that
+				// is, this same job prompted a transfer shadow on a second
+				// match before the first one's record was deleted).
+				//
+				// We don't want to delay unregistering the shadow catalogs
+				// because our idiotic memory management means that someone
+				// else could have deleted that match record holding the
+				// shadow record or the shadow record itself out from under
+				// us.
+				//
+				match_rec * other = FindMrecByJobID( transfer_job_id );
+				if( other != nullptr ) {
+					dprintf( D_ALWAYS, "Delaying transfer shadow start-up because the previous transfer shadow's match record (%p) hasn't been cleaned up yet.\n", other );
+					return SJ::DID_NOT_TRY;
+				}
+
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
 					transfer_job_id, universe, mrec, -1 , nullptr
 				);
