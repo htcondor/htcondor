@@ -17868,16 +17868,26 @@ Scheduler::unlinkMrec(match_rec* match)
 	if( match->shadowRec ) {
 		match->shadowRec->match = NULL;
 
+/*
 		// If we don't delete the shadow record now, we're assuming that
 		// it's going to be deleted when the shadow exits and triggers the
 		// reaper.  Of course, that can only happen if there's shadow process
 		// to reap...
-		if( match->shadowRec->pid == 0 ){
-			dprintf( D_ALWAYS, "Deleting this (%p) match record's shadow record (%p) because it has no PID.\n", match, match->shadowRec );
-			delete_shadow_rec( match->shadowRec );
-			// This isn't presently necessary, but let's be tidy.
-			match->shadowRec = NULL;
+		//
+		// ... or if the shadow record is in the RunnableJobQueue.
+		if( match->shadowRec->pid == 0 ) {
+			// Apparently std::queue doesn't have iterators!
+			if( std::find(
+				RunnableJobQueue.begin(), RunnableJobQueue.end(),
+				match->shadowRec
+			) != RunnableJobQueue.end() ) {
+				dprintf( D_ALWAYS, "Deleting this (%p) match record's shadow record (%p) because it has no PID.\n", match, match->shadowRec );
+				delete_shadow_rec( match->shadowRec );
+				// This isn't presently necessary, but let's be tidy.
+				match->shadowRec = NULL;
+			}
 		}
+*/
 	}
 
 	numMatches--;
