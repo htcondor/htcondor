@@ -192,6 +192,11 @@ call_StartJobFailure( const std::string & claimID ) {
 		s = m->shadowRec;
 	}
 
+    // FIXME: consider calling unregister_shadow_catalogs() here, immediately,
+    // to avoid sticking jobs in the blocked state because they think there's
+    // a live shadow they're waiting for; this would be safer than (also)
+    // deleting the shadow record in unlinkMrec().
+
 
 	//
 	// There's a race condition here.  StartJobFailed() call del_mrec(),
@@ -205,24 +210,18 @@ call_StartJobFailure( const std::string & claimID ) {
 	//
 
 	auto lambda = [claimID, m, s](int /* timerID */) -> void {
-		dprintf( D_ALWAYS, "call_StartJobFailure(): m = %p, s = %p\n", m, s );
+dprintf( D_ALWAYS, "call_StartJobFailure(): m = %p, s = %p\n", m, s );
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
+dprintf( D_ALWAYS, "call_StartJobFailure(): mrec = %p\n", mrec );
 		if( mrec != nullptr ) {
-			// StartJobFailed() indirectly deletes mrec.  We don't want to
-			// delete the shadow record first, because a lot of special case
-			// handling depends on knowing if the match record being deleted
-			// is a transfer shadow's.
-			auto * shadow_record = mrec->shadowRec;
+dprintf( D_ALWAYS, "call_StartJobFailure(): mrec->shadowRec = %p\n", mrec->shadowRec );
+
+			// StartJobFailed() indirectly calls unlinkMrec(), which will delete
+			// the shadow record if its PID == 0, because that means doesn't
+			// have a process whose reaper will delete it.
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
 			dprintf( D_ALWAYS, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
 			scheduler.StartJobFailed( mrec, id );
-
-			if( shadow_record != nullptr ) {
-				dprintf( D_ALWAYS, "call_StartJobFailure(): deleting shadow record after failure to create data slot.\n" );
-				scheduler.delete_shadow_rec( shadow_record );
-			} else {
-				dprintf( D_ALWAYS, "call_StartJobFailure(): match record %p did not have a shadow record!\n", mrec );
-			}
 		} else {
 			dprintf( D_ALWAYS, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
 		}
