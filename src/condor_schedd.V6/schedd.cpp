@@ -13517,6 +13517,11 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 dprintf( D_ALWAYS, "unregister_shadow_catalogs(): begin.\n" );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
+
+for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+    dprintf( D_ALWAYS, "%s = %s\n", catalogName.c_str(), contents.c_str() );
+}
+
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
 			if(! other) { continue; }
@@ -13654,6 +13659,8 @@ dprintf( D_ALWAYS, "unregister_shadow_catalogs(): begin.\n" );
 		    DelMrec( n );
 		}
 	}
+
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): end.\n" );
 }
 
 
@@ -13837,7 +13844,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		rec->match->setStatus( M_CLAIMED );
 	}
 
-	if( rec->keepClaimAttributes && rec->match ) {
+	/* If we're deleting this shadow record because we're deleting its
+	   match record, don't delete our match record. */
+	if( rec->keepClaimAttributes && rec->match && rec->pid != 0 ) {
 			// We are shutting down and detaching from this claim.
 			// Remove the claim record without sending RELEASE_CLAIM
 			// to the startd.
@@ -17851,8 +17860,10 @@ Scheduler::unlinkMrec(match_rec* match)
 		// reaper.  Of course, that can only happen if there's shadow process
 		// to reap...
 		if( match->shadowRec->pid == 0 ){
-			dprintf( D_ALWAYS, "Deleting this match record's shadow record because it has no PID.\n" );
+			dprintf( D_ALWAYS, "Deleting this (%p) match record's shadow record (%p) because it has no PID.\n", match, match->shadowRec );
 			delete_shadow_rec( match->shadowRec );
+			// This isn't presently necessary, but let's be tidy.
+			match->shadowRec = NULL;
 		}
 	}
 
