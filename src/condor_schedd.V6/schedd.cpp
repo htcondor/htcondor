@@ -13532,7 +13532,12 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 	if( srec == NULL ) {
-		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		dprintf( D_ALWAYS, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		return;
+	}
+
+	if( srec->cxfer_state == CXFER_STATE::MAPPING ) {
+		dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): skipping mapping shadow.\n", srec );
 		return;
 	}
 
@@ -13555,6 +13560,7 @@ dprintf( D_ALWAYS, "Found no shadow for catalog %s\n", catalogName.c_str() );
 			}
 dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
 			if( * other == srec && (* other)->pid == shadow_pid ) {
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): removing %s from catalogToShadowMap.\n", catalogName.c_str() );
 				catalogToShadowMap.erase( catalogName );
 				removedCatalogs.push_back( catalogName );
 
@@ -13689,6 +13695,11 @@ dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catal
 		}
 	}
 
+
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): all entries (%lu) after all work follow:\n", catalogToShadowMap.size() );
+for( const auto & [catalogName, shadow] : catalogToShadowMap ) {
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): [map entry] %s = %p\n", catalogName.c_str(), shadow );
+}
 dprintf( D_ALWAYS, "unregister_shadow_catalogs(): end.\n" );
 }
 
@@ -18391,6 +18402,7 @@ Scheduler::HadException( match_rec* mrec )
 		// If we always do this before DelMrec() does, we'll learn about cases
 		// we don't know about that we otherwise couldn't.
 		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id) ) {
+			dprintf( D_ALWAYS, "Marking shadow (%p) with pid %d retiring because of too many exceptions on its match.\n", mrec->shadowRec, mrec->shadowRec->pid );
 			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
 		}
 		DelMrec(mrec);
@@ -22165,4 +22177,14 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 	}
 
 	dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
+}
+
+
+void
+Scheduler::logCatalogToShadowMap() {
+    dprintf( D_ALWAYS, "logCatalogToShadowMap(): begin entries\n" );
+    for( const auto & [catalogName, shadow] : scheduler.catalogToShadowMap ) {
+        dprintf( D_ALWAYS, "[entry] %s = %p\n", catalogName.c_str(), shadow );
+    }
+    dprintf( D_ALWAYS, "logCatalogToShadowMap(): end entries.\n" );
 }

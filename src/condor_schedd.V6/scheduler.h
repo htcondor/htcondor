@@ -554,7 +554,9 @@ class Scheduler : public Service
 	
 	Scheduler();
 	~Scheduler();
-	
+
+    void logCatalogToShadowMap();
+
 	// initialization
 	void			Init();
 	void			Register();
