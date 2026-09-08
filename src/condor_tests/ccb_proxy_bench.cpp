@@ -28,6 +28,7 @@
 #include "ipv6_hostname.h"
 #include "condor_sockaddr.h"
 #include <tuple>
+#include <memory>
 
 #ifdef WIN32
 
@@ -155,6 +156,7 @@ static int targetRole( const char *broker, int seconds, FILE *to_parent )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "target: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
@@ -225,6 +227,7 @@ static int requesterRole( const char *broker, int seconds, FILE *from_target )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_REQUEST, Stream::reli_sock, 20, NULL);
 	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_REQUEST) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
 
 	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
 	ClassAd reqad;
@@ -284,6 +287,7 @@ static int targetRole_deadbeat( const char *broker, FILE *to_parent )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "target: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
@@ -327,6 +331,7 @@ static int requesterRole_expectReap( const char *broker, FILE *from_target )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_REQUEST, Stream::reli_sock, 20, NULL);
 	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_REQUEST) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
 
 	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
 	ClassAd reqad;
@@ -382,7 +387,7 @@ static Sock *sendStreamingRequest( const char *broker, const std::string &ccbid,
 	free(cid);
 	req->encode();
 	if( !putClassAd(req, reqad) || !req->end_of_message() ) {
-		fprintf(stderr, "cap-test: failed to send request\n"); return nullptr;
+		fprintf(stderr, "cap-test: failed to send request\n"); delete req; return nullptr;
 	}
 	return req;
 }
@@ -396,6 +401,7 @@ static int capTest( const char *broker )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "cap-test: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
 	ad.Assign(ATTR_NAME, "ccb_proxy_bench-cap-target");
@@ -415,6 +421,7 @@ static int capTest( const char *broker )
 	std::shared_ptr<Daemon> hold1;
 	Sock *req1 = sendStreamingRequest(broker, ccbid, hold1);
 	if( !req1 ) { return 1; }
+	std::unique_ptr<Sock> req1_owner(req1);
 
 	// Let the broker register the pending session before we probe the limit.
 	sleep(2);
@@ -423,6 +430,7 @@ static int capTest( const char *broker )
 	std::shared_ptr<Daemon> hold2;
 	Sock *req2 = sendStreamingRequest(broker, ccbid, hold2);
 	if( !req2 ) { return 1; }
+	std::unique_ptr<Sock> req2_owner(req2);
 	req2->timeout(30);
 	ClassAd reply;
 	req2->decode();
@@ -522,6 +530,7 @@ static int requesterRole_outbound( const char *broker, int seconds, FILE *from_t
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_PROXY_CONNECT, Stream::reli_sock, 20, NULL);
 	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_PROXY_CONNECT) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
 
 	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
 	ClassAd reqad;
