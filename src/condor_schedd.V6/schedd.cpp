@@ -13741,6 +13741,10 @@ dprintf( D_ALWAYS, "unregister_shadow_catalogs(): end.\n" );
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+    if( rec == nullptr ) {
+        dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(NULL): ignoring.\n" );
+    }
+
     if(! all_shadow_recs.contains(rec)) {
         dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
         return;

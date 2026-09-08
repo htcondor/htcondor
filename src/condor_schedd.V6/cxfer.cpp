@@ -180,38 +180,17 @@ condor::cr::void_coroutine
 command_data_slot_callback(
 	Sock * sock,
 	std::string originaClaimID,
-	ClassAd requestAd
+	ClassAd requestAd,
+	shadow_rec * srec
 );
 
 
 void
-call_StartJobFailure( const std::string & claimID ) {
-	match_rec * m = scheduler.FindMrecByClaimID( claimID.c_str() );
-	shadow_rec * s = NULL;
-	if( m ) {
-		s = m->shadowRec;
-	}
-
-
-	//
-	// We really need to replace how we manage match and shadow records,
-	// but until we do, the problem we really need to solve is that the
-	// transfer shadow isn't unregistering its catalogs.  As of
-	// a79e7188e4a064f092744009aa5f14facddd4cdd, we still have
-	// unregister_shadow_catalog() segfaulting (when called via
-	// delete_shadow_rec() from StartJobHandler()); this is probably
-	// happening because unlinkMrec() can't tell the difference between
-	// shadows which haven't started yet and ones which never will.
-	//
-	// This problem shouldn't intractable, but it seems like it is, so
-	// for now ignore the inevitable memory leaks and just fix the problem
-	// leading to jobs being held indefinitely.
-	//
-	if( s ) {
+call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
+	if( srec ) {
 		// Since this shadow failed to start, its PID field should still be 0.
-		scheduler.unregister_shadow_catalogs( s, 0 );
+		scheduler.unregister_shadow_catalogs( srec, 0 );
 	}
-
 
 	//
 	// There's a race condition here.  StartJobFailed() call del_mrec(),
@@ -224,13 +203,9 @@ call_StartJobFailure( const std::string & claimID ) {
 	// Instead, let's wait a few seconds before vacating the claim.
 	//
 
-	auto lambda = [claimID, m, s](int /* timerID */) -> void {
-dprintf( D_ALWAYS, "call_StartJobFailure(): m = %p, s = %p\n", m, s );
+	auto lambda = [claimID, srec](int /* timerID */) -> void {
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
-dprintf( D_ALWAYS, "call_StartJobFailure(): mrec = %p\n", mrec );
 		if( mrec != nullptr ) {
-dprintf( D_ALWAYS, "call_StartJobFailure(): mrec->shadowRec = %p\n", mrec->shadowRec );
-
 			// StartJobFailed() indirectly calls unlinkMrec(), which will delete
 			// the shadow record if its PID == 0, because that means doesn't
 			// have a process whose reaper will delete it.
@@ -248,7 +223,9 @@ dprintf( D_ALWAYS, "call_StartJobFailure(): mrec->shadowRec = %p\n", mrec->shado
 		// This should be safe -- this shadow record hasn't been added to the
 		// queue of shadows to start yet, and as such nobody else will ever
 		// try to delete it -- but there's extra magic there now JIC.
-		scheduler.delete_shadow_rec( s );
+		if( srec ) {
+			scheduler.delete_shadow_rec( srec );
+		}
 	};
 
 	std::ignore = daemonCore->Register_Timer(
@@ -270,6 +247,11 @@ void
 start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 	// dprintf( D_ALWAYS, "start_command_data_slot(): begin.\n" );
 
+	// We're responsible for deleting this shadow record right up until
+	// we call scheduler.addRunnableJob(), and we can't depend on the match
+	// record being there or remembering the shadow record later.
+	shadow_rec * srec = mrec->shadowRec;
+
 	CondorError errorStack;
 	DCStartd startd( mrec->peer, nullptr );
 
@@ -284,20 +266,20 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 		20 /* seconds of careful research */,
 		/* & errorStack, */ // We'll figure out the lifetime of this later.
 		nullptr,
-		[originalClaimID, requestAd](
+		[originalClaimID, requestAd, srec](
 			bool success, Sock * sock, CondorError * errorStack,
 			const std::string & /* trust_domain */,
 			bool /* should_try_token_request */
 		) -> void {
 			if( success ) {
-				command_data_slot_callback( sock, originalClaimID, requestAd );
+				command_data_slot_callback( sock, originalClaimID, requestAd, srec );
 			} else {
 				dprintf( D_ALWAYS,
 					"start_command_data_slot(): startCommand(COMMAND_DATA_SLOT): failed: %s.\n",
 					errorStack == nullptr ? "no error stack" : errorStack->getFullText().c_str()
 				);
 
-				call_StartJobFailure( originalClaimID );
+				call_StartJobFailure( originalClaimID, srec );
 				return;
 			}
 		},
@@ -309,7 +291,7 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 	switch (result) {
 		case StartCommandFailed: {
 			dprintf( D_ALWAYS, "start_command_data_slot(): startCommand(COMMAND_DATA_SLOT) failed.\n" );
-			call_StartJobFailure( originalClaimID );
+			call_StartJobFailure( originalClaimID, srec );
 			} return;
 		case StartCommandSucceeded:  /* that was quick */
 			break;
@@ -337,9 +319,12 @@ condor::cr::void_coroutine
 command_data_slot_callback(
 	Sock * sock,
 	std::string originalClaimID,
-	ClassAd requestAd
+	ClassAd requestAd,
+	shadow_rec * srec
 ) {
-    auto scope_guard = std::unique_ptr<Sock>(sock);
+	//
+
+	auto scope_guard = std::unique_ptr<Sock>(sock);
 
 	ClassAd commandAd;
 	commandAd.InsertAttr( ATTR_CLAIM_ID, originalClaimID );
@@ -347,19 +332,19 @@ command_data_slot_callback(
 
 	if(! putClassAd( sock, commandAd )) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(commandAd).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
 	if(! putClassAd( sock, requestAd )) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not putClassAd(requestAd).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
 	if(! sock->end_of_message()) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message (put).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
@@ -369,6 +354,23 @@ command_data_slot_callback(
 	// (not sure about how that works with EWOULDBLOCK on connect), so we
 	// only need to return to the event loop before waiting for the reply.
 	//
+
+	//
+	// The whole point of the AwaitableDeadlineSocket is that it returns
+	// back to the event loop, which means any pointer that we carry past
+	// co_await() call may no longer be valid.  For match records, we work
+	// around this by looking them up by their claim ID; if someone's
+	// deleted it, too bad, so sad, that means they did the clean-up.
+	//
+	// There's no equivalent map of all shadow records, and changing
+	// shadowsByProcID (which seems like it ought to be that, given that
+	// there's shadowsByPID for shadow records which have PIDs) to be that
+	// map founders in a mess of weird semantics.  We _believe_ that nobody
+	// else will clean up our shadow record but for now we've added some
+	// memory-intensive magic to the shadow_rec constructor and destructor
+	// so that we don't ever actually try to clean one up twice.
+	//
+
 	// dprintf( D_ALWAYS, "start_command_data_slot(): waiting for reply.\n" );
 	condor::dc::AwaitableDeadlineSocket ads;
 	const int reply_timeout = 20;
@@ -378,7 +380,7 @@ command_data_slot_callback(
 
 	if( timed_out ) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): timed out.\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
@@ -386,19 +388,19 @@ command_data_slot_callback(
 	ClassAd replyAd;
 	if(! getClassAd( sock, replyAd )) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(replyAd).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
 	ClassAd newSlotAd;
 	if(! getClassAd( sock, newSlotAd )) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not getClassAd(newSlotAd).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 	if(! sock->end_of_message()) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): could not end message (get).\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
@@ -408,7 +410,7 @@ command_data_slot_callback(
 	CAResult result = getCAResultNum( resultString.c_str() );
 	if( result != CA_SUCCESS ) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): result was not success\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
@@ -416,12 +418,12 @@ command_data_slot_callback(
 	std::string claimIDString;
 	if(! replyAd.LookupString( ATTR_CLAIM_ID, claimIDString )) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): result did not contain claim ID.\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 	if( claimIDString != originalClaimID ) {
 		dprintf( D_ALWAYS, "start_command_data_slot(): startd erroneously returned new claim ID.\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
@@ -433,7 +435,7 @@ command_data_slot_callback(
 	match_rec * mrec = scheduler.FindMrecByClaimID( originalClaimID.c_str() );
 	if( mrec == nullptr ) {
 		dprintf( D_ALWAYS, "command_data_slot(): startCommand(COMMAND_DATA_SLOT, ...) returned but corresponding match record no longer exists.\n" );
-		call_StartJobFailure( originalClaimID );
+		call_StartJobFailure( originalClaimID, srec );
 		co_return;
 	}
 
