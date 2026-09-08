@@ -12905,6 +12905,17 @@ Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
 
+//
+// There's a lot of semantics around whether or not add_shadow_rec(shadow_rec *)
+// has been called (as compared to add_shadow_rec(...), which doesn't actually
+// add a shadow rec to anything), so overloading shadowsByProcID to track _all_
+// shadows is unnattractive right now.  Instead, let's track all shadow
+// records in the constructor and destructor.  (This uses more memory than
+// just tracking transfer shadows in their own table, but should definitely
+// leak less.)
+//
+std::set<shadow_rec *> all_shadow_recs;
+
 shadow_rec::shadow_rec():
 	pid(-1),
 	universe(0),
@@ -12925,10 +12936,14 @@ shadow_rec::shadow_rec():
 	prev_job_id.cluster = -1;
 	job_id.proc = -1;
 	job_id.cluster = -1;
+
+	all_shadow_recs.insert(this);
 }
 
 shadow_rec::~shadow_rec()
 {
+    all_shadow_recs.erase(this);
+
 	if( recycle_shadow_stream ) {
 		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
 		delete recycle_shadow_stream;
@@ -13556,7 +13571,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		return;
 	}
 
-dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): begin.\n", srec );
+dprintf( D_ALWAYS | D_BACKTRACE, "unregister_shadow_catalogs(%p): begin.\n", srec );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
 
@@ -13680,6 +13695,10 @@ dprintf( D_ALWAYS, "unregister_shadow_catalogs(): removing %s from catalogToShad
 						//
 
 						// auto jobID = sr->job_id;
+						// We're deleting this shadow rec here because this
+						// its shadow hasn't started yet.  We know this
+						// shadow won't be cleaned up anywhere else because
+						// we've marked the job idle, I think.
 						delete_shadow_rec( sr );
 						// This removes `m` from `matchesHeldByBlockedJobs`.
 						// We could rewrite the loop and assign the return
@@ -13722,6 +13741,11 @@ dprintf( D_ALWAYS, "unregister_shadow_catalogs(): end.\n" );
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+    if(! all_shadow_recs.contains(rec)) {
+        dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
+        return;
+    }
+
 	if ( rec->is_reconnect && !rec->reconnect_done ) {
 		// TODO Should we try to update the JobsRestartReconnectsBadput
 		//   stat on an interrupted reconnect attempt?
@@ -18439,9 +18463,11 @@ srec
 			// instead of depending on having a match record.
 			//
 			// This fix won't work in case (b), which means it needs to go.
+/*
 			if( s->pid == 0 ) {
 				delete_shadow_rec( s );
 			}
+*/
 		}
 	}
 }

@@ -240,6 +240,15 @@ dprintf( D_ALWAYS, "call_StartJobFailure(): mrec->shadowRec = %p\n", mrec->shado
 		} else {
 			dprintf( D_ALWAYS, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
 		}
+
+		// The way shadow record lifetimes are managed, any code which runs
+		// before a shadow gets a PID is responsible for cleaning the shadow
+		// record up.  (After, the shadow's reaper must clean up its record.)
+		//
+		// This should be safe -- this shadow record hasn't been added to the
+		// queue of shadows to start yet, and as such nobody else will ever
+		// try to delete it -- but there's extra magic there now JIC.
+		scheduler.delete_shadow_rec( s );
 	};
 
 	std::ignore = daemonCore->Register_Timer(
