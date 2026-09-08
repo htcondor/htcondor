@@ -2397,19 +2397,19 @@ For example:
     SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
 
 When backfill slots are configured, the daemon ad of the *condor_startd* will have 
-attributes that report the aggrate backfill usage of the machine in addition to the normal
+attributes that report the aggregate backfill usage of the machine in addition to the normal
 usage attributes. The :tool:`condor_status` tool uses these attributes to accurately report the actual
 number of CPUs in the pool, as well as how many are assigned to active normal slots and
-how many are assigned to active backfill slots.  use ``condor_status -startd`` to see this summary.
+how many are assigned to active backfill slots.  Use ``condor_status -startd`` to see this summary.
 
 
 Backfill Partitionable slots track all Dynamic slots
 ''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The advertised resource quanties of a backfill p-slot will be the original quanties
-minus the quanties assigned to all dynamic slots, both backfill and non-backfill.
+The advertised resource quantities of a backfill p-slot will be the original quantities
+minus the quantities assigned to all dynamic slots, both backfill and non-backfill.
 
-If machine has both backfill and normal p-slots and each starts with
+If a machine has both backfill and normal p-slots and each starts with
 16 Cpus, when a 2 Cpu dynamic slot is created from the normal p-slot both the normal
 and backfill p-slots will then advertise 14 Cpus.  2 Cpus are deducted from the normal
 p-slot because the dynamic slot was created from it.  2 Cpus are deducted from the backfill
@@ -2426,8 +2426,8 @@ that conflicts with another dynamic slot.  For instance when another slot is
 using the same memory, the value will be ``"Memory"``.  Policy expressions will
 generally only care if this attribute is empty or non-empty.
 
-Backfill and Non-Backfill slots should be configured for sets ofjobs
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Backfill and Non-Backfill slots should be configured for sets of jobs
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 It is generally best to configure backfill slots to only match jobs that
 are willing to be evicted; and to configure non-backfill slots so that they will

@@ -953,7 +953,7 @@ Machine ClassAd Attributes
     slot and those assigned to a Claimed non-backfill slot, the value will be ``"Cpus"``.
     When there is a conflict with both ``CPUs`` and ``Memory``, the value will be 
     ``"Cpus, Memory"``.  For non-fungible resources like ``GPUs`` the value will include
-    the GPU identifier.  The expression ``size(ResourceConflict?:"") > 0`` will evaluate
+    the GPU identifier.  The expression :ad-expr:`size(ResourceConflict?:"") > 0` will evaluate
     to ``True`` when there is any conflict, and ``False`` when there is no conflict.  Use the
     above expression in a :macro:`PREEMPT` expression to evict jobs from a backfill slot
     when a job on a non-backfill slot is using the same resources.
