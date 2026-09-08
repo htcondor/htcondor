@@ -11,6 +11,7 @@ from generation import generate_javascript
 from htc_helpers import *
 
 SUBMIT_CMDS = []
+SUBMIT_CMDS_CI = {}
 
 def find_submit_cmds(dir: str):
     subcoms = []
@@ -31,10 +32,14 @@ def dump(obj):
 def subcom_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     root_dir = root_dir = get_rel_path_to_root_dir(inliner)[:-1]
     subcom_name, subcom_index = custom_ext_parser(text)
-    if subcom_name not in SUBMIT_CMDS:
+    # Case-insensitive lookup: exact match first, then fall back to the
+    # canonical (as-defined) case so the anchor we link to actually exists.
+    canonical = subcom_name if subcom_name in SUBMIT_CMDS else SUBMIT_CMDS_CI.get(subcom_name.lower())
+    if canonical is None:
         docname = inliner.document.settings.env.docname
         warn(f"{docname}:{lineno} | Submit command '{subcom_name}' not found in defined list. Either a typo or not defined.")
-    ref_link = f"href=\"{root_dir}/man-pages/htcondor-jdl.html#" + str(subcom_name) + "\""
+        canonical = subcom_name
+    ref_link = f"href=\"{root_dir}/man-pages/htcondor-jdl.html#" + str(canonical) + "\""
     return make_ref_and_index_nodes(name, subcom_name, subcom_index,
                                     ref_link, rawtext, inliner, lineno, options)
 
@@ -72,7 +77,9 @@ window.addEventListener('DOMContentLoaded', configRedirect);
 
 def setup(app):
     global SUBMIT_CMDS
+    global SUBMIT_CMDS_CI
     SUBMIT_CMDS = find_submit_cmds(app.srcdir)
+    SUBMIT_CMDS_CI = build_ci_index(SUBMIT_CMDS, "submit command")
     app.add_role("subcom", subcom_role)
     app.connect("builder-inited", generate_subcom_redirect_js)
 
