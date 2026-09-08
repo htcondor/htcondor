@@ -43,6 +43,18 @@ MetricD::initAndReconfig()
 	m_ganglia_active    = m_ganglia_active    || hasMetricsForBackend("ganglia");
 	m_prometheus_active = m_prometheus_active || hasMetricsForBackend("prometheus");
 
+	// Say which backends came up.  A backend that no metric routes to is never
+	// initialized, which means none of its configuration is even read: an admin
+	// who sets GANGLIA_* but leaves every metric exported to Prometheus would
+	// otherwise get silence, with nothing in the log to explain it.
+	static const char * const inactive =
+		"NOT active (no metric definition routes to it; see "
+		"METRICD_DEFAULT_EXPORT_METRIC and the per-metric ExportMetric keyword)";
+	dprintf(D_ALWAYS,"Ganglia backend is %s\n",
+	        m_ganglia_active ? "active" : inactive);
+	dprintf(D_ALWAYS,"Prometheus backend is %s\n",
+	        m_prometheus_active ? "active" : inactive);
+
 	if (m_ganglia_active) {
 		m_ganglia.initAndReconfig();
 	}
