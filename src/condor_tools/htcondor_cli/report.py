@@ -1,52 +1,263 @@
-import os
+import csv
+import statistics
 import sys
+
+from collections import Counter
+from datetime import datetime, timedelta
+from difflib import SequenceMatcher
+from pathlib import Path
+from time import time as now
 from types import SimpleNamespace
+from typing import Dict, List, Optional, Tuple
+
 import htcondor2
+from htcondor2._utils.ansi import AnsiOptions, Color, bold, colorize, id_colorize, stylize
+
+# 256-color id for the light-orange used to highlight suggested follow-up
+# commands (e.g. "htcondor cluster analytics 1020") -- distinct enough to
+# stand out from the report's red/yellow/green/cyan status colors without
+# reading as another alert color.
+_TOOL_HINT_COLOR_ID = 215
+
+
+def _tool_hint(text: str) -> str:
+    return id_colorize(text, _TOOL_HINT_COLOR_ID)
+
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
-import math
-from collections import Counter
-import statistics
-from datetime import timedelta
-from datetime import datetime
-import time as time_module
-from difflib import SequenceMatcher
 from .utils import *
 
-def _ensure_cluster_data(cluster_id, logger):
+# All parameters needed by the analytics suite
+REQUIRED_ATTRS = [
+    # Job identifiers
+    "ClusterId",
+    "ProcId",
+    "JobStatus",
+
+    # Resource requests
+    "RequestMemory",
+    "RequestDisk",
+    "RequestCpus",
+    "RequestGpus",
+
+    # Resource usage (RAW values in KiB)
+    "ResidentSetSize_RAW",
+    "DiskUsage_RAW",
+
+    # CPU usage (in seconds)
+    "RemoteUserCpu",
+    "RemoteSysCpu",
+    "RemoteWallClockTime",
+
+    # Provisioned resources
+    "CpusProvisioned",
+
+    # Hold information
+    "HoldReason",
+    "HoldReasonCode",
+    "HoldReasonSubCode",
+
+    # Timing information
+    "QDate",
+    "CompletionDate",
+    "JobStartDate",
+    "EnteredCurrentStatus",
+]
+
+# HTCondor JobStatus code -> human-readable name, in canonical display order.
+JOB_STATUS_NAMES = {
+    1: "Idle",
+    2: "Running",
+    3: "Removing",
+    4: "Completed",
+    5: "Held",
+    6: "Transferring Output",
+    7: "Suspended",
+}
+
+
+def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
     """
-    Ensure cluster_data/cluster_<id>_jobs.csv exists; fetch via HTCondor if not.
-
-    Mirrors main.ensure_cluster_data() but routes messages through `logger`
-    so it fits the htcondor_cli conventions.
+    Fetch all jobs from HTCondor history for a given cluster and save to CSV.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(script_dir, "cluster_data")
-    filepath = os.path.join(data_dir, f"cluster_{cluster_id}_jobs.csv")
+    schedd = htcondor2.Schedd()
 
-    if os.path.exists(filepath):
-        return
+    filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    logger.info(
-        f"No cached data found for cluster {cluster_id}. "
-        f"Fetching from HTCondor now (this may take a moment)..."
-    )
+    print(f"Fetching jobs for cluster {cluster_id}...")
+    print(f"This may take a moment for large clusters...\n")
+
+    data = dict()
+
+    def _get_attr(ad, attr):
+        """Best-effort read of one ClassAd attribute, falling back to eval()."""
+        try:
+            value = ad.get(attr)
+        except Exception:
+            value = None
+        if value is None:
+            try:
+                value = ad.eval(attr)
+            except Exception:
+                value = None
+        return value
+
+    def _get_job_info(query_func) -> None:
+        nonlocal data
+
+        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS):
+            jid = str(ad["ClusterId"]) + "." + str(ad["ProcId"])
+            data[jid] = {attr: _get_attr(ad, attr) for attr in REQUIRED_ATTRS}
+
+    print("Querying current queue...", file=sys.stderr)
+    queue_job_count = 0
+    try:
+        _get_job_info(schedd.query)
+        queue_job_count = len(data)
+        print(f"  Queue complete: {queue_job_count} jobs", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: Error querying queue: {e}", file=sys.stderr)
+
+    print("Querying job history...", file=sys.stderr)
+    try:
+        _get_job_info(schedd.history)
+        history_job_count = len(data) - queue_job_count
+        print(f"  History complete: {history_job_count} jobs", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: Error querying history: {e}", file=sys.stderr)
+
+    job_count = len(data)
+    if job_count == 0:
+        print(f"\nError: No jobs found for cluster {cluster_id}")
+        print("Please verify the cluster ID is correct.")
+        sys.exit(1)
+
+    print(f"\nWriting {job_count} jobs to CSV...", file=sys.stderr)
+    try:
+        with open(filepath, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=REQUIRED_ATTRS)
+            writer.writeheader()
+            writer.writerows(data.values())
+    except Exception as e:
+        print(f"Error writing CSV: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✓ Successfully saved data to: {filepath}")
+    print(f"✓ Total jobs fetched: {job_count}")
+
+    status_counts = {}
+    for job in data.values():
+        status = job.get("JobStatus")
+        if status:
+            try:
+                status = int(status)
+            except Exception:
+                status = -2
+        else:
+            status = -1
+        name = JOB_STATUS_NAMES.get(status, f"Unknown({status})")
+        status_counts[name] = status_counts.get(name, 0) + 1
+
+    print("\nJob Status Breakdown:")
+    for status, count in sorted(status_counts.items()):
+        print(f"  {status:<15}: {count:>6} jobs")
+
+    return job_count
+
+
+def _validate_cluster_exists(cluster_id: int) -> bool:
+    """
+    Quick check to see if cluster exists before full fetch.
+    """
+    schedd = htcondor2.Schedd()
 
     try:
-        from fetch_cluster_data import fetch_cluster_jobs, validate_cluster_exists
-    except ImportError:
+        if len(schedd.query(f"ClusterId=={cluster_id}", ["ClusterId"], match=1)) == 1:
+            return True
+    except Exception:
+        pass
+
+    try:
+        if len(schedd.history(f"ClusterId=={cluster_id}", ["ClusterId"], match=1)) == 1:
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+def _normalize_hold_reason(raw: str) -> str:
+    """
+    Normalize a HoldReason string for fuzzy-bucketing: keep only the first
+    sentence, and strip a leading "Error from <slot>: " prefix if present.
+    """
+    reason = (raw or "").split(". ")[0]
+    if "Error from" in reason and ": " in reason:
+        parts = reason.split(": ", 1)
+        if len(parts) == 2:
+            reason = parts[1]
+    return reason
+
+
+# Default cache location: the current working directory.
+_DEFAULT_CACHE_DIR = Path(".")
+
+
+def _cached_cluster_file(cluster_id: int, cache_dir: Path) -> Path:
+    """
+    Get the expected file path for locally cached cluster data
+    """
+    return cache_dir / "cluster_data" / f"cluster_{cluster_id}_jobs.csv"
+
+
+def _load_csv_for_cluster(cluster_id: int, exit_on_missing: bool = True):
+    """
+    Load the cached CSV for a cluster (see _cached_cluster_file()) and
+    return a list of job dicts.
+
+    Parameters:
+        cluster_id (str or int): The cluster ID to load.
+        exit_on_missing (bool): If True, print an error and sys.exit(1) when
+            the file is not found. If False, return None instead.
+
+    Returns:
+        list[dict] or None
+    """
+    filepath = _cached_cluster_file(cluster_id, _DEFAULT_CACHE_DIR)
+
+    if not filepath.exists():
+        if exit_on_missing:
+            print(
+                f"Cluster data not found for cluster {cluster_id}. "
+                "Please make sure you have the correct CSV file and cluster ID."
+            )
+            sys.exit(1)
+        return None
+
+    with open(filepath, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def _ensure_cluster_data(cluster_id: int, cache_dir: Path = _DEFAULT_CACHE_DIR, fresh: bool = False) -> None:
+    """
+    Ensure cluster_data/cluster_<id>_jobs.csv exists; fetch via HTCondor if not.
+    """
+    filepath = _cached_cluster_file(cluster_id, cache_dir)
+
+    if not fresh and filepath.exists():
+        return
+    elif filepath.exists():
+        print(f"Fetching fresh data for cluster {cluster_id}...")
+    else:
+        print(f"No cached data found for cluster {cluster_id}. Fetching data...")
+
+    if not _validate_cluster_exists(cluster_id):
         raise RuntimeError(
-            "Module to fetch cluster data not found"
+            f"No jobs found for cluster {cluster_id}. Verify the cluster ID, "
+            f"your permissions, and that it exists in HTCondor history or queue."
         )
 
-    if not validate_cluster_exists(cluster_id):
-        raise RuntimeError(
-            f"No jobs found for cluster {cluster_id}. Verify the cluster ID "
-            f"is correct, that you have permission to access it, and that it "
-            f"exists in HTCondor history or queue."
-        )
-
-    fetch_cluster_jobs(cluster_id, output_dir=data_dir)
+    _fetch_cluster_jobs(cluster_id, filepath)
 
 # ── Verbs ─────────────────────────────────────────────────────────────────────
 
@@ -58,28 +269,27 @@ class Dashboard(Verb):
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to display",
         },
     }
 
     # get data from the schedd
-    def fetch_counts(clusterId, job_states):
+    def fetch_counts(cluster_id):
         schedd = htcondor2.Schedd()
-        counts = {state: 0 for state in job_states}
+        counts = {name: 0 for name in JOB_STATUS_NAMES.values()}
 
         print("Fetching job history (this may take a moment)...", file=sys.stderr)
 
         total_found = 0
 
-        for i, ad in enumerate(
-            schedd.history(
-                constraint=f"ClusterId == {clusterId}",
-                projection=["JobStatus"],
-                match=-1,
-            )
+        for ad in schedd.history(
+            constraint=f"ClusterId == {cluster_id}",
+            projection=["JobStatus"],
+            match=-1,
         ):
             total_found += 1
-            counts[job_states[ad.eval("JobStatus") - 1]] += 1
+            counts[JOB_STATUS_NAMES[ad.eval("JobStatus")]] += 1
 
             if total_found % 1000 == 0:
                 print(f"  Found {total_found} matching jobs...", file=sys.stderr)
@@ -88,27 +298,26 @@ class Dashboard(Verb):
 
         print("Fetching current queue...", file=sys.stderr)
         for ad in schedd.query(
-            constraint=f"ClusterId == {clusterId}",
+            constraint=f"ClusterId == {cluster_id}",
             projection=["JobStatus"],
             limit=-1,
         ):
-            counts[job_states[ad.eval("JobStatus") - 1]] += 1
+            counts[JOB_STATUS_NAMES[ad.eval("JobStatus")]] += 1
         print("Done fetching data\n", file=sys.stderr)
 
         return counts
 
-
     # print the dashboard
-    def draw_bars(counts, job_states, bar_width=50):
+    def draw_bars(counts, bar_width=50):
+        job_states = list(JOB_STATUS_NAMES.values())
         max_label_len = max(len(s) for s in job_states)
-        max_count = max(counts.values()) or 1
-        count_width = len(str(max_count))
+        count_width = max(len(str(max(counts.values()) or 1)), len("Count"))
         per_width = len("100.0%")
         total_count = sum(counts.values())
 
         if total_count == 0:
-            print("No jobs in the cluster found, please recheck clusterId")
-            exit()
+            print("No jobs in the cluster found, please recheck cluster_id")
+            sys.exit(1)
 
         header = (
             f"{'Status'.rjust(max_label_len)} | "
@@ -121,8 +330,7 @@ class Dashboard(Verb):
 
         for state in job_states:
             cnt = counts[state]
-            length = math.ceil(int(cnt / total_count * bar_width))
-            bar = "█" * length
+            bar = render_bar(cnt, total_count, bar_width, ceil=True)
             per = cnt * 100 / total_count
 
             state_str = state.rjust(max_label_len)
@@ -132,19 +340,13 @@ class Dashboard(Verb):
 
             print(f"{state_str} | {bar_str} | {cnt_str} | {per_str}")
 
-
-    def get_dashboard_data(clusterId):
+    def get_dashboard_data(cluster_id):
         """
         Return job status counts as a dictionary for use by cluster_health.py.
         Does not print anything, just returns computed metrics.
         """
-        job_states = [
-            "Idle", "Running", "Removing", "Completed",
-            "Held", "Transferring Output", "Suspended",
-        ]
-
         try:
-            counts = Dashboard.fetch_counts(clusterId, job_states)
+            counts = Dashboard.fetch_counts(cluster_id)
             total = sum(counts.values())
 
             if total == 0:
@@ -163,20 +365,10 @@ class Dashboard(Verb):
         except Exception:
             return None
 
-
-    def run(args):
-        """Entry point called by main.py."""
-        job_states = [
-            "Idle", "Running", "Removing", "Completed",
-            "Held", "Transferring Output", "Suspended",
-        ]
-        counts = Dashboard.fetch_counts(args.cluster_id, job_states)
-        print(f"\nCluster {args.cluster_id} Status Dashboard\n")
-        Dashboard.draw_bars(counts, job_states)
-
-
     def __init__(self, logger, cluster_id, **options):
-        Dashboard.run(SimpleNamespace(cluster_id=cluster_id))
+        counts = Dashboard.fetch_counts(cluster_id)
+        print(f"\nCluster {cluster_id} Status Dashboard\n")
+        Dashboard.draw_bars(counts)
 
 class Histogram(Verb):
     """
@@ -186,6 +378,7 @@ class Histogram(Verb):
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to analyse",
         },
         "show": {
@@ -208,37 +401,31 @@ class Histogram(Verb):
         },
     }
 
-
-    """
-    This program takes data from the cluster_data folder and gives an ASCII histogram
-    and ASCII CDF of the runtimes for a cluster.
-    """
-
-
     # ── Data loading ───────────────────────────────────────────────────────────────
 
     def load_data_for_cluster(cluster_id):
         """Load cluster CSV and return a cleaned DataFrame."""
-        jobs = load_csv_for_cluster(cluster_id)
+        jobs = _load_csv_for_cluster(cluster_id)
         return make_dataframe(jobs, numeric_cols=["RemoteWallClockTime", "QDate", "CompletionDate"])
 
-
-    def get_positive_runtimes(df):
+    def get_positive_runtimes(df, quiet=False):
         """Return positive runtime Series, or None if missing/empty."""
         if "RemoteWallClockTime" not in df.columns:
-            print("[WARN] Missing RemoteWallClockTime column.")
+            if not quiet:
+                print("[WARN] Missing RemoteWallClockTime column.")
             return None
 
         rt = df["RemoteWallClockTime"].dropna()
         rt = rt[rt > 0]
 
         if rt.empty:
-            print("[WARN] No valid runtime data found.")
+            if not quiet:
+                print("[WARN] No valid runtime data found.")
             return None
 
         return rt
 
-    def cumulative_distribution(cluster_id, df, height=20, width=60):
+    def cumulative_distribution(rt, height=20, width=60):
         """
         Print an ASCII CDF line plot of job runtimes.
 
@@ -246,7 +433,6 @@ class Histogram(Verb):
         Y-axis: cumulative % of jobs.
         Reads as: "X% of jobs completed within Y time."
         """
-        rt = Histogram.get_positive_runtimes(df)
         if rt is None:
             return
 
@@ -284,10 +470,6 @@ class Histogram(Verb):
                 if plot[row][x] == " ":
                     plot[row][x] = "╌"
 
-        CYAN = "\033[96m"
-        YELLOW = "\033[93m"
-        RESET = "\033[0m"
-
         label_w = 5
 
         print(f"  {'Cumulative Distribution':^{width}}")
@@ -308,9 +490,9 @@ class Histogram(Verb):
             coloured = []
             for cell in row:
                 if cell in ("•", "·"):
-                    coloured.append(f"{CYAN}{cell}{RESET}")
+                    coloured.append(colorize(cell, Color.BRIGHT_CYAN))
                 elif cell == "╌":
-                    coloured.append(f"{YELLOW}{cell}{RESET}")
+                    coloured.append(colorize(cell, Color.BRIGHT_YELLOW))
                 else:
                     coloured.append(cell)
 
@@ -330,22 +512,21 @@ class Histogram(Verb):
         print(f"{'':>{label_w + 1}} {'Runtime':^{width}}")
 
         print(
-            f"\n  Key:  {CYAN}•{RESET} curve point   "
-            f"{CYAN}·{RESET} connector   "
-            f"{YELLOW}╌{RESET} percentile guideline"
+            f"\n  Key:  {colorize('•', Color.BRIGHT_CYAN)} curve point   "
+            f"{colorize('·', Color.BRIGHT_CYAN)} connector   "
+            f"{colorize('╌', Color.BRIGHT_YELLOW)} percentile guideline"
         )
         print()
 
 
     # ── Histogram ──────────────────────────────────────────────────────────────────
 
-    def histogram(cluster_id, df, percentiles=10, max_width=20, show_fast_jobs=False):
+    def histogram(df, rt, percentiles=10, max_width=20, show_fast_jobs=False):
         """
         Print histogram where bins are percentile ranges.
         Bars are red if the bin median runtime is < 10 minutes.
         Optionally print exact job IDs whose runtime is < 10 minutes.
         """
-        rt = Histogram.get_positive_runtimes(df)
         if rt is None:
             return
 
@@ -368,8 +549,6 @@ class Histogram(Verb):
         pct_width = 15
         label_width = 30
         count_width = 7
-        RED = "\033[91m"
-        RESET = "\033[0m"
 
         header = (
             f"{'Percentile':<{pct_width}}"
@@ -399,7 +578,6 @@ class Histogram(Verb):
             if is_red:
                 jobs_in_red_bins += len(in_bin)
 
-            color = RED if is_red else ""
             time_range = (
                 f"{format_seconds_human(left):>10} - {format_seconds_human(right):>10}"
             ).rjust(label_width)
@@ -410,16 +588,14 @@ class Histogram(Verb):
             right_pct = int(round(100 * (i + 1) / len(counts)))
             pct_range = f"{left_pct:02}–{right_pct:02}%".ljust(pct_width)
 
-            bar_len = int((counts[i] / max_count) * max_width) if max_count > 0 else 0
-            bar = "█" * bar_len
+            bar = f"{render_bar(counts[i], max_count, max_width):<{max_width}}"
+            if is_red:
+                bar = colorize(bar, Color.BRIGHT_RED)
 
-            print(
-                f"{pct_range}{time_range} | "
-                f"{color}{bar:<{max_width}}{RESET} {counts[i]:>{count_width}}"
-            )
+            print(f"{pct_range}{time_range} | {bar} {counts[i]:>{count_width}}")
 
-        print(f"\n{RED}Note:{RESET} Bars in red represent bins with median runtime < 10 minutes.")
-        print(f"{RED}Info:{RESET} Total number of jobs in such bins: {jobs_in_red_bins}")
+        print(f"\n{colorize('Note:', Color.BRIGHT_RED)} Bars in red represent bins with median runtime < 10 minutes.")
+        print(f"{colorize('Info:', Color.BRIGHT_RED)} Total number of jobs in such bins: {jobs_in_red_bins}")
 
         if show_fast_jobs:
             if "ClusterId" in df.columns and "ProcId" in df.columns:
@@ -447,18 +623,14 @@ class Histogram(Verb):
         Return runtime analysis metrics as a dict for use by summarize.py.
         Does not print anything.
         """
-        jobs = load_csv_for_cluster(cluster_id, exit_on_missing=False)
+        jobs = _load_csv_for_cluster(cluster_id, exit_on_missing=False)
         if not jobs:
             return None
 
         df = make_dataframe(jobs, numeric_cols=["RemoteWallClockTime", "QDate", "CompletionDate"])
 
-        if "RemoteWallClockTime" not in df.columns:
-            return None
-
-        rt = df["RemoteWallClockTime"].dropna()
-        rt = rt[rt > 0]
-        if rt.empty:
+        rt = Histogram.get_positive_runtimes(df, quiet=True)
+        if rt is None:
             return None
 
         runtimes = rt.values
@@ -470,15 +642,31 @@ class Histogram(Verb):
             if "CompletionDate" in df.columns else Series([])
         )
 
+        # Correlation between submission time and runtime: positive means
+        # later-submitted jobs ran longer, negative means they ran shorter.
+        # Computed from the raw job list (not qdate_series/rt above) since
+        # those are independently dropna()'d and may no longer line up
+        # job-for-job; correlation needs QDate/RemoteWallClockTime pairs
+        # from the *same* job.
+        qdate_paired, runtime_paired = [], []
+        for job in jobs:
+            qd = safe(float, job.get("QDate"))
+            wt = safe(float, job.get("RemoteWallClockTime"))
+            if qd is not None and wt is not None and wt > 0:
+                qdate_paired.append(qd)
+                runtime_paired.append(wt)
+        correlation = np_corrcoef(qdate_paired, runtime_paired)
+
         return {
             "total_runtime_jobs": len(runtimes),
             "mean_runtime": rt.mean(),
             "median_runtime": rt.median(),
             "std_runtime": rt.std(),
             "cv": rt.std() / rt.mean() if rt.mean() > 0 else 0,
-            "fast_jobs": int((runtimes < 600).sum()),
+            "correlation": correlation,
+            "fast_jobs": sum(1 for v in runtimes if v < 600),
             "fast_jobs_pct": float(sum(1 for v in runtimes if v < 600) / len(runtimes) * 100),
-            "long_jobs": int((runtimes > p95).sum()),
+            "long_jobs": sum(1 for v in runtimes if v > p95),
             "p95_runtime": p95,
             "min_runtime": rt.min(),
             "max_runtime": rt.max(),
@@ -489,9 +677,10 @@ class Histogram(Verb):
 
     # ── Entry point ────────────────────────────────────────────────────────────────
 
-    def run(args):
-        """Entry point called by main.py."""
-        df = Histogram.load_data_for_cluster(args.cluster_id)
+    def __init__(self, logger, cluster_id, **options):
+        _ensure_cluster_data(cluster_id)
+
+        df = Histogram.load_data_for_cluster(cluster_id)
 
         rt = Histogram.get_positive_runtimes(df)
         n = len(rt) if rt is not None else 0
@@ -511,37 +700,24 @@ class Histogram(Verb):
             if not completion_times.empty else "N/A"
         )
 
-        BOLD = "\033[1m"
-        RESET = "\033[0m"
-
-        print(f"\n{BOLD}{'Runtime Analysis':^80}{RESET}")
+        print(f"\n{bold('Runtime Analysis'.center(80))}")
         print("=" * 80)
         print(
-            f"  Cluster : {args.cluster_id}   |   Jobs: {n}   |   "
+            f"  Cluster : {cluster_id}   |   Jobs: {n}   |   "
             f"Submitted: {first_sub}   |   Completed: {last_comp}"
         )
         print("=" * 80)
 
-        show = getattr(args, "show", "both")
+        show = options.get("show", "both")
         if show in ("cdf", "both"):
-            Histogram.cumulative_distribution(args.cluster_id, df, height=15, width=60)
+            Histogram.cumulative_distribution(rt, height=15, width=60)
         if show in ("histogram", "both"):
             Histogram.histogram(
-                args.cluster_id,
-                df,
-                percentiles=args.percentiles,
+                df, rt,
+                percentiles=options.get("percentiles", 10),
                 max_width=20,
-                show_fast_jobs=args.print_list,
+                show_fast_jobs=options.get("print_list", False),
             )
-
-    def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id, logger)
-        Histogram.run(SimpleNamespace(
-            cluster_id=cluster_id,
-            show=options.get("show", "both"),
-            print_list=options.get("print_list", False),
-            percentiles=options.get("percentiles", 10),
-        ))
 
 class Analytics(Verb):
     """
@@ -551,38 +727,21 @@ class Analytics(Verb):
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to analyse",
         },
     }
 
     # to print the bar visualizations
     def bar(pct, width=50):
-        filled = int(pct / 100 * width)
-        return "[" + "█" * filled + " " * (width - filled) + f"] {pct:.1f}%"
+        filled = render_bar(pct, 100, width)
+        return "[" + filled.ljust(width) + f"] {pct:.1f}%"
 
     # to calculate efficiency
     def efficiency(used, expected):
         if not expected:
             return 0.0
         return (used / expected) * 100
-
-    # to calculate waste
-    def calculate_waste(requested, used):
-        if not requested:
-            return 0.0
-        return max(0, requested - used)
-
-    # to get percentile value
-    def percentile(data, p):
-        if not data:
-            return 0
-        sorted_data = sorted(data)
-        k = (len(sorted_data) - 1) * p / 100
-        f = int(k)
-        c = f + 1
-        if c >= len(sorted_data):
-            return sorted_data[-1]
-        return sorted_data[f] + (k - f) * (sorted_data[c] - sorted_data[f])
 
     # to print the usage report
     def compute_usage_summary(data, label, percentage=False, unit=None):
@@ -596,7 +755,7 @@ class Analytics(Verb):
         q3 = statistics.quantiles(data_sorted, n=4)[2]
         max_val = data_sorted[-1]
         std_dev = statistics.stdev(data_sorted)
-        
+
         fmt = "{:.1f}%" if percentage else "{:.1f}"
         return (
             f"{label:<25}: "
@@ -620,20 +779,20 @@ class Analytics(Verb):
     def print_usage_distribution(name, used_list, unit="GiB"):
         if not used_list:
             return
-        
+
         max_val = max(used_list)
-        
+
         # Define bins based on the data range
         if max_val <= 10:
-            bins = [0, 2, 5, 10, float('inf')]
+            bins = [0, 2, 5, 10, float("inf")]
             labels = ["0-2", "2-5", "5-10", "10+"]
         elif max_val <= 50:
-            bins = [0, 5, 10, 20, 50, float('inf')]
+            bins = [0, 5, 10, 20, 50, float("inf")]
             labels = ["0-5", "5-10", "10-20", "20-50", "50+"]
         else:
-            bins = [0, 10, 25, 50, 100, float('inf')]
+            bins = [0, 10, 25, 50, 100, float("inf")]
             labels = ["0-10", "10-25", "25-50", "50-100", "100+"]
-        
+
         # Count jobs in each bin
         bin_counts = [0] * len(labels)
         for val in used_list:
@@ -641,79 +800,107 @@ class Analytics(Verb):
                 if bins[i] <= val < bins[i+1]:
                     bin_counts[i] += 1
                     break
-        
+
         total_jobs = len(used_list)
-        
+
         print(f"\n{name} Distribution:")
-        
+
         # Find max count for scaling
         max_count = max(bin_counts) if bin_counts else 1
         bar_width = 50
-        
-        for i, (label, count) in enumerate(zip(labels, bin_counts)):
-            if count > 0:
-                pct = (count / total_jobs) * 100
-                # Create histogram bar
-                bar_length = int((count / max_count) * bar_width)
-                bar_visual = "█" * bar_length
-                print(f"  {label:>10} {unit}: {bar_visual:<{bar_width}} {count:>4} ({pct:>5.1f}%)")
-            else:
-                # Show empty bins if they exist
-                print(f"  {label:>10} {unit}: {'':<{bar_width}} {count:>4} (  0.0%)")
+
+        for label, count in zip(labels, bin_counts):
+            pct = (count / total_jobs) * 100 if count > 0 else 0.0
+            bar_visual = render_bar(count, max_count, bar_width)
+            print(f"  {label:>10} {unit}: {bar_visual:<{bar_width}} {count:>4} ({pct:>5.1f}%)")
+
+    # compute recommended requests + potential savings from p95 usage plus a
+    # buffer; shared by summarize() (prints it) and get_analytics_data()
+    # (returns it as-is)
+    def compute_savings(mem_requested, mem_used, disk_requested, disk_used, cpu_requests, cpu_eff_list, avg_runtime_hours):
+        savings = {}
+
+        if mem_requested and mem_used:
+            p95_mem = np_percentile(mem_used, 95)
+            recommended_mem = p95_mem * 1.1  # 10% buffer
+            median_mem_req = statistics.median(mem_requested)
+
+            if recommended_mem < median_mem_req * 0.8:  # can save > 20%
+                savings["memory"] = {
+                    "current": median_mem_req,
+                    "recommended": recommended_mem,
+                    "savings_gib_hours": (median_mem_req - recommended_mem) * len(mem_used) * avg_runtime_hours,
+                    "reduction_pct": ((median_mem_req - recommended_mem) / median_mem_req) * 100,
+                    "jobs_affected": len(mem_used),
+                }
+
+        if disk_requested and disk_used:
+            p95_disk = np_percentile(disk_used, 95)
+            recommended_disk = p95_disk * 1.2  # 20% buffer
+            median_disk_req = statistics.median(disk_requested)
+
+            if recommended_disk < median_disk_req * 0.8:
+                savings["disk"] = {
+                    "current": median_disk_req,
+                    "recommended": recommended_disk,
+                    "savings_gib_hours": (median_disk_req - recommended_disk) * len(disk_used) * avg_runtime_hours,
+                    "reduction_pct": ((median_disk_req - recommended_disk) / median_disk_req) * 100,
+                    "jobs_affected": len(disk_used),
+                }
+
+        if cpu_requests and cpu_eff_list:
+            median_cpu_pct = statistics.median(cpu_eff_list)
+            median_cpu_req = statistics.median(cpu_requests)
+
+            if median_cpu_pct < 50:
+                savings["cpu"] = {
+                    "current": median_cpu_req,
+                    "recommended": max(1, int(median_cpu_req * (median_cpu_pct / 100) * 1.2)),  # 20% buffer
+                    "current_efficiency": median_cpu_pct,
+                    "jobs_affected": len(cpu_eff_list),
+                }
+
+        return savings
 
     # print recommendations
-    def print_recommendations(mem_req, mem_used, disk_req, disk_used, cpu_req, cpu_used_pct, avg_runtime_hours):
+    def print_recommendations(savings, avg_runtime_hours):
         print(f"\n{'Resource Optimization Recommendations':^80}")
         print("=" * 80)
-        
-        if mem_req and mem_used:
-            p95_mem = Analytics.percentile(mem_used, 95)
-            recommended_mem = p95_mem * 1.1  # 10% buffer
-            median_mem_req = statistics.median(mem_req)
-            
-            if recommended_mem < median_mem_req * 0.8:  # If we can save >20%
-                savings = (median_mem_req - recommended_mem) * len(mem_used) * avg_runtime_hours
-                print(f"\n📊 Memory:")
-                print(f"  Current Request     : {median_mem_req:.1f} GiB")
-                print(f"  Recommended         : {recommended_mem:.1f} GiB (P95 + 10% buffer)")
-                waste_per_job = median_mem_req - recommended_mem
-                print(f"  Potential Savings   : {savings:.1f} GiB-hours")
-                print(f"                        (≈ {waste_per_job:.1f} GiB/job × {len(mem_used)} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
-                print(f"  Jobs Affected       : {len(mem_used)}")
-        
-        if disk_req and disk_used:
-            p95_disk = Analytics.percentile(disk_used, 95)
-            recommended_disk = p95_disk * 1.2  # 20% buffer for disk
-            median_disk_req = statistics.median(disk_req)
-            
-            if recommended_disk < median_disk_req * 0.8:
-                savings = (median_disk_req - recommended_disk) * len(disk_used) * avg_runtime_hours
-                print(f"\n💾 Disk:")
-                print(f"  Current Request     : {median_disk_req:.1f} GiB")
-                print(f"  Recommended         : {recommended_disk:.1f} GiB (P95 + 20% buffer)")
-                waste_per_job = median_disk_req - recommended_disk
-                print(f"  Potential Savings   : {savings:.1f} GiB-hours")
-                print(f"                        (≈ {waste_per_job:.1f} GiB/job × {len(disk_used)} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
-                print(f"  Jobs Affected       : {len(disk_used)}")
-        
-        if cpu_req and cpu_used_pct:
-            median_cpu_pct = statistics.median(cpu_used_pct)
-            median_cpu_req = statistics.median(cpu_req)
-            
-            if median_cpu_pct < 50:
-                # Calculate recommended CPUs based on actual usage
-                # Use the median efficiency to scale down the request
-                recommended_cpus = max(1, int(median_cpu_req * (median_cpu_pct / 100) * 1.2))  # 20% buffer
-                
-                print(f"\n⚙️  CPU:")
-                print(f"  Current Request     : {median_cpu_req:.1f} CPUs")
-                print(f"  Current Efficiency  : {median_cpu_pct:.1f}%")
-                print(f"  Recommended         : {recommended_cpus} CPUs")
-                print(f"  Jobs Affected       : {len(cpu_used_pct)}")
 
-    # prints the total report
-    def summarize(cluster_id):
-        jobs = load_csv_for_cluster(cluster_id)
+        if "memory" in savings:
+            s = savings["memory"]
+            waste_per_job = s["current"] - s["recommended"]
+            print(f"\n📊 Memory:")
+            print(f"  Current Request     : {s['current']:.1f} GiB")
+            print(f"  Recommended         : {s['recommended']:.1f} GiB (P95 + 10% buffer)")
+            print(f"  Potential Savings   : {s['savings_gib_hours']:.1f} GiB-hours")
+            print(f"                        (≈ {waste_per_job:.1f} GiB/job × {s['jobs_affected']} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
+            print(f"  Jobs Affected       : {s['jobs_affected']}")
+
+        if "disk" in savings:
+            s = savings["disk"]
+            waste_per_job = s["current"] - s["recommended"]
+            print(f"\n💾 Disk:")
+            print(f"  Current Request     : {s['current']:.1f} GiB")
+            print(f"  Recommended         : {s['recommended']:.1f} GiB (P95 + 20% buffer)")
+            print(f"  Potential Savings   : {s['savings_gib_hours']:.1f} GiB-hours")
+            print(f"                        (≈ {waste_per_job:.1f} GiB/job × {s['jobs_affected']} jobs × {avg_runtime_hours:.1f} hr avg runtime)")
+            print(f"  Jobs Affected       : {s['jobs_affected']}")
+
+        if "cpu" in savings:
+            s = savings["cpu"]
+            print(f"\n⚙️  CPU:")
+            print(f"  Current Request     : {s['current']:.1f} CPUs")
+            print(f"  Current Efficiency  : {s['current_efficiency']:.1f}%")
+            print(f"  Recommended         : {s['recommended']} CPUs")
+            print(f"  Jobs Affected       : {s['jobs_affected']}")
+
+    # loads a cluster's cached job CSV and computes all resource-usage metrics;
+    # shared by summarize() (prints them) and get_analytics_data() (returns them)
+    def collect_metrics(cluster_id, exit_on_missing=True):
+        jobs = _load_csv_for_cluster(cluster_id, exit_on_missing=exit_on_missing)
+        if jobs is None:
+            return None
 
         mem_requested, mem_used = [], []
         disk_requested, disk_used = [], []
@@ -723,126 +910,123 @@ class Analytics(Verb):
         gpu_requests = []
 
         for job in jobs:
-            mem_req = safe_float(job.get("RequestMemory"))
-            mem_use = safe_float(job.get("ResidentSetSize_RAW"))
+            mem_req = safe(float, job.get("RequestMemory"))
+            mem_use = safe(float, job.get("ResidentSetSize_RAW"))
             if mem_req:
                 mem_requested.append(round(mem_req / 1024, 2))  # Convert MiB to GiB
             if mem_use:
                 mem_used.append(mem_use / 1024 / 1024)  # Convert KiB to GiB
 
-            disk_req = safe_float(job.get("RequestDisk"))
-            disk_use = safe_float(job.get("DiskUsage_RAW"))
+            disk_req = safe(float, job.get("RequestDisk"))
+            disk_use = safe(float, job.get("DiskUsage_RAW"))
             if disk_req:
                 disk_requested.append(round(disk_req / (1024 * 1024), 2))  # Convert KiB to GiB
             if disk_use:
                 disk_used.append(disk_use / (1024 * 1024))  # Convert KiB to GiB
 
-            cpus = safe_float(job.get("RequestCpus"))
+            cpus = safe(float, job.get("RequestCpus"))
             if cpus:
                 cpu_requests.append(int(cpus))
 
-            gpus = safe_float(job.get("RequestGpus"))
+            gpus = safe(float, job.get("RequestGpus"))
             if gpus:
                 gpu_requests.append(int(gpus))
 
-            user_cpu = safe_float(job.get("RemoteUserCpu")) or 0
-            sys_cpu = safe_float(job.get("RemoteSysCpu")) or 0
-            wall_time = safe_float(job.get("RemoteWallClockTime"))
+            user_cpu = safe(float, job.get("RemoteUserCpu")) or 0
+            sys_cpu = safe(float, job.get("RemoteSysCpu")) or 0
+            wall_time = safe(float, job.get("RemoteWallClockTime"))
 
             if wall_time and cpus and (user_cpu or sys_cpu):
-                total_cpu_used = sys_cpu / cpus
-                cpu_used_time.append(total_cpu_used)
+                cpu_used_time.append(sys_cpu / cpus)
                 run_time.append(wall_time)
 
             if wall_time:
                 runtimes.append(wall_time)
 
-        
-
         # Compute per-job efficiency lists
-        per_job_cpu_eff = [
-            Analytics.efficiency(cpu_used_time[i], run_time[i])
-            for i in range(len(cpu_used_time))
-            if run_time[i]
-        ]
-
-        per_job_mem_eff = [
-            Analytics.efficiency(mem_used[i], mem_requested[i])
-            for i in range(min(len(mem_used), len(mem_requested)))
-            if mem_requested[i]
-        ]
-
-        per_job_disk_eff = [
-            Analytics.efficiency(disk_used[i], disk_requested[i])
-            for i in range(min(len(disk_used), len(disk_requested)))
-            if disk_requested[i]
-        ]
+        per_job_cpu_eff = [Analytics.efficiency(u, r) for u, r in zip(cpu_used_time, run_time) if r]
+        per_job_mem_eff = [Analytics.efficiency(u, r) for u, r in zip(mem_used, mem_requested) if r]
+        per_job_disk_eff = [Analytics.efficiency(u, r) for u, r in zip(disk_used, disk_requested) if r]
 
         # Take medians
         avg_cpu_eff = statistics.median(per_job_cpu_eff) if per_job_cpu_eff else 0
         avg_mem_eff = statistics.median(per_job_mem_eff) if per_job_mem_eff else 0
         avg_disk_eff = statistics.median(per_job_disk_eff) if per_job_disk_eff else 0
 
-        
-        total_jobs = len(jobs)
         avg_runtime = statistics.mean(runtimes) if runtimes else 0
-        avg_runtime_str = str(timedelta(seconds=int(avg_runtime))) if avg_runtime else "N/A"
         avg_runtime_hours = avg_runtime / 3600 if avg_runtime else 1.0
+
+        savings = Analytics.compute_savings(
+            mem_requested, mem_used, disk_requested, disk_used,
+            cpu_requests, per_job_cpu_eff, avg_runtime_hours,
+        )
+
+        return {
+            "total_jobs": len(jobs),
+            "avg_runtime": avg_runtime,
+            "avg_runtime_str": str(timedelta(seconds=int(avg_runtime))) if avg_runtime else "N/A",
+            "avg_runtime_hours": avg_runtime_hours,
+            "memory_efficiency": avg_mem_eff,
+            "disk_efficiency": avg_disk_eff,
+            "cpu_efficiency": avg_cpu_eff,
+            "memory_jobs": len(per_job_mem_eff),
+            "disk_jobs": len(per_job_disk_eff),
+            "cpu_jobs": len(per_job_cpu_eff),
+            "mem_requested": mem_requested,
+            "mem_used": mem_used,
+            "disk_requested": disk_requested,
+            "disk_used": disk_used,
+            "cpu_requests": cpu_requests,
+            "gpu_requests": gpu_requests,
+            "cpu_efficiency_list": per_job_cpu_eff,
+            "savings": savings,
+        }
+
+    # prints the total report
+    def summarize(cluster_id):
+        m = Analytics.collect_metrics(cluster_id)
 
         print("=" * 80)
         print(f"{'HTCondor Cluster Resource Summary':^80}")
         print("=" * 80)
         print(f"{'Cluster ID':>20}: {cluster_id}")
-        print(f"{'Job Count':>20}: {total_jobs}")
-        print(f"{'Avg Runtime':>20}: {avg_runtime_str}")
+        print(f"{'Job Count':>20}: {m['total_jobs']}")
+        print(f"{'Avg Runtime':>20}: {m['avg_runtime_str']}")
         print()
 
         print(f"{'Requested Resources':^80}")
         print("=" * 80)
-        Analytics.print_resource_table("Memory (GiB)", mem_requested, "GiB")
-        Analytics.print_resource_table("Disk (GiB)", disk_requested, "GiB")
-        Analytics.print_resource_table("CPUs", cpu_requests, "")
-        Analytics.print_resource_table("GPUs", gpu_requests, "")
+        Analytics.print_resource_table("Memory (GiB)", m["mem_requested"], "GiB")
+        Analytics.print_resource_table("Disk (GiB)", m["disk_requested"], "GiB")
+        Analytics.print_resource_table("CPUs", m["cpu_requests"], "")
+        Analytics.print_resource_table("GPUs", m["gpu_requests"], "")
 
         print(f"{'Number Summary Table':^80}")
         print("=" * 80)
         print(f"{'Resource (units)':<25}: {'Min':>6}  {'Q1':>6}  {'Median':>7}  {'Q3':>6}  {'Max':>6}   {'StdDev':>6}")
         print("-" * 80)
 
-        cpu_usages, mem_values, disk_values = [], [], []
-
-        for i in range(len(jobs)):
-            if i < len(cpu_used_time) and i < len(run_time) and run_time[i]:
-                cpu_usages.append(Analytics.efficiency(cpu_used_time[i], run_time[i]))
-            if i < len(mem_used):
-                mem_values.append(mem_used[i])
-            if i < len(disk_used):
-                disk_values.append(disk_used[i])
-
-
-        print(Analytics.compute_usage_summary(mem_values, "Memory Used (GiB)"))
-        print(Analytics.compute_usage_summary(disk_values, "Disk Used (GiB)"))
-        print(Analytics.compute_usage_summary(cpu_usages, "CPU Usage (%)", percentage=True))
-        
+        print(Analytics.compute_usage_summary(m["mem_used"], "Memory Used (GiB)"))
+        print(Analytics.compute_usage_summary(m["disk_used"], "Disk Used (GiB)"))
+        print(Analytics.compute_usage_summary(m["cpu_efficiency_list"], "CPU Usage (%)", percentage=True))
 
         print()
 
         print(f"{'Overall Utilization':^80}")
         print("=" * 80)
-        print(f"  Memory usage      {Analytics.bar(avg_mem_eff)}")
-        print(f"  Disk usage        {Analytics.bar(avg_disk_eff)}")
-        print(f"  CPU usage         {Analytics.bar(avg_cpu_eff)}")
+        print(f"  Memory usage      {Analytics.bar(m['memory_efficiency'])}")
+        print(f"  Disk usage        {Analytics.bar(m['disk_efficiency'])}")
+        print(f"  CPU usage         {Analytics.bar(m['cpu_efficiency'])}")
         print()
 
         # Usage distribution
         print(f"{'Resource Usage Distribution':^80}")
         print("=" * 80)
-        Analytics.print_usage_distribution("Memory", mem_used, "GiB")
-        Analytics.print_usage_distribution("Disk", disk_used, "GiB")
-        
+        Analytics.print_usage_distribution("Memory", m["mem_used"], "GiB")
+        Analytics.print_usage_distribution("Disk", m["disk_used"], "GiB")
+
         # Recommendations
-        Analytics.print_recommendations(mem_requested, mem_used, disk_requested, disk_used, 
-                            cpu_requests, cpu_usages, avg_runtime_hours)
+        Analytics.print_recommendations(m["savings"], m["avg_runtime_hours"])
 
         # Gives human readable notes on the efficiency and also warnings
         print()
@@ -859,166 +1043,29 @@ class Analytics(Verb):
             else:
                 print(f"  ✅ {resource} usage is {efficiency:.1f}%")
 
-        warn("Memory", avg_mem_eff)
-        warn("Disk", avg_disk_eff)
-        warn("CPU", avg_cpu_eff)
-
+        warn("Memory", m["memory_efficiency"])
+        warn("Disk", m["disk_efficiency"])
+        warn("CPU", m["cpu_efficiency"])
 
         print()
         print(f"{'End of Summary':^80}")
         print("=" * 80)
 
-
     def get_analytics_data(cluster_id):
         """
         Return analytics data as a dictionary for use by cluster_health.py
         Does not print anything, just returns computed metrics.
-        
+
         Returns:
             dict: Dictionary containing all analytics metrics
         """
-        jobs = load_csv_for_cluster(cluster_id, exit_on_missing=False)
-        if jobs is None:
-            return None
-
-        mem_requested, mem_used = [], []
-        disk_requested, disk_used = [], []
-        run_time, cpu_used_time = [], []
-        runtimes = []
-        cpu_requests = []
-        gpu_requests = []
-
-        for job in jobs:
-            mem_req = safe_float(job.get("RequestMemory"))
-            mem_use = safe_float(job.get("ResidentSetSize_RAW"))
-            if mem_req:
-                mem_requested.append(round(mem_req / 1024, 2))
-            if mem_use:
-                mem_used.append(mem_use / 1024 / 1024)
-
-            disk_req = safe_float(job.get("RequestDisk"))
-            disk_use = safe_float(job.get("DiskUsage_RAW"))
-            if disk_req:
-                disk_requested.append(round(disk_req / (1024 * 1024), 2))
-            if disk_use:
-                disk_used.append(disk_use / (1024 * 1024))
-
-            cpus = safe_float(job.get("RequestCpus"))
-            if cpus:
-                cpu_requests.append(int(cpus))
-
-            gpus = safe_float(job.get("RequestGpus"))
-            if gpus:
-                gpu_requests.append(int(gpus))
-
-            user_cpu = safe_float(job.get("RemoteUserCpu")) or 0
-            sys_cpu = safe_float(job.get("RemoteSysCpu")) or 0
-            wall_time = safe_float(job.get("RemoteWallClockTime"))
-
-            if wall_time and cpus and (user_cpu or sys_cpu):
-                total_cpu_used = sys_cpu / cpus
-                cpu_used_time.append(total_cpu_used)
-                run_time.append(wall_time)
-
-            if wall_time:
-                runtimes.append(wall_time)
-
-        # Compute per-job efficiency lists
-        per_job_cpu_eff = [
-            Analytics.efficiency(cpu_used_time[i], run_time[i])
-            for i in range(len(cpu_used_time))
-            if run_time[i]
-        ]
-
-        per_job_mem_eff = [
-            Analytics.efficiency(mem_used[i], mem_requested[i])
-            for i in range(min(len(mem_used), len(mem_requested)))
-            if mem_requested[i]
-        ]
-
-        per_job_disk_eff = [
-            Analytics.efficiency(disk_used[i], disk_requested[i])
-            for i in range(min(len(disk_used), len(disk_requested)))
-            if disk_requested[i]
-        ]
-
-        # Take medians
-        avg_cpu_eff = statistics.median(per_job_cpu_eff) if per_job_cpu_eff else 0
-        avg_mem_eff = statistics.median(per_job_mem_eff) if per_job_mem_eff else 0
-        avg_disk_eff = statistics.median(per_job_disk_eff) if per_job_disk_eff else 0
-
-        avg_runtime = statistics.mean(runtimes) if runtimes else 0
-        avg_runtime_hours = avg_runtime / 3600 if avg_runtime else 1.0
-
-        # Calculate savings
-        savings = {}
-        
-        if mem_requested and mem_used:
-            p95_mem = Analytics.percentile(mem_used, 95)
-            recommended_mem = p95_mem * 1.1
-            median_mem_req = statistics.median(mem_requested)
-            
-            if recommended_mem < median_mem_req * 0.8:
-                mem_savings = (median_mem_req - recommended_mem) * len(mem_used) * avg_runtime_hours
-                savings["memory"] = {
-                    "current": median_mem_req,
-                    "recommended": recommended_mem,
-                    "savings_gib_hours": mem_savings,
-                    "reduction_pct": ((median_mem_req - recommended_mem) / median_mem_req) * 100
-                }
-        
-        if disk_requested and disk_used:
-            p95_disk = Analytics.percentile(disk_used, 95)
-            recommended_disk = p95_disk * 1.2
-            median_disk_req = statistics.median(disk_requested)
-            
-            if recommended_disk < median_disk_req * 0.8:
-                disk_savings = (median_disk_req - recommended_disk) * len(disk_used) * avg_runtime_hours
-                savings["disk"] = {
-                    "current": median_disk_req,
-                    "recommended": recommended_disk,
-                    "savings_gib_hours": disk_savings,
-                    "reduction_pct": ((median_disk_req - recommended_disk) / median_disk_req) * 100
-                }
-        
-        if cpu_requests and per_job_cpu_eff:
-            median_cpu_pct = statistics.median(per_job_cpu_eff)
-            median_cpu_req = statistics.median(cpu_requests)
-            
-            if median_cpu_pct < 50:
-                recommended_cpus = max(1, int(median_cpu_req * (median_cpu_pct / 100) * 1.2))
-                savings["cpu"] = {
-                    "current": median_cpu_req,
-                    "recommended": recommended_cpus,
-                    "current_efficiency": median_cpu_pct,
-                }
-
-        return {
-            "total_jobs": len(jobs),
-            "avg_runtime": avg_runtime,
-            "avg_runtime_hours": avg_runtime_hours,
-            "memory_efficiency": avg_mem_eff,
-            "disk_efficiency": avg_disk_eff,
-            "cpu_efficiency": avg_cpu_eff,
-            "memory_jobs": len(per_job_mem_eff),
-            "disk_jobs": len(per_job_disk_eff),
-            "cpu_jobs": len(per_job_cpu_eff),
-            "mem_requested": mem_requested,
-            "mem_used": mem_used,
-            "disk_requested": disk_requested,
-            "disk_used": disk_used,
-            "cpu_requests": cpu_requests,
-            "cpu_efficiency_list": per_job_cpu_eff,
-            "savings": savings,
-        }
-
+        return Analytics.collect_metrics(cluster_id, exit_on_missing=False)
 
     def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id, logger)
+        _ensure_cluster_data(cluster_id)
         Analytics.summarize(cluster_id)
 
 class Hold(Verb):
-
     """
     Classifies and buckets held jobs by hold reason
     """
@@ -1026,6 +1073,7 @@ class Hold(Verb):
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to analyse",
         },
         "min_count": {
@@ -1073,215 +1121,182 @@ class Hold(Verb):
 
     # Mapping of HoldReasonCodes to their explanations
     HOLD_REASON_CODES = {
-        1: {"label": "UserRequest", "reason": "The user put the job on hold with condor_hold."},
-        3: {"label": "JobPolicy", "reason": "The PERIODIC_HOLD expression evaluated to True. Or, ON_EXIT_HOLD was true."},
-        4: {"label": "CorruptedCredential", "reason": "The credentials for the job are invalid."},
-        5: {"label": "JobPolicyUndefined", "reason": "A job policy expression evaluated to Undefined."},
-        6: {"label": "FailedToCreateProcess", "reason": "The condor_starter failed to start the executable."},
-        7: {"label": "UnableToOpenOutput", "reason": "The standard output file for the job could not be opened."},
-        8: {"label": "UnableToOpenInput", "reason": "The standard input file for the job could not be opened."},
-        9: {"label": "UnableToOpenOutputStream", "reason": "The standard output stream for the job could not be opened."},
-        10: {"label": "UnableToOpenInputStream", "reason": "The standard input stream for the job could not be opened."},
-        11: {"label": "InvalidTransferAck", "reason": "An internal HTCondor protocol error was encountered when transferring files."},
-        12: {"label": "TransferOutputError", "reason": "An error occurred while transferring job output files or self-checkpoint files."},
-        13: {"label": "TransferInputError", "reason": "An error occurred while transferring job input files."},
-        14: {"label": "IwdError", "reason": "The initial working directory of the job cannot be accessed."},
-        15: {"label": "SubmittedOnHold", "reason": "The user requested the job be submitted on hold."},
-        16: {"label": "SpoolingInput", "reason": "Input files are being spooled."},
-        17: {"label": "JobShadowMismatch", "reason": "A standard universe job is not compatible with the condor_shadow version available on the submitting machine."},
-        18: {"label": "InvalidTransferGoAhead", "reason": "An internal HTCondor protocol error was encountered when transferring files."},
-        19: {"label": "HookPrepareJobFailure", "reason": "<Keyword>_HOOK_PREPARE_JOB was defined but could not be executed or returned failure."},
-        20: {"label": "MissedDeferredExecutionTime", "reason": "The job missed its deferred execution time and therefore failed to run."},
-        21: {"label": "StartdHeldJob", "reason": "The job was put on hold because WANT_HOLD in the machine policy was true."},
-        22: {"label": "UnableToInitUserLog", "reason": "Unable to initialize job event log."},
-        23: {"label": "FailedToAccessUserAccount", "reason": "Failed to access user account."},
-        24: {"label": "NoCompatibleShadow", "reason": "No compatible shadow."},
-        25: {"label": "InvalidCronSettings", "reason": "Invalid cron settings."},
-        26: {"label": "SystemPolicy", "reason": "SYSTEM_PERIODIC_HOLD evaluated to true."},
-        27: {"label": "SystemPolicyUndefined", "reason": "The system periodic job policy evaluated to undefined."},
-        32: {"label": "MaxTransferInputSizeExceeded", "reason": "The maximum total input file transfer size was exceeded."},
+        1:  {"label": "UserRequest",                   "reason": "The user put the job on hold with condor_hold."},
+        3:  {"label": "JobPolicy",                     "reason": "The PERIODIC_HOLD expression evaluated to True. Or, ON_EXIT_HOLD was true."},
+        4:  {"label": "CorruptedCredential",           "reason": "The credentials for the job are invalid."},
+        5:  {"label": "JobPolicyUndefined",            "reason": "A job policy expression evaluated to Undefined."},
+        6:  {"label": "FailedToCreateProcess",         "reason": "The condor_starter failed to start the executable."},
+        7:  {"label": "UnableToOpenOutput",            "reason": "The standard output file for the job could not be opened."},
+        8:  {"label": "UnableToOpenInput",             "reason": "The standard input file for the job could not be opened."},
+        9:  {"label": "UnableToOpenOutputStream",      "reason": "The standard output stream for the job could not be opened."},
+        10: {"label": "UnableToOpenInputStream",       "reason": "The standard input stream for the job could not be opened."},
+        11: {"label": "InvalidTransferAck",            "reason": "An internal HTCondor protocol error was encountered when transferring files."},
+        12: {"label": "TransferOutputError",           "reason": "An error occurred while transferring job output files or self-checkpoint files."},
+        13: {"label": "TransferInputError",            "reason": "An error occurred while transferring job input files."},
+        14: {"label": "IwdError",                      "reason": "The initial working directory of the job cannot be accessed."},
+        15: {"label": "SubmittedOnHold",               "reason": "The user requested the job be submitted on hold."},
+        16: {"label": "SpoolingInput",                 "reason": "Input files are being spooled."},
+        17: {"label": "JobShadowMismatch",             "reason": "A standard universe job is not compatible with the condor_shadow version available on the submitting machine."},
+        18: {"label": "InvalidTransferGoAhead",        "reason": "An internal HTCondor protocol error was encountered when transferring files."},
+        19: {"label": "HookPrepareJobFailure",         "reason": "<Keyword>_HOOK_PREPARE_JOB was defined but could not be executed or returned failure."},
+        20: {"label": "MissedDeferredExecutionTime",   "reason": "The job missed its deferred execution time and therefore failed to run."},
+        21: {"label": "StartdHeldJob",                 "reason": "The job was put on hold because WANT_HOLD in the machine policy was true."},
+        22: {"label": "UnableToInitUserLog",           "reason": "Unable to initialize job event log."},
+        23: {"label": "FailedToAccessUserAccount",     "reason": "Failed to access user account."},
+        24: {"label": "NoCompatibleShadow",            "reason": "No compatible shadow."},
+        25: {"label": "InvalidCronSettings",           "reason": "Invalid cron settings."},
+        26: {"label": "SystemPolicy",                  "reason": "SYSTEM_PERIODIC_HOLD evaluated to true."},
+        27: {"label": "SystemPolicyUndefined",         "reason": "The system periodic job policy evaluated to undefined."},
+        32: {"label": "MaxTransferInputSizeExceeded",  "reason": "The maximum total input file transfer size was exceeded."},
         33: {"label": "MaxTransferOutputSizeExceeded", "reason": "The maximum total output file transfer size was exceeded."},
-        34: {"label": "JobOutOfResources", "reason": "Memory usage exceeds a memory limit."},
-        35: {"label": "InvalidDockerImage", "reason": "Specified Docker image was invalid."},
-        36: {"label": "FailedToCheckpoint", "reason": "Job failed when sent the checkpoint signal it requested."},
-        43: {"label": "PreScriptFailed", "reason": "Pre script failed."},
-        44: {"label": "PostScriptFailed", "reason": "Post script failed."},
-        45: {"label": "SingularityTestFailed", "reason": "Test of singularity runtime failed before launching a job"},
-        46: {"label": "JobDurationExceeded", "reason": "The job's allowed duration was exceeded."},
-        47: {"label": "JobExecuteExceeded", "reason": "The job's allowed execution time was exceeded."},
-        48: {"label": "HookShadowPrepareJobFailure", "reason": "Prepare job shadow hook failed when it was executed; status code indicated job should be held."}
+        34: {"label": "JobOutOfResources",             "reason": "Memory usage exceeds a memory limit."},
+        35: {"label": "InvalidDockerImage",            "reason": "Specified Docker image was invalid."},
+        36: {"label": "FailedToCheckpoint",            "reason": "Job failed when sent the checkpoint signal it requested."},
+        43: {"label": "PreScriptFailed",               "reason": "Pre script failed."},
+        44: {"label": "PostScriptFailed",              "reason": "Post script failed."},
+        45: {"label": "SingularityTestFailed",         "reason": "Test of singularity runtime failed before launching a job"},
+        46: {"label": "JobDurationExceeded",           "reason": "The job's allowed duration was exceeded."},
+        47: {"label": "JobExecuteExceeded",            "reason": "The job's allowed execution time was exceeded."},
+        48: {"label": "HookShadowPrepareJobFailure",   "reason": "Prepare job shadow hook failed when it was executed; status code indicated job should be held."}
     }
 
-    """
-    Groups similar hold reason messages using fuzzy string matching (difflib.SequenceMatcher).
+    class HoldReason:
+        def __init__(self, msg: str, code: int, pid: int, time: int) -> None:
+            self.reason = msg
+            self.subcode = code
+            self.proc = pid
+            self.entered = time
 
-        Parameters:
-            reason_list (List[Tuple[str, int, int]]): List of (reason, subcode, proc_id) tuples.
-            threshold (float): Similarity ratio (between 0 and 1) above which reasons are considered similar.
-
-        Returns:
-            List[List[Tuple[str, int, int, int]]]: Buckets of (reason, subcode, proc_id, hold_time) tuples.
-    """
-    def bucket_reasons_with_data(reason_data, threshold=0.7):
+    def bucket_reasons_with_data(reason_data: List[HoldReason], threshold: float = 0.7) -> List[List[HoldReason]]:
+        """Groups similar hold reason messages using fuzzy string matching (difflib.SequenceMatcher)."""
         buckets = []
-        for reason, subcode, proc_id, hold_time in reason_data:
+
+        for hold in reason_data:
             placed = False
+
             for bucket in buckets:
-                ratio = SequenceMatcher(None, reason, bucket[0][0]).ratio()
+                ratio = SequenceMatcher(None, hold.reason, bucket[0].reason).ratio()
+
                 if ratio >= threshold:
-                    bucket.append((reason, subcode, proc_id, hold_time))
+                    bucket.append(hold)
                     placed = True
                     break
+
             if not placed:
-                buckets.append([(reason, subcode, proc_id, hold_time)])
+                buckets.append([hold])
+
         return buckets
 
-
-
-    def calculate_avg_hold_time(bucket):
+    def calculate_avg_hold_time(bucket: List[HoldReason]) -> Tuple[Optional[float], str]:
         """Calculate average time jobs have been held in a bucket"""
-        current_time = time_module.time()
+        current_time = now()
         hold_durations = []
-        
-        for _, _, _, hold_time in bucket:
-            if hold_time > 0:
-                duration = current_time - hold_time
+
+        for reason in bucket:
+            if reason.entered > 0:
+                duration = current_time - reason.entered
                 hold_durations.append(duration)
-        
+
         if not hold_durations:
             return None, "N/A"
-        
+
         avg_seconds = sum(hold_durations) / len(hold_durations)
         return avg_seconds, format_seconds_human(avg_seconds)
 
-
-    """ 
-    Queries the HTCondor schedd for held jobs in the specified cluster and groups them by their HoldReasonCode.
-    Now also collects ProcId and EnteredCurrentStatus (hold time).
-
-        Parameters:
-            cluster_id (str or int): The ID of the cluster to analyze.
-
-        Returns:
-            Dict[int, List[Tuple[str, int, int, int]]]: Maps HoldReasonCode to list of 
-                                                        (HoldReason, HoldReasonSubCode, ProcId, HoldTime) tuples.
-    """
-    def group_by_code(cluster_id):
+    def group_by_code(cluster_id: int) -> Dict[int, List[HoldReason]]:
+        """
+        Queries the HTCondor schedd for held jobs in the specified cluster and groups them by their HoldReasonCode.
+        Now also collects ProcId and EnteredCurrentStatus (hold time).
+        """
         schedd = htcondor2.Schedd()
         reasons_by_code = {}
 
         print("Fetching held jobs from cluster...", file=sys.stderr)
-        
+
         for ad in schedd.query(
-            constraint=f"ClusterId == {cluster_id} && JobStatus == 5",
+            constraint=f"ClusterId=={cluster_id} && JobStatus==5",
             projection=["ProcId", "HoldReasonCode", "HoldReason", "HoldReasonSubCode", "EnteredCurrentStatus"],
             limit=-1
         ):
-            code = ad.eval("HoldReasonCode")
-            subcode = ad.eval("HoldReasonSubCode")
-            proc_id = ad.eval("ProcId")
+
+            code = ad.get("HoldReasonCode")
+            subcode = ad.get("HoldReasonSubCode")
+            proc_id = ad.get("ProcId")
             hold_time = ad.get("EnteredCurrentStatus", 0)
 
             # Displaying only the first line of HoldReason, to bucket more efficiently
-            reason = ad.eval("HoldReason").split('. ')[0]
-            if "Error from" in reason and ": " in reason:
-                parts = reason.split(": ", 1)
-                if len(parts) == 2:
-                    reason = parts[1]
+            reason = _normalize_hold_reason(ad.get("HoldReason"))
 
-            reasons_by_code.setdefault(code, []).append((reason, subcode, proc_id, hold_time))
+            reasons_by_code.setdefault(code, []).append(Hold.HoldReason(reason, subcode, proc_id, hold_time))
 
         print(f"Found {sum(len(v) for v in reasons_by_code.values())} held jobs\n", file=sys.stderr)
+
         return reasons_by_code
 
-
-    """
-    Analyzes and prints time-based statistics for held jobs.
-
-        Parameters:
-            reasons_by_code (Dict): Dictionary grouping hold reasons by HoldReasonCode.
-    """
-    def print_time_analysis(reasons_by_code):
+    def print_time_analysis(reasons_by_code: Dict[int, List[HoldReason]]):
+        """Analyzes and prints time-based statistics for held jobs."""
         all_times = []
-        for pairs in reasons_by_code.values():
-            all_times.extend([hold_time for _, _, _, hold_time in pairs if hold_time > 0])
-        
+        for reasons in reasons_by_code.values():
+            all_times.extend([reason.entered for reason in reasons if reason.entered > 0])
+
         if not all_times:
             print("⏱️  Time Analysis: No timestamp data available\n")
             return
-        
+
         earliest = min(all_times)
         latest = max(all_times)
-        current_time = time_module.time()
-        
+        current_time = now()
+
         print("⏱️  Time Analysis:")
         print(f"  First held: {datetime.fromtimestamp(earliest).strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"  Last held:  {datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S')}")
         duration_hours = (latest - earliest) / 3600
         print(f"  Duration:   {duration_hours:.1f} hours")
-        
+
         # Calculate overall average hold time
         avg_hold_duration = (current_time - sum(all_times) / len(all_times))
         print(f"  Avg hold:   {format_seconds_human(avg_hold_duration)}")
-        
         print()
 
-
-    """
-    Export job IDs with hold reason codes to a CSV file for bulk operations.
-
-        Parameters:
-            all_buckets (List): All buckets with job data.
-            reasons_by_code (Dict): Dictionary mapping codes to job data.
-            cluster_id (str): The cluster ID.
-            filename (str): Output filename.
-    """
-    def export_job_ids(all_buckets, reasons_by_code, cluster_id, filename):
-        import csv
-        
+    def export_job_ids(all_buckets: List[List[HoldReason]], reasons_by_code: Dict[int, List[HoldReason]], cluster_id: int, filename: Path) -> None:
+        """Export job IDs with hold reason codes to a CSV file for bulk operations."""
         # Build a mapping of proc_id to hold reason code
         proc_to_code = {}
-        for code, pairs in reasons_by_code.items():
-            for _, _, proc_id, _ in pairs:
-                proc_to_code[proc_id] = code
-        
+        for code, reasons in reasons_by_code.items():
+            for reason in reasons:
+                proc_to_code[reason.proc] = code
+
         # Collect job IDs with their codes
         job_data = []
         seen_jobs = set()
         for bucket in all_buckets:
-            for _, _, proc_id, _ in bucket:
+            for reason in bucket:
+                proc_id = reason.proc
                 job_id = f"{cluster_id}.{proc_id}"
                 if job_id not in seen_jobs:
                     seen_jobs.add(job_id)
                     hold_code = proc_to_code.get(proc_id, "Unknown")
                     hold_label = Hold.HOLD_REASON_CODES.get(hold_code, {}).get("label", f"Code {hold_code}")
                     job_data.append((job_id, hold_code, hold_label))
-        
+
         # Sort by job ID for consistency
-        job_data.sort(key=lambda x: (int(x[0].split('.')[0]), int(x[0].split('.')[1])))
-        
+        job_data.sort(key=lambda x: (int(x[0].split(".")[0]), int(x[0].split(".")[1])))
+
         # Write to CSV
-        with open(filename, "w", newline='') as f:
+        with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["JobID", "HoldReasonCode", "HoldReasonLabel"])
             writer.writerows(job_data)
-        
+
         print(f"✓ Exported {len(job_data)} unique job IDs to {filename}\n")
 
-    """ 
-    Processes grouped hold reasons and prints a detailed table with filtering and sorting options.
+    def bucket_and_print_table(reasons_by_code: Dict[int, List[HoldReason]], args) -> None:
+        """Processes grouped hold reasons and prints a detailed table with filtering and sorting options."""
+        print(f"Cluster ID: {args.cluster_id}")
 
-        Parameters:
-            reasons_by_code (Dict): Dictionary grouping hold reasons by HoldReasonCode.
-            cluster_id (str or int): The cluster ID being analyzed.
-            args: Parsed command line arguments.
-    """
-    def bucket_and_print_table(reasons_by_code, cluster_id, args):
-        print(f"Cluster ID: {cluster_id}")
-
-        held_jobs = sum(len(pairs) for pairs in reasons_by_code.values())
+        held_jobs = sum(len(reasons) for reasons in reasons_by_code.values())
         print(f"Held Jobs in Cluster: {held_jobs}\n")
-        
+
         # Time analysis
         Hold.print_time_analysis(reasons_by_code)
 
@@ -1296,61 +1311,61 @@ class Hold(Verb):
                 return
             reasons_by_code = {args.code: reasons_by_code[args.code]}
 
-        for code, pairs in reasons_by_code.items():
+        for code, reasons in reasons_by_code.items():
             label = Hold.HOLD_REASON_CODES.get(code, {}).get("label", f"Code {code}")
             seen_codes.add(code)
-            buckets = Hold.bucket_reasons_with_data(pairs, threshold=args.threshold)
-            
-            for bucket in buckets:
+
+            for bucket in Hold.bucket_reasons_with_data(reasons, threshold=args.threshold):
                 # Apply min-count filter
                 if len(bucket) < args.min_count:
                     continue
-                    
+
                 all_buckets.append(bucket)
-                example_reason, subcode, proc_id, hold_time = bucket[0]
+                first = bucket[0]
+                example_reason, subcode, proc_id, hold_time = first.reason, first.subcode, first.proc, first.entered
                 percent = (len(bucket) / held_jobs) * 100 if held_jobs > 0 else 0
-                
+
                 # Calculate average hold time for this bucket
                 avg_hold_seconds, avg_hold_str = Hold.calculate_avg_hold_time(bucket)
-                
+
                 # Prepare job IDs string if requested
                 job_ids_str = ""
                 if args.show_job_ids:
                     if len(bucket) <= 5:
-                        ids = [str(p) for _, _, p, _ in bucket]
+                        ids = [str(h.proc) for h in bucket]
                         job_ids_str = ", ".join(ids)
                     else:
-                        ids = [str(p) for _, _, p, _ in bucket[:3]]
+                        ids = [str(h.proc) for h in bucket[:3]]
                         job_ids_str = f"{', '.join(ids)}... (+{len(bucket)-3} more)"
-                
+
                 row = [
-                    label, 
-                    subcode, 
-                    f"{percent:.1f}% ({len(bucket)})", 
+                    label,
+                    subcode,
+                    f"{percent:.1f}% ({len(bucket)})",
                     avg_hold_str,
                     example_reason
                 ]
                 if args.show_job_ids:
                     row.append(job_ids_str)
-                
+
                 # Store avg_hold_seconds for sorting
                 row.append(avg_hold_seconds if avg_hold_seconds else 0)
-                
+
                 example_rows.append(row)
 
         # Sort results
-        if args.sort_by == 'count':
-            example_rows.sort(key=lambda x: int(x[2].split('(')[1].split(')')[0]), reverse=True)
-        elif args.sort_by == 'code':
+        if args.sort_by == "count":
+            example_rows.sort(key=lambda x: int(x[2].split("(")[1].split(")")[0]), reverse=True)
+        elif args.sort_by == "code":
             example_rows.sort(key=lambda x: x[0])
-        elif args.sort_by == 'percent':
-            example_rows.sort(key=lambda x: float(x[2].split('%')[0]), reverse=True)
-        elif args.sort_by == 'time':
+        elif args.sort_by == "percent":
+            example_rows.sort(key=lambda x: float(x[2].split("%")[0]), reverse=True)
+        elif args.sort_by == "time":
             example_rows.sort(key=lambda x: x[-1], reverse=True)  # Sort by avg_hold_seconds
-        
+
         # Remove the avg_hold_seconds column (used only for sorting)
         example_rows = [row[:-1] for row in example_rows]
-        
+
         # Apply top N filter
         if args.top:
             example_rows = example_rows[:args.top]
@@ -1358,7 +1373,7 @@ class Hold(Verb):
         headers = ["Hold Reason Label", "SubCode", "% of Held Jobs (Count)", "Avg Hold Time", "Example Reason"]
         if args.show_job_ids:
             headers.append("Job IDs (ProcId)")
-        
+
         print(tabulate(example_rows, headers=headers, tablefmt="grid"))
 
         print("\nLegend:")
@@ -1367,23 +1382,23 @@ class Hold(Verb):
             entry = Hold.HOLD_REASON_CODES.get(code, {})
             legend.append([code, entry.get("label", "Unknown"), entry.get("reason", "No description available.")])
         print(tabulate(legend, headers=["Code", "Label", "Reason"], tablefmt="fancy_grid"))
-        
+
 
         # Export job IDs if requested
         if args.export_jobs:
-            Hold.export_job_ids(all_buckets, reasons_by_code, cluster_id, args.export_jobs)
+            Hold.export_job_ids(all_buckets, reasons_by_code, args.cluster_id, args.export_jobs)
 
     def get_hold_bucket_data(cluster_id, threshold=0.7):
         """
         Return held jobs analysis data as a dictionary for use by cluster_health.py
         Does not print anything, just returns computed metrics.
-        
+
         Returns:
             dict: Dictionary containing held jobs analysis
         """
         try:
             reasons_by_code = Hold.group_by_code(cluster_id)
-            
+
             if not reasons_by_code:
                 return {
                     "held_count": 0,
@@ -1392,41 +1407,41 @@ class Hold(Verb):
                     "unique_reasons": 0,
                     "buckets": [],
                 }
-            
+
             held_count = sum(len(pairs) for pairs in reasons_by_code.values())
             held_codes = {}
             all_buckets = []
-            
+
             for code, pairs in reasons_by_code.items():
                 held_codes[code] = len(pairs)
                 buckets = Hold.bucket_reasons_with_data(pairs, threshold=threshold)
                 all_buckets.extend(buckets)
-            
+
             # Get top reasons
             held_reasons = {}
             for bucket in all_buckets:
-                reason = bucket[0][0]  # Get example reason from first job
+                reason = bucket[0].reason  # Get example reason from first job
                 held_reasons[reason] = len(bucket)
-            
+
             # Time analysis
             all_times = []
             for pairs in reasons_by_code.values():
-                all_times.extend([hold_time for _, _, _, hold_time in pairs if hold_time > 0])
-            
+                all_times.extend([r.entered for r in pairs if r.entered > 0])
+
             time_stats = {}
             if all_times:
-                current_time = time_module.time()
+                current_time = now()
                 earliest = min(all_times)
                 latest = max(all_times)
                 avg_hold_duration = (current_time - sum(all_times) / len(all_times))
-                
+
                 time_stats = {
                     "first_held": earliest,
                     "last_held": latest,
                     "duration_hours": (latest - earliest) / 3600,
                     "avg_hold_duration": avg_hold_duration,
                 }
-            
+
             return {
                 "held_count": held_count,
                 "held_codes": held_codes,
@@ -1442,10 +1457,6 @@ class Hold(Verb):
             }
 
     def __init__(self, logger, cluster_id, **options):
-        reasons_by_code = Hold.group_by_code(cluster_id)
-        if not reasons_by_code:
-            logger.info(f"No held jobs found in cluster {cluster_id}")
-            return
         args = SimpleNamespace(
             cluster_id=cluster_id,
             min_count=options.get("min_count", 1),
@@ -1456,17 +1467,25 @@ class Hold(Verb):
             show_job_ids=options.get("show_job_ids", False),
             export_jobs=options.get("export_jobs"),
         )
-        Hold.bucket_and_print_table(reasons_by_code, cluster_id, args)
+
+        reasons_by_code = Hold.group_by_code(cluster_id)
+
+        if not reasons_by_code:
+            logger.info(f"No held jobs found in cluster {cluster_id}")
+            return
+
+        Hold.bucket_and_print_table(reasons_by_code, args)
 
 class Summarize(Verb):
     """
     This program provides a concise cluster health summary by aggregating
     data from all analysis tools and providing tool recommendations.
     """
-    
+
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to summarize",
         },
     }
@@ -1479,19 +1498,6 @@ class Summarize(Verb):
         "fast_jobs_pct": {"critical": 30, "warning": 15},
         "runtime_variance": {"critical": 3.0, "warning": 2.0},
     }
-
-    class Colors:
-        RED = "\033[91m"
-        YELLOW = "\033[93m"
-        GREEN = "\033[92m"
-        CYAN = "\033[96m"
-        BOLD = "\033[1m"
-        RESET = "\033[0m"
-
-
-    def color_text(text, color):
-        return f"{color}{text}{Summarize.Colors.RESET}"
-
 
     def get_health_status(value, threshold_dict, higher_is_better=True):
         if higher_is_better:
@@ -1509,63 +1515,36 @@ class Summarize(Verb):
             else:
                 return "HEALTHY"
 
-
     def get_status_symbol(status):
         if status == "CRITICAL":
-            return Summarize.color_text("🔴 CRITICAL", Summarize.Colors.RED)
+            return colorize("🔴 CRITICAL", Color.BRIGHT_RED)
         elif status == "WARNING":
-            return Summarize.color_text("🟡 WARNING", Summarize.Colors.YELLOW)
+            return colorize("🟡 WARNING", Color.BRIGHT_YELLOW)
         else:
-            return Summarize.color_text("🟢 HEALTHY", Summarize.Colors.GREEN)
-
+            return colorize("🟢 HEALTHY", Color.BRIGHT_GREEN)
 
     def generate_health_report(cluster_id, efficiency_data, status_data, runtime_data, held_data):
         findings = []
 
-        mem_eff = efficiency_data.get("memory_efficiency", 0)
-        mem_status = Summarize.get_health_status(mem_eff, Summarize.THRESHOLDS["memory_efficiency"])
-        mem_jobs = efficiency_data.get("memory_jobs", 0)
-        if mem_status == "CRITICAL":
-            reason = f"Severe over-provisioning ({mem_eff:.1f}% efficiency)"
-        elif mem_status == "WARNING":
-            reason = f"Low efficiency ({mem_eff:.1f}%)"
-        else:
-            reason = f"Well optimized ({mem_eff:.1f}% efficiency)"
-        findings.append({
-            "aspect": "Memory Efficiency", "status": mem_status,
-            "value": f"{mem_eff:.1f}%", "jobs": mem_jobs, "reason": reason,
-            "tool": f"python main.py analytics {cluster_id}",
-        })
-
-        disk_eff = efficiency_data.get("disk_efficiency", 0)
-        disk_status = Summarize.get_health_status(disk_eff, Summarize.THRESHOLDS["disk_efficiency"])
-        disk_jobs = efficiency_data.get("disk_jobs", 0)
-        if disk_status == "CRITICAL":
-            reason = f"Severe over-provisioning ({disk_eff:.1f}% efficiency)"
-        elif disk_status == "WARNING":
-            reason = f"Low efficiency ({disk_eff:.1f}%)"
-        else:
-            reason = f"Well optimized ({disk_eff:.1f}% efficiency)"
-        findings.append({
-            "aspect": "Disk Efficiency", "status": disk_status,
-            "value": f"{disk_eff:.1f}%", "jobs": disk_jobs, "reason": reason,
-            "tool": f"python main.py analytics {cluster_id}",
-        })
-
-        cpu_eff = efficiency_data.get("cpu_efficiency", 0)
-        cpu_status = Summarize.get_health_status(cpu_eff, Summarize.THRESHOLDS["cpu_efficiency"])
-        cpu_jobs = efficiency_data.get("cpu_jobs", 0)
-        if cpu_status == "CRITICAL":
-            reason = f"Severe over-provisioning ({cpu_eff:.1f}% efficiency)"
-        elif cpu_status == "WARNING":
-            reason = f"Low efficiency ({cpu_eff:.1f}%)"
-        else:
-            reason = f"Well optimized ({cpu_eff:.1f}% efficiency)"
-        findings.append({
-            "aspect": "CPU Efficiency", "status": cpu_status,
-            "value": f"{cpu_eff:.1f}%", "jobs": cpu_jobs, "reason": reason,
-            "tool": f"python main.py analytics {cluster_id}",
-        })
+        for aspect, eff_key, jobs_key in [
+            ("Memory Efficiency", "memory_efficiency", "memory_jobs"),
+            ("Disk Efficiency", "disk_efficiency", "disk_jobs"),
+            ("CPU Efficiency", "cpu_efficiency", "cpu_jobs"),
+        ]:
+            eff = efficiency_data.get(eff_key, 0)
+            status = Summarize.get_health_status(eff, Summarize.THRESHOLDS[eff_key])
+            jobs = efficiency_data.get(jobs_key, 0)
+            if status == "CRITICAL":
+                reason = f"Severe over-provisioning ({eff:.1f}% efficiency)"
+            elif status == "WARNING":
+                reason = f"Low efficiency ({eff:.1f}%)"
+            else:
+                reason = f"Well optimized ({eff:.1f}% efficiency)"
+            findings.append({
+                "aspect": aspect, "status": status,
+                "value": f"{eff:.1f}%", "jobs": jobs, "reason": reason,
+                "tool": _tool_hint(f"htcondor cluster analytics {cluster_id}"),
+            })
 
         held_count = held_data.get("held_count", 0)
         held_pct = status_data.get("held_pct", 0)
@@ -1580,7 +1559,7 @@ class Summarize(Verb):
             findings.append({
                 "aspect": "Held Jobs", "status": held_status,
                 "value": str(held_count), "jobs": held_count, "reason": reason,
-                "tool": f"python main.py hold {cluster_id}",
+                "tool": _tool_hint(f"htcondor cluster hold {cluster_id}"),
             })
         else:
             findings.append({
@@ -1602,7 +1581,7 @@ class Summarize(Verb):
             findings.append({
                 "aspect": "Fast Jobs", "status": fast_status,
                 "value": f"{fast_pct:.1f}%", "jobs": fast_jobs, "reason": reason,
-                "tool": f"python main.py histogram {cluster_id}",
+                "tool": _tool_hint(f"htcondor cluster histogram {cluster_id}"),
             })
         else:
             findings.append({
@@ -1612,6 +1591,8 @@ class Summarize(Verb):
 
         cv = runtime_data.get("cv", 0)
         correlation = runtime_data.get("correlation", 0)
+        long_jobs = runtime_data.get("long_jobs", 0)
+        p95_runtime = runtime_data.get("p95_runtime", 0)
         if cv > 0:
             cv_status = Summarize.get_health_status(cv, Summarize.THRESHOLDS["runtime_variance"], higher_is_better=False)
             if cv_status == "CRITICAL":
@@ -1624,10 +1605,12 @@ class Summarize(Verb):
                 reason += ", later jobs slower"
             elif correlation < -0.4:
                 reason += ", later jobs faster"
+            if long_jobs > 0:
+                reason += f", {long_jobs} job{s(long_jobs)} exceeded P95 ({format_seconds_human(p95_runtime)})"
             findings.append({
                 "aspect": "Runtime Consistency", "status": cv_status,
                 "value": f"CV={cv:.2f}", "jobs": total_runtime_jobs, "reason": reason,
-                "tool": f"python main.py histogram {cluster_id}",
+                "tool": _tool_hint(f"htcondor cluster histogram {cluster_id}"),
             })
         else:
             findings.append({
@@ -1644,15 +1627,15 @@ class Summarize(Verb):
                 "aspect": "Job Status", "status": "INFO",
                 "value": str(total_jobs), "jobs": total_jobs,
                 "reason": f"{completed} completed, {running} running, {idle} idle",
-                "tool": f"python main.py dashboard {cluster_id}",
+                "tool": _tool_hint(f"htcondor cluster dashboard {cluster_id}"),
             })
 
         return findings
 
-
     def print_health_summary(cluster_id, findings):
         print("\n" + "=" * 120)
-        print(f"{Summarize.color_text('HTCondor Cluster Health Report', Summarize.Colors.BOLD + Summarize.Colors.CYAN):^130}")
+        title = stylize("HTCondor Cluster Health Report", AnsiOptions(bold=True, color=Color.BRIGHT_CYAN))
+        print(f"{title:^130}")
         print("=" * 120)
         print(f"Cluster ID: {cluster_id}")
         print(f"Report Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1662,11 +1645,11 @@ class Summarize(Verb):
         warning_count = sum(1 for f in findings if f["status"] == "WARNING")
 
         if critical_count > 0:
-            overall = Summarize.color_text("🔴 CRITICAL", Summarize.Colors.RED)
+            overall = colorize("🔴 CRITICAL", Color.BRIGHT_RED)
         elif warning_count > 0:
-            overall = Summarize.color_text("🟡 WARNING", Summarize.Colors.YELLOW)
+            overall = colorize("🟡 WARNING", Color.BRIGHT_YELLOW)
         else:
-            overall = Summarize.color_text("🟢 HEALTHY", Summarize.Colors.GREEN)
+            overall = colorize("🟢 HEALTHY", Color.BRIGHT_GREEN)
 
         print(f"\nOverall Status: {overall}")
         print(f"Critical Issues: {critical_count} | Warnings: {warning_count}")
@@ -1675,7 +1658,7 @@ class Summarize(Verb):
         table_data = []
         for finding in findings:
             if finding["status"] == "INFO":
-                status_display = Summarize.color_text("ℹ️  INFO", Summarize.Colors.CYAN)
+                status_display = colorize("ℹ️  INFO", Color.BRIGHT_CYAN)
             else:
                 status_display = Summarize.get_status_symbol(finding["status"])
             table_data.append([
@@ -1687,38 +1670,36 @@ class Summarize(Verb):
         print(tabulate(table_data, headers=headers, tablefmt="grid", maxcolwidths=[20, 15, 12, 50, 35]))
 
         print("\n" + "=" * 120)
-        print(f"{Summarize.color_text('Recommended Next Steps', Summarize.Colors.BOLD)}")
+        print(bold("Recommended Next Steps"))
         print("=" * 120)
 
         if critical_count > 0:
-            print(f"\n{Summarize.color_text('🔴 HIGH PRIORITY:', Summarize.Colors.RED)}")
+            print(f"\n{colorize('🔴 HIGH PRIORITY:', Color.BRIGHT_RED)}")
             for finding in findings:
                 if finding["status"] == "CRITICAL" and finding["tool"] != "N/A":
                     print(f"  • {finding['aspect']}: {finding['tool']}")
 
         if warning_count > 0:
-            print(f"\n{Summarize.color_text('🟡 REVIEW:', Summarize.Colors.YELLOW)}")
+            print(f"\n{colorize('🟡 REVIEW:', Color.BRIGHT_YELLOW)}")
             for finding in findings:
                 if finding["status"] == "WARNING" and finding["tool"] != "N/A":
                     print(f"  • {finding['aspect']}: {finding['tool']}")
 
         if critical_count == 0 and warning_count == 0:
-            print(f"\n{Summarize.color_text('✓ Cluster is healthy - no immediate action required', Summarize.Colors.GREEN)}")
+            print(f"\n{colorize('✓ Cluster is healthy - no immediate action required', Color.BRIGHT_GREEN)}")
             print("  • Continue regular monitoring")
             print("  • Run weekly health checks")
 
         print("\n" + "=" * 120)
         print()
 
-
-    def run(args):
-        """Entry point called by main.py."""
-        cluster_id = args.cluster_id
+    def __init__(self, logger, cluster_id, **options):
+        _ensure_cluster_data(cluster_id)
 
         efficiency_data = Analytics.get_analytics_data(cluster_id)
         if not efficiency_data:
             print(f"ERROR: Could not load analytics data.")
-            print(f"Please run: python main.py fetch {cluster_id}")
+            print(f"Please run: {_tool_hint(f'htcondor cluster fetch {cluster_id}')}")
             sys.exit(1)
 
         status_data = Dashboard.get_dashboard_data(cluster_id)
@@ -1745,11 +1726,6 @@ class Summarize(Verb):
         )
         Summarize.print_health_summary(cluster_id, findings)
 
-
-    def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id, logger)
-        Summarize.run(SimpleNamespace(cluster_id=cluster_id))
-
 class Fetch(Verb):
     """
     Fetches raw job data for a cluster from HTCondor and caches it as CSV
@@ -1758,28 +1734,21 @@ class Fetch(Verb):
     options = {
         "cluster_id": {
             "args": ("cluster_id",),
+            "type": int,
             "help": "HTCondor cluster ID to fetch",
         },
-        "output_dir": {
-            "args": ("--output-dir",),
-            "default": None,
-            "help": "Directory to save the CSV file (default: ./cluster_data)",
+        "cache_dir": {
+            "args": ("--cache-dir",),
+            "default": _DEFAULT_CACHE_DIR,
+            "type": Path,
+            "help": "Directory to save the CSV file",
         },
     }
 
     def __init__(self, logger, cluster_id, **options):
-        from fetch_cluster_data import fetch_cluster_jobs, validate_cluster_exists
+        filepath = _cached_cluster_file(cluster_id, options.get("cache_dir"))
+        job_count = _fetch_cluster_jobs(cluster_id, filepath)
 
-        if not validate_cluster_exists(cluster_id):
-            raise RuntimeError(
-                f"No jobs found for cluster {cluster_id}. Verify the cluster "
-                f"ID is correct and that you have permission to access it."
-            )
-
-        output_dir = options.get("output_dir") or os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "cluster_data"
-        )
-        filepath, job_count = fetch_cluster_jobs(cluster_id, output_dir=output_dir)
         logger.info(f"Fetched {job_count} jobs for cluster {cluster_id} -> {filepath}")
 
 # ── Noun ──────────────────────────────────────────────────────────────────────

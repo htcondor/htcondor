@@ -1,57 +1,91 @@
-import os
-import csv
-import sys
 import math
 import textwrap
+import unicodedata
+from typing import Optional, Any
 from datetime import datetime, timedelta
 
-def safe_float(value):
-    """
-    Safely convert a value to float, returning None on failure.
+from htcondor2._utils.ansi import strip_ansi
 
-    Parameters:
-        value: Any value to convert.
+# Unicode ranges that render as double-width ("wide") in a terminal even
+# though they are single code points, e.g. the emoji used in health-report
+# tables (🔴 🟢 🟡). East Asian Width alone doesn't cover these.
+_WIDE_CODEPOINT_RANGES = (
+    (0x1F300, 0x1FAFF),  # misc symbols/pictographs, emoticons, transport, etc.
+    (0x2600, 0x27BF),    # misc symbols & dingbats
+    (0x2B00, 0x2BFF),    # misc symbols and arrows
+)
 
-    Returns:
-        float or None
+
+def display_width(s: str) -> int:
     """
-    if value is None or value == "":
+    Approximate the number of terminal columns a string occupies, unlike
+    len() which just counts code points. This matters for strings mixing
+    plain text with emoji: a "wide" emoji like 🔴 occupies two columns,
+    while combining marks and variation selectors (e.g. the U+FE0F in
+    "ℹ️") occupy zero column of their own. Note that a variation selector
+    does *not* imply its base character renders wide -- that varies by
+    terminal/font, so width here is judged on the base character alone.
+    """
+    width = 0
+    for ch in s:
+        cp = ord(ch)
+
+        # Zero-width: joiners, combining marks, variation selectors.
+        if cp == 0x200D or cp in (0xFE0E, 0xFE0F) or unicodedata.combining(ch):
+            continue
+
+        wide = (
+            unicodedata.east_asian_width(ch) in ("W", "F")
+            or any(lo <= cp <= hi for lo, hi in _WIDE_CODEPOINT_RANGES)
+        )
+        width += 2 if wide else 1
+    return width
+
+def safe(datatype: Optional[type], val: Optional[Any], *args, **kwargs) -> Optional[Any]:
+    """
+    Attempt to safely construct/convert a value in the specified data type
+    or return None. Extra positional/keyword arguments are forwarded to the
+    datatype's constructor, so this also works for types that need more
+    than one value (e.g. safe(MyClass, a, b, c)).
+    """
+    if datatype is None:
         return None
+
+    if not isinstance(datatype, type):
+        raise RuntimeError("safe conversion requires a data type (e.g. int, float, str, etc)")
+
+    if val is None:
+        return None
+
     try:
-        return float(value)
-    except (ValueError, TypeError):
-        return None
+        return datatype(val, *args, **kwargs)
+    except:
+        pass
 
+    return None
 
-def load_csv_for_cluster(cluster_id, exit_on_missing=True):
+def render_bar(value, max_value, width, fill_char="█", ceil=False):
     """
-    Load the cached CSV for a cluster and return a list of job dicts.
-
-    Looks for: <script_dir>/cluster_data/cluster_<cluster_id>_jobs.csv
+    Render a proportional bar `width` characters wide representing
+    `value` out of `max_value`. Used by the various ASCII bar charts
+    (Dashboard, Histogram, Analytics).
 
     Parameters:
-        cluster_id (str or int): The cluster ID to load.
-        exit_on_missing (bool): If True, print an error and sys.exit(1) when
-            the file is not found. If False, return None instead.
+        value (float): The value to render.
+        max_value (float): The value that should fill the whole bar.
+        width (int): Bar width in characters.
+        fill_char (str): Character to fill the bar with.
+        ceil (bool): Round the filled length up instead of down.
 
     Returns:
-        list[dict] or None
+        str: `fill_char` repeated to represent the proportion filled.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(script_dir, "cluster_data")
-    filepath = os.path.join(data_dir, f"cluster_{cluster_id}_jobs.csv")
-
-    if not os.path.exists(filepath):
-        if exit_on_missing:
-            print(
-                f"Cluster data not found for cluster {cluster_id}. "
-                "Please make sure you have the correct CSV file and cluster ID."
-            )
-            sys.exit(1)
-        return None
-
-    with open(filepath, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    if max_value <= 0:
+        length = 0
+    else:
+        ratio = value / max_value
+        length = math.ceil(ratio * width) if ceil else int(ratio * width)
+    return fill_char * length
 
 
 def format_seconds_human(seconds):
@@ -233,7 +267,6 @@ def s(n):
     else:
         return "s"
 
-
 # ── numpy replacements ────────────────────────────────────────────────────────
 
 def np_percentile(data, p):
@@ -359,6 +392,36 @@ def np_searchsorted(sorted_data, value):
     return lo
 
 
+def np_corrcoef(x, y):
+    """
+    Compute the Pearson correlation coefficient between two equal-length lists.
+    Equivalent to numpy.corrcoef(x, y)[0, 1].
+
+    Parameters:
+        x (list[float]): First variable's samples.
+        y (list[float]): Second variable's samples, paired index-for-index with x.
+
+    Returns:
+        float: In [-1, 1], or 0.0 if there are fewer than 2 points or either
+            list has zero variance (correlation is undefined).
+    """
+    n = len(x)
+    if n < 2 or n != len(y):
+        return 0.0
+
+    mean_x = sum(x) / n
+    mean_y = sum(y) / n
+
+    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y))
+    var_x = sum((xi - mean_x) ** 2 for xi in x)
+    var_y = sum((yi - mean_y) ** 2 for yi in y)
+
+    if var_x == 0 or var_y == 0:
+        return 0.0
+
+    return cov / math.sqrt(var_x * var_y)
+
+
 # ── pandas DataFrame replacement ─────────────────────────────────────────────
 
 class DataFrame:
@@ -379,7 +442,7 @@ class DataFrame:
     def __init__(self, records):
         """
         Parameters:
-            records (list[dict]): List of row dicts (from load_csv_for_cluster).
+            records (list[dict]): List of row dicts (from a cluster's cached CSV).
         """
         self._records = list(records)
         # Collect all column names preserving insertion order
@@ -397,27 +460,10 @@ class DataFrame:
         return col in self._columns
 
     def __getitem__(self, key):
-        """Return a Series for a column name, or a new DataFrame for a list of columns."""
+        """Return a Series for a column name."""
         if isinstance(key, str):
-            return Series([row.get(key) for row in self._records], name=key)
-        elif isinstance(key, list):
-            return DataFrame([{c: row.get(c) for c in key} for row in self._records])
-        elif isinstance(key, Series):
-            # Boolean mask indexing
-            mask = key._data
-            return DataFrame([row for row, keep in zip(self._records, mask) if keep])
+            return Series([row.get(key) for row in self._records])
         raise TypeError(f"Unsupported key type: {type(key)}")
-
-    def __setitem__(self, col, series_or_list):
-        """Assign a column from a Series or list."""
-        if isinstance(series_or_list, Series):
-            values = series_or_list._data
-        else:
-            values = list(series_or_list)
-        if col not in self._columns:
-            self._columns.append(col)
-        for i, row in enumerate(self._records):
-            row[col] = values[i] if i < len(values) else None
 
     def loc(self, mask, cols):
         """
@@ -462,9 +508,8 @@ class Series:
     Minimal pandas-compatible Series backed by a plain Python list.
     """
 
-    def __init__(self, data, name=None):
+    def __init__(self, data):
         self._data = list(data)
-        self.name = name
 
     # ── Basic properties ───────────────────────────────────────────────────────
 
@@ -485,13 +530,19 @@ class Series:
 
     # ── Filtering ─────────────────────────────────────────────────────────────
 
+    def __getitem__(self, key):
+        """Boolean-mask indexing: rt[rt > 0] returns a new Series of the kept values."""
+        if isinstance(key, Series):
+            return Series([v for v, keep in zip(self._data, key._data) if keep])
+        return self._data[key]
+
     def dropna(self):
         """Return a new Series with None values removed."""
-        return Series([v for v in self._data if v is not None], name=self.name)
+        return Series([v for v in self._data if v is not None])
 
     def fillna(self, value):
         """Return a new Series with None replaced by `value`."""
-        return Series([v if v is not None else value for v in self._data], name=self.name)
+        return Series([v if v is not None else value for v in self._data])
 
     # ── Comparison operators (return boolean Series) ───────────────────────────
 
@@ -579,7 +630,7 @@ def make_dataframe(records, numeric_cols=None):
     coerce specified columns to numeric in one step.
 
     Parameters:
-        records (list[dict]): Raw job dicts from load_csv_for_cluster.
+        records (list[dict]): Raw job dicts from a cluster's cached CSV.
         numeric_cols (list[str] | None): Columns to coerce to float.
 
     Returns:
@@ -637,12 +688,10 @@ def tabulate(rows, headers=None, tablefmt="grid", maxcolwidths=None):
         while len(row) < n_cols:
             row.append("")
 
-    # Strip ANSI codes for width calculation only
-    import re
-    _ansi = re.compile(r'\x1b\[[0-9;]*m')
-
+    # Strip ANSI codes and measure actual terminal column width (not code
+    # point count) so wide emoji (🔴 🟢 🟡 ℹ️) don't throw off padding.
     def visible_len(s):
-        return len(_ansi.sub('', s))
+        return display_width(strip_ansi(s))
 
     def pad_to(s, width):
         vl = visible_len(s)
@@ -657,7 +706,7 @@ def tabulate(rows, headers=None, tablefmt="grid", maxcolwidths=None):
             for i, cell in enumerate(row):
                 max_w = maxcolwidths[i] if i < len(maxcolwidths) else None
                 if max_w and visible_len(cell) > max_w:
-                    lines = textwrap.wrap(_ansi.sub('', cell), max_w)
+                    lines = textwrap.wrap(strip_ansi(cell), max_w)
                     cells.append(lines if lines else [""])
                 else:
                     cells.append([cell])
