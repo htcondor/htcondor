@@ -678,7 +678,7 @@ COMMANDS FOR MATCHMAKING
     but occasionally needs a larger amount of memory, this command will
     allow the majority of jobs to match with smaller memory slots, and perhaps
     allow more of them to match and start, without wasting the larger amount
-    of memory only seldomly needed.  So, if most jobs in a cluster can
+    of memory only seldom needed.  So, if most jobs in a cluster can
     run with 1 GB of memory, but some need 4 GB, then a submit file with:
 
     .. code-block:: condor-submit
@@ -764,14 +764,14 @@ COMMANDS FOR MATCHMAKING
     If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
 
  :subcom-def:`gpus_minimum_capability` = <version> :subcom-def:`gpus_maximum_capability` = <version>
-    The mininum or maximum required Capability value of the GPU, inclusive. Specified
+    The minimum or maximum required Capability value of the GPU, inclusive. Specified
     as a floating point value (for example ``8.5``).
     Use of one or more of these commands will create or modify the :subcom:`require_gpus` expression
     unless that expression already references the GPU property ``Capabilities``.
     When :subcom:`request_gpus` is not used, these commands are ignored.
 
  :subcom-def:`gpus_minimum_memory` = <quantity>
-    The mininum quantity of GPU memory in MiB that a GPU must have in order to run the job.
+    The minimum quantity of GPU memory in MiB that a GPU must have in order to run the job.
 
     Characters may be appended to a numerical value to indicate units.
     ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
