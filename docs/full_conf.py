@@ -723,9 +723,14 @@ class CondorConfigLexer(lexer.RegexLexer):
                 "multi-line",
             ),
             (
-                r"([\$\(\)\w\.]+)( *)(=)( *)",
+                r"([\$\(\)\w\.]+)( *)(\+[,;|&*]{0,2}|)( *)(=)( *)",
                 lexer.bygroups(
-                    token.Name.Builtin, token.Text, token.Operator, token.Text,
+                    token.Name.Builtin,
+                    token.Text,
+                    token.Operator, # Plus-Equals syntax
+                    token.Text,
+                    token.Operator,
+                    token.Text,
                 ),
                 "value",
             ),

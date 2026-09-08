@@ -63,6 +63,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <optional>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -217,6 +218,8 @@ struct FamilyInfo {
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
+	std::optional<uint64_t> cgroup_zswap_max; // limit on compressed swap (memory.zswap.max).
+											 // If unset, nothing is written to the control file.
 	int cgroup_cpu_shares{0};
 #if defined(LINUX)
 	std::vector<dev_t> cgroup_hide_devices;

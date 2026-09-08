@@ -331,7 +331,6 @@ if [ -z "$sfapi_line" ] ; then
     rm -f $bls_tmp_file
     echo "Error: no SFAPI_RESULT in submission output" >&2
     echo "Output: $sfapi_result" >&2
-    echo Error
     exit 1
 fi
 

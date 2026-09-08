@@ -226,6 +226,17 @@ These settings affect the *condor_starter*.
     Memory * 0.5, in order to prevent the system from using otherwise available
     memory for caching on behalf of the job.
 
+:macro-def:`CGROUP_ZSWAP_MAX_EXPR`
+    A classad expression, evaluated in the context of the slot and job ad.
+    When it evaluates to a number, that number, interpreted as megabytes, is
+    written to the job's cgroup ``memory.zswap.max`` limit, which caps how much
+    of the job's memory the kernel may hold in compressed swap.  Note that zero
+    is a meaningful value, and disables zswap entirely for the job.  When this
+    knob is not set, or does not evaluate to a non-negative number, HTCondor
+    does not write to ``memory.zswap.max`` at all, and the job inherits whatever
+    the system default is.  This is only implemented on Linux systems with cgroup v2, where
+    HTCondor controls the jobs' cgroups and the kernel provides zswap.
+
 :macro-def:`CGROUP_IGNORE_CACHE_MEMORY`
     A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.

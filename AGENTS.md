@@ -184,7 +184,12 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 **Lambda Expressions:**
 **Designated Initializers (C++20):**
 **Constexpr & Consteval:**
-**std::filesystem** Please never use the std::filesystem overloads that throw excecptions, always prefer the non-throwing overloads and check the error codes.
+**std::filesystem**: Never use the `std::filesystem` overloads that throw exceptions; always prefer the non-throwing overloads (the ones taking a `std::error_code&`) and check the error code. Daemons run no top-level exception handler, so an uncaught `filesystem_error` reaches `std::terminate` → `abort()` → SIGABRT coredump. File races (a file deleted out from under the daemon) are routine, handleable events, not fatal invariant violations.
+```cpp
+std::error_code ec;
+auto sz = std::filesystem::file_size(path, ec);  // never throws
+if (ec) { /* handle: safe default or return error */ }
+```
 **Value semantics**: Prefer value semantics over raw pointers for ownership and lifetime management.
 
 ### Safe File I/O (SECURITY-CRITICAL)

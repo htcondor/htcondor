@@ -378,6 +378,7 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
 	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
 	if( bp.ECCEnabled != -1 ) { props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false"; }
+	if( bp.integrated != -1 ) { props["Integrated"] = bp.integrated ? "true" : "false"; }
 	if( bp.totalGlobalMem != (size_t)-1 ) { props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.)); }
 	if( bp.xNACK != -1 ) { props["xNACK"] = Format("%d", bp.xNACK); }
 	if( bp.warpSize != -1 ) { props["WarpSize"] = Format("%d", bp.warpSize); }
