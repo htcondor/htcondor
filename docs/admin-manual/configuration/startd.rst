@@ -1011,6 +1011,30 @@ needs.
     slot permits dynamic provisioning, as specified in
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
+:macro-def:`SLOT_TYPE_<N>_BACKFILL`
+    A boolean variable that defaults to ``False``. When ``True``, this
+    slot is provisioned from a set of resources that shadow the normal resources
+    and keep track of conflicts with resource usage by other slots.
+    Currently when this is ``True``, :macro:`SLOT_TYPE_<N>_PARTITIONABLE` must also be set to ``True``.
+
+    Backfill slots will have the attribute :ad-attr:`ResourceConflict` set to a list
+    of resource names whenever the current slot conflicts with another slot.
+    This attribute can be used by the :macro-def:`PREEMPT`
+    policy expression to evict jobs from the backfill slot when a non-backfill slot begins
+    to use the same resources.
+
+    The recommended configuration for using backfill slots has a :macro:`PREEMPT` expression
+    that is ``True`` when :ad-attr:`ResourceConflict` is defined and non-empty. For example:
+
+    .. code-block:: condor-config
+
+                # Create a single backfill p-slot that shadows all of the CPUs, Disk, Memory, etc.
+                SLOT_TYPE_2 = 100%
+                NUM_SLOTS_TYPE_2 = 1
+                SLOT_TYPE_2_PARTITIONABLE = True
+                SLOT_TYPE_2_BACKFILL = True
+                SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
+
 :macro-def:`CLAIM_PARTITIONABLE_LEFTOVERS`
     A boolean variable that defaults to ``True``. When ``True`` within
     the configuration for both the *condor_schedd* and the
