@@ -36,6 +36,17 @@ from ornithology import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+# metricd publishes every METRICD_INTERVAL seconds (5 in these tests). A metric
+# that is going to appear at all appears within a couple of cycles, so these
+# budgets are generous multiples of that rather than open-ended. Keeping them
+# tight matters: when something stops a metric from being published, every
+# fixture waiting on it burns its full budget before the assertions can report
+# what went wrong.
+POLL_SECS = 0.5
+FIRST_CYCLE_TIMEOUT = 30    # metric published on metricd's first cycle
+LATER_CYCLE_TIMEOUT = 45    # aggregate counters need a second cycle
+GROWTH_TIMEOUT = 60         # needs two successive, increasing samples
+
 
 def _prom_sample_value(prom_text, sample_name):
     # Return the float value of a Prometheus sample line for sample_name, or None.
@@ -224,6 +235,12 @@ def condor_with_metricd(test_dir):
         # hardcoded projection set, so the platform label only resolves if
         # PrometheusD::extraProjectionRefs() contributed it to the projection.
         "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform ]',
+        # Several metrics below carry no ExportMetric and are expected to reach
+        # BOTH backends. That is what an empty METRICD_DEFAULT_EXPORT_METRIC
+        # means; it has to be set explicitly here because the shipped default
+        # is "prometheus", which would route them to Prometheus only and starve
+        # every Ganglia assertion in this file.
+        "METRICD_DEFAULT_EXPORT_METRIC":        "",
         "METRICD_INTERVAL":                     "5",
         "METRICD_METRICS_CONFIG_DIR":           str(metrics_dir),
         "METRICD_WANT_PROJECTION":              "true",
@@ -237,7 +254,7 @@ def condor_with_metricd(test_dir):
 @action
 def prom_file_contents(test_dir, condor_with_metricd):
     prom_file = test_dir / "metrics.prom"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     contents = None
     while time.time() < deadline:
         if prom_file.exists():
@@ -245,7 +262,7 @@ def prom_file_contents(test_dir, condor_with_metricd):
             if "prometheus_only_test_jobs" in text:
                 contents = text
                 break
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return contents
 
 
@@ -276,7 +293,7 @@ def ganglia_log_contents(condor_with_metricd):
     # every metric routed to the Ganglia backend. Poll the MetricdLog until
     # at least one such line appears.
     log_file = condor_with_metricd.log_dir / "MetricdLog"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     contents = None
     while time.time() < deadline:
         if log_file.exists():
@@ -284,7 +301,7 @@ def ganglia_log_contents(condor_with_metricd):
             if "noop mode: publishing both_backend_test_metric=13" in text:
                 contents = text
                 break
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return contents
 
 
@@ -296,7 +313,7 @@ def prom_file_with_aggregate(test_dir, condor_with_metricd):
     # SUM aggregate counter shows up (its MAX-aggregate sibling is published in
     # the same cycle, so once one appears both do).
     prom_file = test_dir / "metrics.prom"
-    deadline = time.time() + 120
+    deadline = time.time() + LATER_CYCLE_TIMEOUT
     contents = None
     while time.time() < deadline:
         if prom_file.exists():
@@ -304,7 +321,7 @@ def prom_file_with_aggregate(test_dir, condor_with_metricd):
             if "test_aggregate_sum_counter" in text:
                 contents = text
                 break
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return contents
 
 
@@ -314,7 +331,7 @@ def ganglia_log_with_aggregate(condor_with_metricd):
     # published to Ganglia. Aggregate derivative metrics first appear on the
     # second cycle (they need a previous value to compute the per-daemon delta).
     log_file = condor_with_metricd.log_dir / "MetricdLog"
-    deadline = time.time() + 120
+    deadline = time.time() + LATER_CYCLE_TIMEOUT
     contents = None
     while time.time() < deadline:
         if log_file.exists():
@@ -322,7 +339,7 @@ def ganglia_log_with_aggregate(condor_with_metricd):
             if "publishing test_aggregate_sum_counter=" in text:
                 contents = text
                 break
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return contents
 
 
@@ -336,7 +353,7 @@ def growth_counter_samples(test_dir, condor_with_metricd):
     # confirm the running total accumulates.
     prom_file = test_dir / "metrics.prom"
     name = "test_aggregate_growth_counter_total"
-    deadline = time.time() + 120
+    deadline = time.time() + GROWTH_TIMEOUT
     first = None
     while time.time() < deadline:
         if prom_file.exists():
@@ -346,7 +363,7 @@ def growth_counter_samples(test_dir, condor_with_metricd):
                     first = v
                 elif v > first:
                     return (first, v)
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return (first, None)
 
 
@@ -788,13 +805,13 @@ def condor_with_heredoc_labels(test_dir):
 @action
 def heredoc_prom_contents(test_dir, condor_with_heredoc_labels):
     prom_file = test_dir / "heredoc_metrics.prom"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     while time.time() < deadline:
         if prom_file.exists():
             text = prom_file.read_text()
             if "heredoc_test_gauge" in text:
                 return text
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return None
 
 
@@ -880,11 +897,11 @@ def http_host_port(test_dir, condor_with_http):
 def http_metrics_ready(test_dir, condor_with_http):
     """Wait until metricd has written the prom file at least once."""
     prom_file = test_dir / "http_metrics.prom"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     while time.time() < deadline:
         if prom_file.exists() and "http_test_gauge" in prom_file.read_text():
             return True
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return False
 
 
@@ -937,11 +954,11 @@ def auth_host_port(test_dir, condor_with_http_auth):
 @action
 def auth_metrics_ready(test_dir, condor_with_http_auth):
     prom_file = test_dir / "auth_metrics.prom"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     while time.time() < deadline:
         if prom_file.exists() and "auth_test_gauge" in prom_file.read_text():
             return True
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return False
 
 
@@ -999,11 +1016,11 @@ def https_host_port(test_dir, condor_with_https):
 def https_metrics_ready(test_dir, condor_with_https):
     """Wait until metricd has written the prom file at least once."""
     prom_file = test_dir / "https_metrics.prom"
-    deadline = time.time() + 60
+    deadline = time.time() + FIRST_CYCLE_TIMEOUT
     while time.time() < deadline:
         if prom_file.exists() and "https_test_gauge" in prom_file.read_text():
             return True
-        time.sleep(2)
+        time.sleep(POLL_SECS)
     return False
 
 
