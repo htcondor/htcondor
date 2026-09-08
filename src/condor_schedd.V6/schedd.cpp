@@ -11062,8 +11062,30 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					promptingToTransferProcID( job_id.proc )
 				);
 
+				//
+				// If there's no registered shadow for a catalog required by
+				// this job, it's possible that we've unregistered the catalog
+				// but not yet deleted the match record (see the disaster in
+				// `call_StartJobFailed()`).  In that case, the schedd can
+				// asplode when we call SetMrecJobID(), below, because some
+				// other match record has the transfer shadow's job ID (that
+				// is, this same job prompted a transfer shadow on a second
+				// match before the first one's record was deleted).
+				//
+				// We don't want to delay unregistering the shadow catalogs
+				// because our idiotic memory management means that someone
+				// else could have deleted that match record holding the
+				// shadow record or the shadow record itself out from under
+				// us.
+				//
+				match_rec * other = FindMrecByJobID( transfer_job_id );
+				if( other != nullptr ) {
+					dprintf( D_ALWAYS, "Delaying transfer shadow start-up because the previous transfer shadow's match record (%p) hasn't been cleaned up yet.\n", other );
+					return SJ::DID_NOT_TRY;
+				}
+
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
-					transfer_job_id, universe, mrec, -1 , nullptr
+					transfer_job_id, universe, mrec, -1, nullptr
 				);
 
 
@@ -13523,15 +13545,35 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 	if( srec == NULL ) {
-		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		dprintf( D_ALWAYS, "unregister_shadow_catalogs(NULL): ignoring\n" );
 		return;
 	}
+
+	if( srec->cxfer_state == CXFER_STATE::MAPPING ) {
+		dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): skipping mapping shadow.\n", srec );
+		return;
+	}
+
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): begin.\n", srec );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
+
+for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): unregistering catalog %s = %s\n", catalogName.c_str(), contents.c_str() );
+}
+for( const auto & [catalogName, shadow] : catalogToShadowMap ) {
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): [map entry] %s = %p\n", catalogName.c_str(), shadow );
+}
+
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
-			if(! other) { continue; }
+			if(! other) {
+dprintf( D_ALWAYS, "Found no shadow for catalog %s\n", catalogName.c_str() );
+				continue;
+			}
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
 			if( * other == srec && (* other)->pid == shadow_pid ) {
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): removing %s from catalogToShadowMap.\n", catalogName.c_str() );
 				catalogToShadowMap.erase( catalogName );
 				removedCatalogs.push_back( catalogName );
 
@@ -13665,6 +13707,13 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		    DelMrec( n );
 		}
 	}
+
+
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): all entries (%lu) after all work follow:\n", catalogToShadowMap.size() );
+for( const auto & [catalogName, shadow] : catalogToShadowMap ) {
+    dprintf( D_ALWAYS, "unregister_shadow_catalogs(): [map entry] %s = %p\n", catalogName.c_str(), shadow );
+}
+dprintf( D_ALWAYS, "unregister_shadow_catalogs(): end.\n" );
 }
 
 
@@ -13848,7 +13897,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		rec->match->setStatus( M_CLAIMED );
 	}
 
-	if( rec->keepClaimAttributes && rec->match ) {
+	/* If we're deleting this shadow record because we're deleting its
+	   match record, don't delete our match record. */
+	if( rec->keepClaimAttributes && rec->match && rec->pid != 0 ) {
 			// We are shutting down and detaching from this claim.
 			// Remove the claim record without sending RELEASE_CLAIM
 			// to the startd.
@@ -17853,9 +17904,31 @@ Scheduler::unlinkMrec(match_rec* match)
 		match->auth_hole_id = NULL;
 	}
 
-		// Remove this match from the associated shadowRec.
-	if (match->shadowRec)
+	// Remove this match from the associated shadowRec.
+	if( match->shadowRec ) {
 		match->shadowRec->match = NULL;
+
+/*
+		// If we don't delete the shadow record now, we're assuming that
+		// it's going to be deleted when the shadow exits and triggers the
+		// reaper.  Of course, that can only happen if there's shadow process
+		// to reap...
+		//
+		// ... or if the shadow record is in the RunnableJobQueue.
+		if( match->shadowRec->pid == 0 ) {
+			// Apparently std::queue doesn't have iterators!
+			if( std::find(
+				RunnableJobQueue.begin(), RunnableJobQueue.end(),
+				match->shadowRec
+			) != RunnableJobQueue.end() ) {
+				dprintf( D_ALWAYS, "Deleting this (%p) match record's shadow record (%p) because it has no PID.\n", match, match->shadowRec );
+				delete_shadow_rec( match->shadowRec );
+				// This isn't presently necessary, but let's be tidy.
+				match->shadowRec = NULL;
+			}
+		}
+*/
+	}
 
 	numMatches--;
 	return 0;
@@ -17970,7 +18043,8 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 	matchesByJobID.erase(old_job_id);
 
 	match->jid = job_id;
-	if (JobQueueBase::IsJobId(match->jid)) {
+	// TJ, quit breaking things.
+	if( JobQueueBase::IsJobId(match->jid) || isTransferShadowProcID(match->jid) ) {
 		auto [it, success] = matchesByJobID.emplace(job_id, match);
 		if(! success) {
 			dprintf( D_ALWAYS | D_BACKTRACE, "SetMrecJobID() called for job ID %d.%d, which could not be emplaced.\n", job_id.cluster, job_id.proc );
@@ -18341,6 +18415,7 @@ Scheduler::HadException( match_rec* mrec )
 		// If we always do this before DelMrec() does, we'll learn about cases
 		// we don't know about that we otherwise couldn't.
 		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id) ) {
+			dprintf( D_ALWAYS, "Marking shadow (%p) with pid %d retiring because of too many exceptions on its match.\n", mrec->shadowRec, mrec->shadowRec->pid );
 			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
 		}
 		DelMrec(mrec);
@@ -22033,4 +22108,96 @@ Scheduler::post_transform_adjustments(
 	}
 
 	return 0;
+}
+
+
+void
+Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
+	// If the blocked job is a prompting job, we will have set it blocking
+	// only after we marked the match as belonging to the transfer shadow,
+	// and before we yield control.  (We could move set_job_status() up
+	// to before start_command_data_slot() to make this clearer, although
+	// the latter doesn't yield control either.)
+	PROC_ID transferID{ jid.cluster, promptingToTransferProcID(jid.proc) };
+	match_rec * mrec = FindMrecByJobID( transferID );
+	if( mrec ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
+		return;
+	}
+
+
+	// If the blocked job isn't a prompting job, it should have an entry
+	// in matchesHeldByBlockedJobs.
+	for( match_rec * m : matchesHeldByBlockedJobs ) {
+		if( m == nullptr ) {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null, which is definitely wrong.\n", jid.cluster, jid.proc );
+			continue;
+		}
+
+		if( jid.cluster == m->jid.cluster && jid.proc == m->jid.proc ) {
+			mrec = m;
+		}
+	}
+	if( mrec == nullptr ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): no matches held for nonprompting job, unbocking it.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"no matches held for nonprompting job"
+		);
+
+		return;
+	}
+
+
+	// The match held by this blocked job should have a shadowrec, each of
+	// whose required catalogs has a corresponding shadow.
+	shadow_rec * srec = mrec->shadowRec;
+	if( srec == nullptr ) {
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match held by blocked job does not have a shadow rec; unblocking.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"match held by blocked job had no shadow rec"
+		);
+		DelMrec( mrec );
+
+		return;
+	}
+
+	for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+		auto sr = getShadowForCatalog( catalogName );
+		if(! sr) {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): No shadow for found catalog '%s', unblocking job\n", jid.cluster, jid.proc, catalogName.c_str() );
+
+			std::ignore = release_block_condition(
+				{jid.cluster, jid.proc}, CommonTransfer,
+				"no shadow found for a blocked job's catalog"
+			);
+			DelMrec( mrec );
+
+			return;
+		}
+
+		if( (* sr)->pid == 0 ) {
+		    // This doesn't necessarily mean that we won't start the shadow
+		    // corresponding to this record, but it could mean that we didn't
+		    // and never will (because of a failure to start the shadow,
+		    // including a command_data_slot() failure).  We could try setting
+		    // the PID to -1 in call_StartJobFailure() before the delay, so
+		    // that neither unlinkMrec() nor this function will become confused.
+		}
+	}
+
+	dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
+}
+
+
+void
+Scheduler::logCatalogToShadowMap() {
+    dprintf( D_ALWAYS, "logCatalogToShadowMap(): begin entries\n" );
+    for( const auto & [catalogName, shadow] : scheduler.catalogToShadowMap ) {
+        dprintf( D_ALWAYS, "[entry] %s = %p\n", catalogName.c_str(), shadow );
+    }
+    dprintf( D_ALWAYS, "logCatalogToShadowMap(): end entries.\n" );
 }

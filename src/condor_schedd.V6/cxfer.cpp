@@ -186,6 +186,33 @@ command_data_slot_callback(
 
 void
 call_StartJobFailure( const std::string & claimID ) {
+	match_rec * m = scheduler.FindMrecByClaimID( claimID.c_str() );
+	shadow_rec * s = NULL;
+	if( m ) {
+		s = m->shadowRec;
+	}
+
+
+	//
+	// We really need to replace how we manage match and shadow records,
+	// but until we do, the problem we really need to solve is that the
+	// transfer shadow isn't unregistering its catalogs.  As of
+	// a79e7188e4a064f092744009aa5f14facddd4cdd, we still have
+	// unregister_shadow_catalog() segfaulting (when called via
+	// delete_shadow_rec() from StartJobHandler()); this is probably
+	// happening because unlinkMrec() can't tell the difference between
+	// shadows which haven't started yet and ones which never will.
+	//
+	// This problem shouldn't intractable, but it seems like it is, so
+	// for now ignore the inevitable memory leaks and just fix the problem
+	// leading to jobs being held indefinitely.
+	//
+	if( s ) {
+		// Since this shadow failed to start, its PID field should still be 0.
+		scheduler.unregister_shadow_catalogs( s, 0 );
+	}
+
+
 	//
 	// There's a race condition here.  StartJobFailed() call del_mrec(),
 	// which calls unlink_mrec(), which calls send_vacate().  This can
@@ -197,22 +224,21 @@ call_StartJobFailure( const std::string & claimID ) {
 	// Instead, let's wait a few seconds before vacating the claim.
 	//
 
-	auto lambda = [claimID](int /* timerID */) -> void {
+	auto lambda = [claimID, m, s](int /* timerID */) -> void {
+dprintf( D_ALWAYS, "call_StartJobFailure(): m = %p, s = %p\n", m, s );
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
+dprintf( D_ALWAYS, "call_StartJobFailure(): mrec = %p\n", mrec );
 		if( mrec != nullptr ) {
-			// StartJobFailed() indirectly deletes mrec.  We don't want to
-			// delete the shadow record first, because a lot of special case
-			// handling depends on knowing if the match record being deleted
-			// is a transfer shadow's.
-			auto * shadow_record = mrec->shadowRec;
+dprintf( D_ALWAYS, "call_StartJobFailure(): mrec->shadowRec = %p\n", mrec->shadowRec );
+
+			// StartJobFailed() indirectly calls unlinkMrec(), which will delete
+			// the shadow record if its PID == 0, because that means doesn't
+			// have a process whose reaper will delete it.
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
+			dprintf( D_ALWAYS, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
 			scheduler.StartJobFailed( mrec, id );
-
-			if( shadow_record != nullptr ) {
-				dprintf( D_VERBOSE, "Deleting shadow record after failure to create data slot.\n" );
-				scheduler.delete_shadow_rec( shadow_record );
-			}
-
+		} else {
+			dprintf( D_ALWAYS, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
 		}
 	};
 
