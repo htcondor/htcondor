@@ -773,7 +773,7 @@ class Scheduler : public Service
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
-	void			HadException( match_rec* );
+	void			HadException( match_rec*, shadow_rec * = NULL );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
 		// adlist_replace() assumes ownership of newAd object

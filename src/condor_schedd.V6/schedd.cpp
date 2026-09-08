@@ -10386,6 +10386,7 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		  to add it to all the tables, etc, etc.
 		*/
 	shadow_rec *srec = new shadow_rec;
+dprintf( D_ALWAYS, "(0) new shadow_rec = %p\n", srec );
 	srec->pid = 0;
 	srec->job_id.cluster = cluster;
 	srec->job_id.proc = proc;
@@ -11095,7 +11096,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					const auto & catalogName = catalog.first;
 					auto shadow = getShadowForCatalog( catalogName );
 					if(! shadow) {
-						// dprintf( D_VERBOSE, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+dprintf( D_ALWAYS, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
 						catalogToShadowMap[catalogName] = transfer_shadow_rec;
 						catalogs_to_stage.push_back( catalog );
 					}
@@ -12948,6 +12949,7 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 						   match_rec* mrec, int fd, const char* secret )
 {
 	shadow_rec *new_rec = new shadow_rec;
+dprintf( D_ALWAYS, "(1) new shadow_rec = %p\n", new_rec );
 
 	new_rec->pid = pid;
 	new_rec->job_id = job_id;
@@ -13545,12 +13547,12 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 	if( srec == NULL ) {
-		dprintf( D_ALWAYS, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		dprintf( D_ALWAYS | D_BACKTRACE, "unregister_shadow_catalogs(NULL): ignoring\n" );
 		return;
 	}
 
 	if( srec->cxfer_state == CXFER_STATE::MAPPING ) {
-		dprintf( D_ALWAYS, "unregister_shadow_catalogs(%p): skipping mapping shadow.\n", srec );
+		dprintf( D_ALWAYS | D_BACKTRACE, "unregister_shadow_catalogs(%p): skipping mapping shadow.\n", srec );
 		return;
 	}
 
@@ -13757,6 +13759,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// TODO Failure to spawn a reconnect shadow should probably still
 		//   do the code below our early return here.
 		RemoveShadowRecFromMrec(rec);
+dprintf( D_ALWAYS, "deleting shadow rec %p\n", rec );
 		delete rec;
 		return;
 	}
@@ -13922,6 +13925,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		 rec->universe != CONDOR_UNIVERSE_LOCAL ) {
 		numShadows -= 1;
 	}
+dprintf( D_ALWAYS, "deleting shadow rec %p\n", rec );
 	delete rec;
 	if( ExitWhenDone && numShadows == 0 ) {
 		return;
@@ -15517,7 +15521,16 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				for( const auto & catalog : srec->cxfer_catalogs ) {
 					auto shadow = getShadowForCatalog( catalog.first );
 					if( shadow ) {
-						HadException((*shadow)->match);
+/*
+ * If we _just_ queued a transfer shadow for execution, and two jobs using
+ * that shadow's catalog except (fail to map because the previous transfer
+ * shadow was over quota), then HadException() will delete the match record
+ * but the shadow record will never be deleted because there's no shadow to
+ * die (because the deleted mrec vacates) and trigger that event!
+ *
+ */
+
+						HadException( (*shadow)->match, * shadow );
 					}
 				}
 			}
@@ -17907,27 +17920,6 @@ Scheduler::unlinkMrec(match_rec* match)
 	// Remove this match from the associated shadowRec.
 	if( match->shadowRec ) {
 		match->shadowRec->match = NULL;
-
-/*
-		// If we don't delete the shadow record now, we're assuming that
-		// it's going to be deleted when the shadow exits and triggers the
-		// reaper.  Of course, that can only happen if there's shadow process
-		// to reap...
-		//
-		// ... or if the shadow record is in the RunnableJobQueue.
-		if( match->shadowRec->pid == 0 ) {
-			// Apparently std::queue doesn't have iterators!
-			if( std::find(
-				RunnableJobQueue.begin(), RunnableJobQueue.end(),
-				match->shadowRec
-			) != RunnableJobQueue.end() ) {
-				dprintf( D_ALWAYS, "Deleting this (%p) match record's shadow record (%p) because it has no PID.\n", match, match->shadowRec );
-				delete_shadow_rec( match->shadowRec );
-				// This isn't presently necessary, but let's be tidy.
-				match->shadowRec = NULL;
-			}
-		}
-*/
 	}
 
 	numMatches--;
@@ -18400,7 +18392,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 }
 
 void
-Scheduler::HadException( match_rec* mrec ) 
+Scheduler::HadException( match_rec* mrec, shadow_rec* srec )
 {
 	if( !mrec ) {
 			// If there's no mrec, we can't do anything.
@@ -18411,14 +18403,46 @@ Scheduler::HadException( match_rec* mrec )
 		dprintf( D_ERROR,
 		         "Match for %d.%d has had %d shadow exceptions, relinquishing.\n",
 		         mrec->jid.cluster, mrec->jid.proc, mrec->num_exceptions
-				 );
-		// If we always do this before DelMrec() does, we'll learn about cases
-		// we don't know about that we otherwise couldn't.
-		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id) ) {
-			dprintf( D_ALWAYS, "Marking shadow (%p) with pid %d retiring because of too many exceptions on its match.\n", mrec->shadowRec, mrec->shadowRec->pid );
-			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
-		}
+		);
+
+dprintf( D_ALWAYS, "HadException(): mrec %p, mrec->shadowRec %p, mrec->shadowRec->match %p, srec %p\n",
+mrec, mrec->shadowRec,
+mrec->shadowRec != nullptr ? mrec->shadowRec->match : nullptr,
+srec
+);
+
+		shadow_rec * s = mrec->shadowRec;
+		if( srec ) { s = srec; }
+
 		DelMrec(mrec);
+
+		// DelMrec() never deletes shadow records (and contrary to other comments,
+		// never should, because they have different lifetimes), so it's safe to
+		// look at `s` here.
+		if( s && isTransferShadowProcID(s->job_id) ) {
+			dprintf( D_ALWAYS, "Marking shadow (%p) with pid %d retiring because of too many exceptions on its match.\n", s, s->pid );
+			s->cxfer_state = CXFER_STATE::RETIRING;
+
+			// It's possible that the transfer shadow hasn't started yet;
+			// see the comment in shadowExitCode().  Presently, that means
+			// it's either (a) off in command_data_slot land, or (b) waiting
+			// in the shadow-start queue.  For (b), we do a good job of
+			// cleaning up shadow records if something prevents them from
+			// starting -- specifically including the match record vanishing.
+			// We need to fix (a) to delete the shadow record even if the
+			// match record vanishes, because doing it here will break other
+			// code paths that I don't know about.
+			//
+			// That _probably_ means fixing add_shadow_rec(), or maybe just
+			// extending it for the calls made by cxfer, so that we can
+			// look the transfer shadow up by its proc ID in call_StartJobFailed()
+			// instead of depending on having a match record.
+			//
+			// This fix won't work in case (b), which means it needs to go.
+			if( s->pid == 0 ) {
+				delete_shadow_rec( s );
+			}
+		}
 	}
 }
 
@@ -20792,6 +20816,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		cluster->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 	srec = new shadow_rec;
+dprintf( D_ALWAYS, "(2) new shadow_rec = %p\n", srec );
 	srec->pid = shadow_pid;
 	srec->match = mrec;
 	mrec->shadowRec = srec;

@@ -9850,6 +9850,7 @@ static void DoBuildPrioRecArray() {
 	scheduler.autocluster.mark();
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
+scheduler.logCatalogToShadowMap();
 	PrioRec.clear();
 	struct _get_job_prio_info info;
 	WalkJobQueue2(update_autocluster_id, &info);
@@ -9859,6 +9860,7 @@ static void DoBuildPrioRecArray() {
 	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
+scheduler.logCatalogToShadowMap();
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment.

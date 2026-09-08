@@ -3030,6 +3030,14 @@ command_data_slot(int, Stream * stream ) {
 
 	sock->encode();
 
+/*
+	time_t now = time(nullptr);
+	if( now % 2 ) {
+		dprintf( D_ALWAYS, "Rejecting command_data_slot for odd reasons.\n" );
+		result = CA_INVALID_STATE;
+	}
+*/
+
 	if( result != CA_SUCCESS ) {
 		dprintf( D_ALWAYS, "command_data_slot(): %s\n", errorString.c_str() );
 		delete requestAd;
