@@ -249,32 +249,6 @@ section.
     :macro:`WANT_VACATE` expression may be used to skip the graceful
     shutdown of the job.
 
-:macro-def:`MAXJOBRETIREMENTTIME`
-    When the *condor_startd* wants to evict a job, a job which has run
-    for less than the number of seconds specified by this expression
-    will not be hard-killed. The *condor_startd* will wait for the job
-    to finish or to exceed this amount of time, whichever comes sooner.
-    Time spent in suspension does not count against the job. The default
-    value of 0 (when the configuration variable is not present) means
-    that the job gets no retirement time. If the job vacating policy
-    grants the job X seconds of vacating time, a preempted job will be
-    soft-killed X seconds before the end of its retirement time, so that
-    hard-killing of the job will not happen until the end of the
-    retirement time if the job does not finish shutting down before
-    then. Note that in peaceful shutdown mode of the *condor_startd*,
-    retirement time is treated as though infinite. In graceful shutdown
-    mode, the job will not be preempted until the configured retirement
-    time expires or :macro:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
-    mode, retirement time is ignored. See :macro:`MAXJOBRETIREMENTTIME` in
-    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-    for further explanation.
-
-    By default the *condor_negotiator* will not match jobs to a slot
-    with retirement time remaining. This behavior is controlled by
-    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
-
-    There is no default value for this configuration variable.
-
 :macro-def:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. The default is 1200, which is
