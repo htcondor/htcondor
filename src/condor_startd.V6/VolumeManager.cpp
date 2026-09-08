@@ -16,6 +16,11 @@
 #include <sys/statvfs.h>
 #include "directory.h"
 
+#ifdef HAVE_EXT_LIBSELINUX
+#include <sys/stat.h>
+#include <selinux/selinux.h>
+#include <selinux/label.h>
+#endif
 
 #include <sstream>
 
@@ -359,7 +364,40 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
 
     dprintf(D_FULLDEBUG, "Mounting device %s to %s\n", device_path.c_str(), mountpoint.c_str());
 
-    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, "barrier=0,discard") != 0) {
+    std::string mount_opts = "barrier=0,discard";
+#ifdef HAVE_EXT_LIBSELINUX
+    // A freshly mke2fs'd device has no security.selinux xattrs at all, so
+    // every file created on it (including HTCondor's own _condor_stdout /
+    // _condor_stderr) starts out unlabeled_t until something relabels it.
+    // Since this filesystem holds exactly one job's scratch space and is
+    // destroyed with the LV when the job exits, there is nothing to gain
+    // from per-inode labeling: force the whole mount to report the context
+    // the site's file_contexts policy already assigns to this path (e.g.
+    // via a `semanage fcontext` rule on the mountpoint's parent directory),
+    // avoiding a relabel pass on every job start.
+    if (is_selinux_enabled() > 0) {
+        struct selabel_handle *hnd = selabel_open(SELABEL_CTX_FILE, nullptr, 0);
+        if (hnd) {
+            char *scontext = nullptr;
+            if (selabel_lookup(hnd, &scontext, mountpoint.c_str(), S_IFDIR) == 0 && scontext) {
+                mount_opts += ",context=";
+                mount_opts += scontext;
+                freecon(scontext);
+            } else {
+                dprintf(D_ERROR, "VolumeManager: selabel_lookup(%s) failed (errno=%d): %s; "
+                        "mounting without an explicit SELinux context, new files will be "
+                        "unlabeled_t\n", mountpoint.c_str(), errno, strerror(errno));
+            }
+            selabel_close(hnd);
+        } else {
+            dprintf(D_ERROR, "VolumeManager: selabel_open failed (errno=%d): %s; "
+                    "mounting without an explicit SELinux context, new files will be "
+                    "unlabeled_t\n", errno, strerror(errno));
+        }
+    }
+#endif
+
+    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, mount_opts.c_str()) != 0) {
         err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (errno=%d): %s\n",
                   mountpoint.c_str(), errno, strerror(errno));
         return false;
