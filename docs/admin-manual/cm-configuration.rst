@@ -1904,7 +1904,8 @@ Recognized metric attribute names and their use:
     represented in ganglia as DMAX. If no Lifetime is defined for a
     metric then the default value will be set to a calculated value
     based on the ganglia publish interval with a minimum value set by
-    :macro:`GANGLIAD_MIN_METRIC_LIFETIME`.
+    :macro:`GANGLIA_MIN_METRIC_LIFETIME` (:macro:`GANGLIAD_MIN_METRIC_LIFETIME`
+    in legacy *condor_gangliad* mode).
 
 Absent ClassAds
 ---------------

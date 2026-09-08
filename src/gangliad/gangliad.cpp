@@ -265,7 +265,8 @@ GangliaD::initAndReconfig()
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;
 	// the minimum dmax can be
-	int min_dmax = param_integer("GANGLIAD_MIN_METRIC_LIFETIME", 86400);
+	const char *min_lifetime_knob = g_legacy_gangliad_mode ? "GANGLIAD_MIN_METRIC_LIFETIME" : "GANGLIA_MIN_METRIC_LIFETIME";
+	int min_dmax = param_integer(min_lifetime_knob, 86400);
 	if(min_dmax < 0) { min_dmax = 86400; }
 	dprintf(D_ALWAYS,"Setting minimum calculated DMAX value to %d. Specified metric lifetimes with override this value.\n", min_dmax);
 	// the interval we tell ganglia is the lifetime of the metric

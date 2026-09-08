@@ -39,13 +39,6 @@ no fallback between the two forms — each mode reads only its own knobs.
     inhibit publication. The default value is 60. Use ``METRICD_INTERVAL``
     in metricd mode, ``GANGLIAD_INTERVAL`` in legacy gangliad mode.
 
-:macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
-    An integer value representing the minimum DMAX value for all metrics.
-    Where DMAX is the number number of seconds without updating that
-    a metric will be kept before deletion. This value defaults to ``86400``
-    which is equivalent to 1 day. This value will be overridden by a
-    specific metric defined ``Lifetime`` value.
-
 :macro-def:`METRICD_VERBOSITY` / :macro-def:`GANGLIAD_VERBOSITY`
     An integer that specifies the maximum verbosity level of metrics to
     be published. Basic metrics have a verbosity level of 0, which is the
@@ -152,6 +145,34 @@ Ganglia Backend Knobs
 These knobs configure the Ganglia backend. They are used in both
 *condor_metricd* and *condor_gangliad* modes unless otherwise noted.
 
+.. note::
+
+    In *condor_metricd* mode these knobs take effect **only if at least one
+    metric definition is actually routed to the Ganglia backend**. If none is,
+    *condor_metricd* never initializes the backend at all -- deliberately, so
+    that a Prometheus-only pool does not need ``libganglia`` installed -- and
+    every knob in this section is left unread.
+
+    This matters because the shipped default for
+    :macro:`METRICD_DEFAULT_EXPORT_METRIC` is ``prometheus``, and the metric
+    definitions shipped in :macro:`METRICD_METRICS_CONFIG_DIR` set no
+    ``ExportMetric`` of their own. Out of the box, therefore, nothing routes to
+    Ganglia and setting :macro:`GANGLIA_LIB` alone has no effect. To publish to
+    Ganglia from *condor_metricd*, also name it in
+    :macro:`METRICD_DEFAULT_EXPORT_METRIC` (for example ``ganglia, prometheus``,
+    or an empty value meaning every enabled backend), or add an
+    ``ExportMetric`` keyword naming ``ganglia`` to the individual metrics you
+    want published there.
+
+    *condor_metricd* records which backends it activated in its log at startup
+    and on each reconfiguration, for example::
+
+          Ganglia backend is active
+          Prometheus backend is active
+
+    None of this applies in legacy *condor_gangliad* mode, where Ganglia is the
+    only backend and is always initialized.
+
 :macro-def:`GANGLIA_WANT_RESET_METRICS` / :macro-def:`GANGLIAD_WANT_RESET_METRICS`
     A boolean value that, when ``True``, causes aggregate numeric metrics
     to be reset to a value of zero when they are no longer being updated.
@@ -167,6 +188,14 @@ These knobs configure the Ganglia backend. They are used in both
     If you are running multiple instances that share a SPOOL directory,
     this knob should be customized.
     The default is ``$(SPOOL)/metricsToReset.ganglia_metrics``.
+
+:macro-def:`GANGLIA_MIN_METRIC_LIFETIME` / :macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
+    An integer value representing the minimum DMAX value for all metrics,
+    where DMAX is the number of seconds without updating that a metric will
+    be kept before deletion. This value defaults to ``86400``, which is
+    equivalent to 1 day. It is overridden for an individual metric by that
+    metric's ``Lifetime`` value. Use ``GANGLIA_MIN_METRIC_LIFETIME`` in
+    metricd mode, ``GANGLIAD_MIN_METRIC_LIFETIME`` in legacy gangliad mode.
 
 :macro-def:`GANGLIA_CONFIG`
     The path and file name of the Ganglia configuration file. The
