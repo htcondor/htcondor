@@ -379,9 +379,10 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
         struct selabel_handle *hnd = selabel_open(SELABEL_CTX_FILE, nullptr, 0);
         if (hnd) {
             char *scontext = nullptr;
-            if (selabel_lookup(hnd, &scontext, mountpoint.c_str(), S_IFDIR) == 0 && scontext) {
-                mount_opts += ",context=";
+            if (selabel_lookup_raw(hnd, &scontext, mountpoint.c_str(), S_IFDIR) == 0 && scontext) {
+                mount_opts += ",context=\"";
                 mount_opts += scontext;
+                mount_opts += "\"";
                 freecon(scontext);
             } else {
                 dprintf(D_ERROR, "VolumeManager: selabel_lookup(%s) failed (errno=%d): %s; "
