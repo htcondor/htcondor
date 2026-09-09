@@ -104,7 +104,10 @@ class PrometheusD: public StatsD {
 	static void sendHttpError(int fd, void *ssl, int code, const char *reason);
 
 	// Validate user:password against an Apache-style htpasswd file.
-	// Supports {SHA}, $apr1$, bcrypt ($2y$/$2b$), and standard crypt().
+	// {SHA} entries are handled here; every other format is handed to the
+	// platform's crypt(3), so what is actually accepted depends on the host.
+	// See the implementation for which formats that covers and which do not.
+	// On Windows only {SHA} works, as there is no crypt(3).
 	static bool checkHtpasswd(const std::string &path,
 	                          const std::string &user,
 	                          const std::string &pass);

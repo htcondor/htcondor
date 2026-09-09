@@ -314,6 +314,43 @@ is set.
     so a pool-wide ``[ pool = MetricPool ]`` labels every sample with the
     central manager of the pool it came from.
 
+:macro-def:`PROMETHEUS_HTTP_PORT`
+    The TCP port on which *condor_metricd* accepts HTTP (or HTTPS) requests
+    for the ``/metrics`` endpoint, allowing a Prometheus server to scrape
+    metrics directly rather than reading
+    :macro:`PROMETHEUS_METRICS_FILE` off disk. The default is
+    :macro:`SHARED_PORT_PORT`, meaning requests arrive through
+    *condor_shared_port*. Set it to a specific port to have *condor_metricd*
+    open a listening socket of its own, or to ``-1`` to disable HTTP serving
+    entirely. Serving over HTTPS instead of HTTP is enabled by configuring
+    :macro:`AUTH_SSL_SERVER_CERTFILE` and :macro:`AUTH_SSL_SERVER_KEYFILE`.
+
+:macro-def:`PROMETHEUS_HTTP_AUTH_FILE`
+    Path to an Apache-style ``htpasswd`` file. When set, the ``/metrics``
+    endpoint requires HTTP Basic authentication against it; requests without
+    valid credentials are answered with ``401``. Empty by default, which
+    leaves the endpoint unauthenticated. Note that unless HTTPS is configured
+    (see :macro:`PROMETHEUS_HTTP_PORT`), Basic credentials cross the network
+    in the clear.
+
+    Create the file with Apache's ``htpasswd`` tool, using ``-B`` to select
+    bcrypt:
+
+    .. code-block:: console
+
+          $ htpasswd -B -c /etc/condor/prometheus.htpasswd prometheus
+
+    Use ``-B`` rather than the default. Entries other than ``{SHA}`` are
+    evaluated with the host's ``crypt(3)``, so which hash formats work is a
+    property of the operating system, not of HTCondor. bcrypt (``$2b$`` /
+    ``$2y$``), ``$1$``, ``$5$``, ``$6$``, and DES are supported by the
+    libxcrypt implementation used on current Linux distributions, and
+    ``{SHA}`` is handled by *condor_metricd* itself. However ``$apr1$``
+    (Apache MD5), which some versions of ``htpasswd`` produce by default, is
+    **not** available on several common platforms, including the RHEL 9
+    family. An entry whose format the host cannot evaluate never
+    authenticates; *condor_metricd* logs the reason and denies the request.
+
 :macro-def:`PROMETHEUS_WANT_RESET_METRICS`
     Per-backend reset-metrics flag. Defaults to ``False``.
 

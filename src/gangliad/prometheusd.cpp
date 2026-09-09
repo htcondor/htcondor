@@ -687,8 +687,18 @@ PrometheusD::checkHtpasswd(const std::string &path,
 		}
 
 		// --- All other formats: delegate to system crypt() ---
-		// This covers $apr1$ (Apache MD5), $2y$/$2b$ (bcrypt),
+		// Which formats actually work is therefore whatever this platform's
+		// crypt(3) implements, not something we control.  Modern Linux ships
+		// libxcrypt, which covers $2b$/$2y$ (bcrypt), $1$ (md5crypt),
 		// $5$ (SHA-256 crypt), $6$ (SHA-512 crypt), and DES.
+		//
+		// Notably absent on many systems is $apr1$ (Apache MD5): libxcrypt
+		// omits it unless explicitly enabled at build time, and the RHEL 9
+		// family does not enable it.  Since $apr1$ is what plain "htpasswd"
+		// produces by default on some platforms, an admin can easily end up
+		// with an auth file this host cannot read.  That case fails closed --
+		// crypt() returns NULL and we deny access -- and is logged below.
+		// Recommend "htpasswd -B" (bcrypt) in the documentation.
 #if !defined(WIN32)
 		errno = 0;
 		const char *hashed = crypt(pass.c_str(), file_hash);
@@ -696,9 +706,12 @@ PrometheusD::checkHtpasswd(const std::string &path,
 			found = (strcmp(hashed, file_hash) == 0);
 		} else {
 			dprintf(D_ERROR,
-			        "PrometheusD: crypt() failed for htpasswd entry"
-			        " (unsupported format?): %s\n",
-			        strerror(errno));
+			        "PrometheusD: crypt() could not evaluate the htpasswd entry"
+			        " for user '%s': %s.  This platform's crypt(3) does not"
+			        " support that hash format; note that $apr1$ (Apache MD5)"
+			        " is unsupported on many systems.  Regenerate the entry with"
+			        " 'htpasswd -B' to use bcrypt.\n",
+			        user.c_str(), strerror(errno));
 		}
 #endif
 		break;

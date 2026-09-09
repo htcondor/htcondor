@@ -722,14 +722,43 @@ def _http_get(host, port, path, headers=None, timeout=10):
     return resp.status, body
 
 
-def _make_htpasswd_sha1(path, user, password):
+def _htpasswd_sha1_entry(user, password):
     """
-    Write an Apache-compatible {SHA} htpasswd entry.
-    {SHA} is SHA-1 of the password, base64-encoded.
+    Build an Apache-compatible {SHA} htpasswd entry.
+    {SHA} is SHA-1 of the password, base64-encoded. metricd evaluates this
+    format itself rather than handing it to crypt(3).
     """
     digest = hashlib.sha1(password.encode()).digest()
     encoded = base64.b64encode(digest).decode()
-    path.write_text(f"{user}:{{SHA}}{encoded}\n")
+    return f"{user}:{{SHA}}{encoded}"
+
+
+def _htpasswd_bcrypt_entry(user, password):
+    """
+    Build a bcrypt ($2y$) htpasswd entry, or return None when this platform's
+    crypt(3) cannot produce one.
+
+    Everything that is not {SHA} is handed to crypt(3), so which formats work
+    is a property of the OS. bcrypt is what "htpasswd -B" writes and what the
+    documentation recommends, so it is the important case to cover -- but it
+    is not universal (and Python dropped the crypt module in 3.13), hence the
+    graceful None rather than an import-time failure.
+    """
+    try:
+        import crypt
+    except ImportError:
+        return None
+    # A fixed salt keeps the entry reproducible. The 22 characters after the
+    # cost field are bcrypt's own base64 alphabet, not standard base64.
+    hashed = crypt.crypt(password, "$2y$05$abcdefghijklmnopqrstuv")
+    if not hashed or not hashed.startswith("$2y$"):
+        return None
+    return f"{user}:{hashed}"
+
+
+# Computed once: None when the host crypt(3) has no bcrypt, which makes the
+# bcrypt assertions skip instead of fail.
+BCRYPT_ENTRY = _htpasswd_bcrypt_entry("prombcrypt", "b3crypt!")
 
 
 def _basic_auth_header(user, password):
@@ -925,7 +954,14 @@ def condor_with_http_auth(test_dir):
     )
     prom_file  = test_dir / "auth_metrics.prom"
     passwd_file = test_dir / "test.htpasswd"
-    _make_htpasswd_sha1(passwd_file, "prometheus", "s3cr3t")
+    # Two users, exercising both code paths in PrometheusD::checkHtpasswd():
+    # {SHA} is decoded by metricd itself, while the bcrypt entry goes through
+    # the platform's crypt(3). The bcrypt line is omitted on a host whose
+    # crypt(3) cannot produce one.
+    entries = [_htpasswd_sha1_entry("prometheus", "s3cr3t")]
+    if BCRYPT_ENTRY:
+        entries.append(BCRYPT_ENTRY)
+    passwd_file.write_text("\n".join(entries) + "\n")
 
     cfg = {
         "DAEMON_LIST":                     "$(DAEMON_LIST) METRICD",
@@ -1155,6 +1191,66 @@ class TestPrometheusHTTPAuth:
         )
         assert "# HELP auth_test_gauge" in body
         assert "# TYPE auth_test_gauge gauge" in body
+
+    # --- bcrypt entries, i.e. the crypt(3)-delegated path ------------------
+    #
+    # Everything that is not {SHA} is evaluated by the host's crypt(3), so
+    # these confirm the delegated branch works at all -- the {SHA} tests above
+    # never reach it. bcrypt is the format the documentation tells admins to
+    # use ("htpasswd -B").
+
+    @pytest.mark.skipif(
+        BCRYPT_ENTRY is None,
+        reason="this platform's crypt(3) cannot produce a bcrypt hash",
+    )
+    def test_bcrypt_valid_credentials_returns_200(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, body = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prombcrypt", "b3crypt!"),
+        )
+        assert status == 200
+        assert "auth_test_gauge" in body
+
+    @pytest.mark.skipif(
+        BCRYPT_ENTRY is None,
+        reason="this platform's crypt(3) cannot produce a bcrypt hash",
+    )
+    def test_bcrypt_wrong_password_returns_401(self, auth_host_port, auth_metrics_ready):
+        host, port = auth_host_port
+        status, _ = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prombcrypt", "wrongpassword"),
+        )
+        assert status == 401
+
+    @pytest.mark.skipif(
+        BCRYPT_ENTRY is None,
+        reason="this platform's crypt(3) cannot produce a bcrypt hash",
+    )
+    def test_bcrypt_user_does_not_accept_other_users_password(
+        self, auth_host_port, auth_metrics_ready
+    ):
+        # The file holds two users; a password must not be accepted across
+        # entries, which would indicate the wrong line was matched.
+        host, port = auth_host_port
+        status, _ = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prombcrypt", "s3cr3t"),
+        )
+        assert status == 401
+
+    def test_sha1_user_still_works_alongside_bcrypt_entry(
+        self, auth_host_port, auth_metrics_ready
+    ):
+        # The {SHA} user is the first line of a multi-line file; make sure
+        # parsing does not stop at, or get confused by, the second entry.
+        host, port = auth_host_port
+        status, _ = _http_get(
+            host, port, "/metrics",
+            headers=_basic_auth_header("prometheus", "s3cr3t"),
+        )
+        assert status == 200
 
     def test_404_path_does_not_leak_on_auth(self, auth_host_port, auth_metrics_ready):
         """A 404 on an unknown path should not require credentials."""
