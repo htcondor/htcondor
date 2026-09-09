@@ -126,6 +126,10 @@ int command_cancel_drain_jobs(int dc_cmd, Stream* s );
 // Rehome: kill all claims and prepare for new work
 int command_rehome(int dc_cmd, Stream* s );
 
+// Controller: set/clear the AP allowed to evict any claim on this startd
+int command_set_controller(int dc_cmd, Stream* s );
+int command_clear_controller(int dc_cmd, Stream* s );
+
 // ...
 int command_coalesce_slots(int, Stream * stream );
 

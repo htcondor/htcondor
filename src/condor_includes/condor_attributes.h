@@ -355,6 +355,7 @@
 #define ATTR_IS_DAEMON_CORE  "IsDaemonCore"
 #define ATTR_IS_LOCAL_STARTD  "IsLocalStartd"
 #define ATTR_IS_DIRECT_ATTACH  "IsDirectAttach"
+#define ATTR_CONTROLLER  "Controller"
 #define ATTR_IS_OWNER  "IsOwner"
 #define ATTR_IS_QUEUE_SUPER_USER  "IsQueueSuperUser"
 #define ATTR_IS_LOCAL_USER "IsLocalUser"
