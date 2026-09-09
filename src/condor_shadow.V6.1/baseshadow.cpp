@@ -1883,7 +1883,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 		// Lookup the value of this attribute. We only count integer values.
 		classad::Value attr_val;
 		long long value;
-		it->second->Evaluate(attr_val);
+		new_stats.EvaluateExpr(it->second, attr_val);
 		if (!attr_val.IsIntegerValue(value)) {
 			continue;
 		}

@@ -143,7 +143,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 		if( params.getMetric( name, metric ) ) {
 			double newValue;
 			classad::Value v;
-			expr->Evaluate( v );
+			from->EvaluateExpr( expr, v );
 			if(! v.IsNumber( newValue )) {
 				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
 				continue;
@@ -196,7 +196,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 				CopyAttribute( perJobAttributeName, *to, *from );
 			} else {
 				classad::Value v;
-				expr->Evaluate( v );
+				to->EvaluateExpr( expr, v );
 				if( v.IsNumber( oldValue ) &&
 				  from->EvaluateAttrNumber( perJobAttributeName, newValue ) ) {
 					// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, perJobAttributeName.c_str(), oldValue, metric.c_str(), newValue );
@@ -302,7 +302,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 			if( params.getMetric( name, metric ) ) {
 				double sampleValue = 0.0;
 				classad::Value v;
-				expr->Evaluate( v );
+				from->EvaluateExpr( expr, v );
 				if(! v.IsNumber( sampleValue )) {
 					// Don't duplicate the warning in Aggregate() here.
 					continue;
@@ -378,7 +378,7 @@ StartdNamedClassAd::reset_monitor() {
 		if( params.isMetric( name ) ) {
 			double initialValue;
 			classad::Value v;
-			expr->Evaluate( v );
+			from->EvaluateExpr( expr, v );
 			if(! v.IsNumber( initialValue )) {
 				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
 				continue;
@@ -429,7 +429,7 @@ StartdNamedClassAd::unset_monitor() {
 		if( params.isMetric( name ) ) {
 			double initialValue;
 			classad::Value v;
-			expr->Evaluate( v );
+			from->EvaluateExpr( expr, v );
 			if(! v.IsNumber( initialValue )) {
 				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
 				continue;
