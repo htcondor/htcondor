@@ -32,13 +32,48 @@ SharedPortServer::SharedPortServer():
 {
 }
 
+// An orphan -- a shared port server whose master has died -- is not the
+// authority on the address file.  It does not notice it has been orphaned
+// until up to PARENT_CHECK_FIRST_INTERVAL/PARENT_CHECK_INTERVAL later (the
+// parent watcher in HandleProcessExit() on Windows), and by then a
+// replacement master has very likely already started a new shared port
+// server that published its own address.  So an orphan must neither delete
+// that file nor overwrite it: doing so strands the whole pool, because
+// daemons cannot find the shared port address (the collector treats a
+// missing one as fatal).  Leave the file to whoever is in charge now; a
+// genuinely leftover file is removed by the next master, both at startup
+// (RemoveDeadAddressFile) and again just before it starts a new shared port
+// server (daemon::RealStart).
+bool
+SharedPortServer::MasterIsGone() const
+{
+	pid_t master_pid = daemonCore->getppid();
+	if( master_pid == 0 ) {
+			// No DaemonCore parent started us (no CONDOR_INHERIT, e.g. we were
+			// run by hand), so there is no master to outlive and the address
+			// file is ours.  Checking this explicitly also keeps the two
+			// platforms in agreement: Is_Pid_Alive(0) is a process-group
+			// permission probe that succeeds on Unix, but fails on Windows.
+		return false;
+	}
+	return !daemonCore->Is_Pid_Alive( master_pid );
+}
+
 SharedPortServer::~SharedPortServer() {
 	if( m_registered_handlers ) {
 		daemonCore->Cancel_Command( SHARED_PORT_CONNECT );
 	}
 
 	if( !m_shared_port_server_ad_file.empty() ) {
-		IGNORE_RETURN unlink( m_shared_port_server_ad_file.c_str() );
+		if( MasterIsGone() ) {
+			dprintf(D_ALWAYS,
+					"Our master (pid %d) is gone, so not removing %s: it may "
+					"already belong to a newer shared port server.\n",
+					daemonCore->getppid(),
+					m_shared_port_server_ad_file.c_str());
+		} else {
+			IGNORE_RETURN unlink( m_shared_port_server_ad_file.c_str() );
+		}
 	}
 
 	if( m_publish_addr_timer != -1 ) {
@@ -159,6 +194,18 @@ SharedPortServer::PublishAddress(int /* timerID */)
 {
 	if( !param(m_shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
 		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
+	}
+
+		// See MasterIsGone(): our periodic re-publish must not stomp the
+		// address file either -- UpdateLocalAd() below replaces it
+		// atomically, so an orphan would silently point the whole pool at
+		// its own soon-to-be-dead socket.
+	if( MasterIsGone() ) {
+		dprintf(D_ALWAYS,
+				"Our master (pid %d) is gone, so not updating %s: it may "
+				"already belong to a newer shared port server.\n",
+				daemonCore->getppid(), m_shared_port_server_ad_file.c_str());
+		return;
 	}
 
 	ClassAd ad;
