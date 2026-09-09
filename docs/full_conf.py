@@ -538,8 +538,14 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^job", token.Keyword, "job"),
             (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
+            (
+                r"^(\[?)(weak)(\]?\s+)(parent)",
+                lexer.bygroups(token.Text, token.Keyword, token.Text, token.Keyword),
+                "parent",
+            ),
             (r"^script", token.Keyword, "script"),
             (r"^pre_skip", token.Keyword, "pre_skip"),
+            (r"^tolerance", token.Keyword, "tolerance"),
             (r"^retry", token.Keyword, "retry"),
             (r"^abort-dag-on", token.Keyword, "abort-dag-on"),
             (r"^vars", token.Keyword, "vars"),
@@ -595,6 +601,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ),
         ] + DAGMAN_COMMON,
         "pre_skip": DAGMAN_COMMON,
+        "tolerance": [
+            (
+                r"([\s\[])(fail-fast|wait)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
         "retry": [
             (
                 r"([\s\[])(unless-exit)([\s\]])",

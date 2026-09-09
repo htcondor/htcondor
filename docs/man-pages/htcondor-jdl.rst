@@ -753,7 +753,6 @@ COMMANDS FOR MATCHMAKING
     the constraint will be tested against the properties of AvailableGPUs and only those that match
     will be assigned to the dynamic slot.
 
-    :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
  :subcom-def:`request_<name>` = <quantity>
     The required amount of the custom machine resource identified by
