@@ -5,6 +5,11 @@
   host, such as unified-memory devices like the NVIDIA DGX Spark.
   :jira:`3899`
 
+- :tool:`condor_history` will now directly locate and read job records
+  for a specified :ad-attr:`Owner` or :ad-attr:`ClusterId` when the
+  Archive Librarian is in use.
+  :jira:`3927`
+
 *** 26.2.0 bugs
 
 - The *condor_starter* can now optionally set a limit on the amount of

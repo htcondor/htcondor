@@ -67,6 +67,14 @@ public:
 	std::vector<LibrarianRecord> GetRecords(const std::vector<std::pair<int,int>>& job_ids,
 	                                        FileFilter filter = FileFilter::OnlyExisting) const;
 
+	// Return the file offset and file path for every JobRecord associated with a
+	// cluster ID. Same file-existence filtering as CountByCluster.
+	std::vector<LibrarianRecord> GetRecordsByCluster(int cluster_id, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for every JobRecord associated with a
+	// username. Same file-existence filtering as CountByUser.
+	std::vector<LibrarianRecord> GetRecordsByUser(const std::string& username, FileFilter filter = FileFilter::OnlyExisting) const;
+
 private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;

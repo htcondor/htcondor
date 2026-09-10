@@ -329,6 +329,7 @@ if (BUILD_TESTING)
 			if (HAVE_SQLITE3_H)
 				condor_pl_test(test_archive_librarian "Test basic librarian functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_archive_librarian_restart_recovery "Test librarian rotation-time recovery across a daemon restart" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_condor_history_librarian_fastpath "Test condor_history's librarian-backed direct-seek path" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 
 			# Windows doesn't implement common file transfer yet, so jobs can't

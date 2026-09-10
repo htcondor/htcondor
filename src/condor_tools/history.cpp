@@ -124,7 +124,7 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
-static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr, const std::vector<std::pair<int,int>>& job_ids);
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr);
 static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
@@ -855,29 +855,6 @@ main(int argc, const char* argv[])
 	if ( ! limitSet && specifiedMatch < 0) { specifiedMatch = 100'000; }
   }
 
-  // When only cluster IDs or usernames are specified (no cluster.proc pairs),
-  // use the librarian DB record count as the match limit so we stop early.
-  if ( ! limitSet && readfromfile && recordSrc == HRS_SCHEDD_JOB_HIST
-	   && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
-	bool hasProc = false;
-	for (const auto& item : jobIdFilterInfo) {
-		if (item.jid.proc >= 0) { hasProc = true; break; }
-	}
-	if ( ! hasProc && ( ! jobIdFilterInfo.empty() || ! ownersList.empty())) {
-		LibrarianClient librarian;
-		if (librarian.IsValid()) {
-			int count = 0;
-			for (const auto& item : jobIdFilterInfo) {
-				count += librarian.CountByCluster(item.jid.cluster);
-			}
-			for (const auto& name : ownersList) {
-				count += librarian.CountByUser(name);
-			}
-			if (count > 0) { specifiedMatch = count; }
-		}
-	}
-  }
-
   if (writetosocket && streamresults) {
 	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
@@ -920,20 +897,12 @@ main(int argc, const char* argv[])
           }
       }
 
-      // Direct-seek path: when the user specifies only cluster.proc job IDs, use the
-      // librarian DB to find exact file offsets and seek directly to each record.
+      // Direct-seek path: resolve the restriction list via the librarian DB instead
+      // of scanning the history files. See readHistoryFromLibrarian().
       bool tookDirectPath = false;
-      if (ownersList.empty() && ! jobIdFilterInfo.empty() && recordSrc == HRS_SCHEDD_JOB_HIST
-          && ! JobHistoryFileName && ! readFromDir && ! noLibrarian) {
-          bool allHaveProc = true;
-          std::vector<std::pair<int,int>> ids;
-          for (const auto& item : jobIdFilterInfo) {
-              if (item.jid.proc < 0) { allHaveProc = false; break; }
-              ids.emplace_back(item.jid.cluster, item.jid.proc);
-          }
-          if (allHaveProc) {
-              tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr, ids);
-          }
+      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! readFromDir && ! noLibrarian
+          && (! jobIdFilterInfo.empty() || ! ownersList.empty())) {
+          tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr);
       }
 
       // Read from single file, matching files, or a directory (if valid option)
@@ -1391,19 +1360,11 @@ static bool checkMatchJobIdsFound(const ArchiveRecord &arec, ClassAd *ad = NULL,
 
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec);
 
-// Use the librarian DB index to seek directly to each requested job record.
-// Groups records by archive file and reuses one ArchiveReader per file.
-// Returns false if the librarian is unavailable or has no records for these jobs,
-// allowing the caller to fall back to the normal file-scan path.
-static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr,
-                                     const std::vector<std::pair<int,int>>& job_ids)
+// Group librarian-supplied records by archive file and print each one by seeking
+// directly to its offset, reusing one ArchiveReader per file.
+static void printLibrarianRecords(const char* constraint, ExprTree *constraintExpr,
+                                  const std::vector<LibrarianRecord>& records)
 {
-	LibrarianClient librarian;
-	if ( ! librarian.IsValid()) { return false; }
-
-	printHeader();
-
-	auto records = librarian.GetRecords(job_ids);
 	if (records.size()) {
 		std::map<std::string, std::vector<int64_t>> file_offsets;
 		for (const auto& rec : records) {
@@ -1412,31 +1373,59 @@ static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constrain
 
 		for (auto& [file_path, offsets] : file_offsets) {
 			std::ranges::sort(offsets);
+			// Dedup: the same record can come back from more than one librarian query.
+			offsets.erase(std::unique(offsets.begin(), offsets.end()), offsets.end());
 
-			// Open reader for archive file
 			ArchiveReader reader(file_path, ArchiveReader::Direction::Forward);
 			if ( ! reader.IsOpen()) { continue; }
 
-			// For each offset of specified jobid found in this archive file
 			for (int64_t offset : offsets) {
 				if ( ! reader.SeekForward(offset)) { continue; }
 
-				// Read record
 				ArchiveRecord arec;
 				if ( ! reader.Next(arec)) { continue; }
 
-				// Turn record into ClassAd
 				ClassAd* ad = arec.GetAd();
 				if ( ! ad) { continue; }
 
-				// Print ClassAd
 				printJobIfConstraint(*ad, constraint, constraintExpr, arec);
 
 				delete ad;
 			}
 		}
 	}
+}
 
+// Resolve every restriction-list term (cluster.proc, bare cluster ID, owner name)
+// via the librarian DB instead of scanning the history files, unioning results the
+// same way the restriction list itself is OR'd. Returns false if the librarian is
+// unavailable, so the caller can fall back to the normal file-scan path.
+static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr)
+{
+	LibrarianClient librarian;
+	if ( ! librarian.IsValid()) { return false; }
+
+	std::vector<LibrarianRecord> records;
+	std::vector<std::pair<int,int>> job_ids;
+	for (const auto& item : jobIdFilterInfo) {
+		if (item.jid.proc >= 0) {
+			job_ids.emplace_back(item.jid.cluster, item.jid.proc);
+		} else {
+			auto recs = librarian.GetRecordsByCluster(item.jid.cluster);
+			records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+		}
+	}
+	if ( ! job_ids.empty()) {
+		auto recs = librarian.GetRecords(job_ids);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& name : ownersList) {
+		auto recs = librarian.GetRecordsByUser(name);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+
+	printHeader();
+	printLibrarianRecords(constraint, constraintExpr, records);
 	printFooter();
 	return true;
 }
