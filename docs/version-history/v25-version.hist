@@ -6,6 +6,10 @@
   preserved instead of being overridden.
   :jira:`3613`
 
+- Fixed a bug where jobs would fail and requeue after completion when
+  HOOK_JOB_EXIT is used in the condor_starter.
+  :jira:`3907`
+
 *** 25.0.15 bugs
 
 *** 25.14.0 features
