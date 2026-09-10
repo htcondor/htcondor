@@ -779,7 +779,11 @@ def _make_self_signed_cert(cert_path, key_path):
             "-days", "1", "-nodes", "-subj", "/CN=localhost",
         ],
         check=True,
-        capture_output=True,
+        # stdout=/stderr=PIPE rather than capture_output=True: the latter is
+        # Python 3.7+, and this test has to run on the oldest interpreter any
+        # supported distro ships (3.6).
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
 
