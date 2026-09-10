@@ -143,6 +143,20 @@ def monitorjob(condor, path_to_sleep):
     assert job.wait(condition=ClusterState.all_terminal)
     return job
 
+@action
+def monitorjobxfer(condor, path_to_sleep):
+    job = condor.submit(
+            description={"executable": path_to_sleep,
+                "arguments": "0",
+                "should_transfer_files": "YES",
+                "when_to_transfer_output": "ON_EXIT",
+                "+HookKeyword" : '"monitor"',
+                "log": "monitor_hook_job_events.log"
+                }
+    )
+    assert job.wait(condition=ClusterState.all_terminal)
+    return job
+
 class TestHookStatusCodeAndMsg:
     # Methods that begin with test_* are tests.
 
@@ -176,6 +190,12 @@ class TestHookStatusCodeAndMsg:
             assert 'Kinda bad' in log
 
     def test_monitor_hooks(self, monitorjob):
+        with open('monitor_hooks.out') as f:
+            log = f.read()
+            assert 'Saw update' in log
+            assert 'Saw exit' in log
+
+    def test_monitor_hooks_xfer(self, monitorjobxfer):
         with open('monitor_hooks.out') as f:
             log = f.read()
             assert 'Saw update' in log
