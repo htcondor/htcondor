@@ -69,6 +69,11 @@ public:
 
 	const ClassAd& Banner() const { return m_banner_info; }
 
+	// True if the banner line carried at least one parseable attribute (a
+	// RecordType word and/or key=value pairs). False for a bare "***" banner, or
+	// one whose leading token failed to parse as an attribute value.
+	bool HasBannerInfo() const { return m_banner_info.size() > 0; }
+
 	int64_t GetRecordOffset() const { return m_record_offset; }
 	int64_t GetBannerOffset() const { return m_banner_offset; }
 
