@@ -138,9 +138,6 @@ parseArgs( int argc, char *argv[] )
 			std::string type(opt + 7);
 			if( type == "=staging" ) {
 				cxfer_type = CXFER_STATE::STAGING;
-				// Uncomment to help ensure that we rebuild the priorec array
-				// while jobs are blocked.
-				// sleep(60);
 			} else if( type == "=mapping" ) {
 				cxfer_type = CXFER_STATE::MAPPING;
 			} else {

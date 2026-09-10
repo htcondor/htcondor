@@ -187,6 +187,10 @@ command_data_slot_callback(
 
 void
 call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
+    // We shouldn't have to do this separately now that we're explicitly
+    // tracking (by passing around) the transfer shadow's record, but
+    // unregistering the shadow catalogs as soon as possible results in
+    // fewer jobs blocking for a transfer shadow that will never start.
 	if( srec ) {
 		// Since this shadow failed to start, its PID field should still be 0.
 		scheduler.unregister_shadow_catalogs( srec, 0 );
@@ -204,16 +208,18 @@ call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
 	//
 
 	auto lambda = [claimID, srec](int /* timerID */) -> void {
+	    //
+	    // We (try) to delete the match record first, because there are a
+	    // few things that are done differently in unlinkMrec() if there's
+	    // a registered shadow record.
+	    //
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
 		if( mrec != nullptr ) {
-			// StartJobFailed() indirectly calls unlinkMrec(), which will delete
-			// the shadow record if its PID == 0, because that means doesn't
-			// have a process whose reaper will delete it.
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
-			dprintf( D_ALWAYS, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
+			dprintf( D_VERBOSE, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
 			scheduler.StartJobFailed( mrec, id );
 		} else {
-			dprintf( D_ALWAYS, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
+			dprintf( D_VERBOSE, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
 		}
 
 		// The way shadow record lifetimes are managed, any code which runs
@@ -312,8 +318,18 @@ start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
 // its lifetime.  These requriements appear to be guaranteed by the
 // startCommand_nonblocking() callback API.
 //
-// As always, the (other) parameters are all copies so that we don't have to
-// think about lifetime and ownership.
+// The `originalClaimID` and `requestAd` are copies so that we don't have
+// to think about lifetime and ownership.
+//
+// The shadow rec pointer is dangerous, but the schedd doesn't presently
+// have an indirect way of doing the look-up and avoiding the risk of it
+// having been deleted by the time we get called.  (This is the same way
+// that the schedd manages shadow records while they're in the start
+// queue, but that's also perilous.)  Because the match record might vanish
+// or be altered (removing the shadow pointer), we can't depend on it to
+// make sure we clean up the shadow record.  (Leaking a shadow record is
+// bad; the actual problem is incorrectly blocking jobs because the catalog
+// to shadow map is outdated.)
 //
 condor::cr::void_coroutine
 command_data_slot_callback(
@@ -322,8 +338,6 @@ command_data_slot_callback(
 	ClassAd requestAd,
 	shadow_rec * srec
 ) {
-	//
-
 	auto scope_guard = std::unique_ptr<Sock>(sock);
 
 	ClassAd commandAd;
