@@ -28,6 +28,27 @@ def warn(msg: str):
     if logger is not None:
         logger.warning(msg)
 
+def build_ci_index(keys, label="value"):
+    """Build a case-insensitive lookup index: {lowercased key: canonical-case key}.
+
+    Used so reference roles (:macro:, :subcom:, :dag-cmd:, :ad-attr:) can look up
+    a definition regardless of the case used at the reference site, while still
+    resolving to the exact-case name the definition role registered (needed since
+    HTML anchors are case-sensitive).
+
+    Warns if two distinct canonical keys collide case-insensitively; the later one
+    (in iteration order) wins, same as a dict/list would silently prefer it.
+    """
+    index = {}
+    for key in keys:
+        key = str(key)
+        lower = key.lower()
+        if lower in index and index[lower] != key:
+            warn(f"'{index[lower]}' and '{key}' {label} names collide when compared "
+                 f"case-insensitively; '{key}' will win for case-insensitive lookups.")
+        index[lower] = key
+    return index
+
 def get_all_defined_role(role: str, line: str):
     """Find all definition roles in a single line"""
     # :foo:`bar` :foo:`baz` :foo:`bat` -> bar, baz, bat

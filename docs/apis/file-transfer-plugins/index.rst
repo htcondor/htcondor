@@ -38,7 +38,7 @@ Presently, a file transfer plug-in may be invoked at six different times:
     of item #1.
 4.  Just after item #3.  This is a duplicate of item #2.
 5.  Once when doing input transfer, for all supported protocols.
-6.  At least once for output tansfer, no more than once per supported protocol.
+6.  At least once for output transfer, no more than once per supported protocol.
 
 We call the interface for instances 1 and 3 the "query" interface, and
 the interface for instances 2, 4, 5, and 6 the "transfer" interface.
@@ -99,7 +99,7 @@ URLs, instead.
 
 The plug-in is expected to do the transfer, exiting with status 0 if the
 transfer was successful, and a non-zero status if the transfer was not
-successful.  If the transfer was not succesful, the job will usually be
+successful.  If the transfer was not successful, the job will usually be
 placed on hold; but see :ref:`the_output_file` below.  Regardless, the
 job ClassAd attribute :ad-attr:`HoldReasonSubCode` will be set to the exit
 status of the plug-in.
@@ -247,4 +247,4 @@ for the various ads that will change how HTCondor interacts with the plug-in.
 (To continue the previous example, we might add a ''HasUntar'' boolean to
 the query interface which causes the ''MustUntar'' flag to be set in some
 specific transfer ads; we might further expect the plug-in to explicitly
-note in the corresponding output ad if the untarring was succesful.)
+note in the corresponding output ad if the untarring was successful.)

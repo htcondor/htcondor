@@ -175,7 +175,7 @@ A variety of options for output formatting are provided, including:
     * - \-
       - Job is idle
     * - \>
-      - Job is transfering either input or output sandbox
+      - Job is transferring either input or output sandbox
     * - \=
       - Job is running
     * - \#
