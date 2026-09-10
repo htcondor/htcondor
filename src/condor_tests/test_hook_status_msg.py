@@ -41,6 +41,26 @@ exit 0 """
     st = os.stat(script_file)
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
+    script_file = test_dir / "hook_monitor_update.sh"
+    script_contents = f"""#!/bin/bash
+echo 'Saw update' >>$_CONDOR_JOB_IWD/monitor_hooks.out
+exit 0 """
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
+    script_file = test_dir / "hook_monitor_exit.sh"
+    script_contents = f"""#!/bin/bash
+echo 'Saw exit' >>$_CONDOR_JOB_IWD/monitor_hooks.out
+exit 0 """
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
 #
 # Setup a personal condor with some job hooks defined.
 # The "HOLD" hooks will put the job on hold.
@@ -56,7 +76,9 @@ def condor(test_dir, write_job_hook_scripts):
             "HOLD_HOOK_PREPARE_JOB_BEFORE_TRANSFER" : test_dir / "hook_prepare_before.sh",
             "IDLE_HOOK_PREPARE_JOB_BEFORE_TRANSFER" : test_dir / "hook_prepare_before.sh",
             "HOLD_HOOK_PREPARE_JOB" : test_dir / "hook_hold_prepare.sh",
-            "IDLE_HOOK_PREPARE_JOB" : test_dir / "hook_idle_prepare.sh"
+            "IDLE_HOOK_PREPARE_JOB" : test_dir / "hook_idle_prepare.sh",
+            "MONITOR_HOOK_UPDATE_JOB_INFO" : test_dir / "hook_monitor_update.sh",
+            "MONITOR_HOOK_JOB_EXIT" : test_dir / "hook_monitor_exit.sh"
         }
     ) as condor:
         yield condor
@@ -109,6 +131,18 @@ def idlejob(condor,submit_idlejob):
     # Return the first (and only) job ad in the cluster for testing class to reference
     return submit_idlejob.query()[0]
 
+@action
+def monitorjob(condor, path_to_sleep):
+    job = condor.submit(
+            description={"executable": path_to_sleep,
+                "arguments": "0",
+                "+HookKeyword" : '"monitor"',
+                "log": "monitor_hook_job_events.log"
+                }
+    )
+    assert job.wait(condition=ClusterState.all_terminal)
+    return job
+
 class TestHookStatusCodeAndMsg:
     # Methods that begin with test_* are tests.
 
@@ -141,3 +175,8 @@ class TestHookStatusCodeAndMsg:
             assert 'So far so good' in log
             assert 'Kinda bad' in log
 
+    def test_monitor_hooks(self, monitorjob):
+        with open('monitor_hooks.out') as f:
+            log = f.read()
+            assert 'Saw update' in log
+            assert 'Saw exit' in log
