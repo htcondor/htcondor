@@ -80,7 +80,7 @@ Chirp Commands
     sensitive substring ``Chirp``.
  **ulog** *Message*
     Appends *Message* to the job event log. With this option,
-    jobs do not need ClassAd attribute ``WantIOProxy`` set if the EP is version 26 or later.
+    jobs do not need the ClassAd attribute ``WantIOProxy`` set if the EP is version 26 or later.
  **read** [**-offset** *offset*] [**-stride** *length skip*] *RemoteFileName* *Length*
     Read *Length* bytes from *RemoteFileName*. Optionally, implement a
     stride by starting the read at *offset* and reading *length* bytes
