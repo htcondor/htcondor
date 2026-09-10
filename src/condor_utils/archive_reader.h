@@ -149,6 +149,13 @@ public:
 
 	int64_t Size();
 
+	// Buffered read chunk size (bytes), shared by both directions' refills.
+	// Default matches the backward reader's historical value. Takes effect on
+	// the next chunk refill; set before the first Next() for a predictable
+	// effect. Values of 0 are ignored.
+	void   SetChunkSize(size_t bytes);
+	size_t ChunkSize() const { return m_chunk_size; }
+
 private:
 	// Parse the banner line text into ad.
 	// Extracts an optional record type as the "RecordType" string attribute,
@@ -158,8 +165,22 @@ private:
 	bool NextForward(ArchiveRecord& record);
 	bool NextBackward(ArchiveRecord& record);
 
+	// Pop the next line from the forward read-ahead buffer (offset of its first
+	// byte returned via `offset`), refilling from the file in large chunks as
+	// needed. Returns false at EOF (after returning any final line with no
+	// trailing newline) or on read error.
+	bool NextForwardLine(std::string& line, int64_t& offset);
+
 	// Populate m_bwd_buf by reading the next backward chunk from the file.
 	bool FillBackwardBuffer();
+
+	// Shared low-level chunk read: seek to `at_offset`, read up to `max_len`
+	// bytes, and append them to `out`. `bytes_read` reports how many bytes
+	// were actually read (fewer than `max_len` means EOF, not necessarily an
+	// error -- callers decide whether a short read is expected for their
+	// direction). Returns false, with m_error set, only on a genuine seek or
+	// read error.
+	bool ReadChunk(int64_t at_offset, size_t max_len, std::string& out, size_t& bytes_read);
 
 	// Pop the next line (highest file offset first) from m_bwd_buf,
 	// filling the buffer from the file as needed.
@@ -180,9 +201,19 @@ private:
 	int            m_error{0};
 	std::unique_ptr<FILE, FClose> m_file{};
 
+	// Chunk size (bytes) for ReadChunk(), shared by both directions' refills.
+	size_t m_chunk_size{8192};
+
 	// ---- forward reading ----
 	int64_t m_fwd_record_start{-1}; // offset of first body line
 	std::string    m_fwd_accumulated{};       // body lines collected so far
+
+	// Read-ahead buffer for forward line reading: refilled in large chunks via
+	// ReadChunk() rather than one byte at a time, for sequential-scan throughput.
+	std::string m_fwd_buf{};        // buffered bytes not yet split into lines
+	size_t      m_fwd_buf_pos{0};   // next unconsumed index within m_fwd_buf
+	int64_t     m_fwd_buf_base{0};  // file offset corresponding to m_fwd_buf[0]
+	bool        m_fwd_eof{false};   // underlying stream is at EOF (buffer may still hold unconsumed bytes)
 
 	// ---- backward reading ----
 	int64_t        m_bwd_pos{0};        // everything at [m_bwd_pos, EOF) already consumed
