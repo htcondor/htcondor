@@ -214,7 +214,7 @@ Eventlog Verbs
        **-\-csv**
           By default, *htcondor eventlog read* emits a table of information
           in human readable format.  With this option, the output is in
-          a command separated value format, suitable for injestion by a spreadsheet
+          a comma separated value format, suitable for ingestion by a spreadsheet
           or database.
 
        **-\-json**
@@ -225,7 +225,7 @@ Eventlog Verbs
           With a job ad attribute name, instead of one line per job, emit one line
           summarizing all jobs that share the same value for the attribute name
           given.  In the OSG, the GLIDEIN_SITE attribute is injected into all jobs,
-          so one can quickly get a count of all jobs running, idle and exitted
+          so one can quickly get a count of all jobs running, idle and exited
           per site by using this option.
 
  **htcondor eventlog histogram** *logfile*
@@ -427,7 +427,7 @@ Snake Verbs
 -----------
 
 .. warning::
-     Snakemake is not packaged with HTCondor and must be installed seperately.
+     Snakemake is not packaged with HTCondor and must be installed separately.
      See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
      the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`_
      for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
