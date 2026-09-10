@@ -15,7 +15,7 @@ Currently, there are two independent sets of hooks. One is a set of
 fetch work hooks, some of which are invoked by the *condor_startd* to
 optionally fetch work, and some are invoked by the *condor_starter*.
 See :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work` for more
-details. The other set replace functionality of the
+details. The other set replaces functionality of the
 *condor_job_router* daemon. Documentation for the
 *condor_job_router* daemon is in
 :doc:`/grid-computing/job-router`.
@@ -44,7 +44,7 @@ details. The other set replace functionality of the
 :macro-def:`STARTER_JOB_HOOK_KEYWORD`
     This can be defined to force the *condor_starter* to always use a 
     given keyword for its own hooks, regardless of the value in the 
-    job ClassAd for the :ad-attr:`HookKeyword` attribute.¬
+    job ClassAd for the :ad-attr:`HookKeyword` attribute.
 
 :macro-def:`<Keyword>_HOOK_FETCH_WORK`
     For the fetch work hooks, the full path to the program to invoke
@@ -186,7 +186,7 @@ To define a job:
   use ``BENCHMARK`` or ``SCHEDD`` in the macro name instead.)  A
   ``JobName`` identifies a specific job and must be unique.  In the rest of
   this section, where ``<JobName>`` appears in a macro name, it means to
-  replace ``<JobName>`` with one of the names :macro:`STARTD_CRON_JOBLIST`.
+  replace ``<JobName>`` with one of the names in :macro:`STARTD_CRON_JOBLIST`.
 
 * You must set :macro:`STARTD_CRON_<JobName>_EXECUTABLE`,
   and you'll probably want to set :macro:`STARTD_CRON_<JobName>_ARGS` as well.
@@ -194,8 +194,7 @@ To define a job:
 
 * You must also decide when your job will run.  By default, a job runs
   every :macro:`STARTD_CRON_<JobName>_PERIOD` seconds after the daemon
-  starts up.  You may set :macro:`STARTD_CRON_<JobName>_MODE` to change
-  to this to continuously (``WaitForExit``); on start-up (``OneShot``)
+  starts up.  You may set :macro:`STARTD_CRON_<JobName>_MODE` to change this to continuously (``WaitForExit``); on start-up (``OneShot``)
   and optionally, when the daemon is reconfigured; or as a benchmark
   (``OnDemand``).  If you do not select ``OneShot``, you must set
   :macro:`STARTD_CRON_<JobName>_PERIOD`.
@@ -381,8 +380,7 @@ are probably the most common.
     This variable controls the behavior of the daemon hook manager when
     it detects that an instance of the job's executable is still running
     as it is time to invoke the job again. If ``True``, the daemon hook
-    manager will kill the currently running job and then invoke an new
-    instance of the job. If ``False``, the existing job invocation is
+    manager will kill the currently running job and then invoke a new instance of the job. If ``False``, the existing job invocation is
     allowed to continue running.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
@@ -390,7 +388,7 @@ are probably the most common.
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 :macro-def:`STARTD_CRON_<JobName>_METRICS`
-    A space or comma -separated list. Each element in the list is a
+    A list separated by commas or spaces. Each element in the list is a
     metric type, either ``SUM`` or ``PEAK``; a colon; and a metric name.
 
     An attribute preceded by ``SUM`` is a metric which accumulates over

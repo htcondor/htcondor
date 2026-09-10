@@ -25,8 +25,13 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 		cmake_parse_arguments(${_TARGET} "CTEST;JAVA" "" "DEPENDS" ${ARGN})
 
 		if ( ${_TARGET}_CTEST )
+			# Use the NAME/COMMAND signature of add_test so that generator
+			# expressions (e.g. $<TARGET_FILE:foo>) in the arguments -- in
+			# particular in the --dependencies list -- are evaluated. The
+			# old-style add_test(<name> <command> ...) signature does NOT
+			# expand generator expressions.
 			if ( ${_TARGET}_JAVA )
-				ADD_TEST(${_TARGET} ${PYTHON3_EXECUTABLE}
+				ADD_TEST(NAME ${_TARGET} COMMAND ${PYTHON3_EXECUTABLE}
 					${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver.py
 					"--test" ${_TARGET}
 					"--working-dir" ${CMAKE_BINARY_DIR}
@@ -35,7 +40,7 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 					"--dependencies" "${${_TARGET}_DEPENDS}"
 					"--java")
 			else()
-				ADD_TEST(${_TARGET} ${PYTHON3_EXECUTABLE}
+				ADD_TEST(NAME ${_TARGET} COMMAND ${PYTHON3_EXECUTABLE}
 					${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver.py
 					"--test" ${_TARGET}
 					"--working-dir" ${CMAKE_BINARY_DIR}

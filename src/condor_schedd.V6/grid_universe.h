@@ -60,7 +60,7 @@ class GridUniverseLogic : public Service
 			int pid{0};
 			int add_timer_id{-1};
 			int remove_timer_id{-1};
-			char user[200]{""};
+			std::string user;
 		};
 
 		static gman_node_t* lookupGmanByOwner(const char* user, const char* attr_value);

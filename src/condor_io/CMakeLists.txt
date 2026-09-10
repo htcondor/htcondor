@@ -53,6 +53,6 @@ PARENT_SCOPE
 )
 
 if (NOT WINDOWS)
-	condor_exe_test(cedar_test.exe "cedar.t.unix.cpp" "${CONDOR_TOOL_LIBS}")
+	condor_exe_test(cedar_test "cedar.t.unix.cpp" "${CONDOR_TOOL_LIBS}" EXE)
 endif()
 

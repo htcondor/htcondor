@@ -25,8 +25,7 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`GRIDMANAGER_MINIMUM_PROXY_TIME`
     The minimum number of seconds before expiration of the X509 proxy
     credential for the gridmanager to continue operation. If seconds
-    until expiration is less than this number, the gridmanager will
-    shutdown and wait for a refreshed proxy credential. The default is 3
+    until expiration is less than this number, the gridmanager will shut down and wait for a refreshed proxy credential. The default is 3
     minutes (180 seconds).
 
 :macro-def:`HOLD_JOB_IF_CREDENTIAL_EXPIRES`
@@ -44,7 +43,7 @@ These macros affect the *condor_gridmanager*.
     and/or scalability, you may set this macro to a ClassAd expression.
     It will be evaluated against each grid universe job, and jobs with
     the same evaluated result will go to the same gridmanager.  For instance,
-    if you want to isolate job going to different remote sites from each
+    if you want to isolate jobs going to different remote sites from each
     other, the following expression works:
 
     .. code-block:: condor-config

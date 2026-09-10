@@ -264,7 +264,7 @@ These macros control the *condor_schedd*.
     This specifies the minimum size in bytes of a job's file transfer
     sandbox that is required before the job needs to enter the transfer
     queue. Job file transfers with a sandbox size smaller than this
-    this threshold will bypass the transfer queue and proceed
+    threshold will bypass the transfer queue and proceed
     immediately, regardless of the limits set by
     :macro:`MAX_CONCURRENT_UPLOADS` and :macro:`MAX_CONCURRENT_DOWNLOADS`.
     The default value is 100000000 (100 million bytes).
@@ -319,7 +319,7 @@ These macros control the *condor_schedd*.
     jobs waiting to transfer files within the limits set by
     :macro:`MAX_CONCURRENT_UPLOADS` and/or :macro:`MAX_CONCURRENT_DOWNLOADS`.
     When choosing a new job to allow to transfer, the first job belonging
-    to the transfer queue user who has least number of active transfers
+    to the transfer queue user who has the least number of active transfers
     will be selected. In case of a tie, the user who has least recently
     been given an opportunity to start a transfer will be selected. By
     default, a transfer queue user is identified as the job owner. A
@@ -595,12 +595,11 @@ These macros control the *condor_schedd*.
     transactions that were performed on the queue (such as new jobs
     submitted or jobs completing). Periodically, the
     *condor_schedd* will go through this log, truncate all the
-    transactions and create a new file with containing only the new
-    initial state of the log. This is a somewhat expensive operation,
+    transactions and create a new file containing only the new initial state of the log. This is a somewhat expensive operation,
     but it speeds up when the *condor_schedd* restarts since there are
     fewer transactions it has to play to figure out what state the job
     queue is really in. This macro determines how often the
-    *condor_schedd* should rework this queue to cleaning it up. It is
+    *condor_schedd* should rework this queue to clean it up. It is
     defined in terms of seconds and defaults to 28800 (every 8 hours).
 
 :macro-def:`WALL_CLOCK_CKPT_INTERVAL`
@@ -622,7 +621,7 @@ These macros control the *condor_schedd*.
     allowed to write to the queue, and also we always trust whatever the
     :ad-attr:`Owner` value is set to be by the client in the job ad. This was
     added so users can continue to use the SOAP web-services interface
-    over HTTP (w/o authenticating) to submit jobs in a secure,
+    over HTTP (without authenticating) to submit jobs in a secure,
     controlled environment - for instance, in a portal setting.
 
 :macro-def:`QUEUE_SUPER_USERS`
@@ -639,7 +638,7 @@ These macros control the *condor_schedd*.
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     on UIDs in HTCondor for more details on this. By default, the Unix user root
     and the Windows user administrator are given the ability to remove
-    other user's jobs, in addition to user condor. In addition to a
+    other users' jobs, in addition to user condor. In addition to a
     single user, Unix user groups may be specified by using a special
     syntax defined for this configuration variable; the syntax is the
     percent character (``%``) followed by the user group name. All
@@ -1297,8 +1296,7 @@ These macros control the *condor_schedd*.
        fail if the result does not convert to ``true`` or ``false``.
     -  *expression* - any expression or floating point number that is not one of the above. e.g. ``a+b``. *expression*
        values will be parsed as a classad expression and stored in the job.
-    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
-       this provides a way for admins to disable existing submit commands.
+    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. This provides a way for admins to disable existing submit commands.
     -  *undefined* - the literal ``undefined`` will be treated by :tool:`condor_submit` as if that
        attribute is not in this ad. This is intended to aid composability of this ad across multiple
        configuration files.
@@ -1333,8 +1331,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`SUBMIT_TEMPLATE_<Name>`
     A single submit template containing one or more submit commands.
-    The template can be invoked with or without arguments.  The template
-    can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
+    The template can be invoked with or without arguments.  The template can refer to arguments by number using the ``$(<N>)`` where ``<N>`` is
     a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
     ``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
     The argument number can be followed by ``?`` to test if the argument
@@ -1451,12 +1448,11 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_PROTECTED_JOB_ATTRS`
     A predefined comma and/or space separated list of attributes that
     can only be altered by the queue super-user, once they have
-    committed values. The hard-code value is empty.
+    committed values. The hard-coded value is empty.
 
 :macro-def:`ALTERNATE_JOB_SPOOL`
     A ClassAd expression evaluated in the context of the job ad. If the
-    result is a string, the value is used an an alternate spool
-    directory under which the job's files will be stored. This alternate
+    result is a string, the value is used as an alternate spool directory under which the job's files will be stored. This alternate
     directory must already exist and have the same file ownership and
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
@@ -1514,7 +1510,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`CHECKPOINT_DESTINATION_MAPFILE`
     The location on disk of the file which maps from checkpoint destinations
-    to how invoke the corresponding clean-up plug-in.  Defaults to
+    to how to invoke the corresponding clean-up plug-in.  Defaults to
     ``$(ETC)/checkpoint-destination-mapfile``.
 
 :macro-def:`AUTO_USE_FEATURE_PelicanRetryPolicy`
@@ -1537,7 +1533,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`ENABLE_HTTP_PUBLIC_FILES`
     A boolean that defaults to false.  When true, the schedd will
-    use an external http server to transfer public input file.
+    use an external http server to transfer public input files.
 
 :macro-def:`HTTP_PUBLIC_FILES_ADDRESS`
     The full web address (hostname + port) where your web server is serving files (default:

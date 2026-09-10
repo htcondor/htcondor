@@ -249,7 +249,7 @@ exe_getouterr(char *const command, char *const environment[], char **cmd_output,
 	int fdpipe_stdout[2];
 	int fdpipe_stderr[2];
 	struct pollfd pipe_poll[2];
-	int poll_timeout = 30000; /* 30 seconds by default */
+	int poll_timeout = 60000; /* 60 seconds by default */
 	pid_t pid, process_group;
 	int child_running, status, exitcode;
 	char **envcopy = NULL;

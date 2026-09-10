@@ -105,7 +105,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
-    credential_path = user_dir / "the_credential"
+    credential_path = user_dir / "the-credential"
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
@@ -118,7 +118,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the-credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -129,11 +129,11 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
 
         "transfer_input_files":     "input3.txt",
-        "use_oauth_services":       "the_credential",
+        "use_oauth_services":       "the-credential",
 
         "leave_in_queue":           True,
     }
@@ -243,7 +243,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         # Force a delay; the constant is to ensure that we would print out
         # the waiting message at least twice (if the delay remains at five
         # seconds each time).
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"big_input1.txt, big_input2.txt, debug://sleep/15"',
 
         "transfer_input_files":     "big_input3.txt",
@@ -409,7 +409,7 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"multi_input1.txt, multi_input2.txt"',
 
         "transfer_input_files":     "multi_input3.txt",
@@ -426,7 +426,7 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     job_description_b = { ** job_description_a,
         "arguments":
             f'{kill_file} multi_input4.txt multi_input5.txt multi_input6.txt',
-        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY.CommonInputCatalogs":      '"my_common_files"',
         "MY._x_catalog_my_common_files":    '"multi_input4.txt, multi_input5.txt"',
         "transfer_input_files":     "multi_input6.txt",
     }

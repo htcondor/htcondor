@@ -2,8 +2,6 @@
 
 .. _gangliad_config_options:
 
-Metricd / Gangliad Configuration Options
-========================================
 
 *condor_metricd* is an optional daemon responsible for collecting metrics
 from HTCondor daemons (via the *condor_collector*) and publishing them
@@ -40,6 +38,33 @@ no fallback between the two forms — each mode reads only its own knobs.
     in metricd mode, ``GANGLIAD_INTERVAL`` in legacy gangliad mode.
 
 :macro-def:`METRICD_VERBOSITY` / :macro-def:`GANGLIAD_VERBOSITY`
+Gangliad Configuration Options
+
+*condor_gangliad* is an optional daemon responsible for publishing
+information about HTCondor daemons to the Ganglia\ :sup:`™` monitoring
+system. The Ganglia monitoring system must be installed and configured
+separately. In the typical case, a single instance of the
+*condor_gangliad* daemon is run per pool. A default set of metrics are
+sent. Additional metrics may be defined, in order to publish any
+information available in ClassAds that the *condor_collector* daemon
+has.
+
+:macro-def:`GANGLIAD_INTERVAL`
+    The integer number of seconds between consecutive sending of metrics
+    to Ganglia. Daemons update the *condor_collector* every 300
+    seconds, and the Ganglia heartbeat interval is 20 seconds.
+    Therefore, multiples of 20 between 20 and 300 make sense for this
+    value. Negative values inhibit sending data to Ganglia. The default
+    value is 60.
+
+:macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
+    An integer value representing the minimum DMAX value for all metrics.
+    Where DMAX is the number of seconds without updating that
+    a metric will be kept before deletion. This value defaults to ``86400``
+    which is equivalent to 1 day. This value will be overridden by a
+    specific metric defined ``Lifetime`` value.
+
+:macro-def:`GANGLIAD_VERBOSITY`
     An integer that specifies the maximum verbosity level of metrics to
     be published. Basic metrics have a verbosity level of 0, which is the
     default. Additional metrics can be enabled by increasing the verbosity
@@ -65,7 +90,7 @@ no fallback between the two forms — each mode reads only its own knobs.
     A boolean value that, when ``False``, causes metrics from execute
     node daemons to not be published. Aggregate values from these
     machines will still be published. The default value is ``True``.
-    This option is useful for pools such that use glidein, in which it
+    This option is useful for pools that use glidein, in which it
     is not desired to record metrics for individual execute nodes.
 
 :macro-def:`METRICD_LOG` / :macro-def:`GANGLIAD_LOG`

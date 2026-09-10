@@ -141,6 +141,11 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
 
     std::vector<std::string> attributeList = split(attributes);
 
+    // Hardcode list of attributes to always copy over into transfers
+    attributeList.emplace_back(ATTR_PROJECT_NAME);
+    attributeList.emplace_back(ATTR_USER);
+    attributeList.emplace_back(ATTR_GLOBAL_JOB_ID);
+
     // Special case attributes to copy into all transfer records
     if( isXfer ) {
         attributeList.emplace_back(ATTR_REMOTE_HOST);

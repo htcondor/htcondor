@@ -2581,6 +2581,10 @@ int dprintf_close_logs_in_directory(const char * dir, bool permanent /*=true*/)
 	if ( ! DebugLogs) return 0;
 	int closed = 0;
 	auto_free_ptr realdir(realpath(dir, nullptr));
+	if ( ! realdir) {
+		// dir does not resolve to a real path, so no logs can be in it
+		return 0;
+	}
 	dprintf(D_FULLDEBUG, "closing logs in %s real=%s\n", dir, realdir.ptr());
 	for (auto & it : *DebugLogs) {
 		// TODO: do a better job with directory matching here?

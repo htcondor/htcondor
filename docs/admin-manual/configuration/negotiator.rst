@@ -72,7 +72,7 @@ These macros affect the *condor_negotiator*.
     sites with large number of slots, where the negotiator is running
     on a large machine, setting this to a larger value may result in
     faster negotiation times.  Setting this to more than the number
-    of cores will result in slow downs.  An administrator setting this
+    of cores will result in slowdowns.  An administrator setting this
     should also consider what other processes on the machine may need
     cores, such as the collector, and all of its forked children,
     the condor_master, and any helper programs or scripts running there.
@@ -98,8 +98,7 @@ These macros affect the *condor_negotiator*.
     Defaults to nice-user.
 
 :macro-def:`REMOTE_PRIO_FACTOR`
-    Defines the priority factor for remote users, which are those users
-    who who do not belong to the local domain. See
+    Defines the priority factor for remote users, which are those users who do not belong to the local domain. See
     :doc:`/admin-manual/cm-configuration` for details.
     Defaults to 10000000.
 
@@ -354,7 +353,7 @@ These macros affect the *condor_negotiator*.
     An integer tuning parameter used by the *condor_negotiator* to
     control the number of resource requests fetched from a
     *condor_schedd* per network round-trip. With higher values, the
-    latency of negotiation can be significantly be reduced when
+    latency of negotiation can be significantly reduced when
     negotiating with a *condor_schedd* running HTCondor version 8.3.0
     or more recent, especially over a wide-area network. Setting this
     value too high, however, could cause the *condor_schedd* to
@@ -449,7 +448,7 @@ These macros affect the *condor_negotiator*.
 
 :macro-def:`CONCURRENCY_LIMIT_DEFAULT`
     An integer value that describes the number of resources available
-    for any resources that are not explicitly named defined with the
+    for any resources that are not explicitly defined with the
     configuration variable :macro:`<NAME>_LIMIT`. If not defined, no limits
     are set for resources not explicitly identified using
     :macro:`<NAME>_LIMIT`.

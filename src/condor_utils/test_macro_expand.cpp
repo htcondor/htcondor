@@ -41,6 +41,7 @@ extern const MACRO_SOURCE DefaultMacro;
 class YourString ystr; // most recent lookup
 auto_free_ptr gstr;    // holds a pointer from the most recent lookup that should be freed
 std::string gmstr;   // holds a formatted string that results from dumping a macro set
+std::string gexcmsg; // holds most recent config exception message
 
 bool dash_verbose = false;
 int fail_count;
@@ -66,6 +67,17 @@ template <> bool within(YourString ys, const char* lb, const char* hb) {
 	} else if( verbose ) { \
 		fprintf( stdout, "    OK %5d: %s \t# %s\n", __LINE__, #condition, ystr.ptr() ? ystr.ptr() : "NULL" ); \
 	}
+
+#define REQUIRE_EXCEPT( condition, msg ) \
+	if(! ( condition ) || gexcmsg.find( #msg ) == std::string::npos ) { \
+		fprintf( stderr, "Failed %5d: %s\n", __LINE__, #condition ); \
+		fprintf( stderr, "             : actual value: %s :\n", ystr.ptr() ? ystr.ptr() : "NULL"); \
+		fprintf( stderr, "             : find '%s' in : '%s'\n",  #msg , gexcmsg.c_str()); \
+		++fail_count; \
+	} else if( verbose ) { \
+		fprintf( stdout, "    OK %5d: %s \t# %s \texcept:%s\n", __LINE__, #condition, ystr.ptr() ? ystr.ptr() : "NULL", gexcmsg.c_str() ); \
+	}
+
 
 static MACRO_DEFAULTS TestingMacroDefaults = { 0, NULL, NULL };
 static MACRO_SET TestingMacroSet = {
@@ -110,10 +122,16 @@ YourString & lookup_lcl_as(const char * local, const char * prefix, const char *
 	return ystr;
 }
 
+void CatchConfigException(const char * msg, int /*src_line*/, const char * /*src_file*/)
+{
+	gexcmsg = msg;
+}
+
 // The expand helpers return a ystr, and also store the malloc'ed return value
 // in an auto_free_ptr so that the will be automatically freed by the next REQUIRE
 //
 YourString expand(const char * value) {
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, def_ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -122,6 +140,7 @@ YourString expand(const char * value) {
 YourString expand_as(const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -130,6 +149,7 @@ YourString expand_as(const char * prefix, const char * value) {
 YourString expand_lcl(const char * local, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.localname = local;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -139,6 +159,7 @@ YourString expand_lcl_as(const char * local, const char * prefix, const char * v
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
 	ctx.localname = local;
+	gexcmsg.clear();
 	gstr.set(expand_macro(value, TestingMacroSet, ctx));
 	ystr = gstr.ptr();
 	return ystr;
@@ -291,6 +312,8 @@ static void dump_macro_set(MACRO_SET & set, std::string & str, const char * pref
 //
 void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURCE & source, bool verbose, const char * tag, const char * params, const char * expected)
 {
+	set.defaults = &TestingMacroDefaults;
+
 	int ret = Parse_config_string(source, 0, params, set, ctx);
 	const char * hashout = NULL;
 	if (ret < 0) {
@@ -298,6 +321,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "", ret);
 		gmstr.clear();
 		hashout = NULL;
+		fail_count++;
 	} else {
 		dump_macro_set(set, gmstr, "\t");
 		hashout = gmstr.c_str();
@@ -305,6 +329,7 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 			fprintf(stderr, "Failed %5d: test '%s' local=%s subsys=%s resulting hashtable does not match expected\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");
 			ret = -1;
+			fail_count++;
 		} else if (verbose) {
 			fprintf(stdout, "    OK %5d: test '%s' local=%s subsys=%s\n",
 				lineno, tag, ctx.localname ? ctx.localname : "", ctx.subsys ? ctx.subsys : "");
@@ -318,6 +343,10 @@ void testparse(int lineno, MACRO_SET & set, MACRO_EVAL_CONTEXT &ctx, MACRO_SOURC
 		fprintf(ret ? stderr : stdout, "\t---- end %d ----\n\n", lineno);
 	}
 
+	if (set.apool.contains((const char *)set.defaults)) {
+		fprintf(stderr, "ERROR: about to clear MACRO_SET defaults when it should not be!\n");
+		++fail_count;
+	}
 	clear_macro_set(set);
 }
 
@@ -551,12 +580,19 @@ void testing_$RAND_expand(bool verbose)
 	REQUIRE( within(expand("$RANDOM_INTEGER(3,9,3)"), 3, 9) );
 	REQUIRE( within(expand("$RANDOM_INTEGER(0,9,3)"), 0, 9) );
 
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER()") == "0", invalid max );
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER(a,b)") == "0", invalid max );
+	REQUIRE_EXCEPT ( expand("$RANDOM_INTEGER(6,5)") == "5", min > max );
+	REQUIRE_EXCEPT ( within(expand("$RANDOM_INTEGER(2,5,-4)"), 2, 5), invalid step );
+
 	REQUIRE( within(expand("$RANDOM_CHOICE(1,2,2,1)"), 1, 2) );
 	REQUIRE( within(expand("$RANDOM_CHOICE(aa,bb,cc)"), "aa", "cc") );
 	REQUIRE( within(expand("$RANDOM_CHOICE(List6c)"), "aa", "ff") );
 	REQUIRE( within(expand_as("MASTER", "$RANDOM_CHOICE(List6c)"), "JMK", "ZKM") );
 	REQUIRE( expand("$RANDOM_CHOICE(1)") == "1" );
 	REQUIRE( expand("$RANDOM_CHOICE(aa bb cc)") == "aa bb cc" );
+
+	REQUIRE_EXCEPT ( expand("$RANDOM_CHOICE()") == "", macro is empty );
 }
 
 void testing_$F_expand(bool verbose)
@@ -901,6 +937,13 @@ void testing_$CHOICE_expand(bool verbose)
 	REQUIRE( expand_as("MASTER", "$CHOICE(CHOCOLATE,List6c)") == "YY" );
 	REQUIRE( expand_lcl("LOWER", "$CHOICE(CHOCOLATE,List6c)") == "cc" );
 	REQUIRE( expand_lcl_as("LOWER", "MASTER", "$CHOICE(CHOCOLATE,List6c)") == "XX" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$CHOICE()") == "" , no list );
+	REQUIRE_EXCEPT( expand("$CHOICE(10,list6c)") == "" , out of range );
+	REQUIRE_EXCEPT( expand("$CHOICE(-1,list6c)") == "aa" , invalid index );
+	REQUIRE_EXCEPT( expand("$CHOICE(1,)") == "" , no list);
+
 }
 
 void testing_$SUBSTR_expand(bool verbose)
@@ -922,6 +965,11 @@ void testing_$SUBSTR_expand(bool verbose)
 	REQUIRE( expand_lcl_as("LOWER", "MASTER", "$SUBSTR(list6c,11,vanilla)") == "YY,Z" );
 	REQUIRE( expand("$SUBSTR(fileCompound,-5)") == "se.ex" );
 	REQUIRE( expand_as("MASTER", "$SUBSTR(fileCompound,standard)") == "ur/der/base.ex" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$SUBSTR(FOO)") == "" , no length );
+	REQUIRE_EXCEPT( expand("$SUBSTR(FOO,,)") == "" , invalid start index );
+
 }
 
 void testing_$STRING_expand(bool verbose)
@@ -951,6 +999,10 @@ void testing_$STRING_expand(bool verbose)
 	REQUIRE( expand("$STRING(Items6,%20s)") == "   aa bb cc dd ee ff" );
 	REQUIRE( expand("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
 	REQUIRE( expand("$STRING(Items6,%10.10s)") == "aa bb cc d" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$STRING(FOO,%f)") == "%f" , not a valid format );
+
 }
 
 void testing_$INT_expand(bool verbose)
@@ -973,6 +1025,13 @@ void testing_$INT_expand(bool verbose)
 	REQUIRE( expand("$INT(VANILLA,_%04u_)") == "_0005_" );
 	REQUIRE( expand("$INT(DoubleVanilla,%d)") == "10" );
 	REQUIRE( expand_lcl("LOWER","$INT(DoubleVanilla,%02d)") == "08" );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$INT()") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$INT(items6)") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$INT(vanilla,%f)") == "%f" , not a valid format );
+	REQUIRE_EXCEPT( expand("$INT(FOO,%f)") == "%f" , not a valid format );
+
 }
 
 void testing_$REAL_expand(bool verbose)
@@ -991,6 +1050,13 @@ void testing_$REAL_expand(bool verbose)
 	REQUIRE( expand("$REAL(BackgroundLoad)") == "0.3" );
 	REQUIRE( expand("$REAL(BackgroundLoad,%g)") == "0.3" );
 	REQUIRE( within(expand("$REAL(BackgroundLoad,%e)"), "3.000000e-0001", "3.000000e-01") );
+
+	// exception cases
+	REQUIRE_EXCEPT( expand("$REAL()") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$REAL(items6)") == "" , does not evaluate );
+	REQUIRE_EXCEPT( expand("$REAL(vanilla,%d)") == "%d" , not a valid format );
+	REQUIRE_EXCEPT( expand("$REAL(FOO,%d)") == "%d" , not a valid format );
+
 }
 
 void testing_$EVAL_expand(bool verbose)
@@ -1115,6 +1181,7 @@ int main( int /*argc*/, const char ** argv) {
 
 	ClassAdReconfig();
 
+	_EXCEPT_Reporter = CatchConfigException;
 	TestingMacroSet.defaults->size = param_info_init((const void**)&TestingMacroSet.defaults->table);
 	TestingMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 

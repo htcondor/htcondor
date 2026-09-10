@@ -272,6 +272,10 @@ class TestSharedPortHTTPForwarding:
 
     def test_https_is_forwarded(self, shared_port_port, domain_socket_server, ssl_context):
         client_ctx = ssl.create_default_context()
+        # ssl.TLSVersion / SSLContext.minimum_version were added in Python 3.7;
+        # skip on older interpreters (e.g. the Python 3.6 on AlmaLinux 8).
+        if hasattr(ssl, "TLSVersion"):
+            client_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         client_ctx.check_hostname = False
         client_ctx.verify_mode = ssl.CERT_NONE
 

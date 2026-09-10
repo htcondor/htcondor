@@ -574,11 +574,26 @@ endif()
 set(CMAKE_MACOSX_RPATH OFF)
 
 if (WITH_ADDRESS_SANITIZER)
-	# Condor daemons dup stderr to /dev/null, so to see output need to run with
-	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
-	add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	if (WINDOWS)
+		# MSVC's AddressSanitizer.  The compiler flag is /fsanitize=address
+		# (cl.exe also accepts the '-' form) and it auto-links the ASan runtime
+		# import libs, so no explicit linker flag is needed to enable it.  It is
+		# however incompatible with the /RTC runtime checks and with incremental
+		# linking, both of which the multi-config Debug flags turn on by default,
+		# so strip /RTC from the Debug flags and force /INCREMENTAL:NO.  At run
+		# time clang_rt.asan_dynamic-x86_64.dll must be on PATH beside the
+		# binaries (the CI workflow copies it out of the VS toolchain).
+		string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+		string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}")
+		add_compile_options(/fsanitize=address)
+		add_link_options(/INCREMENTAL:NO)
+	else()
+		# Condor daemons dup stderr to /dev/null, so to see output need to run with
+		# ASAN_OPTIONS="log_path=/tmp/asan" condor_master
+		add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	endif()
 endif()
 
 if (WITH_UB_SANITIZER)

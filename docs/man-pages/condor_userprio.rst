@@ -71,6 +71,13 @@ Edit Options
  **-setfactor** *submitter* *value*
     Set the priority factor of the submitter specified by *submitter*
     to the specified *value*.
+    When combined with **-duration**, the priority factor is set as a
+    temporary *lease*: at the next negotiation cycle on or after
+    *seconds* have elapsed, the priority factor is automatically
+    restored to its prior value.  Lease state is persistent across a
+    *condor_negotiator* restart.  It is an error to set a lease while
+    one is already in effect for the same submitter; cancel the
+    existing lease first with **-cancelfactorlease**.
  **-setprio** *submitter* *value*
     Set the real priority of the submitter specified by *submitter*
     to the specified *value*.
@@ -88,18 +95,34 @@ Edit Options
     effect for the same submitter; cancel the existing lease first
     with **-cancelceilinglease**.
  **-duration** *seconds*
-    Only valid with **-setceiling**.  Make the ceiling a lease that
-    expires after *seconds* seconds, at which point the prior ceiling
-    is restored.
+    Only valid with **-setceiling**, **-setfloor**, or **-setfactor**.
+    Make the corresponding value a lease that expires after *seconds*
+    seconds, at which point the prior value is restored.
  **-cancelceilinglease** *submitter*
     Cancel an in-effect ceiling lease for *submitter*, immediately
     restoring the ceiling value that was in effect before the lease
     was set.  It is an error if no lease is in effect.
+ **-cancelfloorlease** *submitter*
+    Cancel an in-effect floor lease for *submitter*, immediately
+    restoring the floor value that was in effect before the lease
+    was set.  It is an error if no lease is in effect.
+ **-cancelfactorlease** *submitter*
+    Cancel an in-effect priority-factor lease for *submitter*,
+    immediately restoring the priority factor that was in effect
+    before the lease was set.  It is an error if no lease is in
+    effect.
  **-setfloor** *submitter* *value*
     Set the floor for the submitter specified by *submitter* to the
     specified *value*. Where *value* is the sum of the SlotWeight
     of all running jobs (See :macro:`SLOT_WEIGHT`).
     Setting the floor to 0 clears any previously set floor.
+    When combined with **-duration**, the floor is set as a temporary
+    *lease*: at the next negotiation cycle on or after *seconds* have
+    elapsed, the floor is automatically restored to its prior value.
+    Lease state is persistent across a *condor_negotiator* restart.
+    It is an error to set a lease while one is already in effect for
+    the same submitter; cancel the existing lease first with
+    **-cancelfloorlease**.
 
 Display Options
 ~~~~~~~~~~~~~~~

@@ -594,7 +594,7 @@ Job Id: 11.cream-12.pd.infn.it
 			}
 			do_log(debuglogfile, debug, 3, "%s: line in IntStateQuery is:%s\n",argv0,line);
 			now=time(0);
-			string_now=make_message("%d",now);
+			string_now=make_message("%ld",(long)now);
 			if(line && strstr(line,"Job Id: ")){
 				if(!first && en.status!=UNDEFINED && ren && ren->status!=REMOVED && ren->status!=COMPLETED){
                         		if ((ret=job_registry_update_recn_select(rha, &en, ren->recnum,
@@ -849,7 +849,7 @@ Job: 13.cream-12.pd.infn.it
 				}
                         	do_log(debuglogfile, debug, 3, "%s: line in FinalStateQuery is:%s\n",argv0,line);
 				now=time(0);
-				string_now=make_message("%d",now);
+				string_now=make_message("%ld",(long)now);
 				if(line && (strstr(line,"Job deleted") || (strstr(line,"dequeuing from") && strstr(line,"state RUNNING")))){	
 					maxtok_t = strtoken(line, ' ', &token);
 					timestamp=make_message("%s %s",token[0],token[1]);

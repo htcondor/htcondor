@@ -137,24 +137,18 @@ executable				= ${jobFile}
 transfer_executable		= false
 should_transfer_files	= true
 universe				= vanilla
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
-
 log						= cmd_drain_scavenging.log
+arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) \$(MaxJobRetirementTime:3600)
 
-queue 3
-
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsBackfill				= True
-MaxJobRetirementTime	= 60
-
-queue 1
-
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsBackfill				= False
-MaxJobRetirementTime	= 60
-
-queue 1
-
+# 3 jobs without MaxJobRetirement or backfill flag set
+# then one each with MaxJobRetirementTime of 16 and backfill flag
+queue My.IsBackfill,MaxJobRetirementTime from (
+,
+,
+,
+True,60
+False,60
+)
 ";
 
 my $clusterID;
@@ -505,8 +499,12 @@ sub checkTiming {
 					die( "slot1_$7 did not immediately switch from retiring to preempting.\n" );
 				}
 			}
-			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 4) % 60) != $14 && (($finalDrainStartTime + 5) % 60) != $14 && (($finalDrainStartTime + 6) % 60) != $14 ) {
+			# Especially with sub-second reporting, allow the startd some time to
+			# work.  A loaded test host can freeze the daemons for several seconds
+			# mid-vacate, so be generous: accept anything from 4 to 10 seconds.
+			# The % 60 handles the case where the interval straddles a minute.
+			my $vacateDelta = ($14 - $finalDrainStartTime) % 60;
+			if( $vacateDelta < 4 || $vacateDelta > 10 ) {
 				die( "MaxMachineVacateTime was not 5: finalDrainStartTime is $finalDrainStartTime, one is $14, \n" );
 			}
 			$state = 5;

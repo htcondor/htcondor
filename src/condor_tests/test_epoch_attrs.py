@@ -76,6 +76,10 @@ def the_completed_job(the_test_name, the_condor, path_to_sleep, test_dir):
             "output_destination": "null://input.txt",
             "My.TestAttr1": 10,
             "My.TestAttr2": False,
+            # So ProjectName/DAGManJobId/DAGNodeName are present to be copied into epoch records.
+            "project_name": "TestProject",
+            "My.DAGManJobId": 1,
+            "My.DAGNodeName": '"TestNode"',
         },
         count=1,
     )
@@ -141,19 +145,22 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
 EXPECTED_ALL_RECORDS = [ "RunInstanceID", "EpochAdType", "EpochWriteDate", "Owner", "ClusterId", "ProcId" ]
 EXPECTED_TRANSFER_RECORDS = [ "TransferClass", "RemoteHost" ]
 
+# Always copied into INPUT/OUTPUT/CHECKPOINT/COMMON records, regardless of *_JOB_ATTRS. Not SPAWN.
+ALWAYS_COPIED_RECORDS = [ "GlobalJobId", "User", "ProjectName" ]
+
 ALWAYS_KEYS = {
-    "INPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "InputPluginResultList", "InputPluginInvocations" ],
-    "OUTPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "OutputPluginResultList",  "OutputPluginInvocations" ],
-    "CHECKPOINT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "CheckpointPluginResultList", "CheckpointPluginInvocations" ],
+    "INPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + ALWAYS_COPIED_RECORDS + [ "InputPluginResultList", "InputPluginInvocations" ],
+    "OUTPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + ALWAYS_COPIED_RECORDS + [ "OutputPluginResultList",  "OutputPluginInvocations" ],
+    "CHECKPOINT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + ALWAYS_COPIED_RECORDS + [ "CheckpointPluginResultList", "CheckpointPluginInvocations" ],
     "SPAWN": EXPECTED_ALL_RECORDS + [ "NumShadowStarts", "ShadowBday" ],
 }
 
 
 # We could generate this by interrogating the param table.
 DEFAULT_KEYS = {
-    "INPUT": [ "NumShadowStarts" ],
-    "OUTPUT": [ "NumShadowStarts" ],
-    "CHECKPOINT": [ "NumShadowStarts" ],
+    "INPUT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
+    "OUTPUT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
+    "CHECKPOINT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
     "SPAWN": [],
 }
 

@@ -56,8 +56,7 @@ public:
     // Status and Monitoring Operations
     bool writeStatusAndData(const Status& status, const StatusData& statusData, bool rotateStatusData = false);
     bool maybeRecoverStatusAndFiles(std::map<std::string, ArchiveFile>& archiveFiles,
-                                    StatusData& statusData,
-                                    const std::string& directory);
+                                    StatusData& statusData);
 
     // WAL Management
     bool checkpointWAL();

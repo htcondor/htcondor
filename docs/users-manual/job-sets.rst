@@ -14,7 +14,7 @@ Job Sets
 Multiple jobs that share
 a common set of input files and/or arguments and/or index values, etc.,
 can be organized and submitted as a **job set**
-:index:`job set<single: job_set; definition>`).
+:index:`job set<single: job_set; definition>`.
 For example, if you have 10 sets of measurements
 that you are using as input to two different models,
 you might consider submitting a job set
@@ -77,10 +77,10 @@ Job set names are used to check the status of sets or to remove sets.
 The **iterator** of a job set is used to describe the shared values
 and the values' associated variable names
 that are used by the jobs in the job set.
-Multiple iterator types are planned to be supported by HTCondor.
-As of HTCondor 9.4.0, only the *table* iterator type is available.
+HTCondor plans to support multiple iterator types.
+Currently, only the *table* iterator type is available.
 
-The *table* iterator type works similar
+The *table* iterator type works similarly
 to the ``queue <list of varnames> from <file name or list of items>`` syntax
 used by :tool:`condor_submit` description files.
 A table contains comma-separated columns (one per named variable)
@@ -121,7 +121,7 @@ your iterator would be:
 
     iterator = table inputfile,foo,bar input_description.txt
 
-Or you could put this table directly inside in the job set description file:
+Or you could put this table directly inside the job set description file:
 
 .. code-block:: condor-submit
 
@@ -132,7 +132,7 @@ Or you could put this table directly inside in the job set description file:
         input_D.txt,1,1
     }
 
-Each **job** in a job set is a HTCondor job
+Each **job** in a job set is an HTCondor job
 and is described using the :tool:`condor_submit` submit description syntax.
 A job description can reference one or more
 of the variables described by the job set iterator.
@@ -175,11 +175,11 @@ Your *job* descriptions could look like:
        transfer_input_files = $(inputfile)
    }
 
-Note how in the second job above that there is no ``queue`` statement.
+Note that the second job above has no ``queue`` statement.
 Job description queue statements
 are disregarded when using job sets.
 Instead, the number of jobs queued
-are based on the *iterator* of the job set.
+is based on the *iterator* of the job set.
 For the *table iterator*, the number of jobs queued
 will be the number of rows in the table.
 

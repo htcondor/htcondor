@@ -525,6 +525,12 @@ GROUPBY_AD_KEY_TO_ATTRIBUTE = {v: k for k, v in GROUPBY_ATTRIBUTE_TO_AD_KEY.item
 
 HALF_A_SECOND = 500 / 1000
 
+# Escape sequences to switch to/from the "alternate screen" buffer, the same
+# mechanism `less` and other full-screen programs use so that the terminal
+# returns to its prior contents once the program exits.
+ALT_SCREEN_ENTER = "\033[?1049h\033[H"
+ALT_SCREEN_EXIT = "\033[?1049l"
+
 
 def watch_q(
     users=None,
@@ -589,6 +595,34 @@ def watch_q(
         exit_check = EXIT_JOB_STATUS_CHECK[checker.lower()]
         exit_checks.append((exit_grouper, exit_check, exit_status, disp))
 
+    # When refreshing in place (i.e. on a tty), draw into the terminal's
+    # "alternate screen" buffer so that quitting restores whatever was on the
+    # console before condor_watch_q started, the way `less` behaves.
+    refresh = refresh and sys.stdout.isatty()
+
+    in_alt_screen = False
+
+    def leave_alt_screen():
+        nonlocal in_alt_screen
+        if in_alt_screen:
+            sys.stdout.write(ALT_SCREEN_EXIT)
+            sys.stdout.flush()
+            in_alt_screen = False
+
+    if refresh:
+        sys.stdout.write(ALT_SCREEN_ENTER)
+        sys.stdout.flush()
+        in_alt_screen = True
+
+        import signal
+
+        def _handle_exit_signal(signum, frame):
+            leave_alt_screen()
+            raise KeyboardInterrupt
+
+        for _sig in ("SIGTERM", "SIGHUP", "SIGQUIT"):
+            if hasattr(signal, _sig):
+                signal.signal(getattr(signal, _sig), _handle_exit_signal)
     try:
         msg, move, clear = None, None, None
         batch_name_to_nodes_total, cluster_ids_with_nodes_total = find_nodes_total(
@@ -717,6 +751,9 @@ def watch_q(
 
             for grouper, checker, exit_status, disp in exit_checks:
                 if grouper((checker(s) for s in tracker.job_states)):
+                    # Restore the original screen before printing the reason so
+                    # it remains visible after we exit.
+                    leave_alt_screen()
                     print(
                         'Exiting with code {} because of condition "{}" at {}'.format(
                             exit_status, disp, now
@@ -729,7 +766,10 @@ def watch_q(
 
             time.sleep(args.interval)
     except KeyboardInterrupt:
-        sys.exit(0)
+        pass
+    finally:
+        leave_alt_screen()
+    sys.exit(0)
 
 
 PROJECTION = [

@@ -1995,6 +1995,16 @@ int TransformClassAd (
 
 	xfm.rewind();
 	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ParseRulesCallback, &args);
+
+	// Errors in the macro set come from errors in $ expansion functions.
+	// These might not fail the transform, but should be reported since they are bugs in the transform.
+	// note that we report only the last macroset error here and clear all macroset errors.
+	if ((flags&XFORM_UTILS_LOG_MACRO_ERRS) && mset.macros().errors && mset.macros().errors->message()) {
+		// TODO: figure out how to report the line number of the transform, maybe move this into Parse_macros ?
+		dprintf(D_ALWAYS, "ERROR in transform %s : %s\n", xfm.getName(), mset.macros().errors->message());
+		mset.macros().errors->clear();
+	}
+
 	if (rval) {
 		if (flags&XFORM_UTILS_LOG_ERRORS) {
 			args.fnlog(args, true, "Transform of ad %s failed!\n", "");

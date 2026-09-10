@@ -430,7 +430,7 @@ ClassAd * BrokenItem::new_context_ad() const
 		for (auto const & attr : attrs) {
 			classad::Value val;
 			if (b_context->EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
-				ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
+				std::ignore = ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
 			}
 		}
 	}
@@ -873,6 +873,10 @@ ResMgr::init_resources( void )
 	// register the "#coloring" namespace for extra ads for use by Starters
 	auto * coloringBaseAd = new StartdNamedClassAd(COLORING_NAMESPACE, nullptr, nullptr);
 	adlist_register(coloringBaseAd);
+
+	// register the '#catalog' namespace for extra ads for use by Starters
+	auto * catalogBaseAd = new StartdNamedClassAd(CATALOG_NAMESPACE, nullptr, nullptr);
+	adlist_register(catalogBaseAd);
 }
 
 
@@ -3566,6 +3570,16 @@ ResMgr::rebootAfterRehome(const std::string &reboot_command)
 	dprintf(D_ALWAYS,
 		"rehome: host will reboot via '%s' once all claims have been evicted\n",
 		reboot_command.c_str());
+
+		// Mark every slot unavailable (Requirements -> False) now that a
+		// reboot is pending -- rehomeRebootPending() drives reqexp_restore()
+		// into the UNAVAIL_REQ state, the same way draining and shutdown do.
+		// Without this the negotiator immediately rematches the jobs we just
+		// evicted back onto this host, "all claims evicted" is never reached,
+		// and the reboot never fires.  update_all() pushes the now-unavailable
+		// slot ads to the collector so the next negotiation cycle skips us.
+	walk([](Resource* rip) { rip->reqexp_restore(); });
+	update_all();
 
 		// If nothing is running we can reboot right away.
 	checkForRehomeReboot();

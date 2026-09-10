@@ -20,6 +20,8 @@ from libcontainer import (
     SingularityIsWorthy,
     UserNamespacesFunctional,
     SingularityIsWorking,
+    make_empty_sif,
+    EMPTY_SIF_BIND_EXPR,
 )
 
 import htcondor2
@@ -27,12 +29,9 @@ import htcondor2
 
 @action
 def the_container_image(test_dir, pytestconfig):
-    # This is a gross hack.
-    ctest_path = test_dir / ".." / "busybox.sif"
-    if ctest_path.exists():
-        return ctest_path
-    else:
-        return Path(pytestconfig.rootdir) / "busybox.sif"
+    sif = make_empty_sif(test_dir / "busybox.sif")
+    assert sif is not None
+    return sif
 
 
 #
@@ -41,7 +40,7 @@ def the_container_image(test_dir, pytestconfig):
 #
 # * the number of common transfers (0, 1, many = 2), including
 #   1 - `MY.CommonInputFiles`
-#   2 - `_x_common_input_catalogs`
+#   2 - `CommonInputCatalogs`
 #   3 - `container_image`, with the appropriate config knobs set;
 # * the protocol(s) being used (CEDAR, other, or both); and
 # * the number of fall-back transfers (0, 1, many = 2).
@@ -82,6 +81,10 @@ TEST_CASES = {
 
     # We'll skip to the most complicated test case; we can fill in the other
     # cases if this one fails but none of the other ones do.
+    #
+    # (As a result of sequential common file transfer, this test no longer
+    # transfers each catalog twice; if that's desirable, see one of the other
+    # test cases for how to arrange it (KEEP_DATA_CLAIM_IDLE).)
     "three_cxfers_2_double": {
         'submit_commands':      {
             'MY.CommonInputFiles':              '"{path_to_common_input}, file://{path_to_common_input}.0"',
@@ -89,7 +92,7 @@ TEST_CASES = {
             'container_image':                  'file://{the_container_image}',
             'container_is_common':              'True',
 
-            'MY._x_common_input_catalogs':      '"A, B, condor_container_image"',
+            'MY.CommonInputCatalogs':           '"A, B, container_busybox_sif"',
             'MY._x_catalog_A':                  '"file://{path_to_common_input}.1, {path_to_common_input}.2"',
             'MY._x_catalog_B':                  '"file://{path_to_common_input}.3, {path_to_common_input}.4"',
         },
@@ -98,22 +101,18 @@ TEST_CASES = {
             {'CommonPluginResultList'},
             {'CommonPluginResultList'},
             {'CommonPluginResultList'},
-            {'CommonPluginResultList'},
-            {'CommonPluginResultList'},
-            {'CommonPluginResultList'},
-            {'CommonPluginResultList'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
         ],
-        'expected_cts_output': 'Cluster {clusterID}: required 6357200 total bytes in common files (as 794650 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 1589300 bytes, skipping 4767900 bytes, or 75% of the total.',
+        'expected_cts_output': 'Cluster {clusterID}: required 360656 total bytes in common files (as 45082 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 45082 bytes, skipping 315574 bytes, or 87% of the total.',
     },
 }
 
@@ -148,7 +147,7 @@ SKIPPED_TEST_CASES = {
 
     "one_cxfer_cedar_2": {
         'submit_commands':      {
-            'MY._x_common_input_catalogs':      '"A"',
+            'MY.CommonInputCatalogs':      '"A"',
             'MY._x_catalog_A':                  '"{path_to_common_input}"',
         },
         'expected_common_ads':   [
@@ -156,14 +155,14 @@ SKIPPED_TEST_CASES = {
             {'CedarSizeBytes'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
         ],
         'expected_cts_output': 'Cluster {clusterID}: required 168 total bytes in common files (as 21 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 42 bytes, skipping 126 bytes, or 75% of the total.',
         'fall_back_transfers':  0,
@@ -180,14 +179,14 @@ SKIPPED_TEST_CASES = {
             {'CedarSizeBytes'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
         ],
         'expected_cts_output': 'Cluster {clusterID}: required 6356992 total bytes in common files (as 794624 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 1589248 bytes, skipping 4767744 bytes, or 75% of the total.',
         'fall_back_transfers':  0,
@@ -218,7 +217,7 @@ SKIPPED_TEST_CASES = {
 
     "one_cxfer_file_2": {
         'submit_commands':      {
-            'MY._x_common_input_catalogs':      '"A"',
+            'MY.CommonInputCatalogs':      '"A"',
             'MY._x_catalog_A':                  '"file://{path_to_common_input}"',
         },
         'expected_common_ads':   [
@@ -226,14 +225,14 @@ SKIPPED_TEST_CASES = {
             {'CommonPluginResultList'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_A'},
         ],
         'expected_cts_output': 'Cluster {clusterID}: required 168 total bytes in common files (as 21 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 42 bytes, skipping 126 bytes, or 75% of the total.',
         'fall_back_transfers':  0,
@@ -250,14 +249,14 @@ SKIPPED_TEST_CASES = {
             {'CommonPluginResultList'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
-            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif'},
         ],
         'expected_cts_output': 'Cluster {clusterID}: required 6356992 total bytes in common files (as 794624 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 1589248 bytes, skipping 4767744 bytes, or 75% of the total.',
         'fall_back_transfers':  0,
@@ -336,9 +335,11 @@ def the_condor(test_dir):
             'NUM_CPUS':                         4,
             'STARTER_TEST_SANDBOX_TIMEOUT':     50,
             'SINGULARITY':                      '/usr/bin/singularity',
+            'SINGULARITY_BIND_EXPR':            f'"{EMPTY_SIF_BIND_EXPR}"',
             'STARTER_LOG_NAME_APPEND':          'JobID',
-            'STARTER_DEBUG':                    'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
-            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
+            'STARTER_DEBUG':                    'D_CATEGORY D_SUBSECOND D_FULLDEBUG D_ZKM D_TEST',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG D_ZKM D_TEST',
+            'SCHEDD_DEBUG':                     'D_CATEGORY D_SUBSECOND D_FULLDEBUG',
         },
     ) as the_condor:
         yield the_condor

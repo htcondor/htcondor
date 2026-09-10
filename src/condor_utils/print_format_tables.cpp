@@ -422,6 +422,7 @@ bool render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt
 		{ TRANSFERRING_OUTPUT, "XFER_OUT" },
 		{ JOB_STATUS_FAILED, "FAILED" },
 		{ JOB_STATUS_BLOCKED, "BLOCKED" },
+		{ JOB_STATUS_PREPARING, "PREPARING" },
 	};
 	for (size_t ii = 0; ii < COUNTOF(states); ++ii) {
 		if (jobStatus == states[ii].status) {
@@ -554,6 +555,7 @@ const char * format_job_status_raw (long long job_status, Formatter &)
 	case SUSPENDED: return "Suspend";
 	case JOB_STATUS_FAILED: return "Failed ";
 	case JOB_STATUS_BLOCKED: return "Blocked";
+	case JOB_STATUS_PREPARING: return "Preparing";
 	default:        return "Unk    ";
 	}
 }
@@ -567,9 +569,10 @@ const char * format_job_status_char (long long status, Formatter & /*fmt*/)
 	case RUNNING:   ret = "R"; break;
 	case REMOVED:   ret = "X"; break;
 	case COMPLETED: ret = "C"; break;
+	case TRANSFERRING_OUTPUT: ret = ">"; break;
 	case JOB_STATUS_FAILED: ret = "F"; break;
 	case JOB_STATUS_BLOCKED: ret = "B"; break;
-	case TRANSFERRING_OUTPUT: ret = ">"; break;
+	case JOB_STATUS_PREPARING: ret = "P"; break;
 	}
 	return ret;
 }

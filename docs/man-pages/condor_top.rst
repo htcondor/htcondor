@@ -63,41 +63,49 @@ schedd twice. This mode disables live output, cannot be combined with
 file input, and ignores the **-p** option because the data are sourced
 locally.
 
-The following subprocess stat columns may be displayed (\*default):
+The following subprocess stat columns may be displayed (\*default).
+Each column is printed with a three-row header followed by a horizontal
+rule separating the header from the data. The first header row names the
+time scope (``Recent`` = between the two ClassAds, ``Lifetime``/``Total``
+= since daemon start), the second names the metric, and the third gives
+the units (``s`` = seconds, ``#`` = count, ``/s`` = count per second,
+``%`` = percentage). The displayed header is shown in quotes below; the
+identifier following it is the name to pass to the **-s** option to sort
+by that column.
 
- Item
+ "Name" (``Item``)
     \*Name of the subprocess
- InstRt
+ "Recent Runtime" (``InstRt``)
     \*Total runtime between the two ClassAds
- InstAvg
+ "Recent Avg" (``InstAvg``)
     \*Mean runtime per execution between the two ClassAds
- TotalRt
+ "Total Runtime" (``TotalRt``)
     Total runtime since daemon start
- TotAvg
+ "Lifetime Avg" (``TotAvg``)
     \*Mean runtime per execution since daemon start
- TotMax
+ "Lifetime Max" (``TotMax``)
     \*Max runtime per execution since daemon start
- TotMin
+ "Lifetime Min" (``TotMin``)
     Min runtime per execution since daemon start
- RtPctAvg
+ "Pct of Avg" (``RtPctAvg``)
     \*Percent of mean runtime per execution. The ratio of InstAvg to
     TotAvg, expressed as a percentage
- RtPctMax
+ "Pct of Max" (``RtPctMax``)
     Percent of max runtime per execution. The ratio of (InstAvg -
     TotMin) to (TotMax - TotMin), expressed as a percentage
- RtSigmas
+ "Std Devs" (``RtSigmas``)
     Standard deviations from mean runtime. The ratio of (InstAvg -
     TotAvg) to the standard deviation in runtime per execution since
     daemon start
- InstCt
+ "Recent Count" (``InstCt``)
     Executions between the two ClassAds
- InstRate
+ "Recent Rate" (``InstRate``)
     \*Executions per second between the two ClassAds
- TotalCt
+ "Total Count" (``TotalCt``)
     Total executions (counts) since daemon start
- AvgRate
+ "Lifetime Rate" (``AvgRate``)
     \*Mean count rate. Executions per second since daemon start
- CtPctAvg
+ "Pct of Rate" (``CtPctAvg``)
     Percent of mean count rate. The ratio of InstRate to AvgRate,
     expressed as a percentage.
 

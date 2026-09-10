@@ -365,7 +365,9 @@ int MyAsyncFileReader::check_for_read_completion()
 	// if we have not failed, have not yet closed the file, have no pending reads
 	// try and queue a new read.
 	if ( ! error && ! ab.aio_buf && fd != FILE_DESCR_NOT_SET) {
-		queue_next_read();
+		// queue_next_read() records any failure in the error member, which
+		// we return below, so there is nothing extra to check here.
+		std::ignore = queue_next_read();
 	}
 
 	// return the current error/success state.

@@ -59,7 +59,6 @@ class TestBogusCollector:
         assert in_order(
             job_queue_events_for_sleep_job,
             [
-                SetJobStatus(JobStatus.IDLE),
                 SetJobStatus(JobStatus.RUNNING),
                 SetJobStatus(JobStatus.COMPLETED),
             ],

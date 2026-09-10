@@ -123,23 +123,32 @@ typedef struct macro_eval_context {
 	const char *subsys{nullptr};  // default subsys prefix
 	const char *cwd{nullptr};     // current working directory, used for $F macro expansion
 	char without_default{0};
-	char use_mask{0};
+	char use_mask{0}; // see um_* flags defined below.
 	char also_in_config{0}; // also do lookups in the config hashtable (used by submit)
 	char is_context_ex{0};
 
-	void init(const char * sub, char mask=2) {
+	// use_mask flags
+	enum : char {
+		um_COUNT_USES = 0x01,
+		um_COUNT_REFS = 0x02,
+		um_COUNT_USES_AND_REFS = 0x03,
+		um_ALLOW_EXCEPT = 0x40,
+	};
+	bool allow_except() { return (use_mask & um_ALLOW_EXCEPT) != 0; }
+	void init(const char * sub, char mask=um_COUNT_REFS) {
 		cwd = subsys = localname = nullptr;
-		is_context_ex = also_in_config = use_mask = without_default = 0;
+		is_context_ex = also_in_config = without_default = 0;
 		this->subsys = sub;
 		this->use_mask = mask;
 	}
+	void might_EXCEPT(MACRO_SET& mset, const char * cppfile, int line, const char * fmt, ...);
 } MACRO_EVAL_CONTEXT;
 
 typedef struct macro_eval_context_ex : macro_eval_context {
 	// to do lookups of last resort into the given Ad, set these. they are useually null.
 	const char *adname{nullptr}; // name prefix for lookups into the ad
 	const ClassAd * ad{nullptr}; // classad for lookups
-	void init(const char * sub, char mask=2) {
+	void init(const char * sub, char mask=um_COUNT_REFS) {
 		adname = nullptr;
 		ad = nullptr;
 		macro_eval_context::init(sub, mask);
@@ -175,6 +184,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
 		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
 		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		char * get() { return p; }                 // for compat with unique_ptr
+		char * release() { return detach(); }      // for compat with unique_ptr
+		const char * c_str() { return p?p:""; }    // return a printable pointer
 		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
 		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
 	private:
@@ -193,7 +205,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// param table.
 	bool param_defined_by_config(const char* name);
 	const char * param_unexpanded(const char *name);
-	char* param_or_except( const char *name );
 	int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
@@ -259,6 +270,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 								const MACRO_META **ppmet);
 
 	MACRO_SET * param_get_macro_set();
+	void init_param_context(MACRO_EVAL_CONTEXT & ctx);
 
 	// lookup "name" in ALL of relevant tables as indicated by the MACRO_EVAL_CONTEXT.
 	// as soon as an item is found (even an empty item) lookup stops.  the lookup order is
@@ -325,16 +337,48 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
 	// returns the number of macros that were skipped.
 	// used by submit_utils to selectively expand submit hash keys when creating the submit digest
-	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of skipped or < 0 for expansion error
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set,
+		MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
-	// returns the number of $() and $func() patterns that were skipped.
-	unsigned int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of $() and $func() patterns that were skipped or < 0 for expansion error
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the config
 	// returns the number of $() and $func() patterns that were skipped
 	// used by submit_utils to selectively submit templates against the config at load time
-	unsigned int expand_defined_config_macros (std::string &value);
+	// returns number of macros skipped or < 0 for expansion error
+	int expand_defined_config_macros (std::string &value);
+
+	// used to return pointers to a config macro
+	//
+	//  input                         right
+	//      |                         |
+	//      aaaa$ENV(PARAM:DEFAULTVAL)bbbb
+	//          |    |
+	//       left    body
+	//
+	struct UNEXPANDED_MACRO_EXTENTS {
+		const char* left{nullptr}; const char* body{nullptr}; const char*right{nullptr};
+		void clear() { left = body = right = nullptr; }
+	};
+	// scan a string for macros and return the start and end of the next one
+	// finds all $() $func() and $$ macros, including $(dollar)
+	// returns
+	//    0 if no next macro
+	//  < 0 for $ and $$
+	//  > 0 for $func
+	//  extent is set to point the the macro
+	// the use case for this function is when you want to split a string without splitting any of the macros.
+	int next_unexpanded_macro(const char * value, size_t pos, UNEXPANDED_MACRO_EXTENTS &extent);
+
+	// returns true if the input string has any unexpanded macros
+	// if ignore_dollor is true, then *any* macro including $(dollor)
+	// if false, then only config macros $(), $func and $$ are reported
+	bool has_unexpanded_macros(const char * value, bool ignore_dollor);
 
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does
@@ -387,6 +431,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	#define CONFIG_OPT_WANT_EXCEPT 0x400 // default to EXCEPT for errors in config (number of args for $CHOICE, etc)
 	#define CONFIG_OPT_USE_THIS_ROOT_CONFIG 0x800 // use the root config file specified in the last argument of real_config
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
@@ -502,6 +547,11 @@ int write_config_file(const char* pathname, int options);
 
 	void init_global_config_table(int options);
 	void clear_global_config_table(void);
+
+	void swap_global_config(MACRO_SET & macros, std::string & global_source, std::vector<std::string> & local_sources);
+	void init_config_table(MACRO_SET & macros, int options);
+	void clear_config_table(MACRO_SET & macros);
+	void swap_config_tables(MACRO_SET & msetA, MACRO_SET & msetB);
 
 	char * get_tilde(void);
 	char * param ( const char *name );

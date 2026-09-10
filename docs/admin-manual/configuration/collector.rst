@@ -88,7 +88,7 @@ These macros affect the *condor_collector*.
     pool. The larger this value, the less likely the *condor_collector*
     will have stale information about the pool due to dropping update
     packets. If your pool is small or your central manager has very
-    little RAM, considering setting this parameter to a lower value
+    little RAM, consider setting this parameter to a lower value
     (perhaps 256000 or 128000).
 
     .. note::
@@ -112,7 +112,7 @@ These macros affect the *condor_collector*.
     larger this value, the less likely the *condor_collector* will have
     stale information about the pool due to dropping update packets. If
     your pool is small or your central manager has very little RAM,
-    considering setting this parameter to a lower value (perhaps 65536
+    consider setting this parameter to a lower value (perhaps 65536
     or 32768).
 
     .. note::
@@ -143,11 +143,10 @@ These macros affect the *condor_collector*.
     through the information it holds, and summarizes it. The information
     is written to the history file once for each 4 samples. The default
     (and recommended) value is 60 seconds. Setting this macro's value
-    too low will increase the load on the collector, while setting it to
-    high will produce less precise statistical information.
+    too low will increase the load on the collector, while setting it too high will produce less precise statistical information.
 
 :macro-def:`FLOCK_FROM`
-    The macros contains a comma separate list of schedd names that
+    The macro contains a comma-separated list of schedd names that
     should be allowed to flock to this central manager.  Defaults
     to an empty list.
 
@@ -192,7 +191,7 @@ These macros affect the *condor_collector*.
 
     If the value is a non-zero one, the *condor_collector* will insert
     attribute :ad-attr:`UpdatesHistory` into the ClassAd (similar to
-    ``UpdatesTotal``). AttrUpdatesHistory is a hexadecimal string which
+    ``UpdatesTotal``). UpdatesHistory is a hexadecimal string which
     represents a bitmap of the last :macro:`COLLECTOR_DAEMON_HISTORY_SIZE`
     updates. The most significant bit (MSB) of the bitmap represents
     the most recent update, and the least significant bit (LSB) represents
@@ -341,7 +340,7 @@ These macros affect the *condor_collector*.
     of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
     restrict the list of attributes forwarded for claimed Machine ads.
     When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
-    Machine ads that are in the ``Claimed`` state. A Suggested use might be
+    Machine ads that are in the ``Claimed`` state. A suggested use might be
 
     .. code-block:: condor-config
 
