@@ -11050,6 +11050,20 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					return SJ::DID_NOT_TRY;
 				}
 
+				//
+				// If the last thing we did with this job was MAPPING, there
+				// may still a stale entry in matchesByJobID; definitionally,
+				// a prompting job has no resources, so remove it.
+				//
+				// Even worse, the rest of the schedd (in AddMrec()) has
+				// already mapped this job ID to this match, so need to
+				// undo it.
+				//
+				auto count = matchesByJobID.erase(job_id);
+				if( count != 0 ) {
+					dprintf( D_ALWAYS, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+				}
+
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
 
@@ -11159,6 +11173,25 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				set_job_status( job_id.cluster, job_id.proc, JOB_STATUS_BLOCKED );
 
 				matchesHeldByBlockedJobs.push_back(mrec);
+
+				//
+				// Mapping does _not_ add its match record to the table of
+				// match records by job IDs.  If anything goes wrong, we'll
+				// unblock it and delete its match record based on
+				// matchesHeldByBlockedJobs, but if it has an old entry in
+				// matchesByJobID, it will never exit idle again (because "it
+				// has a match").  This can happen if this job was a prompting
+				// job, had an error, and turned into a mapping job whose
+				// transfer shadow then _also_ had an error.
+				//
+				// Even worse, the rest of the schedd (via AddMrec()) has
+				// already mapped this job ID to this match, so we need to
+				// undo it.
+				//
+				auto count = matchesByJobID.erase(job_id);
+				if( count != 0 ) {
+					dprintf( D_ALWAYS, "cxfer %d.%d: MAPPING: removed stale matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+				}
 
 				mrec->shadowRec = job_shadow_rec;
 				return SJ::SUCCEEDED;
@@ -13590,6 +13623,22 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 			}
 			// dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
 			if( * other == srec && (* other)->pid == shadow_pid ) {
+				//
+				// If we've gotten here, than srec is a transfer shadow
+				// whose catalogs we're unregistering.  There's a temptation
+				// to delete the transfer shadow's match record here, but
+				// that isn't our responsibility, and would reintroduce the
+				// fast-cycle bug in start_command_data_slot() that we worked
+				// around by adding the timer.
+				//
+				// So don't do that.
+				//
+				// Almost everywhere the common-files does deletes
+				// a match record, we should instead try to recycle
+				// the resources, but that's not a thing the schedd
+				// can do yet.
+				//
+
 				// dprintf( D_ALWAYS, "unregister_shadow_catalogs(): removing %s from catalogToShadowMap.\n", catalogName.c_str() );
 				catalogToShadowMap.erase( catalogName );
 				removedCatalogs.push_back( catalogName );
@@ -13613,25 +13662,11 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						CommonTransfer,
 						"shadow catalog unregistered (prompting job)" ) )
 					{
-						// (HTCONDOR-3610)  At this point, we should check
-						// for matches blocked on these catalogs and choose
-						// one to switch from MAPPING to STAGING.
-
-						// An idle job with a match that isn't already in the
-						// shadow start queue will never make it there, so if
-						// marked the job idle, we have to clean up its match
-						// record.
 						//
-						// This can manifest in _very_ confusing ways, because
-						// this match will remain registered as as the job's
-						// match until deletion, meaning that the job can could
-						// re-enter the blocked state with a new shadow rec
-						// pointing to a different match, and never get another
-						// chance to run if that blocked state doesn't ever
-						// result in the shadow being added to the run queue.
-						if( srec->match ) {
-							DelMrec( srec->match );
-						}
+						// The prompting job isn't holding on to any resources,
+						// so it doesn't have a match record to delete (unlike
+						// the blocked jobs below).
+						//
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -17745,7 +17780,7 @@ Scheduler::AddMrec(
 
 	JobQueueJob *job_ad = nullptr;
 	JobQueueCluster * cluster_ad = nullptr;
-	if (JobQueueBase::IsJobId(jid)) {
+	if( JobQueueBase::IsJobId(jid) || isTransferShadowProcID(jid) ) {
 		auto [it, success] = matchesByJobID.emplace(jid, rec);
 		ASSERT(success);
 		job_ad = GetJobAd(jid);
@@ -22150,8 +22185,29 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 	PROC_ID transferID{ jid.cluster, promptingToTransferProcID(jid.proc) };
 	match_rec * mrec = FindMrecByJobID( transferID );
 	if( mrec ) {
-		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
-		return;
+		if( mrec->shadowRec ) {
+			switch( mrec->shadowRec->cxfer_state ) {
+				case CXFER_STATE::INVALID:
+					// This is certainly a problem, but I don't know what to
+					// do about it.
+					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): putative transfer shadow record is in INVALID cxfer state.\n", jid.cluster, jid.proc );
+					return;
+				case CXFER_STATE::MAPPING:
+					// This is almost certainly a problem, but carry checking
+					// as if it weren't a prompting job, and this match were
+					// just bad record-keeping, in hopes of gathering more
+					// information for debugging.
+					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): putative transfer shadow record is in MAPPING cxfer state.\n", jid.cluster, jid.proc );
+					break;
+				case CXFER_STATE::STAGING:
+				case CXFER_STATE::STAGED:
+				case CXFER_STATE::RETIRING:
+					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
+					return;
+			}
+		} else {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record, but it had not shadow record.\n", jid.cluster, jid.proc );
+		}
 	}
 
 
