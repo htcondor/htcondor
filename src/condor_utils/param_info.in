@@ -7834,7 +7834,7 @@ default : @end
 @end
 
 
-[$FEATURE.GANGLIA]
+[$FEATURE.METRICD]
 description=Enable condor_metricd daemon
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) METRICD
