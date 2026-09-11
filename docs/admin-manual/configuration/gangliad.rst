@@ -376,13 +376,15 @@ is set.
     family. An entry whose format the host cannot evaluate never
     authenticates; *condor_metricd* logs the reason and denies the request.
 
-:macro-def:`PROMETHEUS_WANT_RESET_METRICS`
-    Per-backend reset-metrics flag. Defaults to ``False``.
+.. note::
 
-:macro-def:`PROMETHEUS_RESET_METRICS_FILE`
-    Backing file for the Prometheus backend's reset-metrics state. Used
-    only when ``PROMETHEUS_WANT_RESET_METRICS`` is ``True``. Behaves like
-    the Ganglia analogue but uses the suffix ``.prometheus_metrics``.
+    The Prometheus backend has no equivalent of
+    :macro:`GANGLIA_WANT_RESET_METRICS`. That setting exists because Ganglia
+    keeps displaying the last value it saw for a metric that stops being
+    updated, so an aggregate that disappears has to be explicitly republished
+    as zero. Prometheus needs no such handling: a series that stops appearing
+    in the exposition is marked stale and ends on its own, which represents a
+    vanished metric more accurately than a zero would.
 
 Metric-Definition Keywords
 --------------------------

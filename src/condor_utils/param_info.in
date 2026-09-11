@@ -5263,12 +5263,6 @@ type=path
 description=Path to filename where metricd stores state about ganglia metrics to reset
 tags=metricd
 
-[PROMETHEUS_RESET_METRICS_FILE]
-default=$(SPOOL)/metricsToReset.prometheus_metrics
-type=path
-description=Path to filename where metricd stores state about prometheus metrics to reset
-tags=metricd
-
 [GANGLIAD_WANT_RESET_METRICS]
 default=false
 type=bool
@@ -5279,12 +5273,6 @@ tags=gangliad,deprecated
 default=true
 type=bool
 description=Should metricd reset aggregate ganglia metrics to zero on restart
-tags=metricd
-
-[PROMETHEUS_WANT_RESET_METRICS]
-default=false
-type=bool
-description=Should metricd reset aggregate prometheus metrics to zero on restart
 tags=metricd
 
 [GANGLIAD_METRICS_CONFIG_DIR]

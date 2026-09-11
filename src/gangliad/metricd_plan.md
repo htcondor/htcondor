@@ -72,7 +72,7 @@ Metric
 | Ganglia reset knobs | `GANGLIAD_WANT_RESET_METRICS`, `GANGLIAD_RESET_METRICS_FILE` (unchanged) | `GANGLIA_WANT_RESET_METRICS` (default true), `GANGLIA_RESET_METRICS_FILE` |
 | Top-level class | `GangliaD` directly (unchanged code path) | `MetricD` |
 | Exports | Ganglia only (unchanged) | Ganglia + Prometheus (per `ExportMetric` setting) |
-| Prometheus knobs | n/a | `PROMETHEUS_METRICS_FILE`, `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`, `PROMETHEUS_DEFAULT_LABELS`, `PROMETHEUS_WANT_RESET_METRICS`, `PROMETHEUS_RESET_METRICS_FILE` |
+| Prometheus knobs | n/a | `PROMETHEUS_METRICS_FILE`, `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`, `PROMETHEUS_DEFAULT_LABELS` |
 
 **Crucially:** there is **no synonym/fallback knob logic anywhere.** Each mode reads its own knob names. This keeps the diff small and the behavior unambiguous.
 
@@ -167,8 +167,6 @@ In code (`gangliad.cpp`), each rename is a one-line picker: `const char *knob = 
 | `PROMETHEUS_METRICS_FILE` | *(empty — disabled)* | Output file path; backend disabled if empty. |
 | `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` | `false` | Append ms timestamp to each sample line. |
 | `PROMETHEUS_DEFAULT_LABELS` | *(empty)* | Default label ad, e.g. `[ pool = "mypoolname"; machine = Machine ]`, or the same in long form inside a `@=end` heredoc. |
-| `PROMETHEUS_WANT_RESET_METRICS` | **false** | Per-backend reset-metrics flag. |
-| `PROMETHEUS_RESET_METRICS_FILE` | spool-based | Used only if above is true. |
 
 ---
 
@@ -333,7 +331,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
 - [x] **2.12** Create `src/gangliad/prometheusd.cpp` implementing:
   - `PrometheusMetric::prometheusType()` → `"counter"` if `derivative && aggregate==NO_AGGREGATE`, else `"gauge"`.
   - `PrometheusD::PrometheusD()` (default).
-  - `PrometheusD::initAndReconfig()`: calls `StatsD::initAndReconfig("METRICD", false)`; reads `PROMETHEUS_METRICS_FILE` → `m_output_file`; `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` → `m_include_timestamp`; `PROMETHEUS_DEFAULT_LABELS` → `m_default_labels = parseLabels(...)`; `PROMETHEUS_WANT_RESET_METRICS` (default false) / `PROMETHEUS_RESET_METRICS_FILE` → `m_reset_metrics_filename`.
+  - `PrometheusD::initAndReconfig()`: calls `StatsD::initAndReconfig("METRICD", false)`; reads `PROMETHEUS_METRICS_FILE` → `m_output_file`; `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` → `m_include_timestamp`; `PROMETHEUS_DEFAULT_LABELS` → `m_default_labels`.  No reset-metrics support: that feature compensates for Ganglia retaining stale values, which Prometheus does not do, and `Metric::serialize()` carries no labels so it could not survive a restart correctly anyway.
   - `PrometheusD::newMetric()`: returns `new PrometheusMetric(*static_cast<const PrometheusMetric*>(copy_me))` if `copy_me`, else `new PrometheusMetric()`.
   - `PrometheusD::publishMetric()`: short-circuit if `m_output_file.empty()`; check `metric.export_systems` (skip if non-empty and lacks "prometheus"); build name via `buildPrometheusName(metric)`; validate against regex (use `[a-zA-Z_:][a-zA-Z0-9_:]*` rule); on invalid → `dprintf(D_ERROR, ...)` and return; build labels via `buildEffectiveLabels(metric)`; get value string via `metric.getValueString(value)`; create `PendingMetric` and append to `m_pending`.
   - `PrometheusD::postPublishMetrics()`: `writeMetricsFile(); m_pending.clear();`
@@ -403,7 +401,7 @@ Private helpers `parseLabels(string) → map` and `serializeLabels(map) → stri
   - Document each `METRICD_*` engine knob as the modern name; explicitly state the `GANGLIAD_*` form is used when invoking the binary as `condor_gangliad`.
   - Document `GANGLIA_DEFAULT_CLUSTER`/`MACHINE`/`IP` for metricd mode; `GANGLIAD_DEFAULT_*` for legacy mode.
   - Document `GANGLIA_WANT_RESET_METRICS` (default true in modern mode) / `GANGLIA_RESET_METRICS_FILE`; legacy mode uses `GANGLIAD_WANT_RESET_METRICS`.
-  - Add a "Prometheus Export" section: `PROMETHEUS_METRICS_FILE`, `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`, `PROMETHEUS_DEFAULT_LABELS`, `PROMETHEUS_WANT_RESET_METRICS`, `PROMETHEUS_RESET_METRICS_FILE`.
+  - Add a "Prometheus Export" section: `PROMETHEUS_METRICS_FILE`, `PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`, `PROMETHEUS_DEFAULT_LABELS`.
   - Document new metric-definition keywords: `ExportMetric`, `PrometheusLabels`, `Counter`.
 - [x] **3.2** In `docs/admin-manual/cm-configuration.rst` Ganglia section: add a brief note that `condor_metricd` supports Prometheus export; cross-link to `gangliad.rst`.
 - [x] **3.3** Add a version-history entry (find the right path under `docs/version-history/`) noting the addition of `condor_metricd` + Prometheus export + HTCONDOR-3374.

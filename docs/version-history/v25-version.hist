@@ -259,10 +259,8 @@
   compatibility, and inspects ``argv[0]`` to select its mode at startup.
   In addition to the Ganglia backend, *condor_metricd* now supports a
   Prometheus text-format file export backend controlled by the new
-  :macro:`PROMETHEUS_METRICS_FILE`, :macro:`PROMETHEUS_DEFAULT_LABELS`,
-  :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP`,
-  :macro:`PROMETHEUS_WANT_RESET_METRICS`, and
-  :macro:`PROMETHEUS_RESET_METRICS_FILE` knobs. New metric-definition
+  :macro:`PROMETHEUS_METRICS_FILE`, :macro:`PROMETHEUS_DEFAULT_LABELS`, and
+  :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` knobs. New metric-definition
   keywords ``ExportMetric``, ``PrometheusLabels``, and ``Counter`` allow
   per-metric routing and labeling.
   :jira:`3374`

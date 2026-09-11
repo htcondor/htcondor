@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "directory_util.h"
 #include "condor_regex.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"     // initAdFromString()
@@ -332,21 +331,23 @@ PrometheusD::initAndReconfig()
 		}
 	}
 
-	m_reset_metrics_filename.clear();
-	if (param_boolean("PROMETHEUS_WANT_RESET_METRICS", false)) {
-		param(m_reset_metrics_filename,"PROMETHEUS_RESET_METRICS_FILE");
-		if (!m_reset_metrics_filename.empty()) {
-			if (!IS_ANY_DIR_DELIM_CHAR(m_reset_metrics_filename[0])) {
-				std::string fname = m_reset_metrics_filename;
-				std::string dirname;
-				param(dirname,"SPOOL");
-				dircat(dirname.c_str(),fname.c_str(),m_reset_metrics_filename);
-			}
-			if (!m_reset_metrics_filename.ends_with(".prometheus_metrics")) {
-				m_reset_metrics_filename += ".prometheus_metrics";
-			}
-		}
-	}
+	// Deliberately no reset-metrics support on this backend.
+	//
+	// StatsD's reset-metrics feature republishes a vanished aggregate gauge as
+	// an explicit zero, because Ganglia otherwise displays the last value it
+	// saw forever.  Prometheus has no such problem: a series that stops
+	// appearing in the exposition is marked stale and ends on its own, which
+	// is the more accurate representation anyway.
+	//
+	// It would also not survive a restart here.  The on-disk format written by
+	// StatsD::WriteMetricsToReset() is Metric::serialize(), which carries no
+	// prometheus_labels, so a metric restored from that file would publish its
+	// zero with no labels at all -- landing in a different time series from the
+	// one it was meant to reset, and leaving a stray label-less series behind.
+	//
+	// Leaving m_reset_metrics_filename empty is what disables the feature; the
+	// base class gates all of it on that being non-empty.  GangliaD sets it and
+	// keeps working normally.
 
 	// HTTP Basic auth password file (Apache htpasswd format).
 	// If empty, the /metrics endpoint is unauthenticated.

@@ -240,8 +240,13 @@ GangliaD::initAndReconfig()
 	{
 		const char *want_reset_knob = g_legacy_gangliad_mode ? "GANGLIAD_WANT_RESET_METRICS" : "GANGLIA_WANT_RESET_METRICS";
 		const char *reset_file_knob = g_legacy_gangliad_mode ? "GANGLIAD_RESET_METRICS_FILE" : "GANGLIA_RESET_METRICS_FILE";
-		bool want_reset_default = !g_legacy_gangliad_mode; // GANGLIA defaults to true; preserve GANGLIAD legacy default of false
-		if (param_boolean(want_reset_knob,want_reset_default)) {
+		// The per-mode defaults live in param_info.in, not here: metricd reads
+		// GANGLIA_WANT_RESET_METRICS, which defaults to true, while legacy
+		// gangliad reads GANGLIAD_WANT_RESET_METRICS, which defaults to false.
+		// Do not try to express that difference with the default argument
+		// below -- param_boolean() discards it whenever the knob has an entry
+		// in the param table, so param_info.in is the only thing that decides.
+		if (param_boolean(want_reset_knob,false)) {
 			param(m_reset_metrics_filename,reset_file_knob);
 
 			if (!m_reset_metrics_filename.empty()) {
