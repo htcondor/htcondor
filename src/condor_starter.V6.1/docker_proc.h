@@ -55,6 +55,9 @@ class DockerProc : public VanillaProc {
 		std::string containerID;
 		std::string containerName;
 		std::string imageName;
+		// The "sha256:..." content hash of the image we actually ran,
+		// as reported by docker.  Sent to the shadow in the update ad.
+		std::string imageHash;
 		int updateTid;
 		uint64_t memUsage, max_memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;

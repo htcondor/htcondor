@@ -525,7 +525,7 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 		{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		std::string arch;
-		DockerAPI::getImageArch(imageName, arch);
+		DockerAPI::getImageArchAndId(imageName, arch, imageHash);
 
 		if (!DockerAPI::imageArchIsCompatible(arch)) {
 			std::string message;
@@ -1115,6 +1115,12 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// or set them during our status polling.
 	//
 	
+	// Tell the shadow exactly which image we ran, so that it can be
+	// recorded in the job ad.
+	if (!imageHash.empty()) {
+		ad->Assign(ATTR_DOCKER_IMAGE_HASH, imageHash);
+	}
+
 	if (max_memUsage > 0) {
 		// Set RSS, Memory and ImageSize to same values, best we have
 		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(max_memUsage / 1024));
