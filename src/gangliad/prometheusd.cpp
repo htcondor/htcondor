@@ -367,7 +367,7 @@ PrometheusD::initAndReconfig()
 		// if http_port != shared_port_port, then Register_Command_Socket() on a ReliSock bound to the
 		// port specified by http_port.  When the ports match, DaemonCore's normal command
 		// socket already carries connections destined for http_port, so no extra socket is needed.
-		if (shared_port_port > 0 && http_port != shared_port_port && !m_http_listen_sock) {
+		if (http_port > 0 && http_port != shared_port_port && !m_http_listen_sock) {
 			ReliSock *rsock = new ReliSock;
 			if (rsock->listen(CP_IPV4, http_port)) {
 				daemonCore->Register_Command_Socket((Stream*)rsock,
