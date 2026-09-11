@@ -166,7 +166,7 @@ int LibrarianClient::CountByUser([[maybe_unused]] const std::string& username, [
 		" JOIN Files f    ON jr.FileId    = f.FileId"
 		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
 		" JOIN Users u    ON jl.UserId    = u.UserId"
-		" WHERE u.UserName = ?";
+		" WHERE u.UserName = ? COLLATE NOCASE";
 	const char* extra = (filter == FileFilter::OnlyExisting)
 		? " AND f.DateOfDeletion IS NULL" : nullptr;
 	return m_impl->countQueryText(base_sql, extra, username);
@@ -234,7 +234,7 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecordsByUser([[maybe_unused]] 
 		" JOIN Files f     ON jr.FileId    = f.FileId"
 		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
 		" JOIN Users u     ON jl.UserId    = u.UserId"
-		" WHERE u.UserName = ?";
+		" WHERE u.UserName = ? COLLATE NOCASE";
 
 	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
 	if ( ! stmt) { return results; }
