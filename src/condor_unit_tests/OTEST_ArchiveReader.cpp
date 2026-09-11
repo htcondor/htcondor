@@ -342,7 +342,7 @@ static bool test_forward_record0_raw_record() {
 
 	const std::string& raw = g_fwd[0].raw_record;
 	emit_output_actual_header();
-	emit_retval(raw.c_str());
+	emit_retval("%s", raw.c_str());
 
 	if (raw.find("Foo = 1") == std::string::npos ||
 	    raw.find("Bar = \"hello\"") == std::string::npos) {
@@ -366,7 +366,7 @@ static bool test_forward_record0_empty_banner() {
 	const std::string& banner = g_fwd[0].raw_banner;
 
 	emit_output_actual_header();
-	emit_retval(banner.c_str());
+	emit_retval("%s", banner.c_str());
 
 	// Banner line should be exactly "***" (no extra content after the stars).
 	if (banner != "***") { FAIL; }
@@ -650,7 +650,7 @@ static bool test_backward_record2_is_forward_record0() {
 	                     " had_ad=" + (snap.had_ad ? "TRUE" : "FALSE");
 
 	emit_output_actual_header();
-	emit_retval(actual.c_str());
+	emit_retval("%s", actual.c_str());
 
 	if ( ! banner_empty || ! snap.had_ad) { FAIL; }
 	PASS;
