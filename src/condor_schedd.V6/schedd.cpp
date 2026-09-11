@@ -9569,14 +9569,19 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					release_block_condition(
+					// If a job starts running, and its transfer shadow dies,
+					// and then a new one is created and succeeds in doing
+					// file transfer, it could try to unblock the job here,
+					// if matchesHeldByBlockedJobs ... FIXME
+					if( release_block_condition(
 						mrec->jid,
 						CommonTransfer,
 						"common transfer notification (dependent job)");
-
-					// Why _are_ these two separate commands?
-					mark_serial_job_running( srec->job_id );
-					addRunnableJob( srec );
+					) {
+						// Why _are_ these two separate commands?
+						mark_serial_job_running( srec->job_id );
+						addRunnableJob( srec );
+					}
 
 					return true;
 				}
@@ -11190,7 +11195,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				//
 				auto count = matchesByJobID.erase(job_id);
 				if( count != 0 ) {
-					dprintf( D_ALWAYS, "cxfer %d.%d: MAPPING: removed stale matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+					dprintf( D_ALWAYS, "cxfer %d.%d: MAPPING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
 				}
 
 				mrec->shadowRec = job_shadow_rec;
