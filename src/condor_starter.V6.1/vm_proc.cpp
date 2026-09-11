@@ -208,22 +208,8 @@ VMProc::StartJob()
 	// with the ProcD in its call to DaemonCore::Create_Process
 
 	FamilyInfo fi;
-
-	// take snapshots at no more than 15 seconds in between, by default
-	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
-
-	m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
-
-	if (m_dedicated_account) {
-		// using login-based family tracking
-		fi.login = m_dedicated_account;
-			// The following message is documented in the manual as the
-			// way to tell whether the dedicated execution account
-			// configuration is being used.
-		dprintf(D_ALWAYS,
-		        "Tracking process family by login \"%s\"\n",
-		        fi.login);
-	}
+	int64_t mem_limit=0;
+	starter->SetupProcessTracking(fi, this, mem_limit);
 
 	// Find vmgahp server location
 	char* vmgahpfile = param( "VM_GAHP_SERVER" );
@@ -411,6 +397,7 @@ VMProc::StartJob()
 	// Set JobPid and num_pids in user_proc.h and os_proc.h
 	JobPid = m_vmgahp->getVMGahpServerPid();
 	num_pids++;
+	starter->ReportProcessTracking(fi, this);
 
 	VMGahpRequest *new_req = new VMGahpRequest(m_vmgahp);
 	ASSERT(new_req);
