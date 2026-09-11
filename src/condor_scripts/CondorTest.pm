@@ -4306,4 +4306,48 @@ sub ErrorReport {
 	CondorTest::RegisterResult(0,"test_name","$testname");
 }
 
+# Verify a DAGMan NODE_STATUS_FILE (default multiline ClassAd format).
+# $path: the status file to read.
+# $blocks: arrayref of arrayrefs; each inner arrayref is a list of regexes
+#          that must all match somewhere within one "[ ... ]" ad, in the
+#          given block order. Attribute order *within* an ad is not
+#          guaranteed (ClassAd storage isn't insertion-ordered), so patterns
+#          within a block are checked independent of each other's order --
+#          only the relative order of blocks (ads) is enforced.
+# Returns "" on success, or an error string describing what's missing.
+sub CheckNodeStatusFile {
+	my ($path, $blocks) = @_;
+
+	open(my $fh, "<", $path) or return "Cannot open node status file <$path>: $!";
+	local $/;
+	my $content = <$fh>;
+	close($fh);
+
+	my @ads = ($content =~ /\[(.*?)\]/gs);
+
+	my $adIndex = 0;
+	foreach my $block (@$blocks) {
+		my $found = 0;
+		while ($adIndex < scalar(@ads)) {
+			my $ad = $ads[$adIndex];
+			$adIndex++;
+			my $allMatch = 1;
+			foreach my $pattern (@$block) {
+				if ($ad !~ /$pattern/) {
+					$allMatch = 0;
+					last;
+				}
+			}
+			if ($allMatch) {
+				$found = 1;
+				last;
+			}
+		}
+		if (!$found) {
+			return "Failed to find node status ad matching: " . join(", ", @$block);
+		}
+	}
+	return "";
+}
+
 1;
