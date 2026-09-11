@@ -671,12 +671,24 @@ PrometheusD::sendHttpError(int fd, void *ssl, int code, const char *reason)
 // ---------------------------------------------------------------------------
 // checkHtpasswd – validate user:password against an Apache-style htpasswd file.
 //
-// Supported hash formats (in order of preference / prevalence):
-//   {SHA}base64  – SHA-1 (base64-encoded digest)
-//   $apr1$...    – Apache's MD5-crypt variant (via system crypt())
-//   $2y$/2b$...  – bcrypt (via system crypt())
-//   $5$/$6$...   – SHA-256/SHA-512 crypt (via system crypt())
-//   anything else  – assumed DES crypt (via system crypt())
+// Only {SHA} is evaluated here.  Every other format is handed to the system
+// crypt(3), so what is actually accepted is a property of the host, not of
+// HTCondor, and cannot be stated definitively in this comment:
+//
+//   {SHA}base64  – SHA-1 of the password, base64-encoded.  Handled below,
+//                  so it works everywhere, including Windows (no crypt(3)).
+//                  Unsalted and weak; accepted for compatibility only.
+//   $2b$/$2y$... – bcrypt.  The recommended format ("htpasswd -B"), and what
+//                  the documentation for PROMETHEUS_HTTP_AUTH_FILE tells
+//                  admins to use.
+//   $1$/$5$/$6$  – md5crypt / SHA-256 crypt / SHA-512 crypt.
+//   DES          – legacy two-character salt.
+//
+// $apr1$ (Apache's MD5-crypt variant) is deliberately NOT listed as supported.
+// libxcrypt omits it unless enabled at build time and the RHEL 9 family does
+// not enable it, so on many hosts an $apr1$ entry simply cannot be validated
+// even though "htpasswd" may produce it by default.  See the longer note at
+// the crypt() call below.
 // ---------------------------------------------------------------------------
 bool
 PrometheusD::checkHtpasswd(const std::string &path,
