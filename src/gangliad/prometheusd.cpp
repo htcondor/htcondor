@@ -47,6 +47,23 @@
 #endif
 
 // ---------------------------------------------------------------------------
+// Bounds on a single HTTP transaction.
+//
+// These exist because a request is served synchronously from DaemonCore's
+// single-threaded event loop, and because nothing else closes an idle
+// connection for us.  Without them a client that connects and then stalls can
+// hold a socket registration forever (plain HTTP) or stop the daemon from
+// making any progress at all (TLS).
+//
+// The header and write budgets are total wall clock, deliberately: a per-read
+// or per-write idle timeout can be defeated by dribbling a byte just often
+// enough to reset it.
+// ---------------------------------------------------------------------------
+static const int PROM_HTTP_HEADER_TIMEOUT = 20;  // to receive a complete request
+static const int PROM_HTTP_WRITE_TIMEOUT  = 60;  // to write one response buffer
+static const int PROM_HTTP_IO_TIMEOUT     = 10;  // per-syscall SO_RCVTIMEO/SO_SNDTIMEO
+
+// ---------------------------------------------------------------------------
 // Minimal OpenSSL function-pointer layer used only by the Prometheus HTTP
 // server.  We follow the same DLOPEN_SECURITY_LIBS pattern used elsewhere in
 // the codebase so that the binary degrades gracefully when libssl is absent.
@@ -642,7 +659,23 @@ bool
 PrometheusD::writeFully(int fd, void *ssl, const void *buf, size_t len)
 {
 	const char *p = static_cast<const char*>(buf);
+
+	// SO_SNDTIMEO bounds each individual write, but not this loop: a client
+	// that opens its receive window a few bytes at a time keeps every write
+	// returning progress, so the loop can run indefinitely.  Since we are on
+	// DaemonCore's event loop, that holds the whole daemon, not just this
+	// connection, so bound the total as well.  This budget is per call, and
+	// a response is written as a header plus a body.
+	const time_t give_up_at = time(nullptr) + PROM_HTTP_WRITE_TIMEOUT;
+
 	while (len > 0) {
+		if (time(nullptr) > give_up_at) {
+			dprintf(D_FULLDEBUG,
+			        "PrometheusD: giving up after %d seconds writing a response;"
+			        " client is not reading (%zu bytes unsent)\n",
+			        PROM_HTTP_WRITE_TIMEOUT, len);
+			return false;
+		}
 		ssize_t n;
 		if (ssl) {
 			n = g_SSL_write(static_cast<SSL*>(ssl), p, static_cast<int>(len));
@@ -890,6 +923,21 @@ PrometheusD::continueHttpRead(Stream *s, std::shared_ptr<PromHttpConn> conn)
 	Sock *sock = static_cast<Sock*>(s);
 	int   fd   = sock->get_file_desc();
 
+	// DaemonCore invokes this handler when the deadline set in
+	// handleHttpCommand() expires, not only when data arrives, and it does not
+	// close the socket itself.  So the check has to happen here.  Returning
+	// FALSE makes DaemonCore cancel the registration and delete the socket;
+	// without it an expired deadline would just produce EAGAIN below, we would
+	// return KEEP_STREAM, and DaemonCore would call us again immediately --
+	// spinning on the CPU instead of closing the connection.
+	if (sock->deadline_expired()) {
+		dprintf(D_FULLDEBUG,
+		        "PrometheusD: closing connection from %s: no complete request"
+		        " within %d seconds\n",
+		        sock->peer_description(), PROM_HTTP_HEADER_TIMEOUT);
+		return FALSE;
+	}
+
 	char buf[4096];
 	ssize_t n = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
 	if (n > 0) {
@@ -963,8 +1011,9 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 			return FALSE;
 		}
 
-		// Bound the handshake and subsequent I/O with a 10-second timeout.
-		struct timeval tv = {10, 0};
+		// Bound each handshake/read syscall.  This is not by itself a bound on
+		// the transaction; see the loop below.
+		struct timeval tv = {PROM_HTTP_IO_TIMEOUT, 0};
 		setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
 		           &tv, static_cast<socklen_t>(sizeof(tv)));
 		setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
@@ -986,12 +1035,33 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 			return FALSE;
 		}
 
-		// Read HTTP request through SSL with the timeout already set above.
+		// Read the HTTP request through SSL.  SO_RCVTIMEO above bounds each
+		// SSL_read but not this loop: a client trickling one small TLS record
+		// every few seconds keeps every read returning progress, so the loop
+		// can run for as long as it takes to reach the 64KB cap.  This whole
+		// path is synchronous inside DaemonCore's event loop, so that stalls
+		// the entire daemon -- metric publication included -- not merely this
+		// connection.  Bound the total.
+		//
+		// This caps the damage; it does not remove it.  Properly fixing it
+		// means driving the handshake and reads non-blocking through
+		// Register_Socket the way the plain path does, which is a larger
+		// change than this one.
 		auto conn = std::make_shared<PromHttpConn>();
 		conn->ssl = ssl;
 
+		const time_t give_up_at = time(nullptr) + PROM_HTTP_HEADER_TIMEOUT;
 		char buf[4096];
 		while (conn->request_buf.find("\r\n\r\n") == std::string::npos) {
+			if (time(nullptr) > give_up_at) {
+				dprintf(D_FULLDEBUG,
+				        "PrometheusD: no complete request from %s within %d"
+				        " seconds; closing\n",
+				        sock->peer_description(), PROM_HTTP_HEADER_TIMEOUT);
+				g_SSL_shutdown(ssl);
+				g_SSL_free(ssl);
+				return FALSE;
+			}
 			int n = g_SSL_read(ssl, buf, sizeof(buf) - 1);
 			if (n <= 0) {
 				int err = g_SSL_get_error(ssl, n);
@@ -1021,6 +1091,15 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 	// ---- Plain HTTP path ----------------------------------------------------
 	auto conn = std::make_shared<PromHttpConn>();
 
+	// Reads here use MSG_DONTWAIT, so the socket itself is left blocking and
+	// the response write would otherwise have no bound at all.  (The TLS path
+	// above already sets both.)
+	{
+		struct timeval tv = {PROM_HTTP_IO_TIMEOUT, 0};
+		setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+		           &tv, static_cast<socklen_t>(sizeof(tv)));
+	}
+
 	char buf[4096];
 	ssize_t n = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
 	if (n > 0) {
@@ -1039,6 +1118,18 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 	}
 
 	// Need more data.  Register the socket and yield to the event loop.
+	//
+	// Set a deadline first.  DaemonCore enforces it by invoking our handler
+	// (see the check at the top of continueHttpRead); it will not close the
+	// socket on its own, and Register_Socket supplies no timeout of its own.
+	// Without this a client that sends a partial header and then stops holds
+	// this descriptor and its sockTable slot for the life of the daemon, which
+	// is trivial file-descriptor exhaustion and needs no authentication.
+	//
+	// The deadline is absolute rather than an idle timer, so trickling a byte
+	// every few seconds does not extend it.
+	sock->set_deadline_timeout(PROM_HTTP_HEADER_TIMEOUT);
+
 	int rc = daemonCore->Register_Socket(
 		s,
 		"PrometheusD HTTP /metrics",

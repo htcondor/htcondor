@@ -990,6 +990,42 @@ def http_host_port(test_dir, condor_with_http):
 
 
 @action
+def stalled_connection_outcome(http_host_port, http_metrics_ready):
+    """
+    Open connections that send a partial request header and never terminate it,
+    then wait for metricd to close them on its own.
+
+    Before handleHttpCommand() set a deadline, these stayed registered for the
+    life of the daemon: one descriptor and one DaemonCore sockTable slot each,
+    needing no authentication. Returns (closed_count, total).
+    """
+    host, port = http_host_port
+    socks = []
+    for _ in range(3):
+        c = socket.create_connection((host, port), timeout=10)
+        # Note the missing blank line: the header block is never completed.
+        c.sendall(b"GET /metrics HTTP/1.0\r\nHost: localhost\r\n")
+        socks.append(c)
+
+    # metricd closes without writing anything, so a clean EOF (b"") is the
+    # signal that the registration was cancelled and the socket deleted.
+    deadline = time.time() + 60
+    closed = 0
+    try:
+        for c in socks:
+            c.settimeout(max(1.0, deadline - time.time()))
+            try:
+                if c.recv(4096) == b"":
+                    closed += 1
+            except socket.timeout:
+                pass
+    finally:
+        for c in socks:
+            c.close()
+    return closed, len(socks)
+
+
+@action
 def http_metrics_ready(test_dir, condor_with_http):
     """Wait until metricd has written the prom file at least once."""
     prom_file = test_dir / "http_metrics.prom"
@@ -1193,6 +1229,31 @@ class TestPrometheusHTTP:
             status, body = _http_get(host, port, "/metrics")
             assert status == 200
             assert "http_test_gauge" in body
+
+
+class TestPrometheusHTTPStalledConnections:
+    """
+    A client that opens a connection and never finishes its request must not be
+    able to hold a socket registration indefinitely. The endpoint is reachable
+    before any authentication, so without a deadline this is trivial
+    file-descriptor exhaustion.
+    """
+
+    def test_stalled_connections_are_closed(self, stalled_connection_outcome):
+        closed, total = stalled_connection_outcome
+        assert closed == total, (
+            "{} of {} stalled connections were still open; metricd is leaking "
+            "socket registrations".format(total - closed, total)
+        )
+
+    def test_server_still_serves_after_stalled_connections(
+        self, http_host_port, stalled_connection_outcome
+    ):
+        # Reaping the stalled connections must not have disturbed the daemon.
+        host, port = http_host_port
+        status, body = _http_get(host, port, "/metrics")
+        assert status == 200
+        assert "http_test_gauge" in body
 
 
 class TestPrometheusHTTPAuth:
