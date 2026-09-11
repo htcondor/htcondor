@@ -5202,99 +5202,190 @@ tags=starter
 default=
 type=string
 description=Path to the Ganglia gmetric Executable
-tags=condor_config
+tags=metricd
 
 [GANGLIA_LIB]
 default=
 type=string
 description=Ganglia Library
-tags=condor_config
+tags=metricd
 
 [GANGLIA_LIB_PATH]
 default=/lib,/usr/lib,/usr/local/lib
 type=string
 description=Ganglia Library Search Path
-tags=condor_config
+tags=metricd
 
 [GANGLIA_LIB64_PATH]
 default=/lib64,/usr/lib64,/usr/local/lib64
 type=string
 description=Ganglia 64-bit Library Search Path
-tags=condor_config
+tags=metricd
 
 [GANGLIA_CONFIG]
 default=/etc/ganglia/gmond.conf
 type=string
 description=Path to the Ganglia Configuration file
-tags=condor_config
+tags=metricd
 
 [GANGLIA_GSTAT_COMMAND]
 default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
-tags=condor_config
+tags=metricd
+
+[GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
+default=false
+type=bool
+description=Send metrics for all hosts to Ganglia
+tags=metricd
 
 [GANGLIAD_WANT_PROJECTION]
 default=true
 type=bool
 description=Should gangliad use an attribute projection to query the collector
-tags=gangliad
+tags=gangliad,deprecated
+
+[METRICD_WANT_PROJECTION]
+default=true
+type=bool
+description=Should metricd use an attribute projection to query the collector
+tags=metricd
 
 [GANGLIAD_RESET_METRICS_FILE]
 default=$(SPOOL)/metricsToReset.ganglia_metrics
 type=path
 description=Path to filename where gangliad stores state
-tags=gangliad
+tags=gangliad,deprecated
+
+[GANGLIA_RESET_METRICS_FILE]
+default=$(SPOOL)/metricsToReset.ganglia_metrics
+type=path
+description=Path to filename where metricd stores state about ganglia metrics to reset
+tags=metricd
 
 [GANGLIAD_WANT_RESET_METRICS]
 default=false
 type=bool
 description=Should gangliad reset aggregate metrics to zero on restart
-tags=gangliad
+tags=gangliad,deprecated
+
+[GANGLIA_WANT_RESET_METRICS]
+default=true
+type=bool
+description=Should metricd reset aggregate ganglia metrics to zero on restart
+tags=metricd
 
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=$(ETC)/ganglia.d
 type=path
-description=Ganglia metric config dir
-tags=condor_config
+description=GangliaD config dir for metric definitions
+tags=gangliad,deprecated
+
+[METRICD_METRICS_CONFIG_DIR]
+default=$(ETC)/metrics.d
+type=path
+description=MetricD config dir for metric definitions
+tags=metricd
 
 [GANGLIAD_VERBOSITY]
 default=0
 type=int
 description=Ganglia Verbosity
-tags=condor_config
+tags=gangliad,deprecated
+
+[METRICD_VERBOSITY]
+default=0
+type=int
+description=MetricD Verbosity
+tags=metricd
 
 [GANGLIAD_INTERVAL]
 default=60
 type=int
 description=Ganglia Interval
-tags=condor_config
+tags=gangliad,deprecated
+
+[METRICD_INTERVAL]
+default=60
+type=int
+description=MetricD Interval
+tags=metricd
 
 [GANGLIAD_LOG]
 default=$(LOG)/GangliadLog
 type=path
-tags=gangliad
+tags=gangliad,deprecated
+
+[METRICD_LOG]
+default=$(LOG)/MetricdLog
+type=path
+tags=metricd
 
 [MAX_GANGLIAD_LOG]
 default=$(MAX_DEFAULT_LOG)
-tags=gangliad
+tags=gangliad,deprecated
+
+[MAX_METRICD_LOG]
+default=$(MAX_DEFAULT_LOG)
+tags=metricd
 
 [GANGLIAD_REQUIREMENTS]
 default=
 type=string
-description=Requirements to be met by all ads monitored by Ganglia
-tags=gangliad
+description=Requirements to be met by all ads monitored by GangliaD
+tags=gangliad,deprecated
+
+[METRICD_REQUIREMENTS]
+default=
+type=string
+description=Requirements to be met by all ads monitored by MetricD
+tags=metricd
 
 [GANGLIAD_PER_EXECUTE_NODE_METRICS]
 default=true
 type=bool
-description=Publish Ganglia metrics for individual execute nodes
-tags=gangliad
+description=Have GangliaD publish metrics for individual execute nodes
+tags=gangliad,deprecated
 
-[GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
-default=false
+[METRICD_PER_EXECUTE_NODE_METRICS]
+default=true
 type=bool
-description=Send Ganglia metrics for all hosts
-tags=gangliad
+description=Have MetricD publish metrics for individual execute nodes
+tags=metricd
+
+[PROMETHEUS_METRICS_FILE]
+default=$(LOG)/metrics.prom
+type=path
+description=Path used by the MetricD to write a file containing metrics in Prometheus text exposition format
+tags=metricd
+
+[PROMETHEUS_METRICS_INCLUDE_TIMESTAMP]
+default=true
+type=bool
+description=Should metrics exported to Prometheus include the optional millisecond timestamp
+tags=metricd
+
+[PROMETHEUS_DEFAULT_LABELS]
+default=[machine=MetricMachine; pool=MetricPool]
+description=Default set of labels for exported Prometheus metrics
+tags=metricd
+
+[PROMETHEUS_HTTP_AUTH_FILE]
+default=
+type=path
+description=Path to an htpasswd file used to control access to read Prometheus metrics over HTTP
+tags=metricd
+
+[PROMETHEUS_HTTP_PORT]
+default=$(SHARED_PORT_PORT)
+type=int
+description=Port used by metricd to accept incoming HTTP connections for /metrics endpoint; -1 means disable
+tags=metricd
+
+[METRICD_DEFAULT_EXPORT_METRIC]
+default=prometheus
+description=Default value for ExportMetric, a comma-seperated list of time-series database backends
+tags=metricd
 
 [MAX_CONCURRENT_DOWNLOADS]
 default=100
@@ -7725,10 +7816,24 @@ default : @fin
 @fin
 
 [$FEATURE.GANGLIA]
-description=Enable condor_gangliad daemon
+description=Enable condor_gangliad daemon (deprecated - concert to using metricd)
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) GANGLIAD
 @end
+
+
+[$FEATURE.METRICD]
+description=Enable condor_metricd daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) METRICD
+	metricd_port_is_shared_port = $(PROMETHEUS_HTTP_PORT:0) == $(SHARED_PORT_PORT:0)
+	if $INT(metricd_port_is_shared_port)
+		METRICD_ARGS=-sock metricd
+		SHARED_PORT_HTTP_FORWARDING_ID=metricd
+	endif
+@end
+
+
 
 [$FEATURE.DefaultCheckpointDestination]
 description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.

@@ -24,10 +24,19 @@
  * This file defines base classes for gathering information from the
  * collector and publishing to some other monitoring system.
  */
-
+#include "condor_common.h"
+#include "condor_daemon_core.h"
 #include <list>
 #include <vector>
 #include <string>
+#include <map>
+#include <unordered_set>
+
+// True when the binary was invoked as condor_gangliad (legacy mode);
+// false when invoked as condor_metricd (modern mode). Defined in metricd_main.cpp.
+extern bool g_legacy_gangliad_mode;
+
+class CollectorList; // forward declaration to avoid including collector.h here
 
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
@@ -56,23 +65,49 @@ public:
 
 	bool isAggregateMetric() const { return aggregate != NO_AGGREGATE; }
 
+	// True if name is a legal Prometheus label name: [a-zA-Z_][a-zA-Z0-9_]*
+	// and not beginning with "__" (that prefix is reserved by Prometheus).
+	static bool isValidLabelName(std::string const &name);
+
 	// This is called to contribute another datapoint to an aggregate
 	// metric (e.g. SUM, AVG, MIN, MAX)
 	void addToAggregateValue(Metric const &datapoint);
 
 	// This is called after all ads have been processed.  It finalizes
-	// the aggregate value so it is ready to be published.
-	void convertToNonAggregateValue();
+	// the aggregate value so it is ready to be published.  A SUM of a
+	// derivative (counter) metric is integrated into a persistent running
+	// total via statsd so it can be published as a monotonic counter rather
+	// than a per-interval gauge; see the implementation for details.
+	void convertToNonAggregateValue(class StatsD *statsd);
 
 	std::string name;
 	std::string title;
 	std::string desc;
 	std::string units;
 	std::string group;
+	// Name of the backend this metric is being evaluated for (e.g. "ganglia"
+	// or "prometheus"), or empty if not backend-specific.  Set in
+	// evaluateDaemonAd() from the owning StatsD's backendName().  Used by
+	// evaluate() to honor backend-decorated attribute overrides such as
+	// Ganglia_Name overriding Name when publishing to ganglia.
+	std::string backend;
 	std::string machine;
 	std::string ip;
 	std::string cluster;
+	// Name of the pool this metric's daemon ad came from: the collector name
+	// stashed into the ad when several pools are monitored, otherwise the
+	// collector host of our own pool.  Exposed to label expressions as
+	// MetricPool; for an aggregate metric it is also the machine.
+	std::string pool;
 	bool derivative;
+	std::vector<std::string> export_systems;
+	// Fully resolved Prometheus label set for this metric: the pool-wide
+	// defaults from PROMETHEUS_DEFAULT_LABELS merged with the metric's own
+	// PrometheusLabels ad, with each label expression already evaluated
+	// against the daemon ad and stringified.  Same-named entries in the
+	// metric's own ad win.  Populated by evaluateDaemonAd().
+	std::map<std::string,std::string> prometheus_labels;
+	int64_t timestamp{0};
 	bool zero_value;
 	int verbosity;
 	int lifetime;
@@ -120,17 +155,35 @@ private:
 	// into strings that reference them.
 	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr=NULL) const;
 	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+
+	// Resolve prometheus_labels from the pool-wide default label ad (may be
+	// NULL) and the metric ad's attr_name attribute, which must be a nested
+	// ClassAd whose attributes are label names and whose values are
+	// expressions evaluated against the daemon ad.  Defaults are applied
+	// first so that same-named per-metric labels override them.
+	void evaluateLabels(char const *attr_name,classad::ClassAd const *default_label_ad,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,char const *regex_attr);
+
+	// Evaluate every attribute of label_ad against daemon_ad and merge the
+	// results into result.  Labels whose expressions evaluate to UNDEFINED or
+	// ERROR (or to a non-scalar type) are omitted rather than emitted empty.
+	void evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups,std::map<std::string,std::string> &result) const;
 };
 
 /* StatsD: base class for gathering and publishing condor statistics
  */
 
-class StatsD: Service {
+class StatsD: public Service {
  public:
 	StatsD();
 	~StatsD();
 
-	virtual void initAndReconfig(char const *service_name);
+	void base_initAndReconfig(char const *service_name, bool as_backend);
+
+	// This is called at startup and on each reconfig, allowing each backend
+	// to re-read its configuration and re-initialize itself as needed.
+	// It is expected that backends will put their own
+	// initialization code in initAndReconfig() and call base_initAndReconfig() from there.
+	virtual void initAndReconfig() = 0;
 
 	// Allocate a new Metric object.
 	// This is done via a virtual function so the class derived from StatsD
@@ -142,6 +195,54 @@ class StatsD: Service {
 
 	// Collect ads from the collector and evaluate all metrics.
 	void publishMetrics( int timerID = -1 );
+
+	// Evaluate the supplied daemon ads against the metric definitions of this
+	// StatsD instance, calling publishMetric()/addToAggregateValue() as needed.
+	virtual void publishMetricsFromAds(std::vector<ClassAd> &daemon_ads);
+
+	// Hook invoked at the end of each publishMetrics() cycle. Backends override
+	// this to flush per-cycle output (e.g. write the Prometheus file).
+	virtual void postPublishMetrics() {}
+
+	// Accessor for the set of collector ad types this StatsD needs.
+	const std::vector<std::string> &getTargetTypes() const { return m_target_types; }
+
+	// Backends override this to add attributes they require in the collector
+	// projection (e.g. PrometheusD needs ATTR_LAST_HEARD_FROM when emitting
+	// timestamps). The owning MetricD merges these into its own projection.
+	virtual void extraProjectionRefs(classad::References & /*refs*/) const {}
+
+	// Returns true if any parsed metric could publish to the named backend.
+	// Conservative: also returns true if any metric has a non-literal or
+	// empty/missing ExportMetric (which could resolve to any backend at
+	// evaluation time). MetricD uses this to skip initializing backends
+	// that have no metrics, so e.g. a Prometheus-only setup never touches
+	// libganglia. Matching is case-insensitive.
+	bool hasMetricsForBackend(const char *backend_name) const;
+
+	// If this StatsD only publishes to a single named backend (e.g. the
+	// Ganglia or Prometheus backend owned by a MetricD), return that backend
+	// name. ParseMetrics() uses it to discard, at parse time, any metric whose
+	// (literal) ExportMetric keyword does not name this backend. Returns
+	// nullptr for instances that must process every metric (MetricD, which
+	// builds the unified collector query, and legacy condor_gangliad).
+	virtual const char *exportFilterName() const { return nullptr; }
+
+	// Returns the name of the backend this StatsD publishes to (e.g.
+	// "ganglia" or "prometheus"), or nullptr for instances that are not tied
+	// to a single backend (the base class and MetricD, which never creates
+	// metrics of its own).  Metric::evaluate() uses this to honor
+	// backend-decorated attribute overrides (e.g. Ganglia_Name).  Unlike
+	// exportFilterName(), this is independent of as-backend filtering: legacy
+	// condor_gangliad still reports "ganglia" here.
+	virtual const char *backendName() const { return nullptr; }
+
+	// Backends that support per-sample labels (currently only Prometheus)
+	// return a ClassAd of pool-wide default label expressions here; the
+	// attribute names are label names and the values are expressions
+	// evaluated against each daemon ad.  Returns nullptr when there are no
+	// pool-wide defaults.  Consulted by Metric::evaluateDaemonAd().
+	virtual const classad::ClassAd *defaultLabelAd() const { return nullptr; }
 
 	// Given a machine name or daemon name, return the IP address of it,
 	// using information gathered from the collector.
@@ -156,6 +257,19 @@ class StatsD: Service {
 	// Returns the collector host name.
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
 
+	// Copy the per-cycle state derived from the collector query (the default
+	// aggregate host and the collector host->IP mappings) from src into this
+	// instance.  MetricD is the only instance that queries the collector, but
+	// its backends are the ones that evaluate metrics, so MetricD must hand
+	// this state over at the start of each publication cycle -- otherwise
+	// aggregate metrics resolve no machine name at all.  Note that per-pool
+	// aggregate names under MONITOR_MULTIPLE_COLLECTORS / MONITOR_COLLECTOR
+	// do NOT come through here: those ride along in each daemon ad as
+	// ATTR_STASH_COLLECTOR_NAME and so survive the hand-off on their own.
+	// This also resets the receiver's IP map each cycle, which is what keeps
+	// it from accumulating stale entries for daemons that have gone away.
+	void adoptCollectorState(StatsD const &src);
+
 	// Apply an aggregate function to a data point.
 	void addToAggregateValue(Metric const &metric);
 
@@ -169,6 +283,25 @@ class StatsD: Service {
 
 	// Get a previous value for a metric for use in calculating derivatives of aggregate metrics. Return true if a previous value was found, false otherwise.
 	bool getPreviousValue(std::string const &key, double &value);
+
+	// Called once at the end of each publication cycle to rotate this cycle's
+	// stored values (m_current_values) into m_previous_values so they are
+	// available as the "previous value" on the next cycle.  Virtual so MetricD
+	// can forward it to its backend instances, which do the actual per-metric
+	// processing; without that forwarding the backends' previous-value maps
+	// would never be populated and no aggregate derivative metric would ever be
+	// published in metricd mode.
+	virtual void cleanupOldPreviousValues();
+
+	// For an aggregate (SUM) derivative metric, integrate this publication
+	// cycle's pooled per-daemon delta (increment) into a persistent running
+	// total keyed by the metric's aggregate_group, and return the new
+	// cumulative total.  This lets a summed counter be published as a proper
+	// monotonic counter (so the backend computes the rate itself), consistent
+	// with how non-aggregate counters are published, rather than as a
+	// per-interval gauge.  The total resets to zero if metricd restarts, which
+	// is normal counter-reset behavior handled by the monitoring backend.
+	double accumulateAggregateCounter(std::string const &key, double increment) { return m_aggregate_counter_totals[key] += increment; }
 
  protected:
 	int m_verbosity;
@@ -188,8 +321,15 @@ class StatsD: Service {
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
 	std::vector<std::string> m_target_types;
-	bool m_want_projection;
+	bool m_want_projection = false;
 	classad::References m_projection_references;
+
+	// Set true if any parsed metric has a non-literal or empty/missing
+	// ExportMetric (so its target backend(s) cannot be known at parse time).
+	bool m_has_wildcard_backend_metric = false;
+	// Count of parsed metrics whose ExportMetric literally names this backend.
+	// Keys are normalized to lowercase.
+	std::map<std::string,unsigned> m_metric_counts_by_backend;
 
 
 	unsigned m_derivative_publication_failed;
@@ -206,11 +346,15 @@ class StatsD: Service {
 	std::unordered_set< std::string > m_unresponsive_collectors;
 
 	// Map that contains previous and current value of each metric for each machine, used to calculate derivatives of aggregate metrics
-	std::map<std::string, double> m_previous_values;
-	std::map<std::string, double> m_current_values;
+	std::unordered_map<std::string, double> m_previous_values;
+	std::unordered_map<std::string, double> m_current_values;
 
-	// Remove entries from m_previous_values whose time doesn't match m_start_time
-	void cleanupOldPreviousValues();
+	// Running cumulative totals for aggregate (SUM) derivative (counter)
+	// metrics, keyed by aggregate_group.  Persists across publication cycles
+	// (unlike m_aggregate_metrics, which is cleared each cycle) so a summed
+	// counter can be published as a monotonic counter.  See
+	// accumulateAggregateCounter() and Metric::convertToNonAggregateValue().
+	std::unordered_map<std::string, double> m_aggregate_counter_totals;
 
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();

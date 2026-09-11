@@ -535,6 +535,7 @@ static const char * SubsysNameById[] = {
 	"JOB_ROUTER",
 	"DEFRAG",
 	"GANGLIAD",
+	"METRICD",
 
 	"DAGMAN",
 	"TOOL",
@@ -562,6 +563,7 @@ static const struct BSubsys {
 	FILL(JOB_ROUTER),
 	FILL(KBDD),
 	FILL(MASTER),
+	FILL(METRICD),
 	FILL(NEGOTIATOR),
 	FILL(REPLICATION),
 	FILL(ROOSTER),
