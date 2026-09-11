@@ -44,22 +44,6 @@ static int fseek_64b(FILE* f, int64_t offset, int origin) {
 #endif
 }
 
-// Read one line from f into line (newline consumed but not stored).
-// Returns true if any characters were read (including a partial last line at EOF).
-static bool fgetline(FILE* f, std::string& line, int& error) {
-	line.clear();
-	error = 0;
-	int ch;
-	while ((ch = fgetc(f)) != EOF) {
-		if (ch == '\n') { return true; }
-		if (ch != '\r') { line += static_cast<char>(ch); }
-	}
-	if (ferror(f)) { error = errno; }
-	return !line.empty();
-}
-
-// Chunk size for backward reads.
-static constexpr int64_t BW_CHUNK = 8192;
 
 // Returns true if line begins with the three-star banner prefix.
 static bool IsBannerLine(const std::string& line) {
@@ -225,6 +209,7 @@ ArchiveReader::ClearEOF() {
 		clearerr(m_file.get());
 	}
 	m_error = 0;
+	m_fwd_eof = false;
 }
 
 bool
@@ -238,6 +223,10 @@ ArchiveReader::SeekForward(int64_t offset) {
 	}
 	m_fwd_accumulated.clear();
 	m_fwd_record_start = -1;
+	m_fwd_buf.clear();
+	m_fwd_buf_pos = 0;
+	m_fwd_buf_base = offset;
+	m_fwd_eof = false;
 	return true;
 }
 
@@ -252,6 +241,12 @@ ArchiveReader::Next(ArchiveRecord& record) {
 int64_t
 ArchiveReader::Tellp() const {
 	if ( ! m_file) { return -1; }
+	if (m_dir == Direction::Forward) {
+		// The underlying stream may be read ahead of this via the forward
+		// read-ahead buffer, so report the logical (buffer-consumed) position,
+		// not the raw stream position.
+		return m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf_pos);
+	}
 	return ftell_64b(m_file.get());
 }
 
@@ -273,7 +268,9 @@ ArchiveReader::Size() {
 		return -1;
 	}
 
-	int64_t size = Tellp();
+	// Raw stream position, not Tellp(): forward's Tellp() reflects the
+	// read-ahead buffer's logical position, not the stream's actual offset.
+	int64_t size = ftell_64b(m_file.get());
 
 	if (fseek_64b(m_file.get(), curr, SEEK_SET) != 0) {
 		dprintf(D_ERROR, "ERROR: Failed to restore position of archive file (%d): %s\n",
@@ -281,36 +278,118 @@ ArchiveReader::Size() {
 		return -1;
 	}
 
+	if (m_dir == Direction::Forward) {
+		// Resync the read-ahead buffer to the restored logical position.
+		m_fwd_buf.clear();
+		m_fwd_buf_pos = 0;
+		m_fwd_buf_base = curr;
+		m_fwd_eof = false;
+	}
+
 	return size;
+}
+
+void
+ArchiveReader::SetChunkSize(size_t bytes) {
+	if (bytes > 0) { m_chunk_size = bytes; }
+}
+
+// =====================================================================
+// Shared chunk reading
+// =====================================================================
+// Seek to `at_offset` and read up to `max_len` bytes, appending them to `out`.
+// Used by both directions' buffer refills; a short read (bytes_read < max_len)
+// is not itself an error -- it means EOF. Only a genuine seek/read failure
+// sets m_error and returns false.
+bool
+ArchiveReader::ReadChunk(int64_t at_offset, size_t max_len, std::string& out, size_t& bytes_read) {
+	bytes_read = 0;
+
+	if (fseek_64b(m_file.get(), at_offset, SEEK_SET) != 0) {
+		m_error = errno;
+		dprintf(D_ERROR, "ArchiveReader: seek to %lld failed: %s\n",
+		        (long long)at_offset, strerror(m_error));
+		return false;
+	}
+
+	std::vector<char> raw(max_len);
+	size_t n = fread(raw.data(), 1, max_len, m_file.get());
+	if (n > 0) {
+		out.append(raw.data(), n);
+	}
+	bytes_read = n;
+
+	if (n < max_len && ferror(m_file.get())) {
+		m_error = errno;
+		dprintf(D_ERROR, "ArchiveReader: read error: %s\n", strerror(m_error));
+		return false;
+	}
+	return true;
 }
 
 // =====================================================================
 // Forward reading
 // =====================================================================
+// Pop the next line from the forward read-ahead buffer (offset of its first
+// byte returned via `offset`), topping the buffer up from the file in large
+// chunks -- rather than one byte at a time -- whenever it runs dry.
+bool
+ArchiveReader::NextForwardLine(std::string& line, int64_t& offset) {
+	while (true) {
+		size_t nl = m_fwd_buf.find('\n', m_fwd_buf_pos);
+		if (nl != std::string::npos) {
+			offset = m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf_pos);
+			line.assign(m_fwd_buf, m_fwd_buf_pos, nl - m_fwd_buf_pos);
+			line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+			m_fwd_buf_pos = nl + 1;
+			return true;
+		}
+
+		if (m_fwd_eof) {
+			// A trailing partial line with no newline still counts (matches
+			// the schedd never appending a final incomplete line under normal
+			// operation, but a truncated/in-progress file can still have one).
+			if (m_fwd_buf_pos < m_fwd_buf.size()) {
+				offset = m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf_pos);
+				line.assign(m_fwd_buf, m_fwd_buf_pos, std::string::npos);
+				line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+				m_fwd_buf_pos = m_fwd_buf.size();
+				return true;
+			}
+			return false;
+		}
+
+		// Compact away the already-consumed prefix before topping up, so the
+		// buffer doesn't grow unbounded over a long forward scan.
+		if (m_fwd_buf_pos > 0) {
+			m_fwd_buf.erase(0, m_fwd_buf_pos);
+			m_fwd_buf_base += static_cast<int64_t>(m_fwd_buf_pos);
+			m_fwd_buf_pos = 0;
+		}
+
+		int64_t next_offset = m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf.size());
+		size_t n = 0;
+		if ( ! ReadChunk(next_offset, m_chunk_size, m_fwd_buf, n)) {
+			return false;
+		}
+		if (n < m_chunk_size) {
+			// A short read with no error means EOF.
+			m_fwd_eof = true;
+		}
+	}
+}
+
 // Accumulate key=value lines until a banner line is found; then emit
 // the accumulated lines as a complete record.
 bool
 ArchiveReader::NextForward(ArchiveRecord& record) {
 	std::string line;
+	int64_t line_off = 0;
 
 	while (true) {
-		int64_t line_off = ftell_64b(m_file.get());
-		int io_error = 0;
-		if ( ! fgetline(m_file.get(), line, io_error)) {
+		if ( ! NextForwardLine(line, line_off)) {
 			// EOF (or I/O error) before finding another banner.
 			// A trailing partial record with no banner is discarded.
-			if (io_error) {
-				m_error = io_error;
-				dprintf(D_ERROR, "ArchiveReader: read error in forward scan: %s\n",
-				        strerror(m_error));
-			}
-			return false;
-		}
-
-		if (io_error) {
-			m_error = io_error;
-			dprintf(D_ERROR, "ArchiveReader: read error mid-line in forward scan: %s\n",
-			        strerror(m_error));
 			return false;
 		}
 
@@ -364,23 +443,14 @@ ArchiveReader::FillBackwardBuffer() {
 	}
 
 	// Read the next chunk ending at m_bwd_pos.
-	int64_t read_size = std::min(BW_CHUNK, m_bwd_pos);
+	int64_t read_size = std::min<int64_t>(static_cast<int64_t>(m_chunk_size), m_bwd_pos);
 	int64_t chunk_base = m_bwd_pos - read_size;
 
-	if (fseek_64b(m_file.get(), chunk_base, SEEK_SET) != 0) {
-		int saved_errno = errno;
-		m_error = saved_errno;
-		dprintf(D_ERROR, "ERROR: Failed to seek to chunk border %llu in archive file (%d): %s\n",
-		        (unsigned long long)chunk_base, m_error, strerror(m_error));
-		return false;
-	}
-
-	std::vector<char> raw(static_cast<size_t>(read_size));
-	size_t bytes_read = fread(raw.data(), 1, static_cast<size_t>(read_size), m_file.get());
-	if (ferror(m_file.get())) {
-		m_error = errno;
-		dprintf(D_ERROR, "ArchiveReader: read error in backward buffer fill: %s\n",
-		        strerror(m_error));
+	// Build combined = chunk + carry.
+	// Byte i in combined corresponds to file offset chunk_base + i.
+	std::string combined;
+	size_t bytes_read = 0;
+	if ( ! ReadChunk(chunk_base, static_cast<size_t>(read_size), combined, bytes_read)) {
 		return false;
 	}
 	if (bytes_read != static_cast<size_t>(read_size)) {
@@ -390,9 +460,6 @@ ArchiveReader::FillBackwardBuffer() {
 		return false;
 	}
 
-	// Build combined = chunk + carry.
-	// Byte i in combined corresponds to file offset chunk_base + i.
-	std::string combined(raw.data(), bytes_read);
 	combined += m_bwd_carry;
 	m_bwd_carry.clear();
 
