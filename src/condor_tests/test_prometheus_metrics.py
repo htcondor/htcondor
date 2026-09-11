@@ -1356,12 +1356,12 @@ def _pick_free_tcp_port():
     range; we read it back and immediately close the socket so metricd can claim
     it. Callers must still verify metricd bound it (see the retry loop below),
     because the port could in principle be taken by another process in between.
-    We bind to all interfaces (host "") so the port is free on every interface
-    metricd might choose, not just loopback.
+    We bind only to loopback ("127.0.0.1") as there is not need for this 
+    test to pick a port that is accessible from anywhere.
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        s.bind(("", 0))
+        s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
     finally:
         s.close()
