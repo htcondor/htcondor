@@ -868,6 +868,12 @@ DagParser::ParseNodeStatus(DagLexer& details) {
 	while ( ! token.empty()) {
 		if (isKeyword(token, "ALWAYS_UPDATE")) {
 			cmd->SetAlwaysUpdate();
+		} else if (isKeyword(token, "CLASSAD")) {
+			cmd->SetFmt(DAG::NodeStatusFmt::CLASSAD);
+		} else if (isKeyword(token, "JSON")) {
+			cmd->SetFmt(DAG::NodeStatusFmt::JSON);
+		} else if (isKeyword(token, "COMPACT")) {
+			cmd->SetCompact();
 		} else {
 			try {
 				int min = std::stoi(token);

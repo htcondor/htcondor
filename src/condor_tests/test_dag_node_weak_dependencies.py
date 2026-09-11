@@ -19,6 +19,7 @@
 
 from ornithology import *
 import htcondor2
+import classad2
 import pytest
 import os
 import sys
@@ -61,16 +62,16 @@ def write_dag_file(contents: str, name: str = DAG_FILENAME) -> str:
 def count_node_statuses(path: str = "status.out") -> dict:
     """Parse a DAGMan NODE_STATUS_FILE and count Done/Error/Futile nodes."""
     counts = {"done": 0, "error": 0, "futile": 0}
-    with open(path, "r") as f:
-        for line in f.readlines():
-            if "NodeStatus =" not in line:
-                continue
-            if "STATUS_DONE" in line:
-                counts["done"] += 1
-            elif "STATUS_ERROR" in line:
-                counts["error"] += 1
-            elif "STATUS_FUTILE" in line:
-                counts["futile"] += 1
+    for ad in classad2.parseAds(open(path, "r")):
+        if ad.get("Type") != "NodeStatus":
+            continue
+        status_name = ad.get("NodeStatusName", "")
+        if status_name == "STATUS_DONE":
+            counts["done"] += 1
+        elif status_name == "STATUS_ERROR":
+            counts["error"] += 1
+        elif status_name == "STATUS_FUTILE":
+            counts["futile"] += 1
     return counts
 
 #-----------------------------------------------------------------------------------------
