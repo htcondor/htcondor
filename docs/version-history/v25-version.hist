@@ -1,3 +1,12 @@
+*** 25.0.15 features
+
+- For Execution Points using the Logical Manager (LVM) for disk space
+  enforcement and Security Enhanced Linux (SELinux), HTCondor now copies
+  the SELinux security context from the mount point to the newly created
+  filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
+  using both LVM and SELinux.
+  :jira:`3337`
+
 *** 25.0.15 bugs
 
 *** 25.0.14 features
