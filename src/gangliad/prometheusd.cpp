@@ -410,11 +410,19 @@ PrometheusD::buildPrometheusName(const Metric &m) const
 		name += unit_suffix;
 	}
 
-	// counter suffix
-	if (m.derivative && m.aggregate == Metric::NO_AGGREGATE) {
+	// counter suffix.  Never for a string metric: those are published as info
+	// metrics below, and "_total_info" would be nonsense.
+	if (m.type != Metric::STRING &&
+	    m.derivative && m.aggregate == Metric::NO_AGGREGATE) {
 		if (!name.ends_with("_total")) {
 			name += "_total";
 		}
+	}
+
+	// info suffix.  A string-valued metric is published as an info metric
+	// (see publishMetric()), and Prometheus convention names those "_info".
+	if (m.type == Metric::STRING && !name.ends_with("_info")) {
+		name += "_info";
 	}
 
 	return name;
@@ -459,16 +467,55 @@ PrometheusD::publishMetric(Metric const &m_in)
 	}
 
 	std::string value;
-	if (!m_in.getValueString(value) || value.empty()) {
+	if (!m_in.getValueString(value)) {
+		return;
+	}
+
+	// Every Prometheus sample value must be a number, so a string-valued
+	// metric cannot be published as-is; emitting the string where the value
+	// belongs produces exposition text that scrapers reject.  The established
+	// convention is an "info" metric: a gauge whose value carries nothing (1)
+	// and whose label carries the string.  The metric is named "<name>_info"
+	// (done in buildPrometheusName()) and the label is named after the metric,
+	// so a Type="string" metric named condor_version publishes as
+	//     condor_version_info{condor_version="10.2.0"} 1
+	std::map<std::string,std::string> labels = m_in.prometheus_labels;
+	const bool is_info = (m_in.type == Metric::STRING);
+	if (is_info) {
+		// Metric names may contain ':' but label names may not, so sanitize.
+		// Use the configured name rather than prom_name so that the unit and
+		// _info suffixes do not leak into the label name.
+		std::string label_name = m_in.name;
+		for (char &c : label_name) {
+			if (!isalnum((unsigned char)c) && c != '_') c = '_';
+		}
+		if (!Metric::isValidLabelName(label_name)) {
+			dprintf(D_ERROR,
+			        "Cannot publish string metric '%s' as a Prometheus info metric:"
+			        " '%s' is not a usable label name; skipping\n",
+			        m_in.name.c_str(), label_name.c_str());
+			return;
+		}
+		// The string becomes the label value.  If a label of the same name was
+		// already configured it is replaced, since this one is the whole point
+		// of the metric.
+		labels[label_name] = value;
+		// An info metric's value is a constant 1; use 0 to distinguish a
+		// daemon that reported an empty string.
+		value = value.empty() ? "0" : "1";
+	} else if (value.empty()) {
 		return;
 	}
 
 	PendingMetric pm;
 	pm.name = prom_name;
-	pm.labels = serializeLabels(m_in.prometheus_labels);
+	pm.labels = serializeLabels(labels);
 	pm.value = value;
 	pm.help = buildPrometheusHelp(m_in);
-	pm.prom_type = static_cast<const PrometheusMetric &>(m_in).prometheusType();
+	// An info metric is always a gauge, whatever Counter/Derivative may say.
+	pm.prom_type = is_info
+	             ? "gauge"
+	             : static_cast<const PrometheusMetric &>(m_in).prometheusType();
 	pm.timestamp = m_in.timestamp;
 	m_pending.push_back(pm);
 }

@@ -207,6 +207,22 @@ METRIC_DEFS = r"""
   PrometheusLabels = [ machine = MetricMachine; metric_pool = MetricPool ];
 ]
 [
+  Name = "string_info_test_metric";
+  Value = CondorVersion;
+  Type = "string";
+  Desc = "String metric published as a Prometheus info metric";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+[
+  Name = "empty_string_info_test_metric";
+  Value = "";
+  Type = "string";
+  Desc = "String metric whose value is empty";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -544,6 +560,53 @@ class TestPrometheusMetrics:
             labels = self._labels(prom_text, name)
             label_machine = re.search(r'\bmachine="([^"]*)"', labels).group(1)
             assert label_machine == _ganglia_machine(ganglia_log_with_aggregate, name)
+
+    # --- string metrics become info metrics ---------------------------------
+    #
+    # A Prometheus sample value must be a number, so a string-valued metric is
+    # published as an info metric: the name gains an "_info" suffix, the string
+    # moves into a label named after the metric, and the value becomes 1.
+
+    def test_string_metric_gets_info_suffix(self, prom_file_contents):
+        assert "string_info_test_metric_info" in prom_file_contents
+        # The unsuffixed name must not also appear as a sample.
+        for line in prom_file_contents.splitlines():
+            if line.startswith("string_info_test_metric{"):
+                assert False, "string metric published without _info suffix: " + line
+
+    def test_string_metric_value_is_one(self, prom_file_contents):
+        assert (
+            _prom_sample_value(prom_file_contents, "string_info_test_metric_info") == 1.0
+        )
+
+    def test_string_metric_value_moved_into_label(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "string_info_test_metric_info")
+        assert labels is not None
+        m = re.search(r'\bstring_info_test_metric="([^"]*)"', labels)
+        assert m is not None, labels
+        assert m.group(1).startswith("$CondorVersion:"), m.group(1)
+
+    def test_string_metric_is_typed_gauge(self, prom_file_contents):
+        assert "# TYPE string_info_test_metric_info gauge" in prom_file_contents
+
+    def test_string_metric_sample_value_is_numeric(self, prom_file_contents):
+        # The bug this replaced emitted the string itself where the value
+        # belongs, which no scraper accepts. Every sample value in the file
+        # must parse as a float.
+        for line in prom_file_contents.splitlines():
+            if line.startswith("#") or not line.strip():
+                continue
+            parts = line.split()
+            # With timestamps enabled the value is the second-to-last token.
+            float(parts[-2])
+
+    def test_empty_string_metric_value_is_zero(self, prom_file_contents):
+        # An empty string still publishes, with value 0, so the series does not
+        # silently vanish.
+        assert (
+            _prom_sample_value(prom_file_contents, "empty_string_info_test_metric_info")
+            == 0.0
+        )
 
     def test_bare_machine_still_means_the_daemon_ad_attribute(
         self, prom_file_contents, schedd_ad
