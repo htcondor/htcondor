@@ -58,7 +58,13 @@ bool IOProxyHandler::init( Stream *s, const char *c )
 	cookie = strdup(c);
 	if(!cookie) return false;
 
-	daemonCore->Register_Socket( s, "IOProxy client", (SocketHandlercpp) &IOProxyHandler::handle_request, "IOProxyHandler::handle_request", this );
+	int rc = daemonCore->Register_Socket( s, "IOProxy client", (SocketHandlercpp) &IOProxyHandler::handle_request, "IOProxyHandler::handle_request", this );
+	if (rc < 0) {
+		dprintf(D_ALWAYS, "IOProxyHandler::init: Register_Socket failed (rc=%d), cannot service IOProxy client\n", rc);
+		free(cookie);
+		cookie = nullptr;
+		return false;
+	}
 
 	return true;
 }

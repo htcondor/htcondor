@@ -2017,7 +2017,7 @@ FileTransfer::ReadTransferPipeMsg()
 		while( total_read < size_of_ad ) {
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 			                           plugin_output_ad_string + total_read,
-			                           size_of_ad );
+			                           size_of_ad - total_read );
 			if( n <= 0 ) { delete [] plugin_output_ad_string; goto read_failed; }
 			total_read += n;
 		}

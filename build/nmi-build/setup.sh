@@ -57,6 +57,8 @@ elif [ "$ID" = 'centos' ]; then
 elif [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
     zypper --non-interactive update
     INSTALL='zypper --non-interactive install'
+    # Work around for broken openSUSE 16.0 Docker image
+    # $INSTALL --oldpackage libsqlite3-0=3.51.3-160000.1.1
     $INSTALL system-group-wheel system-user-mail
 elif [ "$ID" = 'amzn' ] || [ "$ID" = 'almalinux' ] || [ "$ID" = 'fedora' ]; then
     dnf upgrade --assumeyes
@@ -275,7 +277,7 @@ if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$
         $INSTALL procps-ng
     fi
     if [ "$ID" != 'amzn' ] && [ "$ID" != 'sles' ]; then
-        $INSTALL apptainer
+        $INSTALL apptainer fuse-overlayfs
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
@@ -289,10 +291,11 @@ if [ "$ID" = 'debian' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.5.0
+    APPTAINER_VERSION=1.5.1
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL fuse-overlayfs
 fi
 
 if [ "$ID" = 'ubuntu' ]; then
@@ -302,7 +305,7 @@ if [ "$ID" = 'ubuntu' ]; then
         add-apt-repository -y ppa:apptainer/ppa
         apt-get update
     fi
-    $INSTALL apptainer
+    $INSTALL apptainer fuse-overlayfs
 fi
 
 
@@ -351,6 +354,19 @@ fi
 
 # pelican-osdf-compat went to noarch. Unfortunately, the old arch specific RPM is also downloaded
 rm -f "$externals_dir"/pelican-osdf-compat-*64.rpm
+
+# Install the Pelican client and server for the Pelican credmon integration
+# test (src/condor_tests/test_pelican_credmon.py), which stands up a POSIXv2
+# federation with the embedded issuer and exercises the device-code flow,
+# RFC 8693 token exchange, and refresh.  The above only *downloads* pelican for
+# bundling into the tarball; the test needs the binaries on PATH.
+#
+# `pelican` (>= 7.25.0) is a normal HTCondor runtime dependency and is present
+# in the HTCondor repositories.  `pelican-server` provides the federation and
+# may not be mirrored in every repository, so its installation is best-effort:
+# when it is absent the integration test simply skips.
+$INSTALL pelican
+$INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
 
 # Clean up package caches
 if [ "$ID" = 'centos' ]; then

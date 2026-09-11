@@ -1059,42 +1059,56 @@ LogDeleteAttribute::ReadBody(FILE* fp)
 
 #define	ATTRLIST_MAX_EXPRESSION 10240
 
+LogRecord* MakeLogRecord(int optype, const ConstructLogEntry & ctor)
+{
+	LogRecord	*log_rec = nullptr;
+
+	switch(optype) {
+	case CondorLogOp_Error:
+		log_rec = new LogRecordError();
+		break;
+	case CondorLogOp_NewClassAd:
+		log_rec = new LogNewClassAd("", "", ctor);
+		break;
+	case CondorLogOp_DestroyClassAd:
+		log_rec = new LogDestroyClassAd("", ctor);
+		break;
+	case CondorLogOp_SetAttribute:
+		log_rec = new LogSetAttribute("", "", "");
+		break;
+	case CondorLogOp_DeleteAttribute:
+		log_rec = new LogDeleteAttribute("", "");
+		break;
+	case CondorLogOp_BeginTransaction:
+		log_rec = new LogBeginTransaction();
+		break;
+	case CondorLogOp_EndTransaction:
+		log_rec = new LogEndTransaction();
+		break;
+	case CondorLogOp_LogHistoricalSequenceNumber:
+		log_rec = new LogHistoricalSequenceNumber(0,0);
+		break;
+	default:
+		break;
+	}
+	return log_rec;
+}
+
+
 LogRecord	*
 InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor)
 {
-	LogRecord	*log_rec;
-
-	switch(type) {
-        case CondorLogOp_Error:
-            log_rec = new LogRecordError();
-            break;
-	    case CondorLogOp_NewClassAd:
-		    log_rec = new LogNewClassAd("", "", ctor);
-			break;
-	    case CondorLogOp_DestroyClassAd:
-		    log_rec = new LogDestroyClassAd("", ctor);
-			break;
-	    case CondorLogOp_SetAttribute:
-		    log_rec = new LogSetAttribute("", "", "");
-			break;
-	    case CondorLogOp_DeleteAttribute:
-		    log_rec = new LogDeleteAttribute("", "");
-			break;
-		case CondorLogOp_BeginTransaction:
-			log_rec = new LogBeginTransaction();
-			break;
-		case CondorLogOp_EndTransaction:
-			log_rec = new LogEndTransaction();
-			break;
-		case CondorLogOp_LogHistoricalSequenceNumber:
-			log_rec = new LogHistoricalSequenceNumber(0,0);
-			break;
-	    default:
-		    return NULL;
-			break;
+	LogRecord	*log_rec = ctor.NewLogRec(type);
+	if ( ! log_rec) {
+		log_rec = new LogRecordError();
 	}
 
+#if 1
+	// ftell is expensive, so don't do it unless we fail. Also the byte offset is
+	// kinda useless on windows unless you open the file in binary mode.
+#else
 	long long pos = ftell(fp);
+#endif
 
 	// Check if we got a bogus record indicating a bad log file.  There are two basic
     // failure modes.  The first mode is some kind of parse failure that occurs at the
@@ -1104,6 +1118,9 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
     // transaction op).  A complete transaction with corruption is unrecoverable, and 
     // causes a fatal exception.
 	if (log_rec->ReadBody(fp) < 0  ||  log_rec->get_op_type() == CondorLogOp_Error) {
+	#if 1
+		long long pos = ftell(fp);
+	#endif
         dprintf(D_ALWAYS | D_ERROR, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
 		// TODO: this ugly code attempts to reconstruct the corrupted line, fix it to just show the actual line.
 		const char *key, *name="", *value="";

@@ -1404,10 +1404,16 @@ case CONDOR_putfile:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
-		free((char*)path);
+		if (result == 0) {
+			free((char*)path);
+			if (fd >= 0) { close(fd); }
+			dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__);
+			thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
+			return RemoteSyscallResult::UnexpectedClose;
+		}
 
         if (length <= 0) {
+			free((char*)path);
 			if (fd >= 0) close(fd);
 			return RemoteSyscallResult::SyscallOK;
 		}
@@ -1427,8 +1433,8 @@ case CONDOR_putfile:
 		else {
 			dprintf(D_SYSCALLS, "Unable to put file %s\n", path);
 		}
-		close(fd);
-		
+		free((char*)path);
+		if (fd >= 0) { close(fd); }
 		syscall_sock->encode();
 		result = ( syscall_sock->code(num) );
 		ASSERT( result );

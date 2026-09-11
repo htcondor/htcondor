@@ -190,7 +190,10 @@ public:
 		@return the gid of the entry's group id
 	*/
 	gid_t GetGroup() const;
+
+	nlink_t GetLinkCount() const;
 #endif
+
 
 private:
 	si_error_t si_error;
@@ -206,6 +209,7 @@ private:
 #ifndef WIN32
 	uid_t owner;
 	gid_t group;
+	nlink_t link_count {0};
 #endif
 	bool valid;
 	mode_t file_mode;

@@ -288,7 +288,7 @@ iepoch2str(time_t epoch, char * f)
 
 	struct tm tm;
 	
-	lepoch=make_message("%d",epoch);
+	lepoch=make_message("%ld",(long)epoch);
  
 	strptime(lepoch,"%s",&tm);
  

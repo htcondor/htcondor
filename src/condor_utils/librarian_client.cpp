@@ -146,19 +146,24 @@ int LibrarianClient::CountByUser([[maybe_unused]] const std::string& username, [
 #endif
 }
 
-std::vector<LibrarianRecord> LibrarianClient::GetRecords([[maybe_unused]] const std::vector<std::pair<int,int>>& job_ids) const {
+std::vector<LibrarianRecord> LibrarianClient::GetRecords([[maybe_unused]] const std::vector<std::pair<int,int>>& job_ids,
+                                                         [[maybe_unused]] FileFilter filter) const {
 	std::vector<LibrarianRecord> results;
 #ifdef HAVE_SQLITE3_H
 	if ( ! IsValid()) { return results; }
 
-	static const char* sql =
+	static const char* base_sql =
 		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
 		" JOIN Files f ON jr.FileId = f.FileId"
 		" JOIN Jobs j  ON jr.JobId  = j.JobId"
 		" WHERE j.ClusterId = ? AND j.ProcId = ?";
+	static const char* extra_filter = " AND f.DateOfDeletion IS NULL";
+
+	std::string sql = base_sql;
+	if (filter == FileFilter::OnlyExisting) { sql += extra_filter; }
 
 	sqlite3_stmt* stmt = nullptr;
-	if (sqlite3_prepare_v2(m_impl->db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+	if (sqlite3_prepare_v2(m_impl->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
 		dprintf(D_ERROR, "LibrarianClient: prepare failed: %s\n", sqlite3_errmsg(m_impl->db));
 		return results;
 	}

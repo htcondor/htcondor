@@ -163,7 +163,11 @@ JobTransforms::transformJob(
 			continue;
 		}
 
-		rval = TransformClassAd(ad,*xfm,mset,errmsg);
+		// log macro errors in the transform ($func errors), but not the overall error
+		// since we want to add job context to the overall error.
+		const int xfm_flags = XFORM_UTILS_LOG_TO_DPRINTF | XFORM_UTILS_LOG_MACRO_ERRS;
+
+		rval = TransformClassAd(ad,*xfm,mset,errmsg,xfm_flags);
 
 		if (rval < 0) {
 			// Transformation failed; errmsg should say why.
@@ -172,7 +176,7 @@ JobTransforms::transformJob(
 				"(%d.%d) job_transforms: ERROR applying transform %s (err=-3,rval=%d,msg=%s)\n",
 				jid.cluster, jid.proc, xfm->getName(), rval, errmsg.c_str() ? errmsg.c_str() : "<none>");
 			return -3;
-		} 
+		}
 
 		// Keep a count of how many transform rules we applied, and the names
 		// of the transforms applied.

@@ -304,6 +304,25 @@ ParseClassAd(LexerSource *lexer_source, bool full)
  *
  *-------------------------------------------------------------------*/
 
+namespace {
+	// Maximum recursion depth of the recursive-descent parser, to prevent
+	// unbounded C-stack growth (stack overflow / crash) from maliciously
+	// deep input.  years of careful research
+	const int MAX_PARSER_DEPTH = 500;
+
+	// RAII guard installed by every parse function that can recurse
+	// directly (without re-entering parseExpression()).  It increments
+	// the shared depth counter on entry and decrements on exit, so the
+	// counter reflects true C-stack depth rather than just parseExpression()
+	// nesting.
+	struct DepthGuard {
+		int &parser_depth;
+		DepthGuard(int &i) : parser_depth(i) { parser_depth++; }
+		~DepthGuard() { parser_depth--; }
+		bool exceeded() const { return parser_depth > MAX_PARSER_DEPTH; }
+	};
+}
+
 //  Expression ::= LogicalORExpression
 //               | LogicalORExpression '?' Expression ':' Expression
 bool ClassAdParser::
@@ -313,19 +332,9 @@ parseExpression( ExprTree *&tree, bool full )
 	ExprTree  	*treeL = NULL, *treeM = NULL, *treeR = NULL;
 	Operation 	*newTree = NULL;
 
-	// No matter how we return from this function, decrement
-	// ClassAdParser::depth to keep track of stack depth
-	struct RAIIDecrementer {
-		int &parser_depth;
-		RAIIDecrementer(int &i) : parser_depth(i) {}
-		~RAIIDecrementer() {parser_depth--;}
-		RAIIDecrementer &operator++() {parser_depth++;return *this;}
-		int operator()() {return parser_depth;}
-	} stack_guard(depth);
-
-	++stack_guard;
 	// prevent unbounded stack depth
-	if (stack_guard() > 1000) { // years of careful research
+	DepthGuard stack_guard(depth);
+	if (stack_guard.exceeded()) {
 		return false;
 	}
 
@@ -334,26 +343,19 @@ parseExpression( ExprTree *&tree, bool full )
 		lexer.ConsumeToken();
 		treeL = tree;
 
-		if (lexer.PeekTokenType() == Lexer::LEX_COLON) {
-			// middle expression is empty
-			lexer.ConsumeToken(); // consume the colon
-			treeM = NULL; // mean return the lhs
-		} else {
-			// we have a middle expression
-			parseExpression(treeM);
-			if( lexer.PeekTokenType() != Lexer::LEX_COLON ) {
-				CondorErrno = ERR_PARSE_ERROR;
-				CondorErrMsg="expected LEX_COLON, but got "+
-					string(Lexer::strLexToken(tt));
-				if( treeL ) delete treeL; 
-				if( treeM ) delete treeM;
-				tree = NULL;
-				return false;
-			}
-			lexer.ConsumeToken();
+		parseExpression(treeM);
+		if( lexer.PeekTokenType() != Lexer::LEX_COLON ) {
+			CondorErrno = ERR_PARSE_ERROR;
+			CondorErrMsg="expected LEX_COLON, but got "+
+				string(Lexer::strLexToken(tt));
+			if( treeL ) delete treeL;
+			if( treeM ) delete treeM;
+			tree = NULL;
+			return false;
 		}
+		lexer.ConsumeToken();
 		parseExpression(treeR);
-		if( treeL && treeR && ( newTree=Operation::MakeOperation( 
+		if( treeL && treeM && treeR && ( newTree=Operation::MakeOperation(
 				Operation::TERNARY_OP, treeL, treeM, treeR ) ) ) {
 			tree = newTree;
 			return( true );
@@ -778,6 +780,12 @@ parseUnaryExpression(ExprTree *&tree)
 	Operation::OpKind	op=Operation::__NO_OP__;
 	Lexer::TokenType	tt;
 
+	// prevent unbounded stack depth from chained unary operators (e.g. !!!!...)
+	DepthGuard stack_guard(depth);
+	if (stack_guard.exceeded()) {
+		return false;
+	}
+
 	tt = lexer.PeekTokenType();
 	if( tt == Lexer::LEX_MINUS || tt == Lexer::LEX_PLUS || 
 			tt == Lexer::LEX_BITWISE_NOT || tt == Lexer::LEX_LOGICAL_NOT ) 
@@ -821,6 +829,12 @@ parsePostfixExpression(ExprTree *&tree)
 	ExprTree 			*treeL = NULL, *treeR = NULL;
 	Lexer::TokenValue	tv;
 	Lexer::TokenType	tt;
+
+	// prevent unbounded stack depth from chained elvis operators (e.g. a?:b?:c...)
+	DepthGuard stack_guard(depth);
+	if (stack_guard.exceeded()) {
+		return false;
+	}
 
 	if( !parsePrimaryExpression(tree) ) return false;
 	while( ( tt = lexer.PeekTokenType() ) == Lexer::LEX_OPEN_BOX || 
@@ -1208,6 +1222,12 @@ parseExprList( ExprList *&list , bool full )
 	Lexer::TokenType 	tt;
 	ExprTree	*tree = NULL;
 	vector<ExprTree*>	loe;
+		// loe owns the ExprTrees pushed into it until they are
+		// handed off to the ExprList below. If we bail out early,
+		// we must free them ourselves or they leak.
+	auto freeVector = [&loe]() {
+		for( ExprTree *e : loe ) { delete e; }
+	};
 
 	if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_OPEN_BRACE ) {
 		CondorErrno = ERR_PARSE_ERROR;
@@ -1224,11 +1244,7 @@ parseExprList( ExprList *&list , bool full )
 			CondorErrMsg = "while parsing expression list:  expected "
 				"LEX_CLOSE_BRACE or LEX_COMMA but got "+
 				string(Lexer::strLexToken(tt));
-			vector<ExprTree*>::iterator i = loe.begin( );
-			while(i != loe.end()) {
-				delete *i;
-				i++;
-			}
+			freeVector();
 			return false;
 		}
 
@@ -1245,11 +1261,7 @@ parseExprList( ExprList *&list , bool full )
 			CondorErrMsg = "while parsing expression list:  expected "
 				"LEX_CLOSE_BRACE or LEX_COMMA but got "+
 				string(Lexer::strLexToken(tt));
-			vector<ExprTree*>::iterator i = loe.begin( );
-			while(i != loe.end()) {
-				delete *i;
-				i++;
-			}
+			freeVector();
 			return false;
 		}
 	}
@@ -1257,6 +1269,7 @@ parseExprList( ExprList *&list , bool full )
 	lexer.ConsumeToken();
 
 	if( !( list = ExprList::MakeExprList( loe ) ) ) {
+		freeVector();
 		return( false );
 	}
 

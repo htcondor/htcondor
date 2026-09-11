@@ -104,6 +104,8 @@ def write_base_config(prefix_path, java=False):
 def main():
     args = parse_args()
 
+    args.prefix_path = os.path.normpath(args.prefix_path)
+
     rundir_parent = os.path.abspath(
         os.path.join(args.working_dir, "src", "condor_tests")
     )
@@ -174,22 +176,23 @@ def main():
         except FileExistsError:
             pass
 
-    os.environ["PATH"] = os.pathsep.join(
-        [
-            os.path.join(args.prefix_path, "bin"),
-            os.path.join(args.prefix_path, "sbin"),
-            
-            "/bin",
-            "/sbin",
-            "/usr/sbin",
-            "/usr/bin",
-        ]
-    )
-
     if platform.system() == "Windows":
-        os.environ["PATH"] += ";" + os.path.join(args.prefix_path, "../msconfig")        
-    
-    
+        os.environ["PATH"] += ";" + os.path.join(args.prefix_path, "..\\msconfig")
+        os.environ["PATH"] += ";" + os.path.join(args.prefix_path, "bin")
+        os.environ["PATH"] += ";" + os.path.join(args.prefix_path, "..\\src\\condor_tests")
+    else:
+        os.environ["PATH"] = os.pathsep.join(
+            [
+                os.path.join(args.prefix_path, "bin"),
+                os.path.join(args.prefix_path, "sbin"),
+                
+                "/bin",
+                "/sbin",
+                "/usr/sbin",
+                "/usr/bin",
+            ]
+        )
+
     pythonpath = os.environ.setdefault("PYTHONPATH", "")
     add_to_path = os.path.join(args.prefix_path, "lib", "python")
     if add_to_path not in pythonpath:

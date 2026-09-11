@@ -34,7 +34,7 @@ machine within the pool. They specify items related to the
 
 :macro-def:`VM_MAX_NUMBER[Virtual Machines]`
     An integer limit on the number of executing virtual machines. When
-    not defined, the default value is the same :macro:`NUM_CPUS`. When it
+    not defined, the default value is the same as :macro:`NUM_CPUS`. When it
     evaluates to ``Undefined``, as is the case when not defined with a
     numeric value, no meaningful limit is imposed.
 
@@ -75,8 +75,16 @@ machine within the pool. They specify items related to the
 
             bridge
             nat
+            user
             nat, bridge
+            nat, user
+            bridge, user
+            nat, bridge, user
 
+    The ``user`` type uses passt-based user-mode networking (KVM only).
+    It requires libvirt >= 9.0.0 and the ``passt`` binary to be present
+    on the execute node. If either is missing, ``user`` is automatically
+    removed from the available types at startup.
 
 :macro-def:`VM_NETWORKING_DEFAULT_TYPE[Virtual Machines]`
     Where multiple networking types are given in :macro:`VM_NETWORKING_TYPE`,
@@ -85,12 +93,13 @@ machine within the pool. They specify items related to the
 
     .. code-block:: condor-config
 
-          VM_NETWORKING_TYPE = nat, bridge
+          VM_NETWORKING_TYPE = nat, bridge, user
 
 
-    this variable may be defined as either ``nat`` or ``bridge``. Where
+    this variable may be defined as ``nat``, ``bridge``, or ``user``. Where
     multiple networking types are given in :macro:`VM_NETWORKING_TYPE`, and
-    this variable is not defined, a default of ``nat`` is used.
+    this variable is not defined, a default of ``user`` is used if user
+    networking is available, otherwise ``nat``.
 
 :macro-def:`VM_NETWORKING_BRIDGE_INTERFACE[Virtual Machines]`
     For Xen and KVM only, a required string if bridge networking is to

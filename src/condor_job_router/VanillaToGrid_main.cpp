@@ -121,7 +121,8 @@ int vanilla2grid(int argc, char **argv)
 	jobad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
 	int cluster,proc;
-	if( ! submit_job( owner, domain, jobad, 0, 0, &cluster, &proc ) ) {
+	std::string user;
+	if( ! submit_job( owner, domain, jobad, 0, 0, cluster, proc, user ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);

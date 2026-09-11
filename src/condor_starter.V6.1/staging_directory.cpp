@@ -149,7 +149,7 @@ std::unique_ptr<StagingDirectory>
 StagingDirectoryFactory::make(
 	const std::filesystem::path & directory,
 	const std::string & catalogName
-) {
+) const {
 	switch( this->typeToUse ) {
 		case StagingDirectoryType::Hardlink: {
 			auto * p = new HardlinkStagingDirectory( directory, catalogName );
@@ -182,7 +182,7 @@ StagingDirectoryFactory::make(
 std::unique_ptr<StagingDirectory>
 StagingDirectoryFactory::make(
 	const std::string & stagingDirectory
-) {
+) const {
 	switch( this->typeToUse ) {
 		case StagingDirectoryType::Hardlink: {
 			auto * p = new HardlinkStagingDirectory( stagingDirectory );
@@ -209,6 +209,38 @@ StagingDirectoryFactory::make(
 
 	// Why does the compiler think this is necessary?
 	return nullptr;
+}
+
+
+std::string
+StagingDirectoryFactory::type() const {
+    switch( this->typeToUse ) {
+		case StagingDirectoryType::Hardlink: {
+		    return "Hardlink";
+		} break;
+
+		case StagingDirectoryType::BindMount: {
+		    return "BindMount";
+		} break;
+
+		case StagingDirectoryType::Copy: {
+		    return "Copy";
+		} break;
+
+		case StagingDirectoryType::MIN:
+		case StagingDirectoryType::MAX:
+		case StagingDirectoryType::INVALID: {
+			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::type().\n" );
+			return "None";
+		} break;
+
+		// Not sure I like this any better than the fall-thru I complained
+		// about in the make() implementations.
+		default: {
+			dprintf( D_ALWAYS, "Unknown type-to-use in StagingDirectoryFactory::type().\n" );
+			return "Unknown";
+		} break;
+	}
 }
 
 

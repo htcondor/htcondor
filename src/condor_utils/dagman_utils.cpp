@@ -249,6 +249,10 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg( "-DoRecov" );
 	}
 
+	if (options[shallow::b::SetupOnly]) {
+		args.AppendArg("-SetupOnly");
+	}
+
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
 

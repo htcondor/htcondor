@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 210> makeCommandTable() {
+std::array<std::pair<int, const char *>, 212> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -374,6 +374,16 @@ std::array<std::pair<int, const char *>, 210> makeCommandTable() {
 		// Additional actions can be added without a new command.
 #define MANAGE_CEILING (SCHED_VERS+132)
 		{MANAGE_CEILING, "MANAGE_CEILING"},
+		// Manage temporary floor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, Floor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_FLOOR (SCHED_VERS+133)
+		{MANAGE_FLOOR, "MANAGE_FLOOR"},
+		// Manage temporary priority-factor leases on submitters.
+		// Request is a ClassAd: { Submitter, Action, PriorityFactor?, Duration? }.
+		// Reply is a ClassAd:  { Success, ErrorString }.
+#define MANAGE_PRIORITY_FACTOR (SCHED_VERS+134)
+		{MANAGE_PRIORITY_FACTOR, "MANAGE_PRIORITY_FACTOR"},
 // command ids from +140 to +149 reserved for Schedd UserRec commands
 #define QUERY_USERREC_ADS (SCHED_VERS+140)
 		{QUERY_USERREC_ADS, "QUERY_USERREC_ADS"},
@@ -752,7 +762,7 @@ static_assert(makeCommandTable().back().first == COMMAND_LAST, "Is the size of t
 *** Command ids used by the collector 
 ************/
 constexpr const
-std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
+std::array<std::pair<int, const char *>, 64> makeCollectorCommandTable() {
 	return {{ 
 #define UPDATE_STARTD_AD		0
 		{UPDATE_STARTD_AD, "UPDATE_STARTD_AD"},
@@ -919,6 +929,13 @@ std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
 			// Request a collector to retrieve an identity token from a schedd.
 #define IMPERSONATION_TOKEN_REQUEST 81
 		{IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST"},
+
+			// Ask a CCB to dial a target on the requester's behalf and splice the
+			// two sockets into a relay (outbound-CCB / tunneling mode).
+#define CCB_PROXY_CONNECT 82
+		{CCB_PROXY_CONNECT, "CCB_PROXY_CONNECT"},
+
+		// (83 reserved)
 
 #define COLLECTOR_COMMAND_LAST (INT_MAX - 1)			// used by the Win32 credd only
 		{COLLECTOR_COMMAND_LAST, "COLLECTOR_COMMAND_LAST"},

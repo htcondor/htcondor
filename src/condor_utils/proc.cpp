@@ -71,6 +71,7 @@ static const char* JobStatusNames[] = {
 	"SUSPENDED",
 	"FAILED",
 	"BLOCKED",
+	"PREPARING",
 };
 
 

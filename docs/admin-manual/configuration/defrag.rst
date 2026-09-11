@@ -10,7 +10,7 @@ general discussion of *condor_defrag* may be found in
 :ref:`admin-manual/cm-configuration:defragmenting dynamic slots`.
 
 :macro-def:`DEFRAG_NAME`
-    Used to give an prefix value to the ``Name`` attribute in the
+    Used to give a prefix value to the ``Name`` attribute in the
     *condor_defrag* daemon's ClassAd. Defaults to the name given in the :macro:`DAEMON_LIST`.
     This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*

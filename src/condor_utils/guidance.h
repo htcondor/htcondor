@@ -2,6 +2,9 @@
 #define _CONDOR_GUIDANCE_H
 
 // #include <optional>
+// #include <tuple>
+// #include <string>
+// #include "classad/classad.h"
 // #include "guidance.h"
 
 enum class GuidanceResult : int {
@@ -51,5 +54,11 @@ std::optional<std::string> makeCIFName(
     const std::string & startdAddress,
     const std::string & content
 );
+
+std::optional< std::tuple< std::string, std::string > >
+determineCIFScopeAndType( const classad::ClassAd & jobAd );
+
+std::optional< std::string >
+computeCatalogID( const classad::ClassAd & jobAd, const std::string & catalogName );
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

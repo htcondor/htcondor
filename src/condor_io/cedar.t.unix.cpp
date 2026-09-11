@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <iomanip>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -106,7 +107,7 @@ int main()
 
 			// Connect to the server
 			std::cout << "Server: ";
-			std::cin >> serverName;
+			std::cin >> std::setw(sizeof(serverName)) >> serverName;
 			result = mySock.connect(serverName, SERVER_PORT);
 			if(result != TRUE) {
 				std::cout << "Connection failed\n";

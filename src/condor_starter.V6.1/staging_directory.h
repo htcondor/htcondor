@@ -81,11 +81,13 @@ class StagingDirectoryFactory {
 		std::unique_ptr<StagingDirectory> make(
 			const std::filesystem::path & directory,
 			const std::string & catalogName
-		);
+		) const	;
 
 		std::unique_ptr<StagingDirectory> make(
 			const std::string & stagingDirectory
-		);
+		) const;
+
+		std::string type() const;
 
 	private:
 

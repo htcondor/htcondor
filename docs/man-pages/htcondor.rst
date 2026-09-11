@@ -31,6 +31,8 @@ Synopsis
 | **htcondor** **dag** *throttle* [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] dagman-job-id
 | **htcondor** **dag** *resources* [**-history**] dagman-job-id
 
+| **htcondor** **snake** *submit* [**-\-jobdir** *directory*] [**snakefile**] [**-\- snakemake_args ...**]
+
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
 | **htcondor** **eventlog** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] eventlog
@@ -70,7 +72,7 @@ predecessor tools.
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
 The nouns include an individual *job*, *jobset*, *eventlog*, *dag*,
-or *annex*.  Each noun is then followed by a noun-specific *verb* that
+*annex*, or *snake*.  Each noun is then followed by a noun-specific *verb* that
 describes the operation on that noun.
 
 One of the following optional global option may appear before the noun:
@@ -420,6 +422,41 @@ DAG Verbs
 
       **-history**
           Show jobs from the history file instead of the active queue.
+
+Snake Verbs
+-----------
+
+.. warning::
+     Snakemake is not packaged with HTCondor and must be installed seperately.
+     See the `Snakemake documentation <https://snakemake.readthedocs.io/>`_ for more information about Snakemake,
+     the `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/examples/README.md>`_
+     for integrating a Snakemake workflow with HTCondor, and the plugin's `PyPI page <https://pypi.org/project/snakemake-executor-plugin-htcondor/>`_ for installation instructions.
+
+**htcondor snake submit** [**-\-jobdir <directory>**] [**snakefile**] [**-\- snakemake_args ...**]
+
+     Submits `Snakemake <https://snakemake.readthedocs.io/>`_ itself as an HTCondor local-universe management
+     job.  That management job runs Snakemake with the
+     `snakemake-executor-plugin-htcondor <https://github.com/htcondor/snakemake-executor-plugin-htcondor>`_, which in turn submits each
+     Snakemake rule as its own HTCondor job.
+
+     **snakefile** 
+        Tell which Snakemake workflow file to run. If omitted, a file named ``Snakefile`` in the
+        current directory is used. **snakefile** can be specified before or after **-\-jobdir**.
+     
+     **-\-jobdir <directory>** 
+        Create a directory in the current working directory with the specified name.
+        If omitted, a directory named **logs** will be created by default in the current directory to store the management job logs.
+     
+     Anything after a **-\-** separator is passed through to Snakemake unmodified, so additional Snakemake
+     options can be supplied. 
+     
+     **For examples:**
+
+     .. code-block:: console
+
+         $ htcondor snake submit /path/to/Snakefile --jobdir mylogs -- --profile htcondor_profile
+         
+         $ htcondor snake submit -- --jobs 6 --cores 4
 
 .. sidebar:: HTCondor CLI System Nouns
 

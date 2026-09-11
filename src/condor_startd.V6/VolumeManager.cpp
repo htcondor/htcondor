@@ -895,6 +895,7 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     args.AppendArg("vgremove");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -920,6 +921,7 @@ VolumeManager::RemovePV(const std::string &pv_name, CondorError &err, int timeou
     args.AppendArg("pvremove");
     args.AppendArg(pv_name);
     args.AppendArg("--yes");
+    args.AppendArg("--force");
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());

@@ -352,14 +352,20 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		}
 	}
 
-	incRefCount();
+		// Keep ourselves alive for the duration of the startCommand by
+		// capturing a classy_counted_ptr in the callback closure. This
+		// replaces the manual incRefCount()/decRefCount() pair plus the
+		// void *misc_data = this handoff.
+	classy_counted_ptr<DCMessenger> self(this);
 	m_daemon->startCommand_nonblocking (
 		msg->m_cmd,
 		m_callback_sock,
 		msg->getTimeout(),
 		&msg->m_errstack,
-		&DCMessenger::connectCallback,
-		this,
+		[self](bool success, Sock *sock, CondorError * /*errstack*/,
+				const std::string &trust_domain, bool should_try_token_request) {
+			self->handleConnect(success, sock, trust_domain, should_try_token_request);
+		},
 		msg->name(),
 		msg->getRawProtocol(),
 		msg->getSecSessionId(),
@@ -407,32 +413,30 @@ DCMessenger::doneWithSock(Stream *sock)
 }
 
 void
-DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *misc_data)
+DCMessenger::handleConnect(bool success, Sock *sock, const std::string &trust_domain, bool should_try_token_request)
 {
-	ASSERT(misc_data);
+	classy_counted_ptr<DCMsg> msg = m_callback_msg;
 
-	DCMessenger *self = (DCMessenger *)misc_data;
-	classy_counted_ptr<DCMsg> msg = self->m_callback_msg;
-
-	self->m_callback_msg = NULL;
-	self->m_callback_sock = NULL;
-	self->m_pending_operation = NOTHING_PENDING;
-	self->m_daemon->m_trust_domain = trust_domain;
-	self->m_daemon->m_should_try_token_request = should_try_token_request;
+	m_callback_msg = nullptr;
+	m_callback_sock = nullptr;
+	m_pending_operation = NOTHING_PENDING;
+	m_daemon->m_trust_domain = trust_domain;
+	m_daemon->m_should_try_token_request = should_try_token_request;
 
 	if(!success) {
 		if( sock->deadline_expired() ) {
 			msg->addError( CEDAR_ERR_DEADLINE_EXPIRED, "deadline expired" );
 		}
-		msg->callMessageSendFailed( self );
-		self->doneWithSock(sock);
+		msg->callMessageSendFailed( this );
+		doneWithSock(sock);
 	}
 	else {
 		ASSERT(sock);
-		self->writeMsg( msg, sock );
+		writeMsg( msg, sock );
 	}
 
-	self->decRefCount();
+	// Our refcount (held by the lambda that called us) drops when the lambda
+	// is destroyed after this returns.
 }
 
 void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )

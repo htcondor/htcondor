@@ -6,10 +6,10 @@ usr/bin/classad_functional_tester
 usr/bin/classad_version
 usr/bin/condor_adstash
 usr/bin/condor_check_config
-usr/bin/condor_check_password
 usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
+usr/bin/condor_credential_storer
 usr/bin/condor_dagman
 usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
@@ -134,8 +134,6 @@ usr/libexec/condor/singularity_test_sandbox
 usr/libexec/condor/sshd.sh
 usr/sbin/AzureGAHPServer
 usr/sbin/arc_gahp
-usr/sbin/blah_check_config
-usr/sbin/blahpd_daemon
 usr/sbin/condor_advertise
 usr/sbin/condor_aklog
 usr/sbin/condor_c-gahp

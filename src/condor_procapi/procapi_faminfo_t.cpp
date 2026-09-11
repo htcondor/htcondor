@@ -86,19 +86,19 @@ int getFamilyInfo_test(bool verbose) {
     if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
        pi->rssize < rss){
       printf("Error process %d:\n", pid);
-      printf("rssize as returned by getFamilyInfo %d is less than was allocated %d\n", pi->rssize, rss);
+      printf("rssize as returned by getFamilyInfo %lu is less than was allocated %d\n", pi->rssize, rss);
       success = -1;
     }
     if(pi->rssize > rss + rss*FAMILY_INFO_RSS_MARGIN){
       printf("Error process %d:\n", pid);
-      printf("rssize as returned by getFamilyInfo %d is much larger than was allocated %d\n", pi->rssize, rss);
+      printf("rssize as returned by getFamilyInfo %lu is much larger than was allocated %d\n", pi->rssize, rss);
       success = -1;
     }
 
     // the image size should be greater than the resident set size
     if(pi->rssize > pi->imgsize){
       printf("Error process %d:\n", pid);
-      printf("imgsize %d as returned by getFamilyInfo is less than rssize %d\n", pi->imgsize, pi->rssize);
+      printf("imgsize %lu as returned by getFamilyInfo is less than rssize %lu\n", pi->imgsize, pi->rssize);
       success = -1;
     }
 
@@ -106,7 +106,7 @@ int getFamilyInfo_test(bool verbose) {
 		// the proportional set size should be <= the image size
 	if( pi->pssize_available && pi->pssize > pi->imgsize ) {
       printf("Error process %d:\n", pid);
-      printf("imgsize %d as returned by getFamilyInfo is less than pssize %d\n", pi->imgsize, pi->pssize);
+      printf("imgsize %lu as returned by getFamilyInfo is less than pssize %lu\n", pi->imgsize, pi->pssize);
       success = -1;
 	}
 #endif
@@ -121,42 +121,42 @@ int getFamilyInfo_test(bool verbose) {
     // the parents family rssize should be greater than the childs familys
     if(pi->rssize > ppi->rssize){
       printf("Error process %d:\n", pid);
-      printf("parent family rssize %d is smaller than childs %d\n", ppi->rssize, pi->rssize); 
+      printf("parent family rssize %lu is smaller than childs %lu\n", ppi->rssize, pi->rssize);
     }
     //same for image
     if(pi->imgsize > ppi->imgsize){
       printf("Error process %d:\n", pid);
-      printf("parent family imgsize %d is smaller than childs %d\n", ppi->imgsize, pi->imgsize); 
+      printf("parent family imgsize %lu is smaller than childs %lu\n", ppi->imgsize, pi->imgsize);
     }
 #if HAVE_PSS
     //same for pssize
     if(pi->pssize_available && ppi->pssize_available && pi->pssize > ppi->pssize){
       printf("Error process %d:\n", pid);
-      printf("parent family pssize %d is smaller than childs %d\n", ppi->pssize, pi->pssize); 
+      printf("parent family pssize %lu is smaller than childs %lu\n", ppi->pssize, pi->pssize);
     }
 #endif
     //and age
     if(pi->age > ppi->age){
       printf("Error process %d:\n", pid);
-      printf("parent family age %d is smaller than childs %d\n", ppi->age, pi->age); 
+      printf("parent family age %ld is smaller than childs %ld\n", ppi->age, pi->age);
     }
     //and user and system times
     if(pi->user_time > ppi->user_time){
       printf("Error process %d:\n", pid);
-      printf("parent user time %d is smaller than childs %d\n", ppi->user_time, pi->user_time); 
+      printf("parent user time %ld is smaller than childs %ld\n", ppi->user_time, pi->user_time);
     }
     if(pi->sys_time > ppi->sys_time){
       printf("Error process %d:\n", pid);
-      printf("parent sys time %d is smaller than childs %d\n", ppi->sys_time, pi->sys_time); 
+      printf("parent sys time %ld is smaller than childs %ld\n", ppi->sys_time, pi->sys_time);
     }
     // and faults
     if(pi->minfault > ppi->minfault){
       printf("Error process %d:\n", pid);
-      printf("parent min faults %d is smaller than childs %d\n", ppi->minfault,pi->minfault); 
+      printf("parent min faults %lu is smaller than childs %lu\n", ppi->minfault,pi->minfault);
     }
     if(pi->majfault > ppi->minfault){
       printf("Error process %d:\n", pid);
-      printf("parent maj faults %d is smaller than childs %d\n", ppi->majfault,pi->majfault); 
+      printf("parent maj faults %lu is smaller than childs %lu\n", ppi->majfault,pi->majfault);
     }
 
     delete pi;

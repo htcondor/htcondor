@@ -1246,22 +1246,21 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 {
 	if ( sandbox_id != remoteSandboxId ) {
+		// strdup before free, in case sandbox_id aliases the old buffer
+		char *new_sandbox_id = sandbox_id ? strdup( sandbox_id ) : NULL;
 		free( remoteSandboxId );
-		if ( sandbox_id ) {
-			remoteSandboxId = strdup( sandbox_id );
-		} else {
-			remoteSandboxId = NULL;
-		}
+		remoteSandboxId = new_sandbox_id;
 	}
 
 	if ( job_id != remoteJobId ) {
-		free( remoteJobId );
+		// strdup before free, in case job_id aliases the old buffer
+		char *new_job_id = NULL;
 		if ( job_id ) {
 			ASSERT( remoteSandboxId );
-			remoteJobId = strdup( job_id );
-		} else {
-			remoteJobId = NULL;
+			new_job_id = strdup( job_id );
 		}
+		free( remoteJobId );
+		remoteJobId = new_job_id;
 	}
 
 	std::string full_job_id;

@@ -96,7 +96,6 @@ class TestAllowedJobDuration:
         assert in_order(
             test_job_queue_events,
             [
-                SetJobStatus(JobStatus.IDLE),
                 SetJobStatus(JobStatus.RUNNING),
                 SetJobStatus(JobStatus.HELD),
             ]

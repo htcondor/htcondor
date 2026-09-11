@@ -10,6 +10,14 @@ possible values for the :ad-attr:`VacateReasonCode` attribute, along with a brie
 description of each code.  In addition, the :ad-attr:`VacateReasonCode` attribute may be
 accompanied by a :ad-attr:`VacateReasonSubCode` to give additional details.
 
+
+.. note::
+
+    Vacate codes less than 1000 indicate the job will be placed on hold, as 
+    the system assumes whatever is wrong requires human input to fix.
+    Vacate codes greater than or equal to 1000 indicate the problem is with 
+    the system itself, and retrying the execution attempt may succeed.
+
 The :ad-attr:`NumVacatesByReason` job attribute will also be updated with the number of times
 the job or claim has been vacated for each reason code, keyed by the
 `NumVacatesByReason Label`.

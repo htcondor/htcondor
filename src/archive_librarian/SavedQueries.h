@@ -56,14 +56,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc_jobs ON Jobs(ClusterId
 CREATE INDEX IF NOT EXISTS idx_JobListIdInJobs ON Jobs(JobListId);
 
 CREATE TABLE IF NOT EXISTS JobRecords (
-    JobRecordId INTEGER PRIMARY KEY AUTOINCREMENT, 
+    JobRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
     Offset INTEGER,
     CompletionDate INTEGER,
     JobId INTEGER,
     FileId INTEGER,
     JobListId INTEGER,
+    DAGManJobId INTEGER,
+    JobBatchId TEXT,
+    JobBatchName TEXT,
     FOREIGN KEY(JobId) REFERENCES Jobs(JobId),
-    FOREIGN KEY(FileId) REFERENCES Files(FileId), 
+    FOREIGN KEY(FileId) REFERENCES Files(FileId),
     FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId)
 );
 CREATE INDEX IF NOT EXISTS idx_JobIdInJobRecords ON JobRecords(JobId);

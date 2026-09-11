@@ -29,8 +29,8 @@ def condor(test_dir):
         yield condor
 
 
-def _query_ceiling(condor, submitter):
-    """Return the submitter's current ceiling, or None if not present yet."""
+def _query_attr(condor, submitter, attr, cast):
+    """Return the submitter's current value for `attr`, or None if not present."""
     rv = condor.run_command(["condor_userprio", "-allusers", "-l"])
     if rv.returncode != 0:
         return None
@@ -50,23 +50,35 @@ def _query_ceiling(condor, submitter):
     for ad in ads:
         name = ad.get("Name", "").strip('"')
         if name.lower() == submitter.lower():
-            return int(ad.get("Ceiling", "-1"))
+            raw = ad.get(attr)
+            if raw is None:
+                return None
+            return cast(raw)
     return None
 
 
-def _wait_for_ceiling(condor, submitter, expected, timeout=30):
-    """Poll until the submitter's ceiling matches expected, or fail."""
+def _wait_for_attr(condor, submitter, attr, expected, cast=int, timeout=30):
+    """Poll until the submitter's `attr` matches expected, or fail."""
     deadline = time.time() + timeout
     last = None
     while time.time() < deadline:
-        last = _query_ceiling(condor, submitter)
+        last = _query_attr(condor, submitter, attr, cast)
         if last == expected:
             return
         time.sleep(0.5)
     raise AssertionError(
-        f"timed out waiting for {submitter} ceiling to be {expected}; "
+        f"timed out waiting for {submitter} {attr} to be {expected!r}; "
         f"last value was {last!r}"
     )
+
+
+def _query_ceiling(condor, submitter):
+    val = _query_attr(condor, submitter, "Ceiling", int)
+    return -1 if val is None else val
+
+
+def _wait_for_ceiling(condor, submitter, expected, timeout=30):
+    _wait_for_attr(condor, submitter, "Ceiling", expected, int, timeout)
 
 
 def _run_userprio_with_retry(condor, args, timeout=30):
@@ -133,3 +145,87 @@ class TestCeilingLease:
         )
         assert rv.returncode != 0
         assert "no ceiling lease" in (rv.stderr + rv.stdout).lower()
+
+    def test_floor_lease_lifecycle(self, condor):
+        floor_user = "floorleaseuser@test.local"
+
+        # Seed a baseline floor.
+        rv = _run_userprio_with_retry(
+            condor, ["-setfloor", floor_user, "5"]
+        )
+        assert rv.returncode == 0, rv.stderr
+        _wait_for_attr(condor, floor_user, "Floor", 5)
+
+        # Install a lease.
+        rv = _run_userprio_with_retry(
+            condor,
+            ["-setfloor", floor_user, "20", "-duration", "3600"],
+        )
+        assert rv.returncode == 0, rv.stderr
+        assert "Set floor lease" in rv.stdout
+        _wait_for_attr(condor, floor_user, "Floor", 20)
+
+        # Double-lease is rejected.
+        rv = condor.run_command(
+            ["condor_userprio", "-setfloor", floor_user, "30",
+             "-duration", "3600"]
+        )
+        assert rv.returncode != 0
+        assert "already in effect" in (rv.stderr + rv.stdout)
+        _wait_for_attr(condor, floor_user, "Floor", 20)
+
+        # Cancel restores the prior floor.
+        rv = _run_userprio_with_retry(
+            condor, ["-cancelfloorlease", floor_user]
+        )
+        assert rv.returncode == 0, rv.stderr
+        _wait_for_attr(condor, floor_user, "Floor", 5)
+
+        # Double-cancel is rejected.
+        rv = condor.run_command(
+            ["condor_userprio", "-cancelfloorlease", floor_user]
+        )
+        assert rv.returncode != 0
+        assert "no floor lease" in (rv.stderr + rv.stdout).lower()
+
+    def test_priority_factor_lease_lifecycle(self, condor):
+        factor_user = "factorleaseuser@test.local"
+
+        # Seed a baseline priority factor.
+        rv = _run_userprio_with_retry(
+            condor, ["-setfactor", factor_user, "2.0"]
+        )
+        assert rv.returncode == 0, rv.stderr
+        _wait_for_attr(condor, factor_user, "PriorityFactor", 2.0, cast=float)
+
+        # Install a lease.
+        rv = _run_userprio_with_retry(
+            condor,
+            ["-setfactor", factor_user, "7.5", "-duration", "3600"],
+        )
+        assert rv.returncode == 0, rv.stderr
+        assert "Set priority-factor lease" in rv.stdout
+        _wait_for_attr(condor, factor_user, "PriorityFactor", 7.5, cast=float)
+
+        # Double-lease is rejected.
+        rv = condor.run_command(
+            ["condor_userprio", "-setfactor", factor_user, "9.0",
+             "-duration", "3600"]
+        )
+        assert rv.returncode != 0
+        assert "already in effect" in (rv.stderr + rv.stdout)
+        _wait_for_attr(condor, factor_user, "PriorityFactor", 7.5, cast=float)
+
+        # Cancel restores the prior priority factor.
+        rv = _run_userprio_with_retry(
+            condor, ["-cancelfactorlease", factor_user]
+        )
+        assert rv.returncode == 0, rv.stderr
+        _wait_for_attr(condor, factor_user, "PriorityFactor", 2.0, cast=float)
+
+        # Double-cancel is rejected.
+        rv = condor.run_command(
+            ["condor_userprio", "-cancelfactorlease", factor_user]
+        )
+        assert rv.returncode != 0
+        assert "no priority-factor lease" in (rv.stderr + rv.stdout).lower()

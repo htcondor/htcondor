@@ -39,8 +39,18 @@ class EvalState {
 	public:
 		const int MAX_CLASSAD_RECURSION = 400;
 
+		// Total number of node evaluations allowed for a single top-level
+		// evaluation. Unlike depth_remaining (which is restored on unwind and
+		// therefore only bounds stack depth), this is decremented once per
+		// node evaluation and never restored, so it bounds the *cumulative*
+		// work. This stops exponential re-evaluation of shared sub-expressions
+		// (e.g. A=B+B; B=C+C; ...), which is shallow but does 2^N work and
+		// would otherwise run effectively unbounded. See ExprTree::Evaluate.
+		static constexpr long MAX_CLASSAD_EVAL_STEPS = 10'000'000;
+
 		EvalState ()
 			: depth_remaining(MAX_CLASSAD_RECURSION)
+			, eval_steps_remaining(MAX_CLASSAD_EVAL_STEPS)
 			, rootAd(nullptr)
 			, curAd(nullptr)
 			, flattenAndInline(false)
@@ -54,6 +64,7 @@ class EvalState {
 		void SetScopes( const ClassAd* );
 
 		int depth_remaining; // max recursion depth - current depth
+		long eval_steps_remaining; // total node-evaluation budget (not restored)
 
 		// Normally, rootAd will be the ClassAd at the root of the tree
 		// of ExprTrees in the current evaluation. That is, the parent
@@ -71,6 +82,14 @@ class EvalState {
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted.
 		std::vector<ExprTree*> cache_to_delete;
+
+		// Attribute-reference target expressions currently being evaluated,
+		// used to detect circular references (e.g. a self-referential ad like
+		// X = X + 1). Without this, a cycle reachable through more than one
+		// child of an operator causes exponential re-evaluation that is only
+		// bounded by depth_remaining -- effectively a hang. See
+		// AttributeReference::_Evaluate.
+		std::vector<const ExprTree*> eval_stack;
 
 		// add an exprtree to the evaluation cache so that it is deleted after evaluation is complete
 		void AddToDeletionCache(ExprTree * tree);

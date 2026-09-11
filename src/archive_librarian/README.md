@@ -41,7 +41,7 @@ src/condor_utils/
 
 | Callback | Purpose |
 |----------|---------|
-| `main_init` | Calls `librarian.reconfig(true)`, `librarian.initialize()`, registers the periodic `update_timer` |
+| `main_init` | Calls `librarian.reconfig(true)`, `librarian.initialize()` (may run a one-time `VACUUM`, see below), registers the periodic `update_timer` |
 | `main_config` | Calls `librarian.reconfig()` on `condor_reconfig` |
 | `update_timer` | Fires every `LIBRARIAN_UPDATE_INTERVAL` seconds; calls `librarian.update()` |
 | `main_exit` | Calls `DC_Exit(0)` |
@@ -56,7 +56,7 @@ Each timer tick runs `Librarian::update()` in five phases:
 | 1.5 | `reconcileArchiveFiles()` registers new files and detects rotations by comparing inodes (Linux) or first-record hashes (Windows) |
 | 2 | `std::erase_if` removes in-memory entries for files that have left disk; marks them `DateOfDeletion` in the DB; renames unexpectedly removed active files to `<name>.REMOVED` in the DB |
 | 3 | For each unread file, `readJobRecords()` opens (or reuses) a persistent `ArchiveReader`, reads new records incrementally, and calls `dbHandler_.insertJobFileRecords()` to atomically insert records and update the file's offset |
-| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records) until the DB shrinks below `LIBRARIAN_LOW_WATER_MARK` |
+| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records), then runs `PRAGMA incremental_vacuum` to actually shrink the file. If a pass doesn't reduce the file size, further attempts are skipped for `LIBRARIAN_GC_BACKOFF_SECONDS` |
 | 5 | `writeStatusAndData()` records per-cycle and rolling aggregate metrics |
 
 ### File Reading (`archive_reader.cpp`)
@@ -89,7 +89,7 @@ In-memory state for one tracked archive file; keyed by full path in `m_archive_f
 | Field | Description |
 |-------|-------------|
 | `reader` | Persistent `ArchiveReader`; held open between cycles; released when `fully_read` |
-| `filename` | Basename only (e.g. `history` or `history.20241215T143022`) |
+| `filename` | Absolute path of the archive file (e.g. `/var/lib/condor/history` or `/var/lib/condor/history.20241215T143022`) |
 | `hash` | FNV-1a hash of the first record — used as a file identity fingerprint |
 | `rotation_time` | Rotation timestamp string; empty while the file is still the active archive |
 | `last_offset` | Byte offset of the next unread byte |
@@ -140,20 +140,39 @@ row 2 (pre-reset snapshot).
 
 ## Database Schema (`SavedQueries.h`)
 
-Schema version is tracked via `PRAGMA user_version` (current: 1).
+Schema version is tracked via `PRAGMA user_version` (current: 3).
 
 | Table | Purpose |
 |-------|---------|
-| `Files` | One row per tracked archive file; holds offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
+| `Files` | One row per tracked archive file; holds absolute path, offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
 | `Users` | Unique job owners |
 | `JobLists` | `(ClusterId, UserId)` associations |
 | `Jobs` | One row per `(ClusterId, ProcId)` |
-| `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId` |
+| `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId`; optional DAG/batch metadata: `DAGManJobId`, `JobBatchId`, `JobBatchName` (NULL when not present in the record) |
 | `Status` | Per-cycle metrics; rows older than `LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle |
 | `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
 
 Garbage collection (`GC_QUERY_SQL`) targets files where `DateOfDeletion IS NOT NULL`, deletes
 them oldest-first up to the calculated file limit, then cascades to `JobRecords` and `Jobs`.
+
+### Database File Size
+
+The DB uses `auto_vacuum = INCREMENTAL` so that deleted rows shrink the file, not just free
+space for reuse. Since SQLite only applies an `auto_vacuum` mode change on an empty database or
+immediately after a `VACUUM`, `DBHandler::initialize()` detects a non-`INCREMENTAL` mode on
+startup and runs a **one-time full `VACUUM`** to convert it — this copies the whole database and
+can take a while on a large, un-vacuumed file (only happens once; skipped on later restarts).
+Failure to convert (e.g. insufficient free disk space, ~1.1x current file size required) is
+logged but non-fatal and retried on the next restart. After that, each GC pass runs a cheap
+`PRAGMA incremental_vacuum` to keep reclaiming space incrementally.
+
+The DB connection's `sqlite3_busy_timeout` (`LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS`, default `30000`
+ms) governs how long these operations, plus `checkpointWAL()`'s `SQLITE_CHECKPOINT_RESTART`, will
+retry against `SQLITE_BUSY` before giving up. Since the DB runs in WAL mode, ordinary
+reads/writes are unaffected by this setting — a read-only client (e.g. `librarian_client.cpp`,
+opened `SQLITE_OPEN_READONLY`) never contends for the write lock — but a lingering reader
+snapshot can still delay the checkpoint or vacuum operations, which run serially on the
+librarian's own connection.
 
 ---
 
@@ -180,6 +199,9 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 | `LIBRARIAN_MAX_DATABASE_SIZE` | `2147483648` (2 GiB) | DB size limit in bytes |
 | `LIBRARIAN_HIGH_WATER_MARK` | `0.97` | Fraction of size limit that triggers GC |
 | `LIBRARIAN_LOW_WATER_MARK` | `0.80` | Fraction of size limit GC targets |
+| `LIBRARIAN_GC_BACKOFF_SECONDS` | `1800` | Seconds to wait before retrying GC after a pass that didn't shrink the DB file |
+| `LIBRARIAN_STATUS_RETENTION_SECONDS` | `300` | Seconds to retain `Status` table rows |
+| `LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS` | `30000` | `sqlite3_busy_timeout` (ms); only affects WAL checkpointing and VACUUM/`incremental_vacuum`, not normal reads/writes |
 
 ---
 

@@ -1030,9 +1030,11 @@ Stream::get_secret( std::string& s )
 	prepare_crypto_for_secret();
 
 	retval = get_string_ptr(str, len);
-	if (retval) {
+	if (retval && len > 0) {
 		// len includes a NUL terminator, don't make that part of the string
 		s.assign(str ? str : "", len-1);
+	} else {
+		s.clear();
 	}
 
 	restore_crypto_after_secret();

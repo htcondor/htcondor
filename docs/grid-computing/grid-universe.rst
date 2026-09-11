@@ -331,8 +331,8 @@ description file.
 The second argument on the right hand side will be one of ``slurm``,
 ``pbs``, ``lsf``, ``flux``, or ``sge``.
 
-Submission to a batch system on a remote machine using SSH is also
-possible. This is described below.
+Submission to a batch system on a remote machine using SSH or NERSC's
+Superfacility REST API is also possible. This is described below.
 
 The batch GAHP server is a piece of software called the blahp.
 The configuration parameters :macro:`BATCH_GAHP` and :macro:`BLAHPD_LOCATION`
@@ -345,23 +345,24 @@ The batch GAHP supports translating certain job ClassAd attributes into the corr
 
 The following table summarizes how job ClassAd attributes will be translated into the corresponding Slurm job parameters.
 
-+-------------------+---------------------+
-| Job ClassAd       | Slurm               |
-+===================+=====================+
-| RequestMemory     | ``--mem``           |
-+-------------------+---------------------+
-| BatchRuntime      | ``--time``          |
-+-------------------+---------------------+
-| BatchProject      | ``--account``       |
-+-------------------+---------------------+
-| ``Queue``         | ``--partition``     |
-+-------------------+---------------------+
-| ``Queue``         | ``--clusters``      |
-+-------------------+---------------------+
-| *Unsupported*     | ``--cpus-per-task`` |
-+-------------------+---------------------+
++--------------------+-------------------+---------------------+
+| Submit File        | Job ClassAd       | Slurm               |
++====================+===================+=====================+
+| ``request_memory`` | ``RequestMemory`` | ``--mem``           |
++--------------------+-------------------+---------------------+
+| ``batch_runtime``  | ``BatchRuntime``  | ``--time``          |
++--------------------+-------------------+---------------------+
+| ``batch_project``  | ``BatchProject``  | ``--account``       |
++--------------------+-------------------+---------------------+
+| ``batch_queue``    | ``Queue``         | ``--partition``     |
++--------------------+-------------------+---------------------+
+| ``batch_queue``    | ``Queue``         | ``--clusters``      |
++--------------------+-------------------+---------------------+
 
-Note that for Slurm, ``Queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
+Note that ``batch_runtime`` is expressed in seconds. The value will be
+converted appropriately for the target batch system.
+
+Note that for Slurm, ``batch_queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
 
 You can specify batch system parameters that HTCondor doesn't have
 translations for using the **batch_extra_submit_args** command in the
@@ -468,6 +469,65 @@ command tells HTCondor to use the Reverse GAHP for the SSH connection.
 .. code-block:: condor-submit
 
     grid_resource = batch slurm alice@login.example.edu --rvgahp-socket /tmp/alice.rvgahp.sock
+
+Remote Submission to NERSC's Perlmutter HPC System
+''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The `National Energy Research Scientific Computing Center (NERSC)
+<https://www.nersc.gov>`_
+allows remote submission to their Perlmutter HPC system via their
+Superfacility REST API. HTCondor can submit jobs using this interface
+under the **batch** grid type with system type **sfapi**.
+This works very similarly to the **slurm** system type, with the
+addition that you must specify the job files to transfer back and forth.
+
+HTCondor relies on the `sfapi_client
+<https://github.com/NERSC/sfapi_client>`_ python module, which is not
+included in the HTCondor installation. You can set up a python virtual
+environment with the module for HTCondor to use by running these
+commands:
+
+.. code-block:: console
+
+    $ python3 -m venv ~/superfacility-env
+    $ ~/superfacility-env/bin/pip install sfapi_client
+
+HTCondor will activate the virtual environment as needed to use the
+module. If you want to place the virtual environment in a different
+location, then you'll need to edit the ``blah.config`` file to
+indicate the alternate location, like so:
+
+.. code-block:: text
+
+    sfapi_venv=${HOME}/sfapi-env
+
+Using the Superfacility API requires a client OAuth access token
+obtained from NERSC's Iris website. Instructions for doing so can be
+found at `https://docs.nersc.gov/services/sfapi/authentication/
+<https://docs.nersc.gov/services/sfapi/authentication/>`_.
+You will need to use the Red security level, required for submitting
+jobs. The credentials are valid for 2 days, so you will need to
+refresh them frequently.
+
+Once you have created the new client token, write the Client Id to
+``~/.superfacility/clientid.txt`` and the Private Key (use the JSON form,
+not the PEM form) to ``~/.superfacility/priv_key.jwk`` and ensure the
+file permissions are set to owner-only.
+
+.. code-block:: console
+
+    $ mkdir ~/.superfacility
+    $ echo 'XXXXXXX' >~/.superfacility/clientid.txt
+    $ echo '{"n": "XXX", ..., "kty": "RSA"}' >~/.superfacility/priv_key.jwk
+    $ chmod 600 ~/.superfacility/*
+
+Now, you can submit jobs, specifying the Superfacility as the
+destination.
+
+.. code-block:: condor-submit
+
+    grid_resource = batch sfapi
+
 
 The EC2 Grid Type
 -----------------

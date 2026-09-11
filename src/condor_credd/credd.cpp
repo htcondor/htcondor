@@ -429,6 +429,8 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		return CLOSE_STREAM;
 	}
 
+	classad::References user_cred_names;
+	std::string name;
 	std::vector<ClassAd> requests;
 	requests.resize(numads);
 	for(int i=0; i<numads; i++) {
@@ -437,10 +439,38 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			r->end_of_message();
 			return CLOSE_STREAM;
 		}
+		requests[i].LookupString("Service", name);
+		user_cred_names.insert(name);
 	}
 	r->end_of_message();
 
 	dprintf(D_ALWAYS, "Got check_creds for %d OAUTH services.\n", numads);
+
+	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+		std::string added_cred_names;
+		if (!param(added_cred_names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES")) {
+			if (!param(added_cred_names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+				param(added_cred_names, "LOCAL_CREDMON_PROVIDER_NAME");
+			}
+			std::string client_names;
+			if (param(client_names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+				added_cred_names += ' ';
+				added_cred_names += client_names;
+			}
+		}
+		int added_count = 0;
+		for (const auto& name: StringTokenIterator(added_cred_names)) {
+			if (user_cred_names.contains(name)) {
+				continue;
+			}
+			requests.emplace_back(ClassAd());
+			requests.back().Assign("Service", name);
+			added_count++;
+		}
+		if (added_count > 0) {
+			dprintf(D_STATUS, "Added %d OAUTH services.\n", added_count);
+		}
+	}
 
 	std::string URL;
 	CheckCredsState* ck_state = nullptr;
@@ -475,13 +505,13 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 	std::vector<ClassAd *> oauth2_missing;
 	std::vector<ClassAd *> local_missing;
-	for(int i=0; i<numads; i++) {
+	for (auto& request: requests) {
 		std::string service;
 		std::string handle;
 		std::string req_user;
-		requests[i].LookupString("Service", service);
-		requests[i].LookupString("Handle", handle);
-		requests[i].LookupString("Username", req_user);
+		request.LookupString("Service", service);
+		request.LookupString("Handle", handle);
+		request.LookupString("Username", req_user);
 
 		// username handling is special.  we have the req_user sent by
 		// the client, and we have the authenticated sock_user from the
@@ -514,7 +544,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		// whatever we decided, put it back into the ad so anything
 		// that examines this attribute later doesn't need to redo all
 		// this username logic.
-		requests[i].Assign("Username", username);
+		request.Assign("Username", username);
 
 		// TODO ZKM FIX: eventually we will need to honor domain names.
 		// strip off the domain from the username (if any)
@@ -565,10 +595,10 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			switch(cred_type) {
 			case CredSorter::LocalIssuerType:
 			case CredSorter::LocalClientType:
-				local_missing.push_back(&requests[i]);
+				local_missing.push_back(&request);
 				break;
 			case CredSorter::OAuth2Type:
-				oauth2_missing.push_back(&requests[i]);
+				oauth2_missing.push_back(&request);
 				break;
 			case CredSorter::VaultType:
 				formatstr(URL, "ERROR: Vault credential '%s' is missing.", service.c_str());
@@ -584,10 +614,10 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		} else if (use_rc == -1 && (cred_type == CredSorter::LocalIssuerType ||
 		                            cred_type == CredSorter::LocalClientType)) {
 			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_use_fname.c_str());
-			local_missing.push_back(&requests[i]);
+			local_missing.push_back(&request);
 		} else if (cred_type == CredSorter::OAuth2Type) {
 			// check to see if new scopes and audience match previous cred
-			if (cred_matches(service_top_fname, &requests[i]) == FAILURE_CRED_MISMATCH) {
+			if (cred_matches(service_top_fname, &request) == FAILURE_CRED_MISMATCH) {
 				r->encode();
 				URL = "ERROR - credentials exist that do not match the request";
 				URL += "\n  They can be removed with";

@@ -75,7 +75,21 @@ DaemonKeepAlive::reconfig(void)
 				// in which we hang before the first CHILDALIVE.  If
 				// that happens, our parent will never kill us.
 
-			send_child_alive_timer = daemonCore->Register_Timer(0,
+				// For the starter, we deliberately delay the first
+				// CHILDALIVE.  A busy startd with many slots and rapid
+				// job turnover would otherwise be serialized handling a
+				// flood of alives from just-exec'd starters; delaying the
+				// first alive means short-lived starters send none at all.
+				// This is only safe because the startd arms a hung-child
+				// backstop for the starter at Create_Process time (see
+				// OptionalCreateProcessArgs::initialHungTimeout), so a
+				// starter that hangs before its first alive is still reaped.
+			int first_alive_delay = 0;
+			if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_STARTER) ) {
+				first_alive_delay = param_integer("STARTER_FIRST_CHILDALIVE_DELAY", 30, 0);
+			}
+
+			send_child_alive_timer = daemonCore->Register_Timer(first_alive_delay,
 					(unsigned)m_child_alive_period,
 					(TimerHandlercpp)&DaemonKeepAlive::SendAliveToParentFromTimer,
 					"DaemonKeepAlive::SendAliveToParent", this );

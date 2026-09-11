@@ -3483,6 +3483,7 @@ int dc_main( int argc, char** argv )
 	char	*ptmp;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
+	bool	wantsConfigExcept = TRUE;
 	bool	done;
 
 	set_priv_initialize();
@@ -3815,6 +3816,7 @@ int dc_main( int argc, char** argv )
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
 	//config_options |= get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ? CONFIG_OPT_DEPRECATION_WARNINGS : 0;
 	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	if (wantsConfigExcept) { config_options |= CONFIG_OPT_WANT_EXCEPT; } // should this really be all daemons?
 	config_ex(config_options);
 
 
@@ -4245,7 +4247,9 @@ int dc_main( int argc, char** argv )
 		// in DaemonCore::HandleProcessExit().
 		//
 	if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
-		daemonCore->Register_Timer( 15, 120, 
+		int first_interval = param_integer( "PARENT_CHECK_FIRST_INTERVAL", 15, 0 );
+		int interval = param_integer( "PARENT_CHECK_INTERVAL", 120, 1 );
+		daemonCore->Register_Timer( first_interval, interval,
 				check_parent, "check_parent" );
 	}
 #endif

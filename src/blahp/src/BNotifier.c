@@ -437,7 +437,7 @@ PollDB()
 			}
 		}
 		if(skip_reg_open){
-			do_log(debuglogfile, debug, 3, "Skip registry opening: mtime:%d lastn:%d\n",sbuf.st_mtime,connections[i].lastnotiftime);
+			do_log(debuglogfile, debug, 3, "Skip registry opening: mtime:%lld lastn:%lld\n",(long long)sbuf.st_mtime,(long long)connections[i].lastnotiftime);
 			sleep(loop_interval);
 			continue;
 		}

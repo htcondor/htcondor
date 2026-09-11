@@ -2,7 +2,7 @@ HTCondor's Power
 ================
 
 HTCondor is a software system that creates a High-Throughput Computing
-(HTC) environment. It effectively uses the computing power of
+(HTC) environment. It uses the computing power of
 machines connected over a network, be they a single cluster, a set
 of clusters on a campus, cloud resources either stand alone or temporarily
 joined to a local cluster, or international grids. 
@@ -11,16 +11,16 @@ distributed ownership.
 :index:`of machines<single: of machines; distributed ownership>`
 
 A user submits jobs to HTCondor. HTCondor finds available machines
-and begins running the jobs there. HTCondor has
-the capability to detect that a machine running a job is no
+and begins running the jobs there. HTCondor can
+detect that a machine running a job is no
 longer available (perhaps the machine crashed, or maybe it prefers to
 run another job). HTCondor will automatically
 restart the job on another machine without intervention from the user.
 
 HTCondor is useful when a job must be run many (thousands
 of) times, :index:`multiple data sets<single: multiple data sets; job>`\ perhaps
-with hundreds of different data sets. With one command, all of the
-jobs are submitted to HTCondor. Depending upon the number of
+with hundreds of different data sets. With one command, you submit all
+the jobs to HTCondor. Depending upon the number of
 machines in the HTCondor pool, hundreds of otherwise idle
 machines can be running the jobs at any given moment.
 

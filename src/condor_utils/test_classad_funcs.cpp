@@ -216,7 +216,7 @@ static void testing_from(
 		}
 		switch (pcmd->value) {
 		case cmd_CLEAR:
-			toke.next();
+			std::ignore = toke.next();
 			if (toke.matches("MY")) { myad.Clear(); }
 			else if (toke.matches("TARGET")) { targetad.Clear(); }
 			else { myad.Clear(); targetad.Clear(); }

@@ -61,10 +61,10 @@ extern RemoteResource *parallelMasterResource;
 extern CXFER_STATE cxfer_type;
 
 static void append_buffer_info( std::string &url, const char *method, char const *path );
-static int use_append( const char *method, const char *path );
-static int use_compress( const char *method, const char *path );
-static int use_fetch( const char *method, const char *path );
-static int use_local_access( const char *file );
+static int use_append( const char *method, const std::string &path );
+static int use_compress( const char *method, const std::string &path );
+static int use_fetch( const char *method, const std::string &path );
+static int use_local_access( const std::string &file );
 
 int
 pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
@@ -348,23 +348,23 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
 
-	if( use_local_access(full_path.c_str()) ) {
+	if( use_local_access(full_path) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	if( use_fetch(method,full_path.c_str()) ) {
+	if( use_fetch(method,full_path) ) {
 		urlbuf += "fetch:";
 	}
 
-	if( use_compress(method,full_path.c_str()) ) {
+	if( use_compress(method,full_path) ) {
 		urlbuf += "compress:";
 	}
 
 	append_buffer_info(urlbuf,method,full_path.c_str());
 
-	if( use_append(method,full_path.c_str()) ) {
+	if( use_append(method,full_path) ) {
 		urlbuf += "append:";
 	}
 
@@ -425,12 +425,11 @@ static void append_buffer_info( std::string &url, const char *method, char const
 
 /* Return true if this JobAd attribute contains this path */
 
-static int attr_list_has_file( const char *attr, const char *path )
+static int attr_list_has_file( const char *attr, const std::string &path )
 {
-	char const *file;
 	std::string str;
 
-	file = condor_basename(path);
+	const char *file = condor_basename(path.c_str());
 
 	Shadow->getJobAd()->LookupString(attr,str);
 	std::vector<std::string> list = split(str);
@@ -442,17 +441,17 @@ static int attr_list_has_file( const char *attr, const char *path )
 	}
 }
 
-static int use_append( const char * /* method */, const char *path )
+static int use_append( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-static int use_compress( const char * /* method */, const char *path )
+static int use_compress( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-static int use_fetch( const char * /* method */, const char *path )
+static int use_fetch( const char * /* method */, const std::string &path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
@@ -482,11 +481,11 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
-static int use_local_access( const char *file )
+static int use_local_access( const std::string &file )
 {
 	return
-		!strcmp(file,"/dev/null") ||
-		!strcmp(file,"/dev/zero") ||
+		file == "/dev/null" ||
+		file == "/dev/zero" ||
 		attr_list_has_file( ATTR_LOCAL_FILES, file );
 }
 
@@ -1067,6 +1066,16 @@ LookupIntInContext( const ClassAd & ad, const std::string & attr, int & value ) 
 	return false;
 }
 
+bool
+LookupIntInContext( const ClassAd & ad, const std::string & attr, long long & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if( context ) {
+		return context->LookupInteger( attr, value );
+	}
+	return false;
+}
+
 
 bool
 LookupBoolInContext( const ClassAd & ad, const std::string & attr, bool & value ) {
@@ -1170,7 +1179,10 @@ UniShadow::before_common_file_transfer(
 
 bool
 UniShadow::after_common_file_transfer(
-    const ClassAd & request, const std::string & cifName, std::string & stagingDir
+    const ClassAd & request,
+    const std::string & cifName,
+    std::string & stagingDir,
+    long long & size
 ) {
 	bool success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
@@ -1202,7 +1214,7 @@ UniShadow::after_common_file_transfer(
 
 	if( success ) {
 		// We'll assume that malformed replies are transients.
-		if(! LookupStringInContext( request, "StagingDir", stagingDir )) {
+		if(! LookupStringInContext( request, ATTR_STAGING_DIR, stagingDir )) {
 			dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common files transfer; aborting job.\n" );
 
 			// We can't just release the cfLock, because that won't do
@@ -1234,6 +1246,9 @@ UniShadow::after_common_file_transfer(
 			this->cfLocks.erase(cifName);
 			delete cfLock;
 		}
+
+		// Starters before 25.12 don't send this.
+		LookupIntInContext( request, ATTR_SIZE, size );
 	} else {
 		dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): common file transfer failed, aborting job.\n" );
 
@@ -1364,7 +1379,7 @@ do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
 
 	guidance.InsertAttr( ATTR_NAME, cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-	guidance.InsertAttr( "StagingDir", stagingDir );
+	guidance.InsertAttr( ATTR_STAGING_DIR, stagingDir );
 
 	return guidance;
 }
@@ -1471,7 +1486,7 @@ condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_staging_only_conversation(
 	ClassAd request,
 	ListOfCatalogs common_file_catalogs,
-	std::map<std::string, std::string> externalToSimpleNameMap
+	std::map<std::string, std::string> internalToSimpleNameMap
 ) {
 	bool success;
 
@@ -1480,14 +1495,16 @@ UniShadow::start_staging_only_conversation(
 	// in a transfer shadow, we don't need to know which ones weren't
 	// transferred.)
 
+	std::map<std::string, long long> cifNameToSizeMap;
 	std::map<std::string, std::string> cifNameToStagingDirMap;
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
+		long long size = -1;
 		std::string stagingDir;
 		ClassAd guidance = before_common_file_transfer( cifName, commonInputFiles );
 		request = co_yield guidance;
-		success = after_common_file_transfer( request, cifName, stagingDir );
+		success = after_common_file_transfer( request, cifName, stagingDir, size );
 		if(! success) {
 			guidance.Clear();
 			guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
@@ -1495,6 +1512,7 @@ UniShadow::start_staging_only_conversation(
 		}
 
 		cifNameToStagingDirMap[cifName] = stagingDir;
+		cifNameToSizeMap[cifName] = size;
 	}
 
 	//
@@ -1508,21 +1526,50 @@ UniShadow::start_staging_only_conversation(
 	ClassAd guidance;
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
 
-	ClassAd * commonCatalogsAd = new ClassAd();
-	commonCatalogsAd->InsertAttr( ATTR_VERSION, 1 );
 
-	// Let's avoid worrying about whether or not the internal catalog names
-	// are valid ClassAd attribute names by making those names values and
-	// constructing a list of catalog ads.  This should also be more readily
-	// extensible (to say, including the simple name from the job ad).
+	//
+	// Only starter versions >= 25.12 can handle version 2 commands.
+	//
+	int version_to_send = 1;
+	CondorVersionInfo cvi( remRes->starter_version.c_str() );
+	if( cvi.built_since_version( 25, 12, 0 ) ) {
+		version_to_send = 2;
+	}
+	ClassAd * commonCatalogsAd = new ClassAd();
+	commonCatalogsAd->InsertAttr( ATTR_VERSION, version_to_send );
+
 	std::vector<ExprTree *> catalogAds;
 	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
 		ClassAd * catalogAd = new ClassAd();
-		catalogAd->InsertAttr( ATTR_NAME, cifName );
-		catalogAd->InsertAttr( "StagingDir", stagingDir );
-		// Arguably, ATTR_NAME should become ATTR_INTERNAL_NAME and
-		// this attribute should become ATTR_NAME.
-		catalogAd->InsertAttr( "SimpleName", externalToSimpleNameMap[cifName] );
+
+		if( version_to_send == 1 ) {
+			catalogAd->InsertAttr( ATTR_NAME, cifName );
+			catalogAd->InsertAttr( "StagingDir", stagingDir );
+			catalogAd->InsertAttr( "SimpleName", internalToSimpleNameMap[cifName] );
+		} else {
+			catalogAd->InsertAttr( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
+			catalogAd->InsertAttr( ATTR_CATALOG_PATH, stagingDir );
+			catalogAd->InsertAttr( ATTR_CATALOG_SIZE, cifNameToSizeMap[cifName] );
+
+			auto r = determineCIFScopeAndType( * jobAd );
+			if(! r) { EXCEPT("Failed to determine CIF scope and type after having staged it."); }
+			auto [scope, type] = * r;
+			catalogAd->InsertAttr( ATTR_CATALOG_SCOPE, scope );
+			catalogAd->InsertAttr( ATTR_CATALOG_SCOPE_TYPE, type );
+
+			std::string access_point;
+			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
+			access_point = split(access_point, "#")[0];
+			catalogAd->InsertAttr( ATTR_ACCESS_POINT, access_point );
+
+			// This is kind of a hack, since the schedd already computed
+			// the catalog ID, but I'm not sure we want the simple-to-ID
+			// map in every job ad.
+			auto c = computeCatalogID( * jobAd, internalToSimpleNameMap[cifName] );
+			if(! c) { EXCEPT("Failed to compute catalog ID."); }
+			catalogAd->InsertAttr( ATTR_CATALOG_ID, * c );
+		}
+
 		catalogAds.push_back( catalogAd );
 	}
 
@@ -1535,10 +1582,11 @@ UniShadow::start_staging_only_conversation(
 
 
 	ClassAd * colorAd = new ClassAd();
-	colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
+	colorAd->Insert( "CommonCatalogsAd", commonCatalogsAd );
 	guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
 
 	request = co_yield guidance;
+
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
 	if(! success) {
@@ -1595,7 +1643,9 @@ UniShadow::start_staging_only_conversation(
 	//
 	std::string user;
 
-	int sizeOnDiskInMB = -1;
+/*
+	long long sizeOnDiskInMB = -1;
+
 	if(! LookupIntInContext( request, ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB )) {
 		// It's possible that a different starter would reply properly,
 		// so abort this attempt and leave the job in the queue idle.
@@ -1604,6 +1654,7 @@ UniShadow::start_staging_only_conversation(
 			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply
 		);
 	}
+*/
 
 	// We shouldn't need the address, since we're a shadow.
 	DCSchedd schedd( getScheddAddr() /*, pool */ );
@@ -1625,6 +1676,7 @@ UniShadow::start_staging_only_conversation(
 	int rval = schedd.offerResources(
 		resources, user, timeout,
 		originalClaimID
+		/*, sizeOnDiskInMB */
 	);
 	free( originalClaimID );
 
@@ -1657,7 +1709,8 @@ UniShadow::start_staging_only_conversation(
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_mapping_only_conversation(
 	ClassAd request,
-	ListOfCatalogs common_file_catalogs
+	ListOfCatalogs common_file_catalogs,
+	std::map<std::string, std::string> internalToSimpleNameMap
 ) {
 	ClassAd guidance;
 
@@ -1666,8 +1719,98 @@ UniShadow::start_mapping_only_conversation(
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
-		std::string message;
-		guidance = do_wiring_up(message, cifName);
+		//
+		// Determine the staging directory from the slot ad.  We don't want
+		// to hard-code this determination in the starter because it may
+		// change.  We could send a list of attribute-value pairs to the
+		// starter to match against the slot ad, instead, but there's no
+		// reason to do that in the starter instead of the shadow, and by
+		// explicitly sending the cifName, we avoid adding more versioned
+		// code to the starter (it won't try to figure it out on its own).
+		//
+		std::string stagingDir;
+
+		// If I were feeling more ambitious, I would refactor the code from
+		// start_staging_only_conversation() and call it here to fill in an
+		// ad to do matching against.
+		std::vector<std::pair<std::string, std::string>> requirements;
+		requirements.emplace_back( ATTR_CATALOG, internalToSimpleNameMap[cifName] );
+
+		{
+			auto r = determineCIFScopeAndType( * jobAd );
+			if(! r) { EXCEPT("Failed to determine CIF scope and type before mapping it."); }
+			auto [scope, type] = * r;
+			requirements.emplace_back( ATTR_CATALOG_SCOPE, scope );
+			requirements.emplace_back( ATTR_CATALOG_SCOPE_TYPE, type );
+		}
+
+		std::string access_point;
+		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, access_point );
+		access_point = split(access_point, "#")[0];
+		requirements.emplace_back( ATTR_ACCESS_POINT, access_point );
+
+		ClassAd * slotAd = remRes->getSlotAd();
+		classad::ExprTree * e = slotAd ? slotAd->Lookup( "catalogs" ) : nullptr;
+		classad::ExprList * l = dynamic_cast<classad::ExprList *>(e);
+
+		if( slotAd == nullptr ) {
+			dprintf( D_FULLDEBUG, "Starter did not send a slot ad, giving it a chance to find the catalog's path on its own.\n" );
+		} else if( e == nullptr ) {
+			dprintf( D_ALWAYS, "Starter sent a slot ad, but it didn't have a `catalogs` attribute; giving it a chance to find the catalog's path on its own.\n" );
+		} else if( l == nullptr ) {
+			dprintf( D_ALWAYS, "Started sent a slot ad, but its `catalogs` attribute wasn't a list; giving it a chance to find the catalog's path on its own.\n" );
+		} else {
+			for( auto i = l->begin(); i != l->end(); ++i ) {
+				auto * ar = dynamic_cast<classad::AttributeReference *>(* i);
+				if( ar == nullptr ) {
+					dprintf( D_ALWAYS, "Entry in `catalogs` not an attribute reference, ignoring.\n" );
+					continue;
+				}
+
+				classad::EvalState state;
+				state.curAd = slotAd;
+				classad::ExprTree * f = nullptr;
+				classad::AttributeReference::Deref( * ar, state, f );
+				if( f == nullptr ) {
+					dprintf( D_ALWAYS, "Attribute reference in `catalogs` could not be dereferenced, ignoring.\n" );
+					continue;
+				}
+				ClassAd * catalogAd = dynamic_cast<ClassAd *>(f);
+				if( catalogAd == nullptr ) {
+					dprintf( D_ALWAYS, "Attribute referenced in `catalogs` was not a ClassAd, ignoring.\n" );
+					continue;
+				}
+
+				bool matches = true;
+				for( auto [attribute, value] : requirements ) {
+					classad::Value stringValue;
+					std::string catalogValueProbe;
+					formatstr( catalogValueProbe, "string(%s)", attribute.c_str() );
+					if(! catalogAd->EvaluateExpr( catalogValueProbe, stringValue )) {
+						dprintf( D_ALWAYS, "Could not evaluate %s.\n", catalogValueProbe.c_str() );
+						matches = false;
+						break;
+					}
+
+					std::string catalogValue;
+					if(! stringValue.IsStringValue( catalogValue )) {
+						dprintf( D_ALWAYS, "%s did not evaluate into a string.\n", catalogValueProbe.c_str() );
+						matches = false;
+						break;
+					}
+
+					if( value != catalogValue ) { matches = false; break; }
+				}
+
+				if( matches ) {
+					catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
+					dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+					break;
+				}
+			}
+		}
+
+		guidance = do_wiring_up(stagingDir, cifName);
 		request = co_yield guidance;
 
 		bool success = false;
@@ -1692,6 +1835,7 @@ UniShadow::start_common_input_conversation(
 	ListOfCatalogs common_file_catalogs,
 	bool print_waiting /* = true */
 ) {
+	long long size = -1;
 	ClassAd guidance;
 
 
@@ -1761,7 +1905,7 @@ UniShadow::start_common_input_conversation(
 				// so much so that I want to figure that out right now.
 				guidance = before_common_file_transfer( cifName, commonInputFiles );
 				request = co_yield guidance;
-				success = after_common_file_transfer( request, cifName, stagingDir );
+				success = after_common_file_transfer( request, cifName, stagingDir, size );
 				if(! success) {
 					guidance.Clear();
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
@@ -1862,7 +2006,7 @@ UniShadow::start_common_input_conversation(
 					// so much so that I want to figure that out right now.
 					guidance = before_common_file_transfer( cifName, commonInputFiles );
 					request = co_yield guidance;
-					success = after_common_file_transfer( request, cifName, stagingDir );
+					success = after_common_file_transfer( request, cifName, stagingDir, size );
 					if(! success) {
 						guidance.Clear();
 						guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
@@ -2129,8 +2273,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 
 		int required_version = 2;
-		std::map<std::string, std::string> externalToSimpleNameMap;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & externalToSimpleNameMap );
+		std::map<std::string, std::string> internalToSimpleNameMap;
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & internalToSimpleNameMap );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
@@ -2144,7 +2288,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & externalToSimpleNameMap )) {
+		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & internalToSimpleNameMap )) {
 			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -2210,13 +2354,13 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 				case CXFER_STATE::STAGING:
 					the_coroutine = std::move(
-						this->start_staging_only_conversation(request, *common_file_catalogs, externalToSimpleNameMap)
+						this->start_staging_only_conversation(request, *common_file_catalogs, internalToSimpleNameMap)
 					);
 					break;
 
 				case CXFER_STATE::MAPPING:
 					the_coroutine = std::move(
-						this->start_mapping_only_conversation(request, *common_file_catalogs)
+						this->start_mapping_only_conversation(request, *common_file_catalogs, internalToSimpleNameMap)
 					);
 					break;
 
@@ -2254,11 +2398,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 std::optional<ListOfCatalogs>
 UniShadow::computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
-	std::map<std::string, std::string> * externalToSimpleNameMap
+	std::map<std::string, std::string> * internalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, externalToSimpleNameMap );
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, internalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }
@@ -2269,11 +2413,11 @@ UniShadow::computeCommonInputFiles(
 	ClassAd * jobAd,
 	ListOfCatalogs & commonFileCatalogs,
 	int & required_version,
-	std::map<std::string, std::string> * externalToSimpleNameMap
+	std::map<std::string, std::string> * internalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version, externalToSimpleNameMap );
+	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version, internalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }

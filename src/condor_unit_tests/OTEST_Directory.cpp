@@ -1148,7 +1148,7 @@ static bool test_get_access_time_before() {
 	Directory dir(original_dir.c_str());
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != 0) {
 		FAIL;
 	}
@@ -1167,7 +1167,7 @@ static bool test_get_access_time_empty() {
 	dir.Next();
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	if(atime != 0) {
 		FAIL;
 	}
@@ -1187,10 +1187,10 @@ static bool test_get_access_time_close() {
 	stat(file.c_str(), &st);
 	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_atime);
+	emit_retval("%lld", (long long)st.st_atime);
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", atime);
+	emit_retval("%lld", (long long)atime);
 	// allow 3 second slop because underlying file times are second. and
 	// there can be a long preemption between the two calls
 	if(atime+3 < st.st_atime || atime > st.st_atime+3) {
@@ -1209,7 +1209,7 @@ static bool test_get_modify_time_before() {
 	Directory dir(original_dir.c_str());
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != 0) {
 		FAIL;
 	}
@@ -1228,7 +1228,7 @@ static bool test_get_modify_time_empty() {
 	dir.Next();
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime != 0) {
 		FAIL;
 	}
@@ -1245,7 +1245,7 @@ static bool test_get_modify_time_valid() {
 	emit_param("Current File", "%s", next);
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime == 0) {
 		FAIL;
 	}
@@ -1265,10 +1265,10 @@ static bool test_get_modify_time_close() {
 	stat(file.c_str(), &st);
 	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_mtime);
+	emit_retval("%lld", (long long)st.st_mtime);
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", mtime);
+	emit_retval("%lld", (long long)mtime);
 	if(mtime+1 < st.st_mtime || mtime > st.st_mtime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
@@ -1285,7 +1285,7 @@ static bool test_get_create_time_before() {
 	Directory dir(original_dir.c_str());
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != 0) {
 		FAIL;
 	}
@@ -1304,7 +1304,7 @@ static bool test_get_create_time_empty() {
 	dir.Next();
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime != 0) {
 		FAIL;
 	}
@@ -1321,7 +1321,7 @@ static bool test_get_create_time_valid() {
 	emit_param("Current File", "%s", next);
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime == 0) {
 		FAIL;
 	}
@@ -1341,10 +1341,10 @@ static bool test_get_create_time_close() {
 	stat(file.c_str(), &st);
 	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
-	emit_retval("%d", st.st_ctime);
+	emit_retval("%lld", (long long)st.st_ctime);
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ctime);
+	emit_retval("%lld", (long long)ctime);
 	if(ctime+1 < st.st_ctime || ctime > st.st_ctime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
@@ -1434,7 +1434,7 @@ static bool test_get_file_size_same() {
 		DIR_DELIM_CHAR);
 	stat(file.c_str(), &size);
 	emit_output_expected_header();
-	emit_retval("%d", size.st_size);
+	emit_retval("%lld", (long long)size.st_size);
 	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("full_file");
 	filesize_t ret_val = dir.GetFileSize();
@@ -1596,7 +1596,7 @@ static bool test_get_directory_size_same() {
 		DIR_DELIM_CHAR);
 	stat(file.c_str(), &size);
 	emit_output_expected_header();
-	emit_retval("%d", size.st_size);
+	emit_retval("%lld", (long long)size.st_size);
 	Directory dir(full_dir.c_str());
 	filesize_t ret_val = dir.GetDirectorySize();
 	emit_output_actual_header();

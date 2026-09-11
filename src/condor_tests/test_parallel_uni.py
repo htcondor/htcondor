@@ -48,10 +48,7 @@ def submit_parallel_job(test_dir, condor):
         request_memory = 100
 
         log = job.log
-        machine_count = 4
-        queue 
-        machine_count = 1
-        queue 
+        queue machine_count in (4, 1)
     """
     submit_file = write_file(test_dir / "submit" / "job.sub", sub_description)
 
