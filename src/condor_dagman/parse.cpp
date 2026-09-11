@@ -2730,6 +2730,7 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 	case DAG::CMD::NODE_STATUS_FILE: {
 		const NodeStatusCommand* status = DAG::DERIVE_CMD<NodeStatusCommand>(cmd);
 		dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
+		dag.SetNodeStatusFormat(status->GetFmt(), status->Compact());
 	} break;
 	case DAG::CMD::JOBSTATE_LOG:
 		dag.SetJobstateLogFileName((DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile().c_str());

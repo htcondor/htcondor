@@ -665,7 +665,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         ] + DAGMAN_COMMON,
         "node_status_file": [
             (
-                r"([\s\[])(always-update)([\s\]])",
+                r"([\s\[])(always-update|classad|json|compact)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,

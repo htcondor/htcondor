@@ -37,20 +37,13 @@ $dagman_args = "-verbose";
 my $template = "job_dagman_node_status_rm_node.template";
 my $nodesubmit = "job_dagman_node_status_rm_node.cmd";
 
-# Lines must be found in order.
-@outlines = ("DagStatus = 6;.*STATUS_ERROR \\(removed\\)",
-	"NodesTotal = 1;",
-	"NodesDone = 0;",
-	"NodesPre = 0;",
-	"NodesQueued = 0;",
-	"NodesPost = 0;",
-	"NodesReady = 0;",
-	"NodesUnready = 0;",
-	"NodesFailed = 1;",
-	"JobProcsHeld = 0;",
-	"JobProcsIdle = 0;",
-	"Node = \"A\";",
-	"NodeStatus = 6;.*STATUS_ERROR");
+# Each inner arrayref is one ad; patterns within an ad are order-independent.
+@outlineblocks = (
+	["DagStatus = 6;", "DagStatusName = \"STATUS_ERROR\";", "DagStatusDetails = \"removed\";",
+	 "NodesTotal = 1;", "NodesDone = 0;", "NodesPre = 0;", "NodesQueued = 0;", "NodesPost = 0;",
+	 "NodesReady = 0;", "NodesUnready = 0;", "NodesFailed = 1;", "JobProcsHeld = 0;", "JobProcsIdle = 0;"],
+	["Node = \"A\";", "NodeStatus = 6;", "NodeStatusName = \"STATUS_ERROR\";"],
+);
 
 my $killedchosen = 0;
 
@@ -138,7 +131,7 @@ $aborted = sub
 	}
 
 	# Check the node status files.
-	CheckStatusFile("job_dagman_node_status_rm.status", \@outlines);
+	CheckStatusFile("job_dagman_node_status_rm.status", \@outlineblocks);
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
@@ -178,37 +171,12 @@ $evicted = sub
 };
 
 sub CheckStatusFile {
-	$sfile = shift(@_);
-	@slines = @{shift(@_)};
+	my ($sfile, $blocks) = @_;
 
 	print "\nChecking node status file: $sfile\n";
-	$line = "";
-	$passed = 0;
-	$canopen = open(OUT,"<$sfile");
-	if( ! (defined $canopen)) {
-		CondorTest::debug("Can not open outfile<$sfile>:$!\n",1);
-		$diditpass = 0;
-	}
-	while(<OUT>) {
-		chomp();
-		$line = $_;
-		$target = $slines[0];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				shift @slines;
-				if ($#slines < 0) {
-					last;
-				}
-			}
-	}
-	close(OUT);
-
-	if ($#slines >= 0) {
-		CondorTest::debug("failed missing node status lines:\n");
-		foreach $missing (@slines) {
-		print "  $missing\n";
-		}
+	my $err = CondorTest::CheckNodeStatusFile($sfile, $blocks);
+	if ($err ne "") {
+		CondorTest::debug("$err\n",1);
 		$diditpass = 0;
 	}
 }
