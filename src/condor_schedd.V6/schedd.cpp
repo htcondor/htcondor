@@ -151,6 +151,7 @@ extern char *DebugFile;
 extern char *DebugLock;
 
 extern std::vector<std::string> ocu_super_users;
+extern std::vector<std::string> bundle_super_users;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -902,6 +903,288 @@ Scheduler::getOCU(int ocu_id) {
 		return nullptr;
 	}
 
+// Look up the slot bundle defined by a job cluster, if that cluster is one.
+BundleRequest *
+Scheduler::getBundle(int cluster) {
+	auto it = m_bundles.find(cluster);
+	return (it == m_bundles.end()) ? nullptr : &it->second;
+}
+
+// Creating a bundle grabs slots off-the-books at the best possible priority
+// and holds them until the bundle's jobs are all satisfied, so it is a
+// privileged operation: honor IsBundle only for a queue super user or a user
+// named in BUNDLE_SUPER_USERS.  For anybody else the marker is ignored and the
+// jobs negotiate normally.
+static bool
+isBundleAllowedForOwner(const OwnerInfo * owner)
+{
+	if ( ! owner) {
+		return false;
+	}
+	if (isQueueSuperUser(owner)) {
+		return true;
+	}
+	return ContainsUserName(bundle_super_users, owner->Name());
+}
+
+// True if this job asked to be part of a slot bundle ("+IsBundle = true") and
+// its owner is allowed to make one.  Jobs that ask but may not are logged once
+// per queue walk and then treated as ordinary jobs.
+bool
+jobIsBundleJob(JobQueueJob * job)
+{
+	bool is_bundle = false;
+	if ( ! job || ! job->LookupBool(ATTR_IS_BUNDLE, is_bundle) || ! is_bundle) {
+		return false;
+	}
+	if ( ! isBundleAllowedForOwner(job->ownerinfo)) {
+		dprintf(D_FULLDEBUG, "Job %d.%d asked for %s but %s may not create slot bundles; ignoring\n",
+			job->jid.cluster, job->jid.proc, ATTR_IS_BUNDLE,
+			job->ownerinfo ? job->ownerinfo->Name() : "(unknown)");
+		return false;
+	}
+	return true;
+}
+
+// True if this user may create slot bundles at all.  Takes either a job's User
+// attribute or an owner-record name.
+bool
+Scheduler::userMayCreateBundle(const std::string & user)
+{
+	return isBundleAllowedForOwner(find_ownerinfo(user.c_str()));
+}
+
+// A user may have only one slot bundle at a time; find it if they have one.
+// The number of bundles is expected to be small.
+BundleRequest *
+Scheduler::findBundleForUser(const std::string & user, int ignore_cluster)
+{
+	// Canonicalize through the user record so a job's User attribute and an
+	// owner-record name compare equal.
+	const OwnerInfo * owner = find_ownerinfo(user.c_str());
+	const char * name = owner ? owner->Name() : user.c_str();
+
+	for (auto &[cluster, bundle] : m_bundles) {
+		if (cluster == ignore_cluster) { continue; }
+		if (bundle.owner == name) { return &bundle; }
+	}
+	return nullptr;
+}
+
+// --- Bundle census -------------------------------------------------------
+// Bundles are discovered by walking the job queue rather than by an explicit
+// create step, so every count_jobs() pass recomputes how many slots each
+// bundle wants.  A cluster of jobs marked IsBundle *is* the bundle.
+
+// Get (creating if need be) the bundle for this cluster.
+BundleRequest &
+Scheduler::makeBundle(int cluster, const OwnerInfo * owner)
+{
+	BundleRequest & bundle = m_bundles[cluster];
+	if (bundle.cluster == 0) {
+		// First time we have seen this cluster: it is a new bundle.
+		bundle.cluster = cluster;
+		formatstr(bundle.bundle_id, "%s#%d", Name ? Name : "schedd", cluster);
+		if (owner) { bundle.owner = owner->Name(); }
+		dprintf(D_ALWAYS, "Job cluster %d is slot bundle %s\n",
+			cluster, bundle.bundle_id.c_str());
+	}
+	return bundle;
+}
+
+// Note a cluster that was just committed as a bundle.  The census would find
+// it on the next count_jobs() anyway, but recording it now is what lets the
+// one-bundle-per-user check at submit time see a bundle submitted moments ago.
+void
+Scheduler::registerBundleCluster(JobQueueCluster * clusterad)
+{
+	if ( ! jobIsBundleJob(clusterad)) {
+		return;
+	}
+	makeBundle(clusterad->jid.cluster, clusterad->ownerinfo);
+}
+
+void
+Scheduler::beginBundleCensus()
+{
+	for (auto &[cluster, bundle]: m_bundles) {
+		bundle.census = 0;
+		bundle.rep_jid = {-1,-1};
+	}
+}
+
+// Called once per live (idle or running) job of a bundle cluster.
+void
+Scheduler::countBundleJob(JobQueueJob * job)
+{
+	BundleRequest & bundle = makeBundle(job->jid.cluster, job->ownerinfo);
+	bundle.census += 1;
+	if ( ! bundle.rep_jid.isJobKey()) {
+		// Any live job of the cluster will do as the resource-request
+		// template; they all match one request by construction.
+		bundle.rep_jid = job->jid;
+	}
+}
+
+void
+Scheduler::endBundleCensus()
+{
+	// Reap bundle claims whose bundle no longer exists.  releaseBundleClaims()
+	// only ever walks claims belonging to a bundle still in m_bundles, so a
+	// claim orphaned by its bundle disappearing -- the cluster is removed
+	// between the request going out and the match coming back -- would
+	// otherwise be held idle until the schedd restarts, since a bundle claim is
+	// also exempt from the ordinary "out of jobs, relinquish" path.
+	std::vector<match_rec *> orphans;
+	for (auto & [claim_id, mrec] : matches) {
+		if (mrec->is_bundle && ! mrec->shadowRec &&
+			m_bundles.find(mrec->bundle_cluster) == m_bundles.end()) {
+			orphans.push_back(mrec);
+		}
+	}
+	for (match_rec * mrec : orphans) {
+		dprintf(D_ALWAYS, "Releasing claim %s: its slot bundle (cluster %d) is gone\n",
+			mrec->description(), mrec->bundle_cluster);
+		DelMrec(mrec);
+	}
+
+	for (auto it = m_bundles.begin(); it != m_bundles.end(); ) {
+		BundleRequest & bundle = it->second;
+		int old_requested = bundle.num_requested;
+		bundle.num_requested = bundle.census;
+
+		if (bundle.num_requested <= 0) {
+			// Every job of the bundle has left the queue.  Give back what we
+			// were holding for it.  A claim whose job is still shutting down
+			// is left alone; it comes back to us idle when its shadow exits
+			// and the next census releases it, so keep the bundle around
+			// until it is holding nothing.
+			int released = releaseBundleClaims(bundle, INT_MAX);
+			if (bundle.num_satisfied + bundle.num_inflight > 0) {
+				dprintf(D_FULLDEBUG, "Slot bundle %s is done but still holds %d claim(s)\n",
+					bundle.bundle_id.c_str(), bundle.num_satisfied + bundle.num_inflight);
+				++it;
+				continue;
+			}
+			dprintf(D_ALWAYS, "Slot bundle %s is done; released %d held claim(s)\n",
+				bundle.bundle_id.c_str(), released);
+			it = m_bundles.erase(it);
+			continue;
+		}
+
+		// Some of the bundle's jobs finished: hand their slots back.
+		int excess = bundle.num_satisfied - bundle.num_requested;
+		if (excess > 0) {
+			int released = releaseBundleClaims(bundle, excess);
+			dprintf(D_ALWAYS, "Slot bundle %s shrank from %d to %d slots; released %d claim(s)\n",
+				bundle.bundle_id.c_str(), old_requested, bundle.num_requested, released);
+		}
+
+		// Publish the bundle's progress on the cluster ad so it is visible
+		// with condor_q.  Only write on change; this runs every count_jobs().
+		int published = 0;
+		GetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_REQUESTED, &published);
+		if (published != bundle.num_requested) {
+			SetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_REQUESTED, bundle.num_requested, NONDURABLE);
+		}
+		published = 0;
+		GetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_SATISFIED, &published);
+		if (published != bundle.num_satisfied) {
+			SetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_SATISFIED, bundle.num_satisfied, NONDURABLE);
+		}
+
+		++it;
+	}
+}
+
+// Release up to num_to_release of this bundle's held claims.  Only idle claims
+// are released: a claim whose job is still running (or still shutting down)
+// comes back to us Claimed/Idle when its shadow exits, and the next census
+// releases it then, so we never evict a job just to give a slot back.
+// DelMrec sends RELEASE_CLAIM to the startd and (via unlinkMrec) fixes up the
+// bundle's counts.
+int
+Scheduler::releaseBundleClaims(BundleRequest & bundle, int num_to_release)
+{
+	if (num_to_release <= 0) {
+		return 0;
+	}
+
+	// Collect first; DelMrec erases from the matches map as we go.
+	std::vector<match_rec *> idle_claims;
+	for (auto &[claim_id, mrec] : matches) {
+		if (mrec->is_bundle && mrec->bundle_cluster == bundle.cluster && ! mrec->shadowRec) {
+			idle_claims.push_back(mrec);
+		}
+	}
+
+	int released = 0;
+	for (match_rec * mrec : idle_claims) {
+		if (released >= num_to_release) { break; }
+		dprintf(D_FULLDEBUG, "Releasing slot bundle %s claim %s\n",
+			bundle.bundle_id.c_str(), mrec->description());
+		DelMrec(mrec);
+		released += 1;
+	}
+	return released;
+}
+
+// Turn a copy of one of the bundle's job ads into the bundle's resource
+// request ad.
+//
+// ATTR_USER matters here: the startd copies it into the claimed slot's
+// RemoteUser, so the negotiator sees a slot we are already holding as claimed
+// (by condor_bundle) and carves a fresh slot for the next request instead of
+// re-handing -- and priority-preempting -- one this bundle already holds.
+void
+Scheduler::stampBundleRequestAd(ClassAd & ad, const BundleRequest & bundle)
+{
+	ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	ad.Assign(ATTR_BUNDLE_ID, bundle.bundle_id);
+	ad.Assign(ATTR_USER, std::string(BUNDLE_SUBMITTER_NAME) + "@" + AccountingDomain);
+}
+
+// Find a job of this bundle's cluster to run on one of the bundle's held
+// claims.  The bundle is all-or-nothing: no job starts until every job of the
+// cluster has a slot waiting for it.
+bool
+Scheduler::findBundleJobForClaim(match_rec * mrec, PROC_ID & new_job_id)
+{
+	BundleRequest * bundle = getBundle(mrec->bundle_cluster);
+	if ( ! bundle) {
+		// The bundle is gone.  Hold the claim rather than starting a job on it;
+		// endBundleCensus()'s orphan sweep gives it back.  (We do not release
+		// it here: the caller is still using this match_rec.)
+		return false;
+	}
+	if ( ! bundle->isComplete()) {
+		dprintf(D_FULLDEBUG, "Slot bundle %s holding %s idle: %d of %d slots so far\n",
+			bundle->bundle_id.c_str(), mrec->description(),
+			bundle->num_satisfied, bundle->num_requested);
+		return false;
+	}
+
+	JobQueueCluster * clusterad = GetClusterAd(bundle->cluster);
+	if ( ! clusterad) {
+		return false;
+	}
+	for (JobQueueJob * job = clusterad->FirstJob(); job; job = clusterad->NextJob(job)) {
+		runnable_reason_code code;
+		if ( ! Runnable(job, code)) { continue; }
+		if (FindMrecByJobID(job->jid)) { continue; } // already has a claim
+		const char * reason = nullptr;
+		if ( ! jobCanUseMatch(job, mrec->my_match_ad, mrec->pool, reason)) {
+			dprintf(D_MATCH, "Slot bundle %s job %d.%d cannot use claim %s: %s\n",
+				bundle->bundle_id.c_str(), job->jid.cluster, job->jid.proc,
+				mrec->description(), reason ? reason : "no reason given");
+			continue;
+		}
+		new_job_id = job->jid;
+		return true;
+	}
+	return false;
+}
+
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
 {
@@ -1349,6 +1632,21 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		pAd.Assign(ATTR_NAME, str);
 	}
 
+	// Mark the reserved slot-bundle submitter with an explicit attribute so the
+	// negotiator can recognize it without string-matching the submitter name
+	// (which is fragile across the user_is_the_new_owner '@'-qualification).
+	if (isBundleSubmitter(Owner.Name())) {
+		pAd.Assign(ATTR_IS_BUNDLE_SUBMITTER, true);
+	} else {
+		// The caller reuses one ad for every submitter it advertises, so this
+		// marker has to be removed and not merely left unset.  Submitters are
+		// walked in name order, so without this the bundle submitter's marker
+		// leaks into the ad of every submitter sorting after "condor_bundle",
+		// and the negotiator hands each of them the bundle's off-the-books
+		// treatment -- the whole pie and no ceiling.
+		pAd.Delete(ATTR_IS_BUNDLE_SUBMITTER);
+	}
+
 	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
 	pAd.Assign("OCUClaimsBorrowed", Owner.num.OCUClaimsBorrowed);
 	pAd.Assign("OCURunningJobs",   Owner.num.OCURunningJobs);
@@ -1611,8 +1909,15 @@ Scheduler::count_jobs()
 		// updates SubmitterCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
 		// 10/8/2021 TJ - count_a_job now also sees cluster and jobset ads so it will update Owner records.
 		//    For job factories that have no materialized jobs it will potentially trigger new materialization
+	beginBundleCensus();
 	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
 	stats.PrevCountJobsTime = current_time;
+
+	// Now that we know how many live jobs each bundle has, resize the bundles:
+	// release slots whose jobs have finished, and forget bundles whose jobs
+	// have all left the queue.  Do this before the loop over matches below,
+	// which must not see match_recs we are about to delete.
+	endBundleCensus();
 
 	if (JobsSeenOnQueueWalk >= 0) {
 		TotalJobsCount = JobsSeenOnQueueWalk;
@@ -1968,6 +2273,23 @@ Scheduler::count_jobs()
 	}
 
 	time_t time_now = time(nullptr);
+
+	// If we have outstanding slot bundle requests, advertise a reserved
+	// submitter for them so the negotiator will negotiate (and satisfy) them.
+	// The negotiator gives this submitter best priority and matches it
+	// off-the-books
+	if (!m_bundles.empty()) {
+		int outstanding = 0;
+		for (auto &[cluster, bundle]: m_bundles) {
+			outstanding += bundle.remaining();
+		}
+		if (outstanding > 0) {
+			SubmitterData *bundle_sub = insert_submitter(BUNDLE_SUBMITTER_NAME);
+			bundle_sub->num.Hits++;
+			bundle_sub->num.JobsIdle += outstanding;
+			bundle_sub->LastHitTime = time_now;
+		}
+	}
 
 	if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
 		// The usual case -- send one submitter ad per submitter
@@ -4134,6 +4456,18 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		SubData->num.OCURunningJobs += 1;
 	}
 
+	// A cluster of jobs marked "+IsBundle = true" is a slot bundle: the schedd
+	// grabs one slot per live job of the cluster and holds them all before any
+	// of the jobs runs.  Count this job into its bundle (which creates the
+	// bundle the first time we see the cluster).  Bundle jobs are matched only
+	// through the reserved bundle submitter, so they are kept out of both the
+	// prio-rec array and their owner's idle counts below.
+	bool is_bundle_job = jobIsBundleJob(job) &&
+		(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT);
+	if (is_bundle_job) {
+		scheduler.countBundleJob(job);
+	}
+
     time_t now = time(NULL);
     OwnInfo->LastHitTime = now;
     SubData->LastHitTime = now;
@@ -4303,8 +4637,10 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 				SubData->PrioSet.insert( job_prio );
 			}
 		}
-			// Update Owners array JobsIdle
-		int job_idle = (max_hosts - cur_hosts);
+			// Update Owners array JobsIdle.  A bundle job's demand is
+			// carried by the reserved bundle submitter instead, so don't ask
+			// the negotiator for it here as well.
+		int job_idle = is_bundle_job ? 0 : (max_hosts - cur_hosts);
 		OwnerCounts->JobsIdle += job_idle;
 		ProjectCounts->JobsIdle += job_idle;
 		Counters->JobsIdle += job_idle;
@@ -8692,13 +9028,15 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
 
-	// Maybe it isn't a job at all, but an OCU request
+	// Maybe it isn't a job at all, but an OCU or slot bundle request
 	bool is_ocu_request = false;
+	bool is_bundle_request = false;
 	if (job == nullptr) {
 		is_ocu_request = job_id.proc == OCU_qkey2;
-	} 
+		is_bundle_request = job_id.proc == BUNDLE_qkey2;
+	}
 
-	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+	if (!is_ocu_request && !is_bundle_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
 		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool(), /*is_ocu=*/false, /*is_new_match=*/true);
@@ -8741,6 +9079,9 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (job_id.proc == OCU_qkey2) {
 		match_ad.Assign(ATTR_OCU, true);
 	}
+	if (is_bundle_request) {
+		match_ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	}
 
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), job_id, &match_ad,
@@ -8753,6 +9094,21 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if (job_id.proc == OCU_qkey2) {
 		mrec->is_ocu = true;
+	}
+	if (is_bundle_request) {
+		mrec->is_bundle = true;
+		// Record the cluster this claim was granted for even when the bundle is
+		// already gone (removed between the request and the match arriving).
+		// Otherwise the claim is left unattributable -- is_bundle with no
+		// cluster -- and nothing can work out who should give it back.
+		mrec->bundle_cluster = job_id.cluster;
+		BundleRequest *bundle = scheduler.getBundle(job_id.cluster);
+		if (bundle) {
+			// Count this grant as in-flight until the claim completes (or is
+			// lost), so a later negotiation cycle doesn't re-request a slot the
+			// negotiator has already handed us but we haven't claimed yet.
+			bundle->num_inflight++;
+		}
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
@@ -9210,6 +9566,19 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
 	int max_matches_for_this_submitter = INT_MAX;
+
+	// If the negotiator is negotiating for our reserved slot-bundle submitter,
+	// inject the outstanding bundle requests into the RRL as non-job requests
+	// (like OCUs).  These have no PrioRec entries.  The negotiator matches them
+	// first, at best priority and off-the-books.
+	if (isBundleSubmitter(owner)) {
+		for (auto &[cluster, bundle]: m_bundles) {
+			if (bundle.remaining() > 0) {
+				PROC_ID bundle_request = {bundle.cluster, BUNDLE_qkey2};
+				resource_requests->add(bundle.cluster, bundle_request);
+			}
+		}
+	}
 
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
@@ -9686,6 +10055,17 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		}
 	}
 
+	if (! jobAd && mrec->is_bundle ) {
+		// Likewise, if this claim is being held for a slot bundle, there is no
+		// job on it yet -- claim with the bundle's resource-request template,
+		// which is just one of the bundle's jobs.
+		BundleRequest *bundle = scheduler.getBundle(mrec->bundle_cluster);
+		if (bundle) {
+			jobAd = GetExpandedJobAd(bundle->rep_jid, false);
+			if (jobAd) { scheduler.stampBundleRequestAd(*jobAd, *bundle); }
+		}
+	}
+
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
 			// was put on hold in GetJobAd().  Capture the job id before
@@ -10068,8 +10448,36 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			OCU *ocu = scheduler.getOCU(slot->jid);
-			if (ocu != nullptr) {
+			// Gate on the match flag: a bundle claim's jid still carries the
+			// bundle's cluster, which could collide with an unrelated OCU id,
+			// so never look up an OCU for a claim we know is a bundle's.  Doing
+			// this at the lookup rather than in the branch below matters,
+			// because getBundle() can fail here (the bundle was removed while
+			// the match was in flight) and the OCU branch would then run.
+			OCU *ocu = slot->is_bundle ? nullptr : scheduler.getOCU(slot->jid);
+			BundleRequest *bundle = slot->is_bundle ? scheduler.getBundle(slot->bundle_cluster) : nullptr;
+			if (bundle != nullptr) {
+				// This claim satisfies one slot of a bundle.  Hold it with no
+				// job on it (cluster/proc of -1) until the whole bundle is in
+				// hand; then FindRunnableJobForClaim hands it one of the
+				// bundle's jobs.
+				slot->keep_while_idle = std::numeric_limits<int>::max();
+				slot->is_bundle = true;
+				slot->jid.cluster = slot->jid.proc = -1;
+				bundle->num_satisfied++;
+				slot->bundle_counted = true;
+				// This grant is no longer in flight now that it is claimed.
+				if (bundle->num_inflight > 0) { bundle->num_inflight--; }
+				dprintf(D_ALWAYS, "Slot bundle %s satisfied %d of %d slots with %s\n",
+					bundle->bundle_id.c_str(), bundle->num_satisfied,
+					bundle->num_requested, slot->description());
+				if (bundle->isComplete()) {
+					// The gang is complete; let its jobs start.
+					dprintf(D_ALWAYS, "Slot bundle %s is complete with %d slots\n",
+						bundle->bundle_id.c_str(), bundle->num_satisfied);
+					scheduler.ExpediteStartJobs();
+				}
+			} else if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
 				// another job could start here.
@@ -10665,7 +11073,7 @@ Scheduler::StartJob(match_rec *rec)
                // job's keep_idle times to the match
 	int keep_claim_idle_time = 0;
     GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
-	if (rec->is_ocu) {
+	if (rec->is_ocu || rec->is_bundle) {
 		    rec->keep_while_idle = std::numeric_limits<int>::max();
 	} else if (keep_claim_idle_time > 0) {
             rec->keep_while_idle = keep_claim_idle_time;
@@ -10685,6 +11093,14 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id)
 
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
+
+	// A slot bundle claim is held (never relinquished on its own) until the
+	// whole bundle is in hand; then it runs one of the bundle's jobs.  Return
+	// false without deleting the match so the schedd keeps the claim; the
+	// bundle census gives the claim back when its jobs are gone.
+	if (mrec->is_bundle) {
+		return findBundleJobForClaim(mrec, new_job_id);
+	}
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu, /*is_new_match=*/false);
@@ -14850,10 +15266,11 @@ Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
 	if( srec != NULL && !srec->removed && srec->match ) {
 		// Don't delete matches we're trying to use for a now job.
 		if(! srec->match->m_now_job.isJobKey()) {
-			if (!srec->match->is_ocu) {
+			if (!srec->match->is_ocu && !srec->match->is_bundle) {
 				DelMrec(srec->match);
 			} else {
-				// In the OCU case, move claim back to Claimed/Idle
+				// In the OCU and slot-bundle cases, the claim is held for
+				// more than this one job: move it back to Claimed/Idle.
 				srec->match->setStatus(M_CLAIMED);
 				SetMrecJobID(srec->match, -1, -1);
 			}
@@ -14995,7 +15412,7 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 			 || exit_code == JOB_NOT_STARTED ) {
 				if( srec != NULL && srec->match ) {
 					if( srec->match->m_now_job.isJobKey() ) { handleNowClaim = true; }
-					if( srec->match->is_ocu ) { handleOCUClaim = true; }
+					if( srec->match->is_ocu || srec->match->is_bundle ) { handleOCUClaim = true; }
 				}
 			}
 
@@ -17810,6 +18227,30 @@ Scheduler::unlinkMrec(match_rec* match)
 		dirtyJobQueue();
 	}
 
+	// If this match was holding (or on its way to holding) a slot for a bundle,
+	// release its count so the schedd re-requests the lost slot on the next
+	// negotiation cycle.  The bundle_counted flag (set together with the
+	// increment in claimedStartd) means the claim had completed and was
+	// counted as satisfied; otherwise the grant was still in flight.  We
+	// cannot key on jid == -1.-1 here because a completed bundle claim runs
+	// one of the bundle's jobs and so carries a real job id.
+	if (match->is_bundle) {
+		auto bundle_it = m_bundles.find(match->bundle_cluster);
+		if (bundle_it != m_bundles.end()) {
+			BundleRequest &bundle = bundle_it->second;
+			bool was_counted = match->bundle_counted;
+			if (was_counted) {
+				if (bundle.num_satisfied > 0) { bundle.num_satisfied--; }
+			} else {
+				if (bundle.num_inflight > 0) { bundle.num_inflight--; }
+			}
+			dprintf(D_ALWAYS, "Slot bundle %s lost a %s claim (%s); now %d held + %d in flight of %d slots\n",
+				bundle.bundle_id.c_str(), was_counted ? "satisfied" : "pending",
+				match->description(), bundle.num_satisfied, bundle.num_inflight,
+				bundle.num_requested);
+		}
+	}
+
 	matches.erase(match->claimId());
 
 	matchesByJobID.erase(jobId);
@@ -18002,8 +18443,10 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
 		}
-		if (mrec->is_ocu) {
-			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
+		if (mrec->is_ocu || mrec->is_bundle) {
+			// For an OCU anyone can claim; for a bundle the claim is held for
+			// the bundle's remaining jobs.
+			SetMrecJobID(mrec,-1,-1);
 		}
 	}
 }

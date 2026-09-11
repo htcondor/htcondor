@@ -304,6 +304,7 @@ static void ScheduleJobQueueLogFlush();
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
 std::vector<std::string> ocu_super_users;
+std::vector<std::string> bundle_super_users;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -1538,6 +1539,26 @@ InitQmgmt()
 	if( IsFulldebug(D_FULLDEBUG) && !ocu_super_users.empty()) {
 		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
 		for (const auto &username : ocu_super_users) {
+			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
+		}
+	}
+
+	// Who may create slot bundles.  Separate from OCU_SUPER_USERS: a bundle
+	// grabs slots off-the-books at the best possible priority and holds them,
+	// so an admin should be able to hand out that privilege (or not) without
+	// tying it to who may create OCUs.
+	auto_free_ptr bundle_super(param("BUNDLE_SUPER_USERS"));
+
+	// Make sure to clear if removed on reconfig
+	if (bundle_super) {
+		bundle_super_users = split(bundle_super);
+	} else {
+		bundle_super_users.clear();
+	}
+
+	if( IsFulldebug(D_FULLDEBUG) && !bundle_super_users.empty()) {
+		dprintf( D_FULLDEBUG, "Slot Bundle Super Users:\n" );
+		for (const auto &username : bundle_super_users) {
 			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
 		}
 	}
@@ -6207,11 +6228,107 @@ BeginTransaction()
 	return 0;
 }
 
+// Enforce "one slot bundle per user".  A slot bundle is a cluster of jobs
+// marked "+IsBundle = true"; it grabs slots off-the-books ahead of fair share
+// and holds them until all of its jobs have run, so a user gets one at a time.
+// Catching a second one here, at submit, means the user is told why instead of
+// quietly ending up with two bundles competing for the pool.
+static int
+CheckBundleSubmit( const std::vector<JobQueueKey> &new_keys,
+                   const std::vector<JobQueueKey> &exist_keys,
+                   CondorError * errorStack )
+{
+	// Which clusters in this transaction are bundles?  IsBundle normally lands
+	// on the cluster ad, but look at proc ads too in case it was set per-proc.
+	//
+	// Existing keys are examined as well as new ones, because a bundle can be
+	// created by editing a job that is already in the queue
+	// ("condor_qedit <cluster> IsBundle true") just as readily as by submitting
+	// one; checking only new keys let that slip past the one-per-user rule.
+	// The cost is one attribute lookup per job touched by a transaction, and
+	// only for the first job seen of each cluster.
+	std::set<int> new_bundles;
+	std::set<int> looked_at;
+	for (const std::vector<JobQueueKey> * keys : { &new_keys, &exist_keys }) {
+		for (const JobQueueKey & jid : *keys) {
+			if (jid.cluster <= 0 || jid.proc < CLUSTERID_qkey2) {
+				continue; // not a job or cluster ad
+			}
+			if (new_bundles.count(jid.cluster)) {
+				continue; // already know this cluster is a bundle
+			}
+			bool is_bundle = false;
+			if (GetAttributeBool(jid, ATTR_IS_BUNDLE, &is_bundle) >= 0 && is_bundle) {
+				new_bundles.insert(jid.cluster);
+			} else {
+				looked_at.insert(jid.cluster);
+			}
+		}
+	}
+	if (new_bundles.empty()) {
+		return 0;
+	}
+
+	std::map<std::string, int> submitted; // user -> bundle cluster in this transaction
+	for (int cluster : new_bundles) {
+		std::string user;
+		if (GetAttributeString(JOB_ID_KEY(cluster, -1), ATTR_USER, user) < 0 || user.empty()) {
+			// We can't tell whose bundle this is, so we can't say whether it
+			// is their second one.  Let the submit through rather than fail it
+			// for a reason we would not be able to explain.
+			dprintf(D_ALWAYS, "Cluster %d is a slot bundle but has no %s attribute; "
+				"cannot enforce one bundle per user\n", cluster, ATTR_USER);
+			continue;
+		}
+
+		// A user who may not create bundles never has one: IsBundle is simply
+		// ignored for them, so there is nothing to conflict with.
+		if ( ! scheduler.userMayCreateBundle(user)) {
+			continue;
+		}
+
+		// Already have one in the queue?
+		BundleRequest * existing = scheduler.findBundleForUser(user, cluster);
+		if (existing) {
+			if (errorStack) {
+				errorStack->pushf("QMGMT", 5,
+					"%s already has an active slot bundle (cluster %d); "
+					"only one slot bundle per user is allowed. "
+					"Remove it with condor_rm, or wait for it to finish, "
+					"before submitting another.\n",
+					user.c_str(), existing->cluster);
+			}
+			dprintf(D_ALWAYS, "Refusing slot bundle cluster %d: %s already has bundle %s\n",
+				cluster, user.c_str(), existing->bundle_id.c_str());
+			return -1;
+		}
+
+		// Two bundles in this one transaction is the same error.
+		auto [it, inserted] = submitted.emplace(user, cluster);
+		if ( ! inserted) {
+			if (errorStack) {
+				errorStack->pushf("QMGMT", 5,
+					"This submission would give %s two slot bundles (clusters %d and %d); "
+					"only one slot bundle per user is allowed.\n",
+					user.c_str(), it->second, cluster);
+			}
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 int
 CheckTransaction( const std::vector<JobQueueKey> &new_keys,
                   CondorError * errorStack )
 {
 	int rval = 0;
+
+	// NOTE: the one-slot-bundle-per-user check is *not* here.  CheckTransaction
+	// runs only when a transaction creates new ads, and a bundle can also be
+	// created by editing jobs already in the queue, so that check lives in
+	// CommitTransactionInternal instead.
 
 	int initial_status;
 	int triggers = JobQueue->GetTransactionTriggers();
@@ -7340,6 +7457,19 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	std::vector<JobQueueKey> new_keys, exist_keys;
 	JobQueue->GetAllTransactionKeys(new_keys, exist_keys);
 
+	// One slot bundle per user.  This sits outside the new_keys check below
+	// because a bundle can be created by editing existing jobs as well as by
+	// submitting new ones, and it sits outside CheckTransaction because that is
+	// reached only when a transaction creates new ads.
+	{
+		int rval = CheckBundleSubmit(new_keys, exist_keys, errorStack);
+		if (rval < 0) {
+			dprintf(D_FULLDEBUG, "CheckBundleSubmit error %d : %s\n",
+				rval, errorStack ? errorStack->message() : "");
+			return rval;
+		}
+	}
+
 	if ( ! new_keys.empty()) {
 		SetSubmitTotalProcs(new_keys);
 
@@ -7531,6 +7661,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 							credmon_clear_mark(cred_dir_oauth, clusterad->ownerinfo->Name());
 						}
 					}
+
+					// If this cluster is a slot bundle, record it now rather
+					// than waiting for the next job-queue census, so that a
+					// second bundle submitted right behind it is refused.
+					scheduler.registerBundleCluster(clusterad);
 
 					// add the cluster ad to any jobsets it may be in
 					if (scheduler.jobSets) {
@@ -9263,6 +9398,16 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
+	}
+
+	// A job of a slot bundle ("+IsBundle = true") is negotiated for only
+	// through the reserved bundle submitter, and runs only on a slot that
+	// bundle is holding.  Keep it out of the prio-rec array so it is never
+	// offered to the negotiator, or started on a claim, as an ordinary job.
+	// Check the job as well as the bundle table: a cluster submitted since the
+	// last count_jobs() is a bundle before the schedd has recorded it as one.
+	if (scheduler.getBundle(jid.cluster) || jobIsBundleJob(job)) {
+		return 0;
 	}
 
 	// --- Insert this job into the PrioRec array ---

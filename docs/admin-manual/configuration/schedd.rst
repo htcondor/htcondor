@@ -644,6 +644,21 @@ These macros control the *condor_schedd*.
     percent character (``%``) followed by the user group name. All
     members of the user group are given super-user access.
 
+:macro-def:`BUNDLE_SUPER_USERS`
+    A comma and/or space separated list of user names on a given machine
+    that are allowed to create slot bundles, in the same ``USER@DOMAIN``
+    form as :macro:`QUEUE_SUPER_USERS`. A slot bundle is a cluster of jobs
+    submitted with ``+IsBundle = true`` in the submit file: the
+    *condor_schedd* claims one slot for every job of the cluster, ahead of
+    normal fair-share matchmaking and without charging the accountant, and
+    holds them all until the whole cluster can start at once. Because that
+    lets a user reserve capacity ahead of everyone else, it is restricted.
+    Users in :macro:`QUEUE_SUPER_USERS` may always create bundles. For any
+    other user, ``IsBundle`` is ignored and their jobs are scheduled
+    normally. When not defined, only queue super users may create bundles.
+    Each user may have one bundle at a time; submitting a second one is an
+    error.
+
 :macro-def:`QUEUE_SUPER_USER_MAY_IMPERSONATE`
     A regular expression that matches the operating system user names
     (that is, job owners in the form ``USER``) that the queue super user

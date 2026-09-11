@@ -104,6 +104,14 @@ public:
     int pies;
     int pie_spins;
 
+    // The slot-bundle round at the top of the cycle (see negotiationTime).
+    // All zero in a pool that has no bundles, which is the common case.
+    int bundle_submitters;    // bundle submitter ads negotiated in that round
+    int active_bundles;       // distinct bundles the negotiator saw this cycle
+    int bundle_slots_wanted;  // slots those bundles still wanted
+    int bundle_matches;       // slots matched for bundles this cycle
+    time_t bundle_duration;   // wall-clock seconds spent in the bundle round
+
     // set of unique active schedd, id by sinful strings:
     std::set<std::string> active_schedds;
 
@@ -141,6 +149,11 @@ NegotiationCycleStats::NegotiationCycleStats():
 	rejections(0),
     pies(0),
     pie_spins(0),
+    bundle_submitters(0),
+    active_bundles(0),
+    bundle_slots_wanted(0),
+    bundle_matches(0),
+    bundle_duration(0),
     active_schedds(),
     active_submitters(),
     submitters_share_limit(),
@@ -341,6 +354,20 @@ struct submitterLessThan {
 		// nameless submitters are filtered elsewhere
 		ad1->LookupString(ATTR_NAME, subname1);
 		ad2->LookupString(ATTR_NAME, subname2);
+
+		// Slot bundle requests are negotiated first, ahead of all real
+		// submitters, regardless of accountant priority.  Key on the explicit
+		// marker the schedd sets, not the submitter name.
+		//
+		// This is a backstop: negotiationTime() normally extracts the bundle
+		// submitters and negotiates them in a round of their own before any of
+		// this runs, so a bundle ad reaching the sort is not expected.  Order it
+		// first anyway rather than letting it fall to fair share.
+		bool bundle1 = false, bundle2 = false;
+		ad1->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle1);
+		ad2->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle2);
+		if (bundle1 != bundle2) return bundle1;
+
 		double prio1 = mm->accountant.GetPriority(subname1);
 		double prio2 = mm->accountant.GetPriority(subname2);
 
@@ -473,6 +500,7 @@ Matchmaker ()
 
 		// just assign default values
 	want_inform_startd = true;
+	want_inform_startd_of_bundle = false;
 	preemption_req_unstable = true;
 	preemption_rank_unstable = true;
 	NegotiatorTimeout = 30;
@@ -824,6 +852,7 @@ reinitialize ()
 	}
 	MatchWorkingCmSlots = param_boolean("MATCH_WORKING_CM_SLOTS", false);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", false);
+	want_inform_startd_of_bundle = param_boolean("NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH", false);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
 	// we should figure these out automatically someday ....
@@ -1559,6 +1588,7 @@ QUERY_ADS_commandHandler (int cmd, Stream *strm)
 		if (publicAd) {
 			ad = new ClassAd(*publicAd);
 			publishNegotiationCycleStats(ad);
+			publishBundleStats(ad);
 			daemonCore->dc_stats.Publish(*ad, stats_config.c_str());
 			daemonCore->monitor_data.ExportData(ad);
 			ads.Insert(ad);
@@ -1857,6 +1887,25 @@ CountMatches(const std::vector<ClassAd *> &ads, classad::ExprTree* constraint) {
 	return matchCount;
 }
 
+// Move the reserved slot-bundle submitter ads out of submitterAds and into
+// bundleAds.  A bundle needs all N of its slots before any of them are useful,
+// and it holds them off-the-books, so it is negotiated in a round of its own
+// ahead of every real submitter -- see negotiationTime().  Keying on
+// ATTR_IS_BUNDLE_SUBMITTER rather than on the submitter name keeps this working
+// however that name happens to be qualified.
+static void
+extractBundleSubmitters(std::vector<ClassAd *> &submitterAds, std::vector<ClassAd *> &bundleAds)
+{
+	auto isNotBundle = [](ClassAd *ad) -> bool {
+		bool is_bundle = false;
+		ad->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, is_bundle);
+		return !is_bundle;
+	};
+	auto first_bundle = std::stable_partition(submitterAds.begin(), submitterAds.end(), isNotBundle);
+	bundleAds.assign(first_bundle, submitterAds.end());
+	submitterAds.erase(first_bundle, submitterAds.end());
+}
+
 void
 Matchmaker::negotiationTime( int /* timerID */ )
 {
@@ -1971,6 +2020,11 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	StartNewNegotiationCycleStat();
 	negotiation_cycle_stats[0]->start_time = start_time;
 
+	// Advance the cycle counter and age out completed slot bundles (and reset
+	// their per-cycle counters) before matching this cycle's requests.
+	m_negotiation_cycle_num++;
+	ageBundleProgress();
+
 	// Save this for future use.
 	int cTotalSlots = startdAds.size();
     negotiation_cycle_stats[0]->total_slots = cTotalSlots;
@@ -2048,6 +2102,38 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	addRemoteUserPrios( startdAds );
 
 	SetupMatchSecurity(submitterAds);
+
+	// ----- Slot bundles are negotiated first, ahead of every real submitter.
+	//
+	// A slot bundle only becomes useful once it holds all N of its slots, and it
+	// holds each one idle until then, so it must not have to wait behind a floor
+	// round, an accounting group, or another submitter's fair share -- any of
+	// which could leave it permanently short while its claims sit idle.  Pull the
+	// reserved bundle submitters out of the list and negotiate for them in a
+	// round of their own.  Slots matched here are removed from startdAds, so the
+	// rounds below see only what is left.
+	//
+	// Extracting the ads (rather than just sorting them to the front) is what
+	// makes this hold in the cases the sort could not reach: the floor round runs
+	// before the main round, and under HGQ each group is negotiated in turn, with
+	// the bundle submitter landing in whichever group its name maps to.  It also
+	// keeps bundles out of the group tree entirely, which is right -- a bundle
+	// match is never charged to the accountant, so it has no business consuming
+	// any group's quota.
+	//
+	// The schedd only advertises this submitter while a bundle is unsatisfied,
+	// so a pool with no bundles skips the round.
+	std::vector<ClassAd *> bundleSubmitterAds;
+	extractBundleSubmitters(submitterAds, bundleSubmitterAds);
+	if (!bundleSubmitterAds.empty()) {
+		dprintf(D_ALWAYS, "Phase 3.5:  Negotiating slot bundles for %zu submitter(s) ...\n",
+			bundleSubmitterAds.size());
+		negotiation_cycle_stats[0]->bundle_submitters = (int)bundleSubmitterAds.size();
+		time_t start_time_bundles = time(nullptr);
+		negotiateWithGroup(false /*isFloorRound*/, cPoolsize, weightedPoolsize,
+			minSlotWeight, startdAds, claimIds, bundleSubmitterAds);
+		negotiation_cycle_stats[0]->bundle_duration = time(nullptr) - start_time_bundles;
+	}
 
     if (hgq_groups.size() <= 1) {
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
@@ -2131,6 +2217,10 @@ Matchmaker::negotiationTime( int /* timerID */ )
         sleep(insert_duration);
         dprintf(D_ALWAYS, "end sleep: %d seconds\n", insert_duration);
     }
+
+    // Roll the cycle's slot-bundle activity into this cycle's stats before the
+    // stats are frozen and published.
+    updateBundleCycleStats();
 
     // ----- Done with the negotiation cycle
     dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -2678,7 +2768,19 @@ negotiateWithGroup ( bool isFloorRound,
 			if (submitterCeiling < 0) {
 				submitterCeiling = 0;
 			}
-			// So by here, submitterCeiling is "ceiling left"  maybe, "headroom" 
+			// So by here, submitterCeiling is "ceiling left"  maybe, "headroom"
+
+			// Slot bundle requests are matched off-the-books at best priority:
+			// give the reserved bundle submitter the full remaining pie and no
+			// ceiling, so it can grab its N slots ahead of fair share.  The
+			// accountant is not charged for these matches (see AddMatch below).
+			bool is_bundle_submitter = false;
+			submitter_ad->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, is_bundle_submitter);
+			if (is_bundle_submitter) {
+				submitterLimit = pieLeft;
+				submitterLimitUnclaimed = pieLeft;
+				submitterCeiling = INT_MAX;
+			}
 
 			if ( num_idle_jobs > 0 ) {
 				dprintf (D_FULLDEBUG, "  Calculating submitter limit with the "
@@ -4248,7 +4350,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 			}
 		}
 		// end of asking for job information - we now have a request
-	
+
+		// If this is a slot-bundle request, note that the schedd is still
+		// working to fill this bundle (a no-op for ordinary requests).
+		trackBundleRequest(request, scheddName, submitterName);
+
 
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
@@ -4502,6 +4608,10 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         if (remoteUser == "") limitUsedUnclaimed += match_cost;
 		pieLeft -= match_cost;
 		negotiation_cycle_stats[0]->matches++;
+
+		// If this was a slot-bundle request, credit the bundle with the slot
+		// we just matched for it (a no-op for ordinary requests).
+		trackBundleMatch(request, scheddName);
 	}
 
 
@@ -5301,6 +5411,15 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
+	// Is this the match for a slot-bundle request?  The schedd marks bundle
+	// resource requests explicitly.  Used to keep the match off the
+	// accountant's books and to optionally inform the startd of the match
+	// (carrying the bundle id along).
+	bool is_bundle_request = false;
+	request.LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle_request);
+	std::string bundle_id;
+	request.LookupString(ATTR_BUNDLE_ID, bundle_id);
+
 	bool offline = false;
 	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
@@ -5409,7 +5528,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
-	if (want_claiming && want_inform_startd) {
+	// Inform the startd of the match when configured to, or -- for slot-bundle
+	// matches specifically -- when NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH is
+	// set, even if the general NEGOTIATOR_INFORM_STARTD is off.
+	if (want_claiming &&
+		(want_inform_startd || (is_bundle_request && want_inform_startd_of_bundle))) {
 			// The following sends a message to the startd to inform it
 			// of the match.  Although it is a UDP message, it still may
 			// block, because if there is no cached security session,
@@ -5419,7 +5542,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
 				startdName.c_str(),startdAddr.c_str(),NegotiatorTimeout,
-				claim_id.c_str(),want_nonblocking_startd_contact);
+				claim_id.c_str(),want_nonblocking_startd_contact,
+				is_bundle_request, bundle_id.c_str());
 
 		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
@@ -5499,8 +5623,14 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
     }
 
     // 4. notifiy the accountant
-	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
-	accountant.AddMatch(submitterName, offer);
+	// Slot bundle matches are off-the-books: don't charge the accountant for
+	// them.  Key on the explicit request marker, not the submitter name.
+	if (is_bundle_request) {
+		dprintf(D_FULLDEBUG,"      Not notifying the accountant (slot bundle match)\n");
+	} else {
+		dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
+		accountant.AddMatch(submitterName, offer);
+	}
 
 	// done
 	dprintf (D_ALWAYS, "      Successfully matched with %s%s\n",
@@ -6202,6 +6332,7 @@ Matchmaker::updateCollector( int /* timerID */ ) {
 
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
+		publishBundleStats( publicAd );
 
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
@@ -6372,6 +6503,182 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	}
 }
 
+// Number of consecutive cycles a bundle may go unseen before we presume it
+// satisfied (the schedd stopped re-injecting it) or removed, and drop it.  A
+// small grace window rather than a single cycle tolerates a bundle that is
+// transiently skipped (e.g. deadline reached before its schedd is reached).
+static const long BUNDLE_PROGRESS_STALE_CYCLES = 3;
+
+// Record that a slot-bundle resource request was seen this cycle.  A request
+// that is not a bundle request is silently ignored, so the caller may pass any
+// request.  See BundleProgress / m_bundle_progress in matchmaker.h.
+void
+Matchmaker::trackBundleRequest(const ClassAd &request, const std::string &schedd_name, const std::string &submitter)
+{
+	bool is_bundle = false;
+	request.LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle);
+	if (!is_bundle) {
+		return;
+	}
+
+	std::string bundle_id;
+	if (!request.LookupString(ATTR_BUNDLE_ID, bundle_id) || bundle_id.empty()) {
+		dprintf(D_FULLDEBUG, "Slot-bundle request from %s has no %s; not tracking\n",
+			schedd_name.c_str(), ATTR_BUNDLE_ID);
+		return;
+	}
+
+	int remaining = 1;
+	request.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, remaining);
+
+	time_t now = time(nullptr);
+	BundleKey key(schedd_name, bundle_id);
+	auto it = m_bundle_progress.find(key);
+	if (it == m_bundle_progress.end()) {
+		BundleProgress bp;
+		bp.bundle_id = bundle_id;
+		bp.schedd_name = schedd_name;
+		bp.submitter = submitter;
+		bp.last_remaining = remaining;
+		bp.first_cycle = m_negotiation_cycle_num;
+		bp.last_cycle = m_negotiation_cycle_num;
+		bp.first_seen = now;
+		bp.last_seen = now;
+		m_bundle_progress[key] = bp;
+		dprintf(D_FULLDEBUG, "Tracking new slot bundle %s from %s (wants %d more slot(s))\n",
+			bundle_id.c_str(), schedd_name.c_str(), remaining);
+	} else {
+		// Seen again (either a later cycle, or another of this cycle's N
+		// requests for the same bundle).  Refresh what it still needs.
+		it->second.last_remaining = remaining;
+		it->second.last_cycle = m_negotiation_cycle_num;
+		it->second.last_seen = now;
+		if (it->second.submitter.empty()) {
+			it->second.submitter = submitter;
+		}
+	}
+}
+
+// Record that a slot-bundle resource request was successfully matched to a
+// slot.  Non-bundle requests are ignored.
+void
+Matchmaker::trackBundleMatch(const ClassAd &request, const std::string &schedd_name)
+{
+	bool is_bundle = false;
+	request.LookupBool(ATTR_IS_BUNDLE_REQUEST, is_bundle);
+	if (!is_bundle) {
+		return;
+	}
+
+	std::string bundle_id;
+	if (!request.LookupString(ATTR_BUNDLE_ID, bundle_id) || bundle_id.empty()) {
+		return;
+	}
+
+	auto it = m_bundle_progress.find(BundleKey(schedd_name, bundle_id));
+	if (it == m_bundle_progress.end()) {
+		// The request should have been tracked when first seen this cycle; be
+		// defensive and don't create a half-populated record from a match.
+		dprintf(D_FULLDEBUG, "Matched untracked slot bundle %s from %s\n",
+			bundle_id.c_str(), schedd_name.c_str());
+		return;
+	}
+	it->second.matched_this_cycle++;
+	it->second.matched_total++;
+	m_bundle_slots_matched_total++;
+	dprintf(D_FULLDEBUG, "Slot bundle %s from %s matched a slot (%d this cycle, %d total)\n",
+		bundle_id.c_str(), schedd_name.c_str(),
+		it->second.matched_this_cycle, it->second.matched_total);
+}
+
+// At the start of each negotiation cycle: reset per-cycle match counters and
+// drop bundles the schedd has stopped injecting (satisfied or removed).
+void
+Matchmaker::ageBundleProgress()
+{
+	int n_in_progress = 0;
+	for (auto it = m_bundle_progress.begin(); it != m_bundle_progress.end(); ) {
+		if (m_negotiation_cycle_num - it->second.last_cycle > BUNDLE_PROGRESS_STALE_CYCLES) {
+			dprintf(D_FULLDEBUG, "Slot bundle %s from %s completed or gone "
+				"(matched %d slot(s) total); dropping from progress tracking\n",
+				it->second.bundle_id.c_str(), it->second.schedd_name.c_str(),
+				it->second.matched_total);
+			it = m_bundle_progress.erase(it);
+		} else {
+			it->second.matched_this_cycle = 0;
+			++n_in_progress;
+			++it;
+		}
+	}
+	if (n_in_progress > 0) {
+		dprintf(D_FULLDEBUG, "Slot bundles in progress: %d\n", n_in_progress);
+	}
+}
+
+// At the end of a negotiation cycle: summarize what the slot bundles did into
+// this cycle's stats.  m_bundle_progress is the record of every bundle the
+// negotiator saw, and ageBundleProgress() zeroed the per-cycle counters at the
+// top of the cycle, so everything here is about the cycle just finished.
+void
+Matchmaker::updateBundleCycleStats()
+{
+	NegotiationCycleStats *stats = negotiation_cycle_stats[0];
+	if ( ! stats) {
+		return;
+	}
+
+	for (const auto &[key, bp]: m_bundle_progress) {
+		// A bundle lingers in the map for a few cycles after it stops being
+		// injected (see BUNDLE_PROGRESS_STALE_CYCLES), so count only the ones
+		// this cycle actually saw.
+		if (bp.last_cycle != m_negotiation_cycle_num) {
+			continue;
+		}
+		stats->active_bundles++;
+		stats->bundle_slots_wanted += bp.last_remaining;
+		stats->bundle_matches += bp.matched_this_cycle;
+	}
+
+	if (stats->active_bundles > 0) {
+		dprintf(D_FULLDEBUG, "Slot bundles this cycle: %d active, %d slot(s) wanted, "
+			"%d matched, %lld second(s) in the bundle round\n",
+			stats->active_bundles, stats->bundle_slots_wanted, stats->bundle_matches,
+			(long long)stats->bundle_duration);
+	}
+}
+
+// Put the negotiator's *current* slot-bundle state on an ad -- what is being
+// filled right now, as opposed to the per-cycle history published by
+// publishNegotiationCycleStats().
+//
+// These attributes are always published, including the all-zero form in a pool
+// with no bundles: an admin graphing them should see a zero, not a hole.
+void
+Matchmaker::publishBundleStats(ClassAd *ad)
+{
+	int in_progress = 0;
+	int slots_wanted = 0;
+	time_t oldest = 0;
+	time_t now = time(nullptr);
+
+	for (const auto &[key, bp]: m_bundle_progress) {
+		in_progress++;
+		slots_wanted += bp.last_remaining;
+		if (bp.first_seen > 0 && (now - bp.first_seen) > oldest) {
+			oldest = now - bp.first_seen;
+		}
+	}
+
+	ad->Assign(ATTR_BUNDLES_IN_PROGRESS, in_progress);
+	ad->Assign(ATTR_BUNDLE_SLOTS_WANTED, slots_wanted);
+	ad->Assign(ATTR_BUNDLE_SLOTS_MATCHED_TOTAL, m_bundle_slots_matched_total);
+	// How long the longest-outstanding bundle has gone unfilled.  A bundle that
+	// can never be filled -- one asking for more slots than the pool can ever
+	// offer at once -- waits forever by construction, so this climbing without
+	// bound is the signal for that.
+	ad->Assign(ATTR_BUNDLE_MAX_WAIT_SECONDS, (int)oldest);
+}
+
 void Matchmaker::StartNewNegotiationCycleStat()
 {
 	int i;
@@ -6487,7 +6794,12 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT,
         ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT,
         ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE,
-        ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED
+        ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED,
+        ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_BUNDLES,
+        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SUBMITTERS,
+        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED,
+        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES,
+        ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION
     };
     const int nattrs = sizeof(attrs)/sizeof(*attrs);
 
@@ -6526,6 +6838,11 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE, i, (s->duration > 0) ? (double)(s->matches)/double(s->duration) : double(0.0));
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED, i, (period > 0) ? (double)(s->matches)/double(period) : double(0.0));
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, (int)s->active_submitters.size());
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_BUNDLES, i, s->active_bundles );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SUBMITTERS, i, s->bundle_submitters );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED, i, s->bundle_slots_wanted );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES, i, s->bundle_matches );
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION, i, s->bundle_duration );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIES, i, s->pies );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PIE_SPINS, i, s->pie_spins );
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PREFETCH_DURATION, i, s->prefetch_duration );
