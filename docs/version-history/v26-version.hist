@@ -5,6 +5,10 @@
   host, such as unified-memory devices like the NVIDIA DGX Spark.
   :jira:`3899`
 
+- Docker universe jobs now have :ad-attr:`DockerImageHash` recorded
+  in the job ad for provenance reasons.
+  :jira:`974`
+
 *** 26.2.0 bugs
 
 - The *condor_starter* can now optionally set a limit on the amount of
