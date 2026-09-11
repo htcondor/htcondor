@@ -13616,6 +13616,22 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						// (HTCONDOR-3610)  At this point, we should check
 						// for matches blocked on these catalogs and choose
 						// one to switch from MAPPING to STAGING.
+
+						// An idle job with a match that isn't already in the
+						// shadow start queue will never make it there, so if
+						// marked the job idle, we have to clean up its match
+						// record.
+						//
+						// This can manifest in _very_ confusing ways, because
+						// this match will remain registered as as the job's
+						// match until deletion, meaning that the job can could
+						// re-enter the blocked state with a new shadow rec
+						// pointing to a different match, and never get another
+						// chance to run if that blocked state doesn't ever
+						// result in the shadow being added to the run queue.
+						if( srec->match ) {
+							DelMrec( srec->match );
+						}
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -13770,7 +13786,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// TODO Failure to spawn a reconnect shadow should probably still
 		//   do the code below our early return here.
 		RemoveShadowRecFromMrec(rec);
-dprintf( D_ALWAYS, "deleting shadow rec %p\n", rec );
+		// dprintf( D_ALWAYS, "delete /* shadow_ */ rec = %p\n", rec );
 		delete rec;
 		return;
 	}
@@ -13938,7 +13954,7 @@ dprintf( D_ALWAYS, "deleting shadow rec %p\n", rec );
 		 rec->universe != CONDOR_UNIVERSE_LOCAL ) {
 		numShadows -= 1;
 	}
-	// dprintf( D_FIXME, "deleting shadow rec %p\n", rec );
+	// dprintf( D_ALWAYS, "delete /* shadow */ rec = %p\n", rec );
 	delete rec;
 	if( ExitWhenDone && numShadows == 0 ) {
 		return;
