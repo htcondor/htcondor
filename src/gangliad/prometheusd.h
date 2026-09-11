@@ -70,7 +70,6 @@ class PrometheusD: public StatsD {
 	// attribute values are expressions evaluated against each daemon ad.
 	classad::ClassAd m_default_labels;
 	std::vector<PendingMetric> m_pending;
-	std::string m_reset_metrics_filename;
 
 	// HTTP / HTTPS serving
 	bool  m_http_handler_registered{false};
