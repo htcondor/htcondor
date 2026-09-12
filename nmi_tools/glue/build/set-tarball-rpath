@@ -21,7 +21,7 @@ echo "Using $PATCHELF"
 
 # shellcheck disable=SC2046
 for file in \
-    $(file $(find "$tarball" -type f)|grep  ' ELF '|sed -e s/:.*// | egrep -v '(\.o$|\.so|exit_37|pelican|get_user_ns)') \
+    $(file $(find "$tarball" -type f -executable)|grep 'ELF.*executable.*dynamically linked'|sed -e s/:.*//) \
     $(find "$tarball" -name \*_impl.abi3.so); do
     echo Set RPATH to "$rpath" in "$file"
     # --force-rpath only works when there is no pre-existing RPATH or RUNPATH
