@@ -187,10 +187,10 @@ command_data_slot_callback(
 
 void
 call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
-    // We shouldn't have to do this separately now that we're explicitly
-    // tracking (by passing around) the transfer shadow's record, but
-    // unregistering the shadow catalogs as soon as possible results in
-    // fewer jobs blocking for a transfer shadow that will never start.
+	// We shouldn't have to do this separately now that we're explicitly
+	// tracking (by passing around) the transfer shadow's record, but
+	// unregistering the shadow catalogs as soon as possible results in
+	// fewer jobs blocking for a transfer shadow that will never start.
 	if( srec ) {
 		// Since this shadow failed to start, its PID field should still be 0.
 		scheduler.unregister_shadow_catalogs( srec, 0 );
@@ -208,11 +208,11 @@ call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
 	//
 
 	auto lambda = [claimID, srec](int /* timerID */) -> void {
-	    //
-	    // We (try) to delete the match record first, because there are a
-	    // few things that are done differently in unlinkMrec() if there's
-	    // a registered shadow record.
-	    //
+		//
+		// We (try) to delete the match record first, because there are a
+		// few things that are done differently in unlinkMrec() if there's
+		// a registered shadow record.
+		//
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
 		if( mrec != nullptr ) {
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );

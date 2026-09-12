@@ -475,7 +475,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	, claim_id(strdup(the_claim_id))
 	, claim_id_parser(claim_id)
 {
-    all_match_recs.insert(this);
+	all_match_recs.insert(this);
 
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -555,7 +555,7 @@ match_rec::makeDescription() {
 
 match_rec::~match_rec()
 {
-    all_match_recs.erase(this);
+	all_match_recs.erase(this);
 
 	if( peer ) {
 		free( peer );
@@ -9577,10 +9577,20 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					// If a job starts running, and its transfer shadow dies,
-					// and then a new one is created and succeeds in doing
-					// file transfer, it could try to unblock the job here,
-					// if matchesHeldByBlockedJobs ... FIXME
+					//
+					// The calls to actually start the job are conditional
+					// on the job having actually been blocked because the
+					// schedd EXCEPT()s if you try to start the same job
+					// twice.  This should never happen, but if a job starts,
+					// then its transfer shadow dies, and we didn't remove its
+					// from matchesHeldByBlockedJobs, we'll end up here when
+					// the next instance of a transfer shadow for its
+					// catalogs succeeds.
+					//
+					// This particular loop makes sure to delete the match
+					// in matchesHeldByBlockedJobs, but obviously we missed a
+					// spot somewhere else.
+					//
 					if( release_block_condition(
 						mrec->jid,
 						CommonTransfer,
@@ -12988,7 +12998,7 @@ shadow_rec::shadow_rec():
 
 shadow_rec::~shadow_rec()
 {
-    all_shadow_recs.erase(this);
+	all_shadow_recs.erase(this);
 
 	if( recycle_shadow_stream ) {
 		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
@@ -13010,7 +13020,7 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 						   match_rec* mrec, int fd, const char* secret )
 {
 	shadow_rec *new_rec = new shadow_rec;
-    // dprintf( D_ALWAYS, "(1) new shadow_rec = %p\n", new_rec );
+	// dprintf( D_ALWAYS, "(1) new shadow_rec = %p\n", new_rec );
 
 	new_rec->pid = pid;
 	new_rec->job_id = job_id;
@@ -13676,10 +13686,22 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						"shadow catalog unregistered (prompting job)" ) )
 					{
 						//
-						// The prompting job isn't holding on to any resources,
-						// so it doesn't have a match record to delete (unlike
-						// the blocked jobs below).
+						// The prompting job isn't assigned any resources
+						// in the STAGING case, but that doesn't mean it
+						// isn't assigned any by the time we get here,
+						// so we have to unassign them.  Specifically, if an
+						// idle job has a match in matchesByJobID, it will
+						// never re-enter the priorec array and thus never
+						// have StartJob() called on it.)
 						//
+						// If this job was blocked, we must delete its match
+						// record, because we don't know if it's made it into
+						// the shadow-start queue yet.
+						//
+						match_rec * pj_rec = FindMrecByJobID({srec->job_id.cluster, prompting_proc});
+						if( pj_rec ) {
+							DelMrec( pj_rec );
+						}
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -13788,14 +13810,14 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
-    if( rec == nullptr ) {
-        dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(NULL): ignoring.\n" );
-    }
+	if( rec == nullptr ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(NULL): ignoring.\n" );
+	}
 
-    if(! all_shadow_recs.contains(rec)) {
-        dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
-        return;
-    }
+	if(! all_shadow_recs.contains(rec)) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
+		return;
+	}
 
 	if ( rec->is_reconnect && !rec->reconnect_done ) {
 		// TODO Should we try to update the JobsRestartReconnectsBadput
@@ -13971,7 +13993,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// "ACTIVE", it's just "CLAIMED"
 	if( rec->match ) {
 			// Be careful, since there might not be a match record
-			// for this shadow record anymore... 
+			// for this shadow record anymore...
 		rec->match->setStatus( M_CLAIMED );
 	}
 
@@ -17891,10 +17913,14 @@ Scheduler::DelMrec(match_rec *match) {
 int
 Scheduler::unlinkMrec(match_rec* match)
 {
-	if(!match)
-	{
-		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
+	if( match == nullptr ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(NULL): ignoring.\n" );
 		return -1;
+	}
+
+	if(! all_match_recs.contains(match)) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(%p): already deleted, ignoring.\n", match );
+		return 0;
 	}
 
 	if( match->is_dedicated ) {
@@ -22243,6 +22269,14 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 			{jid.cluster, jid.proc}, CommonTransfer,
 			"no matches held for nonprompting job"
 		);
+
+		// Since we released a blocked job, we need to make sure that it gets
+		// looked at again, which means making sure that matchesByJobID
+		// doesn't have an entry for it.
+		match_rec * stale_mrec = FindMrecByJobID(jid);
+		if( stale_mrec ) {
+		    DelMrec( stale_mrec );
+		}
 
 		return;
 	}
