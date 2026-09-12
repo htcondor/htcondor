@@ -456,6 +456,11 @@ struct job_data_transfer_t {
 	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
+//
+// I'm not sure we're managing these as well as we think, either.
+//
+std::set<match_rec *> all_match_recs;
+
 match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY & jobid,
 					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg )
@@ -470,6 +475,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	, claim_id(strdup(the_claim_id))
 	, claim_id_parser(claim_id)
 {
+    all_match_recs.insert(this);
 
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -549,6 +555,8 @@ match_rec::makeDescription() {
 
 match_rec::~match_rec()
 {
+    all_match_recs.erase(this);
+
 	if( peer ) {
 		free( peer );
 		peer = nullptr;
@@ -9576,7 +9584,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 					if( release_block_condition(
 						mrec->jid,
 						CommonTransfer,
-						"common transfer notification (dependent job)");
+						"common transfer notification (dependent job)")
 					) {
 						// Why _are_ these two separate commands?
 						mark_serial_job_running( srec->job_id );
@@ -12970,12 +12978,12 @@ shadow_rec::shadow_rec():
 	exit_already_handled(false),
 	secret(nullptr)
 {
+	all_shadow_recs.insert(this);
+
 	prev_job_id.proc = -1;
 	prev_job_id.cluster = -1;
 	job_id.proc = -1;
 	job_id.cluster = -1;
-
-	all_shadow_recs.insert(this);
 }
 
 shadow_rec::~shadow_rec()
