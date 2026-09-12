@@ -259,7 +259,7 @@ bool        PrioRecArrayIsDirty = true;
 // spend at most this fraction of the time rebuilding the PrioRecArray
 const double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
-const double PrioRecRebuildMaxInterval = 20 * 60;
+const double PrioRecRebuildMaxInterval = 5 * 60;
 Timeslice   PrioRecArrayTimeslice;
 #ifdef PRIO_REC_IS_VECTOR
  std::vector<prio_rec> PrioRec;
@@ -9237,17 +9237,32 @@ stats_entry_abs<int> SCGetAutoClusterType;
 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
-    int     job_prio = 0, 
-            pre_job_prio1 = 0, 
-            pre_job_prio2 = 0, 
-            post_job_prio1 = 0, 
+    int     job_prio = 0,
+            pre_job_prio1 = 0,
+            pre_job_prio2 = 0,
+            post_job_prio1 = 0,
             post_job_prio2 = 0;
 
 	ASSERT(job);
 
+
+	//
+	// While we're walking the whole job queue already, make sure that a job
+	// is blocked (for common file transfer) only if there's a corresponding
+	// transfer shadow.  "Corresponding" may mean either that this job is a
+	// prompting job (and that some transfer shadow's ID reflects that) or
+	// that this job is holding a match waiting for somebody else's transfer
+	// shadow.
+	//
+	if( job->Status() == JOB_STATUS_BLOCKED ) {
+		dprintf( D_ALWAYS, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
+		scheduler.checkBlockedJob( job, jid );
+	}
+
+
 	// TODO: trust that the job->run code is already up-to-date here....
 	// Figure out if we should contine and put this job into the PrioRec array
-	// or not. 
+	// or not.
 	// For now we want to put jobs that would cause the user to exceed MaxJobsRunning
 	// into the prio-rec array anyway, so treat them as runnable here..
 	runnable_reason_code code;
@@ -9265,20 +9280,21 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		}
 	}
 
+
 	// --- Insert this job into the PrioRec array ---
 
-       // If pre/post prios are not defined as forced attributes, set them to INT_MIN
+	// If pre/post prios are not defined as forced attributes, set them to INT_MIN
 	// to flag priocompare routine to not use them.
-	 
+
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
          pre_job_prio1 = 0;
     }
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
          pre_job_prio2 = 0;
-    } 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
          post_job_prio1 = 0;
-    }	 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
          post_job_prio2 = 0;
     }
@@ -9834,18 +9850,20 @@ static void DoBuildPrioRecArray() {
 	scheduler.autocluster.mark();
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
+	scheduler.logCatalogToShadowMap();
 	PrioRec.clear();
 	struct _get_job_prio_info info;
 	WalkJobQueue2(update_autocluster_id, &info);
 	grow_prio_recs(info.num_runnable + info.num_cooldown + 5); // +5 because ToddT sez so...
 	// PrioRecMinCoolDownTime is a global that will be incremented
-	// as we walk the job queue. 
+	// as we walk the job queue.
 	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
+	scheduler.logCatalogToShadowMap();
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
-		// moment. 
+		// moment.
 	if ( ! PrioRec.empty()) {
 		std::sort(PrioRec.begin(), PrioRec.end(), prio_compar{});
 	}
@@ -9884,6 +9902,8 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -9908,6 +9928,8 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSlice );
 	}
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayTimeslice.isTimeToRun() ) {
 
 		dprintf(D_FULLDEBUG,
