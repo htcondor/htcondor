@@ -136,6 +136,9 @@
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
 
+/* Do we have libselinux, for labeling per-job LVM filesystems (USED) */
+#cmakedefine HAVE_EXT_LIBSELINUX 1
+
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
 

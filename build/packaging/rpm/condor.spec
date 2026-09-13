@@ -59,6 +59,8 @@ BuildRequires: krb5-devel
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: libvirt-devel
 %endif
+BuildRequires: libselinux-devel
+BuildRequires: libxcrypt-devel
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
 %if ! ( 0%{?rhel} >= 10 ) && "%{os_release_id}" != "sles"

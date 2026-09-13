@@ -67,7 +67,12 @@ if (UNIX)
 set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
 endif(UNIX)
 
-condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
+set(starter_libraries "${CONDOR_LIBS}")
+if (HAVE_EXT_LIBSELINUX)
+	list(APPEND starter_libraries LIBSELINUX::LIBSELINUX)
+endif()
+
+condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${starter_libraries}" INSTALL "${C_SBIN}")
 
 # need to add all the other install targets for libexec.
 install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
