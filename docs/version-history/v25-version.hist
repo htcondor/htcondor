@@ -158,6 +158,9 @@
 - Fixed a bug which could cause the *condor_startd* to crash when using
   the common input files feature.
   :jira:`3911`
+- Fixed a bug that caused ``shadow disconnected`` events to not be written
+  to the job event log.
+  :jira:`3870`
 
 *** 25.0.14 features
 
