@@ -93,7 +93,8 @@ int DockerAPI::createContainer(
 	const Env & env,
 	const std::string & /*outside_sandboxPath*/,
 	const std::string & inside_directory,
-	const std::list<std::string> extraVolumes,
+	const std::vector<std::string> extraVolumes,
+	const std::vector<std::string> extraMounts,
 	const std::string credentials_dir,
 	int & pid,
 	int * childFDs,
@@ -204,6 +205,20 @@ int DockerAPI::createContainer(
 		}
 		runArgs.AppendArg("--volume");
 		runArgs.AppendArg(volume);
+	}
+
+	// Administrator-configured volumes (DOCKER_VOLUME_DIR_*) are passed using
+	// the newer, more flexible --mount syntax.  Each entry is already a fully
+	// formed --mount spec (type=bind,source=...,target=...[,readonly]).  As
+	// with --volume above, drop duplicates while preserving order.
+	std::unordered_set<std::string> seenMounts;
+	for (const auto &mount : extraMounts) {
+		if (!seenMounts.insert(mount).second) {
+			dprintf(D_FULLDEBUG, "Skipping duplicate docker mount %s\n", mount.c_str());
+			continue;
+		}
+		runArgs.AppendArg("--mount");
+		runArgs.AppendArg(mount);
 	}
 #endif
 

@@ -38,7 +38,7 @@
 
 extern class Starter *starter;
 
-static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
+static void buildExtraVolumes(std::vector<std::string> &extras, std::vector<std::string> &mounts, ClassAd &machAd, ClassAd &jobAd);
 
 static bool handleFTL(int error) {
 	if (error != 0) {
@@ -313,7 +313,8 @@ DockerProc::LaunchContainer() {
 	
 	ClassAd *machineAd = starter->jic->machClassAd();
 
-	std::list<std::string> extras;
+	std::vector<std::string> extras;
+	std::vector<std::string> mounts;
 	std::string slotDir = starter->GetSlotDir();
 
 	// map the slot dir inside the container
@@ -324,7 +325,7 @@ DockerProc::LaunchContainer() {
 	std::string iwd = starter->jic->jobRemoteIWD();
 	extras.push_back(iwd + ":" + iwd);
 
-	buildExtraVolumes(extras, *machineAd, *JobAd);
+	buildExtraVolumes(extras, mounts, *machineAd, *JobAd);
 
 	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
@@ -334,7 +335,7 @@ DockerProc::LaunchContainer() {
 			containerName, imageName,
 			command, args, job_env,
 			sandboxPath, innerdir,
-			extras, credentials_dir(), JobPid, childFDs,
+			extras, mounts, credentials_dir(), JobPid, childFDs,
 			shouldAskForServicePorts, err, affinity_mask);
 
 	if( rv < 0 ) {
@@ -1191,9 +1192,81 @@ DockerProc::restartCheckpointedJob() {
 	return VanillaProc::restartCheckpointedJob();
 }
 
-// Generate a list of strings that are suitable arguments to
-// docker run --volume
-static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd) {
+// Convert a legacy docker --volume specification of the form
+// source[:target[:options]] into the equivalent docker --mount spec
+// "type=<type>,source=...,target=...[,readonly][,bind-propagation=...][,<extraOpts>]".
+//
+// "type" is the --mount mount type, normally "bind" (a host directory) but
+// "volume" (a docker-managed named volume) when the administrator sets
+// DOCKER_VOLUME_DIR_xxx_TYPE = volume; for type=volume the source field is a
+// volume name rather than a host path.
+//
+// The options HTCondor has historically documented for DOCKER_VOLUME_DIR_* are
+// translated: "ro" -> readonly and "rw" (the default) are handled, and the
+// bind-propagation modes are passed through.  Any other option (e.g. the SELinux
+// "z"/"Z" relabel shortcuts, which --mount does not support) is dropped with a
+// warning.
+//
+// extraOpts, from DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS, is appended verbatim as
+// additional comma-separated --mount suboptions (e.g. volume-driver=...,
+// volume-opt=...); it is not interpreted by HTCondor.
+static std::string volumeToMountSpec(const std::string &vol, const std::string &type, const std::string &extraOpts) {
+	std::string source;
+	std::string target;
+	std::string options;
+
+	size_t firstColon = vol.find(':');
+	if (firstColon == std::string::npos) {
+		// No colon: mount the source onto itself.
+		source = vol;
+		target = vol;
+	} else {
+		source = vol.substr(0, firstColon);
+		size_t secondColon = vol.find(':', firstColon + 1);
+		if (secondColon == std::string::npos) {
+			target = vol.substr(firstColon + 1);
+		} else {
+			target = vol.substr(firstColon + 1, secondColon - (firstColon + 1));
+			options = vol.substr(secondColon + 1);
+		}
+	}
+
+	std::string spec = "type=";
+	spec += type;
+	spec += ",source=";
+	spec += source;
+	spec += ",target=";
+	spec += target;
+
+	// The --volume option list is comma-separated.
+	for (const auto &opt: StringTokenIterator(options, ",")) {
+		if (opt == "ro") {
+			spec += ",readonly";
+		} else if (opt == "rw") {
+			// read-write is the default; nothing to add
+		} else if (opt == "shared" || opt == "slave" || opt == "private" ||
+				   opt == "rshared" || opt == "rslave" || opt == "rprivate") {
+			spec += ",bind-propagation=";
+			spec += opt;
+		} else {
+			dprintf(D_ALWAYS, "WARNING: docker volume option '%s' in '%s' has no "
+					"--mount equivalent and will be ignored\n", opt.c_str(), vol.c_str());
+		}
+	}
+
+	// Append any administrator-supplied raw suboptions verbatim.
+	if (!extraOpts.empty()) {
+		spec += ',';
+		spec += extraOpts;
+	}
+
+	return spec;
+}
+
+// Generate a list of strings that are suitable arguments to docker run --volume
+// (extras), plus a list of --mount specs for administrator-configured volumes
+// (mounts).
+static void buildExtraVolumes(std::vector<std::string> &extras, std::vector<std::string> &mounts, ClassAd &machAd, ClassAd &jobAd) {
 	// Bind mount items from MOUNT_UNDER_SCRATCH into working directory
 	std::string scratchNames;
 	if (!param_eval_string(scratchNames, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
@@ -1250,18 +1323,41 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 	for (const auto &volumeName: StringTokenIterator(volumeNames)) {
 		std::string paramName("DOCKER_VOLUME_DIR_");
 		paramName += volumeName;
-		char *volumePath = param(paramName.c_str());
-		if (volumePath) {
-			if (strchr(volumePath, ':') == 0) {
-				// Must have a colon.  If none, assume we meant
-				// source:source
-				char *volumePath2 = (char *)malloc(2 + 2 * strlen(volumePath));
-				strcpy(volumePath2, volumePath);
-				strcat(volumePath2, ":");
-				strcat(volumePath2, volumePath);
-				free(volumePath);
-				volumePath = volumePath2;
+		std::string volumePath;
+		if (param(volumePath, paramName.c_str())) {
+			// The path value is evaluated as a ClassAd expression in the
+			// context of the slot (machine) and job ads; if it is not a valid
+			// expression the literal value is used as-is.
+			std::string evaluatedPath;
+			if (param_eval_string(evaluatedPath, paramName.c_str(), "", &machAd, &jobAd)) {
+				volumePath = evaluatedPath;
 			}
+
+			// The mount type defaults to "bind" (a host directory), but the
+			// administrator may set DOCKER_VOLUME_DIR_xxx_TYPE = volume to use
+			// a docker-managed named volume instead.
+			std::string mountType = "bind";
+			char *typeValue = param((paramName + "_TYPE").c_str());
+			if (typeValue) {
+				mountType = typeValue;
+				free(typeValue);
+			}
+
+			// DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS, if set, is appended verbatim
+			// as additional --mount suboptions.  It is evaluated as a ClassAd
+			// expression in the context of the slot (machine) and job ads; if
+			// it is not a valid expression it is used as a literal string.
+			std::string mountOpts;
+			std::string mountOptsParam = paramName + "_MOUNT_OPTS";
+			if (!param_eval_string(mountOpts, mountOptsParam.c_str(), "", &machAd, &jobAd)) {
+				// Not an expression, maybe a literal
+				param(mountOpts, mountOptsParam.c_str());
+			}
+
+			// Translate the legacy source[:target[:options]] value into a
+			// docker --mount spec.  volumeToMountSpec() handles the no-colon
+			// (source onto itself) case.
+			std::string mountSpec = volumeToMountSpec(volumePath, mountType, mountOpts);
 
 			// If there's a DOCKER_VOLUME_DIR_XXX_MOUNT_IF
 			// param, and it evals to true, add it to the list
@@ -1272,19 +1368,18 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 
 			if (mountIfValue == NULL) {
 				// there's no MOUNT_IF, assume true
-				extras.push_back(volumePath);
-				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+				mounts.push_back(mountSpec);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath.c_str());
 			} else if (param_boolean(paramNameConst.c_str(), false /*deflt*/,
 				false /*do_log*/, &machAd, &jobAd)) {
 
 				// There is a MOUNT_IF, and it is true
-				extras.push_back(volumePath);
-				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath);
+				mounts.push_back(mountSpec);
+				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount\n", volumePath.c_str());
 			} else {
 				// There is a MOUNT_IF, and it is false/undef
-				dprintf(D_ALWAYS, "Not adding %s as a docker volume to mount -- ...MOUNT_IF evaled to false.\n", volumePath);
+				dprintf(D_ALWAYS, "Not adding %s as a docker volume to mount -- ...MOUNT_IF evaled to false.\n", volumePath.c_str());
 			}
-			free(volumePath);
 			free(mountIfValue);
 		} else {
 			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName.c_str());

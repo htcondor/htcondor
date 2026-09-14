@@ -397,7 +397,15 @@ public:
 	PreparingTaskInstance (const JOB_ID_KEY & jid, std::string_view taskname)
 		: _jobid(jid), _task(taskname) {}
 
-	auto operator<=>(const PreparingTaskInstance& ti) const = default; // C++20 spaceship operator
+	auto operator<=>(const PreparingTaskInstance& ti) const {
+		if (auto cmp = _jobid <=> ti._jobid; cmp != 0) {
+			return cmp;
+		}
+		return _task <=> ti._task;
+	}
+	bool operator==(const PreparingTaskInstance& ti) const {
+		return _jobid == ti._jobid && _task == ti._task;
+	}
 
 	// Comparison function for use with SelfDrainingQueue.
 	// Used to determine if another task is already in the queue.
@@ -851,7 +859,7 @@ class Scheduler : public Service
 	void leavePreparingState(JobQueueJob * job);
 	bool addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time_t time);
 
-	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs);
+	void endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs, int num_new_idle_dag_or_local_jobs);
 
 	void configGenericOsUsers();
 

@@ -41,8 +41,6 @@ DagmanUtils dagmanUtils;
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-	printf("\n");
-
 		// Set up the dprintf stuff to write to stderr, so that HTCondor
 		// libraries which use it will write to the right place...
 	dprintf_set_tool_debug("TOOL", 0);
@@ -220,26 +218,34 @@ doRecursionNew(DagmanOptions &dagOpts)
 int
 submitDag(DagmanOptions &dagOpts)
 {
-	printf("-----------------------------------------------------------------------\n");
-	printf("File for submitting this DAG to HTCondor           : %s\n",
-	       dagOpts[shallow::str::SubFile].c_str());
-	printf("Log of DAGMan debugging messages                   : %s\n",
-	       dagOpts[shallow::str::DebugLog].c_str());
-	printf("Log of HTCondor library output                     : %s\n", 
-	       dagOpts[shallow::str::LibOut].c_str());
-	printf("Log of HTCondor library error messages             : %s\n", 
-	       dagOpts[shallow::str::LibErr].c_str());
-	printf("Log of the life of condor_dagman itself            : %s\n",
-	       dagOpts[shallow::str::SchedLog].c_str());
-	printf("\n");
+	if ( ! dagOpts[shallow::b::Terse]) {
+		printf("-----------------------------------------------------------------------\n");
+		printf("File for submitting this DAG to HTCondor           : %s\n",
+		       dagOpts[shallow::str::SubFile].c_str());
+		printf("Log of DAGMan debugging messages                   : %s\n",
+		       dagOpts[shallow::str::DebugLog].c_str());
+		printf("Log of HTCondor library output                     : %s\n",
+		       dagOpts[shallow::str::LibOut].c_str());
+		printf("Log of HTCondor library error messages             : %s\n",
+		       dagOpts[shallow::str::LibErr].c_str());
+		printf("Log of the life of condor_dagman itself            : %s\n",
+		       dagOpts[shallow::str::SchedLog].c_str());
+		printf("\n");
+	}
 
 	if (dagOpts[shallow::b::DoSubmit]) {
 		ArgList args;
 		args.AppendArg( "condor_submit" );
+
 		if( ! dagOpts[shallow::str::RemoteSchedd].empty()) {
 			args.AppendArg("-r");
 			args.AppendArg(dagOpts[shallow::str::RemoteSchedd]);
 		}
+
+		if (dagOpts[shallow::b::Terse]) {
+			args.AppendArg("-terse");
+		}
+
 		args.AppendArg(dagOpts[shallow::str::SubFile]);
 
 			// It is important to set the destination Schedd before
@@ -271,7 +277,10 @@ submitDag(DagmanOptions &dagOpts)
 		printf("-no_submit given, not submitting DAG to HTCondor. You can do this with:\n");
 		printf("\"condor_submit %s\"\n", dagOpts[shallow::str::SubFile].c_str());
 	}
-	printf("-----------------------------------------------------------------------\n");
+
+	if ( ! dagOpts[shallow::b::Terse]) {
+		printf("-----------------------------------------------------------------------\n");
+	}
 
 	return 0;
 }

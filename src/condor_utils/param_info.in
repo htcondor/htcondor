@@ -1165,7 +1165,7 @@ type=string
 tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
-default=NumShadowStarts
+default=NumShadowStarts,DAGManJobId,DAGNodeName
 type=string
 
 [MAX_TRANSFER_LIFETIME]
@@ -1919,7 +1919,7 @@ type=bool
 tags=starter
 
 [SINGULARITY_ADD_ROCM_FLAG]
-default=true
+default=false
 type=bool
 tags=starter
 
@@ -2201,6 +2201,12 @@ default=false
 type=bool
 tags=submit
 description=Submit sends a RESCHEDULE command to schedd. Obsolete, use when Schedd version is before 26.0
+
+[SUBMIT_PREVENT_MULTI_QUEUE]
+default=true
+type=bool
+tags=submit
+description=Submit will stop at the first QUEUE statement and warn if it sees anything after it.
 
 [SUBMIT_PUBLISH_WINDOWS_OSVERSIONINFO]
 description=Submit should put attributes into jobs that show the Windows OSVERSIONINFO
@@ -4177,6 +4183,10 @@ type=string
 description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
 
+[ANNEX_USE_OLD_CREATE]
+default=False
+type=bool
+
 [SCHEDD]
 default=$(SBIN)/condor_schedd
 win32_default=$(SBIN)\condor_schedd.exe
@@ -5297,7 +5307,7 @@ type=int
 range=0,
 
 [MAX_CONCURRENT_UPLOADS_PER_USER]
-default=$(MAX_CONCURRENT_UPLOADS:100)/5
+default=($(MAX_CONCURRENT_UPLOADS:0))/5
 type=int
 range=0,
 
@@ -6453,7 +6463,7 @@ default=250
 [ADSTASH_SE_INDEX_NAME]
 description=What search engine index should condor_adstash push ads to
 type=string
-default=htcondor-000001
+default=htcondor
 [ADSTASH_SE_LOG_MAPPINGS]
 description=Should condor_adstash log mappings used with search engine interfaces
 type=bool

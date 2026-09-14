@@ -154,7 +154,13 @@ do not specify their own with:
     value.  If set to ``warn``, a warning is printed to the screen, but
     submit continues. Default value is unset (neither warn nor error).
     :jira:`1837`
-    
+
+:macro-def:`SUBMIT_PREVENT_MULTI_QUEUE`
+    A boolean expression that when True, causes :tool:`condor_submit` to
+    treat multiple ``QUEUE`` statements in a submit file as an error in
+    all cases and not just with late materialization.
+    The default is True.
+
 :macro-def:`SUBMIT_SEND_RESCHEDULE`
     A boolean expression that when False, prevents :tool:`condor_submit` from
     automatically sending a :tool:`condor_reschedule` command as it

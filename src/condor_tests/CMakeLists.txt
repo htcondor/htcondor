@@ -292,7 +292,8 @@ if (BUILD_TESTING)
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_adstash_conversion "Test adstash ClassAd conversion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/test_adstash_job_history_input;src/condor_tests/test_adstash_transfer_epoch_history_input;src/condor_scripts/adstash")
+			condor_pl_test(test_adstash_index_setup "Test adstash index setup" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/adstash")
 			# Note that ctest can NOT find this test if it's named
 			# test_AwaitableDeadlineReaper.  I can't even.
 			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;$<TARGET_FILE:test_for_AwaitableDeadlineReaper>")
@@ -377,6 +378,7 @@ if (BUILD_TESTING)
 			endif()
 			condor_pl_test(test_negotiator_slot_const "Test NEGOTIATOR_SLOT_CONSTRAINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_ceiling_lease "Test condor_userprio ceiling leases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_py_prio "Verify bindings legacy ad read fix" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_negotiator_reaps_resource_records "Test that the negotiator reaps stale accountant resource records" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_io_ft_error_reporting "Verify that input failures are reported if a failure output transfer fails" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 if(LINUX)
@@ -384,6 +386,7 @@ if(LINUX)
 			condor_pl_test(test_cgroup_oom "Verify that a job exceeding memory request is OOM held if cgroup v2 is available" "quick;ctest;root" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_ocu_basic "Verify that ocus work" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_rm_transfer "Test condor_rm -transfer option" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_rm_held "Test condor_rm -held option" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# LVM startd disk enforcement regression tests: Linux-only, and require root
 			# (or HTCONDOR_TEST_USE_SUDO=1 with passwordless sudo) to create/mount logical
 			# volumes -- see src/condor_tests/liblvm.py and src/condor_startd.V6/VolumeManager.cpp.
@@ -469,6 +472,7 @@ endif()
 			condor_pl_test(test_dagman_inline_desc "Test DAGMan inline descriptions" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_options_mutual_exclusion "Test DAGMan Util options mutual exclusion" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_specify_rescue "Test DAGMan rescue file by name specification" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_terse "Test condor_submit_dag -terse option" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dag_all_nodes "Test DAG ALL_NODES keyword" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_no_submit_retry "Test DAGMan does not re-submit permanent failures" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")

@@ -567,6 +567,11 @@ match_rec::~match_rec()
 		// If we are shuting down, the daemonCore instance will be null
 		// and any use of it will cause a core dump.  At best.
 	if (!daemonCore) {
+			// Still free claim_id, which is normally freed at the end of
+			// this destructor (after the sec-session block that references
+			// it).  Without this, shutdown-time destruction leaks it.
+		claim_id_parser.clear(); // clear because this refs the claim_id we are about to free
+		if (claim_id) { free(claim_id); claim_id = nullptr; }
 		return;
 	}
 
@@ -1142,9 +1147,10 @@ Scheduler::timeout( int /* timerID */ )
 	daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 }
 
-void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs)
+void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs, int num_new_idle_dag_or_local_jobs)
 {
-	dprintf(D_FULLDEBUG, "endSubmitTransaction new_jobs=%d idle=%d\n", num_new_jobs, num_new_idle_jobs);
+	dprintf(D_FULLDEBUG, "endSubmitTransaction new_jobs=%d idle=%d dag_or_local=%d\n",
+		num_new_jobs, num_new_idle_jobs, num_new_idle_dag_or_local_jobs);
 
 	// when we get new idle jobs and we had no submitter pressure before (i.e no idle jobs)
 	// we want to consider re-running count_jobs and sending a RESCHEDULE to the negotiator
@@ -1153,6 +1159,18 @@ void Scheduler::endSubmitTransaction(int num_new_jobs, int num_new_idle_jobs)
 			dprintf(D_STATUS,
 				"%d new idle jobs submitted, and last update had no job pressure. Triggering a rechedule.\n",
 				num_new_idle_jobs);
+			needReschedule();
+		} else if (num_new_idle_dag_or_local_jobs > 0) {
+			dprintf(D_STATUS,
+				"%d new idle dag or local jobs submitted. Triggering a rechedule.\n",
+				num_new_idle_jobs);
+			// TODO: do less than a full reschdule here
+			needReschedule();
+		} else if ( ! cronTabClusterIds.empty()) {
+			dprintf(D_STATUS,
+				"%d new CRONDOR jobs submitted. Triggering a rechedule.\n",
+				(int)cronTabClusterIds.size());
+			// TODO: do less than a full reschdule here
 			needReschedule();
 		}
 	}
@@ -11219,17 +11237,11 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 		return false;
 	}
 
-	// unregister_shadow_catalogs() needs the PID of the shadow currently responsible
-	// for the catalog so that it won't erase entries that have been made in the map
-	// since then.
-	auto shadow = getShadowForCatalog( catalogName );
-	int shadow_pid = (* shadow)->pid;
-
 	// Why do we use manifest constants for attributes but not config knobs?
 	int keep_common_idle = param_integer( "KEEP_DATA_CLAIM_IDLE", 300 );
 	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
 		keep_common_idle, TIMER_NEVER,
-		[this, catalogName, shadow_pid](int /* timerID */) -> void {
+		[this, catalogName](int /* timerID */) -> void {
 			auto shadow = getShadowForCatalog( catalogName );
 			if(! shadow) {
 				dprintf( D_ALWAYS, "Found no shadow for catalog scheduled for clean-up: '%s'\n", catalogName.c_str() );
@@ -18496,6 +18508,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	std::string job_claimid_buf;
 	char const *job_claimid = NULL;
 	char const *match_sec_session_id = NULL;
+	std::string match_sec_session_buf; // backs match_sec_session_id; must outlive its use below
 	int universe = -1;
 	std::string startd_name;
 	std::string starter_addr;
@@ -18680,8 +18693,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 		job_claimid = mrec->claimId();
 		if (mrec->use_sec_session) {
-			std::string sessbuf;
-			match_sec_session_id = mrec->secSessionId(sessbuf);
+			match_sec_session_id = mrec->secSessionId(match_sec_session_buf);
 		}
 	}
 
