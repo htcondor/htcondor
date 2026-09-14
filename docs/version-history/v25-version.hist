@@ -6,6 +6,14 @@
   preserved instead of being overridden.
   :jira:`3613`
 
+- Fixed a bug where the KERBEROS authentication method failed if the server
+  was IPv6-only.
+  :jira:`2863`
+
+- Fixed a bug where :macro:`DISABLE_AUTHENTICATION_IP_CHECK` disabled the
+  warning but not the check.
+  :jira:`2863`
+
 *** 25.0.15 bugs
 
 *** 25.14.0 features
@@ -134,13 +142,6 @@
 
 *** 25.14.0 bugs
 
-- Fixed a bug where the KERBEROS authentication method failed if the server
-  was IPv6-only.
-  :jira:`2863`
-
-- Fixed a bug where :macro:`DISABLE_AUTHENTICATION_IP_CHECK` disabled the
-  warning but not the check.
-  :jira:`2863`
 - The Python bindings no longer assume that all ads in a legacy-style reply
   from the negotiator contain only attributes present in the ad indexed #1.
   :jira:`3884`
