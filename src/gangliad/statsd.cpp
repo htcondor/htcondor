@@ -308,7 +308,9 @@ labelValueToString(classad::Value const &val,std::string &result)
 	case classad::Value::REAL_VALUE: {
 		double d = 0.0;
 		val.IsRealValue(d);
-		formatstr(result,"%g",d);
+		// %.15g for the same reason as Metric::getValueString(): %g rounds to
+		// 6 significant digits, which would quietly corrupt a label value.
+		formatstr(result,"%.15g",d);
 		return true;
 	}
 	case classad::Value::BOOLEAN_VALUE: {
@@ -723,7 +725,10 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			} else {
 				// delta value did not decrease, so change current metric value to the delta value
 				if ( value.IsIntegerValue() ) {
-					value.SetIntegerValue((int)delta_value);
+					// long long for the same reason as the aggregate paths
+					// below: a per-daemon delta of a bytes counter over a
+					// long interval can exceed 2^31.
+					value.SetIntegerValue((long long)delta_value);
 				} else {
 					value.SetRealValue(delta_value);
 				}
@@ -755,7 +760,13 @@ Metric::getValueString(std::string &result) const {
 			double dbl = 0.0;
 			if( zero_value || value.IsNumber(dbl) ) {
                 dbl *= scale;
-				formatstr(result,"%g",dbl);
+				// %g would give only 6 significant digits, which silently
+				// mangles ordinary values: 5000000123 prints as "5e+09".  For
+				// a counter that is fatal -- consecutive scrapes report the
+				// same rounded number and the computed rate is zero.  %.15g
+				// is exact for integers up to 1e15 and still prints 0.1 as
+				// "0.1" rather than "0.10000000000000001" the way %.17g would.
+				formatstr(result,"%.15g",dbl);
 				return true;
 			}
 			break;
@@ -772,10 +783,13 @@ Metric::getValueString(std::string &result) const {
         case UINT16:
         case INT32:
         case UINT32: {
-            int i = 0;
+            // long long, not int: ClassAd stores the value as 64 bits and
+            // IsIntegerValue(int&) narrows with no range check, so an int
+            // here silently wraps any aggregate above 2^31.
+            long long i = 0;
             if( zero_value || value.IsIntegerValue(i) ) {
                 i *= scale;
-                formatstr(result,"%d",i);
+                formatstr(result,"%lld",i);
                 return true;
             }
             break;
@@ -863,7 +877,7 @@ Metric::convertToNonAggregateValue(StatsD *statsd) {
             if (type == FLOAT || type == DOUBLE) {
                 value.SetRealValue(sum);
             } else {
-                value.SetIntegerValue((int)sum);
+                value.SetIntegerValue((long long)sum);
             }
 			break;
 		}
@@ -872,7 +886,7 @@ Metric::convertToNonAggregateValue(StatsD *statsd) {
                 if (type == FLOAT || type == DOUBLE) {
                     value.SetRealValue(sum/count);
                 } else {
-                    value.SetIntegerValue((int)(sum/count));
+                    value.SetIntegerValue((long long)(sum/count));
                 }
 			}
 			else {
@@ -896,7 +910,10 @@ Metric::convertToNonAggregateValue(StatsD *statsd) {
 		if (type == FLOAT || type == DOUBLE) {
 			value.SetRealValue(total);
 		} else {
-			value.SetIntegerValue((int)total);
+			// SetIntegerValue takes a long long and the ClassAd stores 64
+			// bits; an (int) cast here would wrap a pool-wide counter that
+			// exceeds 2^31, which a bytes-transferred total does routinely.
+			value.SetIntegerValue((long long)total);
 		}
 	}
 	else {
