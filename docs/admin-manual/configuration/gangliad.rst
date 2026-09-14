@@ -347,7 +347,8 @@ is set.
     :macro:`SHARED_PORT_PORT`, meaning requests arrive through
     *condor_shared_port*. Set it to a specific port to have *condor_metricd*
     open a listening socket of its own, or to ``-1`` to disable HTTP serving
-    entirely. Serving over HTTPS instead of HTTP is enabled by configuring
+    entirely. This setting can only be changed by restarting *condor_metricd*.
+    Serving over HTTPS in addition to HTTP is enabled by configuring
     :macro:`AUTH_SSL_SERVER_CERTFILE` and :macro:`AUTH_SSL_SERVER_KEYFILE`.
 
 :macro-def:`PROMETHEUS_HTTP_AUTH_FILE`

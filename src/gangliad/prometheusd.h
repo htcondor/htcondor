@@ -73,6 +73,7 @@ class PrometheusD: public StatsD {
 
 	// HTTP / HTTPS serving
 	bool  m_http_handler_registered{false};
+	int   m_http_port{0};          // PROMETHEUS_HTTP_PORT, or 0 if not configured
 	std::string m_http_auth_file;
 	void *m_ssl_ctx{nullptr};       // SSL_CTX* when TLS is configured
 	ReliSock *m_http_listen_sock{nullptr}; // extra listen socket when PROMETHEUS_HTTP_PORT != SHARED_PORT_PORT

@@ -364,6 +364,12 @@ PrometheusD::initAndReconfig()
 	// have the shared port pick an ephemeral port. 
 	int shared_port_port = param_boolean("USE_SHARED_PORT", true) ? param_integer("SHARED_PORT_PORT") : -1;
 	int http_port = param_integer("PROMETHEUS_HTTP_PORT", shared_port_port);
+	if (m_http_handler_registered && http_port != m_http_port) {
+		dprintf(D_ALWAYS,
+		        "PrometheusD: PROMETHEUS_HTTP_PORT changed from %d to %d; "
+		        "HTTP handler already registered, ignoring new value, a restart is needed\n",
+		        m_http_port, http_port);
+	}	
 	if (http_port >= 0 && !m_http_handler_registered && !m_output_file.empty()) {
 		// if http_port != shared_port_port, then Register_Command_Socket() on a ReliSock bound to the
 		// port specified by http_port.  When the ports match, DaemonCore's normal command
@@ -391,6 +397,7 @@ PrometheusD::initAndReconfig()
 			"PrometheusD::handleHttpCommand");
 		if (rc >= 0) {
 			m_http_handler_registered = true;
+			m_http_port = http_port;
 			dprintf(D_ALWAYS,
 			        "PrometheusD: registered HTTP handler for /metrics endpoint\n");
 		} else {
