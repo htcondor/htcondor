@@ -36,8 +36,8 @@ Job Submission Configuration Options
     not specify how much it needs using the
     :subcom:`request_memory[and JOB_DEFAULT_REQUESTMEMORY]`
     submit command. If this variable is not defined, then the default is
-    defined by the expression :ad-expr:`128`
-
+    defined by the expression :ad-expr:`128`.
+    Does not apply to Scheduler or Local universe jobs.
 
 :macro-def:`JOB_DEFAULT_REQUESTDISK`
     The amount of disk in KiB to acquire for a job, if the job does not
@@ -46,13 +46,15 @@ Job Submission Configuration Options
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then the default is the maximum of 1 GB
     and 125% of the transfer input size, which is the expression
-    :ad-expr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`
+    :ad-expr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`.
+    Does not apply to Scheduler or Local universe jobs.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS`
     The number of CPUs to acquire for a job, if the job does not specify
     how many it needs using the :subcom:`request_cpus[and JOB_DEFAULT_REQUESTCPUS]`
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then the default is 1.
+    Does not apply to Scheduler or Local universe jobs.
 
 :macro-def:`DEFAULT_JOB_MAX_RETRIES`
     The default value for the maximum number of job retries, if the

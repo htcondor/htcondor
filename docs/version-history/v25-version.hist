@@ -1,3 +1,10 @@
+*** 25.15.0 features
+
+- Scheduler and Local universe jobs no longer use the Vanilla universe default values for
+  :subcom:`request_cpus`, :subcom:`request_memory` and :subcom:`request_disk`.  Instead,
+  Scheduler and Local universe jobs have no defaults for those submit commands.
+  :jira:`3926`
+
 *** 25.15.15 bugs
 
 - Fixed a bug where the submit description files written by the
