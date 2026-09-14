@@ -489,14 +489,28 @@ PrometheusD::publishMetric(Metric const &m_in)
 	std::string prom_name = buildPrometheusName(m_in);
 
 	// Validate Prometheus metric name: [a-zA-Z_:][a-zA-Z0-9_:]*
-	Regex re;
-	int errcode = 0;
-	int erroffset = 0;
-	if (!re.compile("^[a-zA-Z_:][a-zA-Z0-9_:]*$",&errcode,&erroffset)) {
-		dprintf(D_ERROR, "Prometheus name regex failed to compile\n");
+	//
+	// The pattern is a compile-time constant, so compile it once on the first
+	// call rather than once per metric per publication cycle.  The statics are
+	// function-local to keep this self-contained; C++11 guarantees their
+	// initialization is thread safe and runs in declaration order.
+	static Regex prom_name_re;
+	static const bool prom_name_re_ok = [] {
+		int errcode = 0;
+		int erroffset = 0;
+		if (prom_name_re.compile("^[a-zA-Z_:][a-zA-Z0-9_:]*$",&errcode,&erroffset)) {
+			return true;
+		}
+		dprintf(D_ERROR,
+		        "Prometheus name regex failed to compile (error %d at offset %d)\n",
+		        errcode, erroffset);
+		return false;
+	}();
+
+	if (!prom_name_re_ok) {
 		return;
 	}
-	if (!re.match(prom_name)) {
+	if (!prom_name_re.match(prom_name)) {
 		dprintf(D_ERROR, "Invalid Prometheus metric name '%s'; skipping\n", prom_name.c_str());
 		return;
 	}
