@@ -430,7 +430,17 @@ PrometheusD::buildPrometheusName(const Metric &m) const
 	else if (units_lc == "seconds") unit_suffix = "_seconds";
 	else if (units_lc == "milliseconds") unit_suffix = "_milliseconds";
 	else if (units_lc == "microseconds") unit_suffix = "_microseconds";
-	else if (units_lc == "percent" || units_lc == "%") unit_suffix = "_ratio";
+	else if (units_lc == "percent" || units_lc == "%") unit_suffix = "_percent";
+	else if (units_lc == "count" || units_lc == "items") unit_suffix = "_count";
+	else if (units_lc == "requests") unit_suffix = "_requests";
+	else if (units_lc == "errors") unit_suffix = "_errors";
+	else if (units_lc == "connections") unit_suffix = "_connections";
+	else if (units_lc == "jobs") unit_suffix = "_jobs";
+	else if (units_lc == "tasks") unit_suffix = "_tasks";
+	else if (units_lc == "processes") unit_suffix = "_processes";
+	else if (units_lc == "threads") unit_suffix = "_threads";
+	else if (units_lc == "files") unit_suffix = "_files";
+	else if (units_lc == "messages") unit_suffix = "_messages";
 	if (unit_suffix && !name.ends_with(unit_suffix)) {
 		name += unit_suffix;
 	}
