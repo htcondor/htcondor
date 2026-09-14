@@ -113,6 +113,10 @@ TEST_CASES = {
     "epoch_transfer_type":TestReqs("condor_history -epochs -type transfer", ["2.0","4.0","4.1","6.0","6.1","10.0"], STD_HEADER),
     "epoch_all_type"    : TestReqs("condor_history -epochs -type ALL", ["1.0","2.0","3.0","4.0","4.1","5.0","6.0","6.1","7.0","8.0","9.0","10.0"], STD_HEADER),
     "epoch_unknown_type": TestReqs("condor_history -epochs -type UNKNOWN", header=STD_HEADER),
+    # Regression: -type filtering used to only be enforced when reading backwards
+    # (the default); forward reads silently ignored it. Same expected set as
+    # epoch_input_type above, just read forwards instead.
+    "epoch_input_type_forwards": TestReqs("condor_history -epochs -forwards -type input", ["2.0","6.0","6.1"], STD_HEADER),
     # Test -transfer[-history] flag > Note: This tests the flags autosetup not the actual contents of the Ads since the
     #                                       tests 'transfer' ads are synthesized from a job ad not actual transfer ads
     "transfer_flag_all"     : TestReqs("condor_history -transfer -af:jh Owner", ["2.0","4.0","4.1","6.0","6.1","10.0"], ["ID", "Owner"]),
@@ -589,6 +593,27 @@ Bar=1
     return p
 
 #===============================================================================================
+# Second record's body is an unparseable expression ("(broken" is never closed), so
+# condor_history must print a "Bad history file" warning and skip it while still
+# printing the well-formed first record. Parametrized over both directions since
+# they now share the same reader/parsing code.
+@action(params={"forwards" : "-forwards", "backwards" : "-backwards"})
+def runMalformedAd(default_condor, request):
+    MALFORMED_AD_HISTORY = "malformed.ad.hist"
+    with open(MALFORMED_AD_HISTORY, "w") as f:
+        f.write(
+"""
+Foo=True
+Bar=2
+***
+Foo = (broken
+***
+"""
+        )
+    p = default_condor.run_command(["condor_history",request.param,"-file",MALFORMED_AD_HISTORY,"-af","Bar","Foo"])
+    return p
+
+#===============================================================================================
 @action
 def getDaemonHistory(default_condor):
     # NOTE: This (by default) gets Schedd records from daemon history
@@ -840,6 +865,11 @@ class TestCondorHistory:
         for line in runEmptyBanner.stdout.split("\n"):
             assert line == "2 true" or line == "1 false"
 
+    def test_malformed_ad_warns_and_skips(self, runMalformedAd):
+        assert runMalformedAd.stderr == ""
+        assert "Bad history file" in runMalformedAd.stdout
+        assert "2 true" in runMalformedAd.stdout.split("\n")
+
     def test_daemon_history(self, getDaemonHistory):
         path, cmd = getDaemonHistory
 
@@ -895,6 +925,23 @@ class TestCondorHistory:
 
     def test_completion_date_ordering_regression_cluster_only(self, default_condor, writeCompletionOrderFile):
         p = default_condor.run_command(["condor_history", str(COMP_ORDER_CLUSTER), "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        lines = [line for line in p.stdout.strip().split("\n") if line]
+        assert set(lines) == {
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}",
+            f"{COMP_ORDER_CLUSTER} {COMP_ORDER_OTHER_PROC}",
+        }
+
+    # Same two fixtures, read forwards instead of the default backwards, to confirm
+    # the unified reader gives the same complete result set in either direction.
+    def test_completion_date_ordering_regression_forwards(self, default_condor, writeCompletionOrderFile):
+        target = f"{COMP_ORDER_CLUSTER}.{COMP_ORDER_TARGET_PROC}"
+        p = default_condor.run_command(["condor_history", "-forwards", target, "-file", writeCompletionOrderFile,
+                                         "-af", "ClusterId", "ProcId"])
+        assert p.stdout.strip() == f"{COMP_ORDER_CLUSTER} {COMP_ORDER_TARGET_PROC}"
+
+    def test_completion_date_ordering_regression_cluster_only_forwards(self, default_condor, writeCompletionOrderFile):
+        p = default_condor.run_command(["condor_history", "-forwards", str(COMP_ORDER_CLUSTER), "-file", writeCompletionOrderFile,
                                          "-af", "ClusterId", "ProcId"])
         lines = [line for line in p.stdout.strip().split("\n") if line]
         assert set(lines) == {
