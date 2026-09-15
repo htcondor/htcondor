@@ -1633,7 +1633,7 @@ def condor_dedicated_http_port(test_dir):
                 while http_port == shared_port:
                     http_port = _pick_free_tcp_port()
                 pending = Condor(
-                    test_dir / ("condor_port_%d" % attempt),
+                    test_dir / f"condor_port_{attempt}",
                     config=make_config(shared_port, http_port),
                 )
                 if _bring_up_condor(pending, ready_timeout=25) and \
