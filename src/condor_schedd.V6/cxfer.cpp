@@ -249,14 +249,16 @@ call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
 // lifetime of the `mrec` pointer; but see what we're already doing to avoid
 // having to do so.  Likewise, we'd need a copy of the `requestAd`.
 //
+// We should still worry about the lifetime of the `srec` pointer, but since
+// the rest of the schedd lives dangerously, we must as well.
+//
 void
-start_command_data_slot( match_rec * mrec, const ClassAd & requestAd ) {
+start_command_data_slot(
+	match_rec * mrec,
+	const ClassAd & requestAd,
+	shadow_rec * srec
+) {
 	// dprintf( D_ALWAYS, "start_command_data_slot(): begin.\n" );
-
-	// We're responsible for deleting this shadow record right up until
-	// we call scheduler.addRunnableJob(), and we can't depend on the match
-	// record being there or remembering the shadow record later.
-	shadow_rec * srec = mrec->shadowRec;
 
 	CondorError errorStack;
 	DCStartd startd( mrec->peer, nullptr );

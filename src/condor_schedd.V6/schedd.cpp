@@ -11149,7 +11149,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 
 				// Run the transfer shadow on a data slot created out of
 				// the job slot we matched against.
-				start_command_data_slot( mrec, * job );
+				start_command_data_slot( mrec, * job, transfer_shadow_rec );
 
 
 				//
