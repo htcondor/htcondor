@@ -59,7 +59,7 @@ def the_removed_jobs( the_condor, the_common_file ):
         "should_transfer_files":    "YES",
         "request_cpus":             1,
         "request_memory":           1,
-        "request_disk":             1024,
+        "request_disk":             "1025K",
         "log":                      "the_running_jobs.log.$(ClusterID)",
         "MY.CommonInputFiles":      f'"{the_common_file.as_posix()}"',
     }
