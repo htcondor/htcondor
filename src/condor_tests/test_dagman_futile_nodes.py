@@ -12,6 +12,7 @@
 
 from ornithology import *
 import htcondor2 as htcondor
+import classad2
 import os
 from pathlib import Path
 
@@ -355,37 +356,33 @@ class TestDAGManFutileNodes:
     def test_dag(self,test_dir,job_name,job_wait):
         #Make path to this tests node status file
         path = (test_dir / job_name / "status.out").as_posix()
-        status = ""
-        #Attempt to open file and read contents
-        try:
-            f = open(path,"r")
-            status = f.readlines()
-            f.close()
-        except:
-            #Failed somewhere in opening and reading node status file
-            print(f"Error: Failed to read {path}")
-            assert False
         #Dictionary of counts for expected node status
         counts = {
             "done":0,
             "error":0,
             "futile":0,
         }
-        #Read file content for node status and update counts
-        for line in status:
-            if "NodeStatus =" in line:
-                if "STATUS_FUTILE" in line:
+        #Parse the status file as ClassAds and count each NodeStatus ad's status
+        try:
+            for ad in classad2.parseAds(open(path, "r")):
+                if ad.get("Type") != "NodeStatus":
+                    continue
+                status_name = ad.get("NodeStatusName", "")
+                if status_name == "STATUS_FUTILE":
                     counts["futile"] += 1
-                elif "STATUS_DONE" in line:
+                elif status_name == "STATUS_DONE":
                     counts["done"] += 1
-                elif "STATUS_ERROR" in line:
+                elif status_name == "STATUS_ERROR":
                     counts["error"] += 1
                 #If non-of the expected status' appear then must be unexpected
                 #so fail the test
                 else:
-                    line = line.split(";")[1].strip()
-                    print(f"Error: Unexpected node status found ({line})")
+                    print(f"Error: Unexpected node status found ({status_name})")
                     assert False
+        except OSError:
+            #Failed somewhere in opening and reading node status file
+            print(f"Error: Failed to read {path}")
+            assert False
         #Sanity check out put of Test->Node status counts
         print(f"\t{job_name} node status counts: {counts}")
         #Check node status counts

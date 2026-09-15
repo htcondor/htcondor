@@ -277,6 +277,15 @@ public:
 	}
 	// Get vector of job information
 	const std::vector<JobDetails>& GetJobInfo() const { return jobs; }
+	// Record a job proc reaching a terminal state, surviving Cleanup()'s jobs.clear()
+	void RecordTermination(bool success) {
+		_finalJobsTerminated++;
+		if (success) { _finalJobsSucceeded++; }
+	}
+	// Total job procs that ever terminated/aborted
+	int NumJobsTerminated() const { return _finalJobsTerminated; }
+	// Of those, how many succeeded
+	int NumJobsSucceeded() const { return _finalJobsSucceeded; }
 
 	// Check whether node has not tracked a job proc already
 	bool IsFirstProc() {
@@ -390,6 +399,8 @@ public:
 	void ResetInfo() {
 		numJobsSubmitted = 0;
 		totalJobsFailed = 0;
+		_finalJobsTerminated = 0;
+		_finalJobsSucceeded = 0;
 		isSuccessful = true;
 		readFirstProc = false;
 		is_factory = false;
@@ -478,6 +489,9 @@ private:
 	int _jobProcsOnHold{0}; // Number of tracked job procs currently in hold state
 	int _timesHeld{0}; // Total number of times jobs in the job list went on hold
 	int totalJobsFailed{0}; // Count of jobs that failed (terminate failure or abort)
+
+	int _finalJobsTerminated{0}; // Total job procs that ever terminated/aborted
+	int _finalJobsSucceeded{0}; // Of those, how many succeeded
 
 	int retval{-1}; // Nodes return code
 

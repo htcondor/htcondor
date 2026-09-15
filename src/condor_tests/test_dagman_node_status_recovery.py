@@ -12,6 +12,7 @@ import time
 
 import pytest
 import htcondor2 as htcondor
+import classad2
 
 from ornithology import *
 
@@ -45,24 +46,12 @@ RESTART_CASES = [
 def parse_node_statuses(status_path):
     """{node_name: NodeStatus code} for every NodeStatus ClassAd currently in the file."""
     statuses = {}
-    current_node = None
     try:
-        with open(status_path) as f:
-            lines = f.readlines()
-    except FileNotFoundError:
-        return statuses
-
-    for line in lines:
-        line = line.strip()
-        if line.startswith("Node ="):
-            current_node = line.split("=", 1)[1].strip().strip('";')
-        elif line.startswith("NodeStatus =") and current_node is not None:
-            # e.g. 'NodeStatus = 5; /* "STATUS_DONE" */' -- take just the
-            # leading integer, ignoring the trailing comment.
-            value = line.split("=", 1)[1].split(";", 1)[0].strip()
-            statuses[current_node] = int(value)
-            current_node = None
-
+        for ad in classad2.parseAds(open(status_path)):
+            if ad.get("Type") == "NodeStatus":
+                statuses[ad["Node"]] = ad["NodeStatus"]
+    except (FileNotFoundError, OSError):
+        pass
     return statuses
 
 

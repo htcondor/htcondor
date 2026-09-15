@@ -42,6 +42,8 @@
 #include "condor_q.h"
 #include "transfer_proc.h"
 
+#include <numeric>
+
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
 namespace conf = DagmanConfigOptions;
@@ -674,6 +676,7 @@ void Dag::ProcessAbortEvent(const ULogEvent* event, Node* node, bool recovery) {
 
 		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
 		node->RecordJobAbort(event->proc);
+		node->RecordTermination(false);
 		node->JobFailure();
 
 		// This code is here because if a held job is removed, we
@@ -727,6 +730,7 @@ void Dag::ProcessTerminatedEvent(const ULogEvent* event, Node* node, bool recove
 		bool job_failed = !(termEvent->normal && termEvent->returnValue == 0);
 
 		node->RecordJobExitCode(termEvent->proc, termEvent->returnValue);
+		node->RecordTermination(!job_failed);
 
 		if (job_failed) { // job failed or was killed by a signal
 			node->JobFailure();
@@ -2435,22 +2439,56 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 		return;
 	}
 
-	fprintf(outfile, "[\n");
-	fprintf(outfile, "  Type = \"DagStatus\";\n");
+	auto node_status_printer = [outfile, this](const ClassAd& ad) {
+		std::string buf;
 
-	// Print DAG file list.
-	fprintf(outfile, "  DagFiles = {\n");
-	const char* separator = "";
-	for (auto& _dagFile : dagOpts.dagFiles()) {
-		fprintf(outfile, "%s    %s", separator, EscapeClassadString(_dagFile.c_str()));
-		separator = ",\n";
+		switch (_node_status_fmt) {
+		case DAG::NodeStatusFmt::CLASSAD:
+			if (_node_status_compact) {
+				classad::ClassAdUnParser unparser;
+				unparser.Unparse(buf, &ad);
+			} else {
+				classad::PrettyPrint pp;
+				pp.Unparse(buf, &ad);
+			}
+			break;
+		case DAG::NodeStatusFmt::JSON: {
+			classad::ClassAdJsonUnParser unparser(_node_status_compact);
+			unparser.Unparse(buf, &ad);
+			break;
+		}
+		default:
+			EXCEPT("Unknown node status file print format");
+		}
+
+		if (buf.back() != '\n') { buf += "\n"; }
+		fprintf(outfile, "%s", buf.c_str());
+	};
+
+	ClassAd statusAd;
+
+	statusAd.InsertAttr("Type", "DagStatus");
+
+	static classad::ClassAdUnParser unp;
+	std::string dag_file_list;
+	for (const auto& f : dagOpts.dagFiles()) {
+		if (!dag_file_list.empty()) {
+			dag_file_list += ",";
+		}
+
+		std::string quoted;
+		unp.UnparseString(quoted, f);
+		dag_file_list += quoted;
 	}
-	fprintf(outfile, "\n  };\n");
 
-	// Print timestamp.
+	dag_file_list = "{" + dag_file_list + "}";
+	statusAd.AssignExpr("DagFiles", dag_file_list.c_str());
+
+	statusAd.InsertAttr("Timestamp", startTime);
+
 	std::string timeStr = ctime(&startTime);
 	chomp(timeStr);
-	fprintf(outfile, "  Timestamp = %lu; /* %s */\n", (unsigned long)startTime, EscapeClassadString(timeStr.c_str()));
+	statusAd.InsertAttr("TimestampReadable", timeStr);
 
 	// If markNodesError is true, this means that we want to mark
 	// nodes in the PRERUN, SUBMITTED, and POSTRUN states as being
@@ -2514,53 +2552,85 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 		}
 	}
 
+
 	std::string statusStr = Node::status_t_names[dagJobStatus];
 	trim(statusStr);
-	statusStr += " (";
-	statusStr += statusNote;
-	statusStr += ")";
-	fprintf(outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus, EscapeClassadString(statusStr.c_str()));
+	statusAd.InsertAttr("DagStatus", dagJobStatus);
+	statusAd.InsertAttr("DagStatusName", statusStr);
+	statusAd.InsertAttr("DagStatusDetails", statusNote);
 
 	int nodesPre = PreRunNodeCount();
 	int nodesQueued = NumNodesSubmitted();
 	int nodesPost = PostRunNodeCount();
 	int nodesFailed = NumNodesFailed();
-	int nodesHeld = 0, nodesIdle = 0;
-	NumJobProcStates(&nodesHeld, &nodesIdle);
+
+	int jobsHeld = 0, jobsIdle = 0, jobsRunning = 0;
+	NumJobProcStates(&jobsHeld, &jobsIdle, &jobsRunning);
+
 	if (markNodesError) {
 		// Adjust state counts to reflect "pending" removes of node jobs, etc.
-		nodesFailed += nodesPre;
-		nodesPre = 0;
-		nodesFailed += nodesQueued;
-		nodesQueued = 0;
-		nodesFailed += nodesPost;
-		nodesPost = 0;
-		nodesHeld = 0;
-		nodesIdle = 0;
+		nodesFailed += nodesPre + nodesQueued + nodesPost;
+		nodesPre = nodesQueued = nodesPost = 0;
+
+		// Adjust states for all queued jobs to be terminated/aborted
+		jobsRunning = jobsIdle = jobsHeld = 0;
 	}
-	fprintf(outfile, "  NodesTotal = %d;\n", NumNodes(true));
-	fprintf(outfile, "  NodesDone = %d;\n", NumNodesDone(true));
-	fprintf(outfile, "  NodesPre = %d;\n", nodesPre);
-	fprintf(outfile, "  NodesQueued = %d;\n", nodesQueued);
-	fprintf(outfile, "  NodesPost = %d;\n", nodesPost);
-	fprintf(outfile, "  NodesReady = %d;\n", NumNodesReady());
-	fprintf(outfile, "  NodesUnready = %d;\n", NumNodesUnready(true));
-	fprintf(outfile, "  NodesFutile = %d;\n", NumNodesFutile());
-	fprintf(outfile, "  NodesFailed = %d;\n", nodesFailed);
-	fprintf(outfile, "  JobProcsHeld = %d;\n", nodesHeld);
-	fprintf(outfile, "  JobProcsIdle = %d; /* includes held */\n", nodesIdle);
-	fprintf(outfile, "]\n");
+
+	statusAd.InsertAttr("NodesTotal", NumNodes(true));
+	statusAd.InsertAttr("NodesDone", NumNodesDone(true));
+	statusAd.InsertAttr("NodesPre", nodesPre);
+	statusAd.InsertAttr("NodesQueued", nodesQueued);
+	statusAd.InsertAttr("NodesPost", nodesPost);
+	statusAd.InsertAttr("NodesReady", NumNodesReady());
+	statusAd.InsertAttr("NodesUnready", NumNodesUnready(true));
+	statusAd.InsertAttr("NodesFutile", NumNodesFutile());
+	statusAd.InsertAttr("NodesFailed", nodesFailed);
+
+	statusAd.InsertAttr("JobProcsSubmitted", TotalJobsSubmitted());
+	statusAd.InsertAttr("JobProcsHeld", jobsHeld);
+	statusAd.InsertAttr("JobProcsIdle", jobsIdle);
+	statusAd.InsertAttr("JobProcsRunning", jobsRunning);
+	statusAd.InsertAttr("JobProcsCompleted", TotalJobsCompleted());
+
+	node_status_printer(statusAd);
 
 	// Print status of all nodes.
 	for (auto& node : _nodes) {
-		fprintf(outfile, "[\n");
-		fprintf(outfile, "  Type = \"NodeStatus\";\n");
+		ClassAd ad;
 
-		int jobProcsQueued = node->GetQueuedJobs();
-		int jobProcsHeld = node->GetJobsOnHold();
-
+		std::string nodeNote;
 		Node::status_t status = node->GetStatus();
-		const char* nodeNote = "";
+		int idle = 0, held = 0, run = 0, term = 0, success = 0;
+
+		ad.InsertAttr("Type", "NodeStatus");
+
+		if (status == Node::STATUS_SUBMITTED || status == Node::STATUS_POSTRUN) {
+			// If status is submitted (i.e. running jobs count internal state tracking)
+			for (const auto [procEvent, ec] : node->GetJobInfo()) {
+				if ((procEvent & HOLD_MASK) != 0) {
+					held++;
+				} else if ((procEvent & IDLE_MASK) != 0) {
+					idle++;
+				} else if ((procEvent & ABORT_TERM_MASK) != 0) {
+					term++;
+					if (ec == 0) { success++; }
+				} else {
+					run++;
+				}
+			}
+		} else {
+			// No per-job info once Cleanup() has run; use the counts recorded as each job terminated
+			ASSERT(node->GetJobInfo().empty());
+			term = node->NumJobsTerminated();
+			success = node->NumJobsSucceeded();
+		}
+
+		// Assert that current counts are accurate but use hand counts
+		// later in case we change numbers due to marking things as error
+		ASSERT(held == node->GetJobsOnHold());
+		ASSERT(term - success == node->TotalJobsFailed());
+		ASSERT(run + held + idle == node->GetQueuedJobs());
+
 		if (status == Node::STATUS_READY) {
 			// Note:  Node::STATUS_READY only means that the job is
 			// ready to submit if it doesn't have any unfinished
@@ -2571,15 +2641,20 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 			if (markNodesError) {
 				status = Node::STATUS_ERROR;
 				nodeNote = "Was STATUS_SUBMITTED";
-				jobProcsQueued = 0;
-				jobProcsHeld = 0;
+
+				// Treat these as terminated
+				term += run + held + idle;
+				run = held = idle = 0;
+			} else if (idle + held > 0 && run == 0) {
+				nodeNote = "idle";
+				if (held) {
+					formatstr_cat(nodeNote, ": %d held", held);
+				}
 			} else {
-				// This isn't really the right thing to do for multi-
-				// proc nodes, but I want to get in a fix for
-				// gittrac #5333 today...  wenger 2015-11-05
-				nodeNote = node->GetProcIsIdle(0) ? "idle" : "not_idle";
-				// Note: add info here about whether the job(s) are
-				// held, once that code is integrated.
+				nodeNote = "running";
+				if (term - success > 0) {
+					formatstr_cat(nodeNote, ": %d job(s have failed)", term - success);
+				}
 			}
 
 		} else if (status == Node::STATUS_ERROR) {
@@ -2602,30 +2677,37 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 			nodeNote = "User defined as DONE";
 		}
 
-		fprintf(outfile, "  Node = %s;\n", EscapeClassadString(node->GetNodeName()));
+		ad.InsertAttr("Node", node->GetNodeName());
+		ad.InsertAttr("NodeStatus", status);
 		statusStr = Node::status_t_names[status];
 		trim(statusStr);
-		fprintf(outfile, "  NodeStatus = %d; /* %s */\n", status, EscapeClassadString(statusStr.c_str()));
-		// fprintf( outfile, "  /* HTCondorStatus = xxx; */\n" );
-		fprintf(outfile, "  StatusDetails = %s;\n", EscapeClassadString(nodeNote));
-		fprintf(outfile, "  RetryCount = %d;\n", node->GetRetries());
-		// fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
-		fprintf(outfile, "  JobProcsQueued = %d;\n", jobProcsQueued);
-		// fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
-		// fprintf( outfile, "  /* JobProcsIdle = xxx; */\n" );
-		fprintf(outfile, "  JobProcsHeld = %d;\n", jobProcsHeld);
+		ad.InsertAttr("NodeStatusName", statusStr);
 
-		fprintf(outfile, "]\n");
+		ad.InsertAttr("StatusDetails", nodeNote);
+		ad.InsertAttr("RetryCount", node->GetRetries());
+
+		ad.InsertAttr("JobProcsSubmitted", node->NumSubmitted());
+		ad.InsertAttr("JobProcsQueued", idle + held + run);
+		ad.InsertAttr("JobProcsRunning", run);
+		ad.InsertAttr("JobProcsIdle", idle);
+		ad.InsertAttr("JobProcsHeld", held);
+		ad.InsertAttr("JobProcsCompleted", success);
+		ad.InsertAttr("JobProcsFailed", term - success);
+
+		node_status_printer(ad);
 	}
 
-	// Print end information.
-	fprintf(outfile, "[\n");
-	fprintf(outfile, "  Type = \"StatusEnd\";\n");
+	ClassAd endAd;
+
+	endAd.InsertAttr("Type", "StatusEnd");
 
 	time_t endTime = time(nullptr);
 	timeStr = ctime(&endTime);
 	chomp(timeStr);
-	fprintf(outfile, "  EndTime = %lu; /* %s */\n", (unsigned long)endTime, EscapeClassadString(timeStr.c_str()));
+
+	endAd.InsertAttr("EndTime", endTime); // Legacy timestamp attribute (removing could effect user code)
+	endAd.InsertAttr("Timestamp", endTime);
+	endAd.InsertAttr("TimestampReadable", timeStr);
 
 	time_t nextTime;
 	if (FinishedRunning(true) || removed) {
@@ -2636,41 +2718,28 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 		timeStr = ctime(&nextTime);
 		chomp(timeStr);
 	}
-	fprintf(outfile, "  NextUpdate = %lu; /* %s */\n", (unsigned long)nextTime, EscapeClassadString(timeStr.c_str()));
-	fprintf(outfile, "]\n");
+
+	endAd.InsertAttr("NextUpdate", nextTime);
+	endAd.InsertAttr("NextUpdateReadable", timeStr);
+
+	node_status_printer(endAd);
 
 	fclose(outfile);
 
-	// Now rename the temporary file to the "real" file.
-	std::string statusFileName(_statusFileName);
-
 #ifdef WIN32
 	// Note: We do tolerant_unlink because renaming over an existing file fails on Windows.
-	dagmanUtils.tolerant_unlink(statusFileName.c_str());
+	dagmanUtils.tolerant_unlink(_statusFileName);
 #endif
 
-	if (rename(tmpStatusFile.c_str(), statusFileName.c_str()) != 0) {
+	if (rename(tmpStatusFile.c_str(), _statusFileName) != 0) {
 		debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary node status file (%s) to permanent file (%s): %s\n",
-		             tmpStatusFile.c_str(), statusFileName.c_str(), strerror(errno));
+		             tmpStatusFile.c_str(), _statusFileName, strerror(errno));
 		check_warning_strictness(DAG_STRICT_1);
 		return;
 	}
 
 	_statusFileOutdated = false;
 	_lastStatusUpdateTimestamp = startTime;
-}
-
-//-------------------------------------------------------------------------
-const char* Dag::EscapeClassadString(const char* strIn) {
-	static classad::Value tmpValue;
-	static std::string tmpStr; // must be static so we can return c_str()
-	static classad::ClassAdUnParser unparse;
-
-	tmpValue.SetStringValue(strIn);
-	tmpStr = "";
-	unparse.Unparse(tmpStr, tmpValue);
-
-	return tmpStr.c_str();
 }
 
 //---------------------------------------------------------------------------
