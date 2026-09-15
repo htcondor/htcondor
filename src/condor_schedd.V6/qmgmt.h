@@ -182,6 +182,10 @@ const int CLUSTERPRIVATE_qkey2 = -2;
 // OCU_qkey2 identifies an OCU record.
 const int OCU_qkey2 = -99;
 
+// The magic procid value for slot bundle requests.  Like OCUs, bundle
+// requests are not jobs but are sent to the negotiator.
+const int BUNDLE_qkey2 = -98;
+
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
     if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
