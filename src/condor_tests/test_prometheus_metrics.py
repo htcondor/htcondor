@@ -82,7 +82,7 @@ def _ganglia_publish_line(log_text, metric_name):
     # Return the most recent GANGLIA_LIB=NOOP "publishing <name>=..." log line for
     # metric_name, or None. That line carries both the value and a
     # "derivative=<0|1>" field, so callers can check how Ganglia typed the metric.
-    needle = "publishing %s=" % metric_name
+    needle = f"publishing {metric_name}="
     found = None
     for line in log_text.splitlines():
         if needle in line:
