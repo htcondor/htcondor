@@ -1516,7 +1516,7 @@ def _hard_deadline(seconds):
         return
 
     def _fire(signum, frame):
-        raise _HardTimeout("exceeded hard %d-second deadline" % seconds)
+        raise _HardTimeout(f"exceeded hard {seconds}-second deadline")
 
     previous = signal.signal(signal.SIGALRM, _fire)
     signal.setitimer(signal.ITIMER_REAL, seconds)
