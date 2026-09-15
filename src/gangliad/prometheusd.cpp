@@ -29,6 +29,7 @@
 #include "safe_fopen.h"
 #include "safe_open.h"
 #include "prometheusd.h"
+#include "util_lib_proto.h"  // for rotate_file()
 
 #if !defined(WIN32)
 #include <unistd.h>
@@ -703,7 +704,7 @@ PrometheusD::writeMetricsFile()
 		return;
 	}
 
-	if (rename(tmp.c_str(),m_output_file.c_str()) != 0) {
+	if (rotate_file(tmp.c_str(),m_output_file.c_str()) != 0) {
 		dprintf(D_ERROR, "Failed to rename %s to %s: %s\n",
 		        tmp.c_str(), m_output_file.c_str(), strerror(errno));
 	}
