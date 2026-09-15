@@ -31,10 +31,10 @@ class GangliaMetric: public Metric {
 
 class GangliaD: public StatsD {
  public:
-	GangliaD();
+	GangliaD(bool as_backend = false);
 	~GangliaD();
 
-	virtual void initAndReconfig(const char * unused = 0);
+	virtual void initAndReconfig();
 
 	// create a GangliaMetric
 	virtual Metric *newMetric(Metric const *copy_me=NULL);
@@ -51,6 +51,13 @@ class GangliaD: public StatsD {
     // send heartbeats to hosts not currently monitored by ganglia
     virtual void sendHeartbeats();
 
+    // Filter metrics by ExportMetric only when acting as a backend; legacy
+    // condor_gangliad processes every metric, exactly as it always has.
+    virtual const char *exportFilterName() const { return m_as_backend ? "ganglia" : nullptr; }
+
+    // This StatsD always publishes to ganglia, even in legacy mode.
+    virtual const char *backendName() const { return "ganglia"; }
+
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated
@@ -65,6 +72,7 @@ class GangliaD: public StatsD {
     std::set<std::string> m_need_heartbeat;
     bool m_send_data_for_all_hosts;
     int m_ganglia_metrics_sent;
+    bool m_as_backend;
 };
 
 #endif
