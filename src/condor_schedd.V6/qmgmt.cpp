@@ -259,7 +259,7 @@ bool        PrioRecArrayIsDirty = true;
 // spend at most this fraction of the time rebuilding the PrioRecArray
 const double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
-const double PrioRecRebuildMaxInterval = 5 * 60;
+const double PrioRecRebuildMaxInterval = 20 * 60;
 Timeslice   PrioRecArrayTimeslice;
 #ifdef PRIO_REC_IS_VECTOR
  std::vector<prio_rec> PrioRec;
