@@ -9246,14 +9246,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	ASSERT(job);
 
 
-	//
-	// While we're walking the whole job queue already, make sure that a job
-	// is blocked (for common file transfer) only if there's a corresponding
-	// transfer shadow.  "Corresponding" may mean either that this job is a
-	// prompting job (and that some transfer shadow's ID reflects that) or
-	// that this job is holding a match waiting for somebody else's transfer
-	// shadow.
-	//
 	if( job->Status() == JOB_STATUS_BLOCKED ) {
 		dprintf( D_ALWAYS, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
 		scheduler.checkBlockedJob( job, jid );

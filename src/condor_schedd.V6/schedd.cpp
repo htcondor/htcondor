@@ -9577,20 +9577,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					//
-					// The calls to actually start the job are conditional
-					// on the job having actually been blocked because the
-					// schedd EXCEPT()s if you try to start the same job
-					// twice.  This should never happen, but if a job starts,
-					// then its transfer shadow dies, and we didn't remove its
-					// from matchesHeldByBlockedJobs, we'll end up here when
-					// the next instance of a transfer shadow for its
-					// catalogs succeeds.
-					//
-					// This particular loop makes sure to delete the match
-					// in matchesHeldByBlockedJobs, but obviously we missed a
-					// spot somewhere else.
-					//
+					// In a properly-functioning schedd, we'll never end up
+					// in a situation where we'll release this job twice, but
+					// if we do, only try to start the job the first time (when
+					// we actually unblock the job).
 					if( release_block_condition(
 						mrec->jid,
 						CommonTransfer,
@@ -11074,17 +11064,14 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				}
 
 				//
-				// If the last thing we did with this job was MAPPING, there
-				// may still a stale entry in matchesByJobID; definitionally,
-				// a prompting job has no resources, so remove it.
-				//
-				// Even worse, the rest of the schedd (in AddMrec()) has
-				// already mapped this job ID to this match, so need to
-				// undo it.
+				// The match record was assigned to this job before this
+				// function, so we need to erase the match before blocking
+				// the job.  This may be redundant with SetMrecJobID(),
+				// below.
 				//
 				auto count = matchesByJobID.erase(job_id);
 				if( count != 0 ) {
-					dprintf( D_ALWAYS, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+					dprintf( D_VERBOSE, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
 				}
 
 				// Create the transfer shadow rec with the list of catalogs
@@ -11197,23 +11184,9 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 
 				matchesHeldByBlockedJobs.push_back(mrec);
 
-				//
-				// Mapping does _not_ add its match record to the table of
-				// match records by job IDs.  If anything goes wrong, we'll
-				// unblock it and delete its match record based on
-				// matchesHeldByBlockedJobs, but if it has an old entry in
-				// matchesByJobID, it will never exit idle again (because "it
-				// has a match").  This can happen if this job was a prompting
-				// job, had an error, and turned into a mapping job whose
-				// transfer shadow then _also_ had an error.
-				//
-				// Even worse, the rest of the schedd (via AddMrec()) has
-				// already mapped this job ID to this match, so we need to
-				// undo it.
-				//
 				auto count = matchesByJobID.erase(job_id);
 				if( count != 0 ) {
-					dprintf( D_ALWAYS, "cxfer %d.%d: MAPPING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+					dprintf( D_FULLDEBUG, "cxfer %d.%d: MAPPING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
 				}
 
 				mrec->shadowRec = job_shadow_rec;
@@ -12961,15 +12934,7 @@ Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
 
-//
-// There's a lot of semantics around whether or not add_shadow_rec(shadow_rec *)
-// has been called (as compared to add_shadow_rec(...), which doesn't actually
-// add a shadow rec to anything), so overloading shadowsByProcID to track _all_
-// shadows is unnattractive right now.  Instead, let's track all shadow
-// records in the constructor and destructor.  (This uses more memory than
-// just tracking transfer shadows in their own table, but should definitely
-// leak less.)
-//
+
 std::set<shadow_rec *> all_shadow_recs;
 
 shadow_rec::shadow_rec():
@@ -13686,20 +13651,16 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						"shadow catalog unregistered (prompting job)" ) )
 					{
 						//
-						// The prompting job isn't assigned any resources
-						// in the STAGING case, but that doesn't mean it
-						// isn't assigned any by the time we get here,
-						// so we have to unassign them.  Specifically, if an
-						// idle job has a match in matchesByJobID, it will
-						// never re-enter the priorec array and thus never
-						// have StartJob() called on it.)
-						//
-						// If this job was blocked, we must delete its match
-						// record, because we don't know if it's made it into
-						// the shadow-start queue yet.
+						// Whenever we unblock a job, we must also remove any
+						// entry in matchesByJobID which point to it (unless
+						// we're enqueing a shadow to start).  In this case,
+						// if the prompting job has somehow acquired a match,
+						// we should delete the match as well, because we
+						// won't be using it again.
 						//
 						match_rec * pj_rec = FindMrecByJobID({srec->job_id.cluster, prompting_proc});
 						if( pj_rec ) {
+							dprintf( D_VERBOSE, "unregister_shadow_catalogs(): unblocked prompting job had match, deleting it.\n" );
 							DelMrec( pj_rec );
 						}
 					}
@@ -13709,34 +13670,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 			}
 		}
 
-		//
-		// Our invariants about blocked jobs follow:
-		// (a) A blocked job must either be a prompting job or
-		//     have a match; and
-		// (b) for each common file catalog, there is corresponding
-		//     shadow record.
-		//
-		// Because of (b), when we unregister a catalog, we must
-		// unblock blocked jobs.  As an optimization, we could try to
-		// re-use the match held by the blocked job.  However, since
-		// we just unconditionally delete the match record, we must
-		// also delete its shadow record; definitionally, no blocked
-		// job has a live shadow, so we can't rely on the reaper.  (If
-		// we wanted to confuse people, we could move the blocked job
-		// to the shadow start queue and then fail to start the job
-		// because its match evaporated; this would excuse this code
-		// from the need to clean up the shadow rec, but that would be
-		// its only benefit.)
-		//
-		// We don't have to worry about (a) here because if this shadow
-		// is responsible for a catalog, we just took care of unblocking
-		// its prompting job above.
-		//
-
-		// Doing things this way makes a single pass over the blocked
-		// matches, with each pass doing a set intersection; we could
-		// only one catalog at a time in the main loop, at the cost of
-		// iterating the blocked matches more than once.
+		// See `INSIGHT.md`.
 		std::vector< match_rec *> matches;
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
@@ -13763,26 +13697,8 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				if( anyJobCatalogInRemovedCatalogs ) {
 					if( release_block_condition(sr->job_id, CommonTransfer, "catalog was unregistered" ) )
 					{
+						// See `INSIGHT.md`.
 						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
-
-						//
-						// The job is now idle and holding a claimed resource,
-						// but we can't start a shadow for it.  We can't call
-						// mark_serial_job_running() because we're not starting
-						// a shadow, and if we call addRunnableJob(), we'll
-						// skip StartJob(mrec, job_id) [which is normally
-						// responsible for calling addRunnableJob() via
-						// start_std()].
-						//
-						// If we delete this match record, we must also delete
-						// this shadow record; nobody else will, because no
-						// other code will ever see the shadow record.  We
-						// don't want to leak memory, but we need to delete
-						// the shadow record to maintain our invariants, too,
-						// most notably about entries in catalogToShadowMap.
-						//
-						// See above about HTCONDOR-3610.
-						//
 
 						// Note that by doing things in this order, we bypass
 						// the special handling for cxfer in unlinkMrec().  For
