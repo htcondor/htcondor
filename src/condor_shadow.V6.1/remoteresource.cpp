@@ -1494,6 +1494,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+		// The docker image the starter actually ran, identified by its
+		// content hash.  It never changes for the life of the job, so only
+		// write it into the job ad the first time we hear about it.
+	if( update_ad->LookupString(ATTR_DOCKER_IMAGE_HASH, string_value) ) {
+		std::string prev_hash;
+		if( ! jobAd->LookupString(ATTR_DOCKER_IMAGE_HASH, prev_hash) || prev_hash != string_value ) {
+			jobAd->Assign(ATTR_DOCKER_IMAGE_HASH, string_value);
+		}
+	}
+
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
 		jobAd->Assign(ATTR_EXCEPTION_HIERARCHY, string_value);
 	}

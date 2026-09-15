@@ -1697,14 +1697,16 @@ DockerAPI::imageArchIsCompatible(const std::string &imageArch) {
 }
 
 int
-DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
+DockerAPI::getImageArchAndId(const std::string &image_name, std::string &arch, std::string &image_id) {
 	ArgList archArgs;
 	if ( ! add_docker_arg(archArgs)) {
 		return -1;
 	}
 	archArgs.AppendArg("inspect");
 	archArgs.AppendArg("--format");
-	archArgs.AppendArg("{{.Architecture}}");
+	// Neither the architecture nor the image id can contain whitespace, so
+	// we can ask for both in one inspect and split the result on the space.
+	archArgs.AppendArg("{{.Architecture}} {{.Id}}");
 	archArgs.AppendArg(image_name);
 
 	std::string displayString;
@@ -1736,7 +1738,16 @@ DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
 	}
 
 	chomp(line); trim(line);
-	arch = line;
+
+	size_t space = line.find(' ');
+	if (space == std::string::npos) {
+		arch = line;
+		image_id.clear();
+	} else {
+		arch = line.substr(0, space);
+		image_id = line.substr(space + 1);
+		trim(image_id);
+	}
 	return 0;
 }
 

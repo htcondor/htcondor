@@ -374,6 +374,13 @@ all attributes.
     For Docker and Container universe jobs, a string that names the docker image to run
     inside the container.
 
+:classad-attribute-def:`DockerImageHash`
+    For Docker universe jobs, and Container universe jobs which run under
+    Docker, a string set by the *condor_starter* naming the content hash
+    (as reported by ``docker inspect``, e.g. ``sha256:0a1b2c...``) of the
+    image the job actually ran.  Because a tag such as ``:latest`` may name
+    different images over time, this records precisely which image was used.
+
 :classad-attribute-def:`EC2AccessKeyId`
     Used for grid type ec2 jobs; a string taken from the definition of
     the submit description file command
