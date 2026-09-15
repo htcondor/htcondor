@@ -1535,7 +1535,7 @@ def _metricd_bound_http_port(condor, port, timeout=15):
     failure (lost the port race) or if neither appears within `timeout`.
     """
     log_file = condor.log_dir / "MetricdLog"
-    ok_line   = "listening for HTTP requests on port %d" % port
+    ok_line   = f"listening for HTTP requests on port {port}"
     fail_line = "failed to listen on HTTP port"
     deadline = time.time() + timeout
     while time.time() < deadline:
