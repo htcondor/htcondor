@@ -1589,18 +1589,10 @@ class DaemonCore : public Service
         associating a pointer to data with a registered callback.
     */
     //@{
-    /** Set the data pointer when you're <b>inside</b> the handler
-        function.  It will not work outside.
-
-        @param data The desired pointer to set...
-        @return Not_Yet_Documented
-    */
-    int SetDataPtr( void *data );
-
     /** "Register" a data pointer.  You want to do this immediately
-        after you register a Command/Socket/Timer/etc.  When you enter 
-        the handler for this registered function, the pointer you 
-        specify will be magically available to (G|S)etDataPtr().
+        after you register a Command/Socket/Timer/etc.  When you enter
+        the handler for this registered function, the pointer you
+        specify will be magically available to GetDataPtr().
 
         @param data The desired pointer to set...
         @return Not_Yet_Documented
@@ -2135,10 +2127,25 @@ class DaemonCore : public Service
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
 		std::vector<DCpermission> *alternate_perm{nullptr};
+		// See HandlerDispatchGuard in daemon_core.cpp.
+		bool            in_handler{false};
+		bool            release_pending{false};
+
+		bool registered() const {
+			return !release_pending && (handler || handlercpp || std_handler);
+		}
     };
 
     void                DumpCommandTable(int, const char* = NULL);
-	std::vector<CommandEnt>         comTable;       // command table
+	// The handler tables are std::deques, not std::vectors, so that
+	// registering a new entry (push_back) never moves existing entries.
+	// A handler may register or cancel entries while it is running, and
+	// the dispatch code holds a reference to the running entry; see
+	// HandlerDispatchGuard in daemon_core.cpp.
+	// push_back keeps references valid but invalidates iterators, so any
+	// loop over a table that calls handlers must use an index and re-check
+	// size() each pass, never a range-for or a saved iterator.
+	std::deque<CommandEnt>          comTable;       // command table
     CommandEnt          m_unregisteredCommand;
     CommandEnt          m_httpCommand;
 
@@ -2150,19 +2157,33 @@ class DaemonCore : public Service
         // of a Unix asynchronous signal handler (such as SIGCHLD).
         volatile bool   is_pending;
 
-        struct HandlerEntry {
-            bool valid;
-            StdSignalHandler handler;
-            std::function<void(void)> destroyer;
-            std::string sig_descrip;
-            std::string handler_descrip;
-        };
-        std::vector<HandlerEntry> handlers;
+		struct HandlerEntry {
+			bool valid{false};
+			StdSignalHandler std_handler;
+			std::function<void(void)> destroyer;
+			std::string sig_descrip;
+			std::string handler_descrip;
+			bool in_handler{false};
+			bool release_pending{false};
+
+			// If this handler is running, its std_handler is released when
+			// it returns; see HandlerDispatchGuard in daemon_core.cpp.  The
+			// destroyer is left alone: it may be what is cancelling us.
+			void cancel() {
+				valid = false;
+				if (in_handler) {
+					release_pending = true;
+				} else {
+					std_handler = nullptr;
+				}
+			}
+		};
+		std::deque<HandlerEntry> handlers;
 
         void * data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
-	std::vector<SignalEnt> sigTable;    // signal table
+	std::deque<SignalEnt> sigTable;     // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt
@@ -2184,11 +2205,16 @@ class DaemonCore : public Service
 		HandlerType		handler_type;
 		int				servicing_tid;	// tid servicing this socket
 		bool            is_command_sock;
+		bool			in_handler{false};
+		bool			release_pending{false};
+		// Handlers replaced while running; see retireRunningHandler() in
+		// daemon_core.cpp.
+		std::vector<StdSocketHandler> retired_handlers;
     };
     void              DumpSocketTable(int, const char* = NULL);
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
-	std::vector<SockEnt> sockTable; // socket table; grows dynamically if needed
+	std::deque<SockEnt> sockTable; // socket table; grows dynamically if needed
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -2225,8 +2251,9 @@ class DaemonCore : public Service
         bool            is_cpp;
 		bool			call_handler;
 		bool			in_handler;
+		bool			release_pending{false};
     };
-	std::vector<PipeEnt> pipeTable; // pipe table; grows dynamically if needed
+	std::deque<PipeEnt> pipeTable; // pipe table; grows dynamically if needed
 
     struct ReapEnt
     {
@@ -2239,11 +2266,14 @@ class DaemonCore : public Service
         char*           reap_descrip;
         char*           handler_descrip;
         void*           data_ptr;
+		bool			in_handler{false};
+		bool			release_pending{false};
     };
     void                DumpReapTable(int, const char* = NULL);
+	size_t              findFreeReaperSlot();
     size_t              nReap;          // number of reaper handlers used
     int                 nextReapId;     // next reaper id to use
-	std::vector<ReapEnt>  reapTable;      // reaper table
+	std::deque<ReapEnt>   reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service

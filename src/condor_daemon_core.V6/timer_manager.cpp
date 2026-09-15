@@ -139,7 +139,7 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
-	// Update curr_regdataptr for SetDataPtr()
+	// Update curr_regdataptr for Register_DataPtr()
 	curr_regdataptr = &(new_timer->data_ptr);
 
 	dprintf(D_DAEMONCORE,"leaving DaemonCore NewTimer, id=%d\n",new_timer->id);

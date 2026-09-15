@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 
 class DaemonCommandProtocol: Service {
 
@@ -78,7 +79,7 @@ private:
 	struct timeval m_async_waiting_start_time;
 	float m_async_waiting_time;
 	SecMan *m_sec_man;
-	std::vector<DaemonCore::CommandEnt> &m_comTable;
+	std::deque<DaemonCore::CommandEnt> &m_comTable;
 	const static std::string WaitForSocketDataString;
 	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
 	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
