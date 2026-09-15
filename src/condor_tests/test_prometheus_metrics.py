@@ -1765,7 +1765,7 @@ class TestPrometheusHTTPDedicatedPort:
     def test_metricd_logged_dedicated_listen(self, condor_dedicated_http_port):
         condor, port = condor_dedicated_http_port
         log_text = (condor.log_dir / "MetricdLog").read_text(errors="replace")
-        assert ("listening for HTTP requests on port %d" % port) in log_text
+        assert f"listening for HTTP requests on port {port}" in log_text
 
     def test_get_metrics_returns_200(self, dedicated_host_port, dedicated_metrics_ready):
         host, port = dedicated_host_port
