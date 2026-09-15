@@ -29,6 +29,10 @@
   before it started, the same way less behaves.
   :jira:`3854`
 
+- Add new ``self-service`` form of Annex, where the user is responsible for
+  submitting the Annex EPs to the Slurm cluster of their choice.
+  :jira:`3645`
+
 - Support detection and advertising of AMD GPUs on ROCM 7 systems.
   :jira:`3880`
 
