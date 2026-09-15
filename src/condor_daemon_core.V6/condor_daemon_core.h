@@ -206,12 +206,15 @@ const int DC_STATUS_OOM_KILLED = (1 << 24);
 struct FamilyInfo {
 
 	int max_snapshot_interval{-1};
-	const char* login{nullptr};
+    int cgroup_cpu_shares{0};
+    bool want_pid_namespace{false};
+    bool want_net_namespace{false};
+    bool cgroup_active {false}; // are we actually using a cgroup?
+
+    const char* login{nullptr};
 #if defined(LINUX)
 	gid_t* group_ptr{nullptr};
 #endif
-	bool want_pid_namespace{false};
-	bool want_net_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
 	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
@@ -220,11 +223,9 @@ struct FamilyInfo {
 											 // use memory but no swap
 	std::optional<uint64_t> cgroup_zswap_max; // limit on compressed swap (memory.zswap.max).
 											 // If unset, nothing is written to the control file.
-	int cgroup_cpu_shares{0};
 #if defined(LINUX)
 	std::vector<dev_t> cgroup_hide_devices;
 #endif
-	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
 };
