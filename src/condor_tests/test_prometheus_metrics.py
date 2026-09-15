@@ -223,6 +223,19 @@ METRIC_DEFS = r"""
   ExportMetric = "prometheus";
 ]
 [
+  Name = "escape_test_metric";
+  Value = 7;
+  /* Desc carries a backslash and a line feed; Units is appended to the HELP
+     text so it gets the same treatment. Both come from admin expressions and
+     so can contain anything. */
+  Desc = "d_bs\\ d_nl\n d_dq\" end";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  /* A label value is a quoted context, so it additionally needs the double
+     quote escaped. An unescaped line feed here would split the sample line. */
+  PrometheusLabels = [ tricky = "l_bs\\ l_nl\n l_dq\" end" ];
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -607,6 +620,59 @@ class TestPrometheusMetrics:
             _prom_sample_value(prom_file_contents, "empty_string_info_test_metric_info")
             == 0.0
         )
+
+    # --- exposition-format escaping -----------------------------------------
+    #
+    # Desc, Units and label values all come from admin-supplied ClassAd
+    # expressions, so they can contain any character. The text format defines
+    # exactly these escapes and rejects any other backslash sequence:
+    #   HELP docstring: \\ and \n   (a double quote is an ordinary character)
+    #   label value:    \\, \" and \n
+
+    def test_help_escapes_backslash_and_newline(self, prom_file_contents):
+        # Raw Desc is:  d_bs\ d_nl<LF> d_dq" end
+        assert r'# HELP escape_test_metric d_bs\\ d_nl\n d_dq" end' in prom_file_contents
+
+    def test_help_does_not_escape_double_quote(self, prom_file_contents):
+        # The docstring is not a quoted string; \" there would be a stray
+        # backslash in the rendered help text.
+        assert r'd_dq\" end' not in prom_file_contents
+
+    def test_label_value_escapes_backslash_newline_and_quote(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "escape_test_metric")
+        assert labels is not None
+        assert r'tricky="l_bs\\ l_nl\n l_dq\" end"' in labels
+
+    def test_escaped_metric_occupies_exactly_one_line(self, prom_file_contents):
+        # An unescaped line feed would split the sample in two, which is how
+        # this corrupts the file rather than merely looking wrong.
+        samples = [
+            line for line in prom_file_contents.splitlines()
+            if line.startswith("escape_test_metric{")
+        ]
+        assert len(samples) == 1, samples
+        helps = [
+            line for line in prom_file_contents.splitlines()
+            if line.startswith("# HELP escape_test_metric ")
+        ]
+        assert len(helps) == 1, helps
+
+    def test_every_line_is_well_formed(self, prom_file_contents):
+        # Whole-file structural check, so any future escaping regression shows
+        # up here even if it is in a field these tests do not name. Every line
+        # must be a comment or a sample: <name>[{labels}] <value> [<timestamp>]
+        sample_re = re.compile(
+            r'^[a-zA-Z_:][a-zA-Z0-9_:]*'      # metric name
+            r'(\{.*\})?'                       # optional label set
+            r' -?[0-9.eE+]+'                   # value
+            r'( [0-9]+)?$'                     # optional millisecond timestamp
+        )
+        for line in prom_file_contents.splitlines():
+            if not line.strip():
+                continue
+            if line.startswith("# HELP ") or line.startswith("# TYPE "):
+                continue
+            assert sample_re.match(line), "malformed exposition line: " + repr(line)
 
     def test_bare_machine_still_means_the_daemon_ad_attribute(
         self, prom_file_contents, schedd_ad

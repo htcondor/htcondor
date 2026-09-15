@@ -463,6 +463,47 @@ PrometheusD::buildPrometheusName(const Metric &m) const
 	return name;
 }
 
+// ---------------------------------------------------------------------------
+// Prometheus text exposition format escaping.
+//
+// The format defines exactly these escape sequences, and a parser rejects any
+// other backslash sequence as invalid -- so we must escape what is listed and
+// nothing else:
+//
+//   HELP docstring : \\ for a backslash, \n for a line feed.  A double quote
+//                    is an ordinary character here; the docstring is not a
+//                    quoted string, so escaping it would corrupt the text.
+//   label value    : \\ for a backslash, \" for a double quote, \n for a
+//                    line feed.
+//
+// Everything else is emitted literally.  In particular a carriage return has
+// no legal escape sequence, and inventing one would make the file unparseable;
+// it is harmless raw because only a line feed terminates a line.
+// ---------------------------------------------------------------------------
+static void
+appendEscaped(std::string &out, const std::string &in, bool quoted_context)
+{
+	for (char c : in) {
+		switch (c) {
+		case '\\':
+			out += "\\\\";
+			break;
+		case '\n':
+			out += "\\n";
+			break;
+		case '"':
+			// Only a quoted context (a label value) needs this; escaping it
+			// in a HELP docstring would emit a stray backslash.
+			if (quoted_context) out += '\\';
+			out += c;
+			break;
+		default:
+			out += c;
+			break;
+		}
+	}
+}
+
 std::string
 PrometheusD::buildPrometheusHelp(const Metric &m) const
 {
@@ -472,7 +513,14 @@ PrometheusD::buildPrometheusHelp(const Metric &m) const
 		help += m.units;
 		help += ")";
 	}
-	return help;
+
+	// Desc and Units come from admin-supplied ClassAd expressions, so they can
+	// contain anything at all.  Escape here rather than at write time so that
+	// PendingMetric::help always holds text that is ready to emit verbatim,
+	// matching how serializeLabels() pre-escapes PendingMetric::labels.
+	std::string escaped;
+	appendEscaped(escaped, help, false);
+	return escaped;
 }
 
 void
@@ -672,10 +720,10 @@ PrometheusD::serializeLabels(const std::map<std::string,std::string> &labels)
 		first = false;
 		result += kv.first;
 		result += "=\"";
-		for (char c : kv.second) {
-			if (c == '\\' || c == '"') result += '\\';
-			result += c;
-		}
+		// A label value is a quoted context, so backslash, double quote AND
+		// line feed all need escaping.  Missing the line feed would split the
+		// sample across two lines and invalidate the whole file.
+		appendEscaped(result, kv.second, true);
 		result += "\"";
 	}
 	result += "}";
