@@ -1,4 +1,4 @@
-*** 25.14.0 features
+*** 25.14.1 features
 
 - Administrator-configured Docker universe bind mounts (the
   :macro:`DOCKER_VOLUMES` family) are now made with Docker's ``--mount``
@@ -122,7 +122,7 @@
   communicate with an overloaded *condor_schedd*.
   :jira:`3619`
 
-*** 25.14.0 bugs
+*** 25.14.1 bugs
 
 - The Python bindings no longer assume that all ads in a legacy-style reply
   from the negotiator contain only attributes present in the ad indexed #1.
