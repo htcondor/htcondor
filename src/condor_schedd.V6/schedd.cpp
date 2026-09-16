@@ -10399,7 +10399,7 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		  to add it to all the tables, etc, etc.
 		*/
 	shadow_rec *srec = new shadow_rec;
-    // dprintf( D_ALWAYS, "(0) new shadow_rec = %p\n", srec );
+	// dprintf( D_ALWAYS, "(0) new shadow_rec = %p\n", srec );
 	srec->pid = 0;
 	srec->job_id.cluster = cluster;
 	srec->job_id.proc = proc;
@@ -11071,7 +11071,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				//
 				auto count = matchesByJobID.erase(job_id);
 				if( count != 0 ) {
-					dprintf( D_VERBOSE, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+					dprintf( D_FULLDEBUG, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
 				}
 
 				// Create the transfer shadow rec with the list of catalogs
@@ -11120,7 +11120,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					const auto & catalogName = catalog.first;
 					auto shadow = getShadowForCatalog( catalogName );
 					if(! shadow) {
-                        // dprintf( D_FULLDEBUG, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+						// dprintf( D_FULLDEBUG, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
 						catalogToShadowMap[catalogName] = transfer_shadow_rec;
 						catalogs_to_stage.push_back( catalog );
 					}
@@ -13606,7 +13606,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
 			if(! other) {
-				dprintf( D_FULLDEBUG, "Found no shadow for catalog %s\n", catalogName.c_str() );
+				dprintf( D_VERBOSE, "Found no shadow for catalog %s\n", catalogName.c_str() );
 				continue;
 			}
 			// dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
@@ -13728,6 +13728,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
 	if( rec == nullptr ) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(NULL): ignoring.\n" );
+		return;
 	}
 
 	if(! all_shadow_recs.contains(rec)) {
@@ -14508,8 +14509,8 @@ IsLocalUniverse( shadow_rec* srec )
 static bool
 release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, const char * context)
 {
-	dprintf( D_ALWAYS | D_BACKTRACE,
-		"release_block_condition(%d.%d,, %s)\n",
+	dprintf( D_FULLDEBUG | D_BACKTRACE,
+		"release_block_condition(%d.%d, ..., %s)\n",
 		jid.cluster, jid.proc, context
 	);
 
@@ -14521,7 +14522,8 @@ release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, con
 		set_job_status(jid, JOB_STATUS_IDLE);
 		return true;
 	}
-	dprintf( D_ALWAYS | D_BACKTRACE,
+
+	dprintf( D_VERBOSE | D_BACKTRACE,
 		"Not unblocking job %d.%d (%s): status was %d, not BLOCKED.\n",
 		jid.cluster, jid.proc, context, status);
 	return false;
@@ -18434,7 +18436,9 @@ Scheduler::HadException( match_rec* mrec, shadow_rec* srec )
 		// shadow has died; we don't just call unregister_shadow_catalogs()
 		// because then the transfer shadow proc ID might collide.
 		if( s && isTransferShadowProcID(s->job_id) ) {
-			dprintf( D_VERBOSE, "Marking shadow (%p) with pid %d retiring because of too many exceptions on its match.\n", s, s->pid );
+			// This would normally be D_VERBOSE, except that's marking a change.
+			// If the initial dprintf() above were D_ALWAYS, so would this one.
+			dprintf( D_ERROR, "Marking shadow record (%p) with pid %d retiring because of too many exceptions on its match.\n", s, s->pid );
 			s->cxfer_state = CXFER_STATE::RETIRING;
 		}
 	}
@@ -22144,24 +22148,24 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 			switch( mrec->shadowRec->cxfer_state ) {
 				case CXFER_STATE::INVALID:
 					// This is certainly a problem, but I don't know what to
-					// do about it.
+					// do about it, so we'll just give up when we see it.
 					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): putative transfer shadow record is in INVALID cxfer state.\n", jid.cluster, jid.proc );
 					return;
 				case CXFER_STATE::MAPPING:
-					// This is almost certainly a problem, but carry checking
+					// This is almost certainly a problem, but carry on checking
 					// as if it weren't a prompting job, and this match were
 					// just bad record-keeping, in hopes of gathering more
 					// information for debugging.
-					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): putative transfer shadow record is in MAPPING cxfer state.\n", jid.cluster, jid.proc );
+					dprintf( D_VERBOSE, "checkBlockedJob(%d.%d): putative transfer shadow record is in MAPPING cxfer state.\n", jid.cluster, jid.proc );
 					break;
 				case CXFER_STATE::STAGING:
 				case CXFER_STATE::STAGED:
 				case CXFER_STATE::RETIRING:
-					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
+					dprintf( D_FULLDEBUG, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
 					return;
 			}
 		} else {
-			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record, but it had not shadow record.\n", jid.cluster, jid.proc );
+			dprintf( D_VERBOSE, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record, but it had no shadow record.\n", jid.cluster, jid.proc );
 		}
 	}
 
@@ -22170,7 +22174,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 	// in matchesHeldByBlockedJobs.
 	for( match_rec * m : matchesHeldByBlockedJobs ) {
 		if( m == nullptr ) {
-			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null, which is definitely wrong.\n", jid.cluster, jid.proc );
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null.\n", jid.cluster, jid.proc );
 			continue;
 		}
 
@@ -22179,6 +22183,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 		}
 	}
 	if( mrec == nullptr ) {
+		// This would normally be D_VERBOSE, but it's making a change.
 		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): no matches held for nonprompting job, unbocking it.\n", jid.cluster, jid.proc );
 
 		std::ignore = release_block_condition(
@@ -22202,6 +22207,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 	// whose required catalogs has a corresponding shadow.
 	shadow_rec * srec = mrec->shadowRec;
 	if( srec == nullptr ) {
+		// This would normally be D_VERBOSE, but it's making a change.
 		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match held by blocked job does not have a shadow rec; unblocking it.\n", jid.cluster, jid.proc );
 
 		std::ignore = release_block_condition(
@@ -22216,6 +22222,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 	for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 		auto sr = getShadowForCatalog( catalogName );
 		if(! sr) {
+			// This would normally be D_VERBOSE, but it's making a change.
 			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): No shadow for found catalog '%s', unblocking job\n", jid.cluster, jid.proc, catalogName.c_str() );
 
 			std::ignore = release_block_condition(
@@ -22237,7 +22244,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 		//
 	}
 
-	dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
+	dprintf( D_FULLDEBUG, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
 }
 
 

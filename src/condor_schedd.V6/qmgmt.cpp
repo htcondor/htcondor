@@ -9247,7 +9247,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
 
 	if( job->Status() == JOB_STATUS_BLOCKED ) {
-		dprintf( D_ALWAYS, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
+		dprintf( D_FULLDEBUG, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
 		scheduler.checkBlockedJob( job, jid );
 	}
 

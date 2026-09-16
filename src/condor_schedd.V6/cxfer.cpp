@@ -212,7 +212,7 @@ call_StartJobFailure( const std::string & claimID, shadow_rec * srec ) {
 		match_rec * mrec = scheduler.FindMrecByClaimID( claimID.c_str() );
 		if( mrec != nullptr ) {
 			PROC_ID id( mrec->jid.cluster, transferToPromptingProcID(mrec->jid.proc) );
-			dprintf( D_VERBOSE, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
+			dprintf( D_FULLDEBUG, "call_StartJobFailure(): deleting match record after failure to create data slot.\n" );
 			scheduler.StartJobFailed( mrec, id );
 		} else {
 			dprintf( D_VERBOSE, "call_StartJobFailure(): did not find match record for claim ID '%s'\n", claimID.c_str() );
