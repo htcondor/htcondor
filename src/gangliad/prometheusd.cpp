@@ -59,6 +59,9 @@
 // or per-write idle timeout can be defeated by dribbling a byte just often
 // enough to reset it.
 // ---------------------------------------------------------------------------
+// Namespace prefix applied to every published Prometheus metric name.
+static const char * const PROM_METRIC_PREFIX = "htcondor_";
+
 static const int PROM_HTTP_HEADER_TIMEOUT = 20;  // to receive a complete request
 static const int PROM_HTTP_WRITE_TIMEOUT  = 60;  // to write one response buffer
 static const int PROM_HTTP_IO_TIMEOUT     = 10;  // per-syscall SO_RCVTIMEO/SO_SNDTIMEO
@@ -420,7 +423,20 @@ PrometheusD::newMetric(Metric const *copy_me)
 std::string
 PrometheusD::buildPrometheusName(const Metric &m) const
 {
-	std::string name = m.name;
+	// Namespace every metric, per Prometheus convention, so that HTCondor's
+	// metrics do not collide with anything else scraped into the same server.
+	// Applied before the suffixes below, giving names of the shape
+	// htcondor_<name>[_<unit>][_total|_info].
+	//
+	// Skipped when the configured name already carries the prefix, so an admin
+	// who writes "htcondor_jobs" does not end up with "htcondor_htcondor_jobs".
+	std::string name;
+	if (m.name.starts_with(PROM_METRIC_PREFIX)) {
+		name = m.name;
+	} else {
+		name = PROM_METRIC_PREFIX;
+		name += m.name;
+	}
 
 	// best-effort unit suffix
 	std::string units_lc = m.units;

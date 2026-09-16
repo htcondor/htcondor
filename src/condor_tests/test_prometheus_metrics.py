@@ -47,17 +47,28 @@ FIRST_CYCLE_TIMEOUT = 30    # metric published on metricd's first cycle
 LATER_CYCLE_TIMEOUT = 45    # aggregate counters need a second cycle
 GROWTH_TIMEOUT = 60         # needs two successive, increasing samples
 
+# metricd namespaces every Prometheus metric name with this prefix. Tests name
+# metrics without it and let the helpers below apply it, so the expectation
+# lives in exactly one place.
+PROM_PREFIX = "htcondor_"
+
+
+def _prom_name(sample_name):
+    """The published name for a metric defined as sample_name."""
+    return sample_name if sample_name.startswith(PROM_PREFIX) else PROM_PREFIX + sample_name
+
 
 def _prom_sample_value(prom_text, sample_name):
     # Return the float value of a Prometheus sample line for sample_name, or None.
     # With PROMETHEUS_METRICS_INCLUDE_TIMESTAMP=true a sample line looks like:
     #   name{label="v",...} <value> <timestamp>
     # so the value is the second-to-last whitespace-separated token.
+    want = _prom_name(sample_name)
     for line in prom_text.splitlines():
         if line.startswith("#") or not line.strip():
             continue
         name = line.split(" ", 1)[0].split("{", 1)[0]
-        if name == sample_name:
+        if name == want:
             parts = line.split()
             try:
                 return float(parts[-2])
@@ -401,8 +412,8 @@ class TestPrometheusMetrics:
         assert prom_file_contents is not None
 
     def test_has_help_and_type_lines(self, prom_file_contents):
-        assert "# HELP prometheus_only_test_jobs" in prom_file_contents
-        assert "# TYPE prometheus_only_test_jobs" in prom_file_contents
+        assert "# HELP " + PROM_PREFIX + "prometheus_only_test_jobs" in prom_file_contents
+        assert "# TYPE " + PROM_PREFIX + "prometheus_only_test_jobs" in prom_file_contents
 
     def test_ganglia_only_metric_absent(self, prom_file_contents):
         assert "ganglia_only_test_jobs" not in prom_file_contents
@@ -425,7 +436,7 @@ class TestPrometheusMetrics:
         # Return the raw label-set text (without the enclosing braces) of the
         # first sample line for sample_name, or None. Label values may contain
         # spaces (CondorVersion does), so match greedily up to the last "} ".
-        pattern = re.compile(re.escape(sample_name) + r"\{(.*)\} ")
+        pattern = re.compile(re.escape(_prom_name(sample_name)) + r"\{(.*)\} ")
         for line in prom_text.splitlines():
             if line.startswith("#") or not line.strip():
                 continue
@@ -584,7 +595,7 @@ class TestPrometheusMetrics:
         assert "string_info_test_metric_info" in prom_file_contents
         # The unsuffixed name must not also appear as a sample.
         for line in prom_file_contents.splitlines():
-            if line.startswith("string_info_test_metric{"):
+            if line.startswith(PROM_PREFIX + "string_info_test_metric{"):
                 assert False, "string metric published without _info suffix: " + line
 
     def test_string_metric_value_is_one(self, prom_file_contents):
@@ -600,7 +611,7 @@ class TestPrometheusMetrics:
         assert m.group(1).startswith("$CondorVersion:"), m.group(1)
 
     def test_string_metric_is_typed_gauge(self, prom_file_contents):
-        assert "# TYPE string_info_test_metric_info gauge" in prom_file_contents
+        assert "# TYPE " + PROM_PREFIX + "string_info_test_metric_info gauge" in prom_file_contents
 
     def test_string_metric_sample_value_is_numeric(self, prom_file_contents):
         # The bug this replaced emitted the string itself where the value
@@ -621,6 +632,38 @@ class TestPrometheusMetrics:
             == 0.0
         )
 
+    # --- metric name namespacing --------------------------------------------
+
+    def test_every_sample_name_carries_the_prefix(self, prom_file_contents):
+        # Whole-file check rather than a single metric, so a code path that
+        # bypasses buildPrometheusName() would show up here.
+        for line in prom_file_contents.splitlines():
+            if not line.strip():
+                continue
+            if line.startswith("# HELP ") or line.startswith("# TYPE "):
+                name = line.split()[2]
+            elif line.startswith("#"):
+                continue
+            else:
+                name = line.split(" ", 1)[0].split("{", 1)[0]
+            assert name.startswith(PROM_PREFIX), "unprefixed metric name: " + name
+
+    def test_prefix_is_not_doubled(self, prom_file_contents):
+        assert (PROM_PREFIX + PROM_PREFIX) not in prom_file_contents
+
+    def test_prefix_precedes_the_generated_suffixes(self, prom_file_contents):
+        # The prefix goes on the configured name, before the unit/_total/_info
+        # suffixes are appended, so a counter in bytes reads
+        # htcondor_<name>_bytes_total rather than anything else.
+        assert PROM_PREFIX + "test_bytes_transferred_bytes_total" in prom_file_contents
+        assert PROM_PREFIX + "string_info_test_metric_info" in prom_file_contents
+
+    def test_ganglia_names_are_not_prefixed(self, ganglia_log_contents):
+        # The prefix is a Prometheus convention; Ganglia metric names must be
+        # left exactly as configured.
+        assert "publishing ganglia_only_test_jobs=" in ganglia_log_contents
+        assert PROM_PREFIX + "ganglia_only_test_jobs" not in ganglia_log_contents
+
     # --- exposition-format escaping -----------------------------------------
     #
     # Desc, Units and label values all come from admin-supplied ClassAd
@@ -631,7 +674,7 @@ class TestPrometheusMetrics:
 
     def test_help_escapes_backslash_and_newline(self, prom_file_contents):
         # Raw Desc is:  d_bs\ d_nl<LF> d_dq" end
-        assert r'# HELP escape_test_metric d_bs\\ d_nl\n d_dq" end' in prom_file_contents
+        assert '# HELP ' + PROM_PREFIX + r'escape_test_metric d_bs\\ d_nl\n d_dq" end' in prom_file_contents
 
     def test_help_does_not_escape_double_quote(self, prom_file_contents):
         # The docstring is not a quoted string; \" there would be a stray
@@ -648,12 +691,12 @@ class TestPrometheusMetrics:
         # this corrupts the file rather than merely looking wrong.
         samples = [
             line for line in prom_file_contents.splitlines()
-            if line.startswith("escape_test_metric{")
+            if line.startswith(PROM_PREFIX + "escape_test_metric{")
         ]
         assert len(samples) == 1, samples
         helps = [
             line for line in prom_file_contents.splitlines()
-            if line.startswith("# HELP escape_test_metric ")
+            if line.startswith("# HELP " + PROM_PREFIX + "escape_test_metric ")
         ]
         assert len(helps) == 1, helps
 
@@ -687,10 +730,10 @@ class TestPrometheusMetrics:
         assert "test_bytes_transferred_bytes_total" in prom_file_contents
 
     def test_counter_type_annotation(self, prom_file_contents):
-        assert "# TYPE test_bytes_transferred_bytes_total counter" in prom_file_contents
+        assert "# TYPE " + PROM_PREFIX + "test_bytes_transferred_bytes_total counter" in prom_file_contents
 
     def test_gauge_type_annotation(self, prom_file_contents):
-        assert "# TYPE prometheus_only_test_jobs gauge" in prom_file_contents
+        assert "# TYPE " + PROM_PREFIX + "prometheus_only_test_jobs gauge" in prom_file_contents
 
     def test_invalid_name_metric_absent(self, prom_file_contents):
         assert "invalid name" not in prom_file_contents
@@ -769,7 +812,7 @@ class TestPrometheusMetrics:
         # A SUM of a derivative metric is integrated into a running cumulative
         # total and published as a Prometheus counter (with the _total suffix),
         # not as a per-interval gauge.
-        assert "# TYPE test_aggregate_sum_counter_total counter" in prom_file_with_aggregate
+        assert "# TYPE " + PROM_PREFIX + "test_aggregate_sum_counter_total counter" in prom_file_with_aggregate
 
     def test_aggregate_sum_counter_prometheus_value(self, prom_file_with_aggregate):
         # The source value is constant (5), so every per-daemon delta is 0 and
@@ -778,7 +821,7 @@ class TestPrometheusMetrics:
         assert _prom_sample_value(prom_file_with_aggregate, "test_aggregate_sum_counter_total") == 0
 
     def test_aggregate_max_counter_stays_prometheus_gauge(self, prom_file_with_aggregate):
-        assert "# TYPE test_aggregate_max_counter gauge" in prom_file_with_aggregate
+        assert "# TYPE " + PROM_PREFIX + "test_aggregate_max_counter gauge" in prom_file_with_aggregate
         assert "test_aggregate_max_counter_total" not in prom_file_with_aggregate
 
     # Ganglia backend (GANGLIA_LIB=NOOP logs each published metric, including its
@@ -1275,8 +1318,8 @@ class TestPrometheusHTTP:
     def test_get_metrics_body_has_help_and_type(self, http_host_port, http_metrics_ready):
         host, port = http_host_port
         _, body = _http_get(host, port, "/metrics")
-        assert "# HELP http_test_gauge" in body
-        assert "# TYPE http_test_gauge" in body
+        assert "# HELP " + PROM_PREFIX + "http_test_gauge" in body
+        assert "# TYPE " + PROM_PREFIX + "http_test_gauge" in body
 
     def test_unknown_path_returns_404(self, http_host_port):
         host, port = http_host_port
@@ -1383,8 +1426,8 @@ class TestPrometheusHTTPAuth:
             host, port, "/metrics",
             headers=_basic_auth_header("prometheus", "s3cr3t"),
         )
-        assert "# HELP auth_test_gauge" in body
-        assert "# TYPE auth_test_gauge gauge" in body
+        assert "# HELP " + PROM_PREFIX + "auth_test_gauge" in body
+        assert "# TYPE " + PROM_PREFIX + "auth_test_gauge gauge" in body
 
     # --- bcrypt entries, i.e. the crypt(3)-delegated path ------------------
     #
@@ -1482,8 +1525,8 @@ class TestPrometheusHTTPS:
     def test_https_body_has_help_and_type(self, https_host_port, https_metrics_ready):
         host, port = https_host_port
         _, body = _https_get(host, port, "/metrics")
-        assert "# HELP https_test_gauge" in body
-        assert "# TYPE https_test_gauge gauge" in body
+        assert "# HELP " + PROM_PREFIX + "https_test_gauge" in body
+        assert "# TYPE " + PROM_PREFIX + "https_test_gauge gauge" in body
 
     def test_https_unknown_path_returns_404(self, https_host_port, https_metrics_ready):
         host, port = https_host_port
@@ -1846,8 +1889,8 @@ class TestPrometheusHTTPDedicatedPort:
     def test_get_metrics_body_has_help_and_type(self, dedicated_host_port, dedicated_metrics_ready):
         host, port = dedicated_host_port
         _, body = _http_get(host, port, "/metrics")
-        assert "# HELP port_test_gauge" in body
-        assert "# TYPE port_test_gauge gauge" in body
+        assert "# HELP " + PROM_PREFIX + "port_test_gauge" in body
+        assert "# TYPE " + PROM_PREFIX + "port_test_gauge gauge" in body
 
     def test_unknown_path_returns_404(self, dedicated_host_port, dedicated_metrics_ready):
         host, port = dedicated_host_port
