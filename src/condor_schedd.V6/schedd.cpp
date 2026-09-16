@@ -22172,6 +22172,7 @@ Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
 
 	// If the blocked job isn't a prompting job, it should have an entry
 	// in matchesHeldByBlockedJobs.
+	mrec = nullptr;
 	for( match_rec * m : matchesHeldByBlockedJobs ) {
 		if( m == nullptr ) {
 			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null.\n", jid.cluster, jid.proc );
