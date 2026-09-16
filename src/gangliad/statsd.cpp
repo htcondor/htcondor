@@ -943,6 +943,7 @@ StatsD::~StatsD()
 {
 	clearMetricDefinitions();
 	clearAggregateMetrics();
+	clearPreviousAggregateMetrics();
 }
 
 void
@@ -1845,6 +1846,15 @@ StatsD::clearAggregateMetrics()
 		delete itr->second;
 	}
 	m_aggregate_metrics.clear();
+}
+
+void
+StatsD::clearPreviousAggregateMetrics()
+{
+	for( auto &entry : m_previous_aggregate_metrics ) {
+		delete entry.second;
+	}
+	m_previous_aggregate_metrics.clear();
 }
 
 void

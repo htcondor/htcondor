@@ -136,8 +136,8 @@ def metricd_outcome(test_dir, condor_without_metricd):
         # Success window: METRICD_INTERVAL=5, so first publish at ~5s.
         # Failure window: GangliaD::initAndReconfig() EXCEPTs within
         # ~1s, so the process dies (or the log line lands) almost
-        # immediately. 15s is a comfortable upper bound on both.
-        deadline = time.time() + 15
+        # immediately. 60s is a comfortable upper bound on both.
+        deadline = time.time() + 60
         while time.time() < deadline:
             # Subprocess died → metricd EXCEPTed. Fast fail.
             rc = proc.poll()

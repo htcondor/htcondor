@@ -197,6 +197,12 @@ PrometheusD::PrometheusD()
 
 PrometheusD::~PrometheusD()
 {
+	if (m_http_listen_sock) {
+		daemonCore->Cancel_Socket(m_http_listen_sock);
+		delete m_http_listen_sock;
+		m_http_listen_sock = nullptr;
+	}
+
 	if (m_ssl_ctx && g_SSL_CTX_free) {
 		g_SSL_CTX_free(static_cast<SSL_CTX*>(m_ssl_ctx));
 		m_ssl_ctx = nullptr;

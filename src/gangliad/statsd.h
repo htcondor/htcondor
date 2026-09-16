@@ -377,6 +377,8 @@ class StatsD: public Service {
 	// Initialize aggregate metrics.
 	void clearAggregateMetrics();
 
+	void clearPreviousAggregateMetrics();
+
 	// Remove all previously parsed metric definitions
 	void clearMetricDefinitions();
 

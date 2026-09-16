@@ -93,7 +93,7 @@ def _ganglia_publish_line(log_text, metric_name):
     # Return the most recent GANGLIA_LIB=NOOP "publishing <name>=..." log line for
     # metric_name, or None. That line carries both the value and a
     # "derivative=<0|1>" field, so callers can check how Ganglia typed the metric.
-    needle = "publishing %s=" % metric_name
+    needle = f"publishing {metric_name}="
     found = None
     for line in log_text.splitlines():
         if needle in line:
@@ -1625,7 +1625,7 @@ def _hard_deadline(seconds):
         return
 
     def _fire(signum, frame):
-        raise _HardTimeout("exceeded hard %d-second deadline" % seconds)
+        raise _HardTimeout(f"exceeded hard {seconds}-second deadline")
 
     previous = signal.signal(signal.SIGALRM, _fire)
     signal.setitimer(signal.ITIMER_REAL, seconds)
@@ -1644,7 +1644,7 @@ def _metricd_bound_http_port(condor, port, timeout=15):
     failure (lost the port race) or if neither appears within `timeout`.
     """
     log_file = condor.log_dir / "MetricdLog"
-    ok_line   = "listening for HTTP requests on port %d" % port
+    ok_line   = f"listening for HTTP requests on port {port}"
     fail_line = "failed to listen on HTTP port"
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -1742,7 +1742,7 @@ def condor_dedicated_http_port(test_dir):
                 while http_port == shared_port:
                     http_port = _pick_free_tcp_port()
                 pending = Condor(
-                    test_dir / ("condor_port_%d" % attempt),
+                    test_dir / f"condor_port_{attempt}",
                     config=make_config(shared_port, http_port),
                 )
                 if _bring_up_condor(pending, ready_timeout=25) and \
@@ -1874,7 +1874,7 @@ class TestPrometheusHTTPDedicatedPort:
     def test_metricd_logged_dedicated_listen(self, condor_dedicated_http_port):
         condor, port = condor_dedicated_http_port
         log_text = (condor.log_dir / "MetricdLog").read_text(errors="replace")
-        assert ("listening for HTTP requests on port %d" % port) in log_text
+        assert f"listening for HTTP requests on port {port}" in log_text
 
     def test_get_metrics_returns_200(self, dedicated_host_port, dedicated_metrics_ready):
         host, port = dedicated_host_port
