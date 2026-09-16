@@ -14,6 +14,14 @@
   using both LVM and SELinux.
   :jira:`3337`
 
+- Fixed a bug where the KERBEROS authentication method failed if the server
+  was IPv6-only.
+  :jira:`2863`
+
+- Fixed a bug where :macro:`DISABLE_AUTHENTICATION_IP_CHECK` disabled the
+  warning but not the check.
+  :jira:`2863`
+
 *** 25.0.15 bugs
 
 *** 25.14.0 features
