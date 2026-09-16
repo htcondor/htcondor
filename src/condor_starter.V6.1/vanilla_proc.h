@@ -105,6 +105,10 @@ public:
 
 	virtual bool ShouldConvertCmdToAbsolutePath() { return m_pid_ns_status_filename.empty();}
 
+	void set_pid_ns_status_filename(const std::string & filename) {
+		m_pid_ns_status_filename = filename;
+	}
+
 	bool finishShutdownFast();
 
 protected:
