@@ -117,8 +117,23 @@ def the_running_jobs( the_condor, the_common_files ):
         # (still) Works.
         # "request_disk":             "9217K",
 
-        # Works.  Leaving this one in the test suite as the hardest.
-        "request_disk":             "10101K",
+        # Fails on some platforms due to what appears to be two bugs in
+        # other parts of HTCondor:
+        #
+        # (1) The 'shell' command in the JDL should _not_ transfer a shell
+        #     -- and as far as I know does not -- and should therefore _not_
+        #     set ExecutableSize or ImageSize.
+        #
+        # (2) The startd should _not_ assume that the starter is lying to
+        #     when the starter gives a DiskUsage number lower than what the
+        #     job has already set.  It's fine to make DiskUsage a peak
+        #     number, but not at the cost of having a correct indicator of
+        #     actual resource consumption.
+        #
+        # "request_disk":             "10101K",
+
+        # 8203 (usage) + 1024 (one quantum) + 2048 (two quanta for shell)
+        "request_disk":             "11275",
 
         # Fails, but it should, because we're a disk quantum short.
         # "request_disk":             "8204K",
