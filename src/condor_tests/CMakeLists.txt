@@ -507,11 +507,13 @@ endif()
 			condor_pl_test(test_htcondor_736 "Test bugs fixed in HTCONDOR-736" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			if (NOT WINDOWS)
 				condor_pl_test(test_htcondor_809 "Additional file-transfer tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-        condor_pl_test(test_prometheus_metrics "Test condor_metricd Prometheus export (HTCONDOR-3374)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			endif()
+			if (WITH_GANGLIA)
 			  # This test stands up several personal pools and polls for metrics
 			  # that metricd publishes on a timer, so a misconfiguration shows up
 			  # as waiting rather than as an error. Cap it so a hang fails the
-			  # run instead of stalling it. Typical runtime is under a minute.
+			  # run instead of stalling it. Typical runtime is about a minute.
+			  condor_pl_test(test_prometheus_metrics "Test condor_metricd Prometheus export (HTCONDOR-3374)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			  set_tests_properties(test_prometheus_metrics PROPERTIES TIMEOUT 180)
 			  condor_pl_test(test_metricd_no_ganglia "Test condor_metricd skips Ganglia when no Ganglia metrics (HTCONDOR-3374)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
