@@ -17836,7 +17836,7 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	if(! all_match_recs.contains(match)) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(%p): already deleted, ignoring.\n", match );
-		return 0;
+		return -1;
 	}
 
 	if( match->is_dedicated ) {
