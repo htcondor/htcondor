@@ -545,7 +545,7 @@ option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 option(WITH_PLACEMENT "Support for placement tokens and tokens database" ON)
 if (LINUX)
-	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+	option(WITH_GANGLIA "Compiling with support for condor_gangliad and condor_metricd" ON)
 endif(LINUX)
 
 #####################################
@@ -946,6 +946,14 @@ else(MSVC)
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		add_compile_options(-Wno-error=unused-local-typedefs)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+
+	# Note: This causes tons of warnings in our codebase, so we don't enable it by default,
+	# but it's worth enabling if you are working on a specific area of the code.  Someday
+	# we should clean up all the warnings and enable this by default. -tannenba 6/2026
+	# check_cxx_compiler_flag(-Woverloaded-virtual c_Woverloaded_virtual)
+	# if (c_Woverloaded_virtual)
+		# add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>)
+	# endif(c_Woverloaded_virtual)
 
 	# check compiler flag not working for this flag.
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
