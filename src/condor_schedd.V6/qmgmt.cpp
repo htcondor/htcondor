@@ -3938,9 +3938,8 @@ NewProc(int cluster_id)
 	if (Q_SOCK) {
 		const char * owner = EffectiveUserName(Q_SOCK);
 		if( owner == nullptr || ! owner[0] ) {
-			// This should only happen for job submission via SOAP, but
-			// it's unclear how we can verify that.  Regardless, if we
-			// don't know who the owner of the job is, we can't enfore
+			// This should rarely happen.  Regardless, if we don't know
+			// who the owner of the job is, we can't enforce
 			// MAX_JOBS_PER_OWNER.
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
