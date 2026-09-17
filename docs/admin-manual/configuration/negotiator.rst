@@ -361,6 +361,13 @@ These macros affect the *condor_negotiator*.
     :macro:`USE_RESOURCE_REQUEST_COUNTS` is set to ``False``, then this
     variable will be unconditionally set to a value of 1.
 
+:macro-def:`NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP`
+    A boolean value, defaulting to ``True``, controlling whether the
+    *condor_negotiator* tells a *condor_schedd* that it will enforce the
+    schedd's declared session match cap itself, letting the schedd report
+    true, uncapped auto cluster demand instead of pre-clamping it. See
+    :macro:`SCHEDD_USE_TRUE_DEMAND_REPORTING`.
+
 :macro-def:`NEGOTIATOR_MATCH_EXPRS`
     A comma-separated list of macro names that are inserted as ClassAd
     attributes into matched job ClassAds. The attribute name in the

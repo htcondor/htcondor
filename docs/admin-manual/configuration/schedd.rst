@@ -169,11 +169,24 @@ These macros control the *condor_schedd*.
                       $(MAX_SHADOWS_OPSYS), \
                       $(MAX_JOBS_RUNNING) )
 
+:macro-def:`SCHEDD_USE_TRUE_DEMAND_REPORTING`
+    A boolean value, defaulting to ``True``, that lets the
+    *condor_schedd* report each auto cluster's true, uncapped job count
+    and let the negotiator enforce the :macro:`MAX_JOBS_RUNNING` /
+    :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` session budget itself,
+    instead of the *condor_schedd* pre-clamping it. This way, an auto
+    cluster that matches nothing at all no longer costs anything against
+    the budget, so it can't starve lower job priority auto clusters even
+    for one cycle. Only honored when the negotiator has advertised
+    support for it (see :macro:`NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP`);
+    otherwise falls back to :macro:`SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS`.
+
 :macro-def:`SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS`
     A boolean value that controls two related behaviors that prevent a
     single auto cluster's backlog from consuming a whole negotiation
     session's :macro:`MAX_JOBS_RUNNING` budget and starving lower job
-    priority auto clusters:
+    priority auto clusters. Only used as a fallback when the negotiator
+    hasn't advertised support for :macro:`SCHEDD_USE_TRUE_DEMAND_REPORTING`.
 
     -  When the *condor_schedd* is sending the negotiator a batch of
        resource requests, it reserves one unit of budget for each other
@@ -279,7 +292,9 @@ These macros control the *condor_schedd*.
     to all jobs submitted by a user from the same *condor_schedd*. The default is
     ``$(MAX_CONCURRENT_UPLOADS)/5``. A setting of 0 means unlimited transfers. This limit currently
     does not apply to grid universe jobs. When
-    the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*
+    the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*.
+    Feeds into the negotiation session budget described under
+    :macro:`SCHEDD_USE_TRUE_DEMAND_REPORTING`.
 
 :macro-def:`BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER`
     This specifies the minimum size in bytes of a job's file transfer
