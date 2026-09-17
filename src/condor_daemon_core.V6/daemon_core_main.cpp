@@ -3700,7 +3700,7 @@ int dc_main( int argc, char** argv )
 			}
 			break;
 
-		case 'h':		// -http <port> : specify port for HTTP and SOAP requests
+		case 'h':		// -http <port> : specify port for HTTP requests
 			if ( ptr[0][2] && ptr[0][2] == 't' ) {
 					// specify an HTTP port
 				ptr++;
