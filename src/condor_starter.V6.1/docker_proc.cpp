@@ -1122,8 +1122,21 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 		ad->Assign(ATTR_IMAGE_SIZE, int(max_memUsage / (1024 * 1024)));
 		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1000 * 1000));
 		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1000 * 1000));
-		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1000l * 1000l * 1000l)));
-		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int) (sysCpu / (1000l * 1000l * 1000l)));
+		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int64_t) (userCpu / (1000l * 1000l * 1000l)));
+		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int64_t) (sysCpu / (1000l * 1000l * 1000l)));
+		if (m_proc_exited) {
+			// on completion CPUsUsage is total-cpu-time / total-execution-time
+			double job_duration = timersub_double( job_exit_time, job_start_time );
+			if (job_duration > 0) {
+				double cputime = (userCpu + sysCpu) / (1000l * 1000l * 1000l);
+				ad->Assign(ATTR_CPUS_USAGE, cputime / job_duration);
+			} else {
+				ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
+			}
+		} else {
+			// TODO: add CPU fraction over the last sampling interval
+			// ad->Assign(ATTR_CPUS_USAGE, ??);
+		}
 	}
 	return OsProc::PublishUpdateAd( ad );
 }
