@@ -177,9 +177,12 @@ class TestNegotiatorZeroMatchAutoclusterStarvation:
 
         # By default the negotiator advertises "ScheddOfferCap" and the
         # schedd reports true demand (SCHEDD_USE_TRUE_DEMAND_REPORTING),
-        # so the legacy clamp-and-refund path should never engage here --
-        # confirm that, rather than just relying on it having also worked.
+        # so the legacy clamp path (nextJob()'s !reportTrueDemand() branch,
+        # the only place "jobs instead of" is logged) should never engage
+        # here -- confirm that, rather than just relying on it having also
+        # worked.
         schedd_log_text = condor.schedd_log.path.read_text()
+        assert "jobs instead of" not in schedd_log_text
         assert "Refunding" not in schedd_log_text
 
 
@@ -275,11 +278,17 @@ class TestNegotiatorLegacyFallback:
             verbose=True,
         )
 
-        # Confirm the *legacy* clamp-and-refund path actually engaged --
-        # not that the new true-demand path silently did the work instead
-        # (which would defeat the point of this compatibility test).
+        # Confirm the *legacy* clamp path actually engaged -- not that the
+        # new true-demand path silently did the work instead (which would
+        # defeat the point of this compatibility test). "jobs instead of"
+        # only appears in nextJob()'s !reportTrueDemand() clamp branch, so
+        # it's a reliable signal regardless of whether a full REJECTED
+        # (and thus a "Refunding" message) happens to occur -- with only
+        # two auto clusters here, the pre-existing per-batch reservation
+        # alone is often enough to avoid starvation without ever needing
+        # an actual refund.
         schedd_log_text = condor_legacy_negotiator.schedd_log.path.read_text()
-        assert "Refunding" in schedd_log_text
+        assert "jobs instead of" in schedd_log_text
 
 
 #
