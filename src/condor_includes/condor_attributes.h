@@ -730,6 +730,7 @@
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
 #define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"
+#define ATTR_SCHEDD_OFFER_LIMIT "_condor_SCHEDD_OFFER_LIMIT"  // used in resource request ad; schedd's declared cap on total matches this session
 #define ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY "RestrictToAuthenticatedIdentity"
 #define ATTR_SLOT_AD  "SlotAd"
 #define ATTR_SLOT_TYPE  "SlotType"

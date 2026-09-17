@@ -3032,6 +3032,11 @@ default=true
 type=bool
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP]
+default=true
+type=bool
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_CONSIDER_PREEMPTION]
 default=true
 type=bool
