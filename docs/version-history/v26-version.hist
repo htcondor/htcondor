@@ -1,5 +1,11 @@
 *** 26.2.0 features
 
+- Added :tool:`htcondor cluster`, which caches a cluster's job data
+  locally and profiles it to produce a health report, flagging problems
+  such as inefficient resource usage or held jobs and recommending
+  specific follow-up commands to investigate them.
+  :jira:`3892`
+
 - :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
   attribute that is true for NVIDIA GPUs that share their memory with the
   host, such as unified-memory devices like the NVIDIA DGX Spark.

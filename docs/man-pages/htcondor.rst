@@ -60,6 +60,13 @@ Synopsis
 
 | **htcondor** **cm** *status*
 
+| **htcondor** **cluster** *summarize* cluster_id
+| **htcondor** **cluster** *dashboard* cluster_id
+| **htcondor** **cluster** *histogram* [**-\-show** *cdf|histogram|both*] [**-\-percentiles** *N*] [**-\-print-list**] cluster_id
+| **htcondor** **cluster** *analytics* cluster_id
+| **htcondor** **cluster** *hold* [**-\-min-count** *N*] [**-\-top** *N*] [**-\-code** *code*] [**-\-sort-by** *count|code|percent|time*] [**-\-threshold** *similarity*] [**-\-show-job-ids**] [**-\-export-jobs** *file*] cluster_id
+| **htcondor** **cluster** *fetch* [**-\-cache-dir** *directory*] cluster_id
+
 Description
 -----------
 
@@ -72,7 +79,7 @@ predecessor tools.
 The first argument of the *htcondor* command (ignoring any global options) is
 the *noun* representing an object in the HTCondor system to be operated on.
 The nouns include an individual *job*, *jobset*, *eventlog*, *dag*,
-*annex*, or *snake*.  Each noun is then followed by a noun-specific *verb* that
+*annex*, *snake*, or *cluster*.  Each noun is then followed by a noun-specific *verb* that
 describes the operation on that noun.
 
 One of the following optional global option may appear before the noun:
@@ -547,6 +554,72 @@ Central Manager Verbs
 
     Returns the health status of all Central Managers the current host
     communicates with.
+
+Cluster Verbs
+-------------
+
+  **htcondor cluster summarize** *cluster_id*
+
+    Fetches (if not already cached) and analyzes all job data for a
+    cluster, then prints a consolidated health report covering resource
+    efficiency, held jobs, fast/short jobs, and runtime consistency, along
+    with the follow-up **htcondor cluster** command to run for details on
+    each issue found.
+
+  **htcondor cluster dashboard** *cluster_id*
+
+    Displays an ASCII bar chart of job counts by status (Idle, Running,
+    Held, Completed, etc.) for a cluster.
+
+  **htcondor cluster histogram** *cluster_id* [**-\-show** *cdf|histogram|both*] [**-\-percentiles** *N*] [**-\-print-list**]
+
+    Plots the runtime distribution of a cluster's completed jobs, as a
+    cumulative distribution function (CDF), a percentile histogram, or
+    both.
+
+    **-\-show** *cdf|histogram|both*
+        Which graph(s) to display. Defaults to ``both``.
+    **-\-percentiles** *N*
+        Number of percentile bins to use for the histogram. Defaults to ``10``.
+    **-\-print-list**
+        Also print the job IDs of jobs with a runtime under 10 minutes.
+
+  **htcondor cluster analytics** *cluster_id*
+
+    Produces a resource-utilization report comparing requested and used
+    CPU, memory, and disk across a cluster's jobs.
+
+  **htcondor cluster hold** *cluster_id* [**-\-min-count** *N*] [**-\-top** *N*] [**-\-code** *code*] [**-\-sort-by** *count|code|percent|time*] [**-\-threshold** *similarity*] [**-\-show-job-ids**] [**-\-export-jobs** *file*]
+
+    Classifies a cluster's held jobs by hold reason, grouping similar hold
+    messages together, and prints a table of the resulting buckets.
+
+    **-\-min-count** *N*
+        Only show buckets with at least *N* jobs. Defaults to ``1``.
+    **-\-top** *N*
+        Show only the top *N* most common buckets.
+    **-\-code** *code*
+        Filter to jobs with the given ``HoldReasonCode``.
+    **-\-sort-by** *count|code|percent|time*
+        Sort buckets by count, code, percent, or time. Defaults to ``count``.
+    **-\-threshold** *similarity*
+        Similarity threshold, between ``0.0`` and ``1.0``, used when
+        grouping hold reason messages together. Defaults to ``0.7``.
+    **-\-show-job-ids**
+        Include each bucket's ProcIds in the output table.
+    **-\-export-jobs** *file*
+        Export the held job IDs to a CSV file at *file*, for use with bulk
+        operations such as *condor_release*.
+
+  **htcondor cluster fetch** *cluster_id* [**-\-cache-dir** *directory*]
+
+    Fetches raw job data (from the current queue and job history) for a
+    cluster and caches it as a CSV file for use by the other **cluster**
+    verbs.
+
+    **-\-cache-dir** *directory*
+        Directory in which to save the cached CSV file. Defaults to the
+        current working directory.
 
 Examples
 --------
