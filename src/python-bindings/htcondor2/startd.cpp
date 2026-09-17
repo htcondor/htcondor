@@ -74,6 +74,52 @@ _startd_rehome(PyObject *, PyObject * args) {
 }
 
 static PyObject *
+_startd_set_controller(PyObject *, PyObject * args) {
+    // _startd_set_controller(addr, controller_name, controller_pool, controller_identity, token)
+
+    const char * addr = NULL;
+    const char * controller_name = NULL;
+    const char * controller_pool = NULL;
+    const char * controller_identity = NULL;
+    const char * token = NULL;
+    if(! PyArg_ParseTuple( args, "szzzz", & addr, & controller_name, & controller_pool, & controller_identity, & token )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCStartd startd(addr);
+    bool r = startd.set_controller( controller_name, controller_pool, controller_identity, token );
+    if(! r) {
+        const char * err = startd.error();
+        PyErr_SetString( PyExc_HTCondorException, err ? err : "Startd failed to process set controller request." );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+_startd_clear_controller(PyObject *, PyObject * args) {
+    // _startd_clear_controller(addr)
+
+    const char * addr = NULL;
+    if(! PyArg_ParseTuple( args, "s", & addr )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    DCStartd startd(addr);
+    bool r = startd.clear_controller();
+    if(! r) {
+        const char * err = startd.error();
+        PyErr_SetString( PyExc_HTCondorException, err ? err : "Startd failed to process clear controller request." );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 _startd_vacate_slots(PyObject *, PyObject * args) {
     // _startd_vacate_slots(addr, slot_name, vacate_fast)
 

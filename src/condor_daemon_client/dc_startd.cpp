@@ -1322,6 +1322,109 @@ DCStartd::rehome(const char *schedd_name, const char *schedd_pool, int timeout, 
 }
 
 bool
+DCStartd::set_controller(const char *controller_name, const char *controller_pool, const char *controller_identity, const char *token)
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( SET_CONTROLLER, Sock::reli_sock, 20 );
+	if( !sock ) {
+		formatstr(error_msg,"Failed to start SET_CONTROLLER command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	if( controller_name ) {
+		request_ad.Assign("ControllerName", controller_name);
+	}
+	if( token ) {
+		request_ad.Assign("ControllerToken", token);
+	}
+	if( controller_pool ) {
+		request_ad.Assign("ControllerPool", controller_pool);
+	}
+	if( controller_identity ) {
+		request_ad.Assign("ControllerIdentity", controller_identity);
+	}
+
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to compose SET_CONTROLLER request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to get response to SET_CONTROLLER request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	bool result = false;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		formatstr(error_msg,
+				"Received failure from %s in response to SET_CONTROLLER request: %s",
+				name(),remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}
+
+bool
+DCStartd::clear_controller()
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( CLEAR_CONTROLLER, Sock::reli_sock, 20 );
+	if( !sock ) {
+		formatstr(error_msg,"Failed to start CLEAR_CONTROLLER command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to compose CLEAR_CONTROLLER request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
+		formatstr(error_msg,"Failed to get response to CLEAR_CONTROLLER request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	bool result = false;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		formatstr(error_msg,
+				"Received failure from %s in response to CLEAR_CONTROLLER request: %s",
+				name(),remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}
+
+bool
 DCStartd::cancelDrainJobs(char const *request_id)
 {
 	std::string error_msg;
