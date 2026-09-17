@@ -39,10 +39,10 @@ my $nodesubmit = "job_dagman_node_status_rm_node.cmd";
 
 # Each inner arrayref is one ad; patterns within an ad are order-independent.
 @outlineblocks = (
-	["DagStatus = 6;", "DagStatusName = \"STATUS_ERROR\";", "DagStatusDetails = \"removed\";",
+	["DagStatus = 6;", "DagStatusDetails = \"removed\";",
 	 "NodesTotal = 1;", "NodesDone = 0;", "NodesPre = 0;", "NodesQueued = 0;", "NodesPost = 0;",
 	 "NodesReady = 0;", "NodesUnready = 0;", "NodesFailed = 1;", "JobProcsHeld = 0;", "JobProcsIdle = 0;"],
-	["Node = \"A\";", "NodeStatus = 6;", "NodeStatusName = \"STATUS_ERROR\";"],
+	["Node = \"A\";", "NodeStatus = 6;"],
 );
 
 my $killedchosen = 0;

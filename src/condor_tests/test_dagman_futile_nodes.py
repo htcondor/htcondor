@@ -365,19 +365,20 @@ class TestDAGManFutileNodes:
         #Parse the status file as ClassAds and count each NodeStatus ad's status
         try:
             for ad in classad2.parseAds(open(path, "r")):
-                if ad.get("Type") != "NodeStatus":
+                if ad.get("MyType") != "NodeStatus":
                     continue
-                status_name = ad.get("NodeStatusName", "")
-                if status_name == "STATUS_FUTILE":
+                # NodeStatus codes, per docs/automated-workflows/dagman-information-files.rst
+                node_status = ad.get("NodeStatus")
+                if node_status == 7:  # STATUS_FUTILE
                     counts["futile"] += 1
-                elif status_name == "STATUS_DONE":
+                elif node_status == 5:  # STATUS_DONE
                     counts["done"] += 1
-                elif status_name == "STATUS_ERROR":
+                elif node_status == 6:  # STATUS_ERROR
                     counts["error"] += 1
                 #If non-of the expected status' appear then must be unexpected
                 #so fail the test
                 else:
-                    print(f"Error: Unexpected node status found ({status_name})")
+                    print(f"Error: Unexpected node status found ({node_status})")
                     assert False
         except OSError:
             #Failed somewhere in opening and reading node status file

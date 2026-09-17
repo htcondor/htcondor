@@ -56,10 +56,10 @@ $scriptfile = "job_dagman_final-A.scripts.out";
 
 $statusfile = "job_dagman_final-A.status";
 @status_blocks = (
-	["DagStatus = 5;", "DagStatusName = \"STATUS_DONE\";", "DagStatusDetails = \"success\";"],
-	["Node = \"A_A\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"A_B\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"A_C\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
+	["DagStatus = 5;", "DagStatusDetails = \"success\";"],
+	["Node = \"A_A\";", "NodeStatus = 5;"],
+	["Node = \"A_B\";", "NodeStatus = 5;"],
+	["Node = \"A_C\";", "NodeStatus = 5;"],
 );
 
 my $killedchosen = 0;

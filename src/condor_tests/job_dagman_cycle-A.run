@@ -30,12 +30,12 @@ $dagman_args = "-verbose";
 $statusfile = "job_dagman_cycle-A.status";
 # Lines must be found in order.
 @status_blocks = (
-	["DagStatus = 6;", "DagStatusName = \"STATUS_ERROR\";", "DagStatusDetails = \"cycle\";",
+	["DagStatus = 6;", "DagStatusDetails = \"cycle\";",
 	 "NodesTotal = 3;", "NodesDone = 1;", "NodesPre = 0;", "NodesQueued = 0;", "NodesPost = 0;",
 	 "NodesReady = 0;", "NodesUnready = 2;", "NodesFailed = 0;", "JobProcsHeld = 0;", "JobProcsIdle = 0;"],
-	["Node = \"A\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"B\";", "NodeStatus = 0;", "NodeStatusName = \"STATUS_NOT_READY\";"],
-	["Node = \"C\";", "NodeStatus = 0;", "NodeStatusName = \"STATUS_NOT_READY\";"],
+	["Node = \"A\";", "NodeStatus = 5;"],
+	["Node = \"B\";", "NodeStatus = 0;"],
+	["Node = \"C\";", "NodeStatus = 0;"],
 );
 
 my $killedchosen = 0;

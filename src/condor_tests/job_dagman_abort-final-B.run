@@ -31,15 +31,15 @@ $dagman_args = "-verbose";
 $statusfile = "job_dagman_abort-final-B.status";
 # Lines must be found in order.
 @status_blocks = (
-	["DagStatus = 5;", "DagStatusName = \"STATUS_DONE\";", "DagStatusDetails = \"success\";",
+	["DagStatus = 5;", "DagStatusDetails = \"success\";",
 	 "NodesTotal = 5;", "NodesDone = 3;", "NodesPre = 0;", "NodesQueued = 0;", "NodesPost = 0;",
 	 "NodesReady = 0;", "NodesUnready = 0;", "NodesFutile = 1", "NodesFailed = 1;",
 	 "JobProcsHeld = 0;", "JobProcsIdle = 0;"],
-	["Node = \"A\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"B\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"C\";", "NodeStatus = 6;", "NodeStatusName = \"STATUS_ERROR\";"],
-	["Node = \"D\";", "NodeStatus = 7;", "NodeStatusName = \"STATUS_FUTILE\";"],
-	["Node = \"E\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
+	["Node = \"A\";", "NodeStatus = 5;"],
+	["Node = \"B\";", "NodeStatus = 5;"],
+	["Node = \"C\";", "NodeStatus = 6;"],
+	["Node = \"D\";", "NodeStatus = 7;"],
+	["Node = \"E\";", "NodeStatus = 5;"],
 );
 $finalfile = "job_dagman_abort-final-B-nodeE.out";
 @finallines = ("DAG_STATUS=3",

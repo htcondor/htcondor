@@ -133,12 +133,10 @@ following additional metrics will be recorded:
         :caption: Example node status file contents
 
         [
-          Type = "DagStatus";
+          MyType = "DagStatus";
           DagFiles = { "diamond.dag" };
           Timestamp = 1399674138;
-          TimestampReadable = "Mon May 12 12:22:18 2014";
           DagStatus = 3;
-          DagStatusName = "STATUS_SUBMITTED";
           DagStatusDetails = "";
           NodesTotal = 12;
           NodesDone = 11;
@@ -156,10 +154,9 @@ following additional metrics will be recorded:
           JobProcsCompleted = 11;
         ]
         [
-          Type = "NodeStatus";
+          MyType = "NodeStatus";
           Node = "A";
           NodeStatus = 5;
-          NodeStatusName = "STATUS_DONE";
           StatusDetails = "";
           RetryCount = 0;
           JobProcsSubmitted = 1;
@@ -172,10 +169,9 @@ following additional metrics will be recorded:
         ]
         ...
         [
-          Type = "NodeStatus";
+          MyType = "NodeStatus";
           Node = "D";
           NodeStatus = 3;
-          NodeStatusName = "STATUS_SUBMITTED";
           StatusDetails = "idle";
           RetryCount = 0;
           JobProcsSubmitted = 1;
@@ -187,12 +183,10 @@ following additional metrics will be recorded:
           JobProcsFailed = 0;
         ]
         [
-          Type = "StatusEnd";
+          MyType = "StatusEnd";
           EndTime = 1399674138;
           Timestamp = 1399674138;
-          TimestampReadable = "Mon May 12 12:22:18 2014";
           NextUpdate = 1399674141;
-          NextUpdateReadable = "Mon May 12 12:22:21 2014";
         ]
 
 :index:`node status file<single: DAGMan; Node status file>`
@@ -240,9 +234,7 @@ or more:
 
     NODE_STATUS_FILE my.dag.status 30
 
-Possible ``DagStatus`` and ``NodeStatus`` attribute values are (the
-corresponding ``DagStatusName``/``NodeStatusName`` attributes give these
-same values by name instead of by number):
+Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 
 -  0 (STATUS_NOT_READY): At least one parent has not yet finished or
    the node is a FINAL node.

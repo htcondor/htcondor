@@ -62,14 +62,14 @@ $statusfile = "job_dagman_final-I.status";
 
 # Lines must be found in order.
 @status_blocks = (
-	["DagStatus = 5;", "DagStatusName = \"STATUS_DONE\";", "DagStatusDetails = \"success\";",
+	["DagStatus = 5;", "DagStatusDetails = \"success\";",
 	 "NodesTotal = 5;", "NodesDone = 3;", "NodesPre = 0;", "NodesQueued = 0;", "NodesPost = 0;",
 	 "NodesReady = 0;", "NodesUnready = 1;", "NodesFailed = 1;", "JobProcsHeld = 0;", "JobProcsIdle = 0;"],
-	["Node = \"I_A\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"I_B\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
-	["Node = \"I_C1\";", "NodeStatus = 0;", "NodeStatusName = \"STATUS_NOT_READY\";"],
-	["Node = \"I_C2\";", "NodeStatus = 6;", "NodeStatusName = \"STATUS_ERROR\";"],
-	["Node = \"I_D\";", "NodeStatus = 5;", "NodeStatusName = \"STATUS_DONE\";"],
+	["Node = \"I_A\";", "NodeStatus = 5;"],
+	["Node = \"I_B\";", "NodeStatus = 5;"],
+	["Node = \"I_C1\";", "NodeStatus = 0;"],
+	["Node = \"I_C2\";", "NodeStatus = 6;"],
+	["Node = \"I_D\";", "NodeStatus = 5;"],
 );
 
 my $killedchosen = 0;

@@ -48,7 +48,7 @@ def parse_node_statuses(status_path):
     statuses = {}
     try:
         for ad in classad2.parseAds(open(status_path)):
-            if ad.get("Type") == "NodeStatus":
+            if ad.get("MyType") == "NodeStatus":
                 statuses[ad["Node"]] = ad["NodeStatus"]
     except (FileNotFoundError, OSError):
         pass

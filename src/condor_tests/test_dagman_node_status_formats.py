@@ -117,16 +117,19 @@ class TestDAGManNodeStatusFormats:
         with ChangeDir(status_case):
             ads = read_status_ads(STATUS_FILENAME, status_fmt)
 
+        # NodeStatus/DagStatus codes, per docs/automated-workflows/dagman-information-files.rst
+        STATUS_DONE = 5
+
         by_type = {}
         for ad in ads:
-            by_type.setdefault(ad.get("Type"), []).append(ad)
+            by_type.setdefault(ad.get("MyType"), []).append(ad)
 
         assert len(by_type.get("DagStatus", [])) == 1
         assert len(by_type.get("StatusEnd", [])) == 1
         assert len(by_type.get("NodeStatus", [])) == 2
 
         dag_ad = by_type["DagStatus"][0]
-        assert dag_ad["DagStatusName"] == "STATUS_DONE"
+        assert dag_ad["DagStatus"] == STATUS_DONE
         assert dag_ad["NodesTotal"] == 2
         assert dag_ad["NodesDone"] == 2
         assert dag_ad["NodesFailed"] == 0
@@ -134,4 +137,4 @@ class TestDAGManNodeStatusFormats:
         nodes = {ad["Node"]: ad for ad in by_type["NodeStatus"]}
         assert set(nodes.keys()) == {"A", "B"}
         for ad in nodes.values():
-            assert ad["NodeStatusName"] == "STATUS_DONE"
+            assert ad["NodeStatus"] == STATUS_DONE

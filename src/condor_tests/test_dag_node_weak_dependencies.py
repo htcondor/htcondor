@@ -63,14 +63,15 @@ def count_node_statuses(path: str = "status.out") -> dict:
     """Parse a DAGMan NODE_STATUS_FILE and count Done/Error/Futile nodes."""
     counts = {"done": 0, "error": 0, "futile": 0}
     for ad in classad2.parseAds(open(path, "r")):
-        if ad.get("Type") != "NodeStatus":
+        if ad.get("MyType") != "NodeStatus":
             continue
-        status_name = ad.get("NodeStatusName", "")
-        if status_name == "STATUS_DONE":
+        # NodeStatus codes, per docs/automated-workflows/dagman-information-files.rst
+        node_status = ad.get("NodeStatus")
+        if node_status == 5:  # STATUS_DONE
             counts["done"] += 1
-        elif status_name == "STATUS_ERROR":
+        elif node_status == 6:  # STATUS_ERROR
             counts["error"] += 1
-        elif status_name == "STATUS_FUTILE":
+        elif node_status == 7:  # STATUS_FUTILE
             counts["futile"] += 1
     return counts
 

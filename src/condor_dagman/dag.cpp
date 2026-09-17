@@ -2456,9 +2456,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 			classad::ClassAdJsonUnParser unparser(_node_status_compact);
 			unparser.Unparse(buf, &ad);
 			break;
-		}
-		default:
-			EXCEPT("Unknown node status file print format");
+			}
 		}
 
 		if (buf.back() != '\n') { buf += "\n"; }
@@ -2467,7 +2465,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 	ClassAd statusAd;
 
-	statusAd.InsertAttr("Type", "DagStatus");
+	statusAd.InsertAttr(ATTR_MY_TYPE, "DagStatus");
 
 	static classad::ClassAdUnParser unp;
 	std::string dag_file_list;
@@ -2483,12 +2481,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 	dag_file_list = "{" + dag_file_list + "}";
 	statusAd.AssignExpr("DagFiles", dag_file_list.c_str());
-
 	statusAd.InsertAttr("Timestamp", startTime);
-
-	std::string timeStr = ctime(&startTime);
-	chomp(timeStr);
-	statusAd.InsertAttr("TimestampReadable", timeStr);
 
 	// If markNodesError is true, this means that we want to mark
 	// nodes in the PRERUN, SUBMITTED, and POSTRUN states as being
@@ -2553,10 +2546,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 	}
 
 
-	std::string statusStr = Node::status_t_names[dagJobStatus];
-	trim(statusStr);
 	statusAd.InsertAttr("DagStatus", dagJobStatus);
-	statusAd.InsertAttr("DagStatusName", statusStr);
 	statusAd.InsertAttr("DagStatusDetails", statusNote);
 
 	int nodesPre = PreRunNodeCount();
@@ -2602,7 +2592,7 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 		Node::status_t status = node->GetStatus();
 		int idle = 0, held = 0, run = 0, term = 0, success = 0;
 
-		ad.InsertAttr("Type", "NodeStatus");
+		ad.InsertAttr(ATTR_MY_TYPE, "NodeStatus");
 
 		if (status == Node::STATUS_SUBMITTED || status == Node::STATUS_POSTRUN) {
 			// If status is submitted (i.e. running jobs count internal state tracking)
@@ -2679,9 +2669,6 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 		ad.InsertAttr("Node", node->GetNodeName());
 		ad.InsertAttr("NodeStatus", status);
-		statusStr = Node::status_t_names[status];
-		trim(statusStr);
-		ad.InsertAttr("NodeStatusName", statusStr);
 
 		ad.InsertAttr("StatusDetails", nodeNote);
 		ad.InsertAttr("RetryCount", node->GetRetries());
@@ -2699,28 +2686,21 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 	ClassAd endAd;
 
-	endAd.InsertAttr("Type", "StatusEnd");
+	endAd.InsertAttr(ATTR_MY_TYPE, "StatusEnd");
 
 	time_t endTime = time(nullptr);
-	timeStr = ctime(&endTime);
-	chomp(timeStr);
 
 	endAd.InsertAttr("EndTime", endTime); // Legacy timestamp attribute (removing could effect user code)
 	endAd.InsertAttr("Timestamp", endTime);
-	endAd.InsertAttr("TimestampReadable", timeStr);
 
 	time_t nextTime;
 	if (FinishedRunning(true) || removed) {
 		nextTime = 0;
-		timeStr = "none";
 	} else {
 		nextTime = endTime + _minStatusUpdateTime;
-		timeStr = ctime(&nextTime);
-		chomp(timeStr);
 	}
 
 	endAd.InsertAttr("NextUpdate", nextTime);
-	endAd.InsertAttr("NextUpdateReadable", timeStr);
 
 	node_status_printer(endAd);
 
