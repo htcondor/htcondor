@@ -902,13 +902,13 @@ once a full time span has accumulated.
     Number of jobs waiting to transfer input files.
 
 :classad-attribute-def:`TransferQueueNumDownloading`
-    Number of jobs transfering output files.
+    Number of jobs transferring output files.
 
 :classad-attribute-def:`TransferQueueNumUploading`
-    Number of jobs transfering input files.
+    Number of jobs transferring input files.
 
 :classad-attribute-def:`TransferQueueMaxDownloading`
-    Maximum number of jobs transfering output files concurrently.
+    Maximum number of jobs transferring output files concurrently.
 
 :classad-attribute-def:`TransferQueueMaxUploading`
-    Maximum number of jobs transfering input files concurrently.
+    Maximum number of jobs transferring input files concurrently.

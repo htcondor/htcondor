@@ -37,7 +37,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/process_capabilities.cpp
 # to fix warnings.
 if (UNIX)
 set_source_files_properties(clinpack.cpp PROPERTIES COMPILE_FLAGS "-w")
-endif(UNIX)
+endif()
 
 set( SYSAPI_UTIL_SRCS "${SysapiSourceFiles}" PARENT_SCOPE )
 
@@ -49,6 +49,6 @@ if (NOT WINDOWS)
     # compiling everything with -fPIC is needed to dynamically load libraries, but it messes up the benchmarks so turn it back off here
     set_property(SOURCE clinpack.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC -fPIE")
     set_property(SOURCE dhry21a.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-PIC -fPIE")
-endif (NOT WINDOWS)
+endif()
 
 condor_exe(condor_mips "mips_main.cpp;dhry21a.cpp;../condor_utils/utc_time.cpp" ${C_LIBEXEC} "" OFF)

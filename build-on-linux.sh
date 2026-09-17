@@ -24,6 +24,11 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] ||
         date +'%Y%m%d%H%M' > BUILD-ID
     fi
 
+    # Make a BUILD-EPOCH if one not provided
+    if [ ! -f BUILD-EPOCH ]; then
+        date +'%s' > BUILD-EPOCH
+    fi
+
     # Create the source tarball from the source directory
     mkdir -p condor-${condor_version}
     cp -p ${src_dir}/.??* condor-${condor_version} > /dev/null 2>&1

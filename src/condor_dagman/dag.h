@@ -39,6 +39,7 @@
 #include "edge.h"
 #include <ranges>
 #include <filesystem>
+#include <system_error>
 
 #include <queue>
 
@@ -405,6 +406,8 @@ public:
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
+
+	std::string cif{}; // First discovered CommonInputTransfer list (hopefully temporary)
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes

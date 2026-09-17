@@ -1334,7 +1334,7 @@ main (int argc, const char *argv[])
 		} else if (sdo_mode == SDO_StartD_GPUs) {
 			// for the STARTD daemon ad, DetectedGPUs might be 0, or it might be a string list of GPUIDs
 			// or it might be an array of GPU property ad refs (like AvailableGPUs)
-			mode_constraint = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			mode_constraint = STARTDAEMON_GPUS_CONSTRAINT;
 			projList.insert("DetectedGPUs");
 			projList.insert("OfflineGPUs");
 			projList.insert(ATTR_CONDOR_VERSION);
@@ -1390,6 +1390,23 @@ main (int argc, const char *argv[])
 
 	projList.insert(ATTR_OCU);
 
+	// when using -tot -format -or -af, we want -gpus to behave like an additional constraint expression
+	// for -compact we will have already set that expression above.
+	// TODO: refactor handling of flags that are always constraint and sometimes format like -gpus -broken and -compact
+	if (dash_gpus && explicit_format && ! compactMode) {
+		const char * constr = nullptr;
+		switch (adType) {
+		case STARTDAEMON_AD: constr = STARTDAEMON_GPUS_CONSTRAINT; break;
+		case SLOT_AD:
+		case STARTD_AD: constr = PMODE_GPUS_CONSTRAINT; break;
+		default: break;
+		}
+		if (constr) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	}
+
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
 		printf ("----------\n");
@@ -1425,14 +1442,9 @@ main (int argc, const char *argv[])
 	TrackTotals bothTotals(mainPP.ppTotalStyle);
 	TrackTotals leftTotals(mainPP.ppTotalStyle);
 
-	// in order to totals, the projection MUST have certain attributes
+	// in order to calculate totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
 		rightTotals.addProjection(projList);
-		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
-			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
-			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
-			query->addANDConstraint (constr);
-		}
 	}
 
 	// fetch the query

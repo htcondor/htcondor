@@ -21,6 +21,7 @@ from liblvm import (
     vg_exists,
     pv_exists,
     loop_dev_for_file,
+    JOB_REQUEST_MEMORY_MB,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ class TestLVMAutoCleanup:
                     "error": "error",
                     "log": "auto_cleanup_log",
                     "request_cpus": "1",
-                    "request_memory": "64m",
+                    "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
                     "request_disk": "32m",
                 },
                 count=1,

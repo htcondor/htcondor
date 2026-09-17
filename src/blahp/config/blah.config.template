@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux
+supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux,sfapi
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
@@ -35,7 +35,7 @@ blah_shared_directories=/
 #job files are copied/moved to/from this temporary directory.
 #Running in the Iwd requires that all directories with job files are
 #shared (i.e. blah_shared_directories=/).
-blah_run_in_workdir=yes
+blah_run_in_workdir=no
 
 #By default the job temporary work directory is created as a subdirectory
 #of wherever the batch system is configured to land the job. 
@@ -346,6 +346,16 @@ sge_pe_policy=*
 
 #path to the flux executable (default is to use PATH)
 #flux_binpath=
+
+#SFAPI
+
+# Path to a Python virtual environment that includes package sfapi_client
+# You can create it with these commands:
+#   python3 -m venv ~/superfacility-env
+#   ~/superfacility-env/bin/pip install sfapi_client
+# If this variable is unset, assume the package can be found without
+# activating a virtual environment.
+sfapi_venv=${HOME}/superfacility-env
 
 ##
 #####BNotifier subsection

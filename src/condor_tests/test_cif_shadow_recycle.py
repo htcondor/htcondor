@@ -1,6 +1,7 @@
 #!/usr/bin/env pytest
 
 import pytest
+import hashlib
 import subprocess
 
 import logging
@@ -80,7 +81,7 @@ TEST_CASES = {
             'container_image':                  'file://{the_container_image}',
             'container_is_common':              'True',
 
-            'MY.CommonInputCatalogs':           '"A, B, container_busybox_sif"',
+            'MY.CommonInputCatalogs':           '"A, B, container_{hash}"',
             'MY._x_catalog_A':                  '"file://{path_to_common_input}.1, {path_to_common_input}.2"',
             'MY._x_catalog_B':                  '"file://{path_to_common_input}.3, {path_to_common_input}.4"',
         },
@@ -91,14 +92,14 @@ TEST_CASES = {
             {'CommonPluginResultList'},
         ],
         'expected_epoch_ads':  [
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
-            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_busybox_sif', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', 'CommonInputCatalogs', '_x_catalog_container_{hash}', 'CommonInputFiles'},
         ],
     },
 }
@@ -158,9 +159,17 @@ def the_condor(test_dir):
 
 
 @action
+def the_hash(the_container_image):
+    as_in_submit_file = f"file://{the_container_image}"
+    bytes = as_in_submit_file.encode('utf-8')
+    return hashlib.sha256(bytes).hexdigest()[0:8]
+
+
+@action
 def the_job_handles(
     the_job_description, the_condor,
-    test_dir, path_to_common_input, the_container_image
+    test_dir, path_to_common_input, the_container_image,
+    the_hash
 ):
     job_handles = {}
     for name, case in TEST_CASES.items():
@@ -169,6 +178,7 @@ def the_job_handles(
                 test_dir=test_dir,
                 path_to_common_input=path_to_common_input,
                 the_container_image=the_container_image,
+                hash=the_hash,
             ) for k, v in case['submit_commands'].items()
         }
         description = {
@@ -227,8 +237,16 @@ def the_actual_common_ads(the_condor, the_completed_job):
 
 
 @action
-def the_expected_epoch_ads(the_case_name):
-    return TEST_CASES[the_case_name]['expected_epoch_ads']
+def the_expected_epoch_ads(the_case_name, the_hash):
+    entries = TEST_CASES[the_case_name]['expected_epoch_ads']
+    entries = [
+        {
+            k.format(
+                hash=the_hash,
+            ) for k in entry
+        } for entry in entries
+    ]
+    return entries
 
 
 @action

@@ -70,6 +70,9 @@ void title_case(std::string &str); // capitalize each word
 
 const char * empty_if_null(const char * c_str);
 
+// malloc a buffer to hold a null terminated copy of data from a string_view
+char * strviewdup(std::string_view sv);
+
 // Return a string based on string src, but for each character in Q that
 // occurs in src, insert the character escape before it.
 // For example, for src="Alain", Q="abc", and escape='_', the result will

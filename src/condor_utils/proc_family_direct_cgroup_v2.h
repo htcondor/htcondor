@@ -23,6 +23,7 @@
 
 #include "proc_family_interface.h"
 #include <string>
+#include <optional>
 
 // Ths class manages sets of Linux processes with cgroups.
 // This is efficient, so we do it in the caller's process,
@@ -138,6 +139,7 @@ private:
 	uint64_t cgroup_memory_limit;
 	uint64_t cgroup_memory_limit_low;
 	uint64_t cgroup_memory_and_swap_limit;
+	std::optional<uint64_t> cgroup_zswap_max;
 
 	// The goal is to create a new cgroup per job.  Sometimes we can't
 	// do this, because a previous job has an unkillable job in it. Today

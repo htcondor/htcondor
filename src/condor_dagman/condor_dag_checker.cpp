@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_attributes.h"
 #include "dag_parser.h"
 #include "submit_utils.h"
 #include "condor_version.h"
@@ -349,6 +350,7 @@ struct MockDag {
 	size_t num_splices{0};
 	uint32_t node_index_offset{0};
 
+	static std::string cif; // Current dag scope (root+splice or subdag) first common input file list found in jdl (hopefully temporary)
 	static uint32_t node_index;
 	static uint32_t join_node_index;
 	static short check_external; // Check all JDL simulation for job submission
@@ -423,6 +425,7 @@ private:
 };
 
 
+std::string MockDag::cif = "";
 uint32_t MockDag::node_index = 0;
 uint32_t MockDag::join_node_index = 0;
 short MockDag::check_external = 0;
@@ -463,8 +466,11 @@ void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagPar
 		std::vector<DagParseError> subdag_errors;
 		MockDag subdag;
 
+		std::string restore_cif = subdag.cif;
 		uint32_t restore_node_idx = subdag.node_index;
 		uint32_t restore_join_node_idx = subdag.join_node_index;
+
+		subdag.cif.clear();
 		subdag.node_index = 0;
 		subdag.join_node_index = 0;
 
@@ -478,6 +484,7 @@ void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagPar
 			}
 		}
 
+		subdag.cif = restore_cif;
 		subdag.node_index = restore_node_idx;
 		subdag.join_node_index = restore_join_node_idx;
 
@@ -587,6 +594,15 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 		if ( ! proc_ad) {
 			CondorError* err = submitHash.error_stack();
 			FAIL_AND_RETURN(cmd, err ? err->getFullText() : "Submit description produced invalid job ad", errors);
+		}
+
+		std::string cif;
+		if (proc_ad->EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
+			if ( ! MockDag::cif.empty()) {
+				if (MockDag::cif != cif) {
+					FAIL_AND_RETURN(cmd, "Multiple differing common input transfer lists declared in DAG", errors);
+				}
+			} else { MockDag::cif = cif; }
 		}
 
 		// Break after first successful job ad unless strict checking is enabled
@@ -1049,6 +1065,7 @@ int main(int argc, const char** argv) {
 		std::vector<DagParseError> errors;
 
 		MockDag dag;
+		dag.cif.clear();
 		dag.node_index = 0;
 		dag.join_node_index = 0;
 

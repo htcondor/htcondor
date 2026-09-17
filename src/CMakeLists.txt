@@ -84,12 +84,12 @@ if (BUILD_TESTING)
 		add_dependencies( BLD_TESTS ${CONDOR_TESTS} )
 		#set(COPY_COMMAND xcopy /y)
 		#set(COPY_RECURSIVE_COMMAND xcopy /ys)
-	else(WINDOWS)
+	else()
 		add_custom_target(tests)
 		add_dependencies(tests ${CONDOR_TESTS})
 		#set(COPY_COMMAND cp)
 		#set(COPY_RECURSIVE_COMMAND cp -r)
-	endif(WINDOWS)
+	endif()
 
 	# This is a bit ugly, but to make a package of tests, what we have to do is build a cmake script file
 	# using FILE(WRITE/APPEND) commands that has inside it FILE(INSTALL) commands to build up the 
@@ -114,7 +114,7 @@ if (BUILD_TESTING)
 			"  SET(BUILD_TYPE RelWithDebInfo)\n"
 			"ENDIF()\n"
 		)
-	endif(WINDOWS)
+	endif()
 
 	# recursive copy the condor_tests source directory
 	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "FILE(INSTALL \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests\" DESTINATION \${CMAKE_INSTALL_PREFIX})\n")
@@ -125,9 +125,9 @@ if (BUILD_TESTING)
 	FOREACH (test IN LISTS CONDOR_TEST_EXES)
 		if (WINDOWS)
 			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/\${BUILD_TYPE}/${test}\"\n")
-		else (WINDOWS)
+		else()
 			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/${test}\" \n")
-		endif(WINDOWS)
+		endif()
 	ENDFOREACH (test)
 	# copy rules for pl tests
 	FOREACH (test IN LISTS CONDOR_PL_TESTS)
@@ -170,12 +170,12 @@ if (BUILD_TESTING)
 			DEPENDS BLD_TESTS
 			COMMAND ${CMAKE_COMMAND} -DBUILD_TYPE=$<CONFIG> -DCMAKE_INSTALL_PREFIX=${CPACK_TEST_PACKAGE_FILE_NAME} -P "${WIN_COPY_TESTS_FILE}"
 		)
-	ELSE(WINDOWS)
+	else()
 		add_custom_target(tests-tar-pkg
 			DEPENDS tests
 			COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CPACK_TEST_PACKAGE_FILE_NAME} -P ${COPY_TESTS_CMAKE_FILE}
 		)
-	ENDIF(WINDOWS)
+	endif()
 
 	add_custom_command(
 	    TARGET tests-tar-pkg

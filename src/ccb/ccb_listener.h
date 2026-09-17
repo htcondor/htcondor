@@ -30,10 +30,22 @@
 
 #include "condor_daemon_core.h"
 
+class CCBServer;
+
 class CCBListener: public Service, public ClassyCountedPtr {
  public:
 	CCBListener(char const *ccb_address);
 	~CCBListener();
+
+		// When this listener belongs to a CCB server's upstream registration, the
+		// server sets itself here so a routed (tunneled) reverse-connect request --
+		// one carrying a remaining CCBRoute -- can be handed back to the server to
+		// set up the next hop and relay, instead of being handled locally.
+	void SetCCBServer( CCBServer *s ) { m_ccb_server = s; }
+
+		// Fires each time this listener (re)registers and is assigned a ccbid --
+		// used instead of polling to learn when upstream registration completes.
+	void SetRegistrationCallback( std::function<void()> cb ) { m_on_registered = std::move(cb); }
 
 		// This is called at initial creation time and on reconfig.
 	void InitAndReconfig();
@@ -64,6 +76,8 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	time_t m_last_contact_from_peer;
 	bool m_heartbeat_disabled;
 	bool m_heartbeat_initialized;
+	CCBServer *m_ccb_server{nullptr};   // set iff this is a CCB's upstream listener
+	std::function<void()> m_on_registered;   // fired when (re)registration completes
 
 	bool SendMsgToCCB(ClassAd &msg,bool blocking);
 	bool WriteMsgToCCB(ClassAd &msg);
@@ -75,7 +89,7 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool ReadMsgFromCCB();
 	bool HandleCCBRegistrationReply( ClassAd &msg );
 	bool HandleCCBRequest( ClassAd &msg );
-	bool DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id,char const *peer_description);
+	bool DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id,char const *peer_description, ClassAd const *route_ad = nullptr);
 	int ReverseConnected(Stream *stream);
 	void ReportReverseConnectResult(ClassAd *connect_msg,bool success,char const *error_msg=NULL);
 
@@ -88,6 +102,14 @@ class CCBListeners {
  public:
 		// format of addresses: "<ccb1> <ccb2> ..."
 	void Configure(char const *addresses);
+
+		// Propagate the owning CCB server to all current and future listeners (see
+		// CCBListener::SetCCBServer).
+	void SetCCBServer( CCBServer *s );
+
+		// Propagate a registration-completion callback to all current and future
+		// listeners (see CCBListener::SetRegistrationCallback).
+	void SetRegistrationCallback( std::function<void()> cb );
 
 		// find CCB listener for given CCB address
 	CCBListener *GetCCBListener(char const *address);
@@ -105,6 +127,8 @@ class CCBListeners {
 	typedef std::list< classy_counted_ptr<CCBListener> > CCBListenerList;
 	CCBListenerList m_ccb_listeners;
 	std::string m_ccb_contact;
+	CCBServer *m_ccb_server{nullptr};
+	std::function<void()> m_on_registered;
 };
 
 #endif

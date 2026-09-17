@@ -2785,6 +2785,13 @@ void CredSorter::Init()
 			m_vault_names.clear();
 		}
 	}
+	// Pelican services must be enumerated explicitly; unlike Vault, an empty or
+	// unset list means there are no Pelican services (no wildcard).  Naming a
+	// service here keeps the Vault wildcard below from claiming it, and lets the
+	// submit side tell the storer to run in Pelican mode.
+	if (!param(m_pelican_names, "PELICAN_CREDMON_PROVIDER_NAMES")) {
+		m_pelican_names.clear();
+	}
 	std::string storer;
 	if (param(storer, "SEC_CREDENTIAL_STORER")) {
 		m_vault_enabled = true;
@@ -2815,6 +2822,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 			return VaultType;
 		}
 	}
+	// Explicitly-named Pelican services are claimed here, before the Vault
+	// wildcard below, so they are not misclassified as Vault.
+	for (const auto& str: StringTokenIterator(m_pelican_names)) {
+		if (cred_name == str) {
+			return PelicanType;
+		}
+	}
 	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
 	bool client_id_defined = param(param_val, param_name.c_str());
 	if (m_oauth2_names.empty() && client_id_defined) {
@@ -2824,4 +2838,13 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 		return VaultType;
 	}
 	return UnknownType;
+}
+
+const char *CredSorter::StorerMode(CredType type)
+{
+	switch (type) {
+	case VaultType:   return "vault";
+	case PelicanType: return "pelican";
+	default:          return nullptr;
+	}
 }

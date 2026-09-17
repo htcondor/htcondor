@@ -1605,7 +1605,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
 				auto stats = shadow->getCommonTransferInfoStats();
 				if( stats ) {
-					c.Insert( "TransferCommonStats", (* stats).Copy() );
+					c.Insert( ATTR_TRANSFER_COMMON_STATS, (* stats).Copy() );
 				}
 			}
 

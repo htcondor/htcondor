@@ -173,6 +173,8 @@ def condor(test_dir):
     with Condor(local_dir=test_dir / "condor",
                 config={
                     "COLLECTOR_UPDATE_INTERVAL" : "2",
+                    "MASTER_UPDATE_INTERVAL" : "5",
+                    "NEGOTIATOR_UPDATE_INTERVAL" : "5",
                     "DAEMON_LIST" : "MASTER,COLLECTOR NEGOTIATOR,STARTD SCHEDD",
                 }) as condor:
         yield condor

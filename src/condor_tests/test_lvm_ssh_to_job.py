@@ -13,7 +13,7 @@ import pytest
 
 from ornithology import *
 
-from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config
+from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config, JOB_REQUEST_MEMORY_MB
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -51,7 +51,7 @@ def ssh_test_job_hash(scratch_path_file):
         "error": "error",
         "log": "ssh_test_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
     }
 
