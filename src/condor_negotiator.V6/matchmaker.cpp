@@ -825,6 +825,7 @@ reinitialize ()
 	MatchWorkingCmSlots = param_boolean("MATCH_WORKING_CM_SLOTS", false);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", false);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
+	m_advertise_schedd_offer_cap = param_boolean("NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP", true);
 
 	// we should figure these out automatically someday ....
 	preemption_req_unstable = ! (param_boolean("PREEMPTION_REQUIREMENTS_STABLE",true)) ;
@@ -4096,7 +4097,14 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.Assign(ATTR_MATCH_CLAIMED_PSLOTS, true);
 		// report that we are capable of sending a match rejection diagnostic ad
 		// TODO: report that we are capable of enhanced logging for jobs that request it (i.e. Dye tracing)
-		negotiate_ad.Assign(ATTR_MATCH_CAPS,"MatchDiag3" /* ",Dye" */);
+		std::string match_caps = "MatchDiag3" /* ",Dye" */;
+		if (m_advertise_schedd_offer_cap) {
+			// Tells the schedd it may report its true, uncapped per-autocluster
+			// demand plus a single ATTR_SCHEDD_OFFER_LIMIT session match cap,
+			// instead of speculatively clamping ATTR_RESOURCE_REQUEST_COUNT itself.
+			match_caps += ",ScheddOfferCap";
+		}
+		negotiate_ad.Assign(ATTR_MATCH_CAPS, match_caps);
 		negotiate_ad.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 		if (!putClassAd(sock, negotiate_ad))
@@ -4144,6 +4152,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 	std::string remoteUser;
 	double limitUsed = 0.0;
 	double limitUsedUnclaimed = 0.0;
+	// Schedd-declared cap on total matches this session (ATTR_SCHEDD_OFFER_LIMIT,
+	// only present when the schedd honors our advertised "ScheddOfferCap" match
+	// capability). Unlike submitterLimit/submitterCeiling this is a raw,
+	// unweighted match count, so it's compared against numMatched, not limitUsed.
+	int scheddOfferCap = INT_MAX;
 
 	numMatched = 0;
 
@@ -4218,6 +4231,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 			break; // stop negotiating
 		}
 
+		if (numMatched >= scheddOfferCap) {
+			dprintf(D_ALWAYS, "  Schedd %s capped this session at %d matches, stopping negotiation\n", schedd_id.c_str(), scheddOfferCap);
+			break; // stop negotiating
+		}
+
 		// 2a.  ask for job information
 		if ( !request_list->getRequest(request,cluster,proc,autocluster,sock, schedd_will_match) ) {
 			// Failed to get a request.  Check to see if it is because
@@ -4248,7 +4266,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 			}
 		}
 		// end of asking for job information - we now have a request
-	
+
+		// Pick up the schedd's declared session cap, if it reported one. This
+		// naturally lags by one request (like limitUsed already does): it's
+		// checked at the top of the *next* iteration, not this one.
+		request.LookupInteger(ATTR_SCHEDD_OFFER_LIMIT, scheddOfferCap);
 
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
