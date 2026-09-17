@@ -225,22 +225,50 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 			dprintf( D_ALWAYS,"Collector %s blacklisted; skipping\n",
 					 daemon->name() );
 		} else {
-			dprintf (D_FULLDEBUG,
-					 "Trying to query collector %s\n",
-					 daemon->addr());
+			Sock* probe_sock = nullptr;
 
-			if( num_collectors > 1 ) {
+			if (num_collectors > 1) {
+				// quick reachability check with a short, unmultiplied
+				// timeout, so one dead HA collector can't stall the
+				// whole query for a full (possibly multiplied) QUERY_TIMEOUT.
+				int probe_timeout = param_integer("HA_COLLECTOR_PROBE_TIMEOUT", 10);
+				CondorError probe_errstack;
+				// start the blacklist timer before the probe, not after, so a
+				// slow-to-fail probe is scored by its actual duration rather
+				// than by the near-zero gap between two calls made back to back.
 				daemon->blacklistMonitorQueryStarted();
+				probe_sock = daemon->reliSock(probe_timeout, 0, &probe_errstack, false, /*ignore_timeout_multiplier=*/true);
+
+				if (!probe_sock) {
+					dprintf(D_ALWAYS,
+							"Collector %s did not respond within %ds probe; trying next collector\n",
+							daemon->addr(), probe_timeout );
+					daemon->blacklistMonitorQueryFinished(false);
+				} else {
+					// the real exchange should still honor TIMEOUT_MULTIPLIER;
+					// only the reachability probe itself bypasses it.
+					probe_sock->restoreTimeoutMultiplier();
+				}
 			}
 
-			result = cQuery.processAds (callback, pv, *daemon, errstack);
+			if (num_collectors == 1 || probe_sock) {
+				dprintf(D_FULLDEBUG, "Trying to query collector %s\n", daemon->addr());
 
-			if( num_collectors > 1 ) {
-				daemon->blacklistMonitorQueryFinished( result == Q_OK );
-			}
+				if (num_collectors > 1) {
+					daemon->blacklistMonitorQueryStarted();
+				}
 
-			if (result == Q_OK) {
-				return result;
+				// probe_sock is NULL in the single-collector case, which
+				// makes processAds connect the normal way, unchanged.
+				result = cQuery.processAds(callback, pv, *daemon, errstack, probe_sock);
+
+				if (num_collectors > 1) {
+					daemon->blacklistMonitorQueryFinished(result == Q_OK);
+				}
+
+				if (result == Q_OK) {
+					return result;
+				}
 			}
 		}
 

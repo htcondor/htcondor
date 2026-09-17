@@ -65,6 +65,12 @@ These macros affect the *condor_collector*.
     Network timeout when talking to anyone doing a query. It is defined
     in seconds and defaults to 60.
 
+:macro-def:`HA_COLLECTOR_PROBE_TIMEOUT`
+    Network timeout, in seconds, for the reachability probe used to fail
+    over quickly past an unresponsive collector when :macro:`COLLECTOR_HOST`
+    lists more than one collector. Unlike :macro:`QUERY_TIMEOUT`, it is not
+    scaled by :macro:`TIMEOUT_MULTIPLIER`. Defaults to 10.
+
 :macro-def:`COLLECTOR_NAME`
     This macro is used to specify a short description of your pool. It
     should be about 20 characters long. For example, the name of the
