@@ -150,10 +150,6 @@
 
 *** 25.14.0 bugs
 
-- Fixed a bug where a large backlog of higher job priority jobs could
-  exhaust a negotiation session's offer budget and starve a lower
-  priority auto cluster, even when matching slots were idle.
-  :jira:`3855`
 - The Python bindings no longer assume that all ads in a legacy-style reply
   from the negotiator contain only attributes present in the ad indexed #1.
   :jira:`3884`

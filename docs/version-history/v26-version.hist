@@ -22,6 +22,11 @@
   zswap support.
   :jira:`3898`
 
+- Fixed a bug where a large backlog of higher job priority jobs could
+  exhaust a negotiation session's offer budget and starve a lower
+  priority auto cluster, even when matching slots were idle.
+  :jira:`3855`
+
 *** 26.1.0 bugs
 
 *** 26.0.1 bugs
