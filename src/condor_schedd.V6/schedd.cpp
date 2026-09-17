@@ -5503,7 +5503,7 @@ etc).  May block for a long time, so you'll probably want to do this is
 a thread.
 
 What do we do here?  At the moment if the job has a "sandbox" directory
-("condor_submit -s", Condor-C, or the SOAP interface) we chown it from
+("condor_submit -s" or Condor-C) we chown it from
 condor to the user.  In the future we might allocate a dynamic account here.
 */
 int
