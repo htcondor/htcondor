@@ -14509,7 +14509,7 @@ IsLocalUniverse( shadow_rec* srec )
 static bool
 release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, const char * context)
 {
-	dprintf( D_FULLDEBUG | D_BACKTRACE,
+	dprintf( D_FULLDEBUG,
 		"release_block_condition(%d.%d, ..., %s)\n",
 		jid.cluster, jid.proc, context
 	);
