@@ -53,6 +53,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_job_id.proc = -1;
 	m_instance = next_negotiate_instance_id++;
 	m_refund_unused_resource_requests = param_boolean("SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS", true);
+	m_use_true_demand_reporting = param_boolean("SCHEDD_USE_TRUE_DEMAND_REPORTING", true);
 }
 
 ScheddNegotiate::~ScheddNegotiate()
@@ -67,6 +68,7 @@ ScheddNegotiate::setMatchCaps(std::string_view caps)
 	for (auto & str : StringTokenIterator(caps)) {
 		if (YourStringNoCase("MatchDiag3") == str) { m_can_do_match_diag_3 = true; }
 		else if (YourStringNoCase("Dye") == str) { m_can_do_match_dye = true; }
+		else if (YourStringNoCase("ScheddOfferCap") == str) { m_negotiator_honors_offer_cap = true; }
 	}
 }
 
@@ -168,8 +170,12 @@ ScheddNegotiate::nextJob()
 		// whole offer budget before the remaining, actually-pending clusters are
 		// ever shown to the negotiator.  For the one-job-at-a-time protocol this
 		// is always 0, so it has no effect.
+		// None of this speculative reservation/refund bookkeeping is needed when
+		// reportTrueDemand() is true: the negotiator enforces the aggregate
+		// session cap itself via ATTR_SCHEDD_OFFER_LIMIT, so nothing is ever
+		// pre-spent here that would need reserving against or refunding back.
 	int reserved_for_pending_requests = 0;
-	if ( m_refund_unused_resource_requests ) {
+	if ( !reportTrueDemand() && m_refund_unused_resource_requests ) {
 		int other_pending_clusters = m_jobs ? (int)m_jobs->size() : 0;
 		if (other_pending_clusters > 0) { other_pending_clusters -= 1; }
 		reserved_for_pending_requests = MAX(0, MIN(m_num_resource_reqs_to_send - 1, other_pending_clusters));
@@ -247,24 +253,29 @@ ScheddNegotiate::nextJob()
 							// resource_count is the remaining un-iterated jobs plus this one.
 							int resource_count = 1+clusterSize;
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
-							int available_to_offer = m_jobs_can_offer - reserved_for_pending_requests;
-							if (m_jobs_can_offer > 0 && resource_count > available_to_offer)
-							{
-								int original_resource_count = resource_count;
-								resource_count = MAX(1, available_to_offer);
-								dprintf(D_FULLDEBUG,
-								        "Offering %d jobs instead of %d to the negotiator for this cluster; "
-								        "nearing internal limits (MAX_JOBS_RUNNING, etc) or reserving budget "
-								        "for %d other pending resource request(s) in this batch.\n",
-								        resource_count, original_resource_count, reserved_for_pending_requests);
+							if ( !reportTrueDemand() ) {
+								int available_to_offer = m_jobs_can_offer - reserved_for_pending_requests;
+								if (m_jobs_can_offer > 0 && resource_count > available_to_offer)
+								{
+									int original_resource_count = resource_count;
+									resource_count = MAX(1, available_to_offer);
+									dprintf(D_FULLDEBUG,
+									        "Offering %d jobs instead of %d to the negotiator for this cluster; "
+									        "nearing internal limits (MAX_JOBS_RUNNING, etc) or reserving budget "
+									        "for %d other pending resource request(s) in this batch.\n",
+									        resource_count, original_resource_count, reserved_for_pending_requests);
+								}
+								m_jobs_can_offer -= resource_count;
+								if ( m_refund_unused_resource_requests ) {
+									m_outstanding_offer_counts[m_current_job_id] = resource_count;
+								}
 							}
-							m_jobs_can_offer -= resource_count;
+							// When reportTrueDemand() is true, resource_count is left as the
+							// true, uncapped demand (only bounded by count_max above); the
+							// negotiator enforces the aggregate cap via ATTR_SCHEDD_OFFER_LIMIT.
 							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,resource_count);
-							if ( m_refund_unused_resource_requests ) {
-								m_outstanding_offer_counts[m_current_job_id] = resource_count;
-							}
 						}
-						else {
+						else if ( !reportTrueDemand() ) {
 							m_jobs_can_offer--;
 							if ( m_refund_unused_resource_requests ) {
 								m_outstanding_offer_counts[m_current_job_id] = 1;
@@ -507,6 +518,14 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 	if (m_can_do_match_diag_3) { match_diag = 3; }
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) match_diag);
 
+		// Tell the negotiator the aggregate cap on total matches it may give us
+		// this session, so it can enforce it itself instead of us speculatively
+		// clamping ATTR_RESOURCE_REQUEST_COUNT. Omitted (no cap) when
+		// m_jobs_can_offer is unset (-1).
+	if (reportTrueDemand() && m_jobs_can_offer >= 0) {
+		m_current_job_ad.Assign(ATTR_SCHEDD_OFFER_LIMIT, m_jobs_can_offer);
+	}
+
 		// Send the ad to the negotiator
 	int putad_result = 0;
 	std::string auto_cluster_attrs;
@@ -531,6 +550,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
 		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
+		sig_attrs.insert(ATTR_SCHEDD_OFFER_LIMIT);
 
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string tmp;

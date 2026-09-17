@@ -210,6 +210,11 @@ class ScheddNegotiate: public DCMsg {
 	bool m_will_match_claimed_pslots{false}; // should matchmaker match pslots that we have claimed?
 	bool m_can_do_match_diag_3{false};
 	bool m_can_do_match_dye{false};
+		// set from the "ScheddOfferCap" token in ATTR_MATCH_CAPS: the negotiator
+		// will enforce ATTR_SCHEDD_OFFER_LIMIT as an aggregate session match cap,
+		// so we may report true, uncapped per-autocluster demand instead of
+		// speculatively clamping ATTR_RESOURCE_REQUEST_COUNT ourselves.
+	bool m_negotiator_honors_offer_cap{false};
 	ClassAd * m_reject_ad{nullptr};   // detailed match rejection ad (24.x negotiators or later)
 
  private:
@@ -221,6 +226,15 @@ class ScheddNegotiate: public DCMsg {
 
 		// See SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS.
 	bool m_refund_unused_resource_requests;
+
+		// See SCHEDD_USE_TRUE_DEMAND_REPORTING. Combined with
+		// m_negotiator_honors_offer_cap via reportTrueDemand().
+	bool m_use_true_demand_reporting;
+
+		// True demand reporting requires both that we've been configured to
+		// use it, and that the negotiator we're talking to has told us (via
+		// ATTR_MATCH_CAPS) that it will honor ATTR_SCHEDD_OFFER_LIMIT.
+	bool reportTrueDemand() const { return m_negotiator_honors_offer_cap && m_use_true_demand_reporting; }
 
 	std::string m_owner;
 	std::string m_remote_pool;
