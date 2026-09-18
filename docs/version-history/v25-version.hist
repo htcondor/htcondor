@@ -26,6 +26,11 @@
   HOOK_JOB_EXIT is used in the condor_starter.
   :jira:`3907`
 
+- Fixed a bug in :tool:`condor_adstash` where an unknown (to
+  :tool:`condor_adstash`) field type in the index mappings would
+  cause a crash.
+  :jira:`3934`
+
 *** 25.0.15 bugs
 
 *** 25.14.0 features
