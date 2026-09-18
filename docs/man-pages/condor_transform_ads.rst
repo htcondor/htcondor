@@ -75,7 +75,7 @@ Options
     -  **new**: "new" ClassAd form without newlines
     -  **auto**: use the same format as the first input
 
-    | ClassAds are storted by attribute unless **nosort** is specified.
+    | ClassAds are sorted by attribute unless **nosort** is specified.
 
  [*<key>=<value>* ]
     Assign key/value pairs before rules file is parsed; can be used to

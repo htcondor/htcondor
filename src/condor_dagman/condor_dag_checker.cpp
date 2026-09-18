@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_attributes.h"
 #include "dag_parser.h"
 #include "submit_utils.h"
 #include "condor_version.h"
@@ -122,6 +123,9 @@ struct MockDagNode {
 };
 
 struct MockDagData {
+	MockDagData() = default;
+	MockDagData(const std::string& c) { cif = c; }
+
 	void SetParent(MockDag& dag) { self = std::addressof(dag); }
 
 	bool hasSplice(const std::string& name) const {
@@ -201,7 +205,7 @@ struct MockDagData {
 			return nullptr;
 		}
 
-		auto& splice = splices.emplace_back();
+		auto& splice = splices.emplace_back(cif);
 		splice.data.scope = name;
 
 		return &splice;
@@ -368,6 +372,8 @@ struct MockDagData {
 		}
 	}
 
+	std::string& GetCIF() { return cif; }
+
 private:
 	void considerDependency(const ParentChildCommand* pc, const std::string& name, const bool is_parent, std::vector<node_id_t>& list, std::string& missing, std::vector<DagParseError>& errors) {
 		static std::set<DAG::CMD> invalid = {
@@ -411,6 +417,7 @@ private:
 	// "" for the top-level DAG (and every independent SUBDAG), or this splice's own
 	// declared name otherwise (unprefixed -- just what it's called at its own scope).
 	std::string scope{};
+	std::string cif{}; // Common input files scoped to one DAG+splices
 
 	std::string final_node{};
 	std::string provisioner{};
@@ -466,13 +473,14 @@ void checkSubdag(const SubdagCommand* cmd, const bool strict, std::vector<DagPar
 				addCommandError(cmd, err.GetLocation() + ">" + err.GetError(), errors);
 			}
 		}
+
 	} else if (strict) {
 		addCommandError(cmd, source + " does not exist", errors);
 	}
 }
 
 
-void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
+void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src, std::string& dag_cif,
               std::vector<DagParseError>& errors, std::map<std::string, DagParseError>* jdl_dne = nullptr) {
 	std::string queue_args;
 	auto_free_ptr owner(my_username());
@@ -573,6 +581,15 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 			FAIL_AND_RETURN(cmd, err ? err->getFullText() : "Submit description produced invalid job ad", errors);
 		}
 
+		std::string cif;
+		if (proc_ad->EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
+			if ( ! dag_cif.empty()) {
+				if (dag_cif != cif) {
+					FAIL_AND_RETURN(cmd, "Multiple differing common input transfer lists declared in DAG", errors);
+				}
+			} else { dag_cif = cif; }
+		}
+
 		// Break after first successful job ad unless strict checking is enabled
 		if ( ! strict) { break; }
 	}
@@ -625,7 +642,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 								type = JDL::INLINE;
 							}
 
-							checkJDL(cmd.get(), src, type, errors, &node_jdl_dne);
+							checkJDL(cmd.get(), src, type, dag.data.GetCIF(), errors, &node_jdl_dne);
 						}
 					}
 					break;
@@ -791,7 +808,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				if (check_external & CHECK_JDL) {
 					const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
 					std::ignore = node_jdl_dne.erase(desc->GetName());
-					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, errors);
+					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, dag.data.GetCIF(), errors);
 				}
 			default:
 				break;

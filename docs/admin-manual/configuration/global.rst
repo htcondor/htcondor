@@ -1973,6 +1973,15 @@ More information about networking in HTCondor can be found in
     a failure. The default is 300 (5 minutes). Set to 0 to disable handshake
     reaping.
 
+:macro-def:`CCB_TUNNEL_REGISTRATION_TIMEOUT[Networking]`
+    The number of seconds a tunneling inside CCB server will hold a registrant's
+    registration reply while waiting to complete its own upstream registration.
+    The reply is deferred so that the registrant only ever learns a reachable,
+    nested tunnel contact; if the tunnel has not come up within this time, the
+    broker disconnects the waiting registrant, which then retries the
+    registration later. The default is 300 (5 minutes). Set to 0 to wait
+    indefinitely.
+
 :macro-def:`CCB_SERVER_MAX_STREAMING_SESSIONS[Networking]`
     The maximum number of concurrent CCB streaming (proxy) sessions a broker will
     maintain, counting both in-progress handshakes and established relays.

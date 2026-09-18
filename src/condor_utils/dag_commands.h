@@ -105,6 +105,12 @@ namespace DAG {
 		WAIT,           // Let remaining jobs complete
 	};
 
+	// Node status file printing format
+	enum class NodeStatusFmt {
+		CLASSAD = 1,
+		JSON,
+	};
+
 	// Quick map of keyword strings to enum value
 	extern const std::map<std::string, CMD, NoCaseCmp> KEYWORD_MAP;
 	// Map of DAG Command to exampe syntax
@@ -732,10 +738,23 @@ public:
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::NODE_STATUS_FILE; };
 	virtual std::string _getDetails() const {
+		const char* format = "UNKNOWN";
+		switch (fmt) {
+			case DAG::NodeStatusFmt::CLASSAD: format = "CLASSAD"; break;
+			case DAG::NodeStatusFmt::JSON: format = "JSON"; break;
+		}
+
 		std::string ret;
-		formatstr(ret, "%s %d %s", Disp(file), min_update, always_update ? "T" : "F");
+		formatstr(ret, "%s %d %s %s %s", Disp(file), min_update, always_update ? "T" : "F",
+		          format, compact ? "T" : "F");
 		return ret;
 	}
+
+	void SetFmt(const DAG::NodeStatusFmt f) { fmt = f; }
+	DAG::NodeStatusFmt GetFmt() const { return fmt; }
+
+	void SetCompact() { compact = true; }
+	bool Compact() const { return compact; }
 
 	void SetMinUpdateTime(const int t) { min_update = t; }
 	int GetMinUpdateTime() const { return min_update; }
@@ -743,8 +762,10 @@ public:
 	void SetAlwaysUpdate() { always_update = true; }
 	bool AlwaysUpdate() const { return always_update; }
 private:
+	DAG::NodeStatusFmt fmt{DAG::NodeStatusFmt::CLASSAD};
 	int min_update{60}; // Minimal time between file updates
 	bool always_update{false}; // Whether or not to update file regardless of state change
+	bool compact{false}; // Print format compact: True (single line) | False (multiline)
 };
 
 // JOBSTATE_LOG Command

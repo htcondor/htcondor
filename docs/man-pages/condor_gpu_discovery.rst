@@ -223,6 +223,9 @@ Tables
     * - ECCEnabled
       - ECCEnabled
       - ECCEnabled
+    * - Integrated
+      -
+      -
     * - GlobalMemoryMb
       - GlobalMemoryMb
       - GlobalMemoryMb

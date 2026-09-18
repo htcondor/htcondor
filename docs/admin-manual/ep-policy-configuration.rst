@@ -1019,12 +1019,18 @@ submitting their jobs to HTCondor).  Understanding the configuration requires
 an understanding of ClassAd expressions, which are detailed in the
 :doc:`/classads/classad-mechanism` section.
 
-The START Expression
-''''''''''''''''''''
+START and other Requirements expressions
+''''''''''''''''''''''''''''''''''''''''
+
+The ``Requirements`` expression is used for matching machines with jobs; it is set
+to reference other expressions that are controlled by configuration.
+All of the attributes referenced by ``Requirements`` must evaluate to ``True`` in order for a job to match.
+``Requirements`` will reference :macro:`START`, :ad-attr:`Healthy`,
+and :ad-attr:`WithinResourceLimits`.
 
 The most important expression to the *condor_startd* is the
 :macro:`START` expression. This expression describes the
-conditions that must be met for a machine or slot to run a job. This
+policy conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
 :ad-attr:`KeyboardIdle` and :ad-attr:`LoadAvg`) and attributes in a job ClassAd (such
 as :ad-attr:`Owner`, :ad-attr:`ImageSize`, and :ad-attr:`Cmd`, the name of the executable the
@@ -1036,14 +1042,12 @@ role in determining the state and activity of a machine.
     policies; see information on policy templates here:
     :ref:`admin-manual/introduction-to-configuration:available configuration templates`.
 
-
-The ``Requirements`` expression is used for matching machines with jobs.
-
-In situations where a machine wants to make itself unavailable for
-further matches, the ``Requirements`` expression is set to ``False``.
-When the :macro:`START` expression locally evaluates to ``True``, the machine
-advertises the ``Requirements`` expression as ``True`` and does not
-publish the :macro:`START` expression.
+Often there are resources like a shared file system that are needed to run jobs and that
+can fail or be temporarily unavailable.  The :ad-attr:`Healthy` expression is meant
+to represent the availability of these global resources. When the :ad-attr:`Healthy` expression
+does not evaluate to ``True``, ``Requirements`` does not evaluate to ``True`` and no
+job will match. In older configurations, ``START`` was used for these health check conditions
+because :ad-attr:`Healthy` was not available.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the *condor_negotiator* to see if there is
@@ -1096,6 +1100,74 @@ priority, interactive response on the machines will not suffer. A
 machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
+
+The Healthy Expression
+''''''''''''''''''''''
+
+The :ad-attr:`Healthy` attribute consists of a list of expressions that reference other
+attributes of the *condor_startd* each of which indicates the result of a health check.
+All health check expressions must evaluate to ``True`` or non-zero in order for the overall
+:ad-attr:`Healthy` expression to be ``True``.  When :ad-attr:`Healthy` is not ``True`` no job will match.
+
+The list of health check expressions is configured by adding comma separated expressions
+to the :macro:`STARTD_HEALTH_EXPRS`.  These expressions will normally reference attributes
+set either by the configuration or by ``STARTD_CRON`` scripts.  It is generally
+a good idea to force attributes referenced by these expressions to be *condor_startd* attributes
+by using the ``MY.`` prefix.
+
+    .. code-block:: condor-config
+
+        # Two health checks:
+        #  PreventJobsReason is an admin controlled attribute set by config
+        #  SHARED_FS_MOUNTED is set by a STARTD_CRON script that is not shown in this example
+        STARTD_HEALTH_EXPRS = size(MY.PreventJobsReason ?: "") == 0, MY.SHARED_FS_MOUNTED ?: false
+
+        # Admins should configure PreventJobsReason to a string and reconfig to disable all new job starts.
+        STARTD_ATTRS = $(STARTD_ATTRS), PreventJobsReason
+        PreventJobsReason =
+        #PreventJobsReason = "Down for maintenance by bob"
+
+Composing the list of health check expressions over multiple configuration files is simplified by the new ``+,=``
+feature of the configuration language.  Using this new language feature, the above example could be written
+
+    .. code-block:: condor-config
+
+        # Add PreventJobsReason health expression
+        #
+        STARTD_HEALTH_EXPRS +,= size(MY.PreventJobsReason ?: "") == 0
+        STARTD_ATTRS += PreventJobsReason
+
+        # Add SHARED_FS_MOUNTED health expression.
+        # SHARED_FS_MOUNTED will be set by STARTD_CRON script configured elsewhere
+        #
+        STARTD_HEALTH_EXPRS +,= MY.SHARED_FS_MOUNTED ?: false
+
+        # Admins should configure PreventJobsReason to a string and reconfig to disable all new job starts.
+        PreventJobsReason =
+
+Optional Requirements clauses
+''''''''''''''''''''''''''''''''''''''''''
+
+In addition to :macro:`START`, :ad-attr:`Healthy` and :ad-attr:`WithinResourceLimits` additional
+attribute references can be added to the :ad-attr:`Requirements[type=Machine]` expression of the partitionable slots by
+adding the attribute names to :macro:`PSLOT_REQUIREMENTS_CLAUSES`. Attributes can be added to
+the dynamic slot :ad-attr:`Requirements[type=Machine]` expression by adding the attribute names to :macro:`DSLOT_REQUIREMENTS_CLAUSES`.
+
+These configuration macros were added in 25.10 to simplify and clarify the use of policy expressions
+that would formerly have been added to the :macro:`START` expression but which must evaluate only
+in partitionable or only in dynamic slots to work correctly.
+
+For example, an expression that is intended to restrict a dynamic slot that has GPUs to only match jobs that
+request the same number of GPUs is difficult to express in the :macro:`START` expression, but fairly
+simple to write as an expression that exists only in the dynamic slot.
+
+    .. code-block:: condor-config
+
+        # A dynamic slot with GPUs should only match jobs that request that many GPUs
+        #
+        DSLOT_REQUIREMENTS_CLAUSES += JobFillsSlot
+        JobFillsSlot = MY.GPUs?:0 == TARGET.RequestGPUs?:0
+
 
 The RANK Expression
 '''''''''''''''''''
@@ -2283,23 +2355,118 @@ It serves as a quick reference.
 :index:`transitions<single: transitions; machine activity>`
 :index:`transitions<single: transitions; state>` :index:`transitions<single: transitions; activity>`
 
-Configuring HTCondor for Running Backfill Jobs
-----------------------------------------------
+Configuring HTCondor for Backfill
+---------------------------------
 
 :index:`Backfill`
 
-HTCondor can be configured to run backfill jobs whenever the
-*condor_startd* has no other work to perform. These jobs are considered
+HTCondor has two types of backfill, There is an older type of backfill where
+any slot can enter a backfill state and run backfill tasks when there are no jobs for it to run.
+There is a newer form of backfill where a slot type can be configured as a
+backfill slot.  Backfill slots will run ordinary HTCondor jobs from an AP,
+and will evict those jobs when a non-backfill slot on the same EP begins to use the
+same resources.
+
+Configuring a Backfill Partitionable slot
+-----------------------------------------
+
+HTCondor can be configured to have both normal and backfill partitionable slots
+using the same set of resources.  Slots that are designated backfill slots will
+keep track of the resource usage of normal slots and can evict jobs when
+any normal slot is using the same resources as the backfill slot.
+
+Use :macro:`SLOT_TYPE_<N>_BACKFILL` to designate a slot type as backfill. This
+currently works only when the slot type is also partitionable.
+
+When the *condor_startd* creates slots at startup time, it provisions them from the
+set of available resources like :macro:`DETECTED_CPUS` and :macro:`DETECTED_MEMORY`.
+When it creates a slot designated backfill, it uses a second set of resources that
+shadows the normal resource and starts with the same quantites.  This allows the creation of
+a primary p-slot and a backfill p-slot that each start with 100% of available resources.
+
+For example:
+
+.. code-block:: condor-config
+
+    # Create a normal p-slot that uses 100% of resources as SLOT_TYPE_1
+    use FEATURE : PartitionableSlot(1, 100%)
+
+    # Create a backfill p-slot also that uses 100% as SLOT_TYPE_2
+    use FEATURE : PartitionableSlot(2, 100%)
+    SLOT_TYPE_2_BACKFILL = true
+    SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
+
+When backfill slots are configured, the daemon ad of the *condor_startd* will have 
+attributes that report the aggregate backfill usage of the machine in addition to the normal
+usage attributes. The :tool:`condor_status` tool uses these attributes to accurately report the actual
+number of CPUs in the pool, as well as how many are assigned to active normal slots and
+how many are assigned to active backfill slots.  Use ``condor_status -startd`` to see this summary.
+
+
+Backfill Partitionable slots track all Dynamic slots
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The advertised resource quantities of a backfill p-slot will be the original quantities
+minus the quantities assigned to all dynamic slots, both backfill and non-backfill.
+
+If a machine has both backfill and normal p-slots and each starts with
+16 Cpus, when a 2 Cpu dynamic slot is created from the normal p-slot both the normal
+and backfill p-slots will then advertise 14 Cpus.  2 Cpus are deducted from the normal
+p-slot because the dynamic slot was created from it.  2 Cpus are deducted from the backfill
+p-slot because a 2 Cpu dynamic slot exists. This applies to all resource types - :ad-attr:'Cpus',
+:ad-attr:`Disk`, :ad-attr:`Memory`, :ad-attr:`GPUs` as well as custom resources.
+
+Backfill dynamic slots track resource conflicts
+'''''''''''''''''''''''''''''''''''''''''''''''
+
+Each backfill dynamic slot will have an attribute that is empty or undefined when
+no other dynamic slot is using the same resources. The attribute is :ad-attr:`ResourceConflict`.
+When this attribute is not empty, it will have the name of the type of resource
+that conflicts with another dynamic slot.  For instance when another slot is
+using the same memory, the value will be ``"Memory"``.  Policy expressions will
+generally only care if this attribute is empty or non-empty.
+
+Backfill and Non-Backfill slots should be configured for sets of jobs
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+It is generally best to configure backfill slots to only match jobs that
+are willing to be evicted; and to configure non-backfill slots so that they will
+not run those jobs.  If you do not do this, The Negotiator will match the
+jobs from a single joblist to both non-backfill and backfill slots. The jobs on
+the backfill slots will then start and the get evicted a few seconds later when
+other jobs from that job list arrive to up the non-backfill slot.
+
+.. code-block:: condor-config
+
+    # Assume TYPE_1 slots are non-backfill and TYPE_2 slots are backfill
+    # and that jobs will set MY.BackfillJob = true to op-in to backfill slots.
+    # any give job will match only one slot type.
+    SLOT_TYPE_1_START = ! (TARGET.BackfillJob?:false)
+    SLOT_TYPE_2_START = TARGET.BackfillJob
+
+Note that the configuration above assumes that :macro:`START` is set to ``True``.
+Otherwise the `TARGET.BackfillJob` should be ``&&``-ed to the :macro:`START`
+expression rather than replacing it.
+
+
+Running backfill tasks while in the Backfill state (deprecated)
+---------------------------------------------------------------
+
+This form of backfill has been deprecated and may be removed in a the future.
+
+HTCondor can be configured to run enter a backfill state and run backfill tasks
+when the *condor_startd* has no other work to perform. The *condor_start* will
+leave the backfill state when asked to run a HTCondor job. Backfill task are considered
 the lowest possible priority, but when machines would otherwise be idle,
 the resources can be put to good use.
 
 Currently, HTCondor only supports using the Berkeley Open Infrastructure
-for Network Computing (BOINC) to provide the backfill jobs. More
+for Network Computing (BOINC) to provide the backfill tasks. More
 information about BOINC is available at
 `http://boinc.berkeley.edu <http://boinc.berkeley.edu>`_.
 
-The rest of this section provides an overview of how backfill jobs work
-in HTCondor, details for configuring the policy for when backfill jobs
+The rest of this section provides an overview of how backfill tasks work
+in HTCondor, details for configuring the policy for when backfill tasks
 are started or killed, and details on how to configure HTCondor to spawn
 the BOINC client to perform the work.
 
@@ -2323,7 +2490,7 @@ for the new, higher priority task.  More details about the different
 states an HTCondor resource can enter and all of the possible
 transitions between them are described in :ref:`Machine States`, above.
 
-At this point, the only backfill system supported by HTCondor is BOINC.
+At this point, the only backfill task generator supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client
 program at the appropriate times, but otherwise provides no additional
 services to configure the BOINC computations themselves. Future versions
@@ -3553,6 +3720,14 @@ second is the value inside the container. If a ":ro" is specified after
 the second directory name, the volume will be mounted read-only inside
 the container.
 
+These administrator-configured volumes are bind-mounted using Docker's
+``--mount`` option. Unlike the older ``--volume`` option, ``--mount``
+requires the source directory on the host to already exist; if it does
+not, the container will fail to start rather than the directory being
+silently created. Note also that ``--mount`` does not support the
+SELinux relabel shortcuts (``:z`` / ``:Z``); such options are ignored
+with a warning in the *condor_starter* log.
+
 These directories will be bind-mounted unconditionally inside the
 container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
@@ -3572,6 +3747,37 @@ Extending the above example,
 In this case, the directory /path1 will get mounted inside the container
 only for jobs owned by user "smith", and who set +WantSomeDirMounted =
 true in their submit file.
+
+By default each of these is a bind mount of a host directory. An
+administrator may instead mount a Docker-managed named volume by setting
+:macro:`DOCKER_VOLUME_DIR_xxx_TYPE` to ``volume``, in which case the first
+field of :macro:`DOCKER_VOLUME_DIR_xxx` is a Docker volume name rather than a
+host path. Arbitrary additional ``--mount`` suboptions may be supplied with
+:macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS`, and appended to the mount
+specification.
+
+Both :macro:`DOCKER_VOLUME_DIR_xxx` and
+:macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_OPTS` are evaluated as ClassAd expressions
+in the context of the slot and job ads (or used as a literal string if the
+value is not a valid expression). This allows per-job values, such as mounting
+each user's own home directory out of a shared Docker volume. For example,
+given a Docker named volume ``nfs_home`` whose per-user subdirectories hold each
+user's home directory,
+
+.. code-block:: condor-config
+
+    DOCKER_VOLUMES = HOME
+    DOCKER_VOLUME_DIR_HOME = strcat("nfs_home:/home/", Owner)
+    DOCKER_VOLUME_DIR_HOME_TYPE = volume
+    DOCKER_VOLUME_DIR_HOME_MOUNT_OPTS = strcat("volume-subpath=", Owner)
+    DOCKER_MOUNT_VOLUMES = HOME
+
+For a job owned by user "smith" this produces the mount specification
+``type=volume,source=nfs_home,target=/home/smith,volume-subpath=smith``,
+so only that user's subdirectory of the volume is mounted, at
+``/home/smith``, and no other user's home directory is exposed. (The
+``volume-subpath`` option requires Docker Engine 26.0 or later, and the
+subdirectory must already exist within the volume.)
 
 In addition to installing the Docker service, the single configuration
 variable :macro:`DOCKER` must be set. It defines the
@@ -3770,7 +3976,7 @@ case it refers to a file in the scratch directory, so that the image
 can be transferred by HTCondor's file transfer mechanism.
 
 Here's the simplest possible configuration file.  It will force all
-jobs on this machine to run under Singularity, and to use an image that is located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+jobs on this machine to run under Singularity, and to use an image that is located in the file system in the path ``/cvmfs/cernvm-prod.cern.ch/cvm3``:
 
 .. code-block:: condor-config
 

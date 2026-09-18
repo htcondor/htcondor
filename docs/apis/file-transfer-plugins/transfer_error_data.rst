@@ -299,7 +299,7 @@ EXAMPLE
 
 The curl plug-in might write the following file if asked to transfer the
 URLs ``http://cnn.com`` and ``http://azaphrael.org`` and both transfer
-succesfully.
+successfully.
 
 .. code-block:: condor-classad
 

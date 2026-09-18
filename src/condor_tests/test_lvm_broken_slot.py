@@ -25,7 +25,13 @@ import pytest
 import htcondor2 as htcondor
 from ornithology import *
 
-from liblvm import LVMTestable, LVM_SKIP_REASON, lvm_config, LV_BROKEN_REASON
+from liblvm import (
+    LVMTestable,
+    LVM_SKIP_REASON,
+    lvm_config,
+    LV_BROKEN_REASON,
+    JOB_REQUEST_MEMORY_MB,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -85,7 +91,7 @@ def short_job_hash(scratch_path_file):
         "error": "error",
         "log": "broken_slot_log",
         "request_cpus": "1",
-        "request_memory": "64m",
+        "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
         "request_disk": "48m",
     }
 

@@ -54,8 +54,4 @@ char * chomp( char *buffer );
 #define GETLINE_TRIM_SIMPLE_CONTINUATION 1
 char * getline_trim ( FILE *fp, int & lineno, int mode=0 );
 
-#include "condor_arglist.h"
-
-#include "basename.h"
-
 #endif /* _STRING */

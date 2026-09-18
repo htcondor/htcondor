@@ -73,6 +73,11 @@ private:
   static std::string environmentPrefix();
   static void add_containment_args(ArgList & sing_args);
 
+	// Strip HOME and every APPTAINER_*/SINGULARITY_* variable a job may
+	// have set, so it cannot subvert the container the starter builds.
+	// The APPTAINERENV_*/SINGULARITYENV_* passthrough prefix is left intact.
+  static void cleanEnvironment(Env &job_env);
+
   static bool m_enabled;
   static bool m_probed;
   static bool m_apptainer;

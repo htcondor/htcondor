@@ -390,13 +390,13 @@ authenticate:
 		}
 
 			// check to see if the auth IP is the same as the socket IP
-		if( auth_rc ) {
+		if( auth_rc && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false) ) {
 			char const *sockip = mySock->peer_ip_str();
-			char const *authip = m_auth->getRemoteHost() ;
+			char const *authip = m_auth->getRemoteHost();
 
 			auth_rc = !sockip || !authip || !strcmp(sockip,authip);
 
-			if (!auth_rc && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false)) {
+			if( !auth_rc ) {
 				errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
 								"authenticated remote host does not match connection address (%s vs %s)", authip, sockip );
 				dprintf (D_ALWAYS, "AUTHENTICATE: ERROR: authenticated remote host does not match connection address (%s vs %s); configure DISABLE_AUTHENTICATION_IP_CHECK=TRUE if this check should be skipped\n",authip,sockip);

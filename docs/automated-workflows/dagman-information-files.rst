@@ -133,12 +133,11 @@ following additional metrics will be recorded:
         :caption: Example node status file contents
 
         [
-          Type = "DagStatus";
-          DagFiles = {
-            "diamond.dag"
-          };
+          MyType = "DagStatus";
+          DagFiles = { "diamond.dag" };
           Timestamp = 1399674138;
           DagStatus = 3;
+          DagStatusDetails = "";
           NodesTotal = 12;
           NodesDone = 11;
           NodesPre = 0;
@@ -146,32 +145,47 @@ following additional metrics will be recorded:
           NodesPost = 0;
           NodesReady = 0;
           NodesUnready = 0;
+          NodesFutile = 0;
           NodesFailed = 0;
+          JobProcsSubmitted = 12;
           JobProcsHeld = 0;
           JobProcsIdle = 1;
+          JobProcsRunning = 0;
+          JobProcsCompleted = 11;
         ]
         [
-          Type = "NodeStatus";
+          MyType = "NodeStatus";
           Node = "A";
           NodeStatus = 5;
           StatusDetails = "";
           RetryCount = 0;
+          JobProcsSubmitted = 1;
           JobProcsQueued = 0;
+          JobProcsRunning = 0;
+          JobProcsIdle = 0;
           JobProcsHeld = 0;
+          JobProcsCompleted = 1;
+          JobProcsFailed = 0;
         ]
         ...
         [
-          Type = "NodeStatus";
+          MyType = "NodeStatus";
           Node = "D";
           NodeStatus = 3;
           StatusDetails = "idle";
           RetryCount = 0;
+          JobProcsSubmitted = 1;
           JobProcsQueued = 1;
+          JobProcsRunning = 0;
+          JobProcsIdle = 1;
           JobProcsHeld = 0;
+          JobProcsCompleted = 0;
+          JobProcsFailed = 0;
         ]
         [
-          Type = "StatusEnd";
+          MyType = "StatusEnd";
           EndTime = 1399674138;
+          Timestamp = 1399674138;
           NextUpdate = 1399674141;
         ]
 
@@ -189,12 +203,17 @@ the DAG. To have DAGMan write the node status file, simply use the
 
 .. code-block:: condor-dagman
 
-    NODE_STATUS_FILE filename [minimumUpdateTime] [ALWAYS-UPDATE]
+    NODE_STATUS_FILE filename [minimumUpdateTime] [ALWAYS-UPDATE] [CLASSAD | JSON] [COMPACT]
 
-The node status file is a collection of ClassAds in New ClassAd format.
-There is one ClassAd for the overall status of the DAG, one ClassAd for
-the status of each node, and one ClassAd with the time at which the node
-status file was completed as well as the time of the next update.
+The node status file is a collection of ads: one for the overall status of
+the DAG, one for the status of each node, and one with the time at which
+the node status file was completed as well as the time of the next update.
+By default these ads are written in New ClassAd format, pretty-printed
+across multiple lines. The optional *JSON* keyword writes JSON instead,
+and the optional *COMPACT* keyword prints each ad on a single line rather
+than pretty-printed. Attribute order within an ad is not guaranteed, so
+any code parsing this file should look up attributes by name rather than
+assume a particular order or line layout.
 
 The status file may be updated once per :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL[and the Node Status File]`
 in combination with the optional *minimumUpdateTime* value which defaults

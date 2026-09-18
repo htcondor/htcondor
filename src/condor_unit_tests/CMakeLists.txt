@@ -40,6 +40,7 @@ FTEST_your_string.cpp
 )
 set( OTSrcs
 OTEST_ArgList.cpp
+OTEST_ClaimId.cpp
 OTEST_condor_sockaddr.cpp
 OTEST_Directory.cpp
 OTEST_Env.cpp

@@ -27,6 +27,7 @@ Synopsis
 [**-DontAlwaysRunPost** | **-AlwaysRunPost**] [**-priority** *N*]
 [**-r/-remote** *schedd_name*] [**-schedd-daemon-ad-file** *filename*]
 [**-schedd-address-file** *filename*] [**-RescueFile** *filename*]
+[**-terse**]
 
 
 Description
@@ -49,6 +50,8 @@ Options
     submit DAGMan as an HTCondor job.
  **-v/-verbose**
     Cause *condor_submit_dag* to give verbose error messages.
+ **-terse**
+    Display only the resulting DAGMan job id on success.
  **-f/-force**
     Don't fail to place DAGMan job to AP if previous execution files
     are discovered. Previous execution files (except the ``*.dagman.out``)

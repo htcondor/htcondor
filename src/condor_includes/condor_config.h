@@ -166,28 +166,31 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// The intended use is:
 	//   auto_free_ptr value(param("param_name"));
 	//   if (value) { dprintf(D_ALWAYS, "param_name has value %s\n", value.ptr()); }
-	//
-	// NOTE: it is NOT SAFE to use this class as a member of a class or struct that you intend to copy.
-	//   This class has minimal support for copy construction/assigment using the swap() idiom, which necessary
-	//   for populating STL containers. but it does NOT support deep copying or reference counting
-	//   which would be needed to support its use as a member in a class that you intend to copy and keep
-	//   both copies around. 
+	// Like the param system itself, it treats null and "" as empty(), and treats empty() as false
+	// The class has minimal support for copy construction/assigment/move using the swap() idiom, which necessary
+	//   for populating STL containers. but it does NOT have reference counting which would be needed to support
+	//   its use as a member in a class that you intend to copy and expect the pointer not to change.
 	class auto_free_ptr {
 	public:
-		auto_free_ptr(char* str=NULL) : p(str) {}
+		auto_free_ptr() = default;
+		auto_free_ptr(char* str) : p(str) {}
 		friend void swap(auto_free_ptr& first, auto_free_ptr& second) { char*t = first.p; first.p = second.p; second.p = t; }
 		auto_free_ptr(const auto_free_ptr& that) { if (that.p) p = strdup(that.p); else p = nullptr; }
+		auto_free_ptr(auto_free_ptr&& that) noexcept { swap(*this,that); } // swap on move
 		auto_free_ptr & operator=(auto_free_ptr that) { swap(*this, that); return *this; } // swap on assigment.
 		~auto_free_ptr() { clear(); }
 		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
 		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
-		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
+		bool empty() const { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
 		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
 		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		char * get() { return p; }                 // for compat with unique_ptr
+		char * release() { return detach(); }      // for compat with unique_ptr
+		const char * c_str() const { return p?p:""; }    // return a printable pointer
 		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
 		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
 	private:
-		char * p;
+		char * p{nullptr};
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
@@ -334,16 +337,48 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
 	// returns the number of macros that were skipped.
 	// used by submit_utils to selectively expand submit hash keys when creating the submit digest
-	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of skipped or < 0 for expansion error
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set,
+		MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
-	// returns the number of $() and $func() patterns that were skipped.
-	unsigned int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	// returns the number of $() and $func() patterns that were skipped or < 0 for expansion error
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+	int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx, classad::References & skipped_names);
 
 	// do macro expansion in-place in a std::string, expanding only macros that are defined in the config
 	// returns the number of $() and $func() patterns that were skipped
 	// used by submit_utils to selectively submit templates against the config at load time
-	unsigned int expand_defined_config_macros (std::string &value);
+	// returns number of macros skipped or < 0 for expansion error
+	int expand_defined_config_macros (std::string &value);
+
+	// used to return pointers to a config macro
+	//
+	//  input                         right
+	//      |                         |
+	//      aaaa$ENV(PARAM:DEFAULTVAL)bbbb
+	//          |    |
+	//       left    body
+	//
+	struct UNEXPANDED_MACRO_EXTENTS {
+		const char* left{nullptr}; const char* body{nullptr}; const char*right{nullptr};
+		void clear() { left = body = right = nullptr; }
+	};
+	// scan a string for macros and return the start and end of the next one
+	// finds all $() $func() and $$ macros, including $(dollar)
+	// returns
+	//    0 if no next macro
+	//  < 0 for $ and $$
+	//  > 0 for $func
+	//  extent is set to point the the macro
+	// the use case for this function is when you want to split a string without splitting any of the macros.
+	int next_unexpanded_macro(const char * value, size_t pos, UNEXPANDED_MACRO_EXTENTS &extent);
+
+	// returns true if the input string has any unexpanded macros
+	// if ignore_dollor is true, then *any* macro including $(dollor)
+	// if false, then only config macros $(), $func and $$ are reported
+	bool has_unexpanded_macros(const char * value, bool ignore_dollor);
 
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does
@@ -429,14 +464,13 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 // the HASHITER can only be defined with c++ linkage
 class HASHITER {
 public:
-	int opts;
-	int ix; int id; int is_def;
-	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
+	int opts{0};
+	int ix{0}; int id{0}; int is_def{0};
+	MACRO_DEF_ITEM * pdef{nullptr}; // for use when default comes from per-daemon override table.
 	MACRO_SET & set;
 	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
-	HASHITER( const HASHITER & rhs) :
-	opts(rhs.opts), ix(rhs.ix), is_def(rhs.is_def), pdef(rhs.pdef), set(rhs.set)
-	{ }
+	HASHITER(const HASHITER & rhs) = default;
+	HASHITER(HASHITER&& rhs) = default;
 	HASHITER & operator =( const HASHITER & rhs ) {
 		if( this != & rhs ) {
 			this->opts = rhs.opts;
@@ -586,8 +620,8 @@ int write_config_file(const char* pathname, int options);
 		void set(FILE* _fp, MACRO_SOURCE& _src) { fp =  _fp; src = &_src; }
 		void reset() { fp = NULL; src = NULL; }
 	protected:
-		FILE * fp;
-		MACRO_SOURCE * src;
+		FILE * fp{nullptr};
+		MACRO_SOURCE * src{nullptr};
 	};
 
 	// A MacroStream that owns the FILE* and MACRO_SOURCE
@@ -605,7 +639,7 @@ int write_config_file(const char* pathname, int options);
 		bool open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg);
 		int  close(MACRO_SET& set, int parsing_return_val);
 	protected:
-		FILE * fp;
+		FILE * fp{nullptr};
 		MACRO_SOURCE src;
 	};
 

@@ -226,6 +226,17 @@ These settings affect the *condor_starter*.
     Memory * 0.5, in order to prevent the system from using otherwise available
     memory for caching on behalf of the job.
 
+:macro-def:`CGROUP_ZSWAP_MAX_EXPR`
+    A classad expression, evaluated in the context of the slot and job ad.
+    When it evaluates to a number, that number, interpreted as megabytes, is
+    written to the job's cgroup ``memory.zswap.max`` limit, which caps how much
+    of the job's memory the kernel may hold in compressed swap.  Note that zero
+    is a meaningful value, and disables zswap entirely for the job.  When this
+    knob is not set, or does not evaluate to a non-negative number, HTCondor
+    does not write to ``memory.zswap.max`` at all, and the job inherits whatever
+    the system default is.  This is only implemented on Linux systems with cgroup v2, where
+    HTCondor controls the jobs' cgroups and the kernel provides zswap.
+
 :macro-def:`CGROUP_IGNORE_CACHE_MEMORY`
     A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.
@@ -604,9 +615,22 @@ These settings affect the *condor_starter*.
     or -d.
 
 :macro-def:`SINGULARITY_ADD_ROCM_FLAG`
-    A boolean value that defaults to true.  When true, HTCONDOR will pass --rocm 
-    flag to singularity, in order to support AMD gpus.  This should not cause problems
-    on machines without AMD gpus.
+    A boolean value that defaults to false.  When true, HTCondor will pass --rocm
+    flag to singularity, in order to support AMD gpus.
+
+:macro-def:`SINGULARITY_ALLOWED_JOB_ENV_VARS`
+    A string value containing a space or comma separated list of additional
+    environment variable names.  Before launching a container, the starter
+    removes every ``APPTAINER_*`` and ``SINGULARITY_*`` variable from the job's
+    environment, so that a job cannot use them to reconfigure the container the
+    starter builds (for example, overriding the starter's bind mounts by setting
+    ``APPTAINER_BINDPATH``).  A built-in allowlist of the ``APPTAINER_DOCKER_USERNAME``,
+    ``APPTAINER_DOCKER_PASSWORD``, ``SINGULARITY_DOCKER_USERNAME`` and
+    ``SINGULARITY_DOCKER_PASSWORD`` credential variables is always preserved.  Any
+    variable names listed here are preserved in addition to those.  The default
+    value is the empty string.  Note that this does not affect the
+    ``APPTAINERENV_*`` / ``SINGULARITYENV_*`` mechanism a job uses to inject
+    variables into the container, which is always honored.
 
 :macro-def:`USE_DEFAULT_CONTAINER`
     A boolean value or classad expression evaluating to boolean in the context of the Slot

@@ -955,7 +955,8 @@ echo $(basename $archive_dir) >> $remote_glite_dir/Manifest.txt
 rsync -aq $archive_dir/bin/blahpd $remote_glite_dir/bin 2>/dev/null
 rsync -aq $archive_dir/sbin/bl* $remote_glite_dir/sbin 2>/dev/null
 rsync -aq $archive_dir/usr/libexec/blahp/* $remote_glite_dir/libexec 2>/dev/null
-rsync -aq $archive_dir/etc/bl* $remote_glite_dir/etc 2>/dev/null
+rsync -aq $archive_dir/etc/blahp $remote_glite_dir/etc 2>/dev/null
+rsync -aq $archive_dir/etc/blparser.conf $remote_glite_dir/etc 2>/dev/null
 
 # Copy over libraries preserving symlinks and directory name
 rsync -aq  $archive_dir/$libdir/lib*.so* $remote_glite_dir/$libdir/ 2>/dev/null
@@ -965,6 +966,9 @@ rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
 # Copy rvgahp_server
 rsync -aq  $archive_dir/sbin/rvgahp_server $remote_glite_dir/bin 2>/dev/null
+
+# Copy blah.config, forcing blah_run_in_workdir=yes
+sed 's/^#*blah_run_in_workdir=.*/blah_run_in_workdir=yes/' $archive_dir/etc/blah.config >$remote_glite_dir/etc/blah.config
 
 # link in local submit attributes with correct symlinks
 (cd $remote_glite_dir/libexec; ln -sf ../etc/blahp/*_local_submit_attributes.sh .)

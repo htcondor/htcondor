@@ -11,6 +11,7 @@
 
 import logging
 import classad2 as classad
+import re
 from ornithology import *
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,10 @@ def jobCredFailureAP(submitJobCredFailureAP):
    return submitJobCredFailureAP.query()[0]
 
 
+def check_reason_string(reason: str, direction: str, source: str):
+    assert re.search(rf"Transfer {direction} files failure at (?:the )?{source}", reason)
+
+
 class TestXferHoldCodes:
    def test_submit_all(self,
       submitJobInputFailureAP, submitJobOutputFailureAP,
@@ -174,24 +179,24 @@ class TestXferHoldCodes:
 
    def test_jobInputFailureAP(self, jobInputFailureAP):
       assert jobInputFailureAP["HoldReasonCode"] == 13
-      assert "Transfer input files failure at access point" in jobInputFailureAP["HoldReason"] 
+      check_reason_string(jobInputFailureAP["HoldReason"], "input", "access point")
 
 
    def test_jobOutputFailureAP(self, jobOutputFailureAP):
       assert jobOutputFailureAP["HoldReasonCode"] == 12
-      assert "Transfer output files failure at access point" in jobOutputFailureAP["HoldReason"]
+      check_reason_string(jobOutputFailureAP["HoldReason"], "output", "access point")
 
 
    def test_jobInputFailureEP(self, jobInputFailureEP):
       assert jobInputFailureEP["HoldReasonCode"] == 13
       assert jobInputFailureEP["HoldReasonSubCode"] == (1 << 8)
-      assert "Transfer input files failure at execution point" in jobInputFailureEP["HoldReason"]
+      check_reason_string(jobInputFailureEP["HoldReason"], "input", "execution point")
 
 
    def test_jobOutputFailureEP(self, jobOutputFailureEP):
       assert jobOutputFailureEP["HoldReasonCode"] == 12
       assert jobOutputFailureEP["HoldReasonSubCode"] == 2
-      assert "Transfer output files failure at execution point" in jobOutputFailureEP["HoldReason"]
+      check_reason_string(jobOutputFailureEP["HoldReason"], "output", "execution point")
 
 
    def test_jobCredFailureAP(self, jobCredFailureAP):
@@ -202,10 +207,10 @@ class TestXferHoldCodes:
    def test_jobPluginOutputFailureEP(self, jobPluginOutputFailureEP):
       assert jobPluginOutputFailureEP["HoldReasonCode"] == 12
       assert jobPluginOutputFailureEP["HoldReasonSubCode"] == (PLUGIN_EXIT_CODE << 8)
-      assert "Transfer output files failure at execution point" in jobPluginOutputFailureEP["HoldReason"]
+      check_reason_string(jobPluginOutputFailureEP["HoldReason"], "output", "execution point")
 
 
    def test_jobPluginInputFailureEP(self, jobPluginInputFailureEP):
       assert jobPluginInputFailureEP["HoldReasonCode"] == 13
       assert jobPluginInputFailureEP["HoldReasonSubCode"] == (PLUGIN_EXIT_CODE << 8)
-      assert "Transfer input files failure at execution point" in jobPluginInputFailureEP["HoldReason"]
+      check_reason_string(jobPluginInputFailureEP["HoldReason"], "input", "execution point")

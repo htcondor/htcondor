@@ -2092,7 +2092,7 @@ when originating from machines that match their leftmost 24 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
 The special value ``{:local_ips:}`` can be used to represent all IP
-addresses that are useable on the local machine. To allow any client
+addresses that are usable on the local machine. To allow any client
 that is connecting from the local machine, you would use the
 following:
 

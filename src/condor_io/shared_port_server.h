@@ -41,6 +41,10 @@ class SharedPortServer: Service {
 	static void RemoveDeadAddressFile();
 
  private:
+		// True when the master that started us is gone, i.e. we are an
+		// orphan and no longer the authority on the address file.
+	bool MasterIsGone() const;
+
 	bool m_registered_handlers;
 	bool m_registered_http_handler{false};
 	std::string m_shared_port_server_ad_file;

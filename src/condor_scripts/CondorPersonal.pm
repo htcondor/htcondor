@@ -1580,7 +1580,7 @@ sub NewIsRunningYet {
 	#print "Checking running of: $name config:$config \n";
 	# ON going up or down, first number total time to allow a full up state, but
 	# master has to be alive by second number or bail
-	my $res = StateChange("up", $config, 120, 30);
+	my $res = StateChange("up", $config, 300, 30);
 	return $res;
 }
 

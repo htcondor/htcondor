@@ -39,6 +39,7 @@
 #include "edge.h"
 #include <ranges>
 #include <filesystem>
+#include <system_error>
 
 #include <queue>
 
@@ -372,6 +373,7 @@ public:
 
 	// Node Status file helper functions
 	void SetNodeStatusFileName(const char *statusFileName, int minUpdateTime, bool alwaysUpdate = false);
+	void SetNodeStatusFormat(const DAG::NodeStatusFmt fmt, const bool c) { _node_status_fmt = fmt; _node_status_compact = c; }
 	void DumpNodeStatus(bool held, bool removed);
 
 	// JobState log helper functions
@@ -405,6 +407,8 @@ public:
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
+
+	std::string cif{}; // First discovered CommonInputTransfer list (hopefully temporary)
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
@@ -485,8 +489,6 @@ private:
 
 	void DFSVisit(Node * node, int depth); // DFS visit and number nodes to detect cycle
 
-	const char *EscapeClassadString(const char* strIn);
-
 	// Private DOT file helper functions
 	void IncludeExtraDotCommands(FILE *dot_file);
 	void DumpDotFileNodes(FILE *temp_dot_file);
@@ -552,6 +554,7 @@ private:
 
 	DagStatus _dagStatus{DAG_STATUS_OK};
 	DagStatus _altHaltStatus{DAG_STATUS_OK};
+	DAG::NodeStatusFmt _node_status_fmt{DAG::NodeStatusFmt::CLASSAD};
 
 	int _numNodesDone{0}; // Number of nodes that have completed execution
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
@@ -590,6 +593,8 @@ private:
 	bool _reject{false}; // Reject this DAG
 	bool _dagIsHalted{false}; // DAG is currently halted
 	bool _dagIsAborted{false}; // DAG has been aborted. Needed because ABORT-DAG-ON w/ return 0 is DAG_STATUS_OK
+
+	bool _node_status_compact{false}; // Is node status file multiline or single line
 
 	// Information for producing dot files, which can be used to visualize
 	// DAG files. Dot is part of the graphviz package, which is available from

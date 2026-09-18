@@ -27,14 +27,9 @@
 #include <numeric>
 #include <utility>
 
-size_t
-Edge::AddArc(const DagArc& arc) {
-	return AddArc(arc.id, arc.metadata);
-}
+size_t Edge::AddArc(const DagArc& arc) { return AddArc(arc.id, arc.metadata); }
 
-
-size_t
-Edge::AddArc(const node_id_t id, const unsigned int meta) {
+size_t Edge::AddArc(const node_id_t id, const unsigned int meta) {
 	ASSERT(id != NO_ID);
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 
@@ -45,52 +40,38 @@ Edge::AddArc(const node_id_t id, const unsigned int meta) {
 
 	// Strongest-wins: a strong (re-)declaration upgrades an existing weak arc.
 	// A weak (re-)declaration never downgrades an existing strong arc.
-	if ( ! (meta & ARC_WEAK) && (it->metadata & ARC_WEAK)) {
-		it->metadata &= ~ARC_WEAK;
-	}
+	if (!(meta & ARC_WEAK) && (it->metadata & ARC_WEAK)) { it->metadata &= ~ARC_WEAK; }
 
 	return static_cast<size_t>(it - m_arcs.begin());
 }
 
-
-size_t
-Edge::AppendArc(const node_id_t id, const unsigned int meta) {
+size_t Edge::AppendArc(const node_id_t id, const unsigned int meta) {
 	size_t idx = m_arcs.size();
 	m_arcs.emplace_back(id, meta);
 	return idx;
 }
 
-
-const DagArc&
-Edge::GetArc(const node_id_t id) const {
+const DagArc& Edge::GetArc(const node_id_t id) const {
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 
-	if (it != m_arcs.end()) {
-		return *it;
-	}
+	if (it != m_arcs.end()) { return *it; }
 
 	EXCEPT("Invalid node id provided");
 }
 
-
-DagArc&
-Edge::GetArc(const node_id_t id) {
+DagArc& Edge::GetArc(const node_id_t id) {
 	return const_cast<DagArc&>(std::as_const(*this).GetArc(id));
 }
 
-
-bool
-Edge::Contains(const node_id_t id) const {
+bool Edge::Contains(const node_id_t id) const {
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 	return it != m_arcs.end();
 }
 
-
-bool
-Edge::MarkDone(node_id_t parent_id) {
+bool Edge::MarkDone(node_id_t parent_id) {
 	auto it = std::ranges::find(m_arcs, parent_id, &DagArc::id);
 	if (it == m_arcs.end()) { return false; }
-	if ( ! (it->metadata & ARC_DONE)) {
+	if (!(it->metadata & ARC_DONE)) {
 		it->metadata |= ARC_DONE;
 		if (m_waiting > 0) { --m_waiting; }
 		return m_waiting == 0;
@@ -98,16 +79,12 @@ Edge::MarkDone(node_id_t parent_id) {
 	return false; // already marked done, no new completion event
 }
 
-
-void
-Edge::Reset() {
+void Edge::Reset() {
 	for (auto& arc : m_arcs) { arc.metadata &= ~ARC_DONE; }
 	m_waiting = static_cast<uint32_t>(m_arcs.size());
 }
 
-
-edge_id_t
-EdgeTable::NewEdge(const Edge* duplicate) {
+edge_id_t EdgeTable::NewEdge(const Edge* duplicate) {
 	size_t idx = m_edges.size();
 
 	if (duplicate) { // Copy-On-Write (COW) is occurring
@@ -121,9 +98,7 @@ EdgeTable::NewEdge(const Edge* duplicate) {
 	return static_cast<edge_id_t>(idx);
 }
 
-
-const Edge&
-EdgeTable::GetEdge(const edge_id_t id) const {
+const Edge& EdgeTable::GetEdge(const edge_id_t id) const {
 	if (id < 0) {
 		return m_edges[0];
 	} else if (id > 0) {
@@ -133,77 +108,51 @@ EdgeTable::GetEdge(const edge_id_t id) const {
 	EXCEPT("Invalid edge id provided");
 }
 
-
-Edge&
-EdgeTable::GetEdge(const edge_id_t id) {
+Edge& EdgeTable::GetEdge(const edge_id_t id) {
 	return const_cast<Edge&>(std::as_const(*this).GetEdge(id));
 }
 
+bool EdgeTable::IsDirect(const edge_id_t id) { return id < 0; }
 
-bool
-EdgeTable::IsDirect(const edge_id_t id) {
-	return id < 0;
-}
-
-
-size_t
-EdgeTable::DirectIdToOffset(edge_id_t id) {
+size_t EdgeTable::DirectIdToOffset(edge_id_t id) {
 	ASSERT(EdgeTable::IsDirect(id));
 	return static_cast<size_t>((id + 1) * -1);
 }
 
+edge_id_t EdgeTable::DirectOffsetToId(size_t idx) { return (static_cast<edge_id_t>(idx) * -1) - 1; }
 
-edge_id_t
-EdgeTable::DirectOffsetToId(size_t idx) {
-	return (static_cast<edge_id_t>(idx) * -1) - 1;
-}
-
-
-edge_id_t
-EdgeTable::AddDirectArc(const node_id_t id, const unsigned int meta) {
+edge_id_t EdgeTable::AddDirectArc(const node_id_t id, const unsigned int meta) {
 	ASSERT(id != NO_ID);
 	size_t idx = m_edges[0].AppendArc(id, meta);
 	return EdgeTable::DirectOffsetToId(idx);
 }
 
-
-const DagArc&
-EdgeTable::GetDirectArc(const edge_id_t id) const {
+const DagArc& EdgeTable::GetDirectArc(const edge_id_t id) const {
 	ASSERT(EdgeTable::IsDirect(id));
 	size_t idx = EdgeTable::DirectIdToOffset(id);
 	return m_edges[0][idx];
 }
 
-
-DagArc&
-EdgeTable::GetDirectArc(const edge_id_t id) {
+DagArc& EdgeTable::GetDirectArc(const edge_id_t id) {
 	return const_cast<DagArc&>(std::as_const(*this).GetDirectArc(id));
 }
 
-
-edge_id_t
-EdgeTable::NewWaitEdge() {
+edge_id_t EdgeTable::NewWaitEdge() {
 	edge_id_t id = static_cast<edge_id_t>(m_wait_edges.size()) + 1;
 	m_wait_edges.emplace_back();
 	return id;
 }
 
-
-const Edge&
-EdgeTable::GetWaitEdge(const edge_id_t id) const {
+const Edge& EdgeTable::GetWaitEdge(const edge_id_t id) const {
 	ASSERT(id >= 1 && id <= static_cast<edge_id_t>(m_wait_edges.size()));
 	return m_wait_edges[id - 1];
 }
 
-
-Edge&
-EdgeTable::GetWaitEdge(const edge_id_t id) {
+Edge& EdgeTable::GetWaitEdge(const edge_id_t id) {
 	return const_cast<Edge&>(std::as_const(*this).GetWaitEdge(id));
 }
 
-
-std::vector<size_t>
-Edge::CompactPool() {
+std::vector<size_t> Edge::CompactPool() {
 	std::vector<size_t> mapping(m_arcs.size(), SIZE_MAX);
 	std::vector<DagArc> compacted;
 	for (size_t i = 0; i < m_arcs.size(); ++i) {
@@ -216,21 +165,13 @@ Edge::CompactPool() {
 	return mapping;
 }
 
+std::vector<size_t> EdgeTable::CompactDirectPool() { return m_edges[0].CompactPool(); }
 
-std::vector<size_t>
-EdgeTable::CompactDirectPool() {
-	return m_edges[0].CompactPool();
-}
-
-
-void
-EdgeTable::ResetWaitEdges() {
+void EdgeTable::ResetWaitEdges() {
 	for (auto& e : m_wait_edges) { e.Reset(); }
 }
 
-
-edge_id_t
-EdgeTable::PromoteDirect(const edge_id_t id) {
+edge_id_t EdgeTable::PromoteDirect(const edge_id_t id) {
 	DagArc& direct = GetDirectArc(id);
 	edge_id_t new_eid = NewEdge();
 	Edge& edge = GetEdge(new_eid);
@@ -240,13 +181,10 @@ EdgeTable::PromoteDirect(const edge_id_t id) {
 	return new_eid;
 }
 
-
-size_t
-EdgeTable::ArcCount() const {
+size_t EdgeTable::ArcCount() const {
 	// Get all non-direct edge arc counts (num arcs * number of parents)
-	auto view = m_edges
-	          | std::views::drop(1)
-	          | std::views::transform([](const auto& edge) { return edge.size() * edge.GetRefCount(); });
+	auto view =
+		m_edges | std::views::drop(1) | std::views::transform([](const auto& edge) { return edge.size() * edge.GetRefCount(); });
 
 	// Total up all counts including all direct arcs (i.e. Edge 0)
 	return std::accumulate(view.begin(), view.end(), size_t{0}) + m_edges[0].size();

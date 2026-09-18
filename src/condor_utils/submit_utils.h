@@ -169,7 +169,7 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
-#define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_CommonInputFiles "transfer_common_input"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
@@ -540,8 +540,10 @@ public:
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
+	bool setSynthesizeCommonInputFiles(bool value) { bool old = SynthesizeCommonInputFiles; SynthesizeCommonInputFiles = value; return old;}
 	bool setFileChecksAreWarnings(bool value) { bool old = FileChecksAreWarnings; FileChecksAreWarnings = value; return old; }
 	bool getFileChecksAreWarnings() { return FileChecksAreWarnings; }
+	bool getSynthesizeCommonInputFiles() { return SynthesizeCommonInputFiles; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
 	void clearExtendedCommands() { extendedCmds.Clear(); }
@@ -553,7 +555,12 @@ public:
 	int submit_param_int(const char* name, const char * alt_name, int def_value) const;
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
 	std::string submit_param_string( const char * name, const char * alt_name ) const;
-	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
+	char * expand_macro(const char* value) const {
+		return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx));
+	}
+	int selective_expand_macro(std::string & value, classad::References & skip_knobs, MACRO_EVAL_CONTEXT & ctx) const {
+		return ::selective_expand_macro(value, skip_knobs, const_cast<MACRO_SET&>(SubmitMacroSet), ctx);
+	}
 
 	const char * lookup(const char* name) const {
 		return lookup_macro( name,
@@ -594,6 +601,21 @@ public:
 	// returns 1 if late materialization is requested by the job, 0 if not
 	// if return is 1, max_materialize will be set to the requested value or to INT_MAX
 	bool want_factory_submit(long long & max_materialize);
+
+	// look for submit commands that indicate a desire for packing multiple tasks into the job
+	bool want_task_packing(int & packing);
+
+	// modify the dictionary to set common_input_files from the other submit commands
+	// at input, the synthesis needs to know what the queue statement attributes are
+	// so it can know that those can vary by proc.
+	bool synthesize_common_files(const std::vector<std::string> & vars, bool force);
+
+	// Given an input list of comma separated items, and an existing set of per-cluster items
+	// move items from the per_proc_list to the per_cluster_list if they do not vary by proc
+	bool extract_per_proc_items(const char * input_list,
+		const std::vector<std::string> & vars,
+		std::string & per_cluster_list,
+		std::string & per_proc_list);
 
 	// helper function to split queue arguments if any from the word 'queue'
 	// returns NULL if the line does not begin with the word queue
@@ -691,6 +713,11 @@ public:
 		int (*check_file)(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags),
 		void* pv_check_arg);
 
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int add_job_task(int taskid, int item_index, int step);
+	int finalize_job_tasks(int max_tasks);
+#endif
+
 	// delete the last job ClassAd returned by make_job_ad (if any)
 	void delete_job_ad();
 
@@ -729,6 +756,7 @@ public:
 	void dump_templates(FILE* out, const char * category, int flags); // print the templates to the given FILE*
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, const std::vector<std::string> & vars, int options);
+	classad::References per_proc_keys(const std::vector<std::string> & vars, int cluster_id);
 	void setup_macro_defaults(); // setup live defaults table
 	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
 
@@ -747,6 +775,7 @@ public:
 	}
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
+	void init_macro_eval_context(MACRO_EVAL_CONTEXT & ctx) const { ctx = mctx; }
 	int getUniverse() const  { return JobUniverse; }
 	int getClusterId() const { return jid.cluster; }
 	int getProcId() const    { return jid.proc; }
@@ -807,11 +836,12 @@ protected:
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables
 	// so that whatever is set here will be found by $(Key) macro expansion.
-	char* LiveNodeString;
-	char* LiveClusterString;
-	char* LiveProcessString;
-	char* LiveRowString;
-	char* LiveStepString;
+	char* LiveNodeString{nullptr};
+	char* LiveClusterString{nullptr};
+	char* LiveProcessString{nullptr};
+	char* LiveRowString{nullptr};
+	char* LiveStepString{nullptr};
+	char* LiveTaskIdString{nullptr};
 
 	// options set as we parse the submit file
 	// these variables are used to pass values between the various SetXXX functions below
@@ -830,7 +860,9 @@ protected:
 	bool already_warned_notification_never;
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
-	bool InsertDefaultPolicyExprs;
+	bool InsertDefaultPolicyExprs{false};
+	bool SynthesizeCommonInputFiles{false};
+	bool AllowCommonInputFiles{true};
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
@@ -958,15 +990,12 @@ private:
 	ContainerImageType image_type_from_string(std::string image) const;
 };
 
+//#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
+//#ifdef SUPPORT_FOR_TASK_PACKING
+
 struct SubmitStepFromQArgs {
 
-	SubmitStepFromQArgs(SubmitHash & h)
-		: m_hash(h)
-		, m_jidInit(0,0)
-		, m_nextProcId(0)
-		, m_step_size(0)
-		, m_done(false)
-	{} // this needs to be cheap because Submit.queue() will always invoke it, even if there is no foreach data
+	SubmitStepFromQArgs(SubmitHash & h)  : m_hash(h) {};
 
 	~SubmitStepFromQArgs() {
 		// disconnnect the hashtable from our livevars pointers
@@ -976,11 +1005,21 @@ struct SubmitStepFromQArgs {
 	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
+#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 	JOB_ID_KEY next_jobid() const { return JOB_ID_KEY(m_jidInit.cluster,m_nextProcId); }
+#endif
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int  packing() const { return m_packing; }
+	void set_packing(int packing) { m_packing = (packing > 0) ? packing : 1; }
+#endif
 	int  selected_item_count() const { return m_fea.item_len(); }
 	int  selected_job_count() const {
 		if (m_fea.queue_num < 0) return 0;
-		return m_fea.item_len() * m_step_size;
+		int job_count = m_fea.item_len() * m_step_size;
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		if (m_packing > 1) { job_count = (job_count + m_packing-1) / m_packing; }
+	#endif
+		return job_count;
 	}
 
 	// clear and re-initialize from new qargs
@@ -989,6 +1028,9 @@ struct SubmitStepFromQArgs {
 		int rval = 0;
 		m_fea.clear();
 		m_step_size = 1;
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		m_packing = 1;
+	#endif
 		m_done = false;
 		if (qargs) {
 			rval = m_hash.parse_q_args(qargs, m_fea, errmsg);
@@ -1001,7 +1043,11 @@ struct SubmitStepFromQArgs {
 	int begin(const JOB_ID_KEY & id, bool set_live)
 	{
 		m_jidInit = id;
+	#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 		m_nextProcId = id.proc;
+	#else
+		m_next = 0;
+	#endif
 		if (set_live) {
 			if (m_fea.vars.empty()) {
 				m_hash.set_live_submit_variable("Item", "", true);
@@ -1017,10 +1063,14 @@ struct SubmitStepFromQArgs {
 	}
 
 	// setup for iteration when there is only the 'count' provided via the python bindings
-	void begin(const JOB_ID_KEY & id, int count, bool set_live)
+	void begin_count(const JOB_ID_KEY & id, int count, bool set_live)
 	{
 		m_jidInit = id;
+	#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 		m_nextProcId = id.proc;
+	#else
+		m_next = 0;
+	#endif
 		m_fea.clear(); m_fea.queue_num = count;
 		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		if (set_live) m_hash.set_live_submit_variable("Item", "", true);
@@ -1041,16 +1091,36 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int next_impl(bool selected, JOB_ID_KEY & jid, int & item_index, int & step, int & taskid, bool set_live)
+#else
 	int next_impl(bool selected, JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
+#endif
 	{
 		if (m_done) return 0;
 
+	#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 		int iter_index = (m_nextProcId - m_jidInit.proc);
+	#else
+		int iter_index = m_next;
+	#endif
 
 		jid.cluster = m_jidInit.cluster;
+	#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 		jid.proc = m_nextProcId;
+	#else
+	  #ifdef SUPPORT_FOR_TASK_PACKING
+		jid.proc = m_jidInit.proc + (m_next / m_packing);
+	  #else
+		jid.proc = m_jidInit.proc + m_next;
+	  #endif
+	#endif
 		item_index = iter_index / m_step_size;
 		step = iter_index % m_step_size;
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		taskid = iter_index % m_packing;
+	#endif
+
 
 		if (selected && ! m_fea.items.empty()) {
 			// convert item_index from [0...n] to [slice start... end]
@@ -1076,18 +1146,34 @@ struct SubmitStepFromQArgs {
 			}
 		}
 
+	#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 		++m_nextProcId;
+	#else
+		++m_next;
+	#endif
 		return (0 == iter_index) ? 2 : 1;
 	}
 
 	// sets jid, item_index and step for the next job, ignoring the slice (if any)
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int next_raw(JOB_ID_KEY & jid, int & item_index, int & step, int & taskid, bool set_live) {
+		return next_impl(false, jid, item_index, step, taskid, set_live);
+	}
+#else
 	int next_raw(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
 		return next_impl(false, jid, item_index, step, set_live);
 	}
+#endif
 	// sets jid, item_index and step for the next job, taking the slice into account
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int next_selected(JOB_ID_KEY & jid, int & item_index, int & step, int & taskid, bool set_live) {
+		return next_impl(true, jid, item_index, step, taskid, set_live);
+	}
+#else
 	int next_selected(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
 		return next_impl(true, jid, item_index, step, set_live);
 	}
+#endif
 
 	std::vector<std::string> & vars() { return m_fea.vars; }
 
@@ -1197,12 +1283,19 @@ struct SubmitStepFromQArgs {
 
 
 	SubmitHash & m_hash;         // the (externally owned) submit hash we are updating as we iterate
-	JOB_ID_KEY m_jidInit;
+	JOB_ID_KEY m_jidInit{0,0};
 	SubmitForeachArgs m_fea;
 	NOCASE_STRING_MAP m_livevars; // holds live data for active vars
+#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
 	int  m_nextProcId;
-	int  m_step_size;
-	bool m_done;
+#else
+	int  m_next{0};
+#endif
+	int  m_step_size{0};
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int  m_packing{0}; // number of tasks per job
+#endif
+	bool m_done{false};
 };
 
 

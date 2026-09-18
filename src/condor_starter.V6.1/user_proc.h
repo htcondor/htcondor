@@ -110,6 +110,8 @@ public:
 	virtual bool Ckpt() { return false; }
 	virtual void CkptDone(bool /*success*/) {};
 
+	virtual bool ThisProcRunsAlongsideMainProc();
+
 		/** Returns the pid of this job.
 			@return The pid. */
 	int GetJobPid() const { return JobPid; }
@@ -125,12 +127,8 @@ public:
 		*/
 	bool RequestedExit( void ) const { return requested_exit; };
 
-		/** This is the login id used for execute login is dedicated pid tracking.
-		 *  If there is no dedicated login for job execution, this is NULL.
-		 *  (public so it can be seen by derived grandchildren classes; protected
-		 *   only allow derived child classes access, not grandchildren).
-		 */
-	char const *m_dedicated_account;
+	const ClassAd * jobAd() { return JobAd; }
+	int Universe() { return job_universe; }
 
 protected:
 
@@ -184,7 +182,6 @@ protected:
 
 	void SetStdFiles(const int std_fds[], char const *std_fnames[]);
 
-	virtual bool ThisProcRunsAlongsideMainProc();
 
 	virtual char const *getArgv0();
 
