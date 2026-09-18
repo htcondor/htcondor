@@ -13,7 +13,6 @@
 # proc's terminal event, and writing a status snapshot in that state used to
 # EXCEPT DAGMan rather than report anything at all.
 
-import re
 import time
 
 import pytest
@@ -228,40 +227,47 @@ NODE_STATUS_FILE {status_path} 1 ALWAYS-UPDATE
 
 def find_node_job_id(nodes_log, node_name, timeout: int = 120):
     """
-    Scrape a node's cluster.proc.subproc out of the DAG's default node log by
-    finding the submit event whose body names it. DAGMan monitors this log, not
-    the per-node $(JOB).log files, so this is the log a late event has to land
-    in to be seen.
+    Read a node's cluster.proc out of the DAG's default node log with the
+    job event log reader, by finding the submit event whose structured notes
+    name the node. DAGMan monitors this log, not the per-node $(JOB).log
+    files, so this is the log a late event has to land in to be seen.
 
     Returns the *last* such submit event: DAGMan can legitimately resubmit a
     node (DAGMAN_MAX_SUBMIT_ATTEMPTS), and only the newest job id is the one it
     still associates with the node, so an older one would be ignored on lookup.
     """
-    submit_re = re.compile(r"^000 \((\d+)\.(\d+)\.(\d+)\)")
     deadline = time.time() + timeout
-    while True:
-        job_id = None
-        found = None
-        try:
-            with open(nodes_log) as f:
-                for line in f:
-                    match = submit_re.match(line)
-                    if match:
-                        job_id = match.groups()
-                    elif job_id and f'DAGNodeName = "{node_name}"' in line:
-                        found = job_id
-                        job_id = None
-        except FileNotFoundError:
-            pass
-        if found:
-            return found
-        if time.time() >= deadline:
-            raise TimeoutError(
-                "No submit event for node {} in {} within {}s".format(
-                    node_name, nodes_log, timeout
+    jel = None
+    found = None
+    try:
+        while True:
+            # JobEventLog wants a log that exists; DAGMan creates it when it
+            # submits the first node, which can be a moment after we ask.
+            if jel is None and nodes_log.exists():
+                jel = htcondor.JobEventLog(str(nodes_log))
+            if jel is not None:
+                # Poll rather than block, so a log that never gets a submit
+                # event for this node still hits the timeout below. The
+                # reader picks up where it left off, so the last match seen
+                # across all polls is the newest one in the log.
+                for event in jel.events(stop_after=0):
+                    if event.type is not htcondor.JobEventType.SUBMIT:
+                        continue
+                    notes = event.get("StructuredNotes")
+                    if notes is not None and notes.get("DAGNodeName") == node_name:
+                        found = (event.cluster, event.proc)
+            if found is not None:
+                return found
+            if time.time() >= deadline:
+                raise TimeoutError(
+                    "No submit event for node {} in {} within {}s".format(
+                        node_name, nodes_log, timeout
+                    )
                 )
-            )
-        time.sleep(0.5)
+            time.sleep(0.5)
+    finally:
+        if jel is not None:
+            jel.close()
 
 
 def wait_for_event_processed(dagman_out, event_name, node_name, timeout: int = 300):
@@ -302,11 +308,12 @@ def append_evicted_event(nodes_log, job_id):
     This writes the node log directly, without taking the user log lock, so
     callers must only do it while the log is quiescent -- see the call site.
     """
-    cluster, proc, subproc = job_id
+    cluster, proc = job_id
+    # The subproc is always 0 for the jobs this test runs.
     with open(nodes_log, "a") as f:
         f.write(
-            "004 ({}.{}.{}) {} Job was evicted.\n".format(
-                cluster, proc, subproc, time.strftime("%Y-%m-%d %H:%M:%S")
+            "004 ({:03d}.{:03d}.000) {} Job was evicted.\n".format(
+                cluster, proc, time.strftime("%Y-%m-%d %H:%M:%S")
             )
         )
         f.write("\t(0) Job terminated and was requeued\n")
