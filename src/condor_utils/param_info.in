@@ -6851,7 +6851,7 @@ default : @end
   # universe jobs can't go over their disk allocations, so
   # we ignore them.
   #
-  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  DISK_EXCEEDED = (JobUniverse != 13 && IsDataSlot =!= True && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
   HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
   use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
 @end
