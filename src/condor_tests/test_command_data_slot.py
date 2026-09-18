@@ -59,7 +59,7 @@ def the_running_job( test_dir, the_condor, the_common_file ):
         "should_transfer_input":    "YES",
         "request_CPUs":             1,
         "request_memory":           1,
-        "request_disk":             "1025K",
+        "request_disk":             "3M",
         "log":                      test_dir / "the_running_job.log",
         "output":                   test_dir / "the_running_job.out",
         "MY.CommonInputFiles":      f'"{str(the_common_file)}"',
