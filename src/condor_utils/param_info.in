@@ -4927,7 +4927,7 @@ default : @fin
 @fin
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1024})
+default=quantize(RequestDisk, {Target.DiskQuantum ?: 1024})
 version=24.12.18
 type=string
 description=Default modification to a disk resource request
@@ -6851,7 +6851,7 @@ default : @end
   # universe jobs can't go over their disk allocations, so
   # we ignore them.
   #
-  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  DISK_EXCEEDED = (JobUniverse != 13 && IsDataSlot =!= True && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
   HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
   use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
 @end
