@@ -2556,6 +2556,16 @@ ADVANCED COMMANDS
 
     This feature is not presently available for Windows.
 
+ :subcom-def:`min_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is greater than or equal to the version string
+    (e.g., ``26.1.1``).
+
+ :subcom-def:`max_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is strictly less than the version string
+    (e.g., ``26.1.1``).
+
  :subcom-def:`max_job_retirement_time` = <integer expression>
     An integer-valued expression (in seconds) that does nothing unless
     the machine that runs the job has been configured to provide
