@@ -29,6 +29,7 @@ def the_condor( test_dir ):
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "STARTD_DEBUG":     "D_CATEGORY D_SUB_SECOND",
         },
         raw_config='''
             DISK_EXCEEDED = (DiskUsage =!= UNDEFINED && DiskUsage > Disk)
@@ -68,79 +69,8 @@ def the_running_jobs( the_condor, the_common_files ):
         "request_cpus":             1,
         "request_memory":           1,
 
-        # This is just wrong; we need at least enough space for the CFs.
-        # Symptom: `data1_2: State change: PREEMPT is TRUE.` after cxfer.
-        # "request_disk":             256,
-
-        # Let's try twice as much as we need, plus 1M[iB] more.
-        # Symptom: `data1_2: State change: PREEMPT is TRUE.` after the split.
-        # "request_disk":             "17M",
-
-        # This works.  It quantizes to 10240, but the difference between it
-        # and the catalog size (8203) quantizes to 1024, leaving 9216 for the
-        # 8203 common files.
-        # "request_disk":             "9217K",
-
-        # This quantizes to 10240 as well, but its difference with C will
-        # quantize to 2048, not leaving enough space.
-        # Symptom: `data1_2: State change: PREEMPT is TRUE.` after the split.
-        # "request_disk":             "10101K",
-
-        # This quantizes to 9216, but its difference with C quantizes to
-        # 1024, leaving not enough space.
-        # Symptom: `data1_2: State change: PREEMPT is TRUE.` after the split.
-        # "request_disk":             "8204K",
-
-        ##
-        ## The above all applied to 01c396918c1bc6a2ef853e529660580820eb2e60.
-        ##
-        ## After changing MODIFY_REQUEST_EXPR_REQUESTDISK, we see the following.
-        ##
-
-        # Fails, but with `slot1_5: Slot Requirements not satisfied`, because
-        # RequestDisk is negative, which is accurate as far as it goes.
-        # "request_disk":             256,
-
-        # Fails, but with `slot1_5: Machine Requirements check (state 0:NORMAL) failed!`.
-        # citing WithinResourceLimits, which is unaware of quantization.  It
-        # computes `R-C` and gets 9001, which is more than the 8MB left over
-        # after quantizing.
-        # "request_disk":             "17M",
-
-        ##
-        ## Retry again, with updated WithinResourceLimits.
-        ##
-
-        # Works.
-        # "request_disk":             "17M",
-
-        # (still) Works.
-        # "request_disk":             "9217K",
-
-        # Fails on some platforms due to what appears to be two bugs in
-        # other parts of HTCondor:
-        #
-        # (1) The 'shell' command in the JDL should _not_ transfer a shell
-        #     -- and as far as I know does not -- and should therefore _not_
-        #     set ExecutableSize or ImageSize.
-        #
-        # (2) The startd should _not_ assume that the starter is lying to
-        #     when the starter gives a DiskUsage number lower than what the
-        #     job has already set.  It's fine to make DiskUsage a peak
-        #     number, but not at the cost of having a correct indicator of
-        #     actual resource consumption.
-        #
-        # "request_disk":             "10101K",
-
-        # 8203 (usage) + 1024 (one quantum) + 2048 (two quanta for shell)
-        "request_disk":             "11275",
-
-        # Fails, but it should, because we're a disk quantum short.
-        # "request_disk":             "8204K",
-
-        ##
-        ## We could try this without both fixes, but let's not.
-        ##
+        # Method: quantize(catalog-size) + quantize(size-of-shell).
+        "request_disk":             "11264",
 
         "log":                      "the_running_jobs.log.$(ClusterID)",
         "transfer_common_input":    f"{the_common_files.as_posix()}",

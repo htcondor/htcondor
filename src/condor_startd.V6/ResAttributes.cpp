@@ -1921,7 +1921,17 @@ const char * MachAttributes::withinLimitsExpression()
 				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
 				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
 				"MY.Disk > 0"
-				;
+			;
+
+			//
+			// It seems illogical that we need to modify WithinResourceLimits
+			// if we're properly modifying RequestDisk, but the startd does
+			// not modify RequestDisk before evaluating WithinResourceLimits
+			// when activating a claim (as opposed to splitting a slot), and
+			// the negotiator can't modify RequestDisk before looking for a
+			// match.  We must modify RequestDisk because it's used when
+			// splitting the data slot.
+			//
 			static const char *climit_part_two =
 				"TARGET.RequestDisk <= MY.Disk"
 				;
