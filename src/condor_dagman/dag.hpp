@@ -75,6 +75,15 @@ public:
 
 	N data{};
 
+	// Overload operator-> to return point to data class to allow node->DataClassFunc()
+	N* operator->() {
+		return &data;
+	}
+
+	const N* operator->() const {
+		return &data;
+	}
+
 	node_id_t GetID() const { return m_id; }
 
 	// Defers to N::CanAddChild()/CanAddParent() if N defines them, else always true.
@@ -184,6 +193,15 @@ public:
 		const Node<N>* node = FindNode(id);
 		if ( ! node) { throw std::out_of_range("Invalid node id provided"); }
 		return *node;
+	}
+
+	// Overload operator-> to return point to data class to allow dag->DataClassFunc()
+	D* operator->() {
+		return &data;
+	}
+
+	const D* operator->() const {
+		return &data;
 	}
 
 	// Iterates every node regardless of reachability -- unlike Walk(), which

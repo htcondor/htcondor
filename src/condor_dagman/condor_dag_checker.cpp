@@ -624,7 +624,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					{
 						const NodeCommand* node = DAG::DERIVE_CMD<NodeCommand>(cmd);
 
-						std::string err = dag.data.addNode(node->GetName(), cmd_val);
+						std::string err = dag->addNode(node->GetName(), cmd_val);
 						if ( ! err.empty()) {
 							addCommandError(node, err, errors);
 						}
@@ -642,7 +642,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 								type = JDL::INLINE;
 							}
 
-							checkJDL(cmd.get(), src, type, dag.data.GetCIF(), errors, &node_jdl_dne);
+							checkJDL(cmd.get(), src, type, dag->GetCIF(), errors, &node_jdl_dne);
 						}
 					}
 					break;
@@ -651,7 +651,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 						const SpliceCommand* splice = DAG::DERIVE_CMD<SpliceCommand>(cmd);
 
 						std::string err;
-						MockDag* splice_dag = dag.data.addSplice(splice->GetName(), err);
+						MockDag* splice_dag = dag->addSplice(splice->GetName(), err);
 						if ( ! err.empty()) {
 							addCommandError(splice, err, errors);
 							continue;
@@ -715,7 +715,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 	const auto& new_errors = parser.GetParseErrorList();
 	errors.insert(errors.end(), new_errors.begin(), new_errors.end());
 
-	dag.data.inheritSpliceNodes();
+	dag->inheritSpliceNodes();
 
 	std::ranges::sort(commands, [](DagCmd& l, DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
 
@@ -741,9 +741,9 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					if (node_name.c_str() == all_nodes_keyword) {
 						// Allow ALL_NODES (case insensitive)
 						if (cmd_val == DAG::CMD::DONE) { error = "ALL_NODES can not be used with DONE command"; }
-					} else if (dag.data.hasSplice(node_name)) {
+					} else if (dag->hasSplice(node_name)) {
 						error = "Cannot be applied to splice " + node_name;
-					} else if ( ! dag.data.hasNode(node_name)) {
+					} else if ( ! dag->hasNode(node_name)) {
 						error = "References undefined node " + node_name;
 					}
 
@@ -760,7 +760,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				}
 				break;
 			case DAG::CMD::PARENT_CHILD:
-				dag.data.makeDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), errors);
+				dag->makeDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), errors);
 				break;
 			case DAG::CMD::CATEGORY:
 				{
@@ -768,7 +768,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					std::string missing;
 
 					for (const auto& node : cat->GetNodes()) {
-						if ( ! dag.data.hasNode(node.data()) && node.data() != all_nodes_keyword) {
+						if ( ! dag->hasNode(node.data()) && node.data() != all_nodes_keyword) {
 							if ( ! missing.empty()) { missing += ","; }
 							missing += node.data();
 						}
@@ -808,7 +808,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				if (check_external & CHECK_JDL) {
 					const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
 					std::ignore = node_jdl_dne.erase(desc->GetName());
-					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, dag.data.GetCIF(), errors);
+					checkJDL(desc, desc->GetInlineDesc(), JDL::INLINE, dag->GetCIF(), errors);
 				}
 			default:
 				break;
@@ -830,7 +830,7 @@ bool json_printer(const std::string& file, MockDag& dag, std::vector<DagParseErr
 
 	result.InsertAttr("DagFile", file);
 
-	dag.data.getStats(result);
+	dag->getStats(result);
 
 	bool cyclic = false;
 	result.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);
@@ -878,7 +878,7 @@ bool json_printer(const std::string& file, MockDag& dag, std::vector<DagParseErr
 
 bool stats_printer(const std::string& file, MockDag& dag, std::vector<DagParseError>& /*errors*/) {
 	ClassAd stats;
-	dag.data.getStats(stats);
+	dag->getStats(stats);
 
 	bool cyclic = false;
 	stats.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);
@@ -893,7 +893,7 @@ bool stats_printer(const std::string& file, MockDag& dag, std::vector<DagParseEr
 
 bool default_printer(const std::string& file, MockDag& dag, std::vector<DagParseError>& errors) {
 	ClassAd stats;
-	dag.data.getStats(stats);
+	dag->getStats(stats);
 
 	bool cyclic = false;
 	stats.LookupBool(DAG_STAT_HAS_CYCLE, cyclic);

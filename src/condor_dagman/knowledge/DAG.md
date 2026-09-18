@@ -33,6 +33,16 @@ auto [ok, failed_id, why] = dag.Connect({a}, {b, c}); // A -> B, A -> C
 dag.Connect({b, c}, {a}, ARC_WEAK); // B,C -> A, weakly (ARC_WEAK is from edge.h)
 ```
 
+Both `Node<N>` and `Dag<D, N>` also define `operator->()` (mutable and
+const), returning `&data`. So a caller holding a `Node<N>&`/`Dag<D, N>&`
+can write `node->Foo()`/`dag->Foo()` as shorthand for
+`node.data.Foo()`/`dag.data.Foo()`:
+
+```cpp
+dag->size();  // same as dag.data.size(), for D = std::string above
+dag[a]->name; // same as dag[a].data.name
+```
+
 **`AddNode(...)` returns a `node_id_t`, not a `Node<N>&`.** A reference
 would be invalidated by a later `AddNode()` call that reallocates the
 backing storage. Hold ids across any `AddNode()` call you don't control the

@@ -170,6 +170,47 @@ static bool test_find_node_and_operator_brackets() {
 }
 
 //------------------------------------------------------------------------------------
+// operator->() on both Node<N> and Dag<D, N> forwards straight to the wrapped data
+// (&data), so a caller holding a Node<N>&/Dag<D, N>& can write node->Foo()/dag->Foo()
+// instead of node.data.Foo()/dag.data.Foo(). Exercises both the mutable and const
+// overloads.
+static bool test_operator_arrow_forwards_to_data() {
+	TestDag dag;
+	dag.data = "my dag";
+	node_id_t a = dag.AddNode(TestData{"A"});
+
+	const TestDag& const_dag = dag;
+	const Node<TestData>& const_node = dag[a];
+
+	emit_test("Test operator->() on Node<N> and Dag<D, N> forwards to the wrapped data, mutable and const");
+	emit_input_header();
+	emit_param("Graph", "dag.data='my dag', node A.data.name='A'");
+
+	emit_output_expected_header();
+	emit_retval("dag->size()=6 node->name='A' const_dag->size()=6 const_node->name='A' "
+	            "&dag->data==dag.operator->()=TRUE &node->data==node.operator->()=TRUE");
+
+	std::string actual = "dag->size()=" + std::to_string(dag->size()) +
+	                      " node->name='" + dag[a]->name + "'" +
+	                      " const_dag->size()=" + std::to_string(const_dag->size()) +
+	                      " const_node->name='" + const_node->name + "'" +
+	                      " &dag->data==dag.operator->()=" + tfstr(dag.operator->() == &dag.data) +
+	                      " &node->data==node.operator->()=" + tfstr(dag[a].operator->() == &dag[a].data);
+
+	emit_output_actual_header();
+	emit_retval(actual.c_str());
+
+	if (dag->size() != 6) { FAIL; }
+	if (dag[a]->name != "A") { FAIL; }
+	if (const_dag->size() != 6) { FAIL; }
+	if (const_node->name != "A") { FAIL; }
+	if (dag.operator->() != &dag.data) { FAIL; }
+	if (dag[a].operator->() != &dag[a].data) { FAIL; }
+
+	PASS;
+}
+
+//------------------------------------------------------------------------------------
 static bool test_contains() {
 	TestDag dag;
 	node_id_t a = dag.AddNode(TestData{"A"});
@@ -1785,6 +1826,7 @@ bool OTEST_Dag() {
 	driver.register_function(test_add_node_and_data_access);
 	driver.register_function(test_reserve_prevents_pointer_invalidation);
 	driver.register_function(test_find_node_and_operator_brackets);
+	driver.register_function(test_operator_arrow_forwards_to_data);
 	driver.register_function(test_contains);
 	driver.register_function(test_size_matches_num_nodes);
 	driver.register_function(test_const_overloads);

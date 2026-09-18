@@ -4213,7 +4213,7 @@ bool Dag::Connect(std::vector<Node*>& parents, const std::vector<Node*>& childre
 			// as a parent -- update_parent() must only fire for a genuinely new link,
 			// else re-declaring it here would wrongly convert its single-parent state
 			// into a bogus wait edge (or double-register it on an existing one).
-			bool already_present = ! fresh_edge && edge.Contains(c->GetNodeID());
+			bool already_present = (! fresh_edge) && edge.Contains(c->GetNodeID());
 
 			if (fresh_edge) {
 				std::ignore = edge.AppendArc(c->GetNodeID(), meta);
