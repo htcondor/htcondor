@@ -1093,7 +1093,12 @@ void Dag::ProcessIsIdleEvent(Node* node, int proc) {
 	// Note:  we need to make sure here that the job proc isn't already
 	// idle so we don't count it twice if, for example, we get a hold
 	// event for a job that's already idle.
-	if (!node->GetProcIsIdle(proc) && (node->GetStatus() == Node::STATUS_SUBMITTED)) {
+	// Note:  the node state has to be tested *before* GetProcIsIdle(), which
+	// starts tracking the proc as a side effect.  A late or duplicate event
+	// for a node that already finished (e.g. an eviction written after the
+	// terminate event by a starter orphaned across an AP crash) must not
+	// resurrect per-proc info that Cleanup() has already discarded.
+	if ((node->GetStatus() == Node::STATUS_SUBMITTED) && !node->GetProcIsIdle(proc)) {
 		node->SetProcIsIdle(proc, true);
 		_numIdleJobProcs++;
 	}
@@ -1115,7 +1120,13 @@ void Dag::ProcessIsIdleEvent(Node* node, int proc) {
 void Dag::ProcessNotIdleEvent(Node* node, int proc) {
 	if (!node) { return; }
 
-	if (node->GetProcIsIdle(proc) && (node->GetStatus() == Node::STATUS_SUBMITTED || node->GetStatus() == Node::STATUS_ERROR)) {
+	// See ProcessIsIdleEvent():  IsJobTrackingDone()/GetStatus() have to be
+	// tested before GetProcIsIdle(), which starts tracking the proc as a side
+	// effect.  A node can be STATUS_ERROR either with procs still queued (node
+	// job failure tolerance) or after Cleanup(), hence both tests.
+	if (!node->IsJobTrackingDone() &&
+	    (node->GetStatus() == Node::STATUS_SUBMITTED || node->GetStatus() == Node::STATUS_ERROR) &&
+	    node->GetProcIsIdle(proc)) {
 		node->SetProcIsIdle(proc, false);
 		_numIdleJobProcs--;
 	}
@@ -1134,7 +1145,9 @@ void Dag::ProcessNotIdleEvent(Node* node, int proc) {
 		_numIdleJobProcs = 0;
 	}
 
-	node->SetProcEvent(proc, EXEC_MASK);
+	// Only record the event while this node is still tracking its procs;
+	// after Cleanup() this would resurrect a proc the node has finished with.
+	if (!node->IsJobTrackingDone()) { node->SetProcEvent(proc, EXEC_MASK); }
 
 	debug_printf(DEBUG_VERBOSE, "Number of idle job procs: %d\n", _numIdleJobProcs);
 }
@@ -2594,32 +2607,41 @@ void Dag::DumpNodeStatus(bool held, bool removed) {
 
 		ad.InsertAttr(ATTR_MY_TYPE, "NodeStatus");
 
-		if (status == Node::STATUS_SUBMITTED || status == Node::STATUS_POSTRUN) {
-			// If status is submitted (i.e. running jobs count internal state tracking)
-			for (const auto [procEvent, ec] : node->GetJobInfo()) {
-				if ((procEvent & HOLD_MASK) != 0) {
-					held++;
-				} else if ((procEvent & IDLE_MASK) != 0) {
-					idle++;
-				} else if ((procEvent & ABORT_TERM_MASK) != 0) {
-					term++;
-					if (ec == 0) { success++; }
-				} else {
-					run++;
-				}
+		// Count from the per-proc state the node is tracking.  Key this off the
+		// tracking data rather than off the node status:  a node can be marked
+		// STATUS_ERROR while sibling procs are still queued (node job failure
+		// tolerance), and per-proc info is gone once Cleanup() has run.
+		for (const auto [procEvent, ec] : node->GetJobInfo()) {
+			if ((procEvent & HOLD_MASK) != 0) {
+				held++;
+			} else if ((procEvent & IDLE_MASK) != 0) {
+				idle++;
+			} else if ((procEvent & ABORT_TERM_MASK) != 0) {
+				term++;
+				if (ec == 0) { success++; }
+			} else {
+				run++;
 			}
-		} else {
+		}
+
+		if (node->IsJobTrackingDone()) {
 			// No per-job info once Cleanup() has run; use the counts recorded as each job terminated
-			ASSERT(node->GetJobInfo().empty());
 			term = node->NumJobsTerminated();
 			success = node->NumJobsSucceeded();
 		}
 
-		// Assert that current counts are accurate but use hand counts
-		// later in case we change numbers due to marking things as error
-		ASSERT(held == node->GetJobsOnHold());
-		ASSERT(term - success == node->TotalJobsFailed());
-		ASSERT(run + held + idle == node->GetQueuedJobs());
+		// Sanity-check the hand counts against the node's own counters, but only
+		// warn:  the node status file is a reporting path, and killing the whole
+		// workflow over a questionable status snapshot is far worse than writing
+		// one.  (This matches how NumJobProcStates() reports the same skews.)
+		if (held != node->GetJobsOnHold() || term - success != node->TotalJobsFailed() ||
+		    run + held + idle != node->GetQueuedJobs()) {
+			debug_printf(DEBUG_NORMAL,
+			             "Warning: Node %s job proc counts for the node status file (held=%d, failed=%d, queued=%d) are not "
+			             "equivalent to the node's internal counts (held=%d, failed=%d, queued=%d).\n",
+			             node->GetNodeName(), held, term - success, run + held + idle, node->GetJobsOnHold(),
+			             node->TotalJobsFailed(), node->GetQueuedJobs());
+		}
 
 		if (status == Node::STATUS_READY) {
 			// Note:  Node::STATUS_READY only means that the job is
