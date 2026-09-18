@@ -286,6 +286,9 @@ public:
 	int NumJobsTerminated() const { return _finalJobsTerminated; }
 	// Of those, how many succeeded
 	int NumJobsSucceeded() const { return _finalJobsSucceeded; }
+	// Has Cleanup() already thrown away this node's per-proc info? Late or
+	// duplicate job proc events must not start tracking procs again after it has.
+	bool IsJobTrackingDone() const { return jobTrackingDone; }
 
 	// Check whether node has not tracked a job proc already
 	bool IsFirstProc() {
@@ -406,6 +409,7 @@ public:
 		is_factory = false;
 		error_text.clear();
 		jobs.clear();
+		jobTrackingDone = false;
 	}
 
 	void SetTolerance(const int tol, const DAG::ToleranceMode mode, const bool percentage = false) {
@@ -522,6 +526,7 @@ private:
 	bool isSuccessful{true}; // Is Node currently successful or not
 	bool readFirstProc{false}; // DAG has already read a job event (submit) for this node
 	bool missingJobs{false}; // Node counts found missing jobs during verifying state with AP
+	bool jobTrackingDone{false}; // Cleanup() has discarded the per-proc info in jobs
 
 	bool _parents_done{false}; // set to true when all of the parents of this node are done
 	bool m_multiple_parents{false};  // disambiguates m_parents interpretation
