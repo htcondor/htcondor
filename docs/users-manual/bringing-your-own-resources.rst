@@ -24,7 +24,7 @@ you'll give the set of resources you're leasing a name; we call a named
 set of leased resources an *annex*.
 
 HTCondor provides access to annexes through the :tool:`htcondor annex`
-tool, which supports both AWS' EC2 any Slurm HPC system.  The former
+tool, which supports both AWS' EC2 and any Slurm HPC system.  The former
 is described in some detail in the :doc:`../cloud-computing/index` section;
 we'll only discuss the latter here.
 
