@@ -110,17 +110,20 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 	// If we are to only start one script then manually try non-deferred script execution
 	// until the first success
 	if (justOne) {
-		auto it = _waitingQueue.begin();
-		auto end = defer_partition.begin();
-		while (it != end) {
-			Script* script = *it;
+		// Index based: erasing from the middle of a deque invalidates all
+		// iterators, so we can not hold onto the partition point across an erase.
+		size_t ready_count = (size_t)(defer_partition.begin() - _waitingQueue.begin());
+		size_t i = 0;
+		while (i < ready_count) {
+			Script* script = _waitingQueue[i];
 			ASSERT(script != nullptr);
 			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
 			if (res != ScriptExecResult::DEFERRED) {
-				it = _waitingQueue.erase(it);
+				_waitingQueue.erase(_waitingQueue.begin() + i);
+				ready_count--;
 				if (res == ScriptExecResult::EXECUTED) { return 1; }
 			} else {
-				it++;
+				i++;
 			}
 		}
 
