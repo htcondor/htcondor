@@ -551,10 +551,12 @@ class OCU; // forward reference - declared in qmgmt.h
 class Scheduler : public Service
 {
   public:
-	
+
 	Scheduler();
 	~Scheduler();
-	
+
+	void logCatalogToShadowMap( const char * leader = "logCatalogToShadowMap()" );
+
 	// initialization
 	void			Init();
 	void			Register();
@@ -614,7 +616,7 @@ class Scheduler : public Service
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);
 	static int		generalJobFilesWorkerThread(void *, Stream *);
-	int				spoolJobFilesReaper(int,int);	
+	int				spoolJobFilesReaper(int,int);
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( int timerID = -1 );
 	void			addCronTabClassAd( JobQueueJob* );
@@ -771,7 +773,7 @@ class Scheduler : public Service
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
-	void			HadException( match_rec* );
+	void			HadException( match_rec*, shadow_rec * = NULL );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
 		// adlist_replace() assumes ownership of newAd object
@@ -913,6 +915,11 @@ class Scheduler : public Service
 	// Don't inadvertently create empty vectors.
 	// Note that the returned vector is a copy, and does not own the pointers.
 	std::optional<std::vector<match_rec *>> getMatchesBySinful( const std::string & sinful );
+
+	// A blocked job must either (a) be a prompting job with a matching transfer
+	// shadow or (b) had a match record in matchesHeldByBlockedJobs _and_ have
+	// a transfer shadow for each catalog.
+	void checkBlockedJob( JobQueueJob * job, const JOB_ID_KEY & jid );
 
 	// Remove empty vectors from the map.
 	bool removeMatchFromSinful( const std::string & sinful, match_rec * match );
