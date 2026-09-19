@@ -27,6 +27,12 @@
   zswap support.
   :jira:`3898`
 
+- To assist in debugging, added :subcom:`min_condor_version` and
+  :subcom:`max_condor_version`, which prevent the require the HTCondor
+  version of the EP to greater than or equal to, or strictly less than,
+  respectively, the specified version, e.g. "26.0.1".
+  :jira:`3065`
+
 *** 26.1.0 bugs
 
 *** 26.0.1 bugs
