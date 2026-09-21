@@ -248,7 +248,6 @@ Requires: rsync
 %if %uw_build
 # Require tested Pelican packages
 Requires: (pelican >= 7.26.0 or pelican-debug >= 7.26.0)
-Requires: pelican-osdf-compat >= 7.26.0
 %endif
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
@@ -899,6 +898,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/common-cloud-attributes-aws.sh
 %_libexecdir/condor/onedrive_plugin.py
 %_libexecdir/condor/curl_plugin
+%_libexecdir/condor/pelican_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub

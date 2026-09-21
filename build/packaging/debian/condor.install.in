@@ -128,6 +128,7 @@ usr/libexec/condor/interactive.sub
 usr/libexec/condor/linux_kernel_tuning
 usr/libexec/condor/onedrive_plugin.py
 usr/libexec/condor/orted_launcher.sh
+usr/libexec/condor/pelican_plugin
 usr/libexec/condor/set_batchtok_cmd
 usr/libexec/condor/singularity_test_sandbox
 usr/libexec/condor/sshd.sh
