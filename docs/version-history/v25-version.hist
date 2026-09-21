@@ -5,6 +5,12 @@
   ``queue`` statement given in the layer's submit description is now
   preserved instead of being overridden.
   :jira:`3613`
+
+- Fixed calculation of :ad-attr:`CpusUsage` in the job ClassAd so that the
+  final value is calculated using the total execution time rather than just
+  the final sampling interval.
+  :jira:`3331`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
