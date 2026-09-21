@@ -344,6 +344,9 @@ class Matchmaker : public Service
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
 		bool MatchPasswordEnabled{false};
+		// value of knob NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP: advertise that we
+		// will honor a schedd-declared ATTR_SCHEDD_OFFER_LIMIT session match cap
+		bool m_advertise_schedd_offer_cap{true};
         char * strSlotConstraint; // query collector for machineAds with this constraint
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas

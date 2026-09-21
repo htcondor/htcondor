@@ -3050,6 +3050,11 @@ default=true
 type=bool
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_ADVERTISE_SCHEDD_OFFER_CAP]
+default=true
+type=bool
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_CONSIDER_PREEMPTION]
 default=true
 type=bool
@@ -5407,6 +5412,19 @@ default=true
 rant=
 type=bool
 description=Should Schedd obey SLOT_WEIGHT
+tags=schedd
+usage=
+
+[SCHEDD_REFUND_UNUSED_RESOURCE_REQUESTS]
+default=true
+type=bool
+description=Reserve per-batch offer budget for other pending resource requests, and refund a rejected resource request's unused speculative match count back into the session's job-offer budget, so lower priority auto clusters are not starved. Ignored when talking to a negotiator that honors SCHEDD_USE_TRUE_DEMAND_REPORTING instead.
+tags=schedd
+
+[SCHEDD_USE_TRUE_DEMAND_REPORTING]
+default=true
+type=bool
+description=When talking to a negotiator that advertises it will enforce ATTR_SCHEDD_OFFER_LIMIT as an aggregate session match cap, report true, uncapped per-auto-cluster demand instead of speculatively clamping ATTR_RESOURCE_REQUEST_COUNT and refunding unused offers. Has no effect against a negotiator that does not advertise this capability.
 tags=schedd
 usage=
 
