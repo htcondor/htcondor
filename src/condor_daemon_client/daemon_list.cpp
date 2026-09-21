@@ -205,6 +205,8 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 	bool problems_resolving = false;
 	bool random_order = ! param_boolean("HAD_USE_PRIMARY", false);
+	// Enable quick collector probe sockets (non-timeout multiplied) if timeout <= 0 then no probe
+	int probe_timeout = param_integer("HA_COLLECTOR_PROBE_TIMEOUT", 10);
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
@@ -227,11 +229,10 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 		} else {
 			Sock* probe_sock = nullptr;
 
-			if (num_collectors > 1) {
+			if (num_collectors > 1 && probe_timeout > 0) {
 				// quick reachability check with a short, unmultiplied
 				// timeout, so one dead HA collector can't stall the
 				// whole query for a full (possibly multiplied) QUERY_TIMEOUT.
-				int probe_timeout = param_integer("HA_COLLECTOR_PROBE_TIMEOUT", 10);
 				CondorError probe_errstack;
 				// start the blacklist timer before the probe, not after, so a
 				// slow-to-fail probe is scored by its actual duration rather
@@ -241,25 +242,34 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 				if (!probe_sock) {
 					dprintf(D_ALWAYS,
-							"Collector %s did not respond within %ds probe; trying next collector\n",
-							daemon->addr(), probe_timeout );
+							"Collector %s did not respond within %ds probe; trying next collector: %s\n",
+							daemon->addr(), probe_timeout, probe_errstack.getFullText().c_str());
 					daemon->blacklistMonitorQueryFinished(false);
+
+					if (vCollectors.size() - 1 == 0 && errstack && !errstack->code(0)) {
+						// Keep last probe error if no current errors
+						*errstack = probe_errstack;
+					}
 				} else {
 					// the real exchange should still honor TIMEOUT_MULTIPLIER;
 					// only the reachability probe itself bypasses it.
 					probe_sock->restoreTimeoutMultiplier();
+					probe_sock->timeout(0); // make certain in blocking mode; the real query applies its own timeout
 				}
 			}
 
-			if (num_collectors == 1 || probe_sock) {
+			// If one collector, successful probe socket, or disabled probe sockets do query
+			if (num_collectors == 1 || probe_sock || probe_timeout <= 0) {
 				dprintf(D_FULLDEBUG, "Trying to query collector %s\n", daemon->addr());
 
 				if (num_collectors > 1) {
 					daemon->blacklistMonitorQueryStarted();
 				}
 
-				// probe_sock is NULL in the single-collector case, which
-				// makes processAds connect the normal way, unchanged.
+				// probe_sock is NULL in the single-collector case and
+				// whenever the probe is administratively disabled via
+				// HA_COLLECTOR_PROBE_TIMEOUT <= 0, which makes processAds
+				// connect the normal way, unchanged.
 				result = cQuery.processAds(callback, pv, *daemon, errstack, probe_sock);
 
 				if (num_collectors > 1) {

@@ -83,6 +83,10 @@ def ha_status_result(default_condor):
         # deterministically every run.
         "_CONDOR_HAD_USE_PRIMARY": "true",
         "_CONDOR_HA_COLLECTOR_PROBE_TIMEOUT": str(PROBE_TIMEOUT),
+        # condor_status runs as subsystem TOOL; a nonzero multiplier here
+        # makes sure the probe timeout stays unscaled (MAX_ELAPSED would be
+        # blown past if the probe were multiplied like QUERY_TIMEOUT is).
+        "_CONDOR_TOOL_TIMEOUT_MULTIPLIER": "10",
     }
 
     with SetEnv(ENV):
