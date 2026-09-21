@@ -247,86 +247,6 @@ StagingDirectoryFactory::type() const {
 const std::error_code ec_true =  std::error_code(0, std::system_category());
 const std::error_code ec_false = std::error_code(1, std::system_category());
 
-
-//
-// The platform-specific code begins here.
-//
-#if defined(WINDOWS)
-
-// The Windows-specific code ERROR_CALL_NOT_IMPLEMENTED would be appropriate
-// here; we could also use ENOSYS ("function not implemented"), but since we
-// should never be calling these functions anyway, let's not bother.
-
-std::error_code
-createStagingDirectory(
-	const std::filesystem::path & /* parentDir */,
-	const std::filesystem::path & /* stagingDir */
-) {
-	return ec_false;
-}
-
-
-std::error_code
-convertToStagingDirectory(
-	const std::filesystem::path & /* location */
-) {
-	return ec_false;
-}
-
-
-std::error_code
-StagingDirectory::map_impl(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-HardlinkStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-HardlinkStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-std::error_code
-CopyStagingDirectory::entry_is_file(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-};
-
-
-std::error_code
-CopyStagingDirectory::entry_is_directory(
-	const std::filesystem::path & sandbox,
-	const std::filesystem::path & relative_path,
-	const std::string & log_prefix
-) {
-	return ec_false;
-}
-
-
-#else /* WINDOWS */
-
-
 std::error_code
 createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
 	using std::filesystem::perms;
@@ -364,6 +284,10 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 		return errorCode;
 	}
 
+#ifdef WINDOWS
+	// no need to chown on windows
+	// the above std::filesystem::permissions calls also above seem to do nothing
+#else
 	int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
@@ -375,6 +299,7 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 		dprintf( D_ALWAYS, "Unable to change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
 		return std::error_code(errno, std::system_category());
 	}
+#endif
 
 	return ec_true;
 }
@@ -439,6 +364,15 @@ convertToStagingDirectory(
 			}
 			continue;
 		}
+	#ifdef WINDOWS
+		// FILE_ATTRIBUTE_NOT_CONTENT_INDEXED tell windows indexing code to skip the file
+		DWORD attrs = FILE_ATTRIBUTE_NOT_CONTENT_INDEXED | FILE_ATTRIBUTE_READONLY;
+		if ( ! SetFileAttributes(entry.path().string().c_str(), attrs)) {
+			DWORD err = GetLastError();
+			dprintf( D_ALWAYS, "Failed to SetFileAttributes(%s): %s (%d)\n", entry.path().string().c_str(), GetLastErrorString(err), err );
+			return {(int)err, std::system_category()};
+		}
+	#else
 		std::filesystem::permissions(
 			entry.path(),
 			perms::owner_read | perms::group_read | perms::others_read,
@@ -448,9 +382,13 @@ convertToStagingDirectory(
 			dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
 			return ec;
 		}
+	#endif
 	}
 
 
+#ifdef WINDOWS
+	// no need to chown on windows
+#else
 	{
 		TemporaryPrivSentry tpt(PRIV_ROOT);
 
@@ -461,7 +399,7 @@ convertToStagingDirectory(
 			return std::error_code(errno, std::system_category());
 		}
 	}
-
+#endif
 
 	dprintf( D_ZKM, "convertToStagingDirectory(): end.\n" );
 	return ec_true;
@@ -479,8 +417,14 @@ check_permissions(
 		dprintf( D_ALWAYS, "check_permissions(): status(%s) failed: %s (%d)\n", l.string().c_str(), ec.message().c_str(), ec.value() );
 		return false;
 	}
+#ifdef WINDOWS
+	// linux style permission check is meaningless on Windows.
+	dprintf( D_ZKM, "check_permissions(%s): perms=0x%0x desired=0x%0x\n", l.string().c_str(), status.permissions(), p);
+	return true;
+#else
 	auto permissions = status.permissions();
 	return permissions == p;
+#endif
 }
 
 
@@ -587,11 +531,15 @@ HardlinkStagingDirectory::entry_is_directory(
 	}
 	dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
+#ifdef WINDOWS
+	// no need to chown on windows
+#else
 	int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "%s: Unable to change owner of common input directory, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
 		return std::error_code(errno, std::system_category());
 	}
+#endif
 
     return ec_true;
 }
@@ -617,11 +565,15 @@ HardlinkStagingDirectory::entry_is_file(
 		return ec;
 	}
 
+#ifdef WINDOWS
+	// no need chown on windows
+#else
 	int rv = chown( (stagingDir/relative_path).string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "%s: Unable to change owner of common input file hardlink, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
 		return std::error_code(errno, std::system_category());
 	}
+#endif
 
     return ec_true;
 }
@@ -643,11 +595,15 @@ CopyStagingDirectory::entry_is_directory(
 	}
 	dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
+#ifdef WINDOWS
+	// no need chown on windows
+#else
 	int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "%s: Unable to change owner of common input directory, aborting: %s (%d)\n", log_prefix.c_str(), strerror(errno), errno );
 		return std::error_code(errno, std::system_category());
 	}
+#endif
 
 	return ec_true;
 }
@@ -685,7 +641,6 @@ CopyStagingDirectory::entry_is_file(
 
 	return ec_true;
 }
-#endif /* WINDOWS */
 
 
 #if defined(LINUX)
@@ -861,10 +816,6 @@ HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
 
 bool
 HardlinkStagingDirectory::usable() {
-#if defined(WINDOWS)
-	return false;
-#endif /* WINDOWS */
-
 	bool forbidden = param_boolean( "FORBID_HARDLINK_MAPPING", false );
 	bool allowed = ! param_boolean( "STARTD_ENFORCE_DISK_LIMITS", false );
 
@@ -927,9 +878,6 @@ CopyStagingDirectory::map( const std::filesystem::path & destination ) {
 
 bool
 CopyStagingDirectory::usable() {
-#if defined(WINDOWS)
-	return false;
-#endif /* WINDOWS */
 	bool forbidden = param_boolean( "FORBID_COPY_MAPPING", false );
 	bool allowed = true;
 
