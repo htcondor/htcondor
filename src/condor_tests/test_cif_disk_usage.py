@@ -32,9 +32,7 @@ def the_condor( test_dir ):
             "STARTD_DEBUG":     "D_CATEGORY D_SUB_SECOND",
         },
         raw_config='''
-            DISK_EXCEEDED = (DiskUsage =!= UNDEFINED && DiskUsage > Disk)
-            HOLD_REASON_DISK_EXCEEDED = disk usage exceeded request_disk
-            use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, 103, $(HOLD_REASON_DISK_EXCEEDED) )
+            use policy : hold_if_disk_exceeded
         ''',
     ) as the_condor:
         yield the_condor
