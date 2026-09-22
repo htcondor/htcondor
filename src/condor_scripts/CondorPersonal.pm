@@ -101,12 +101,25 @@ sub Initialize
 	}
 }
 
+# pid of the process that built its derived config, so that we only build it
+# once per process and a forked child builds its own rather than naming a file
+# that does not exist.
+my $derived_config_pid = 0;
+
 sub deriveMasterConfig {
 	# since we still are in the impact of the initial condor
 	# get all of the actual settings
 	my @outres = ();
-	my $derivedconfig = "derived_condor_config";
-	if(-f "$derivedconfig") {
+	# Every test in a run shares one condor_tests directory, so this file must be
+	# private to this process. condor_config_val -writeconfig also dumps a
+	# "from <Environment>" section holding per-process _CONDOR_ANCESTOR_<pid>
+	# entries, so two processes emit different-length output; writing that
+	# non-atomically to one shared path splices them together and leaves a
+	# trailing partial line. A single bad line makes every later
+	# condor_config_val exit 1, and then no personal condor can be built for the
+	# rest of the run.
+	my $derivedconfig = "derived_condor_config.$$";
+	if($derived_config_pid == $$) {
 		return($derivedconfig);
 	} else {
 		# we need gererate the effective current config and
@@ -116,13 +129,15 @@ sub deriveMasterConfig {
 		if($res != 1) {
 			die "Error while getting the effective current configuration\n";
 		}
-		open(DR,"<derived_condor_config") or die "Failed to create derived_condor_config: $!\n";
+		open(DR,"<$derivedconfig") or die "Failed to create $derivedconfig: $!\n";
 		my $line = "";
 		while(<DR>) {
 			$line = $_;
 			fullchomp($line);
 			print "$line\n";
 		}
+		close(DR);
+		$derived_config_pid = $$;
 	}
 	return($derivedconfig);
 }
