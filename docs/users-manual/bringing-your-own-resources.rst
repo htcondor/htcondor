@@ -13,10 +13,7 @@ at
 `Bridges-2 <https://www.psc.edu/resources/bridges-2/>`_,
 `Expanse <https://www.sdsc.edu/services/hpc/expanse/>`_,
 or
-`Perlmutter <https://docs.nersc.gov/systems/perlmutter/>`_;
-or you might have funds for
-`AWS <https://aws.amazon.com>`_
-VMs.
+`Perlmutter <https://docs.nersc.gov/systems/perlmutter/>`_.
 
 If you want to make use of any of these resources, you may "bring your own
 resources" to any AP which has that functionality enabled.  When you do,
@@ -24,7 +21,7 @@ you'll give the set of resources you're leasing a name; we call a named
 set of leased resources an *annex*.
 
 HTCondor provides access to annexes through the :tool:`htcondor annex`
-tool, which supports both AWS' EC2 and any Slurm HPC system.  The former
+tool, which supports any Slurm HPC system.  The former
 is described in some detail in the :doc:`../cloud-computing/index` section;
 we'll only discuss the latter here.
 
