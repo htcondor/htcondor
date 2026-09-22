@@ -52,7 +52,8 @@ int hip_Init(void) {
 	// We use an allocation rather than a stack object here to avoid trashing the stack
 	// if the API changes, and allocate extra space also to avoid crashing.
 	size_t cb = sizeof(hipDeviceProp_t)*2;
-	hipDeviceProp_t * props = (hipDeviceProp_t*)malloc(cb);
+	std::vector<unsigned char> props_buf(cb, 0);
+	hipDeviceProp_t * props = (hipDeviceProp_t*)props_buf.data();
 	std::string name;
 
 	int hPlatforms = 0;
