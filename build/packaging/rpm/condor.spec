@@ -903,6 +903,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
+%_libexecdir/condor/condor_metricd
 %_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
@@ -1128,6 +1129,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
+%config(noreplace) %_sysconfdir/condor/metrics.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
 %dir %_var/lib/condor/execute/
@@ -1360,6 +1362,23 @@ fi
 # configuration
 
 %changelog
+* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+- condor_q no longer crashes when using both the -batch and -af options
+
+* Fri Aug 28 2026 Tim Theisen <tim@cs.wisc.edu> - 25.13.3-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
+* Thu Aug 27 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.24-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
+* Thu Aug 27 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.24-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
+
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 25.13.2-1
 - The condor_credmon_oauth now properly handles credentials with handles
 - Improve providing OAuth credentials to all jobs on the Access Point
@@ -1369,7 +1388,7 @@ fi
 - Add CCB Tunneling for daemons with no outbound network connectivity
 
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.13-1
-- Fix bug where condor_q crashes when given -batch and -af arguments
+- All changes in HTCondor 24.12.23
 
 * Wed Aug 19 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.23-1
 - All changes in HTCondor 24.0.23
