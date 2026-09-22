@@ -5222,6 +5222,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes |  SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
 	// invoke SetContainerSpecial
 	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
 
@@ -5994,6 +5995,7 @@ int SubmitHash::SetRequirements()
 #if defined(WIN32)
 	bool	checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
 #endif
+	bool	checks_common_transfer = false;
 	bool	checks_fsdomain = false;
 	bool	checks_file_transfer = false;
 	bool	checks_file_transfer_plugin_methods = false;
@@ -6005,6 +6007,7 @@ int SubmitHash::SetRequirements()
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
 		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
+		checks_common_transfer = machine_refs.count(ATTR_HAS_COMMON_FILES_TRANSFER);
 	}
 	checks_hsct = machine_refs.count( ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
@@ -6129,6 +6132,8 @@ int SubmitHash::SetRequirements()
 	}
 
 	if( !checks_disk ) {
+		// NOTE: We only need to add a job requirements check for disk when matching to a STARTD
+		// when the STARTD is version 23.9 or earlier and has static slots.
 		ExprTree * expr = job->Lookup(ATTR_REQUEST_DISK);
 		if (expr) {
 			double disk = 0;
@@ -6137,7 +6142,11 @@ int SubmitHash::SetRequirements()
 					// Sufficiently recent versions of the starter will adjust
 					// RequestDisk to reflect common files usage, so the job
 					// shouldn't try to enforce WithinResourceLimits.
-					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+					// Rather than disabling the job's disk size check using a versionGE
+					// we will simply omit the automatic requirements clause for Disk.
+					// This moves the version check from the Startd to submit
+					// but we are willing to live with that.
+					//answer += " && ( || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 				} else {
 					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
 				}
@@ -6390,6 +6399,7 @@ int SubmitHash::SetRequirements()
 			answer += crypt_check;
 
 
+		#if 0 // 8.9 is old enough to kill this 
 			bool addVersionCheck = false;
 
 			std::string checkpointFiles;
@@ -6415,10 +6425,11 @@ int SubmitHash::SetRequirements()
 			if( addVersionCheck ) {
 				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
+		#endif
 
-			bool requireCommonFilesTransfer = false;
-			if( job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer) ) {
-				if( requireCommonFilesTransfer ) {
+			bool requireCommonFilesTransfer = job->Lookup(ATTR_COMMON_INPUT_FILES);
+			if ( requireCommonFilesTransfer || job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer)) {
+				if( requireCommonFilesTransfer && ! checks_common_transfer ) {
 					answer += " && TARGET.HasCommonFilesTransfer >= 2";
 				}
 			}
@@ -7256,6 +7267,7 @@ int SubmitHash::SetTransferFiles()
 	// canonicalize CommonInputFiles and store in the job
 	if ( ! clusterAd && AllowCommonInputFiles ) {
 		macro_value.set(submit_param(SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES));
+		if ( ! macro_value) { macro_value.set(submit_param(SUBMIT_KEY_TransferCommonInputFiles)); }
 		if (macro_value) {
 			const char * files = trim_and_strip_quotes_in_place(macro_value.ptr());
 			std::string common;
@@ -9837,6 +9849,10 @@ bool SubmitHash::synthesize_common_files(const std::vector<std::string> & vars, 
 	if ( ! exist_common) {
 		exist_common = lookup(ATTR_COMMON_INPUT_FILES);
 		if (exist_common) common_key = ATTR_COMMON_INPUT_FILES;
+		else {
+			exist_common = lookup(SUBMIT_KEY_TransferCommonInputFiles);
+			if (exist_common) common_key = SUBMIT_KEY_TransferCommonInputFiles;
+		}
 	}
 	if (exist_common && ! force) {
 		return true;
@@ -10231,21 +10247,6 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 	// tell the job factory to skip processing SetRequirements and just use the cluster requirements for all jobs
 	out += "FACTORY.Requirements=MY.Requirements\n";
-
-#if 0 // for testing
-	const char * raw_cif = lookup(SUBMIT_KEY_CommonInputFiles);
-	if (raw_cif) {
-		out += "Raw." SUBMIT_KEY_CommonInputFiles "=";
-		out += raw_cif;
-		out += "\n";
-	}
-	const char * raw_tif = lookup(SUBMIT_KEY_TransferInputFiles);
-	if (raw_tif) {
-		out += "Raw." SUBMIT_KEY_TransferInputFiles "=";
-		out += raw_tif;
-		out += "\n";
-	}
-#endif
 
 	// when we selectively expand the submit hash, we want to skip over some knobs
 	// because their values can change as we materialize jobs.
