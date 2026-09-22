@@ -555,6 +555,9 @@ class Scheduler : public Service
 	Scheduler();
 	~Scheduler();
 
+	std::set<match_rec *>  all_match_recs;
+	std::set<shadow_rec *> all_shadow_recs;
+
 	void logCatalogToShadowMap( const char * leader = "logCatalogToShadowMap()" );
 
 	// initialization

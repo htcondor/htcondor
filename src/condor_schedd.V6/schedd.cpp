@@ -459,7 +459,6 @@ struct job_data_transfer_t {
 //
 // I'm not sure we're managing these as well as we think, either.
 //
-std::set<match_rec *> all_match_recs;
 
 match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY & jobid,
 					  const ClassAd *match, char const *the_user, char const *my_pool,
@@ -475,7 +474,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	, claim_id(strdup(the_claim_id))
 	, claim_id_parser(claim_id)
 {
-	all_match_recs.insert(this);
+	scheduler.all_match_recs.insert(this);
 
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -555,7 +554,7 @@ match_rec::makeDescription() {
 
 match_rec::~match_rec()
 {
-	all_match_recs.erase(this);
+	scheduler.all_match_recs.erase(this);
 
 	if( peer ) {
 		free( peer );
@@ -12935,7 +12934,6 @@ Scheduler::display_shadow_recs()
 }
 
 
-std::set<shadow_rec *> all_shadow_recs;
 
 shadow_rec::shadow_rec():
 	pid(-1),
@@ -12953,7 +12951,7 @@ shadow_rec::shadow_rec():
 	exit_already_handled(false),
 	secret(nullptr)
 {
-	all_shadow_recs.insert(this);
+	scheduler.all_shadow_recs.insert(this);
 
 	prev_job_id.proc = -1;
 	prev_job_id.cluster = -1;
@@ -12963,7 +12961,7 @@ shadow_rec::shadow_rec():
 
 shadow_rec::~shadow_rec()
 {
-	all_shadow_recs.erase(this);
+	scheduler.all_shadow_recs.erase(this);
 
 	if( recycle_shadow_stream ) {
 		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
@@ -13731,7 +13729,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		return;
 	}
 
-	if(! all_shadow_recs.contains(rec)) {
+	if(! scheduler.all_shadow_recs.contains(rec)) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
 		return;
 	}
@@ -17836,7 +17834,7 @@ Scheduler::unlinkMrec(match_rec* match)
 		return -1;
 	}
 
-	if(! all_match_recs.contains(match)) {
+	if(! scheduler.all_match_recs.contains(match)) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(%p): already deleted, ignoring.\n", match );
 		return -1;
 	}
