@@ -6427,7 +6427,7 @@ int SubmitHash::SetRequirements()
 			}
 		#endif
 
-			bool requireCommonFilesTransfer = job->Lookup(ATTR_COMMON_INPUT_FILES);
+			bool requireCommonFilesTransfer = job->Lookup(ATTR_COMMON_INPUT_FILES) || job->Lookup(ATTR_CONTAINER_IS_COMMON);
 			if ( requireCommonFilesTransfer || job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer)) {
 				if( requireCommonFilesTransfer && ! checks_common_transfer ) {
 					answer += " && TARGET.HasCommonFilesTransfer >= 2";
