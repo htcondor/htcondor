@@ -722,12 +722,12 @@ command_match_info(int cmd, Stream* stream )
 	// slot-bundle info) after the claim id.  Read it only when the peer is new
 	// enough to have sent it; an older negotiator's MATCH_INFO ends right after
 	// the claim id.  The send side is gated on our version the same way.
+	// The ad stays empty for an older negotiator, and match_info() then leaves
+	// the claim's bundle info alone.
 	//
-	bool is_bundle = false;
-	std::string bundle_id;
+	ClassAd match_ad;
 	const CondorVersionInfo *vi = stream->get_peer_version();
 	if( vi && vi->built_since_version(26, 2, 0) ) {
-		ClassAd match_ad;
 		if( !getClassAd(stream, match_ad) ) {
 			// The peer said it would send this ad, so a failure here means the
 			// stream is at an unknown offset; carrying on would read the rest
@@ -735,8 +735,6 @@ command_match_info(int cmd, Stream* stream )
 			dprintf( D_ALWAYS, "Error: can't read MATCH_INFO metadata ad.\n" );
 			return FALSE;
 		}
-		match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle);
-		match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
 	}
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: can't read end of message for MATCH_INFO.\n" );
@@ -753,20 +751,6 @@ command_match_info(int cmd, Stream* stream )
 		return FALSE;
 	}
 
-		// If the negotiator told us this match is for a slot bundle, remember
-		// it on the matching claim so the slot advertises IsBundle/BundleId
-		// while it is Matched, before the claim is even activated.
-	if( is_bundle ) {
-		Claim *claim = (rip->r_cur && rip->r_cur->idMatches(id)) ? rip->r_cur :
-			((rip->r_pre && rip->r_pre->idMatches(id)) ? rip->r_pre : nullptr);
-		if( claim ) {
-			claim->setBundle(true);
-			claim->setBundleId(bundle_id);
-			rip->dprintf( D_ALWAYS, "MATCH_INFO: match is for slot bundle %s\n",
-						  bundle_id.c_str() );
-		}
-	}
-
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
 		return FALSE;
@@ -779,7 +763,7 @@ command_match_info(int cmd, Stream* stream )
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
-		rval = match_info( rip, id );
+		rval = match_info( rip, id, match_ad );
 	}
 	return rval;
 }
@@ -2004,8 +1988,31 @@ abort:
 	return FALSE;
 }
 
+// If the negotiator told us this match is for a slot bundle, remember it on
+// the claim that the match is for, so that the slot advertises IsBundle and
+// BundleId while it is Matched, before the claim is ever activated.  An older
+// negotiator sends no metadata ad at all; leave whatever the claim already has
+// alone in that case, since REQUEST_CLAIM will stamp it from the request ad.
+static void
+set_bundle_info( Claim* claim, const ClassAd & match_ad )
+{
+	bool is_bundle = false;
+	if( ! match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle) ) {
+		return;
+	}
+	std::string bundle_id;
+	match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
+	claim->setBundle(is_bundle);
+	claim->setBundleId(bundle_id);
+	if( is_bundle ) {
+		claim->rip()->dprintf( D_ALWAYS,
+							   "MATCH_INFO: match is for slot bundle %s\n",
+							   bundle_id.c_str() );
+	}
+}
+
 int
-match_info( Resource* rip, const char* id )
+match_info( Resource* rip, const char* id, const ClassAd & match_ad )
 {
 	int rval = FALSE;
 	ClaimIdParser idp(id);
@@ -2024,6 +2031,7 @@ match_info( Resource* rip, const char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
+			set_bundle_info( rip->r_pre, match_ad );
 			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
@@ -2033,6 +2041,7 @@ match_info( Resource* rip, const char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
+			set_bundle_info( rip->r_pre_pre, match_ad );
 			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
@@ -2052,6 +2061,8 @@ match_info( Resource* rip, const char* id )
 	case owner_state:
         if (rip->r_cur->idMatches(id)) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", idp.publicClaimId() );
+
+			set_bundle_info( rip->r_cur, match_ad );
 
 			if( rip->destination_state() != no_state ) {
 					// we've already got a destination state.
