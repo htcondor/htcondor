@@ -108,6 +108,9 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DOT visual-2.dot UPDATE OVERWRITE\n"
 		"DOT visual-3.dot DONT-UPDATE DONT-OVERWRITE INCLUDE ../path/to/header.dot\n"
 		"NODE_STATUS_FILE foo 82 ALWAYS-UPDATE 1000\n"
+		"NODE_STATUS_FILE bar 60 JSON COMPACT\n"
+		"NODE_STATUS_FILE baz 30 CLASSAD COMPACT ALWAYS-UPDATE\n"
+		"NODE_STATUS_FILE qux 45 JSON\n"
 		"ENV GET   foo bar baz \n"
 		"ENV SET  foo=bar;baz=10;      \n"
 		"CONNECT S1 S2\n"
@@ -334,7 +337,10 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"DOT > visual.dot  F F",
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
-		"NODE_STATUS_FILE > foo 1000 T",
+		"NODE_STATUS_FILE > foo 1000 T CLASSAD F",
+		"NODE_STATUS_FILE > bar 60 F JSON T",
+		"NODE_STATUS_FILE > baz 30 T CLASSAD T",
+		"NODE_STATUS_FILE > qux 45 F JSON F",
 		"ENV > GET foo,bar,baz",
 		"ENV > SET foo=bar;baz=10;",
 		"CONNECT > [S1]--[S2]",

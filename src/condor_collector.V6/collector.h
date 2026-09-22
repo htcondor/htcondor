@@ -111,9 +111,6 @@ public:
 	static int schedd_token_request(int, Stream *stream);
 
 
-	// A get method to support SOAP
-	static CollectorEngine & getCollector( void ) { return collector; };
-
     // data pertaining to each view collector entry
     struct vc_entry {
         std::string name;

@@ -4100,10 +4100,50 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 			// fall back on the original backed-up ad.
 		if ( !must_modify_request ) {
 				// save an unmodified backup copy of the req_classad
-			unmodified_req_classad = new ClassAd( *req_classad );  
+			unmodified_req_classad = new ClassAd( *req_classad );
 		}
 
-			// Now make the modifications.
+
+		//
+		// See HTCONDOR-3930: we can't correctly divide the data and (prompting)
+		// job slot's disk correctly in the presence of quantization, because
+		// that may require more space than we allocated.  The problem we're
+		// trying to fix here is that the submitter (with the previous math)
+		// increasing RequestDisk wouldn't solve the problem.  The reason we're
+		// fixing it _here_ is to prevent an admin's override of the
+		// MODIFY_REQUEST_EXPR_RequestDisk knob from breaking things.
+		//
+		// To do that, we compute how much space the job will save by using
+		// common files (if any), and subtract that off the request disk the
+		// MODIFY epxression sees before evaluating it.  That will result
+		// in a request that at most one disk quantum too large (unless the
+		// admin is doing weird stuff), so we'll subtract a whole one off
+		// to make sure everything fits.
+		//
+		std::string catalog_space_str;
+		param( catalog_space_str, "CATALOG_SPACE" );
+		ExprTree * cs_tree = NULL;
+		ParseClassAdRvalExpr( catalog_space_str.c_str(), cs_tree );
+
+		long long catalog_space = -1;
+		long long modified_request_disk = -1;
+		classad::Value cs_value;
+		if( cs_tree &&
+		    EvalExprToNumber(cs_tree, req_classad, mach_classad, cs_value) &&
+		    cs_value.IsNumber(catalog_space)
+		) {
+			long long request_disk = -1;
+			if( req_classad->LookupInteger( ATTR_REQUEST_DISK, request_disk ) ) {
+				if( catalog_space != 0 ) {
+					modified_request_disk = request_disk - catalog_space;
+					dprintf( D_FULLDEBUG, "Pre adjusting %s from %lld to %lld to reflect use of common files.\n", ATTR_REQUEST_DISK, request_disk, modified_request_disk );
+					req_classad->Assign( ATTR_REQUEST_DISK, modified_request_disk );
+				}
+			}
+		}
+		if( cs_tree ) { delete cs_tree; }
+
+		// Now make the modifications.
 		static const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
@@ -4121,6 +4161,31 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 					req_classad->Assign(resources[i],val);
 				}
 				if (tree) delete tree;
+			}
+		}
+
+		//
+		// The default MODIFY_REQUEST_EXPR_RequestDisk quantizes (rounds up).
+		// The extra comes from the data slot, which might be left with too
+		// little as a result.  So if the job is using common files, decrease
+		// its requst disk to compensate.
+		//
+		// See HTCONDOR-3930 for why we do this particular computation.
+		//
+		if( catalog_space != 0 ) {
+			long long new_request_disk;
+			if( req_classad->LookupInteger( ATTR_REQUEST_DISK, new_request_disk ) ) {
+				// If the modified request disk wasn't changed, don't correct
+				// for rounding that didn't happen.
+				if( new_request_disk != modified_request_disk ) {
+					long long quantum = param_integer( "CXFER_ADJUSTMENT_QUANTUM", 1024 );
+					mach_classad->LookupInteger( "DiskQuantum", quantum );
+					int quanta = param_integer( "CXFER_ADJUSTMENT_QUANTA", 1 );
+
+					dprintf( D_FULLDEBUG, "Post adjusting %s from %lld to %lld to reflect use of common files.\n", ATTR_REQUEST_DISK, new_request_disk, new_request_disk - (quantum * quanta) );
+					new_request_disk -= (quantum * quanta);
+					req_classad->Assign( ATTR_REQUEST_DISK, new_request_disk );
+				}
 			}
 		}
 

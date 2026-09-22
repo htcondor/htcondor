@@ -3948,9 +3948,8 @@ NewProc(int cluster_id)
 	if (Q_SOCK) {
 		const char * owner = EffectiveUserName(Q_SOCK);
 		if( owner == nullptr || ! owner[0] ) {
-			// This should only happen for job submission via SOAP, but
-			// it's unclear how we can verify that.  Regardless, if we
-			// don't know who the owner of the job is, we can't enfore
+			// This should rarely happen.  Regardless, if we don't know
+			// who the owner of the job is, we can't enforce
 			// MAX_JOBS_PER_OWNER.
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
@@ -9247,17 +9246,24 @@ stats_entry_abs<int> SCGetAutoClusterType;
 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
-    int     job_prio = 0, 
-            pre_job_prio1 = 0, 
-            pre_job_prio2 = 0, 
-            post_job_prio1 = 0, 
+    int     job_prio = 0,
+            pre_job_prio1 = 0,
+            pre_job_prio2 = 0,
+            post_job_prio1 = 0,
             post_job_prio2 = 0;
 
 	ASSERT(job);
 
+
+	if( job->Status() == JOB_STATUS_BLOCKED ) {
+		dprintf( D_FULLDEBUG, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
+		scheduler.checkBlockedJob( job, jid );
+	}
+
+
 	// TODO: trust that the job->run code is already up-to-date here....
 	// Figure out if we should contine and put this job into the PrioRec array
-	// or not. 
+	// or not.
 	// For now we want to put jobs that would cause the user to exceed MaxJobsRunning
 	// into the prio-rec array anyway, so treat them as runnable here..
 	runnable_reason_code code;
@@ -9287,18 +9293,18 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
 	// --- Insert this job into the PrioRec array ---
 
-       // If pre/post prios are not defined as forced attributes, set them to INT_MIN
+	// If pre/post prios are not defined as forced attributes, set them to INT_MIN
 	// to flag priocompare routine to not use them.
-	 
+
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
          pre_job_prio1 = 0;
     }
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
          pre_job_prio2 = 0;
-    } 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
          post_job_prio1 = 0;
-    }	 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
          post_job_prio2 = 0;
     }
@@ -9854,18 +9860,20 @@ static void DoBuildPrioRecArray() {
 	scheduler.autocluster.mark();
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
+	scheduler.logCatalogToShadowMap();
 	PrioRec.clear();
 	struct _get_job_prio_info info;
 	WalkJobQueue2(update_autocluster_id, &info);
 	grow_prio_recs(info.num_runnable + info.num_cooldown + 5); // +5 because ToddT sez so...
 	// PrioRecMinCoolDownTime is a global that will be incremented
-	// as we walk the job queue. 
+	// as we walk the job queue.
 	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
+	scheduler.logCatalogToShadowMap();
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
-		// moment. 
+		// moment.
 	if ( ! PrioRec.empty()) {
 		std::sort(PrioRec.begin(), PrioRec.end(), prio_compar{});
 	}
@@ -9904,6 +9912,8 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -9928,6 +9938,8 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSlice );
 	}
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayTimeslice.isTimeToRun() ) {
 
 		dprintf(D_FULLDEBUG,
