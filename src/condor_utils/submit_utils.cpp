@@ -6427,9 +6427,11 @@ int SubmitHash::SetRequirements()
 			}
 		#endif
 
-			bool requireCommonFilesTransfer = job->Lookup(ATTR_COMMON_INPUT_FILES) || job->Lookup(ATTR_CONTAINER_IS_COMMON);
-			if ( requireCommonFilesTransfer || job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer)) {
-				if( requireCommonFilesTransfer && ! checks_common_transfer ) {
+			if ( ! checks_common_transfer) {
+				bool uses_common_files = job->Lookup(ATTR_COMMON_INPUT_FILES) || job->Lookup(ATTR_CONTAINER_IS_COMMON);
+				bool requireCommonFilesTransfer = false; // TODO config knob for this?
+				job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer); // TODO: change to submit keyword
+				if( requireCommonFilesTransfer && uses_common_files ) {
 					answer += " && TARGET.HasCommonFilesTransfer >= 2";
 				}
 			}
@@ -7122,6 +7124,11 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
 
+			// if we ended up deciding that the container is common
+			// but the user did not set that attribute, set it now.
+			if ( ! job->Lookup(ATTR_CONTAINER_IS_COMMON)) {
+				AssignJobVal(ATTR_CONTAINER_IS_COMMON, true);
+			}
 
 			// To avoid colliding inside a DAG when container images are
 			// common, the catalog name we generate here must depend on
