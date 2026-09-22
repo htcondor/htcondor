@@ -29,7 +29,11 @@ def the_condor( test_dir ):
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "STARTD_DEBUG":     "D_CATEGORY D_SUB_SECOND",
         },
+        raw_config='''
+            use policy : hold_if_disk_exceeded
+        ''',
     ) as the_condor:
         yield the_condor
 
@@ -56,13 +60,16 @@ def the_common_files( test_dir ):
 @action
 def the_running_jobs( the_condor, the_common_files ):
     job_description = {
-        "shell":                    "sleep 1",
+        "shell":                    "sleep 6",
 
         "universe":                 "vanilla",
         "should_transfer_files":    "YES",
         "request_cpus":             1,
         "request_memory":           1,
-        "request_disk":             256,
+
+        # Method: quantize(catalog-size) + quantize(size-of-shell).
+        "request_disk":             "11264",
+
         "log":                      "the_running_jobs.log.$(ClusterID)",
         "transfer_common_input":    f"{the_common_files.as_posix()}",
     }
@@ -71,6 +78,21 @@ def the_running_jobs( the_condor, the_common_files ):
         description=job_description,
         count=4,
     )
+
+
+    # This section is just for debuggery.
+    assert job_handle.wait(
+        timeout=120,
+        condition=ClusterState.running_exactly(4),
+        fail_condition=ClusterState.any_held,
+    )
+
+    c = the_condor.get_local_collector()
+    r = c.query(
+        projection=['Name', 'Disk', 'DiskUsage'],
+    )
+    print(r)
+
 
     assert job_handle.wait(
         timeout=120,

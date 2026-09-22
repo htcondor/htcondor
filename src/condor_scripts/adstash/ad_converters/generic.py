@@ -97,10 +97,20 @@ def finite_float(x):
 
 FIELD_TYPE_MAP = {
     "text": str,
+    "match_only_text": str,
     "keyword": str,
+    "wildcard": str,
+    "constant_keyword": str,
+    "ip": str,
     "float": finite_float,
     "double": finite_float,
+    "half_float": finite_float,
+    "scaled_float": finite_float,
     "long": coerce_int,
+    "integer": coerce_int,
+    "short": coerce_int,
+    "byte": coerce_int,
+    "unsigned_long": coerce_int,
     "date": coerce_int,
     "boolean": strict_bool,
     "object": dict,
@@ -184,7 +194,10 @@ class GenericClassAdConverter():
             flattened_field_name = ".".join(field_name_hierarchy)
             if self.projection is not None and flattened_field_name.lower() not in self.projection:
                 continue
-            field_type = FIELD_TYPE_MAP[field_properties.get("type", "object")]
+            field_type = FIELD_TYPE_MAP.get(field_properties.get("type", "object"))
+            if field_type is None:
+                logging.debug(f"Skipping field {flattened_field_name} with unknown type {field_properties.get('type')}")
+                continue
             known_field_types[flattened_field_name.lower()][flattened_field_name] = field_type
             if field_type is dict and "properties" in field_properties:
                 known_field_types.update(self.get_known_field_types(field_properties, field_name_hierarchy))
@@ -211,10 +224,14 @@ class GenericClassAdConverter():
                 # Only a single * wildcard is supported in our implementation, even though
                 # multiple * wildcards are valid in Elasticsearch dynamic templates.
                 logging.warning(f"Dynamic template {dt_name} has multiple * wildcards in match pattern '{match_pattern}', which is not supported and will never match.")
+            dt_field_type = FIELD_TYPE_MAP.get(dt.get("mapping", {}).get("type", "keyword"))
+            if dt_field_type is None:
+                logging.debug(f"Skipping dynamic template {dt_name} with unknown type {dt.get('mapping', {}).get('type')}")
+                continue
             matchers[dt_name] = {
                 "match_type": match_type,
                 "match_pattern": match_pattern,
-                "field_type": FIELD_TYPE_MAP[dt.get("mapping", {}).get("type", "keyword")],
+                "field_type": dt_field_type,
             }
         return matchers
 
