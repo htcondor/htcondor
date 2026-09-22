@@ -1576,10 +1576,9 @@ These macros control the *condor_schedd*.
 
 :macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
     When an EP offers its slots directly to this *condor_schedd* (see
-    :ref:`admin-manual/ep-policy-configuration:directly attaching an ep
-    to one ap`), and the EP's authenticated identity does not have ``DAEMON``
-    authorization, the *condor_schedd* will only match jobs owned by that
-    authenticated identity to the offered slots.  Setting this knob to
+    :ref:`direct-attach`), and the EP's authenticated identity does not have
+    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
+    by that authenticated identity to the offered slots.  Setting this knob to
     ``True`` disables that restriction, allowing any EP with ``WRITE``
     authorization to run any user's jobs.  Do not set this unless every
     identity with ``WRITE`` access to this AP is trusted to do so.

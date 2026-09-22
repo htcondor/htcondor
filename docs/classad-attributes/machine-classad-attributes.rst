@@ -357,8 +357,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`IsDirectAttach`
     Defined only when the *condor_startd* is configured to directly attach to
-    an AP; see :ref:`admin-manual/ep-policy-configuration:directly
-    attaching an ep to one ap`.  The value is the name of the
+    an AP; see :ref:`direct-attach`.  The value is the name of the
     *condor_schedd* named by :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`, to
     which this slot is offered when it is unclaimed.
 

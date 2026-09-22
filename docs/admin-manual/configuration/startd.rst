@@ -1618,9 +1618,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
 These macros allow a *condor_startd* to directly connect to a *condor_schedd*,
 so that it can run jobs on this startd without sharing it with other
-schedds.  See :ref:`admin-manual/ep-policy-configuration:directly
-attaching an ep to one ap` for a description of how direct attach works
-and why an administrator might want to use it.
+schedds.  See :ref:`direct-attach` for a description of how direct attach
+works and why an administrator might want to use it.
 
 :macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`
     The name of the *condor_schedd* to which this *condor_startd* should
