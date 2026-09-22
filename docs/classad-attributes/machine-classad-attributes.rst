@@ -355,6 +355,13 @@ Machine ClassAd Attributes
     When ``True``, the slot is in use by the AP to transfer and then store
     common files, rather than run a job.
 
+:classad-attribute-def:`IsDirectAttach`
+    Defined only when the *condor_startd* is configured to directly attach to
+    an AP; see :ref:`admin-manual/ep-policy-configuration:directly
+    attaching an ep to one ap`.  The value is the name of the
+    *condor_schedd* named by :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`, to
+    which this slot is offered when it is unclaimed.
+
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
     setup to enforce disk usage limits for each job the machine executes.
