@@ -178,6 +178,34 @@ class TestKnownAttrTypes:
         assert completed_doc["RequestDisk"] == 123456789
 
 
+class TestUnknownFieldTypes:
+    """#5b: Fields with unknown ES types (e.g. date_range) are skipped gracefully"""
+
+    @pytest.fixture
+    def mapping_with_unknown_type(self):
+        m = get_default_mappings(job)
+        m["properties"]["MyDateRange"] = {"type": "date_range"}
+        return m
+
+    @pytest.fixture
+    def converter_with_unknown_type(self, mapping_with_unknown_type):
+        return JobClassAdConverter(mapping=mapping_with_unknown_type)
+
+    @pytest.fixture
+    def doc_with_unknown_type(self, converter_with_unknown_type, ads):
+        return converter_with_unknown_type.convert_ad_to_doc(ads[0])
+
+    def test_converter_does_not_crash(self, doc_with_unknown_type):
+        assert doc_with_unknown_type is not None
+
+    def test_unknown_type_field_not_in_known_field_types(self, converter_with_unknown_type):
+        assert "mydaterange" not in converter_with_unknown_type.known_field_types
+
+    def test_known_fields_still_work(self, doc_with_unknown_type):
+        assert doc_with_unknown_type["CompletionDate"] == 1781013600
+        assert isinstance(doc_with_unknown_type["CompletionDate"], int)
+
+
 class TestIgnoredAttributes:
     """#6: IGNORE_ATTRS are dropped from output"""
 
