@@ -418,6 +418,24 @@ there is a log file specified in the submit description file for the
 job, then the job exit status will be recorded there as well, along with
 other information described below.
 
+A job that was evicted and restarted, or that failed and was retried, ran
+more than once, leaves only a single history record, describing its
+final run.  If the administrator of the access point has enabled job epoch
+history, a record of each individual run is kept as well, and
+:tool:`condor_history` will report them with the **-epochs** option.  The
+**-transfer-history** option reports a record for each file transfer the job
+performed, including which transfer plugin ran and whether it succeeded, which
+is often the quickest way to find out why one attempt of a job transferred its
+input much more slowly than another.
+
+.. code-block:: console
+
+    $ condor_history -epochs 1234.0
+    $ condor_history -transfer-history -json
+
+Both options read an archive the access point may or may not be configured to
+keep; see :ref:`admin-manual/ap-policy-configuration:job epoch history`.
+
 By default, HTCondor does not send an email message when the job
 completes. Modify this behavior with the
 :subcom:`notification[example]` command

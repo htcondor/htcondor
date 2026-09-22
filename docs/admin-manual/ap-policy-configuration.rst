@@ -751,6 +751,132 @@ downloaded from a checkpoint; if any don't match, the checkpoint is considered
 invalid and deleted, and the job is rescheduled (and will resume from the
 "extra" checkpoint(s), if one remains available).
 
+.. _job-epoch-history:
+
+Job Epoch History
+-----------------
+
+:index:`job epoch history`
+:index:`epoch history<single: epoch history; job history>`
+:index:`run instance`
+
+The history file named by :macro:`HISTORY` holds one record per job, written
+when the job leaves the queue.  A job that is evicted and restarted, or that
+fails and is retried, still leaves only that single final record, so questions
+about *individual run attempts*, how many times did this job start, which machine ran
+it the first time, how long did input transfer take on each attempt, which
+transfer plugin failed, cannot be answered from the job history at all.  The
+*job epoch history* addresses this issue.  Every time a *condor_shadow* runs a job it
+appends records describing that one run to a separate archive.  Each run is
+called an *epoch*, or a *run instance*, and is numbered in the record attribute
+``RunInstanceID``, starting at zero for a job's first run.
+
+Epoch history is written by the AP's shadows, and is enabled by default:
+:macro:`JOB_EPOCH_HISTORY` defaults to ``$(SPOOL)/epoch_history``.  The file is
+rotated like the job history file, at :macro:`MAX_EPOCH_HISTORY_LOG` bytes (20
+MB by default) keeping :macro:`MAX_EPOCH_HISTORY_ROTATIONS` older copies (2 by
+default), so it occupies a bounded amount of space and needs no external
+cleanup.  :tool:`condor_preen` knows about the configured file and will not
+remove it from the spool directory.  To move the archive, or to turn the
+feature off entirely by setting it to nothing:
+
+.. code-block:: condor-config
+
+    # Somewhere with more room than SPOOL.
+    JOB_EPOCH_HISTORY = /var/log/condor/epoch_history
+    MAX_EPOCH_HISTORY_LOG = 200000000
+    MAX_EPOCH_HISTORY_ROTATIONS = 5
+
+    # Or, to disable epoch history entirely:
+    # JOB_EPOCH_HISTORY =
+
+A single run of a job produces several records, each one a ClassAd followed by
+a banner line naming its type, the job id, the run instance, and the time it
+was written:
+
+.. code-block:: text
+
+    *** EPOCH ClusterId=12 ProcId=0 RunInstanceId=1 Owner="alice" CurrentTime=1758000000
+
+The types are:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 85
+
+    * - Type
+      - Written
+    * - ``SPAWN``
+      - When the *condor_shadow* starts, before the job runs.  By default this
+        is a small ad identifying the job and the run; see
+        :macro:`SPAWN_JOB_ATTRS`.
+    * - ``INPUT``
+      - When input transfer for the run finishes, with the file transfer
+        plugin invocations and their results.
+    * - ``COMMON``
+      - When a common files transfer finishes, with the same plugin
+        information plus statistics about the common file transfer.
+    * - ``CHECKPOINT``
+      - When a self-checkpointing job transfers a checkpoint.
+    * - ``OUTPUT``
+      - When output transfer for the run finishes.
+    * - ``EPOCH``
+      - When the run ends, whether the job completed, was held, or was
+        evicted.  This is the full job ClassAd as it stood at the end of that
+        run, so it carries the exit status, resource usage, and the machine
+        the job ran on.
+
+The transfer records describe a transfer, not a job, so only a few job
+attributes are copied into them: the job's user, project name, global job id
+and the machine it ran on are always included, and
+:macro:`TRANSFER_JOB_ATTRS` names any others to copy.  A single record type can
+override that list with a knob of its own named after the type --
+``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
+``COMMON_JOB_ATTRS``.  Attributes that a job does not have are skipped.
+
+Read the archive with :tool:`condor_history`.  The **-epochs** option reads the
+epoch history rather than the job history, and by default displays the
+``EPOCH`` records:
+
+.. code-block:: console
+
+    $ condor_history -epochs
+    $ condor_history -epochs 12.0
+
+The **-transfer-history** option displays the ``INPUT``, ``OUTPUT`` and
+``CHECKPOINT`` records instead, optionally narrowed to particular types.  These
+records have no default display format, so one must be given:
+
+.. code-block:: console
+
+    $ condor_history -transfer-history -json
+    $ condor_history -transfer-history:IO -af RunInstanceID RemoteHost TransferSuccess
+
+Epoch records can also be shipped to Elasticsearch by :tool:`condor_adstash`
+with its ``--schedd_job_epoch_history`` and ``--schedd_transfer_epoch_history``
+options; see :ref:`admin-manual/monitoring:elasticsearch`.
+
+Per-job epoch files
+'''''''''''''''''''
+
+Instead of, or in addition to, the single archive, the shadow can write one
+file per job.  Setting :macro:`JOB_EPOCH_HISTORY_DIR` to an existing directory
+makes each job's records go to ``job.runs.<cluster>.<proc>.ads`` in that
+directory, which is convenient when something outside HTCondor consumes the
+records for one job at a time.
+
+These files are neither rotated nor cleaned up, so the directory grows without
+bound until something removes them.  Reading them with ``-epochs:d`` deletes
+each file once it has been read, which makes :tool:`condor_history` the
+consumer that also does the cleanup:
+
+.. code-block:: console
+
+    $ condor_history -epochs:d -directory
+
+Note that :tool:`condor_preen` does not know about this directory, so it should
+be placed outside ``$(SPOOL)`` or added to :macro:`VALID_SPOOL_FILES`.
+
 .. _archive-librarian:
 
 Archive Librarian
