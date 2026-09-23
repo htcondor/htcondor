@@ -92,10 +92,19 @@ Suggests: docker.io,
           singularity-container,
           slurm-client
 Conflicts: htcondor,
+#if defined(UW_BUILD)
+           pelican-osdf-compat,
+#endif
            condor-upgrade-checks
 Breaks: htcondor,
+#if defined(UW_BUILD)
+        pelican-osdf-compat,
+#endif
         condor-upgrade-checks
 Replaces: htcondor,
+#if defined(UW_BUILD)
+          pelican-osdf-compat,
+#endif
           condor-upgrade-checks
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
