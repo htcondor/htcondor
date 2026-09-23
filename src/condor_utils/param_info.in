@@ -5394,7 +5394,7 @@ description=When a slot should be in Owner state
 
 [PELICAN_PLUGIN]
 default=$(LIBEXEC)/pelican_plugin
-description=Full path to the osdf/Pelican plugin
+description=Full path to the OSDF/Pelican plugin
 type=path
 
 [FILETRANSFER_PLUGINS]
