@@ -309,12 +309,6 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 # upgrade-checks package discontinued as of 24.9.0
 Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
-
-%if %uw_build
-# pelican-osdf-compat configuration included as of 25.0.15
-Obsoletes: pelican-osdf-compat
-Provides: pelican-osdf-compat = %{version}-%{release}
-%endif
 %endif
 
 %if 0%{?suse_version}
