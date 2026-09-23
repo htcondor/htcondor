@@ -1362,6 +1362,18 @@ fi
 # configuration
 
 %changelog
+* Wed Sep 23 2026 Tim Theisen <tim@cs.wisc.edu> - 25.14.1-1
+- HTCondor no longer accepts multiple queue statements in a submit file
+- The credmon can now obtain and renew OAuth2 access tokens from Pelican
+- HTCondor now detects AMD GPUs that use ROCM 7
+- Container universe adds the detected GPU flag the container command line
+- New self-service annex mode that works with any Slurm cluster
+- New metric daemon that can export metrics to Prometheus and Ganglia
+- Improvements to condor_adstash (see version history)
+- condor_rm now accepts the -held option
+- condor_watch_q now restores the terminal after exiting
+- Fix condor_q crash when using both -batch and -af
+
 * Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
