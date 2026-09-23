@@ -850,6 +850,7 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool IsContainerJob;
+	bool ContainerIsCommon{false};
 	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;

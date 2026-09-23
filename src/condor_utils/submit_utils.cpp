@@ -4887,9 +4887,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WantJobNetworking, ATTR_WANT_JOB_NETWORKING, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
-	// FIXME: Strictly speaking, only the submit utils need to know about this
-	// bool.  Can we make its value available without adding to the job ad?
-	{SUBMIT_KEY_ContainerIsCommon, ATTR_CONTAINER_IS_COMMON, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -5225,6 +5222,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes |  SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
 	// invoke SetContainerSpecial
 	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
+	{SUBMIT_KEY_ContainerIsCommon, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_container},
 
 	{NULL, NULL, 0}, // end of table
 };
@@ -6398,37 +6396,8 @@ int SubmitHash::SetRequirements()
 			answer += xfer_check;
 			answer += crypt_check;
 
-
-		#if 0 // 8.9 is old enough to kill this 
-			bool addVersionCheck = false;
-
-			std::string checkpointFiles;
-			if( job->LookupString(ATTR_CHECKPOINT_FILES, checkpointFiles) ) {
-				addVersionCheck = true;
-			}
-
-			bool preserveRelativePaths = false;
-			if( job->LookupBool(ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths) ) {
-				if( preserveRelativePaths ) {
-					addVersionCheck = true;
-				}
-			}
-
-			std::string whenString;
-			if( job->LookupString(ATTR_WHEN_TO_TRANSFER_OUTPUT, whenString) ) {
-				auto when = getFileTransferOutputNum(whenString.c_str());
-				if( when == FTO_ON_SUCCESS ) {
-					addVersionCheck = true;
-				}
-			}
-
-			if( addVersionCheck ) {
-				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
-			}
-		#endif
-
 			if ( ! checks_common_transfer) {
-				bool uses_common_files = job->Lookup(ATTR_COMMON_INPUT_FILES) || job->Lookup(ATTR_CONTAINER_IS_COMMON);
+				bool uses_common_files = job->Lookup(ATTR_COMMON_INPUT_FILES) || ContainerIsCommon;
 				bool requireCommonFilesTransfer = false; // TODO config knob for this?
 				job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer); // TODO: change to submit keyword
 				if( requireCommonFilesTransfer && uses_common_files ) {
@@ -6452,20 +6421,27 @@ int SubmitHash::SetRequirements()
 				}
 
 				// check input
-				std::string file_list;
+				std::string file_list, tag;
 				if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, file_list)) {
 					for (const auto& file: StringTokenIterator(file_list, ",")) {
 						if (IsUrl(file.c_str())){
-							std::string tag = getURLType(file.c_str(), true);
+							tag = getURLType(file.c_str(), true);
 							if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 						}
 					}
 				}
 
+				// make sure that a container transfer URL type is in the list of needed methods
+				// when the container is in a common catalog, it will not be in TransferInput
+				if (job->LookupString(ATTR_CONTAINER_IMAGE_SOURCE, tag)) {
+					classad::ReferencesBySize notx{"cedar", "docker", "local", "oras"};
+					if ( ! notx.count(tag) && ! jobmethods.count(tag)) { methods.insert(tag.c_str()); }
+				}
+
 				// check output (not a list this time)
 				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
 					if (IsUrl(file_list.c_str())) {
-						std::string tag = getURLType(file_list.c_str(), true);
+						tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					} else {
 						push_warning(stderr, SUBMIT_KEY_OutputDestination " must be a URL, did you mean " SUBMIT_KEY_OutputDirectory " ?\n");
@@ -6481,7 +6457,7 @@ int SubmitHash::SetRequirements()
 							trim(url);
 
 							if( IsUrl(url.c_str()) ) {
-								std::string tag = getURLType(url.c_str(), true);
+								tag = getURLType(url.c_str(), true);
 								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 							}
 						}
@@ -7114,8 +7090,8 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			}
 		}
 
-		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
-		if(! userRequestedCommonContainer) {
+		ContainerIsCommon = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, userRequestedCommonContainer);
+		if(! ContainerIsCommon) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
 				*accumulate_size_kb += calc_image_size_kb(container_image);
@@ -7123,12 +7099,6 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		} else {
 			// FIXME: This does not check to see if the container image varies
 			// per-proc, which it must not for this code to work.
-
-			// if we ended up deciding that the container is common
-			// but the user did not set that attribute, set it now.
-			if ( ! job->Lookup(ATTR_CONTAINER_IS_COMMON)) {
-				AssignJobVal(ATTR_CONTAINER_IS_COMMON, true);
-			}
 
 			// To avoid colliding inside a DAG when container images are
 			// common, the catalog name we generate here must depend on

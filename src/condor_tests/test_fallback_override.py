@@ -54,11 +54,10 @@ def make_test_job(the_condor, test_job_ID):
 the_job_description = """
     universe = vanilla
     shell = cat common-file input-file-$(ProcID) > output-file-$(ProcID); sleep 10
-    transfer_common_files = common-file
+    MY.CommonInputFiles = "common-file"
     transfer_input_files = input-file-$(ProcID)
     transfer_output_files = output-file-$(ProcID)
     should_transfer_files = YES
-    #requirements = HasCommonFilesTransfer
     request_cpus = 1
     request_memory = 1024
     log = $(ClusterID).log
