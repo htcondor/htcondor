@@ -58,7 +58,7 @@ enable historical archive record indexing to a database by setting :macro:`use f
 
 :macro-def:`LIBRARIAN_GC_BACKOFF_SECONDS`
     An integer value representing how long, in seconds, to wait before retrying garbage
-    collection after a pass that did not reduce the database's file size. Defaults to
+    collection after a pass that did not reduce the database's size. Defaults to
     ``1800`` (30 minutes).
 
 :macro-def:`LIBRARIAN_USER_RETENTION_DAYS`

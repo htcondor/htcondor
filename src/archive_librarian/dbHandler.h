@@ -64,7 +64,17 @@ public:
     bool checkpointWAL();
 
     // === Garbage Collection ===
+    // Database size in bytes as page_count * page_size. Unlike the main file's size
+    // on disk, this includes pages still in the WAL and drops as soon as
+    // incremental_vacuum frees pages. Returns -1 on error.
+    int64_t getDatabaseSizeBytes();
+    // Number of GC-eligible files (oldest DateOfDeletion first) whose records are
+    // estimated to free at least bytesToDelete. 0 when nothing is eligible, -1 on error.
+    int countFilesToCollect(int64_t bytesToDelete);
     bool runGarbageCollection(const std::string& gcSql, int targetFileLimit);
+    // Remove users past LIBRARIAN_USER_RETENTION_DAYS in its own transaction; for GC
+    // cycles where no files are eligible (runGarbageCollection() prunes otherwise).
+    bool pruneExpiredUsersNow();
 
     // === Testing Support ===
     sqlite3* getDB() const { return db_; }

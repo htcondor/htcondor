@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS StatusData (
 CREATE TEMP TABLE IF NOT EXISTS FilesToDelete AS 
 SELECT FileId FROM Files 
 WHERE DateOfDeletion IS NOT NULL 
-ORDER BY DateOfDeletion ASC 
+ORDER BY DateOfDeletion ASC, FileId ASC  -- must match DBHandler::countFilesToCollect()
 LIMIT ?; -- calculated based on job count needed
 
 -- 2. Collect JobIds 

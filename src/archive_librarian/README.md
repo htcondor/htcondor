@@ -56,7 +56,7 @@ Each timer tick runs `Librarian::update()` in five phases:
 | 1.5 | `reconcileArchiveFiles()` registers new files and detects rotations by comparing inodes (Linux) or first-record hashes (Windows) |
 | 2 | `std::erase_if` removes in-memory entries for files that have left disk; marks them `DateOfDeletion` in the DB; renames unexpectedly removed active files to `<name>.REMOVED` in the DB |
 | 3 | For each unread file, `readJobRecords()` opens (or reuses) a persistent `ArchiveReader`, reads new records incrementally, and calls `dbHandler_.insertJobFileRecords()` to atomically insert records and update the file's offset |
-| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records), timestamps/prunes users with no remaining jobs (see [User Retention](#user-retention)), then runs `PRAGMA incremental_vacuum` to actually shrink the file. If a pass doesn't reduce the file size, further attempts are skipped for `LIBRARIAN_GC_BACKOFF_SECONDS` |
+| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`, collecting until it reaches `LIBRARIAN_LOW_WATER_MARK` (see [Garbage Collection](#garbage-collection)). If GC doesn't reduce the DB size, further attempts are skipped for `LIBRARIAN_GC_BACKOFF_SECONDS` |
 | 5 | `writeStatusAndData()` records per-cycle and rolling aggregate metrics |
 
 ### File Reading (`archive_reader.cpp`)
@@ -77,7 +77,7 @@ Per-file read progress (byte offset) is tracked in `ArchiveFile::last_offset` an
 Each file tracks a Welford online running average of record sizes
 (`ArchiveFile::avg_record_size`, `ArchiveFile::records_read`). After each update cycle these
 per-file averages are combined into a global `EstimatedBytesPerJobInArchive_`, which drives the
-backlog estimator and GC file-count calculation.
+backlog estimator.
 
 ---
 
@@ -158,14 +158,36 @@ Schema version is tracked via `PRAGMA user_version` (current: 4).
 | `Status` | Per-cycle metrics; rows older than `LIBRARIAN_STATUS_RETENTION_SECONDS` are pruned each cycle |
 | `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
 
-Garbage collection (`GC_QUERY_SQL`) targets files where `DateOfDeletion IS NOT NULL`, deletes
-them oldest-first up to the calculated file limit, then cascades to `JobRecords`, `Jobs`, and
-empty `JobLists`. The in-memory `(ClusterId, ProcId) → JobId` cache is cleared after each
-successful pass so no deleted `JobId` is reused.
+### Garbage Collection
+
+GC only collects files that are already gone from disk (`DateOfDeletion IS NOT NULL`). Each
+update cycle, `cleanupDatabaseIfNeeded()`:
+
+1. Measures the DB size as `PRAGMA page_count * page_size` (`DBHandler::getDatabaseSizeBytes()`).
+   It doesn't use the main file's size on disk: in WAL mode, recent writes and pages freed by
+   `incremental_vacuum` only reach the main file at the next checkpoint, so that size can lag by
+   up to the WAL size (several MB).
+2. If the size exceeds the high water mark, runs up to 10 passes until the size is at or below
+   the low water mark:
+   - `countFilesToCollect()` walks eligible files in `(DateOfDeletion, FileId)` order, summing
+     each file's `JobRecords` count × average DB bytes per record (DB size / total records),
+     until the estimate covers `size - low water mark`.
+   - `runGarbageCollection()` runs `GC_QUERY_SQL` for that many files: it deletes their jobs
+     (all records of those jobs), empty `JobLists`, and the `Files` rows, applies
+     [User Retention](#user-retention), then runs `PRAGMA incremental_vacuum`.
+   - The average bytes per record includes fixed schema overhead, so one pass can fall short;
+     the next pass re-estimates from the new size.
+3. Stops early if nothing is eligible (still pruning expired users) or a pass doesn't shrink the
+   DB. If the DB didn't shrink at all, it backs off for `LIBRARIAN_GC_BACKOFF_SECONDS`.
+4. If space was reclaimed, runs `checkpointWAL()` so the main file on disk shrinks now rather
+   than at the next 4 MB WAL checkpoint. A failed checkpoint is logged, not fatal.
+
+The in-memory `(ClusterId, ProcId) → JobId` cache is cleared after each successful pass so no
+deleted `JobId` is reused.
 
 ### User Retention
 
-All steps below run in the same GC transaction:
+All steps below run in the same GC transaction (see [Garbage Collection](#garbage-collection)):
 
 1. `GC_QUERY_SQL` records the owners of the jobs it's about to delete in the temp table
    `UsersToCheck`.
@@ -226,7 +248,7 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 | `LIBRARIAN_MAX_DATABASE_SIZE` | `2147483648` (2 GiB) | DB size limit in bytes |
 | `LIBRARIAN_HIGH_WATER_MARK` | `0.97` | Fraction of size limit that triggers GC |
 | `LIBRARIAN_LOW_WATER_MARK` | `0.80` | Fraction of size limit GC targets |
-| `LIBRARIAN_GC_BACKOFF_SECONDS` | `1800` | Seconds to wait before retrying GC after a pass that didn't shrink the DB file |
+| `LIBRARIAN_GC_BACKOFF_SECONDS` | `1800` | Seconds to wait before retrying GC after it didn't shrink the DB |
 | `LIBRARIAN_STATUS_RETENTION_SECONDS` | `300` | Seconds to retain `Status` table rows |
 | `LIBRARIAN_USER_RETENTION_DAYS` | `365` | Days to keep a user with no indexed jobs after GC removes their last job (`0` = same GC pass, `< 0` = never) |
 | `LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS` | `30000` | `sqlite3_busy_timeout` (ms); only affects WAL checkpointing and VACUUM/`incremental_vacuum`, not normal reads/writes |

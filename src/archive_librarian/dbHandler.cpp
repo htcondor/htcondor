@@ -15,6 +15,7 @@
 #include "condor_attributes.h"
 #include "to_string_si_units.h"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <functional>
@@ -1146,6 +1147,74 @@ static int queryRowCount(sqlite3* db, const char* countSql) {
     return result;
 }
 
+int64_t DBHandler::getDatabaseSizeBytes() {
+    if ( ! db_) return -1;
+
+    auto pragmaValue = [this](const char* sql) -> int64_t {
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            dprintf(D_ERROR, "getDatabaseSizeBytes: prepare failed for '%s': %s\n", sql, sqlite3_errmsg(db_));
+            return -1;
+        }
+        int64_t value = -1;
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            value = sqlite3_column_int64(stmt, 0);
+        } else {
+            dprintf(D_ERROR, "getDatabaseSizeBytes: step failed for '%s': %s\n", sql, sqlite3_errmsg(db_));
+        }
+        std::ignore = sqlite3_finalize(stmt);
+        return value;
+    };
+
+    int64_t pageCount = pragmaValue("PRAGMA page_count;");
+    int64_t pageSize  = pragmaValue("PRAGMA page_size;");
+    if (pageCount < 0 || pageSize < 0) {
+        return -1;
+    }
+    return pageCount * pageSize;
+}
+
+int DBHandler::countFilesToCollect(int64_t bytesToDelete) {
+    if ( ! db_) return -1;
+
+    int64_t dbSize = getDatabaseSizeBytes();
+    int totalRecords = queryRowCount(db_, "SELECT COUNT(*) FROM JobRecords;");
+    if (dbSize < 0 || totalRecords < 0) {
+        return -1;
+    }
+    // Average database bytes per indexed record (includes index and schema overhead)
+    double bytesPerRecord = static_cast<double>(dbSize) / std::max(totalRecords, 1);
+
+    // Same order as GC_QUERY_SQL step 1
+    const char* sql =
+        "SELECT (SELECT COUNT(*) FROM JobRecords jr WHERE jr.FileId = f.FileId) "
+        "FROM Files f WHERE f.DateOfDeletion IS NOT NULL "
+        "ORDER BY f.DateOfDeletion ASC, f.FileId ASC;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        dprintf(D_ERROR, "countFilesToCollect: prepare failed: %s\n", sqlite3_errmsg(db_));
+        return -1;
+    }
+
+    int numFiles = 0;
+    double bytesFreed = 0.0;
+    int rc = SQLITE_OK;
+    while (bytesFreed < static_cast<double>(bytesToDelete) && (rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        bytesFreed += static_cast<double>(sqlite3_column_int64(stmt, 0)) * bytesPerRecord;
+        numFiles++;
+    }
+    if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
+        dprintf(D_ERROR, "countFilesToCollect: step failed: %s\n", sqlite3_errmsg(db_));
+        numFiles = -1;
+    }
+    std::ignore = sqlite3_finalize(stmt);
+
+    dprintf(D_FULLDEBUG, "countFilesToCollect: %d file(s) estimated to free %.0f of %lld requested bytes "
+            "(%.1f bytes/record over %d record(s)).\n",
+            numFiles, bytesFreed, (long long)bytesToDelete, bytesPerRecord, totalRecords);
+    return numFiles;
+}
+
 // Runs a single-statement SQL with one int64 parameter bound to ?1. Returns the number
 // of rows changed, or -1 on failure.
 static int execWithInt64(sqlite3* db, const std::string& sql, int64_t value) {
@@ -1182,6 +1251,26 @@ bool DBHandler::pruneExpiredUsers(int64_t now) {
     if (pruned > 0) {
         dprintf(D_STATUS, "Garbage collection: removed %d user(s) with no indexed jobs for at least "
                 "%d day(s) (LIBRARIAN_USER_RETENTION_DAYS).\n", pruned, retentionDays);
+    }
+    return true;
+}
+
+bool DBHandler::pruneExpiredUsersNow() {
+    if ( ! db_) return false;
+
+    char* errMsg = nullptr;
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "pruneExpiredUsersNow: begin transaction failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return false;
+    }
+    if ( ! pruneExpiredUsers(static_cast<int64_t>(time(nullptr)))) {
+        ROLLBACK_AND_RETURN();
+    }
+    if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "pruneExpiredUsersNow: commit failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        ROLLBACK_AND_RETURN();
     }
     return true;
 }

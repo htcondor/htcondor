@@ -27,6 +27,16 @@
 
 *** 26.2.0 bugs
 
+- Fixed a bug where the Archive Librarian's garbage collection removed only
+  one archive file's records per pass and stopped just under
+  :macro:`LIBRARIAN_HIGH_WATER_MARK`, instead of reducing the database to
+  :macro:`LIBRARIAN_LOW_WATER_MARK`. Garbage collection also no longer
+  mistakes a successful pass for a failed one, which triggered a
+  :macro:`LIBRARIAN_GC_BACKOFF_SECONDS` delay, because the database file
+  had not yet been checkpointed. The database file on disk now shrinks
+  as soon as garbage collection finishes.
+  :jira:`3943`
+
 - The *condor_starter* can now optionally set a limit on the amount of
   compressed swap (zswap) a job may use, via the new
   :macro:`CGROUP_ZSWAP_MAX_EXPR`. It is a ClassAd expression, evaluated in
