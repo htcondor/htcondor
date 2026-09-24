@@ -1146,6 +1146,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/blahp/
 %config %_sysconfdir/blahp/condor_local_submit_attributes.sh
 %config %_sysconfdir/blahp/flux_local_submit_attributes.sh
+%config %_sysconfdir/blahp/iri_local_submit_attributes.sh
 %config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
 %config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
 %config %_sysconfdir/blahp/nqs_local_submit_attributes.sh

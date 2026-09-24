@@ -125,6 +125,9 @@
 #define SUBMIT_KEY_BatchProject "batch_project"
 #define SUBMIT_KEY_BatchQueue "batch_queue"
 #define SUBMIT_KEY_BatchRuntime "batch_runtime"
+#define SUBMIT_KEY_IriService "iri_service"
+#define SUBMIT_KEY_IriCredential "iri_credential"
+#define SUBMIT_KEY_IriDirectory "iri_directory"
 
 #define SUBMIT_KEY_FileRemaps "file_remaps"
 #define SUBMIT_KEY_BufferFiles "buffer_files"

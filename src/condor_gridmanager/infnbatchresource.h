@@ -37,18 +37,20 @@ public:
 	void Reconfig();
 
 	static std::string & HashName( const char * batch_type,
-	                             const char * gahp_args );
+	                             const char * blahp_name );
 
 	static INFNBatchResource* FindOrCreateResource( const char * batch_type, 
 	                                                const char * resource_name,
-	                                                const char * gahp_args );
+	                                                const char * blahp_name,
+	                                                const char * xfer_gahp_name );
 
 	GahpClient *gahp;
 	GahpClient *m_xfer_gahp;
 
 	INFNBatchResource( const char * batch_type,
 	                   const char * resource_name,
-	                   const char * gahp_args );
+	                   const char * blahp_name,
+	                   const char * xfer_gahp_name );
 
 	~INFNBatchResource();
 
@@ -70,7 +72,7 @@ private:
 				bool & ping_succeeded  );
 
 	std::string m_batchType;
-	std::string m_gahpArgs;
+	std::string m_blahpName;
 	bool m_gahpIsRemote;
 	bool m_gahpCanRefreshProxy;
 	bool m_gahpRefreshProxyChecked;

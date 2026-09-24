@@ -496,7 +496,7 @@ function bls_setup_all_files ()
   if [ -d "$blah_debug_save_submit_info" -a -n "$bls_tmp_name" ]; then
     # Store files used for this job in a directory
     bls_info_dir="$blah_debug_save_submit_info/$bls_tmp_name.debug"
-    mkdir "$bls_info_dir"
+    mkdir -p "$bls_info_dir"
     if [ -d "$bls_info_dir" ]; then
       bls_wrapper_stdout="$bls_info_dir/wrapper.stdout"
       bls_wrapper_stderr="$bls_info_dir/wrapper.stderr"

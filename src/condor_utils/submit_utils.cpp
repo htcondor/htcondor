@@ -5005,6 +5005,10 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_GSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_GSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
 
+	{SUBMIT_KEY_IriCredential, ATTR_IRI_CREDENTIAL, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_IriDirectory, ATTR_IRI_DIRECTORY, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_IriService, ATTR_IRI_SERVICE, SimpleSubmitKeyword::f_as_string},
+
 	// EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
 	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
 	{SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},

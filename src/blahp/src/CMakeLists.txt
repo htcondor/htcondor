@@ -239,6 +239,9 @@ set(blah_scripts
     scripts/sfapi_cancel.sh scripts/sfapi_helpers.py
     scripts/sfapi_ping.sh scripts/sfapi_setup.sh
     scripts/sfapi_status.sh scripts/sfapi_submit.sh
+    scripts/iri_cancel.sh scripts/iri_helpers.py
+    scripts/iri_ping.sh scripts/iri_setup.sh
+    scripts/iri_status.sh scripts/iri_submit.sh
    )
 
 install(FILES
@@ -258,6 +261,7 @@ set(local_attr_scripts
     nqs_local_submit_attributes.sh
     kubernetes_local_submit_attributes.sh
     flux_local_submit_attributes.sh
+    iri_local_submit_attributes.sh
     )
 
 # The <lrms>_local_submit_attributes.sh scripts should be installed
