@@ -15,6 +15,11 @@
   Archive Librarian is in use.
   :jira:`3927`
 
+- The Archive Librarian now removes users from its database once they have
+  had no indexed jobs for :macro:`LIBRARIAN_USER_RETENTION_DAYS` days, which
+  defaults to 365.
+  :jira:`3943`
+
 *** 26.2.0 bugs
 
 - The *condor_starter* can now optionally set a limit on the amount of

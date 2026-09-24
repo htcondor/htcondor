@@ -807,7 +807,10 @@ point it discovers. During the update process, if the backing database is found
 to be over the configured size then it will garbage collect old job id and job
 record entries associated with archive files that have already rotated out. This
 process will prioritize removing entries associated with the oldest timestamped
-history files.
+history files. Garbage collection also timestamps any user left with no indexed
+jobs, and removes users that have had no indexed jobs for longer than
+:macro:`LIBRARIAN_USER_RETENTION_DAYS`. A user that has new jobs indexed before
+being removed is retained as normal.
 
 .. note::
 
@@ -903,7 +906,10 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
            * - ``DateOfLastJob``
              - INTEGER
              - —
-             - Reserved for future garbage collection; not currently populated.
+             - Unix timestamp set by garbage collection when the user's last indexed job is
+               removed. ``NULL`` while the user has indexed jobs, and cleared back to ``NULL``
+               when a new job for the user is indexed. Users are removed once this is older
+               than :macro:`LIBRARIAN_USER_RETENTION_DAYS`.
 
     .. tab:: JobLists
 
@@ -934,6 +940,7 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
         **Indexes**
 
         - ``idx_unique_cluster_user`` — unique on ``(ClusterId, UserId)``; one ``JobList`` per cluster/owner pair.
+        - ``idx_UserIdInJobLists`` — on ``UserId``; used by garbage collection to check whether a user has any remaining jobs.
 
     .. tab:: Jobs
 

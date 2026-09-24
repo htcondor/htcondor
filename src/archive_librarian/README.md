@@ -22,7 +22,7 @@ src/archive_librarian/
 ├── dbHandler.cpp           # SQLite database operations
 ├── dbHandler.h             # DBHandler class declaration
 ├── config.hpp              # LibrarianConfig class and option enums
-├── SavedQueries.h          # SQL strings: schema DDL and garbage-collection query
+├── SavedQueries.h          # SQL strings: schema DDL, garbage-collection and user-retention queries
 ├── CMakeLists.txt
 └── README.md
 
@@ -56,7 +56,7 @@ Each timer tick runs `Librarian::update()` in five phases:
 | 1.5 | `reconcileArchiveFiles()` registers new files and detects rotations by comparing inodes (Linux) or first-record hashes (Windows) |
 | 2 | `std::erase_if` removes in-memory entries for files that have left disk; marks them `DateOfDeletion` in the DB; renames unexpectedly removed active files to `<name>.REMOVED` in the DB |
 | 3 | For each unread file, `readJobRecords()` opens (or reuses) a persistent `ArchiveReader`, reads new records incrementally, and calls `dbHandler_.insertJobFileRecords()` to atomically insert records and update the file's offset |
-| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records), then runs `PRAGMA incremental_vacuum` to actually shrink the file. If a pass doesn't reduce the file size, further attempts are skipped for `LIBRARIAN_GC_BACKOFF_SECONDS` |
+| 4 | `cleanupDatabaseIfNeeded()` runs garbage collection if the DB exceeds `LIBRARIAN_HIGH_WATER_MARK`; GC deletes the oldest files (and their job records), timestamps/prunes users with no remaining jobs (see [User Retention](#user-retention)), then runs `PRAGMA incremental_vacuum` to actually shrink the file. If a pass doesn't reduce the file size, further attempts are skipped for `LIBRARIAN_GC_BACKOFF_SECONDS` |
 | 5 | `writeStatusAndData()` records per-cycle and rolling aggregate metrics |
 
 ### File Reading (`archive_reader.cpp`)
@@ -140,12 +140,18 @@ row 2 (pre-reset snapshot).
 
 ## Database Schema (`SavedQueries.h`)
 
-Schema version is tracked via `PRAGMA user_version` (current: 3).
+Schema version is tracked via `PRAGMA user_version` (current: 4).
+
+| Version | Change |
+|---------|--------|
+| 2 | `Files.FileName` stores absolute paths |
+| 3 | `JobRecords` gains `DAGManJobId`, `JobBatchId`, `JobBatchName` |
+| 4 | `Users.DateOfLastJob` populated by GC (existing users with no jobs are backfilled with the migration time); `idx_UserIdInJobLists` index added |
 
 | Table | Purpose |
 |-------|---------|
 | `Files` | One row per tracked archive file; holds absolute path, offset, rotation/deletion timestamps, `AvgRecordSize`, `RecordsRead` |
-| `Users` | Unique job owners |
+| `Users` | Unique job owners; `DateOfLastJob` is `NULL` while the user has indexed jobs, else the time GC removed their last job |
 | `JobLists` | `(ClusterId, UserId)` associations |
 | `Jobs` | One row per `(ClusterId, ProcId)` |
 | `JobRecords` | Completion record location: `Offset`, `CompletionDate`, `FileId`, `JobId`; optional DAG/batch metadata: `DAGManJobId`, `JobBatchId`, `JobBatchName` (NULL when not present in the record) |
@@ -153,7 +159,27 @@ Schema version is tracked via `PRAGMA user_version` (current: 3).
 | `StatusData` | Rolling aggregate (upserted each cycle); up to two rows: row 1 active, row 2 pre-reset snapshot retained when any integer counter overflows INT64_MAX |
 
 Garbage collection (`GC_QUERY_SQL`) targets files where `DateOfDeletion IS NOT NULL`, deletes
-them oldest-first up to the calculated file limit, then cascades to `JobRecords` and `Jobs`.
+them oldest-first up to the calculated file limit, then cascades to `JobRecords`, `Jobs`, and
+empty `JobLists`. The in-memory `(ClusterId, ProcId) → JobId` cache is cleared after each
+successful pass so no deleted `JobId` is reused.
+
+### User Retention
+
+All steps below run in the same GC transaction:
+
+1. `GC_QUERY_SQL` records the owners of the jobs it's about to delete in the temp table
+   `UsersToCheck`.
+2. After the deletes, `GC_MARK_USERS_SQL` sets `DateOfLastJob = now` for each of those users
+   that no longer has any `Jobs`/`JobLists` rows (and isn't already timestamped).
+3. `GC_PRUNE_USERS_SQL` deletes users whose `DateOfLastJob <= now - LIBRARIAN_USER_RETENTION_DAYS * 86400`
+   and who still have no jobs. Skipped when the retention is negative; with `0`, users marked in
+   step 2 are removed in the same pass. The prune also runs on GC passes that find no eligible
+   files.
+
+When a new job is indexed for a timestamped user, `insertUnseenJob()` clears `DateOfLastJob`
+back to `NULL` (`USER_CLEAR_LAST_JOB_SQL`). Because GC only runs when the DB is over
+`LIBRARIAN_HIGH_WATER_MARK`, users may be kept longer than the retention window. The goal is
+only to stop the table from growing forever with users who no longer run jobs.
 
 ### Database File Size
 
@@ -201,6 +227,7 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 | `LIBRARIAN_LOW_WATER_MARK` | `0.80` | Fraction of size limit GC targets |
 | `LIBRARIAN_GC_BACKOFF_SECONDS` | `1800` | Seconds to wait before retrying GC after a pass that didn't shrink the DB file |
 | `LIBRARIAN_STATUS_RETENTION_SECONDS` | `300` | Seconds to retain `Status` table rows |
+| `LIBRARIAN_USER_RETENTION_DAYS` | `365` | Days to keep a user with no indexed jobs after GC removes their last job (`0` = same GC pass, `< 0` = never) |
 | `LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS` | `30000` | `sqlite3_busy_timeout` (ms); only affects WAL checkpointing and VACUUM/`incremental_vacuum`, not normal reads/writes |
 
 ---

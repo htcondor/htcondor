@@ -724,6 +724,7 @@ void Librarian::reconfig(bool startup) {
     config[i::GCBackoffSeconds]           = param_integer("LIBRARIAN_GC_BACKOFF_SECONDS", 1800);
     config[i::DBBusyTimeoutMs]            = param_integer("LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS", 30'000,
                                                             0, std::numeric_limits<int>::max());
+    config[i::UserRetentionDays]          = param_integer("LIBRARIAN_USER_RETENTION_DAYS", 365);
 
     config[ll::MaxRecordsPerUpdate] = param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 100'000);
     config[ll::DBMaxSizeBytes] = param_longlong("LIBRARIAN_MAX_DATABASE_SIZE",

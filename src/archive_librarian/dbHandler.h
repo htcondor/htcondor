@@ -3,10 +3,12 @@
  *
  * Major components:
  * - jobIdCache: avoids repeated DB hits for JobId/JobListId lookups
- * - insertUnseenJob: populates missing User, JobList, and Job entries
+ * - insertUnseenJob: populates missing User, JobList, and Job entries (clears Users.DateOfLastJob)
  * - insertJobFileRecords: batch inserts JobRecords and updates File state atomically
  * - writeFileInfo / updateFileInfo: track file-level processing state
  * - Status tracking: records how much of each file has been processed
+ * - Garbage collection: removes deleted files' records, timestamps users left with no
+ *   indexed jobs, and prunes such users after LIBRARIAN_USER_RETENTION_DAYS
  */
 
 #pragma once
@@ -71,6 +73,7 @@ private:
 
     int getSchemaVersion();
     void pruneStatusTable(int64_t retentionSeconds);
+    bool pruneExpiredUsers(int64_t now);
 
     // Job Record Operations
     std::pair<int,int> jobIdLookup(int clusterId, int procId);
@@ -83,6 +86,7 @@ private:
     sqlite3_stmt* jobIdLookupStmt_{nullptr};
     sqlite3_stmt* userInsertStmt_{nullptr};
     sqlite3_stmt* userSelectStmt_{nullptr};
+    sqlite3_stmt* userClearLastJobStmt_{nullptr};
     sqlite3_stmt* jobListInsertStmt_{nullptr};
     sqlite3_stmt* jobListSelectStmt_{nullptr};
     sqlite3_stmt* jobInsertStmt_{nullptr};

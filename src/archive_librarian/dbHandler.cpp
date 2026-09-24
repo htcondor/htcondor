@@ -194,7 +194,7 @@ bool DBHandler::initialize() {
         ROLLBACK_AND_RETURN();
     }
 
-    constexpr int SCHEMA_VERSION = 3;
+    constexpr int SCHEMA_VERSION = 4;
 
     if (version > SCHEMA_VERSION) {
         dprintf(D_ALWAYS, "Database schema version (%d) is newer than my version (%d).\n",
@@ -246,6 +246,25 @@ bool DBHandler::initialize() {
                 dprintf(D_ALWAYS, "Database migrated from schema v2 to v3 (JobRecords DAG/batch columns).\n");
                 [[fallthrough]];
             }
+            case 3: {
+                // v3→v4: Users.DateOfLastJob now records when GC removed a user's last
+                // indexed job (NULL while the user still has jobs). The JobLists(UserId)
+                // index is created by SCHEMA_SQL above. Backfill users that were already
+                // orphaned by earlier GC passes so they become eligible for pruning.
+                const char* backfill =
+                    "UPDATE Users SET DateOfLastJob = strftime('%s','now')"
+                    " WHERE DateOfLastJob IS NULL"
+                    " AND NOT EXISTS (SELECT 1 FROM Jobs j WHERE j.UserId = Users.UserId)"
+                    " AND NOT EXISTS (SELECT 1 FROM JobLists jl WHERE jl.UserId = Users.UserId);";
+                if (sqlite3_exec(db_, backfill, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+                    dprintf(D_ERROR, "v3→v4 migration failed: %s\n", errMsg ? errMsg : "Unknown");
+                    sqlite3_free(errMsg);
+                    ROLLBACK_AND_RETURN();
+                }
+                dprintf(D_ALWAYS, "Database migrated from schema v3 to v4 (Users.DateOfLastJob tracking; "
+                        "%d user(s) without indexed jobs timestamped).\n", sqlite3_changes(db_));
+                [[fallthrough]];
+            }
             default:
                 if (sqlite3_exec(db_, version_stmt.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
                     dprintf(D_ERROR, "Failed to set new schema version: %s\n", errMsg ? errMsg : "Unknown");
@@ -278,6 +297,11 @@ bool DBHandler::initialize() {
     if (sqlite3_prepare_v2(db_, userLookupSQL, -1, &userSelectStmt_, nullptr) != SQLITE_OK) {
         dprintf(D_ERROR, "Failed to prepare userSelectStmt: %s\n", sqlite3_errmsg(db_));
         userSelectStmt_ = nullptr;
+    }
+
+    if (sqlite3_prepare_v2(db_, SavedQueries::USER_CLEAR_LAST_JOB_SQL.c_str(), -1, &userClearLastJobStmt_, nullptr) != SQLITE_OK) {
+        dprintf(D_ERROR, "Failed to prepare userClearLastJobStmt: %s\n", sqlite3_errmsg(db_));
+        userClearLastJobStmt_ = nullptr;
     }
 
     const char* jobListInsertSQL = "INSERT OR IGNORE INTO JobLists (ClusterId, UserId) VALUES (?, ?)";
@@ -313,6 +337,7 @@ DBHandler::~DBHandler() {
     if (jobIdLookupStmt_)   { std::ignore = sqlite3_finalize(jobIdLookupStmt_);    jobIdLookupStmt_   = nullptr; }
     if (userInsertStmt_)    { std::ignore = sqlite3_finalize(userInsertStmt_);     userInsertStmt_    = nullptr; }
     if (userSelectStmt_)    { std::ignore = sqlite3_finalize(userSelectStmt_);     userSelectStmt_    = nullptr; }
+    if (userClearLastJobStmt_) { std::ignore = sqlite3_finalize(userClearLastJobStmt_); userClearLastJobStmt_ = nullptr; }
     if (jobListInsertStmt_) { std::ignore = sqlite3_finalize(jobListInsertStmt_);  jobListInsertStmt_ = nullptr; }
     if (jobListSelectStmt_) { std::ignore = sqlite3_finalize(jobListSelectStmt_);  jobListSelectStmt_ = nullptr; }
     if (jobInsertStmt_)     { std::ignore = sqlite3_finalize(jobInsertStmt_);      jobInsertStmt_     = nullptr; }
@@ -492,6 +517,18 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
     if (userId == -1) {
         dprintf(D_ERROR, "Failed to insert/lookup user: %s\n", owner.c_str());
         return false;
+    }
+
+    // User has an indexed job again: clear any GC-set DateOfLastJob so they aren't pruned.
+    // Non-fatal on failure; the GC prune query independently refuses to delete users with jobs.
+    if (userClearLastJobStmt_) {
+        std::ignore = sqlite3_bind_int(userClearLastJobStmt_, 1, userId);
+        if (sqlite3_step(userClearLastJobStmt_) != SQLITE_DONE) {
+            dprintf(D_ERROR, "Failed to clear DateOfLastJob for user %s: %s\n",
+                    owner.c_str(), sqlite3_errmsg(db_));
+        }
+        std::ignore = sqlite3_reset(userClearLastJobStmt_);
+        std::ignore = sqlite3_clear_bindings(userClearLastJobStmt_);
     }
 
     int jobListId = getOrInsertIdPrepared(
@@ -1109,6 +1146,46 @@ static int queryRowCount(sqlite3* db, const char* countSql) {
     return result;
 }
 
+// Runs a single-statement SQL with one int64 parameter bound to ?1. Returns the number
+// of rows changed, or -1 on failure.
+static int execWithInt64(sqlite3* db, const std::string& sql, int64_t value) {
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        dprintf(D_ERROR, "execWithInt64: prepare failed: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+    std::ignore = sqlite3_bind_int64(stmt, 1, value);
+    int changed = -1;
+    if (sqlite3_step(stmt) == SQLITE_DONE) {
+        changed = sqlite3_changes(db);
+    } else {
+        dprintf(D_ERROR, "execWithInt64: step failed: %s\n", sqlite3_errmsg(db));
+    }
+    std::ignore = sqlite3_finalize(stmt);
+    return changed;
+}
+
+// Deletes users that have had no indexed jobs for longer than LIBRARIAN_USER_RETENTION_DAYS.
+// Must be called inside an open transaction. Returns false on a DB error.
+bool DBHandler::pruneExpiredUsers(int64_t now) {
+    int retentionDays = config[conf::i::UserRetentionDays];
+    if (retentionDays < 0) {
+        return true; // Never prune
+    }
+
+    int64_t cutoff = now - (static_cast<int64_t>(retentionDays) * 24 * 60 * 60);
+    int pruned = execWithInt64(db_, SavedQueries::GC_PRUNE_USERS_SQL, cutoff);
+    if (pruned < 0) {
+        dprintf(D_ERROR, "Garbage collection: failed to prune expired users\n");
+        return false;
+    }
+    if (pruned > 0) {
+        dprintf(D_STATUS, "Garbage collection: removed %d user(s) with no indexed jobs for at least "
+                "%d day(s) (LIBRARIAN_USER_RETENTION_DAYS).\n", pruned, retentionDays);
+    }
+    return true;
+}
+
 bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimit) {
     if ( ! db_) return false;
 
@@ -1154,6 +1231,8 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
     dprintf(D_STATUS, "Garbage collection: %d of %d requested file(s) are eligible for deletion "
             "(i.e. already marked deleted from disk).\n", filesMatched, fileLimit);
 
+    int64_t now = static_cast<int64_t>(time(nullptr));
+
     if (filesMatched <= 0) {
         // Nothing eligible right now -- drop the temp table we just created so a future
         // run's "CREATE TEMP TABLE IF NOT EXISTS" doesn't silently reuse this stale,
@@ -1161,6 +1240,11 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
         int r = sqlite3_exec(db_, "DROP TABLE IF EXISTS FilesToDelete;", nullptr, nullptr, nullptr);
         if (r != SQLITE_OK) {
             dprintf(D_ERROR, "Garbage collection drop temp table failed: %s\n", sqlite3_errmsg(db_));
+            ROLLBACK_AND_RETURN();
+        }
+
+        // No jobs removed so no users to mark, but previously marked users may have expired
+        if ( ! pruneExpiredUsers(now)) {
             ROLLBACK_AND_RETURN();
         }
 
@@ -1203,11 +1287,33 @@ bool DBHandler::runGarbageCollection(const std::string& gcQuerySQL, int fileLimi
     // row count from "DELETE FROM Files ...", i.e. files actually removed.
     int filesDeleted = sqlite3_changes(db_);
 
+    // Timestamp users whose last indexed job was just removed, then prune expired users
+    int usersMarked = execWithInt64(db_, SavedQueries::GC_MARK_USERS_SQL, now);
+    if (usersMarked < 0) {
+        dprintf(D_ERROR, "Garbage collection: failed to mark users with no remaining indexed jobs\n");
+        ROLLBACK_AND_RETURN();
+    }
+    if (sqlite3_exec(db_, SavedQueries::GC_DROP_USERS_TO_CHECK_SQL.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        dprintf(D_ERROR, "Garbage collection drop UsersToCheck failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        ROLLBACK_AND_RETURN();
+    }
+    if (usersMarked > 0) {
+        dprintf(D_STATUS, "Garbage collection: %d user(s) no longer have any indexed jobs.\n", usersMarked);
+    }
+    if ( ! pruneExpiredUsers(now)) {
+        ROLLBACK_AND_RETURN();
+    }
+
     if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
         dprintf(D_ERROR, "Garbage collection commit failed: %s\n", errMsg);
         sqlite3_free(errMsg);
         ROLLBACK_AND_RETURN();
     }
+
+    // Deleted Jobs rows may still be cached; a stale hit would skip insertUnseenJob()
+    // (leaving a dangling JobId and not clearing the owner's DateOfLastJob).
+    jobIdCache_.clear();
 
     // Return the pages just freed by the deletes above to the OS so the file actually
     // shrinks. Requires auto_vacuum=INCREMENTAL (see initialize()); on a database that

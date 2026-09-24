@@ -424,12 +424,18 @@ class TestLibrarianIngestion:
         assert total >= NUM_JOBS + 1, \
             f"Expected SUM(RecordsRead) >= {NUM_JOBS + 1}, got {total}"
 
-    # --- Schema v3 checks ---
+    # --- Schema checks ---
 
     def test_schema_version(self, librarian_db):
-        """Database must be at schema version 3."""
+        """Database must be at schema version 4."""
         version = librarian_db.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 3, f"Expected schema version 3, got {version}"
+        assert version == 4, f"Expected schema version 4, got {version}"
+
+    def test_user_has_no_last_job_time(self, librarian_db):
+        """A user with indexed jobs must have a NULL DateOfLastJob (schema v4)."""
+        rows = librarian_db.execute(r"SELECT UserName, DateOfLastJob FROM Users").fetchall()
+        assert len(rows) == 1
+        assert rows[0][1] is None, f"Expected NULL DateOfLastJob for active user, got {rows[0]}"
 
     def test_dag_batch_columns_exist(self, librarian_db):
         """JobRecords must have DAGManJobId, JobBatchId, and JobBatchName columns (schema v3)."""

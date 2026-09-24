@@ -6191,6 +6191,12 @@ range=0,
 description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
 tags=librarian
 
+[LIBRARIAN_USER_RETENTION_DAYS]
+default=365
+type=int
+description=Days the archive librarian keeps a user with no remaining indexed jobs before garbage collection removes it. 0 removes immediately, negative never removes.
+tags=librarian
+
 [LIBRARIAN_MAX_DATABASE_SIZE]
 default=2 * 1024 * 1024 * 1024
 #type=longlong

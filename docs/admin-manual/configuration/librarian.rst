@@ -56,6 +56,14 @@ enable historical archive record indexing to a database by setting :macro:`use f
     collection after a pass that did not reduce the database's file size. Defaults to
     ``1800`` (30 minutes).
 
+:macro-def:`LIBRARIAN_USER_RETENTION_DAYS`
+    An integer value representing the number of days to keep a user's entry in the
+    archive librarian's database after garbage collection removes the last of that
+    user's indexed jobs. Expired users are removed during garbage collection, so a user
+    may be kept longer than this value. A value of ``0`` removes the user in the same
+    garbage collection pass, and a negative value never removes users. Defaults to
+    ``365``.
+
 :macro-def:`LIBRARIAN_MAX_JOBS_CACHED`
     An integer value representing the maximum number of job id information to database
     reference id's to cache in memory. Defaults to ``10,000``.
