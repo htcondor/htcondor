@@ -67,6 +67,14 @@ int cleanStringForUseAsAttr(std::string &str, char chReplace=0, bool compact=tru
 // The caller is responible for calling 'delete' on the returned ClassAd.
 ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 
+// True iff submitter_name is the reserved slot-bundle submitter.  Compares the
+// name up to the '@' domain separator exactly against BUNDLE_SUBMITTER_NAME, so
+// an unrelated submitter that merely starts with "condor_bundle" (e.g.
+// "condor_bundlers") is not misclassified.  This is the single point that
+// decides bundle-submitter identity from a name; the negotiator keys on the
+// ATTR_IS_BUNDLE_SUBMITTER marker instead.
+bool isBundleSubmitter(const std::string & submitter_name);
+
 // tokenize the input string, and insert tokens into the attrs set
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL);
 inline bool add_attrs_from_string_tokens(classad::References & attrs, const std::string & str, const char * delims=NULL) {
