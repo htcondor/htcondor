@@ -76,7 +76,6 @@ Depends: adduser,
          cryptsetup,
 #if defined(UW_BUILD)
          pelican (>= 7.26.0),
-         pelican-osdf-compat (>= 7.26.0),
 #endif
          libjs-bootstrap,
          libjs-jquery,

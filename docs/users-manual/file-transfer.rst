@@ -824,7 +824,7 @@ from the desired service (see :ref:`jobs_that_require_credentials`).
 To use a file transfer plugin,
 substitute ``https`` in a transfer URL with the service name
 (``box`` for Box.com,
-``stash`` for Stash Cache,
+``pelican`` for Pelican,
 ``osdf`` for OSDF,
 ``gdrive`` for Google Drive, and
 ``onedrive`` for Microsoft OneDrive)
