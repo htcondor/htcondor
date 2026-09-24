@@ -2023,7 +2023,18 @@ match_info( Resource* rip, const char* id, const ClassAd & match_ad )
 		if( rip->r_cur->idMatches(id) ) {
 				// The ClaimId we got matches the one for the
 				// current claim, and we're already claimed.  There's
-				// nothing to do here.
+				// nothing to do here.  The negotiator notifies us and
+				// the schedd at the same time, so the schedd's
+				// REQUEST_CLAIM can beat this message here; it has
+				// already stamped the bundle info from the request ad.
+			bool is_bundle = false;
+			if( match_ad.LookupBool(ATTR_IS_BUNDLE, is_bundle) && is_bundle ) {
+				std::string bundle_id;
+				match_ad.LookupString(ATTR_BUNDLE_ID, bundle_id);
+				rip->dprintf( D_ALWAYS,
+							  "MATCH_INFO: arrived after claim, match is for slot bundle %s\n",
+							  bundle_id.c_str() );
+			}
 			rval = TRUE;
 		} else if( rip->r_pre && rip->r_pre->idMatches(id) ) {
 				// The ClaimId we got matches the preempting

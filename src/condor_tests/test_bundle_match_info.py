@@ -96,8 +96,13 @@ class TestBundleMatchInfo:
 	def test_startd_was_told_the_match_is_a_bundle(self, bundle_startd_log):
 		"""The startd read the metadata ad and recognized a bundle match.  If
 		either version gate named a version the peer does not satisfy, the ad is
-		never sent or never read and this line never appears."""
-		assert "MATCH_INFO: match is for slot bundle" in bundle_startd_log["log"], (
+		never sent or never read and this line never appears.
+
+		The negotiator tells the startd and the schedd about the match at the
+		same time, so MATCH_INFO may arrive before or after the schedd's
+		REQUEST_CLAIM.  The startd logs the bundle either way, with a
+		different prefix, so match only the common part."""
+		assert "match is for slot bundle" in bundle_startd_log["log"], (
 			"Startd never reported a slot bundle MATCH_INFO"
 		)
 
