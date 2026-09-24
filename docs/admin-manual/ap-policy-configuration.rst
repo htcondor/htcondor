@@ -656,9 +656,7 @@ spiked, whether a growing transfer queue preceded the slowdown, and how the
 queue depth on this AP has trended over the past weeks.  It is not a substitute
 for a real monitoring system -- the records are coarse, local to one AP, and
 eventually rotate away -- but it is always there, which the monitoring system
-frequently is not on the day it is needed.  For long-term retention of the same
-information, see
-:ref:`admin-manual/cm-configuration:monitoring with ganglia, elasticsearch, etc.`
+frequently is not on the day it is needed.
 
 .. note::
 
