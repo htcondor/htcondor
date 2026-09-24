@@ -5,6 +5,7 @@
   ``queue`` statement given in the layer's submit description is now
   preserved instead of being overridden.
   :jira:`3613`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
@@ -13,6 +14,8 @@
   filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
   using both LVM and SELinux.
   :jira:`3337`
+
+*** 25.0.15 bugs
 
 - Fixed a bug where the KERBEROS authentication method failed if the server
   was IPv6-only.
@@ -31,9 +34,6 @@
   cause a crash.
   :jira:`3934`
 
-*** 25.0.15 bugs
-
-*** 25.14.0 features
 *** 25.14.1 features
 
 - The *condor_submit* warning about submit files with multiple ``QUEUE`` statements
@@ -170,19 +170,6 @@
   when a temporary directory isn't being created.
   :jira:`3882`
 
-- Fixed the default for :macro:`MAX_CONCURRENT_UPLOADS_PER_USER` so it evaluates to 0
-  (no limit) when :macro:`MAX_CONCURRENT_UPLOADS` is not set.
-  :jira:`3664`
-
-- Improved the error message when :tool:`condor_q` or tool:`condor_rm` cannot
-  communicate with an overloaded *condor_schedd*.
-  :jira:`3619`
-
-*** 25.14.0 bugs
-
-- The Python bindings no longer assume that all ads in a legacy-style reply
-  from the negotiator contain only attributes present in the ad indexed #1.
-  :jira:`3884`
 *** 25.14.1 bugs
 
 - Fixed a bug where an idle job removed from the queue could occasionally
