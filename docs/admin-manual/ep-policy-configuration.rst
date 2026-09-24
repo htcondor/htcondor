@@ -4443,6 +4443,88 @@ When ``condor_gpu_utilization`` is running, it reports the following
 attributes to the slot ad, :ad-attr:`DeviceGPUsAverageUsage` and
 :ad-attr:`DeviceGPUsMemoryPeakUsage`.
 
+.. _direct-attach:
+
+Directly Attaching an EP to one AP
+----------------------------------
+
+:index:`direct attach`
+
+In the usual arrangement, an EP advertises its slots to the *condor_collector*,
+and those slots run jobs only after the *condor_negotiator* has matched one of
+them to a job and handed that match to an AP.  An EP configured for *direct
+attach* skips both of those steps: on a regular interval the *condor_startd*
+offers all of its unclaimed slots directly to one named *condor_schedd*, and
+that *condor_schedd* matches the offered slots against the jobs in its own queue
+and claims the ones it can use.  No *condor_negotiator* is involved, and the
+pool need not even have one running.  Claiming works as it always does -- the
+AP contacts the EP to claim a slot and start a job -- so the EP must still be
+reachable from the AP, possibly via :ref:`admin-manual/networking:htcondor
+connection brokering (ccb)`.
+
+An administrator might want an EP to attach directly to an AP because:
+
+-  The EP has been created on borrowed resources -- an HPC allocation, a cloud
+   instance, or a batch slot on some other system -- on behalf of one person,
+   and should run that person's jobs for its whole (usually short) lifetime.
+   This is how :tool:`htcondor annex` configures the EPs it creates.  Direct
+   attach makes the pilot's purpose explicit, rather than trying to express
+   "these resources belong to this one user" with ``START`` expressions,
+   accounting groups, or a private pool.
+-  Latency matters more than fair share.  A directly attached slot can be
+   claimed as soon as the EP offers it, instead of waiting for the next
+   negotiation cycle, which is useful for workloads made of many short jobs.
+-  The pool is small, or is a personal HTCondor, and running a
+   *condor_negotiator* to matchmake a handful of machines to a single queue is
+   not worth the trouble.
+-  Some hardware is to be devoted to a particular AP, permanently or
+   temporarily.  :tool:`htcondor` ``ep rehome`` uses direct attach for exactly
+   this: it drains an EP and re-points it at a different AP at runtime,
+   persisting the configuration so that it survives a restart or reboot.
+
+To set up direct attach, set :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME` on the
+EP to the name of the AP that should receive the offers, as that name appears
+in the output of :tool:`condor_status` ``-schedd``.  Setting this knob is what enables
+the feature; when it is empty, the *condor_startd* never offers its slots to
+anyone.  If the AP reports to a different *condor_collector* than the EP does,
+name that collector in :macro:`STARTD_DIRECT_ATTACH_SCHEDD_POOL`, which is how
+the *condor_startd* finds the AP.  For example:
+
+.. code-block:: condor-config
+
+    # Offer this machine's unclaimed slots to one specific AP.
+    STARTD_DIRECT_ATTACH_SCHEDD_NAME = submit.example.com
+    STARTD_DIRECT_ATTACH_SCHEDD_POOL = cm.example.com
+
+    # Offer slots soon after they become free.  The direct attach interval
+    # is a minimum; it is only checked when the startd sends its regular
+    # updates, so UPDATE_INTERVAL bounds it as well.
+    STARTD_DIRECT_ATTACH_INTERVAL = 30
+    UPDATE_INTERVAL = 30
+
+Only slots in the Unclaimed state are offered, so an EP whose slots are all
+busy offers nothing.  A partitionable slot stays unclaimed as it is carved up,
+so it continues to be offered and can accumulate many jobs from the AP.
+The EP still advertises to its own *condor_collector* as usual, which is what
+makes the machine visible to :tool:`condor_status` and to
+:tool:`htcondor` ``ep`` commands; directly attached slots advertise the
+attribute :ad-attr:`IsDirectAttach`, whose value is the name of the AP they are
+offered to.
+
+Direct attach has security consequences worth understanding, because the EP is
+approaching the AP rather than the other way around.  The AP requires the EP to
+authenticate and to have ``WRITE`` authorization before it will accept an
+offer.  Unless the EP's authenticated identity also has ``DAEMON``
+authorization at the AP, the AP will only match jobs whose owner is that same
+authenticated identity, which is what makes it safe for an ordinary user to
+start an EP -- on an HPC node, say -- and attach it to their own AP without
+being able to capture anyone else's jobs.  Administrators who need to relax
+this can set :macro:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK` on the AP, but
+should not do so unless every identity with ``WRITE`` access to the AP is
+trusted to run any user's jobs.  In the other direction, an EP that is willing
+to run jobs for only one submitter of that AP can say so with
+:macro:`STARTD_DIRECT_ATTACH_SUBMITTER_NAME`.
+
 .. _consumption-policy:
 
 condor_negotiator-Side Resource Consumption Policies
