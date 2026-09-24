@@ -1,11 +1,5 @@
 *** 25.15.15 bugs
 
-- Fixed a bug where the submit description files written by the
-  ``htcondor2.dags`` module each contained two ``queue`` statements. A
-  ``queue`` statement given in the layer's submit description is now
-  preserved instead of being overridden.
-  :jira:`3613`
-
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
   late materialization joblist attempts to use common files or a common container.
   :jira:`3942`
