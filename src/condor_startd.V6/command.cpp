@@ -944,8 +944,7 @@ abort_claim( Resource* rip )
 	case claimed_state:
 		if (rip->r_pre_pre) {
 			rip->removeClaim( rip->r_pre_pre );
-		}
-		else {
+		} else if (rip->r_pre) {
 			rip->removeClaim( rip->r_pre );
 		}
 		break;
