@@ -23,6 +23,11 @@ enable historical archive record indexing to a database by setting :macro:`use f
 :macro-def:`LIBRARIAN_DEBUG`
     The archive librarian's debugging level. Default is nothing.
 
+:macro-def:`LIBRARIAN_ADDRESS_FILE`
+    This macro is described in :macro:`<SUBSYS>_ADDRESS_FILE`. It allows tools such
+    as :tool:`condor_restart` with ``-daemon librarian`` to locate the archive
+    librarian. Defaults to ``$(LOG)/.librarian_address``.
+
 :macro-def:`LIBRARIAN_DATABASE`
     The path to the archive librarian's SQLite3 database file. Defaults to
     ``$(SPOOL)/library.db``.

@@ -20,6 +20,11 @@
   defaults to 365.
   :jira:`3943`
 
+- The Archive Librarian now writes an address file,
+  :macro:`LIBRARIAN_ADDRESS_FILE`, so it can be targeted by tools such as
+  :tool:`condor_restart` with ``-daemon librarian``.
+  :jira:`3943`
+
 *** 26.2.0 bugs
 
 - The *condor_starter* can now optionally set a limit on the amount of

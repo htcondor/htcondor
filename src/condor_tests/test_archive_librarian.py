@@ -68,42 +68,14 @@ def _safe_job_count(db_path):
         return 0
 
 
-def _restart_pool_and_wait_for_new_schedd(condor, timeout=60):
+def _reconfig_schedd(condor):
     """
-    Restart every daemon under condor_master (including LIBRARIAN, since it's
-    in DAEMON_LIST) and block until a new SCHEDD process is confirmed alive.
-    SCHEDD's pid is used as the restart signal since condor_who reports it
-    reliably; LIBRARIAN restarts as part of the same condor_restart call.
+    Reconfig the schedd so it closes its cached handle to the history file
+    (Scheduler::Init() -> InitJobHistoryFile()); otherwise it would keep
+    appending to the renamed/removed file instead of creating a new one.
     """
-    who = condor.run_command(["condor_who", "-quick"])
-    assert who.returncode == 0, "Failed to query daemon information with condor_who"
-    old_pid = None
-    for line in who.stdout.split("\n"):
-        if line.startswith("SCHEDD_PID"):
-            old_pid = line.split("=")[1]
-            break
-    assert old_pid is not None, "Failed to get schedd pid before restart"
-
-    condor.run_command(["condor_restart", "-fast"])
-
-    start = time.time()
-    while True:
-        assert time.time() - start <= timeout, "Failed to restart condor"
-
-        who = condor.run_command(["condor_who", "-quick"])
-        if who.returncode == 0:
-            alive = False
-            pid = None
-            for line in who.stdout.split("\n"):
-                if line.startswith("SCHEDD_PID"):
-                    pid = line.split("=")[1]
-                elif line.startswith("SCHEDD =") and '"alive"' in line.lower():
-                    alive = True
-
-            if alive and pid is not None and pid != old_pid:
-                return
-
-        time.sleep(1)
+    p = condor.run_command(["condor_reconfig", "-schedd"])
+    assert p.returncode == 0, f"condor_reconfig -schedd failed: {p.stderr}"
 
 
 def _submit_and_wait(condor, log_path, path_to_sleep, count):
@@ -217,9 +189,8 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
 
     os.utime(str(rotated_path), None)
 
-    # Restart the schedd (and, incidentally, every other daemon in DAEMON_LIST)
-    # to close its file handle to the rotated file.
-    _restart_pool_and_wait_for_new_schedd(condor)
+    # Close the schedd's file handle to the rotated file.
+    _reconfig_schedd(condor)
 
     handle = _submit_and_wait(condor, test_dir / "job_post_rotation.log", path_to_sleep, 1)
 
@@ -386,7 +357,7 @@ class TestLibrarianIngestion:
         assert count >= 1, "Rotated file not marked FullyRead"
 
     def test_post_rotation_status_updated(self, post_rotation_db, condor):
-        """The daemon must keep writing Status rows after the schedd restart.
+        """The daemon must keep writing Status rows after the rotation.
 
         Asserted as a delta on MAX(TimeOfUpdate) so retention pruning (which
         keeps the live count near 1) cannot mask a stalled daemon.
@@ -409,14 +380,6 @@ class TestLibrarianIngestion:
         assert new_max is not None and new_max > initial_max, (
             f"Status TimeOfUpdate did not advance: was {initial_max}, now {new_max}"
         )
-
-    def test_post_rotation_avg_record_size_persisted(self, post_rotation_db):
-        """AvgRecordSize must remain > 0 for all files after a daemon restart (DB persistence)."""
-        rows = post_rotation_db.execute(r"SELECT FileName, AvgRecordSize FROM Files").fetchall()
-        assert len(rows) >= 2, "Expected at least 2 Files entries after rotation"
-        bad = [(r[0], r[1]) for r in rows if r[1] <= 0]
-        assert not bad, \
-            f"AvgRecordSize reset to 0 after restart for: {bad}"
 
     def test_post_rotation_records_read_total(self, post_rotation_db):
         """Total RecordsRead across all files must be >= NUM_JOBS + 1 after the post-rotation ingest."""

@@ -6146,6 +6146,12 @@ type=bool
 description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
 
 # Archive librarian configuration options
+[LIBRARIAN_ADDRESS_FILE]
+default=$(LOG)/.librarian_address
+type=path
+description=Path to the archive librarian address file
+tags=librarian
+
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
 win32_default=$(SBIN)\condor_librarian.exe

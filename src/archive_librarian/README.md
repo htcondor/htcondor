@@ -218,6 +218,7 @@ LIBRARIAN_DATABASE = $(LOCAL_DIR)/librarian.db
 | Knob | Default | Description |
 |------|---------|-------------|
 | `LIBRARIAN_DATABASE` | *(required)* | Path to the SQLite database file |
+| `LIBRARIAN_ADDRESS_FILE` | `$(LOG)/.librarian_address` | Address file used by tools (e.g. `condor_restart -daemon librarian`) to locate the daemon |
 | `HISTORY` | *(inherited)* | Path to the active HTCondor history archive file |
 | `LIBRARIAN_UPDATE_INTERVAL` | `5` | Seconds between update cycles |
 | `LIBRARIAN_MAX_UPDATES_PER_CYCLE` | `100000` | Maximum records ingested per cycle |
