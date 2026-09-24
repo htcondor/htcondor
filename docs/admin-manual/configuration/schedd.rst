@@ -1573,3 +1573,14 @@ These macros control the *condor_schedd*.
     (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
 
     We expect this knob to default to true in a later version of HTCondor.
+
+:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
+    When an EP offers its slots directly to this *condor_schedd* (see
+    :ref:`direct-attach`), and the EP's authenticated identity does not have
+    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
+    by that authenticated identity to the offered slots.  Setting this knob to
+    ``True`` disables that restriction, allowing any EP with ``WRITE``
+    authorization to run any user's jobs.  Do not set this unless every
+    identity with ``WRITE`` access to this AP is trusted to do so.
+
+    Defaults to ``False``.

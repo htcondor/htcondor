@@ -22104,7 +22104,8 @@ Scheduler::post_transform_adjustments(
 		// SetAttributeExpr() unparses the expression and does not take
 		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get(),
+			SetAttribute_SubmitTransform
 		);
 		if( rv != 0 ) {
 			if( errorStack ) {
@@ -22116,7 +22117,8 @@ Scheduler::post_transform_adjustments(
 		}
 
 		rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
+			SetAttribute_SubmitTransform
 		);
 		if( rv != 0 ) {
 			if( errorStack ) {
