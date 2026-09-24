@@ -6,6 +6,10 @@
   preserved instead of being overridden.
   :jira:`3613`
 
+- Fixed a failure to materialize jobs in the *condor_schedd* when a
+  late materialization joblist attempts to use common files or a common container.
+  :jira:`3942`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
