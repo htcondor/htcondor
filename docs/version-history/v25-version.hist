@@ -1,3 +1,10 @@
+*** 25.15.15 features
+
+- The ``chirp ulog`` is now enabled whenever the ``chirp set_job_attr_delayed`` is enabled.
+  These are enabled by default, so it is no longer necessary for the job to have :subcom:`want_io_proxy`
+  set to true.
+  :jira:`3924`
+
 *** 25.15.15 bugs
 
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
