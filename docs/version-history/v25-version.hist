@@ -1,5 +1,17 @@
 *** 25.15.15 bugs
 
+- Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
+  when :macro:`COLLECTOR_HOST` listed multiple collectors and one silently
+  dropped packets instead of refusing the connection. A new
+  :macro:`HA_COLLECTOR_PROBE_TIMEOUT` reachability check now fails over
+  much sooner.
+  :jira:`3491`
+
+- Fixed a bug where the submit description files written by the
+  ``htcondor2.dags`` module each contained two ``queue`` statements. A
+  ``queue`` statement given in the layer's submit description is now
+  preserved instead of being overridden.
+  :jira:`3613`
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
   late materialization joblist attempts to use common files or a common container.
   :jira:`3942`

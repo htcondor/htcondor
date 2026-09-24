@@ -289,6 +289,11 @@ description=Directory for condor credentials
 default=60
 type=int
 
+[HA_COLLECTOR_PROBE_TIMEOUT]
+default=10
+type=int
+description=Timeout in seconds for the reachability probe used to fail fast over an unresponsive collector when multiple collectors are configured for high availability. A value <= 0 disables the probe, falling back to the full QUERY_TIMEOUT.
+
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
