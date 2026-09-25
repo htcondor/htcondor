@@ -6156,6 +6156,12 @@ type=bool
 description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
 
 # Archive librarian configuration options
+[LIBRARIAN_ADDRESS_FILE]
+default=$(LOG)/.librarian_address
+type=path
+description=Path to the archive librarian address file
+tags=librarian
+
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
 win32_default=$(SBIN)\condor_librarian.exe
@@ -6199,6 +6205,12 @@ default=1800
 type=int
 range=0,
 description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
+tags=librarian
+
+[LIBRARIAN_USER_RETENTION_DAYS]
+default=365
+type=int
+description=Days the archive librarian keeps a user with no remaining indexed jobs before garbage collection removes it. 0 removes immediately, negative never removes.
 tags=librarian
 
 [LIBRARIAN_MAX_DATABASE_SIZE]
