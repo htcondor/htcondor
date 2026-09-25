@@ -2990,7 +2990,7 @@ FileTransfer::DoDownload(ReliSock *s)
 					for (auto list_entry : (*exprlist)) {
 						std::string url_value;
 						classad::Value value;
-						if (!list_entry->Evaluate(value)) {
+						if (!classad::ClassAd::EvaluateExpr(nullptr, list_entry, value)) {
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry.\n");
 							signed_urls.emplace_back("");
 						}
@@ -4773,7 +4773,7 @@ FileTransfer::computeFileList(
 			for (auto list_entry : (*exprlist)) {
 				classad::Value entry_val;
 				std::string fname;
-				if (!list_entry->Evaluate(entry_val) || !entry_val.IsStringValue(fname)) {
+				if (!classad::ClassAd::EvaluateExpr(nullptr, list_entry, entry_val) || !entry_val.IsStringValue(fname)) {
 					continue;
 				}
 				if (ExecFile && fname == "condor_exec.exe") {
@@ -4866,7 +4866,7 @@ FileTransfer::computeFileList(
 				}
 				classad::Value entry_val;
 				std::string signed_url;
-				if (!list_entry->Evaluate(entry_val) || !entry_val.IsStringValue(signed_url)) {
+				if (!classad::ClassAd::EvaluateExpr(nullptr, list_entry, entry_val) || !entry_val.IsStringValue(signed_url)) {
 					idx++;
 					dprintf(D_FULLDEBUG, "DoUpload: WARNING - not a valid string entry\n");
 					continue;

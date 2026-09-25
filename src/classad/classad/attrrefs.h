@@ -92,24 +92,19 @@ class AttributeReference : public ExprTree
          */
         friend bool operator==(const AttributeReference &ref1, const AttributeReference &ref2);
 
-		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-
 		static int Deref(const AttributeReference & ref, EvalState &, ExprTree*&);
 
 	protected:
 		/// Constructor
-		AttributeReference(): parentScope(nullptr), expr(nullptr), absolute(false)  {}
+		AttributeReference(): expr(nullptr), absolute(false)  {}
 
   	private:
 		// private ctor for internal use
 		AttributeReference( ExprTree*, const std::string &, bool );
-		virtual void _SetParentScope( const ClassAd* p );
     	virtual bool _Evaluate( EvalState & , Value & ) const;
     	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& ) const;
     	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool ) const;
-
-		const ClassAd *parentScope;
 
 		ExprTree	*expr;
 		bool		absolute;

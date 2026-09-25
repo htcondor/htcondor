@@ -22,6 +22,8 @@
 #define __CLASSAD_EXPR_TREE_H__
 
 #include <vector>
+#include <utility>
+#include <unordered_map>
 #include "classad/classad_containers.h"
 #include "classad/common.h"
 #include "classad/value.h"
@@ -33,6 +35,51 @@ namespace classad {
 class ExprTree;
 class ClassAd;
 class MatchClassAd;
+
+
+// Map from a ClassAd to its parent (enclosing) scope, built up during
+// evaluation. Lexical scope chains are short -- typically 2-3 deep, even in a
+// match -- so a flat vector with linear search beats a hashed map: it avoids
+// the per-EvalState heap allocation of hash buckets and the hashing itself,
+// both of which showed up in profiles of matchmaking. This exposes just the
+// slice of the std::unordered_map interface the evaluator uses
+// (find/end/operator[]/copy), so it is a drop-in for the call sites.
+class ScopeParentMap {
+	public:
+		using value_type = std::pair<const ClassAd*, const ClassAd*>;
+		using iterator = std::vector<value_type>::iterator;
+		using const_iterator = std::vector<value_type>::const_iterator;
+
+		iterator begin() { return m_vec.begin(); }
+		iterator end()   { return m_vec.end(); }
+		const_iterator begin() const { return m_vec.begin(); }
+		const_iterator end()   const { return m_vec.end(); }
+
+		iterator find(const ClassAd* key) {
+			for (iterator it = m_vec.begin(); it != m_vec.end(); ++it) {
+				if (it->first == key) { return it; }
+			}
+			return m_vec.end();
+		}
+		const_iterator find(const ClassAd* key) const {
+			for (const_iterator it = m_vec.begin(); it != m_vec.end(); ++it) {
+				if (it->first == key) { return it; }
+			}
+			return m_vec.end();
+		}
+
+		// insert-or-assign, matching std::unordered_map::operator[]
+		const ClassAd*& operator[](const ClassAd* key) {
+			for (value_type& p : m_vec) {
+				if (p.first == key) { return p.second; }
+			}
+			m_vec.emplace_back(key, nullptr);
+			return m_vec.back().second;
+		}
+
+	private:
+		std::vector<value_type> m_vec;
+};
 
 
 class EvalState {
@@ -78,6 +125,10 @@ class EvalState {
 		bool		flattenAndInline;	// NAC
 		bool		debug;
 		bool		inAttrRefScope;
+
+		// Map from ClassAd* to its parent scope during evaluation.
+		// Populated dynamically as evaluation descends into nested ClassAds.
+		ScopeParentMap parentMap;
 
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted.
@@ -136,24 +187,19 @@ class ExprTree
 		/// Virtual destructor
 		virtual ~ExprTree () {};
 
-		/** Sets the lexical parent scope of the expression, which is used to 
-				determine the lexical scoping structure for resolving attribute
-				references. (However, the semantic parent may be different from 
-				the lexical parent if a <tt>super</tt> attribute is specified.) 
-				This method is automatically called when expressions are 
-				inserted into ClassAds, and should thus be called explicitly 
-				only when evaluating expressions which haven't been inserted 
-				into a ClassAd.
-			@param p The parent ClassAd.
+		/** Sets the lexical parent scope of the expression.
+		    This is now a no-op; parent scope is tracked dynamically
+		    in EvalState::parentMap during evaluation.
+			@param p The parent ClassAd (ignored).
 		*/
 		void SetParentScope( const ClassAd* p );
 
 		/** Gets the parent scope of the expression.
-			Some expressions (e.g. literals) don't know their parent
-			scope and always return NULL.
-		 	@return The parent scope of the expression.
+		    Always returns NULL; parent scope is tracked dynamically
+		    in EvalState::parentMap during evaluation.
+		 	@return Always NULL.
 		*/
-		virtual const ClassAd *GetParentScope( ) const = 0;
+		const ClassAd *GetParentScope( ) const { return nullptr; }
 
 		/** Makes a deep copy of the expression tree
 		 * 	@return A deep copy of the expression, or NULL on failure.
@@ -192,14 +238,7 @@ class ExprTree
          *  @param val   The result of the evaluation
          *  @return true on success, false on failure
          */
-		bool Evaluate( EvalState &state, Value &val ) const; 
-		
-        /** Evaluate this tree.
-         *  This only works if the expression is currently part of a ClassAd.
-         *  @param val   The result of the evaluation
-         *  @return true on success, false on failure
-         */
-		bool Evaluate( Value& v ) const;
+		bool Evaluate( EvalState &state, Value &val ) const;
 
         /** Is this ExprTree the same as the tree?
          *  @return true if it is the same, false otherwise
@@ -221,6 +260,16 @@ class ExprTree
 		*  @return true if the copy succeeded, false otherwise.
 		*/
 		void CopyFrom(const ExprTree &) { }
+
+		/** Evaluate this tree with no enclosing scope.
+		 *  Only valid for self-contained (top-level) expressions; an
+		 *  expression that references attributes of a containing ClassAd
+		 *  will evaluate to UNDEFINED. Use ClassAd::EvaluateExpr() to
+		 *  evaluate in the scope of an ad.
+		 *  @param v   The result of the evaluation
+		 *  @return true on success, false on failure
+		 */
+		bool Evaluate( Value& v ) const;
 
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;
@@ -255,7 +304,6 @@ class ExprTree
         ExprTree(const ExprTree &tree);
         ExprTree &operator=(const ExprTree &literal);
 
-		virtual void _SetParentScope( const ClassAd* )=0;
 		virtual bool _Evaluate( EvalState&, Value& ) const=0;
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const=0;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* )const=0;
