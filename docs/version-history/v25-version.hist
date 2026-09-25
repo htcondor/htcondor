@@ -9,6 +9,11 @@
 
 *** 25.0.15 bugs
 
+- Fixed a bug where :subcom:`allowed_execute_duration` had no effect on
+  scheduler universe jobs (such as :tool:`condor_dagman`) and local
+  universe jobs.
+  :jira:`3941`
+
 *** 25.0.14 features
 
 - Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
