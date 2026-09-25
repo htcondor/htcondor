@@ -54,7 +54,7 @@ public:
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
 	// name, description, and so on.
-	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD *statsd,std::vector<std::string> *regex_groups=NULL,char const *regex_attr=NULL);
+	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD &statsd,std::vector<std::string> *regex_groups=NULL,char const *regex_attr=NULL);
 
 	// Sets result to a string representation of the value to publish.
 	// Returns false on failure.
@@ -78,7 +78,7 @@ public:
 	// derivative (counter) metric is integrated into a persistent running
 	// total via statsd so it can be published as a monotonic counter rather
 	// than a per-interval gauge; see the implementation for details.
-	void convertToNonAggregateValue(class StatsD *statsd);
+	void convertToNonAggregateValue(class StatsD &statsd);
 
 	std::string name;
 	std::string title;

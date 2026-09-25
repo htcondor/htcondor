@@ -138,16 +138,19 @@ static bool prom_ssl_initialize()
 	    LOAD(hdl, SSL_shutdown)                        ||
 	    LOAD(hdl, SSL_get_error)) {
 		dprintf(D_ERROR, "PrometheusD: failed to load SSL symbol: %s\n", dlerror());
+		dlclose(hdl);
 		return false;
 	}
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	if (LOAD(hdl, SSLv23_server_method)) {
 		dprintf(D_ERROR, "PrometheusD: failed to load SSLv23_server_method: %s\n", dlerror());
+		dlclose(hdl);
 		return false;
 	}
 #else
 	if (LOAD(hdl, TLS_server_method)) {
 		dprintf(D_ERROR, "PrometheusD: failed to load TLS_server_method: %s\n", dlerror());
+		dlclose(hdl);
 		return false;
 	}
 #endif
