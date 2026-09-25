@@ -352,7 +352,7 @@ if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
-# Install the Pelican client and server for the Pelican credmon integration
+# Install the Pelican server for the Pelican credmon integration
 # test (src/condor_tests/test_pelican_credmon.py), which stands up a POSIXv2
 # federation with the embedded issuer and exercises the device-code flow,
 # RFC 8693 token exchange, and refresh.  The above only *downloads* pelican for
@@ -362,8 +362,9 @@ fi
 # in the HTCondor repositories.  `pelican-server` provides the federation and
 # may not be mirrored in every repository, so its installation is best-effort:
 # when it is absent the integration test simply skips.
-$INSTALL pelican
-$INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
+if [ "$ID" != 'debian' ] && [ "$ID" != 'ubuntu' ]; then
+    $INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
+fi
 
 # Clean up package caches
 if [ "$ID" = 'centos' ]; then
