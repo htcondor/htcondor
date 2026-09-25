@@ -52,6 +52,8 @@ class DataReuseDirectory;
 }
 #endif
 
+class OsProc; // forward ref
+
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
 	represent a running job.
@@ -181,6 +183,11 @@ public:
 	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
 	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
 
+	// The shadow will return a bool meant to overwrite `claim_is_closing`
+	// in VanillaProc::restartCheckpointedJob()... if all goes well.  The
+	// optional part is for when it doesn't.
+	static std::optional<bool> requestGuidanceCheckpointTaken( Starter * s, const ClassAd & context );
+
 		/**
 		 *
 		 *
@@ -263,6 +270,11 @@ public:
 			InnerWorkingDir.clear();
 		}
 	}
+
+	void SetupProcessTracking(FamilyInfo & fi, UserProc* up, int64_t & mem_limit);
+	const char * ChooseCGroup(FamilyInfo & fi, int job_universe, const std::string & suffix);
+	void ReportProcessTracking(FamilyInfo & fi, UserProc* up);
+	bool GetFsRemaps(OsProc * oproc, FilesystemRemap * & remaps, bool include_pid_namespeace=false);
 
 	// Get job working directory disk usage: return bytes used & num dirs + files
 	void include_multilink_files_in_disk_usage(bool v) {
@@ -395,6 +407,12 @@ protected:
 		std::function<void(void)> continue_conversation
 	);
 
+	static std::optional<bool> handleCheckpointTakenCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
+	);
+
 	static bool handleJobSetupCommand(
 		Starter * s,
 		const ClassAd & guidance,
@@ -405,6 +423,34 @@ protected:
 	// we want to report *after* we finish transfer of FailureFiles
 	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
 	struct UnreadyReason  m_urea; // details when m_setupStatus is non-zero
+
+	FamilyInfo main_job_fi;
+	int64_t    m_oom_memory_limit{0};
+	gid_t      m_tracking_gid{0};
+   #if 0
+	// this doesn't work in a map
+	typedef std::unique_ptr<char, decltype(&std::free)> cstr_pointer;
+   #else
+	class cstr_pointer {
+	public:
+		cstr_pointer() = default;
+		cstr_pointer(char* str) : p(str) {}
+		cstr_pointer(const cstr_pointer&) = delete; // no copy
+		cstr_pointer(cstr_pointer&& other) noexcept { std::swap(this->p,other.p); }
+		~cstr_pointer() { clear(); }
+		void reset(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
+		void clear() { if (p) free(p); p = nullptr; } // free the pointer if any
+		char * get() { return p; }                 // for compat with unique_ptr
+	private:
+		char * p{nullptr};
+	};
+   #endif
+	// map of cgroup name indexed by CgroupSuffix
+	// The main cgroup name will be indexed by "".
+	// if cgroups are not enabled, then the cstr_pointer will hold a nullptr.
+	std::map<std::string, cstr_pointer> m_cgroup_names;
+	// Holds the filesystem remaps if any. Will hold a nullptr if no remaps are not used.
+	std::unique_ptr<FilesystemRemap> fs_remap;
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;

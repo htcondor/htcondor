@@ -4927,7 +4927,7 @@ default : @fin
 @fin
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk - $(CATALOG_SPACE),{Target.DiskQuantum?:1024})
+default=quantize(RequestDisk, {Target.DiskQuantum ?: 1024})
 version=24.12.18
 type=string
 description=Default modification to a disk resource request
@@ -5398,7 +5398,7 @@ type=int
 range=0,
 
 [MAX_CONCURRENT_UPLOADS_PER_USER]
-default=$(MAX_CONCURRENT_UPLOADS:100)/5
+default=($(MAX_CONCURRENT_UPLOADS:0))/5
 type=int
 range=0,
 
@@ -5763,13 +5763,13 @@ version=8.2.8
 type=string
 description=When a slot should be in Owner state
 
-[STASH_PLUGIN]
-default=$(LIBEXEC)/stash_plugin
-description=Full path to the stash/osdf/Pelican plugin
+[PELICAN_PLUGIN]
+default=$(LIBEXEC)/pelican_plugin
+description=Full path to the OSDF/Pelican plugin
 type=path
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py, $(STASH_PLUGIN)
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py, $(PELICAN_PLUGIN)
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
@@ -6942,7 +6942,7 @@ default : @end
   # universe jobs can't go over their disk allocations, so
   # we ignore them.
   #
-  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  DISK_EXCEEDED = (JobUniverse != 13 && MY.IsDataSlot ?: false && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
   HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
   use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
 @end

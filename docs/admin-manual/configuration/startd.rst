@@ -24,6 +24,11 @@ section.
     to replace it with one that will generate a better rank for the
     *condor_startd* daemon, or a user with a higher priority.
 
+:macro-def:`STARTD_HEALTH_EXPRS`
+    A comma separated list of expressions that must each evaluate to ``True`` in
+    order for the machine to be considered healthy. A machine that is not
+    healthy will not start any HTCondor job.
+
 :macro-def:`DEFAULT_DRAINING_START_EXPR`
     An alternate :macro:`START` expression to use while draining when the
     drain command is sent without a ``-start`` argument.  When this
@@ -244,32 +249,6 @@ section.
     :macro:`WANT_VACATE` expression may be used to skip the graceful
     shutdown of the job.
 
-:macro-def:`MAXJOBRETIREMENTTIME`
-    When the *condor_startd* wants to evict a job, a job which has run
-    for less than the number of seconds specified by this expression
-    will not be hard-killed. The *condor_startd* will wait for the job
-    to finish or to exceed this amount of time, whichever comes sooner.
-    Time spent in suspension does not count against the job. The default
-    value of 0 (when the configuration variable is not present) means
-    that the job gets no retirement time. If the job vacating policy
-    grants the job X seconds of vacating time, a preempted job will be
-    soft-killed X seconds before the end of its retirement time, so that
-    hard-killing of the job will not happen until the end of the
-    retirement time if the job does not finish shutting down before
-    then. Note that in peaceful shutdown mode of the *condor_startd*,
-    retirement time is treated as though infinite. In graceful shutdown
-    mode, the job will not be preempted until the configured retirement
-    time expires or :macro:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
-    mode, retirement time is ignored. See :macro:`MAXJOBRETIREMENTTIME` in
-    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-    for further explanation.
-
-    By default the *condor_negotiator* will not match jobs to a slot
-    with retirement time remaining. This behavior is controlled by
-    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
-
-    There is no default value for this configuration variable.
-
 :macro-def:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. The default is 1200, which is
@@ -405,6 +384,29 @@ section.
 
 :macro-def:`SLOT<N>_STARTD_ATTRS`
     Like the above, but only applies to the numbered slot.
+
+:macro-def:`SLOT_REQUIREMENTS_CLAUSES`
+    A list of startd attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
+    each slot.  :macro:`START`, and :ad-attr:`WithinResourceLimits` are always included in
+    Requirements and do not need to be listed here. Defaults to :ad-attr:`Healthy` when
+    there are :macro:`STARTD_HEALTH_EXPRS` configured.
+
+    Example:
+
+    .. code-block:: condor-config
+
+          # jobs must have a project name and type 2 slots are reserved for project bluebook
+          SLOT_REQUIREMENTS_CLAUSES += ProjectRequirement
+          ProjectRequirement = TARGET.ProjectName isnt undefined
+          SLOT_TYPE_2_ProjectRequirement = TARGET.ProjectName == "bluebook"
+
+:macro-def:`PSLOT_REQUIREMENTS_CLAUSES`
+    A list of attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
+    each partitionable slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
+
+:macro-def:`DSLOT_REQUIREMENTS_CLAUSES`
+    A list of attributes that should be included in the :ad-attr:`Requirements[type=Machine]` expression of
+    each dynamic slot in addition to those listed in :macro:`SLOT_REQUIREMENTS_CLAUSES`.
 
 :macro-def:`STARTD_DEBUG`
     This macro (and other settings related to debug logging in the
@@ -982,6 +984,30 @@ needs.
     A boolean variable that defaults to ``False``. When ``True``, this
     slot permits dynamic provisioning, as specified in
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+
+:macro-def:`SLOT_TYPE_<N>_BACKFILL`
+    A boolean variable that defaults to ``False``. When ``True``, this
+    slot is provisioned from a set of resources that shadow the normal resources
+    and keep track of conflicts with resource usage by other slots.
+    Currently when this is ``True``, :macro:`SLOT_TYPE_<N>_PARTITIONABLE` must also be set to ``True``.
+
+    Backfill slots will have the attribute :ad-attr:`ResourceConflict` set to a list
+    of resource names whenever the current slot conflicts with another slot.
+    This attribute can be used by the :macro-def:`PREEMPT`
+    policy expression to evict jobs from the backfill slot when a non-backfill slot begins
+    to use the same resources.
+
+    The recommended configuration for using backfill slots has a :macro:`PREEMPT` expression
+    that is ``True`` when :ad-attr:`ResourceConflict` is defined and non-empty. For example:
+
+    .. code-block:: condor-config
+
+                # Create a single backfill p-slot that shadows all of the CPUs, Disk, Memory, etc.
+                SLOT_TYPE_2 = 100%
+                NUM_SLOTS_TYPE_2 = 1
+                SLOT_TYPE_2_PARTITIONABLE = True
+                SLOT_TYPE_2_BACKFILL = True
+                SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
 
 :macro-def:`CLAIM_PARTITIONABLE_LEFTOVERS`
     A boolean variable that defaults to ``True``. When ``True`` within

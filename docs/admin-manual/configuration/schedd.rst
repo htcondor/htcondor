@@ -256,7 +256,7 @@ These macros control the *condor_schedd*.
     This specifies the maximum number of simultaneous transfers per user of input
     files from the access point to execute machines. The limit applies
     to all jobs submitted by a user from the same *condor_schedd*. The default is
-    ``$(MAX_CONCURRENT_UPLOADS)/5``. A setting of 0 means unlimited transfers. This limit currently
+    ``$(MAX_CONCURRENT_UPLOADS:0)/5``. A setting of 0 means unlimited transfers. This limit currently
     does not apply to grid universe jobs. When
     the limit is reached, the schedd will stop requesting new matches for that user from the *condor_negotiator*
 
