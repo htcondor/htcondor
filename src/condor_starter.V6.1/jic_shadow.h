@@ -113,6 +113,13 @@ public:
 		*/
 	void Continue( void );
 
+		/** All the jobs have been spawned.  In addition to the base-class
+			behavior (starting the periodic shadow-update timer), start a
+			separate, faster timer dedicated to updating the startd with the
+			job's resource usage.
+		 */
+	void allJobsSpawned( void );
+
 		/** All the jobs are done. We need to send an update ad to the
 		 *  shadow before starting the transfer of output files.
 		 */
@@ -306,6 +313,21 @@ private:
 		/** Send a command to the startd and get a classad reply
 		*/
 	ClassAd * sendStartdCommand(int cmd, ClassAd & payload);
+
+		/** Publish a lightweight, usage-only update ad (the job's resource
+			usage as measured by the proc classes, plus cached disk usage) and
+			send it to the startd.  Unlike updateShadow()/publishUpdateAd(), this
+			does NOT drain m_delayed_updates (those belong to the shadow) and does
+			NOT trigger a disk du walk -- it uses the disk usage cached by the
+			slower shadow-update path.  Driven by the startd-update timer.
+		*/
+	void updateStartdUsage( int timerID = -1 );
+
+		/// Start the timer that periodically sends job usage to the startd.
+	void startStartdUpdateTimer( void );
+
+		/// Cancel the startd-update timer.
+	void cancelStartdUpdateTimer( void );
 
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
@@ -571,6 +593,17 @@ private:
 	void syscall_sock_disconnect();
 
 	Stream *m_job_startd_update_sock;
+
+		/// Timer id for the periodic startd usage updates (separate from, and
+		/// faster than, the periodic shadow updates).
+	int m_startd_update_tid{-1};
+
+		/// Disk usage of the sandbox, cached by publishUpdateAd() on the (slow)
+		/// shadow-update cadence so the (fast) startd-update path can report it
+		/// without triggering an expensive du walk on every tick.  Negative
+		/// means "not yet sampled".
+	long long m_cached_disk_usage_kb{-1};
+	size_t m_cached_scratch_file_count{0};
 
 		/** A list of output files that have been dynamically added
 		    (e.g. a core file dumped by the job)

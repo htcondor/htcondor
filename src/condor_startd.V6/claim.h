@@ -385,11 +385,18 @@ private:
 	bool        c_bundle{false}; // when true, this claim is held for a slot bundle
 	std::string c_bundle_id;     // id of the bundle this claim belongs to
 
-	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
-	double c_cpus_usage;    // CpusUsage from last call to updateUsage
-	long long c_image_size;	// ImageSize (total_image_size) from last call to updateUsage
-	long long c_cur_rss{0}; // current (not peak) ResidentSetSize from updateUsage
-	long long c_peak_rss{0};// peak ResidentSetSize from updateUsage
+	// these are cached from the usage the starter pushes to us via
+	// receiveJobClassAdUpdate(); updateUsage() just hands them back.
+	double c_cpus_usage;    // CpusUsage (in cpus/cores; 1.0 == one full cpu)
+	long long c_image_size;	// ImageSize
+	long long c_cur_rss{0}; // current (not peak) ResidentSetSize
+	long long c_peak_rss{0};// peak ResidentSetSize
+
+	// previous cumulative cpu-seconds sample (RemoteUserCpu + RemoteSysCpu) and
+	// the time it arrived, used to derive an instantaneous CpusUsage from the
+	// starter's successive updates.  c_prev_cpu_time == 0 means "no sample yet".
+	double c_prev_cpu_secs{-1.0};
+	time_t c_prev_cpu_time{0};
 
 	std::string c_vacate_reason;
 	int c_vacate_code{0};
