@@ -18,7 +18,7 @@ else
 		CXXFLAGS="$(rpm --eval '%build_cxxflags') ${CXXFLAGS}"
 		echo "Using rpm to set CXXFLAGS to ${CXXFLAGS}"
 	else
-		echo "No dpkg-buildflags or rpmbuild found, using default CXXFLAGS"
+		echo "No dpkg-buildflags or rpm found, using default CXXFLAGS"
 	fi
 fi
 
