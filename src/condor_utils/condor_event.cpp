@@ -3878,8 +3878,8 @@ NodeExecuteEvent::readEvent (ULogFile& file, bool & got_sync_line)
 		return 1; // OK for there to be no more lines - backwards compatibility
 	}
 	if (starts_with(line, "\tSlotName:")) {
-		slotName = strchr(line.c_str(),':') + 1,
-			trim(slotName);
+		slotName = strchr(line.c_str(),':') + 1;
+		trim(slotName);
 		trim_quotes(slotName, "\"");
 	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
 		setProp().Insert(attr, tree);
@@ -6087,6 +6087,16 @@ CommonFilesEvent::CommonFilesEvent() : type((+CommonFilesEventType::None)._to_st
 	eventNumber = ULOG_COMMON_FILES;
 }
 
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+bool CommonFilesEvent::hasProps() { // return true if non-zero number of execute properties
+	return executeProps.get() && executeProps->size() > 0;
+};
+ClassAd & CommonFilesEvent::setProp() { // get a ref to the execute properties ad, creating if does not exist.
+	if ( ! executeProps.get()) { executeProps.reset(new ClassAd()); }
+	return *executeProps.get();
+}
+#endif
+
 int
 CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
 	std::string eventString;
@@ -6105,6 +6115,40 @@ CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
 	}
 	type = groups[1];
 
+	std::string line;
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+	ExprTree * tree = nullptr;
+	std::string attr;
+#endif
+
+	// the next line is repetition of the event type as a string CommonFilesEventStrings
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		// TODO: fail if the string is missing or wrong?
+		return 1;
+	}
+	// if this is one of the CommonFileEventStrings, just skip it and read another line.
+	if (strstr(line.c_str(), "common files")) {
+		// read optional SlotName: <name>
+		if ( ! read_optional_line(line, file, got_sync_line)) {
+			return 1; // OK for there to be no more lines - backwards compatibility
+		}
+	}
+	if (starts_with(line, "\tSlotName:")) {
+		slotName = strchr(line.c_str(),':') + 1;
+		trim(slotName);
+		trim_quotes(slotName, "\"");
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+		setProp().Insert(attr, tree);
+	}
+	if (got_sync_line) return 1;
+	// read optional other properties
+	while (read_optional_line(line, file, got_sync_line)) {
+		if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+			setProp().Insert(attr, tree);
+		}
+#endif
+	}
 	return 1;
 }
 
@@ -6121,6 +6165,19 @@ CommonFilesEvent::formatBody( std::string & out ) {
 		}
 	}
 
+	if ( ! slotName.empty()) {
+		formatstr_cat(out, "\tSlotName: %s\n", slotName.c_str());
+	}
+
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+	if (hasProps()) {
+		// print sorted key=value pairs for the properties
+		classad::References attrs;
+		sGetAdAttrs(attrs, *executeProps);
+		sPrintAdAttrs(out, *executeProps, attrs, "\t");
+	}
+#endif
+
 	return true;
 }
 
@@ -6134,6 +6191,16 @@ CommonFilesEvent::toClassAd( bool event_time_utc ) {
 		return NULL;
 	}
 
+	if( !slotName.empty()) {
+		ad->Assign("SlotName", slotName);
+	}
+
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+	if (hasProps()) {
+		ad->Insert("ExecuteProps", executeProps->Copy());
+	}
+#endif
+
 	return ad;
 }
 
@@ -6142,6 +6209,18 @@ CommonFilesEvent::initFromClassAd( ClassAd * ad ) {
 	ULogEvent::initFromClassAd( ad );
 
 	ad->LookupString( "Type", type );
+	slotName.clear();
+	ad->LookupString("SlotName", slotName);
+
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+	ClassAd * props = nullptr;
+	ExprTree * tree = ad->Lookup("ExecuteProps");
+	if (tree && tree->isClassad(&props)) {
+		executeProps.reset(static_cast<ClassAd*>(props->Copy()));
+	} else {
+		executeProps.reset(nullptr);
+	}
+#endif
 }
 
 
