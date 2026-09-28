@@ -601,7 +601,7 @@ CopyStagingDirectory::entry_is_directory(
 	dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 #ifdef WINDOWS
-	// no need chown on windows
+	// See comment in createStagingDirectory().
 #else
 	int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
