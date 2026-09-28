@@ -14,63 +14,25 @@
 # limitations under the License.
 
 import json
-import random
 import logging
 
-from operator import itemgetter
-from collections import defaultdict
+import elasticsearch
+from elasticsearch import VERSION as ES_VERSION
 
-try:
-    import elasticsearch
-    from elasticsearch import VERSION as ES_VERSION
-    _ES_MODULE_FOUND = True
-except ModuleNotFoundError as err:
-    _ES_MODULE_FOUND = False
-    _ES_MODULE_NOT_FOUND_ERROR = err
-
-from adstash.utils import get_host_port, classad_json_serializer
-from adstash.interfaces.generic import GenericInterface
+from adstash.interfaces.search_engine import SearchEngineInterface
 
 ES8 = (8,0,0)
-if _ES_MODULE_FOUND and (ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0)):
+if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
     logging.warning(f"Unsupported Elasticsearch Python library {ES_VERSION}, proceeding anyway...")
 
 
-class ElasticsearchInterface(GenericInterface):
-
-    is_search_engine = True
+class ElasticsearchInterface(SearchEngineInterface):
 
     def __init__(
             self,
-            host="localhost",
-            port="9200",
-            url_prefix="",
-            username=None,
-            password=None,
-            use_https=False,
-            ca_certs=None,
-            timeout=60,
-            _check_for_module=True,
             **kwargs
             ):
-        if _check_for_module and not _ES_MODULE_FOUND:  # raise module not found error if missing
-            raise _ES_MODULE_NOT_FOUND_ERROR
-        self.host, self.port = get_host_port(host, port)
-        self.url_prefix = url_prefix or ""
-        self.username = username
-        self.password = password
-        self.use_https = use_https
-        self.ca_certs = ca_certs
-        self.timeout = timeout
-        self.handle = None
         super().__init__(**kwargs)
-
-
-    def __getstate__(self):
-        """Remove handle to make object pickleable"""
-        state = self.__dict__.copy()
-        state["handle"] = None
-        return state
 
 
     def get_handle(self) -> "elasticsearch.Elasticsearch":
@@ -114,12 +76,6 @@ class ElasticsearchInterface(GenericInterface):
         return self.handle
 
 
-    def ping(self) -> None:
-        client = self.get_handle()
-        if not client.ping():
-            raise ConnectionError(f"Could not connect to {self.__class__.__name__} at {self.host}:{self.port}")
-
-
     def get_health(self) -> dict:
         client = self.get_handle()
         health = {}
@@ -139,18 +95,7 @@ class ElasticsearchInterface(GenericInterface):
         except elasticsearch.exceptions.NotFoundError:
             logging.info(f"{alias} is not an alias, assuming {alias} is the active index")
             return alias
-
-        # find which index is reporting as writable
-        for index, alias_info in indices.items():
-            if alias_info["aliases"][alias].get("is_write_index"):
-                logging.info(f"{alias} is an alias, found active index {index}.")
-                return index
-
-        # fallback to lexicographically last index
-        indices = list(indices.keys())
-        indices.sort(reverse=True)
-        logging.warning(f"Could not find an active index for alias {alias}, trying {indices[0]}")
-        return indices[0]
+        return self.resolve_alias(indices, alias)
 
 
     def get_mappings(self, index: str) -> dict:
@@ -163,7 +108,6 @@ class ElasticsearchInterface(GenericInterface):
             mappings = client.indices.get_mapping(index=index)[index]["mappings"]
         except elasticsearch.exceptions.NotFoundError:
             logging.warning(f"Index {index} was not found, assuming no existing mappings")
-
         return mappings
 
 
@@ -203,94 +147,6 @@ class ElasticsearchInterface(GenericInterface):
             client.indices.put_settings(index=index, settings=settings)
 
 
-    def make_bulk_body(self, docs: list, metadata=None) -> str:
-        """
-        Elasticsearch supports bulk indexing via NDJSON, where
-        an action (e.g. "index") is followed by the data object
-        being acted upon.
-        https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-bulk
-        """
-        body = []
-        for doc_id, doc in docs:
-            doc["metadata"] = {**doc.get("metadata", {}), **(metadata or {})}  # merge existing with chunk-level metadata
-            action = {"index": {"_id": doc_id}}  # index the doc w/ this id
-            body.append(json.dumps(action))
-            body.append(json.dumps(doc, sort_keys=True, default=classad_json_serializer))
-        return "\n".join(body)
-
-
-    def get_error_count(self, result: dict, n_ads: int = 0, raise_on_errors: bool = False) -> int:
-        """
-        Crawl through the result from the bulk API,
-        print out any errors,
-        and return the number of errors encountered.
-        https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-bulk#operation-bulk-200
-
-        n_ads is the number of docs submitted; used as the error count when the
-        response is malformed (missing 'errors' key), since we cannot confirm any
-        docs were indexed successfully.
-
-        If raise_on_errors is True, raise RuntimeError instead of returning when
-        the response is malformed or when indexing errors are present.
-        """
-        if "errors" not in result:
-            msg = f"Bulk response missing 'errors' key (possible timeout or partial response): {result}"
-            if raise_on_errors:
-                raise RuntimeError(msg)
-            logging.warning(msg)
-            return n_ads
-
-        if not result["errors"]:
-            return 0
-
-        took = result.get("took")
-        items = result.get("items", [])
-        n_success = sum(1 for item in items if item.get("index", {}).get("status", 0) < 300)
-
-        if n_success == 0 and not items:
-            logging.error(f"Bulk response has errors=true but no items; raw result: {result}")
-
-        n_errors = 0
-        error_types = defaultdict(int)
-        error_reasons = []
-        for item in items:
-            try:
-                error = item["index"]["error"]
-                n_errors += 1
-            except (KeyError, TypeError):
-                continue
-            try:
-                error_reasons.append(error["reason"])
-            except (KeyError, TypeError):
-                pass
-            try:
-                error_type = error["type"]
-            except (KeyError, TypeError):
-                error_type = "unknown"
-            error_types[error_type] += 1
-
-        error_type_list = list(error_types.items())
-        error_type_list.sort(key=itemgetter(1), reverse=True)
-        error_type_strs = []
-        for (error_type, n) in error_type_list[:3]:
-            error_type_strs.append(f"{error_type} ({n} times)")
-        took_str = f", took {took}ms on ES side" if took is not None else ""
-        logging.error(f"{n_errors} errors encountered during bulk index ({n_success} succeeded{took_str}).")
-        logging.error(f"""Most common error type(s): {", ".join(error_type_strs)}.""")
-        try:
-            logging.error(f"""Example reason: {random.choice(error_reasons)}.""")
-        except IndexError:
-            pass
-
-        if raise_on_errors:
-            raise RuntimeError(
-                f"{n_errors} errors in bulk index ({n_success} succeeded{took_str}); "
-                f"most common type(s): {', '.join(error_type_strs)}"
-            )
-
-        return n_errors
-
-
     def post_ads(self, ads: list, index: str, metadata=None, **kwargs) -> dict:
         """
         Push a list of JSON-ified ads in the format
@@ -303,5 +159,3 @@ class ElasticsearchInterface(GenericInterface):
         result = client.bulk(body=body, index=index, filter_path=["errors", "took", "items.*.index.error.**", "items.*.index.status"])
         n_errors = self.get_error_count(result, n_ads=len(ads), **kwargs)
         return {"success": len(ads)-n_errors, "error": n_errors}
-
-
