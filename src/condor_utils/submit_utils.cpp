@@ -6140,7 +6140,8 @@ int SubmitHash::SetRequirements()
 					// shouldn't try to enforce WithinResourceLimits.
 					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 				} else {
-					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+					if ( ! answer.empty()) { answer += " && "; }
+					answer += "(TARGET.Disk >= " ATTR_REQUEST_DISK ")";
 				}
 			}
 		}
@@ -6151,7 +6152,8 @@ int SubmitHash::SetRequirements()
 		} else if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
 			// scheduler jobs run in user's space, there is no TARGET.Disk to compare against.
 		} else {
-			answer += " && (TARGET.Disk >= DiskUsage)";
+			if ( ! answer.empty()) { answer += " && "; }
+			answer += "(TARGET.Disk >= DiskUsage)";
 		}
 	} else {
 		if (JobUniverse != CONDOR_UNIVERSE_VM) {
@@ -6635,7 +6637,11 @@ int SubmitHash::SetRequirements()
 		answer += " && TARGET." ATTR_OCU " =?= true";
 	}
 
-	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
+	if (answer.empty()) {
+		AssignJobVal(ATTR_REQUIREMENTS, true);
+	} else {
+		AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
+	}
 	RETURN_IF_ABORT();
 
 	return 0;
