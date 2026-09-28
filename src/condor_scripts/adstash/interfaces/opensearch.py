@@ -48,7 +48,7 @@ class OpenSearchInterface(ElasticsearchInterface):
         super().__init__(_check_for_module=False, **kwargs)
 
 
-    def get_handle(self) -> opensearchpy.OpenSearch:
+    def get_handle(self) -> "opensearchpy.OpenSearch":
         """
         Set up the OpenSearch client if needed.
         """

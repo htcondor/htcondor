@@ -73,7 +73,7 @@ class ElasticsearchInterface(GenericInterface):
         return state
 
 
-    def get_handle(self) -> elasticsearch.Elasticsearch:
+    def get_handle(self) -> "elasticsearch.Elasticsearch":
         """
         Set up the Elasticsearch client if needed.
         """
