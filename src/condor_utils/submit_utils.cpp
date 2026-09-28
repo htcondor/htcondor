@@ -5980,8 +5980,9 @@ int SubmitHash::SetRequirements()
 		ABORT_AND_RETURN(1);
 	}
 
-	bool	checks_arch = machine_refs.count( ATTR_ARCH );
-	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
+	bool	is_local_or_scheduler = (JobUniverse == CONDOR_UNIVERSE_LOCAL || JobUniverse == CONDOR_UNIVERSE_SCHEDULER);
+	bool	checks_arch = is_local_or_scheduler || machine_refs.count( ATTR_ARCH );
+	bool	checks_opsys = IsContainerJob || IsDockerJob || is_local_or_scheduler || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_SHORT_NAME ) ||
@@ -6139,7 +6140,8 @@ int SubmitHash::SetRequirements()
 					// shouldn't try to enforce WithinResourceLimits.
 					answer += " && (versionGE(split(TARGET.CondorVersion)[1], \"25.12.0\") || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 				} else {
-					answer += " && (TARGET.Disk >= " ATTR_REQUEST_DISK ")";
+					if ( ! answer.empty()) { answer += " && "; }
+					answer += "(TARGET.Disk >= " ATTR_REQUEST_DISK ")";
 				}
 			}
 		}
@@ -6147,8 +6149,11 @@ int SubmitHash::SetRequirements()
 			// VM universe uses Total Disk 
 			// instead of Disk for Condor slot
 			answer += " && (TARGET.TotalDisk >= DiskUsage)";
-		}else {
-			answer += " && (TARGET.Disk >= DiskUsage)";
+		} else if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+			// scheduler jobs run in user's space, there is no TARGET.Disk to compare against.
+		} else {
+			if ( ! answer.empty()) { answer += " && "; }
+			answer += "(TARGET.Disk >= DiskUsage)";
 		}
 	} else {
 		if (JobUniverse != CONDOR_UNIVERSE_VM) {
@@ -6632,7 +6637,11 @@ int SubmitHash::SetRequirements()
 		answer += " && TARGET." ATTR_OCU " =?= true";
 	}
 
-	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
+	if (answer.empty()) {
+		AssignJobVal(ATTR_REQUIREMENTS, true);
+	} else {
+		AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
+	}
 	RETURN_IF_ABORT();
 
 	return 0;
@@ -8443,6 +8452,9 @@ ClassAd* SubmitHash::make_job_ad (
 			if ( ! clusterAd->LookupInteger(ATTR_JOB_UNIVERSE, uni) || uni != JobUniverse) {
 				clusterAd->Update(universeAd);
 			}
+		}
+		if (JobUniverse == CONDOR_UNIVERSE_SCHEDULER || JobUniverse == CONDOR_UNIVERSE_LOCAL) {
+			UseDefaultResourceParams = false;
 		}
 		job = NULL;
 		procAd = NULL;

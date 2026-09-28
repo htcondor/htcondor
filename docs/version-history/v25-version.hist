@@ -1,5 +1,10 @@
 *** 25.15.15 features
 
+- Scheduler and Local universe jobs no longer use the Vanilla universe default values for
+  :subcom:`request_cpus`, :subcom:`request_memory` and :subcom:`request_disk`.  Instead,
+  Scheduler and Local universe jobs have no defaults for those submit commands.
+  :jira:`3926`
+  
 - The ``chirp ulog`` is now enabled whenever the ``chirp set_job_attr_delayed`` is enabled.
   These are enabled by default, so it is no longer necessary for the job to have :subcom:`want_io_proxy`
   set to true.
