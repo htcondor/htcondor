@@ -571,7 +571,7 @@ HardlinkStagingDirectory::entry_is_file(
 	}
 
 #ifdef WINDOWS
-	// no need chown on windows
+	// See comment in createStagingDirectory().
 #else
 	int rv = chown( (stagingDir/relative_path).string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
