@@ -28,7 +28,7 @@ BEGIN {
 # us by the VM GAHP.  The GAHP then outputs a blank line to indicate
 # that the entire classad has been sent to us.
 {
-    gsub(/\"/, "")
+    gsub(/"/, "")
     key = $1
     # Matching value should be $3-$NR
     $1 = ""
@@ -137,7 +137,7 @@ END {
     # To see full input ad to script set D_FULLDEBUG
     if(attrs["JobVMNetworking"] == "true")
     {
-	if(index(attrs["JobVMNetworkingType"],"nat") != 0)
+	if(index(tolower(attrs["JobVMNetworkingType"]),"nat") != 0)
 	{
 	    print "<interface type='network'><source network='default'/>" ;
             if(attrs["JobVM_MACADDR"] != "")
@@ -145,6 +145,22 @@ END {
 		print"<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
             }
 	    print "<model type='virtio'/>" ;
+	    print "</interface>" ;
+	}
+	else if(index(tolower(attrs["JobVMNetworkingType"]),"user") != 0)
+	{
+	    # virtio is required: e1000 + QEMU stream backend (used by passt) causes
+	    # ~60s carrier detection delay before DHCP fires. virtio has no carrier
+	    # detection emulation so link-up is immediate.
+	    # No <alias> element: it is libvirt output-only and breaks connectivity
+	    # if included in input XML.
+	    print "<interface type='user'>" ;
+	    print "<model type='virtio'/>" ;
+            if(attrs["JobVM_MACADDR"] != "")
+            {
+		print "<mac address='" attrs["JobVM_MACADDR"] "'/>" ;
+            }
+	    print "<backend type='passt'/>" ;
 	    print "</interface>" ;
 	}
 	else
