@@ -285,8 +285,13 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	}
 
 #ifdef WINDOWS
-	// no need to chown on windows
-	// the above std::filesystem::permissions calls also above seem to do nothing
+  	// On Linux, the purpose of this function is to prevent jobs which
+  	// didn't ask for this catalog from being able to see it.  On Windows,
+  	// execute directories aren't protected against this kind of snooping,
+  	// so there's no point in protecting the staging directory.
+  	//
+  	// Likewise, note that the preceding std::filesystem:permissions() calls
+  	// above seem to do nothing.
 #else
 	int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
