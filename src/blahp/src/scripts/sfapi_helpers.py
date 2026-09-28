@@ -23,6 +23,7 @@ _DEFAULT_CLIENT_ID_FILE = Path.home() / ".superfacility" / "clientid.txt"
 
 class SfApiHelperError(Exception):
     """Raised for errors encountered in sfapi_helpers operations."""
+
     pass
 
 
@@ -41,8 +42,7 @@ def submit_remote_slurm_job(job_name, job_script, input_files):
                         working directory before submission.
     :return: Tuple of (job_id, remote_dir, remote_stdout_path, remote_stderr_path).
     """
-    with (Client(client_id, client_secret) as client):
-
+    with Client(client_id, client_secret) as client:
         # first figure out a job directory on the remote side
         # on the scratch file system
         if job_name is None:
@@ -58,12 +58,15 @@ def submit_remote_slurm_job(job_name, job_script, input_files):
 
         # specify the remote_stdout and remote_stderr
         # and directory where the job should run in to the job script
-        job_script = f"""#!/bin/bash
+        job_script = (
+            f"""#!/bin/bash
 
 #SBATCH --output={remote_stdout}
 #SBATCH --error={remote_stderr}
 #SBATCH --chdir={remote_dir}
-""" + job_script
+"""
+            + job_script
+        )
 
         print("Submitting job \n" + job_name)
 
@@ -117,7 +120,7 @@ def download_file(source, destination):
             print(f"Downloaded Binary File: {os.path.abspath(destination)}")
         else:
             # StringIO
-            with open(destination, 'w') as f:
+            with open(destination, "w") as f:
                 shutil.copyfileobj(buffer, f)
                 print(f"Downloaded File: {os.path.abspath(destination)}")
 
@@ -140,8 +143,8 @@ def download_job_outputs(blahp_job_id):
         output::/pegasus/wf-scratch/LOCAL/scitech/pegasus/hello-world/run0032/f.inter:/pscratch/sd/v/vahi/.blah/bl_dGdwlN/f.inter
 
     """
-    parts = blahp_job_id.strip().split('/')
-    if len(parts) != 3 or parts[0] != 'sfapi':
+    parts = blahp_job_id.strip().split("/")
+    if len(parts) != 3 or parts[0] != "sfapi":
         raise ValueError(
             f"Invalid blahp job ID {blahp_job_id!r}. Expected sfapi/<date>/<jobid>"
         )
@@ -153,15 +156,15 @@ def download_job_outputs(blahp_job_id):
 
     for line in jobstate_file.read_text().splitlines():
         line = line.strip()
-        if not line or line.startswith("#") or '::' not in line:
+        if not line or line.startswith("#") or "::" not in line:
             continue
         # Split into type tag and the path pair
-        type, paths = line.split('::', 1)
+        type, paths = line.split("::", 1)
         if type == "remote_dir":
             continue
 
         # Both paths are absolute so splitting on the first ':' is unambiguous
-        local_path, remote_path = paths.split(':', 1)
+        local_path, remote_path = paths.split(":", 1)
         print(f"Downloading {remote_path} -> {local_path}")
         download_file(remote_path, local_path)
 
@@ -178,8 +181,8 @@ def delete_remote_job_directory(blahp_job_id):
     :raises FileNotFoundError: If the jobstate file does not exist.
     :raises SfApiHelperError: If no remote_dir entry is found in the jobstate file.
     """
-    parts = blahp_job_id.strip().split('/')
-    if len(parts) != 3 or parts[0] != 'sfapi':
+    parts = blahp_job_id.strip().split("/")
+    if len(parts) != 3 or parts[0] != "sfapi":
         raise ValueError(
             f"Invalid blahp job ID {blahp_job_id!r}. Expected sfapi/<date>/<jobid>"
         )
@@ -193,7 +196,7 @@ def delete_remote_job_directory(blahp_job_id):
     for line in jobstate_file.read_text().splitlines():
         line = line.strip()
         if line.startswith("remote_dir::"):
-            _, remote_dir = line.split('::', 1)
+            _, remote_dir = line.split("::", 1)
             remote_dir = remote_dir.strip()
             break
 
@@ -314,7 +317,7 @@ def check_token_validity(key_path):
 
     :param key_path: Path to the JWK private key file
                        (e.g. ~/.superfacility/priv_key.jwk).
-    :raises SfApiHelperError: If the key file is missing or unparseable, the
+    :raises SfApiHelperError: If the key file is missing or unparsable, the
                               client ID file is missing, or authentication fails.
     """
 
@@ -332,8 +335,7 @@ def check_token_validity(key_path):
             bearer = client.token
     except Exception as e:
         raise SfApiHelperError(
-            f"Token authentication failed for client_id {cid} "
-            f"using key {key_path}: {e}"
+            f"Token authentication failed for client_id {cid} using key {key_path}: {e}"
         )
 
     print(f"Token is valid. client_id: {cid}")
@@ -355,8 +357,10 @@ def check_token_validity(key_path):
             total_seconds = int(delta.total_seconds())
 
             if total_seconds <= 0:
-                print(f"Token EXPIRED {-total_seconds // 60}m {-total_seconds % 60}s ago "
-                      f"(at {exp_dt.strftime('%Y-%m-%d %H:%M:%S %Z')})")
+                print(
+                    f"Token EXPIRED {-total_seconds // 60}m {-total_seconds % 60}s ago "
+                    f"(at {exp_dt.strftime('%Y-%m-%d %H:%M:%S %Z')})"
+                )
             else:
                 hours, remainder = divmod(total_seconds, 3600)
                 minutes, seconds = divmod(remainder, 60)
@@ -364,8 +368,10 @@ def check_token_validity(key_path):
                     human = f"{hours}h {minutes}m {seconds}s"
                 else:
                     human = f"{minutes}m {seconds}s"
-                print(f"Token expires in {human} "
-                      f"(at {exp_dt.strftime('%Y-%m-%d %H:%M:%S %Z')})")
+                print(
+                    f"Token expires in {human} "
+                    f"(at {exp_dt.strftime('%Y-%m-%d %H:%M:%S %Z')})"
+                )
         else:
             print("Token has no expiry claim (exp not present in JWT payload)")
     except Exception:
@@ -435,6 +441,7 @@ def load_sflapi_client_secret(key_path=None, clientid_path=None):
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     """
     Demo entry point: print NERSC status, list project allocations, and
@@ -484,7 +491,9 @@ module load python
 # Prints N random numbers to form a normal disrobution
 python -c "import numpy as np; numbers = np.random.normal(size={N}); [print(n) for n in numbers]"
     """
-    job_id, remote_stdout, remote_stderr = submit_remote_slurm_job(None, job_script, [input_file])
+    job_id, remote_stdout, remote_stderr = submit_remote_slurm_job(
+        None, job_script, [input_file]
+    )
     retrieve_remote_stdout_stderr(job_id, remote_stdout, remote_stderr)
 
 
@@ -521,7 +530,7 @@ def cancel_job(job_id):
     form sfapi/<date>/<jobid>; the blahp prefix is stripped automatically.
     """
     # Accept both "sfapi/20240506/12345" and plain "12345"
-    numeric_id = job_id.strip().split('/')[-1]
+    numeric_id = job_id.strip().split("/")[-1]
 
     with Client(client_id, client_secret) as client:
         perlmutter = client.compute(Machine.perlmutter)
@@ -556,7 +565,7 @@ if __name__ == '__main__':
     main()
 """
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="NERSC SFAPI helpers for blahp remote job submission"
     )
@@ -573,25 +582,27 @@ if __name__ == '__main__':
         ),
     )
     sp.add_argument(
-        "-n", "--job-name",
+        "-n",
+        "--job-name",
         metavar="NAME",
         default=None,
         help="Job name used for the remote working directory and output files "
-             "(default: auto-generated)",
+        "(default: auto-generated)",
     )
     sp.add_argument(
-        "-i", "--input-files",
+        "-i",
+        "--input-files",
         metavar="FILE1,FILE2,...",
         default=None,
         help="Comma-separated list of local files to upload to the remote job "
-             "directory before submission",
+        "directory before submission",
     )
     sp.add_argument(
-        "-s", "--script",
+        "-s",
+        "--script",
         metavar="SCRIPT",
         default=None,
-        help="Path to the SBATCH job script to submit "
-             "(reads from stdin when omitted)",
+        help="Path to the SBATCH job script to submit (reads from stdin when omitted)",
     )
 
     # --- status subcommand ---
@@ -604,22 +615,24 @@ if __name__ == '__main__':
         ),
     )
     st.add_argument(
-        "-t", "--type",
+        "-t",
+        "--type",
         metavar="TYPE",
         choices=["resource", "job", "key"],
         required=True,
         help="What to query: 'resource' to check a NERSC system status, "
-             "'job' to check a submitted job state, "
-             "'token' to verify that an SFAPI private key can authenticate",
+        "'job' to check a submitted job state, "
+        "'token' to verify that an SFAPI private key can authenticate",
     )
     st.add_argument(
-        "-v", "--value",
+        "-v",
+        "--value",
         metavar="VALUE",
         default=None,
         help="Resource name (e.g. 'perlmutter') when --type=resource; "
-             "job ID when --type=job; "
-             "path to the JWK private key file when --type=key; "
-             f"(default: {_DEFAULT_PRIVATE_JWK_KEY_FILE})",
+        "job ID when --type=job; "
+        "path to the JWK private key file when --type=key; "
+        f"(default: {_DEFAULT_PRIVATE_JWK_KEY_FILE})",
     )
 
     # --- download subcommand ---
