@@ -392,7 +392,7 @@ convertToStagingDirectory(
 
 
 #ifdef WINDOWS
-	// no need to chown on windows
+	// See comment in createStagingDirectory().
 #else
 	{
 		TemporaryPrivSentry tpt(PRIV_ROOT);
