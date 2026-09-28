@@ -11,6 +11,10 @@
   late materialization joblist attempts to use common files or a common container.
   :jira:`3942`
 
+- Fixed a bug in :tool:`condor_adstash` where using OpenSearch had a dependency on
+  the Elasticsearch Python library.
+  :jira:`3949`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
