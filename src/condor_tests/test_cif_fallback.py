@@ -540,7 +540,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert job_evictions == 0
 
     common_transfer_begins = count_shadow_log_lines(
-        the_condor, "Starting common files transfer."
+        the_condor, "Starting common files transfer"
     )
     assert common_transfer_begins == cf_xfers
 
@@ -600,7 +600,7 @@ def count_starter_log_lines(the_condor, the_phrase):
 
 def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits):
     common_transfer_begins = count_starter_log_lines(
-        the_condor, "Starting common files transfer."
+        the_condor, "Starting common files transfer"
     )
     assert common_transfer_begins == cf_xfers
 
