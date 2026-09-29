@@ -262,7 +262,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 			if (num_collectors == 1 || probe_sock || probe_timeout <= 0) {
 				dprintf(D_FULLDEBUG, "Trying to query collector %s\n", daemon->addr());
 
-				if (num_collectors > 1) {
+				if (num_collectors > 1 && ! probe_sock) {
 					daemon->blacklistMonitorQueryStarted();
 				}
 
