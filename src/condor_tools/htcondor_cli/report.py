@@ -274,6 +274,11 @@ class Dashboard(Verb):
         },
     }
 
+    def __init__(self, logger, cluster_id, **options):
+        counts = Dashboard.fetch_counts(cluster_id)
+        print(f"\nCluster {cluster_id} Status Dashboard\n")
+        Dashboard.draw_bars(counts)
+
     # get data from the schedd
     def fetch_counts(cluster_id):
         schedd = htcondor2.Schedd()
@@ -365,10 +370,6 @@ class Dashboard(Verb):
         except Exception:
             return None
 
-    def __init__(self, logger, cluster_id, **options):
-        counts = Dashboard.fetch_counts(cluster_id)
-        print(f"\nCluster {cluster_id} Status Dashboard\n")
-        Dashboard.draw_bars(counts)
 
 class Histogram(Verb):
     """
@@ -400,6 +401,50 @@ class Histogram(Verb):
             "help": "Number of percentile bins for the histogram (default: 10)",
         },
     }
+
+    # ── Entry point ────────────────────────────────────────────────────────────────
+
+    def __init__(self, logger, cluster_id, **options):
+        _ensure_cluster_data(cluster_id)
+
+        df = Histogram.load_data_for_cluster(cluster_id)
+
+        rt = Histogram.get_positive_runtimes(df)
+        n = len(rt) if rt is not None else 0
+
+        submit_times = df["QDate"].dropna() if "QDate" in df.columns else Series([])
+        completion_times = (
+            df["CompletionDate"].dropna()
+            if "CompletionDate" in df.columns else Series([])
+        )
+
+        first_sub = (
+            format_epoch_human_relative(submit_times.min())
+            if not submit_times.empty else "N/A"
+        )
+        last_comp = (
+            format_epoch_human_relative(completion_times.max())
+            if not completion_times.empty else "N/A"
+        )
+
+        print(f"\n{bold('Runtime Analysis'.center(80))}")
+        print("=" * 80)
+        print(
+            f"  Cluster : {cluster_id}   |   Jobs: {n}   |   "
+            f"Submitted: {first_sub}   |   Completed: {last_comp}"
+        )
+        print("=" * 80)
+
+        show = options.get("show", "both")
+        if show in ("cdf", "both"):
+            Histogram.cumulative_distribution(rt, height=15, width=60)
+        if show in ("histogram", "both"):
+            Histogram.histogram(
+                df, rt,
+                percentiles=options.get("percentiles", 10),
+                max_width=20,
+                show_fast_jobs=options.get("print_list", False),
+            )
 
     # ── Data loading ───────────────────────────────────────────────────────────────
 
@@ -675,50 +720,6 @@ class Histogram(Verb):
         }
 
 
-    # ── Entry point ────────────────────────────────────────────────────────────────
-
-    def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id)
-
-        df = Histogram.load_data_for_cluster(cluster_id)
-
-        rt = Histogram.get_positive_runtimes(df)
-        n = len(rt) if rt is not None else 0
-
-        submit_times = df["QDate"].dropna() if "QDate" in df.columns else Series([])
-        completion_times = (
-            df["CompletionDate"].dropna()
-            if "CompletionDate" in df.columns else Series([])
-        )
-
-        first_sub = (
-            format_epoch_human_relative(submit_times.min())
-            if not submit_times.empty else "N/A"
-        )
-        last_comp = (
-            format_epoch_human_relative(completion_times.max())
-            if not completion_times.empty else "N/A"
-        )
-
-        print(f"\n{bold('Runtime Analysis'.center(80))}")
-        print("=" * 80)
-        print(
-            f"  Cluster : {cluster_id}   |   Jobs: {n}   |   "
-            f"Submitted: {first_sub}   |   Completed: {last_comp}"
-        )
-        print("=" * 80)
-
-        show = options.get("show", "both")
-        if show in ("cdf", "both"):
-            Histogram.cumulative_distribution(rt, height=15, width=60)
-        if show in ("histogram", "both"):
-            Histogram.histogram(
-                df, rt,
-                percentiles=options.get("percentiles", 10),
-                max_width=20,
-                show_fast_jobs=options.get("print_list", False),
-            )
-
 class Analytics(Verb):
     """
     Produces a resource utilisation report (CPU / memory / disk)
@@ -731,6 +732,10 @@ class Analytics(Verb):
             "help": "HTCondor cluster ID to analyse",
         },
     }
+
+    def __init__(self, logger, cluster_id, **options):
+        _ensure_cluster_data(cluster_id)
+        Analytics.summarize(cluster_id)
 
     # to print the bar visualizations
     def bar(pct, width=50):
@@ -1061,9 +1066,6 @@ class Analytics(Verb):
         """
         return Analytics.collect_metrics(cluster_id, exit_on_missing=False)
 
-    def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id)
-        Analytics.summarize(cluster_id)
 
 class Hold(Verb):
     """
@@ -1166,6 +1168,26 @@ class Hold(Verb):
             self.subcode = code
             self.proc = pid
             self.entered = time
+
+    def __init__(self, logger, cluster_id, **options):
+        args = SimpleNamespace(
+            cluster_id=cluster_id,
+            min_count=options.get("min_count", 1),
+            top=options.get("top"),
+            code=options.get("code"),
+            sort_by=options.get("sort_by", "count"),
+            threshold=options.get("threshold", 0.7),
+            show_job_ids=options.get("show_job_ids", False),
+            export_jobs=options.get("export_jobs"),
+        )
+
+        reasons_by_code = Hold.group_by_code(cluster_id)
+
+        if not reasons_by_code:
+            logger.info(f"No held jobs found in cluster {cluster_id}")
+            return
+
+        Hold.bucket_and_print_table(reasons_by_code, args)
 
     def bucket_reasons_with_data(reason_data: List[HoldReason], threshold: float = 0.7) -> List[List[HoldReason]]:
         """Groups similar hold reason messages using fuzzy string matching (difflib.SequenceMatcher)."""
@@ -1456,25 +1478,6 @@ class Hold(Verb):
                 "error": str(e)
             }
 
-    def __init__(self, logger, cluster_id, **options):
-        args = SimpleNamespace(
-            cluster_id=cluster_id,
-            min_count=options.get("min_count", 1),
-            top=options.get("top"),
-            code=options.get("code"),
-            sort_by=options.get("sort_by", "count"),
-            threshold=options.get("threshold", 0.7),
-            show_job_ids=options.get("show_job_ids", False),
-            export_jobs=options.get("export_jobs"),
-        )
-
-        reasons_by_code = Hold.group_by_code(cluster_id)
-
-        if not reasons_by_code:
-            logger.info(f"No held jobs found in cluster {cluster_id}")
-            return
-
-        Hold.bucket_and_print_table(reasons_by_code, args)
 
 class Summarize(Verb):
     """
@@ -1498,6 +1501,39 @@ class Summarize(Verb):
         "fast_jobs_pct": {"critical": 30, "warning": 15},
         "runtime_variance": {"critical": 3.0, "warning": 2.0},
     }
+
+    def __init__(self, logger, cluster_id, **options):
+        _ensure_cluster_data(cluster_id)
+
+        efficiency_data = Analytics.get_analytics_data(cluster_id)
+        if not efficiency_data:
+            print(f"ERROR: Could not load analytics data.")
+            print(f"Please run: {_tool_hint(f'htcondor cluster fetch {cluster_id}')}")
+            sys.exit(1)
+
+        status_data = Dashboard.get_dashboard_data(cluster_id)
+        if not status_data:
+            status_data = {
+                "total_jobs": efficiency_data.get("total_jobs", 0),
+                "status_counts": {}, "held": 0, "held_pct": 0,
+                "completed": 0, "running": 0, "idle": 0,
+            }
+
+        runtime_data = Histogram.get_histogram_data(cluster_id)
+        if not runtime_data:
+            runtime_data = {
+                "cv": 0, "fast_jobs": 0, "fast_jobs_pct": 0,
+                "total_runtime_jobs": 0, "correlation": 0,
+            }
+
+        held_data = Hold.get_hold_bucket_data(cluster_id)
+        if not held_data:
+            held_data = {"held_count": 0, "unique_reasons": 0}
+
+        findings = Summarize.generate_health_report(
+            cluster_id, efficiency_data, status_data, runtime_data, held_data
+        )
+        Summarize.print_health_summary(cluster_id, findings)
 
     def get_health_status(value, threshold_dict, higher_is_better=True):
         if higher_is_better:
@@ -1693,38 +1729,6 @@ class Summarize(Verb):
         print("\n" + "=" * 120)
         print()
 
-    def __init__(self, logger, cluster_id, **options):
-        _ensure_cluster_data(cluster_id)
-
-        efficiency_data = Analytics.get_analytics_data(cluster_id)
-        if not efficiency_data:
-            print(f"ERROR: Could not load analytics data.")
-            print(f"Please run: {_tool_hint(f'htcondor cluster fetch {cluster_id}')}")
-            sys.exit(1)
-
-        status_data = Dashboard.get_dashboard_data(cluster_id)
-        if not status_data:
-            status_data = {
-                "total_jobs": efficiency_data.get("total_jobs", 0),
-                "status_counts": {}, "held": 0, "held_pct": 0,
-                "completed": 0, "running": 0, "idle": 0,
-            }
-
-        runtime_data = Histogram.get_histogram_data(cluster_id)
-        if not runtime_data:
-            runtime_data = {
-                "cv": 0, "fast_jobs": 0, "fast_jobs_pct": 0,
-                "total_runtime_jobs": 0, "correlation": 0,
-            }
-
-        held_data = Hold.get_hold_bucket_data(cluster_id)
-        if not held_data:
-            held_data = {"held_count": 0, "unique_reasons": 0}
-
-        findings = Summarize.generate_health_report(
-            cluster_id, efficiency_data, status_data, runtime_data, held_data
-        )
-        Summarize.print_health_summary(cluster_id, findings)
 
 class Fetch(Verb):
     """
