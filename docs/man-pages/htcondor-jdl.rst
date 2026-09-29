@@ -602,9 +602,11 @@ COMMANDS FOR MATCHMAKING
     resulting in a dynamic slot being created with this many cores.
 
  :subcom-def:`request_disk` = <quantity>
-    The requested amount of disk space in KiB requested for this job. If
-    not specified, it will be set to the job ClassAd attribute
-    :ad-attr:`DiskUsage`. The expression
+    The requested amount of disk space in KiB requested for this job.
+    If not specified, and the job universe is not Scheduler or Local, the value is set
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTDISK`.
+
+    The expression
 
     .. code-block:: condor-classad-expr
 
@@ -636,7 +638,8 @@ COMMANDS FOR MATCHMAKING
 
 
  :subcom-def:`request_memory` = <quantity>
-    The amount of memory this job needs in Mb. If not specified, the value is set 
+    The amount of memory this job needs in Mb. If not specified, and the job universe
+    is not Scheduler or Local, the value is set
     by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
     The actual amount of memory used by a job is represented by the job ClassAd attribute
     :ad-attr:`MemoryUsage`.

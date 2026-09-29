@@ -58,7 +58,6 @@ the_job_description = """
     transfer_input_files = input-file-$(ProcID)
     transfer_output_files = output-file-$(ProcID)
     should_transfer_files = YES
-    requirements = HasCommonFilesTransfer
     request_cpus = 1
     request_memory = 1024
     log = $(ClusterID).log
