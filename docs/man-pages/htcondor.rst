@@ -37,12 +37,10 @@ Synopsis
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
 | **htcondor** **eventlog** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] eventlog
 
-| **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
-| **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
+| **htcondor** **annex** *create* [*description-options*] annex-name
+| **htcondor** **annex** *add* [*description-options*] annex-name
 | **htcondor** **annex** *status* annex-name
 | **htcondor** **annex** *shutdown* annex-name
-| **htcondor** **annex** *systems*
-| **htcondor** **annex** *login* system-name
 
 | **htcondor** **credential** *list*
 | **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
@@ -241,45 +239,24 @@ Annex Verbs
 -----------
 
 An *annex* is a named set of leased resources.  If the AP's administrator
-has enabled this command, any submitter who can run jobs on one of the
-supported systems can use resources from that system to run jobs placed
-at that AP.
+has enabled this command, any submitter who can run jobs on a remote
+Slurm system can use resources from that system to run jobs placed
+at the AP.
 
-  | **htcondor annex create** [*description-options*] *annex-name* *queue@system*
-  | **htcondor annex add** [*description-options*] *annex-name* *queue@system*
+  | **htcondor annex create** [*description-options*] *annex-name*
+  | **htcondor annex add** [*description-options*] *annex-name*
 
-    Create new annex with a given *annex-name* using resources from the
-    specified *queue* at the specific *system*.  The description options
+    Create new annex with a given *annex-name*.  The description options
     are the same for creating a new annex and for adding more resources
-    to the same annex.  You will be prompted to login to the system.
+    to the same annex.  This will create a tar file and print
+    instructions for how to use it to launch EPs on the desired system.
 
     **Description Options**
 
-        **-\-nodes** *nodes*
-            Number of nodes to request.  Defaults to 1.
-        **-\-lifetime** *lifetime*
-            Annex lifetime (in seconds).  Defaults to 3600.  After this
-            length of time, the annex terminates even if jobs are running.
-        **-\-cpus** *cpus*
-            Number of CPUs to request (shared queues only).  Unset by
-            default.
-        **-\-mem_mb** *memory*
-            Memory (in MB) to request (shared queues only).  Unset by
-            default.
-        **-\-gpus** *gpu-count*
-            Number of GPUs to request (GPU queues only).  Unset by default.
-        **-\-gpu-type** *type*
-            Type of GPU to request (GPU queues only).  Unset by default.
         **-\-idle-time** *seconds*
             The number of seconds to remain idle (not running any jobs)
             before shutting down.  Default and suggested minimum is
             300 seconds.
-        **-\-login-name** *login*
-            The (SSH) login name to use for this capacity request.
-            Uses SSH's default.
-        **-\-login-host** *host*
-            The (SSH) login name to use for this capacity request.
-            The default is system-specific.
 
   **htcondor annex status** *annex-name*
 
@@ -289,14 +266,6 @@ at that AP.
 
     Shuts the named annex down, releasing its resources.
 
-  **htcondor annex systems**
-
-    Displays the list of supported systems and their queues.
-
-  **htcondor annex login** *system-name*
-
-    Open a shared SSH connection to the named system; if one doesn't exist,
-    create one (requiring you to login) and share it.
 
 Credential Verbs
 ----------------

@@ -2153,6 +2153,8 @@ BETTER_ENUM(CommonFilesEventType, int,
 	WaitStarted = 4, WaitFinished = 5
 )
 
+//#define COMMON_FILES_EVENT_HAS_EXECUTE_PROPS 1
+
 class CommonFilesEvent : public ULogEvent {
 	public:
 
@@ -2171,9 +2173,19 @@ class CommonFilesEvent : public ULogEvent {
         void setType( CommonFilesEventType cfet ) { type = (+cfet)._to_string(); }
 		void setType( const std::string & cfet ) { type = cfet; }
 		const std::string & getType() const { return type; }
+		std::string &SlotName() { return slotName; }
+
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS // future ?
+		bool hasProps(); // return true if non-zero number of execute properties
+		ClassAd & setProp(); // get a ref to the execute properties ad, creating if does not exist.
+#endif
 
 	protected:
 		std::string type;
+		std::string slotName; // optional SlotName:
+#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS // future ?
+		std::unique_ptr<ClassAd> executeProps{nullptr};
+#endif
 };
 
 

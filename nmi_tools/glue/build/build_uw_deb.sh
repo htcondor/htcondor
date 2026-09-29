@@ -79,7 +79,7 @@ if [ "$PRE_RELEASE" = 'OFF' ]; then
 else
     # Generate a changelog entry
     dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Test build"
-    sed -i "0,/^ -- /s/^ -- .*/ -- Test build <htcondor-admin@cs.wisc.edu> $(date --date=@$condor_build_epoch '+%a, %d %b %Y %H:%M:%S %z')/" debian/changelog
+    sed -i "0,/^ -- /s/^ -- .*/ -- Test build <htcondor-admin@cs.wisc.edu>  $(date --date=@$condor_build_epoch '+%a, %d %b %Y %H:%M:%S %z')/" debian/changelog
 fi
 
 . /etc/os-release
