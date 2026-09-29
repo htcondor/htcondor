@@ -28,7 +28,7 @@ BEGIN {
 # us by the VM GAHP.  The GAHP then outputs a blank line to indicate
 # that the entire classad has been sent to us.
 {
-    gsub(/\"/, "")
+    gsub(/"/, "")
     key = $1
     # Matching value should be $3-$NR
     $1 = ""
