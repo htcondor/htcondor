@@ -622,7 +622,7 @@ if __name__ == "__main__":
         required=True,
         help="What to query: 'resource' to check a NERSC system status, "
         "'job' to check a submitted job state, "
-        "'token' to verify that an SFAPI private key can authenticate",
+        "'key' to verify that an SFAPI private key can authenticate",
     )
     st.add_argument(
         "-v",
