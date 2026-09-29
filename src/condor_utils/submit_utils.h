@@ -392,6 +392,9 @@
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
 
+#define SUBMIT_KEY_AnnexName "annex_name"
+#define SUBMIT_KEY_RestrictToAnnex "restrict_to_annex"
+
 //Temporary function to get a mapfile object point to protected url map
 MapFile* getProtectedURLMap();
 

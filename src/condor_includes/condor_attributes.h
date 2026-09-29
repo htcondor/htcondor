@@ -744,6 +744,7 @@
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
 #define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"
+#define ATTR_RESTRICT_TO_ANNEX "RestrictToAnnex"
 #define ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY "RestrictToAuthenticatedIdentity"
 #define ATTR_SLOT_AD  "SlotAd"
 #define ATTR_SLOT_TYPE  "SlotType"
@@ -851,6 +852,7 @@
 #define ATTR_SUSPEND  "Suspend"
 #define ATTR_SUSPEND_REASON  "SuspendReason"
 #define ATTR_SUSPEND_JOB_AT_EXEC  "SuspendJobAtExec"
+#define ATTR_TARGET_ANNEX_NAME "TargetAnnexName"
 #define ATTR_TARGET_TYPE  "TargetType"
 #define ATTR_TIME_TO_LIVE  "TimeToLive"
 #define ATTR_TOOL_DAEMON_ARGS1  "ToolDaemonArgs"
