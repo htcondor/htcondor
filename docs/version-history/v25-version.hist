@@ -13,6 +13,10 @@
 
 *** 25.0.15 bugs
 
+- Fixed a bug where the *condor_defrag* daemon couldn't send drain commands
+  to EPs that didn't have an IDTOKENS signing key.
+  :jira:`3954`
+
 *** 25.0.14 features
 
 - Updated :tool:`condor_upgrade_check` for well known "gotchas", warnings,
