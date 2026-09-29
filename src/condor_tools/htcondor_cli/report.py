@@ -102,10 +102,10 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
                 value = None
         return value
 
-    def _get_job_info(query_func) -> None:
+    def _get_job_info(query_func, **query_func_kwargs) -> None:
         nonlocal data
 
-        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS):
+        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS, **query_func_kwargs):
             jid = str(ad["ClusterId"]) + "." + str(ad["ProcId"])
             data[jid] = {attr: _get_attr(ad, attr) for attr in REQUIRED_ATTRS}
 
@@ -178,7 +178,7 @@ def _validate_cluster_exists(cluster_id: int) -> bool:
         pass
 
     try:
-        if len(schedd.history(f"ClusterId=={cluster_id}", ["ClusterId"], match=1)) == 1:
+        if len(list(schedd.history(f"ClusterId=={cluster_id}", ["ClusterId"], match=1))) == 1:
             return True
     except Exception:
         pass
@@ -937,7 +937,7 @@ class Analytics(Verb):
             wall_time = safe(float, job.get("RemoteWallClockTime"))
 
             if wall_time and cpus and (user_cpu or sys_cpu):
-                cpu_used_time.append(sys_cpu / cpus)
+                cpu_used_time.append((user_cpu + sys_cpu) / cpus)
                 run_time.append(wall_time)
 
             if wall_time:
@@ -1374,14 +1374,14 @@ class Hold(Verb):
         if args.show_job_ids:
             headers.append("Job IDs (ProcId)")
 
-        print(tabulate(example_rows, headers=headers, tablefmt="grid"))
+        tabulate(example_rows, headers=headers, tablefmt="grid")
 
         print("\nLegend:")
         legend = []
         for code in sorted(seen_codes):
             entry = Hold.HOLD_REASON_CODES.get(code, {})
             legend.append([code, entry.get("label", "Unknown"), entry.get("reason", "No description available.")])
-        print(tabulate(legend, headers=["Code", "Label", "Reason"], tablefmt="fancy_grid"))
+        tabulate(legend, headers=["Code", "Label", "Reason"], tablefmt="fancy_grid")
 
 
         # Export job IDs if requested
@@ -1667,7 +1667,7 @@ class Summarize(Verb):
             ])
 
         headers = ["Aspect", "Status", "Value", "Reason / Details", "Tool for Details"]
-        print(tabulate(table_data, headers=headers, tablefmt="grid", maxcolwidths=[20, 15, 12, 50, 35]))
+        tabulate(table_data, headers=headers, tablefmt="grid", maxcolwidths=[20, 15, 12, 50, 35])
 
         print("\n" + "=" * 120)
         print(bold("Recommended Next Steps"))
