@@ -20,6 +20,10 @@
   the Elasticsearch Python library.
   :jira:`3949`
 
+- Fixed a bug in the *condor_schedd* where each time a submit transform was applied,
+  an empty failure message with no error text was printed to the SchedLog.
+  :jira:`3957`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
