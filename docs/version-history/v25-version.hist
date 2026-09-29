@@ -12,6 +12,11 @@
 
 *** 25.15.15 bugs
 
+- Fixed calculation of :ad-attr:`CpusUsage` in the job ClassAd so that the
+  final value is calculated using the total execution time rather than just
+  the final sampling interval.
+  :jira:`3331`
+
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
   late materialization joblist attempts to use common files or a common container.
   :jira:`3942`
