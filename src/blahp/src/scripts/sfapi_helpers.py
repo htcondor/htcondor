@@ -338,7 +338,7 @@ def check_token_validity(key_path):
             f"Token authentication failed for client_id {cid} using key {key_path}: {e}"
         )
 
-    print(f"Token is valid. client_id: {cid}")
+    print("Token is valid.")
 
     # Decode the JWT payload (middle segment) to read the exp claim.
     # No signature verification is needed here — we just fetched this token
