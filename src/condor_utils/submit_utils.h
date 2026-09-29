@@ -172,6 +172,7 @@
 #define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input"
 #define SUBMIT_KEY_CommonInputFiles "common_input_files"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
+#define SUBMIT_KEY_RequireCommonFiles "require_common_files"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -850,7 +851,6 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool IsContainerJob;
-	bool ContainerIsCommon{false};
 	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;

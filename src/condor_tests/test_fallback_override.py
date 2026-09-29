@@ -67,14 +67,14 @@ the_job_description = """
 
 @jobs(params={
     "undefined":    f"{the_job_description}",
-    "false":        f"{the_job_description}\nMY.RequireCommonFilesTransfer = False\n",
+    "false":        f"{the_job_description}\n require_common_files = False\n",
 })
 def expect_missing_job(request, default_condor):
     return make_test_job(default_condor, request.param)
 
 
 @jobs(params={
-    "true":        f"{the_job_description}\nMY.RequireCommonFilesTransfer = True\n",
+    "true":        f"{the_job_description}\n require_common_files = True\n",
 })
 def expect_present_job(request, default_condor):
     return make_test_job(default_condor, request.param)

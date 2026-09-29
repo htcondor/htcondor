@@ -10,6 +10,10 @@
   set to true.
   :jira:`3924`
 
+- Added new submit command :subcom:`require_common_files` that forces jobs that use common input files
+  to run only only EPs that support common files transfer.
+  :jira:`3955`
+
 *** 25.15.15 bugs
 
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
