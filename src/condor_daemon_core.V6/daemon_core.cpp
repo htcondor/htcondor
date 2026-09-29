@@ -9514,8 +9514,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// See below, just after the loop
 
 		if( it->has_relisock() && m_shared_port_endpoint ) {
-				// SOAP-enabled daemons may have both a shared port and
-				// a fixed TCP port for receiving SOAP commands
+				// A daemon may have both a shared port and a fixed TCP
+				// command socket (e.g. for HTTP requests).
 			dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
 					 it->rsock()->get_sinful() );
 		}

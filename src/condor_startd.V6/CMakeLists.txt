@@ -64,4 +64,9 @@ if (HAVE_BOINC)
 list(APPEND startdElements boinc_mgr.cpp)
 endif()
 
-condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
+set(startd_libraries "${CONDOR_LIBS}")
+if (HAVE_EXT_LIBSELINUX)
+	list(APPEND startd_libraries LIBSELINUX::LIBSELINUX)
+endif()
+
+condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${startd_libraries}" INSTALL "${C_SBIN}")

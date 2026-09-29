@@ -249,32 +249,6 @@ section.
     :macro:`WANT_VACATE` expression may be used to skip the graceful
     shutdown of the job.
 
-:macro-def:`MAXJOBRETIREMENTTIME`
-    When the *condor_startd* wants to evict a job, a job which has run
-    for less than the number of seconds specified by this expression
-    will not be hard-killed. The *condor_startd* will wait for the job
-    to finish or to exceed this amount of time, whichever comes sooner.
-    Time spent in suspension does not count against the job. The default
-    value of 0 (when the configuration variable is not present) means
-    that the job gets no retirement time. If the job vacating policy
-    grants the job X seconds of vacating time, a preempted job will be
-    soft-killed X seconds before the end of its retirement time, so that
-    hard-killing of the job will not happen until the end of the
-    retirement time if the job does not finish shutting down before
-    then. Note that in peaceful shutdown mode of the *condor_startd*,
-    retirement time is treated as though infinite. In graceful shutdown
-    mode, the job will not be preempted until the configured retirement
-    time expires or :macro:`SHUTDOWN_GRACEFUL_TIMEOUT` expires. In fast shutdown
-    mode, retirement time is ignored. See :macro:`MAXJOBRETIREMENTTIME` in
-    :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-    for further explanation.
-
-    By default the *condor_negotiator* will not match jobs to a slot
-    with retirement time remaining. This behavior is controlled by
-    :macro:`NEGOTIATOR_CONSIDER_EARLY_PREEMPTION`.
-
-    There is no default value for this configuration variable.
-
 :macro-def:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. The default is 1200, which is
@@ -1011,6 +985,30 @@ needs.
     slot permits dynamic provisioning, as specified in
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
 
+:macro-def:`SLOT_TYPE_<N>_BACKFILL`
+    A boolean variable that defaults to ``False``. When ``True``, this
+    slot is provisioned from a set of resources that shadow the normal resources
+    and keep track of conflicts with resource usage by other slots.
+    Currently when this is ``True``, :macro:`SLOT_TYPE_<N>_PARTITIONABLE` must also be set to ``True``.
+
+    Backfill slots will have the attribute :ad-attr:`ResourceConflict` set to a list
+    of resource names whenever the current slot conflicts with another slot.
+    This attribute can be used by the :macro-def:`PREEMPT`
+    policy expression to evict jobs from the backfill slot when a non-backfill slot begins
+    to use the same resources.
+
+    The recommended configuration for using backfill slots has a :macro:`PREEMPT` expression
+    that is ``True`` when :ad-attr:`ResourceConflict` is defined and non-empty. For example:
+
+    .. code-block:: condor-config
+
+                # Create a single backfill p-slot that shadows all of the CPUs, Disk, Memory, etc.
+                SLOT_TYPE_2 = 100%
+                NUM_SLOTS_TYPE_2 = 1
+                SLOT_TYPE_2_PARTITIONABLE = True
+                SLOT_TYPE_2_BACKFILL = True
+                SLOT_TYPE_2_PREEMPT = size(ResourceConflict?:"") > 0
+
 :macro-def:`CLAIM_PARTITIONABLE_LEFTOVERS`
     A boolean variable that defaults to ``True``. When ``True`` within
     the configuration for both the *condor_schedd* and the
@@ -1620,7 +1618,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
 These macros allow a *condor_startd* to directly connect to a *condor_schedd*,
 so that it can run jobs on this startd without sharing it with other
-schedds.
+schedds.  See :ref:`direct-attach` for a description of how direct attach
+works and why an administrator might want to use it.
 
 :macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`
     The name of the *condor_schedd* to which this *condor_startd* should
@@ -1634,7 +1633,7 @@ schedds.
     collector the *condor_schedd* reports to.  If empty, assume that the *condor_schedd*
     reports to the same collector as this *condor_startd*.
 
-:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_SUBMITTER`
+:macro-def:`STARTD_DIRECT_ATTACH_SUBMITTER_NAME`
     If the *condor_schedd* to which this *condor_startd* should directly connect
     should only run jobs from one submitter, this parameter names that submitter.
     If empty, the *condor_startd* will run jobs from any submitter.

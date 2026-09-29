@@ -79,6 +79,35 @@ struct LibrarianClient::Impl {
 		std::ignore = sqlite3_finalize(stmt);
 		return count;
 	}
+
+	// Shared by GetRecords/GetRecordsByCluster/GetRecordsByUser: append
+	// base_sql's OnlyExisting filter clause (if requested) and prepare it.
+	// Returns nullptr (error already logged) on prepare failure; caller binds
+	// params, fetches rows via fetchRecordRows(), and finalizes the statement.
+	sqlite3_stmt* prepareRecordsQuery(const char* base_sql, FileFilter filter) const {
+		std::string sql = base_sql;
+		if (filter == FileFilter::OnlyExisting) { sql += " AND f.DateOfDeletion IS NULL"; }
+		sqlite3_stmt* stmt = nullptr;
+		if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+			dprintf(D_ERROR, "LibrarianClient: prepare failed: %s\n", sqlite3_errmsg(db));
+			return nullptr;
+		}
+		return stmt;
+	}
+
+	// Step an already-prepared, already-bound statement to completion,
+	// appending one LibrarianRecord per row: column 0 = Offset (int64),
+	// column 1 = FileName (text). Shared row-processing for all three
+	// GetRecords* methods.
+	static void fetchRecordRows(sqlite3_stmt* stmt, std::vector<LibrarianRecord>& out) {
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			LibrarianRecord rec;
+			rec.offset    = sqlite3_column_int64(stmt, 0);
+			const char* fn = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+			rec.file_path = fn ? fn : "";
+			out.push_back(std::move(rec));
+		}
+	}
 #endif // HAVE_SQLITE3_H
 };
 
@@ -137,7 +166,7 @@ int LibrarianClient::CountByUser([[maybe_unused]] const std::string& username, [
 		" JOIN Files f    ON jr.FileId    = f.FileId"
 		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
 		" JOIN Users u    ON jl.UserId    = u.UserId"
-		" WHERE u.UserName = ?";
+		" WHERE u.UserName = ? COLLATE NOCASE";
 	const char* extra = (filter == FileFilter::OnlyExisting)
 		? " AND f.DateOfDeletion IS NULL" : nullptr;
 	return m_impl->countQueryText(base_sql, extra, username);
@@ -157,29 +186,61 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecords([[maybe_unused]] const 
 		" JOIN Files f ON jr.FileId = f.FileId"
 		" JOIN Jobs j  ON jr.JobId  = j.JobId"
 		" WHERE j.ClusterId = ? AND j.ProcId = ?";
-	static const char* extra_filter = " AND f.DateOfDeletion IS NULL";
 
-	std::string sql = base_sql;
-	if (filter == FileFilter::OnlyExisting) { sql += extra_filter; }
-
-	sqlite3_stmt* stmt = nullptr;
-	if (sqlite3_prepare_v2(m_impl->db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-		dprintf(D_ERROR, "LibrarianClient: prepare failed: %s\n", sqlite3_errmsg(m_impl->db));
-		return results;
-	}
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
 
 	for (const auto& [cluster, proc] : job_ids) {
 		std::ignore = sqlite3_reset(stmt);
 		std::ignore = sqlite3_bind_int(stmt, 1, cluster);
 		std::ignore = sqlite3_bind_int(stmt, 2, proc);
-		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			LibrarianRecord rec;
-			rec.offset    = sqlite3_column_int64(stmt, 0);
-			const char* fn = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-			rec.file_path = fn ? fn : "";
-			results.push_back(std::move(rec));
-		}
+		Impl::fetchRecordRows(stmt, results);
 	}
+	std::ignore = sqlite3_finalize(stmt);
+#endif
+	return results;
+}
+
+std::vector<LibrarianRecord> LibrarianClient::GetRecordsByCluster([[maybe_unused]] int cluster_id,
+                                                                   [[maybe_unused]] FileFilter filter) const {
+	std::vector<LibrarianRecord> results;
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid()) { return results; }
+
+	static const char* base_sql =
+		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
+		" JOIN Files f    ON jr.FileId    = f.FileId"
+		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
+		" WHERE jl.ClusterId = ?";
+
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
+
+	std::ignore = sqlite3_bind_int(stmt, 1, cluster_id);
+	Impl::fetchRecordRows(stmt, results);
+	std::ignore = sqlite3_finalize(stmt);
+#endif
+	return results;
+}
+
+std::vector<LibrarianRecord> LibrarianClient::GetRecordsByUser([[maybe_unused]] const std::string& username,
+                                                                [[maybe_unused]] FileFilter filter) const {
+	std::vector<LibrarianRecord> results;
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid()) { return results; }
+
+	static const char* base_sql =
+		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
+		" JOIN Files f     ON jr.FileId    = f.FileId"
+		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
+		" JOIN Users u     ON jl.UserId    = u.UserId"
+		" WHERE u.UserName = ? COLLATE NOCASE";
+
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
+
+	std::ignore = sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+	Impl::fetchRecordRows(stmt, results);
 	std::ignore = sqlite3_finalize(stmt);
 #endif
 	return results;

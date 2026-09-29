@@ -523,10 +523,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 		return CommandProtocolContinue;
 }
 
-// Read the header.  Soap requests are handled here.
-// If this is not a soap request and is a registered command,
-// pass on to ReadCommand.
-// Soap requests are also handled here.
+// Read the header.  HTTP/TLS requests (and other unregistered commands) are
+// detected here by peeking at the leading bytes and dispatched to the HTTP
+// handler.  If this is not such a request and is a registered command, pass
+// on to ReadCommand.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();

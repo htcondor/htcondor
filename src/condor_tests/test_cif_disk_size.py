@@ -37,7 +37,8 @@ def the_condor( test_dir ):
             "CLAIM_WORKLIFE":   0,
             "DISK":             500,
 
-            "MODIFY_REQUEST_EXPR_REQUESTDISK": "quantize(RequestDisk - $(CATALOG_SPACE), (Target.DiskQuantum ?: 1) )",
+            "DiskQuantum":      1,
+            "STARTD_ATTRS":     "$(STARTD_ATTRS) DiskQuantum",
         },
     ) as the_condor:
         yield the_condor

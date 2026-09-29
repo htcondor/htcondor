@@ -355,6 +355,12 @@ Machine ClassAd Attributes
     When ``True``, the slot is in use by the AP to transfer and then store
     common files, rather than run a job.
 
+:classad-attribute-def:`IsDirectAttach`
+    Defined only when the *condor_startd* is configured to directly attach to
+    an AP; see :ref:`direct-attach`.  The value is the name of the
+    *condor_schedd* named by :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`, to
+    which this slot is offered when it is unclaimed.
+
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
     setup to enforce disk usage limits for each job the machine executes.
@@ -944,6 +950,19 @@ Machine ClassAd Attributes
     of time remaining for the current running job. This may be less than
     the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
+
+:classad-attribute-def:`ResourceConflict`
+    The list of resources that conflict between the current slot and a claimed
+    non-backfill slot.  Slots that are :macro:`SLOT_TYPE_<N>_BACKFILL` will
+    have this attribute and the value will be non-empty when there are conflicts.
+    For instance, when a conflict exist beween ``Cpus`` assigned to the current
+    slot and those assigned to a Claimed non-backfill slot, the value will be ``"Cpus"``.
+    When there is a conflict with both ``CPUs`` and ``Memory``, the value will be 
+    ``"Cpus, Memory"``.  For non-fungible resources like ``GPUs`` the value will include
+    the GPU identifier.  The expression :ad-expr:`size(ResourceConflict?:"") > 0` will evaluate
+    to ``True`` when there is any conflict, and ``False`` when there is no conflict.  Use the
+    above expression in a :macro:`PREEMPT` expression to evict jobs from a backfill slot
+    when a job on a non-backfill slot is using the same resources.
 
 :classad-attribute-def:`SingularityVersion`
     A string containing the version of Singularity available, if the

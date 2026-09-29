@@ -99,7 +99,7 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	// append all directories from here on down
 	try { // apparently the ++operator will throw, even if the ctor does not
 		for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
-			if (stdfs::is_directory(entry)) {
+			if (entry.is_directory()) {
 				dirs.emplace_back(entry);
 			}	
 		}

@@ -512,7 +512,12 @@ and `shared_fs_config_options`_.
 
 :macro-def:`<SUBSYS>_DAEMON_HISTORY`
     A path representing a file for the daemon specified by :macro:`SUBSYSTEM`
-    to periodically write ClassAd records into.
+    to periodically write ClassAd records into. ``SCHEDD_DAEMON_HISTORY``
+    defaults to ``$(SPOOL)/schedd_daemon_history``, so the *condor_schedd*
+    keeps this history unless the knob is set to nothing. Setting it for a
+    daemon that does not write a daemon history has no effect. See
+    :ref:`admin-manual/ap-policy-configuration:recording ap performance over
+    time` for what the records contain and how to read them.
 
     .. note::
 

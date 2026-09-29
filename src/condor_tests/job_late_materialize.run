@@ -35,6 +35,7 @@ use warnings;
 my $config = <<CONDOR_TESTREQ_CONFIG;
   NUM_CPUS = 6
   NUM_SLOTS = 6
+  JOB_DEFAULT_REQUESTDISK = MAX({20, (TransferInputSizeMB+1) * 1.25}) * 1024
   # this is now the default
   #SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
