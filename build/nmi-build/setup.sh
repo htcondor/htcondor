@@ -302,14 +302,14 @@ if [ "$ID" = 'ubuntu' ]; then
     $INSTALL apptainer fuse-overlayfs
 fi
 
-
 # Include packages for tarball in the image.
+PELICAN_VERSION=7.26.2-1 # Specify both version and release (release required on Debian)
 externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican=$PELICAN_VERSION
     if [ "$VERSION_CODENAME" = 'bullseye' ]; then
         apt-get download libscitokens0 libvomsapi1v5
     elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
@@ -332,7 +332,7 @@ if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
 fi
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
-        libgomp munge-libs pelican pcre2 scitokens-cpp
+        libgomp munge-libs pelican-$PELICAN_VERSION pcre2 scitokens-cpp
     if [ "$ID" != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
@@ -340,7 +340,7 @@ if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican-$PELICAN_VERSION
 fi
 if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
