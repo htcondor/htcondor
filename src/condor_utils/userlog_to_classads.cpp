@@ -207,8 +207,24 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	jobClassAd->InsertAttr("StartdIpAddr",start_event->getExecuteHost());
-	// the execute host is the best we have
+	// the execute host is the best we have (unless we have the expanded execute event)
 	jobClassAd->InsertAttr("RemoteHost",start_event->getExecuteHost());
+	// if we have the expanded execute event, then we have the slot name and possibly properties
+	if ( !start_event->slotName.empty()) {
+		jobClassAd->Assign("RemoteHost", start_event->slotName.c_str());
+		// insert remote properties that are provisioned resources as *Provisioned
+		if (start_event->hasProps()) {
+			const auto & props = start_event->setProp();
+			jobClassAd->Insert("RemoteProps", props.Copy());
+			for (const auto & attr : classad::ReferencesBySize{"Cpus", "Disk", "Memory", "GPUs"}) {
+				classad::Value val;
+				if (props.EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
+					auto * lit = classad::Literal::MakeLiteral(val);
+					if (lit) jobClassAd->InsertLiteral(attr + "Provisioned", lit);
+				};
+			}
+		}
+	}
       }
       break;
 
@@ -228,6 +244,8 @@ bool userlog_to_classads(const char *filename,
 	{
 	  ExprTree *oldhost=jobClassAd->Remove("RemoteHost");
 	  jobClassAd->Insert("LastRemoteHost",oldhost);
+	  ExprTree *oldprops=jobClassAd->Remove("RemoteProps");
+	  if (oldprops) { jobClassAd->Insert("LastRemoteProps", oldprops); }
 	}
 
 	// Update the time attributes
