@@ -102,29 +102,44 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
                 value = None
         return value
 
-    def _get_job_info(query_func, **query_func_kwargs) -> None:
+    def _get_job_info(query_func, **query_func_kwargs) -> int:
         nonlocal data
+        duplicate_count = 0
 
         for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS, **query_func_kwargs):
             jid = str(ad["ClusterId"]) + "." + str(ad["ProcId"])
+
+            if jid in data:
+                duplicate_count += 1
+
             data[jid] = {attr: _get_attr(ad, attr) for attr in REQUIRED_ATTRS}
+
+        return duplicate_count
 
     print("Querying current queue...", file=sys.stderr)
     queue_job_count = 0
     try:
         _get_job_info(schedd.query)
-        queue_job_count = len(data)
-        print(f"  Queue complete: {queue_job_count} jobs", file=sys.stderr)
     except Exception as e:
         print(f"Warning: Error querying queue: {e}", file=sys.stderr)
+    finally:
+        queue_job_count = len(data)
 
     print("Querying job history...", file=sys.stderr)
+    history_job_count = 0
     try:
-        _get_job_info(schedd.history)
-        history_job_count = len(data) - queue_job_count
-        print(f"  History complete: {history_job_count} jobs", file=sys.stderr)
+        # Update queued count by removing jobs that transitioned into the history
+        queue_job_count = queue_job_count - _get_job_info(schedd.history)
     except Exception as e:
         print(f"Warning: Error querying history: {e}", file=sys.stderr)
+    finally:
+        history_job_count = len(data) - queue_job_count
+
+    if queue_job_count > 0:
+        print(f"  Queue complete: {queue_job_count} jobs", file=sys.stderr)
+
+    if history_job_count > 0:
+        print(f"  History complete: {history_job_count} jobs", file=sys.stderr)
 
     job_count = len(data)
     if job_count == 0:
