@@ -362,8 +362,9 @@ fi
 # in the HTCondor repositories.  `pelican-server` provides the federation and
 # may not be mirrored in every repository, so its installation is best-effort:
 # when it is absent the integration test simply skips.
-if [ "$ID" != 'debian' ] && [ "$ID" != 'ubuntu' ]; then
-    $INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
+if [ "$ID" = 'almalinux' ] && [ "$ARCH" != 'ppc64le' ]; then
+    $INSTALL "https://repo.osg-htc.org/osg/$MAJOR_VER-main/osg-$MAJOR_VER-main-el$VERSION_ID-release-latest.rpm"
+    $INSTALL pelican-server
 fi
 
 # Clean up package caches
