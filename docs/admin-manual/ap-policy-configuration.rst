@@ -597,6 +597,72 @@ overloaded schedd.  An administrator can see this attribute by running
     $ condor_status -direct -schedd name-of-schedd -af RecentDaemonCoreDutyCycle
 
 
+Recording AP performance over time
+''''''''''''''''''''''''''''''''''
+
+The command above reports the duty cycle *now*, which does not help with the
+question an administrator usually has, namely what the AP was doing at three
+o'clock this morning when users could not submit.  For that, the
+*condor_schedd* keeps a history of its own daemon ClassAd, in the same spirit
+as the job history file but recording the daemon rather than the jobs that
+passed through it.
+
+This is enabled by default: :macro:`<SUBSYS>_DAEMON_HISTORY` for the schedd
+defaults to ``$(SPOOL)/schedd_daemon_history``.  Every time the schedd sends
+its ad to the *condor_collector* it also appends that ad to this file, but no
+more often than :macro:`SCHEDD_HISTORY_RECORD_INTERVAL` seconds (900 by
+default).  Because the record rides along with the collector update, the real
+interval between records is a multiple of :macro:`SCHEDD_INTERVAL`; with the
+default settings of both knobs, a record lands every twenty minutes.  The file
+is rotated at :macro:`MAX_DAEMON_HISTORY_LOG` bytes (20 MB by default) keeping
+:macro:`MAX_DAEMON_HISTORY_ROTATIONS` older copies (one by default), so it
+takes a bounded amount of space and needs no external cleanup, and
+:tool:`condor_preen` will not remove it from the spool directory.  Setting the
+knob to nothing turns the feature off:
+
+.. code-block:: condor-config
+
+    # Keep a record every five minutes instead, and more of them.
+    SCHEDD_HISTORY_RECORD_INTERVAL = 300
+    MAX_DAEMON_HISTORY_LOG = 200000000
+    MAX_DAEMON_HISTORY_ROTATIONS = 5
+
+    # Or, to disable the schedd's daemon history entirely:
+    # SCHEDD_DAEMON_HISTORY =
+
+Each record holds more than the ad the collector receives.  The schedd adds its
+own verbose statistics, the DaemonCore statistics, and the file transfer queue
+statistics before writing, so attributes that are too voluminous to advertise
+pool-wide are still available afterwards.  Read the file with
+:tool:`condor_history`, whose **-daemon** option displays a table of the
+values most often wanted -- when the record was written, the duty cycle, the
+number of running, idle and held jobs, and the depth of the transfer queues:
+
+.. code-block:: console
+
+    $ condor_history -daemon
+
+Any other attribute of the record can be printed with the usual options, and
+the records can be read from a remote AP with **-name**:
+
+.. code-block:: console
+
+    $ condor_history -daemon -name ap1.example.com -limit 24 \
+          -af RecordWriteDate RecentDaemonCoreDutyCycle TotalRunningJobs TotalIdleJobs
+
+Used this way the daemon history answers questions that no single
+:tool:`condor_status` query can: whether the duty cycle climbed gradually or
+spiked, whether a growing transfer queue preceded the slowdown, and how the
+queue depth on this AP has trended over the past weeks.  It is not a substitute
+for a real monitoring system -- the records are coarse, local to one AP, and
+eventually rotate away -- but it is always there, which the monitoring system
+frequently is not on the day it is needed.
+
+.. note::
+
+    Although :macro:`<SUBSYS>_DAEMON_HISTORY` is named for a subsystem, the
+    *condor_schedd* is the only daemon that writes a daemon history today.
+
 Horizontal Scaling
 ''''''''''''''''''
 

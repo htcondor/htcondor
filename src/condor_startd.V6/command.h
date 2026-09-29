@@ -101,8 +101,10 @@ int command_classad_handler(int, Stream* );
   complicated, these functions are here that actually do the work of 
   some of the commands. 
 */
-// Negotiator sent match information to us
-int match_info( Resource*, const char* );
+// Negotiator sent match information to us.  match_ad holds any extra
+// metadata the negotiator sent along with the match (slot-bundle info);
+// it is empty when the negotiator is too old to send it.
+int match_info( Resource*, const char*, const ClassAd & match_ad );
 
 // Schedd Agent requests a claim
 int request_claim( Resource*, Claim *, const char*, Stream* ); 

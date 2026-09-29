@@ -277,6 +277,18 @@ public:
 	}
 	// Get vector of job information
 	const std::vector<JobDetails>& GetJobInfo() const { return jobs; }
+	// Record a job proc reaching a terminal state, surviving Cleanup()'s jobs.clear()
+	void RecordTermination(bool success) {
+		_finalJobsTerminated++;
+		if (success) { _finalJobsSucceeded++; }
+	}
+	// Total job procs that ever terminated/aborted
+	int NumJobsTerminated() const { return _finalJobsTerminated; }
+	// Of those, how many succeeded
+	int NumJobsSucceeded() const { return _finalJobsSucceeded; }
+	// Has Cleanup() already thrown away this node's per-proc info? Late or
+	// duplicate job proc events must not start tracking procs again after it has.
+	bool IsJobTrackingDone() const { return jobTrackingDone; }
 
 	// Check whether node has not tracked a job proc already
 	bool IsFirstProc() {
@@ -390,11 +402,14 @@ public:
 	void ResetInfo() {
 		numJobsSubmitted = 0;
 		totalJobsFailed = 0;
+		_finalJobsTerminated = 0;
+		_finalJobsSucceeded = 0;
 		isSuccessful = true;
 		readFirstProc = false;
 		is_factory = false;
 		error_text.clear();
 		jobs.clear();
+		jobTrackingDone = false;
 	}
 
 	void SetTolerance(const int tol, const DAG::ToleranceMode mode, const bool percentage = false) {
@@ -479,6 +494,9 @@ private:
 	int _timesHeld{0}; // Total number of times jobs in the job list went on hold
 	int totalJobsFailed{0}; // Count of jobs that failed (terminate failure or abort)
 
+	int _finalJobsTerminated{0}; // Total job procs that ever terminated/aborted
+	int _finalJobsSucceeded{0}; // Of those, how many succeeded
+
 	int retval{-1}; // Nodes return code
 
 	int _preskip{PRE_SKIP_INVALID}; // Nodes preskip code (to skip rest of node)
@@ -508,6 +526,7 @@ private:
 	bool isSuccessful{true}; // Is Node currently successful or not
 	bool readFirstProc{false}; // DAG has already read a job event (submit) for this node
 	bool missingJobs{false}; // Node counts found missing jobs during verifying state with AP
+	bool jobTrackingDone{false}; // Cleanup() has discarded the per-proc info in jobs
 
 	bool _parents_done{false}; // set to true when all of the parents of this node are done
 	bool m_multiple_parents{false};  // disambiguates m_parents interpretation

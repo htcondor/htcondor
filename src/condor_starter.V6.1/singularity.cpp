@@ -366,20 +366,23 @@ Singularity::setup(ClassAd &machineAd,
 
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(slot_dir + ":" + "/condor_scratch");
-			// _CONDOR_SCRATCH_DIR should always point at the execute
-			// directory (as the vanilla universe does), which may or may
-			// not be a "scratch" subdir of slot_dir depending on
-			// STARTER_NESTED_SCRATCH.  Derive the in-container path from
-			// execute_dir rather than hardcoding the nested-scratch layout.
-			std::string container_scratch = execute_dir;
-			replace_str(container_scratch, slot_dir, "/condor_scratch");
-			job_env.SetEnv("_CONDOR_SCRATCH_DIR", container_scratch);
+
+			// With file transfer off, target_dir holds the job iwd, and
+			// the scratch dir is bound at /condor_scratch instead.  So
+			// environment values that name the scratch dir -- including
+			// _CONDOR_SCRATCH_DIR itself and any $$(CONDOR_SCRATCH_DIR)
+			// expansions the job asked for -- must be retargeted to
+			// /condor_scratch, not to target_dir.  Note this preserves
+			// whatever "scratch" subdir of slot_dir STARTER_NESTED_SCRATCH
+			// put the execute dir in, rather than hardcoding that layout.
+			retargetEnvs(job_env, "/condor_scratch", slot_dir);
 		} else {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(pwd);
+
+			// Update the environment variables
+			retargetEnvs(job_env, target_dir, slot_dir);
 		}
-		// Update the environment variables
-		retargetEnvs(job_env, target_dir, slot_dir);
 
 	} else {
 		sing_args.AppendArg("--pwd");
@@ -396,16 +399,25 @@ Singularity::setup(ClassAd &machineAd,
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if (assignedGpus.length() > 0) {
-		sing_args.AppendArg("--nv");
 		static const char* open_cl_path = "/etc/OpenCL/vendors";
 		if (IsDirectory(open_cl_path)) {
 			additional_bind_mounts.emplace_back(open_cl_path);
 		}
 
-		// We don't really know if the GPUs are NVidia, but it doesn'to
-		// seem hurt to have both the nvidia and rocm bind mounts available
-		// if either is needed.  But knob it just to be sure.
-		if (param_boolean("SINGULARITY_ADD_ROCM_FLAG", true)) {
+		std::string nvidia_driver;
+		machineAd.LookupString("GPUs_NvidiaDriver", nvidia_driver);
+		
+		if (!nvidia_driver.empty()) {
+			sing_args.AppendArg("--nv");
+		}
+
+		// If --nv and --rocm are set (in any order), apptainer
+		// ignores --rocm.  Only set --rocm if we think we are on
+		// an amd gpu system or the knob is set to true.
+		int rocm_version = -1;
+		machineAd.LookupInteger("GPUs_Rocm", rocm_version);
+		if (rocm_version > 0 || 
+				param_boolean("SINGULARITY_ADD_ROCM_FLAG", false)) {
 			sing_args.AppendArg("--rocm");
 		}
 	}

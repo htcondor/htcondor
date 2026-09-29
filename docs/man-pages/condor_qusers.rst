@@ -28,7 +28,7 @@ Options
 -------
 
  **-help**
-    Print useage then exit.
+    Print usage then exit.
  **-version**
     Print the version and then exit.
  **-debug**

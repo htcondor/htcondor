@@ -10,7 +10,7 @@ single queue statement.
 
 .. note::
 
-    The following example submit files are not designed to be useable but rather
+    The following example submit files are not designed to be usable but rather
     a demonstration of how the old syntax can be converted.
 
 A Job Per File

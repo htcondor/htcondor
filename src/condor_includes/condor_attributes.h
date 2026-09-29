@@ -340,7 +340,6 @@
 #define ATTR_HIBERNATION_RAW_MASK  "HibernationRawMask"
 #define ATTR_HIBERNATION_METHOD  "HibernationMethod"
 #define ATTR_UNHIBERNATE  "Unhibernate"
-#define ATTR_CONTAINER_IS_COMMON "ContainerIsCommon"
 #define ATTR_HOLD_KILL_SIG  "HoldKillSig"
 #define ATTR_HOOK_KEYWORD  "HookKeyword"
 #define ATTR_HISTORY_RECORD_SOURCE  "HistoryRecordSource"
@@ -412,6 +411,20 @@
 #define ATTR_OCU_NAME  "OCUName"
 #define ATTR_OCU_WANTED  "OCUWanted"
 #define ATTR_OCU_STATE  "OCUState"
+#define ATTR_IS_BUNDLE_REQUEST  "IsBundleRequest" // marks a resource request as a slot-bundle request
+// Job attr ("+IsBundle = true"): this job's cluster is a slot bundle.  Also the
+// startd slot attr saying the claim on that slot is held for a slot bundle.
+#define ATTR_IS_BUNDLE  "IsBundle"
+#define ATTR_IS_BUNDLE_SUBMITTER  "IsBundleSubmitter" // submitter-ad marker: the reserved slot-bundle submitter
+#define ATTR_BUNDLE_ID  "BundleId"                // <schedd-name>#<cluster> identifying the bundle
+#define ATTR_BUNDLE_NUM_REQUESTED  "BundleNumRequested" // cluster ad: N, the slots the bundle wants
+#define ATTR_BUNDLE_NUM_SATISFIED  "BundleNumSatisfied" // cluster ad: claims already held for the bundle
+#define ATTR_BUNDLE_OLDEST_QDATE  "BundleOldestQDate"
+#define BUNDLE_SUBMITTER_NAME    "condor_bundle"
+#define ATTR_BUNDLES_IN_PROGRESS  "BundlesInProgress"       // bundles the negotiator is watching fill
+#define ATTR_BUNDLE_SLOTS_WANTED  "BundleSlotsWanted"       // slots those bundles still want
+#define ATTR_BUNDLE_SLOTS_MATCHED_TOTAL "BundleSlotsMatchedTotal" // slots matched for bundles since startup
+#define ATTR_BUNDLE_MAX_WAIT_SECONDS "BundleMaxWaitSeconds" // age of the longest-outstanding bundle
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
@@ -444,6 +457,7 @@
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
 #define ATTR_JOB_ID  "JobId"
 #define ATTR_JOB_FINISHED_HOOK_DONE  "JobFinishedHookDone"
+#define ATTR_JOB_ABORT_EVENT_LOGGED  "JobAbortEventLogged"
 #define ATTR_JOB_INPUT  "In"
 #define ATTR_JOB_IWD  "Iwd"
 #define ATTR_JOB_IWD_FLUSH_NFS_CACHE  "IwdFlushNFSCache"
@@ -1231,6 +1245,15 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_DOWNLOADING  "Downloading"
 #define ATTR_TIMEOUT  "Timeout"
 #define ATTR_CCBID  "CCBID"
+#define ATTR_CCB_TTL  "CCBTTL"
+	// Inbound tunnel routing/audit: the remaining downstream CCBIDs to reach after
+	// this hop (space-separated; empty/absent at the final hop), and the audit
+	// trail -- the original (end) requester and the immediately-prior forwarding
+	// hop -- carried along each recursive rendezvous so inner CCBs can log who a
+	// tunneled connection is really for without authenticating the client.
+#define ATTR_CCB_ROUTE  "CCBRoute"
+#define ATTR_CCB_ORIGINAL_REQUESTER  "CCBOriginalRequester"
+#define ATTR_CCB_PRIOR_HOP  "CCBPriorHop"
 #define ATTR_REQUEST_ID  "RequestID"
 #define ATTR_SESSION_INFO  "SessionInfo"
 #define ATTR_SSH_PUBLIC_SERVER_KEY  "SSHPublicServerKey"
@@ -1275,6 +1298,12 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE2_CPU_TIME  "LastNegotiationCyclePhase2CpuTime"
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE3_CPU_TIME  "LastNegotiationCyclePhase3CpuTime"
 #define ATTR_LAST_NEGOTIATION_CYCLE_PHASE4_CPU_TIME  "LastNegotiationCyclePhase4CpuTime"
+// Slot bundles are negotiated in a round of their own at the top of each cycle.
+#define ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_BUNDLES  "LastNegotiationCycleActiveBundles"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SUBMITTERS  "LastNegotiationCycleBundleSubmitters"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED  "LastNegotiationCycleBundleSlotsWanted"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES  "LastNegotiationCycleBundleMatches"
+#define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION  "LastNegotiationCycleBundleDuration"
 
 #define ATTR_JOB_MACHINE_ATTRS  "JobMachineAttrs"
 #define ATTR_MACHINE_ATTR_PREFIX  "MachineAttr"

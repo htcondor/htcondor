@@ -1138,7 +1138,10 @@ Sinful::regenerateV1String() {
 		for (const auto& contact : StringTokenIterator(getCCBContact())) {
 			std::string ccbAddr, ccbID;
 			std::string peer( "er, constructing v1 Sinful string" );
-			bool contactOK = CCBClient::SplitCCBContact( contact.c_str(), ccbAddr, ccbID, peer, NULL );
+				// v1 serialization: keep the flat entry-broker address and carry the
+				// whole (possibly nested) id chain as one CCBID, so split on the FIRST
+				// '#' (peel_innermost=false), not the last.
+			bool contactOK = CCBClient::SplitCCBContact( contact.c_str(), ccbAddr, ccbID, peer, NULL, false );
 			if(! contactOK ) {
 				m_valid = false;
 				return;

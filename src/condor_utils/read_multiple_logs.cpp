@@ -22,10 +22,10 @@
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
 #include "condor_string.h"
+#include "basename.h"
 #include "tmp_dir.h"
 #include "condor_getcwd.h"
 
-#include <iostream>
 #include "classad/classad_distribution.h"
 
 #include "fs_util.h"

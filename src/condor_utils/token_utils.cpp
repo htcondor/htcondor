@@ -25,7 +25,7 @@
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 #include "condor_config.h"
-#include "condor_string.h"
+#include "basename.h"
 #include "directory.h"
 #include "condor_random_num.h"
 

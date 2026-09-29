@@ -63,13 +63,18 @@ if (LINUX)
 	list(APPEND starterElements
 		../condor_startd.V6/VolumeManager.cpp
 	)
-endif(LINUX)
+endif()
 
 if (UNIX)
 set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
-endif(UNIX)
+endif()
 
-condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
+set(starter_libraries "${CONDOR_LIBS}")
+if (HAVE_EXT_LIBSELINUX)
+	list(APPEND starter_libraries LIBSELINUX::LIBSELINUX)
+endif()
+
+condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${starter_libraries}" INSTALL "${C_SBIN}")
 
 # need to add all the other install targets for libexec.
 install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
@@ -78,7 +83,7 @@ if (HAVE_SSH_TO_JOB)
 	install ( FILES condor_ssh_to_job_sshd_setup condor_ssh_to_job_shell_setup DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/condor_ssh_to_job_sshd_config_template.in ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template @ONLY )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_FILE_PERMS} )
-endif(HAVE_SSH_TO_JOB)
+endif()
 
 if (LINUX)
 	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "" OFF)

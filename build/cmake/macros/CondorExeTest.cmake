@@ -59,7 +59,7 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 		if ( WINDOWS )
 			set_property( TARGET ${_cet_target} PROPERTY FOLDER "tests" )
-		endif ( WINDOWS )
+		endif()
 
 		add_dependencies(${_cet_target} condor_version_obj)
 		target_link_libraries(${_cet_target} PRIVATE "${_LINK_LIBS};condor_version_obj" )
@@ -73,10 +73,10 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 				POST_BUILD
 				WORKING_DIRECTORY ${TEST_TARGET_DIR}
 				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs $<TARGET_FILE:${_cet_target}> )
-		endif(APPLE)
+		endif()
 
 		APPEND_VAR( CONDOR_TESTS ${_cet_target} )
 
-	endif(BUILD_TESTING)
+	endif()
 
 ENDMACRO(CONDOR_EXE_TEST)

@@ -25,4 +25,4 @@ if(WINDOWS)
 	
 	condor_exe( condor_rmdir "${RmdirFiles}" ${C_BIN} "" OFF )
 
-endif(WINDOWS)
+endif()

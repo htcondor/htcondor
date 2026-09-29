@@ -13,57 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import json
-import pprint
+import logging
 
-from pathlib import Path
+import opensearchpy
+from opensearchpy import VERSION as OS_VERSION
 
-try:
-    import opensearchpy
-    from opensearchpy import VERSION as OS_VERSION
-    _OS_MODULE_FOUND = True
-except ModuleNotFoundError as err:
-    _OS_MODULE_FOUND = False
-    _OS_MODULE_NOT_FOUND_ERROR = err
+from adstash.interfaces.search_engine import SearchEngineInterface
 
-
-from adstash.utils import get_host_port
-from adstash.interfaces.elasticsearch import ElasticsearchInterface
-
-
-if _OS_MODULE_FOUND and (OS_VERSION < (1,0,0) or OS_VERSION >= (3,0,0)):
+if OS_VERSION < (1,0,0) or OS_VERSION >= (3,0,0):
     logging.warning(f"Unsupported Opensearch Python library {OS_VERSION}, proceeding anyway...")
 
 
-class OpenSearchInterface(ElasticsearchInterface):
-
+class OpenSearchInterface(SearchEngineInterface):
 
     def __init__(
             self,
-            host="localhost",
-            port="9200",
-            url_prefix="",
-            username=None,
-            password=None,
-            use_https=False,
-            ca_certs=None,
-            timeout=60,
             **kwargs
             ):
-        if not _OS_MODULE_FOUND:  # raise module not found error if missing
-            raise _OS_MODULE_NOT_FOUND_ERROR
-        self.host, self.port = get_host_port(host, port)
-        self.url_prefix = url_prefix or ""
-        self.username = username
-        self.password = password
-        self.use_https = use_https
-        self.ca_certs = ca_certs
-        self.timeout = timeout
-        self.handle = None
+        super().__init__(**kwargs)
 
 
-    def get_handle(self):
+    def get_handle(self) -> "opensearchpy.OpenSearch":
+        """
+        Set up the OpenSearch client if needed.
+        """
         if self.handle is not None:
             return self.handle
 
@@ -94,56 +68,83 @@ class OpenSearchInterface(ElasticsearchInterface):
         return self.handle
 
 
-    def setup_index(self, index, log_mappings=True, log_dir=Path.cwd(), **kwargs):
+    def get_health(self) -> dict:
+        client = self.get_handle()
+        health = {}
+        try:
+            health = client.cluster.health()
+        except opensearchpy.exceptions.AuthorizationException:
+            logging.warning(f"Search engine user {self.username} does not have cluster-level access, cannot get health status")
+        except Exception as e:
+            logging.exception(f"Cannot get health status due to error: {e}")
+        return health
+
+
+    def get_active_index(self, alias: str) -> str:
+        client = self.get_handle()
+        try:
+            indices = client.indices.get_alias(name=alias)
+        except opensearchpy.exceptions.NotFoundError:
+            logging.info(f"{alias} is not an alias, assuming {alias} is the active index")
+            return alias
+        return self.resolve_alias(indices, alias)
+
+
+    def get_mappings(self, index: str) -> dict:
+        """
+        Fetch the existing mappings for an index (if it exists)
+        """
+        client = self.get_handle()
+        mappings = {}
+        try:
+            mappings = client.indices.get_mapping(index=index)[index]["mappings"]
+        except opensearchpy.exceptions.NotFoundError:
+            logging.warning(f"Index {index} was not found, assuming no existing mappings")
+        return mappings
+
+
+    def get_settings(self, index: str) -> dict:
+        """
+        Fetch the existing settings for an index
+        """
+        client = self.get_handle()
+        return client.indices.get_settings(index=index)[index]["settings"]
+
+
+    def update_mappings(self, index: str, mappings: dict, **kwargs):
+        """
+        Given an index and mappings, push the new mapping to the index
+        """
         client = self.get_handle()
 
-        # check if index is an alias, and get the active index if so
-        if client.indices.exists_alias(name=index):
-            index = self.get_active_index(index)
+        logging.info(f"Updating mappings for index {index}")
+        logging.debug(json.dumps(mappings, indent=2))
+        if OS_VERSION >= (2,0,0):
+            client.indices.put_mapping(index=index, body=mappings)
+        else:
+            client.indices.put_mapping(index=index, **mappings)
 
-        mappings = self.make_mappings(**kwargs)
-        settings = self.make_settings(**kwargs)
 
-        if not client.indices.exists(index=index):  # push new index if doesn't exist
-            logging.info(f"Creating new index {index}.")
-            if OS_VERSION >= (2,0,0):
-                body = {
-                    "mappings": mappings,
-                    "settings": settings,
-                }
-                client.indices.create(index=index, body=json.dumps(body))
-            else:
-                client.indices.create(index=index, mappings=mappings, settings=settings)
-            if log_mappings and log_dir:
-                mappings_file = log_dir / "condor_adstash_opensearch_last_mappings.json"
-                logging.debug(f"Writing new mappings to {mappings_file}.")
-                json.dump(mappings, open(mappings_file, "w"), indent=2)
-            return
+    def update_settings(self, index: str, settings: dict, **kwargs):
+        """
+        Given an index and settings, push the new settings to the index
+        """
+        client = self.get_handle()
 
-        # otherwise check existing index for missing mappings properties
-        update_mappings = False
-        updated_mappings = {}
-        existing_mappings = self.get_mappings(index)
-        for outer_key in mappings:
-            if outer_key not in existing_mappings:  # add anything missing
-                updated_mappings[outer_key] = mappings[outer_key]
-                update_mappings = True
-            elif isinstance(mappings[outer_key], dict):  # update missing keys in any existing dicts
-                missing_inner_keys = set(mappings[outer_key]) - set(existing_mappings[outer_key])
-                if len(missing_inner_keys) > 0:
-                    updated_mappings[outer_key] = {}
-                    for inner_key in missing_inner_keys:
-                        updated_mappings[outer_key][inner_key] = mappings[outer_key][inner_key]
-                    update_mappings = True
-        if update_mappings:
-            logging.info(f"Updated mappings for index {index}")
-            logging.debug(f"{pprint.pformat(updated_mappings)}")
-            if OS_VERSION >= (2,0,0):
-                body = {"mappings": updated_mappings}
-                client.indices.put_mapping(index=index, body=body)
-            else:
-                client.indices.put_mapping(index=index, **updated_mappings)
-            if log_mappings and log_dir:
-                mappings_file = log_dir / "condor_adstash_opensearch_last_mappings.json"
-                logging.debug(f"Writing updated mappings to {mappings_file}.")
-                json.dump(updated_mappings, open(mappings_file, "w"), indent=2)
+        logging.info(f"Updating settings for index {index}")
+        logging.debug(json.dumps(settings, indent=2))
+        client.indices.put_settings(index=index, body=json.dumps(settings))
+
+
+    def post_ads(self, ads: list, index: str, metadata=None, **kwargs) -> dict:
+        """
+        Push a list of JSON-ified ads in the format
+        [(doc_id, ad), (doc_id, ad), ...]
+        to the given OpenSearch index.
+        """
+        client = self.get_handle()
+
+        body = self.make_bulk_body(ads, metadata)
+        result = client.bulk(body=body, index=index, filter_path=["errors", "took", "items.*.index.error.**", "items.*.index.status"])
+        n_errors = self.get_error_count(result, n_ads=len(ads), **kwargs)
+        return {"success": len(ads)-n_errors, "error": n_errors}

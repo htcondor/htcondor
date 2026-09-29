@@ -156,7 +156,9 @@ cluster_name=`echo "$bls_opt_queue" | cut -s -f2 -d@`
 if [ "$cluster_name" != "" ] ; then
     bls_opt_queue=`echo "$bls_opt_queue" | cut -f1 -d@`
 fi
-[ -z "$bls_opt_queue" ] || grep -q "^#SBATCH -p" $bls_tmp_file || echo "#SBATCH -p $bls_opt_queue" >> $bls_tmp_file
+# Perlmutter uses just QOS, which sets the partition appropriately.
+# So, unlike the standard slurm submit, map the 'queue' value to -q.
+[ -z "$bls_opt_queue" ] || grep -q "^#SBATCH -q" $bls_tmp_file || echo "#SBATCH -q $bls_opt_queue" >> $bls_tmp_file
 [ -z "$cluster_name" ] || grep -q "^#SBATCH -M" $bls_tmp_file || echo "#SBATCH -M $cluster_name" >> $bls_tmp_file
 
 # Extended support for MPI attributes
@@ -329,7 +331,6 @@ if [ -z "$sfapi_line" ] ; then
     rm -f $bls_tmp_file
     echo "Error: no SFAPI_RESULT in submission output" >&2
     echo "Output: $sfapi_result" >&2
-    echo Error
     exit 1
 fi
 

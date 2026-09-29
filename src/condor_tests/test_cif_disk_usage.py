@@ -29,7 +29,11 @@ def the_condor( test_dir ):
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "STARTD_DEBUG":     "D_CATEGORY D_SUB_SECOND",
         },
+        raw_config='''
+            use policy : hold_if_disk_exceeded
+        ''',
     ) as the_condor:
         yield the_condor
 
@@ -44,7 +48,7 @@ def the_common_files( test_dir ):
     subdirectory.mkdir(exist_ok=True, parents=True)
     common_file_b = common_files_d / subdirectory / "common-file.b"
 
-    # Writefiles that are just over 4 MB in size, because the quantization
+    # Write files that are just over 4 MB in size, because the quantization
     # sometimes matters.
     contents = "1234567890abcdef" * ((64 * 128 * 8 * 4) + 1)
     common_file_a.write_text(contents)
@@ -56,21 +60,39 @@ def the_common_files( test_dir ):
 @action
 def the_running_jobs( the_condor, the_common_files ):
     job_description = {
-        "shell":                    "sleep 1",
+        "shell":                    "sleep 6",
 
         "universe":                 "vanilla",
         "should_transfer_files":    "YES",
         "request_cpus":             1,
         "request_memory":           1,
-        "request_disk":             256,
+
+        # Method: quantize(catalog-size) + quantize(size-of-shell).
+        "request_disk":             "11264",
+
         "log":                      "the_running_jobs.log.$(ClusterID)",
-        "MY.CommonInputFiles":      f'"{the_common_files.as_posix()}"',
+        "transfer_common_input":    f"{the_common_files.as_posix()}",
     }
 
     job_handle = the_condor.submit(
         description=job_description,
         count=4,
     )
+
+
+    # This section is just for debuggery.
+    assert job_handle.wait(
+        timeout=120,
+        condition=ClusterState.running_exactly(4),
+        fail_condition=ClusterState.any_held,
+    )
+
+    c = the_condor.get_local_collector()
+    r = c.query(
+        projection=['Name', 'Disk', 'DiskUsage'],
+    )
+    print(r)
+
 
     assert job_handle.wait(
         timeout=120,

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import glob
 import os
 import platform
 import shutil
@@ -199,9 +200,11 @@ def main():
         os.environ["PYTHONPATH"] = os.pathsep.join([".", add_to_path, pythonpath])
 
     write_base_config(args.prefix_path, java=args.java)
-    # This is not re-generated each time.
-    if os.path.exists("derived_condor_config"):
-        os.unlink("derived_condor_config")
+    # CondorPersonal.pm names these derived_condor_config.<pid>, so a re-run
+    # of this test leaves the previous run's file behind.  Clear them all,
+    # including the old un-suffixed name.
+    for stale in glob.glob("derived_condor_config*"):
+        os.unlink(stale)
 
     os.environ["CONDOR_CONFIG"] = os.path.abspath("base_config")
 

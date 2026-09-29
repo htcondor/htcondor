@@ -46,7 +46,7 @@ condor_status command with a direct query, such as
     which may be easier to write policy around, is based off of this.
 
 :classad-attribute-def:`SignalRuntime`
-    This attribute respresents the total number of wall clock time
+    This attribute represents the total number of wall clock time
     seconds this daemon has spent processing signals since start. The
     corresponding attribute RecentSignalRuntime is the total time in the
     last 20 minutes.
@@ -58,7 +58,7 @@ condor_status command with a direct query, such as
     in the last 20 minutes.
 
 :classad-attribute-def:`SocketRuntime`
-    This attribute respresents the total number of wall clock time
+    This attribute represents the total number of wall clock time
     seconds this daemon has spent processing socket messages since
     start. The corresponding attribute RecentTimerRuntime is the total
     time in the last 20 minutes.
@@ -69,7 +69,7 @@ condor_status command with a direct query, such as
     RecentSockMessages is the count of message in the last 20 minutes.
 
 :classad-attribute-def:`TimerRuntime`
-    This attribute respresents the total number of wall clock time
+    This attribute represents the total number of wall clock time
     seconds this daemon has spent processing timers since start. The
     corresponding attribute RecentTimerRuntime is the total time in the
     last 20 minutes.

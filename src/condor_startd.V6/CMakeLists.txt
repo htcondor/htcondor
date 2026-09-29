@@ -53,15 +53,20 @@ if (WINDOWS)
 		CondorSystrayNotifier.windows.cpp
 		winreg.windows.cpp
 	)
-endif(WINDOWS)
+endif()
 
 if (LINUX)
 	set_source_files_properties(ResAttributes.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-endif(LINUX)
+endif()
 
 
 if (HAVE_BOINC)
 list(APPEND startdElements boinc_mgr.cpp)
 endif()
 
-condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
+set(startd_libraries "${CONDOR_LIBS}")
+if (HAVE_EXT_LIBSELINUX)
+	list(APPEND startd_libraries LIBSELINUX::LIBSELINUX)
+endif()
+
+condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${startd_libraries}" INSTALL "${C_SBIN}")

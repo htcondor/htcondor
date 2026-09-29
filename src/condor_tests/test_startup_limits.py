@@ -492,8 +492,11 @@ class TestStartupLimitMonitoring:
             "+LimitGroup": '"monitor"',
         }
 
-        # Submit exactly NUM_SLOTS (2) jobs so each slot gets one job
-        # and no claim reuse occurs, keeping the allowed count deterministic.
+        # Submit NUM_SLOTS (2) jobs. Note: the schedd does NOT guarantee one
+        # job per slot -- claim reuse and multi-slot matchmaking mean both jobs
+        # may run on the same slot and the startup-limit gate may be consulted
+        # more than once per job. "allowed" counts allowed startup events, not
+        # unique jobs, so only its lower bound is deterministic.
         handle = the_condor.submit(description=desc, count=2)
         assert handle.wait(
             timeout=120,
@@ -504,4 +507,6 @@ class TestStartupLimitMonitoring:
         info = _query_limit(helper_path, schedd_address, monitoring_limit)
         assert info["skipped"] == 0
         assert info["ignored"] == 0
-        assert info["allowed"] == 2
+        # A zero-count (monitoring) limit must record startups without throttling.
+        # At least one startup per submitted job; claim reuse can push this higher.
+        assert info["allowed"] >= 2

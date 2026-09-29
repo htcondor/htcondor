@@ -118,7 +118,7 @@ Options
     that have full health and are not broken are counted but not printed.
  **-lvm**
     (Query option) Query *condor_startd* ClassAds of slots current
-    enforced disk usage. Ues with **-startd** to see which *condor_startd*\s
+    enforced disk usage. Use with **-startd** to see which *condor_startd*\s
     are enforcing disk usage.
  **-snapshot** *[details]*
     (Query option) Can only be used if the **-direct** option has been

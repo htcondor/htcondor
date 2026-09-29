@@ -29,7 +29,7 @@ import htcondor2 as htcondor
 
 # adstash library in libexec
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
-from adstash.adstash import adstash
+from adstash.main import adstash
 from adstash.utils import set_up_logging
 from adstash.config import get_config
 
@@ -69,6 +69,12 @@ def main():
     # custom ad file implies standalone mode
     args.standalone = args.standalone or (args.read_ad_file is not None)
 
+    # Handle --init_index mode: write JSON files and exit
+    if args.init_index:
+        from adstash.index_setup import init_index
+        init_index(ad_type=args.init_ad_type, args=args)
+        sys.exit(0)
+
     # set up logging
     set_up_logging(args)
 
@@ -90,8 +96,8 @@ def main():
 
     # pretty print a list of args (but no passwords) if debugging
     safe_args = vars(args).copy()
-    if "es_password" in safe_args:
-        safe_args["es_password"] = "<hidden>"
+    if "se_password" in safe_args:
+        safe_args["se_password"] = "<hidden>"
     logging.debug(f"Using config: {pprint.pformat(safe_args)}")
 
     # catch signals

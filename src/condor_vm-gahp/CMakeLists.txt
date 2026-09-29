@@ -34,4 +34,4 @@ if (LINUX AND WITH_LIBVIRT)
 
    install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-endif(LINUX AND WITH_LIBVIRT)
+endif()

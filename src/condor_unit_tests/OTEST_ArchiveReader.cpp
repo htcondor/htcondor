@@ -342,7 +342,7 @@ static bool test_forward_record0_raw_record() {
 
 	const std::string& raw = g_fwd[0].raw_record;
 	emit_output_actual_header();
-	emit_retval(raw.c_str());
+	emit_retval("%s", raw.c_str());
 
 	if (raw.find("Foo = 1") == std::string::npos ||
 	    raw.find("Bar = \"hello\"") == std::string::npos) {
@@ -366,7 +366,7 @@ static bool test_forward_record0_empty_banner() {
 	const std::string& banner = g_fwd[0].raw_banner;
 
 	emit_output_actual_header();
-	emit_retval(banner.c_str());
+	emit_retval("%s", banner.c_str());
 
 	// Banner line should be exactly "***" (no extra content after the stars).
 	if (banner != "***") { FAIL; }
@@ -650,7 +650,7 @@ static bool test_backward_record2_is_forward_record0() {
 	                     " had_ad=" + (snap.had_ad ? "TRUE" : "FALSE");
 
 	emit_output_actual_header();
-	emit_retval(actual.c_str());
+	emit_retval("%s", actual.c_str());
 
 	if ( ! banner_empty || ! snap.had_ad) { FAIL; }
 	PASS;
@@ -929,6 +929,86 @@ static bool test_banner_classad_record2_cluster_and_owner() {
 	emit_output_actual_header();
 	emit_retval(actual.c_str());
 	if (cid != 7 || owner != "bob") { FAIL; }
+	PASS;
+}
+
+//------------------------------------------------------------------------------------
+// Tests: HasBannerInfo()
+//------------------------------------------------------------------------------------
+
+static bool test_has_banner_info_false_for_empty_banner() {
+	emit_test("Record 0 HasBannerInfo() is false (empty *** banner)");
+	emit_input_header();
+	emit_param("Record index", "0");
+	emit_output_expected_header();
+	emit_retval("false");
+
+	ArchiveReader r(ARCHIVE_FILE, ArchiveReader::Direction::Forward);
+	if ( ! r.IsOpen()) { emit_comment("Failed to open file"); FAIL; }
+
+	ArchiveRecord rec;
+	if ( ! r.Next(rec)) { emit_comment("No first record"); FAIL; }
+
+	bool has_info = rec.HasBannerInfo();
+	emit_output_actual_header();
+	emit_retval(tfstr(has_info));
+	if (has_info) { FAIL; }
+	PASS;
+}
+
+static bool test_has_banner_info_true_for_populated_banner() {
+	emit_test("Record 1 HasBannerInfo() is true (banner carries key=value pairs)");
+	emit_input_header();
+	emit_param("Record index", "1");
+	emit_output_expected_header();
+	emit_retval("true");
+
+	ArchiveReader r(ARCHIVE_FILE, ArchiveReader::Direction::Forward);
+	if ( ! r.IsOpen()) { emit_comment("Failed to open file"); FAIL; }
+
+	ArchiveRecord rec;
+	r.Next(rec); // skip record 0
+	if ( ! r.Next(rec)) { emit_comment("No second record"); FAIL; }
+
+	bool has_info = rec.HasBannerInfo();
+	emit_output_actual_header();
+	emit_retval(tfstr(has_info));
+	if ( ! has_info) { FAIL; }
+	PASS;
+}
+
+// Separate, isolated one-record archive file: banner has a leading attribute
+// name ("ClusterId") followed by "=" but no parseable value, so ArchiveReader
+// extracts zero attributes from it even though the banner text isn't bare.
+static const char* MALFORMED_BANNER_FILE = "unit-test-archive-malformed-banner.log";
+static const char* MALFORMED_BANNER_CONTENTS =
+	"Foo = 1\n"
+	"*** ClusterId =\n";
+
+static bool test_has_banner_info_false_for_unparseable_banner() {
+	emit_test("HasBannerInfo() is false when the banner's leading token fails to parse");
+	emit_input_header();
+	emit_param("Banner", "*** ClusterId =");
+	emit_output_expected_header();
+	emit_retval("false");
+
+	FILE* f = fopen(MALFORMED_BANNER_FILE, "w");
+	if ( ! f) { emit_comment("Failed to open archive file for writing"); FAIL; }
+	size_t len = strlen(MALFORMED_BANNER_CONTENTS);
+	bool wrote = (fwrite(MALFORMED_BANNER_CONTENTS, 1, len, f) == len);
+	fclose(f);
+	if ( ! wrote) { emit_comment("Failed to write archive file contents"); FAIL; }
+
+	ArchiveReader r(MALFORMED_BANNER_FILE, ArchiveReader::Direction::Forward);
+	if ( ! r.IsOpen()) { emit_comment("Failed to open file"); FAIL; }
+
+	ArchiveRecord rec;
+	if ( ! r.Next(rec)) { emit_comment("No record"); FAIL; }
+
+	bool has_info = rec.HasBannerInfo();
+	emit_output_actual_header();
+	emit_retval(tfstr(has_info));
+	if (has_info) { FAIL; }
 	PASS;
 }
 
@@ -1400,6 +1480,11 @@ bool OTEST_ArchiveReader() {
 	driver.register_function(test_banner_classad_record1_owner);
 	driver.register_function(test_banner_classad_record2_record_type);
 	driver.register_function(test_banner_classad_record2_cluster_and_owner);
+
+	// HasBannerInfo()
+	driver.register_function(test_has_banner_info_false_for_empty_banner);
+	driver.register_function(test_has_banner_info_true_for_populated_banner);
+	driver.register_function(test_has_banner_info_false_for_unparseable_banner);
 
 	// GetAd() special cases
 	driver.register_function(test_getad_nullptr_empty_body);

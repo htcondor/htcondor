@@ -413,7 +413,7 @@ WantParallelScheduling=true
 RequestCpus=max({ TARGET.TotalCpus - 1,3 })
 RequestDisk=3145728
 RequestMemory=2253
-Requirements=/TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET\.Cpus >= RequestCpus/
+Requirements=/TARGET\.Memory >= RequestMemory.+TARGET\.Cpus >= RequestCpus/
 
 ==customattr.sub
 CustomExpr=99 / Bottles || Beer
@@ -451,7 +451,7 @@ Out="prediction_script_data_70.out"
 PeriodicHold=(NumJobCompletions > 10)
 RequestDisk=716800
 RequestMemory=1741
-Requirements=/OpSysMajorVer == 7.+TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET.HasFileTransfer/
+Requirements=/OpSysMajorVer == 7.+TARGET\.Memory >= RequestMemory.+TARGET.HasFileTransfer/
 ShouldTransferFiles="YES"
 TransferInput="110.txt,grid_i.txt,my_env.RData,../../R_v2.tar.gz,../prediction_script_data.R,../../SLIBS.tar.gz"
 UserLog=/".+Multilevel_Thesis_WheatData/70.prediction_script_data_70.log"/

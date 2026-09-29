@@ -801,7 +801,7 @@ void ReliSock::resetHeaderMD()
 	m_final_recv_header = false;
 }
 
-ReliSock::RcvMsg :: RcvMsg() : 
+ReliSock::RcvMsg :: RcvMsg() :
     mode_(MD_OFF),
     mdChecker_(0), 
 	p_sock(0),
@@ -2803,6 +2803,31 @@ ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorErro
 	if( !m_ccb_client->ReverseConnect(errorStack, nonblocking) ) {
 		dprintf(D_ALWAYS,"Failed to reverse connect to %s via CCB.\n",
 				peer_description());
+		return 0;
+	}
+	if( nonblocking ) {
+		return CEDAR_EWOULDBLOCK;
+	}
+
+	m_ccb_client = NULL; // in blocking case, we are done with ccb client
+	return 1;
+}
+
+int
+ReliSock::do_outbound_ccb_connect(char const *ccb_addr,char const *target,bool nonblocking,CondorError * errorStack,int ttl)
+{
+	ASSERT( !m_ccb_client.get() ); // only one reverse/outbound connect at a time!
+
+		// Ask the outbound CCB broker to dial `target` on our behalf and splice the
+		// connection back to us; on success we adopt the spliced socket exactly as
+		// a reverse connection does.
+	m_ccb_client = new CCBClient( ccb_addr, (ReliSock *)this );
+	m_ccb_client->SetOutboundTarget( target, ttl );
+
+	if( !m_ccb_client->ReverseConnect(errorStack, nonblocking) ) {
+		dprintf(D_ALWAYS,"Failed to reach %s via outbound CCB %s.\n",
+				target, ccb_addr);
+		m_ccb_client = NULL;
 		return 0;
 	}
 	if( nonblocking ) {

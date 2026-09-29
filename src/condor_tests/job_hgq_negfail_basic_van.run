@@ -194,21 +194,17 @@ output = $testname.out
 error = $testname.err
 notification = never
 arguments = 3600
-# group 'a.a' should be able to use slots unused by 'a.b'
-# set up requirements to stay out of lower slots (used by b.a and b.b)
-Requirements = (SlotID > 10)
-+AccountingGroup = \"a.a.user\"
-queue 20
-# set up jobs for 'a.b' to fail:
-Requirements = False
-+AccountingGroup = \"a.b.user\"
-queue 10
-# set up 'b.a' and 'b.b' to compete
-Requirements = (SlotID <= 10)
-+AccountingGroup = \"b.a.user\"
-queue 10
-+AccountingGroup = \"b.b.user\"
-queue 10
++AccountingGroup =\"\$(agroup)\"
+# 20 in group a.a.user, 10 each in a.b.user, b.a.user and b.b.user
+# group 'a.a' should be able to use slots unused by 'b.*' which have
+# requirements to stay in the lower slots
+queue 10 agroup,Requirements from (
+ a.a.user,(SlotID > 10)
+ a.a.user,(SlotID > 10)
+ a.b.user,False
+ b.a.user,(SlotID <= 10)
+ b.b.user,(SlotID <= 10)
+)
 ";
 
 my $submit_filename = CondorTest::TempFileName("$testname.submit");
