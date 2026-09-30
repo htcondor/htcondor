@@ -804,6 +804,11 @@ class Condor:
         """The address of the pool's startd."""
         return self._get_address_file("STARTD").read_text().splitlines()[0]
 
+    @property
+    def collector_address(self):
+        """The address of the pool's collector."""
+        return self._get_address_file("COLLECTOR").read_text().splitlines()[0]
+
     def _get_log_path(self, subsystem):
         return self._get_path_from_condor_config_val("{}_LOG".format(subsystem))
 
