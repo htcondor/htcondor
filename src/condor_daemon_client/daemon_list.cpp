@@ -54,7 +54,7 @@ CollectorList::create(const char * pool, DCCollectorAdSequences * adseq, time_t 
 	if( collector_name_param ) {
 			// Create collector objects
 		for (const auto& collector_name : StringTokenIterator(collector_name_param)) {
-			result->m_list.emplace_back(new DCCollector(collector_name.c_str()));
+			result->m_list.emplace_back(new DCCollector(collector_name.c_str(), DCCollector::UpdateType::CONFIG, start, reconfig));
 		}
 	} else {
 			// Otherwise, just return an empty list

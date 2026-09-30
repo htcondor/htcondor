@@ -11263,7 +11263,7 @@ DaemonCore::initCollectorList() {
 		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create(NULL, adSeq);
+	m_collector_list = CollectorList::create(NULL, adSeq, m_startup_time, m_reconfig_time);
 
 	// This param has legal values of TRUE, FALSE, and AUTO
 	// but we only need to check for TRUE here because TRUE means we

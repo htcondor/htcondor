@@ -65,8 +65,6 @@ DCCollector::init( bool needs_reconfig, time_t _start_time, time_t _reconfig_tim
 		reconfigTime = _reconfig_time ? _reconfig_time : time( NULL );
 		reconfig();
 	}
-	dprintf(D_ZKM | D_BACKTRACE, "DCCollector::init(%d) start=%lld reconfig=%lld\n",
-		needs_reconfig, (long long)startTime, (long long)reconfigTime);
 }
 
 
