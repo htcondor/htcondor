@@ -293,7 +293,10 @@ class JobQueue:
                 job_id: [SetJobStatus(jobs.JobStatus.COMPLETED)] for job_id in job_ids
             },
             unexpected_events={
+                job_id: {
                     SetJobStatus(jobs.JobStatus.SUSPENDED),
+                }
+                for job_id in job_ids
             },
             abort_events={
                 job_id: {
