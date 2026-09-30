@@ -17,6 +17,7 @@ import json
 
 from pathlib import Path
 
+from adstash.utils import classad_json_serializer
 from adstash.interfaces.json_file import JSONFileInterface as Interface
 
 class JSONFileInterface(Interface):
@@ -35,21 +36,32 @@ class JSONFileInterface(Interface):
     ADSTASH_INTERFACE = jsonlinefile
     """
 
-    def __init__(self, json_dir=Path.cwd(), log_mappings=True, **kwargs):
-        super().__init__(json_dir, log_mappings, **kwargs)
+    def __init__(self, json_dir=Path.cwd(), json_legacy=False, **kwargs):
+        super().__init__(json_dir=json_dir, json_legacy=json_legacy, **kwargs)
+
+    def make_bulk_body(self, docs: list, metadata=None) -> str:
+        body = []
+        for doc_id, doc in docs:
+            doc["_id"] = doc_id
+            doc["metadata"] = metadata or {}  # bolt on the metadata
+            body.append(doc)
+
+        if self.json_legacy:
+            return "".join([json.dumps(doc, indent=2, sort_keys=True, default=classad_json_serializer) for doc in body])
+
+        # dump each ad as a separate line, without indentation
+        return "\n".join(
+            [json.dumps(doc, indent=None, sort_keys=True, default=classad_json_serializer) for doc in body]
+        )
 
     def post_ads(self, ads, metadata={}, **kwargs):
-        body = self.make_body(ads, metadata)
-        if len(body) > 0:
-            self.write_mappings(self.log_mappings, self.json_dir, **kwargs)
-
+        body = self.make_bulk_body(ads, metadata)
         json_file = self.json_dir / "adstash_line_file.json"
         # open the file in 'append' mode
         with json_file.open("a") as f:
-            for ad in body:
-                # write but do not indent
-                json.dump(ad, f, sort_keys=True)
-                # append newline
-                f.write("\n")
+            f.write(body)
+            # append newline on the last line
+            f.write("\n")
 
         return {"success": len(body), "error": 0}
+
