@@ -1742,6 +1742,7 @@ class DaemonCore : public Service
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
 	time_t getStartTime() const {return m_startup_time;}
+	time_t getReconfigTime() const {return m_reconfig_time;}
 
 		/**
 		   Indicates if this daemon wants to be restarted by its
@@ -2434,6 +2435,7 @@ class DaemonCore : public Service
 
 	static unsigned m_remote_admin_seq;
 	static time_t m_startup_time;
+	static time_t m_reconfig_time;
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;

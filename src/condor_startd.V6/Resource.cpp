@@ -1809,6 +1809,7 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t last_heard_from, Purp
 		// the collector will set this, but for direct query, we have to set this ourselves
 		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
 		// the dc_collector object normally sets this
+		// TODO: remove this, should no longer be necessary
 		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
 	}
 
@@ -2653,6 +2654,11 @@ void Resource::publish_static(ClassAd* cap)
 	// We need these for both public and private ads
 	cap->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString());
 	cap->Assign(ATTR_NAME, r_name);
+	// ATTR_DAEMON_START_TIME is injected by the dc_collector object
+	// but we need it set earlier and for ads that are never sent to the collector
+	// so we can use it in policy expressions
+	cap->Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	cap->Assign(ATTR_DAEMON_LAST_RECONFIG_TIME, daemonCore->getReconfigTime());
 
 	cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 

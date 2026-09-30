@@ -2201,6 +2201,12 @@ type=string
 tags=submit
 usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
 
+[SUBMIT_DEFAULT_REQUIRE_COMMON_FILES]
+default=false
+type=bool
+tags=submit
+usage=Sets the default value for submit command require_common_files
+
 [SUBMIT_SEND_RESCHEDULE]
 default=false
 type=bool

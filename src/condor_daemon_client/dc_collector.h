@@ -75,7 +75,7 @@ public:
 			NULL if you want local
 			@param type What kind up updates to use for it
 		*/
-	DCCollector( const char* name, UpdateType type = CONFIG );
+	DCCollector( const char* name, UpdateType type = CONFIG, time_t start=0, time_t reconfig=0 );
 
 		/// Copy constructor (implemented using deepCopy())
 	DCCollector( const DCCollector& );
@@ -127,7 +127,7 @@ private:
 
 	std::string constructorName;
 
-	void init( bool needs_reconfig );
+	void init( bool needs_reconfig, time_t _start_time, time_t _reconfig_time );
 
 	void deepCopy( const DCCollector& copy );
 	void theRealDeepCopy( const DCCollector & copy );
