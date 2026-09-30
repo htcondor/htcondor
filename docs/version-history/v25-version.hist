@@ -1,3 +1,15 @@
+*** 25.15.15 features
+
+- Scheduler and Local universe jobs no longer use the Vanilla universe default values for
+  :subcom:`request_cpus`, :subcom:`request_memory` and :subcom:`request_disk`.  Instead,
+  Scheduler and Local universe jobs have no defaults for those submit commands.
+  :jira:`3926`
+  
+- The ``chirp ulog`` is now enabled whenever the ``chirp set_job_attr_delayed`` is enabled.
+  These are enabled by default, so it is no longer necessary for the job to have :subcom:`want_io_proxy`
+  set to true.
+  :jira:`3924`
+
 *** 25.15.15 bugs
 
 - Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
@@ -7,9 +19,22 @@
   much sooner.
   :jira:`3491`
 
+- Fixed calculation of :ad-attr:`CpusUsage` in the job ClassAd so that the
+  final value is calculated using the total execution time rather than just
+  the final sampling interval.
+  :jira:`3331`
+
 - Fixed a failure to materialize jobs in the *condor_schedd* when a
   late materialization joblist attempts to use common files or a common container.
   :jira:`3942`
+
+- Fixed a bug in :tool:`condor_adstash` where using OpenSearch had a dependency on
+  the Elasticsearch Python library.
+  :jira:`3949`
+
+- Fixed a bug in the *condor_schedd* where each time a submit transform was applied,
+  an empty failure message with no error text was printed to the SchedLog.
+  :jira:`3957`
 
 *** 25.0.15 features
 
@@ -19,6 +44,10 @@
   filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
   using both LVM and SELinux.
   :jira:`3337`
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
 
 *** 25.0.15 bugs
 
