@@ -171,7 +171,8 @@ class JobQueue:
         -------
         all_good : bool
             ``True`` is all events occurred and no unexpected events occurred.
-            ``False`` if it timed out, or if any unexpected events occurred.
+            ``False`` if it timed out, or if any unexpected events occurred,
+            or if an abort event occurred.
         """
         all_good = True
 
@@ -291,10 +292,12 @@ class JobQueue:
             expected_events={
                 job_id: [SetJobStatus(jobs.JobStatus.COMPLETED)] for job_id in job_ids
             },
+            unexpected_events={
+                    SetJobStatus(jobs.JobStatus.SUSPENDED),
+            },
             abort_events={
                 job_id: {
                     SetJobStatus(jobs.JobStatus.HELD),
-                    SetJobStatus(jobs.JobStatus.SUSPENDED),
                     SetJobStatus(jobs.JobStatus.REMOVED),
                 }
                 for job_id in job_ids
