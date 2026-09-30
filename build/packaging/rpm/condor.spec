@@ -930,6 +930,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/opensearch.py
 %_libexecdir/condor/adstash/interfaces/generic.py
 %_libexecdir/condor/adstash/interfaces/json_file.py
+%_libexecdir/condor/adstash/interfaces/ndjson_file.py
 %_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/adstash/mapping/__init__.py
 %_libexecdir/condor/adstash/mapping/common.py
