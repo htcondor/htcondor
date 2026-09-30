@@ -35,17 +35,17 @@ std::map< std::string, Timeslice > DCCollector::blacklist;
 
 // Instantiate things
 
-DCCollector::DCCollector( const char* dcName, UpdateType uType )
+DCCollector::DCCollector( const char* dcName, UpdateType uType, time_t start, time_t reconfig )
 	: Daemon( DT_COLLECTOR, dcName, NULL )
 {
 	this->constructorName = dcName;
 
 	up_type = uType;
-	init( true );
+	init( true, start, reconfig );
 }
 
 void
-DCCollector::init( bool needs_reconfig )
+DCCollector::init( bool needs_reconfig, time_t _start_time, time_t _reconfig_time )
 {
 	static long bootTime = 0;
 	reconfigTime = 0;
@@ -59,18 +59,20 @@ DCCollector::init( bool needs_reconfig )
 	if (bootTime == 0) {
 		bootTime = time( NULL );
 	} 
-	reconfigTime = startTime = bootTime;
+	reconfigTime = startTime = _start_time ? _start_time : bootTime;
 
 	if( needs_reconfig ) {
-		reconfigTime = time( NULL );
+		reconfigTime = _reconfig_time ? _reconfig_time : time( NULL );
 		reconfig();
 	}
+	dprintf(D_ZKM | D_BACKTRACE, "DCCollector::init(%d) start=%lld reconfig=%lld\n",
+		needs_reconfig, (long long)startTime, (long long)reconfigTime);
 }
 
 
 DCCollector::DCCollector( const DCCollector& copy ) : Daemon(copy)
 {
-	init( false );
+	init( false, copy.getStartTime(), copy.getReconfigTime() );
 	deepCopy( copy );
 }
 

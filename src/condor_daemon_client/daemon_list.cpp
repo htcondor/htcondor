@@ -44,7 +44,7 @@ CollectorList::~CollectorList() {
 
 
 CollectorList *
-CollectorList::create(const char * pool, DCCollectorAdSequences * adseq)
+CollectorList::create(const char * pool, DCCollectorAdSequences * adseq, time_t start, time_t reconfig)
 {
 	CollectorList * result = new CollectorList(adseq);
 
