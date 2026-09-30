@@ -137,6 +137,53 @@ class Claims(Verb):
         logger.info("")
 
 
+class Controlled(Verb):
+    """
+    Displays the execution points this access point controls
+    """
+
+    options = {
+        "ap_name": {
+            "args": ("--name",),
+            "help": "Name or address of the access point to query",
+        }
+    }
+
+    def __init__(self, logger, **options):
+        ap_name = options.get("name")
+
+        if ap_name:
+            collector = htcondor2.Collector()
+            location = collector.locate(htcondor2.DaemonType.Schedd, ap_name)
+            schedd = htcondor2.Schedd(location)
+        else:
+            schedd = htcondor2.Schedd()
+
+        try:
+            ep_ads = schedd.get_controlled_eps()
+        except Exception as e:
+            raise RuntimeError(f"Failed to query controlled execution points: {e}")
+
+        if len(ep_ads) == 0:
+            logger.info("No controlled execution points")
+            return
+
+        name_width = len("Execution Point")
+        for ad in ep_ads:
+            name = ad.get("Name", "???")
+            name_width = max(name_width, len(name))
+
+        header = f"{'Execution Point': <{name_width}}   {'Pool'}"
+        logger.info(underline(header))
+
+        for ad in sorted(ep_ads, key=lambda a: a.get("Name", "")):
+            name = ad.get("Name", "???")
+            pool = ad.get("EPPool", "")
+            logger.info(f"{name: <{name_width}}   {pool}")
+
+        logger.info("")
+
+
 class AccessPoint(Noun):
     """
     Run operations on pool access points
@@ -148,6 +195,9 @@ class AccessPoint(Noun):
     class claims(Claims):
         pass
 
+    class controlled(Controlled):
+        pass
+
     @classmethod
     def verbs(cls):
-        return [cls.status, cls.claims]
+        return [cls.status, cls.claims, cls.controlled]
