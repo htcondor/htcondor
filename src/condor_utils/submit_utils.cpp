@@ -6634,10 +6634,18 @@ int SubmitHash::SetRequirements()
 	if(! checks_condor_version) {
 		std::string requiredCondorVersion;
 		if( job->LookupString( ATTR_MIN_CONDOR_VERSION, requiredCondorVersion ) ) {
-			answer += "&& versionGE(split(TARGET.CondorVersion)[1], " ATTR_MIN_CONDOR_VERSION ")";
+			if( JobUniverse == CONDOR_UNIVERSE_LOCAL || JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+				push_warning( stderr, SUBMIT_KEY_MinCondorVersion " does not apply to local or scheduler universe jobs.\n" );
+			} else {
+				answer += "&& versionGE(split(TARGET.CondorVersion)[1], " ATTR_MIN_CONDOR_VERSION ")";
+			}
 		}
 		if( job->LookupString( ATTR_MAX_CONDOR_VERSION, requiredCondorVersion ) ) {
-			answer += "&& versionLT(split(TARGET.CondorVersion)[1], " ATTR_MAX_CONDOR_VERSION ")";
+			if( JobUniverse == CONDOR_UNIVERSE_LOCAL || JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+				push_warning( stderr, SUBMIT_KEY_MaxCondorVersion " does not apply to local or scheduler universe jobs.\n" );
+			} else {
+				answer += "&& versionLT(split(TARGET.CondorVersion)[1], " ATTR_MAX_CONDOR_VERSION ")";
+			}
 		}
 	}
 
