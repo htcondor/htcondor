@@ -235,6 +235,9 @@
 
 #define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
 
+#define SUBMIT_KEY_MaxCondorVersion "max_condor_version"
+#define SUBMIT_KEY_MinCondorVersion "min_condor_version"
+
 //
 // Job Deferral Parameters
 //
