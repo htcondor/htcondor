@@ -8,7 +8,6 @@ docker://htcondor/nmi-build:aarch64_AlmaLinux9-25151500,arm-AL9,ubuntu-24.04-arm
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25151500,arm-AL10,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:aarch64_Ubuntu24-25151500,arm-U24,ubuntu-24.04-arm,all
 docker://htcondor/nmi-build:aarch64_Ubuntu26-25151500,arm-U26,ubuntu-24.04-arm,all
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25151500,ppc-AL8,batlab,batlab
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25151500,x86-AL8,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-25151500,x86-AL9,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_AlmaLinux10-25151500,x86-AL10,ubuntu-latest,all
