@@ -33,7 +33,7 @@ class JSONFileInterface(Interface):
     The log file should be rotated by an external tool like: 'logrotate'
 
     use the following configuration macro:
-    ADSTASH_INTERFACE = jsonlinefile
+    ADSTASH_INTERFACE = ndjsonfile
     """
 
     def __init__(self, json_dir=Path.cwd(), json_legacy=False, **kwargs):
@@ -56,7 +56,7 @@ class JSONFileInterface(Interface):
 
     def post_ads(self, ads, metadata={}, **kwargs):
         body = self.make_bulk_body(ads, metadata)
-        json_file = self.json_dir / "adstash_line_file.json"
+        json_file = self.json_dir / "adstash.jsonl"
         # open the file in 'append' mode
         with json_file.open("a") as f:
             f.write(body)
