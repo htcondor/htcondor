@@ -116,6 +116,7 @@ const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
 time_t DaemonCore::m_startup_time = time(NULL);
+time_t DaemonCore::m_reconfig_time = DaemonCore::m_startup_time;
 
 #define CREATE_PROCESS_FAILED_CHDIR 1
 
@@ -3041,6 +3042,7 @@ DaemonCore::reconfig(void) {
 	// NOTE: on reconfig, refreshDNS() will have already been called
 	// by the time we get here, because it needs to be called early
 	// in the process.
+	m_reconfig_time = time(NULL);
 
 	// This is the compatibility layer on top of new ClassAds.
 	// A few configuration parameters control its behavior.
@@ -11261,7 +11263,7 @@ DaemonCore::initCollectorList() {
 		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create(NULL, adSeq);
+	m_collector_list = CollectorList::create(NULL, adSeq, m_startup_time, m_reconfig_time);
 
 	// This param has legal values of TRUE, FALSE, and AUTO
 	// but we only need to check for TRUE here because TRUE means we
