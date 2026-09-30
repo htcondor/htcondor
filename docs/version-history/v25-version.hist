@@ -13,6 +13,10 @@
 
 *** 25.0.15 bugs
 
+- Fixed a bug where the *condor_defrag* daemon couldn't send drain commands
+  to EPs that didn't have an IDTOKENS signing key.
+  :jira:`3954`
+
 - Fixed a bug where :subcom:`allowed_execute_duration` had no effect on
   scheduler universe jobs (such as :tool:`condor_dagman`) and local
   universe jobs.
