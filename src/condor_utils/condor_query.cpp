@@ -519,8 +519,11 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * poolName,
 	return processAds(callback, pv, collector, errstack);
 }
 
+// Takes ownership of reuse_sock (when non-null) -- it is deleted on every
+// return path below, success or failure. The caller must not touch or
+// delete it after this call.
 QueryResult CondorQuery::
-processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack /*= NULL*/)
+processAds(bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack /*= NULL*/, Sock* reuse_sock /*= nullptr*/)
 {
 	Sock*    sock;
 	QueryResult result;
@@ -529,12 +532,16 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 	// contact collector
 	if( !collector.locate() ) {
 			// We were passed a bogus poolName, abort gracefully
+		delete reuse_sock;
 		return Q_NO_COLLECTOR_HOST;
 	}
 
 	// make the query ad
 	result = getQueryAd (queryAd);
-	if (result != Q_OK) return result;
+	if (result != Q_OK) {
+		delete reuse_sock;
+		return result;
+	}
 
 	if (IsDebugLevel(D_HOSTNAME)) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
@@ -546,14 +553,23 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 	bool orig_auth = collector.getRequestAuthentication();
 	collector.setRequestAuthentication(requestAuth);
 
-	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
-	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
-	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
+	int mytimeout = param_integer("QUERY_TIMEOUT",60);
 
-		collector.setRequestAuthentication(orig_auth);
-		if (sock) {
+	if (reuse_sock) {
+		sock = reuse_sock;
+		if (!collector.startCommand(command, sock, mytimeout, errstack)) {
+			collector.setRequestAuthentication(orig_auth);
 			delete sock;
+			return Q_COMMUNICATION_ERROR;
 		}
+	} else if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack))) {
+		collector.setRequestAuthentication(orig_auth);
+		return Q_COMMUNICATION_ERROR;
+	}
+
+	if (!putClassAd(sock, queryAd) || !sock->end_of_message()) {
+		collector.setRequestAuthentication(orig_auth);
+		delete sock;
 		return Q_COMMUNICATION_ERROR;
 	}
 

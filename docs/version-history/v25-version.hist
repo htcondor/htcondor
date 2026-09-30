@@ -12,6 +12,13 @@
 
 *** 25.15.15 bugs
 
+- Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
+  when :macro:`COLLECTOR_HOST` listed multiple collectors and one silently
+  dropped packets instead of refusing the connection. A new
+  :macro:`HA_COLLECTOR_PROBE_TIMEOUT` reachability check now fails over
+  much sooner.
+  :jira:`3491`
+
 - Fixed calculation of :ad-attr:`CpusUsage` in the job ClassAd so that the
   final value is calculated using the total execution time rather than just
   the final sampling interval.
