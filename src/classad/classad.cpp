@@ -118,7 +118,7 @@ void SetOldClassAdSemantics(bool enable)
 }
 
 ClassAd::
-ClassAd (const ClassAd &ad) : ExprTree()
+ClassAd (const ClassAd &ad) : ExprTree(), parentAd(nullptr)
 {
     CopyFrom(ad);
 	return;
@@ -146,12 +146,12 @@ CopyFrom( const ClassAd &ad )
 		succeeded = false;
 	} else {
 		Clear( );
-		
+
 		// copy scoping attributes
 		ExprTree::CopyFrom(ad);
 		chained_parent_ad = ad.chained_parent_ad;
 		alternateScope = ad.alternateScope;
-		parentScope = ad.parentScope;
+		parentAd = nullptr; // copies don't inherit parent relationship
 		
 		this->do_dirty_tracking = false;
 		for( const auto& [attr_name, attr_tree] : ad.attrList ) {
@@ -551,9 +551,6 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 		return false;
 	}
 
-	// parent of the expression is this classad
-	tree->SetParentScope( this );
-
 	auto [itr, inserted] = attrList.emplace(attrName, tree);
 	if (!inserted) {
 		// replace existing value
@@ -579,9 +576,6 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 		CondorErrMsg = "no expression when inserting attribute in classad";
 		return false;
 	}
-
-	// parent of the expression is this classad
-	tree->SetParentScope( this );
 
 	auto [itr, inserted] = attrList.emplace(attrName, tree);
 	if (!inserted) {
@@ -680,7 +674,7 @@ LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 int ClassAd::
 LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 {
-	const ClassAd *current = this, *superScope;
+	const ClassAd *current = this;
 
 	expr = NULL;
 
@@ -694,11 +688,15 @@ LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 			return( EVAL_OK );
 		}
 
-		if ( state.rootAd == current ) {
-			superScope = NULL;
-		} else {
-			superScope = current->parentScope;
+		// Find parent scope from parentMap
+		const ClassAd *superScope = nullptr;
+		if ( state.rootAd != current ) {
+			auto it = state.parentMap.find(current);
+			if (it != state.parentMap.end()) {
+				superScope = it->second;
+			}
 		}
+
 		if ( getSpecialAttrNames().find(name) == getSpecialAttrNames().end() ) {
 			// continue searching from the superScope ...
 			current = superScope;
@@ -719,8 +717,8 @@ LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 			expr = const_cast<ClassAd *>((const ClassAd *)state.curAd);
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
-			// the lexical parent
-			expr = const_cast<ClassAd *>((const ClassAd*)superScope);
+			// the lexical parent via parentMap
+			expr = const_cast<ClassAd *>(superScope);
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
 			// an alias for time() from old ClassAds
@@ -728,7 +726,7 @@ LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 			return ( expr ? EVAL_OK : EVAL_UNDEF );
 		}
 
-	}	
+	}
 
 	return( EVAL_UNDEF );
 }
@@ -825,12 +823,15 @@ DeepRemove( ExprTree *scopeExpr, const std::string &name )
 // --- end removal methods
 
 
+// PopulateScopeMap default: walk up parentAd chain to find the
+// topmost ad and delegate to its PopulateScopeMap (which may be
+// a MatchClassAd that sets up LEFT/RIGHT scope chains).
 void ClassAd::
-_SetParentScope( const ClassAd *scope )
+PopulateScopeMap( EvalState& state ) const
 {
-	// We shouldn't propagate
-	// the call to sub-expressions because this is a new scope
-	parentScope = scope;
+	if (parentAd && parentAd != this) {
+		parentAd->PopulateScopeMap(state);
+	}
 }
 
 
@@ -866,7 +867,7 @@ Modify( ClassAd& mod )
 		// Step 1:  Process Replace attribute
 	if( ( expr = mod.Lookup( ATTR_REPLACE ) ) != NULL ) {
 		ClassAd	*ad;
-		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
+		if( mod.EvaluateExpr( expr, val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Clear( );
 			ctx->Update( *ad );
 		}
@@ -875,7 +876,7 @@ Modify( ClassAd& mod )
 		// Step 2:  Process Updates attribute
 	if( ( expr = mod.Lookup( ATTR_UPDATES ) ) != NULL ) {
 		ClassAd *ad;
-		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
+		if( mod.EvaluateExpr( expr, val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Update( *ad );
 		}
 	}
@@ -886,18 +887,18 @@ Modify( ClassAd& mod )
 		const char			*attrName;
 
 			// make a first pass to check that it is a list of std::strings ...
-		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
+		if( !mod.EvaluateExpr( expr, val ) || !val.IsListValue( list ) ) {
 			return;
 		}
 		for (const auto *expr: *list) {
-			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
+			if( !mod.EvaluateExpr( expr, val ) || !val.IsStringValue( attrName ) ) {
 				return;
 			}
 		}
 
 			// now go through and delete all the named attributes ...
 		for (const auto *expr: *list) {
-			if( expr->Evaluate( val ) && val.IsStringValue( attrName ) ) {
+			if( mod.EvaluateExpr( expr, val ) && val.IsStringValue( attrName ) ) {
 				ctx->Delete( attrName );
 			}
 		}
@@ -934,7 +935,6 @@ Copy( ) const
 	ClassAd	*newAd = new ClassAd();
 
 	if( !newAd ) return NULL;
-	newAd->parentScope = parentScope;
 	newAd->chained_parent_ad = chained_parent_ad;
 
 	AttrList::const_iterator	itr;
@@ -980,6 +980,10 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 	tree = NULL; // Just to be safe...  wenger 2003-12-11.
 
 	oldAd = state.curAd;
+	// Record parent scope in parentMap before descending
+	if (state.parentMap.find(this) == state.parentMap.end() && oldAd) {
+		state.parentMap[this] = oldAd;
+	}
 	state.curAd = this;
 
 	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
@@ -1020,8 +1024,7 @@ _GetDeepScope( ExprTree *tree ) const
 	Value	val;
 
 	if( !tree ) return( NULL );
-	tree->SetParentScope( this );
-	if( !tree->Evaluate( val ) || !val.IsClassAdValue( scope ) ) {
+	if( !EvaluateExpr( this, tree, val ) || !val.IsClassAdValue( scope ) ) {
 		return( NULL );
 	}
 	return( (ClassAd*)scope );

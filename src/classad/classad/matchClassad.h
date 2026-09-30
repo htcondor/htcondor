@@ -195,8 +195,12 @@ class MatchClassAd : public ClassAd
 		*/
 		static bool UnoptimizeAdForMatchmaking( ClassAd *ad );
 
+		/** Populate scope map entries for MatchClassAd.
+		    Sets up scope chains: lad->lCtx->this, rad->rCtx->this
+		*/
+		virtual void PopulateScopeMap(EvalState& state) const;
+
 	protected:
-		const ClassAd *ladParent, *radParent;
 		ClassAd *lCtx, *rCtx, *lad, *rad;
 		ExprTree *symmetric_match, *right_matches_left, *left_matches_right;
 		std::string lAlias, rAlias;

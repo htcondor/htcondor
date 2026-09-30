@@ -40,21 +40,15 @@ bool
 EvaluateLooseExpr( classad::ExprTree * expr,
                    classad::ClassAd * my, classad::ClassAd * target,
                    classad::Value & value ) {
-    const classad::ClassAd * originalScope = expr->GetParentScope();
-    expr->SetParentScope(my);
-
-    bool rv = false;
     if( target == my || target == NULL ) {
-        rv = expr->Evaluate( value );
+        return classad::ClassAd::EvaluateExpr(my, expr, value);
     } else {
         classad::MatchClassAd matchAd( my, target );
-        rv = expr->Evaluate( value );
+        bool rv = my->EvaluateExpr( expr, value );
         matchAd.RemoveLeftAd();
         matchAd.RemoveRightAd();
+        return rv;
     }
-
-    expr->SetParentScope(originalScope);
-    return rv;
 }
 
 
@@ -64,8 +58,6 @@ evaluate( classad::ExprTree * expr, classad::ClassAd * scope,
 ) {
     if( scope != NULL ) {
         return EvaluateLooseExpr( expr, scope, target, value );
-    } else if( expr->GetParentScope() ) {
-        return expr->Evaluate( value );
     } else {
         classad::EvalState state;
         auto r = expr->Evaluate( state, value );
