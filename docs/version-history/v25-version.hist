@@ -29,21 +29,6 @@
   an empty failure message with no error text was printed to the SchedLog.
   :jira:`3957`
 
-*** 25.0.15 features
-
-- For Execution Points using the Logical Manager (LVM) for disk space
-  enforcement and Security Enhanced Linux (SELinux), HTCondor now copies
-  the SELinux security context from the mount point to the newly created
-  filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
-  using both LVM and SELinux.
-  :jira:`3337`
-
-- VM universe now supports the ``user`` type networking with the **passt**
-  backend allowing outbound network connectivity on EL10 execution points.
-  :jira:`3947`
-
-*** 25.0.15 bugs
-
 - Fixed a bug where the KERBEROS authentication method failed if the server
   was IPv6-only.
   :jira:`2863`
@@ -60,6 +45,30 @@
   :tool:`condor_adstash`) field type in the index mappings would
   cause a crash.
   :jira:`3934`
+
+*** 25.0.15 features
+
+- For Execution Points using the Logical Manager (LVM) for disk space
+  enforcement and Security Enhanced Linux (SELinux), HTCondor now copies
+  the SELinux security context from the mount point to the newly created
+  filesystem.  This update allows tool:`condor_ssh_to_job` to work on hosts
+  using both LVM and SELinux.
+  :jira:`3337`
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
+
+*** 25.0.15 bugs
+
+- Fixed a bug where the *condor_defrag* daemon couldn't send drain commands
+  to EPs that didn't have an IDTOKENS signing key.
+  :jira:`3954`
+
+- Fixed a bug where :subcom:`allowed_execute_duration` had no effect on
+  scheduler universe jobs (such as :tool:`condor_dagman`) and local
+  universe jobs.
+  :jira:`3941`
 
 *** 25.14.1 features
 
