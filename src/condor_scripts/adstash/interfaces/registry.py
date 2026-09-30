@@ -27,8 +27,8 @@ def json_file_interface():
     from adstash.interfaces.json_file import JSONFileInterface
     return JSONFileInterface
 def ndjson_file_interface():
-    from adstash.interfaces.ndjson_file import JSONFileInterface
-    return JSONFileInterface
+    from adstash.interfaces.ndjson_file import NDJSONFileInterface
+    return NDJSONFileInterface
 
 
 ADSTASH_INTERFACE_REGISTRY = {
