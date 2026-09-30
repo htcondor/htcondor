@@ -1,5 +1,11 @@
 *** 26.2.0 features
 
+*** 26.2.0 bugs
+
+*** 26.0.2 bugs
+
+*** 26.1.0 features
+
 - Added :tool:`htcondor cluster`, which caches a cluster's job data
   locally and profiles it to produce a health report, flagging problems
   such as inefficient resource usage or held jobs and recommending
@@ -35,15 +41,13 @@
   JSON per-line to adstash.jsonl in the directory specified by ``--json_dir``.
   :jira:`3959`
 
-*** 26.2.0 bugs
+*** 26.1.0 bugs
 
 - To assist in debugging, added :subcom:`min_condor_version` and
   :subcom:`max_condor_version`, which prevent the require the HTCondor
   version of the EP to greater than or equal to, or strictly less than,
   respectively, the specified version, e.g. "26.0.1".
   :jira:`3065`
-
-*** 26.1.0 bugs
 
 *** 26.0.1 bugs
 
