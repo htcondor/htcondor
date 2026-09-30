@@ -1,3 +1,5 @@
+*** 26.0.2 bugs
+
 *** 26.0.1 bugs
 
 - Fixed a rare bug that could cause *condor_dagman* to crash when the
