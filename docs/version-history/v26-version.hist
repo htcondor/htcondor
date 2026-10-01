@@ -21,6 +21,15 @@
   Archive Librarian is in use.
   :jira:`3927`
 
+- Add submit command :subcom:`annex_name`, which intendicates that the
+  jobs are intended to run on EPs of the named annex.
+  Add submit command :subcom:`restrict_to_annex`, which specifies whether
+  these jobs can run only on EPs of the named annex, or can also run on
+  non-annex EPs.
+  Add new configuraiton parameter :macro:`ANNEX_RESTRICT_JOB_DEFAULT`,
+  which sets the default value for :subcom:`restrict_to_annex`.
+  :jira:`2015`
+
 - The *condor_starter* can now optionally set a limit on the amount of
   compressed swap (zswap) a job may use, via the new
   :macro:`CGROUP_ZSWAP_MAX_EXPR`. It is a ClassAd expression, evaluated in

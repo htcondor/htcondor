@@ -850,6 +850,17 @@ COMMANDS FOR MATCHMAKING
     Also, see the HTCondor Users Manual for complete information on the syntax
     and available attributes that can be used in the ClassAd expression.
 
+ :subcom-def:`annex_name` = <name>
+    Indicates that these jobs are intended to run on EPs of the named annex.
+    The annex EPs need to be provisioned using the *htcondor annex create*
+    command.
+
+ :subcom-def:`restrict_to_annex` = <True | False>
+    For jobs connected to an annex, this specifies whether the jobs can run
+    only on annex EPs or may also run on non-annex EPs.
+    The default is set by configuration parameter
+    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`.
+
 FILE TRANSFER COMMANDS
 
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
