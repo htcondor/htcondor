@@ -370,7 +370,7 @@ public:
 		// peer ever tries to read a payload the other side did not send.
 		//
 		const CondorVersionInfo *vi = sock->get_peer_version();
-		if ( vi && vi->built_since_version(26, 2, 0) ) {
+		if ( vi && vi->built_since_version(26, 1, 0) ) {
 			ClassAd match_ad;
 			match_ad.Assign(ATTR_IS_BUNDLE, m_is_bundle);
 			if ( m_is_bundle && !m_bundle_id.empty() ) {
