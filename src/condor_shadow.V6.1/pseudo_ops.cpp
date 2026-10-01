@@ -1125,11 +1125,19 @@ UniShadow::before_common_file_transfer(
 	const std::string & cifName,
 	const std::string & commonInputFiles
 ) {
-	dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 	CommonFilesEvent cfStartEvent;
 	cfStartEvent.setType( CommonFilesEventType::TransferStarted );
+	if (remRes) {
+	#ifdef COMMON_FILES_EVENT_HAS_EXECUTE_PROPS
+		ClassAd & props = cfStartEvent.setProp();
+	#else
+		ClassAd dummy; // TODO: add props to CommonFilesEvent?
+		ClassAd & props = dummy;
+	#endif
+		remRes->populateExecuteEvent(cfStartEvent.SlotName(), props);
+	}
+	dprintf( D_ALWAYS, "Starting common files transfer to %s\n", cfStartEvent.SlotName().c_str() );
 	uLog.writeEvent( & cfStartEvent, jobAd );
-
 
 	ClassAd commonAd;
 	CopyAttribute(

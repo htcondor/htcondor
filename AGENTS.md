@@ -186,6 +186,7 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 **Constexpr & Consteval:**
 **std::filesystem** Please never use the std::filesystem overloads that throw excecptions, always prefer the non-throwing overloads and check the error codes.
 **Value semantics**: Prefer value semantics over raw pointers for ownership and lifetime management.
+**References for non-null parameters**: When a function parameter can never legitimately be `nullptr`, take it by reference (`Foo &foo`, or `const Foo &foo`) rather than by pointer. Reserve pointer parameters for arguments where `nullptr` is a meaningful, handled value.
 
 ### Safe File I/O (SECURITY-CRITICAL)
 

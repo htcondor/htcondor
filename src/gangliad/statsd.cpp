@@ -421,12 +421,12 @@ Metric::evaluateLabels(char const *attr_name,classad::ClassAd const *default_lab
 }
 
 bool
-Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD *statsd,std::vector<std::string> *regex_groups,char const *regex_attr)
+Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD &statsd,std::vector<std::string> *regex_groups,char const *regex_attr)
 {
 	// Record which backend this metric is being evaluated for, so that
 	// evaluate() can honor backend-decorated attribute overrides such as
 	// Ganglia_Name overriding Name when publishing to ganglia.
-	char const *backend_name = statsd ? statsd->backendName() : nullptr;
+	char const *backend_name = statsd.backendName();
 	backend = backend_name ? backend_name : "";
 
 	if( regex_attr ) {
@@ -497,7 +497,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				std::vector<std::string> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					std::shared_ptr<Metric> metric(statsd->newMetric());
+					std::shared_ptr<Metric> metric(statsd.newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -533,17 +533,17 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	else if( !strcasecmp(my_type.c_str(),"machine") ) {
 		group = "HTCondor Startd";
-		if( !statsd->publishPerExecuteNodeMetrics() ) {
+		if( !statsd.publishPerExecuteNodeMetrics() ) {
 			return false;
 		}
 	}
 	else if( !strcasecmp(my_type.c_str(),"daemonmaster") ) {
 		group = "HTCondor Master";
 
-		if( !statsd->publishPerExecuteNodeMetrics() ) {
+		if( !statsd.publishPerExecuteNodeMetrics() ) {
 			std::string machine_name;
 			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine_name);
-			if( statsd->isExecuteOnlyNode(machine_name) ) {
+			if( statsd.isExecuteOnlyNode(machine_name) ) {
 				return false;
 			}
 		}
@@ -655,7 +655,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	// into the ad as it came back from that pool's collector; otherwise it is
 	// the collector host of our own pool.
 	if( !daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,pool) ) {
-		pool = statsd ? statsd->getDefaultAggregateHost() : "";
+		pool = statsd.getDefaultAggregateHost();
 	}
 
 	if( isAggregateMetric() ) {
@@ -682,12 +682,12 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	if( !evaluateOptionalString(ATTR_MACHINE,machine,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	statsd->getDaemonIP(machine,ip);
+	statsd.getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	// Labels are evaluated last so that they can refer to the metric's own
 	// resolved machine and pool, which are only settled above.
-	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd ? statsd->defaultLabelAd() : NULL,metric_ad,daemon_ad,regex_groups,regex_attr);
+	evaluateLabels(ATTR_PROMETHEUS_LABELS,statsd.defaultLabelAd(),metric_ad,daemon_ad,regex_groups,regex_attr);
 
 	if ( isAggregateMetric() && 
 		 derivative && 
@@ -704,7 +704,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,ad_type);
 		std::string collector_name;
 		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
-			collector_name = statsd->getDefaultAggregateHost();
+			collector_name = statsd.getDefaultAggregateHost();
 		}
 		time_t start_time = 0;
 		daemon_ad.LookupInteger(ATTR_DAEMON_START_TIME,start_time);
@@ -712,9 +712,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		std::string key = name + "/" + daemon_name + "/" + ad_type + "/" + collector_name + "/" + std::to_string(start_time);
 		double current_numeric_value, previous_numeric_value;
 		value.IsNumber(current_numeric_value); // we know this is a number because we checked above
-		bool have_previous_value = statsd->getPreviousValue(key, previous_numeric_value);
+		bool have_previous_value = statsd.getPreviousValue(key, previous_numeric_value);
 		// Store the value into our previous value map for use in calculating the derivative the next time we see this metric from this daemon instance.
-		statsd->storePreviousValue(key, current_numeric_value);
+		statsd.storePreviousValue(key, current_numeric_value);
 		if( have_previous_value ) {
 			// we have a previous value, so we can calculate the derivative
 			double delta_value = current_numeric_value - previous_numeric_value;
@@ -744,10 +744,10 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	daemon_ad.EvaluateAttrInt(ATTR_LAST_HEARD_FROM, timestamp);
 
 	if( isAggregateMetric() ) {
-		statsd->addToAggregateValue(*this);
+		statsd.addToAggregateValue(*this);
 	}
 	else {
-		statsd->publishMetric(*this);
+		statsd.publishMetric(*this);
 	}
 	return true;
 }
@@ -860,7 +860,7 @@ Metric::addToAggregateValue(Metric const &datapoint) {
 }
 
 void
-Metric::convertToNonAggregateValue(StatsD *statsd) {
+Metric::convertToNonAggregateValue(StatsD &statsd) {
 	// Only a SUM of a derivative metric is itself a counter.  addToAggregateValue()
 	// summed the per-daemon deltas, so for SUM 'sum' holds this interval's pooled
 	// increment across the daemons.  MIN/MAX/AVG of counters are rate-like
@@ -906,7 +906,7 @@ Metric::convertToNonAggregateValue(StatsD *statsd) {
 		// publisher treats it as a counter.  The total stays monotonic because
 		// negative per-daemon deltas (e.g. a daemon restart) were already dropped
 		// before aggregation in evaluateDaemonAd().
-		double total = statsd->accumulateAggregateCounter(aggregate_group, sum);
+		double total = statsd.accumulateAggregateCounter(aggregate_group, sum);
 		if (type == FLOAT || type == DOUBLE) {
 			value.SetRealValue(total);
 		} else {
@@ -1635,7 +1635,7 @@ StatsD::publishDaemonMetrics(ClassAd& daemon_ad)
 	{
 		std::shared_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
-		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, this);
+		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, *this);
 	}
 }
 
@@ -1686,7 +1686,7 @@ StatsD::publishAggregateMetrics()
 		 itr++ )
 	{
 		Metric *metric = newMetric(itr->second);
-		metric->convertToNonAggregateValue(this);
+		metric->convertToNonAggregateValue(*this);
 		publishMetric(*metric);
 		// Note: convertToNonAggregateValue() leaves derivative==true only for
 		// aggregate counters (a SUM of a derivative metric).  Such counters must
