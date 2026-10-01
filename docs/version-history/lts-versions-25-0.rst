@@ -20,6 +20,10 @@ New Features:
 
 .. include-history:: features 25.0.15
 
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
+
 Bugs Fixed:
 
 .. include-history:: bugs 25.0.15
