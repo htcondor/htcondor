@@ -40,6 +40,7 @@
 #include "truncate.h"
 
 #include <filesystem>
+#include <tuple>
 #include "profiling.hpp"
 
 namespace deep = DagmanDeepOptions;
@@ -94,15 +95,34 @@ void Dagman::SetThrottles(Throttles userThrottles) {
 	}
 }
 
-// In Config() we get DAGMan-related configuration values.  This
-// is a three-step process:
-// 1. Get the name of the DAGMan-specific config file (if any).
-// 2. If there is a DAGMan-specific config file, process it so
-//    that its values are added to the configuration.
-// 3. Get the values we want from the configuration.
+// In Config() we get DAGMan-related configuration values via the following steps
+//    1. Query config for administator controlled options (disabled user control inputs by default)
+//    2. Digest the user level configuration (i.e. _CONDOR_* env vars and ~/.condor/config)
+//    3. Read in and digest DAG specific configuration
+//    4. Query config for all DAGMan options
+//    5. Set up log caching if enabled
+//    6. Reload log file details so user defined config takes effect
+//
+// Note: debug_printfs are DEBUG_NORMAL here because when we
+// get here we haven't processed command-line arguments yet.
 bool Dagman::Config() {
-	// Note: debug_printfs are DEBUG_NORMAL here because when we
-	// get here we haven't processed command-line arguments yet.
+	struct ThrottleConfig {
+		ThrottleConfig(const char* o, const int def, const int min, const int max) : opt(o), min(min), preset(def), max(max) {}
+
+		const char* opt{nullptr};
+		int min{-1};
+		int preset{-1};
+		int max{-1};
+	};
+
+	std::map<Throttle, ThrottleConfig> throttle_config = {
+		{Throttle::MAX_IDLE, {"DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX}},
+		{Throttle::MAX_NODES, {"DAGMAN_MAX_JOBS_SUBMITTED", 0, 0, INT_MAX}},
+		{Throttle::MAX_PRE, {"DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX}},
+		{Throttle::MAX_HOLD, {"DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX}},
+		{Throttle::MAX_POST, {"DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX}},
+		{Throttle::MAX_INT_SUBMITS, {"DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX}},
+	};
 
 	int admin_min_scan_int = -1;
 
@@ -110,14 +130,20 @@ bool Dagman::Config() {
 	if (!param_boolean("DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING", false)) {
 		debug_printf(DEBUG_NORMAL, "Administrator set throttle limits enabled\n");
 		// Allow admin to set min for scan interval since this can increase CPU usage
-		admin_min_scan_int = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+		admin_min_scan_int = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR", 1, 1, INT_MAX);
 
-		adminThrottles[Throttle::MAX_IDLE] = param_integer("DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_NODES] = param_integer("DAGMAN_MAX_JOBS_SUBMITTED", 0, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_PRE] = param_integer("DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_HOLD] = param_integer("DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_POST] = param_integer("DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_INT_SUBMITS] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", 1000, 1, INT_MAX);
+		for (auto& [type, config] : throttle_config) {
+			std::string knob = std::string(config.opt) + "_CEILING";
+			// Default ceiling is twice the throttles default value
+			adminThrottles[type] = param_integer(knob.c_str(), config.preset * 2, config.min, config.max);
+		}
+	}
+
+	// Now apply the user level config (USER_CONFIG_FILE and _CONDOR_* environment)
+	// that was withheld at startup so users can not override the admin limits above
+	if (!config_digest_user_config()) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to apply user configuration\n");
+		DC_Exit(EXIT_ERROR);
 	}
 
 	// Get and process the DAGMan-specific config file (if any)
@@ -133,6 +159,12 @@ bool Dagman::Config() {
 		}
 		process_config_source(config[conf::str::DagConfig].c_str(), 0, "DAGMan config", nullptr, true);
 	}
+
+	// Helper lambda to get a throttles defined value (from all config including user and DAG specific)
+	auto param_throttle = [&throttle_config](const Throttle type) -> int {
+		const auto& config = throttle_config.at(type);
+		return param_integer(config.opt, config.preset, config.min, config.max);
+	};
 
 	config[conf::b::UseOldDagParser] = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_OLD_FILE_PARSER setting: %s\n", config[conf::b::UseOldDagParser] ? "True" : "False");
@@ -167,7 +199,7 @@ bool Dagman::Config() {
 	// Undocumented on purpose: enables parse/edge-processing timing and memory diagnostics
 	config[conf::b::ParseTimingDebug] = param_boolean("DAGMAN_DEBUG_PARSE_TIMING", false);
 
-	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX);
+	config[conf::i::SubmitsPerInterval] = param_throttle(Throttle::MAX_INT_SUBMITS);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
 
 	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);
@@ -216,19 +248,19 @@ bool Dagman::Config() {
 	config[conf::b::RetryNodeFirst] = param_boolean("DAGMAN_RETRY_NODE_FIRST", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %s\n", config[conf::b::RetryNodeFirst] ? "True" : "False");
 
-	options[shallow::i::MaxIdle] = param_integer("DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX);
+	options[shallow::i::MaxIdle] = param_throttle(Throttle::MAX_IDLE);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOBS_IDLE setting: %d\n", options[shallow::i::MaxIdle]);
 
-	options[shallow::i::MaxJobs] = param_integer("DAGMAN_MAX_JOBS_SUBMITTED", 0, 0, INT_MAX);
+	options[shallow::i::MaxJobs] = param_throttle(Throttle::MAX_NODES);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n", options[shallow::i::MaxJobs]);
 
-	options[shallow::i::MaxPre] = param_integer("DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX);
+	options[shallow::i::MaxPre] = param_throttle(Throttle::MAX_PRE);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_PRE_SCRIPTS setting: %d\n", options[shallow::i::MaxPre]);
 
-	options[shallow::i::MaxPost] = param_integer("DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX);
+	options[shallow::i::MaxPost] = param_throttle(Throttle::MAX_POST);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n", options[shallow::i::MaxPost]);
 
-	options[shallow::i::MaxHold] = param_integer("DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
+	options[shallow::i::MaxHold] = param_throttle(Throttle::MAX_HOLD);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_HOLD_SCRIPTS setting: %d\n", options[shallow::i::MaxHold]);
 
 	config[conf::b::MungeNodeNames] = param_boolean("DAGMAN_MUNGE_NODE_NAMES", true);
@@ -1620,6 +1652,8 @@ void condor_event_timer(int /* tid */) {
 
 void main_pre_dc_init(int, char*[]) {
 	DC_Skip_Core_Init();
+	// Withhold user level config until admin limits are read in Dagman::Config()
+	DC_Disable_User_Config();
 #ifdef WIN32
 	_setmaxstdio(2048);
 #endif

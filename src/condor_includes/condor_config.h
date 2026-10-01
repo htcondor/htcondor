@@ -435,11 +435,17 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	#define CONFIG_OPT_USE_THIS_ROOT_CONFIG 0x800 // use the root config file specified in the last argument of real_config
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
+	#define CONFIG_OPT_DEFER_USER_CONFIG 0x4000 // don't apply USER_CONFIG_FILE or _CONDOR_* environment until config_digest_user_config() is called (config_ex() only)
 	bool config();
 	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
 	bool config_host(const char* host, int config_options, const char * root_config); // used by condor_config_val
 	bool validate_config(bool abort_if_invalid);
+	// true when config was loaded with CONFIG_OPT_DEFER_USER_CONFIG and user level config has not yet been applied
+	bool config_user_config_pending();
+	// apply the user level config (USER_CONFIG_FILE and _CONDOR_* environment) deferred by CONFIG_OPT_DEFER_USER_CONFIG
+	// this reloads the entire config. Returns true without doing anything if nothing is pending
+	bool config_digest_user_config();
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);
