@@ -1,5 +1,13 @@
 *** 26.2.0 features
 
+- Administrators can now cap the DAGMan throttles that users may set via
+  new configuration options such as :macro:`DAGMAN_MAX_JOBS_IDLE_CEILING`
+  and :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR`. DAGMan reads these
+  limits from the system configuration before applying any user
+  configuration, so they cannot be bypassed via ``_CONDOR_`` environment
+  variables or :macro:`USER_CONFIG_FILE`.
+  :jira:`3963`
+
 *** 26.2.0 bugs
 
 *** 26.0.2 bugs

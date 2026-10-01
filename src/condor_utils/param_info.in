@@ -691,6 +691,12 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_MAX_HOLD_SCRIPTS_CEILING]
+default=40
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_MAX_JOB_HOLDS]
 default=100
 type=int
@@ -704,10 +710,22 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_MAX_JOBS_IDLE_CEILING]
+default=2000
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_MAX_JOBS_SUBMITTED]
 default=0
 type=int
 customization=normal
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_MAX_JOBS_SUBMITTED_CEILING]
+default=0
+type=int
 tags=dagman,dagman_main
 restart=never
 
@@ -718,10 +736,22 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_MAX_POST_SCRIPTS_CEILING]
+default=40
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_MAX_PRE_SCRIPTS]
 default=20
 type=int
 customization=normal
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_MAX_PRE_SCRIPTS_CEILING]
+default=40
+type=int
 tags=dagman,dagman_main
 restart=never
 
@@ -739,6 +769,12 @@ restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
 default=100
+type=int
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING]
+default=200
 type=int
 tags=dagman,dagman_main
 restart=never
@@ -796,6 +832,12 @@ restart=never
 
 [DAGMAN_USER_LOG_SCAN_INTERVAL]
 default=5
+type=int
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR]
+default=1
 type=int
 tags=dagman,dagman_main
 restart=never

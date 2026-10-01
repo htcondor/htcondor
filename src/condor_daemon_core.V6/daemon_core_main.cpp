@@ -139,6 +139,10 @@ int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 // It can be set to false by calling the DC_Skip_Core_Init() function.
 static bool doCoreInit = true;
 
+// This flag tells daemoncore to load the startup config without the user level config.
+// It can be set by calling the DC_Disable_User_Config() function.
+static bool disableUserConfig = false;
+
 
 	// Right now, the default ID is simply the empty string.
 const std::string DCTokenRequester::default_identity = "";
@@ -932,6 +936,12 @@ void
 DC_Skip_Core_Init()
 {
 	doCoreInit = false;
+}
+
+void
+DC_Disable_User_Config(bool disable)
+{
+	disableUserConfig = disable;
 }
 
 static void
@@ -3817,6 +3827,7 @@ int dc_main( int argc, char** argv )
 	//config_options |= get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ? CONFIG_OPT_DEPRECATION_WARNINGS : 0;
 	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
 	if (wantsConfigExcept) { config_options |= CONFIG_OPT_WANT_EXCEPT; } // should this really be all daemons?
+	if (disableUserConfig) { config_options |= CONFIG_OPT_DEFER_USER_CONFIG; }
 	config_ex(config_options);
 
 

@@ -83,6 +83,7 @@
 #include "CondorError.h"
 #include "../condor_sysapi/sysapi.h"
 #include <algorithm> // for std::sort
+#include <optional>
 
 
 // define this to keep param who's values match defaults from going into the runtime param table.
@@ -400,6 +401,9 @@ extern bool condor_fsync_on;
 std::string global_config_source;
 std::vector<std::string> local_config_sources;
 std::string user_config_source; // which of the files in local_config_sources is the user file
+
+// config options saved by real_config when CONFIG_OPT_DEFER_USER_CONFIG is used so that config_digest_user_config() can reload
+static std::optional<int> deferred_user_config_options;
 
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
@@ -759,11 +763,30 @@ bool config_ex(int config_options)
 	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT));
 }
 
+bool config_user_config_pending()
+{
+	return deferred_user_config_options.has_value();
+}
+
+bool config_digest_user_config()
+{
+	if ( ! deferred_user_config_options) { return true; }
+
+	// take the saved options (defer bit already cleared)
+	int options = *deferred_user_config_options;
+	deferred_user_config_options.reset();
+
+	dprintf(D_CONFIG, "config: applying deferred user config\n");
+	return config_ex(options);
+}
+
 
 bool
 config_host(const char* host, int config_options, const char * root_config)
 {
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
+	// deferring user config is only supported via config_ex()
+	config_options &= ~CONFIG_OPT_DEFER_USER_CONFIG;
 	return real_config(host, wantsQuiet, config_options, root_config);
 }
 
@@ -773,6 +796,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	const char* config_source = root_config;
 	std::string config_file_tmp; // used as a temp buffer by find_global
 	char* tmp = NULL;
+
+	bool defer_user_config = config_options & CONFIG_OPT_DEFER_USER_CONFIG;
+	deferred_user_config_options.reset();
 
 	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 	config_options |= CONFIG_OPT_COLON_IS_META_ONLY;
@@ -940,10 +966,11 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
 		// Now, insert overrides from the user config file (if any)
+		// unless deferred until config_digest_user_config() is called
 	user_config_source.clear();
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
-	if (!user_config_name.empty() && ! only_env) {
+	if (!user_config_name.empty() && ! only_env && ! defer_user_config) {
 		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
@@ -951,14 +978,14 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		}
 	}
 
-		// Now, insert any macros defined in the environment.
+		// Now, insert any macros defined in the environment (unless deferred).
 	char **my_environ = GetEnviron();
 
 		// Build "magic_prefix" with _condor_, or w/e distro we are
 
 	const size_t prefix_len = sizeof("_condor_")-1;
 
-	for( int i = 0; my_environ[i]; i++ ) {
+	for( int i = 0; ! defer_user_config && my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
 		if( strncasecmp( my_environ[i], "_condor_",  prefix_len ) != 0 ) {
 			continue;
@@ -1049,6 +1076,10 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
 	ClassAdReconfig();
+
+	if (defer_user_config) {
+		deferred_user_config_options = config_options & ~CONFIG_OPT_DEFER_USER_CONFIG;
+	}
 
 	return true;
 }
