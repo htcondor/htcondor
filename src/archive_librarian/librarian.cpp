@@ -448,25 +448,18 @@ void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_fi
 // GARBAGE COLLECTION
 // ================================
 
-static std::uintmax_t get_database_size(const std::string& db_path) {
-    std::error_code ec;
-    auto size = std::filesystem::file_size(db_path, ec);
-
-    if (ec) {
-        dprintf(D_ERROR, "ERROR: Failed to get database size: %s\n",
-                ec.message().c_str());
-        return 0;
-    }
-
-    return size;
-}
-
 bool Librarian::cleanupDatabaseIfNeeded() {
-    bool garbageCollected = false;
+    // Size from page_count * page_size, not the main file's size: in WAL mode recent
+    // writes (and pages freed by incremental_vacuum) only reach the main file on the
+    // next checkpoint, so the file size can badly lag the real database size.
+    int64_t currentSize = dbHandler_.getDatabaseSizeBytes();
+    int64_t sizeLimit   = config[conf::ll::DBMaxSizeBytes];
+    int64_t highWatermark = static_cast<int64_t>(sizeLimit * config[conf::dbl::DBHighWaterMark]);
 
-    size_t currentSize  = get_database_size(config[conf::str::DBPath]);
-    long long sizeLimit = config[conf::ll::DBMaxSizeBytes];
-    size_t highWatermark = static_cast<size_t>(sizeLimit * config[conf::dbl::DBHighWaterMark]);
+    if (currentSize < 0) {
+        dprintf(D_ERROR, "cleanupDatabaseIfNeeded: failed to determine database size; skipping garbage collection.\n");
+        return false;
+    }
 
     dprintf(D_FULLDEBUG, "cleanupDatabaseIfNeeded: size=%s, high water mark=%s (limit=%s, fraction=%.2f)\n",
             to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
@@ -480,53 +473,86 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     if (now < nextGCAttempt_) {
         auto remaining = std::chrono::duration_cast<std::chrono::seconds>(nextGCAttempt_ - now).count();
         dprintf(D_FULLDEBUG, "Database over the high water mark (%s > %s), but skipping garbage "
-                "collection; a prior pass didn't shrink the file, backing off for another "
+                "collection; a prior pass didn't shrink the database, backing off for another "
                 "%lld more second(s).\n",
                 to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
                 (long long)remaining);
         return false;
     }
 
-    size_t lowWatermark   = static_cast<size_t>(sizeLimit * config[conf::dbl::DBLowWaterMark]);
-    size_t bytesToDelete  = currentSize - lowWatermark;
-    int numJobsToDelete   = static_cast<int>(
-        std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
-    int numFilesToDelete = 1;
-    if (EstimatedJobsPerFileInArchive_ > 0) {
-        numFilesToDelete = static_cast<int>(
-            std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
-    }
+    int64_t lowWatermark = static_cast<int64_t>(sizeLimit * config[conf::dbl::DBLowWaterMark]);
+    int64_t startSize    = currentSize;
 
     dprintf(D_STATUS, "Database over high water mark (%s > %s); starting garbage collection. "
-            "Target: shrink to %s (~%d job(s) across ~%d file(s), est. %.1f bytes/job, "
-            "%d job(s)/file).\n",
+            "Target: shrink to %s.\n",
             to_string_byte_units(currentSize).c_str(), to_string_byte_units(highWatermark).c_str(),
-            to_string_byte_units(lowWatermark).c_str(), numJobsToDelete, numFilesToDelete,
-            EstimatedBytesPerJobInDatabase_, EstimatedJobsPerFileInArchive_);
+            to_string_byte_units(lowWatermark).c_str());
 
-    garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
-    if ( ! garbageCollected) {
-        dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
+    // Each pass collects the oldest eligible files estimated to free enough space to
+    // reach the low water mark. The estimate is an average over all records (it
+    // includes fixed schema overhead), so repeat until the target is reached, nothing
+    // is eligible, or a pass fails to shrink the database.
+    constexpr int MAX_GC_PASSES = 10;
+    bool garbageCollected = false;
+    bool madeProgress = true;
+    for (int pass = 1; pass <= MAX_GC_PASSES && currentSize > lowWatermark; ++pass) {
+        int numFilesToDelete = dbHandler_.countFilesToCollect(currentSize - lowWatermark);
+        if (numFilesToDelete <= 0) {
+            if (numFilesToDelete == 0) {
+                dprintf(D_STATUS, "Garbage collection: no files currently eligible for deletion.\n");
+                // No jobs to remove, but previously timestamped users may have expired
+                std::ignore = dbHandler_.pruneExpiredUsersNow();
+            }
+            madeProgress = (currentSize < startSize);
+            break;
+        }
+
+        dprintf(D_STATUS, "Garbage collection pass %d: collecting %d file(s) to free ~%s.\n",
+                pass, numFilesToDelete, to_string_byte_units(currentSize - lowWatermark).c_str());
+
+        if ( ! dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete)) {
+            dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
+            madeProgress = (currentSize < startSize);
+            break;
+        }
+        garbageCollected = true;
+
+        int64_t sizeAfter = dbHandler_.getDatabaseSizeBytes();
+        if (sizeAfter < 0 || sizeAfter >= currentSize) {
+            // This pass reclaimed nothing; earlier passes may still have
+            madeProgress = (currentSize < startSize);
+            break;
+        }
+        currentSize = sizeAfter;
     }
 
-    // Judge success by whether the file actually got smaller, not just whether the
-    // delete transaction committed -- a GC pass can "succeed" with zero eligible rows
+    // Judge success by whether the database actually got smaller, not just whether the
+    // delete transactions committed -- a GC pass can "succeed" with zero eligible rows
     // (nothing marked deleted yet) or with rows deleted but no space reclaimed (e.g.
     // incremental_vacuum unavailable). Either way, retrying every single cycle just
     // burns CPU and writes for no benefit, so back off until it's worth trying again.
-    size_t sizeAfter = get_database_size(config[conf::str::DBPath]);
-    if (sizeAfter >= currentSize) {
+    if ( ! madeProgress || currentSize >= startSize) {
         auto backoff = std::chrono::seconds(config[conf::i::GCBackoffSeconds]);
         nextGCAttempt_ = now + backoff;
         dprintf(D_STATUS, "Garbage collection did not reduce database size (%s -> %s); backing "
                 "off further attempts for %lld second(s) (LIBRARIAN_GC_BACKOFF_SECONDS).\n",
-                to_string_byte_units(currentSize).c_str(), to_string_byte_units(sizeAfter).c_str(),
+                to_string_byte_units(startSize).c_str(), to_string_byte_units(currentSize).c_str(),
                 (long long)backoff.count());
     } else {
-        dprintf(D_STATUS, "Garbage collection reduced database size: %s -> %s (%s reclaimed).\n",
-                to_string_byte_units(currentSize).c_str(), to_string_byte_units(sizeAfter).c_str(),
-                to_string_byte_units(currentSize - sizeAfter).c_str());
+        dprintf(D_STATUS, "Garbage collection reduced database size: %s -> %s (%s reclaimed; low water mark %s).\n",
+                to_string_byte_units(startSize).c_str(), to_string_byte_units(currentSize).c_str(),
+                to_string_byte_units(startSize - currentSize).c_str(),
+                to_string_byte_units(lowWatermark).c_str());
         nextGCAttempt_ = {};
+
+        // In WAL mode the pages freed above only leave the main database file at the
+        // next checkpoint, which otherwise waits for the WAL to reach 4 MB. Checkpoint
+        // now so the file on disk actually shrinks. Not fatal on failure (e.g. a reader
+        // holding an old snapshot past the busy timeout); a later checkpoint catches up.
+        if ( ! dbHandler_.checkpointWAL()) {
+            dprintf(D_STATUS, "Garbage collection: WAL checkpoint failed; database file will shrink "
+                    "at a later checkpoint.\n");
+        }
     }
 
     return garbageCollected;
@@ -724,6 +750,7 @@ void Librarian::reconfig(bool startup) {
     config[i::GCBackoffSeconds]           = param_integer("LIBRARIAN_GC_BACKOFF_SECONDS", 1800);
     config[i::DBBusyTimeoutMs]            = param_integer("LIBRARIAN_DATABASE_BUSY_TIMEOUT_MS", 30'000,
                                                             0, std::numeric_limits<int>::max());
+    config[i::UserRetentionDays]          = param_integer("LIBRARIAN_USER_RETENTION_DAYS", 365);
 
     config[ll::MaxRecordsPerUpdate] = param_longlong("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 100'000);
     config[ll::DBMaxSizeBytes] = param_longlong("LIBRARIAN_MAX_DATABASE_SIZE",
