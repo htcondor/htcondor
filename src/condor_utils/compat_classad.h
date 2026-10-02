@@ -276,10 +276,28 @@ class ClassAdFileParseHelper
 	virtual int PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
 	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)=0;
-	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
-	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
-	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	virtual int NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)=0;
+
+
+	//
+	// Returns a [code, value] pair so we can distinguish between a valid
+	// ad that happens to be empty and an ad that may be in the "old" ("long")
+	// format.
+	//
+	// Returning UNPARSEABLE but also setting detected_long causes the caller
+	// to parse errmsg as a an "old" ("long") format line.  We do this to
+	// avoid having to backtrack the FILE * (which doesn't always work).
+	//
+
+	enum class ParseResult : int {
+		EMPTY_AD    = -100,
+		END_OF_FILE = -99,
+		ERROR       = -1,
+		LONG_FORM   = 0,
+		PARSEABLE   = 1
+	};
+
+	virtual std::pair<ParseResult, int> NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)=0;
+
 
 	// use this version of readLine only with CompatStringViewLexerSource or CompatFileLexerSource
 	static bool readLine(std::string & buffer, classad::LexerSource & lsrc, bool append=false);
@@ -301,8 +319,9 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
 	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	//virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
-	virtual int NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg);
+	// virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+	// virtual int NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg);
+	virtual std::pair<ParseResult, int> NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg);
 
 	enum class ParseType : long {
 		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads
