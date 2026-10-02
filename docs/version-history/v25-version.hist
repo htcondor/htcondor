@@ -1,11 +1,11 @@
 *** 25.15.16 bugs
 
-*** 25.0.16 bugs
-
 - Fixed a bug where a large backlog of higher job priority jobs could
   exhaust the *condor_schedd*'s offer budget for a negotiation cycle and
   starve a lower priority auto cluster, even when matching slots were idle.
   :jira:`3855`
+
+*** 25.0.16 bugs
 
 *** 25.15.15 features
 
