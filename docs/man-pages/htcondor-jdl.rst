@@ -859,7 +859,7 @@ COMMANDS FOR MATCHMAKING
     For jobs connected to an annex, this specifies whether the jobs can run
     only on annex EPs or may also run on non-annex EPs.
     The default is set by configuration parameter
-    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`.
+    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`, whose default is True.
 
 FILE TRANSFER COMMANDS
 
