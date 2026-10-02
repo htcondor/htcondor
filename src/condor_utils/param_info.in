@@ -7758,10 +7758,14 @@ default : @fin
 		else
 			restrict_to_annex = $(ANNEX_RESTRICT_JOB_DEFAULT)
 		endif
+		# AuthenticatedIdentity is present in the AP's copy of the
+		# slot ad, but not in the EP's copy. So if it's missing,
+		# treat that as a match.
+		restrict_expr = (MY.TargetAnnexName == TARGET.AnnexName && (MY.User == TARGET.AuthenticateIdentity)?:true)
 		if $(restrict_to_annex)
-			addl_reqs = (MY.TargetAnnexName == TARGET.AnnexName)
+			addl_reqs = $(restrict_expr)
 		else
-			addl_reqs = (TARGET.AnnexName is Undefined || TARGET.AnnexName == MY.TargetAnnexName)
+			addl_reqs = (TARGET.AnnexName is Undefined || $(restrict_expr))
 		endif
 		SET Requirements $(addl_reqs) && ($(MY.Requirements))
 		SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
