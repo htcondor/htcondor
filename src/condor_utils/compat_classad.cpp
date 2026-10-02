@@ -1662,7 +1662,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			} else if (lexsrc.AtEnd()) {
 				code = ParseResult::END_OF_FILE;
 			} else {
-				code = ParseResult::ERROR;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1692,7 +1692,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			} else if (lexsrc.AtEnd()) {
 				code = ParseResult::END_OF_FILE;
 			} else {
-				code = ParseResult::ERROR;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1704,7 +1704,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			}
 			ASSERT(parser);
 			if ( ! readLine(buffer, lexsrc, false)) {
-				code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::ERROR;
+				code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::PARSE_ERROR;
 			} else {
 				bool fok = parser->ParseClassAd(buffer, ad, false);
 				if (fok) {
@@ -1712,7 +1712,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 				} else if (lexsrc.AtEnd()) {
 					code = ParseResult::END_OF_FILE;
 				} else {
-					code = ParseResult::ERROR;
+					code = ParseResult::PARSE_ERROR;
 				}
 			}
 		} break;
@@ -1744,7 +1744,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			} else if (lexsrc.AtEnd()) {
 				code = ParseResult::END_OF_FILE;
 			} else {
-				code = ParseResult::ERROR;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1752,7 +1752,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			// get a line from the file
 			for (;;) {
 				if ( ! readLine(buffer, lexsrc, false)) {
-					code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::ERROR;
+					code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::PARSE_ERROR;
 				}
 				chomp(buffer);
 				trim(buffer);
@@ -1858,7 +1858,7 @@ int InsertFromStream(classad::LexerSource & lexsrc, classad::ClassAd &ad, bool& 
 				error = 0;
 				is_eof = true;
 				return 0;
-			case CondorClassAdFileParseHelper::ParseResult::ERROR:
+			case CondorClassAdFileParseHelper::ParseResult::PARSE_ERROR:
 				error = value;
 				is_eof = lexsrc.AtEnd();
 				return phelp->OnParseError(buffer, ad, lexsrc);

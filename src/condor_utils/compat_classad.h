@@ -20,6 +20,8 @@
 #ifndef COMPAT_CLASSAD_H
 #define COMPAT_CLASSAD_H
 
+#include <utility>
+
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 
@@ -291,7 +293,7 @@ class ClassAdFileParseHelper
 	enum class ParseResult : int {
 		EMPTY_AD    = -100,
 		END_OF_FILE = -99,
-		ERROR       = -1,
+		PARSE_ERROR = -1,
 		LONG_FORM   = 0,
 		PARSEABLE   = 1
 	};
