@@ -55,7 +55,6 @@ public:
 	pid_t 	spawn(Claim *, time_t now, Stream* s );
 	pid_t	pid() const {return s_pid;};
 	bool	active() const;
-	const ProcFamilyUsage & updateUsage(void);
 
 
 	void	setReaperID( int reaper_id ) { s_reaper_id = reaper_id; };
@@ -135,11 +134,8 @@ private:
 		// been assigned to a given resource and spawned.
 	std::string     s_dpf; // prefix for all dprintf messages (normally the slot id)
 	pid_t           s_pid;
-	ProcFamilyUsage s_usage;
 	time_t          s_birthdate;
 	time_t          s_last_update_time;
-	double          s_vm_cpu_usage;
-	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
 	time_t          s_vacate_soft_timeout;
