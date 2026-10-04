@@ -1753,6 +1753,7 @@ CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSou
 			for (;;) {
 				if ( ! readLine(buffer, lexsrc, false)) {
 					code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::PARSE_ERROR;
+					break;
 				}
 				chomp(buffer);
 				trim(buffer);
