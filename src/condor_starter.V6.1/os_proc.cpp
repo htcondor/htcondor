@@ -49,7 +49,6 @@
 #include "singularity.h"
 #include "find_child_proc.h"
 
-#include <sstream>
 #include <charconv>
 
 extern class Starter *starter;

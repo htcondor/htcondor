@@ -183,3 +183,12 @@ These settings affect the *condor_shadow*.
     .. code-block:: console
 
         $ condor_history -epochs:d -directory
+
+:macro-def:`TRANSFER_JOB_ATTRS`
+    A comma and/or space separated list of job ClassAd attribute names
+    that the *condor_shadow* copies from the job ad into a file transfer
+    job epoch history record (the ``INPUT``, ``OUTPUT``, ``CHECKPOINT``,
+    and ``COMMON`` record types written when :macro:`JOB_EPOCH_HISTORY` or
+    :macro:`JOB_EPOCH_HISTORY_DIR` is configured). An attribute is only
+    copied into the record if it is actually present on the job ad.
+    Defaults to ``NumShadowStarts,DAGManJobId,DAGNodeName``.

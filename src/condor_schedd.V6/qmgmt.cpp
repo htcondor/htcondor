@@ -304,6 +304,7 @@ static void ScheduleJobQueueLogFlush();
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
 std::vector<std::string> ocu_super_users;
+bool SlotBundlesEnabled = false;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -1541,6 +1542,15 @@ InitQmgmt()
 			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
 		}
 	}
+
+	// Whether this schedd honors "+IsBundle = true" at all.  A bundle grabs
+	// slots off-the-books at the best possible priority and holds them until
+	// all of its jobs can run, so it is off unless an admin turns it on.  It is
+	// a single schedd-wide switch rather than a list of who may create one:
+	// everyone who can submit to a schedd with bundles enabled can use them.
+	SlotBundlesEnabled = param_boolean("ENABLE_SLOT_BUNDLES", false);
+	dprintf(D_FULLDEBUG, "Slot bundles are %s\n",
+		SlotBundlesEnabled ? "enabled" : "disabled");
 
 	delete queue_super_user_may_impersonate_regex;
 	queue_super_user_may_impersonate_regex = nullptr;
@@ -3938,9 +3948,8 @@ NewProc(int cluster_id)
 	if (Q_SOCK) {
 		const char * owner = EffectiveUserName(Q_SOCK);
 		if( owner == nullptr || ! owner[0] ) {
-			// This should only happen for job submission via SOAP, but
-			// it's unclear how we can verify that.  Regardless, if we
-			// don't know who the owner of the job is, we can't enfore
+			// This should rarely happen.  Regardless, if we don't know
+			// who the owner of the job is, we can't enforce
 			// MAX_JOBS_PER_OWNER.
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
@@ -7334,6 +7343,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	std::string owner;
 	int has_new_idle_jobs = 0;
+	int has_new_idle_dag_or_local_jobs = 0;
 
 	// get sorted vectors of keys that are new and of keys that are modifications to existing ads
 	std::vector<JobQueueKey> new_keys, exist_keys;
@@ -7674,6 +7684,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				// so do that now (this is where it should always have been...)
 				if (job_status == JOB_STATUS_IDLE) {
 					has_new_idle_jobs += 1;
+					if (procad->Universe() == CONDOR_UNIVERSE_SCHEDULER || procad->Universe() == CONDOR_UNIVERSE_LOCAL) {
+						has_new_idle_dag_or_local_jobs += 1;
+					}
 				}
 
 				// handle initial counts of jobs by state in various places for this new job
@@ -7761,8 +7774,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	if (jobs_added_this_transaction) {
 		// because of Preparing state, the ProcAd may be inheriting IDLE from the cluster ad
 		// which would have resulted in the Dirty trigger in SetAttribute being skipped.
-		if (has_new_idle_jobs && ! PrioRecArrayIsDirty) DirtyPrioRecArray();
-		scheduler.endSubmitTransaction(jobs_added_this_transaction, has_new_idle_jobs);
+		int new_idle_priorec_jobs = has_new_idle_jobs - has_new_idle_dag_or_local_jobs;
+		if (new_idle_priorec_jobs > 0 && ! PrioRecArrayIsDirty) DirtyPrioRecArray();
+		scheduler.endSubmitTransaction(jobs_added_this_transaction, has_new_idle_jobs, has_new_idle_dag_or_local_jobs);
 	}
 
 	xact_start_time = 0;
@@ -9232,17 +9246,24 @@ stats_entry_abs<int> SCGetAutoClusterType;
 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
-    int     job_prio = 0, 
-            pre_job_prio1 = 0, 
-            pre_job_prio2 = 0, 
-            post_job_prio1 = 0, 
+    int     job_prio = 0,
+            pre_job_prio1 = 0,
+            pre_job_prio2 = 0,
+            post_job_prio1 = 0,
             post_job_prio2 = 0;
 
 	ASSERT(job);
 
+
+	if( job->Status() == JOB_STATUS_BLOCKED ) {
+		dprintf( D_FULLDEBUG, "%d.%d: job blocked while building priorec array\n", jid.cluster, jid.proc );
+		scheduler.checkBlockedJob( job, jid );
+	}
+
+
 	// TODO: trust that the job->run code is already up-to-date here....
 	// Figure out if we should contine and put this job into the PrioRec array
-	// or not. 
+	// or not.
 	// For now we want to put jobs that would cause the user to exceed MaxJobsRunning
 	// into the prio-rec array anyway, so treat them as runnable here..
 	runnable_reason_code code;
@@ -9260,20 +9281,30 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		}
 	}
 
+	// A job of a slot bundle ("+IsBundle = true") is negotiated for only
+	// through the reserved bundle submitter, and runs only on a slot that
+	// bundle is holding.  Keep it out of the prio-rec array so it is never
+	// offered to the negotiator, or started on a claim, as an ordinary job.
+	// Check the job as well as the bundle table: a cluster submitted since the
+	// last count_jobs() is a bundle before the schedd has recorded it as one.
+	if (scheduler.getBundle(jid.cluster) || jobIsBundleJob(job)) {
+		return 0;
+	}
+
 	// --- Insert this job into the PrioRec array ---
 
-       // If pre/post prios are not defined as forced attributes, set them to INT_MIN
+	// If pre/post prios are not defined as forced attributes, set them to INT_MIN
 	// to flag priocompare routine to not use them.
-	 
+
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
          pre_job_prio1 = 0;
     }
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
          pre_job_prio2 = 0;
-    } 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
          post_job_prio1 = 0;
-    }	 
+    }
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
          post_job_prio2 = 0;
     }
@@ -9829,18 +9860,20 @@ static void DoBuildPrioRecArray() {
 	scheduler.autocluster.mark();
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
+	scheduler.logCatalogToShadowMap();
 	PrioRec.clear();
 	struct _get_job_prio_info info;
 	WalkJobQueue2(update_autocluster_id, &info);
 	grow_prio_recs(info.num_runnable + info.num_cooldown + 5); // +5 because ToddT sez so...
 	// PrioRecMinCoolDownTime is a global that will be incremented
-	// as we walk the job queue. 
+	// as we walk the job queue.
 	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
+	scheduler.logCatalogToShadowMap();
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
-		// moment. 
+		// moment.
 	if ( ! PrioRec.empty()) {
 		std::sort(PrioRec.begin(), PrioRec.end(), prio_compar{});
 	}
@@ -9879,6 +9912,8 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -9903,6 +9938,8 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSlice );
 	}
 
+	// Comment out this stanza to help trigger priorec rebuilds while
+	// waiting for a sleeping transfer shadow.
 	if( !PrioRecArrayTimeslice.isTimeToRun() ) {
 
 		dprintf(D_FULLDEBUG,

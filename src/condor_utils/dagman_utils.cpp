@@ -18,6 +18,8 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "basename.h"
+#include "condor_string.h" // for getline_trim
 #include "condor_arglist.h"
 #include "condor_attributes.h"
 #include "condor_getcwd.h"

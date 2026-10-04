@@ -2,11 +2,11 @@ if( LINUX )
 
 	if( NOT LIBUUID_FOUND )
 		message( FATAL_ERROR "annexd requires uuid library" )
-	endif( NOT LIBUUID_FOUND )
+	endif()
 
 	if( NOT HAVE_UUID_UUID_H )
 		message( FATAL_ERROR "annexd required uuid header" )
-	endif( NOT HAVE_UUID_UUID_H )
+	endif()
 
 
 	set(annexSources
@@ -51,4 +51,4 @@ if( LINUX )
 		"${CONDOR_LIBS};${LIBUUID_FOUND}"
 		ON )
 
-endif( LINUX )
+endif()

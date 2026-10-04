@@ -127,7 +127,7 @@ The ``Header`` qualifier has the following keyword:
     Define label or column heading. If not present then default to
     using the provided ``<expression>``.
 
-The ``Adjusments`` qualifier has the following keywords:
+The ``Adjustments`` qualifier has the following keywords:
 
   ``WIDTH {[-]<integer> | AUTO}``
     Set the width of the column to explicit ``<integer>`` value or

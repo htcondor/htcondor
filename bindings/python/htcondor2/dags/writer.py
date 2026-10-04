@@ -113,7 +113,8 @@ class DAGWriter:
             if isinstance(n, node.NodeLayer)
             and isinstance(n.submit_description, htcondor.Submit)
         ):
-            text = str(layer.submit_description) + "\nqueue"
+            # Submit.__str__() already emits a queue statement.
+            text = str(layer.submit_description)
             (path / "{}.sub".format(layer.name)).write_text(text)
 
     def write_noop_submit_file(self, dag_dir):

@@ -33,6 +33,7 @@
 #include "directory_util.h"
 
 #include <filesystem>
+#include <system_error>
 
 //-------------------------------------------------------------
 
@@ -180,7 +181,13 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	bool as_root = true;
 	size_t credSize = 0;
 	void * credential = nullptr;
-	if( std::filesystem::exists(token_path) && std::filesystem::is_regular_file(token_path)) {
+	// Non-throwing overloads: token_path is built from the remote peer's
+	// authenticated identity, so a stat error on it (EACCES on a parent
+	// component, ELOOP, ENAMETOOLONG, an NFS/IO hiccup) must not abort the
+	// credd with an uncaught filesystem_error. Any such error returns false
+	// and falls into the "not an existing regular file" bail-out below.
+	std::error_code token_ec;
+	if( std::filesystem::exists(token_path, token_ec) && std::filesystem::is_regular_file(token_path, token_ec)) {
 		bool rv = read_secure_file( token_path.string().c_str(),
 			& credential, & credSize,
 			as_root, SECURE_FILE_VERIFY_ACCESS

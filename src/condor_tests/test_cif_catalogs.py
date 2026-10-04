@@ -472,7 +472,7 @@ def completed_container_jobs(the_container_condor, the_container_user_dir, the_c
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"A1.txt, A2.txt"',
+        "transfer_common_input":    "A1.txt, A2.txt",
 
         "should_transfer_files":    True,
 
@@ -574,7 +574,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert job_evictions == 0
 
     common_transfer_begins = count_shadow_log_lines(
-        the_condor, "Starting common files transfer."
+        the_condor, "Starting common files transfer"
     )
     assert common_transfer_begins == cf_xfers
 

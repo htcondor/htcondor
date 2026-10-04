@@ -137,24 +137,18 @@ executable				= ${jobFile}
 transfer_executable		= false
 should_transfer_files	= true
 universe				= vanilla
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
-
 log						= cmd_drain_scavenging.log
+arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) \$(MaxJobRetirementTime:3600)
 
-queue 3
-
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsBackfill				= True
-MaxJobRetirementTime	= 60
-
-queue 1
-
-arguments				= -u -k ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsBackfill				= False
-MaxJobRetirementTime	= 60
-
-queue 1
-
+# 3 jobs without MaxJobRetirement or backfill flag set
+# then one each with MaxJobRetirementTime of 16 and backfill flag
+queue My.IsBackfill,MaxJobRetirementTime from (
+,
+,
+,
+True,60
+False,60
+)
 ";
 
 my $clusterID;

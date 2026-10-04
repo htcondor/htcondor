@@ -231,10 +231,11 @@ output = $testname.out
 error = $testname.err
 notification = never
 arguments = 3600
-+AccountingGroup=\"a.user\"
-queue 2
-+AccountingGroup=\"b.user\"
-queue 2
++AccountingGroup=\"\$(item)\"
+queue 2 from (
+a.user
+b.user
+)
 ";
 
 my $submit_filename = CondorTest::TempFileName("$testname.submit");

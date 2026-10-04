@@ -91,7 +91,7 @@ system installed with administrative privileges.)  Because the different
 roles in the HTCondor system are all on the same machine, we configure
 all network communications to occur over the loopback device, where we don't
 have to worry about eavesdropping or requiring encryption.  We
-use the ``FS`` method, which depends on the local filesytem, to identify
+use the ``FS`` method, which depends on the local filesystem, to identify
 which user is attempting to connect, and restrict access correspondingly.
 
 The *get_htcondor* tool installs the standard minicondor package from the

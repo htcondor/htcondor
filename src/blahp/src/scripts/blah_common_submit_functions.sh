@@ -511,7 +511,7 @@ function bls_setup_all_files ()
 
   local job_iwd=${bls_opt_workdir}
   if [ "${job_iwd: -1}" != "/" ] ; then
-      $job_iwd="${job_iwd}/"
+      job_iwd="${job_iwd}/"
   fi
 
   # Put executable into inputsandbox (unless in a shared dir)
@@ -615,7 +615,7 @@ function bls_setup_all_files ()
       while read xfile <&4 ; do
           if [ ! -z $xfile  ] ; then
               if [ "$blah_run_in_workdir" == "yes" ] ; then
-                  if [ "${xfile:0:${#job_iwd}}" == "${job_iwd}" -o "${xfile}" == "$(basename ${xfile})" ] ; then
+                  if [ "$(dirname ${xfile})/" == "${job_iwd}" -o "${xfile}" == "$(basename ${xfile})" ] ; then
                       continue
                   fi
                fi

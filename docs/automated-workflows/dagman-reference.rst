@@ -223,11 +223,11 @@ Special Files
         JOBSTATE_LOG filename
 
 :dag-cmd-def:`NODE_STATUS_FILE` (see :ref:`Full Description<node-status-file>`)
-    Inform DAGMan to produce a snapshot status file for the DAG nodes.
+    Inform DAGMan to produce a snapshot status file for the DAG nodes, in ClassAd or JSON format.
 
     .. code-block:: condor-dagman
 
-        NODE_STATUS_FILE filename [minimumUpdateTime] [ALWAYS-UPDATE]
+        NODE_STATUS_FILE filename [minimumUpdateTime] [ALWAYS-UPDATE] [CLASSAD | JSON] [COMPACT]
 
 :dag-cmd-def:`SAVE_POINT_FILE` (see :ref:`Full Description<DAG Save Files>`)
     Inform DAGMan to write a save file the first time the specified node starts.

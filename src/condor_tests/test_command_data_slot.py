@@ -26,7 +26,7 @@ def the_condor( test_dir ):
     with Condor(
         local_dir=local_dir,
         config = {
-            # Turn of FAMILY session, so we can test (for) MATCH.
+            # Turn off FAMILY session, so we can test (for) MATCH.
             "SEC_USE_FAMILY_SESSION":   "FALSE",
 
             # Fix up the other auth levels.
@@ -59,7 +59,7 @@ def the_running_job( test_dir, the_condor, the_common_file ):
         "should_transfer_input":    "YES",
         "request_CPUs":             1,
         "request_memory":           1,
-        "request_disk":             1,
+        "request_disk":             "3M",
         "log":                      test_dir / "the_running_job.log",
         "output":                   test_dir / "the_running_job.out",
         "MY.CommonInputFiles":      f'"{str(the_common_file)}"',

@@ -25,7 +25,10 @@
 #include "reli_sock.h"
 #include "classad_oldnew.h"
 #include "condor_classad.h"
+#include "ipv6_hostname.h"
+#include "condor_sockaddr.h"
 #include <tuple>
+#include <memory>
 
 #ifdef WIN32
 
@@ -41,6 +44,10 @@ int main( int, char ** )
 
 #include <poll.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include <chrono>
 #include <memory>
 #include <vector>
@@ -49,8 +56,12 @@ static const int BLAST_BUF = 256 * 1024;
 
 // Run a bidirectional blast on fd for `seconds`: keep the outbound direction
 // full and drain the inbound direction, returning the inbound throughput in
-// bytes/sec (i.e. the rate at which the peer's data arrives).
-static double blast( int fd, int seconds )
+// bytes/sec (i.e. the rate at which the peer's data arrives) and, in
+// received_out, the exact number of inbound bytes.  Both are reported for human
+// diagnosis; liveness is proven separately by prime(), because this blast is a
+// winner-take-all measurement whose losing direction can deliver zero bytes
+// within the window (see prime()).
+static double blast( int fd, int seconds, uint64_t &received_out )
 {
 	int flags = fcntl(fd, F_GETFL, 0);
 	if( flags >= 0 ) { std::ignore = fcntl(fd, F_SETFL, flags | O_NONBLOCK); }
@@ -82,7 +93,58 @@ static double blast( int fd, int seconds )
 		}
 	}
 	double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+	received_out = received;
 	return secs > 0 ? (double)received / secs : 0.0;
+}
+
+// Prove, before the throughput blast, that at least one byte traverses the relay
+// in EACH direction -- the liveness check that guards against a relay which
+// establishes but pumps only one way.  This CANNOT be read off the blast: the
+// blast is a saturating, winner-take-all bidirectional measurement (worst under
+// concurrent suite load, and systematically lopsided under shared port, where
+// the reply path's buffering gives one direction a head start), so the losing
+// direction can deliver zero bytes *within the fixed measurement window* even
+// though the relay is carrying its data -- the bytes are simply still in flight,
+// backed up in kernel/relay buffers, when the peer closes at end-of-window.
+//
+// prime() runs the instant the splice is up, while both directions are still
+// empty, so the first byte each way flows immediately -- before any winner-take-
+// all can develop.  It is non-blocking and resends continuously, so it is robust
+// to a lost first-byte readiness wakeup (a lone un-retried byte can race the
+// broker's relay-socket registration and strand the handshake).  Returns true
+// once we have received a byte from the peer, which proves the peer->us
+// direction; the peer's own prime() call proves us->peer.  A truly one-way relay
+// makes one side's prime() time out and the bench exits non-zero.
+static bool prime( int fd, int deadline_seconds )
+{
+	int flags = fcntl(fd, F_GETFL, 0);
+	if( flags >= 0 ) { std::ignore = fcntl(fd, F_SETFL, flags | O_NONBLOCK); }
+
+	char out = 'p';
+	char in[64];
+	auto start = std::chrono::steady_clock::now();
+	auto deadline = start + std::chrono::seconds(deadline_seconds);
+
+	while( std::chrono::steady_clock::now() < deadline ) {
+		struct pollfd pfd;
+		pfd.fd = fd;
+		pfd.events = POLLIN | POLLOUT;
+		pfd.revents = 0;
+		int rc = poll(&pfd, 1, 100);
+		if( rc < 0 ) { if( errno == EINTR ) { continue; } return false; }
+		if( pfd.revents & (POLLERR|POLLNVAL|POLLHUP) ) { return false; }
+		if( pfd.revents & POLLOUT ) {
+			ssize_t n = send(fd, &out, 1, 0);
+			if( n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) { return false; }
+		}
+		if( pfd.revents & POLLIN ) {
+			ssize_t n = recv(fd, in, sizeof(in), 0);
+			if( n > 0 ) { return true; }     // a byte from the peer: peer->us is live
+			if( n == 0 ) { return false; }   // peer closed before priming
+			if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) { return false; }
+		}
+	}
+	return false;
 }
 
 // targetRole: register with the broker, wait for the forwarded request, reverse-
@@ -94,6 +156,7 @@ static int targetRole( const char *broker, int seconds, FILE *to_parent )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "target: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
@@ -142,7 +205,8 @@ static int targetRole( const char *broker, int seconds, FILE *to_parent )
 		fprintf(stderr, "target: failed to send reverse-connect hello\n"); return 1;
 	}
 
-	double rate = blast(rc.get_file_desc(), seconds);   // requester -> target
+	uint64_t rbytes = 0;
+	double rate = blast(rc.get_file_desc(), seconds, rbytes);   // requester -> target
 	fprintf(to_parent, "%.6f\n", rate);
 	fflush(to_parent);
 	return 0;
@@ -163,6 +227,7 @@ static int requesterRole( const char *broker, int seconds, FILE *from_target )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_REQUEST, Stream::reli_sock, 20, NULL);
 	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_REQUEST) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
 
 	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
 	ClassAd reqad;
@@ -195,7 +260,8 @@ static int requesterRole( const char *broker, int seconds, FILE *from_target )
 		fprintf(stderr, "requester: failed to read proxied hello\n"); return 1;
 	}
 
-	double tgt_to_req = blast(req->get_file_desc(), seconds);
+	uint64_t tgt_to_req_bytes = 0;
+	double tgt_to_req = blast(req->get_file_desc(), seconds, tgt_to_req_bytes);
 
 	// Second line from the target: the requester->target rate it measured.
 	double req_to_tgt = 0.0;
@@ -221,6 +287,7 @@ static int targetRole_deadbeat( const char *broker, FILE *to_parent )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "target: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
@@ -264,6 +331,7 @@ static int requesterRole_expectReap( const char *broker, FILE *from_target )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *req = ccb.startCommand(CCB_REQUEST, Stream::reli_sock, 20, NULL);
 	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_REQUEST) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
 
 	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
 	ClassAd reqad;
@@ -319,7 +387,7 @@ static Sock *sendStreamingRequest( const char *broker, const std::string &ccbid,
 	free(cid);
 	req->encode();
 	if( !putClassAd(req, reqad) || !req->end_of_message() ) {
-		fprintf(stderr, "cap-test: failed to send request\n"); return nullptr;
+		fprintf(stderr, "cap-test: failed to send request\n"); delete req; return nullptr;
 	}
 	return req;
 }
@@ -333,6 +401,7 @@ static int capTest( const char *broker )
 	Daemon ccb(DT_COLLECTOR, broker, NULL);
 	Sock *reg = ccb.startCommand(CCB_REGISTER, Stream::reli_sock, 20, NULL);
 	if( !reg ) { fprintf(stderr, "cap-test: startCommand(CCB_REGISTER) failed\n"); return 1; }
+	std::unique_ptr<Sock> reg_owner(reg);
 	ClassAd ad;
 	ad.Assign(ATTR_COMMAND, CCB_REGISTER);
 	ad.Assign(ATTR_NAME, "ccb_proxy_bench-cap-target");
@@ -352,6 +421,7 @@ static int capTest( const char *broker )
 	std::shared_ptr<Daemon> hold1;
 	Sock *req1 = sendStreamingRequest(broker, ccbid, hold1);
 	if( !req1 ) { return 1; }
+	std::unique_ptr<Sock> req1_owner(req1);
 
 	// Let the broker register the pending session before we probe the limit.
 	sleep(2);
@@ -360,6 +430,7 @@ static int capTest( const char *broker )
 	std::shared_ptr<Daemon> hold2;
 	Sock *req2 = sendStreamingRequest(broker, ccbid, hold2);
 	if( !req2 ) { return 1; }
+	std::unique_ptr<Sock> req2_owner(req2);
 	req2->timeout(30);
 	ClassAd reply;
 	req2->decode();
@@ -376,19 +447,169 @@ static int capTest( const char *broker )
 	return 0;
 }
 
+// targetRole_listener: open a plain TCP listener, advertise its address to the
+// parent, accept the connection the broker dials in on our behalf, and blast.
+// Used by outbound-proxy (CCB_PROXY_CONNECT) mode: unlike streaming, the target
+// does not register or reverse-connect -- the broker dials THIS listener directly.
+static int targetRole_listener( int seconds, FILE *to_parent )
+{
+	int lfd = socket(AF_INET, SOCK_STREAM, 0);
+	if( lfd < 0 ) { fprintf(stderr, "listener: socket() failed\n"); return 1; }
+	int one = 1;
+	int r = setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+	if (r != 0) {
+		fprintf(stderr, "listener: setsockopt(SO_REUSEADDR) failed\n");
+	}
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = 0;   // ephemeral
+	if( bind(lfd, (struct sockaddr *)&sin, sizeof(sin)) != 0 ) {
+		close(lfd);
+		fprintf(stderr, "listener: bind() failed\n");
+		return 1;
+	}
+	socklen_t slen = sizeof(sin);
+	if( getsockname(lfd, (struct sockaddr *)&sin, &slen) != 0 ) {
+		fprintf(stderr, "listener: getsockname() failed\n");
+		close(lfd);
+		return 1;
+	}
+	int port = ntohs(sin.sin_port);
+	if( listen(lfd, 1) != 0 ) { fprintf(stderr, "listener: listen() failed\n"); return 1; }
+
+	// Advertise a sinful the broker can dial (its primary local IPv4 address).
+	std::string ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+	fprintf(to_parent, "<%s:%d>\n", ip.c_str(), port);
+	fflush(to_parent);
+
+	int cfd = accept(lfd, NULL, NULL);
+	if( cfd < 0 ) { fprintf(stderr, "listener: accept() failed\n"); return 1; }
+	close(lfd);
+		// Match the TCP_NODELAY that CEDAR sockets set; without it Nagle on this
+		// raw socket throttles our sends and makes the bidirectional measurement
+		// lopsided.
+	int nodelay = 1;
+	setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+		// Prove both relay directions are live before the (winner-take-all) blast.
+	if( !prime(cfd, 20) ) {
+		fprintf(stderr, "listener: relay liveness priming failed (req->tgt never arrived)\n");
+		close(cfd); return 1;
+	}
+
+	uint64_t rbytes = 0;
+	double rate = blast(cfd, seconds, rbytes);   // requester -> target
+		// Report both the rate and the exact received-byte count.  These are printed
+		// for humans/log diagnosis only -- liveness is enforced by prime() above, not
+		// by these numbers: the raw bidirectional blast is winner-take-all, so the
+		// losing direction can deliver zero bytes within the window even though the
+		// relay carries it.
+	fprintf(to_parent, "%.6f %llu\n", rate, (unsigned long long)rbytes);
+	fflush(to_parent);
+	close(cfd);
+	return 0;
+}
+
+// requesterRole_outbound: ask the broker to dial the listener on our behalf
+// (CCB_PROXY_CONNECT) and blast over the spliced socket, reporting throughput.
+// If target_override is non-empty, ask the broker to dial THAT address instead of
+// the listener's -- used by the SSRF-guard tests to point the request at a denied
+// target (e.g. a loopback IP or a name that resolves to loopback); such a request
+// is refused before any dial, so the listener child is simply released afterward.
+static int requesterRole_outbound( const char *broker, int seconds, FILE *from_target,
+								   int ttl, const char *target_override )
+{
+	char line[256];
+	if( !fgets(line, sizeof(line), from_target) ) {
+		fprintf(stderr, "requester: listener failed before advertising\n"); return 1;
+	}
+	std::string target(line);
+	while( !target.empty() && (target.back()=='\n' || target.back()=='\r') ) { target.pop_back(); }
+	if( target_override && *target_override ) { target = target_override; }
+
+	Daemon ccb(DT_COLLECTOR, broker, NULL);
+	Sock *req = ccb.startCommand(CCB_PROXY_CONNECT, Stream::reli_sock, 20, NULL);
+	if( !req ) { fprintf(stderr, "requester: startCommand(CCB_PROXY_CONNECT) failed\n"); return 1; }
+	std::unique_ptr<Sock> req_owner(req);
+
+	char *connect_id = Condor_Crypt_Base::randomHexKey(20);
+	ClassAd reqad;
+	reqad.Assign(ATTR_MY_ADDRESS, target);   // the address the broker should dial
+	reqad.Assign(ATTR_CLAIM_ID, connect_id);
+	reqad.Assign(ATTR_NAME, "ccb_proxy_bench-outbound-requester");
+	if( ttl >= 0 ) { reqad.Assign(ATTR_CCB_TTL, ttl); }   // let tests exercise TTL exhaustion
+	free(connect_id);
+	req->encode();
+	if( !putClassAd(req, reqad) || !req->end_of_message() ) {
+		fprintf(stderr, "requester: failed to send proxy-connect request\n"); return 1;
+	}
+
+	ClassAd reply;
+	req->decode();
+	if( !getClassAd(req, reply) || !req->end_of_message() ) {
+		fprintf(stderr, "requester: failed to read reply\n"); return 1;
+	}
+	bool result = false;
+	reply.LookupBool(ATTR_RESULT, result);
+	if( !result ) {
+		std::string err; reply.LookupString(ATTR_ERROR_STRING, err);
+		fprintf(stderr, "requester: broker refused: %s\n", err.c_str()); return 1;
+	}
+
+	// Unlike streaming, there is no reverse-connect hello in outbound mode: after
+	// {Result:true} the socket is a raw pipe to the target.
+		// Prove both relay directions are live before the (winner-take-all) blast.
+	if( !prime(req->get_file_desc(), 20) ) {
+		fprintf(stderr, "requester: relay liveness priming failed (tgt->req never arrived)\n");
+		return 1;
+	}
+	uint64_t tgt_to_req_bytes = 0;
+	double tgt_to_req = blast(req->get_file_desc(), seconds, tgt_to_req_bytes);
+
+	double req_to_tgt = 0.0;
+	uint64_t req_to_tgt_bytes = 0;
+	if( fgets(line, sizeof(line), from_target) ) {
+		unsigned long long b = 0;
+		sscanf(line, "%lf %llu", &req_to_tgt, &b);
+		req_to_tgt_bytes = (uint64_t)b;
+	}
+
+	auto gbits = [](double bps){ return bps * 8.0 / 1e9; };
+	auto mib   = [](double bps){ return bps / (1024.0*1024.0); };
+		// The rates and trailing "[N bytes]" are informational (they make the
+		// winner-take-all lopsidedness visible in the logs).  The test does NOT assert
+		// on them; bidirectional liveness was proven by prime() before the blast.
+	printf("CCB outbound-proxy relay throughput over %ds:\n", seconds);
+	printf("  requester -> target : %8.1f MiB/s  (%.2f Gbps)  [%llu bytes]\n",
+		   mib(req_to_tgt), gbits(req_to_tgt), (unsigned long long)req_to_tgt_bytes);
+	printf("  target -> requester : %8.1f MiB/s  (%.2f Gbps)  [%llu bytes]\n",
+		   mib(tgt_to_req), gbits(tgt_to_req), (unsigned long long)tgt_to_req_bytes);
+	printf("  aggregate           : %8.1f MiB/s  (%.2f Gbps)\n",
+		   mib(req_to_tgt+tgt_to_req), gbits(req_to_tgt+tgt_to_req));
+	return 0;
+}
+
 int main( int argc, char **argv )
 {
 	if( argc < 2 ) {
-		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test]\n", argv[0]);
+		fprintf(stderr, "usage: %s <broker-sinful> [seconds | --no-reverse-connect | --cap-test | --outbound [--ttl N] [--target <sinful>]]\n", argv[0]);
 		return 2;
 	}
 	const char *broker = argv[1];
 	bool reaper_mode = false;
 	bool cap_mode = false;
+	bool outbound_mode = false;
+	int outbound_ttl = -1;   // -1 => let the broker apply its own default
+	const char *outbound_target = nullptr;   // override the dialed target (SSRF tests)
 	int seconds = 5;
 	for( int i = 2; i < argc; i++ ) {
 		if( std::string(argv[i]) == "--no-reverse-connect" ) { reaper_mode = true; }
 		else if( std::string(argv[i]) == "--cap-test" ) { cap_mode = true; }
+		else if( std::string(argv[i]) == "--outbound" ) { outbound_mode = true; }
+		else if( std::string(argv[i]) == "--ttl" && i+1 < argc ) { outbound_ttl = atoi(argv[++i]); }
+		else if( std::string(argv[i]) == "--target" && i+1 < argc ) { outbound_target = argv[++i]; }
 		else { seconds = atoi(argv[i]); }
 	}
 
@@ -415,6 +636,8 @@ int main( int argc, char **argv )
 		FILE *to_parent = fdopen(fds[1], "w");
 		int rc = reaper_mode
 			? (to_parent ? targetRole_deadbeat(broker, to_parent) : 1)
+			: outbound_mode
+			? (to_parent ? targetRole_listener(seconds, to_parent) : 1)
 			: (to_parent ? targetRole(broker, seconds, to_parent) : 1);
 		if( to_parent ) { fclose(to_parent); }
 		_exit(rc);
@@ -423,6 +646,19 @@ int main( int argc, char **argv )
 	// Parent: the requester.
 	close(fds[1]);
 	FILE *from_target = fdopen(fds[0], "r");
+
+	if( outbound_mode ) {
+		int rc = from_target ? requesterRole_outbound(broker, seconds, from_target, outbound_ttl, outbound_target) : 1;
+		if( from_target ) { fclose(from_target); }
+			// If the broker refused (e.g. TTL exhausted or target not allow-listed),
+			// the listener child is still blocked in accept(); release it so waitpid
+			// does not hang.
+		if( rc != 0 ) { kill(pid, SIGTERM); }
+		int status = 0;
+		waitpid(pid, &status, 0);
+		if( rc == 0 && !(WIFEXITED(status) && WEXITSTATUS(status) == 0) ) { rc = 1; }
+		return rc;
+	}
 
 	if( reaper_mode ) {
 		int rc = from_target ? requesterRole_expectReap(broker, from_target) : 1;

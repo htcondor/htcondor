@@ -131,29 +131,22 @@ executable				= ${jobFile}
 transfer_executable		= false
 should_transfer_files	= true
 universe				= vanilla
-
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
-MaxJobRetirementTime	= 60
-
 log						= cmd_drain_scavenging_vacation.log
 
-Requirements			= (NumJobStarts?:0) < 1
-queue 3
+arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) \$(arg_timeout)
 
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsInterruptible		= true
-MaxJobRetirementTime	= 3600
 # prevent job from restarting after eviction before we can kill it
 Requirements			= (NumJobStarts?:0) < 1
 
-queue 1
-
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-+IsInterruptible		= false
-MaxJobRetirementTime	= 60
-
-queue 1
-
+# 3 jobs with no interruptable flag, and MaxJobRetirementTime of 60
+# then one job each with the interruptable flag
+queue MY.IsInterruptible,MaxJobRetirementTime,arg_timeout from (
+,60,3600
+,60,3600
+,60,3600
+true,3600,60
+false,60,60
+)
 ";
 
 my $clusterID;

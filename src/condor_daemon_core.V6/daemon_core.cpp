@@ -116,6 +116,7 @@ const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
 time_t DaemonCore::m_startup_time = time(NULL);
+time_t DaemonCore::m_reconfig_time = DaemonCore::m_startup_time;
 
 #define CREATE_PROCESS_FAILED_CHDIR 1
 
@@ -3041,6 +3042,7 @@ DaemonCore::reconfig(void) {
 	// NOTE: on reconfig, refreshDNS() will have already been called
 	// by the time we get here, because it needs to be called early
 	// in the process.
+	m_reconfig_time = time(NULL);
 
 	// This is the compatibility layer on top of new ClassAds.
 	// A few configuration parameters control its behavior.
@@ -3056,6 +3058,9 @@ DaemonCore::reconfig(void) {
 	SecMan *secman = getSecMan();
 	secman->reconfig();
 	secman->getIpVerify()->Init();
+
+		// the connect path caches OUTBOUND_CCB_ADDRESS; re-read it on reconfig
+	Sock::invalidateOutboundCCBAddressCache();
 
         // invoke reconfig method on our class to handle timer events
     t.reconfig();
@@ -3189,6 +3194,24 @@ DaemonCore::reconfig(void) {
 		}
 
 		char *ccb_addresses = param("CCB_ADDRESS");
+		if( !ccb_addresses || !ccb_addresses[0] ) {
+				// No explicit inbound CCB.  If this daemon tunnels its *outbound*
+				// connections through a CCB (OUTBOUND_CCB_ADDRESS), it almost certainly
+				// cannot be dialed directly either, so default its *inbound* CCB to that
+				// same broker: the inside CCB serves both directions and stamps the
+				// tunnel nesting into the contact it hands out.  Under the master this is
+				// already injected (and gated on the tunnel being ready); this makes a
+				// daemon started standalone self-configure the same way.  An explicit
+				// CCB_ADDRESS overrides.
+			free( ccb_addresses );
+			ccb_addresses = param("OUTBOUND_CCB_ADDRESS");
+			if( ccb_addresses && ccb_addresses[0] ) {
+				dprintf( D_ALWAYS,
+						 "No CCB_ADDRESS configured; defaulting inbound CCB to "
+						 "OUTBOUND_CCB_ADDRESS=%s (outbound-CCB tunnel).\n",
+						 ccb_addresses );
+			}
+		}
 		if( m_shared_port_endpoint ) {
 				// if we are using a shared port, then we don't need our
 				// own ccb listener; SharedPortServer will have its own
@@ -9493,8 +9516,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// See below, just after the loop
 
 		if( it->has_relisock() && m_shared_port_endpoint ) {
-				// SOAP-enabled daemons may have both a shared port and
-				// a fixed TCP port for receiving SOAP commands
+				// A daemon may have both a shared port and a fixed TCP
+				// command socket (e.g. for HTTP requests).
 			dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
 					 it->rsock()->get_sinful() );
 		}
@@ -11240,7 +11263,7 @@ DaemonCore::initCollectorList() {
 		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create(NULL, adSeq);
+	m_collector_list = CollectorList::create(NULL, adSeq, m_startup_time, m_reconfig_time);
 
 	// This param has legal values of TRUE, FALSE, and AUTO
 	// but we only need to check for TRUE here because TRUE means we

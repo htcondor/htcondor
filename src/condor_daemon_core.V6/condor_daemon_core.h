@@ -63,6 +63,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <optional>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -205,23 +206,26 @@ const int DC_STATUS_OOM_KILLED = (1 << 24);
 struct FamilyInfo {
 
 	int max_snapshot_interval{-1};
-	const char* login{nullptr};
+    int cgroup_cpu_shares{0};
+    bool want_pid_namespace{false};
+    bool want_net_namespace{false};
+    bool cgroup_active {false}; // are we actually using a cgroup?
+
+    const char* login{nullptr};
 #if defined(LINUX)
 	gid_t* group_ptr{nullptr};
 #endif
-	bool want_pid_namespace{false};
-	bool want_net_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
 	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
-	int cgroup_cpu_shares{0};
+	std::optional<uint64_t> cgroup_zswap_max; // limit on compressed swap (memory.zswap.max).
+											 // If unset, nothing is written to the control file.
 #if defined(LINUX)
 	std::vector<dev_t> cgroup_hide_devices;
 #endif
-	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
 };
@@ -1741,6 +1745,7 @@ class DaemonCore : public Service
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
 	time_t getStartTime() const {return m_startup_time;}
+	time_t getReconfigTime() const {return m_reconfig_time;}
 
 		/**
 		   Indicates if this daemon wants to be restarted by its
@@ -2433,6 +2438,7 @@ class DaemonCore : public Service
 
 	static unsigned m_remote_admin_seq;
 	static time_t m_startup_time;
+	static time_t m_reconfig_time;
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;

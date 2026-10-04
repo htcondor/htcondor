@@ -259,28 +259,20 @@ RegisterResult(check_pr(\%data,$option,\%Attr),check_name => $option, test_name 
 
 ########################################################
 $option = "config -nobatch";
-my $local_config = `condor_config_val LOCAL_CONFIG_FILE`;
-$local_config =~ s/\n//;
-print "local config file is $local_config\n";
-
-my $local_dir = `condor_config_val LOCAL_DIR`;
-$local_dir =~ s/\n//;
-my $extra_config = "$local_dir/$testname.cfg";
-open (FHOUT, ">>$local_config");
-print FHOUT "include ifexist : $extra_config\n";
-close FHOUT;
-
-print "LOCAL_DIR is $local_dir\n";
-print "Creating temporary extra config file: '$extra_config'\n";
-
-open (FHOUT, ">$extra_config");
-print FHOUT "Q_DEFAULT_PRINT_FORMAT_FILE=q_totals.cpf\n";
-print FHOUT "Q_DEFAULT_RUN_PRINT_FORMAT_FILE=normal.cpf\n";
-print FHOUT "Q_DEFAULT_HOLD_PRINT_FORMAT_FILE=q_totals.cpf\n";
-print FHOUT "Q_DEFAULT_GOODPUT_PRINT_FORMAT_FILE=normal.cpf\n";
-print FHOUT "Q_DEFAULT_GRID_PRINT_FORMAT_FILE=normal.cpf\n";
-
-close FHOUT;
+# Set the Q_DEFAULT_*_PRINT_FORMAT_FILE knobs with _CONDOR_ environment
+# overrides rather than by editing a config file.  Every test in a batlab run
+# shares one HTCondor install, so appending to $(LOCAL_CONFIG_FILE) here leaks
+# these settings into the personal condor of any test that happens to derive
+# its config while we hold them, which breaks it in confusing ways (a
+# NOHEADER NOTITLE format file makes condor_q print only the totals line).
+# condor_q reads _CONDOR_<param> at the same param() call as the config file,
+# so this covers the same code and cannot escape this process.
+print "Setting print format file knobs in the environment\n";
+$ENV{_CONDOR_Q_DEFAULT_PRINT_FORMAT_FILE} = "q_totals.cpf";
+$ENV{_CONDOR_Q_DEFAULT_RUN_PRINT_FORMAT_FILE} = "normal.cpf";
+$ENV{_CONDOR_Q_DEFAULT_HOLD_PRINT_FORMAT_FILE} = "q_totals.cpf";
+$ENV{_CONDOR_Q_DEFAULT_GOODPUT_PRINT_FORMAT_FILE} = "normal.cpf";
+$ENV{_CONDOR_Q_DEFAULT_GRID_PRINT_FORMAT_FILE} = "normal.cpf";
 
 ($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,"-run -nobatch");
 %data = %{$data_ref};
@@ -305,14 +297,8 @@ RegisterResult($result,check_name=>$option, test_name=>$testname);
 ############################################################
 $option = "config -batch_is_default=false";
 
-open (FHOUT, ">$extra_config");
-print FHOUT "CONDOR_Q_DASH_BATCH_IS_DEFAULT=false\n";
-print FHOUT "Q_DEFAULT_PRINT_FORMAT_FILE=q_totals.cpf\n";
-print FHOUT "Q_DEFAULT_RUN_PRINT_FORMAT_FILE=normal.cpf\n";
-print FHOUT "Q_DEFAULT_HOLD_PRINT_FORMAT_FILE=q_totals.cpf\n";
-print FHOUT "Q_DEFAULT_GOODPUT_PRINT_FORMAT_FILE=normal.cpf\n";
-print FHOUT "Q_DEFAULT_GRID_PRINT_FORMAT_FILE=normal.cpf\n";
-close FHOUT;
+# keep the print format file knobs from above, and turn off -batch by default
+$ENV{_CONDOR_CONDOR_Q_DASH_BATCH_IS_DEFAULT} = "false";
 
 ($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,"-run");
 %data = %{$data_ref};
@@ -333,8 +319,13 @@ $result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary
 
 RegisterResult($result,check_name=>$option, test_name=>$testname);
 
-print "deleting extra config file '$extra_config'\n";
-unlink ($extra_config);
+print "clearing print format file knobs from the environment\n";
+delete $ENV{_CONDOR_Q_DEFAULT_PRINT_FORMAT_FILE};
+delete $ENV{_CONDOR_Q_DEFAULT_RUN_PRINT_FORMAT_FILE};
+delete $ENV{_CONDOR_Q_DEFAULT_HOLD_PRINT_FORMAT_FILE};
+delete $ENV{_CONDOR_Q_DEFAULT_GOODPUT_PRINT_FORMAT_FILE};
+delete $ENV{_CONDOR_Q_DEFAULT_GRID_PRINT_FORMAT_FILE};
+delete $ENV{_CONDOR_CONDOR_Q_DASH_BATCH_IS_DEFAULT};
 
 CondorTest::EndTest();
 exit(0);

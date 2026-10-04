@@ -2270,7 +2270,8 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// because you can theoretically run more than one, but we'll ignore
 	// that for now (and the startd doesn't produce the list itself).
 	if(! m_job_update_attrs_set) {
-		m_job_update_attrs.emplace_back( ATTR_CPUS_USAGE );
+		// cannot do ATTR_CPUS_USAGE here, we don't want the STARTDs value
+		// because it is over a short interval and includes things other than the job.
 
 		std::string scjl;
 		if( param( scjl, "STARTD_CRON_JOBLIST" ) ) {

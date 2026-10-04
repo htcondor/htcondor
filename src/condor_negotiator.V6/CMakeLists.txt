@@ -28,7 +28,7 @@ NegotiatorPluginManager.cpp
 
 if (UNIX)
 		set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp GroupEntry.cpp hgq_group_tester.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-endif(UNIX)
+endif()
 
 condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
   LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}" )

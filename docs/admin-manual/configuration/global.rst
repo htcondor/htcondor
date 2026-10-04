@@ -512,7 +512,12 @@ and `shared_fs_config_options`_.
 
 :macro-def:`<SUBSYS>_DAEMON_HISTORY`
     A path representing a file for the daemon specified by :macro:`SUBSYSTEM`
-    to periodically write ClassAd records into.
+    to periodically write ClassAd records into. ``SCHEDD_DAEMON_HISTORY``
+    defaults to ``$(SPOOL)/schedd_daemon_history``, so the *condor_schedd*
+    keeps this history unless the knob is set to nothing. Setting it for a
+    daemon that does not write a daemon history has no effect. See
+    :ref:`admin-manual/ap-policy-configuration:recording ap performance over
+    time` for what the records contain and how to read them.
 
     .. note::
 
@@ -1972,6 +1977,15 @@ More information about networking in HTCondor can be found in
     streaming request to connect back before canceling the connection reporting
     a failure. The default is 300 (5 minutes). Set to 0 to disable handshake
     reaping.
+
+:macro-def:`CCB_TUNNEL_REGISTRATION_TIMEOUT[Networking]`
+    The number of seconds a tunneling inside CCB server will hold a registrant's
+    registration reply while waiting to complete its own upstream registration.
+    The reply is deferred so that the registrant only ever learns a reachable,
+    nested tunnel contact; if the tunnel has not come up within this time, the
+    broker disconnects the waiting registrant, which then retries the
+    registration later. The default is 300 (5 minutes). Set to 0 to wait
+    indefinitely.
 
 :macro-def:`CCB_SERVER_MAX_STREAMING_SESSIONS[Networking]`
     The maximum number of concurrent CCB streaming (proxy) sessions a broker will
