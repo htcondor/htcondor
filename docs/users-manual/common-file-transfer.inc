@@ -43,7 +43,11 @@ by the HTCondor system, but it will *not* result in your job running on any
 fewer resources: HTCondor will automatically fall back to uncommon file
 transfer as necessary.
 
-Using common files will never increase the resource requirements for your job.
+Using common files will never increase the non-disk resource requirements for
+your jobs.  If a job's disk request has been specified very parsiminously,
+it may need to be increased by a small amount because EPs by default round
+disk requests up to the nearest megabyte.  Jobs which don't need every
+megabyte of their requested disk will not be affected.
 
 Common Container Images
 """""""""""""""""""""""

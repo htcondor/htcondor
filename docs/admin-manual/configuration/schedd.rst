@@ -1558,12 +1558,23 @@ These macros control the *condor_schedd*.
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:  **<user>**, **<condor>** or **<%username%>**
 
+:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
+    When an EP offers its slots directly to this *condor_schedd* (see
+    :ref:`direct-attach`), and the EP's authenticated identity does not have
+    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
+    by that authenticated identity to the offered slots.  Setting this knob to
+    ``True`` disables that restriction, allowing any EP with ``WRITE``
+    authorization to run any user's jobs.  Do not set this unless every
+    identity with ``WRITE`` access to this AP is trusted to do so.
+
+    Defaults to ``False``.
+
 :macro-def:`FORBID_COMMON_FILE_TRANSFER`
     Common file transfer is a new feature, and while it ought to work for
     everyone everywhere under the proper circumstances
     (see :ref:`common_file_transfer`), we may have missed something.
 
-    Defaults to true.  Setting this knob to false will prevent the schedd
+    Defaults to false.  Setting this knob to true will prevent the schedd
     from trying to use common files; instead, it will fall back on normal
     file transfer for jobs which define common files.
 
@@ -1612,15 +1623,4 @@ These macros control the *condor_schedd*.
     no output is lost as a result of giving up on the data slot quickly, so
     we want to give other jobs using the same common file(s) a chance to
     run elsewhere.
-
-:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
-    When an EP offers its slots directly to this *condor_schedd* (see
-    :ref:`direct-attach`), and the EP's authenticated identity does not have
-    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
-    by that authenticated identity to the offered slots.  Setting this knob to
-    ``True`` disables that restriction, allowing any EP with ``WRITE``
-    authorization to run any user's jobs.  Do not set this unless every
-    identity with ``WRITE`` access to this AP is trusted to do so.
-
-    Defaults to ``False``.
 
