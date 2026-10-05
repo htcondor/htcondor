@@ -17,7 +17,7 @@
   container start may take some time, so this makes various statistics
   more accurate, and allows :tool:`condor_ssh_to_job` to have a better
   idea when the container is actually running.
-  :jira:`39661
+  :jira:`3966`
 
 - :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
   attribute that is true for NVIDIA GPUs that share their memory with the
