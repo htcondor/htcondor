@@ -354,7 +354,9 @@ def kill_starter_shadow_log(kill_starter_condor, kill_starter_job):
 
     # Stop the startd so that the shadow's DEACTIVATE_CLAIM fails.
     text = kill_starter_condor.startd_log.path.read_text()
-    startd_pid = int(re.findall(r"\*\* PID = (\d+)", text)[-1])
+    pid_matches = re.findall(r"\*\* PID = (\d+)", text)
+    assert pid_matches, "Could not find startd PID in startd log"
+    startd_pid = int(pid_matches[-1])
     logger.info(f"Stopping startd (pid {startd_pid})")
     os.kill(startd_pid, signal.SIGSTOP)
 
