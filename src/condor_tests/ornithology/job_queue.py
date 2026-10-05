@@ -141,6 +141,7 @@ class JobQueue:
         self,
         expected_events: EXPECTED_EVENTS,
         unexpected_events: Optional[EXPECTED_EVENTS] = None,
+        abort_events: Optional[EXPECTED_EVENTS] = None,
         timeout: int = 120,
     ):
         """
@@ -163,18 +164,26 @@ class JobQueue:
         ----------
         expected_events
         unexpected_events
+        abort_events
         timeout
 
         Returns
         -------
         all_good : bool
             ``True`` is all events occurred and no unexpected events occurred.
-            ``False`` if it timed out, or if any unexpected events occurred.
+            ``False`` if it timed out, or if any unexpected events occurred,
+            or if an abort event occurred.
         """
         all_good = True
 
         if unexpected_events is None:
             unexpected_events = {}
+        if abort_events is None:
+            abort_events = {}
+
+        abort_events = {
+            jobid: set(events) for jobid, events in abort_events.items()
+        }
 
         unexpected_events = {
             jobid: set(events) for jobid, events in unexpected_events.items()
@@ -202,6 +211,10 @@ class JobQueue:
                 for jobid, event in transaction:
                     if jobid not in jobids:
                         continue
+
+                    if event in abort_events.get(jobid, ()):
+                        logger.error("Job queue event wait ending due to abort event.")
+                        return False
 
                     if event in unexpected_events.get(jobid, ()):
                         logger.error(
@@ -281,8 +294,13 @@ class JobQueue:
             },
             unexpected_events={
                 job_id: {
-                    SetJobStatus(jobs.JobStatus.HELD),
                     SetJobStatus(jobs.JobStatus.SUSPENDED),
+                }
+                for job_id in job_ids
+            },
+            abort_events={
+                job_id: {
+                    SetJobStatus(jobs.JobStatus.HELD),
                     SetJobStatus(jobs.JobStatus.REMOVED),
                 }
                 for job_id in job_ids

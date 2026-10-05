@@ -151,6 +151,7 @@ extern char *DebugFile;
 extern char *DebugLock;
 
 extern std::vector<std::string> ocu_super_users;
+extern bool SlotBundlesEnabled;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -456,6 +457,10 @@ struct job_data_transfer_t {
 	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
+//
+// I'm not sure we're managing these as well as we think, either.
+//
+
 match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY & jobid,
 					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg )
@@ -470,6 +475,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 	, claim_id(strdup(the_claim_id))
 	, claim_id_parser(claim_id)
 {
+	scheduler.all_match_recs.insert(this);
 
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -549,6 +555,8 @@ match_rec::makeDescription() {
 
 match_rec::~match_rec()
 {
+	scheduler.all_match_recs.erase(this);
+
 	if( peer ) {
 		free( peer );
 		peer = nullptr;
@@ -901,6 +909,244 @@ Scheduler::getOCU(int ocu_id) {
 		}
 		return nullptr;
 	}
+
+// Look up the slot bundle defined by a job cluster, if that cluster is one.
+BundleRequest *
+Scheduler::getBundle(int cluster) {
+	auto it = m_bundles.find(cluster);
+	return (it == m_bundles.end()) ? nullptr : &it->second;
+}
+
+// True if this job asked to be part of a slot bundle ("+IsBundle = true") and
+// this schedd honors that.  A bundle grabs slots off-the-books at the best
+// possible priority and holds them until all of its jobs can run, so the
+// feature is off unless ENABLE_SLOT_BUNDLES turns it on; where it is off the
+// marker is simply ignored and the jobs negotiate normally.
+bool
+jobIsBundleJob(JobQueueJob * job)
+{
+	bool is_bundle = false;
+	if ( ! job || ! job->LookupBool(ATTR_IS_BUNDLE, is_bundle) || ! is_bundle) {
+		return false;
+	}
+	if ( ! SlotBundlesEnabled) {
+		dprintf(D_FULLDEBUG, "Job %d.%d asked for %s but ENABLE_SLOT_BUNDLES is false; ignoring\n",
+			job->jid.cluster, job->jid.proc, ATTR_IS_BUNDLE);
+		return false;
+	}
+	return true;
+}
+
+// --- Bundle census -------------------------------------------------------
+// Bundles are discovered by walking the job queue rather than by an explicit
+// create step, so every count_jobs() pass recomputes how many slots each
+// bundle wants.  A cluster of jobs marked IsBundle *is* the bundle.
+
+// Get (creating if need be) the bundle for this cluster.
+BundleRequest &
+Scheduler::makeBundle(int cluster, const OwnerInfo * owner)
+{
+	BundleRequest & bundle = m_bundles[cluster];
+	if (bundle.cluster == 0) {
+		// First time we have seen this cluster: it is a new bundle.
+		bundle.cluster = cluster;
+		formatstr(bundle.bundle_id, "%s#%d", Name ? Name : "schedd", cluster);
+		if (owner) { bundle.owner = owner->Name(); }
+		// Take the ordering key from the job queue rather than from the clock,
+		// so that a schedd restart rebuilds the same order it had before.
+		int qdate = 0;
+		if (GetAttributeInt(cluster, -1, ATTR_Q_DATE, &qdate) >= 0 && qdate > 0) {
+			bundle.qdate = qdate;
+		} else {
+			// No QDate to be had; treat it as brand new, which sorts it last.
+			bundle.qdate = time(nullptr);
+		}
+		dprintf(D_ALWAYS, "Job cluster %d is slot bundle %s\n",
+			cluster, bundle.bundle_id.c_str());
+	}
+	return bundle;
+}
+
+void
+Scheduler::beginBundleCensus()
+{
+	for (auto &[cluster, bundle]: m_bundles) {
+		bundle.census = 0;
+		bundle.rep_jid = {-1,-1};
+	}
+}
+
+// Called once per live (idle or running) job of a bundle cluster.
+void
+Scheduler::countBundleJob(JobQueueJob * job)
+{
+	BundleRequest & bundle = makeBundle(job->jid.cluster, job->ownerinfo);
+	bundle.census += 1;
+	if ( ! bundle.rep_jid.isJobKey()) {
+		// Any live job of the cluster will do as the resource-request
+		// template; they all match one request by construction.
+		bundle.rep_jid = job->jid;
+	}
+}
+
+void
+Scheduler::endBundleCensus()
+{
+	// Reap bundle claims whose bundle no longer exists.  releaseBundleClaims()
+	// only ever walks claims belonging to a bundle still in m_bundles, so a
+	// claim orphaned by its bundle disappearing -- the cluster is removed
+	// between the request going out and the match coming back -- would
+	// otherwise be held idle until the schedd restarts, since a bundle claim is
+	// also exempt from the ordinary "out of jobs, relinquish" path.
+	std::vector<match_rec *> orphans;
+	for (auto & [claim_id, mrec] : matches) {
+		if (mrec->is_bundle && ! mrec->shadowRec &&
+			m_bundles.find(mrec->bundle_cluster) == m_bundles.end()) {
+			orphans.push_back(mrec);
+		}
+	}
+	for (match_rec * mrec : orphans) {
+		dprintf(D_ALWAYS, "Releasing claim %s: its slot bundle (cluster %d) is gone\n",
+			mrec->description(), mrec->bundle_cluster);
+		DelMrec(mrec);
+	}
+
+	for (auto it = m_bundles.begin(); it != m_bundles.end(); ) {
+		BundleRequest & bundle = it->second;
+		int old_requested = bundle.num_requested;
+		bundle.num_requested = bundle.census;
+
+		if (bundle.num_requested <= 0) {
+			// Every job of the bundle has left the queue.  Give back what we
+			// were holding for it.  A claim whose job is still shutting down
+			// is left alone; it comes back to us idle when its shadow exits
+			// and the next census releases it, so keep the bundle around
+			// until it is holding nothing.
+			int released = releaseBundleClaims(bundle, INT_MAX);
+			if (bundle.num_satisfied + bundle.num_inflight > 0) {
+				dprintf(D_FULLDEBUG, "Slot bundle %s is done but still holds %d claim(s)\n",
+					bundle.bundle_id.c_str(), bundle.num_satisfied + bundle.num_inflight);
+				++it;
+				continue;
+			}
+			dprintf(D_ALWAYS, "Slot bundle %s is done; released %d held claim(s)\n",
+				bundle.bundle_id.c_str(), released);
+			it = m_bundles.erase(it);
+			continue;
+		}
+
+		// Some of the bundle's jobs finished: hand their slots back.
+		int excess = bundle.num_satisfied - bundle.num_requested;
+		if (excess > 0) {
+			int released = releaseBundleClaims(bundle, excess);
+			dprintf(D_ALWAYS, "Slot bundle %s shrank from %d to %d slots; released %d claim(s)\n",
+				bundle.bundle_id.c_str(), old_requested, bundle.num_requested, released);
+		}
+
+		// Publish the bundle's progress on the cluster ad so it is visible
+		// with condor_q.  Only write on change; this runs every count_jobs().
+		int published = 0;
+		GetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_REQUESTED, &published);
+		if (published != bundle.num_requested) {
+			SetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_REQUESTED, bundle.num_requested, NONDURABLE);
+		}
+		published = 0;
+		GetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_SATISFIED, &published);
+		if (published != bundle.num_satisfied) {
+			SetAttributeInt(bundle.cluster, -1, ATTR_BUNDLE_NUM_SATISFIED, bundle.num_satisfied, NONDURABLE);
+		}
+
+		++it;
+	}
+}
+
+// Release up to num_to_release of this bundle's held claims.  Only idle claims
+// are released: a claim whose job is still running (or still shutting down)
+// comes back to us Claimed/Idle when its shadow exits, and the next census
+// releases it then, so we never evict a job just to give a slot back.
+// DelMrec sends RELEASE_CLAIM to the startd and (via unlinkMrec) fixes up the
+// bundle's counts.
+int
+Scheduler::releaseBundleClaims(BundleRequest & bundle, int num_to_release)
+{
+	if (num_to_release <= 0) {
+		return 0;
+	}
+
+	// Collect first; DelMrec erases from the matches map as we go.
+	std::vector<match_rec *> idle_claims;
+	for (auto &[claim_id, mrec] : matches) {
+		if (mrec->is_bundle && mrec->bundle_cluster == bundle.cluster && ! mrec->shadowRec) {
+			idle_claims.push_back(mrec);
+		}
+	}
+
+	int released = 0;
+	for (match_rec * mrec : idle_claims) {
+		if (released >= num_to_release) { break; }
+		dprintf(D_FULLDEBUG, "Releasing slot bundle %s claim %s\n",
+			bundle.bundle_id.c_str(), mrec->description());
+		DelMrec(mrec);
+		released += 1;
+	}
+	return released;
+}
+
+// Turn a copy of one of the bundle's job ads into the bundle's resource
+// request ad.
+//
+// ATTR_USER matters here: the startd copies it into the claimed slot's
+// RemoteUser, so the negotiator sees a slot we are already holding as claimed
+// (by condor_bundle) and carves a fresh slot for the next request instead of
+// re-handing -- and priority-preempting -- one this bundle already holds.
+void
+Scheduler::stampBundleRequestAd(ClassAd & ad, const BundleRequest & bundle)
+{
+	ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	ad.Assign(ATTR_BUNDLE_ID, bundle.bundle_id);
+	ad.Assign(ATTR_USER, std::string(BUNDLE_SUBMITTER_NAME) + "@" + AccountingDomain);
+}
+
+// Find a job of this bundle's cluster to run on one of the bundle's held
+// claims.  The bundle is all-or-nothing: no job starts until every job of the
+// cluster has a slot waiting for it.
+bool
+Scheduler::findBundleJobForClaim(match_rec * mrec, PROC_ID & new_job_id)
+{
+	BundleRequest * bundle = getBundle(mrec->bundle_cluster);
+	if ( ! bundle) {
+		// The bundle is gone.  Hold the claim rather than starting a job on it;
+		// endBundleCensus()'s orphan sweep gives it back.  (We do not release
+		// it here: the caller is still using this match_rec.)
+		return false;
+	}
+	if ( ! bundle->isComplete()) {
+		dprintf(D_FULLDEBUG, "Slot bundle %s holding %s idle: %d of %d slots so far\n",
+			bundle->bundle_id.c_str(), mrec->description(),
+			bundle->num_satisfied, bundle->num_requested);
+		return false;
+	}
+
+	JobQueueCluster * clusterad = GetClusterAd(bundle->cluster);
+	if ( ! clusterad) {
+		return false;
+	}
+	for (JobQueueJob * job = clusterad->FirstJob(); job; job = clusterad->NextJob(job)) {
+		runnable_reason_code code;
+		if ( ! Runnable(job, code)) { continue; }
+		if (FindMrecByJobID(job->jid)) { continue; } // already has a claim
+		const char * reason = nullptr;
+		if ( ! jobCanUseMatch(job, mrec->my_match_ad, mrec->pool, reason)) {
+			dprintf(D_MATCH, "Slot bundle %s job %d.%d cannot use claim %s: %s\n",
+				bundle->bundle_id.c_str(), job->jid.cluster, job->jid.proc,
+				mrec->description(), reason ? reason : "no reason given");
+			continue;
+		}
+		new_job_id = job->jid;
+		return true;
+	}
+	return false;
+}
 
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
@@ -1349,6 +1595,36 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		pAd.Assign(ATTR_NAME, str);
 	}
 
+	// Mark the reserved slot-bundle submitter with an explicit attribute so the
+	// negotiator can recognize it without string-matching the submitter name
+	// (which is fragile across the user_is_the_new_owner '@'-qualification).
+	if (isBundleSubmitter(Owner.Name())) {
+		pAd.Assign(ATTR_IS_BUNDLE_SUBMITTER, true);
+		// The negotiator sorts bundle submitters on this, oldest first, so that
+		// every negotiation cycle serves bundles in the same order.  Without a
+		// stable order two bundles can each acquire a partial fill and then
+		// deadlock, because a partial fill is held until its bundle completes.
+		//
+		// Publish it only while we actually have a bundle waiting for slots.
+		// This submitter record outlives the demand that created it, and a
+		// schedd with nothing outstanding must not sort ahead of one that has
+		// an old bundle still waiting.
+		if (m_bundle_oldest_qdate > 0) {
+			pAd.Assign(ATTR_BUNDLE_OLDEST_QDATE, (long long)m_bundle_oldest_qdate);
+		} else {
+			pAd.Delete(ATTR_BUNDLE_OLDEST_QDATE);
+		}
+	} else {
+		// The caller reuses one ad for every submitter it advertises, so these
+		// have to be removed and not merely left unset.  Submitters are
+		// walked in name order, so without this the bundle submitter's marker
+		// leaks into the ad of every submitter sorting after "condor_bundle",
+		// and the negotiator hands each of them the bundle's off-the-books
+		// treatment -- the whole pie and no ceiling.
+		pAd.Delete(ATTR_IS_BUNDLE_SUBMITTER);
+		pAd.Delete(ATTR_BUNDLE_OLDEST_QDATE);
+	}
+
 	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
 	pAd.Assign("OCUClaimsBorrowed", Owner.num.OCUClaimsBorrowed);
 	pAd.Assign("OCURunningJobs",   Owner.num.OCURunningJobs);
@@ -1611,8 +1887,15 @@ Scheduler::count_jobs()
 		// updates SubmitterCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
 		// 10/8/2021 TJ - count_a_job now also sees cluster and jobset ads so it will update Owner records.
 		//    For job factories that have no materialized jobs it will potentially trigger new materialization
+	beginBundleCensus();
 	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
 	stats.PrevCountJobsTime = current_time;
+
+	// Now that we know how many live jobs each bundle has, resize the bundles:
+	// release slots whose jobs have finished, and forget bundles whose jobs
+	// have all left the queue.  Do this before the loop over matches below,
+	// which must not see match_recs we are about to delete.
+	endBundleCensus();
 
 	if (JobsSeenOnQueueWalk >= 0) {
 		TotalJobsCount = JobsSeenOnQueueWalk;
@@ -1968,6 +2251,32 @@ Scheduler::count_jobs()
 	}
 
 	time_t time_now = time(nullptr);
+
+	// If we have outstanding slot bundle requests, advertise a reserved
+	// submitter for them so the negotiator will negotiate (and satisfy) them.
+	// The negotiator gives this submitter best priority and matches it
+	// off-the-books
+	m_bundle_oldest_qdate = 0;
+	if (!m_bundles.empty()) {
+		int outstanding = 0;
+		for (auto &[cluster, bundle]: m_bundles) {
+			int remaining = bundle.remaining();
+			outstanding += remaining;
+			// The negotiator orders bundle submitters by the age of their
+			// oldest *unsatisfied* bundle, so a bundle that already has all
+			// its slots does not go on holding our place in that order.
+			if (remaining > 0 && bundle.qdate > 0 &&
+				(m_bundle_oldest_qdate == 0 || bundle.qdate < m_bundle_oldest_qdate)) {
+				m_bundle_oldest_qdate = bundle.qdate;
+			}
+		}
+		if (outstanding > 0) {
+			SubmitterData *bundle_sub = insert_submitter(BUNDLE_SUBMITTER_NAME);
+			bundle_sub->num.Hits++;
+			bundle_sub->num.JobsIdle += outstanding;
+			bundle_sub->LastHitTime = time_now;
+		}
+	}
 
 	if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
 		// The usual case -- send one submitter ad per submitter
@@ -4134,6 +4443,18 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		SubData->num.OCURunningJobs += 1;
 	}
 
+	// A cluster of jobs marked "+IsBundle = true" is a slot bundle: the schedd
+	// grabs one slot per live job of the cluster and holds them all before any
+	// of the jobs runs.  Count this job into its bundle (which creates the
+	// bundle the first time we see the cluster).  Bundle jobs are matched only
+	// through the reserved bundle submitter, so they are kept out of both the
+	// prio-rec array and their owner's idle counts below.
+	bool is_bundle_job = jobIsBundleJob(job) &&
+		(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT);
+	if (is_bundle_job) {
+		scheduler.countBundleJob(job);
+	}
+
     time_t now = time(NULL);
     OwnInfo->LastHitTime = now;
     SubData->LastHitTime = now;
@@ -4303,8 +4624,10 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 				SubData->PrioSet.insert( job_prio );
 			}
 		}
-			// Update Owners array JobsIdle
-		int job_idle = (max_hosts - cur_hosts);
+			// Update Owners array JobsIdle.  A bundle job's demand is
+			// carried by the reserved bundle submitter instead, so don't ask
+			// the negotiator for it here as well.
+		int job_idle = is_bundle_job ? 0 : (max_hosts - cur_hosts);
 		OwnerCounts->JobsIdle += job_idle;
 		ProjectCounts->JobsIdle += job_idle;
 		Counters->JobsIdle += job_idle;
@@ -5503,7 +5826,7 @@ etc).  May block for a long time, so you'll probably want to do this is
 a thread.
 
 What do we do here?  At the moment if the job has a "sandbox" directory
-("condor_submit -s", Condor-C, or the SOAP interface) we chown it from
+("condor_submit -s" or Condor-C) we chown it from
 condor to the user.  In the future we might allocate a dynamic account here.
 */
 int
@@ -8692,13 +9015,15 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
 
-	// Maybe it isn't a job at all, but an OCU request
+	// Maybe it isn't a job at all, but an OCU or slot bundle request
 	bool is_ocu_request = false;
+	bool is_bundle_request = false;
 	if (job == nullptr) {
 		is_ocu_request = job_id.proc == OCU_qkey2;
-	} 
+		is_bundle_request = job_id.proc == BUNDLE_qkey2;
+	}
 
-	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+	if (!is_ocu_request && !is_bundle_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
 		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool(), /*is_ocu=*/false, /*is_new_match=*/true);
@@ -8741,6 +9066,9 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (job_id.proc == OCU_qkey2) {
 		match_ad.Assign(ATTR_OCU, true);
 	}
+	if (is_bundle_request) {
+		match_ad.Assign(ATTR_IS_BUNDLE_REQUEST, true);
+	}
 
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), job_id, &match_ad,
@@ -8753,6 +9081,21 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if (job_id.proc == OCU_qkey2) {
 		mrec->is_ocu = true;
+	}
+	if (is_bundle_request) {
+		mrec->is_bundle = true;
+		// Record the cluster this claim was granted for even when the bundle is
+		// already gone (removed between the request and the match arriving).
+		// Otherwise the claim is left unattributable -- is_bundle with no
+		// cluster -- and nothing can work out who should give it back.
+		mrec->bundle_cluster = job_id.cluster;
+		BundleRequest *bundle = scheduler.getBundle(job_id.cluster);
+		if (bundle) {
+			// Count this grant as in-flight until the claim completes (or is
+			// lost), so a later negotiation cycle doesn't re-request a slot the
+			// negotiator has already handed us but we haven't claimed yet.
+			bundle->num_inflight++;
+		}
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
@@ -9211,6 +9554,19 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	int skipped_auto_cluster = -1;
 	int max_matches_for_this_submitter = INT_MAX;
 
+	// If the negotiator is negotiating for our reserved slot-bundle submitter,
+	// inject the outstanding bundle requests into the RRL as non-job requests
+	// (like OCUs).  These have no PrioRec entries.  The negotiator matches them
+	// first, at best priority and off-the-books.
+	if (isBundleSubmitter(owner)) {
+		for (auto &[cluster, bundle]: m_bundles) {
+			if (bundle.remaining() > 0) {
+				PROC_ID bundle_request = {bundle.cluster, BUNDLE_qkey2};
+				resource_requests->add(bundle.cluster, bundle_request);
+			}
+		}
+	}
+
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
 
@@ -9569,14 +9925,19 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					release_block_condition(
+					// In a properly-functioning schedd, we'll never end up
+					// in a situation where we'll release this job twice, but
+					// if we do, only try to start the job the first time (when
+					// we actually unblock the job).
+					if( release_block_condition(
 						mrec->jid,
 						CommonTransfer,
-						"common transfer notification (dependent job)");
-
-					// Why _are_ these two separate commands?
-					mark_serial_job_running( srec->job_id );
-					addRunnableJob( srec );
+						"common transfer notification (dependent job)")
+					) {
+						// Why _are_ these two separate commands?
+						mark_serial_job_running( srec->job_id );
+						addRunnableJob( srec );
+					}
 
 					return true;
 				}
@@ -9683,6 +10044,17 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		OCU *ocu = scheduler.getOCU(mrec->jid);
 		if (ocu) {
 			jobAd = new ClassAd(ocu->ad);
+		}
+	}
+
+	if (! jobAd && mrec->is_bundle ) {
+		// Likewise, if this claim is being held for a slot bundle, there is no
+		// job on it yet -- claim with the bundle's resource-request template,
+		// which is just one of the bundle's jobs.
+		BundleRequest *bundle = scheduler.getBundle(mrec->bundle_cluster);
+		if (bundle) {
+			jobAd = GetExpandedJobAd(bundle->rep_jid, false);
+			if (jobAd) { scheduler.stampBundleRequestAd(*jobAd, *bundle); }
 		}
 	}
 
@@ -10068,8 +10440,36 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			OCU *ocu = scheduler.getOCU(slot->jid);
-			if (ocu != nullptr) {
+			// Gate on the match flag: a bundle claim's jid still carries the
+			// bundle's cluster, which could collide with an unrelated OCU id,
+			// so never look up an OCU for a claim we know is a bundle's.  Doing
+			// this at the lookup rather than in the branch below matters,
+			// because getBundle() can fail here (the bundle was removed while
+			// the match was in flight) and the OCU branch would then run.
+			OCU *ocu = slot->is_bundle ? nullptr : scheduler.getOCU(slot->jid);
+			BundleRequest *bundle = slot->is_bundle ? scheduler.getBundle(slot->bundle_cluster) : nullptr;
+			if (bundle != nullptr) {
+				// This claim satisfies one slot of a bundle.  Hold it with no
+				// job on it (cluster/proc of -1) until the whole bundle is in
+				// hand; then FindRunnableJobForClaim hands it one of the
+				// bundle's jobs.
+				slot->keep_while_idle = std::numeric_limits<int>::max();
+				slot->is_bundle = true;
+				slot->jid.cluster = slot->jid.proc = -1;
+				bundle->num_satisfied++;
+				slot->bundle_counted = true;
+				// This grant is no longer in flight now that it is claimed.
+				if (bundle->num_inflight > 0) { bundle->num_inflight--; }
+				dprintf(D_ALWAYS, "Slot bundle %s satisfied %d of %d slots with %s\n",
+					bundle->bundle_id.c_str(), bundle->num_satisfied,
+					bundle->num_requested, slot->description());
+				if (bundle->isComplete()) {
+					// The gang is complete; let its jobs start.
+					dprintf(D_ALWAYS, "Slot bundle %s is complete with %d slots\n",
+						bundle->bundle_id.c_str(), bundle->num_satisfied);
+					scheduler.ExpediteStartJobs();
+				}
+			} else if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
 				// another job could start here.
@@ -10386,6 +10786,7 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 		  to add it to all the tables, etc, etc.
 		*/
 	shadow_rec *srec = new shadow_rec;
+	// dprintf( D_ALWAYS, "(0) new shadow_rec = %p\n", srec );
 	srec->pid = 0;
 	srec->job_id.cluster = cluster;
 	srec->job_id.proc = proc;
@@ -10665,7 +11066,7 @@ Scheduler::StartJob(match_rec *rec)
                // job's keep_idle times to the match
 	int keep_claim_idle_time = 0;
     GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
-	if (rec->is_ocu) {
+	if (rec->is_ocu || rec->is_bundle) {
 		    rec->keep_while_idle = std::numeric_limits<int>::max();
 	} else if (keep_claim_idle_time > 0) {
             rec->keep_while_idle = keep_claim_idle_time;
@@ -10685,6 +11086,14 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec, PROC_ID & new_job_id)
 
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
+
+	// A slot bundle claim is held (never relinquished on its own) until the
+	// whole bundle is in hand; then it runs one of the bundle's jobs.  Return
+	// false without deleting the match so the schedd keeps the claim; the
+	// bundle census gives the claim back when its jobs are gone.
+	if (mrec->is_bundle) {
+		return findBundleJobForClaim(mrec, new_job_id);
+	}
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu, /*is_new_match=*/false);
@@ -11049,6 +11458,17 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					return SJ::DID_NOT_TRY;
 				}
 
+				//
+				// The match record was assigned to this job before this
+				// function, so we need to erase the match before blocking
+				// the job.  This may be redundant with SetMrecJobID(),
+				// below.
+				//
+				auto count = matchesByJobID.erase(job_id);
+				if( count != 0 ) {
+					dprintf( D_FULLDEBUG, "cxfer %d.%d: STAGING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+				}
+
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
 
@@ -11062,8 +11482,30 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					promptingToTransferProcID( job_id.proc )
 				);
 
+				//
+				// If there's no registered shadow for a catalog required by
+				// this job, it's possible that we've unregistered the catalog
+				// but not yet deleted the match record (see the disaster in
+				// `call_StartJobFailed()`).  In that case, the schedd can
+				// asplode when we call SetMrecJobID(), below, because some
+				// other match record has the transfer shadow's job ID (that
+				// is, this same job prompted a transfer shadow on a second
+				// match before the first one's record was deleted).
+				//
+				// We don't want to delay unregistering the shadow catalogs
+				// because our idiotic memory management means that someone
+				// else could have deleted that match record holding the
+				// shadow record or the shadow record itself out from under
+				// us.
+				//
+				match_rec * other = FindMrecByJobID( transfer_job_id );
+				if( other != nullptr ) {
+					dprintf( D_VERBOSE, "Delaying transfer shadow start-up because the previous transfer shadow's match record (%p) hasn't been cleaned up yet.\n", other );
+					return SJ::DID_NOT_TRY;
+				}
+
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
-					transfer_job_id, universe, mrec, -1 , nullptr
+					transfer_job_id, universe, mrec, -1, nullptr
 				);
 
 
@@ -11073,7 +11515,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					const auto & catalogName = catalog.first;
 					auto shadow = getShadowForCatalog( catalogName );
 					if(! shadow) {
-						// dprintf( D_VERBOSE, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+						// dprintf( D_FULLDEBUG, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
 						catalogToShadowMap[catalogName] = transfer_shadow_rec;
 						catalogs_to_stage.push_back( catalog );
 					}
@@ -11089,7 +11531,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 
 				// Run the transfer shadow on a data slot created out of
 				// the job slot we matched against.
-				start_command_data_slot( mrec, * job );
+				start_command_data_slot( mrec, * job, transfer_shadow_rec );
 
 
 				//
@@ -11136,6 +11578,11 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				set_job_status( job_id.cluster, job_id.proc, JOB_STATUS_BLOCKED );
 
 				matchesHeldByBlockedJobs.push_back(mrec);
+
+				auto count = matchesByJobID.erase(job_id);
+				if( count != 0 ) {
+					dprintf( D_FULLDEBUG, "cxfer %d.%d: MAPPING: removed matchesByJobID entry.\n", job_id.cluster, job_id.proc );
+				}
 
 				mrec->shadowRec = job_shadow_rec;
 				return SJ::SUCCEEDED;
@@ -12882,6 +13329,8 @@ Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
 
+
+
 shadow_rec::shadow_rec():
 	pid(-1),
 	universe(0),
@@ -12898,6 +13347,8 @@ shadow_rec::shadow_rec():
 	exit_already_handled(false),
 	secret(nullptr)
 {
+	scheduler.all_shadow_recs.insert(this);
+
 	prev_job_id.proc = -1;
 	prev_job_id.cluster = -1;
 	job_id.proc = -1;
@@ -12906,6 +13357,8 @@ shadow_rec::shadow_rec():
 
 shadow_rec::~shadow_rec()
 {
+	scheduler.all_shadow_recs.erase(this);
+
 	if( recycle_shadow_stream ) {
 		dprintf(D_ALWAYS,"Failed to finish switching shadow %d to new job %d.%d\n",pid,job_id.cluster,job_id.proc);
 		delete recycle_shadow_stream;
@@ -12926,6 +13379,7 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 						   match_rec* mrec, int fd, const char* secret )
 {
 	shadow_rec *new_rec = new shadow_rec;
+	// dprintf( D_ALWAYS, "(1) new shadow_rec = %p\n", new_rec );
 
 	new_rec->pid = pid;
 	new_rec->job_id = job_id;
@@ -13027,6 +13481,14 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		SetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, num);
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
 		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
+	}
+
+		// Scheduler and local universe jobs have no shadow to record
+		// when the job begins executing (and no input transfer), so
+		// the start of the job is the start of execution.  This lets
+		// AllowedExecuteDuration apply to these universes.
+	if (job_univ == CONDOR_UNIVERSE_SCHEDULER || job_univ == CONDOR_UNIVERSE_LOCAL) {
+		SetAttributeInt(cluster, proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, current_time);
 	}
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
@@ -13523,15 +13985,51 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 	if( srec == NULL ) {
-		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		dprintf( D_VERBOSE | D_BACKTRACE, "unregister_shadow_catalogs(NULL): ignoring\n" );
 		return;
 	}
+
+	if( srec->cxfer_state == CXFER_STATE::MAPPING ) {
+		// dprintf( D_ALWAYS | D_BACKTRACE, "unregister_shadow_catalogs(%p): skipping mapping shadow.\n", srec );
+		return;
+	}
+
+	// dprintf( D_ALWAYS | D_BACKTRACE, "unregister_shadow_catalogs(%p): begin.\n", srec );
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		std::vector< std::string > removedCatalogs;
+
+        if( IsDebugLevel( D_FULLDEBUG ) ) {
+            for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+                dprintf( D_FULLDEBUG, "unregister_shadow_catalogs(): unregistering catalog %s = %s\n", catalogName.c_str(), contents.c_str() );
+            }
+        }
+		logCatalogToShadowMap("begin: unregister_shadow_catalogs()");
+
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
-			if(! other) { continue; }
+			if(! other) {
+				dprintf( D_VERBOSE, "Found no shadow for catalog %s\n", catalogName.c_str() );
+				continue;
+			}
+			// dprintf( D_ALWAYS, "unregister_shadow_catalogs(): found shadow %p (%p) for catalog %s; other PID = %d, my PID = %d\n", * other, srec, catalogName.c_str(), (* other)->pid, shadow_pid );
 			if( * other == srec && (* other)->pid == shadow_pid ) {
+				//
+				// If we've gotten here, than srec is a transfer shadow
+				// whose catalogs we're unregistering.  There's a temptation
+				// to delete the transfer shadow's match record here, but
+				// that isn't our responsibility, and would reintroduce the
+				// fast-cycle bug in start_command_data_slot() that we worked
+				// around by adding the timer.
+				//
+				// So don't do that.
+				//
+				// Almost everywhere the common-files does deletes
+				// a match record, we should instead try to recycle
+				// the resources, but that's not a thing the schedd
+				// can do yet.
+				//
+
+				// dprintf( D_ALWAYS, "unregister_shadow_catalogs(): removing %s from catalogToShadowMap.\n", catalogName.c_str() );
 				catalogToShadowMap.erase( catalogName );
 				removedCatalogs.push_back( catalogName );
 
@@ -13554,9 +14052,19 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						CommonTransfer,
 						"shadow catalog unregistered (prompting job)" ) )
 					{
-						// (HTCONDOR-3610)  At this point, we should check
-						// for matches blocked on these catalogs and choose
-						// one to switch from MAPPING to STAGING.
+						//
+						// Whenever we unblock a job, we must also remove any
+						// entry in matchesByJobID which point to it (unless
+						// we're enqueing a shadow to start).  In this case,
+						// if the prompting job has somehow acquired a match,
+						// we should delete the match as well, because we
+						// won't be using it again.
+						//
+						match_rec * pj_rec = FindMrecByJobID({srec->job_id.cluster, prompting_proc});
+						if( pj_rec ) {
+							dprintf( D_VERBOSE, "unregister_shadow_catalogs(): unblocked prompting job had match, deleting it.\n" );
+							DelMrec( pj_rec );
+						}
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -13564,21 +14072,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 			}
 		}
 
-		// Although the jobs are still blocked on a common catalog,
-		// the blocked state must be synonymous with the existence
-		// of at least one transfer shadow; otherwise, the jobs
-		// will never unblock.  For now, rather than do anything
-		// clever, just unblock all of the relevant blocked jobs;
-		// StartJob() will reblock them, or start a new transfer
-		// shadow, as appropriate.
-		//
-		// FIXME: the above is a lie; StartJob() will never be called
-		// again for these jobs (I think because they have matches).
-		//
-		// Doing things this way makes a single pass over the blocked
-		// matches, with each pass doing a set intersection; we could
-		// only one catalog at a time in the main loop, at the cost of
-		// iterating the blocked matches more than once.
+		// See `INSIGHT.md`.
 		std::vector< match_rec *> matches;
 		for( match_rec * m : matchesHeldByBlockedJobs ) {
 			if( m->shadowRec != NULL ) {
@@ -13605,57 +14099,18 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				if( anyJobCatalogInRemovedCatalogs ) {
 					if( release_block_condition(sr->job_id, CommonTransfer, "catalog was unregistered" ) )
 					{
+						// See `INSIGHT.md`.
 						dprintf( D_ALWAYS, "Unblocked job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
 
-						//
-						// The job is now idle and holding a claimed resource,
-						// but we can't start a shadow for it.  We can't call
-						// mark_serial_job_running() because we're not starting
-						// a shadow, and if we call addRunnableJob(), we'll
-						// skip StartJob(mrec, job_id) [which is normally
-						// responsible for calling addRunnableJob() via
-						// start_std()].
-						//
-						// If we delete this match record, we should probably
-						// also delete its (this) shadow record; it will leak,
-						// otherwise -- or worse, prevent a new shadow record
-						// for the transfer shadow's job ID from being created
-						// when it's time to try again.
-						//
-						// Conveniently, this makes it equally difficult to
-						// delete the match record as to try to use it again.
-						// For now, we'll delete the match record; it seems
-						// safer.  In the future, we should probably do what
-						// we do when we get a d-slot back from the startd;
-						// that will probably end up with the same job, but
-						// at least that way we (a) don't call StartJob()
-						// from a weird place and (b) anything we do to prevent
-						// too many common-transfer retries will work generally.
-						//
-						// See above about HTCONDOR-3610.
-						//
-
-						// auto jobID = sr->job_id;
+						// Note that by doing things in this order, we bypass
+						// the special handling for cxfer in unlinkMrec().  For
+						// now, since we know that this isn't a transfer shadow
+						// and that we've already unblocked the job, this is
+						// harmless, but we should consider reversing the order
+						// here (moving the delete into the loop below) and
+						// consolidating behavior.
 						delete_shadow_rec( sr );
-						// This removes `m` from `matchesHeldByBlockedJobs`.
-						// We could rewrite the loop and assign the return
-						// value of erase or manually iterate as appropriate,
-						// but that means explicitly removing m, rather than
-						// letting DelMrec() handle it, which seems wrong.
-						// DelMrec( m );
 						matches.push_back( m );
-
-/* This code passes the tests locally, except test_unblocking_jobs.py,
- * which fails `test_kill_transfer_shadow`, because the jobs all immediately
- * reblock trying the transfer again.
-						// Stolen from StartJob( mrec ); should refactor.
-						auto result = StartJob( m, jobID );
-						if( result != SJ::SUCCEEDED ) {
-							StartJobFailed( m, jobID );
-
-							// (Skip the e-mail for now.)
-						}
-*/
 					}
 				}
 			}
@@ -13664,6 +14119,8 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		for( match_rec * n : matches ) {
 		    DelMrec( n );
 		}
+
+		logCatalogToShadowMap("end: unregister_shadow_catalogs()");
 	}
 }
 
@@ -13671,6 +14128,16 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+	if( rec == nullptr ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(NULL): ignoring.\n" );
+		return;
+	}
+
+	if(! scheduler.all_shadow_recs.contains(rec)) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "delete_shadow_rec(%p): already deleted, ignoring.\n", rec );
+		return;
+	}
+
 	if ( rec->is_reconnect && !rec->reconnect_done ) {
 		// TODO Should we try to update the JobsRestartReconnectsBadput
 		//   stat on an interrupted reconnect attempt?
@@ -13708,6 +14175,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// TODO Failure to spawn a reconnect shadow should probably still
 		//   do the code below our early return here.
 		RemoveShadowRecFromMrec(rec);
+		// dprintf( D_ALWAYS, "delete /* shadow_ */ rec = %p\n", rec );
 		delete rec;
 		return;
 	}
@@ -13844,11 +14312,15 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// "ACTIVE", it's just "CLAIMED"
 	if( rec->match ) {
 			// Be careful, since there might not be a match record
-			// for this shadow record anymore... 
+			// for this shadow record anymore...
 		rec->match->setStatus( M_CLAIMED );
 	}
 
-	if( rec->keepClaimAttributes && rec->match ) {
+	// I believe that rec->pid != 0 is presently superfluous.  [FIXME]
+	//
+	// If we're deleting this shadow record because we're deleting its
+	// match record, don't delete our match record.
+	if( rec->keepClaimAttributes && rec->match && rec->pid != 0 ) {
 			// We are shutting down and detaching from this claim.
 			// Remove the claim record without sending RELEASE_CLAIM
 			// to the startd.
@@ -13871,6 +14343,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		 rec->universe != CONDOR_UNIVERSE_LOCAL ) {
 		numShadows -= 1;
 	}
+	// dprintf( D_ALWAYS, "delete /* shadow */ rec = %p\n", rec );
 	delete rec;
 	if( ExitWhenDone && numShadows == 0 ) {
 		return;
@@ -14438,6 +14911,11 @@ IsLocalUniverse( shadow_rec* srec )
 static bool
 release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, const char * context)
 {
+	dprintf( D_FULLDEBUG,
+		"release_block_condition(%d.%d, ..., %s)\n",
+		jid.cluster, jid.proc, context
+	);
+
 	// TODO: implement multiple block conditions
 
 	int status = -1;
@@ -14446,7 +14924,8 @@ release_block_condition(const JOB_ID_KEY & jid, JobBlockedCondition /*jbc*/, con
 		set_job_status(jid, JOB_STATUS_IDLE);
 		return true;
 	}
-	dprintf(D_FULLDEBUG,
+
+	dprintf( D_VERBOSE | D_BACKTRACE,
 		"Not unblocking job %d.%d (%s): status was %d, not BLOCKED.\n",
 		jid.cluster, jid.proc, context, status);
 	return false;
@@ -14850,10 +15329,11 @@ Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
 	if( srec != NULL && !srec->removed && srec->match ) {
 		// Don't delete matches we're trying to use for a now job.
 		if(! srec->match->m_now_job.isJobKey()) {
-			if (!srec->match->is_ocu) {
+			if (!srec->match->is_ocu && !srec->match->is_bundle) {
 				DelMrec(srec->match);
 			} else {
-				// In the OCU case, move claim back to Claimed/Idle
+				// In the OCU and slot-bundle cases, the claim is held for
+				// more than this one job: move it back to Claimed/Idle.
 				srec->match->setStatus(M_CLAIMED);
 				SetMrecJobID(srec->match, -1, -1);
 			}
@@ -14995,7 +15475,7 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 			 || exit_code == JOB_NOT_STARTED ) {
 				if( srec != NULL && srec->match ) {
 					if( srec->match->m_now_job.isJobKey() ) { handleNowClaim = true; }
-					if( srec->match->is_ocu ) { handleOCUClaim = true; }
+					if( srec->match->is_ocu || srec->match->is_bundle ) { handleOCUClaim = true; }
 				}
 			}
 
@@ -15466,7 +15946,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				for( const auto & catalog : srec->cxfer_catalogs ) {
 					auto shadow = getShadowForCatalog( catalog.first );
 					if( shadow ) {
-						HadException((*shadow)->match);
+						HadException( (*shadow)->match, * shadow );
 					}
 				}
 			}
@@ -17656,7 +18136,7 @@ Scheduler::AddMrec(
 
 	JobQueueJob *job_ad = nullptr;
 	JobQueueCluster * cluster_ad = nullptr;
-	if (JobQueueBase::IsJobId(jid)) {
+	if( JobQueueBase::IsJobId(jid) || isTransferShadowProcID(jid) ) {
 		auto [it, success] = matchesByJobID.emplace(jid, rec);
 		ASSERT(success);
 		job_ad = GetJobAd(jid);
@@ -17754,9 +18234,13 @@ Scheduler::DelMrec(match_rec *match) {
 int
 Scheduler::unlinkMrec(match_rec* match)
 {
-	if(!match)
-	{
-		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
+	if( match == nullptr ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(NULL): ignoring.\n" );
+		return -1;
+	}
+
+	if(! scheduler.all_match_recs.contains(match)) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "unlinkMrec(%p): already deleted, ignoring.\n", match );
 		return -1;
 	}
 
@@ -17810,6 +18294,30 @@ Scheduler::unlinkMrec(match_rec* match)
 		dirtyJobQueue();
 	}
 
+	// If this match was holding (or on its way to holding) a slot for a bundle,
+	// release its count so the schedd re-requests the lost slot on the next
+	// negotiation cycle.  The bundle_counted flag (set together with the
+	// increment in claimedStartd) means the claim had completed and was
+	// counted as satisfied; otherwise the grant was still in flight.  We
+	// cannot key on jid == -1.-1 here because a completed bundle claim runs
+	// one of the bundle's jobs and so carries a real job id.
+	if (match->is_bundle) {
+		auto bundle_it = m_bundles.find(match->bundle_cluster);
+		if (bundle_it != m_bundles.end()) {
+			BundleRequest &bundle = bundle_it->second;
+			bool was_counted = match->bundle_counted;
+			if (was_counted) {
+				if (bundle.num_satisfied > 0) { bundle.num_satisfied--; }
+			} else {
+				if (bundle.num_inflight > 0) { bundle.num_inflight--; }
+			}
+			dprintf(D_ALWAYS, "Slot bundle %s lost a %s claim (%s); now %d held + %d in flight of %d slots\n",
+				bundle.bundle_id.c_str(), was_counted ? "satisfied" : "pending",
+				match->description(), bundle.num_satisfied, bundle.num_inflight,
+				bundle.num_requested);
+		}
+	}
+
 	matches.erase(match->claimId());
 
 	matchesByJobID.erase(jobId);
@@ -17853,9 +18361,10 @@ Scheduler::unlinkMrec(match_rec* match)
 		match->auth_hole_id = NULL;
 	}
 
-		// Remove this match from the associated shadowRec.
-	if (match->shadowRec)
+	// Remove this match from the associated shadowRec.
+	if( match->shadowRec ) {
 		match->shadowRec->match = NULL;
+	}
 
 	numMatches--;
 	return 0;
@@ -17970,7 +18479,8 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 	matchesByJobID.erase(old_job_id);
 
 	match->jid = job_id;
-	if (JobQueueBase::IsJobId(match->jid)) {
+	// A transfer shadow isn't a job, but it is a shadow, so we need to know.
+	if( JobQueueBase::IsJobId(match->jid) || isTransferShadowProcID(match->jid) ) {
 		auto [it, success] = matchesByJobID.emplace(job_id, match);
 		if(! success) {
 			dprintf( D_ALWAYS | D_BACKTRACE, "SetMrecJobID() called for job ID %d.%d, which could not be emplaced.\n", job_id.cluster, job_id.proc );
@@ -18002,8 +18512,10 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
 		}
-		if (mrec->is_ocu) {
-			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
+		if (mrec->is_ocu || mrec->is_bundle) {
+			// For an OCU anyone can claim; for a bundle the claim is held for
+			// the bundle's remaining jobs.
+			SetMrecJobID(mrec,-1,-1);
 		}
 	}
 }
@@ -18326,7 +18838,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 }
 
 void
-Scheduler::HadException( match_rec* mrec ) 
+Scheduler::HadException( match_rec* mrec, shadow_rec* srec )
 {
 	if( !mrec ) {
 			// If there's no mrec, we can't do anything.
@@ -18337,13 +18849,27 @@ Scheduler::HadException( match_rec* mrec )
 		dprintf( D_ERROR,
 		         "Match for %d.%d has had %d shadow exceptions, relinquishing.\n",
 		         mrec->jid.cluster, mrec->jid.proc, mrec->num_exceptions
-				 );
-		// If we always do this before DelMrec() does, we'll learn about cases
-		// we don't know about that we otherwise couldn't.
-		if( mrec->shadowRec && isTransferShadowProcID(mrec->shadowRec->job_id) ) {
-			mrec->shadowRec->cxfer_state = CXFER_STATE::RETIRING;
-		}
+		);
+
+		// dprintf( D_ALWAYS, "HadException(): mrec %p, mrec->shadowRec %p, mrec->shadowRec->match %p, srec %p\n", mrec, mrec->shadowRec, mrec->shadowRec != nullptr ? mrec->shadowRec->match : nullptr, srec );
+
+		shadow_rec * s = mrec->shadowRec;
+		if( srec ) { s = srec; }
+
 		DelMrec(mrec);
+
+		// DelMrec() never deletes shadow records (and never should, because
+		// match and shadow records have different lifetimes), so it's safe
+		// to look at `s` here.  We mark the transfer shadow record as
+		// retiring to avoid starting new jobs using its catalogs until the
+		// shadow has died; we don't just call unregister_shadow_catalogs()
+		// because then the transfer shadow proc ID might collide.
+		if( s && isTransferShadowProcID(s->job_id) ) {
+			// This would normally be D_VERBOSE, except that's marking a change.
+			// If the initial dprintf() above were D_ALWAYS, so would this one.
+			dprintf( D_ERROR, "Marking shadow record (%p) with pid %d retiring because of too many exceptions on its match.\n", s, s->pid );
+			s->cxfer_state = CXFER_STATE::RETIRING;
+		}
 	}
 }
 
@@ -20717,6 +21243,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		cluster->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 	srec = new shadow_rec;
+	// dprintf( D_ALWAYS, "(2) new shadow_rec = %p\n", srec );
 	srec->pid = shadow_pid;
 	srec->match = mrec;
 	mrec->shadowRec = srec;
@@ -22008,7 +22535,8 @@ Scheduler::post_transform_adjustments(
 		// SetAttributeExpr() unparses the expression and does not take
 		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get()
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get(),
+			SetAttribute_SubmitTransform
 		);
 		if( rv != 0 ) {
 			if( errorStack ) {
@@ -22020,7 +22548,8 @@ Scheduler::post_transform_adjustments(
 		}
 
 		rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get()
+			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
+			SetAttribute_SubmitTransform
 		);
 		if( rv != 0 ) {
 			if( errorStack ) {
@@ -22033,4 +22562,131 @@ Scheduler::post_transform_adjustments(
 	}
 
 	return 0;
+}
+
+
+void
+Scheduler::checkBlockedJob( JobQueueJob *, const JOB_ID_KEY & jid ) {
+	// If the blocked job is a prompting job, we will have set it blocking
+	// only after we marked the match as belonging to the transfer shadow,
+	// and before we yield control.  (We could move set_job_status() up
+	// to before start_command_data_slot() to make this clearer, although
+	// the latter doesn't yield control either.)
+	PROC_ID transferID{ jid.cluster, promptingToTransferProcID(jid.proc) };
+	match_rec * mrec = FindMrecByJobID( transferID );
+	if( mrec ) {
+		if( mrec->shadowRec ) {
+			switch( mrec->shadowRec->cxfer_state ) {
+				case CXFER_STATE::INVALID:
+					// This is certainly a problem, but I don't know what to
+					// do about it, so we'll just give up when we see it.
+					dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): putative transfer shadow record is in INVALID cxfer state.\n", jid.cluster, jid.proc );
+					return;
+				case CXFER_STATE::MAPPING:
+					// This is almost certainly a problem, but carry on checking
+					// as if it weren't a prompting job, and this match were
+					// just bad record-keeping, in hopes of gathering more
+					// information for debugging.
+					dprintf( D_VERBOSE, "checkBlockedJob(%d.%d): putative transfer shadow record is in MAPPING cxfer state.\n", jid.cluster, jid.proc );
+					break;
+				case CXFER_STATE::STAGING:
+				case CXFER_STATE::STAGED:
+				case CXFER_STATE::RETIRING:
+					dprintf( D_FULLDEBUG, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record.\n", jid.cluster, jid.proc );
+					return;
+			}
+		} else {
+			dprintf( D_VERBOSE, "checkBlockedJob(%d.%d): found corresponding transfer shadow's match record, but it had no shadow record.\n", jid.cluster, jid.proc );
+		}
+	}
+
+
+	// If the blocked job isn't a prompting job, it should have an entry
+	// in matchesHeldByBlockedJobs.
+	mrec = nullptr;
+	for( match_rec * m : matchesHeldByBlockedJobs ) {
+		if( m == nullptr ) {
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match in the list of those held by blocked job is null.\n", jid.cluster, jid.proc );
+			continue;
+		}
+
+		if( jid.cluster == m->jid.cluster && jid.proc == m->jid.proc ) {
+			mrec = m;
+		}
+	}
+	if( mrec == nullptr ) {
+		// This would normally be D_VERBOSE, but it's making a change.
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): no matches held for nonprompting job, unbocking it.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"no matches held for nonprompting job"
+		);
+
+		// Since we released a blocked job, we need to make sure that it gets
+		// looked at again, which means making sure that matchesByJobID
+		// doesn't have an entry for it.
+		match_rec * stale_mrec = FindMrecByJobID(jid);
+		if( stale_mrec ) {
+		    DelMrec( stale_mrec );
+		}
+
+		return;
+	}
+
+
+	// The match held by this blocked job should have a shadowrec, each of
+	// whose required catalogs has a corresponding shadow.
+	shadow_rec * srec = mrec->shadowRec;
+	if( srec == nullptr ) {
+		// This would normally be D_VERBOSE, but it's making a change.
+		dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): Match held by blocked job does not have a shadow rec; unblocking it.\n", jid.cluster, jid.proc );
+
+		std::ignore = release_block_condition(
+			{jid.cluster, jid.proc}, CommonTransfer,
+			"match held by blocked job had no shadow rec"
+		);
+		DelMrec( mrec );
+
+		return;
+	}
+
+	for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+		auto sr = getShadowForCatalog( catalogName );
+		if(! sr) {
+			// This would normally be D_VERBOSE, but it's making a change.
+			dprintf( D_ALWAYS, "checkBlockedJob(%d.%d): No shadow for found catalog '%s', unblocking job\n", jid.cluster, jid.proc, catalogName.c_str() );
+
+			std::ignore = release_block_condition(
+				{jid.cluster, jid.proc}, CommonTransfer,
+				"no shadow found for a blocked job's catalog"
+			);
+			DelMrec( mrec );
+
+			return;
+		}
+
+		//
+		// We don't have enough information to know if the shadow record
+		// in the catalogToShadowMap corresponds to a shadow about to be
+		// spawned, a live shadow, a zombie shadow, or a bogus record.
+		//
+		// Even if we did, it might be better to check the contents of the
+		// catalogToShadow map as its own pass in the consistency-checker.
+		//
+	}
+
+	dprintf( D_FULLDEBUG, "checkBlockedJob(%d.%d): Found a shadow for all catalogs.\n", jid.cluster, jid.proc );
+}
+
+
+void
+Scheduler::logCatalogToShadowMap( const char * leader ) {
+    if(! IsDebugLevel(D_FULLDEBUG)) { return; }
+
+    dprintf( D_FULLDEBUG, "%s: begin entries\n", leader );
+    for( const auto & [catalogName, shadow] : scheduler.catalogToShadowMap ) {
+        dprintf( D_FULLDEBUG, "[entry] %s = %p\n", catalogName.c_str(), shadow );
+    }
+    dprintf( D_FULLDEBUG, "%s: end entries.\n", leader );
 }

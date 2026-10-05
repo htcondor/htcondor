@@ -1,5 +1,17 @@
 *** 26.2.0 features
 
+*** 26.2.0 bugs
+
+*** 26.0.2 bugs
+
+*** 26.1.0 features
+
+- Added :tool:`htcondor cluster`, which caches a cluster's job data
+  locally and profiles it to produce a health report, flagging problems
+  such as inefficient resource usage or held jobs and recommending
+  specific follow-up commands to investigate them.
+  :jira:`3892`
+
 - :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
   attribute that is true for NVIDIA GPUs that share their memory with the
   host, such as unified-memory devices like the NVIDIA DGX Spark.
@@ -9,12 +21,15 @@
   in the job ad for provenance reasons.
   :jira:`974`
   
+- The DAGMan Node Status File now reports aggregate job proc counts
+  (submitted, running, idle, held, completed, and failed) for the DAG
+  and each node, and can be written in JSON format.
+  :jira:`3928`
+
 - :tool:`condor_history` will now directly locate and read job records
   for a specified :ad-attr:`Owner` or :ad-attr:`ClusterId` when the
   Archive Librarian is in use.
   :jira:`3927`
-
-*** 26.2.0 bugs
 
 - The *condor_starter* can now optionally set a limit on the amount of
   compressed swap (zswap) a job may use, via the new
@@ -26,19 +41,21 @@
   zswap support.
   :jira:`3898`
 
+- :tool:`condor_adstash` now includes a ``ndjsonfile`` interface which appends
+  JSON per-line to adstash.jsonl in the directory specified by ``--json_dir``.
+  :jira:`3959`
+
 *** 26.1.0 bugs
+
+- To assist in debugging, added :subcom:`min_condor_version` and
+  :subcom:`max_condor_version`, which prevent the require the HTCondor
+  version of the EP to greater than or equal to, or strictly less than,
+  respectively, the specified version, e.g. "26.0.1".
+  :jira:`3065`
 
 *** 26.0.1 bugs
 
 - Fixed a rare bug that could cause *condor_dagman* to crash when the
   AP is restarted.
   :jira:`3915`
-
-- Fixed a bug where the *condor_schedd* could crash if it lost a match after
-  deciding to start a transfer shadow but before managing to do so.
-  :jira:`3913`
-
-- Fixed a bug where :ad-attr:`ResourcesUsed` would grow without bounds in the
-  *condor_negotiator* and as reported by :tool:`condor_userprio`
-  :jira:`3904`
 

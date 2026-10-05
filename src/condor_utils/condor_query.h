@@ -202,7 +202,10 @@ class CondorQuery
 	// fetch ads from the collector, handing each to 'callback'
 	// callback will return 'false' if it took ownership of the ad.
 	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * pool, CondorError* errstack = NULL);
-	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack = NULL);
+	// if reuse_sock is non-null, this call takes ownership of it and deletes
+	// it on every return path (success or failure) -- the caller must not
+	// touch or delete it afterward.
+	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack = NULL, Sock* reuse_sock = nullptr);
 
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'

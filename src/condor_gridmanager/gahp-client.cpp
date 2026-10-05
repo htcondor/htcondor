@@ -749,8 +749,6 @@ GahpServer::Startup(bool force)
 	// For amazon ec2 ca authentication
 	tmp_char = param("GAHP_SSL_CAFILE");
 	if( tmp_char ) {
-		// CRUFT: the SOAP value was used before 8.7.9
-		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
 		newenv.SetEnv( "GAHP_SSL_CAFILE", tmp_char );
 		free( tmp_char );
 	}
@@ -758,8 +756,6 @@ GahpServer::Startup(bool force)
 	// For amazon ec2 ca authentication
 	tmp_char = param("GAHP_SSL_CADIR");
 	if( tmp_char ) {
-		// CRUFT: the SOAP value was used before 8.7.9
-		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
 		newenv.SetEnv( "GAHP_SSL_CADIR", tmp_char );
 		free( tmp_char );
 	}

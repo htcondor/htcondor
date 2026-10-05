@@ -7,18 +7,39 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 25.0.16
+---------------
+
+Release Notes:
+
+.. HTCondor version 25.0.16 released on November 19, 2026.
+
+- HTCondor version 25.0.16 planned release date is November 19, 2026.
+
+New Features:
+
+.. include-history:: features 25.0.16
+
+Bugs Fixed:
+
+.. include-history:: bugs 25.0.16
+
 Version 25.0.15
 ---------------
 
 Release Notes:
 
-.. HTCondor version 25.0.15 released on September 29, 2026.
+.. HTCondor version 25.0.15 released on October 22, 2026.
 
-- HTCondor version 25.0.15 planned release date is September 29, 2026.
+- HTCondor version 25.0.15 planned release date is October 22, 2026.
 
 New Features:
 
 .. include-history:: features 25.0.15
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
 
 Bugs Fixed:
 
@@ -29,9 +50,7 @@ Version 25.0.14
 
 Release Notes:
 
-.. HTCondor version 25.0.14 released on September 22, 2026.
-
-- HTCondor version 25.0.14 planned release date is September 22, 2026.
+- HTCondor version 25.0.14 released on September 22, 2026.
 
 New Features:
 

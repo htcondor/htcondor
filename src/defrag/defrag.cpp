@@ -241,6 +241,7 @@ void Defrag::config()
 	m_drain_attrs.insert(ATTR_PLATFORM); // TODO: get rid if this after Daemon object is fixed to work without it.
 	m_drain_attrs.insert(ATTR_MY_ADDRESS);
 	m_drain_attrs.insert(ATTR_ADDRESS_V1);
+	m_drain_attrs.insert(ATTR_REMOTE_ADMIN_CAPABILITY);
 	// also these special attributes to choose draining candidates
 	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION);
 	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION);

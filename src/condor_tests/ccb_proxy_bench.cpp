@@ -466,7 +466,9 @@ static int targetRole_listener( int seconds, FILE *to_parent )
 	sin.sin_addr.s_addr = htonl(INADDR_ANY);
 	sin.sin_port = 0;   // ephemeral
 	if( bind(lfd, (struct sockaddr *)&sin, sizeof(sin)) != 0 ) {
-		fprintf(stderr, "listener: bind() failed\n"); return 1;
+		close(lfd);
+		fprintf(stderr, "listener: bind() failed\n");
+		return 1;
 	}
 	socklen_t slen = sizeof(sin);
 	if( getsockname(lfd, (struct sockaddr *)&sin, &slen) != 0 ) {
