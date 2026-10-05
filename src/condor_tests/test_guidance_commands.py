@@ -127,7 +127,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
             "#!/bin/bash\n"
             f'exec {SBIN}/condor_shadow --use-guidance-in-job-ad "$@"' "\n"
         )
-        path_to_shadow_wrapper.chmod(0o777)
+        path_to_shadow_wrapper.chmod(0o755)
 
         yield the_condor
 
