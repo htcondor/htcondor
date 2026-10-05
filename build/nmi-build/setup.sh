@@ -285,7 +285,7 @@ if [ "$ID" = 'debian' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.5.1
+    APPTAINER_VERSION=1.5.4
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
@@ -303,7 +303,7 @@ if [ "$ID" = 'ubuntu' ]; then
 fi
 
 # Include packages for tarball in the image.
-PELICAN_VERSION=7.26.2-1 # Specify both version and release (release required on Debian)
+PELICAN_VERSION=7.26.3-1 # Specify both version and release (release required on Debian)
 externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
