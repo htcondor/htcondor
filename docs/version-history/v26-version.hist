@@ -12,6 +12,13 @@
   specific follow-up commands to investigate them.
   :jira:`3892`
 
+- When running Docker universe jobs, the execute event is now logged
+  when the container is *started*, not when it is *created*.  The
+  container start may take some time, so this makes various statistics
+  more accurate, and allows :tool:`condor_ssh_to_job` to have a better
+  idea when the container is actually running.
+  :jira:`39661
+
 - :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
   attribute that is true for NVIDIA GPUs that share their memory with the
   host, such as unified-memory devices like the NVIDIA DGX Spark.
