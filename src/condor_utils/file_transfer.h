@@ -32,6 +32,7 @@
 #include "dc_transfer_queue.h"
 #include <vector>
 #include <map>
+#include <string_view>
 
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;
@@ -767,6 +768,10 @@ class FileTransfer final: public Service {
 
 	// Read full string from pipe to prevent forked child from getting stuck on blocked Write()
 	bool PipeReadFullString(std::string& buf, const int nBytes);
+
+	// Write full buffer to pipe, retrying on short writes (the counterpart
+	// to PipeReadFullString(), above).
+	bool PipeWriteFullBuffer(std::string_view buf);
 
 	// called to lookup the catalog entry of file
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);

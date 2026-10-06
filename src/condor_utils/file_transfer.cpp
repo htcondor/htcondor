@@ -1892,6 +1892,35 @@ FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
 	return nleft == 0;
 }
 
+// Write a buffer to the transfer pipe, retrying on short writes.  A plain
+// write() to a pipe is allowed to write fewer bytes than requested (e.g. a
+// buffer larger than the pipe's capacity, or a write interrupted after some
+// bytes were already transferred), and the forked child writing status back
+// to the parent must not give up after a partial write: doing so desyncs
+// the framed messages that PipeReadFullString()/ReadTransferPipeMsg() on the
+// other end expect to see, which can leave that end blocked forever.
+bool
+FileTransfer::PipeWriteFullBuffer(std::string_view buf) {
+	const int nBytes = (int)buf.size();
+#if defined(WIN32)
+	int nleft = nBytes;
+	while (nleft > 0) {
+		int nwritten = daemonCore->Write_Pipe(TransferPipe[1],
+		                                      buf.data() + (nBytes - nleft),
+		                                      nleft);
+		if (nwritten <= 0) { return false; }
+		nleft -= nwritten;
+	}
+	return true;
+#else
+	int fd = -1;
+	if (!daemonCore->Get_Pipe_FD(TransferPipe[1], &fd)) {
+		return false;
+	}
+	return full_write(fd, buf.data(), nBytes) == nBytes;
+#endif
+}
+
 bool
 FileTransfer::ReadTransferPipeMsg()
 {
@@ -2079,13 +2108,9 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 	if( n != sizeof(size_of_ad) ) { return false; }
 
 	// Write the serialization.
-	n = daemonCore->Write_Pipe(
-		TransferPipe[1],
-		plugin_output_ad_string.c_str(),
-		plugin_output_ad_string.size()
-	);
-	// I'm also asserting that our ads aren't >= 2GB.
-	ASSERT( n == (int)plugin_output_ad_string.size() );
+	if (!PipeWriteFullBuffer(plugin_output_ad_string)) {
+		return false;
+	}
 
 	return true;
 }
@@ -3972,10 +3997,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   stats.c_str(),
-				   stats_len );
-		if(n != stats_len) write_failed = true;
+		if (!PipeWriteFullBuffer(stats)) write_failed = true;
 		dprintf(D_ZKM, "sent stats ad to pipe: %s\n", stats.c_str());
 	}
 	int error_len = Info.error_desc.length();
@@ -3989,10 +4011,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.error_desc.c_str(),
-				   error_len );
-		if(n != error_len) write_failed = true;
+		if (!PipeWriteFullBuffer(std::string_view(Info.error_desc.c_str(), error_len))) write_failed = true;
 		dprintf(D_ZKM, "sent error to pipe: %s\n", Info.error_desc.c_str());
 	}
 
@@ -4007,10 +4026,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.spooled_files.c_str(),
-				   spooled_files_len );
-		if(n != spooled_files_len) write_failed = true;
+		if (!PipeWriteFullBuffer(std::string_view(Info.spooled_files.c_str(), spooled_files_len))) write_failed = true;
 	}
 
 	if(write_failed) {
