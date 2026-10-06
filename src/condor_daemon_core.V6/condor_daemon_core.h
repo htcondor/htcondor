@@ -2534,6 +2534,15 @@ extern PREFAST_NORETURN void DC_Exit( int status, const char *shutdown_program =
 */
 extern void DC_Skip_Core_Init();
 
+/** Call this function (inside your main_pre_dc_init() function) to have
+    daemoncore load the startup config without the user level config
+    (USER_CONFIG_FILE and _CONDOR_* environment). The daemon is then
+    responsible for calling config_digest_user_config() once it has read
+    any admin only values. Note: daemoncore initialization will only see
+    the system level config. Reconfig always loads the full config.
+*/
+extern void DC_Disable_User_Config(bool disable = true);
+
 
 extern void dc_reconfig();
 

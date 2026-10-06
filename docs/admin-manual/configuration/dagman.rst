@@ -203,17 +203,127 @@ Throttling
 :macro-def:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`
     A boolean value that defaults to ``False``. When ``True`` users can set
     any value for the various DAGMan throttles. When ``False`` DAGMan will
-    limit any user specified throttle values to the bounds of the configured
-    throttles (maximum/minimum) unless the configured value is ``0``. This
-    applies to the following options:
+    limit any user specified throttle values to the administrator defined
+    ceilings (maximums) and floor (minimum) listed below. A ceiling of ``0``
+    means the associated throttle is not limited.
 
-    1. :macro:`DAGMAN_MAX_JOBS_IDLE`
-    2. :macro:`DAGMAN_MAX_JOBS_SUBMITTED`
-    3. :macro:`DAGMAN_MAX_PRE_SCRIPTS`
-    4. :macro:`DAGMAN_MAX_HOLD_SCRIPTS`
-    5. :macro:`DAGMAN_MAX_POST_SCRIPTS`
-    6. :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
-    7. :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL`
+    +---------------------------------------------+-----------------------------------------------------+
+    |               Throttle                      |                   Admin Limit                       |
+    +=============================================+=====================================================+
+    | :macro:`DAGMAN_MAX_JOBS_IDLE`               | :macro:`DAGMAN_MAX_JOBS_IDLE_CEILING`               |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_MAX_JOBS_SUBMITTED`          | :macro:`DAGMAN_MAX_JOBS_SUBMITTED_CEILING`          |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_MAX_PRE_SCRIPTS`             | :macro:`DAGMAN_MAX_PRE_SCRIPTS_CEILING`             |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_MAX_HOLD_SCRIPTS`            | :macro:`DAGMAN_MAX_HOLD_SCRIPTS_CEILING`            |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_MAX_POST_SCRIPTS`            | :macro:`DAGMAN_MAX_POST_SCRIPTS_CEILING`            |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`    | :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING`    |
+    +---------------------------------------------+-----------------------------------------------------+
+    | :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL`      | :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR`        |
+    +---------------------------------------------+-----------------------------------------------------+
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_JOBS_IDLE_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_JOBS_IDLE` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 2000 (twice the default of :macro:`DAGMAN_MAX_JOBS_IDLE`).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_JOBS_SUBMITTED_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_JOBS_SUBMITTED` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 0 (unlimited).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_PRE_SCRIPTS_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_PRE_SCRIPTS` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 40 (twice the default of :macro:`DAGMAN_MAX_PRE_SCRIPTS`).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_HOLD_SCRIPTS` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 40 (twice the default of :macro:`DAGMAN_MAX_HOLD_SCRIPTS`).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_POST_SCRIPTS_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_POST_SCRIPTS` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 40 (twice the default of :macro:`DAGMAN_MAX_POST_SCRIPTS`).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING`
+    An integer value that sets the maximum value a user may set for
+    :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL` when administrator throttle limiting is enabled
+    (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). A value of ``0``
+    means no limit is enforced. The default value is 200 (twice the default of :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`).
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
+
+:macro-def:`DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR`
+    An integer value that sets the minimum value a user may set for
+    :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL` when administrator throttle
+    limiting is enabled (see :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`).
+    This prevents users from increasing the CPU usage of :tool:`condor_dagman`
+    by scanning the workflow log too frequently. The legal range of values is
+    1 to INT_MAX. The default value is 1 second.
+
+    .. note::
+
+        This option is only read from the administrator's configuration.
+        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
+        ``_CONDOR_*`` environment variables, or a DAG specific configuration
+        file are ignored.
 
 :macro-def:`DAGMAN_MAX_JOBS_IDLE`
     An integer value that controls the maximum number of idle procs
