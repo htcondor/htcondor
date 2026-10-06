@@ -9787,6 +9787,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			// this match away now (seems like we could do something better?) - 
 			// while it is not ideal to throw away the match in this instance,
 			// it is consistent with what we current do during negotiation.
+			delete jobAd;
 			DelMrec ( mrec );
 			return;
 		}
