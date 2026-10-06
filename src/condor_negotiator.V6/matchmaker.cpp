@@ -6700,7 +6700,7 @@ Matchmaker::publishBundleStats(ClassAd *ad)
 	// can never be filled -- one asking for more slots than the pool can ever
 	// offer at once -- waits forever by construction, so this climbing without
 	// bound is the signal for that.
-	ad->Assign(ATTR_BUNDLE_MAX_WAIT_SECONDS, (int)oldest);
+	ad->Assign(ATTR_BUNDLE_MAX_WAIT_SECONDS, oldest);
 }
 
 void Matchmaker::StartNewNegotiationCycleStat()
