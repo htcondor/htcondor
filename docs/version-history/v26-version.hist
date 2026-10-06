@@ -2,6 +2,10 @@
 
 *** 26.2.0 bugs
 
+- Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
+  config knob from *condor_dagman* and :tool:`condor_submit_dag`.
+  :jira:`3971`
+
 *** 26.0.2 bugs
 
 *** 26.1.0 features
