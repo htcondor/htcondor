@@ -7267,6 +7267,32 @@ int SubmitHash::SetTransferFiles()
 			// TODO: universalise paths and determine size of common input files??
 			AssignJobString(ATTR_COMMON_INPUT_FILES, common.c_str());
 			macro_value.clear();
+
+			// Insert a catalog attribute that references CommonInputFiles to give it a catalog name.
+			// The catalog name is either specified as a submit keyword or it defaults to the clusterid
+			// The submit keyword is used by DAGMAN when it controls the common input files
+			// so that dagman also controls the scope of the common files.
+			std::string catalogName, catalogAttr;
+			macro_value.set(submit_param(SUBMIT_KEY_CommonInputFilesScope));
+			if (macro_value) {
+				catalogName = macro_value.c_str();
+			} else {
+				catalogName = std::to_string(this->getClusterId()) + "_" ATTR_CLUSTER_ID;
+			}
+			formatstr( catalogAttr, "_x_catalog_%s", catalogName.c_str() );
+			AssignJobExpr( catalogAttr.c_str(), ATTR_COMMON_INPUT_FILES);
+
+			// then add that catalog to the list of catalogs
+			std::string xcip;
+			std::ignore = job->LookupString( ATTR_COMMON_INPUT_CATALOGS, xcip );
+			// Don't duplicate entries.  This can't be the right way to do
+			// this; this function may be in the wrong place (unless we want
+			// to allow a different container image per proc).
+			if( xcip.find( catalogName ) == std::string::npos ) {
+				if(! xcip.empty()) { xcip += ", "; }
+				xcip += catalogName;
+				AssignJobString( ATTR_COMMON_INPUT_CATALOGS, xcip.c_str() );
+			}
 		}
 	}
 
