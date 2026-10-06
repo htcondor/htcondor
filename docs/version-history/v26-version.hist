@@ -2,6 +2,11 @@
 
 *** 26.2.0 bugs
 
+- Fixed a bug where HTCondor would use IPv4 to initiate a network
+  connection despite configuration parameter :macro:`ENABLE_IPV4`
+  being set to ``False``, and likewise for IPv6.
+  :jira:`3970`
+
 *** 26.0.2 bugs
 
 *** 26.1.0 features
