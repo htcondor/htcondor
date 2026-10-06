@@ -5,6 +5,10 @@
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
   config knob from *condor_dagman* and :tool:`condor_submit_dag`.
   :jira:`3971`
+- Fixed a bug where HTCondor would use IPv4 to initiate a network
+  connection despite configuration parameter :macro:`ENABLE_IPV4`
+  being set to ``False``, and likewise for IPv6.
+  :jira:`3970`
 
 *** 26.0.2 bugs
 
