@@ -303,9 +303,6 @@ DockerProc::LaunchContainer() {
 	childFDs[2] = open(DockerErrorFile().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	}
 
-	  // Ulog the execute event
-	starter->jic->notifyJobPreSpawn();
-
 	CondorError err;
 	// DockerAPI::createContainer() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
@@ -534,7 +531,14 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			return ReapResult::JobDone;
 		}
+		}
 
+		// Ulog the execute event now, rather than before docker create,
+		// as docker create may spend a long time pulling the image.
+		starter->jic->notifyJobPreSpawn();
+
+		{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		condor_gettimestamp( job_start_time );
