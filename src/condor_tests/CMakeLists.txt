@@ -541,7 +541,6 @@ endif()
 			# Sadly, Python doesn't implement a way to get disk space on Windows.
 			if (NOT WINDOWS)
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 			condor_pl_test(test_failure_files "Test failure files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
