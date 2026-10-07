@@ -71,6 +71,11 @@ STARTD_ATTRS = \$(STARTD_ATTRS),DaemonStopTime"
 fi
 
 cat << EOF > ${FULL_HOSTNAME}/config.d/30-annex-node
+# Give EP daemons a unique name on this machine, in case several annex
+# instances are launched here in parallel.
+MASTER_NAME = $$@\$(FULL_HOSTNAME)
+STARTD_NAME = $$@\$(FULL_HOSTNAME)
+
 # These are resource limits detected on an individual node of the slurm job
 $CONDOR_CPUS_LINE
 $CONDOR_MEMORY_LINE
