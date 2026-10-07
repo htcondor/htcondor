@@ -98,22 +98,31 @@ if [ $minor_ver -ne 0 ]; then
     series="${major_ver}.x"
 fi
 
-arch=$(uname -m)
-distro_raw=$(. /etc/os-release; echo $ID)
-distro_ver=$(. /etc/os-release; echo $VERSION_ID | cut -d. -f1)
+os_name=$(uname)
+if [ ${os_name} == "Darwin" ] ; then
+    arch="x86_64"
+    distro="macOS13"
+elif [ ${os_name} == "Linux" ] ; then
+    arch=$(uname -m)
+    distro_raw=$(. /etc/os-release; echo $ID)
+    distro_ver=$(. /etc/os-release; echo $VERSION_ID | cut -d. -f1)
 
-# TODO Recognize Amazon Linux
-# TODO Allow user to dictate distro name?
-if [[ $distro_raw =~ (rhel|centos|almalinux|rocky) ]]; then
-    distro="AlmaLinux${distro_ver}"
-elif [[ $distro_raw =~ opensuse-leap ]]; then
-    distro="openSUSE${distro_ver}"
-elif [[ $distro_raw =~ debian ]]; then
-    distro="Debian${distro_ver}"
-elif [[ $distro_raw =~ ubuntu ]]; then
-    distro="Ubuntu${distro_ver}"
+    # TODO Recognize Amazon Linux
+    # TODO Allow user to dictate distro name?
+    if [[ $distro_raw =~ (rhel|centos|almalinux|rocky) ]]; then
+        distro="AlmaLinux${distro_ver}"
+    elif [[ $distro_raw =~ opensuse-leap ]]; then
+        distro="openSUSE${distro_ver}"
+    elif [[ $distro_raw =~ debian ]]; then
+        distro="Debian${distro_ver}"
+    elif [[ $distro_raw =~ ubuntu ]]; then
+        distro="Ubuntu${distro_ver}"
+    else
+        echo "Unrecognized linux distro '${distro_raw}', aborting setup."
+        exit 1
+    fi
 else
-    echo "Unrecognized linux distro '${distro_raw}', aborting setup."
+    echo "Unrecgonized OS '${os_name}', aborting setup."
     exit 1
 fi
 
