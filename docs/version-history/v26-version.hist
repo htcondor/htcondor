@@ -1,5 +1,10 @@
 *** 26.2.0 features
 
+- The :tool:`htcondor annex` commands *create* and *add* are now treated
+  equivalently and can be issued before any jobs for the named annex have
+  been submitted.
+  :jira:`3931`
+
 - When running Docker universe jobs, the execute event is now logged
   when the container is *started*, not when it is *created*.  The
   container start may take some time, so this makes various statistics

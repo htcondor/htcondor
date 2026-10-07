@@ -1144,26 +1144,10 @@ def annex_inner_func_new(
             raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
 
 
-    ##
-    ## While we're requiring that jobs are submitted before creating the
-    ## annex (for .sif pre-staging purposes), refuse to make the annex
-    ## if no such jobs exist.
-    ##
-    schedd = htcondor.Schedd()
-    annex_jobs = schedd.query(f'TargetAnnexName == "{annex_name}"')
-
-    enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
-    if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
-        if not annex_jobs:
-            raise RuntimeError(
-                f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
-            )
-        logger.debug(
-            f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
-        )
-
     if test == 2:
         return
+
+    schedd = htcondor.Schedd()
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
@@ -1295,14 +1279,8 @@ def annex_add_old(logger, annex_name, **others):
     return annex_inner_func_old(logger, annex_name, **others)
 
 def annex_create_new(logger, annex_name, **others):
-    if others.get("test") is None:
-        if annex_name_exists(annex_name):
-            raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
     return annex_inner_func_new(logger, annex_name, **others)
 
 
 def annex_add_new(logger, annex_name, **others):
-    if others.get("test") is None:
-        if not annex_name_exists(annex_name):
-            raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
     return annex_inner_func_new(logger, annex_name, **others)
