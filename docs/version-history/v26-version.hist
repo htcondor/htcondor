@@ -1,5 +1,10 @@
 *** 26.2.0 features
 
+- The :tool:`htcondor annex` commands *create* and *add* are now treated
+  equivalently and can be issued before any jobs for the named annex have
+  been submitted.
+  :jira:`3931`
+
 *** 26.2.0 bugs
 
 *** 26.0.2 bugs
