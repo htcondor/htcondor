@@ -670,6 +670,11 @@ void
 RemoteResource::closeClaimSock( void )
 {
 	if( claim_sock ) {
+			// do_REMOTE_syscall() may still be on the stack using the
+			// global alias; null it so it can tell the socket is gone.
+		if( syscall_sock == claim_sock ) {
+			syscall_sock = nullptr;
+		}
 		daemonCore->Cancel_Socket( claim_sock );
 		delete claim_sock;
 		claim_sock = NULL;
