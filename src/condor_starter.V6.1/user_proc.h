@@ -30,8 +30,9 @@
 */
 enum class ReapResult {
 	JobNotFound,      ///< This UserProc did not match the exited pid
-	JobDone,          ///< This UserProc matched the pid and the job is finished
+	JobDone,          ///< This UserProc matched the pid and the job is finished and next job should not start
 	JobShouldReExec,  ///< This UserProc matched the pid but will re-exec the job locally (e.g. self-checkpoint)
+	JobNext,          ///< This UserProc matched the pid and the next job should be started (if any).
 };
 
 /** This class is a base class for the various types of startable
@@ -114,6 +115,11 @@ public:
 			@return The pid. */
 	int GetJobPid() const { return JobPid; }
 
+	ClassAd * taskAd() const { return JobAd; }
+	int taskId() const { return taskid; }
+	void set_taskId(int id) { taskid = id; } // TODO: move this into constructor?
+	void set_finalTask(bool val) { m_finalTask = val; }
+
 		/** Check if user's job process has actually been started yet.
 			For instance, it may not have been forked yet because we're
 			waiting for data files to be transfered.
@@ -140,6 +146,7 @@ protected:
 	int JobPid;
 	int job_universe;
 	int exit_status;
+	int taskid{0};
 	bool requested_exit;
 	bool m_proc_exited;
 
@@ -147,6 +154,9 @@ protected:
 		// JobAd. Most of the time, we aren't. But in at least one case,
 		// we are.
 	bool m_deleteJobAd;
+
+		// this is the last task, so notifyJobExit when JobExit is called
+	bool m_finalTask{true};
 
 		/** This is the identifier for this UserProc.  It's used for
 			dprintf messages() and in some cases as a prefix for

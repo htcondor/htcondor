@@ -95,7 +95,10 @@ public:
 		 */
 	virtual void Config();
 
-	virtual int SpawnJob( void );
+	virtual int SpawnJob(UserProc * job = nullptr);
+
+	virtual bool PrepareNextTask(pid_t pid, int status);
+	virtual UserProc* AllocateJob(int taskid=0);
 
 	virtual void WriteRecoveryFile( ClassAd *recovery_ad );
 	virtual void RemoveRecoveryFile();
@@ -387,6 +390,8 @@ public:
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
+	std::map<int, ClassAd> m_task_ads;
+	std::unique_ptr<UserProc> m_next_job;
 
 	// Code shared by the requestGuidance...() functions.
 	static bool handleJobEnvironmentCommand(

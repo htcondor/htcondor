@@ -474,6 +474,10 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	long long max_materialize = INT_MAX;
 	int selected_job_count = 0; // number of jobs we will be submitting (including unmaterialized jobs)
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int task_packing = 1;
+#endif
+
 	bool success = false;
 	SubmitResult result = SubmitResult::RETRY;
 	std::string errmsg;
@@ -614,6 +618,10 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		submitHash.attachTransferMap(dm._protectedUrlMap);
 	}
 
+#ifdef SUPPORT_FOR_TASK_PACKING
+	submitHash.want_task_packing(task_packing);
+#endif
+
 	selected_job_count = ssi.selected_job_count();
 	if (submitHash.want_factory_submit(max_materialize)) {
 		int late_ver = 0;
@@ -654,12 +662,20 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 		int proc_id = 0, item_index = 0, step = 0;
 
 		JOB_ID_KEY jid(cluster_id, proc_id);
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		ssi.set_packing(task_packing);
+	#endif
 		ssi.begin(jid, ! is_factory);
 
 		// for late-mat we want to iter all items, for regular submit we iter only selected ones
 		bool iter_selected = ! is_factory;
 
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		int taskid = 0;
+		while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, taskid, iter_selected)) > 0) {
+	#else
 		while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
+	#endif
 			bool send_cluster = (rval == 2); // rval tells us when we need to send the cluster ad
 
 			if ( ! is_factory) {
@@ -780,6 +796,20 @@ DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::string& err) {
 				// break out of the loop, we are done.
 				break;
 			}
+
+		#ifdef SUPPORT_FOR_TASK_PACKING
+			if (ssi.packing() > 1) {
+				int task_packing = ssi.packing();
+				int taskid, item_indexT, stepT;
+				JOB_ID_KEY jidT = jid;
+				for (int ix = 1; ix < task_packing; ++ix) {
+					if (ssi.next_selected(jidT, item_indexT, stepT, taskid, true)) {
+						submitHash.add_job_task(taskid, item_indexT, stepT);
+					}
+				}
+				submitHash.finalize_job_tasks(task_packing);
+			}
+		#endif
 
 			// send procad attributes
 			errmsg = MyQ->send_JobAttributes(jid, *proc_ad, SetAttribute_NoAck);
