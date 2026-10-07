@@ -1869,6 +1869,7 @@ FileTransfer::callClientCallback()
 // instead of narrowing it.
 static bool
 PipeMsgLengthOk(size_t size, const char * what) {
+	// '>=' (not '>') leaves room for callers that add one for a trailing null
 	if (size >= static_cast<size_t>(std::numeric_limits<int>::max())) {
 		dprintf(D_ALWAYS, "FileTransfer: %s is too large (%zu bytes) to send "
 		                   "over the transfer status pipe\n", what, size);
@@ -1879,7 +1880,13 @@ PipeMsgLengthOk(size_t size, const char * what) {
 
 bool
 FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
-	buf.resize(nBytes);
+	// Check before resize(): a negative length would convert to a huge
+	// size_t and throw rather than fail the read.
+	if (nBytes < 0) {
+		dprintf(D_ERROR, "PipeReadFullString: invalid length: %d\n", nBytes);
+		return false;
+	}
+	buf.resize(static_cast<size_t>(nBytes));
 
 	int num_reads = 0;
 	bool success = daemonCore->Read_Pipe_Full(TransferPipe[0], buf.data(), nBytes, &num_reads);
@@ -3961,8 +3968,14 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	std::string stats;
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(stats, &Info.stats);
-	if (!PipeMsgLengthOk(stats.length(), "stats ad")) write_failed = true;
-	int stats_len = stats.length();
+
+	int stats_len = 0;
+	if (!PipeMsgLengthOk(stats.length(), "stats ad")) {
+		write_failed = true;
+	} else {
+		stats_len = static_cast<int>(stats.length());
+	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&stats_len,
@@ -3973,11 +3986,17 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], stats.data(), stats_len)) write_failed = true;
 		dprintf(D_ZKM, "sent stats ad to pipe: %s\n", stats.c_str());
 	}
-	if (!PipeMsgLengthOk(Info.error_desc.length(), "error description")) write_failed = true;
-	int error_len = Info.error_desc.length();
-	if(error_len) {
-		error_len++; //write the null too
+
+	int error_len = 0;
+	if (!PipeMsgLengthOk(Info.error_desc.length(), "error description")) {
+		write_failed = true;
+	} else {
+		error_len = static_cast<int>(Info.error_desc.length());
+		if (error_len) {
+			error_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&error_len,
@@ -3989,11 +4008,16 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		dprintf(D_ZKM, "sent error to pipe: %s\n", Info.error_desc.c_str());
 	}
 
-	if (!PipeMsgLengthOk(Info.spooled_files.length(), "spooled files list")) write_failed = true;
-	int spooled_files_len = Info.spooled_files.length();
-	if(spooled_files_len) {
-		spooled_files_len++; //write the null too
+	int spooled_files_len = 0;
+	if (!PipeMsgLengthOk(Info.spooled_files.length(), "spooled files list")) {
+		write_failed = true;
+	} else {
+		spooled_files_len = static_cast<int>(Info.spooled_files.length());
+		if (spooled_files_len) {
+			spooled_files_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&spooled_files_len,
