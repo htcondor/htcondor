@@ -9977,7 +9977,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 	hash_iter_delete(&it);
 
 	// Special case for "organized" output since it uses several submit commands
-	// to set an existing submit command <sigh>.  We want to build an base/pattern
+	// to set an existing submit command <sigh>.  We want to build a base/pattern
 	// for the organized output directory, and add it as "output_directory=" if
 	// it has unexpanded macros after selective expansion
 	const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(str, true);
