@@ -9913,7 +9913,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		omit_knobs.insert(SUBMIT_KEY_Requirements);
 
 		// convert the OrganizedOutput keys into a complex SUBMIT_KEY_OutputDirectory
-		// and them omit the from the digest
+		// and then omit them from the digest
 		omit_knobs.insert(SUBMIT_KEY_OrganizedOutput);
 		omit_knobs.insert(SUBMIT_KEY_OrganizedOutputBase);
 		omit_knobs.insert(SUBMIT_KEY_OrganizedOutputPattern);
