@@ -144,11 +144,10 @@ idle because no other job can fit on the machine.
 Common Files and Checkpointing
 """"""""""""""""""""""""""""""
 
-[FIXME: test this.]
-
 You should (for efficiency and clarity) already be omitting input files that
 the job doesn't change from :subcom:`transfer_checkpoint_files`; continue to
-do so by not including files any files from subcom:`transfer_common_input` either.
+do so by not including files any files from subcom:`transfer_common_input`
+either.
 
 Job Event Logs
 """"""""""""""
