@@ -29,6 +29,10 @@
   host, such as unified-memory devices like the NVIDIA DGX Spark.
   :jira:`3899`
 
+- Docker universe jobs now have :ad-attr:`DockerImageHash` recorded
+  in the job ad for provenance reasons.
+  :jira:`974`
+  
 - The DAGMan Node Status File now reports aggregate job proc counts
   (submitted, running, idle, held, completed, and failed) for the DAG
   and each node, and can be written in JSON format.

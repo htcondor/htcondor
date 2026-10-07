@@ -7,6 +7,8 @@
 # so it isnt in the ctest lists, # but will run under a personal condor
 
 import logging
+import re
+import time
 
 from ornithology import *
 from htcondor2 import JobEventType
@@ -64,6 +66,29 @@ def events_for_docker_job(condor, completed_test_job):
     return condor.job_queue.by_jobid[JobID(completed_test_job.clusterid,0)]
 
 @action
+def docker_job_ad(condor, completed_test_job):
+    # The job has completed, but it may not have reached the history file yet.
+    schedd = condor.get_local_schedd()
+    constraint = f"ClusterId == {completed_test_job.clusterid} && ProcId == 0"
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        ads = list(schedd.history(constraint, ["DockerImage", "DockerImageHash"]))
+        if len(ads) > 0:
+            return ads[0]
+        time.sleep(1)
+    assert False, f"Job {completed_test_job.clusterid}.0 never reached the history file"
+
+@action
+def expected_image_hash(condor, test_job_hash, completed_test_job):
+    # After the job has run (so the image is pulled), ask docker directly
+    # which image the tag resolves to, using the same docker binary the
+    # starter uses.
+    docker = condor.run_command(["condor_config_val", "DOCKER"]).stdout.strip()
+    rv = condor.run_command(
+        [docker, "image", "inspect", "--format", "{{.Id}}", test_job_hash["docker_image"]]
+    )
+    assert rv.returncode == 0, f"docker image inspect failed: {rv.stderr}"
+    return rv.stdout.strip()
 def bad_create_job(condor_bad_create, test_job_hash):
     job = condor_bad_create.submit({**test_job_hash}, count=1)
     assert job.wait(condition=ClusterState.all_held, timeout=120)
@@ -85,6 +110,12 @@ class TestDocker:
                 ],
              )
 
+    def test_docker_image_hash(self, docker_job_ad, expected_image_hash):
+        image_hash = docker_job_ad.get("DockerImageHash")
+        assert image_hash is not None, "DockerImageHash missing from job ad"
+        assert re.fullmatch(r"sha256:[0-9a-f]{64}", image_hash), \
+            f"DockerImageHash '{image_hash}' is not a sha256 content hash"
+        assert image_hash == expected_image_hash
     def test_execute_event_before_terminate(self, completed_test_job):
         types = event_types(completed_test_job)
         assert JobEventType.EXECUTE in types
