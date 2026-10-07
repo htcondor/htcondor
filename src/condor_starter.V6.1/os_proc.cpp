@@ -782,7 +782,9 @@ OsProc::JobExit( void )
 {
 	int reason;	
 
-	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
+	//dprintf( D_ZKM | D_BACKTRACE, "Inside OsProc::JobExit() taskid=%d %s\n",
+	//	taskid, m_finalTask?"final":"" );
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit() taskid=%d%s\n", taskid, m_finalTask?" final":"" );
 
 	if( requested_exit == true ) {
 		if( starter->jic->hadHold() || starter->jic->hadRemove() ) {
@@ -814,8 +816,10 @@ OsProc::JobExit( void )
     set_priv ( old );
 
 #endif
-
-	return starter->jic->notifyJobExit( exit_status, reason, this );
+	if (m_finalTask) {
+		return starter->jic->notifyJobExit( exit_status, reason, this );
+	}
+	return true;
 }
 
 

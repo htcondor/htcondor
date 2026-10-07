@@ -23,6 +23,14 @@
 #include "condor_config.h" // for MACRO_SOURCE
 #include <dc_schedd.h> // for ShouldTransferFiles_t
 
+// comment/uncomment to enable/disable submit_utils stuff that
+// supports multiple queue statements in condor_q
+// (hopefully we wont need to enable this again!)
+//#define SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
+
+// comment/uncomment this line to enable/disable submit option
+// to pack multiple queue foreach items (tasks) into a job.
+#define SUPPORT_FOR_TASK_PACKING 1
 
 /*
 **	submit keywords that control submit behavior
@@ -991,7 +999,6 @@ private:
 };
 
 //#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
-//#ifdef SUPPORT_FOR_TASK_PACKING
 
 struct SubmitStepFromQArgs {
 

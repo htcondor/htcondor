@@ -166,6 +166,7 @@ UserProc::JobReaper(int pid, int status)
 		// a script proc or a non-interactive sshd proc).
 		if( name == NULL ) {
 			starter->RecordJobExitStatus(status);
+			return ReapResult::JobNext;
 		}
 		return ReapResult::JobDone;
 	}
@@ -408,6 +409,70 @@ UserProc::getStdFile( std_file_type type,
 	return true;
 }
 
+#ifdef WIN32
+// open a stdout/err file via the win32 api so we can open in actual append mode if needed.
+static int open_stdFile_win32(const char * file, int flags, bool inheritable, DWORD & err)
+{
+	int fd = -1;
+
+	// if we want Win32 file handle in append mode, we have to open the handle in a diffent file mode
+	// than what the c-runtime uses:  FILE_APPEND_DATA but NOT FILE_WRITE_DATA or GENERIC_WRITE.
+	// Note that we do NOT pass _O_APPEND to _open_osfhandle() since what that does in the current (broken)
+	// c-runtime is tell it to call seek before every write, but you *can't* seek an append-only file...
+	DWORD access_mode = GENERIC_READ;
+	if (flags & _O_APPEND) {
+		access_mode = FILE_APPEND_DATA; // append but not GENERIC_WRITE !!
+	} else if (flags & _O_RDWR) {
+		access_mode = GENERIC_READ | GENERIC_WRITE;
+	} else if (flags & _O_WRONLY) {
+		access_mode = GENERIC_WRITE;
+	}
+
+	// set create mode based in input flags
+	DWORD create_mode = OPEN_ALWAYS;
+	switch (flags & (_O_CREAT | _O_TRUNC)) {
+	case 0:                 create_mode = OPEN_EXISTING; break;
+	case _O_CREAT:          create_mode = OPEN_ALWAYS; break;
+	case _O_TRUNC:          create_mode = TRUNCATE_EXISTING; break;
+	case _O_CREAT|_O_TRUNC: create_mode = CREATE_ALWAYS; break;
+	}
+
+	// allow others unrestricted open of the file and
+	// set the inherit flag, since we will want to pass this to another process.
+	DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	DWORD attrib = FILE_ATTRIBUTE_NORMAL;
+
+	// use a security attributes structure to set the inheritable flag of the file
+	SECURITY_ATTRIBUTES sa_inherit{sizeof(SECURITY_ATTRIBUTES), nullptr, true};
+	LPSECURITY_ATTRIBUTES inherit = inheritable ? &sa_inherit : nullptr;
+
+	// TODO: consider using CreateFile3 which has FILE_FLAG_DISALLOW_PATH_REDIRECTS
+	// which prevents following symbolic links, but would necessitate that we convert
+	// drive letters into path prefixes ourselves.
+
+	HANDLE hf = CreateFile(file, access_mode, share_mode, inherit, create_mode, attrib, NULL);
+	if (hf == INVALID_HANDLE_VALUE) {
+		fd = -1;
+		err = GetLastError();
+	} else {
+		err = 0;
+		fd = _open_osfhandle((intptr_t)hf, flags & (/*_O_APPEND | */_O_RDONLY | _O_RDWR | _O_TEXT | _O_WTEXT));
+		if (fd < 0) {
+			// open_osfhandle can sometimes set errno and sometimes _doserrno (i.e. GetLastError()),
+			// the only non-windows error code it sets is EMFILE when the c-runtime fd table is full.
+			if (errno == EMFILE) {
+				err = ERROR_TOO_MANY_OPEN_FILES;
+			} else {
+				err = _doserrno;
+				if (err == NO_ERROR) err = ERROR_INVALID_FUNCTION; // make sure we get an error code
+			}
+		}
+	}
+
+	return fd;
+}
+#endif
+
 int
 UserProc::openStdFile( std_file_type type,
                        const char* attr,
@@ -435,6 +500,19 @@ UserProc::openStdFile( std_file_type type,
 		// otherwise, we need to perform an open on the name
 		// we got back
 	bool is_output = (type != SFT_IN);
+#ifdef WIN32
+	// FDs that we want to pass to child processes have to be opened using Win32 API
+	// and not the c-runtime (in particular for O_APPEND). so we call a function
+	// here that does a W32 open, then wraps a c-runtime fd around it.
+	// Closing the fd will close the Win32 handle. We want Win32 inheritable handles
+	// here although daemonCore will can also add that when we try and pass them to a child process.
+	DWORD open_err = 0;
+	int flags = O_RDONLY | O_LARGEFILE; // LARGEFILE is a noop on windows
+	if (is_output) { flags = outputOpenFlags(); }
+	if (filename == NULL_FILE) { flags &= ~_O_TRUNC; } // can't truncate NUL
+	const bool Inheritable = true; // inheritable by child processes
+	fd = open_stdFile_win32(filename.c_str(), flags, Inheritable, open_err);
+#else // ! WIN32
 	if( is_output ) {
 		int flags = outputOpenFlags();
 
@@ -455,9 +533,23 @@ UserProc::openStdFile( std_file_type type,
 	} else {
 		fd = safe_open_wrapper_follow( filename.c_str(), O_RDONLY | O_LARGEFILE );
 	}
+#endif // ! WIN32
+
 	if( fd < 0 ) {
-		int open_errno = errno;
-		char const *errno_str = strerror( errno );
+	#ifdef WIN32
+		const char * errno_str = GetLastErrorString(open_err);
+		// Win32 has richer error codes, conversion to errno would loose information
+		// and be confusing on Windows only pools, so return Win32 codes.
+		// Note this ends up as the hold subcode.
+		// Conveniently ERROR_FILE_NOT_FOUND == ENOENT
+		// Windows also has ERROR_PATH_NOT_FOUND (which == 3 == ESRCH)
+		// Sadly ERROR_ACCESS_DENIED == 5 has value of EIO and not EACCES
+		// Also sadly EACCES has the same value as ERROR_INVALID_DATA.
+		int hold_subcode = open_err;
+	#else
+		int hold_subcode = errno;
+		const char * errno_str = strerror( errno );
+	#endif
 		std::string err_msg;
 		const char* phrase;
 		if (type == SFT_IN) {
@@ -469,20 +561,21 @@ UserProc::openStdFile( std_file_type type,
 		else {
 			phrase = "standard error";
 		}
-		formatstr( err_msg, "Failed to open '%s' as %s: %s (errno %d)",
-		                 filename.c_str(),
-		                 phrase,
-		                 errno_str,
-		                 errno );
+		formatstr(err_msg, "Failed to open '%s' as %s: %s", filename.c_str(), phrase, errno_str);
+	#ifdef WIN32
+		formatstr_cat(err_msg, " (error %u)", open_err);
+	#else
+		formatstr_cat(err_msg, " (errno %d)", hold_subcode);
+	#endif
 		dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
 		starter->jic->notifyStarterError( err_msg.c_str(), true,
 		  is_output ? CONDOR_HOLD_CODE::UnableToOpenOutput :
-		              CONDOR_HOLD_CODE::UnableToOpenInput, open_errno );
+		              CONDOR_HOLD_CODE::UnableToOpenInput,
+		  hold_subcode );
 		return -1;
 	}
 	dprintf( (filename == NULL_FILE) ? D_FULLDEBUG : D_ALWAYS,
-	         "%s: %s\n", log_header,
-	         filename.c_str() );
+	         "%s: %s\n", log_header, filename.c_str() );
 	return fd;
 }
 
