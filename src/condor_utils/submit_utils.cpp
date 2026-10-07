@@ -8442,7 +8442,7 @@ ClassAd* SubmitHash::make_job_ad (
 	SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	SetSimpleJobExprs();
-	SetOutputDirSpecial(); // we do this here so that OutputDestintion will already have been set (by SetSimpleJobExprs)
+	SetOutputDirSpecial(); // we do this here so that OutputDestination will already have been set (by SetSimpleJobExprs)
 	SetExtendedJobExprs();
 
 	SetJobDeferral(); /* 4 attrs, prunable */
