@@ -494,7 +494,6 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     // is eligible, or a pass fails to shrink the database.
     constexpr int MAX_GC_PASSES = 10;
     bool garbageCollected = false;
-    bool madeProgress = true;
     for (int pass = 1; pass <= MAX_GC_PASSES && currentSize > lowWatermark; ++pass) {
         int numFilesToDelete = dbHandler_.countFilesToCollect(currentSize - lowWatermark);
         if (numFilesToDelete <= 0) {
@@ -503,7 +502,6 @@ bool Librarian::cleanupDatabaseIfNeeded() {
                 // No jobs to remove, but previously timestamped users may have expired
                 std::ignore = dbHandler_.pruneExpiredUsersNow();
             }
-            madeProgress = (currentSize < startSize);
             break;
         }
 
@@ -512,15 +510,13 @@ bool Librarian::cleanupDatabaseIfNeeded() {
 
         if ( ! dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete)) {
             dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
-            madeProgress = (currentSize < startSize);
             break;
         }
         garbageCollected = true;
 
         int64_t sizeAfter = dbHandler_.getDatabaseSizeBytes();
         if (sizeAfter < 0 || sizeAfter >= currentSize) {
-            // This pass reclaimed nothing; earlier passes may still have
-            madeProgress = (currentSize < startSize);
+            // This pass reclaimed nothing; stop (earlier passes may still have)
             break;
         }
         currentSize = sizeAfter;
@@ -531,7 +527,7 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     // (nothing marked deleted yet) or with rows deleted but no space reclaimed (e.g.
     // incremental_vacuum unavailable). Either way, retrying every single cycle just
     // burns CPU and writes for no benefit, so back off until it's worth trying again.
-    if ( ! madeProgress || currentSize >= startSize) {
+    if (currentSize >= startSize) {
         auto backoff = std::chrono::seconds(config[conf::i::GCBackoffSeconds]);
         nextGCAttempt_ = now + backoff;
         dprintf(D_STATUS, "Garbage collection did not reduce database size (%s -> %s); backing "
