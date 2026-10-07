@@ -2598,7 +2598,7 @@ int SubmitHash::SetOutputDirSpecial()
 		}
 	}
 
-	// Before SUBMIT_KEY_OrganizedOutput was addded, this is what SetSimpleJobExprs would have done.
+	// Before SUBMIT_KEY_OrganizedOutput was added, this is what SetSimpleJobExprs would have done.
 	// It converts the $() expanded output dir to a full path and optionally does a file check on it.
 	const char * str = out_dir;
 	if (str && str[0]) {
