@@ -433,6 +433,16 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def get_my_identity():
+    try:
+        c = htcondor.Collector()
+        location = c.locate(htcondor.DaemonType.Schedd)
+        ping_ad = htcondor.ping(location, "WRITE")
+    except Exception as e:
+        raise RuntimeError(f"Cannot reach schedd: {e}")
+    return ping_ad["MyRemoteUserName"]
+
+
 def create_annex_token(logger, type):
     token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
     annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
@@ -1077,15 +1087,14 @@ def annex_inner_func_new(
     test,
 ):
 
-    # We use this same method to determine the user name in `htcondor job`,
-    # so even if it's wrong, it will at least consistently so.
-    username = getpass.getuser()
-
     # As reminders for when we fix lifetime being specified in seconds.
     idletime_in_seconds = startd_noclaim_shutdown
 
     if test is not None and test == 1:
         return
+
+    if owners is None:
+        owners = get_my_identity()
 
     # Location of the local universe script files
     local_script_dir = (

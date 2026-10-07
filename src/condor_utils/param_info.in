@@ -7765,7 +7765,7 @@ default : @fin
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
 	JOB_TRANSFORM_AssignAnnex @=end
 		REQUIREMENTS TargetAnnexName =!= undefined
-		my_identity = "$(MY.Owner)@$(ANNEX_TOKEN_DOMAIN)"
+		my_identity = "$(MY.User)"
 		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
 		if defined MY.JobMachineAttrs
 			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"

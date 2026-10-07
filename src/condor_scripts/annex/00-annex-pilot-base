@@ -35,7 +35,7 @@ CCB_ADDRESS = $(ANNEX_PILOT_COLLECTOR)
 STARTD_NOCLAIM_SHUTDOWN = 300
 
 # Only start jobs from the specified owner(s).
-START = $(START) && stringListMember( Owner, "$(ANNEX_PILOT_OWNERS)" )
+START = $(START) && stringListMember(User, "$(ANNEX_PILOT_OWNERS)")
 # Only start jobs for this annex.
 START = $(START) && MY.AnnexName == TARGET.TargetAnnexName
 
