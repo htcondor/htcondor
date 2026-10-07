@@ -25,6 +25,7 @@
 #include "classadHistory.h"
 #include "condor_uid.h"
 #include "directory_util.h"
+#include "file_lock.h"
 #include "job_ad_instance_recording.h"
 #include "proc.h"
 
@@ -35,6 +36,7 @@
 static bool epochHistoryIsInitialized = false;
 static HistoryFileRotationInfo hri; //File rotation info for aggregate history like file
 static HistoryFileRotationInfo dri; //File rotation info for epoch directory files
+static std::string rotation_lock_file; //Lock file serializing rotation across shadows
 // Struct to hold information of where to write epoch ads
 struct EpochWriteFilesInfo {
 	auto_free_ptr JobEpochInstDir;      //Path to valid directory for epoch files
@@ -105,6 +107,13 @@ initJobEpochHistoryFiles(){
 			dri.MaxHistoryFileSize = 1024 * 1024 * 100; //Base 100MB until adding user defined limit (maybe be clever by asking number of adds and doing math)
 			efi.can_writeAd = true;
 		}
+	}
+
+	param(rotation_lock_file, "EPOCH_HISTORY_LOCK");
+	if (!rotation_lock_file.empty()) {
+		dprintf(D_FULLDEBUG, "Using lock file %s for file rotation\n", rotation_lock_file.c_str());
+	} else {
+		dprintf(D_ERROR, "EPOCH_HISTORY_LOCK is not set; epoch history rotation is unlocked and records may be lost!\n");
 	}
 }
 
@@ -225,8 +234,35 @@ static void
 writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, const char* new_path = NULL) {
 	//Set priv_condor to allow writing to condor owned locations i.e. spool directory
 	TemporaryPrivSentry tps(PRIV_CONDOR);
+
+	// Hold the lock across the size check and rotation so concurrent shadows
+	// cannot both decide to rotate. Lock a separate file because rotation
+	// renames the file being written to.
+	int lock_fd = -1;
+	std::unique_ptr<FileLock> rotation_lock;
+	if ( ! rotation_lock_file.empty()) {
+		lock_fd = safe_open_wrapper_follow(rotation_lock_file.c_str(), O_CREAT | O_WRONLY | _O_NOINHERIT, 0644);
+		if (lock_fd < 0) {
+			dprintf(D_ERROR, "Failed to open epoch rotation lock file %s (%d): %s\n",
+			        rotation_lock_file.c_str(), errno, strerror(errno));
+		} else {
+			rotation_lock = std::make_unique<FileLock>(lock_fd, nullptr, rotation_lock_file.c_str());
+			if ( ! rotation_lock->obtain(WRITE_LOCK)) {
+				dprintf(D_ERROR, "Failed to lock epoch rotation lock file %s\n", rotation_lock_file.c_str());
+			}
+		}
+	}
+
 	//Check if we want to rotate the file
+	// Note: Backups are named by time to the second, so two rotations within the same
+	//       second clobber the earlier backup. Only reachable when the max file size is
+	//       about one record, since the next lock holder re-checks a nearly empty file.
 	MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
+
+	// Release the lock before closing the fd it is held on
+	rotation_lock.reset();
+	if (lock_fd >= 0) { close(lock_fd); }
+
 	//Open file and append Job Ad to it
 	int fd = -1;
 	const char * errmsg = nullptr;
