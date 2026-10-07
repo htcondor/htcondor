@@ -56,6 +56,12 @@ These settings affect the *condor_shadow*.
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor_shadow* to exit after running a single job.
 
+:macro-def:`DEACTIVATE_CLAIM_TIMEOUT`
+    The integer number of seconds the *condor_shadow* waits for the
+    *condor_startd* to accept and answer a request to deactivate a claim.
+    The *condor_shadow* tries three times, five seconds apart, before
+    giving up on the *condor_startd*. The default is 20.
+
 :macro-def:`SHADOW_JOB_CLEANUP_RETRY_DELAY`
     This integer specifies the number of seconds to wait between tries
     to commit the final update to the job ClassAd in the
