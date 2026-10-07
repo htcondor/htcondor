@@ -1155,7 +1155,7 @@ FILE TRANSFER COMMANDS
         output_directory = /path/to/output/$INT(ClusterId,%05d)/$(JobId)
 
     Will transfer the output into a separate directory for each submission,
-    with a seprate subdirectory for each job.  :ad-expr:`$INT(ClusterId,%05d)` prints
+    with a separate subdirectory for each job.  :ad-expr:`$INT(ClusterId,%05d)` prints
     the ClusterId with a minimum of 5 digits using leading 0's, so if the
     ClusterId of the submission is 95, the output directories will be
 
