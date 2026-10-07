@@ -436,13 +436,13 @@ def extract_sif_file(job_ad):
 def create_annex_token(logger, type):
     token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
     annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
-    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
-    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+    token_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+    token_file.close()
 
     args = [
         'condor_token_fetch',
         '-lifetime', str(token_lifetime),
-        '-token', token_name,
+        '-file', token_file,
         '-key', annex_token_key_name,
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
@@ -463,10 +463,7 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY", "")
-            if sec_token_directory == "":
-                sec_token_directory = "~/.condor/tokens.d"
-            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+            return token_file.name
         else:
             logger.error(f"Failed to create annex token, aborting.")
             logger.warning(f"{out.strip()}")
