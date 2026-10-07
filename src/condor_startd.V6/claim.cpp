@@ -205,7 +205,8 @@ Claim::~Claim()
 	this->cancelLeaseTimer();
 	if ( c_alive_inprogress_sock ) {
 		daemonCore->Cancel_Socket(c_alive_inprogress_sock);
-		c_alive_inprogress_sock = NULL;
+		delete c_alive_inprogress_sock;
+		c_alive_inprogress_sock = nullptr;
 	}
 
 	// if we were associated with a starter, then we need to check to see if that starter was reaped
