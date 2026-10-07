@@ -1,6 +1,10 @@
 #!/usr/bin/env pytest
 
 import logging
+import os
+import re
+import signal
+import time
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -123,7 +127,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
             "#!/bin/bash\n"
             f'exec {SBIN}/condor_shadow --use-guidance-in-job-ad "$@"' "\n"
         )
-        path_to_shadow_wrapper.chmod(0o777)
+        path_to_shadow_wrapper.chmod(0o755)
 
         yield the_condor
 
@@ -273,3 +277,114 @@ class TestGuidanceCommands:
             # Validate that the diagnostic was run.
             # diagnostic_log_path = (test_dir / ".diagnostic" / f"send_ep_logs.{the_completed_job.clusterid}.0.0")
             # assert diagnostic_log_path.exists()
+
+
+#
+# Regression test: if the shadow kills the starter while it is computing
+# guidance, and the startd can't be reached, RemoteResource::killStarter()
+# disconnects and deletes the claim socket.  The shadow then must not try
+# to send the guidance reply on the deleted socket (it used to SIGSEGV).
+#
+# We stop (not kill: that takes the starter with it) the startd while the
+# starter waits out a RetryReqest, so that the subsequent DEACTIVATE_CLAIM
+# times out for real.
+#
+
+KILL_STARTER_GUIDANCE = (
+    '{ [ Command = "RetryReqest"; RetryDelay = 5; ],'
+    ' [ Command = "CarryOn"; _condor_test_vacate_requeue_abort = true; ] }'
+)
+
+
+@action
+def kill_starter_condor(test_dir, path_to_shadow_wrapper):
+    local_dir = test_dir / "kill_starter_condor"
+
+    with Condor(
+        local_dir=local_dir,
+        config={
+            "SHADOW":                       path_to_shadow_wrapper.as_posix(),
+            "SHADOW_DEBUG":                 "D_FULLDEBUG D_TEST",
+            "DEACTIVATE_CLAIM_TIMEOUT":     5,
+            "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
+            "SHADOW_WORKLIFE":              0,
+            "STARTER_LOG_NAME_APPEND":      "JobID",
+        },
+    ) as the_condor:
+        SBIN = htcondor2.param["SBIN"]
+        path_to_shadow_wrapper.write_text(
+            "#!/bin/bash\n"
+            f'exec {SBIN}/condor_shadow --use-guidance-in-job-ad "$@"' "\n"
+        )
+        path_to_shadow_wrapper.chmod(0o777)
+
+        yield the_condor
+
+
+@action
+def kill_starter_job(kill_starter_condor, the_job_description):
+    return kill_starter_condor.submit(
+        description={
+            ** the_job_description,
+            # Must outlast the failed DEACTIVATE_CLAIMs (~30s), or the
+            # reconnect fails synchronously and the shadow never returns
+            # to reply; it also bounds the shadow's blocking sleep in
+            # killStarter().
+            "job_lease_duration":           45,
+            "+_condor_guidance_test_case":  KILL_STARTER_GUIDANCE,
+        },
+        count=1,
+    )
+
+
+@action
+def kill_starter_shadow_log(kill_starter_condor, kill_starter_job):
+    # The ShadowLog doesn't exist until the job's shadow starts.
+    deadline = time.time() + 120
+    while not kill_starter_condor.shadow_log.path.exists():
+        assert time.time() < deadline, "shadow never started"
+        time.sleep(1)
+    shadow_log = kill_starter_condor.shadow_log.open()
+
+    # Wait for the first guidance (the RetryReqest) to go out.
+    assert shadow_log.wait(
+        timeout=120,
+        condition=lambda line: "Using guidance in job ad." in line.message,
+    )
+
+    # Stop the startd so that the shadow's DEACTIVATE_CLAIM fails.
+    text = kill_starter_condor.startd_log.path.read_text()
+    pid_matches = re.findall(r"\*\* PID = (\d+)", text)
+    assert pid_matches, "Could not find startd PID in startd log"
+    startd_pid = int(pid_matches[-1])
+    logger.info(f"Stopping startd (pid {startd_pid})")
+    os.kill(startd_pid, signal.SIGSTOP)
+
+    try:
+        # Three DEACTIVATE_CLAIM attempts time out (5s each, 5s apart),
+        # then the shadow sleeps out the rest of the job lease.  The
+        # crash handler's "Caught signal" line has no timestamp, so
+        # DaemonLogStream won't parse it; poll the raw text instead.
+        deadline = time.time() + 180
+        while True:
+            text = kill_starter_condor.shadow_log.path.read_text()
+            if "Claim socket closed while computing guidance" in text:
+                break
+            if "Caught signal" in text:
+                break
+            assert time.time() < deadline, "shadow never replied or crashed"
+            time.sleep(1)
+    finally:
+        os.kill(startd_pid, signal.SIGCONT)
+
+    return text
+
+
+class TestGuidanceKillStarter:
+
+    def test_shadow_survives_socket_close_during_guidance(self,
+        kill_starter_shadow_log
+    ):
+        assert "Failed to kill starter" in kill_starter_shadow_log
+        assert "Caught signal" not in kill_starter_shadow_log
+        assert "Claim socket closed while computing guidance" in kill_starter_shadow_log

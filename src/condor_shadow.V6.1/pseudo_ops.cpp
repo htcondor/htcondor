@@ -2183,7 +2183,19 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// in-job guidance would have to specify the request type.)
 		if( use_guidance_in_job_ad ) {
 			dprintf( D_TEST, "Using guidance in job ad.\n" );
-			return send_guidance_from_job_ad( request, guidance );
+			GuidanceResult rv = send_guidance_from_job_ad( request, guidance );
+
+			// Lets the test exercise a shadow-side failure that kills
+			// the starter while the starter waits for this reply.
+			bool vacate = false;
+			if( guidance.LookupBool( "_condor_test_vacate_requeue_abort", vacate ) && vacate ) {
+				guidance = VACATE_REQUEUE_ABORT(
+					"Test-requested vacate during guidance.",
+					CONDOR_HOLD_CODE::JobNotStarted,
+					JOB_NOT_STARTED_SUB_CODE::CommonTransferFailed
+				);
+			}
+			return rv;
 		}
 
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {

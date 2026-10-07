@@ -30,23 +30,4 @@ enum class DAG_GENERIC_CMD {
 
 bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm);
 
-Node* AddNode( Dag *dag, const char *name,
-			  const char* directory,
-			  const char* submitFileOrSubmitDesc,
-			  bool noop,
-			  bool done, NodeType type, std::string &failReason );
-
-/** Set the DAG file (if any) for a node.
-	@param dag: the DAG this node is part of
-	@param nodeName: the name of the node
-	@param dagFile: the name of the DAG file
-	@param whynot: holds error message if something went wrong
-	@return true if successful, false otherwise
-*/
-bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
-			std::string &whynot );
-
-bool IsValidNodeName( Dag *dm, const char *name, std::string &whynot );
-bool IsValidSubmitName( const char *name, std::string &whynot );
-
 #endif	// ifndef DAGMAN_COMMANDS_H

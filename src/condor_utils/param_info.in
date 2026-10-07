@@ -4554,6 +4554,11 @@ version=7.5.3
 type=int
 tags=shadow
 
+[DEACTIVATE_CLAIM_TIMEOUT]
+default=20
+type=int
+tags=shadow
+
 [CLAIM_WORKLIFE]
 default=1200
 type=int

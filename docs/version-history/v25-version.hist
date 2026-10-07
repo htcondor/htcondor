@@ -1,5 +1,13 @@
 *** 25.15.16 bugs
 
+- Fixed a bug in :tool:`condor_userprio` where using both ``-allusers`` and ``-name`` 
+  options would result in no output.
+  :jira:`3965`
+  
+- Fixed a bug in the *condor_shadow* that caused a segfault and coredump when
+  the shadow had difficulty communicating with a starter.
+  :jira:`3967`
+
 *** 25.0.16 bugs
 
 *** 25.15.15 features
@@ -901,7 +909,7 @@
 *** 25.6.1 features
 
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
-  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  parser will be deprecated in the future but can be used by setting ``DAGMAN_USE_OLD_FILE_PARSER``
   to ``True``.
   :jira:`3304`
 

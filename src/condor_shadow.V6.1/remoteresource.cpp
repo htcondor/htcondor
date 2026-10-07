@@ -670,6 +670,11 @@ void
 RemoteResource::closeClaimSock( void )
 {
 	if( claim_sock ) {
+			// do_REMOTE_syscall() may still be on the stack using the
+			// global alias; null it so it can tell the socket is gone.
+		if( syscall_sock == claim_sock ) {
+			syscall_sock = nullptr;
+		}
 		daemonCore->Cancel_Socket( claim_sock );
 		delete claim_sock;
 		claim_sock = NULL;
@@ -1491,6 +1496,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( long_value > scratch_dir_file_count ) {
 			scratch_dir_file_count = long_value;
 			jobAd->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, scratch_dir_file_count);
+		}
+	}
+
+		// The docker image the starter actually ran, identified by its
+		// content hash.  While it doesn't change during any particular
+		// instance, it may change from instance to instance, so update
+		// it if it's new or if it changed.
+	if( update_ad->LookupString(ATTR_DOCKER_IMAGE_HASH, string_value) ) {
+		std::string prev_hash;
+		if( ! jobAd->LookupString(ATTR_DOCKER_IMAGE_HASH, prev_hash) || prev_hash != string_value ) {
+			jobAd->Assign(ATTR_DOCKER_IMAGE_HASH, string_value);
 		}
 	}
 

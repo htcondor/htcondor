@@ -5,7 +5,27 @@
   been submitted.
   :jira:`3931`
 
+- When running Docker universe jobs, the execute event is now logged
+  when the container is *started*, not when it is *created*.  The
+  container start may take some time, so this makes various statistics
+  more accurate, and allows :tool:`condor_ssh_to_job` to have a better
+  idea when the container is actually running.
+  :jira:`3966`
+
+- Docker universe jobs now have :ad-attr:`DockerImageHash` recorded
+  in the job ad for provenance reasons.
+  :jira:`974`
+  
 *** 26.2.0 bugs
+
+- Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
+  config knob from *condor_dagman* and :tool:`condor_submit_dag`.
+  :jira:`3971`
+
+- Fixed a bug where HTCondor would use IPv4 to initiate a network
+  connection despite configuration parameter :macro:`ENABLE_IPV4`
+  being set to ``False``, and likewise for IPv6.
+  :jira:`3970`
 
 *** 26.0.2 bugs
 
@@ -16,13 +36,6 @@
   such as inefficient resource usage or held jobs and recommending
   specific follow-up commands to investigate them.
   :jira:`3892`
-
-- When running Docker universe jobs, the execute event is now logged
-  when the container is *started*, not when it is *created*.  The
-  container start may take some time, so this makes various statistics
-  more accurate, and allows :tool:`condor_ssh_to_job` to have a better
-  idea when the container is actually running.
-  :jira:`3966`
 
 - :tool:`condor_gpu_discovery` now advertises an :ad-attr:`Integrated`
   attribute that is true for NVIDIA GPUs that share their memory with the

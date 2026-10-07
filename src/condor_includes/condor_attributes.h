@@ -211,6 +211,7 @@
 #define ATTR_IS_TRANSFER_SHADOW "IsTransferShadow"
 #define ATTR_DOCKER_CACHED_IMAGE_SIZE "DockerCachedImageSizeMb"
 #define ATTR_DOCKER_IMAGE "DockerImage"
+#define ATTR_DOCKER_IMAGE_HASH "DockerImageHash"
 #define ATTR_DOCKER_NETWORKS "DockerNetworks"
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
 #define ATTR_DOCKER_OVERRIDE_ENTRYPOINT  "DockerOverrideEntrypoint"
