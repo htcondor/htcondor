@@ -83,6 +83,10 @@
   using both LVM and SELinux.
   :jira:`3337`
 
+- HTCondor tarballs now contain `Apptainer 1.5.4 <https://github.com/apptainer/apptainer/releases/tag/v1.5.4>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.4.
+
 *** 25.0.15 bugs
 
 - Fixed a bug where the *condor_defrag* daemon couldn't send drain commands
