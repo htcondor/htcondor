@@ -185,6 +185,18 @@ output.
 If MIG is enabled on any GPU in the system, some properties become unavailable
 for every GPU in the system; `condor_gpu_discovery` will report what it can.
 
+With **-properties**, each MIG instance also reports which physical GPU
+it lives on and where it sits within that GPU:
+
+    - ``MigParentUuid``: the NVML UUID (``GPU-<uuid>``) of the physical GPU
+      hosting the instance.
+    - ``MigGpuInstanceId``: the instance's GPU instance id.
+    - ``MigComputeInstanceId``: the instance's compute instance id.
+
+These match the ``gi<G>`` and ``ci<C>`` directories under
+``/proc/driver/nvidia/capabilities/gpu<minor>/mig/``, and are not reported
+for GPUs which are not MIG instances.
+
 ClassAd Output
 ~~~~~~~~~~~~~~
 
@@ -232,10 +244,22 @@ Tables
     * - DriverVersion
       - OpenCLVersion
       - AmdDriverVersion
-    * - RuntimeVersion
+    * - NvidiaDriver
       -
       -
     * - Capability
+      -
+      -
+    * -
+      -
+      - Rocm
+    * - MigParentUuid
+      -
+      -
+    * - MigGpuInstanceId
+      -
+      -
+    * - MigComputeInstanceId
       -
       -
 
@@ -256,11 +280,11 @@ Tables
     :widths: 25 25
     :header-rows: 0
 
-    * - BoardTempC
-      - DieTempC
-    * - EccErrorSingleBit
-      - EccErrorDoubleBit
-    * - FanSpeedPct
+    * - DieTempC
+      - FanSpeedPct
+    * - EccErrorsSingleBit
+      - EccErrorsDoubleBit
+    * - PowerUsage_mw
       -
 
 .. list-table:: Table 2.1 Simulated GPUs
