@@ -23,6 +23,11 @@ enable historical archive record indexing to a database by setting :macro:`use f
 :macro-def:`LIBRARIAN_DEBUG`
     The archive librarian's debugging level. Default is nothing.
 
+:macro-def:`LIBRARIAN_ADDRESS_FILE`
+    This macro is described in :macro:`<SUBSYS>_ADDRESS_FILE`. It allows tools such
+    as :tool:`condor_restart` with ``-daemon librarian`` to locate the archive
+    librarian. Defaults to ``$(LOG)/.librarian_address``.
+
 :macro-def:`LIBRARIAN_DATABASE`
     The path to the archive librarian's SQLite3 database file. Defaults to
     ``$(SPOOL)/library.db``.
@@ -53,8 +58,16 @@ enable historical archive record indexing to a database by setting :macro:`use f
 
 :macro-def:`LIBRARIAN_GC_BACKOFF_SECONDS`
     An integer value representing how long, in seconds, to wait before retrying garbage
-    collection after a pass that did not reduce the database's file size. Defaults to
+    collection after a pass that did not reduce the database's size. Defaults to
     ``1800`` (30 minutes).
+
+:macro-def:`LIBRARIAN_USER_RETENTION_DAYS`
+    An integer value representing the number of days to keep a user's entry in the
+    archive librarian's database after garbage collection removes the last of that
+    user's indexed jobs. Expired users are removed during garbage collection, so a user
+    may be kept longer than this value. A value of ``0`` removes the user in the same
+    garbage collection pass, and a negative value never removes users. Defaults to
+    ``365``.
 
 :macro-def:`LIBRARIAN_MAX_JOBS_CACHED`
     An integer value representing the maximum number of job id information to database
