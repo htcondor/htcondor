@@ -235,33 +235,38 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 	//Set priv_condor to allow writing to condor owned locations i.e. spool directory
 	TemporaryPrivSentry tps(PRIV_CONDOR);
 
-	// Hold the lock across the size check and rotation so concurrent shadows
-	// cannot both decide to rotate. Lock a separate file because rotation
-	// renames the file being written to.
-	int lock_fd = -1;
-	std::unique_ptr<FileLock> rotation_lock;
-	if ( ! rotation_lock_file.empty()) {
-		lock_fd = safe_open_wrapper_follow(rotation_lock_file.c_str(), O_CREAT | O_WRONLY | _O_NOINHERIT, 0644);
-		if (lock_fd < 0) {
-			dprintf(D_ERROR, "Failed to open epoch rotation lock file %s (%d): %s\n",
-			        rotation_lock_file.c_str(), errno, strerror(errno));
-		} else {
-			rotation_lock = std::make_unique<FileLock>(lock_fd, nullptr, rotation_lock_file.c_str());
-			if ( ! rotation_lock->obtain(WRITE_LOCK)) {
-				dprintf(D_ERROR, "Failed to lock epoch rotation lock file %s\n", rotation_lock_file.c_str());
+	// Pre-check if this history file needs to be rotated
+	// Note: This check can still race but is executed again in MaybeRotateHistory()
+	//       when the file lock is held
+	if (CheckHistoryRotationNeeded(fri, info.buffer.length(), info.file_path.c_str())) {
+		// Hold the lock across the size check and rotation so concurrent shadows
+		// cannot both decide to rotate. Lock a separate file because rotation
+		// renames the file being written to.
+		int lock_fd = -1;
+		std::unique_ptr<FileLock> rotation_lock;
+		if ( ! rotation_lock_file.empty()) {
+			lock_fd = safe_open_wrapper_follow(rotation_lock_file.c_str(), O_CREAT | O_WRONLY | _O_NOINHERIT, 0644);
+			if (lock_fd < 0) {
+				dprintf(D_ERROR, "Failed to open epoch rotation lock file %s (%d): %s\n",
+				        rotation_lock_file.c_str(), errno, strerror(errno));
+			} else {
+				rotation_lock = std::make_unique<FileLock>(lock_fd, nullptr, rotation_lock_file.c_str());
+				if ( ! rotation_lock->obtain(WRITE_LOCK)) {
+					dprintf(D_ERROR, "Failed to lock epoch rotation lock file %s\n", rotation_lock_file.c_str());
+				}
 			}
 		}
+
+		// Re-check for file rotation and execute rotation (prevent TOCU race above w/ lock held)
+		// Note: Backups are named by time to the second, so two rotations within the same
+		//       second clobber the earlier backup. Only reachable when the max file size is
+		//       about one record, since the next lock holder re-checks a nearly empty file.
+		MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
+
+		// Release the lock before closing the fd it is held on
+		rotation_lock.reset();
+		if (lock_fd >= 0) { close(lock_fd); }
 	}
-
-	//Check if we want to rotate the file
-	// Note: Backups are named by time to the second, so two rotations within the same
-	//       second clobber the earlier backup. Only reachable when the max file size is
-	//       about one record, since the next lock holder re-checks a nearly empty file.
-	MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
-
-	// Release the lock before closing the fd it is held on
-	rotation_lock.reset();
-	if (lock_fd >= 0) { close(lock_fd); }
 
 	//Open file and append Job Ad to it
 	int fd = -1;

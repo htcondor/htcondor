@@ -138,11 +138,9 @@ AppendHistory(ClassAd* ad)
   // history file. 
 
   std::string ad_string;
-  int ad_size;
   sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs, FastSort);
-  ad_size = ad_string.length();
 
-  if (JobHistoryFileName && DoHistoryRotation) { MaybeRotateHistory(hri, ad_size, JobHistoryFileName); }
+  if (JobHistoryFileName && DoHistoryRotation) { MaybeRotateHistory(hri, ad_string.length(), JobHistoryFileName); }
 
   FILE *LogFile = OpenHistoryFile();
   if (!LogFile) {
@@ -350,74 +348,98 @@ CloseJobHistoryFile() {
 	}
 }
 
+// Check if this file should be rotated
+bool CheckHistoryRotationNeeded(const HistoryFileRotationInfo& fri, const size_t size_to_append, const char* filename) {
+	struct stat history_stat_info = {};
+	int rc = stat(filename, &history_stat_info);
+
+	// Failed to stat history file so skip rotation
+	if (rc != 0) {
+		// File DNE so not an error in stating to report
+		if (errno != ENOENT) {
+			dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
+		}
+		return false;
+	}
+
+	// History file + new record will exceed limit -> rotate
+	if ((history_stat_info.st_size + (filesize_t)size_to_append) > fri.MaxHistoryFileSize) {
+		return true;
+	}
+
+	// Check for time based rotations
+	if (fri.DoDailyHistoryRotation || fri.DoMonthlyHistoryRotation) {
+		// NOTE: localtime() under the hood manages a static struct tm that
+		//       it returns a pointer to. So, subsequent calls will change the
+		//       time data but return the same pointer making the comparison incorrect
+		struct CacheTM {
+			int year{-1};
+			int mon{-1};
+			int yday{-1};
+
+			bool valid{false};
+		};
+
+		CacheTM mod, now;
+
+		// Get last file modification time
+		time_t mod_time = history_stat_info.st_mtime;
+		struct tm* mod_tm = localtime(&mod_time);
+		if (mod_tm) {
+			mod.year = mod_tm->tm_year;
+			mod.mon = mod_tm->tm_mon;
+			mod.yday = mod_tm->tm_yday;
+			mod.valid = true;
+		}
+
+		// Get current time
+		time_t now_time = time(nullptr);
+		struct tm* now_tm = localtime(&now_time);
+		if (now_tm) {
+			now.year = now_tm->tm_year;
+			now.mon = now_tm->tm_mon;
+			now.yday = now_tm->tm_yday;
+			now.valid = true;
+		}
+
+		if (mod.valid && now.valid) {
+			// If different year then rotate regardless of month/day desired rotation
+			if (now.year > mod.year) {
+				return true;
+			}
+
+			// Check for daily rotation against the last modified time
+			if (fri.DoDailyHistoryRotation && now.yday > mod.yday) {
+				return true;
+			}
+
+			// Check for monthly rotation against the last modified time
+			if (fri.DoMonthlyHistoryRotation && now.mon > mod.mon) {
+				return true;
+			}
+		} else {
+			dprintf(D_ERROR, "Failed to convert timestamps into local times: Modification(%s) Current(%s)\n",
+			                 mod.valid ? "valid" : "invalid", now.valid ? "valid" : "invalid");
+		}
+	}
+
+	// No rotation check triggered so skip rotation
+	return false;
+}
+
 // --------------------------------------------------------------------------
-// Decide if we should rotate the history file, and do the rotation if 
+// Decide if we should rotate the history file, and do the rotation if
 // necessary.
 // --------------------------------------------------------------------------
 void
-MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const char* filename, const char* new_filepath)
-{
-        struct stat history_stat_info = {};
-        int rc = stat(filename, &history_stat_info);
-        filesize_t file_size = history_stat_info.st_size;
-
-        if (rc != 0 && errno == ENOENT) {
-            ; // Do nothing, the history file doesn't exist
-        } else if (rc != 0) {
-            dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
-        } else {
-			bool mustRotate = false;
-
-            if (file_size + size_to_append > fri.MaxHistoryFileSize) {
-				mustRotate = true;
-			}
-
-
-			if (fri.DoDailyHistoryRotation) {
-				time_t mod_tt = history_stat_info.st_mtime;
-				struct tm *mod_t = localtime(&mod_tt);
-				int mod_yday = mod_t->tm_yday;
-				int mod_year = mod_t->tm_year;
-
-				time_t now_tt = time(0);
-				struct tm *now_t = localtime(&now_tt);
-				int now_yday = now_t->tm_yday;
-				int now_year = now_t->tm_year;
-
-				if ((now_yday > mod_yday) ||
-					(now_year > mod_year)) {
-					mustRotate = true;
-				}
-			}
-
-			if (fri.DoMonthlyHistoryRotation) {
-				time_t mod_tt = history_stat_info.st_mtime;
-				struct tm *mod_t = localtime(&mod_tt);
-				int mod_mon = mod_t->tm_mon;
-				int mod_year = mod_t->tm_year;
-
-				time_t now_tt = time(0);
-				struct tm *now_t = localtime(&now_tt);
-				int now_mon = now_t->tm_mon;
-				int now_year = now_t->tm_year;
-
-				if ((now_mon > mod_mon) ||
-					(now_year > mod_year)) {
-					mustRotate = true;
-				}
-			}
-
-			if (mustRotate) {
-                // Writing the new ClassAd will make the history file too 
-                // big, so we will rotate the history file after removing
-                // extra history files. 
-                dprintf(D_ALWAYS, "Will rotate history file.\n");
-                if (!new_filepath) { RemoveExtraHistoryFiles(fri.NumberBackupHistoryFiles, filename); }
-                RotateHistory(fri.IsStandardHistory, filename, new_filepath);
-            }
-        }
-    return;
-    
+MaybeRotateHistory(const HistoryFileRotationInfo& fri, const size_t size_to_append, const char* filename, const char* new_filepath) {
+	if (CheckHistoryRotationNeeded(fri, size_to_append, filename)) {
+		// Rotation needed: Remove oldest backups if over backup limit and
+		// not rotating to different location before rotating file
+		dprintf(D_ALWAYS, "Will rotate history file.\n");
+		if (!new_filepath) { RemoveExtraHistoryFiles(fri.NumberBackupHistoryFiles, filename); }
+		RotateHistory(fri.IsStandardHistory, filename, new_filepath);
+	}
 }
 
 // --------------------------------------------------------------------------
