@@ -91,8 +91,17 @@ def _logical_size(db_path):
 
 
 def _write_history_file(path, first_cluster, count, completion_date):
-    """Write `count` minimal job records in the archive format ArchiveReader parses."""
-    with path.open("w") as f:
+    """
+    Write `count` minimal job records in the archive format ArchiveReader parses.
+
+    The records go to a temp name the librarian ignores (it doesn't start with the
+    history base name, so findHistoryFiles() won't match it) and are then renamed into
+    place, so the librarian never sees a partially written file. Otherwise an
+    update cycle can read a rotated file mid-write, hit EOF, mark it FullyRead,
+    and never index the rest (rotated files are not re-read).
+    """
+    tmp = path.with_name(f"tmp.{path.name}")
+    with tmp.open("w") as f:
         for i in range(count):
             cluster = first_cluster + i
             f.write(
@@ -104,6 +113,7 @@ def _write_history_file(path, first_cluster, count, completion_date):
                 f"*** Offset = 0 ClusterId = {cluster} ProcId = 0 Owner = \"{OWNER}\" "
                 f"CompletionDate = {completion_date} CurrentTime = {completion_date}\n"
             )
+    tmp.replace(path)
 
 
 def _file_rows(db_path):
