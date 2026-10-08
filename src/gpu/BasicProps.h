@@ -22,6 +22,14 @@ class BasicProps {
 		int           driverVersion {-1};
 		int           hipDetection{0};
 
+		// Only set for NVIDIA MIG instances: the NVML uuid ("GPU-<uuid>") of the
+		// physical GPU hosting this instance, and the instance's GPU and compute
+		// instance ids.  Together these locate the instance's nvidia-caps access
+		// files under /proc/driver/nvidia/capabilities/gpu<minor>/mig/gi<G>/ci<C>
+		std::string   migParentUuid;
+		int           migGpuInstanceId {-1};
+		int           migComputeInstanceId {-1};
+
 		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };
 #endif
