@@ -176,11 +176,13 @@ fi
 # Re-enable errexit
 set -o errexit
 
+# Touch the tarball so it won't be cleaned up below
+touch ${BINARIES_DIR}/${BINARIES_FILE}
 ln -s ${BINARIES_DIR}/${BINARIES_FILE} ${IWD}/condor.tar.gz
 
-echo -e "\rStep 2 of 3: Cleaning old logs..."
+echo -e "\rStep 2 of 3: Cleaning old files..."
 find . -maxdepth 1 -name 'annex-logs.*' -mtime +14 -exec rm -rf '{}' ';'
-
+find ${BINARIES_DIR} -type f -mtime +14 -delete
 
 echo -e "\rStep 3 of 3: configuring software..."
 
