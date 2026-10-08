@@ -1,4 +1,7 @@
 #!/bin/bash
+# Show my work
+set -x
+
 # Exit on any error
 set -e
 
@@ -303,7 +306,7 @@ if [ "$ID" = 'ubuntu' ]; then
 fi
 
 # Include packages for tarball in the image.
-PELICAN_VERSION=7.26.3-1 # Specify both version and release (release required on Debian)
+PELICAN_VERSION=7.27.0-1 # Specify both version and release (release required on Debian)
 externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
