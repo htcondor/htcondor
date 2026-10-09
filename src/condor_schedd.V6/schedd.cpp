@@ -10147,6 +10147,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			// this match away now (seems like we could do something better?) - 
 			// while it is not ideal to throw away the match in this instance,
 			// it is consistent with what we current do during negotiation.
+			delete jobAd;
 			DelMrec ( mrec );
 			return;
 		}
@@ -13481,6 +13482,14 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		SetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, num);
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
 		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
+	}
+
+		// Scheduler and local universe jobs have no shadow to record
+		// when the job begins executing (and no input transfer), so
+		// the start of the job is the start of execution.  This lets
+		// AllowedExecuteDuration apply to these universes.
+	if (job_univ == CONDOR_UNIVERSE_SCHEDULER || job_univ == CONDOR_UNIVERSE_LOCAL) {
+		SetAttributeInt(cluster, proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, current_time);
 	}
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {

@@ -303,9 +303,6 @@ DockerProc::LaunchContainer() {
 	childFDs[2] = open(DockerErrorFile().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	}
 
-	  // Ulog the execute event
-	starter->jic->notifyJobPreSpawn();
-
 	CondorError err;
 	// DockerAPI::createContainer() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
@@ -525,7 +522,7 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 		{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		std::string arch;
-		DockerAPI::getImageArch(imageName, arch);
+		DockerAPI::getImageArchAndId(imageName, arch, imageHash);
 
 		if (!DockerAPI::imageArchIsCompatible(arch)) {
 			std::string message;
@@ -534,7 +531,14 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			return ReapResult::JobDone;
 		}
+		}
 
+		// Ulog the execute event now, rather than before docker create,
+		// as docker create may spend a long time pulling the image.
+		starter->jic->notifyJobPreSpawn();
+
+		{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		condor_gettimestamp( job_start_time );
@@ -1115,6 +1119,12 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// or set them during our status polling.
 	//
 	
+	// Tell the shadow exactly which image we ran, so that it can be
+	// recorded in the job ad.
+	if (!imageHash.empty()) {
+		ad->Assign(ATTR_DOCKER_IMAGE_HASH, imageHash);
+	}
+
 	if (max_memUsage > 0) {
 		// Set RSS, Memory and ImageSize to same values, best we have
 		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(max_memUsage / 1024));
@@ -1122,8 +1132,21 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 		ad->Assign(ATTR_IMAGE_SIZE, int(max_memUsage / (1024 * 1024)));
 		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1000 * 1000));
 		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1000 * 1000));
-		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1000l * 1000l * 1000l)));
-		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int) (sysCpu / (1000l * 1000l * 1000l)));
+		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int64_t) (userCpu / (1000l * 1000l * 1000l)));
+		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int64_t) (sysCpu / (1000l * 1000l * 1000l)));
+		if (m_proc_exited) {
+			// on completion CPUsUsage is total-cpu-time / total-execution-time
+			double job_duration = timersub_double( job_exit_time, job_start_time );
+			if (job_duration > 0) {
+				double cputime = double(userCpu + sysCpu) / (1000.0 * 1000.0 * 1000.0);
+				ad->Assign(ATTR_CPUS_USAGE, cputime / job_duration);
+			} else {
+				ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
+			}
+		} else {
+			// TODO: add CPU fraction over the last sampling interval
+			// ad->Assign(ATTR_CPUS_USAGE, ??);
+		}
 	}
 	return OsProc::PublishUpdateAd( ad );
 }

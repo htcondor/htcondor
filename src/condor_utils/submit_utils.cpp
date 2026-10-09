@@ -5016,6 +5016,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// The special processing for require_cuda_version is in SetRequirements().
 	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
+	// The special processing for [max|min]_condor_version is in SetRequirements().
+	{SUBMIT_KEY_MaxCondorVersion, ATTR_MAX_CONDOR_VERSION, SimpleSubmitKeyword::f_as_string },
+	{SUBMIT_KEY_MinCondorVersion, ATTR_MIN_CONDOR_VERSION, SimpleSubmitKeyword::f_as_string },
 
 	// Dataflow jobs
 	{SUBMIT_KEY_SkipIfDataflow, ATTR_SKIP_IF_DATAFLOW, SimpleSubmitKeyword::f_as_bool },
@@ -5223,6 +5226,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes |  SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_RequireCommonFiles, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_transfer},
 	// invoke SetContainerSpecial
 	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
 	{SUBMIT_KEY_ContainerIsCommon, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_container},
@@ -6003,6 +6007,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_hsct = false;
+	bool	checks_condor_version = machine_refs.count( ATTR_VERSION );
 
 	if( mightTransfer(JobUniverse) ) {
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
@@ -6405,10 +6410,12 @@ int SubmitHash::SetRequirements()
 			answer += crypt_check;
 
 			if ( ! checks_common_transfer) {
-				bool uses_common_files = job->Lookup(ATTR_COMMON_INPUT_FILES) || ContainerIsCommon;
-				bool requireCommonFilesTransfer = false; // TODO config knob for this?
-				job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer); // TODO: change to submit keyword
-				if( requireCommonFilesTransfer && uses_common_files ) {
+				bool uses_common_files = job->Lookup(ATTR_COMMON_INPUT_FILES) || job->Lookup(ATTR_COMMON_INPUT_CATALOGS);
+				// submit command require_common_files tells us whether to force the job to run on a machine that
+				// can do common files tranfer.  We pull the default for that submit command from config.
+				bool require_common_xfer = param_boolean("SUBMIT_DEFAULT_REQUIRE_COMMON_FILES", false);
+				require_common_xfer = submit_param_bool(SUBMIT_KEY_RequireCommonFiles, nullptr, require_common_xfer);
+				if( require_common_xfer && uses_common_files ) {
 					answer += " && TARGET.HasCommonFilesTransfer >= 2";
 				}
 			}
@@ -6621,6 +6628,24 @@ int SubmitHash::SetRequirements()
 				" must be of the form 'x' or 'x.y',"
 				" where x and y are positive integers.\n" );
 			ABORT_AND_RETURN(1);
+		}
+	}
+
+	if(! checks_condor_version) {
+		std::string requiredCondorVersion;
+		if( job->LookupString( ATTR_MIN_CONDOR_VERSION, requiredCondorVersion ) ) {
+			if( JobUniverse == CONDOR_UNIVERSE_LOCAL || JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+				push_warning( stderr, SUBMIT_KEY_MinCondorVersion " does not apply to local or scheduler universe jobs.\n" );
+			} else {
+				answer += "&& versionGE(split(TARGET.CondorVersion)[1], " ATTR_MIN_CONDOR_VERSION ")";
+			}
+		}
+		if( job->LookupString( ATTR_MAX_CONDOR_VERSION, requiredCondorVersion ) ) {
+			if( JobUniverse == CONDOR_UNIVERSE_LOCAL || JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+				push_warning( stderr, SUBMIT_KEY_MaxCondorVersion " does not apply to local or scheduler universe jobs.\n" );
+			} else {
+				answer += "&& versionLT(split(TARGET.CondorVersion)[1], " ATTR_MAX_CONDOR_VERSION ")";
+			}
 		}
 	}
 
@@ -7080,7 +7105,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image)  {
-		bool userRequestedCommonContainer = param_boolean(
+		bool container_is_common = param_boolean(
 			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
 			false
 		);
@@ -7097,13 +7122,13 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			if( re != NULL ) {
 				std::cmatch match;
 				if( std::regex_match( container_image.ptr(), match, * re ) ) {
-					userRequestedCommonContainer = true;
+					container_is_common = true;
 				}
 			}
 		}
 
-		ContainerIsCommon = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, userRequestedCommonContainer);
-		if(! ContainerIsCommon) {
+		container_is_common = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, container_is_common);
+		if(! container_is_common) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
 				*accumulate_size_kb += calc_image_size_kb(container_image);

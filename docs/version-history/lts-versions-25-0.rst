@@ -7,6 +7,23 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 25.0.16
+---------------
+
+Release Notes:
+
+.. HTCondor version 25.0.16 released on November 19, 2026.
+
+- HTCondor version 25.0.16 planned release date is November 19, 2026.
+
+New Features:
+
+.. include-history:: features 25.0.16
+
+Bugs Fixed:
+
+.. include-history:: bugs 25.0.16
+
 Version 25.0.15
 ---------------
 
@@ -19,6 +36,14 @@ Release Notes:
 New Features:
 
 .. include-history:: features 25.0.15
+
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
+
+- HTCondor tarballs now contain `Pelican 7.27.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.27.0.
 
 Bugs Fixed:
 

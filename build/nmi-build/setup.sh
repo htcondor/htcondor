@@ -1,4 +1,7 @@
 #!/bin/bash
+# Show my work
+set -x
+
 # Exit on any error
 set -e
 
@@ -264,13 +267,13 @@ echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
-    $INSTALL condor libnss-myhostname openssh-server
+    $INSTALL pelican condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
-    $INSTALL condor hostname java openssh-clients openssh-server openssl
+    $INSTALL pelican condor hostname java openssh-clients openssh-server openssl
     if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
         $INSTALL procps
     else
@@ -291,7 +294,7 @@ if [ "$ID" = 'debian' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.5.1
+    APPTAINER_VERSION=1.5.4
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
@@ -308,14 +311,15 @@ if [ "$ID" = 'ubuntu' ]; then
     $INSTALL apptainer fuse-overlayfs
 fi
 
-
 # Include packages for tarball in the image.
+# Careful, pelican RCs have a tilde in the package name (not the filename)
+PELICAN_VERSION=26.0.0~rc.3-1 # Specify both version and release (release required on Debian)
 externals_dir="/usr/local/condor/externals"
 mkdir -p "$externals_dir"
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 libsqlite3-0 pelican
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 libsqlite3-0 pelican=$PELICAN_VERSION
     if [ "$VERSION_CODENAME" = 'bullseye' ]; then
         apt-get download libscitokens0 libvomsapi1v5
     elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
@@ -337,22 +341,22 @@ if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
     popd
 fi
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ]; then
-    yumdownloader --downloadonly --destdir="$externals_dir" \
-        libgomp munge-libs pelican pcre2 sqlite-libs scitokens-cpp
+    dnf download --destdir="$externals_dir" \
+        libgomp munge-libs pelican-$PELICAN_VERSION pcre2 sqlite-libs scitokens-cpp
     if [ "$ID" != 'amzn' ]; then
-        yumdownloader --downloadonly --destdir="$externals_dir" voms
+        dnf download --destdir="$externals_dir" voms
     fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican-$PELICAN_VERSION
 fi
 if [ "$ID" = 'opensuse-leap' ]; then
     zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
-# Install the Pelican client and server for the Pelican credmon integration
+# Install the Pelican server for the Pelican credmon integration
 # test (src/condor_tests/test_pelican_credmon.py), which stands up a POSIXv2
 # federation with the embedded issuer and exercises the device-code flow,
 # RFC 8693 token exchange, and refresh.  The above only *downloads* pelican for
@@ -362,8 +366,11 @@ fi
 # in the HTCondor repositories.  `pelican-server` provides the federation and
 # may not be mirrored in every repository, so its installation is best-effort:
 # when it is absent the integration test simply skips.
-$INSTALL pelican
-$INSTALL pelican-server || echo "WARNING: pelican-server unavailable; test_pelican_credmon will skip"
+# TODO: comment back in when OSG 26 is released
+# if [ "$ID" = 'almalinux' ] && [ "$ARCH" != 'ppc64le' ]; then
+    # $INSTALL "https://repo.osg-htc.org/osg/$MAJOR_VER-main/osg-$MAJOR_VER-main-el$VERSION_ID-release-latest.rpm"
+    # $INSTALL pelican-server
+# fi
 
 # Clean up package caches
 if [ "$ID" = 'centos' ]; then

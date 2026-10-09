@@ -172,6 +172,7 @@
 #define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input"
 #define SUBMIT_KEY_CommonInputFiles "common_input_files"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
+#define SUBMIT_KEY_RequireCommonFiles "require_common_files"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -234,6 +235,9 @@
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
 #define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
+#define SUBMIT_KEY_MaxCondorVersion "max_condor_version"
+#define SUBMIT_KEY_MinCondorVersion "min_condor_version"
 
 //
 // Job Deferral Parameters
@@ -853,7 +857,6 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool IsContainerJob;
-	bool ContainerIsCommon{false};
 	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;

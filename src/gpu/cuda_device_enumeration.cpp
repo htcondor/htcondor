@@ -320,9 +320,9 @@ setNVMLFunctionPointers() {
 	nvmlDeviceGetPciInfo_v3 =
 		(nvml_get_pci)dlsym( nvml_handle, "nvmlDeviceGetPciInfo_v3" );
 	nvmlDeviceGetGpuInstanceId =
-		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetGpuInstanceID" );
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetGpuInstanceId" );
 	nvmlDeviceGetComputeInstanceId =
-		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetComputeInstanceID" );
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetComputeInstanceId" );
 	nvmlDeviceGetMaxMigDeviceCount =
 		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetMaxMigDeviceCount" );
 	nvmlDeviceGetName =
@@ -331,6 +331,8 @@ setNVMLFunctionPointers() {
 		(nvml_get_char)dlsym( nvml_handle, "nvmlDeviceGetUUID" );
 	nvmlDeviceGetMigDeviceHandleByIndex =
 		(nvml_get_dhbi)dlsym( nvml_handle, "nvmlDeviceGetMigDeviceHandleByIndex" );
+	nvmlDeviceGetDeviceHandleFromMigDeviceHandle =
+		(nvml_get_parent)dlsym( nvml_handle, "nvmlDeviceGetDeviceHandleFromMigDeviceHandle" );
 	nvmlDeviceGetCudaComputeCapability =
 		(nvml_get_int_int)dlsym( nvml_handle, "nvmlDeviceGetCudaComputeCapability" );
 	nvmlDeviceGetMaxClockInfo =
@@ -645,6 +647,49 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	return NVML_SUCCESS;
 }
 
+// Fill in the identifiers needed to locate a MIG instance's device files:
+// its parent GPU and its GPU / compute instance ids.  Failure here is not
+// fatal to discovery; the attributes are simply not published.
+static void
+nvml_getMIGIdentity( nvmlDevice_t migDevice, BasicProps * p ) {
+	nvmlReturn_t r;
+
+	if( nvmlDeviceGetDeviceHandleFromMigDeviceHandle && nvmlDeviceGetUUID ) {
+		nvmlDevice_t parent;
+		r = nvmlDeviceGetDeviceHandleFromMigDeviceHandle( migDevice, & parent );
+		if( NVML_SUCCESS == r ) {
+			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+			r = nvmlDeviceGetUUID( parent, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+			if( NVML_SUCCESS == r ) {
+				p->parentUuid = uuid;
+			} else {
+				print_nvml_error("[MIG parent] nvmlDeviceGetUUID", r);
+			}
+		} else {
+			print_nvml_error("nvmlDeviceGetDeviceHandleFromMigDeviceHandle", r);
+		}
+	}
+
+	unsigned int id = 0;
+	if( nvmlDeviceGetGpuInstanceId ) {
+		r = nvmlDeviceGetGpuInstanceId( migDevice, & id );
+		if( NVML_SUCCESS == r ) {
+			p->migGpuInstanceId = (int)id;
+		} else {
+			print_nvml_error("nvmlDeviceGetGpuInstanceId", r);
+		}
+	}
+
+	if( nvmlDeviceGetComputeInstanceId ) {
+		r = nvmlDeviceGetComputeInstanceId( migDevice, & id );
+		if( NVML_SUCCESS == r ) {
+			p->migComputeInstanceId = (int)id;
+		} else {
+			print_nvml_error("nvmlDeviceGetComputeInstanceId", r);
+		}
+	}
+}
+
 nvmlReturn_t
 enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 	nvmlReturn_t r;
@@ -663,6 +708,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		r = nvml_getBasicProps( migDevice, & bp );
 		print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for MIG %s returns %d\n", bp.uuid.c_str(), r);
 		if( NVML_SUCCESS != r ) { return r; }
+		nvml_getMIGIdentity( migDevice, & bp );
 
 		devices.push_back( bp );
 	}

@@ -727,7 +727,7 @@ command_match_info(int cmd, Stream* stream )
 	//
 	ClassAd match_ad;
 	const CondorVersionInfo *vi = stream->get_peer_version();
-	if( vi && vi->built_since_version(26, 2, 0) ) {
+	if( vi && vi->built_since_version(26, 1, 0) ) {
 		if( !getClassAd(stream, match_ad) ) {
 			// The peer said it would send this ad, so a failure here means the
 			// stream is at an unknown offset; carrying on would read the rest

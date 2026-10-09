@@ -304,6 +304,24 @@ Out=/".+\d+xfer8.sub.\d+_0.out"/
 StreamErr=false
 StreamOut=true
 
+==common1.sub
+CommonInputFiles="simple.in"
+Requirements=/TARGET\.HasCommonFilesTransfer >= 2/
+
+==common2.sub
+CommonInputFiles="simple.in"
+Requirements=!/TARGET\.HasCommonFilesTransfer >= 2/
+
+==commonsif.sub
+ContainerImage="image.sif"
+ContainerImageSource="https"
+ContainerImageFullPath="https://example.com/image.sif"
+CommonInputCatalogs=/"container_.*"/
+Requirements=/TARGET\.HasContainer/
+Requirements=/TARGET\.HasSIF/
+Requirements=/TARGET\.HasCommonFilesTransfer >= 2/
+Requirements=/stringListIMember\("https",TARGET\.HasFileTransferPluginMethods\)/
+
 ==periodic.sub
 OnExitHold=ExitCode > 42
 OnExitHoldReason="job fooled by succeeding to well"

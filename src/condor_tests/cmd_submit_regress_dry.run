@@ -267,6 +267,14 @@ sub check_expectations {
 					printf "\tFAILURE: for %s: %s does not match expected /%s/\n", $attr, $rhs, $re;
 					$misses += 1;
 				}
+			} elsif ($exv =~ /^!\/(.*)\/$/) { # expectation is an antipattern
+				my $re = qr/$1/;
+				if ($rhs =~ $re) {
+					printf "\tFAILURE: for %s: %s should not match /%s/\n", $attr, $rhs, $re;
+					$misses += 1;
+				} else {
+					if ($verbose) { printf "\tfor %s: %s anti-matches /%s/\n", $attr, $rhs, $re; }
+				}
 			} else { # expectation is a literal
 				
 				if ($rhs eq $exv) {

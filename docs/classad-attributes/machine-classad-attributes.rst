@@ -1451,10 +1451,6 @@ the value of configuration variable  :macro:`MACHINE_RESOURCE_INVENTORY_GPUs`
 and what GPUs are detected. In the name of the attribute, ``<name>`` is
 substituted with the *prefix string* assigned for the GPU.
 
-:classad-attribute-def:`<name>BoardTempC`
-    For NVIDIA devices, a dynamic attribute representing the temperature
-    in Celsius of the board containing the GPU.
-
 :classad-attribute-def:`<name>Capability`
     The CUDA-defined capability for the GPU.
 
@@ -1507,6 +1503,16 @@ substituted with the *prefix string* assigned for the GPU.
     This is the case for unified-memory devices such as the NVIDIA
     DGX Spark.
 
+:classad-attribute-def:`<name>MigComputeInstanceId`
+    For NVIDIA MIG instances, the integer compute instance id of this
+    instance within its GPU instance. Not present for GPUs which are not
+    MIG instances.
+
+:classad-attribute-def:`<name>MigGpuInstanceId`
+    For NVIDIA MIG instances, the integer GPU instance id of this instance
+    within its physical GPU. Not present for GPUs which are not MIG
+    instances.
+
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
@@ -1514,10 +1520,19 @@ substituted with the *prefix string* assigned for the GPU.
     For Open CL devices, a string representing the manufacturer's
     version number.
 
-:classad-attribute-def:`<name>RuntimeVersion`
-    For CUDA devices, a string representing the manufacturer's version
-    number.
-    
+:classad-attribute-def:`<name>ParentUuid`
+    For NVIDIA MIG instances, a string holding the NVML UUID, of the form
+    ``GPU-<uuid>``, of the physical GPU which hosts this instance. Not
+    present for GPUs which are not MIG instances.
+
+:classad-attribute-def:`<name>PowerUsage_mw`
+    For NVIDIA devices, a dynamic attribute representing the integer power
+    draw of the GPU in milliwatts.
+
+:classad-attribute-def:`<name>Rocm`
+    For AMD devices, the integer major version of the HIP (ROCm) library
+    used to discover the GPU.
+
 :classad-attribute-def:`DeviceGPUsAverageUsage`
     The number of seconds executed by GPUs assigned to this slot,
     divided by the number of seconds since the startd started up.
