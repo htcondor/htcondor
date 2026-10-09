@@ -1558,6 +1558,50 @@ These macros control the *condor_schedd*.
    HTTP_PUBLIC_FILES_ROOT_DIR. There are three valid options for
    this knob:  **<user>**, **<condor>** or **<%username%>**
 
+:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
+    When an EP offers its slots directly to this *condor_schedd* (see
+    :ref:`direct-attach`), and the EP's authenticated identity does not have
+    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
+    by that authenticated identity to the offered slots.  Setting this knob to
+    ``True`` disables that restriction, allowing any EP with ``WRITE``
+    authorization to run any user's jobs.  Do not set this unless every
+    identity with ``WRITE`` access to this AP is trusted to do so.
+
+    Defaults to ``False``.
+
+:macro-def:`FORBID_COMMON_FILE_TRANSFER`
+    Common file transfer is a new feature, and while it ought to work for
+    everyone everywhere under the proper circumstances
+    (see :ref:`common_file_transfer`), we may have missed something.
+
+    Defaults to false.  Setting this knob to true will prevent the schedd
+    from trying to use common files; instead, it will fall back on normal
+    file transfer for jobs which define common files.
+
+:macro-def:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`
+    Container images are definitionally immutable and usually the same for
+    every job in a cluster (and many clusters in a DAG); in addition, they
+    are usually large.  Thus, container images are prime candidates for
+    :ref:`common file transfer<common_file_transfer>`,
+    so that they get transferred to an EP once and
+    can be used many times.  (Because they use the same common file transfer
+    mechanism as any other common file, container images are not presently
+    shared between different job owners.)
+
+    Defaults to false.  Setting this knob to true will cause HTCondor to
+    do common file transfer for every container image that HTCondor transfers
+    (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
+
+    We expect this knob to default to true in a later version of HTCondor.
+
+:macro-def:`CONTAINER_REGEX_COMMON_BY_DEFAULT`
+    Not all container images are transferred by HTCondor, and therefore must
+    be excluded from common file transfer.  HTCondor always excludes
+    ``docker://`` and ``oras://`` URLs, so you shouldn't need to set this.
+
+    Defaults to unset.  If set, this knob is a regular expression which the
+    container image must match to be eligible for common file transfer.
+
 :macro-def:`KEEP_DATA_CLAIM_IDLE`
     After an AP stages common files to an EP, it is responsible for keeping
     those files there for as long as jobs running on that EP require them.
@@ -1570,28 +1614,13 @@ These macros control the *condor_schedd*.
 
     Defaults to 300 seconds.
 
-:macro-def:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`
-    Container images are definitionally immutable and usually the same for
-    every job in a cluster (and many clusters in a DAG); in addition, they
-    are usually large.  Thus, container images are prime candidates for
-    common file transfer, so that they get transferred to an EP once and
-    can be used many times.  (Because they use the same common file transfer
-    mechanism as any other common file, container images are not presently
-    shared between different job owners.)
+:macro-def:`DATA_SLOT_MAX_DISCONNECT_DURATION`
+    Like :ad-attr:`JobLeaseDuration`, except for data slots and set by
+    the administrator for the whole AP, rather than by the submitter for a
+    specific job.
 
-    Defaults to false.  Setting this knob to true will cause HTCondor to
-    do common file transfer for every container image that HTCondor transfers
-    (*i.e.*, not Docker images) unless :subcom:`container_is_common` is set.
+    Defaults to 20 (seconds).  This is much shorter than for jobs because
+    no output is lost as a result of giving up on the data slot quickly, so
+    we want to give other jobs using the same common file(s) a chance to
+    run elsewhere.
 
-    We expect this knob to default to true in a later version of HTCondor.
-
-:macro-def:`DISABLE_DIRECT_ATTACH_IDENTITY_CHECK`
-    When an EP offers its slots directly to this *condor_schedd* (see
-    :ref:`direct-attach`), and the EP's authenticated identity does not have
-    ``DAEMON`` authorization, the *condor_schedd* will only match jobs owned
-    by that authenticated identity to the offered slots.  Setting this knob to
-    ``True`` disables that restriction, allowing any EP with ``WRITE``
-    authorization to run any user's jobs.  Do not set this unless every
-    identity with ``WRITE`` access to this AP is trusted to do so.
-
-    Defaults to ``False``.
