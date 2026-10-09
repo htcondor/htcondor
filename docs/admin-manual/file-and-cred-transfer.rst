@@ -594,7 +594,6 @@ Additional EP Requirements
 
 Currently, only some 26.0.x EPs can transfer common files:
 
-- The EP must be Linux.
 - The EP must either not define :macro:`SLOT<N>_EXECUTE` or define all
   :macro:`SLOT<N>_EXECUTE` directories to be on the same filesystem.
 - The EP must *not* define :macro:`STARTD_ENFORCE_DISK_LIMITS`.
