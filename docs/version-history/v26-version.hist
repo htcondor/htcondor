@@ -93,6 +93,11 @@
   version of the EP to greater than or equal to, or strictly less than,
   respectively, the specified version, e.g. "26.0.1".
   :jira:`3065`
+*** 26.0.1 features
+
+- HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-26.0.0.
 
 *** 26.0.1 bugs
 
