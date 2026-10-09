@@ -1151,8 +1151,73 @@ class DaemonCore : public Service
 	int Read_Pipe(int pipe_end, void* buffer, int len);
 
 	int Write_Pipe(int pipe_end, const void* buffer, int len);
-					 
-	/** Close an anonymous pipe.  This function will also call 
+
+	/** Read exactly len bytes from a pipe, retrying as needed.
+	 *
+	 *  Unlike Read_Pipe(), a single underlying read is allowed to
+	 *  transfer fewer bytes than requested -- e.g. once len exceeds the
+	 *  pipe's buffer capacity, or when a signal interrupts a blocking
+	 *  read after some bytes are already in hand -- and a caller that
+	 *  needs the full amount must not treat a short Read_Pipe() result
+	 *  as a hard failure.  This loops over Read_Pipe() until len bytes
+	 *  have been read, an error occurs, or the writer closes its end
+	 *  (EOF) before len bytes arrive.
+	 *
+	 *  @param pipe_end  A read end previously returned by Create_Pipe(),
+	 *                   Create_Named_Pipe(), or Inherit_Pipe().
+	 *  @param buffer    Caller-owned buffer of exactly `len` bytes (not
+	 *                   `len` minus what some other call already
+	 *                   consumed): this function fills it exactly as one
+	 *                   `read(buffer, len)` would, just possibly spread
+	 *                   over several underlying reads.  On success, all
+	 *                   `len` bytes are filled.  On failure, only the
+	 *                   bytes actually read are meaningful; whatever is
+	 *                   left in the rest of the buffer is untouched
+	 *                   leftover content and must not be used.
+	 *  @param len       Number of bytes to read; a negative len is a
+	 *                   caller bug, logged and reported back as false
+	 *                   rather than passed through to Read_Pipe().
+	 *  @param num_calls If non-null, set to the number of underlying
+	 *                   Read_Pipe() calls this took.  Diagnostic only.
+	 *  @return true if all `len` bytes were read; false on error, or on
+	 *          premature EOF (the pipe closed with fewer than `len`
+	 *          bytes delivered).
+	*/
+	bool Read_Pipe_Full(int pipe_end, void* buffer, int len, int* num_calls = nullptr);
+
+	/** Write exactly len bytes to a pipe, retrying as needed.
+	 *
+	 *  Unlike Write_Pipe(), a single underlying write is allowed to
+	 *  transfer fewer bytes than requested -- the same pipe-capacity and
+	 *  signal-interruption caveats as Read_Pipe_Full(), above -- and a
+	 *  caller that needs the whole buffer sent (e.g. because it already
+	 *  wrote this payload's length to the pipe as a separate, preceding
+	 *  message) must not give up after one short Write_Pipe().  This
+	 *  loops over Write_Pipe() until len bytes have been written or an
+	 *  error occurs.
+	 *
+	 *  @param pipe_end  A write end previously returned by Create_Pipe(),
+	 *                   Create_Named_Pipe(), or Inherit_Pipe().
+	 *  @param buffer    Caller-owned buffer holding exactly `len` valid
+	 *                   bytes to send: this function only ever reads
+	 *                   from it, exactly as one `write(buffer, len)`
+	 *                   would, just possibly spread over several
+	 *                   underlying writes.
+	 *  @param len       Number of bytes to write; a negative len is a
+	 *                   caller bug, logged and reported back as false
+	 *                   rather than passed through to Write_Pipe().
+	 *  @param num_calls If non-null, set to the number of underlying
+	 *                   Write_Pipe() calls this took.  Diagnostic only.
+	 *  @return true if all `len` bytes were written; false on error.  On
+	 *          false, how many of the `len` bytes actually made it onto
+	 *          the pipe before the failure is not reported -- if this
+	 *          payload's length was already sent as a separate message,
+	 *          the whole framed exchange must now be treated as corrupt;
+	 *          there is no way to send just the missing remainder.
+	*/
+	bool Write_Pipe_Full(int pipe_end, const void* buffer, int len, int* num_calls = nullptr);
+
+	/** Close an anonymous pipe.  This function will also call
 	 * Cancel_Pipe() on behalf of the caller if the pipe_end had
 	 * been registed via Register_Pipe().
 	*/
