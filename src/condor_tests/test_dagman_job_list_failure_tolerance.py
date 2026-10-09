@@ -12,7 +12,7 @@ import json
 import enum
 from pathlib import Path
 from shutil import rmtree
-from time import time as now
+from time import time as now, sleep
 
 TIMEOUT = 120
 
@@ -329,17 +329,25 @@ class TestDAGManJobFailTolerance:
                             # left alone and allowed to terminate on their own.
                             terminated.add(event.proc)
                         elif event.type == htcondor2.JobEventType.JOB_ABORTED:
+                            # An abort event for a proc that already terminated
+                            # is not evidence of tolerance removal, so it says
+                            # nothing about test_expect_removal. DAGMan always
+                            # condor_rm's the whole cluster as it exits, even
+                            # when it believes nothing is left in the queue
+                            # (dagman_main.cpp RemoveRunningJobs()), and that
+                            # can catch a proc whose terminate event is already
+                            # in this log but which the schedd has not finished
+                            # reaping yet. Accept that race here.
+                            if event.proc in terminated:
+                                aborted.add(event.proc)
+                                continue
+                            # Otherwise the abort came from the condor_rm that
+                            # DAGMan issues on reaching the failure tolerance
+                            # limit, which only the cases that expect removal
+                            # should see, and only for procs past the
+                            # tolerance.
                             assert test_expect_removal
-                            # When DAGMan reaches the failure tolerance limit,
-                            # it issues a condor_rm on the whole cluster. That
-                            # condor_rm can race with the terminate event for
-                            # the last failing proc, causing the schedd to emit
-                            # a JOB_ABORTED event for a proc that has already
-                            # terminated. Accept that race: only check the
-                            # proc-index invariant for procs we have not seen
-                            # a terminate event for.
-                            if event.proc not in terminated:
-                                assert event.proc > test_tolerance
+                            assert event.proc > test_tolerance
                             aborted.add(event.proc)
 
                     # Each proc reaches a terminal state via either a terminate
@@ -347,3 +355,159 @@ class TestDAGManJobFailTolerance:
                     if len(terminated | aborted) == test_num_procs:
                         break
 
+
+#==================================================================
+# Regression tests for the schedd-side half of the bug this test kept tripping
+# over: condor_rm by constraint used to give a job that had already finished a
+# JOB_ABORTED event on top of its JOB_TERMINATED event.
+#
+# The shadow updates the job queue (setting TerminationPending) and then writes
+# the terminate event to the user log, but the job stays in the queue until the
+# schedd reaps the shadow. DAGMan reacts to the terminate event by exiting, and
+# on the way out it condor_rm's its node jobs unconditionally (dagman_main.cpp
+# RemoveRunningJobs()), so it lands in that window. The schedd handles the two
+# halves of the window differently:
+#
+#   - while the shadow is still terminating the job (running / transferring
+#     output), Scheduler::actOnJobs() skips it, the same guard
+#     abortJobsByConstraint() applies; it leaves the queue on its own directly.
+#   - once the job is completed, it is removed as usual, but
+#     Scheduler::WriteAbortToUserLog() leaves out the abort event, because the
+#     shadow already wrote the terminate event.
+#
+# Completed jobs must NOT be skipped: leave_in_queue parks them in that state
+# indefinitely, still carrying TerminationPending (nothing ever clears it), and
+# refusing to remove those makes condor_rm a no-op until the schedd's periodic
+# policy sweep notices, minutes later.
+
+def _in_queue(handle):
+    """Is any job from this cluster still in the queue?"""
+    return len(handle.query(projection=["ProcId"])) > 0
+
+
+def _gone(handle):
+    return lambda state: not _in_queue(handle)
+
+
+def _rm_by_constraint(condor, handle):
+    condor.run_command(
+        ["condor_rm", "-constraint", f"ClusterId=={handle.clusterid}"]
+    )
+
+
+def _event_types(log):
+    with htcondor2.JobEventLog(str(log)) as JEL:
+        return [event.type for event in JEL.events(stop_after=0)]
+
+
+#------------------------------------------------------------------
+@action
+def parked_job(default_condor, test_dir):
+    """A finished job parked in the queue, still marked termination pending.
+
+    leave_in_queue holds it in the completed state, which is where the racing
+    condor_rm used to catch DAGMan's node jobs -- and where a job keeps the
+    TerminationPending marker indefinitely, since nothing ever clears it.
+    """
+    log = test_dir / "parked.log"
+    handle = default_condor.submit(
+        {
+            "executable": "/bin/true",
+            "leave_in_queue": "true",
+            "log": log.as_posix(),
+        },
+        count=1,
+    )
+    # Not ClusterState.all_complete: that counts jobs that have left the queue,
+    # and this job has to still be in it.
+    def parked(state):
+        ads = handle.query(projection=["JobStatus", "TerminationPending"])
+        return len(ads) == 1 and ads[0]["JobStatus"] == int(JobStatus.COMPLETED)
+
+    assert handle.wait(condition=parked, timeout=TIMEOUT)
+    ad = handle.query(projection=["TerminationPending"])[0]
+    # The shadow sets this on its way out; the rest of the test is meaningless
+    # if that ever stops being true.
+    assert ad["TerminationPending"] is True
+    return handle, log
+
+
+@action
+def removed_parked_job(default_condor, parked_job):
+    handle, log = parked_job
+    # leave_in_queue also holds a job in the queue after it is removed, so
+    # clear it first -- the same way a user (or test_checkpoint_preen) cleans
+    # up a parked job. The job keeps its TerminationPending marker.
+    result = default_condor.run_command(
+        ["condor_qedit", str(handle.clusterid), "LeaveJobInQueue", "False"]
+    )
+    assert result.returncode == 0
+    _rm_by_constraint(default_condor, handle)
+    return handle, log
+
+
+class TestRemoveOfCompletedJob:
+    def test_job_leaves_the_queue_promptly(self, removed_parked_job):
+        handle, _ = removed_parked_job
+        # This deadline has to stay well under PERIODIC_EXPR_INTERVAL (60s by
+        # default): the schedd's periodic policy sweep reaps completed jobs on
+        # its own, so a longer wait would pass even if condor_rm did nothing.
+        assert handle.wait(condition=_gone(handle), timeout=30)
+
+    def test_no_abort_event_on_top_of_the_terminate_event(self, removed_parked_job):
+        handle, log = removed_parked_job
+        assert handle.wait(condition=_gone(handle), timeout=30)
+        types = _event_types(log)
+        assert htcondor2.JobEventType.JOB_TERMINATED in types
+        assert htcondor2.JobEventType.JOB_ABORTED not in types
+
+
+#------------------------------------------------------------------
+@action
+def shadow_job(default_condor, test_dir):
+    """A job whose shadow is still terminating it.
+
+    condor_qedit sets the marker, which puts the queue in the state that window
+    produces without having to race a real shadow. This class gets its own
+    personal pool, so the job has a slot to itself.
+    """
+    handle = default_condor.submit(
+        {
+            "executable": "/bin/sleep",
+            "arguments": "3600",
+            "log": (test_dir / "shadow.log").as_posix(),
+        },
+        count=1,
+    )
+    assert handle.wait(condition=ClusterState.all_running, timeout=TIMEOUT)
+    result = default_condor.run_command(
+        ["condor_qedit", str(handle.clusterid), "TerminationPending", "true"]
+    )
+    assert result.returncode == 0
+    return handle
+
+
+@action
+def removed_shadow_job(default_condor, shadow_job):
+    _rm_by_constraint(default_condor, shadow_job)
+    # The remove is a single schedd command, so this only has to outlast the
+    # round trip before we can conclude the job was left alone.
+    sleep(10)
+    return shadow_job
+
+
+class TestRemoveSkipsShadowTerminating:
+    def test_job_was_not_removed(self, removed_shadow_job):
+        assert _in_queue(removed_shadow_job)
+
+    def test_job_is_removable_once_not_pending(self, default_condor, removed_shadow_job):
+        # Clearing the marker makes the job removable again, which shows the
+        # guard -- and not something else about the job -- held it in place.
+        result = default_condor.run_command(
+            ["condor_qedit", str(removed_shadow_job.clusterid),
+             "TerminationPending", "false"]
+        )
+        assert result.returncode == 0
+        _rm_by_constraint(default_condor, removed_shadow_job)
+        assert removed_shadow_job.wait(condition=_gone(removed_shadow_job),
+                                       timeout=TIMEOUT)
