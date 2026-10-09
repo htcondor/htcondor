@@ -4199,6 +4199,10 @@ type=string
 description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
 
+[ANNEX_RESTRICT_JOB_DEFAULT]
+default=true
+type=bool
+
 [ANNEX_USE_OLD_CREATE]
 default=False
 type=bool
@@ -7777,37 +7781,23 @@ default : @fin
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
 	JOB_TRANSFORM_AssignAnnex @=end
 		REQUIREMENTS TargetAnnexName =!= undefined
-		my_identity = "$(MY.Owner)@$(ANNEX_TOKEN_DOMAIN)"
-		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
-		if defined MY.JobMachineAttrs
-			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
+		if defined MY.RestrictToAnnex
+			restrict_to_annex = $(MY.RestrictToAnnex)
 		else
-			SET JobMachineAttrs "AnnexName"
+			restrict_to_annex = $(ANNEX_RESTRICT_JOB_DEFAULT)
 		endif
-		if defined MY.Requirements
-			SET Requirements $(addl_reqs) && ($(MY.Requirements))
+		# AuthenticatedIdentity is present in the AP's copy of the
+		# slot ad, but not in the EP's copy. So if it's missing,
+		# treat that as a match.
+		restrict_expr = (MY.TargetAnnexName == TARGET.AnnexName && (MY.User == TARGET.AuthenticateIdentity)?:true)
+		if $(restrict_to_annex)
+			addl_reqs = $(restrict_expr)
 		else
-			SET Requirements $(addl_reqs)
+			addl_reqs = (TARGET.AnnexName is Undefined || $(restrict_expr))
 		endif
+		SET Requirements $(addl_reqs) && ($(MY.Requirements))
+		SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
 	@end
-
-	# The schedd will not try to activate a directly-connected claim
-	# with a job whose owner is not the authenticated identity of the
-	# directly-connected EP.  This limits the damage that can be done
-	# by a misconfigured EP to only running the annex owner's other
-	# jobs, which I think no long justifies tranforming all other jobs.
-	if $(ANNEX_JOBS_EXCLUSIVELY:FALSE)
-		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
-		JOB_TRANSFORM_AnnexJobsExclusively @=end
-			REQUIREMENTS TargetAnnexName =?= undefined
-			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, regexp("^condor(_pool)?@.*$", TARGET.AuthenticatedIdentity))
-			if defined MY.Requirements
-				SET Requirements $(addl_reqs) && ($(MY.Requirements))
-			else
-				SET Requirements $(addl_reqs)
-			endif
-		@end
-	endif
 @fin
 
 [AUTO_USE_FEATURE_PelicanRetryPolicy]
