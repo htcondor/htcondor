@@ -1,5 +1,10 @@
 *** 25.15.16 bugs
 
+- Fixed a bug where a large backlog of higher job priority jobs could
+  exhaust the *condor_schedd*'s offer budget for a negotiation cycle and
+  starve a lower priority auto cluster, even when matching slots were idle.
+  :jira:`3855`
+
 - Fixed a bug in :tool:`condor_userprio` where using both ``-allusers`` and ``-name`` 
   options would result in no output.
   :jira:`3965`
