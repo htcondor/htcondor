@@ -661,7 +661,7 @@ nvml_getMIGIdentity( nvmlDevice_t migDevice, BasicProps * p ) {
 			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 			r = nvmlDeviceGetUUID( parent, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
 			if( NVML_SUCCESS == r ) {
-				p->migParentUuid = uuid;
+				p->parentUuid = uuid;
 			} else {
 				print_nvml_error("[MIG parent] nvmlDeviceGetUUID", r);
 			}

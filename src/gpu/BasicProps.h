@@ -26,7 +26,7 @@ class BasicProps {
 		// physical GPU hosting this instance, and the instance's GPU and compute
 		// instance ids.  Together these locate the instance's nvidia-caps access
 		// files under /proc/driver/nvidia/capabilities/gpu<minor>/mig/gi<G>/ci<C>
-		std::string   migParentUuid;
+		std::string   parentUuid;
 		int           migGpuInstanceId {-1};
 		int           migComputeInstanceId {-1};
 

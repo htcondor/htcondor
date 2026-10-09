@@ -188,7 +188,7 @@ for every GPU in the system; `condor_gpu_discovery` will report what it can.
 With **-properties**, each MIG instance also reports which physical GPU
 it lives on and where it sits within that GPU:
 
-    - ``MigParentUuid``: the NVML UUID (``GPU-<uuid>``) of the physical GPU
+    - ``ParentUuid``: the NVML UUID (``GPU-<uuid>``) of the physical GPU
       hosting the instance.
     - ``MigGpuInstanceId``: the instance's GPU instance id.
     - ``MigComputeInstanceId``: the instance's compute instance id.
@@ -253,7 +253,7 @@ Tables
     * -
       -
       - Rocm
-    * - MigParentUuid
+    * - ParentUuid
       -
       -
     * - MigGpuInstanceId

@@ -1513,17 +1513,17 @@ substituted with the *prefix string* assigned for the GPU.
     within its physical GPU. Not present for GPUs which are not MIG
     instances.
 
-:classad-attribute-def:`<name>MigParentUuid`
-    For NVIDIA MIG instances, a string holding the NVML UUID, of the form
-    ``GPU-<uuid>``, of the physical GPU which hosts this instance. Not
-    present for GPUs which are not MIG instances.
-
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
 :classad-attribute-def:`<name>OpenCLVersion`
     For Open CL devices, a string representing the manufacturer's
     version number.
+
+:classad-attribute-def:`<name>ParentUuid`
+    For NVIDIA MIG instances, a string holding the NVML UUID, of the form
+    ``GPU-<uuid>``, of the physical GPU which hosts this instance. Not
+    present for GPUs which are not MIG instances.
 
 :classad-attribute-def:`<name>PowerUsage_mw`
     For NVIDIA devices, a dynamic attribute representing the integer power
