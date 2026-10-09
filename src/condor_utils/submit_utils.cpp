@@ -7193,7 +7193,9 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 
 		// if we are going to change ContainerImage, we need to store the full pathname
 		// for use by late-materialization when late-mat will be building a per-job transfer input list
-		job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
+		if(! container_is_common) {
+			job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
+		}
 
 		size_t pos = container_tmp.find(':');
 		if (pos == std::string::npos) {
