@@ -1138,7 +1138,7 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 			// on completion CPUsUsage is total-cpu-time / total-execution-time
 			double job_duration = timersub_double( job_exit_time, job_start_time );
 			if (job_duration > 0) {
-				double cputime = (userCpu + sysCpu) / (1000l * 1000l * 1000l);
+				double cputime = double(userCpu + sysCpu) / (1000.0 * 1000.0 * 1000.0);
 				ad->Assign(ATTR_CPUS_USAGE, cputime / job_duration);
 			} else {
 				ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
