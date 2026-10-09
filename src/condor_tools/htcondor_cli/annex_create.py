@@ -452,7 +452,7 @@ def create_annex_token(logger, type):
     args = [
         'condor_token_fetch',
         '-lifetime', str(token_lifetime),
-        '-file', token_file,
+        '-file', token_file.name,
         '-key', annex_token_key_name,
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
