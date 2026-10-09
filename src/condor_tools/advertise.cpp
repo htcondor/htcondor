@@ -73,9 +73,8 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 	virtual ~ToolClassAdFileParseHelper() {}
 	ToolClassAdFileParseHelper(bool multi) : multiple(multi) {};
 
-	// return non-zero if new parser, o if old (line oriented) parser
 	// TODO: fix this to handle new style classads also...
-	virtual int NewParser(classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+	virtual std::pair<ParseResult, int> NewParser(classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return {ParseResult::LONG_FORM, 0}; }
 
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/) {
