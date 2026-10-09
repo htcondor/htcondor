@@ -3234,6 +3234,13 @@ default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
+[EPOCH_HISTORY_LOCK]
+default=$(LOCK)/_shadow_epoch_history.lock
+win32_default=$(LOCK)\_shadow_epoch_history.lock
+type=path
+description=Lock file the shadow holds while rotating epoch history files
+tags=shadow
+
 [SCHEDD_DAEMON_HISTORY]
 default=$(SPOOL)/schedd_daemon_history
 type=string

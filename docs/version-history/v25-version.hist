@@ -15,6 +15,10 @@
 
 *** 25.0.16 bugs
 
+- Fixed a bug where multiple *condor_shadow* processes could rotate the
+  :macro:`JOB_EPOCH_HISTORY` file at the same time, losing job epoch records.
+  :jira:`3977`
+
 *** 25.15.15 features
 
 - Scheduler and Local universe jobs no longer use the Vanilla universe default values for
