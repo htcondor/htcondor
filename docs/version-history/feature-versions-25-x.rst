@@ -36,6 +36,10 @@ New Features:
 
 .. include-history:: features 25.15.15 25.0.15
 
+- HTCondor tarballs now contain `Pelican 7.27.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.27.0.
+
 Bugs Fixed:
 
 .. include-history:: bugs 25.15.15 25.0.15

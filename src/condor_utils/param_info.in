@@ -3234,6 +3234,13 @@ default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
+[EPOCH_HISTORY_LOCK]
+default=$(LOCK)/_shadow_epoch_history.lock
+win32_default=$(LOCK)\_shadow_epoch_history.lock
+type=path
+description=Lock file the shadow holds while rotating epoch history files
+tags=shadow
+
 [SCHEDD_DAEMON_HISTORY]
 default=$(SPOOL)/schedd_daemon_history
 type=string
@@ -4198,6 +4205,10 @@ default=$(TRUST_DOMAIN)
 type=string
 description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
+
+[ANNEX_RESTRICT_JOB_DEFAULT]
+default=true
+type=bool
 
 [ANNEX_USE_OLD_CREATE]
 default=False
@@ -6172,6 +6183,12 @@ type=bool
 description=Allow underscores and other non-alphanumeric/hyphen characters in token provider names (disables user-supplied credential handles)
 
 # Archive librarian configuration options
+[LIBRARIAN_ADDRESS_FILE]
+default=$(LOG)/.librarian_address
+type=path
+description=Path to the archive librarian address file
+tags=librarian
+
 [LIBRARIAN]
 default=$(SBIN)/condor_librarian
 win32_default=$(SBIN)\condor_librarian.exe
@@ -6215,6 +6232,12 @@ default=1800
 type=int
 range=0,
 description=How long, in seconds, the archive librarian waits before retrying garbage collection after a pass that did not shrink the database file.
+tags=librarian
+
+[LIBRARIAN_USER_RETENTION_DAYS]
+default=365
+type=int
+description=Days the archive librarian keeps a user with no remaining indexed jobs before garbage collection removes it. 0 removes immediately, negative never removes.
 tags=librarian
 
 [LIBRARIAN_MAX_DATABASE_SIZE]
@@ -7765,37 +7788,23 @@ default : @fin
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
 	JOB_TRANSFORM_AssignAnnex @=end
 		REQUIREMENTS TargetAnnexName =!= undefined
-		my_identity = "$(MY.User)"
-		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
-		if defined MY.JobMachineAttrs
-			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
+		if defined MY.RestrictToAnnex
+			restrict_to_annex = $(MY.RestrictToAnnex)
 		else
-			SET JobMachineAttrs "AnnexName"
+			restrict_to_annex = $(ANNEX_RESTRICT_JOB_DEFAULT)
 		endif
-		if defined MY.Requirements
-			SET Requirements $(addl_reqs) && ($(MY.Requirements))
+		# AuthenticatedIdentity is present in the AP's copy of the
+		# slot ad, but not in the EP's copy. So if it's missing,
+		# treat that as a match.
+		restrict_expr = (MY.TargetAnnexName == TARGET.AnnexName && (MY.User == TARGET.AuthenticateIdentity)?:true)
+		if $(restrict_to_annex)
+			addl_reqs = $(restrict_expr)
 		else
-			SET Requirements $(addl_reqs)
+			addl_reqs = (TARGET.AnnexName is Undefined || $(restrict_expr))
 		endif
+		SET Requirements $(addl_reqs) && ($(MY.Requirements))
+		SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
 	@end
-
-	# The schedd will not try to activate a directly-connected claim
-	# with a job whose owner is not the authenticated identity of the
-	# directly-connected EP.  This limits the damage that can be done
-	# by a misconfigured EP to only running the annex owner's other
-	# jobs, which I think no long justifies tranforming all other jobs.
-	if $(ANNEX_JOBS_EXCLUSIVELY:FALSE)
-		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
-		JOB_TRANSFORM_AnnexJobsExclusively @=end
-			REQUIREMENTS TargetAnnexName =?= undefined
-			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, regexp("^condor(_pool)?@.*$", TARGET.AuthenticatedIdentity))
-			if defined MY.Requirements
-				SET Requirements $(addl_reqs) && ($(MY.Requirements))
-			else
-				SET Requirements $(addl_reqs)
-			endif
-		@end
-	endif
 @fin
 
 [AUTO_USE_FEATURE_PelicanRetryPolicy]

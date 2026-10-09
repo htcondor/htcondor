@@ -4987,6 +4987,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ManifestDesired, ATTR_JOB_MANIFEST_DESIRED, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ManifestDir, ATTR_JOB_MANIFEST_DIR, SimpleSubmitKeyword::f_as_string},
 
+	{SUBMIT_KEY_AnnexName, ATTR_TARGET_ANNEX_NAME, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_RestrictToAnnex, ATTR_RESTRICT_TO_ANNEX, SimpleSubmitKeyword::f_as_bool},
+
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 	{SUBMIT_KEY_CheckpointDestination, ATTR_JOB_CHECKPOINT_DESTINATION, SimpleSubmitKeyword::f_as_string},

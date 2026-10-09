@@ -329,6 +329,8 @@ if (BUILD_TESTING)
 			if (HAVE_SQLITE3_H)
 				condor_pl_test(test_archive_librarian "Test basic librarian functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_archive_librarian_restart_recovery "Test librarian rotation-time recovery across a daemon restart" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_archive_librarian_gc "Test librarian garbage collection and user retention" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_archive_librarian_gc_size "Test librarian garbage collection shrinks the database to the low water mark" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_history_librarian_fastpath "Test condor_history's librarian-backed direct-seek path" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 
@@ -365,6 +367,7 @@ if (BUILD_TESTING)
 				condor_pl_test(test_condor_run "Test condor_run outputs submission warnings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
+			condor_pl_test(test_negotiator_autocluster_starvation "Test that a low job priority auto cluster is not starved by a large backlog of a higher job priority auto cluster targeting a different slot class" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -541,7 +544,6 @@ endif()
 			# Sadly, Python doesn't implement a way to get disk space on Windows.
 			if (NOT WINDOWS)
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 			condor_pl_test(test_failure_files "Test failure files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -556,6 +558,7 @@ endif()
 
 			condor_pl_test(test_dont_queue_small_sandboxes "Test not using transfer queue for small transfers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_epoch_attrs "Test our work-around for ElasticSearch not doing joins" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_epoch_rotation_lock "Test shadow epoch history rotation honors its lock file" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_success_exit_code_xfer "Make sure we still get logs if success_exit_code is set" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 

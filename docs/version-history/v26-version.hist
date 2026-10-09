@@ -1,5 +1,14 @@
 *** 26.2.0 features
 
+- The :tool:`htcondor annex` commands *create* and *add* are now treated
+  equivalently and can be issued before any jobs for the named annex have
+  been submitted.
+  :jira:`3931`
+
+- Enhance :tool:`condor_gpu_discovery` to publish MIG-specific
+  gpu attributes when running on a mig-enabled NVidia gpu.
+  :jira:`3978`
+
 - When running Docker universe jobs, the execute event is now logged
   when the container is *started*, not when it is *created*.  The
   container start may take some time, so this makes various statistics
@@ -47,6 +56,25 @@
   Archive Librarian is in use.
   :jira:`3927`
 
+- Add submit command :subcom:`annex_name`, which intendicates that the
+  jobs are intended to run on EPs of the named annex.
+  Add submit command :subcom:`restrict_to_annex`, which specifies whether
+  these jobs can run only on EPs of the named annex, or can also run on
+  non-annex EPs.
+  Add new configuration parameter :macro:`ANNEX_RESTRICT_JOB_DEFAULT`,
+  which sets the default value for :subcom:`restrict_to_annex`.
+  :jira:`2015`
+
+- The Archive Librarian now removes users from its database once they have
+  had no indexed jobs for :macro:`LIBRARIAN_USER_RETENTION_DAYS` days, which
+  defaults to 365.
+  :jira:`3943`
+
+- The Archive Librarian now writes an address file,
+  :macro:`LIBRARIAN_ADDRESS_FILE`, so it can be targeted by tools such as
+  :tool:`condor_restart` with ``-daemon librarian``.
+  :jira:`3943`
+
 - The *condor_starter* can now optionally set a limit on the amount of
   compressed swap (zswap) a job may use, via the new
   :macro:`CGROUP_ZSWAP_MAX_EXPR`. It is a ClassAd expression, evaluated in
@@ -61,6 +89,16 @@
   JSON per-line to adstash.jsonl in the directory specified by ``--json_dir``.
   :jira:`3959`
 
+- Fixed a bug where the Archive Librarian's garbage collection removed only
+  one archive file's records per pass and stopped just under
+  :macro:`LIBRARIAN_HIGH_WATER_MARK`, instead of reducing the database to
+  :macro:`LIBRARIAN_LOW_WATER_MARK`. Garbage collection also no longer
+  mistakes a successful pass for a failed one, which triggered a
+  :macro:`LIBRARIAN_GC_BACKOFF_SECONDS` delay, because the database file
+  had not yet been checkpointed. The database file on disk now shrinks
+  as soon as garbage collection finishes.
+  :jira:`3943`
+
 *** 26.1.0 bugs
 
 - To assist in debugging, added :subcom:`min_condor_version` and
@@ -68,6 +106,11 @@
   version of the EP to greater than or equal to, or strictly less than,
   respectively, the specified version, e.g. "26.0.1".
   :jira:`3065`
+*** 26.0.1 features
+
+- HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-26.0.0.
 
 *** 26.0.1 bugs
 
