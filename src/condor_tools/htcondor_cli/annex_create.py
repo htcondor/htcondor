@@ -433,16 +433,26 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def get_my_identity():
+    try:
+        c = htcondor.Collector()
+        location = c.locate(htcondor.DaemonType.Schedd)
+        ping_ad = htcondor.ping(location, "WRITE")
+    except Exception as e:
+        raise RuntimeError(f"Cannot reach schedd: {e}")
+    return ping_ad["MyRemoteUserName"]
+
+
 def create_annex_token(logger, type):
     token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
     annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
-    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
-    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+    token_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+    token_file.close()
 
     args = [
         'condor_token_fetch',
         '-lifetime', str(token_lifetime),
-        '-token', token_name,
+        '-file', token_file.name,
         '-key', annex_token_key_name,
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
@@ -463,10 +473,7 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY", "")
-            if sec_token_directory == "":
-                sec_token_directory = "~/.condor/tokens.d"
-            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+            return token_file.name
         else:
             logger.error(f"Failed to create annex token, aborting.")
             logger.warning(f"{out.strip()}")
@@ -1080,15 +1087,14 @@ def annex_inner_func_new(
     test,
 ):
 
-    # We use this same method to determine the user name in `htcondor job`,
-    # so even if it's wrong, it will at least consistently so.
-    username = getpass.getuser()
-
     # As reminders for when we fix lifetime being specified in seconds.
     idletime_in_seconds = startd_noclaim_shutdown
 
     if test is not None and test == 1:
         return
+
+    if owners is None:
+        owners = get_my_identity()
 
     # Location of the local universe script files
     local_script_dir = (
