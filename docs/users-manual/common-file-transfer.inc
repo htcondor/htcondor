@@ -158,6 +158,6 @@ Job Event Logs
 
 Common file transfer(s) are recorded in job event logs, using their own
 :doc:`event code<../codes-other-values/job-event-log-codes>` (47), so that
-the definition of existing transfer-transfer events (code 40) doesn't
+the definition of existing file-transfer events (code 40) doesn't
 change.  Likewise, because a common file transfer isn't part of any specific
 job, these events are recorded with negative proc IDs.
