@@ -4708,11 +4708,13 @@ tryagain:
 		if( *value == '(' ) {
 			dollar = value - prefix_len;
 			body = ++value;
+			// reset for every candidate, a : seen in a body we gave up on must not
+			// become the default value offset of a later macro without one.
+			after_colon = 0;
 			if (bodychars == MACRO_BODY_ANYTHING) {
 				while( *value && *value != ')' ) { ++value; }
 			} else if (bodychars == MACRO_BODY_IDCHAR_COLON || bodychars == MACRO_BODY_META_ARG) {
 				bool is_meta_arg_body = (bodychars == MACRO_BODY_META_ARG);
-				after_colon = 0;
 				while( *value && *value != ')' ) {
 					char c = *value++;
 					if (c == ':' && ! after_colon) {
