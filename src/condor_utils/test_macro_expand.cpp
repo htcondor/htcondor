@@ -925,6 +925,13 @@ void testing_$F_regressions(bool verbose)
 	REQUIRE( expand("$Fqn(fileEmptyQuoted)") == "\"\"" );
 	REQUIRE( expand("$Fa(fileEmptySQuoted)") == "" );
 	REQUIRE( expand("$Fqa(fileEmptySQuoted)") == "''" );
+
+	// asking for more dirs than the path has used to pop_back on an empty vector
+	REQUIRE( expand("$Fdddddddd(fileAbsDeep)") == "/six/five/four/three/two/one/" );
+	REQUIRE( expand("$Fdddddd(fileRelDeep)") == "a/b/c/d/e/" );
+	REQUIRE( expand("$Fddddddb(fileRelDeep)") == "a/b/c/d/e" );
+	REQUIRE( expand("$Fddd(fileDirs)") == "/dur/" );
+	REQUIRE( expand("$Fddnx(fileDirs)") == "/dur/der" );
 }
 
 void testing_expand_limits(bool verbose)

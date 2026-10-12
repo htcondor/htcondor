@@ -2846,7 +2846,8 @@ const char * condor_basename_plus_dirs(const char *path, int num_dirs)
 	}
 
 	// now throw away separators from the end corresponding to the number of dirs we want to keep
-	while (num_dirs > 0) {
+	// if there are fewer dirs than that, we keep them all
+	while (num_dirs > 0 && ! seps.empty()) {
 		seps.pop_back();
 		--num_dirs;
 	}
