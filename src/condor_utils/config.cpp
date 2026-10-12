@@ -4495,6 +4495,7 @@ static ptrdiff_t evaluate_macro_func (
 						}
 					}
 				}
+				delete tree; tree = nullptr;
 			}
 
 			retval = argbuf.size();
