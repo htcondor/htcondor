@@ -54,23 +54,15 @@ public:
 	char *readline(char *s, int cb) { return fgets(s, cb, fp); }
 };
 
-int MacroStreamMemoryFile::LineSource::at_eof() {
-	if ( ! str || ! cb) return true;
-	if (cb < 0) {
-		return str[ix] == 0;
-	}
-	return ix >= (size_t)cb;
-}
-
 char * MacroStreamMemoryFile::LineSource::readline(char *s, int cb)
 {
-	if (at_eof() || cb <= 0) return NULL;
-	const char * p = str+ix;
-	const char * pe = strchr(p, '\n');
-	size_t len;
-	if (pe) { len = (pe+1 - p); } else { len = strlen(p); }
-	len = MIN(len, (size_t)cb-1);
-	memcpy(s, p, len);
+	if (at_eof() || cb <= 0) return nullptr;
+	// scan by length rather than with strchr/strlen, so that an embedded \0 is
+	// consumed like fgets would, rather than read as an empty line forever
+	size_t nl = data.find('\n', ix);
+	size_t len = (nl == std::string_view::npos) ? data.size() - ix : nl + 1 - ix;
+	len = std::min(len, (size_t)cb - 1);
+	data.copy(s, len, ix);
 	ix += len;
 	s[len] = 0;
 	return s;

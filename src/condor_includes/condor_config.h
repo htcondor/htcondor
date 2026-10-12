@@ -24,6 +24,7 @@
 
 #include <vector>
 #include <string>
+#include <string_view>
 #include <limits>
 
 typedef std::vector<const char *> MACRO_SOURCES;
@@ -661,8 +662,8 @@ int write_config_file(const char* pathname, int options);
 		// the buffer must be null terminated, so this can be used as a string.
 		const char * remainder(size_t & cb) {
 			if ( ! ls.at_eof()) {
-				cb = ls.cb - ls.ix;
-				return ls.str+ls.ix;
+				cb = ls.data.size() - ls.ix;
+				return ls.data.data() + ls.ix;
 			} else {
 				cb = 0;
 				return NULL;
@@ -675,16 +676,20 @@ int write_config_file(const char* pathname, int options);
 		// this class allows for template expansion of getline_implementation
 		class LineSource {
 		public:
-			const char* str;
-			ssize_t cb;
-			size_t ix;
+			std::string_view data;
+			size_t ix{0};
 
-			LineSource(const char*p, ssize_t _cb, size_t _ix) : str(p), cb(_cb), ix(_ix) {}
-			~LineSource() {}
+			// a negative _cb means p is null terminated
+			LineSource(const char*p, ssize_t _cb, size_t _ix) { init(p, _cb, _ix); }
 
-			void init(const char*p, ssize_t _cb, size_t _ix) { str = p; cb = _cb; ix = _ix; }
-			void clear() { str= NULL; cb = 0; ix = 0; }
-			int at_eof();
+			void init(const char*p, ssize_t _cb, size_t _ix) {
+				if ( ! p) { data = {}; }
+				else if (_cb < 0) { data = std::string_view(p); }
+				else { data = std::string_view(p, _cb); }
+				ix = _ix;
+			}
+			void clear() { data = {}; ix = 0; }
+			bool at_eof() const { return ix >= data.size(); }
 			char *readline(char *s, int cb); // returns up to \n, for use only by getline_implementation
 		};
 
