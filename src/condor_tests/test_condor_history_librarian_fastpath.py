@@ -126,25 +126,38 @@ def _rotate_history(condor):
     assert p.returncode == 0, f"condor_reconfig -schedd failed: {p.stderr}"
 
 
-def _librarian_alive(condor):
+def _who_quick(condor):
+    """Return condor_who -quick output (the master's ready ad) as a dict of
+    attribute name -> unparsed value string, e.g. {"IsReady": "true"}."""
     who = condor.run_command(["condor_who", "-quick"])
     if who.returncode != 0:
-        return False
-    for line in who.stdout.split("\n"):
-        if line.startswith("LIBRARIAN =") and '"alive"' in line.lower():
-            return True
-    return False
+        return {}
+    return dict(
+        (k.strip(), v.strip()) for k, v in
+        (line.split("=", 1) for line in who.stdout.splitlines() if "=" in line)
+    )
 
 
 def _set_librarian_running(condor, running, timeout=60):
     """Stop (condor_off) or start (condor_on) just the LIBRARIAN daemon under
-    the master, and wait for condor_who to report the new state."""
+    the master, and wait for the master to report the new state. A daemon
+    turned off with condor_off is put on hold, which does not clear IsReady,
+    so stopping waits for LIBRARIAN = "Hold"; starting waits for IsReady with
+    LIBRARIAN = "Alive"."""
     cmd = "condor_on" if running else "condor_off"
     p = condor.run_command([cmd, "-daemon", "LIBRARIAN"])
     assert p.returncode == 0, f"{cmd} -daemon LIBRARIAN failed: {p.stderr}"
     start = time.time()
-    while _librarian_alive(condor) != running:
-        assert time.time() - start <= timeout, f"LIBRARIAN never {'started' if running else 'stopped'}"
+    while True:
+        who = _who_quick(condor)
+        if running:
+            if who.get("IsReady") == "true" and who.get("LIBRARIAN") == '"Alive"':
+                return
+        elif who.get("LIBRARIAN") == '"Hold"':
+            return
+        assert time.time() - start <= timeout, (
+            f"LIBRARIAN never {'started' if running else 'stopped'} (last condor_who -quick: {who})"
+        )
         time.sleep(1)
 
 
