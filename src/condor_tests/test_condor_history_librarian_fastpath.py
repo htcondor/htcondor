@@ -15,9 +15,15 @@
 #       mixes a full cluster.proc, a bare cluster ID, and an owner name -- all
 #       partially overlapping -- must print every matching job exactly once,
 #       not once per matching restriction-list term.
-#     - Output order and limits: records span a rotated and an active archive
-#       file, and the direct-seek path must match the file-scan path's order
-#       (-backwards default, -forwards) and honor -limit.
+#     - Output order and stop conditions: records span several rotated
+#       archive files and the active file, and the direct-seek path must match
+#       the file-scan path's order (-backwards default, -forwards) and honor
+#       -limit, -scanlimit, and -since.
+#     - Archive order is taken from rotation time, not Files.FileId: the
+#       librarian is stopped across two rotations, so on restart it re-keys
+#       the old active row to the oldest rotated file, inserts the current
+#       active file, and only then inserts the intervening rotated file,
+#       leaving FileIds out of chronological order.
 
 import datetime
 import os
@@ -106,13 +112,40 @@ def _rotate_history(condor):
     with condor.use_config():
         history_path = Path(htcondor2.param["HISTORY"])
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-    rotated_path = history_path.parent / f"{history_path.name}.{timestamp}"
+    # Rotated names have one-second resolution; never reuse one.
+    while True:
+        timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
+        rotated_path = history_path.parent / f"{history_path.name}.{timestamp}"
+        if not rotated_path.exists():
+            break
+        time.sleep(0.5)
     history_path.rename(rotated_path)
     os.utime(str(rotated_path), None)
 
     p = condor.run_command(["condor_reconfig", "-schedd"])
     assert p.returncode == 0, f"condor_reconfig -schedd failed: {p.stderr}"
+
+
+def _librarian_alive(condor):
+    who = condor.run_command(["condor_who", "-quick"])
+    if who.returncode != 0:
+        return False
+    for line in who.stdout.split("\n"):
+        if line.startswith("LIBRARIAN =") and '"alive"' in line.lower():
+            return True
+    return False
+
+
+def _set_librarian_running(condor, running, timeout=60):
+    """Stop (condor_off) or start (condor_on) just the LIBRARIAN daemon under
+    the master, and wait for condor_who to report the new state."""
+    cmd = "condor_on" if running else "condor_off"
+    p = condor.run_command([cmd, "-daemon", "LIBRARIAN"])
+    assert p.returncode == 0, f"{cmd} -daemon LIBRARIAN failed: {p.stderr}"
+    start = time.time()
+    while _librarian_alive(condor) != running:
+        assert time.time() - start <= timeout, f"LIBRARIAN never {'started' if running else 'stopped'}"
+        time.sleep(1)
 
 
 def _run_history(condor, args):
@@ -156,7 +189,15 @@ def condor(condor_config, test_dir):
 
 
 # ---------------------------------------------------------------------------
-# Actions: two single-proc clusters under the same (real) owner.
+# Actions: all clusters under the same (real) owner, spread across archives:
+#
+#   history.<T1>  A, B     rotated while the librarian is running
+#   history.<T2>  C (x3)   rotated while the librarian is stopped
+#   history.<T3>  D        rotated while the librarian is stopped
+#   history       E        active
+#
+# On restart the librarian assigns FileIds T1 < history(E) < T3, so FileId
+# order is not archive order.
 # ---------------------------------------------------------------------------
 
 @action
@@ -198,15 +239,40 @@ def cluster_c(condor, test_dir, path_to_sleep, history_rotated):
 
 
 @action
-def all_jobs_indexed(condor, cluster_a, cluster_b, cluster_c):
-    """Depend on this fixture to guarantee every cluster is in the librarian DB
-    before running any condor_history command against it."""
+def cluster_c_indexed(condor, cluster_c):
     _wait_for_db_job_count(condor, 2 + NUM_C_PROCS)
 
 
 @action
-def all_jobids(cluster_a, cluster_b, cluster_c):
-    return {f"{cluster_a.clusterid}.0", f"{cluster_b.clusterid}.0"} | {
+def librarian_stopped(condor, cluster_c_indexed):
+    _set_librarian_running(condor, False)
+
+
+@action
+def cluster_d(condor, test_dir, path_to_sleep, librarian_stopped):
+    _rotate_history(condor)
+    return _submit_and_wait(condor, test_dir / "d.log", path_to_sleep)
+
+
+@action
+def cluster_e(condor, test_dir, path_to_sleep, cluster_d):
+    _rotate_history(condor)
+    return _submit_and_wait(condor, test_dir / "e.log", path_to_sleep)
+
+
+NUM_JOBS = 2 + NUM_C_PROCS + 2
+
+@action
+def all_jobs_indexed(condor, cluster_a, cluster_b, cluster_c, cluster_d, cluster_e):
+    """Depend on this fixture to guarantee every cluster is in the librarian DB
+    before running any condor_history command against it."""
+    _set_librarian_running(condor, True)
+    _wait_for_db_job_count(condor, NUM_JOBS)
+
+
+@action
+def all_jobids(cluster_a, cluster_b, cluster_c, cluster_d, cluster_e):
+    return {f"{h.clusterid}.0" for h in (cluster_a, cluster_b, cluster_d, cluster_e)} | {
         f"{cluster_c.clusterid}.{p}" for p in range(NUM_C_PROCS)
     }
 
@@ -278,18 +344,40 @@ class TestCondorHistoryLibrarianFastpath:
         assert sorted(file_scan_forwards) == sorted(all_jobids)
         assert _run_history(condor, ["-forwards", owner]) == file_scan_forwards
 
-    def test_order_follows_rotation_not_path(self, condor, owner, cluster_a, cluster_b, cluster_c):
-        """Pre-rotation clusters come before the post-rotation cluster reading forwards."""
+    def test_file_ids_are_not_chronological(self, condor, all_jobs_indexed):
+        """
+        Precondition for test_order_follows_rotation_not_file_id: the restart
+        after two missed rotations must leave the newest rotated file (D's)
+        with a larger FileId than the active file (E's). If this fails, the
+        scenario wasn't reproduced and the ordering test proves nothing.
+        """
+        with condor.use_config():
+            history_path = Path(htcondor2.param["HISTORY"])
+        conn = sqlite3.connect(str(_get_db_path(condor)))
+        rows = conn.execute("SELECT FileName, FileId FROM Files WHERE DateOfDeletion IS NULL").fetchall()
+        conn.close()
+        ids = {Path(name).name: file_id for name, file_id in rows}
+        rotated = sorted(n for n in ids if n.startswith(f"{history_path.name}."))
+        assert len(rotated) == 3, f"Expected 3 rotated files in DB, found {sorted(ids)}"
+        assert ids[rotated[-1]] > ids[history_path.name], f"FileIds are chronological: {ids}"
+
+    def test_order_follows_rotation_not_file_id(self, condor, all_jobs_indexed, owner, cluster_a, cluster_b, cluster_c, cluster_d, cluster_e):
+        """
+        Regression test: archive order comes from rotation time, not from path
+        (history sorts before history.<T>) or Files.FileId (out of order after
+        the restart), so clusters print in submission order reading forwards.
+        """
         clusters = [int(j.split(".")[0]) for j in _run_history(condor, ["-forwards", owner])]
         a_id, b_id, c_id = cluster_a.clusterid, cluster_b.clusterid, cluster_c.clusterid
-        assert clusters == [a_id, b_id] + [c_id] * NUM_C_PROCS
+        d_id, e_id = cluster_d.clusterid, cluster_e.clusterid
+        assert clusters == [a_id, b_id] + [c_id] * NUM_C_PROCS + [d_id, e_id]
 
-    @pytest.mark.parametrize("limit", [1, 2, 4])
+    @pytest.mark.parametrize("limit", [1, 2, 4, 6])
     def test_owner_limit_backwards(self, condor, owner, file_scan_backwards, limit):
         """Regression test: -limit with an owner returns the newest N jobs."""
         assert _run_history(condor, ["-limit", str(limit), owner]) == file_scan_backwards[:limit]
 
-    @pytest.mark.parametrize("limit", [1, 2, 4])
+    @pytest.mark.parametrize("limit", [1, 2, 4, 6])
     def test_owner_limit_forwards(self, condor, owner, file_scan_forwards, limit):
         """Regression test: -limit -forwards with an owner returns the oldest N jobs."""
         assert _run_history(condor, ["-forwards", "-limit", str(limit), owner]) == file_scan_forwards[:limit]
@@ -302,3 +390,65 @@ class TestCondorHistoryLibrarianFastpath:
         assert len(reference) == NUM_C_PROCS
         assert _run_history(condor, direction + ["-limit", "1", c_id]) == reference[:1]
         assert _run_history(condor, direction + ["-limit", "2", c_id]) == reference[:2]
+
+    @pytest.mark.parametrize("direction", [[], ["-forwards"]], ids=["backwards", "forwards"])
+    @pytest.mark.parametrize("scanlimit", [1, 3, 6])
+    def test_owner_scanlimit(self, condor, all_jobs_indexed, owner, direction, scanlimit):
+        """Regression test: -scanlimit with an owner stops after N ads, like a file scan."""
+        args = direction + ["-scanlimit", str(scanlimit), owner]
+        reference = _run_history(condor, ["-no-librarian"] + args)
+        assert len(reference) == scanlimit
+        assert _run_history(condor, args) == reference
+
+    @pytest.mark.parametrize("direction", [[], ["-forwards"]], ids=["backwards", "forwards"])
+    def test_scanlimit_counts_unmatched_ads(self, condor, all_jobs_indexed, owner, cluster_a, cluster_b, cluster_c, cluster_d, cluster_e, direction):
+        """
+        Regression test: -scanlimit bounds ads examined, not ads printed, so it
+        is distinguishable from -limit. Excluding cluster C by constraint, the
+        first 4 ads scanned are {E, D, C, C} backwards or {A, B, C, C} forwards,
+        so only 2 jobs print (where -limit 4 would print 4).
+        """
+        args = direction + ["-scanlimit", "4", "-constraint", f"ClusterId != {cluster_c.clusterid}", owner]
+        reference = _run_history(condor, ["-no-librarian"] + args)
+        if direction:
+            expected = [f"{cluster_a.clusterid}.0", f"{cluster_b.clusterid}.0"]
+        else:
+            expected = [f"{cluster_e.clusterid}.0", f"{cluster_d.clusterid}.0"]
+        assert reference == expected
+        assert _run_history(condor, args) == expected
+
+    @pytest.mark.parametrize("direction", [[], ["-forwards"]], ids=["backwards", "forwards"])
+    def test_cluster_scanlimit(self, condor, all_jobs_indexed, cluster_c, direction):
+        """Regression test: -scanlimit with a bare cluster ID is honored."""
+        args = direction + ["-scanlimit", "2", str(cluster_c.clusterid)]
+        reference = _run_history(condor, ["-no-librarian"] + args)
+        assert len(reference) == 2
+        assert _run_history(condor, args) == reference
+
+    def test_owner_since_job_id(self, condor, all_jobs_indexed, owner, cluster_b, cluster_c, cluster_d, cluster_e):
+        """
+        Regression test: -since <cluster.proc> with an owner stops at that job
+        (exclusive). -since cannot be combined with -forwards.
+        """
+        args = ["-since", f"{cluster_b.clusterid}.0", owner]
+        reference = _run_history(condor, ["-no-librarian"] + args)
+        c_jobs = {f"{cluster_c.clusterid}.{p}" for p in range(NUM_C_PROCS)}
+        assert reference[:2] == [f"{cluster_e.clusterid}.0", f"{cluster_d.clusterid}.0"]
+        assert set(reference[2:]) == c_jobs
+        assert _run_history(condor, args) == reference
+
+    def test_owner_since_cluster(self, condor, all_jobs_indexed, owner, cluster_c, cluster_d, cluster_e):
+        """Regression test: -since <cluster> with an owner stops at the first ad of that cluster."""
+        args = ["-since", str(cluster_c.clusterid), owner]
+        expected = [f"{cluster_e.clusterid}.0", f"{cluster_d.clusterid}.0"]
+        assert _run_history(condor, ["-no-librarian"] + args) == expected
+        assert _run_history(condor, args) == expected
+
+    def test_cluster_since_expression(self, condor, all_jobs_indexed, cluster_c):
+        """Regression test: -since <expression> with a bare cluster ID is honored."""
+        c_id = str(cluster_c.clusterid)
+        newest_first = _run_history(condor, ["-no-librarian", c_id])
+        stop_proc = newest_first[1].split(".")[1]
+        args = ["-since", f"ProcId == {stop_proc}", c_id]
+        assert _run_history(condor, ["-no-librarian"] + args) == newest_first[:1]
+        assert _run_history(condor, args) == newest_first[:1]

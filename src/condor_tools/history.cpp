@@ -44,6 +44,7 @@
 #include <algorithm> //for std::reverse
 #include <utility> // for std::move
 #include <map>
+#include <tuple>
 
 #include "classad_helpers.h"
 #include "history_utils.h"
@@ -1361,16 +1362,22 @@ static bool checkMatchJobIdsFound(const ArchiveRecord &arec, ClassAd *ad = NULL,
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec);
 
 // Print librarian-supplied records by seeking directly to each one's offset.
-// Records are put in chronological archive order (FileId then offset), reversed
-// unless reading -forwards, so output order and -limit/-scanlimit/-since behave
-// the same as a normal file scan.
+// Records are put in chronological archive order, reversed unless reading
+// -forwards, so output order and -limit/-scanlimit/-since behave the same as a
+// normal file scan. Files are ordered like findHistoryFiles(): rotated files by
+// rotation time, then the active file (rotation_time 0) last. FileId only breaks
+// ties; it is not chronological after a restart that missed multiple rotations.
 static void printLibrarianRecords(const char* constraint, ExprTree *constraintExpr,
                                   std::vector<LibrarianRecord>& records)
 {
-	auto key = [](const LibrarianRecord& rec) { return std::make_pair(rec.file_id, rec.offset); };
+	auto key = [](const LibrarianRecord& rec) {
+		return std::make_tuple(rec.rotation_time == 0, rec.rotation_time, rec.file_id, rec.offset);
+	};
 	std::ranges::sort(records, {}, key);
 	// Dedup: the same record can come back from more than one librarian query.
-	auto dups = std::ranges::unique(records, {}, key);
+	auto dups = std::ranges::unique(records, {}, [](const LibrarianRecord& rec) {
+		return std::make_pair(rec.file_id, rec.offset);
+	});
 	records.erase(dups.begin(), dups.end());
 	if (backwards) { std::ranges::reverse(records); }
 
