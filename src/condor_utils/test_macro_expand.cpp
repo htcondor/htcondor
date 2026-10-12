@@ -265,6 +265,8 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"List6c", "aa,bb, cc,dd,ee,ff"},
 		{"MASTER.List6c", "JMK,Vvv,XX,YY,ZKM,ZA"},
 		{"List6cq", "$Fq(list6c)"},
+		{"fileEmptyQuoted", "\"\""},
+		{"fileEmptySQuoted", "''"},
 
 		// for $INT and $REAL tests
 		{"DoubleVanilla", "$(VANILLA)*2"},
@@ -907,6 +909,15 @@ void testing_$F_regressions(bool verbose)
 
 	REQUIRE( expand("$F(Items5) ff") == "aa bb cc dd ee ff" );
 	REQUIRE( expand("\"$F(Items5Quoted) ff\"") == "\"aa bb cc dd ee ff\"" );
+
+	// a value that is only a pair of quotes used to underflow the copy length in strcpy_quoted
+	REQUIRE( expand("$F(\"\")") == "" );
+	REQUIRE( expand("$F(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fn(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fq(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fqn(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fa(fileEmptySQuoted)") == "" );
+	REQUIRE( expand("$Fqa(fileEmptySQuoted)") == "''" );
 }
 
 void testing_$CHOICE_expand(bool verbose)

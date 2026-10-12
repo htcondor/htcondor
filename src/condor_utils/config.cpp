@@ -2835,7 +2835,7 @@ char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 
 	// ignore leading and/or trailing quotes when we copy
 	char quote_char = 0;
-	if (*str=='"' || (*str && *str == quoted)) { quote_char = *str; ++str; --cch; }
+	if (cch > 0 && (*str=='"' || *str == quoted)) { quote_char = *str; ++str; --cch; }
 	if (cch > 0 && str[cch-1] && str[cch-1] == quote_char) --cch;
 
 	ASSERT(out);
