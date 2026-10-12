@@ -4417,8 +4417,10 @@ static ptrdiff_t evaluate_macro_func (
 				if ( ! rhs.Insert(attr, tree)) {
 					delete tree; tree = NULL;
 				} else if(rhs.EvaluateAttr(attr, val, classad::Value::STRING_VALUE) && val.IsStringValue()) {
-					// value is valid. use it instead of mval
-					val.IsStringValue(mval);
+					// value is valid. use it instead of mval. copy it to mbuf, since val
+					// is destroyed at the end of this block and mval is used after that
+					val.IsStringValue(mbuf);
+					mval = mbuf.c_str();
 				}
 			}
 

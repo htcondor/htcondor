@@ -137,6 +137,16 @@ YourString expand(const char * value) {
 	return ystr;
 }
 
+// expand using the std::string overload of expand_macro, which has its own macro function evaluation
+std::string gsstr;
+YourString expand_str(const char * value) {
+	gexcmsg.clear();
+	gsstr = value;
+	expand_macro(gsstr, 0, TestingMacroSet, def_ctx);
+	ystr = gsstr.c_str();
+	return ystr;
+}
+
 YourString expand_as(const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
@@ -1065,6 +1075,13 @@ void testing_$STRING_expand(bool verbose)
 	// exception cases
 	REQUIRE_EXCEPT( expand("$STRING(FOO,%f)") == "%f" , not a valid format );
 
+	// the std::string expand_macro used to return a pointer into a destroyed classad::Value,
+	// which showed up for strings too long for the small string buffer
+	REQUIRE( expand_str("$STRING(ITEMS5quoted)") == "aa bb cc dd ee" );
+	REQUIRE( expand_str("$STRING(Items6)") == "aa bb cc dd ee ff" );
+	REQUIRE( expand_str("$STRING(FullVerNum)") == "8.5.6.998822" );
+	REQUIRE( expand_str("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
+	REQUIRE( expand_str("[$STRING(fileRelSpaces)]") == "[ein/zw ei/dr ei.fir]" );
 }
 
 void testing_$INT_expand(bool verbose)
