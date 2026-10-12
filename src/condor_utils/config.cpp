@@ -5101,7 +5101,7 @@ int selective_expand_macro (
 		return -1;
 	}
 	if (depth.too_deep()) {
-		macro_set.push_error(stderr, -1, NULL, "macro expansion nested too deeply (self reference?) while expanding: %s", value.c_str());
+		macro_set.push_error(stderr, -1, nullptr, "macro expansion nested too deeply (self reference?) while expanding: %s", value.c_str());
 		MacroExpandDepth::fail();
 		return -1;
 	}
