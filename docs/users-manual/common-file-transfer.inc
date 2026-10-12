@@ -44,7 +44,7 @@ fewer resources: HTCondor will automatically fall back to uncommon file
 transfer as necessary.
 
 Using common files will never increase the non-disk resource requirements for
-your jobs.  If a job's disk request has been specified very parsiminously,
+your jobs.  If a job's disk request has been specified very parsimoniously,
 it may need to be increased by a small amount because EPs by default round
 disk requests up to the nearest megabyte.  Jobs which don't need every
 megabyte of their requested disk will not be affected.
@@ -58,7 +58,7 @@ you don't need to do anything; any container image that HTCondor (as opposed
 to Docker) transfers will be eligible.  Your jobs should spend less time (on
 average) transferring container images and more time actually running.
 
-Instead, your administrator may require you to specify that your container
+Alternatively, your administrator may require you to specify that your container
 image is common; you may set
 
 ``container_is_common = True``
@@ -99,7 +99,7 @@ The data slot starts out with enough resources (CPUs, memory, GPUs, etc) to
 run the job for which it will store common file(s); this is to reserve those
 resources to make sure that the common file transfer isn't wasted.  (This
 does not increase your job's resource usage, since the same file(s) would
-have had to have been transferred in order to start your job in a regular
+otherwise have been transferred in order to start your job in a regular
 "job" slot, which would also have been reserving those resources during the
 transfer.)  Once the common file transfer(s) are complete, all of the
 reserved resources and some of the disk (whatever the job asked for that's
