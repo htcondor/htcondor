@@ -17,9 +17,12 @@
  * The dictionary of config keywords and macro functions lets the fuzzer
  * reach things like $F("") that random mutation rarely produces.
  *
- * The first byte of input selects the parser options and the subsys / local
- * name used for lookups, the rest is parsed exactly as a config file would be,
- * then every resulting value is macro expanded the way param() would.
+ * To fuzz in parallel use -jobs=N -workers=M, -fork crashes in clang 22.
+ *
+ * The first byte of input selects the parser options, the subsys / local
+ * name used for lookups and the expand options, the rest is parsed exactly as
+ * a config file would be, then every resulting value is macro expanded the way
+ * param() would, by both overloads of expand_macro.
  *
  * include statements are disabled, because "include : cmd |" would run
  * arbitrary commands from the fuzzer input.
@@ -69,12 +72,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *input, size_t len) {
 	std::string errmsg;
 	Parse_macros(ms, 0, set, opts, &ctx, errmsg, nullptr, nullptr);
 
-	// Now expand everything that was defined, as param() would
+	unsigned int expand_opts = 0;
+	if (sel & 0x40) expand_opts |= EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR;
+	if (sel & 0x80) expand_opts |= EXPAND_MACRO_OPT_IS_PATH;
+
+	// Now expand everything that was defined, as param() would,
+	// with both overloads of expand_macro, since their macro function code is separate
 	HASHITER it = hash_iter_begin(set, HASHITER_NO_DEFAULTS);
 	while ( ! hash_iter_done(it)) {
 		const char * val = hash_iter_value(it);
 		if (val) {
 			free(expand_macro(val, set, ctx));
+			std::string sval(val);
+			expand_macro(sval, expand_opts, set, ctx);
 		}
 		hash_iter_next(it);
 	}
