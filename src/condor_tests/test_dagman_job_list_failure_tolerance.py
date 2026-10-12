@@ -498,7 +498,9 @@ def removed_shadow_job(default_condor, shadow_job):
 
 class TestRemoveSkipsShadowTerminating:
     def test_job_was_not_removed(self, removed_shadow_job):
-        assert _in_queue(removed_shadow_job)
+        ads = removed_shadow_job.query(projection=["JobStatus"])
+        assert len(ads) == 1
+        assert ads[0]["JobStatus"] == int(JobStatus.RUNNING)
 
     def test_job_is_removable_once_not_pending(self, default_condor, removed_shadow_job):
         # Clearing the marker makes the job removable again, which shows the
