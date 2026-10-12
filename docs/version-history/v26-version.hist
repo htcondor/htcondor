@@ -5,6 +5,10 @@
   been submitted.
   :jira:`3931`
 
+- When running as root on a cgroup v2 system, if a GPU job is allocated
+  an NVIDIA MIG device, hide all the GPUs not part of the allocated MIGs.
+  :jira:`3978`
+
 - Enhance :tool:`condor_gpu_discovery` to publish MIG-specific
   gpu attributes when running on a mig-enabled NVidia gpu.
   :jira:`3978`
