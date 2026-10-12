@@ -4815,16 +4815,6 @@ bool has_unexpanded_macros(const char * value, bool ignore_dollor)
 }
 
 
-// used by config_canonicalize_path, gcc 4.4.7 needs it to be declared at global scope.
-struct _remove_duplicate_path_chars {
-	char last_ch;
-	bool operator()(char ch) {
-		bool retval = (ch == DIR_DELIM_CHAR && last_ch == ch);
-		last_ch = ch;
-		return retval;
-	}
-};
-
 // convert path characters in place in a std::string, and remove excess path characters
 //
 void config_canonicalize_path(std::string & value)
@@ -4849,12 +4839,12 @@ void config_canonicalize_path(std::string & value)
 
 	// TODO: also remove internal ./  and ../ from path
 	if (may_need_flattening) {
-		struct _remove_duplicate_path_chars tmp = {0};
 		// a double \\ is permitted at the beginning of a path
 		std::string::iterator start = value.begin();
 		if (*start == DIR_DELIM_CHAR) ++start;
-		// erase excess path characters
-		value.erase(std::remove_if(start, value.end(), tmp));
+		// collapse each run of path separators to one
+		auto both_delims = [](char a, char b) { return a == DIR_DELIM_CHAR && b == DIR_DELIM_CHAR; };
+		value.erase(std::unique(start, value.end(), both_delims), value.end());
 	}
 }
 
