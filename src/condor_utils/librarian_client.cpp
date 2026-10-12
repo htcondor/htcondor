@@ -97,7 +97,7 @@ struct LibrarianClient::Impl {
 
 	// Step an already-prepared, already-bound statement to completion,
 	// appending one LibrarianRecord per row: column 0 = Offset (int64),
-	// column 1 = FileName (text). Shared row-processing for all three
+	// column 1 = FileName (text), column 2 = FileId (int64). Shared row-processing for all three
 	// GetRecords* methods.
 	static void fetchRecordRows(sqlite3_stmt* stmt, std::vector<LibrarianRecord>& out) {
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -105,6 +105,7 @@ struct LibrarianClient::Impl {
 			rec.offset    = sqlite3_column_int64(stmt, 0);
 			const char* fn = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
 			rec.file_path = fn ? fn : "";
+			rec.file_id   = sqlite3_column_int64(stmt, 2);
 			out.push_back(std::move(rec));
 		}
 	}
@@ -182,7 +183,7 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecords([[maybe_unused]] const 
 	if ( ! IsValid()) { return results; }
 
 	static const char* base_sql =
-		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
 		" JOIN Files f ON jr.FileId = f.FileId"
 		" JOIN Jobs j  ON jr.JobId  = j.JobId"
 		" WHERE j.ClusterId = ? AND j.ProcId = ?";
@@ -208,7 +209,7 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecordsByCluster([[maybe_unused
 	if ( ! IsValid()) { return results; }
 
 	static const char* base_sql =
-		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
 		" JOIN Files f    ON jr.FileId    = f.FileId"
 		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
 		" WHERE jl.ClusterId = ?";
@@ -230,7 +231,7 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecordsByUser([[maybe_unused]] 
 	if ( ! IsValid()) { return results; }
 
 	static const char* base_sql =
-		"SELECT jr.Offset, f.FileName FROM JobRecords jr"
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
 		" JOIN Files f     ON jr.FileId    = f.FileId"
 		" JOIN JobLists jl ON jr.JobListId = jl.JobListId"
 		" JOIN Users u     ON jl.UserId    = u.UserId"

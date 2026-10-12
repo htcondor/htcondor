@@ -1360,39 +1360,45 @@ static bool checkMatchJobIdsFound(const ArchiveRecord &arec, ClassAd *ad = NULL,
 
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec);
 
-// Group librarian-supplied records by archive file and print each one by seeking
-// directly to its offset, reusing one ArchiveReader per file.
+// Print librarian-supplied records by seeking directly to each one's offset.
+// Records are put in chronological archive order (FileId then offset), reversed
+// unless reading -forwards, so output order and -limit/-scanlimit/-since behave
+// the same as a normal file scan.
 static void printLibrarianRecords(const char* constraint, ExprTree *constraintExpr,
-                                  const std::vector<LibrarianRecord>& records)
+                                  std::vector<LibrarianRecord>& records)
 {
-	if (records.size()) {
-		std::map<std::string, std::vector<int64_t>> file_offsets;
-		for (const auto& rec : records) {
-			file_offsets[rec.file_path].push_back(rec.offset);
+	auto key = [](const LibrarianRecord& rec) { return std::make_pair(rec.file_id, rec.offset); };
+	std::ranges::sort(records, {}, key);
+	// Dedup: the same record can come back from more than one librarian query.
+	auto dups = std::ranges::unique(records, {}, key);
+	records.erase(dups.begin(), dups.end());
+	if (backwards) { std::ranges::reverse(records); }
+
+	// Reuse one ArchiveReader for each consecutive run of records in the same file
+	std::unique_ptr<ArchiveReader> reader;
+	int64_t reader_file_id = -1;
+
+	for (const auto& rec : records) {
+		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds) || abort_transfer) {
+			break;
 		}
 
-		for (auto& [file_path, offsets] : file_offsets) {
-			std::ranges::sort(offsets);
-			// Dedup: the same record can come back from more than one librarian query.
-			offsets.erase(std::unique(offsets.begin(), offsets.end()), offsets.end());
-
-			ArchiveReader reader(file_path, ArchiveReader::Direction::Forward);
-			if ( ! reader.IsOpen()) { continue; }
-
-			for (int64_t offset : offsets) {
-				if ( ! reader.SeekForward(offset)) { continue; }
-
-				ArchiveRecord arec;
-				if ( ! reader.Next(arec)) { continue; }
-
-				ClassAd* ad = arec.GetAd();
-				if ( ! ad) { continue; }
-
-				printJobIfConstraint(*ad, constraint, constraintExpr, arec);
-
-				delete ad;
-			}
+		if ( ! reader || reader_file_id != rec.file_id) {
+			reader = std::make_unique<ArchiveReader>(rec.file_path, ArchiveReader::Direction::Forward);
+			reader_file_id = rec.file_id;
 		}
+		if ( ! reader->IsOpen() || ! reader->SeekForward(rec.offset)) { continue; }
+
+		ArchiveRecord arec;
+		if ( ! reader->Next(arec)) { continue; }
+
+		ClassAd* ad = arec.GetAd();
+		if ( ! ad) { continue; }
+
+		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, arec);
+
+		delete ad;
+		if (done) { break; }
 	}
 }
 
@@ -1514,7 +1520,8 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 		}
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
-		if (checkMatchJobIdsFound(arec, &ad)) { //Check if all possible ads have been displayed
+		//Check if all possible ads have been displayed (owner terms can still match more ads)
+		if (checkMatchJobIdsFound(arec, &ad) && ownersList.empty()) {
 			maxAds = adCount;
 			return true;
 		}
@@ -1600,7 +1607,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		}
 
 		// No ad was built; still check completion date vs QDate for an early exit.
-		if ( ! printed && read_backwards && cluster > 0 && checkMatchJobIdsFound(arec, NULL, true)) {
+		if ( ! printed && read_backwards && cluster > 0 && checkMatchJobIdsFound(arec, NULL, true) && ownersList.empty()) {
 			break;
 		}
 

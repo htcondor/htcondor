@@ -26,9 +26,13 @@
 #include <vector>
 
 // A single indexed record: the byte offset within the file and the file path.
+// file_id is the librarian's Files.FileId; ids are assigned as archive files
+// are discovered (oldest rotated first, active last), so ordering records by
+// (file_id, offset) yields chronological archive order.
 struct LibrarianRecord {
 	int64_t     offset;
 	std::string file_path;
+	int64_t     file_id{0};
 };
 
 // Read-only client for the Librarian SQLite3 index database.
