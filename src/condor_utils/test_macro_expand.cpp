@@ -381,6 +381,17 @@ void testparse_lcl_as(const char * local, const char *prefix, int lineno, MACRO_
 	testparse(lineno, set, ctx, source, verbose, tag, params, expected);
 }
 
+// parse text in config syntax the way a config file is parsed, using Parse_macros
+// rather than Parse_config_string, so that it goes through getline
+static int parse_mem(MACRO_SET & set, const char * text)
+{
+	MACRO_SOURCE source{};
+	insert_source("parse_mem", set, source);
+	MacroStreamMemoryFile ms(text, -1, source);
+	std::string errmsg;
+	return Parse_macros(ms, 0, set, 0, &def_ctx, errmsg, nullptr, nullptr);
+}
+
 //
 //   UNIT TESTS FOLLOW THIS BANNER
 //
@@ -415,6 +426,15 @@ void testing_parser(bool verbose)
 	testparse_as("NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub2", n1, n1e1);
 	testparse_lcl("N1", __LINE__, set, def_ctx, source, verbose, "subsys.self sub3", n1, n1e2);
 	testparse_lcl_as("N1", "NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub4", n1, n1e2);
+
+	// parse errors must not free getline's static line buffer, which the next parse reuses
+	// and frees again at end of input. #opt:strict makes param assignment with : an error
+	MACRO_SET mset;
+	mset.initialize(CONFIG_OPT_SMART_COM_IN_CONT | CONFIG_OPT_COLON_IS_META_ONLY); // errors go into mset.errors
+	mset.defaults = &TestingMacroDefaults;
+	REQUIRE( parse_mem(mset, "#opt:strict\nfoo : bar\n") < 0 );
+	REQUIRE( parse_mem(mset, "A = 1\nB = 2\n") == 0 );
+	REQUIRE( (ystr = lookup_macro("B", mset, def_ctx)) == "2" );
 }
 
 void testing_lookups(bool verbose)

@@ -1739,6 +1739,7 @@ Parse_macros(
 						);
 				if (op == ':') {
 					retval = -1;
+					name = NULL; // prevent cleanup from freeing name since it's owned by getline_implementation
 					goto cleanup;
 				}
 			}
