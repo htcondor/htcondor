@@ -594,7 +594,7 @@ int write_config_file(const char* pathname, int options);
 
 	// expand $(N) from value against arguments in argstr
 	// returns a malloc()'d ptr to expanded value, caller is responsible from freeing returned pointer.
-	// returns nullptr if expansion does not terminate, i.e. an argument refers to itself as $(N)
+	// returns nullptr if expansion hits a limit, i.e. an argument refers to itself as $(N)
 	char * expand_meta_args(const char *value, std::string & argstr);
 
 	// macro stream class wraps up an fp or string so that the macro parser can read from either.

@@ -1217,7 +1217,7 @@ void do_smart_auto_use(int /*options*/)
 
 			auto_free_ptr expanded(expand_meta_args(raw_template, args));
 			if ( ! expanded) {
-				fprintf(stderr, "Configuration error while interpreting %s : argument expansion of %s:%s did not terminate\n",
+				fprintf(stderr, "Configuration error while interpreting %s : argument expansion of %s:%s failed (self reference?)\n",
 					name, tags[0].c_str(), tags[1].c_str());
 				continue;
 			}

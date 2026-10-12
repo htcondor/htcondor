@@ -507,7 +507,7 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 			value = expanded.ptr();
 			if ( ! value) {
 				macro_set.push_error(stderr, -1, NULL,
-						"Error: use %s: %s argument expansion did not terminate\n",
+						"Error: use %s: %s argument expansion failed (self reference?)\n",
 						name, item);
 				return -1;
 			}
@@ -2666,6 +2666,9 @@ int selective_expand_macro (
 // like A=$INT(A) is an error rather than a stack overflow.
 static const int MAX_MACRO_EXPAND_ITERATIONS = 10000; // substitutions while expanding a single value
 static const int MAX_MACRO_EXPAND_DEPTH = 32;         // nested expansions of a looked up value by a macro function
+// size of a value being expanded, so that a cycle that grows the value on each pass, like
+// A=$(B)x B=$(A), fails quickly rather than after the iteration limit of quadratic copying
+static const size_t MAX_MACRO_EXPAND_SIZE = 1024*1024;
 
 // tracks how deeply the expand functions are nested within each other.
 // Once a limit is hit, the whole expansion has failed: nested expansions return
@@ -3123,6 +3126,10 @@ char * expand_meta_args(const char *value, std::string & argstr)
 			}
 
 			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			if (rval_sz > MAX_MACRO_EXPAND_SIZE) {
+				free(tmp);
+				return nullptr;
+			}
 			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
@@ -3978,6 +3985,12 @@ expand_macro(const char *value,
 			}
 
 			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			if (rval_sz > MAX_MACRO_EXPAND_SIZE) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"expanded value too large (circular reference?) while expanding: %s", value);
+				MacroExpandDepth::fail();
+				free(tmp);
+				return strdup("");
+			}
 			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
@@ -4911,6 +4924,12 @@ unsigned int expand_macro (
 			} else {
 				value.replace(pos.dollar, pos.right-pos.dollar, body);
 				cch = (ptrdiff_t)body.size();
+				if (value.size() > MAX_MACRO_EXPAND_SIZE) {
+					ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"expanded value too large (circular reference?) while expanding: %s", value.c_str());
+					MacroExpandDepth::fail();
+					value.clear();
+					return 0;
+				}
 			}
 
 			// update non_empty_mask for top level expansions
@@ -5161,6 +5180,11 @@ int selective_expand_macro (
 			} else {
 				value.replace(pos.dollar, pos.right-pos.dollar, body);
 				cch = (ptrdiff_t)body.size();
+				if (value.size() > MAX_MACRO_EXPAND_SIZE) {
+					macro_set.push_error(stderr, -1, NULL, "expanded value too large while macro expanding: %s", body.c_str());
+					MacroExpandDepth::fail();
+					return -1;
+				}
 			}
 		}
 	} while (special_id);
@@ -5362,6 +5386,12 @@ expand_self_macro(const char *value,
 			}
 
 			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			if (rval_sz > MAX_MACRO_EXPAND_SIZE) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"expanded value too large (circular reference?) while expanding: %s", value);
+				MacroExpandDepth::fail();
+				free(tmp);
+				return nullptr;
+			}
 			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
