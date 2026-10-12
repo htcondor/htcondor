@@ -150,7 +150,7 @@ Common Files and Checkpointing
 
 You should (for efficiency and clarity) already be omitting input files that
 the job doesn't change from :subcom:`transfer_checkpoint_files`; continue to
-do so by not including files any files from subcom:`transfer_common_input`
+do so by not including any files from :subcom:`transfer_common_input`
 either.
 
 Job Event Logs
