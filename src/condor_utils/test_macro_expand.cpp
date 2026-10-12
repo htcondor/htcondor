@@ -268,6 +268,13 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"fileEmptyQuoted", "\"\""},
 		{"fileEmptySQuoted", "''"},
 
+		// for expansion limit tests
+		{"CycleA", "$(CycleB)"},
+		{"CycleB", "$(CycleA)"},
+		{"SelfInt", "$INT(SelfInt)"},
+		{"SelfInt2", "$INT(SelfInt2)$INT(SelfInt2)"},
+		{"SelfString", "$STRING(SelfString)"},
+
 		// for $INT and $REAL tests
 		{"DoubleVanilla", "$(VANILLA)*2"},
 		{"HalfVanilla", "$(VANILLA)/2.0"},
@@ -920,6 +927,23 @@ void testing_$F_regressions(bool verbose)
 	REQUIRE( expand("$Fqa(fileEmptySQuoted)") == "''" );
 }
 
+void testing_expand_limits(bool verbose)
+{
+	if (verbose) {
+		fprintf( stdout, "\n----- testing_expand_limits ----\n\n");
+	}
+	// circular references used to hang, self references through a macro function used to overflow the stack
+	REQUIRE_EXCEPT( expand("$(CycleA)") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("x$(CycleA)y") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt2)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("x$STRING(SelfString)y") == "", nested too deeply );
+
+	// a failed expansion should not affect the next one
+	REQUIRE( expand("$INT(VANILLA)") == "5" );
+	REQUIRE( expand("$INT(DoubleVanilla,%d)") == "10" );
+}
+
 void testing_$CHOICE_expand(bool verbose)
 {
 	if (verbose) {
@@ -1158,6 +1182,7 @@ int main( int /*argc*/, const char ** argv) {
 					case 'v': test_flags |= 0x0400; break; // $EVAL
 					case 'r': test_flags |= 0x0800; break; // $RANDOM_INTEGER and $RANDOM_CHOICE
 					case 'p': test_flags |= 0x1000; break; // parse
+					case 'x': test_flags |= 0x2000; break; // expansion limits
 					}
 				}
 			} else {
@@ -1181,6 +1206,7 @@ int main( int /*argc*/, const char ** argv) {
 				"      v $EVAL expansion/evaluation\n"
 				"      r $RANDOM_INTEGER and $RANDOM_CHOICE expansion/evaluation\n"
 				"      p config parsing\n"
+				"      x expansion limits\n"
 				"   default is to run all tests\n"
 				"   If -verbose is specified, all tests show output, otherwise\n"
 				"   only failed tests produce output\n"
@@ -1219,6 +1245,7 @@ int main( int /*argc*/, const char ** argv) {
 	if (test_flags & 0x0800) testing_$RAND_expand(dash_verbose);
 
 	if (test_flags & 0x1000) testing_parser(dash_verbose);
+	if (test_flags & 0x2000) testing_expand_limits(dash_verbose);
 
 	return fail_count > 0;
 }

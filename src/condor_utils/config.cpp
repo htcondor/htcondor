@@ -2285,6 +2285,10 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
 		char * tvalue = expand_self_macro(value, name, set, ctx);
+		if ( ! tvalue) {
+			// expansion hit a limit and has already been reported
+			tvalue = strdup("");
+		}
 		if (set.metat && set.tracer && set.tracer->match(name)) {
 			// if replacement tracing is enabled, call the tracer log function before we do the replacement
 			set.tracer->log(name, pitem->raw_value, tvalue, set.metat[pitem - set.table]);
@@ -2649,6 +2653,33 @@ int selective_expand_macro (
 	ConfigMacroSkipCount & skb,
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx);
+
+// Limits on macro expansion, so that a circular definition like A=$(B) B=$(A)
+// is an error rather than a hang, and a self reference through a macro function
+// like A=$INT(A) is an error rather than a stack overflow.
+static const int MAX_MACRO_EXPAND_ITERATIONS = 10000; // substitutions while expanding a single value
+static const int MAX_MACRO_EXPAND_DEPTH = 32;         // nested expansions of a looked up value by a macro function
+
+// tracks how deeply the expand functions are nested within each other.
+// Once a limit is hit, the whole expansion has failed: nested expansions return
+// empty immediately, and further errors are not reported, until the outermost
+// expansion returns. Otherwise each enclosing macro function would report its own
+// error, and A=$INT(A)$INT(A) would recurse to the depth limit 2^depth times.
+class MacroExpandDepth {
+public:
+	MacroExpandDepth() { ++depth; }
+	~MacroExpandDepth() { if (--depth == 0) { failed = false; } }
+	MacroExpandDepth(const MacroExpandDepth&) = delete;
+	MacroExpandDepth & operator=(const MacroExpandDepth&) = delete;
+	bool too_deep() const { return depth > MAX_MACRO_EXPAND_DEPTH; }
+	static bool has_failed() { return failed; }
+	static void fail() { failed = true; }
+private:
+	static thread_local int depth;
+	static thread_local bool failed;
+};
+thread_local int MacroExpandDepth::depth = 0;
+thread_local bool MacroExpandDepth::failed = false;
 
 enum {
 	MACRO_ID_DOUBLEDOLLAR=-2,
@@ -3252,6 +3283,10 @@ static const char * get_lookup_and_expand_macro_arg (
 // and just print a similar message and return if exceptions are not.
 void MACRO_EVAL_CONTEXT::might_EXCEPT(MACRO_SET& mset, const char * file, int line, const char * fmt, ...)
 {
+	// an expansion limit was hit and already reported, the rest are just fallout from that
+	if (MacroExpandDepth::has_failed()) {
+		return;
+	}
 	va_list pvar;
 	char buf[ BUFSIZ ];
 	va_start(pvar, fmt);
@@ -3889,10 +3924,21 @@ expand_macro(const char *value,
 			 MACRO_SET& macro_set,
 			 MACRO_EVAL_CONTEXT & ctx)
 {
+	MacroExpandDepth depth;
+	if (MacroExpandDepth::has_failed()) {
+		return strdup("");
+	}
+	if (depth.too_deep()) {
+		ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"macro expansion nested too deeply (self reference?) while expanding: %s", value);
+		MacroExpandDepth::fail();
+		return strdup("");
+	}
+
 	char *tmp = strdup( value );
 	char *left, *name, *right, *func;
 	const char *tvalue;
 	char *rval;
+	int iteration_count = 0;
 
 	bool all_done = false;
 	while ( ! all_done) { // loop until all done expanding
@@ -3901,10 +3947,21 @@ expand_macro(const char *value,
 		NoDollarBody no_dollar; // prevents $(DOLLAR) from being matched by next_config_macro
 		int special_id = next_config_macro(is_config_macro, no_dollar, tmp, 0, &left, &name, &right, &func);
 		if (special_id) {
+			if (++iteration_count > MAX_MACRO_EXPAND_ITERATIONS) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"iteration limit exceeded (circular reference?) while expanding: %s", value);
+				MacroExpandDepth::fail();
+				free(tmp);
+				return strdup("");
+			}
 			all_done = false;
 
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, special_id, name, tbuf, macro_set, ctx);
+			if (MacroExpandDepth::has_failed()) {
+				// a nested expansion hit a limit, so this one has failed too
+				free(tmp);
+				return strdup("");
+			}
 
 			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
 			rval = (char *)malloc(rval_sz);
@@ -4779,6 +4836,19 @@ unsigned int expand_macro (
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
+	MacroExpandDepth depth;
+	if (MacroExpandDepth::has_failed()) {
+		value.clear();
+		return 0;
+	}
+	if (depth.too_deep()) {
+		ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"macro expansion nested too deeply (self reference?) while expanding: %s", value.c_str());
+		MacroExpandDepth::fail();
+		value.clear();
+		return 0;
+	}
+	int iteration_count = 0;
+
 	// these are use to keep track of expansion at the top level
 	// so we can detect which top level macros ultimately "expand" to nothing (i.e. are not defined)
 	int ix_macro = -1;
@@ -4797,6 +4867,12 @@ unsigned int expand_macro (
 		NoDollarBody no_dollar; // prevents $(DOLLAR) from being matched by next_config_macro
 		special_id = next_config_macro(is_config_macro, no_dollar, tmp, pos.dollar, pos);
 		if (special_id) {
+			if (++iteration_count > MAX_MACRO_EXPAND_ITERATIONS) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"iteration limit exceeded (circular reference?) while expanding: %s", value.c_str());
+				MacroExpandDepth::fail();
+				value.clear();
+				return 0;
+			}
 			body.clear(); body.append(value, pos.dollar, pos.right-pos.dollar);
 			MACRO_POSITION pos2 = pos;
 			pos2.dollar = 0;
@@ -4804,6 +4880,11 @@ unsigned int expand_macro (
 			pos2.right -= pos.dollar;
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
+			if (MacroExpandDepth::has_failed()) {
+				// a nested expansion hit a limit, so this one has failed too
+				value.clear();
+				return 0;
+			}
 			if (cch < 0) {
 				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"%s", errmsg.c_str());
 				cch = 0;
@@ -5011,6 +5092,15 @@ int selective_expand_macro (
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
+	MacroExpandDepth depth;
+	if (MacroExpandDepth::has_failed()) {
+		return -1;
+	}
+	if (depth.too_deep()) {
+		macro_set.push_error(stderr, -1, NULL, "macro expansion nested too deeply (self reference?) while expanding: %s", value.c_str());
+		MacroExpandDepth::fail();
+		return -1;
+	}
 	int iteration_count = 0;
 
 	MACRO_POSITION pos; pos.clear();
@@ -5023,8 +5113,9 @@ int selective_expand_macro (
 		special_id = next_config_macro(is_config_macro, skb, tmp, pos.dollar, pos);
 		if (special_id) {
 			body.clear(); body.append(value, pos.dollar, pos.right - pos.dollar);
-			if (++iteration_count > 10000) {
+			if (++iteration_count > MAX_MACRO_EXPAND_ITERATIONS) {
 				macro_set.push_error(stderr, -1, NULL, "iteration limit exceeded while macro expanding: %s", body.c_str());
+				MacroExpandDepth::fail();
 				return -1;
 			}
 			MACRO_POSITION pos2 = pos;
@@ -5033,12 +5124,15 @@ int selective_expand_macro (
 			pos2.right -= pos.dollar;
 			if (pos2.defval) { pos2.defval -= pos.dollar; }
 			if (special_id > SPECIAL_MACRO_ID_RANDOM_INTEGER) {
-				if ( ! skb.can_evaluate(special_id, tmp + pos.body, pos.body_len(), macro_set, ctx)) {
+				bool ok = skb.can_evaluate(special_id, tmp + pos.body, pos.body_len(), macro_set, ctx);
+				if (MacroExpandDepth::has_failed()) { return -1; }
+				if ( ! ok) {
 					pos.dollar = pos.right;
 					continue;
 				}
 			}
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
+			if (MacroExpandDepth::has_failed()) { return -1; }
 			if (cch < 0) {
 				// when evaluation fails, assume it is because of selective expansion
 				// and just skip over this function macro
@@ -5178,8 +5272,19 @@ expand_self_macro(const char *value,
 				 MACRO_SET& macro_set,
 				 MACRO_EVAL_CONTEXT & ctx)
 {
+	MacroExpandDepth depth;
+	if (MacroExpandDepth::has_failed()) {
+		return nullptr;
+	}
+	if (depth.too_deep()) {
+		ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"macro expansion nested too deeply (self reference?) while expanding: %s", value);
+		MacroExpandDepth::fail();
+		return nullptr;
+	}
+
 	char *tmp = strdup( value );
 	char *rval;
+	int iteration_count = 0;
 
 	ASSERT(self != NULL && self[0] != 0);
 
@@ -5224,10 +5329,21 @@ expand_self_macro(const char *value,
 
 		int func_id = next_config_macro(is_config_macro, only_self, tmp, 0, &left, &body, &right, &func);
 		if (func_id) {
+			if (++iteration_count > MAX_MACRO_EXPAND_ITERATIONS) {
+				ctx.might_EXCEPT(macro_set, "config.cpp",__LINE__,"iteration limit exceeded (circular reference?) while expanding: %s", value);
+				MacroExpandDepth::fail();
+				free(tmp);
+				return nullptr;
+			}
 			all_done = false;
 
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, func_id, body, tbuf, macro_set, ctx);
+			if (MacroExpandDepth::has_failed()) {
+				// a nested expansion hit a limit, so this one has failed too
+				free(tmp);
+				return nullptr;
+			}
 
 			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
 			rval = (char *)malloc(rval_sz);
