@@ -460,7 +460,7 @@ const char * Starter::ChooseCGroup(FamilyInfo & fi, int job_universe, const std:
 
 			// AvailableGpus is a list of attribute names all the gpus provisioned 
 			// to this slot.  Each attribute itself has a classad with various attributes
-			// about that gpu.  For MIG devices, one of the attributes is ParentUuuid, 
+			// about that gpu.  For MIG devices, one of the attributes is ParentUuid, 
 			// which is the GPU device.  We can't hide the MIG device directly, so
 			// if there is a ParentUuid defined in the nested classad, use that instead.
 
