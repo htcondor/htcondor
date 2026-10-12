@@ -1216,6 +1216,11 @@ void do_smart_auto_use(int /*options*/)
 			src.meta_id = (short int)meta_id;
 
 			auto_free_ptr expanded(expand_meta_args(raw_template, args));
+			if ( ! expanded) {
+				fprintf(stderr, "Configuration error while interpreting %s : argument expansion of %s:%s did not terminate\n",
+					name, tags[0].c_str(), tags[1].c_str());
+				continue;
+			}
 			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
 		}
 	}

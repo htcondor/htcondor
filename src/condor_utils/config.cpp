@@ -505,6 +505,12 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		if ( ! mag.args.empty() || has_meta_args(value)) {
 			expanded.set(expand_meta_args(value, mag.args));
 			value = expanded.ptr();
+			if ( ! value) {
+				macro_set.push_error(stderr, -1, NULL,
+						"Error: use %s: %s argument expansion did not terminate\n",
+						name, item);
+				return -1;
+			}
 		}
 		int ret = Parse_config_string(source, depth, value, macro_set, ctx);
 		if (ret < 0) {
@@ -3054,6 +3060,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 	char *left, *name, *right, *func;
 	const char *tvalue;
 	char *rval;
+	int iteration_count = 0;
 
 	bool all_done = false;
 	while ( ! all_done) { // loop until all done expanding
@@ -3070,6 +3077,11 @@ char * expand_meta_args(const char *value, std::string & argstr)
 		MetaArgOnlyBody meta_only; // this selects only $(<num>) macros
 		int special_id = next_config_macro(is_meta_arg_macro, meta_only, tmp, 0, &left, &name, &right, &func);
 		if (special_id) {
+			// the substituted text is rescanned, so an argument that contains $(1) would loop forever
+			if (++iteration_count > MAX_MACRO_EXPAND_ITERATIONS) {
+				free(tmp);
+				return nullptr;
+			}
 			all_done = false;
 
 			StringTokenIterator it(argstr, ","); it.rewind();
