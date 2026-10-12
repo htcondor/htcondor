@@ -465,3 +465,16 @@ class TestCondorHistoryLibrarianFastpath:
         args = ["-since", f"ProcId == {stop_proc}", c_id]
         assert _run_history(condor, ["-no-librarian"] + args) == newest_first[:1]
         assert _run_history(condor, args) == newest_first[:1]
+
+    def test_search_takes_precedence_over_librarian(self, condor, all_jobs_indexed, owner, cluster_a, cluster_b):
+        """
+        Regression test: the librarian only indexes HISTORY, so an explicit
+        -search path must be scanned directly rather than answered from the
+        DB. Searching the oldest rotated file returns only its jobs (A, B).
+        """
+        with condor.use_config():
+            history_path = Path(htcondor2.param["HISTORY"])
+        rotated = sorted(history_path.parent.glob(f"{history_path.name}.*"))
+        assert len(rotated) == 3, f"Expected 3 rotated history files, found {rotated}"
+        expected = [f"{cluster_b.clusterid}.0", f"{cluster_a.clusterid}.0"]
+        assert _run_history(condor, ["-search", str(rotated[0]), owner]) == expected

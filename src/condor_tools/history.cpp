@@ -899,9 +899,10 @@ main(int argc, const char* argv[])
       }
 
       // Direct-seek path: resolve the restriction list via the librarian DB instead
-      // of scanning the history files. See readHistoryFromLibrarian().
+      // of scanning the history files. See readHistoryFromLibrarian(). The librarian
+      // only indexes HISTORY, so an explicit -search path takes precedence.
       bool tookDirectPath = false;
-      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! readFromDir && ! noLibrarian
+      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! searchPath && ! readFromDir && ! noLibrarian
           && (! jobIdFilterInfo.empty() || ! ownersList.empty())) {
           tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr);
       }
