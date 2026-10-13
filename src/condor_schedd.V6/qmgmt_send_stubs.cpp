@@ -897,7 +897,7 @@ CloseSocket()
 
 
 ClassAd *
-GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )
+GetJobAd(int cluster_id, int proc_id)
 {
 	int	rval = -1;
 

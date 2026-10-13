@@ -8560,13 +8560,8 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 }
 
 // We have to define this to prevent the version in qmgmt_stubs from being pulled into the schedd.
-ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
-	ClassAd* ad = nullptr;
-	if (expStartdAd) {
-		ad = GetExpandedJobAd(JOB_ID_KEY(cluster_id, proc_id), persist_expansions);
-	} else {
-		ad = GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
-	}
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id) {
+	ClassAd* ad = GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
 	return ad;
 }
 

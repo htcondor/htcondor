@@ -957,24 +957,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		errno = 0;
 		// Only fetch the jobad for legal values of cluster/proc
 		if( cluster_id >= 1 ) {
-			if( proc_id >= 0 ) {
-				if( !Q_PEER.getReadOnly() ) {
-					// expand $$() macros in the jobad as required by GridManager.
-					// The GridManager depends on the fact that the following call
-					// expands $$ and saves the expansions to disk in case of
-					// restart.
-					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, true, true );
-					delete_ad = true;
-					// note : since we expanded the ad, ad is now a deep
-					// copy of the ad in memory, so we must delete it below.
-				} else {
-					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
-				}
-			} else if( proc_id == -1 ) {
-				// allow cluster ad to be queried as required by preen, but
-				// do NOT ask to expand $$() macros in a cluster ad!
-				ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
-			}
+			ad = GetJobAd_as_ClassAd(cluster_id, proc_id);
 		}
 		terrno = errno;
 		rval = ad ? 0 : -1;
