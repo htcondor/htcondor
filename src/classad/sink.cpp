@@ -77,6 +77,13 @@ const char *ClassAdUnParser::opString[] =
 	" ?: ", // TERNARY_OP   A?B:C
 };
 
+// Returns true if the character could be part of a valid UTF-8 stream
+inline bool
+isutf8(int c)
+{
+	return c >= 32 && c <= 247 && c != 127 && c != 192 && c != 193;
+}
+
 void ClassAdUnParser::
 setXMLUnparse(bool doXMLUnparse) 
 {
@@ -93,9 +100,9 @@ setDelimiter(char delim)
 
 void
 ClassAdUnParser::UnparseString(std::string &buffer, const std::string &source) const {
-	char	tempBuf[512];
+	char tempBuf[16];
 	buffer += '"';
-	for (const char c: source) {
+	for (const unsigned char c: source) {
 		if (c == delimiter) {
 			if(delimiter == '\"') {
 				buffer += "\\\""; 
@@ -120,7 +127,7 @@ ClassAdUnParser::UnparseString(std::string &buffer, const std::string &source) c
 				case '\"': buffer += "\""; continue;
 
 				default:
-				   if( !isprint( c ) ) {
+				   if( !isutf8(c) ) {
 					   // print octal representation
 					   snprintf( tempBuf, sizeof(tempBuf), "\\%03o", (unsigned char)c );
 					   buffer += tempBuf;
@@ -146,7 +153,7 @@ ClassAdUnParser::UnparseString(std::string &buffer, const std::string &source) c
 
 void
 ClassAdUnParser::UnparseReal(std::string &buffer, double real) const {
-	char	tempBuf[512];
+	char tempBuf[32];
 	if (real == 0.0) {
 		// It might be positive or negative and it's
 		// hard to tell. printf is good at telling though.
