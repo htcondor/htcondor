@@ -6,7 +6,7 @@ see below) and the :subcom:`transfer_common_input` into named lists of
 objects (files or URLs) called "catalogs".  The container image catalog's
 name will be something like "container_77fc30a2", where the hexadecimal at
 the end is a hash of the full path (or URL) to the container; the name for
-common input files' catalog will be something like "clusterID_34732" and
+common input files' catalog will be something like "clusterID_34732" or
 "dagmanJobID_7779332".
 
 The common files implementation operates on catalogs, rather than on
@@ -76,6 +76,29 @@ Because we default to copying on LVs, we added ``ALLOW_COMMON_FILES_ON_LVS``
 defaulted to off until such time as we can safely set the default for
 mapping on LVs to bind mount.
 
-The original intention was to support Windows EPs with copy mapping, but
-see above for why that won't work; it may end up being easier just to
-implement a Window-specific variety of the hardlink mapping.
+On Linux, the data slot attempts to store the catalog files in with ownership,
+mode, and in a directory structure such that those files are only readable
+through hardlinks to them, in order to maintain the usual degree of privacy
+between different jobs (and any non-root process) running on the same host.
+On Windows, where the execute slots don't provide this kind of privacy, the
+data slots don't either.
+
+See https://opensciencegrid.atlassian.net/browse/HTCONDOR-2887 for the
+originally proposed implementation, repeated here:
+
+> Let the directory staging be owned by slotuser_1 and mode 0500.  Let
+> it contain a file, common, also owned by slotuser_1 but mode 0444.
+> This should be safe because only slotuser_1 (and root) can traverse
+> the directory to find the file.
+>
+> Consider a directory sandbox owned by slotuser_2 and mode 0700.  As
+> root, hardlink sandbox/common to staging/common.  Because root can
+> traverse staging, this hardlink can be created.  Because common is
+> world-readable, it can be read by slotuser_2, but not written to.  The
+> job – or the starter – can delete sandbox/common because the directory
+> is 0700, but this will not unlink staging/common.
+
+This may differ slightly -- I don't know why -- from the current implementation,
+but should have the advantage that slotuser_2 can't change the staged file
+because they don't have permission to change the mode of the hardlink to make
+it writable.
