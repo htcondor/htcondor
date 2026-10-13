@@ -346,13 +346,9 @@ int DeleteAttribute(int cluster, int proc, const char *attr);
 	The caller MUST call FreeJobAd when the ad is no longer in use. 
 	@param cluster_id Cluster number of ad to fetch
 	@param proc_id Process number of ad to fetch
-	@param expStartdAttrs Expand $$(xxx) style macros inside the ClassAd
-		with attributes from the matching Startd ad.  
-	@param persist_expansions Save information about $$ expansions so that
-        they can be reconstructed after restart of the schedd.
 	@return NULL on failure; the job ClassAd on success
 */
-ClassAd *GetJobAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd *GetJobAd(int cluster_id, int proc_id);
 
 /** Efficiently get the first job ClassAd which matches the constraint.
 	@return NULL on failure; the job ClassAd on success
