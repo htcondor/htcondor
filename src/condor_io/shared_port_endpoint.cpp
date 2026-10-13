@@ -1541,7 +1541,8 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 	free(keybuf);
 	keybuf = NULL;
 #elif defined(WIN32)
-	return;
+	unsigned short rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
+	formatstr(result, "%s_%lu_%04hx", WINDOWS_DAEMON_SOCKET_DIR, (unsigned long)getpid(), rand_tag);
 #else
 	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
@@ -1577,9 +1578,7 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 		result.clear();
 	}
 #endif
-#ifndef WIN32
 	m_daemon_socket_dir = result;
-#endif
 }
 
 
@@ -1597,7 +1596,10 @@ SharedPortEndpoint::SetDaemonSocketDir(const char* val)
 bool
 SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 {
-#ifndef WIN32
+#ifdef WIN32
+	result = WINDOWS_DAEMON_SOCKET_DIR;
+	return true;
+#else
 	if (!param(result, "DAEMON_SOCKET_DIR") )
 	{
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
@@ -1620,22 +1622,17 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 	result = default_name;
 	return true;
 #endif
-	return false;
 }
 
 
 bool
 SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 {
-#ifdef WIN32
-	result = WINDOWS_DAEMON_SOCKET_DIR;
-#else
 	if (m_daemon_socket_dir.empty()) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");
 		return false;
 	}
 	result = m_daemon_socket_dir;
-#endif
 	return true;
 }
 
