@@ -118,6 +118,9 @@
 
 *** 26.0.1 bugs
 
+- Fixed a bug that incorrectly calculated :ad-attr:`TransferOutQueued`
+  :jira:`3987`
+
 - Fixed a rare bug that could cause *condor_dagman* to crash when the
   AP is restarted.
   :jira:`3915`

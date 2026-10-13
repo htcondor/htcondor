@@ -717,16 +717,17 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", time(nullptr) );
+		m_transfer_in_queued = time(nullptr);
+		jobAd->Assign( "TransferInQueued", m_transfer_in_queued );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
 		time_t now = time(nullptr);
 		jobAd->Assign( "TransferInStarted", now );
 
-		time_t then;
-		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
-			te.setQueueingDelay( now - then );
+		if( m_transfer_in_queued != 0 ) {
+			te.setQueueingDelay( now - m_transfer_in_queued );
+			m_transfer_in_queued = 0;
 		} else {
 			if( remRes ) { // this should always be true...
 				char * starterAddr = NULL;
@@ -752,16 +753,17 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );
 
-		jobAd->Assign( "TransferOutQueued", time(nullptr) );
+		m_transfer_out_queued = time(nullptr);
+		jobAd->Assign( "TransferOutQueued", m_transfer_out_queued );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_STARTED );
 
 		time_t now = time(nullptr);
 		jobAd->Assign( "TransferOutStarted", now );
 
-		time_t then;
-		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
-			te.setQueueingDelay( now - then );
+		if( m_transfer_out_queued != 0 ) {
+			te.setQueueingDelay( now - m_transfer_out_queued );
+			m_transfer_out_queued = 0;
 		}
 
 		// Increment (or set) number of job output transfer starts
