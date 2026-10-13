@@ -25,7 +25,7 @@
 namespace classad {
 
 ExprList::
-ExprList(const std::vector<ExprTree*>& exprs) : parentScope(nullptr)
+ExprList(const std::vector<ExprTree*>& exprs)
 {
     CopyList(exprs);
 }
@@ -78,8 +78,6 @@ CopyFrom(const ExprList &other_list)
     success = true;
 
     ExprTree::CopyFrom(other_list);
-
-	parentScope = other_list.parentScope;
 
 	for (const ExprTree *expr: other_list) {
         ExprTree *newTree;
@@ -142,16 +140,6 @@ bool operator==(ExprList &list1, ExprList &list2)
     return list1.SameAs(&list2);
 }
 
-
-void ExprList::
-_SetParentScope( const ClassAd *parent )
-{
-	parentScope = parent;
-
-	for (ExprTree *expr: exprList) {
-		expr->SetParentScope( parent );
-	}
-}
 
 ExprList *ExprList::
 MakeExprList(const std::vector<ExprTree*> &exprs )
@@ -287,10 +275,7 @@ ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	}
 	currentState->depth_remaining--;
 
-	const ClassAd *tmpScope = currentState->curAd;
-	currentState->curAd = tree->GetParentScope();
 	tree->Evaluate( *currentState, val );
-	currentState->curAd = tmpScope;
 
 	currentState->depth_remaining++;
 
