@@ -51,7 +51,8 @@ Options
     history file is last.
 **-no-librarian**
     Ignore using the *condor_librarian* record index database regardless of
-    :macro:`USING_LIBRARIAN` being ``True``.
+    :macro:`USING_LIBRARIAN` being ``True``. The database is also not used when
+    **-file**, **-search**, or **-dir** is specified.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
 *cluster.process*
