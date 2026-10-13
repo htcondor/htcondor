@@ -207,6 +207,9 @@ all attributes.
     suspension during time in which the job was not evicted.
     This number is updated when the job exits.
 
+:classad-attribute-def:`CommonInputFiles`
+    Like :ad-attr:`TransferInput`, except for :ref:`common files<common_file_transfer>`.
+
 :classad-attribute-def:`CompletionDate`
     The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
