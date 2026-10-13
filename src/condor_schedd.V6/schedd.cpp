@@ -7901,6 +7901,18 @@ Scheduler::actOnJobs(int, Stream* s)
 				jobs[i].cluster = -1;
 				continue;
 			}
+				// Same guard as the constraint clause above, for jobs
+				// named by id (condor_rm 123.0), which never see that
+				// clause: don't remove a job the shadow is terminating.
+			if( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
+				bool termination_pending = false;
+				job_ad->LookupBool(ATTR_TERMINATION_PENDING, termination_pending);
+				if( termination_pending ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					jobs[i].cluster = -1;
+					continue;
+				}
+			}
 			break;
 		case JA_REMOVE_X_JOBS:
 			if( status == HELD ) {

@@ -488,7 +488,16 @@ def shadow_job(default_condor, test_dir):
 
 
 @action
-def removed_shadow_job(default_condor, shadow_job):
+def rm_by_id_result(default_condor, shadow_job):
+    # condor_rm names a single job by id rather than by constraint, which the
+    # schedd validates through a different path; try that form too.
+    return default_condor.run_command(
+        ["condor_rm", f"{shadow_job.clusterid}.0"]
+    )
+
+
+@action
+def removed_shadow_job(default_condor, shadow_job, rm_by_id_result):
     _rm_by_constraint(default_condor, shadow_job)
     # The remove is a single schedd command, so this only has to outlast the
     # round trip before we can conclude the job was left alone.
@@ -501,6 +510,10 @@ class TestRemoveSkipsShadowTerminating:
         ads = removed_shadow_job.query(projection=["JobStatus"])
         assert len(ads) == 1
         assert ads[0]["JobStatus"] == int(JobStatus.RUNNING)
+
+    def test_rm_by_id_was_refused(self, removed_shadow_job, rm_by_id_result):
+        assert rm_by_id_result.returncode != 0
+        assert "already terminating" in rm_by_id_result.stderr + rm_by_id_result.stdout
 
     def test_job_is_removable_once_not_pending(self, default_condor, removed_shadow_job):
         # Clearing the marker makes the job removable again, which shows the
