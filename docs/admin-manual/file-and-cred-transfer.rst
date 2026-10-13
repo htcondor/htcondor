@@ -656,7 +656,7 @@ the user manual.
     .. rubric:: Computing Actual Benefit
 
     There is an `unsupported script
-    <https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_ 
+    <https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_
     available from the HTCondor GitHub repository which, given a cluster ID or a
     DAGMan job ID, determines both the size of the common file(s) transferred by
     that cluster or DAG and how many transfers of those files did not happen
