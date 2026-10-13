@@ -1101,6 +1101,7 @@ machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
 
+.. condor_startd_health_expression
 The Healthy Expression
 ''''''''''''''''''''''
 

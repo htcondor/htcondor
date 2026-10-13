@@ -126,8 +126,8 @@ version history: :doc:`Version 25 Feature Releases <../version-history/feature-v
   See :ref:`provider_name_restrictions` for details.
   :jira:`2860`
 
-- Add Healthy as a new *condor_startd* expression that indicates if the *condor_startd* has passed
-  Administrator defined health checks.
+- Add :ad-attr:`Healthy` as a new *condor_startd* :ref:`condor_startd_health_expression<expression>`
+  that indicates if the *condor_startd* has passed Administrator defined health checks.
   :jira:`3611`
 
 - :tool:`condor_q`, :tool:`condor_qusers`, :tool:`condor_status`, and :tool:`condor_who` now
