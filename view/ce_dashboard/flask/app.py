@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request
 from blueprints.landing import landing_bp
 from blueprints.overview import overview_bp
+from blueprints.landing_graphs import landing_graphs_bp, refresh_landing_graph_cache
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 import os
 import utils
 
@@ -84,6 +87,18 @@ def handle_edit():
 # Register blueprints
 app.register_blueprint(landing_bp)
 app.register_blueprint(overview_bp)
+app.register_blueprint(landing_graphs_bp)
+
+_scheduler = BackgroundScheduler()
+_scheduler.add_job(
+    func=refresh_landing_graph_cache,
+    trigger='interval',
+    minutes=10,
+    id='refresh_landing_graph_cache',
+)
+_scheduler.start()
+atexit.register(lambda: _scheduler.shutdown(wait=False))
 
 if __name__ == '__main__':
+
     app.run(debug=True)
