@@ -49,6 +49,7 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 
 bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
+std::string SharedPortEndpoint::m_daemon_socket_dir;
 
 std::string
 SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
@@ -1532,7 +1533,7 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
 		// shared port "directory" in the abstract Unix namespace.
-	char *keybuf = Condor_Crypt_Base::randomHexKey(32);
+	char *keybuf = Condor_Crypt_Base::randomHexKey(8);
 	if (keybuf == NULL) {
 		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.");
 	}
@@ -1569,12 +1570,29 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 		}
 		free( default_name );
 	}
+	// A path containing a space is not suitable for passing to a child via
+	// the DaemonCore inherit environment variable. The value will still be
+	// accessible via the Alt call.
+	if (strchr(result.c_str(), ' ')) {
+		result.clear();
+	}
 #endif
 #ifndef WIN32
-	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.c_str(), 1);
+	m_daemon_socket_dir = result;
 #endif
 }
 
+
+void
+SharedPortEndpoint::SetDaemonSocketDir(const char* val)
+{
+	// When dir value is inherited from a parent, just set it.
+	if (val == nullptr) {
+		m_daemon_socket_dir.clear();
+	} else {
+		m_daemon_socket_dir = val;
+	}
+}
 
 bool
 SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
@@ -1612,12 +1630,11 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
 #else
-	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-	if (known_dir == NULL) {
+	if (m_daemon_socket_dir.empty()) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");
 		return false;
 	}
-	result = known_dir;
+	result = m_daemon_socket_dir;
 #endif
 	return true;
 }
