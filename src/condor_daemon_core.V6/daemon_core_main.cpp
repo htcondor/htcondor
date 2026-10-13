@@ -4202,6 +4202,9 @@ int dc_main( int argc, char** argv )
 
 
 		// SETUP COMMAND SOCKET
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) && daemon_sock_name == nullptr) {
+		daemon_sock_name = "master";
+	}
 	daemonCore->SetDaemonSockName( daemon_sock_name );
 	daemonCore->InitDCCommandSocket( command_port );
 

@@ -1044,7 +1044,6 @@ int daemon::RealStart( )
 			// need to further uniquify them with a sequence number, and
 			// not doing so makes it possible to construct certain
 			// addresses, rather than discover them.
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}
