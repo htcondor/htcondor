@@ -746,6 +746,7 @@ struct SimpleSubmitKeyword {
 		f_as_string   = 0x08,
 		f_as_list     = 0x10,  // canonicalize the item as a list, removing extra spaces and using , as separator
 		f_strip_quotes = 0x20, // if value has quotes already, remove them before inserting into the ad
+		f_cluster_only = 0x40, // attribute may not be written to the proc ad (i.e. cannot vary by job)
 
 		f_error       = 0x040, // use of this command has been disabled in submit
 		f_alt_name    = 0x080, // this is an alternate name, don't set if the previous keyword existed
@@ -5218,8 +5219,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ShouldTransferFiles, ATTR_SHOULD_TRANSFER_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_WhenToTransferOutput, ATTR_WHEN_TO_TRANSFER_OUTPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
-	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
-	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes |  SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_cluster_only | SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_special_transfer },
+	{SUBMIT_KEY_TransferCommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_cluster_only | SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes |  SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_transfer },
 	{SUBMIT_KEY_RequireCommonFiles, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_transfer},
 	// invoke SetContainerSpecial
 	{SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_container },
@@ -10294,6 +10295,13 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 			}
 			if (iret > 0) {
 				has_pending_expansions = true;
+				// check for commands that may not vary by proc.
+				auto * it = is_prunable_keyword(key);
+				if (it && it->val && (it->val->opts & SimpleSubmitKeyword::f_cluster_only)) {
+					push_error(stderr, "%s must have the same value for all jobs, but '%s' will vary by job.", key, rhs.c_str());
+					out.clear();
+					break;
+				}
 			}
 			fixup_rhs_for_digest(key, rhs, has_pending_expansions);
 		} else {
