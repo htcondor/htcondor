@@ -5,8 +5,8 @@ Common Files
 
 Workflows executed via HTCondor may transfer the same file more than once.  If
 the different copies are going to different machines, this is well and proper;
-but until version 26, HTCondor did not take advantage when the same file is
-transferred to the same machine more than once.
+but until version 26, HTCondor did not take advantage of the same file
+being transferred to the same machine more than once.
 
 Under certain specific but (hopefully) generally applicable circumstances,
 it now does.  To avoid transferring a file to the same machine a second time:
@@ -14,7 +14,7 @@ it now does.  To avoid transferring a file to the same machine a second time:
 - The file *must* be immutable:
 
   - neither written to by either job, nor
-  - changed by any other means while the workflow is running.
+  - changed by any other means, including other jobs, while the workflow is running.
 - The file *must* be either:
 
   - the declared :subcom:`container_image` for each job; or
@@ -31,7 +31,7 @@ it now does.  To avoid transferring a file to the same machine a second time:
 - The two jobs *must* either:
 
   - run at the same time; or
-  - the second job must shortly after the first one ends (as defined by :macro:`KEEP_DATA_CLAIM_IDLE`).
+  - the second job must start shortly after the first one ends (as defined by :macro:`KEEP_DATA_CLAIM_IDLE`).
 
 The last constraint is, of course, a scheduling constraint and not under your
 control.  Likewise, HTCondor can only take advantage of this
@@ -61,7 +61,9 @@ average) transferring container images and more time actually running.
 Alternatively, your administrator may require you to specify that your container
 image is common; you may set
 
-``container_is_common = True``
+.. code-block:: condor-submit
+
+    container_is_common = True
 
 in your submit file to do so.  See :subcom:`container_is_common` for
 details.
@@ -77,7 +79,9 @@ job does, you must explicitly tell HTCondor which input files are common by
 setting :subcom:`transfer_common_input` in your submit file.  For
 example:
 
-``transfer_common_input = x, y, osdf://e/z/p/z``
+.. code-block:: condor-submit
+
+    transfer_common_input = x, y, osdf://e/z/p/z
 
 The list is identical in syntax to :subcom:`transfer_input_files`, including
 its ability to specify URLs.
