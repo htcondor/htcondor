@@ -33,6 +33,12 @@
 		.site-name {
 		    font-weight: bold;
 		}
+		.site-name a.unclickable {
+		    pointer-events: none;
+		    color: inherit;
+		    text-decoration: none;
+		    cursor: default;
+		}
 		.ccstar-label {
 		    color: green;
 		    font-weight: bold;
@@ -101,7 +107,7 @@
 {% set glideins_id = i ~ '-glideins' %}
     <div class="row">
         <div class="col-2 htcv-col-2 site-info" data-fqdn="{{ site.fqdn }}">
-            <p class="site-name">{{ site.name }}</p>
+            <p class="site-name"><a class="unclickable" href="/overview.html?host={{ site.fqdn | urlencode }}">{{ site.name }}</a></p>
             <p>{{ site.site_name }}{% if site.isCCStar %} <span class="ccstar-label">(CC*)</span>{% endif %}</p>
             <p class="site-stats">Loading update time...</p>
         </div>
@@ -158,8 +164,9 @@ $.getJSON('/data/ce_update_times', function (data) {
         const $labelCol = $(this);
         const fqdn = $labelCol.data('fqdn');
         const date = data[fqdn];
-        if (date) {
+        if (date && date !== 'Unknown') {
             $labelCol.find('.site-stats').text(date);
+            $labelCol.find('.site-name a').removeClass('unclickable');
         } else {
             $labelCol.find('.site-stats').text('');
         }
