@@ -8545,8 +8545,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// So just always do it.
 						if ( SetAttribute(cluster_id,proc_id,expr.c_str(),tvalue) < 0 )
 						{
-							EXCEPT("Failed to store %s into job ad %d.%d",
+							dprintf(D_ERROR, "Failed to store %s into job ad %d.%d\n",
 								expr.c_str(),cluster_id,proc_id);
+							attribute_not_found = true;
+							bad_attr_name = curr_attr_to_expand;
+							break;
 						}
 					}
 					// skip any quotation marks around strings
@@ -8584,8 +8587,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				}
 				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.c_str(),attribute_value) < 0 )
 				{
-					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
+					dprintf(D_ERROR, "Failed to store '%s=%s' into job ad %d.%d\n",
 						cachedAttrName.c_str(), attribute_value, cluster_id, proc_id);
+					attribute_not_found = true;
+					bad_attr_name = curr_attr_to_expand;
+					break;
 				}
 			}
 
@@ -8594,7 +8600,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if( started_transaction ) {
 			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
 			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
-			CommitNonDurableTransactionOrDieTrying();
+			// If we failed to expand something, abort the transaction
+			if (attribute_not_found) {
+				AbortTransaction();
+			} else {
+				CommitNonDurableTransactionOrDieTrying();
+			}
 		}
 
 		if ( startd_ad ) {
@@ -8617,8 +8628,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					match_exp_name += itr.first;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.c_str(),new_value) < 0 )
 					{
-						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
+						dprintf(D_ERROR, "Failed to store '%s=%s' into job ad %d.%d\n",
 						       match_exp_name.c_str(), new_value, cluster_id, proc_id);
+						attribute_not_found = true;
+						bad_attr_name = match_exp_name;
+						break;
 					}
 				}
 			}
@@ -8681,7 +8695,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
-			dprintf( D_ALWAYS, 
+			dprintf( D_STATUS,
 				"Putting job %d.%d on hold - cannot expand $$(%s)\n",
 				 cluster_id, proc_id, name );
 			// SetAttribute does security checks if Q_SOCK is not NULL.
@@ -9076,13 +9090,8 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 }
 
 // We have to define this to prevent the version in qmgmt_stubs from being pulled into the schedd.
-ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
-	ClassAd* ad = nullptr;
-	if (expStartdAd) {
-		ad = GetExpandedJobAd(JOB_ID_KEY(cluster_id, proc_id), persist_expansions);
-	} else {
-		ad = GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
-	}
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id) {
+	ClassAd* ad = GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
 	return ad;
 }
 
