@@ -497,7 +497,7 @@ Note that this setting disables support for user-supplied handles.
 
 .. _admin_common_file_transfer:
 
-Common File Transfer for Admnistrators
+Common File Transfer for Administrators
 --------------------------------------
 
 The concept and limitations of :ref:`common_file_transfer` are explained in
@@ -550,9 +550,9 @@ the user manual.
     disk to allocate to a job which will benefit from common files already
     present at the EP.
 
-    (Presently, a single job may have require only two different "catalogs" of
+    (Presently, a single job may require only two different "catalogs" of
     common files: its container image and its common input files.  We expect to
-    relax this constraint in 26.x development series.)
+    relax this constraint in the 26.x development series.)
 
     These attributes are not documented elsewhere in this manual in case we find
     it necessary to change them.
@@ -571,9 +571,9 @@ the user manual.
     .. rubric:: Computing Actual Benefit
 
     There is an `unsupported script
-    <https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_ 
+    <https://raw.githubusercontent.com/htcondor/htcondor/refs/heads/main/src/condor_scripts/common_transfer_savings.py>`_
     available from the HTCondor GitHub repository which, given a cluster ID or a
-    DAGMan job ID, determines both the size of the common file(s) tranferred by
+    DAGMan job ID, determines both the size of the common file(s) transferred by
     that cluster or DAG and how many transfers of those files did not happen
     because they were common, as a percentage of the total.  That is, for a
     cluster of a 1000 container universe jobs whose container image was 8 GB, you
@@ -606,7 +606,7 @@ As the administrator, you can control:
 - if common file transfers are enabled at all
   (:macro:`FORBID_COMMON_FILE_TRANSFER`);
 - if container images are common by default
-  (:macro:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`)
+  (:macro:`CONTAINER_IMAGES_COMMON_BY_DEFAULT`);
 - and if so, which ones
   (:macro:`CONTAINER_REGEX_COMMON_BY_DEFAULT`);
 - how long the AP should keep a data slot on an EP in hopes that another
