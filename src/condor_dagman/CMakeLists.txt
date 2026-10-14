@@ -38,4 +38,4 @@ condor_exe(condor_dagman "${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
 # Client tools
 condor_exe(condor_submit_dag "condor_submit_dag.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_dag_checker "condor_dag_checker.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_dag_checker "condor_dag_checker.cpp;edge.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
