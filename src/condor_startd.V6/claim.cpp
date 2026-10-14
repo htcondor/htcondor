@@ -360,9 +360,6 @@ Claim::publish( ClassAd* cad )
 			cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
 			cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
 		}
-		if (c_client->c_cgroupActive) {
-			cad->Assign(ATTR_CGROUP_ENFORCED, true);
-		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -457,7 +454,6 @@ Claim::unpublish( ClassAd* cad )
 		ATTR_REMOTE_GROUP,
 		ATTR_REMOTE_NEGOTIATING_GROUP,
 		ATTR_REMOTE_AUTOREGROUP,
-		ATTR_CGROUP_ENFORCED,
 		ATTR_JOB_ID,
 		ATTR_GLOBAL_JOB_ID,
 		ATTR_JOB_START,
@@ -903,7 +899,6 @@ Claim::loadStatistics()
 	if ( c_client ) {
 		c_client->c_numPids = 0;
 		c_jobad->LookupInteger(ATTR_NUM_PIDS, c_client->c_numPids);
-		c_jobad->LookupBool(ATTR_CGROUP_ENFORCED, c_client->c_cgroupActive);
 	}
 }
 
