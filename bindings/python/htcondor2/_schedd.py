@@ -36,6 +36,9 @@ from .htcondor2_impl import (
     _schedd_edit_job_ids,
     _schedd_edit_job_constraint,
     _schedd_reschedule,
+    _schedd_request_controller_token,
+    _schedd_register_controlled_ep,
+    _schedd_get_controlled_eps,
     _schedd_export_job_ids,
     _schedd_export_job_constraint,
     _schedd_import_exported_job_results,
@@ -993,6 +996,67 @@ class Schedd():
         already busy or waiting out the minimum cycle time.
         """
         _schedd_reschedule(self._addr)
+
+
+    def request_controller_token(self) -> dict:
+        """
+        Ask this schedd (acting as an access point) to mint a *controller*
+        capability token.  Delivered to an execution point via
+        :meth:`htcondor2.Startd.set_controller`, the token establishes this AP
+        as the controller of that EP, permitting it to evict any claim there.
+
+        The caller must be authorized (``WRITE`` or ``ADMINISTRATOR``) on the
+        schedd; if so, the token is issued immediately.
+
+        :return:  A dictionary with keys ``Token``, ``ControllerName``,
+            ``ControllerIdentity``, and ``ControllerPool``, suitable for
+            passing to :meth:`htcondor2.Startd.set_controller`.
+        """
+        token, name, identity, pool = _schedd_request_controller_token(self._addr)
+        return {
+            "Token": token,
+            "ControllerName": name,
+            "ControllerIdentity": identity,
+            "ControllerPool": pool,
+        }
+
+
+    def register_controlled_ep(self,
+        ep_name : str,
+        ep_pool : Optional[str] = None,
+        remove : bool = False,
+    ) -> None:
+        """
+        Inform this schedd (acting as an access point) that it is now the
+        controller of the named execution point, or -- when *remove* is
+        :py:obj:`True` -- that it no longer is.  This is called after the EP
+        itself has accepted (or been cleared of) the relationship, so the AP
+        can report the EPs it controls via :meth:`get_controlled_eps`.
+
+        The caller must be authorized (``WRITE`` or ``ADMINISTRATOR``) on the
+        schedd.
+
+        :param ep_name:  The name of the execution point.
+        :param ep_pool:  The collector pool used to reach the EP, if any.
+        :param remove:  If :py:obj:`True`, forget the EP instead of recording it.
+        """
+        _schedd_register_controlled_ep(self._addr, ep_name, ep_pool, remove)
+
+
+    def get_controlled_eps(self) -> List[classad.ClassAd]:
+        """
+        Return the execution points this schedd (acting as an access point)
+        currently controls, as recorded via :meth:`register_controlled_ep`.
+        Each entry is a :class:`classad.ClassAd` with at least a ``Name``
+        attribute.
+
+        Note that being an EP's controller is distinct from holding a claim on
+        it (see :meth:`get_claims`): the controller may evict any claim on the
+        EP but need not have a claim -- or a job -- there itself.
+
+        :return:  A list of :class:`classad.ClassAd`, one per controlled EP.
+        """
+        return _schedd_get_controlled_eps(self._addr)
 
 
     def export_jobs(self,
