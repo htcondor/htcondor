@@ -9,8 +9,10 @@ older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
 - The use of multiple ``QUEUE`` statements in a single submit
-  description file is disabled as of v25.14.0. This functionality
-  is planned to finally be removed during the lifetime of
+  description file is disabled by default as of v25.14.1.
+  For jobs not using late materialization, setting
+  :macro:`SUBMIT_PREVENT_MULTI_QUEUE` to ``False`` temporarily restores support.
+  This functionality is planned to be removed during the lifetime of
   the V26 feature series.
   :jira:`3878`
 
@@ -30,8 +32,8 @@ is a list of items that administrators should be aware of.
 
 - DAGMan's configurable throttles set by the user are now limited
   to the values set in the root configuration. This can be disabled
-  by setting `DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING = False` in
-  your configuration.
+  by setting :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` to ``True`` in
+  the administrator's configuration.
   :jira:`3584`
 
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
@@ -60,8 +62,8 @@ version history: :doc:`Version 25 Feature Releases <../version-history/feature-v
   submitting the Annex EPs to the Slurm cluster of their choice.
   :jira:`3645`
 
-- A new :tool:`condor_dag_checker` tool that can process and check the existence
-  and validity of the DAG, node submit submit descriptions, Sub-DAG files, and scripts.
+- :tool:`condor_dag_checker` now has options to process and check the existence
+  and validity of node submit descriptions, Sub-DAG files, and scripts.
   :jira:`3540`
 
 - Added new DAGMan :dag-cmd:`TOLERANCE` command to allow users to have
@@ -126,7 +128,7 @@ version history: :doc:`Version 25 Feature Releases <../version-history/feature-v
   See :ref:`provider_name_restrictions` for details.
   :jira:`2860`
 
-- Add :ad-attr:`Healthy` as a new *condor_startd* :ref:`condor_startd_health_expression<expression>`
+- Add :ad-attr:`Healthy` as a new *condor_startd* :ref:`expression <condor_startd_health_expression>`
   that indicates if the *condor_startd* has passed Administrator defined health checks.
   :jira:`3611`
 
