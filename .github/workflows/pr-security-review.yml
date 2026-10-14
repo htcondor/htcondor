@@ -1,0 +1,499 @@
+name: PR Security Review (opencode + NRP LLM)
+
+# Stage 2 of 2: runs an LLM security review of a PR using opencode against
+# the National Research Platform (NRP) managed LLM service. Findings are
+# uploaded as SARIF to code scanning, which only users with write access can
+# see. The PR gets only a comment saying a review ran, with no findings in it.
+#
+# Stage 1, pr-security-review-trigger.yml, runs on pull_request and uploads
+# the PR number as an artifact. This workflow is triggered by its completion
+# via workflow_run, so it always runs the default branch's copy of this file
+# and has access to secrets, even for PRs from forks.
+#
+# Setup:
+#   - Repository secret NRP_LLM_TOKEN: API token from https://nrp.ai/llmtoken/
+#   - Optional repository variable NRP_MODEL (default: qwen3)
+#   - Optional repository variable OPENCODE_VERSION (default: pinned below;
+#     review a new release before bumping it)
+#
+# Jobs:
+#   verify  - checks that the PR number from stage 1 is genuine.
+#   review  - runs opencode. Holds the NRP secret but only a read-only GitHub
+#             token, because it installs and runs third-party code from npm.
+#   publish - holds the write permissions (create the llm-security-review/pr-N
+#             branch, upload SARIF, comment). Installs and runs nothing but
+#             gh and python3 from the runner image.
+#
+# SECURITY NOTES:
+#   - The stage 1 artifact is untrusted (a PR can rewrite stage 1). We only
+#     take a PR number from it, and verify via the API that that PR's head
+#     commit is the commit stage 1 ran on before doing anything. The review
+#     job checks again after fetching the diff, so the diff reviewed is the
+#     one for that commit.
+#   - The PR's code is NEVER checked out or executed. We check out the
+#     trusted base commit, fetch the PR diff as plain data, and run opencode
+#     with only read-only tools (read/grep/glob/list) confined to the
+#     workspace. No shell, no edits, no web access.
+#   - The GitHub token is never exposed to the opencode step and is not
+#     persisted into .git/config.
+#   - PRIVACY: in a public repo, Actions logs, job summaries and artifacts are
+#     world-readable, as are code scanning annotations on PRs. So the model's
+#     output is never printed to the log or uploaded as an artifact (it is
+#     passed between jobs as a job output), and the SARIF is uploaded against
+#     a separate branch, llm-security-review/pr-N, pointing at the PR head
+#     (the code scanning API requires the ref to exist), rather than the PR's
+#     ref, so that GitHub does not attach the findings to the PR. That is
+#     observed rather than documented GitHub behavior, so the publish job
+#     fails loudly if our results ever show up in the PR's checks.
+#     pr-security-review-cleanup.yml removes the branch and its analyses once
+#     the PR is closed.
+
+on:
+  workflow_run:
+    workflows: ["PR Security Review Trigger"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-security-review-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+env:
+  NRP_MODEL: ${{ vars.NRP_MODEL || 'qwen3' }}
+  SARIF_TOOL_NAME: opencode-nrp-security-review
+
+jobs:
+  verify:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      pull-requests: read
+    outputs:
+      ok: ${{ steps.verify.outputs.ok }}
+      pr_number: ${{ steps.verify.outputs.pr_number }}
+      head_sha: ${{ steps.verify.outputs.head_sha }}
+      base_sha: ${{ steps.verify.outputs.base_sha }}
+    steps:
+      - name: Download and verify PR info
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          info="$RUNNER_TEMP/pr-info"
+          mkdir -p "$info"
+          if ! gh run download "$TRIGGER_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              -n pr-security-review-info -D "$info"; then
+            echo "No PR info artifact (e.g. draft PR); nothing to review."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          pr=$(head -c 32 "$info/pr_number" | tr -d '[:space:]')
+          if ! [[ "$pr" =~ ^[0-9]{1,10}$ ]]; then
+            echo "::error::Invalid PR number in artifact"
+            exit 1
+          fi
+
+          IFS=$'\t' read -r head_sha base_sha state draft < <(
+            gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" \
+              --jq '[.head.sha, .base.sha, .state, (.draft|tostring)] | @tsv')
+
+          if [ "$head_sha" != "$TRIGGER_HEAD_SHA" ]; then
+            echo "PR #$pr head is $head_sha, but the trigger ran on $TRIGGER_HEAD_SHA."
+            echo "Either the PR was updated since (a newer run will review it) or the artifact is bogus; skipping."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$state" != "open" ] || [ "$draft" = "true" ]; then
+            echo "PR #$pr is $state (draft=$draft); skipping."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Verified PR #$pr at $head_sha (base $base_sha)"
+          {
+            echo "ok=true"
+            echo "pr_number=$pr"
+            echo "head_sha=$head_sha"
+            echo "base_sha=$base_sha"
+          } >> "$GITHUB_OUTPUT"
+
+  review:
+    needs: verify
+    if: needs.verify.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Read-only on purpose: this job runs third-party code (opencode and its
+    # npm dependencies), so it must not hold any token that can write.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      stale: ${{ steps.diff.outputs.stale }}
+      diff_note: ${{ steps.diff.outputs.diff_note }}
+      sarif: ${{ steps.sarif.outputs.sarif }}
+    env:
+      PR_NUMBER: ${{ needs.verify.outputs.pr_number }}
+      HEAD_SHA: ${{ needs.verify.outputs.head_sha }}
+      OPENCODE_VERSION: ${{ vars.OPENCODE_VERSION || '1.18.35' }}
+      # Cap on diff bytes handed to the model
+      MAX_DIFF_BYTES: 300000
+    steps:
+      - name: Check out base commit (trusted code only)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.verify.outputs.base_sha }}
+          persist-credentials: false
+
+      # The PR's base branch (e.g. a release branch) may not contain the
+      # review prompt, so always take it from the default branch, which is
+      # where this workflow itself runs from.
+      - name: Fetch review prompt from default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: .review-tooling
+          sparse-checkout: .github/opencode
+          persist-credentials: false
+
+      - name: Stage review prompt
+        run: |
+          cp .review-tooling/.github/opencode/security-review-prompt.md "$RUNNER_TEMP/"
+          rm -rf .review-tooling
+
+      - name: Fetch PR diff as data
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .pr-review
+          if ! gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > .pr-review/full.diff 2> .pr-review/diff.err; then
+            echo "::warning::Could not fetch PR diff: $(cat .pr-review/diff.err)"
+            : > .pr-review/full.diff
+          fi
+          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json files \
+            --jq '.files[] | "\(.path) (+\(.additions)/-\(.deletions))"' > .pr-review/files.txt || true
+
+          # gh fetches the PR's *current* diff. If the PR moved on since
+          # verify, this isn't the diff for HEAD_SHA; a newer run will
+          # review the new head.
+          now=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)
+          if [ "$now" != "$HEAD_SHA" ]; then
+            echo "PR #$PR_NUMBER moved from $HEAD_SHA to $now while fetching the diff; skipping."
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          size=$(stat -c %s .pr-review/full.diff)
+          if [ "$size" -gt "$MAX_DIFF_BYTES" ]; then
+            head -c "$MAX_DIFF_BYTES" .pr-review/full.diff > .pr-review/pr.diff
+            printf '\n\n[... diff truncated: %s of %s bytes shown ...]\n' "$MAX_DIFF_BYTES" "$size" >> .pr-review/pr.diff
+            echo "diff_note=Diff was truncated to ${MAX_DIFF_BYTES} of ${size} bytes; later files were not reviewed." >> "$GITHUB_OUTPUT"
+          else
+            mv .pr-review/full.diff .pr-review/pr.diff
+          fi
+          rm -f .pr-review/full.diff .pr-review/diff.err
+          echo "Diff size: $(stat -c %s .pr-review/pr.diff) bytes"
+          echo "stale=false" >> "$GITHUB_OUTPUT"
+
+      - name: Install opencode
+        if: steps.diff.outputs.stale == 'false'
+        run: |
+          npm install -g "opencode-ai@${OPENCODE_VERSION}"
+          opencode --version
+
+      - name: Run security review
+        id: review
+        if: steps.diff.outputs.stale == 'false'
+        env:
+          NRP_API_KEY: ${{ secrets.NRP_LLM_TOKEN }}
+          # Inline config has the highest precedence, so nothing in the
+          # checkout can loosen these permissions.
+          OPENCODE_CONFIG_CONTENT: |
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "autoupdate": false,
+              "share": "disabled",
+              "provider": {
+                "nrp": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "NRP Nautilus",
+                  "options": {
+                    "baseURL": "https://ellm.nrp-nautilus.io/v1",
+                    "apiKey": "{env:NRP_API_KEY}"
+                  },
+                  "models": {
+                    "${{ vars.NRP_MODEL || 'qwen3' }}": {}
+                  }
+                }
+              },
+              "permission": {
+                "*": "deny",
+                "read": "allow",
+                "grep": "allow",
+                "glob": "allow",
+                "list": "allow"
+              }
+            }
+        run: |
+          if [ -z "$NRP_API_KEY" ]; then
+            echo "::error::NRP_LLM_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ ! -s .pr-review/pr.diff ]; then
+            printf '<!-- BEGIN SECURITY REPORT -->\n{"risk": "None", "summary": "", "findings": [{"severity": "Low", "title": "PR diff could not be retrieved", "path": "", "line": 1, "issue": "The PR diff could not be retrieved (it may be too large for the GitHub API), so no review was performed."}]}\n<!-- END SECURITY REPORT -->\n' > .pr-review/raw.txt
+            exit 0
+          fi
+          set +e
+          timeout 20m opencode run -m "nrp/${NRP_MODEL}" \
+            "$(cat "$RUNNER_TEMP/security-review-prompt.md")" \
+            < /dev/null > .pr-review/raw.txt 2> .pr-review/stderr.txt
+          rc=$?
+          set -e
+          echo "opencode exit code: $rc"
+          # Don't print the model's stdout or stderr: the log is public.
+          echo "output: $(stat -c %s .pr-review/raw.txt) bytes, stderr: $(stat -c %s .pr-review/stderr.txt) bytes"
+
+      - name: Convert report to SARIF
+        id: sarif
+        if: always() && steps.review.outcome != 'skipped'
+        run: |
+          python3 - <<'PY'
+          import base64, gzip, json, os, re
+
+          raw = ""
+          try:
+              with open(".pr-review/raw.txt", encoding="utf-8", errors="replace") as f:
+                  raw = f.read()
+          except FileNotFoundError:
+              pass
+          raw = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", raw)
+
+          changed = []
+          try:
+              with open(".pr-review/files.txt", encoding="utf-8") as f:
+                  for l in f:
+                      changed.append(re.sub(r" \(\+\d+/-\d+\)$", "", l.rstrip("\n")))
+          except FileNotFoundError:
+              pass
+          changed = [c for c in changed if c]
+
+          report, problem = None, None
+          blocks = [b.strip() for b in re.findall(
+              r"<!-- BEGIN SECURITY REPORT -->(.*?)<!-- END SECURITY REPORT -->", raw, re.S) if b.strip()]
+          if not blocks:
+              problem = "The model did not produce a delimited report."
+          else:
+              text = re.sub(r"^```(?:json)?\s*|\s*```$", "", blocks[-1])
+              try:
+                  report = json.loads(text)
+                  if not isinstance(report, dict) or not isinstance(report.get("findings", []), list):
+                      raise ValueError("unexpected JSON shape")
+              except ValueError as e:
+                  problem = f"The model's report was not valid JSON ({e})."
+
+          TAG = f"\n\n[{os.environ['SARIF_TOOL_NAME']}]"
+          levels = {"critical": "error", "high": "error", "medium": "warning", "low": "note"}
+          scores = {"critical": "9.5", "high": "8.0", "medium": "5.5", "low": "2.0"}
+          rules, results = {}, []
+
+          def add(severity, title, path, line, message):
+              sev = str(severity).strip().lower()
+              if sev not in levels:
+                  sev = "medium"
+              rule_id = "llm/" + (re.sub(r"[^a-z0-9]+", "-", str(title).lower()).strip("-")[:60] or "finding")
+              rules.setdefault(rule_id, {
+                  "id": rule_id,
+                  "name": rule_id,
+                  "shortDescription": {"text": str(title)[:200] or "LLM security finding"},
+                  "properties": {"tags": ["security", "llm"], "security-severity": scores[sev]},
+              })
+              path = str(path or "").removeprefix("./")
+              if path not in changed:
+                  if path:
+                      message = f"(Model reported location `{path}:{line}`, which is not a changed file.)\n\n" + message
+                  path, line = (changed[0] if changed else "README.md"), 1
+              try:
+                  line = max(1, int(line))
+              except (TypeError, ValueError):
+                  line = 1
+              results.append({
+                  "ruleId": rule_id,
+                  "level": levels[sev],
+                  "message": {"text": message[:20000] + TAG},
+                  "locations": [{"physicalLocation": {
+                      "artifactLocation": {"uri": path},
+                      "region": {"startLine": line}}}],
+              })
+
+          if report is not None:
+              for f in report.get("findings", []):
+                  if not isinstance(f, dict):
+                      continue
+                  msg = "\n\n".join(
+                      f"**{k.title()}:** {f[k]}" for k in ("issue", "scenario", "fix") if f.get(k))
+                  add(f.get("severity"), f.get("title", "Finding"), f.get("path"), f.get("line"),
+                      f"[{f.get('severity', '?')}] {f.get('title', '')}\n\n{msg}")
+          else:
+              # Still deliver whatever the model said, privately.
+              add("low", "Unparseable LLM security review output", None, 1,
+                  problem + "\n\nRaw model output:\n\n" + (raw.strip()[-15000:] or "(empty)"))
+
+          sarif = {
+              "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+              "version": "2.1.0",
+              "runs": [{
+                  "tool": {"driver": {
+                      "name": os.environ["SARIF_TOOL_NAME"],
+                      "informationUri": "https://opencode.ai",
+                      "version": os.environ["NRP_MODEL"],
+                      "rules": list(rules.values()),
+                  }},
+                  "automationDetails": {"id": f"{os.environ['SARIF_TOOL_NAME']}/"},
+                  "results": results,
+              }],
+          }
+          # Hand the SARIF to the publish job as a job output (gzipped and
+          # base64-encoded, which is also what the upload API wants). It
+          # becomes an environment variable there, so keep it well under the
+          # 128 KiB limit on a single variable.
+          def encode():
+              return base64.b64encode(gzip.compress(json.dumps(sarif).encode())).decode()
+          limit = 100000
+          enc = encode()
+          if len(enc) > limit:
+              for r in results:
+                  r["message"]["text"] = r["message"]["text"][:2000] + TAG
+              enc = encode()
+          if len(enc) > limit:
+              del results[50:]
+              enc = encode()
+          if len(enc) > limit:
+              n = len(report.get("findings", [])) if report else 0
+              del results[1:]
+              results[0]["message"]["text"] = (
+                  f"The LLM report ({n} findings) was too large to upload; "
+                  "re-run the review or review this PR by hand." + TAG)
+              enc = encode()
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"sarif={enc}\n")
+          # Counts only; the log is public.
+          print(f"SARIF encoded: parsed={'yes' if report is not None else 'no'}, {len(enc)} bytes")
+          PY
+
+  publish:
+    needs: [verify, review]
+    if: always() && needs.verify.outputs.ok == 'true' && needs.review.outputs.stale == 'false' && needs.review.outputs.sarif != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # No checkout and nothing installed: only gh and python3 from the image.
+    permissions:
+      contents: write         # create the llm-security-review/pr-N branch
+      security-events: write  # upload SARIF
+      pull-requests: write    # comment
+      checks: read            # leak check
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ needs.verify.outputs.pr_number }}
+      HEAD_SHA: ${{ needs.verify.outputs.head_sha }}
+      COMMENT_MARKER: '<!-- opencode-nrp-security-review -->'
+    steps:
+      - name: Upload SARIF to code scanning (private to maintainers)
+        env:
+          SARIF: ${{ needs.review.outputs.sarif }}
+        run: |
+          ref="refs/heads/llm-security-review/pr-${PR_NUMBER}"
+          # git/ref/ (singular) is an exact-match lookup; git/refs/ prefix-matches.
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/${ref#refs/}" --silent 2> /dev/null; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/${ref}" \
+              -f sha="$HEAD_SHA" -F force=true --silent
+            echo "Moved $ref to $HEAD_SHA"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="$ref" -f sha="$HEAD_SHA" --silent
+            echo "Created $ref at $HEAD_SHA"
+          fi
+          python3 - "$ref" <<'PY'
+          import json, os, sys
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "upload.json"), "w") as f:
+              json.dump({"commit_sha": os.environ["HEAD_SHA"], "ref": sys.argv[1],
+                         "sarif": os.environ["SARIF"], "tool_name": os.environ["SARIF_TOOL_NAME"]}, f)
+          PY
+          id=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/code-scanning/sarifs" \
+                 --input "$RUNNER_TEMP/upload.json" --jq .id)
+          echo "Uploaded SARIF $id for $HEAD_SHA as $ref"
+          for _ in $(seq 1 30); do
+            status=$(gh api "repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${id}" \
+                       --jq '.processing_status + " " + ((.errors // []) | join("; "))')
+            echo "processing: $status"
+            case "$status" in
+              complete*) break ;;
+              failed*) exit 1 ;;
+            esac
+            sleep 10
+          done
+
+      # Keeping results off the PR relies on observed GitHub behavior (an
+      # upload against another branch isn't attached to the PR). If that ever
+      # changes, our findings would be public in the PR's checks, so look for
+      # them there and fail loudly. Every SARIF message ends with
+      # [SARIF_TOOL_NAME], which shows up in the annotation text.
+      - name: Check results did not leak onto the PR
+        run: |
+          sleep 30
+          tag="[${SARIF_TOOL_NAME}]"
+          leaked=0
+          for cr in $(gh api --paginate "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+                        --jq '.check_runs[] | select(.app.slug == "github-advanced-security") | .id'); do
+            n=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/check-runs/${cr}/annotations?per_page=100" \
+                  --jq "[.[] | select(((.message // \"\") + (.title // \"\") + (.raw_details // \"\")) | contains(\"${tag}\"))] | length" \
+                | awk '{s += $1} END {print s + 0}')
+            name=$(gh api "repos/${GITHUB_REPOSITORY}/check-runs/${cr}" --jq .name)
+            if [ "$n" -gt 0 ] || [[ "$name" == *"${SARIF_TOOL_NAME}"* ]]; then
+              leaked=1
+            fi
+          done
+          if [ "$leaked" -ne 0 ]; then
+            echo "::error::GitHub attached the LLM security review results to PR #${PR_NUMBER}'s checks, where they are publicly visible. Disable this workflow and delete the analyses for llm-security-review/pr-${PR_NUMBER} (see pr-security-review-cleanup.yml)."
+            exit 1
+          fi
+          echo "No review results found in the PR's checks."
+
+      # Only after a successful upload and leak check, so the comment never
+      # points at results that aren't there or claims a privacy that failed.
+      - name: Post PR comment
+        env:
+          DIFF_NOTE: ${{ needs.review.outputs.diff_note }}
+        run: |
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          alerts_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/code-scanning?query=is%3Aopen+branch%3Allm-security-review%2Fpr-${PR_NUMBER}+tool%3A${SARIF_TOOL_NAME}"
+          {
+            echo "$COMMENT_MARKER"
+            echo "## 🔒 Automated Security Review"
+            echo
+            echo "An automated LLM security review (model \`${NRP_MODEL}\` via NRP, using opencode) ran on commit \`${HEAD_SHA:0:10}\` ([run](${run_url}))."
+            echo
+            echo "Results are visible only to maintainers, in [code scanning](${alerts_url})."
+            echo "The PR's reviewers (and its author, if they have write access) should triage these alerts before merging."
+            echo "They are deleted within a day of the PR being closed."
+            if [ -n "${DIFF_NOTE:-}" ]; then
+              echo
+              echo "> ⚠️ ${DIFF_NOTE}"
+            fi
+          } > "$RUNNER_TEMP/comment.md"
+          # Delete and re-post rather than edit: a comment's edit history is
+          # public, and older versions of this workflow put findings in it.
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"${COMMENT_MARKER}\"))) | .id" \
+          | while read -r id; do
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/comments/${id}"
+              echo "Deleted comment $id"
+            done
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          echo "Created new comment"
