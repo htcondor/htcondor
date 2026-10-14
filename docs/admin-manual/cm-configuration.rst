@@ -1695,216 +1695,766 @@ As there are many robust, well-documented systems to do these sorts of things,
 the best solution is to copy the original data out of the proprietary HTCondor
 formats and into third party monitoring, database and visualization systems.
 
-The *condor_gangliad* is an HTCSS daemon that periodically copies data out of
-the *condor_collector* and into the ganglia monitoring system.  It can also be
-used to populate grafana.  The same binary is also installed as *condor_metricd*,
-which supports the Ganglia backend plus a Prometheus text-format file export
-backend; see :ref:`gangliad_config_options` for the full set of knobs.
+The *condor_metricd* is an HTCSS daemon that periodically copies data out of
+the *condor_collector* and into Prometheus and/or Ganglia, which in turn can be
+used to drive dashboards in Grafana or similar tools. It is described in
+:ref:`admin-manual/cm-configuration:The condor_metricd` below.
 :tool:`condor_adstash` is a HTCSS daemon which can copy job history information
 out of the AP's history file and into the Elasticsearch database for further
 querying.
 
-Ganglia
--------
+The condor_metricd
+------------------
 
+:index:`with Prometheus<single: with Prometheus; Monitoring>`
 :index:`with Ganglia<single: with Ganglia; Monitoring>`
-:index:`Ganglia monitoring`
-:index:`condor_gangliad daemon`
+:index:`Prometheus monitoring` :index:`Ganglia monitoring`
+:index:`condor_metricd daemon`
 
-Installation and configuration of Ganglia itself is beyond the scope of this
-document: complete information is available at the ganglia homepage at
-(`http://ganglia.info/ <http://ganglia.info/>`_), from the O'Reilly book on
-the subject, or numerous webpages.
+Why a daemon for this
+'''''''''''''''''''''
 
-Generally speaking, the *condor_gangliad* should be setup to run on the same
-system where the ganglia *gmetad* is running.  Unless the pool is exceptionally
-large, putting the gmetad and the *condor_gangliad* on the central manager
-machine is a good choice.  To enable the *condor_gangliad*, simply add
-the line
+Suppose you want to know how many slots in the pool are currently running a
+job. That is a question about the ClassAds in the *condor_collector*: count the
+slots where ``State == "Claimed"`` and ``Activity != "Idle"``. A one-off answer
+is easy enough with a constraint and a projection:
+
+.. code-block:: console
+
+      $ condor_status -startd \
+            -constraint 'State=="Claimed" && Activity!="Idle"' \
+            -autoformat Name | wc -l
+
+Suppose you then want that number plotted over time, so you put the command in
+a cron job. Then you want the number of *cores* in use rather than slots, so
+you sum the ``Cpus`` attribute instead. Then you want to know *why* the
+remaining cores are idle, which is several more queries. Before long you have
+dozens or hundreds of cron jobs, each independently querying the
+*condor_collector* every minute, and a central manager spending all its time
+answering them.
+
+*condor_metricd* exists to do this properly: query the *condor_collector* once
+per cycle for everything needed to compute every metric, and hand the results
+to a time-series database built for storing and graphing them.
+
+How it works
+''''''''''''
+
+*condor_metricd* has two halves.
+
+The **engine** queries one or more *condor_collector* daemons on a timer, and
+evaluates every metric definition against every ClassAd returned. A metric
+definition says how to turn ClassAds into a metric: which ads to look at, what
+expression to evaluate for the value, and whether to publish one metric per ad
+or aggregate across all of them. The result is a stream of metrics, each a name
+and a value at a point in time, with some labels attached.
+
+The **backends** take those metrics and present them to a time-series database.
+Two are supported. The Prometheus backend serves the metrics over HTTP for
+Prometheus to scrape, and also writes them to a file. The Ganglia backend
+hands them to Ganglia's *gmond*. Both can be active at once, and each metric
+definition can choose which backends it goes to.
+
+Because a single collector query serves every metric and every backend, the
+cost to the *condor_collector* does not grow as metrics are added.
+
+.. note::
+
+    For backwards compatibility the *condor_metricd* binary is also installed
+    under the name *condor_gangliad*, and inspects ``argv[0]`` at startup to
+    decide which mode to run in. When invoked as *condor_gangliad* it behaves
+    exactly as in previous releases: it reads only the ``GANGLIAD_*``
+    configuration variables, reads metric definitions from
+    ``$(ETC)/ganglia.d``, and publishes only to Ganglia. An existing
+    *condor_gangliad* configuration therefore continues to work untouched, and
+    nothing in this chapter applies to it.
+
+    That legacy mode is deprecated and is not documented here. Administrators
+    maintaining a *condor_gangliad* configuration should consult the
+    documentation for the HTCondor version they are running. New deployments,
+    and anyone adding Prometheus, should use *condor_metricd*.
+
+Enabling the condor_metricd
+'''''''''''''''''''''''''''
+
+Add the following to the configuration of the machine that should run the
+daemon, and :tool:`condor_restart` HTCondor there:
 
 .. code-block:: condor-config
 
-      use FEATURE: ganglia
+      use FEATURE: METRICD
 
-to the config file on the central manager machine, and :tool:`condor_restart` the
-HTCondor system on that machine.  If the *condor_gangliad* daemon is to run on
-a different machine than the one running Ganglia's *gmetad*, modify
-configuration variable :macro:`GANGLIA_GSTAT_COMMAND` to get the list of
-monitored hosts from the master *gmond* program.
+Unless the pool is exceptionally large, the central manager is a good choice of
+machine, since that is where the *condor_collector* it queries already runs.
 
-The above steps alone should be sufficient to get a default set of metrics
-about the pool into ganglia.  Additional metrics, tuning and other
-information, if needed, follows.
+That alone is enough to get a default set of metrics about the pool published
+to Prometheus, both at the ``/metrics`` HTTP endpoint and in the file named by
+:macro:`PROMETHEUS_METRICS_FILE`. Everything below describes how to define
+additional metrics and how to route them.
 
-By default, the *condor_gangliad* will only propagate metrics to hosts that are
-already monitored by Ganglia. Set configuration variable
-:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a Ganglia host
-to monitor a pool not monitored by Ganglia or have a heterogeneous pool where
-some hosts are not monitored. In this case, default graphs that Ganglia
-provides will not be present. However, the HTCondor metrics will appear.
+Defining Metrics
+''''''''''''''''
 
-On large pools, setting configuration variable
-:macro:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will reduce the amount
-of data sent to Ganglia. The execute node data is the least important to
-monitor. One can also limit the amount of data by setting configuration
-variable :macro:`GANGLIAD_REQUIREMENTS` Be aware that aggregate sums over the
-entire pool will not be accurate if this variable limits the ClassAds queried.
+A metric is a name, a value at a timestamp, and a set of labels. Metrics are
+defined in files in the directory named by
+:macro:`METRICD_METRICS_CONFIG_DIR`, which defaults to ``$(ETC)/metrics.d``.
+Every file in that directory is read, and each may hold any number of
+definitions.
 
-Metrics to be sent to Ganglia are specified in files within the directory
-specified by variable :macro:`GANGLIAD_METRICS_CONFIG_DIR`.  Here is an example
-of a single metric definition given as a New ClassAd:
+A metric definition is itself a ClassAd, written in the bracketed form, whose
+attributes are evaluated against each ClassAd fetched from the
+*condor_collector*. Here is a complete one:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "SchedulerRecentDaemonCoreDutyCycle";
+      Value  = RecentDaemonCoreDutyCycle;
+      Desc   = "Recent percentage of busy time in the daemon event loop";
+      Scale  = 100;
+      Units  = "percent";
+      TargetType = "Scheduler";
+    ]
+
+``TargetType`` selects which ClassAds this metric applies to, here the ad
+published by each *condor_schedd*. ``Value`` is evaluated against each such ad.
+Since the attributes of the definition are ClassAd expressions evaluated in the
+context of the daemon ad, they can refer to any attribute of it. ``Name`` can
+too, which is how one definition can cover several daemon types:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = strcat(MyType, "RecentDaemonCoreDutyCycle");
+      Value  = RecentDaemonCoreDutyCycle;
+      Desc   = "Recent percentage of busy time in the daemon event loop";
+      Scale  = 100;
+      Units  = "percent";
+      TargetType = "Scheduler,Negotiator";
+    ]
+
+An example set of metrics to use as a starting point is installed as
+``$(METRICD_METRICS_CONFIG_DIR)/00_default_metrics``.
+
+Aggregate Metrics
+'''''''''''''''''
+
+By default a metric produces one value per matching ClassAd. The ``Aggregate``
+keyword instead combines them into a single pool-wide value, which is usually
+what you want for a question about the pool rather than about one machine.
+``Requirements`` restricts which ads contribute. These two definitions answer
+"how many cores are in use, and how many are not":
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "CpusInUse";
+      Aggregate = "SUM";
+      Value  = Cpus;
+      Requirements = State=="Claimed" && Activity!="Idle";
+      TargetType = "Machine";
+    ]
+    [
+      Name   = "CpusNotInUse";
+      Aggregate = "SUM";
+      Value  = Cpus;
+      Requirements = State!="Claimed" || Activity=="Idle";
+      TargetType = "Machine";
+    ]
+
+Breaking the idle cores down by reason is a matter of adding definitions with
+narrower ``Requirements``:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "CpusNotInUse_LowMemory";
+      Aggregate = "SUM";
+      Value  = Cpus;
+      Requirements = State=="Unclaimed" && Memory < 1024;
+      TargetType = "Machine";
+    ]
+    [
+      Name   = "CpusNotInUse_Draining";
+      Aggregate = "SUM";
+      Value  = Cpus;
+      Requirements = State=="Drained";
+      TargetType = "Machine";
+    ]
+
+``AVG``, ``MIN`` and ``MAX`` work the same way. Note that ``Requirements`` can
+be used to exclude ads that would distort the result, as here where slots with
+no reported usage would drag an average toward zero:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "MemoryEfficiency";
+      Aggregate = "AVG";
+      Value  = real(MemoryUsage)/Memory*100;
+      Requirements = MemoryUsage > 0.0;
+      Units  = "percent";
+      TargetType = "Machine";
+    ]
+
+What host an aggregate belongs to
++++++++++++++++++++++++++++++++++
+
+An ordinary metric describes one daemon, so it is naturally associated with
+that daemon's host. An aggregate describes the pool as a whole and has no one
+daemon behind it, so by default it is associated with the host running the
+*condor_collector* it was gathered from — that is, the central manager.
+
+This matters in both backends. Ganglia files the metric under the central
+manager's host page rather than any execute node's. In Prometheus, the
+``MetricMachine`` pseudo-attribute evaluates to the central manager's name, so
+with the shipped :macro:`PROMETHEUS_DEFAULT_LABELS` an aggregate is labeled
+``machine="cm.example.edu"`` while a per-daemon metric from the same pool is
+labeled with the individual daemon. ``MetricPool`` is the central manager
+either way, so on an aggregate the two coincide.
+
+When several pools are monitored, each pool's aggregates are associated with
+that pool's own central manager, and aggregation happens per pool rather than
+across all of them.
+
+Metric Definition Keywords
+''''''''''''''''''''''''''
+
+Most keywords are ClassAd expressions evaluated against the daemon ClassAd
+being processed, so they may refer to any attribute of it. The value type
+expected for each keyword, and what happens when it is omitted, are noted
+below.
+
+Core keywords
++++++++++++++
+
+ Name
+    *String expression.* **Required.** The name of this metric. Metrics
+    published for the same machine must have unique names. When published to
+    Prometheus the name is prefixed with ``htcondor_`` and may gain a unit,
+    ``_total`` or ``_info`` suffix; see
+    :ref:`admin-manual/cm-configuration:Exposing Metrics to Prometheus`.
+
+    *If omitted*, there is no name to publish the metric under and the
+    definition is unusable — except for a ``Regex`` metric, where the name of
+    each matched attribute is used.
+ TargetType
+    *String expression.* **Required.** A comma-separated list of daemon
+    ClassAd types this metric applies to, matching the :ad-attr:`MyType` of the
+    daemon ClassAd. The special value ``Machine_slot1`` monitors the machine
+    ClassAd for slot 1 only, which is useful for machine-wide attributes. The
+    special value ``ANY`` matches every type of ClassAd.
+
+    *If omitted*, *condor_metricd* refuses to start, reporting a configuration
+    error naming the offending definition.
+ Value
+    *Expression of any type.* Produces the value of the metric when evaluated.
+
+    *If omitted*, the value is that of the attribute in the daemon ClassAd
+    whose name matches this metric's ``Name``; this is the usual way to
+    publish an attribute unchanged. If the result is ``UNDEFINED`` after that
+    fallback, no metric is published for that ad.
+ Desc
+    *String expression.* A brief description of the metric. Published to
+    Prometheus as the ``# HELP`` text and displayed by Ganglia when hovering
+    over the graph.
+
+    *If omitted*, the metric is published with no description.
+ Units
+    *String expression.* The units of this metric, such as ``bytes``,
+    ``seconds`` or ``percent``. For Prometheus this is appended to both the
+    metric name and the help text, following Prometheus naming convention.
+
+    *If omitted*, no unit suffix is added and nothing is appended to the help
+    text.
+ Scale
+    *Numeric expression.* A factor multiplied by ``Value``. Used when the raw
+    value is not in a human-interpretable unit: duty cycle is reported from 0
+    to 1 but is conventionally expressed as a percentage, so it is scaled by
+    100. When scaling by large values, setting ``Type`` to ``float`` is
+    recommended.
+
+    *If omitted*, the default is ``1``, leaving the value unchanged.
+ Type
+    *String.* The type of the metric: ``double``, ``float``, ``int32``,
+    ``uint32``, ``int16``, ``uint16``, ``int8``, ``uint8`` or ``string``.
+    Integer values can be coerced to ``float`` or ``double``, which matters for
+    values stored internally as 64 bits.
+
+    *If omitted*, the type is inferred from the evaluated value: ``string`` for
+    strings, ``int32`` for integers, ``float`` for reals and ``int8`` for
+    booleans.
+ Requirements
+    *Boolean expression.* Restricts which ClassAds contribute to this metric.
+    An ad for which this is not ``True`` is skipped entirely.
+
+    *If omitted*, the default is ``True``, so every ad of the matching
+    ``TargetType`` contributes.
+ Verbosity
+    *Integer.* The verbosity level of this metric. The metric is not published
+    if this exceeds :macro:`METRICD_VERBOSITY`.
+
+    *If omitted*, the default is ``0``, so the metric is always published.
+ Counter
+    *Boolean.* When ``True``, the value is treated as a monotonically
+    increasing counter rather than a gauge — a quantity that starts at zero
+    and only grows, such as :ad-attr:`FileTransferUploadBytes`. Prometheus
+    publishes it as a ``counter`` with a ``_total`` suffix and computes rates
+    itself; Ganglia graphs its derivative. ``Derivative`` is an accepted
+    synonym.
+
+    For an aggregate metric, the per-ad increase since the previous cycle is
+    computed first and those increases are then aggregated, so that a daemon
+    restarting does not produce a spurious negative contribution.
+
+    *If omitted*, the default is ``False``: a numeric value is published as a
+    gauge, meaning a reading at a point in time with no implied relationship
+    to the previous reading, and a string value is published as an info
+    metric.
+ Aggregate
+    *String.* An aggregation function applied across all matching ClassAds,
+    producing one combined metric instead of one metric per ad. Possible
+    values are ``SUM``, ``AVG``, ``MAX`` and ``MIN``.
+
+    *If omitted*, no aggregation is performed and one metric is published per
+    matching ClassAd.
+ AggregateGroup
+    *String expression.* Meaningful only when ``Aggregate`` is set, where it
+    works like ``GROUP BY`` in SQL: one result is produced per distinct value
+    of this expression. Set it to group by something other than the pool as a
+    whole, such as the owner of the running job, as in
+    :ref:`admin-manual/cm-configuration:Labels versus names` below.
+
+    *If omitted*, the default is the metric's ``Name``, giving a single
+    pool-wide result. When several pools are being monitored, the collector
+    name is appended to that default, so each pool is aggregated separately.
+ ExportMetric
+    *String expression.* A comma-separated list of the backends this metric
+    should be published to; recognized names are ``ganglia`` and
+    ``prometheus``. An empty value means every enabled backend.
+
+    *If omitted*, the value of :macro:`METRICD_DEFAULT_EXPORT_METRIC` is used,
+    which itself defaults to ``prometheus``.
+ Regex
+    *String.* A regular expression matching the attributes to be monitored by
+    this metric. This is for dynamic attributes that cannot be enumerated in
+    advance, because their names depend on runtime information such as which
+    users are currently running jobs. One metric is created per matching
+    attribute; the default metric name is the name of the matched attribute,
+    and the default value is that attribute's value.
+
+    Because the attribute name is not known in advance, a special attribute
+    named ``Regex`` is made available to the ``Value`` expression. Text matched
+    by parenthesized groups in the regular expression can be substituted into
+    other string keywords such as ``Name`` and ``Desc`` by writing "\\\\1" for
+    the first group, "\\\\2" for the second, and so on.
+
+    Note that using ``Regex`` in any metric definition disables the collector
+    projection described under :macro:`METRICD_WANT_PROJECTION` for the whole
+    daemon, since the attributes needed can no longer be determined in
+    advance.
+
+    *If omitted*, the metric monitors the single attribute named by ``Name``
+    rather than a family of them.
+
+Prometheus-specific keywords
+++++++++++++++++++++++++++++
+
+ PrometheusLabels
+    *Nested ClassAd.* Its attribute names are Prometheus label names and its
+    attribute values are ClassAd expressions, evaluated against the daemon ad
+    exactly as ``Value`` is:
+
+    .. code-block:: condor-classad
+
+          PrometheusLabels = [
+              machine = Machine;
+              pool    = "cm.example.edu";
+              state   = strcat(State, "_", Activity);
+          ];
+
+    The result is merged with :macro:`PROMETHEUS_DEFAULT_LABELS`, with labels
+    defined here winning over pool-wide ones of the same name.
+    *condor_metricd* quotes and escapes the label values, so a value
+    containing a comma, quote, backslash or newline is emitted correctly
+    without anything being escaped by hand here.
+
+    An expression evaluating to ``UNDEFINED`` or ``ERROR``, or to a non-scalar
+    value such as a list, **omits** that label rather than emitting it empty.
+    This is the intended way to make a label conditional:
+
+    .. code-block:: condor-classad
+
+          PrometheusLabels = [
+              machine = Machine;
+              tier    = ifThenElse(IsProductionMachine, "prod", undefined);
+          ];
+
+    Label names must match ``[a-zA-Z_][a-zA-Z0-9_]*`` and must not begin with
+    ``__``, which Prometheus reserves. An illegal name is reported once in the
+    *condor_metricd* log when the configuration is read, and that label is not
+    published.
+
+    Each label expression is evaluated against the daemon ad directly rather
+    than within the label ad, so ``machine = Machine`` means "the ``Machine``
+    attribute of the daemon ad" and is not a self-reference. One consequence is
+    that label expressions cannot refer to one another.
+
+    *If omitted*, the metric carries only the labels from
+    :macro:`PROMETHEUS_DEFAULT_LABELS`.
+
+    Two pseudo-attributes are supplied by *condor_metricd* for use in label
+    expressions:
+
+    ``MetricMachine``
+        The host this metric is associated with. For a metric gathered from a
+        single daemon this is that daemon's name; for an aggregate metric it is
+        the pool's central manager.
+
+    ``MetricPool``
+        The name of the pool the metric came from. When several pools are
+        monitored via :macro:`MONITOR_MULTIPLE_COLLECTORS` or
+        :macro:`MONITOR_COLLECTOR`, this is the name configured for that pool,
+        which is what makes a per-pool label correct on aggregate metrics.
+
+    On an aggregate metric the two are the same value; on a non-aggregate
+    metric they usually differ.
+
+    .. warning::
+
+        Prefer ``MetricMachine`` over a bare ``Machine`` reference when
+        labeling an **aggregate** metric. An aggregate is published from the
+        metric built for whichever contributing daemon ad happened to be
+        processed first, so ``machine = Machine`` resolves to an arbitrary one
+        of the daemons that fed the aggregate, and which one may change from
+        cycle to cycle.
+
+ String-valued metrics
+    This is not a keyword but a consequence of ``Type``.
+    Prometheus sample values must be numeric, so a metric whose value is a
+    string is published as an *info* metric: the name gains an ``_info``
+    suffix, the string moves into a label named after the metric, and the value
+    becomes 1. A metric named ``condor_version`` with a string value is
+    therefore scraped as::
+
+          htcondor_condor_version_info{condor_version="10.2.0"} 1
+
+Ganglia-specific keywords
++++++++++++++++++++++++++
+
+ Title
+    *String expression.* The graph title used for this metric.
+
+    *If omitted*, the metric name is used.
+ Group
+    *String expression.* The name of this metric's group. Metrics are arranged
+    by group within a Ganglia web page, and metrics in different groups must
+    have unique names.
+
+    *If omitted*, the group is determined by the daemon type, for example
+    "HTCondor Schedd" or "HTCondor Startd".
+ Cluster
+    *String expression.* The Ganglia cluster name for this metric.
+
+    *If omitted*, the value of :macro:`GANGLIA_DEFAULT_CLUSTER` is used.
+ Machine
+    *String expression.* The name of the host associated with this metric.
+
+    *If omitted*, the value of :macro:`GANGLIA_DEFAULT_MACHINE` is used; if
+    that is not set either, the default is taken from the ``Machine``
+    attribute of the daemon ClassAd. If the daemon name is of the form
+    *name@hostname*, indicating several instances of HTCondor on one machine,
+    the daemon name is used instead so that their metrics do not overwrite
+    each other. For an aggregate metric the default is the name of the
+    *condor_collector* host, as described above.
+ IP
+    *String expression.* The IP address of the host associated with this
+    metric. The value must be unique for each machine published to Ganglia,
+    but need not be a valid IP address.
+
+    *If omitted*, the value of :macro:`GANGLIA_DEFAULT_IP` is used; if that is
+    not set either, the default is extracted from the ``MyAddress`` attribute
+    of the daemon ClassAd. If ``Machine`` contains an "@", the default IP is
+    set to the same value as ``Machine`` to keep it unique per instance.
+ Lifetime
+    *Positive integer.* The maximum number of seconds a metric will be kept
+    without being updated before Ganglia deletes it, represented in Ganglia as
+    DMAX.
+
+    *If omitted*, a value is calculated from the publication interval, with a
+    floor of :macro:`GANGLIA_MIN_METRIC_LIFETIME`.
+
+Backend-specific overrides
+++++++++++++++++++++++++++
+
+Prefixing any keyword with ``Ganglia_`` or ``Prometheus_`` overrides that
+keyword for that backend only, leaving the unprefixed value in effect for the
+other. This is what makes a single definition able to serve both backends when
+they want different things, as in the per-user example in
+:ref:`admin-manual/cm-configuration:Labels versus names` below, where
+``Ganglia_Name`` embeds the user in the metric name while Prometheus gets a
+label instead.
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "jobs_running";
+      Prometheus_Desc = "Number of running jobs";
+      Ganglia_Desc = "Jobs running in this pool right now";
+      TargetType = "Scheduler";
+    ]
+
+Choosing Which Backend Each Metric Goes To
+''''''''''''''''''''''''''''''''''''''''''
+
+The ``ExportMetric`` keyword names the backends a metric should be published
+to. :macro:`METRICD_DEFAULT_EXPORT_METRIC` supplies the default for definitions
+that do not set it, and ships as ``prometheus``. So out of the box every metric
+goes to Prometheus only, and the Ganglia backend is never initialized — which
+is deliberate, since it means a Prometheus-only pool never needs
+``libganglia`` installed.
+
+To send everything to both backends, set the default to empty, which means
+"every enabled backend":
+
+.. code-block:: condor-config
+
+      METRICD_DEFAULT_EXPORT_METRIC =
+
+Or route individual metrics:
 
 .. code-block:: condor-classad
 
     [
       Name   = "JobsSubmitted";
+      ExportMetric = "ganglia, prometheus";
       Desc   = "Number of jobs submitted";
       Units  = "jobs";
       TargetType = "Scheduler";
     ]
 
-A nice set of default metrics is in file:
-``$(GANGLIAD_METRICS_CONFIG_DIR)/00_default_metrics``.
+Labels versus names
++++++++++++++++++++
 
-Recognized metric attribute names and their use:
+Prometheus and Ganglia disagree about how to express a metric that has a
+dimension to it, such as a per-user or per-daemon-type breakdown.
 
- Name
-    The name of this metric, which corresponds to the ClassAd attribute
-    name. Metrics published for the same machine must have unique names.
- Value
-    A ClassAd expression that produces the value when evaluated. The
-    default value is the value in the daemon ClassAd of the attribute
-    with the same name as this metric.
- Desc
-    A brief description of the metric. This string is displayed when the
-    user holds the mouse over the Ganglia graph for the metric.
- Verbosity
-    The integer verbosity level of this metric. Metrics with a higher
-    verbosity level than that specified by configuration variable
-    :macro:`GANGLIAD_VERBOSITY` will not be published.
- TargetType
-    A string containing a comma-separated list of daemon ClassAd types
-    that this metric monitors. The specified values should match the
-    value of :ad-attr:`MyType` of the daemon ClassAd. In addition, there are
-    special values that may be included. "Machine_slot1" may be
-    specified to monitor the machine ClassAd for slot 1 only. This is
-    useful when monitoring machine-wide attributes. The special value
-    "ANY" matches any type of ClassAd.
- Requirements
-    A boolean expression that may restrict how this metric is
-    incorporated. It defaults to ``True``, which places no restrictions
-    on the collection of this ClassAd metric.
- Title
-    The graph title used for this metric. The default is the metric
-    name.
- Group
-    A string specifying the name of this metric's group. Metrics are
-    arranged by group within a Ganglia web page. The default is
-    determined by the daemon type. Metrics in different groups must have
-    unique names.
- Cluster
-    A string specifying the cluster name for this metric. The default
-    cluster name is taken from the configuration variable
-    :macro:`GANGLIAD_DEFAULT_CLUSTER`.
- Units
-    A string describing the units of this metric.
- Scale
-    A scaling factor that is multiplied by the value of the ``Value``
-    attribute. The scale factor is used when the value is not in the
-    basic unit or a human-interpretable unit. For example, duty cycle is
-    commonly expressed as a percent, but the HTCondor value ranges from
-    0 to 1. So, duty cycle is scaled by 100. Some metrics are reported
-    in KiB. Scaling by 1024 allows Ganglia to pick the appropriate
-    units, such as number of bytes rather than number of KiB. When
-    scaling by large values, converting to the "float" type is
-    recommended.
- Derivative
-    A boolean value that specifies if Ganglia should graph the
-    derivative of this metric. If ``True``, and this metric is an aggregate metric, then the derivative of
-    each value to be aggregated is computed, and the aggregate function is applied to these derivatives.
-    This is useful for numeric attributes that are "counters", i.e. they start at zero and are
-    monotonically increasing throughout the lifetime of a slot or a daemon.  
-    For example, consider the schedd ad attribute :ad-attr:`FileTransferUploadBytes` which publishes the total number of
-    bytes uploaded by the schedd. If ``Derivative`` is set to ``True``, and this metric is an aggregate metric, then the sum of the derivatives of "FileTransferUploadBytes"
-    across the pool is computed and published. The derivative of "FileTransferUploadBytes" for each ClassAd is the positive change
-    in the value of "FileTransferUploadBytes" since the last update.
-    If this metric is not an aggregate metric, then computing of the derivative is performed by
-    Ganglia as usual (note: this requires Ganglia versions 3.4 or later).
- Type
-    A string specifying the type of the metric. Possible values are
-    "double", "float", "int32", "uint32", "int16", "uint16", "int8",
-    "uint8", and "string". The default is "string" for string values,
-    the default is "int32" for integer values, the default is "float"
-    for real values, and the default is "int8" for boolean values.
-    Integer values can be coerced to "float" or "double". This is
-    especially important for values stored internally as 64-bit values.
- Regex
-    This string value specifies a regular expression that matches
-    attributes to be monitored by this metric. This is useful for
-    dynamic attributes that cannot be enumerated in advance, because
-    their names depend on dynamic information such as the users who are
-    currently running jobs. When this is specified, one metric per
-    matching attribute is created. The default metric name is the name
-    of the matched attribute, and the default value is the value of that
-    attribute. As usual, the ``Value`` expression may be used when the
-    raw attribute value needs to be manipulated before publication.
-    However, since the name of the attribute is not known in advance, a
-    special ClassAd attribute in the daemon ClassAd is provided to allow
-    the ``Value`` expression to refer to it. This special attribute is
-    named ``Regex``. Another special feature is the ability to refer to
-    text matched by regular expression groups defined by parentheses
-    within the regular expression. These may be substituted into the
-    values of other string attributes such as ``Name`` and ``Desc``.
-    This is done by putting macros in the string values. "\\\\1" is
-    replaced by the first group, "\\\\2" by the second group, and so on.
- Aggregate
-    This string value specifies an aggregation function to apply,
-    instead of publishing individual metrics for each daemon ClassAd.
-    Possible values are "sum", "avg", "max", and "min".
- AggregateGroup
-    When an aggregate function has been specified, this string value
-    specifies which aggregation group the current daemon ClassAd belongs
-    to. The default is the metric ``Name``. This feature works like
-    GROUP BY in SQL. The aggregation function produces one result per
-    value of ``AggregateGroup``. A single aggregate group would
-    therefore be appropriate for a pool-wide metric. As an example, to
-    publish the sum of an attribute across different types of slot
-    ClassAds, make the metric name an expression that is unique to each
-    type. The default ``AggregateGroup`` would be set accordingly. Note
-    that the assumption is still that the result is a pool-wide metric,
-    so by default it is associated with the *condor_collector* daemon's
-    host. To group by machine and publish the result into the Ganglia
-    page associated with each machine, make the ``AggregateGroup``
-    contain the machine name and override the default ``Machine``
-    attribute to be the daemon's machine name, rather than the
-    *condor_collector* daemon's machine name.
- Machine
-    The name of the host associated with this metric. If configuration
-    variable :macro:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
-    default is taken from the ``Machine`` attribute of the daemon
-    ClassAd. If the daemon name is of the form name@hostname, this may
-    indicate that there are multiple instances of HTCondor running on
-    the same machine. To avoid the metrics from these instances
-    overwriting each other, the default machine name is set to the
-    daemon name in this case. For aggregate metrics, the default value
-    of ``Machine`` will be the name of the *condor_collector* host.
- IP
-    A string containing the IP address of the host associated with this
-    metric. If :macro:`GANGLIAD_DEFAULT_IP` is not specified, the default is
-    extracted from the ``MyAddress`` attribute of the daemon ClassAd.
-    This value must be unique for each machine published to Ganglia. It
-    need not be a valid IP address. If the value of ``Machine`` contains
-    an "@" sign, the default IP value will be set to the same value as
-    ``Machine`` in order to make the IP value unique to each instance of
-    HTCondor running on the same host.
- Lifetime
-    A positive integer value representing the max number of seconds
-    without updating a metric will be kept before deletion. This is
-    represented in ganglia as DMAX. If no Lifetime is defined for a
-    metric then the default value will be set to a calculated value
-    based on the ganglia publish interval with a minimum value set by
-    :macro:`GANGLIA_MIN_METRIC_LIFETIME` (:macro:`GANGLIAD_MIN_METRIC_LIFETIME`
-    in legacy *condor_gangliad* mode).
+Prometheus wants one metric name with a **label** carrying the dimension, so
+that queries can sum over it or filter by it. Ganglia has no labels, and wants
+the dimension **embedded in the metric name**.
+
+A metric definition can satisfy both at once. ``PrometheusLabels`` supplies the
+labels, and a ``Ganglia_`` prefix on any keyword overrides that keyword for the
+Ganglia backend only:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "UserMemoryEfficiency";
+      PrometheusLabels = [ user = RemoteUser ];
+      Ganglia_Name = strcat(RemoteUser, "-UserMemoryEfficiency");
+      Title  = strcat(RemoteUser, " Memory Efficiency");
+      Aggregate = "AVG";
+      AggregateGroup = RemoteUser;
+      Value  = real(MemoryUsage)/Memory*100;
+      Requirements = MemoryUsage > 0.0;
+      Units  = "percent";
+      TargetType = "Machine";
+    ]
+
+Prometheus receives ``htcondor_user_memory_efficiency_percent{user="alice"}``
+while Ganglia receives a separate metric named
+``alice-UserMemoryEfficiency``. The same prefix trick works for any keyword:
+``Prometheus_Desc`` gives Prometheus a different description than Ganglia,
+``Ganglia_Units`` a different unit string, and so on.
+
+Here is the same idea applied to a metric covering several daemon types, where
+Prometheus gets one series labeled by type and Ganglia gets one metric per
+type:
+
+.. code-block:: condor-classad
+
+    [
+      Name   = "RecentDaemonCoreDutyCycle";
+      PrometheusLabels = [
+          type = MyType;
+          tier = ifThenElse(IsProductionMachine, "production", undefined);
+      ];
+      Ganglia_Name = strcat(MyType, "RecentDaemonCoreDutyCycle");
+      Value  = RecentDaemonCoreDutyCycle;
+      Desc   = "Recent percentage of busy time in the daemon event loop";
+      Scale  = 100;
+      Units  = "percent";
+      TargetType = "Scheduler,Negotiator";
+    ]
+
+A label expression evaluating to ``UNDEFINED`` drops that label rather than
+emitting it empty, which is how ``tier`` above appears only on production
+machines.
+
+Exposing Metrics to Prometheus
+''''''''''''''''''''''''''''''
+
+``use FEATURE: METRICD`` gives you a Prometheus exporter with no further
+configuration. *condor_metricd* serves the standard ``/metrics`` endpoint over
+HTTP on the port named by :macro:`PROMETHEUS_HTTP_PORT`, which defaults to
+:macro:`SHARED_PORT_PORT` — normally ``9618``, the same port the rest of
+HTCondor already uses. The feature arranges for *condor_shared_port* to forward
+HTTP requests on that port to *condor_metricd*, so no additional port needs to
+be opened in a firewall.
+
+Confirm it is working with:
+
+.. code-block:: console
+
+      $ curl http://cm.example.edu:9618/metrics
+
+and point Prometheus at it:
+
+.. code-block:: yaml
+
+      scrape_configs:
+        - job_name: htcondor
+          static_configs:
+            - targets: ['cm.example.edu:9618']
+
+Every metric name is prefixed with ``htcondor_``, following the Prometheus
+convention of namespacing an application's metrics, so a metric defined as
+``Name = "jobs_running"`` is scraped as ``htcondor_jobs_running``.
+
+The same content is also written to the file named by
+:macro:`PROMETHEUS_METRICS_FILE`, by default ``$(LOG)/metrics.prom``. The file
+is rewritten atomically on every cycle, so a reader never sees a partial one.
+This is useful for inspecting the output by hand, and for sites that prefer to
+collect metrics with the Prometheus node exporter's textfile collector rather
+than scrape a second endpoint.
+
+Serving over HTTPS
+++++++++++++++++++
+
+If :macro:`AUTH_SSL_SERVER_CERTFILE` and :macro:`AUTH_SSL_SERVER_KEYFILE` are
+configured and readable, *condor_metricd* automatically accepts TLS on the same
+port; it detects whether each connection is plain HTTP or TLS and responds
+accordingly. No separate setting enables this. Scrape it with ``https://``
+instead, and configure Prometheus accordingly:
+
+.. code-block:: yaml
+
+      scrape_configs:
+        - job_name: htcondor
+          scheme: https
+          static_configs:
+            - targets: ['cm.example.edu:9618']
+
+Requiring a password
+++++++++++++++++++++
+
+Set :macro:`PROMETHEUS_HTTP_AUTH_FILE` to the path of an Apache-style
+``htpasswd`` file to require HTTP Basic authentication on ``/metrics``:
+
+.. code-block:: condor-config
+
+      PROMETHEUS_HTTP_AUTH_FILE = /etc/condor/prometheus.htpasswd
+
+.. code-block:: yaml
+
+      scrape_configs:
+        - job_name: htcondor
+          basic_auth:
+            username: prometheus
+            password: s3cr3t
+          static_configs:
+            - targets: ['cm.example.edu:9618']
+
+Use ``htpasswd -B`` to create entries; see
+:macro:`PROMETHEUS_HTTP_AUTH_FILE` for which hash formats work. Basic
+credentials are sent in the clear unless HTTPS is also configured.
+
+Using a different port, or a reverse proxy
+++++++++++++++++++++++++++++++++++++++++++
+
+Setting :macro:`PROMETHEUS_HTTP_PORT` to a port other than
+:macro:`SHARED_PORT_PORT` causes *condor_metricd* to open a listening socket of
+its own on that port, rather than receiving forwarded requests from
+*condor_shared_port*:
+
+.. code-block:: condor-config
+
+      use FEATURE: METRICD
+      PROMETHEUS_HTTP_PORT = 9100
+
+This is the usual arrangement when putting a reverse proxy in front of the
+endpoint, so that the proxy owns the public port and terminates TLS, while
+*condor_metricd* listens only on the loopback-facing port behind it. With
+NGINX, for example:
+
+.. code-block:: nginx
+
+      location /metrics {
+          proxy_pass http://127.0.0.1:9100/metrics;
+      }
+
+Setting :macro:`PROMETHEUS_HTTP_PORT` to ``-1`` disables HTTP serving
+altogether, leaving only :macro:`PROMETHEUS_METRICS_FILE`. That is the right
+choice for sites collecting the file with the node exporter's textfile
+collector.
+
+.. note::
+
+    :macro:`PROMETHEUS_HTTP_PORT` is read once at startup. Changing it and
+    issuing a :tool:`condor_reconfig` has no effect, and *condor_metricd* will
+    log that a restart is needed.
+
+Exposing Metrics to Ganglia
+'''''''''''''''''''''''''''
+
+Installing and configuring Ganglia itself is beyond the scope of this document;
+see the Ganglia homepage at `http://ganglia.info/ <http://ganglia.info/>`_.
+
+Two things are needed to publish to Ganglia. First, route some metrics there,
+since nothing goes to Ganglia by default:
+
+.. code-block:: condor-config
+
+      use FEATURE: METRICD
+      # send every metric to both backends
+      METRICD_DEFAULT_EXPORT_METRIC =
+
+Second, make sure *condor_metricd* can reach Ganglia. It is simplest to run it
+on the same machine as Ganglia's *gmetad*. If it runs elsewhere, set
+:macro:`GANGLIA_GSTAT_COMMAND` so it can get the list of monitored hosts from
+the master *gmond*.
+
+By default, metrics are only propagated for hosts Ganglia already monitors. Set
+:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to monitor a pool Ganglia
+does not otherwise know about, or a pool where only some hosts are monitored.
+The default Ganglia graphs will then be absent for those hosts, but the
+HTCondor metrics will appear.
+
+If no metric is routed to Ganglia, the backend is never initialized and none of
+the ``GANGLIA_*`` variables have any effect — including
+:macro:`GANGLIA_LIB`. *condor_metricd* records which backends it activated in
+its log at startup::
+
+      Ganglia backend is active
+      Prometheus backend is active
+
+Reducing the Volume of Data
+'''''''''''''''''''''''''''
+
+On a large pool, three variables control how much work is done and how much
+data is produced:
+
+- :macro:`METRICD_PER_EXECUTE_NODE_METRICS` set to ``False`` stops publishing
+  per-execute-node metrics, which are usually the least interesting and by far
+  the most numerous. Pool-wide aggregates are unaffected.
+- :macro:`METRICD_REQUIREMENTS` restricts which ClassAds are considered at all.
+  Be aware that aggregates will no longer cover the whole pool if this excludes
+  ads that would have contributed.
+- :macro:`METRICD_INTERVAL` controls how often the whole cycle runs.
+
+:macro:`METRICD_WANT_PROJECTION`, on by default, already limits the collector
+query to just the attributes the metric definitions reference.
 
 Absent ClassAds
 ---------------
