@@ -63,7 +63,7 @@ ReliSock *sns = 0;
 
 /* OsProc class implementation */
 
-OsProc::OsProc( ClassAd* ad ) : howCode(-1), cgroupActive(false)
+OsProc::OsProc( ClassAd* ad ) : howCode(-1)
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
@@ -720,9 +720,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	dprintf(D_ALWAYS,"Create_Process succeeded, pid=%d\n",JobPid);
 
-	if (family_info->cgroup_active) {
-		this->cgroupActive = true;
-	}
 	condor_gettimestamp( job_start_time );
 
 	return 1;
@@ -1015,10 +1012,6 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 			ad->Assign( ATTR_JOB_CORE_DUMPED, true );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
-
-	if (cgroupActive) {
-		ad->Assign(ATTR_CGROUP_ENFORCED, true );
-	} 
 	return UserProc::PublishUpdateAd( ad );
 }
 

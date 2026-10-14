@@ -23,7 +23,13 @@
 - Docker universe jobs now have :ad-attr:`DockerImageHash` recorded
   in the job ad for provenance reasons.
   :jira:`974`
-  
+
+- The *condor_starter* now advertises :ad-attr:`HasCgroup` as ``True``
+  when jobs on that execution point will be placed in a per-job cgroup.
+  The ``CgroupEnforced`` attribute, which the *condor_startd*
+  advertised in the slot ad of a running job, has been removed.
+  :jira:`3995`
+
 *** 26.2.0 bugs
 
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``

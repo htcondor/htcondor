@@ -73,10 +73,6 @@ Machine ClassAd Attributes
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
 
-:classad-attribute-def:`CgroupEnforced`
-    If a job is running inside a per-job cgroup, this boolean attribute
-    is ``True``.
-
 :classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
     Currently, this only applies to partitionable slots.
@@ -234,6 +230,10 @@ Machine ClassAd Attributes
     uniformly-mounted, networked file systems usually via NFS or AFS.
     This is useful for Vanilla universe jobs which require remote file
     access.
+
+:classad-attribute-def:`HasCgroup`
+    A boolean attribute that is ``True`` if jobs run on this slot will
+    be placed in a per-job cgroup, and ``Undefined`` otherwise.
 
 :classad-attribute-def:`HasContainer`
     A boolean value set to ``True`` if the machine is capable of

@@ -787,10 +787,6 @@
   bindings.
   :jira:`3553`
 
-- When cgroups are active, *condor_startds* now advertise
-  :ad-attr:`CgroupEnforced` to be true.
-  :jira:`3555`
-
 - Enabling/disabling AP users now requires ADMINISTRATOR authorization.
   Previously, WRITE with queue superuser authorization was required.
   :jira:`3550`
