@@ -6269,6 +6269,13 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 		bool do_transforms = true;
 		bool check_requirements = true;
 
+		// Late materialization sets a non-idle JobStatus directly into the new proc ad
+		// rather than deferring it to InitialJobStatus (see SetAttribute), so a status
+		// that the proc ad already has in this transaction must not be replaced by the default.
+		// Look it up now, before the ad is chained to the cluster ad or assigned a status below.
+		int own_status = JOB_STATUS_IDLE;
+		bool has_own_status = JobQueueBase::IsJobId(jid) && ad.LookupInteger(ATTR_JOB_STATUS, own_status);
+
 		ClassAd fakeProcAd; // in case we need a fake proc to apply a transform to the clusterad
 		ClassAd * procAd = nullptr; // reall or fake proc ad to pass to transforms
 		classad::References tmpAttrs, *xform_attrs = nullptr;
@@ -6333,8 +6340,10 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			}
 		} else {
 			// job ads, make sure that the ad has a status
-			initial_status = JOB_STATUS_IDLE;
-			procAd->LookupInteger(ATTR_INITIAL_JOB_STATUS, initial_status);
+			initial_status = own_status;
+			if ( ! has_own_status) {
+				procAd->LookupInteger(ATTR_INITIAL_JOB_STATUS, initial_status);
+			}
 			procAd->Assign(ATTR_JOB_STATUS, initial_status);
 		}
 
@@ -6400,6 +6409,10 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 		// set a transaction trigger to do some processing after commit transaction.
 		if (scheduler.finalizePreparingTasksForNewJobInTransaction(jid, ad, has_spooling_hold)) {
 			SetSecureAttributeInt(jid, ATTR_JOB_STATUS, JOB_STATUS_PREPARING);
+			if (has_own_status) {
+				// remember the status we are replacing, so that leaving the Preparing state restores it
+				SetSecureAttributeInt(jid, ATTR_INITIAL_JOB_STATUS, own_status);
+			}
 			JobQueue->SetTransactionTriggers(catPreparingState);
 			if (JobQueueBase::IsClusterId(jid)) { clustersPreparing.insert(jid.cluster); }
 		} else {
@@ -6408,7 +6421,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 			// preparing state show through.  otherwise we need to set the initial job status
 			// since we prevented it from being set when submit called SetAttribute.
 			// and anyone watching the job queue needs to see the SetAttribute
-			if (JobQueueBase::IsJobId(jid) && ! clustersPreparing.count(jid.cluster)) {
+			if (JobQueueBase::IsJobId(jid) && ! clustersPreparing.count(jid.cluster) && ! has_own_status) {
 				initial_status = JOB_STATUS_IDLE;
 				GetAttributeInt(jid, ATTR_INITIAL_JOB_STATUS, &initial_status);
 				SetSecureAttributeInt(jid, ATTR_JOB_STATUS, initial_status);
