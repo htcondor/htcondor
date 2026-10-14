@@ -22474,6 +22474,13 @@ Scheduler::post_transform_adjustments(
 	bool /* is_late_mat */,
 	bool /* project_is_cluster_attr */
 ) {
+	// adjustments is cluster only, but we will adjust the proc0 ad
+	// because this called along with the transforms which do not
+	// transform the cluster ad except for factory jobs.
+	// SetAttribute will make sure that attributes written to proc0
+	// that are cluster-only will end up in the cluster ad.
+	if (jid.proc > 0) return 0;
+
 	// Combine ATTR_COMMON_INPUT_FILES (if any) with
 	// ATTR_COMMON_INPUT_CATALOGS (if any) to produce ATTR_REQUESTED_CATALOGS,
 	// a ClassAd list of catalog (simple) name strings.
@@ -22506,14 +22513,26 @@ Scheduler::post_transform_adjustments(
 	}
 
 	if( requested_catalogs.size() > 0 ) {
+
 		auto rc = std::make_unique<classad::ExprList>();
 		auto rcid = std::make_unique<classad::ExprList>();
+
+		// computeCatalogID uses GlobalJobId to get the schedd name
+		// but the cluster ad doesn't have a GlobalJobId, so we will fake
+		// enough of a GlobalJobId to satisfy computeCatalogId for it.
+		// TODO: store in the cluster ad an attribute that computeCatalogId
+		// can use instead of the GLOBAL_JOB_AD for the schedd identifier.
+		// then we can remove this code.
+		bool has_global_job_id = ad->Lookup(ATTR_GLOBAL_JOB_ID);
+		if ( ! has_global_job_id) {
+			std::string global_id = std::string(Name) + "#";
+			ad->Assign(ATTR_GLOBAL_JOB_ID, global_id);
+		}
 
 		std::string empty;
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
-
 
 			auto catalogID = computeCatalogID( * ad, catalog );
 			if( ! catalogID ) {
@@ -22528,6 +22547,9 @@ Scheduler::post_transform_adjustments(
 			rcid->push_back( m );
 		}
 
+		// remove the fake GlobalJobId we put into the cluster ad
+		if ( ! has_global_job_id) { ad->Delete(ATTR_GLOBAL_JOB_ID); }
+
 		// This should be reimplemented to do what the job transforms do
 		// (turn on dirty tracking and call set_dirty_attributes()), only
 		// with set_dirty_attributes() refactored so that it can be used
@@ -22536,9 +22558,8 @@ Scheduler::post_transform_adjustments(
 		// SetAttributeExpr() unparses the expression and does not take
 		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get(),
-			SetAttribute_SubmitTransform
-		);
+			jid, ATTR_REQUESTED_CATALOGS, rc.get(),
+			SetAttribute_SubmitTransform);
 		if( rv != 0 ) {
 			if( errorStack ) {
 				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
@@ -22549,9 +22570,8 @@ Scheduler::post_transform_adjustments(
 		}
 
 		rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
-			SetAttribute_SubmitTransform
-		);
+			jid, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
+			SetAttribute_SubmitTransform);
 		if( rv != 0 ) {
 			if( errorStack ) {
 				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
@@ -22559,6 +22579,16 @@ Scheduler::post_transform_adjustments(
 					"common file transfer: %d.", rv );
 			}
 			return -1;
+		}
+
+		// when we add/update an ad here, SetAttribute will change the transaction
+		// but not the temporary cluster ad we use for transforms, so we need to insert
+		// attributes into that ad explicitly for the benefit of the next ad that gets
+		// transformed.
+		ClassAd * clusterAd = ad->GetChainedParentAd();
+		if (clusterAd) {
+			clusterAd->Insert(ATTR_REQUESTED_CATALOGS, rc.release());
+			clusterAd->Insert(ATTR_REQUESTED_CATALOG_IDS, rcid.release());
 		}
 	}
 
