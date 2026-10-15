@@ -430,7 +430,9 @@ Condor_Auth_SSPI::unwrap(const char *   input,
                              char*&   output, 
                              int&     output_len)
 {
-	if ( !input || !input_len ) {
+	// input_len comes from the peer; too short to hold the trailer is an
+	// error, not an invariant violation
+	if ( !input || input_len <= 16 ) {
 		return FALSE;
 	}
 
@@ -440,7 +442,6 @@ Condor_Auth_SSPI::unwrap(const char *   input,
 
 	const void* pvSealedMessage = input;
 	DWORD cbSealedMessage = input_len;
-	ASSERT(input_len > 16);
 	DWORD cbMessage = input_len - 16;	// 16 should not be hard-coded!
 	output_len = input_len - 16;
 	void** ppvMessage = (void**)&output;
