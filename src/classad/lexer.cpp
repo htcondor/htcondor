@@ -524,11 +524,24 @@ tokenizeString(char delim)
 {
 	bool stringComplete = false;
 
+	wind();
 	if ( oldClassAdLex ) {
-		return tokenizeStringOld(delim);
+		if (ch == delim) {
+			// Second quote, see if this is a triple-quoted string
+			wind();
+			if (ch == delim) {
+				// Triple-quoted string, parse under new-style rules
+				wind();
+			} else {
+				// Empty string, mark it as complete
+				stringComplete = true;
+			}
+		} else {
+			// Plain old-style string
+			return tokenizeStringOld(delim);
+		}
 	}
 	// need to mark() after the quote
-	wind ();
 	mark ();
 	
 	while (!stringComplete) {
@@ -602,8 +615,7 @@ tokenizeStringOld(char delim)
 {
 	bool stringComplete = false;
 
-	// need to mark() after the quote
-	wind ();
+	// need to mark() after the quote (assume caller wound past the opening quote)
 	mark ();
 
 	while (!stringComplete) {
