@@ -943,7 +943,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		int proc_id = -1;
 		ClassAd *ad = nullptr;
 		int terrno = 0;
-		bool delete_ad = false;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -971,11 +970,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		if( rval >= 0 ) {
 			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
-		// If we called GetJobAd() with the third bool argument set
-		// to True (expandedAd), it does a deep copy of the ad in the
-		// queue in order to expand the $$() attributes.  So we must
-		// delete it.
-		if (delete_ad) delete ad;
 		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
