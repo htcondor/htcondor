@@ -5506,17 +5506,9 @@ SetAttribute(const JOB_ID_KEY & jid, const char *attr_name,
 			// we will set the initial state in CheckTransaction
 			return 0;
 		} else if (new_status == JOB_STATUS_HELD || new_status == JOB_STATUS_BLOCKED) {
-			JobQueueJob * clusterAd = nullptr;
-			if (JobQueue->Lookup({cluster_id, CLUSTERID_qkey2}, clusterAd) &&
-				clusterAd && clusterAd->Status() != JOB_STATUS_PREPARING) {
-				// if cluster ad exists and the cluster is not still preparing,
-				// this is late materialization, so no need to defer setting the status
-			} else {
-				// job does not yet exist, and cluster is either preparing or does not yet exist
-				// so we defer setting the status of the proc ad and store it as InitialJobStatus instead.
-				attr_name = ATTR_INITIAL_JOB_STATUS;
-				// for now, we allow the hold code to be set into the job ad.
-			}
+			// set InitialJobStatus, which CheckTransaction or leavePreparingState
+			// will use to set the job status.
+			attr_name = ATTR_INITIAL_JOB_STATUS;
 		}
 	}
 	else if (attr_id == idATTR_JOB_STATUS && job) {
