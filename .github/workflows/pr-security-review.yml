@@ -31,7 +31,10 @@ name: PR Security Review (opencode + NRP LLM)
 #     job checks again after fetching the diff, so the diff reviewed is the
 #     one for that commit.
 #   - The PR's code is NEVER checked out or executed. We check out the
-#     trusted base commit, fetch the PR diff as plain data, and run opencode
+#     default branch commit this workflow runs from (never anything named by
+#     the PR, not even its base: a PR can target any branch, including the
+#     llm-security-review/* branches that hold PR heads), fetch the PR diff
+#     as plain data, and run opencode
 #     with only read-only tools (read/grep/glob/list) confined to the
 #     workspace. No shell, no edits, no web access.
 #   - The GitHub token is never exposed to the opencode step and is not
@@ -76,7 +79,6 @@ jobs:
       ok: ${{ steps.verify.outputs.ok }}
       pr_number: ${{ steps.verify.outputs.pr_number }}
       head_sha: ${{ steps.verify.outputs.head_sha }}
-      base_sha: ${{ steps.verify.outputs.base_sha }}
     steps:
       - name: Download and verify PR info
         id: verify
@@ -100,9 +102,9 @@ jobs:
             exit 1
           fi
 
-          IFS=$'\t' read -r head_sha base_sha state draft < <(
+          IFS=$'\t' read -r head_sha state draft < <(
             gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" \
-              --jq '[.head.sha, .base.sha, .state, (.draft|tostring)] | @tsv')
+              --jq '[.head.sha, .state, (.draft|tostring)] | @tsv')
 
           if [ "$head_sha" != "$TRIGGER_HEAD_SHA" ]; then
             echo "PR #$pr head is $head_sha, but the trigger ran on $TRIGGER_HEAD_SHA."
@@ -116,12 +118,11 @@ jobs:
             exit 0
           fi
 
-          echo "Verified PR #$pr at $head_sha (base $base_sha)"
+          echo "Verified PR #$pr at $head_sha"
           {
             echo "ok=true"
             echo "pr_number=$pr"
             echo "head_sha=$head_sha"
-            echo "base_sha=$base_sha"
           } >> "$GITHUB_OUTPUT"
 
   review:
@@ -145,27 +146,18 @@ jobs:
       # Cap on diff bytes handed to the model
       MAX_DIFF_BYTES: 300000
     steps:
-      - name: Check out base commit (trusted code only)
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.verify.outputs.base_sha }}
-          persist-credentials: false
-
-      # The PR's base branch (e.g. a release branch) may not contain the
-      # review prompt, so always take it from the default branch, which is
-      # where this workflow itself runs from.
-      - name: Fetch review prompt from default branch
+      # The default branch, not the PR's base: the base is chosen by the PR
+      # author and may be a branch holding untrusted code. For PRs against a
+      # release branch this is only approximate context, but release
+      # branches are merged forward into the default branch.
+      - name: Check out default branch (trusted code only)
         uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
-          path: .review-tooling
-          sparse-checkout: .github/opencode
           persist-credentials: false
 
       - name: Stage review prompt
-        run: |
-          cp .review-tooling/.github/opencode/security-review-prompt.md "$RUNNER_TEMP/"
-          rm -rf .review-tooling
+        run: cp .github/opencode/security-review-prompt.md "$RUNNER_TEMP/"
 
       - name: Fetch PR diff as data
         id: diff
