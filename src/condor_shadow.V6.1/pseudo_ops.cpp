@@ -2285,8 +2285,9 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 
 		int required_version = 2;
+		bool cif_in_catalog = false; // catalog has ref to CommonInputFiles already
 		std::map<std::string, std::string> internalToSimpleNameMap;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & internalToSimpleNameMap );
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, cif_in_catalog, & internalToSimpleNameMap );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
@@ -2300,7 +2301,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & internalToSimpleNameMap )) {
+		if( ! cif_in_catalog && ! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & internalToSimpleNameMap )) {
 			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -2428,11 +2429,12 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 std::optional<ListOfCatalogs>
 UniShadow::computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
+	bool & cif_in_catalog, // catalog has an entry for CommonInputFiles
 	std::map<std::string, std::string> * internalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, internalToSimpleNameMap );
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, cif_in_catalog, startdAddress, internalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }
