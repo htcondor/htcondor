@@ -128,8 +128,9 @@ long long store_cred_blob(const char *user, int mode, const unsigned char * cred
 int store_cred_handler(int i, Stream *s);
 // command handler for CREDD_GET_PASSWD in Credd and Shadow
 int cred_get_password_handler(int i, Stream *s);
-// command handler for CREDD_GET_CRED in Shadow
-int cred_get_cred_handler(int i, Stream *s);
+// command handler for CREDD_GET_CRED in Shadow.  job_owner is the bare
+// name of the job's owner, the only user whose credential will be sent
+int cred_get_cred_handler(int i, Stream *s, const char *job_owner);
 // check whether credfile has matching scopes and audience to those in requestAd
 int cred_matches(const std::string & credfile, const classad::ClassAd * requestAd);
 
