@@ -1533,6 +1533,10 @@ substituted with the *prefix string* assigned for the GPU.
     For AMD devices, the integer major version of the HIP (ROCm) library
     used to discover the GPU.
 
+:classad-attribute-def:`<name>Vendor`
+    For CUDA and HIP devices, a string naming the manufacturer of the
+    GPU, either ``"NVIDIA"`` or ``"AMD"``.
+
 :classad-attribute-def:`DeviceGPUsAverageUsage`
     The number of seconds executed by GPUs assigned to this slot,
     divided by the number of seconds since the startd started up.
