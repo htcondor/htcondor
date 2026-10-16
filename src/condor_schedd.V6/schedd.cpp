@@ -10249,7 +10249,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// Re-enable the job for matching in the PrioRec array
 		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
 		auto * rec = findInPrioRec(match->jid);
-		if (rec) rec->matched = false;
+		if (rec) {
+			rec->matched = false;
+		} else if (JobQueueBase::IsJobId(match->jid)) {
+			// The PrioRec array was rebuilt while this claim request was
+			// in flight, and the rebuild left the job out because it had
+			// a match record.  Nothing else will put it back until some
+			// unrelated job change dirties the array (or the periodic
+			// twenty-minute rebuild), so the job would sit idle and
+			// unmatched.  Force a rebuild instead.
+			DirtyPrioRecArray();
+		}
 		scheduler.DelMrec(match);
 		return;
 	}
