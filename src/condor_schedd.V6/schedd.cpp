@@ -6247,6 +6247,24 @@ Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 		return true;
 	}
 
+		// A job that got as far as COMPLETED already has its terminate event
+		// in the user log: the schedd only moves a job there once it has
+		// reaped the shadow, and the shadow writes that event before it
+		// exits.  Removing such a job (a leave_in_queue job the user is
+		// cleaning up, or one the schedd has not destroyed yet when a tool
+		// reacting to the terminate event condor_rm's it) is fine, but giving
+		// it a second terminal event is not -- it confuses any user log
+		// consumer that expects one per proc.  Remove it quietly instead.
+	int last_status = 0;
+	if( GetAttributeInt(job->jid.cluster, job->jid.proc,
+	                    ATTR_LAST_JOB_STATUS, &last_status) >= 0 &&
+	    last_status == COMPLETED ) {
+		dprintf( D_FULLDEBUG, "Job %d.%d was removed after it completed; "
+		         "not writing an abort event over its terminate event\n",
+		         job->jid.cluster, job->jid.proc );
+		return true;
+	}
+
 	TemporaryPrivSentry sentry;
 	init_user_ids_from_ad(*job->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job);
@@ -7948,8 +7966,27 @@ Scheduler::actOnJobs(int, Stream* s)
 		switch( action ) {
 		case JA_REMOVE_JOBS:
 		case JA_TRANSFER_AND_REMOVE_JOBS:
-				// Don't remove removed jobs
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, REMOVED );
+				// Don't remove removed jobs.  Also don't remove a job whose
+				// shadow is in the middle of terminating it: the shadow
+				// updates the queue (setting TerminationPending) and then
+				// writes the terminate event to the user log, so a tool that
+				// reacts to that event -- DAGMan condor_rm's its node jobs as
+				// it exits -- can otherwise remove a job that is already done
+				// and give it a second terminal event.  Nothing parks a job in
+				// these states, so it always leaves the queue on its own
+				// shortly and this cannot strand one.  Note that COMPLETED is
+				// deliberately NOT included: leave_in_queue parks jobs there
+				// indefinitely, still carrying TerminationPending (nothing
+				// ever clears it), and those must stay removable.  A rm that
+				// lands once the job is COMPLETED is handled in
+				// WriteAbortToUserLog() instead, by leaving out the duplicate
+				// event rather than refusing the remove.
+			snprintf( buf, sizeof(buf),
+			          "(ProcId is undefined || (%s!=%d && !(%s=?=true && (%s==%d || %s==%d)))) && (",
+			          ATTR_JOB_STATUS, REMOVED,
+			          ATTR_TERMINATION_PENDING,
+			          ATTR_JOB_STATUS, RUNNING,
+			          ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
@@ -8179,6 +8216,18 @@ Scheduler::actOnJobs(int, Stream* s)
 				results.record( tmp_id, AR_ALREADY_DONE );
 				jobs[i].cluster = -1;
 				continue;
+			}
+				// Same guard as the constraint clause above, for jobs
+				// named by id (condor_rm 123.0), which never see that
+				// clause: don't remove a job the shadow is terminating.
+			if( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
+				bool termination_pending = false;
+				job_ad->LookupBool(ATTR_TERMINATION_PENDING, termination_pending);
+				if( termination_pending ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					jobs[i].cluster = -1;
+					continue;
+				}
 			}
 			break;
 		case JA_REMOVE_X_JOBS:
@@ -10249,7 +10298,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// Re-enable the job for matching in the PrioRec array
 		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
 		auto * rec = findInPrioRec(match->jid);
-		if (rec) rec->matched = false;
+		if (rec) {
+			rec->matched = false;
+		} else if (JobQueueBase::IsJobId(match->jid)) {
+			// The PrioRec array was rebuilt while this claim request was
+			// in flight, and the rebuild left the job out because it had
+			// a match record.  Nothing else will put it back until some
+			// unrelated job change dirties the array (or the periodic
+			// twenty-minute rebuild), so the job would sit idle and
+			// unmatched.  Force a rebuild instead.
+			DirtyPrioRecArray();
+		}
 		scheduler.DelMrec(match);
 		return;
 	}

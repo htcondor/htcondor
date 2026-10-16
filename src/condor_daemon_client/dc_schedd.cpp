@@ -1659,6 +1659,9 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d not running to be continued",
 					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
+			formatstr( buf, "Job %d.%d is already terminating",
+					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
 			formatstr( buf, "Invalid result for job %d.%d",
