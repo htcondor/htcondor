@@ -5,7 +5,7 @@
 This is the configuration variable reference for *condor_metricd*. For an
 introduction to what *condor_metricd* does, how to enable it, and how to write
 the metric definition files it reads, see
-:ref:`admin-manual/cm-configuration:The condor_metricd`.
+:ref:`admin-manual/monitoring:Monitor Pool Metrics with Prometheus and Ganglia`.
 
 The variables are grouped the way the daemon itself is structured. The
 ``METRICD_*`` variables configure the engine, which queries the
@@ -147,7 +147,7 @@ Prometheus Backend Configuration Variables
 ------------------------------------------
 
 These variables control how metrics are presented to Prometheus. See
-:ref:`admin-manual/cm-configuration:Exposing Metrics to Prometheus` for the
+:ref:`admin-manual/monitoring:Exposing Metrics to Prometheus` for the
 corresponding setup instructions.
 
 :macro-def:`PROMETHEUS_METRICS_FILE[MetricD]`
@@ -193,7 +193,7 @@ corresponding setup instructions.
     same-named labels from this variable. The label naming rules, the
     value-evaluation rules and the ``MetricMachine`` / ``MetricPool``
     pseudo-attributes are all described under ``PrometheusLabels`` in
-    :ref:`admin-manual/cm-configuration:Metric Definition Keywords`.
+    :ref:`admin-manual/monitoring:Metric Definition Keywords`.
 
 :macro-def:`PROMETHEUS_HTTP_PORT[MetricD]`
     The TCP port on which *condor_metricd* serves the ``/metrics`` endpoint for
@@ -235,7 +235,7 @@ These variables control how metrics are presented to Ganglia. They take effect
 only if at least one metric definition is actually routed to the Ganglia
 backend. Since :macro:`METRICD_DEFAULT_EXPORT_METRIC` defaults to
 ``prometheus``, that is not the case out of the box; see
-:ref:`admin-manual/cm-configuration:Exposing Metrics to Ganglia`.
+:ref:`admin-manual/monitoring:Exposing Metrics to Ganglia`.
 
 :macro-def:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS[MetricD]`
     A boolean. When ``True``, data is sent to Ganglia for hosts it is not
