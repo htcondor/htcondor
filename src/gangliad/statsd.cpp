@@ -1322,10 +1322,22 @@ StatsD::getCollectorsToMonitor()
 	if (monitor_collector.empty()) {
 		return false;
 	}
-	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
-	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	// The historical spelling of these three knobs has a typo in it.  Honor it
+	// when it is explicitly set, so existing configurations keep working, but
+	// fall back to the correctly spelled name, which is what is documented.
+	// Test param()'s return value rather than whether the string is empty:
+	// param() assigns the default argument when the knob is undefined, so the
+	// string is never empty here and an emptiness test would never fire.
+	if (!param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME)) {
+		param(collector_name_attr,"MONITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	}
+	if (!param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST)) {
+		param(collector_addr_attr,"MONITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	}
 	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
-	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	if (!param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD))) {
+		param(collector_ad_type,"MONITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	}
 	AdTypes type = StringToAdType(collector_ad_type.c_str());
 	if (type == NO_AD) {
 		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");

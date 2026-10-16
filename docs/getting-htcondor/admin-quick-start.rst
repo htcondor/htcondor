@@ -203,8 +203,8 @@ on machines with GPUs -- using the options described in
   :doc:`../users-manual/self-checkpointing-applications`.
 * Understanding :doc:`../classads/classad-mechanism` is essential for
   many administrative tasks.
-* The rest of the :doc:`../admin-manual/index`, particularly the section on
-  :ref:`admin-manual/cm-configuration:Monitoring with Ganglia, Elasticsearch, etc.`.
+* The rest of the :doc:`../admin-manual/index`, particularly
+  :doc:`../admin-manual/monitoring`.
 * Slides from
   `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_
   -- our annual conference -- include a number of tutorials and talks on
