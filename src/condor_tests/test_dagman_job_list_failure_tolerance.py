@@ -412,7 +412,11 @@ def parked_job(default_condor, test_dir):
     log = test_dir / "parked.log"
     handle = default_condor.submit(
         {
-            "executable": "/bin/true",
+            # Not /bin/true: macOS only has /usr/bin/true, and Debian without
+            # merged /usr only has /bin/true. /bin/sleep is everywhere.
+            # TODO: Have a first class ornithology way to do this!
+            "executable": "/bin/sleep",
+            "arguments": "0",
             "leave_in_queue": "true",
             "log": log.as_posix(),
         },
