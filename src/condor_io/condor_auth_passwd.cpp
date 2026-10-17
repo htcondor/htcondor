@@ -162,12 +162,15 @@ sqlite3* acquireTokensDbHandle()
 		return nullptr;
 	}
 
-		// TODO consider adding a short busy wait
 	rc = sqlite3_open_v2(cfg_db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", cfg_db_file.c_str(), sqlite3_errmsg(db));
 		return nullptr;
 	}
+	// Another daemon (the placementd) may hold a write lock briefly; wait
+	// for it instead of failing token validation or minting with
+	// SQLITE_BUSY.  Short, since this runs on the authentication path.
+	sqlite3_busy_timeout(db, 2000);
 
 	if (cfg_db_file != tokens_db_file) {
 		// First time opening this database file. Check that our tables exist.

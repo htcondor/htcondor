@@ -134,6 +134,9 @@ PlacementDaemon::Init()
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
 	}
+	// Every daemon's auth layer opens this file too; wait for its locks
+	// rather than failing.
+	sqlite3_busy_timeout(m_db, 5000);
 	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (requester_id TEXT, foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER, token_project TEXT)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
@@ -204,7 +207,7 @@ PlacementDaemon::invalidate_ad()
 {
 	ClassAd query_ad;
 	SetMyTypeName(query_ad, QUERY_ADTYPE);
-	query_ad.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE);
+	query_ad.Assign(ATTR_TARGET_TYPE, "PlacementD");
 
 	std::string line;
 	formatstr(line, "TARGET.%s == \"%s\"", ATTR_NAME, m_name);
@@ -712,7 +715,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		const char* rec_user = (const char*)sqlite3_column_text(stmt, 0);
-		time_t rec_exp = sqlite3_column_int(stmt, 1);
+		time_t rec_exp = (time_t)sqlite3_column_int64(stmt, 1);
 		const char* rec_sub = (const char*)sqlite3_column_text(stmt, 2);
 			// TODO add project?
 		auto reply_it = reply_users.find(rec_user);
@@ -841,7 +844,7 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 		token_ad.Assign("ApUserId", (const char*)sqlite3_column_text(stmt, 2));
 		token_ad.Assign("Authorizations", (const char*)sqlite3_column_text(stmt, 3));
 		token_ad.Assign("TokenId", (const char*)sqlite3_column_text(stmt, 4));
-		token_ad.Assign("TokenExpiration", sqlite3_column_int(stmt, 5));
+		token_ad.Assign("TokenExpiration", (long long)sqlite3_column_int64(stmt, 5));
 		str = (const char*)sqlite3_column_text(stmt, 6);
 		if (str && str[0]) {
 			token_ad.Assign("Project", str);
