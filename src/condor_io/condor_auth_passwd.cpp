@@ -998,6 +998,14 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 
 	// Setup the policy ad
 	if (capability && !param_boolean("SEC_ACCEPT_CAPABILITY_TOKENS", false)) {
+		// A capability authorizes only what it lists.  As a plain token
+		// with no limit it would carry its subject's full authority, so a
+		// capability that lists nothing is refused instead.
+		if (authz.empty()) {
+			dprintf(D_SECURITY, "Capability token %s lists no authorizations and capabilities are not accepted; refusing it\n",
+				jti.c_str());
+			return false;
+		}
 		dprintf(D_SECURITY, "Treating capability as plain token due to configuration\n");
 		capability = false;
 	}
@@ -1801,8 +1809,11 @@ Condor_Auth_Passwd::lookup_token([[maybe_unused]] const std::string& jti, [[mayb
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		found = true;
-		subject = (const char*)sqlite3_column_text(stmt, 0);
-		scope = (const char*)sqlite3_column_text(stmt, 1);
+		// Either column may be NULL.
+		const char *sub_col = (const char*)sqlite3_column_text(stmt, 0);
+		const char *scope_col = (const char*)sqlite3_column_text(stmt, 1);
+		subject = sub_col ? sub_col : "";
+		scope = scope_col ? scope_col : "";
 	}
 	if (rc != SQLITE_DONE) {
 		goto db_done;
@@ -1821,7 +1832,11 @@ Condor_Auth_Passwd::lookup_token([[maybe_unused]] const std::string& jti, [[mayb
 	}
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
-		extra_claims[(const char*)sqlite3_column_text(stmt, 0)] = (const char*)sqlite3_column_text(stmt, 1);
+		const char *claim = (const char*)sqlite3_column_text(stmt, 0);
+		const char *value = (const char*)sqlite3_column_text(stmt, 1);
+		if (claim && value) {
+			extra_claims[claim] = value;
+		}
 	}
 	if (rc != SQLITE_DONE) {
 		goto db_done;
