@@ -589,7 +589,12 @@ void checkJDL(const BaseDagCommand* cmd, const std::string& jdl, const JDL src,
 	ssi.begin(jid, true);
 
 	bool iter_selected = true;
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int taskid = 0;
+	while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, taskid, iter_selected)) > 0) {
+#else
 	while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
+#endif
 		ClassAd* proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
 		if ( ! proc_ad) {
 			CondorError* err = submitHash.error_stack();

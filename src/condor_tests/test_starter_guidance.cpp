@@ -357,7 +357,11 @@ bool Starter::Init(JobInfoCommunicator*, char const*, bool, int, int, int) { EXC
 void Starter::StarterExit(int code) { EXCEPT("MOCK"); exit(code); }
 int Starter::FinalCleanup(int code) { EXCEPT("MOCK"); return code; }
 void Starter::Config() { EXCEPT("MOCK"); }
-int Starter::SpawnJob() { EXCEPT("MOCK"); return -1; }
+int Starter::SpawnJob(UserProc * /* job = nullptr */) { EXCEPT("MOCK"); return -1; }
+bool Starter::PrepareNextTask(pid_t, int) { EXCEPT("MOCK"); return false; }
+UserProc * Starter::AllocateJob(int) { EXCEPT("MOCK"); return nullptr; }
+
+
 void Starter::WriteRecoveryFile(classad::ClassAd*) { EXCEPT("MOCK"); }
 void Starter::RemoveRecoveryFile() { EXCEPT("MOCK"); }
 
