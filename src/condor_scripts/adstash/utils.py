@@ -161,7 +161,7 @@ def set_up_logging(args):
                 sys.exit(1)
 
         filehandler = logging.handlers.RotatingFileHandler(
-            args.log_file, maxBytes=100000
+            args.log_file, maxBytes=100000, backupCount=1
         )
         filehandler.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
         logger.addHandler(filehandler)
