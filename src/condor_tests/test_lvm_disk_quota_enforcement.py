@@ -66,13 +66,13 @@ def overfill_job_hash(thin_provisioning):
         request_disk_mb = 512
         overfill_mb = 600
     return {
-        # oflag=direct on the dd fallback keeps the write out of the LV's own
-        # page cache, but the loop device backing the LV isn't opened with
-        # direct-io, so a buffered write can still pile onto the job's
-        # cgroup memory limit -- request_memory is sized well above
-        # overfill_mb (see OVERFILL_JOB_REQUEST_MEMORY_MB) as the real
-        # protection against that race.
-        "shell": f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} oflag=direct); sleep 60",
+        # The dd fallback's buffered writes can pile onto the job's cgroup
+        # memory limit before they reach the LV -- request_memory is sized
+        # well above overfill_mb (see OVERFILL_JOB_REQUEST_MEMORY_MB) as the
+        # protection against that race. Don't use oflag=direct: uutils dd
+        # (the default dd on Ubuntu 26.04+) issues misaligned O_DIRECT
+        # writes, which fail without writing anything.
+        "shell": f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} conv=fsync); sleep 60",
         "universe": "vanilla",
         "output": "output",
         "error": "error",
