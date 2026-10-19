@@ -367,7 +367,8 @@ bool Librarian::updateStatusData(Status status) {
  *   - If the path has a rotation timestamp AND its inode (Unix) or hash (Windows)
  *     matches the currently-active ArchiveFile, a rotation is recorded:
  *       * The active entry is re-keyed to the rotated path and its rotation_time set.
- *       * A fresh ArchiveFile is created for the original (now active) path.
+ *       * A fresh ArchiveFile is created for the original (now active) path,
+ *         if that path is also in archive_files.
  *   - Otherwise the path is treated as a brand-new file.
  *
  * All new entries are inserted into the database via writeFileInfo().
@@ -418,14 +419,23 @@ void Librarian::reconcileArchiveFiles(const std::vector<std::string>& archive_fi
 
             dbHandler_.updateFileInfo(m_archive_files[path]);
 
-            // Register the fresh active file.
-            auto newActive = makeArchiveFile(activePath);
-            if ( ! newActive) {
-                dprintf(D_ERROR, "reconcileArchiveFiles: failed to build ArchiveFile for '%s'\n",
-                        activePath.c_str());
+            // Register the fresh active file, but only if it was in this cycle's
+            // listing. update() judges disappearance against that same listing, so
+            // registering a file the schedd created after findHistoryFiles() ran
+            // would get it marked deleted in the DB moments later. If it wasn't
+            // listed, the next cycle picks it up as a new file.
+            if (std::ranges::find(archive_files, activePath) == archive_files.end()) {
+                dprintf(D_FULLDEBUG, "reconcileArchiveFiles: new active archive '%s' not yet "
+                        "present; registering it next cycle.\n", activePath.c_str());
             } else {
-                dbHandler_.writeFileInfo(*newActive);
-                m_archive_files[activePath] = std::move(*newActive);
+                auto newActive = makeArchiveFile(activePath);
+                if ( ! newActive) {
+                    dprintf(D_ERROR, "reconcileArchiveFiles: failed to build ArchiveFile for '%s'\n",
+                            activePath.c_str());
+                } else {
+                    dbHandler_.writeFileInfo(*newActive);
+                    m_archive_files[activePath] = std::move(*newActive);
+                }
             }
 
             dprintf(D_STATUS, "reconcileArchiveFiles: triggering WAL checkpoint after archive rotation.\n");
