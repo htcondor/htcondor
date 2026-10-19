@@ -74,8 +74,8 @@ def overfill_job_hash(thin_provisioning):
         # writes, which fail without writing anything.
         "shell": f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} conv=fsync); sleep 60",
         "universe": "vanilla",
-        "output": "output",
-        "error": "error",
+        "output": "overfill_output",
+        "error": "overfill_error",
         "log": "overfill_log",
         "request_cpus": "1",
         "request_memory": f"{OVERFILL_JOB_REQUEST_MEMORY_MB}m",
@@ -103,8 +103,8 @@ def underquota_job_hash():
     return {
         "shell": "(fallocate -l 8M smallfile.bin || dd if=/dev/zero of=smallfile.bin bs=1M count=8)",
         "universe": "vanilla",
-        "output": "output",
-        "error": "error",
+        "output": "underquota_output",
+        "error": "underquota_error",
         "log": "underquota_log",
         "request_cpus": "1",
         "request_memory": f"{JOB_REQUEST_MEMORY_MB}m",
