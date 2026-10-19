@@ -125,9 +125,21 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
+		// Only the job owner's credential is sent, and only if the job
+		// asked for it to be sent.
 	daemonCore->
 		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
-						  &cred_get_cred_handler,
+						  [this](int cmd, Stream *s) -> int {
+							  bool send_credential = false;
+							  if ( ! jobAd->EvaluateAttrBool(ATTR_JOB_SEND_CREDENTIAL, send_credential) || ! send_credential) {
+								  dprintf(D_ALWAYS, "Refusing CREDD_GET_CRED: job does not have %s=true\n",
+										  ATTR_JOB_SEND_CREDENTIAL);
+								  return TRUE;
+							  }
+							  std::string owner_buf;
+							  const char *owner = name_of_user(getJobOwner(), owner_buf);
+							  return cred_get_cred_handler(cmd, s, owner);
+						  },
 						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
 
