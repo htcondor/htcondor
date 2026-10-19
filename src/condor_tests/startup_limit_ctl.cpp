@@ -187,12 +187,16 @@ int main(int argc, char **argv)
         reply.LookupString(ATTR_STARTUP_LIMIT_UUID, uuid);
         std::cout << uuid << "\n";
     } else {
+        // The schedd sends each limit ad as its own message, followed by a
+        // "Last" ad.  Anything short of the "Last" ad is a failed query, not
+        // an empty result, so report it rather than exiting 0 with no output.
+        bool got_last = false;
         while (true) {
             ClassAd ad;
-            if (!getClassAd(sock, ad)) { break; }
+            if (!getClassAd(sock, ad) || !sock->end_of_message()) { break; }
             bool is_last = false;
             ad.LookupBool("Last", is_last);
-            if (is_last) { break; }
+            if (is_last) { got_last = true; break; }
             std::string ad_tag;
             ad.LookupString(ATTR_STARTUP_LIMIT_TAG, ad_tag);
             if (!tag.empty() && tag != ad_tag) { continue; }
@@ -208,7 +212,12 @@ int main(int argc, char **argv)
                 std::cout << ad_tag << " " << name_out << " " << skipped << " " << ignored << " " << allowed << "\n";
             }
         }
-        sock->end_of_message();
+        if (!got_last) {
+            std::cerr << "Failed to receive query reply from schedd\n";
+            sock->close();
+            delete sock;
+            return 1;
+        }
     }
 
     sock->close();

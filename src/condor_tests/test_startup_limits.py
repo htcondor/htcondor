@@ -63,23 +63,37 @@ def _create_limit(helper_path, schedd_address, *, tag, expr, count, window, expi
     return tag
 
 
-def _query_limit(helper_path, schedd_address, tag):
+def _query_limit(helper_path, schedd_address, tag, *, attempts=3, retry_delay=1):
+    """Query one startup limit, retrying failed queries.
+
+    A single query can fail on a loaded (especially Windows) test host even
+    though the limit is installed, so one failure is not fatal.
+    """
     cmd = [str(helper_path), "--query", "--schedd", schedd_address, "--tag", tag]
-    # Avoid capture_output (Python 3.7+); stay compatible with older runtimes.
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-    lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
-    if not lines:
-        raise RuntimeError("no startup limit data returned")
-    fields = lines[-1].split()
-    if len(fields) < 5:
-        raise RuntimeError(f"unexpected startup limit output: {lines[-1]}")
-    return {
-        "tag": fields[0],
-        "name": fields[1],
-        "skipped": int(fields[2]),
-        "ignored": int(fields[3]),
-        "allowed": int(fields[4]),
-    }
+    err = None
+    for attempt in range(attempts):
+        if attempt:
+            time.sleep(retry_delay)
+        # Avoid capture_output (Python 3.7+); stay compatible with older runtimes.
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=False)
+        if proc.returncode != 0:
+            err = f"startup_limit_ctl --query exited {proc.returncode}: {proc.stderr.strip()}"
+            continue
+        lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
+        if not lines:
+            err = f"no startup limit data returned for tag {tag}"
+            continue
+        fields = lines[-1].split()
+        if len(fields) < 5:
+            raise RuntimeError(f"unexpected startup limit output: {lines[-1]}")
+        return {
+            "tag": fields[0],
+            "name": fields[1],
+            "skipped": int(fields[2]),
+            "ignored": int(fields[3]),
+            "allowed": int(fields[4]),
+        }
+    raise RuntimeError(f"{err} (after {attempts} attempts)")
 
 
 def _wait_for_limit(helper_path, schedd_address, tag, predicate, *, timeout=60, interval=1, handles=None):
@@ -97,8 +111,8 @@ def _wait_for_limit(helper_path, schedd_address, tag, predicate, *, timeout=60, 
             last_err = None
             if predicate(info):
                 return info
-        except subprocess.CalledProcessError as exc:
-            # Schedd may be briefly unavailable during startup/shutdown; keep polling.
+        except RuntimeError as exc:
+            # A query can fail transiently (schedd busy, dropped reply); keep polling.
             last_err = exc
 
         if handles:
