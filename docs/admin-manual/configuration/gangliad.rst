@@ -1,6 +1,9 @@
+:index:`Metricd Options<single: Configuration; Metricd Options>`
+
 .. _metricd_config_options:
 
-:index:`Metricd Options<single: Configuration; Metricd Options>`
+Metricd Daemon Configuration Options
+====================================
 
 This is the configuration variable reference for *condor_metricd*. For an
 introduction to what *condor_metricd* does, how to enable it, and how to write
@@ -76,7 +79,7 @@ backend the resulting metrics are published to.
     **and** :macro:`STATISTICS_TO_PUBLISH` in the *condor_schedd*
     configuration contains ``TRANSFER:2``, or
     :macro:`STATISTICS_TO_PUBLISH_LIST` names the desired attributes
-    explicitly. The default is ``0``.
+    explicitly.
 
 :macro-def:`METRICD_WANT_PROJECTION[MetricD]`
     A boolean. When ``True``, *condor_metricd* asks the *condor_collector* for

@@ -150,7 +150,8 @@ machine, since that is where the *condor_collector* it queries already runs.
 
 That alone is enough to get a default set of metrics about the pool published
 to Prometheus, both at the ``/metrics`` HTTP endpoint and in the file named by
-:macro:`PROMETHEUS_METRICS_FILE`. Everything below describes how to define
+:macro:`PROMETHEUS_METRICS_FILE`. For a comprehensive listing of all *condor_metricd*
+configuration knobs see :ref:`metricd_config_options`. Everything below describes how to define
 additional metrics and how to route them.
 
 Defining Metrics
@@ -1172,9 +1173,9 @@ negotiator match log
     ``$(LOG)/MatchLog``.
 
 history log
-    This optional log contains information about all jobs that have been
-    completed. It is written by the *condor_schedd* daemon. The file
-    name is ``$(SPOOL)/history``.
+    This log contains information about all jobs that have been
+    completed or removed. It is written by the *condor_schedd* and/or *condor_shadow* daemon. The default file
+    name is ``$(SPOOL)/history`` as specified in :macro:`HISTORY`.
 
     Administrators can view this historical information by using
     the command line tool :tool:`condor_history`.

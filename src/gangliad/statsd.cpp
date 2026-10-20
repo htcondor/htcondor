@@ -1340,7 +1340,7 @@ StatsD::getCollectorsToMonitor()
 	}
 	AdTypes type = StringToAdType(collector_ad_type.c_str());
 	if (type == NO_AD) {
-		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_AD_TYPE");
 	}
 	
 	// First, formulate the query we will send to the collector(s)

@@ -119,7 +119,8 @@
 - Introducing *condor_metricd*, a new daemon that publishes HTCondor
   metrics from the *condor_collector* to multiple monitoring backends
   including Prometheus and Ganglia.  For Prometheus, the *condor_metricd* supports exporting
-  gauges and counters to Prometheus via file, HTTP, and/or HTTPS. 
+  gauges and counters to Prometheus via file, HTTP, and/or HTTPS.
+  For full documentation, see :ref:`admin-manual/monitoring:Monitor Pool Metrics with Prometheus and Ganglia`.
   Note: If your HTCSS configuration already uses the (now deprecated) *condor_gangliad*,
   the same binary is also installed as *condor_gangliad* for full backwards
   compatibility with older versions of HTCSS.
