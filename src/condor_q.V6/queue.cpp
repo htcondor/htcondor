@@ -2393,6 +2393,10 @@ print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 		text += "\n";
 	}
 	fputs(text.c_str(), stdout);
+
+	// As in print_results, flush now rather than relying on the flush at exit,
+	// which has been seen to lose the totals line for a backtick'ed perl caller on Windows.
+	fflush(stdout);
 }
 
 static void

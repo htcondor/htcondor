@@ -193,6 +193,7 @@ class Condor:
         self.tokens_dir = self.local_dir / "tokens.d"
 
         self.config_file = self.local_dir / "condor_config"
+        self.master_stderr_file = self.local_dir / "condor_master.stderr"
 
         if config is None:
             config = {}
@@ -393,14 +394,19 @@ class Condor:
             cmd = [master_bin, "-f"]
             
             if self.use_sudo:
-                cmd = ["sudo", "-E"] + cmd
+                # Pass CONDOR_CONFIG explicitly: sudo-rs (the default sudo
+                # on Ubuntu 26.04+) ignores a bare -E.
+                cmd = ["sudo", f"CONDOR_CONFIG={self.config_file.as_posix()}"] + cmd
                 logger.info(
                     f"Starting condor_master with sudo (will run as {self.condor_user or 'root'})"
                 )
-            
-            self.condor_master = subprocess.Popen(
-                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+
+            # Keep the master's stdout/stderr, so that a master which dies
+            # before it can write its log leaves some trace of why.
+            with self.master_stderr_file.open(mode="a") as out:
+                self.condor_master = subprocess.Popen(
+                    cmd, stdout=out, stderr=subprocess.STDOUT
+                )
 
             logger.debug(
                 "Started condor_master (pid {})".format(self.condor_master.pid)
@@ -427,6 +433,14 @@ class Condor:
 
             # if the master log does not exist yet, we can't use condor_who
             if not master_log_path.exists():
+                if self.condor_master is not None and not self.master_is_alive:
+                    self._log_master_stderr()
+                    raise RuntimeError(
+                        "condor_master for {} exited with code {} before writing its log".format(
+                            self, self.condor_master.returncode
+                        )
+                    )
+
                 logger.debug(
                     "MASTER_LOG at {} does not yet exist for {}, retrying in 1 seconds (giving up in {} seconds)".format(
                         self.master_log, self, time_to_give_up
@@ -470,11 +484,22 @@ class Condor:
             )
 
         self.run_command(["condor_who", "-quick"])
+        self._log_master_stderr()
         if dump_logs_if_fail:
             for logfile in self.log_dir.iterdir():
                 logger.error("Contents of {}:\n{}".format(logfile, logfile.read_text()))
 
         raise TimeoutError("Standup for {} failed".format(self))
+
+    def _log_master_stderr(self):
+        try:
+            text = self.master_stderr_file.read_text()
+        except OSError:
+            return
+        if text.strip():
+            logger.error(
+                "condor_master stdout/stderr for {}:\n{}".format(self, text)
+            )
 
     def _cleanup(self):
         logger.info("Cleaning up {}".format(self))
