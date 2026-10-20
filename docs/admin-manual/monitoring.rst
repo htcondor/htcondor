@@ -293,8 +293,8 @@ Core keywords
  Name
     *String expression.* **Required.** The name of this metric. Metrics
     published for the same machine must have unique names. When published to
-    Prometheus the name is prefixed with ``htcondor_`` and may gain a unit,
-    ``_total`` or ``_info`` suffix; see
+    Prometheus the name is converted to snake_case, prefixed with
+    ``htcondor_``, and may gain a unit, ``_total`` or ``_info`` suffix; see
     :ref:`admin-manual/monitoring:Exposing Metrics to Prometheus`.
 
     *If omitted*, there is no name to publish the metric under and the
@@ -385,11 +385,15 @@ Core keywords
     works like ``GROUP BY`` in SQL: one result is produced per distinct value
     of this expression. Set it to group by something other than the pool as a
     whole, such as the owner of the running job, as in
-    :ref:`admin-manual/monitoring:Labels versus names` below.
+    :ref:`admin-manual/monitoring:Labels versus names` below. Name only the
+    dimension to group by; the metric's own name is always part of the
+    grouping, so two metrics that use the same expression here are still
+    aggregated separately from each other. When several pools are being
+    monitored, the collector name is part of it too, so each pool is
+    aggregated separately.
 
-    *If omitted*, the default is the metric's ``Name``, giving a single
-    pool-wide result. When several pools are being monitored, the collector
-    name is appended to that default, so each pool is aggregated separately.
+    *If omitted*, there is no further grouping and a single pool-wide result
+    is produced.
  ExportMetric
     *String expression.* A comma-separated list of the backends this metric
     should be published to; recognized names are ``ganglia`` and
@@ -683,6 +687,14 @@ and point Prometheus at it:
 Every metric name is prefixed with ``htcondor_``, following the Prometheus
 convention of namespacing an application's metrics, so a metric defined as
 ``Name = "jobs_running"`` is scraped as ``htcondor_jobs_running``.
+
+Metric names and label names are also converted from the CamelCase of HTCondor
+ClassAd attributes to the snake_case that Prometheus conventionally uses, so
+``Name = "TotalRunningJobs"`` is scraped as ``htcondor_total_running_jobs``.
+Embedded acronyms are kept whole rather than split letter by letter, so
+``MonitorSelfCPUUsage`` becomes ``monitor_self_cpu_usage``. A name you already
+wrote in snake_case is left exactly as it is, and the conversion applies only
+to Prometheus: the Ganglia backend publishes names unchanged.
 
 The same content is also written to the file named by
 :macro:`PROMETHEUS_METRICS_FILE`, by default ``$(LOG)/metrics.prom``. The file

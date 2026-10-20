@@ -553,18 +553,27 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 
 	if( isAggregateMetric() ) {
-		// This is like GROUP BY in SQL.
-		// By default, group by the name of the metric.
-		// If this GangliaD is configured to monitor multiple pools, however, then
-		// the default is the name of the metric PLUS the collector name since we typically 
-		// want an aggregate metric per pool.
+		// This is like GROUP BY in SQL: one aggregate result per distinct key.
+		//
+		// The key always begins with this metric's own name.  StatsD keeps a
+		// single map of aggregates keyed by this string and shared by every
+		// metric, so two metrics whose keys collided would silently accumulate
+		// into one another -- which is why AggregateGroup names only the
+		// dimension to group by (the submitter, the accounting group, ...)
+		// rather than having to spell out the metric name as well.
+		aggregate_group = name;
+		std::string group_by;
+		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,group_by,metric_ad,daemon_ad,regex_groups) ) return false;
+		if( !group_by.empty() ) {
+			aggregate_group += "/" + group_by;
+		}
+		// If this daemon came from one of several monitored pools, append the
+		// collector name as well: we want an aggregate per pool however the
+		// group was chosen.
 		std::string collector_name;
 		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
-			aggregate_group = name + "/" + collector_name;
-		} else {
-			aggregate_group = name;
+			aggregate_group += "/" + collector_name;
 		}
-		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
 	if( !evaluateOptionalString(ATTR_GROUP,group,metric_ad,daemon_ad,regex_groups) ) return false;

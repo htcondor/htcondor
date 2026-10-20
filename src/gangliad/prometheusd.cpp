@@ -429,9 +429,68 @@ PrometheusD::newMetric(Metric const *copy_me)
 	return new PrometheusMetric();
 }
 
+// Convert a CamelCase HTCondor name to the snake_case Prometheus conventionally
+// uses.  HTCondor ClassAd attributes -- which is where most metric names come
+// from -- are CamelCase with embedded all-caps acronyms, so a naive "insert an
+// underscore before every capital" turns MonitorSelfCPUUsage into the unreadable
+// monitor_self_c_p_u_usage.
+//
+// Instead, insert a separator only at a real word boundary, of which there are
+// exactly two kinds:
+//
+//   lower|digit -> Upper    TotalJobs      -> total_jobs
+//   Upper -> Upper + lower  MonitorSelfCPUUsage -> monitor_self_cpu_usage
+//
+// The second rule is what handles acronyms: in a run of capitals, the boundary
+// falls before the *last* one, because that capital is the start of the next
+// word only if a lowercase letter follows it.  So "CPUUsage" splits as
+// CPU|Usage, while "CPU" at the end of a name does not split at all.  The same
+// rule gets HTTPSProxyURL -> https_proxy_url and IOWait -> io_wait for free,
+// with no table of known acronyms to maintain.
+//
+// Characters that are already separators pass through: an existing underscore
+// never doubles, and ':' (legal in a Prometheus metric name, and reserved by
+// convention for recording rules) is left alone and suppresses a split after
+// it.  The transform is idempotent, so a name an admin already wrote in
+// snake_case is unchanged.
+static std::string
+toSnakeCase(const std::string &in)
+{
+	std::string out;
+	out.reserve(in.size() + 8);
+	for (size_t i = 0; i < in.size(); i++) {
+		const unsigned char c = (unsigned char)in[i];
+		if (isupper(c) && i > 0) {
+			const unsigned char prev = (unsigned char)in[i-1];
+			const unsigned char next = (i+1 < in.size()) ? (unsigned char)in[i+1] : 0;
+			const bool boundary = islower(prev) || isdigit(prev) ||
+			                      (isupper(prev) && islower(next));
+			if (boundary && !out.empty() && out.back() != '_') {
+				out += '_';
+			}
+		}
+		if (c == '_' && !out.empty() && out.back() == '_') {
+			continue; // never emit a run of underscores
+		}
+		out += (char)tolower(c);
+	}
+	// Leading and trailing underscores are legal but ugly, and a leading pair
+	// is reserved by Prometheus; drop them.  If that would leave nothing at
+	// all, keep the original rather than returning an unusable empty name.
+	size_t b = out.find_first_not_of('_');
+	if (b == std::string::npos) {
+		return in;
+	}
+	return out.substr(b, out.find_last_not_of('_') - b + 1);
+}
+
 std::string
 PrometheusD::buildPrometheusName(const Metric &m) const
 {
+	// Metric names follow the Prometheus convention of snake_case rather than
+	// the CamelCase of the ClassAd attributes they are usually derived from.
+	std::string snake = toSnakeCase(m.name);
+
 	// Namespace every metric, per Prometheus convention, so that HTCondor's
 	// metrics do not collide with anything else scraped into the same server.
 	// Applied before the suffixes below, giving names of the shape
@@ -440,11 +499,11 @@ PrometheusD::buildPrometheusName(const Metric &m) const
 	// Skipped when the configured name already carries the prefix, so an admin
 	// who writes "htcondor_jobs" does not end up with "htcondor_htcondor_jobs".
 	std::string name;
-	if (m.name.starts_with(PROM_METRIC_PREFIX)) {
-		name = m.name;
+	if (snake.starts_with(PROM_METRIC_PREFIX)) {
+		name = snake;
 	} else {
 		name = PROM_METRIC_PREFIX;
-		name += m.name;
+		name += snake;
 	}
 
 	// best-effort unit suffix
@@ -600,15 +659,24 @@ PrometheusD::publishMetric(Metric const &m_in)
 	// convention is an "info" metric: a gauge whose value carries nothing (1)
 	// and whose label carries the string.  The metric is named "<name>_info"
 	// (done in buildPrometheusName()) and the label is named after the metric,
-	// so a Type="string" metric named condor_version publishes as
-	//     condor_version_info{condor_version="10.2.0"} 1
-	std::map<std::string,std::string> labels = m_in.prometheus_labels;
+	// so a Type="string" metric named CondorVersion publishes as
+	//     htcondor_condor_version_info{condor_version="10.2.0"} 1
+	// Label names get the same snake_case treatment as metric names, so that
+	// everything this backend emits reads consistently whether it came from a
+	// CamelCase ClassAd attribute or from an admin's PrometheusLabels ad.
+	// Conversion cannot turn a valid label name into an invalid one -- it only
+	// lowercases and inserts underscores -- so the names were already checked
+	// in Metric::evaluateLabelAd() and need no re-check here.
+	std::map<std::string,std::string> labels;
+	for (auto const &[label_name,label_value] : m_in.prometheus_labels) {
+		labels[toSnakeCase(label_name)] = label_value;
+	}
 	const bool is_info = (m_in.type == Metric::STRING);
 	if (is_info) {
 		// Metric names may contain ':' but label names may not, so sanitize.
 		// Use the configured name rather than prom_name so that the unit and
 		// _info suffixes do not leak into the label name.
-		std::string label_name = m_in.name;
+		std::string label_name = toSnakeCase(m_in.name);
 		for (char &c : label_name) {
 			if (!isalnum((unsigned char)c) && c != '_') c = '_';
 		}

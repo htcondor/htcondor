@@ -247,6 +247,26 @@ METRIC_DEFS = r"""
   PrometheusLabels = [ tricky = "l_bs\\ l_nl\n l_dq\" end" ];
 ]
 [
+  /* Metric and label names are published in snake_case.  The name mixes a
+     normal CamelCase word boundary with an embedded all-caps acronym, which
+     must split as ...Self|CPU|Usage and not as one letter per underscore. */
+  Name = "MonitorSelfCPUUsageSnakeTest";
+  Value = 19;
+  Desc = "CamelCase name and label published as snake_case";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "somegroup" ];
+]
+[
+  /* A name already written in snake_case must come through untouched: the
+     conversion has to be idempotent, since an admin may well write either. */
+  Name = "already_snake_case_test";
+  Value = 29;
+  Desc = "Already snake_case, must be unchanged";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -663,6 +683,30 @@ class TestPrometheusMetrics:
         # left exactly as configured.
         assert "publishing ganglia_only_test_jobs=" in ganglia_log_contents
         assert PROM_PREFIX + "ganglia_only_test_jobs" not in ganglia_log_contents
+
+    # --- snake_case conversion ----------------------------------------------
+
+    def test_camelcase_name_becomes_snake_case(self, prom_file_contents):
+        # MonitorSelfCPUUsageSnakeTest splits at the two kinds of word
+        # boundary: lower->Upper (Self|CPU is not one, but Monitor|Self and
+        # Usage|Snake are) and Upper->Upper+lower, which is what keeps the
+        # CPU acronym intact instead of yielding c_p_u.
+        assert (
+            PROM_PREFIX + "monitor_self_cpu_usage_snake_test" in prom_file_contents
+        )
+        assert "c_p_u" not in prom_file_contents
+        assert "MonitorSelfCPUUsageSnakeTest" not in prom_file_contents
+
+    def test_camelcase_label_name_becomes_snake_case(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "monitor_self_cpu_usage_snake_test")
+        assert labels is not None
+        assert 'accounting_group="somegroup"' in labels
+        assert "AccountingGroup" not in labels
+
+    def test_snake_case_conversion_is_idempotent(self, prom_file_contents):
+        # A name an admin already wrote in snake_case must survive untouched:
+        # no doubled underscores, nothing appended or trimmed.
+        assert _prom_sample_value(prom_file_contents, "already_snake_case_test") == 29
 
     # --- exposition-format escaping -----------------------------------------
     #
