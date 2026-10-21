@@ -68,7 +68,7 @@ is easy enough with a constraint and a projection:
 
 .. code-block:: console
 
-      $ condor_status -startd \
+      $ condor_status -slots \
             -constraint 'State=="Claimed" && Activity!="Idle"' \
             -autoformat Name | wc -l
 
