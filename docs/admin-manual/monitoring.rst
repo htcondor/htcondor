@@ -815,9 +815,11 @@ Use :macro:`PROMETHEUS_HTTP_AUTH_FILE` to control access to an endpoint that is
 reachable from the network.
 
 Setting :macro:`PROMETHEUS_HTTP_PORT` to ``-1`` disables HTTP serving
-altogether, leaving only :macro:`PROMETHEUS_METRICS_FILE`. That is the right
+altogether, leaving only only a prom file at location :macro:`PROMETHEUS_METRICS_FILE`. That is the right
 choice for sites collecting the file with the node exporter's textfile
-collector.
+collector (although be aware using the node exporter's textfile collector
+will also require setting :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` to False, as 
+the textfile collector does not support timestamps).
 
 .. note::
 
