@@ -1644,6 +1644,26 @@ def _pick_free_tcp_port():
         s.close()
 
 
+def _routable_local_ipv4():
+    """Return one non-loopback IPv4 address of this host, or None.
+
+    Used to prove a loopback-only listen socket really is unreachable off
+    127.0.0.1. Connecting a UDP socket sends nothing but makes the kernel
+    select a source address, which is the address a peer would reach us on.
+    A host with no route (or only loopback) yields nothing to test against,
+    and the caller skips.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("192.0.2.1", 9))   # TEST-NET-1; no packet is sent
+        ip = s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+    return None if ip.startswith("127.") else ip
+
+
 class _HardTimeout(BaseException):
     """Raised by _hard_deadline when its wall-clock budget is exceeded.
 
@@ -1827,11 +1847,11 @@ def condor_dedicated_http_port(test_dir):
 
 @action
 def dedicated_host_port(condor_dedicated_http_port):
-    # Connect on the same interface metricd binds its command socket to; the
-    # dedicated HTTP socket uses that same interface, on the port we chose.
+    # A dedicated HTTP socket binds the loopback address by default
+    # (PROMETHEUS_HTTP_LOCALHOST_ONLY), so that is where it is reachable --
+    # unlike metricd's command socket, which binds the regular interfaces.
     condor, port = condor_dedicated_http_port
-    host, _cmd_port = _metricd_http_port(condor)
-    return host, port
+    return "127.0.0.1", port
 
 
 @action
@@ -1947,6 +1967,31 @@ class TestPrometheusHTTPDedicatedPort:
             status, body = _http_get(host, port, "/metrics")
             assert status == 200
             assert "port_test_gauge" in body
+
+    # --- PROMETHEUS_HTTP_LOCALHOST_ONLY --------------------------------------
+    #
+    # A dedicated port is normally chosen in order to front the endpoint with a
+    # reverse proxy, so it binds loopback only by default. These assert that
+    # default from both sides: the endpoint answers on 127.0.0.1, and it is NOT
+    # reachable on this host's routable address.
+
+    def test_metricd_logged_localhost_only_bind(self, condor_dedicated_http_port):
+        condor, port = condor_dedicated_http_port
+        log_text = (condor.log_dir / "MetricdLog").read_text(errors="replace")
+        assert f"listening for HTTP requests on port {port} (localhost only)" in log_text
+
+    def test_not_reachable_on_routable_address(self, condor_dedicated_http_port,
+                                               dedicated_metrics_ready):
+        _condor, port = condor_dedicated_http_port
+        local_ip = _routable_local_ipv4()
+        if local_ip is None:
+            pytest.skip("host has no non-loopback IPv4 address to test against")
+        # Loopback works (the fixture already proved metricd bound the port),
+        # so a refusal here is the bind address at work rather than a dead
+        # daemon or a port that was never bound.
+        with pytest.raises(OSError):
+            s = socket.create_connection((local_ip, port), timeout=5)
+            s.close()
 
 
 class TestPrometheusHTTPDisabled:

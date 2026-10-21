@@ -207,6 +207,30 @@ corresponding setup instructions.
     Setting it to ``-1`` disables HTTP serving entirely, leaving only
     :macro:`PROMETHEUS_METRICS_FILE`.
 
+:macro-def:`PROMETHEUS_HTTP_LOCALHOST_ONLY[MetricD]`
+    A boolean that controls which address the ``/metrics`` listening socket is
+    bound to. The default is ``True``, binding only the loopback address, so
+    the endpoint is reachable from this machine but not from the network. Set
+    it to ``False`` to bind the address that :macro:`BIND_ALL_INTERFACES` and
+    :macro:`NETWORK_INTERFACE` select, as other HTCondor listening sockets do.
+
+    **This setting is consulted only when** :macro:`PROMETHEUS_HTTP_PORT`
+    **names a port other than** :macro:`SHARED_PORT_PORT`, which is to say only
+    when *condor_metricd* opens a listening socket of its own. In the default
+    configuration the two ports are the same, the endpoint is served through
+    *condor_shared_port* along with all other HTCondor traffic, and the socket
+    it is served on belongs to *condor_shared_port* rather than to
+    *condor_metricd* — restricting it would restrict HTCondor as a whole. In
+    that configuration this setting has no effect whatever its value, and
+    *condor_metricd* logs a line at startup saying so.
+
+    The default suits the usual reason for moving the endpoint to a dedicated
+    port, which is to put a reverse proxy in front of it: the proxy reaches the
+    endpoint over the loopback interface and is the only thing exposed to the
+    network. If you instead intend Prometheus to scrape the dedicated port
+    directly from another host, set this to ``False`` and consider
+    :macro:`PROMETHEUS_HTTP_AUTH_FILE`.
+
 :macro-def:`PROMETHEUS_HTTP_AUTH_FILE[MetricD]`
     Path to an Apache-style ``htpasswd`` file. When set, the ``/metrics``
     endpoint requires HTTP Basic authentication against it, and requests

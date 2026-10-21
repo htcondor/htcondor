@@ -787,6 +787,25 @@ NGINX, for example:
           proxy_pass http://127.0.0.1:9100/metrics;
       }
 
+Because that is the usual reason for moving the endpoint off the shared port,
+a dedicated socket binds **only the loopback address** by default: the proxy
+can reach it, the network cannot. If you instead want Prometheus to scrape the
+dedicated port directly from another host, bind the regular interfaces with:
+
+.. code-block:: condor-config
+
+      PROMETHEUS_HTTP_LOCALHOST_ONLY = False
+
+:macro:`PROMETHEUS_HTTP_LOCALHOST_ONLY` is consulted only when
+*condor_metricd* opens a socket of its own, which is to say only when
+:macro:`PROMETHEUS_HTTP_PORT` differs from :macro:`SHARED_PORT_PORT`. In the
+default configuration the endpoint arrives through *condor_shared_port* on a
+socket that belongs to *condor_shared_port* and carries all other HTCondor
+traffic, so there is nothing for *condor_metricd* to restrict; the setting has
+no effect there whatever its value, and a line is logged at startup saying so.
+Use :macro:`PROMETHEUS_HTTP_AUTH_FILE` to control access to an endpoint that is
+reachable from the network.
+
 Setting :macro:`PROMETHEUS_HTTP_PORT` to ``-1`` disables HTTP serving
 altogether, leaving only :macro:`PROMETHEUS_METRICS_FILE`. That is the right
 choice for sites collecting the file with the node exporter's textfile
