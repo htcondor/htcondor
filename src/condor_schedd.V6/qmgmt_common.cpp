@@ -177,6 +177,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 	FILL(ATTR_PROC_ID,            2),  // forced into proc ad
 	FILL(ATTR_PROJECT_NAME,       -3), // forced into the cluster ad
 	FILL(ATTR_USER,               -1), // forced into cluster ad
+	FILL(ATTR_WANT_PARALLEL_SCHEDULING, -1), // forced into cluster ad
 };
 #undef FILL
 
