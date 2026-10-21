@@ -334,14 +334,7 @@ Metric::toSnakeCase(const std::string &in)
 		}
 		out += (char)tolower(c);
 	}
-	// Leading and trailing underscores are legal but ugly, and a leading pair
-	// is reserved by Prometheus; drop them.  If that would leave nothing at
-	// all, keep the original rather than returning an unusable empty name.
-	size_t b = out.find_first_not_of('_');
-	if (b == std::string::npos) {
-		return in;
-	}
-	return out.substr(b, out.find_last_not_of('_') - b + 1);
+	return out;
 }
 
 int
