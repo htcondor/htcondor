@@ -375,6 +375,7 @@ void
 setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra ) {
 	if ( ! bp.uuid.empty()) { props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str()); }
 	if(! bp.name.empty()) { props["DeviceName"] = Format("\"%s\"", bp.name.c_str()); }
+	if(! bp.vendor.empty()) { props["Vendor"] = Format("\"%s\"", bp.vendor.c_str()); }
 	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
 	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
 	if( bp.ECCEnabled != -1 ) { props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false"; }

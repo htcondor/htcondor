@@ -232,6 +232,9 @@ Tables
     * - DeviceName
       - DeviceName
       - DeviceName
+    * - Vendor
+      -
+      - Vendor
     * - ECCEnabled
       - ECCEnabled
       - ECCEnabled

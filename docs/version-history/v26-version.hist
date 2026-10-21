@@ -13,6 +13,11 @@
   gpu attributes when running on a mig-enabled NVidia gpu.
   :jira:`3978`
 
+- :tool:`condor_gpu_discovery` now publishes a ``Vendor`` property
+  for each GPU, such as ``"NVIDIA"`` or ``"AMD"``, so that jobs and
+  HTCondor itself can tell GPU types apart.
+  :jira:`4007`
+
 - When running Docker universe jobs, the execute event is now logged
   when the container is *started*, not when it is *created*.  The
   container start may take some time, so this makes various statistics
