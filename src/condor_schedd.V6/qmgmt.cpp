@@ -4057,6 +4057,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 // TODO: make ProjectName a forced cluster attr? (cannot until persistent project records cannot be disabled)
 //	FILL(ATTR_PROJECT_NAME,       -1), // forced into the cluster ad
 	FILL(ATTR_USER,              -1), // forced into cluster ad
+	FILL(ATTR_WANT_PARALLEL_SCHEDULING, -1), // forced into cluster ad
 };
 #undef FILL
 
@@ -4629,6 +4630,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_REQUIREMENTS,       0),
 	FILL(ATTR_USER,               catClusterOnly),
 	FILL(ATTR_VACATE_REASON_CODE, 0),
+	FILL(ATTR_WANT_PARALLEL_SCHEDULING, catClusterOnly),
 
 
 };
