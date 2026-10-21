@@ -639,7 +639,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				std::vector<std::string> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					std::shared_ptr<Metric> metric(statsd.newMetric());
+					std::unique_ptr<Metric> metric(statsd.newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -1839,7 +1839,7 @@ StatsD::publishDaemonMetrics(ClassAd& daemon_ad)
 		 itr != m_metrics.end();
 		 itr++ )
 	{
-		std::shared_ptr<Metric> metric(newMetric());
+		std::unique_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
 		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, *this);
 	}
