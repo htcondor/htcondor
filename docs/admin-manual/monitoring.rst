@@ -445,6 +445,14 @@ Prometheus-specific keywords
     containing a comma, quote, backslash or newline is emitted correctly
     without anything being escaped by hand here.
 
+    Label names are converted to snake_case before that merge, so ``State``
+    here and ``state`` in :macro:`PROMETHEUS_DEFAULT_LABELS` are the same
+    label and this one wins, however either is spelled. For the same reason,
+    two names within a single label ad that differ by more than case but
+    converge on one label name — ``AccountingGroup`` and ``Accounting_Group``,
+    say — are a configuration error: only the first can be published, and
+    *condor_metricd* reports the clash at startup.
+
     An expression evaluating to ``UNDEFINED`` or ``ERROR``, or to a non-scalar
     value such as a list, **omits** that label rather than emitting it empty.
     This is the intended way to make a label conditional:

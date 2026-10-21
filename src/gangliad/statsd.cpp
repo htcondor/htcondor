@@ -289,6 +289,91 @@ Metric::isValidLabelName(std::string const &label_name)
 	return true;
 }
 
+// Convert a CamelCase HTCondor name to the snake_case Prometheus conventionally
+// uses.  HTCondor ClassAd attributes -- which is where most metric names come
+// from -- are CamelCase with embedded all-caps acronyms, so a naive "insert an
+// underscore before every capital" turns MonitorSelfCPUUsage into the unreadable
+// monitor_self_c_p_u_usage.
+//
+// Instead, insert a separator only at a real word boundary, of which there are
+// exactly two kinds:
+//
+//   lower|digit -> Upper    TotalJobs      -> total_jobs
+//   Upper -> Upper + lower  MonitorSelfCPUUsage -> monitor_self_cpu_usage
+//
+// The second rule is what handles acronyms: in a run of capitals, the boundary
+// falls before the *last* one, because that capital is the start of the next
+// word only if a lowercase letter follows it.  So "CPUUsage" splits as
+// CPU|Usage, while "CPU" at the end of a name does not split at all.  The same
+// rule gets HTTPSProxyURL -> https_proxy_url and IOWait -> io_wait for free,
+// with no table of known acronyms to maintain.
+//
+// Characters that are already separators pass through: an existing underscore
+// never doubles, and ':' (legal in a Prometheus metric name, and reserved by
+// convention for recording rules) is left alone and suppresses a split after
+// it.  The transform is idempotent, so a name an admin already wrote in
+// snake_case is unchanged.
+std::string
+Metric::toSnakeCase(const std::string &in)
+{
+	std::string out;
+	out.reserve(in.size() + 8);
+	for (size_t i = 0; i < in.size(); i++) {
+		const unsigned char c = (unsigned char)in[i];
+		if (isupper(c) && i > 0) {
+			const unsigned char prev = (unsigned char)in[i-1];
+			const unsigned char next = (i+1 < in.size()) ? (unsigned char)in[i+1] : 0;
+			const bool boundary = islower(prev) || isdigit(prev) ||
+			                      (isupper(prev) && islower(next));
+			if (boundary && !out.empty() && out.back() != '_') {
+				out += '_';
+			}
+		}
+		if (c == '_' && !out.empty() && out.back() == '_') {
+			continue; // never emit a run of underscores
+		}
+		out += (char)tolower(c);
+	}
+	// Leading and trailing underscores are legal but ugly, and a leading pair
+	// is reserved by Prometheus; drop them.  If that would leave nothing at
+	// all, keep the original rather than returning an unusable empty name.
+	size_t b = out.find_first_not_of('_');
+	if (b == std::string::npos) {
+		return in;
+	}
+	return out.substr(b, out.find_last_not_of('_') - b + 1);
+}
+
+int
+Metric::reportLabelNameCollisions(classad::ClassAd const &label_ad, char const *source)
+{
+	// Two attribute names that differ by more than case -- AccountingGroup and
+	// Accounting_Group, say -- are distinct to ClassAds but normalize to the
+	// same Prometheus label name, so only one of them can ever be published.
+	// evaluateLabelAd() resolves that by keeping the first, which is stable but
+	// arbitrary from the admin's point of view; say so here, once per reconfig,
+	// rather than leaving them to wonder which label went missing.
+	std::map<std::string,std::string> first_seen;   // normalized -> as written
+	int collisions = 0;
+
+	for( auto const &[label_name,label_expr] : label_ad ) {
+		if( !label_expr ) continue;
+		if( !isValidLabelName(label_name) ) continue;   // reported separately
+
+		std::string norm_name = toSnakeCase(label_name);
+		auto [it,inserted] = first_seen.emplace(norm_name,label_name);
+		if( !inserted ) {
+			collisions++;
+			dprintf(D_ERROR,
+			        "CONFIGURATION ERROR: '%s' and '%s' in %s both name the Prometheus "
+			        "label '%s'; only '%s' will be published\n",
+			        it->second.c_str(),label_name.c_str(),source,
+			        norm_name.c_str(),it->second.c_str());
+		}
+	}
+	return collisions;
+}
+
 // Render an evaluated label expression as a label value string.  Returns
 // false for values that have no sensible scalar rendering (UNDEFINED, ERROR,
 // lists, nested ads, times), in which case the caller omits the label.
@@ -341,12 +426,32 @@ Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const 
 	if( !pool.empty() )    overlay.InsertAttr(ATTR_METRIC_POOL,pool);
 	overlay.SetParentScope(&daemon_ad);
 
+	// Label names are normalized to snake_case as they go in, not after the
+	// caller has merged the sources together.  Normalizing afterwards would
+	// decide precedence by the collation order of the merged map: a default
+	// of accounting_group and a per-metric AccountingGroup survive the merge
+	// as two distinct keys, and whichever sorted later would win -- which is
+	// the default, exactly backwards.  Normalizing here means the two are the
+	// same key by the time the caller merges, so the documented rule that
+	// per-metric labels override pool-wide defaults actually holds.
+	//
+	// Within one source, two attributes can still normalize together (say
+	// AccountingGroup and Accounting_Group, which ClassAds treat as distinct
+	// since they differ by more than case).  That is a configuration mistake,
+	// reported once per reconfig by the config-read checks; here we keep the
+	// first and skip the rest, so the choice is at least not silently made by
+	// map order.
+	std::set<std::string> seen_here;
+
 	for( auto const &[label_name,label_expr] : label_ad ) {
 		if( !label_expr ) continue;
 
 		// Bad label names are reported once at config-read time; here we
 		// just skip them rather than emitting invalid exposition text.
 		if( !isValidLabelName(label_name) ) continue;
+
+		std::string norm_name = toSnakeCase(label_name);
+		if( !seen_here.insert(norm_name).second ) continue;
 
 		// Evaluate in the overlay/daemon-ad scope rather than in label_ad's
 		// own scope.  ClassAd attribute lookup is case-insensitive, so
@@ -376,7 +481,7 @@ Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const 
 			continue;
 		}
 
-		result[label_name] = label_value;
+		result[norm_name] = label_value;
 	}
 }
 
@@ -1255,6 +1360,13 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 							        label_name.c_str(),ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
 						}
 					}
+					// Two legal names can still collide once normalized to
+					// snake_case, leaving one of them unpublishable.
+					std::string source;
+					formatstr(source,"%s of metric %s defined in %s",
+					          ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+					Metric::reportLabelNameCollisions(
+						*static_cast<classad::ClassAd *>(labels_expr),source.c_str());
 				}
 			}
 		}

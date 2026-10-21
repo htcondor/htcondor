@@ -193,7 +193,10 @@ corresponding setup instructions.
           @end
 
     Labels set by a metric's own ``PrometheusLabels`` keyword override
-    same-named labels from this variable. The label naming rules, the
+    same-named labels from this variable, where "same-named" is judged after
+    label names are converted to snake_case: a default written ``machine``
+    and a metric's ``Machine`` are one label, and the metric's wins. The
+    label naming rules, the
     value-evaluation rules and the ``MetricMachine`` / ``MetricPool``
     pseudo-attributes are all described under ``PrometheusLabels`` in
     :ref:`admin-manual/monitoring:Metric Definition Keywords`.

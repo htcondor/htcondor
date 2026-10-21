@@ -258,6 +258,31 @@ METRIC_DEFS = r"""
   PrometheusLabels = [ AccountingGroup = "somegroup" ];
 ]
 [
+  /* PROMETHEUS_DEFAULT_LABELS sets accounting_group; this sets the same label
+     spelled AccountingGroup. They are distinct ClassAd attributes that
+     normalize to one Prometheus label name, and the per-metric value must
+     win -- normalizing after the merge instead of before would hand the
+     default the win, since "accounting_group" sorts after "AccountingGroup". */
+  Name = "label_precedence_test_metric";
+  Value = 41;
+  Desc = "Per-metric label must beat a differently spelled default";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "from_metric" ];
+]
+[
+  /* Two attributes of one label ad that normalize to the same label name.
+     Only one can be published; metricd keeps the first and reports the
+     clash once at config-read time rather than letting map order decide
+     silently. */
+  Name = "label_collision_test_metric";
+  Value = 43;
+  Desc = "Two label names that normalize to one";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "first"; Accounting_Group = "second" ];
+]
+[
   /* A name already written in snake_case must come through untouched: the
      conversion has to be idempotent, since an admin may well write either. */
   Name = "already_snake_case_test";
@@ -294,7 +319,12 @@ def condor_with_metricd(test_dir):
         # nothing else in this test references and that is not in metricd's
         # hardcoded projection set, so the platform label only resolves if
         # PrometheusD::extraProjectionRefs() contributed it to the projection.
-        "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform ]',
+        # accounting_group is here in snake_case so that a metric below can
+        # supply the same label spelled AccountingGroup. Both normalize to
+        # accounting_group, and the per-metric one must win; see
+        # test_per_metric_label_overrides_differently_spelled_default.
+        "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform;'
+                                                '  accounting_group = "from_default" ]',
         # Several metrics below carry no ExportMetric and are expected to reach
         # BOTH backends. That is what an empty METRICD_DEFAULT_EXPORT_METRIC
         # means; it has to be set explicitly here because the shipped default
@@ -707,6 +737,38 @@ class TestPrometheusMetrics:
         # A name an admin already wrote in snake_case must survive untouched:
         # no doubled underscores, nothing appended or trimmed.
         assert _prom_sample_value(prom_file_contents, "already_snake_case_test") == 29
+
+    def test_per_metric_label_overrides_differently_spelled_default(self, prom_file_contents):
+        # PROMETHEUS_DEFAULT_LABELS has accounting_group="from_default"; this
+        # metric has AccountingGroup="from_metric". Normalizing label names
+        # after merging the two sources would make the default win, because
+        # the merged map still holds both spellings as distinct keys and
+        # "accounting_group" collates after "AccountingGroup".
+        labels = self._labels(prom_file_contents, "label_precedence_test_metric")
+        assert labels is not None
+        assert 'accounting_group="from_metric"' in labels
+        assert "from_default" not in labels
+
+    def test_default_label_still_applies_where_metric_is_silent(self, prom_file_contents):
+        # The flip side: a metric that does not set the label at all still
+        # gets the pool-wide default.
+        labels = self._labels(prom_file_contents, "already_snake_case_test")
+        assert 'accounting_group="from_default"' in labels
+
+    def test_colliding_label_names_publish_once(self, prom_file_contents):
+        # AccountingGroup and Accounting_Group normalize together; exactly one
+        # label is published, and it is not an arbitrary merge of the two.
+        labels = self._labels(prom_file_contents, "label_collision_test_metric")
+        assert labels is not None
+        assert labels.count("accounting_group=") == 1
+        assert 'accounting_group="first"' in labels
+
+    def test_colliding_label_names_reported_once(self, ganglia_log_contents):
+        # Reported at config-read time, where the attribute names are static,
+        # rather than on every publication cycle.
+        needle = "both name the Prometheus label 'accounting_group'"
+        assert needle in ganglia_log_contents
+        assert ganglia_log_contents.count(needle) == 1
 
     # --- exposition-format escaping -----------------------------------------
     #

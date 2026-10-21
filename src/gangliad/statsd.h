@@ -69,6 +69,21 @@ public:
 	// and not beginning with "__" (that prefix is reserved by Prometheus).
 	static bool isValidLabelName(std::string const &name);
 
+	// Convert a CamelCase HTCondor name to the snake_case Prometheus uses.
+	// Applied to metric names and to label names, the latter early enough
+	// that two spellings of one label collide before precedence is decided
+	// rather than after; see evaluateLabelAd().
+	static std::string toSnakeCase(std::string const &in);
+
+	// Report, at D_ERROR, any two attributes of a label ad whose names
+	// normalize to the same Prometheus label name -- only one of them can be
+	// published, so the admin needs to know which.  'source' names the ad for
+	// the message (e.g. "PROMETHEUS_DEFAULT_LABELS").  Returns the number of
+	// collisions found.  Call this at config-read time: the attribute names
+	// are static, so nothing about this needs re-checking per cycle.
+	static int reportLabelNameCollisions(classad::ClassAd const &label_ad,
+	                                     char const *source);
+
 	// This is called to contribute another datapoint to an aggregate
 	// metric (e.g. SUM, AVG, MIN, MAX)
 	void addToAggregateValue(Metric const &datapoint);
