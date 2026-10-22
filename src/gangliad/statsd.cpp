@@ -276,6 +276,50 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 }
 
 bool
+Metric::evaluateOptionalBool(char const *attr_name,bool &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,BOOLEAN,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsBooleanValue(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalInt(char const *attr_name,int &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	// Checked as DOUBLE rather than INT32 so that IsNumber() accepts a real
+	// and converts, matching what ClassAd::EvaluateAttrInt() used to do here.
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalDouble(char const *attr_name,double &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
 Metric::isValidLabelName(std::string const &label_name)
 {
 	// Prometheus label names must match [a-zA-Z_][a-zA-Z0-9_]* and names
@@ -532,13 +576,13 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	if( !evaluateOptionalString(ATTR_NAME,name,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+	if( !evaluateOptionalInt(ATTR_VERBOSITY,verbosity,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( verbosity > max_verbosity ) {
 		// avoid doing more work; this metric requires higher verbosity
 		return false;
 	}
 
-	metric_ad.EvaluateAttrInt(ATTR_LIFETIME, lifetime);
+	if( !evaluateOptionalInt(ATTR_LIFETIME,lifetime,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -684,11 +728,15 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	export_systems = split(export_str);
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
-	if (!derivative) {
-		metric_ad.EvaluateAttrBool(ATTR_COUNTER, derivative);
+	// Counter is an alias for Derivative; either marks the metric as one.
+	// Both go through the override-aware evaluator, so Prometheus_Counter
+	// marks a counter for Prometheus only, Ganglia_Derivative for Ganglia
+	// only, and so on.
+	if( !evaluateOptionalBool(ATTR_DERIVATIVE,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
+	if( !derivative ) {
+		if( !evaluateOptionalBool(ATTR_COUNTER,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
-    metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
+	if( !evaluateOptionalDouble(ATTR_SCALE,scale,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string type_str;
 	if( !evaluateOptionalString(ATTR_TYPE,type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -1260,8 +1308,40 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		delete ad;
 		ad = ad2;
 
+		// Pre-filter on Verbosity, honoring backend-decorated overrides the
+		// same way Metric::evaluate() does at publication time.  Without that
+		// a metric carrying both Verbosity and, say, Prometheus_Verbosity
+		// would be discarded here on the strength of the undecorated value,
+		// and the override would never get a chance to apply.
+		//
+		// A backend instance uses its own decorated value if there is one.
+		// MetricD has no backend of its own, but it is the instance that
+		// queries the collector and so computes the projection on behalf of
+		// all of them; dropping a metric here would strip the attributes that
+		// metric references from the query and leave some backend publishing
+		// UNDEFINED.  So MetricD takes the most permissive value it can find.
 		int verbosity = 0;
-		ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+		char const *backend_name = backendName();
+		if( backend_name ) {
+			std::string decorated = std::string(backend_name) + "_" + ATTR_VERBOSITY;
+			if( !ad->Lookup(decorated) || !ad->EvaluateAttrInt(decorated,verbosity) ) {
+				ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			}
+		} else {
+			ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			std::string const suffix = std::string("_") + ATTR_VERBOSITY;
+			for( auto const &[attr,_] : *ad ) {
+				if( attr.size() <= suffix.size() ) continue;
+				if( strcasecmp(attr.c_str() + attr.size() - suffix.size(),
+				               suffix.c_str()) != 0 ) continue;
+				int decorated_verbosity = 0;
+				if( ad->EvaluateAttrInt(attr,decorated_verbosity) &&
+				    decorated_verbosity < verbosity )
+				{
+					verbosity = decorated_verbosity;
+				}
+			}
+		}
 		if( verbosity > m_verbosity ) {
 			delete ad;
 			continue;

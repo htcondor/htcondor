@@ -169,7 +169,18 @@ private:
 	// If this is a regex metric, performs substitutions of regex groups
 	// into strings that reference them.
 	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr=NULL) const;
+
+	// Typed wrappers around evaluate() for keywords that may be absent: each
+	// leaves 'result' untouched if the attribute is not defined, and returns
+	// false only if it is defined but does not evaluate to the right type.
+	// Every metric-definition keyword goes through one of these, so that all
+	// of them honor backend-decorated overrides (Prometheus_Counter and the
+	// like) uniformly -- reading an attribute straight off the metric ad
+	// would silently bypass that.
 	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalBool(char const *attr_name,bool &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalInt(char const *attr_name,int &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalDouble(char const *attr_name,double &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
 
 	// Resolve prometheus_labels from the pool-wide default label ad (may be
 	// NULL) and the metric ad's attr_name attribute, which must be a nested

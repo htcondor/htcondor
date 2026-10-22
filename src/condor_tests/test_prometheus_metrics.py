@@ -283,6 +283,39 @@ METRIC_DEFS = r"""
   PrometheusLabels = [ AccountingGroup = "first"; Accounting_Group = "second" ];
 ]
 [
+  /* Backend-decorated overrides must work for EVERY keyword, not just the
+     ones that happen to go through the string evaluator. Counter, Scale and
+     Verbosity used to be read straight off the metric ad, which silently
+     bypassed the override. Each of these three is decorated for Prometheus
+     only, so the Ganglia side of the same metric shows the undecorated
+     behavior and the two can be compared. */
+  Name = "override_counter_test_metric";
+  Value = 47;
+  Desc = "Prometheus_Counter must mark this a counter for Prometheus only";
+  Prometheus_Counter = true;
+  TargetType = "Scheduler";
+]
+[
+  Name = "override_scale_test_metric";
+  Value = 3;
+  Desc = "Prometheus_Scale must apply for Prometheus only";
+  Scale = 1;
+  Prometheus_Scale = 1000;
+  TargetType = "Scheduler";
+]
+[
+  /* Verbosity 99 is above METRICD_VERBOSITY, so this metric is filtered out
+     for Ganglia; the Prometheus override brings it back for Prometheus. This
+     also covers the config-read-time pre-filter, which drops metrics before
+     any override is consulted. */
+  Name = "override_verbosity_test_metric";
+  Value = 53;
+  Desc = "Prometheus_Verbosity must requalify this for Prometheus only";
+  Verbosity = 99;
+  Prometheus_Verbosity = 0;
+  TargetType = "Scheduler";
+]
+[
   /* A name already written in snake_case must come through untouched: the
      conversion has to be idempotent, since an admin may well write either. */
   Name = "already_snake_case_test";
@@ -762,6 +795,41 @@ class TestPrometheusMetrics:
         assert labels is not None
         assert labels.count("accounting_group=") == 1
         assert 'accounting_group="first"' in labels
+
+    # --- backend-decorated overrides on non-string keywords ------------------
+    #
+    # Counter, Scale and Verbosity were read directly off the metric ad,
+    # bypassing the override-aware evaluator, so Prometheus_Counter and
+    # friends were silently ignored. Each metric below decorates one of them
+    # for Prometheus only, so Ganglia shows what the undecorated value does.
+
+    def test_prometheus_counter_override_applies(self, prom_file_contents):
+        assert ("# TYPE " + PROM_PREFIX + "override_counter_test_metric_total counter"
+                in prom_file_contents)
+
+    def test_prometheus_counter_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        # Same metric, Ganglia side: no decoration matches, so it stays a gauge.
+        line = _ganglia_publish_line(ganglia_log_contents, "override_counter_test_metric")
+        assert line is not None
+        assert "derivative=0" in line
+
+    def test_prometheus_scale_override_applies(self, prom_file_contents):
+        # Value 3 scaled by Prometheus_Scale=1000, not by Scale=1.
+        assert _prom_sample_value(prom_file_contents, "override_scale_test_metric") == 3000
+
+    def test_prometheus_scale_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        line = _ganglia_publish_line(ganglia_log_contents, "override_scale_test_metric")
+        assert line is not None
+        assert "publishing override_scale_test_metric=3," in line
+
+    def test_prometheus_verbosity_override_applies(self, prom_file_contents):
+        # Verbosity=99 is above METRICD_VERBOSITY; Prometheus_Verbosity=0
+        # requalifies it, including past the config-read-time pre-filter.
+        assert _prom_sample_value(prom_file_contents, "override_verbosity_test_metric") == 53
+
+    def test_prometheus_verbosity_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        assert _ganglia_publish_line(ganglia_log_contents,
+                                     "override_verbosity_test_metric") is None
 
     def test_colliding_label_names_reported_once(self, ganglia_log_contents):
         # Reported at config-read time, where the attribute names are static,
