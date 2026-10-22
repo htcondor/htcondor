@@ -1,4 +1,8 @@
 *** 26.0.2 bugs
+
+- :tool:`condor_tail` should now work on files larger than 2 Gb in size.
+  :jira:`4008`
+
 *** 26.0.1 features
 
 - HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
