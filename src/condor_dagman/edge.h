@@ -52,15 +52,18 @@ public:
 	size_t AddArc(const node_id_t id, const unsigned int meta = 0);
 	size_t AppendArc(const node_id_t id, const unsigned int meta = 0);
 	DagArc& GetArc(const node_id_t id);
+	const DagArc& GetArc(const node_id_t id) const;
 
 	// Pre-size the backing arc vector before a known-size run of AppendArc() calls,
 	// so bulk construction doesn't pay for repeated amortized-doubling reallocation.
 	void Reserve(const size_t n) { m_arcs.reserve(n); }
 
 	DagArc& operator[](const node_id_t id) { return GetArc(id); }
+	const DagArc& operator[](const node_id_t id) const { return GetArc(id); }
 	DagArc& operator[](const size_t idx)   { return m_arcs[idx]; }
+	const DagArc& operator[](const size_t idx) const { return m_arcs[idx]; }
 
-	bool Contains(const node_id_t id);
+	bool Contains(const node_id_t id) const;
 
 	// Wait edge operations — set ARC_DONE bits on parent arcs as they complete.
 	// Call Reset() once after all parents are added via AddArc to initialize m_waiting.
@@ -112,8 +115,10 @@ public:
 
 	edge_id_t NewEdge(const Edge* duplicate = nullptr);
 	Edge& GetEdge(const edge_id_t id);
+	const Edge& GetEdge(const edge_id_t id) const;
 
 	Edge& operator[](const edge_id_t id) { return GetEdge(id); }
+	const Edge& operator[](const edge_id_t id) const { return GetEdge(id); }
 
 	static bool IsDirect(const edge_id_t id);
 	static size_t DirectIdToOffset(edge_id_t id);
@@ -121,6 +126,7 @@ public:
 
 	edge_id_t AddDirectArc(const node_id_t id, const unsigned int meta = 0);
 	DagArc& GetDirectArc(const edge_id_t id);
+	const DagArc& GetDirectArc(const edge_id_t id) const;
 	edge_id_t PromoteDirect(const edge_id_t id);
 
 	// Compact the direct-arc pool (m_edges[0]), removing promoted slots.
@@ -131,6 +137,7 @@ public:
 	// IDs are 1-based; NO_EDGE_ID(0) means the node has no parents.
 	edge_id_t NewWaitEdge();
 	Edge& GetWaitEdge(const edge_id_t id);
+	const Edge& GetWaitEdge(const edge_id_t id) const;
 	// Initialize m_waiting on all wait edges after Connect() has fully populated them.
 	void ResetWaitEdges();
 
