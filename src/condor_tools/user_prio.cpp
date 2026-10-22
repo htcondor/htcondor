@@ -1467,7 +1467,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
         LRentry.AcctGroup = "<none>";
     }
     if (!ad->LookupBool(attrIsAcctGroup, LRentry.IsAcctGroup)) {
-        LR[i=1].IsAcctGroup = false;
+        LRentry.IsAcctGroup = false;
     }
 
     char attr[64];
