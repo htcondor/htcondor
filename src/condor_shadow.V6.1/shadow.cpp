@@ -499,16 +499,19 @@ UniShadow::resourceDisconnected( RemoteResource* rr )
 
 	time_t now = time(NULL);
 	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
+	jobAd->AssignExpr(ATTR_JOB_RECONNECTED_DATE, "Undefined");
 
 	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).
 		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
+		job_updater->watchAttribute(ATTR_JOB_RECONNECTED_DATE);
 	}
 	else {
 			// They want it now, so do the qmgmt operation directly.
 		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, now);
+		updateJobAttr(ATTR_JOB_RECONNECTED_DATE, "Undefined");
 	}
 }
 
@@ -550,17 +553,21 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 	job_reconnect_cnt++;
 	jobAd->Assign(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
 	jobAd->AssignExpr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
+	time_t now = time(NULL);
+	jobAd->Assign(ATTR_JOB_RECONNECTED_DATE, now);
 
 	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).
 		job_updater->watchAttribute(ATTR_NUM_JOB_RECONNECTS);
+		job_updater->watchAttribute(ATTR_JOB_RECONNECTED_DATE);
 		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
 	}
 	else {
 			// They want it now, so do the qmgmt operation directly.
 		updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+		updateJobAttr(ATTR_JOB_RECONNECTED_DATE, now);
 		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 	}
 

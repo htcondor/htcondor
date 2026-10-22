@@ -503,6 +503,7 @@
 #define ATTR_JOB_REMOTE_USER_CPU  "RemoteUserCpu"
 #define ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU  "CumulativeRemoteSysCpu"
 #define ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU  "CumulativeRemoteUserCpu"
+#define ATTR_JOB_RECONNECTED_DATE  "JobReconnectedDate"
 #define ATTR_JOB_DISCONNECTED_DATE  "JobDisconnectedDate"
 #define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
 #define ATTR_JOB_LAST_REMOTE_WALL_CLOCK "LastRemoteWallClockTime"
