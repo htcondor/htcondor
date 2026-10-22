@@ -158,6 +158,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_placement_query_users", &_placement_query_users, METH_VARARGS, NULL},
 	{"_placement_query_tokens", &_placement_query_tokens, METH_VARARGS, NULL},
 	{"_placement_query_authorizations", &_placement_query_authorizations, METH_VARARGS, NULL},
+	{"_placement_query", &_placement_query, METH_VARARGS, NULL},
+	{"_placement_edit", &_placement_edit, METH_VARARGS, NULL},
 
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 	{"_schedd_userrec_query", &_schedd_userrec_query, METH_VARARGS, NULL},
