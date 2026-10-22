@@ -1435,6 +1435,12 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     LR[i-1].Ceiling=-1;
     LR[i-1].Floor=-1;
 
+	// These values can be used even if the relevant Detail flag isn't set,
+	// so ensure values from a previous ad don't bleed through if the
+	// attribute isn't present in the current ad.
+	resUsed = 0;
+	AccUsage = 0;
+
 	char strI[32];
 
 		// The old format, one big ad
