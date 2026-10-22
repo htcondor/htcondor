@@ -1410,7 +1410,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   bool fNeedGroupIdFixup = false;
 
   for( int i=1; i<=numElem; i++) {
-    LR[i-1].index = i;
+    LineRec& LRentry = LR[i-1];
+    LRentry.index = i;
 
 	char strI[32];
 
@@ -1423,118 +1424,120 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 		ad = & accountingAds[i - 1];
 	}
 
-	snprintf(attrName, sizeof(attrName), "Name%s", strI);
-	snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
-	snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
-	snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
-	snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
-	snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
-	snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
-	snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
-	snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
-    formatstr(attrAcctGroup, "AccountingGroup%s", strI);
-    formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
-    formatstr(attrCeiling, "Ceiling%s", strI);
-    formatstr(attrFloor, "Floor%s", strI);
+	if (accountingAds.empty() || i == 1) {
+		snprintf(attrName, sizeof(attrName), "Name%s", strI);
+		snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
+		snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
+		snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
+		snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
+		snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
+		snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
+		snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
+		snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
+		formatstr(attrAcctGroup, "AccountingGroup%s", strI);
+		formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
+		formatstr(attrCeiling, "Ceiling%s", strI);
+		formatstr(attrFloor, "Floor%s", strI);
+	}
 
-    if( !ad->LookupString(attrName, LR[i-1].Name) ||
-		!ad->LookupFloat(attrPrio, LR[i-1].Priority) ) {
+	if( !ad->LookupString(attrName, LRentry.Name) ||
+	    !ad->LookupFloat(attrPrio, LRentry.Priority) ) {
 			continue;
 	}
 
-    LR[i-1].HasDetail |= DetailPriority | DetailName;
+    LRentry.HasDetail |= DetailPriority | DetailName;
 
-    if( ad->LookupFloat(attrFactor, LR[i-1].Factor) ) {
-       LR[i-1].HasDetail |= DetailFactor;
-       if (LR[i-1].Factor > 0)
-          LR[i-1].HasDetail |= DetailRealPrio;
+    if( ad->LookupFloat(attrFactor, LRentry.Factor) ) {
+       LRentry.HasDetail |= DetailFactor;
+       if (LRentry.Factor > 0)
+          LRentry.HasDetail |= DetailRealPrio;
        }
-	if( ad->LookupFloat( attrAccUsage, LR[i-1].AccUsage ) ) LR[i-1].HasDetail |= DetailAccUsage;
-	if( ad->LookupFloat( attrCeiling, LR[i-1].Ceiling ) ) LR[i-1].HasDetail |= DetailCeiling;
-	if( ad->LookupFloat( attrFloor, LR[i-1].Floor ) ) LR[i-1].HasDetail |= DetailFloor;
-	if( ad->LookupFloat( attrRequested, LR[i-1].Requested ) ) LR[i-1].HasDetail |= DetailRequested;
-	if( ad->LookupInteger( attrBeginUsage, LR[i-1].BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
-	if( ad->LookupInteger( attrLastUsage, LR[i-1].LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
+	if( ad->LookupFloat( attrAccUsage, LRentry.AccUsage ) ) LRentry.HasDetail |= DetailAccUsage;
+	if( ad->LookupFloat( attrCeiling, LRentry.Ceiling ) ) LRentry.HasDetail |= DetailCeiling;
+	if( ad->LookupFloat( attrFloor, LRentry.Floor ) ) LRentry.HasDetail |= DetailFloor;
+	if( ad->LookupFloat( attrRequested, LRentry.Requested ) ) LRentry.HasDetail |= DetailRequested;
+	if( ad->LookupInteger( attrBeginUsage, LRentry.BeginUsage ) ) LRentry.HasDetail |= DetailUseTime1;
+	if( ad->LookupInteger( attrLastUsage, LRentry.LastUsage ) ) LRentry.HasDetail |= DetailUseTime2 | DetailUseDeltaT;
 
-	if (ad->LookupFloat(attrWtResUsed, LR[i-1].wtRes) || ad->LookupFloat(attrResUsed, LR[i-1].wtRes)) {
-		LR[i-1].HasDetail |= DetailResUsed;
+	if (ad->LookupFloat(attrWtResUsed, LRentry.wtRes) || ad->LookupFloat(attrResUsed, LRentry.wtRes)) {
+		LRentry.HasDetail |= DetailResUsed;
 	}
 
-    if (!ad->LookupString(attrAcctGroup, LR[i-1].AcctGroup)) {
-        LR[i-1].AcctGroup = "<none>";
+    if (!ad->LookupString(attrAcctGroup, LRentry.AcctGroup)) {
+        LRentry.AcctGroup = "<none>";
     }
-    if (!ad->LookupBool(attrIsAcctGroup, LR[i-1].IsAcctGroup)) {
+    if (!ad->LookupBool(attrIsAcctGroup, LRentry.IsAcctGroup)) {
         LR[i=1].IsAcctGroup = false;
     }
 
     char attr[64];
     snprintf( attr, sizeof(attr), "EffectiveQuota%s", strI );
-    if (ad->LookupFloat(attr, LR[i-1].EffectiveQuota)) LR[i-1].HasDetail |= DetailEffQuota;
+    if (ad->LookupFloat(attr, LRentry.EffectiveQuota)) LRentry.HasDetail |= DetailEffQuota;
     snprintf( attr, sizeof(attr), "ConfigQuota%s", strI );
-    if (ad->LookupFloat(attr, LR[i-1].ConfigQuota)) LR[i-1].HasDetail |= DetailCfgQuota;
+    if (ad->LookupFloat(attr, LRentry.ConfigQuota)) LRentry.HasDetail |= DetailCfgQuota;
 
-    if (LR[i-1].IsAcctGroup) {
-        LR[i-1].GroupId = -i;
-        if (LR[i-1].Name == "<none>" || LR[i-1].Name == ".")
-           LR[i-1].GroupId = 0;
+    if (LRentry.IsAcctGroup) {
+        LRentry.GroupId = -i;
+        if (LRentry.Name == "<none>" || LRentry.Name == ".")
+           LRentry.GroupId = 0;
 
         snprintf( attr, sizeof(attr), "GroupAutoRegroup%s", strI );
         bool regroup = false;
-        if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
-        LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
+        if (ad->LookupBool(attr, regroup)) LRentry.HasDetail |= DetailSurplus;
+        LRentry.Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
            GlobalSurplusPolicy = SurplusRegroup;
 
         snprintf( attr, sizeof(attr), "SurplusPolicy%s", strI );
         if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
-           LR[i-1].HasDetail |= DetailSurplus;
+           LRentry.HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
               GlobalSurplusPolicy = SurplusRegroup;
-              LR[i-1].Surplus = SurplusRegroup;
+              LRentry.Surplus = SurplusRegroup;
            } else if (MATCH == strcasecmp(policy, "byquota")) {
               GlobalSurplusPolicy = SurplusByQuota;
-              LR[i-1].Surplus = SurplusByQuota;
+              LRentry.Surplus = SurplusByQuota;
            } else if (MATCH == strcasecmp(policy, "no")) {
-              LR[i-1].Surplus = SurplusNone;
+              LRentry.Surplus = SurplusNone;
               } else {
-              LR[i-1].Surplus = SurplusUnknown;
+              LRentry.Surplus = SurplusUnknown;
            }
         }
 
-        double sort_key = LR[i-1].SortKey;
+        double sort_key = LRentry.SortKey;
         snprintf( attr, sizeof(attr), "GroupSortKey%s", strI );
-        if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
-        LR[i-1].SortKey = sort_key;
+        if (ad->LookupFloat(attr, sort_key)) LRentry.HasDetail |= DetailSortKey;
+        LRentry.SortKey = sort_key;
 
         snprintf( attr, sizeof(attr), "SubtreeQuota%s", strI );
-        if (ad->LookupFloat(attr, LR[i-1].SubtreeQuota)) LR[i-1].HasDetail |= DetailTreeQuota;
-        if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
-           LR[i-1].HasDetail &= ~DetailPrios;
+        if (ad->LookupFloat(attr, LRentry.SubtreeQuota)) LRentry.HasDetail |= DetailTreeQuota;
+        if (GroupRollup && !(LRentry.HasDetail & DetailEffQuota)) {
+           LRentry.HasDetail &= ~DetailPrios;
         }
 
         if (GroupPrioIsMeaningless) {
-           LR[i-1].HasDetail &= ~DetailPriority;
+           LRentry.HasDetail &= ~DetailPriority;
         }
 
     } else {
        // if this is not a group, then it's in a group, if it's in the none
        // group we can set it's group id now, but if not we need to stuff 
        // in a bogus value and set a flag to turn on groupid fixup later.
-       if (LR[i-1].AcctGroup == "<none>" || LR[i-1].AcctGroup == ".")
-          LR[i-1].GroupId = 0;
+       if (LRentry.AcctGroup == "<none>" || LRentry.AcctGroup == ".")
+          LRentry.GroupId = 0;
        else {
           // set to large negative number so we know we have to fix it
-          LR[i-1].GroupId = -numElem*2;
+          LRentry.GroupId = -numElem*2;
           fNeedGroupIdFixup = true;
        }
-       if (LR[i-1].HasDetail & (DetailEffQuota | DetailCfgQuota))
+       if (LRentry.HasDetail & (DetailEffQuota | DetailCfgQuota))
           UsersHaveQuotas = true;
     }
 
-    if (LR[i-1].GroupId != 0)
-       LR[i-1].HasDetail |= DetailGroup;
+    if (LRentry.GroupId != 0)
+       LRentry.HasDetail |= DetailGroup;
 
-    DetailAvailFlag |= LR[i-1].HasDetail;
+    DetailAvailFlag |= LRentry.HasDetail;
 
   }
  
