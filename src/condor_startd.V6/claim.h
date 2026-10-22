@@ -114,7 +114,7 @@ public:
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
-	void dprintf( int, const char* ... ) CHECK_PRINTF_FORMAT(3,4);
+	void dprintf( int, const char*, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 	void refuseClaimRequest();
 
