@@ -29,6 +29,11 @@
   in the job ad for provenance reasons.
   :jira:`974`
 
+- The *condor_shadow* now sets :ad-attr:`JobReconnectedDate` to the current
+  time in the job ad whenever it successfully reconnects to the
+  *condor_starter*.
+  :jira:`4013`
+
 - The *condor_starter* now advertises :ad-attr:`HasCgroup` as ``True``
   when jobs on that execution point will be placed in a per-job cgroup.
   The ``CgroupEnforced`` attribute, which the *condor_startd*
