@@ -5818,98 +5818,6 @@ Scheduler::PeriodicExprHandler( int /* timerID */ )
 }
 
 
-/** Last chance to prep a job before it (potentially) starts
-
-This is a last chance to do any final work before starting a
-job handler (starting condor_shadow, handing off to condor_gridmanager,
-etc).  May block for a long time, so you'll probably want to do this is
-a thread.
-
-What do we do here?  At the moment if the job has a "sandbox" directory
-("condor_submit -s" or Condor-C) we chown it from
-condor to the user.  In the future we might allocate a dynamic account here.
-*/
-int
-aboutToSpawnJobHandler( int cluster, int proc, void* )
-{
-	if( isTransferShadowProcID( proc ) ) { return TRUE; }
-
-	ASSERT(cluster > 0);
-	ASSERT(proc >= 0);
-
-	ClassAd * job_ad = GetJobAd( cluster, proc );
-	ASSERT( job_ad ); // No job ad?
-	if( ! SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
-			// nothing more to do...
-		FreeJobAd( job_ad );
-		return TRUE;
-	}
-
-	SpooledJobFiles::createJobSpoolDirectory(job_ad,PRIV_USER);
-
-	FreeJobAd(job_ad);
-
-	return TRUE;
-}
-
-
-int
-aboutToSpawnJobHandlerDone( int cluster, int proc, 
-							void* shadow_record, int )
-{
-	shadow_rec* srec = (shadow_rec*)shadow_record;
-	dprintf( D_FULLDEBUG, 
-			 "aboutToSpawnJobHandler() completed for job %d.%d%s\n",
-			 cluster, proc, 
-			 srec ? ", attempting to spawn job handler" : "" );
-
-		// just to be safe, check one more time to make sure the job
-		// is still runnable.
-	int status;
-	if( ! scheduler.isStillRunnable(cluster, proc, status) ) {
-		if( status != -1 ) {
-			PROC_ID job_id;
-			job_id.cluster = cluster;
-			job_id.proc = proc;
-			mark_job_stopped( job_id );
-		}
-		if( srec ) {
-			scheduler.delete_shadow_rec(srec);
-		}
-		return FALSE;
-	}
-
-	if( srec && srec->recycle_shadow_stream ) {
-		scheduler.finishRecycleShadow( srec );
-		return TRUE;
-	}
-
-	return (int)scheduler.spawnJobHandler( cluster, proc, srec );
-}
-
-
-// Returns true if srec is still valid after the call, false if it was deleted.
-// In the synchronous (non-threaded) case aboutToSpawnJobHandlerDone() runs
-// inline and may delete srec -- when the job is no longer runnable, or when
-// spawnJobHandler() finds no match -- and it returns 0 exactly in those cases.
-// Callers that reuse srec after this call (notably the MPI/parallel per-proc
-// loop, where the whole cluster shares the procid-0 srec) must stop touching
-// srec once this returns false.  In the threaded case any deletion is deferred
-// to the reaper, so srec is still valid when this returns.
-bool
-callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
-{
-	// braces from vestigial if ! jobPrepNeedsThread
-	{
-		dprintf( D_FULLDEBUG, "Job prep for %d.%d will not block, "
-				 "calling aboutToSpawnJobHandler() directly\n",
-				 cluster, proc );
-		aboutToSpawnJobHandler( cluster, proc, srec );
-		return aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 ) != 0;
-	}
-}
-
-
 bool
 Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
@@ -7054,10 +6962,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			int universe = CONDOR_UNIVERSE_VANILLA;
 			ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 			FreeJobAd(ad);
-
-			if(universe == CONDOR_UNIVERSE_GRID) {
-				aboutToSpawnJobHandler( cluster, proc, NULL );
-			}
 		}
 	}
 
@@ -10165,7 +10069,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 				if (replacement != mrec->jid) {
 					dprintf(D_FULLDEBUG, "StartupLimit replacing job %d.%d with %d.%d for match %s\n",
 						mrec->jid.cluster, mrec->jid.proc, replacement.cluster, replacement.proc, description.c_str());
-					mrec->jid = replacement;
+					SetMrecJobID(mrec, replacement);
 					delete jobAd;
 					jobAd = GetExpandedJobAd(mrec->jid, false);
 					if (!jobAd) {
@@ -11309,16 +11213,7 @@ Scheduler::AddRunnableLocalJobs()
 				dprintf( D_FULLDEBUG,
 					 "Found idle scheduler universe job %d.%d\n",
 					 id.cluster, id.proc );
-				/*
-				  we've decided to spawn a scheduler universe job.
-				  instead of doing that directly, we'll go through our
-				  aboutToSpawnJobHandler() hook isntead.  inside
-				  aboutToSpawnJobHandlerDone(), if the job is a
-				  scheduler universe job, we'll spawn it then.  this
-				  wrapper handles all the logic for if we want to
-				  invoke the hook in its own thread or not, etc.
-				*/
-				callAboutToSpawnJobHandler( id.cluster, id.proc, NULL );
+				spawnJobHandler(id.cluster, id.proc, nullptr);
 			}
 		}
 	}
@@ -11855,38 +11750,7 @@ Scheduler::StartJobHandler( int /* timerID */ )
 			continue;
 		}
 
-			// if we got this far, we're definitely starting the job,
-			// so deal with the aboutToSpawnJobHandler hook...
-		int universe = srec->universe;
-		bool srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec );
-
-		//bool wantPS = 0;
-		//if(job_ad) { job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS); }
-
-		if( (job_ad && job_ad->UseParallelScheduler()) ||
-			(universe == CONDOR_UNIVERSE_MPI) ||
-			(universe == CONDOR_UNIVERSE_PARALLEL)
-			) {
-			
-			if (proc != 0) {
-				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
-					   "non-zero procid for job (%d.%d)\n", cluster, proc);
-
-				continue;
-			}
-
-				// We've just called callAboutToSpawnJobHandler on procid 0,
-				// now call it on the rest of them.  All procs of an MPI/parallel
-				// cluster share this single procid-0 srec; if a per-proc call
-				// finds the job no longer runnable it deletes that shared srec,
-				// so stop as soon as srec is gone rather than pass a freed
-				// pointer back into callAboutToSpawnJobHandler.
-			proc = 1;
-			while( srec_valid && GetJobAd(cluster, proc) ) {
-				srec_valid = callAboutToSpawnJobHandler( cluster, proc, srec);
-				proc++;
-			}
-		}
+		spawnJobHandler(cluster, proc, srec);
 
 			// we're done trying to spawn a job at this time.  call
 			// tryNextJob() to let our timer logic handle the rest.
@@ -12285,7 +12149,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	if( wants_reconnect ) {
 			// Now that the shadow is alive, the match is "ACTIVE"
 		mrec->setStatus( M_ACTIVE );
-		mrec->jid = job_id;
 		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
 		        mrec->description(), mrec->jid.cluster, mrec->jid.proc );
 
@@ -21267,7 +21130,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 	mrec->setStatus( M_ACTIVE );
 
-	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);
+	finishRecycleShadow(srec);
 	return KEEP_STREAM;
 }
 

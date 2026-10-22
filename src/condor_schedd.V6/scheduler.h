@@ -1466,34 +1466,6 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 extern bool locate_and_advertise_local_credd(bool force);
 
-/** Hook to call whenever we're going to give a job to a "job
-	handler", be that a shadow, starter (local univ), or gridmanager.
-	it takes the optional shadow record as a void* so this can be
-	seamlessly used for Create_Thread_With_Data().  In fact, we don't
-	need the srec at all for the function itself, but we'll need it as
-	our data pointer in the reaper (so we can actually spawn the right
-	handler), so we ignore it here, but will need it later...
-*/
-int aboutToSpawnJobHandler( int cluster, int proc, void* srec=NULL );
-
-
-/** For use as a reaper with Create_Thread_With_Data(), or to call
-	directly after aboutToSpawnJobHandler() if there's no thread. 
-*/
-int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
-								int exit_status = 0 );
-
-
-/** A helper function that wraps the call to jobPrepNeedsThread() and
-	invokes aboutToSpawnJobHandler() as appropriate, either in its own
-	thread using Create_Thread_With_Data(), or calling it and then
-	aboutToSpawnJobHandlerDone() directly.  Returns false if srec was deleted
-	during a synchronous call (job no longer runnable, or no match); the
-	caller must not reuse srec once this returns false.
-*/
-bool callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
-
-
 /** Hook to call whenever a job enters a "finished" state, something
 	it can never get out of (namely, COMPLETED or REMOVED).  Like the
 	aboutToSpawnJobHandler() hook above, this might be expensive, so
