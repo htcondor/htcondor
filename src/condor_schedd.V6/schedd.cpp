@@ -13454,11 +13454,6 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 
 	if (pid) {
 		add_shadow_rec(new_rec);
-	} else if ( new_rec->match && new_rec->match->pool ) {
-		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-						ATTR_REMOTE_POOL,
-						new_rec->match->pool,
-						NONDURABLE);
 	}
 	return new_rec;
 }
@@ -14338,6 +14333,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+		SetAttributeInt( cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0 );
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
@@ -14423,13 +14419,8 @@ void
 mark_job_running(const PROC_ID & job_id)
 {
 	int status = 0;
-	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &status);
-	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_MAX_HOSTS, &orig_max);
-	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_ORIG_MAX_HOSTS,
-					orig_max);
-
 
 	if( status == RUNNING ) {
 		EXCEPT( "Trying to run job %d.%d, but already marked RUNNING!",
@@ -14441,8 +14432,6 @@ mark_job_running(const PROC_ID & job_id)
 	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, status);
 	SetAttributeInt(job_id.cluster, job_id.proc,
 					ATTR_ENTERED_CURRENT_STATUS, time(0) );
-	SetAttributeInt(job_id.cluster, job_id.proc,
-					ATTR_LAST_SUSPENSION_TIME, 0 );
 
 
 		// If this is a scheduler universe job, increment the
@@ -14523,13 +14512,8 @@ void
 _mark_job_stopped(const PROC_ID & job_id)
 {
 	int		status    = 0;
-	int		orig_max  = 0;
-	int		had_orig  = 0;
 
 		// NOTE: This function is wrapped in a NONDURABLE transaction.
-
-	had_orig = GetAttributeInt(job_id.cluster, job_id.proc,
-								ATTR_ORIG_MAX_HOSTS, &orig_max);
 
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &status);
 
@@ -14562,15 +14546,6 @@ _mark_job_stopped(const PROC_ID & job_id)
 		SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id.cluster, job_id.proc,
 						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
-		SetAttributeInt( job_id.cluster, job_id.proc,
-						 ATTR_LAST_SUSPENSION_TIME, 0 );
-
-		if (had_orig >= 0) {
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_MAX_HOSTS,
-							orig_max);
-		}
-		DeleteAttribute( job_id.cluster, job_id.proc, ATTR_REMOTE_POOL );
-
 	}	
 }
 
@@ -15023,19 +14998,11 @@ set_job_status(JobQueueJob * job, int status)
 		for (job = clusterad->FirstJob(); job != nullptr; job = clusterad->NextJob(job)) {
 			SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_JOB_STATUS, status);
 			SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_ENTERED_CURRENT_STATUS, now);
-			long long lst = 0;
-			if (job->LookupInteger(ATTR_LAST_SUSPENSION_TIME, lst) && lst != 0) {
-				SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_LAST_SUSPENSION_TIME, 0);
-			}
 		}
 	} else if (job->IsJob() || job->IsCluster()) {
 		if (job->IsCluster()) { ASSERT(status == JOB_STATUS_IDLE || status == JOB_STATUS_PREPARING); }
 		SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_JOB_STATUS, status);
 		SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_ENTERED_CURRENT_STATUS, now);
-		long long lst = 0;
-		if (job->LookupInteger(ATTR_LAST_SUSPENSION_TIME, lst) && lst != 0) {
-			SetAttributeInt(job->jid.cluster, job->jid.proc, ATTR_LAST_SUSPENSION_TIME, 0);
-		}
 	}
 
 	// Nothing written in this transaction requires immediate
@@ -19739,11 +19706,6 @@ holdJobRaw( int cluster, int proc, const char* reason,
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}
 
-	if( SetAttributeInt(cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0) < 0 ) {
-		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
-				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
-	}
-
 	// Update count in job ad of "system holds", whatever that is supposed to mean
 	// (this is a legacy attribute from way back when, keep it the same as it was for now)
 	if ( system_hold ) {
@@ -19883,11 +19845,6 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 						time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
-	}
-
-	if( SetAttributeInt(cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0 ) < 0 ) {
-		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
-				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
 	}
 
 	if ( write_to_user_log ) {
