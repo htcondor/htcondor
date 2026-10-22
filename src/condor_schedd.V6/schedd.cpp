@@ -10854,7 +10854,6 @@ Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 	srec->match = mrec;
 	srec->preempted = FALSE;
 	srec->removed = FALSE;
-	srec->conn_fd = -1;
 	srec->isZombie = FALSE;
 	srec->is_reconnect = true;
 	srec->keepClaimAttributes = false;
@@ -11282,7 +11281,7 @@ Scheduler::AddRunnableLocalJobs()
 				}
 				this->LocalUniverseJobsRunning++;
 
-				local_rec = add_shadow_rec( 0, id, CONDOR_UNIVERSE_LOCAL, NULL, -1, nullptr );
+				local_rec = add_shadow_rec( 0, id, CONDOR_UNIVERSE_LOCAL, NULL, nullptr );
 				addRunnableJob( local_rec );
 			} else {
 				// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
@@ -11565,7 +11564,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				}
 
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
-					transfer_job_id, universe, mrec, -1, nullptr
+					transfer_job_id, universe, mrec, nullptr
 				);
 
 
@@ -11619,7 +11618,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 
 			{
 				shadow_rec * job_shadow_rec = add_shadow_rec(
-					0, job_id, universe, mrec, -1 , nullptr
+					0, job_id, universe, mrec, nullptr
 				);
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
@@ -11656,7 +11655,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 			{
 				mark_serial_job_running(job_id);
 				shadow_rec * job_shadow_rec = add_shadow_rec(
-					0, job_id, universe, mrec, -1 , nullptr
+					0, job_id, universe, mrec, nullptr
 				);
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
@@ -12685,7 +12684,7 @@ Scheduler::start_std( match_rec* mrec, const PROC_ID & job_id, int univ )
 	mark_serial_job_running(job_id);
 
 	// add job to run queue
-	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 , nullptr );
+	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, nullptr );
 	addRunnableJob( srec );
 	return srec;
 }
@@ -13340,7 +13339,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		}
 	}
 
-	retval =  add_shadow_rec(pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1, cmd_secret.empty() ? nullptr : cmd_secret.c_str());
+	retval =  add_shadow_rec(pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, cmd_secret.empty() ? nullptr : cmd_secret.c_str());
 
 	if (retval) { success = true; }
 
@@ -13397,7 +13396,6 @@ shadow_rec::shadow_rec():
     match(NULL),
 	preempted(false),
 	preempt_pending(false),
-	conn_fd(-1),
 	removed(FALSE),
 	isZombie(FALSE),
 	is_reconnect(false),
@@ -13436,7 +13434,7 @@ shadow_rec::~shadow_rec()
 
 struct shadow_rec *
 Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
-						   match_rec* mrec, int fd, const char* secret )
+						   match_rec* mrec, const char* secret )
 {
 	shadow_rec *new_rec = new shadow_rec;
 	// dprintf( D_ALWAYS, "(1) new shadow_rec = %p\n", new_rec );
@@ -13447,7 +13445,6 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 	new_rec->match = mrec;
 	new_rec->preempted = FALSE;
 	new_rec->removed = FALSE;
-	new_rec->conn_fd = fd;
 	new_rec->isZombie = FALSE;
 	new_rec->keepClaimAttributes = false;
 	if (secret) { new_rec->secret = strdup(secret); }
@@ -14391,9 +14388,6 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		shadowsByPid.erase(pid);
 	}
 	shadowsByProcID.erase(rec->job_id);
-	if ( rec->conn_fd != -1 ) {
-		close(rec->conn_fd);
-	}
 
 	if ( rec->universe != CONDOR_UNIVERSE_SCHEDULER &&
 		 rec->universe != CONDOR_UNIVERSE_LOCAL ) {

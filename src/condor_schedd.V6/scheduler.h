@@ -140,7 +140,6 @@ struct shadow_rec
     match_rec*	    match;
     bool            preempted;
 	bool            preempt_pending;
-    int             conn_fd;
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
@@ -815,7 +814,7 @@ class Scheduler : public Service
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
-									int fd, const char* secret );
+									const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec*, shadow_rec * = NULL );
