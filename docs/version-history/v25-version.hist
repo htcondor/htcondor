@@ -23,6 +23,10 @@
   macro expansion in the job ad failed.
   :jira:`3988`
 
+- Fixed a bug that could cause *condor_userprio* to print bogus values for
+  a user's resoruce usage when they haven't used any resources.
+  :jira:`4018`
+
 *** 25.15.15 features
 
 - Scheduler and Local universe jobs no longer use the Vanilla universe default values for
