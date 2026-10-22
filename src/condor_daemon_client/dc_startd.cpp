@@ -415,9 +415,12 @@ DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bo
 		dprintf (D_COMMAND, "DCStartd::%s(%s,...) making connection to %s\n", _cmd_str.c_str(), getCommandStringSafe(cmd), _addr.c_str());
 	}
 
+	// years of research...
+	int timeout = param_integer( "DEACTIVATE_CLAIM_TIMEOUT", 20, 1 );
+
 	bool  result;
 	ReliSock reli_sock;
-	reli_sock.timeout(20);   // years of research... :)
+	reli_sock.timeout(timeout);
 	if( ! reli_sock.connect(_addr.c_str()) ) {
 		std::string err = "DCStartd::" + _cmd_str + ": ";
 		err += "Failed to connect to startd (";
@@ -426,7 +429,7 @@ DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bo
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
-	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
+	result = startCommand( cmd, (Sock*)&reli_sock, timeout, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
 		std::string err = "DCStartd::" + _cmd_str + ": ";
 		err += "Failed to send command ";

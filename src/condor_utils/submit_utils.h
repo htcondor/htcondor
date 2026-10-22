@@ -169,8 +169,10 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
-#define SUBMIT_KEY_CommonInputFiles "transfer_common_input"
+#define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input"
+#define SUBMIT_KEY_CommonInputFiles "common_input_files"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
+#define SUBMIT_KEY_RequireCommonFiles "require_common_files"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -233,6 +235,9 @@
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
 #define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
+#define SUBMIT_KEY_MaxCondorVersion "max_condor_version"
+#define SUBMIT_KEY_MinCondorVersion "min_condor_version"
 
 //
 // Job Deferral Parameters
@@ -390,6 +395,9 @@
 #define SUBMIT_KEY_RmKillSig "remove_kill_sig"
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
+
+#define SUBMIT_KEY_AnnexName "annex_name"
+#define SUBMIT_KEY_RestrictToAnnex "restrict_to_annex"
 
 //Temporary function to get a mapfile object point to protected url map
 MapFile* getProtectedURLMap();

@@ -1198,12 +1198,6 @@ main(int argc, const char* argv[])
 			query.addANDConstraint(toConstrain.c_str());
 		}
 
-		if (neg_name) {
-			std::string constraint;
-			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);
-			query.addANDConstraint(constraint.c_str());
-		}
-
 		// build a constraint for usernames
 		// we compare fully qualified usernames using a comparison for each -- (Name =?= "bob@cs"|| Name =?= "alice@cs")
 		// but we compare partially qualfied usernames by using list member -- StringListMemember(splitusername(Name)[0], "bob,alice")
@@ -1225,6 +1219,13 @@ main(int argc, const char* argv[])
 
 		bool queryNegotiator = !fromCollector;
 		if (fromCollector) {
+
+			if (neg_name) {
+				std::string constraint;
+				formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);
+				query.addANDConstraint(constraint.c_str());
+			}
+
 			CollectorList * collectors = CollectorList::create(pool_name);
 			q = collectors->query(query, accountingAds, &errstack);
 			delete collectors;
@@ -1433,6 +1434,12 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     LR[i-1].Requested=0.0;
     LR[i-1].Ceiling=-1;
     LR[i-1].Floor=-1;
+
+	// These values can be used even if the relevant Detail flag isn't set,
+	// so ensure values from a previous ad don't bleed through if the
+	// attribute isn't present in the current ad.
+	resUsed = 0;
+	AccUsage = 0;
 
 	char strI[32];
 

@@ -53,6 +53,9 @@ char*          Name = nullptr;
 char*          X509Directory = nullptr;
 
 // global objects
+//
+// Order matters: because of global ctor/dtor ordering,
+// do not swap the order of these two object
 Scheduler	scheduler;
 DedicatedScheduler dedicated_scheduler;
 

@@ -8,12 +8,25 @@
 import logging
 import pytest
 import os
+import time
 
 import htcondor2 as htcondor
 from ornithology import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# True if pid exists and is not a zombie
+def process_is_alive(pid):
+    try:
+        with open(f"/proc/{pid}/stat", 'r') as file:
+            stat = file.read()
+    except FileNotFoundError:
+        return False
+    # The state field follows the parenthesized command name,
+    # which may itself contain spaces or parens
+    state = stat.rsplit(')', 1)[1].split()[0]
+    return state != 'Z'
 
 # Standup a condor with user-space cgroup v2 enabled
 @standup
@@ -405,7 +418,13 @@ class TestCgroupOOM:
         with open('pidfile', 'r') as file:
             pid = file.read().rstrip()
         # Check that the pid does not exist in the system anymore -- that it has not escaped.
-        assert not os.path.exists("/proc/" + pid)
+        # A killed process can linger briefly as a zombie until it is reaped, so poll
+        # a few times, and count a zombie as dead.
+        for _ in range(5):
+            if not process_is_alive(pid):
+                break
+            time.sleep(1)
+        assert not process_is_alive(pid)
 
     def test_cgroup_isolated(self, isolated_test_job):
         # When the job exits, this is a copy of the cgroup.procs file

@@ -433,16 +433,26 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def get_my_identity():
+    try:
+        c = htcondor.Collector()
+        location = c.locate(htcondor.DaemonType.Schedd)
+        ping_ad = htcondor.ping(location, "WRITE")
+    except Exception as e:
+        raise RuntimeError(f"Cannot reach schedd: {e}")
+    return ping_ad["MyRemoteUserName"]
+
+
 def create_annex_token(logger, type):
     token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
     annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
-    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
-    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+    token_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+    token_file.close()
 
     args = [
         'condor_token_fetch',
         '-lifetime', str(token_lifetime),
-        '-token', token_name,
+        '-file', token_file.name,
         '-key', annex_token_key_name,
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
@@ -463,10 +473,7 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY", "")
-            if sec_token_directory == "":
-                sec_token_directory = "~/.condor/tokens.d"
-            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+            return token_file.name
         else:
             logger.error(f"Failed to create annex token, aborting.")
             logger.warning(f"{out.strip()}")
@@ -1080,15 +1087,14 @@ def annex_inner_func_new(
     test,
 ):
 
-    # We use this same method to determine the user name in `htcondor job`,
-    # so even if it's wrong, it will at least consistently so.
-    username = getpass.getuser()
-
     # As reminders for when we fix lifetime being specified in seconds.
     idletime_in_seconds = startd_noclaim_shutdown
 
     if test is not None and test == 1:
         return
+
+    if owners is None:
+        owners = get_my_identity()
 
     # Location of the local universe script files
     local_script_dir = (
@@ -1144,26 +1150,10 @@ def annex_inner_func_new(
             raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
 
 
-    ##
-    ## While we're requiring that jobs are submitted before creating the
-    ## annex (for .sif pre-staging purposes), refuse to make the annex
-    ## if no such jobs exist.
-    ##
-    schedd = htcondor.Schedd()
-    annex_jobs = schedd.query(f'TargetAnnexName == "{annex_name}"')
-
-    enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
-    if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
-        if not annex_jobs:
-            raise RuntimeError(
-                f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
-            )
-        logger.debug(
-            f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
-        )
-
     if test == 2:
         return
+
+    schedd = htcondor.Schedd()
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
@@ -1295,14 +1285,8 @@ def annex_add_old(logger, annex_name, **others):
     return annex_inner_func_old(logger, annex_name, **others)
 
 def annex_create_new(logger, annex_name, **others):
-    if others.get("test") is None:
-        if annex_name_exists(annex_name):
-            raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
     return annex_inner_func_new(logger, annex_name, **others)
 
 
 def annex_add_new(logger, annex_name, **others):
-    if others.get("test") is None:
-        if not annex_name_exists(annex_name):
-            raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
     return annex_inner_func_new(logger, annex_name, **others)

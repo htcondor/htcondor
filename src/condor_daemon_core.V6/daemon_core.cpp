@@ -116,6 +116,7 @@ const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
 time_t DaemonCore::m_startup_time = time(NULL);
+time_t DaemonCore::m_reconfig_time = DaemonCore::m_startup_time;
 
 #define CREATE_PROCESS_FAILED_CHDIR 1
 
@@ -2539,6 +2540,71 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 #endif
 }
 
+bool
+DaemonCore::Read_Pipe_Full(int pipe_end, void* buffer, int len, int* num_calls)
+{
+	if (len < 0) {
+		dprintf(D_ALWAYS, "Read_Pipe_Full: invalid len: %d\n", len);
+		return false;
+	}
+
+	char* ptr = (char*)buffer;
+	int nleft = len;
+	int calls = 0;
+
+	while (nleft > 0) {
+		calls++;
+		int nread = Read_Pipe(pipe_end, ptr, nleft);
+
+		if (nread < 0) {
+#ifndef WIN32
+			if (errno == EINTR) { calls--; continue; }
+#endif
+			if (num_calls) { *num_calls = calls; }
+			return false;
+		}
+		if (nread == 0) { break; } // EOF
+
+		ptr += nread;
+		nleft -= nread;
+	}
+
+	if (num_calls) { *num_calls = calls; }
+	return nleft == 0;
+}
+
+bool
+DaemonCore::Write_Pipe_Full(int pipe_end, const void* buffer, int len, int* num_calls)
+{
+	if (len < 0) {
+		dprintf(D_ALWAYS, "Write_Pipe_Full: invalid len: %d\n", len);
+		return false;
+	}
+
+	const char* ptr = (const char*)buffer;
+	int nleft = len;
+	int calls = 0;
+
+	while (nleft > 0) {
+		calls++;
+		int nwritten = Write_Pipe(pipe_end, ptr, nleft);
+
+		if (nwritten <= 0) {
+#ifndef WIN32
+			if (nwritten < 0 && errno == EINTR) { calls--; continue; }
+#endif
+			if (num_calls) { *num_calls = calls; }
+			return false;
+		}
+
+		ptr += nwritten;
+		nleft -= nwritten;
+	}
+
+	if (num_calls) { *num_calls = calls; }
+	return true;
+}
+
 #if !defined(WIN32)
 int
 DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
@@ -3041,6 +3107,7 @@ DaemonCore::reconfig(void) {
 	// NOTE: on reconfig, refreshDNS() will have already been called
 	// by the time we get here, because it needs to be called early
 	// in the process.
+	m_reconfig_time = time(NULL);
 
 	// This is the compatibility layer on top of new ClassAds.
 	// A few configuration parameters control its behavior.
@@ -11261,7 +11328,7 @@ DaemonCore::initCollectorList() {
 		adSeq = m_collector_list->detachAdSequences();
 		delete m_collector_list;
 	}
-	m_collector_list = CollectorList::create(NULL, adSeq);
+	m_collector_list = CollectorList::create(NULL, adSeq, m_startup_time, m_reconfig_time);
 
 	// This param has legal values of TRUE, FALSE, and AUTO
 	// but we only need to check for TRUE here because TRUE means we

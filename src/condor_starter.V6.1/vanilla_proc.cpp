@@ -457,12 +457,26 @@ const char * Starter::ChooseCGroup(FamilyInfo & fi, int job_universe, const std:
 		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
 			// Potentially disable GPU devices from job
 			std::string available_gpus;
-			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+
+			// AvailableGpus is a list of attribute names all the gpus provisioned 
+			// to this slot.  Each attribute itself has a classad with various attributes
+			// about that gpu.  For MIG devices, one of the attributes is ParentUuid, 
+			// which is the GPU device.  We can't hide the MIG device directly, so
+			// if there is a ParentUuid defined in the nested classad, use that instead.
+
+			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",(ParentUuid ?: DeviceUuid)),AvailableGPUs))";
 			classad::Value v;
+
 			// if the expression does not evaluate to a string, available_gpus
 			// remains empty, which means hide all (see below)
 			std::ignore = mad->EvaluateExpr(gpu_expr, v);
 			std::ignore = v.IsStringValue(available_gpus);
+
+			// Hack.  Work around the fact that a mig device has a reference to the
+			// parent device in the ParentUuid entry, but that already has the
+			// GPU- prefix, unlike the DeviceUuid entry.  Thus the strcat above
+			// gives us a double "GPU-GPU-" prefix for mig devices.
+			replace_str(available_gpus, "GPU-GPU-", "GPU-");
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
@@ -778,6 +792,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
 	reported_usage += m_current_usage;
+	reported_usage.percent_cpu = m_current_usage.percent_cpu; // fix percent_cpu, which is damaged by +=
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
@@ -786,6 +801,16 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Publish the info we care about into the ad.
 	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
+	if (m_proc_exited) {
+		double job_duration = timersub_double( job_exit_time, job_start_time );
+		if (job_duration > 0) {
+			ad->Assign(ATTR_CPUS_USAGE, ((double)usage->sys_cpu_time + (double)usage->user_cpu_time) / job_duration);
+		} else {
+			ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
+		}
+	} else {
+		ad->Assign(ATTR_CPUS_USAGE, usage->percent_cpu / 100.0);
+	}
 
 	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
 

@@ -21,11 +21,15 @@
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"
+#include "basename.h"
 #include "gangliad.h"
+#include "metricd.h"
 
 //-------------------------------------------------------------
 
+bool g_legacy_gangliad_mode = false;
 GangliaD *gangliad = NULL;
+MetricD *metricd = NULL;
 
 //-------------------------------------------------------------
 
@@ -33,24 +37,35 @@ void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_FULLDEBUG, "main_init() called\n");
 
-	gangliad = new GangliaD();
-	gangliad->initAndReconfig();
+	if (g_legacy_gangliad_mode) {
+		gangliad = new GangliaD();
+		gangliad->initAndReconfig();
+	} else {
+		metricd = new MetricD();
+		metricd->initAndReconfig();
+	}
 }
 
 //-------------------------------------------------------------
 
-void 
+void
 main_config()
 {
 	dprintf(D_FULLDEBUG, "main_config() called\n");
 
-	gangliad->initAndReconfig();
+	if (g_legacy_gangliad_mode) {
+		gangliad->initAndReconfig();
+	} else {
+		metricd->initAndReconfig();
+	}
 }
 
 static void Stop()
 {
 	delete gangliad;
 	gangliad = NULL;
+	delete metricd;
+	metricd = NULL;
 	DC_Exit(0);
 }
 
@@ -77,7 +92,14 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("GANGLIAD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	const char *progname = condor_basename(argv[0]);
+	if (progname && strstr(progname, "gangliad") != NULL) {
+		g_legacy_gangliad_mode = true;
+		set_mySubSystem("GANGLIAD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	} else {
+		g_legacy_gangliad_mode = false;
+		set_mySubSystem("METRICD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	}
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

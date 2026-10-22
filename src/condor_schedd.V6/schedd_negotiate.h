@@ -130,7 +130,8 @@ class ScheddNegotiate: public DCMsg {
 	// set during initialization to limit the number of RRs that will be sent to negotiator
 	// m_jobs_can_offer will normally be set to -1 and then to the Schedd global limit (shadows) once the negotiator calls
 	// if you set it to 0 or a positive int here, that will be the upper limit (shadow limit may still set it lower)
-	// m_jobs_can_offer counts down as we send RRs while responding to negotiate
+	// m_jobs_can_offer counts down as we send RRs while responding to negotiate, and is reset
+	// to that limit minus the matches received so far each time it runs out or the negotiator asks for another RRL
 	void setMaxJobsCanOffer(int max_jobs) { m_jobs_can_offer = max_jobs; m_curbed = (max_jobs==0); }
 
 		// Begins asynchronously processing negotiation operations
@@ -225,6 +226,16 @@ class ScheddNegotiate: public DCMsg {
 
 	int m_jobs_rejected;
 	int m_jobs_matched;
+
+		// Offer limit (m_jobs_can_offer) as computed for the first resource
+		// request list of this negotiation, and m_jobs_matched at that time.
+		// Each later resource request list, and each time an auto cluster uses
+		// up the budget within a list, resets m_jobs_can_offer to this limit
+		// minus the matches received since. See resetRRLOfferLimit().
+	int m_rrl_offer_limit{-1};
+	int m_rrl_offer_limit_base_matches{0};
+	bool m_rrl_offer_limit_set{false};
+	void resetRRLOfferLimit();
 
 	int m_num_resource_reqs_sent; // used when sending a resource request list
 	int m_num_resource_reqs_to_send; // used when sending a resource request list

@@ -517,7 +517,8 @@ public:
 	static int get_timeout_multiplier();
 
 	void ignoreTimeoutMultiplier() { ignore_timeout_multiplier = true; }
-	
+	void restoreTimeoutMultiplier() { ignore_timeout_multiplier = false; }
+
     //@}
  private:
         

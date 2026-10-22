@@ -52,7 +52,8 @@ int hip_Init(void) {
 	// We use an allocation rather than a stack object here to avoid trashing the stack
 	// if the API changes, and allocate extra space also to avoid crashing.
 	size_t cb = sizeof(hipDeviceProp_t)*2;
-	hipDeviceProp_t * props = (hipDeviceProp_t*)malloc(cb);
+	std::vector<unsigned char> props_buf(cb, 0);
+	hipDeviceProp_t * props = (hipDeviceProp_t*)props_buf.data();
 	std::string name;
 
 	int hPlatforms = 0;
@@ -295,6 +296,7 @@ hipError_t hip_getBasicProps(int dev, BasicProps *bp, int fix_guid_magic){
 	const hipDeviceProp_t & dev_props = hip_platforms[dev];
 
 	bp->hipDetection = hip_lib_major_version; // what version of hip (ROCM) libraries we used to get properties.
+	bp->vendor = "AMD";
 
 	if (is_null_uuid(dev_props.uuid)) {
 		print_error(MODE_DIAGNOSTIC_MSG, "diag: dev(%d) UUID is NULL-GUID, ignoring\n", dev);

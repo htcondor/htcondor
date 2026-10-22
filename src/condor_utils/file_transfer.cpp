@@ -53,6 +53,7 @@
 #include "fcloser.h"
 
 #include <algorithm>
+#include <limits>
 #include <numeric>
 #include <string>
 #include <unordered_set>
@@ -1859,37 +1860,40 @@ FileTransfer::callClientCallback()
 	}
 }
 
+// The transfer status pipe protocol frames each variable-length payload
+// with an `int` byte count (and some callers add 1 for a trailing null),
+// so a payload whose size doesn't fit in a positive int can't be sent:
+// narrowing it would either wrap to a negative length (which the reader
+// then uses for an allocation) or, on the writer's side, make the retry
+// loop below believe there's nothing left to write.  Reject it up front
+// instead of narrowing it.
+static bool
+PipeMsgLengthOk(size_t size, const char * what) {
+	// '>=' (not '>') leaves room for callers that add one for a trailing null
+	if (size >= static_cast<size_t>(std::numeric_limits<int>::max())) {
+		dprintf(D_ALWAYS, "FileTransfer: %s is too large (%zu bytes) to send "
+		                   "over the transfer status pipe\n", what, size);
+		return false;
+	}
+	return true;
+}
+
 bool
 FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
-	int nleft = nBytes;
-	int num_reads = 0;
-
-	while (nleft > 0) {
-		char* tmp_buf = new char[nleft];
-		ASSERT(tmp_buf);
-
-		num_reads++;
-
-		int nread = daemonCore->Read_Pipe(TransferPipe[0],
-		                                  tmp_buf,
-		                                  nleft);
-
-		if (nread < 0) {
-			delete [] tmp_buf;
-			return false;
-		}
-
-		buf.insert(buf.size(), tmp_buf, nread);
-		nleft -= nread;
-
-		delete [] tmp_buf;
-
-		if (nread == 0) { break; }
+	// Check before resize(): a negative length would convert to a huge
+	// size_t and throw rather than fail the read.
+	if (nBytes < 0) {
+		dprintf(D_ERROR, "PipeReadFullString: invalid length: %d\n", nBytes);
+		return false;
 	}
+	buf.resize(static_cast<size_t>(nBytes));
+
+	int num_reads = 0;
+	bool success = daemonCore->Read_Pipe_Full(TransferPipe[0], buf.data(), nBytes, &num_reads);
 
 	dprintf(D_TEST, "PipeReadFullString(%d) Total Reads: %d\n", nBytes, num_reads);
 
-	return nleft == 0;
+	return success;
 }
 
 bool
@@ -2071,6 +2075,10 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 	classad::ClassAdUnParser caup;
 	caup.Unparse( plugin_output_ad_string, & plugin_output_ad );
 
+	if (!PipeMsgLengthOk(plugin_output_ad_string.size(), "plugin output ad")) {
+		return false;
+	}
+
 	// Write the size of the serialization.
 	int size_of_ad = plugin_output_ad_string.size();
 	n = daemonCore->Write_Pipe(
@@ -2079,13 +2087,9 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 	if( n != sizeof(size_of_ad) ) { return false; }
 
 	// Write the serialization.
-	n = daemonCore->Write_Pipe(
-		TransferPipe[1],
-		plugin_output_ad_string.c_str(),
-		plugin_output_ad_string.size()
-	);
-	// I'm also asserting that our ads aren't >= 2GB.
-	ASSERT( n == (int)plugin_output_ad_string.size() );
+	if (!daemonCore->Write_Pipe_Full(TransferPipe[1], plugin_output_ad_string.data(), (int)plugin_output_ad_string.size())) {
+		return false;
+	}
 
 	return true;
 }
@@ -3964,7 +3968,14 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	std::string stats;
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(stats, &Info.stats);
-	int stats_len = stats.length();
+
+	int stats_len = 0;
+	if (!PipeMsgLengthOk(stats.length(), "stats ad")) {
+		write_failed = true;
+	} else {
+		stats_len = static_cast<int>(stats.length());
+	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&stats_len,
@@ -3972,16 +3983,20 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   stats.c_str(),
-				   stats_len );
-		if(n != stats_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], stats.data(), stats_len)) write_failed = true;
 		dprintf(D_ZKM, "sent stats ad to pipe: %s\n", stats.c_str());
 	}
-	int error_len = Info.error_desc.length();
-	if(error_len) {
-		error_len++; //write the null too
+
+	int error_len = 0;
+	if (!PipeMsgLengthOk(Info.error_desc.length(), "error description")) {
+		write_failed = true;
+	} else {
+		error_len = static_cast<int>(Info.error_desc.length());
+		if (error_len) {
+			error_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&error_len,
@@ -3989,17 +4004,20 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.error_desc.c_str(),
-				   error_len );
-		if(n != error_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], Info.error_desc.c_str(), error_len)) write_failed = true;
 		dprintf(D_ZKM, "sent error to pipe: %s\n", Info.error_desc.c_str());
 	}
 
-	int spooled_files_len = Info.spooled_files.length();
-	if(spooled_files_len) {
-		spooled_files_len++; //write the null too
+	int spooled_files_len = 0;
+	if (!PipeMsgLengthOk(Info.spooled_files.length(), "spooled files list")) {
+		write_failed = true;
+	} else {
+		spooled_files_len = static_cast<int>(Info.spooled_files.length());
+		if (spooled_files_len) {
+			spooled_files_len++; //write the null too
+		}
 	}
+
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&spooled_files_len,
@@ -4007,10 +4025,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   Info.spooled_files.c_str(),
-				   spooled_files_len );
-		if(n != spooled_files_len) write_failed = true;
+		if (!daemonCore->Write_Pipe_Full(TransferPipe[1], Info.spooled_files.c_str(), spooled_files_len)) write_failed = true;
 	}
 
 	if(write_failed) {

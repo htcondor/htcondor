@@ -541,10 +541,10 @@ Daemon::connectSock(Sock *sock, time_t sec, CondorError* errstack, bool non_bloc
 
 	sock->set_peer_description(idStr());
 	if( sec ) {
-		sock->timeout( sec );
 		if( ignore_timeout_multiplier ) {
 			sock->ignoreTimeoutMultiplier();
 		}
+		sock->timeout( sec );
 	}
 
 	int rc = sock->connect(_addr.c_str(), 0, non_blocking, errstack);

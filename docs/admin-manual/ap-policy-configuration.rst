@@ -597,6 +597,72 @@ overloaded schedd.  An administrator can see this attribute by running
     $ condor_status -direct -schedd name-of-schedd -af RecentDaemonCoreDutyCycle
 
 
+Recording AP performance over time
+''''''''''''''''''''''''''''''''''
+
+The command above reports the duty cycle *now*, which does not help with the
+question an administrator usually has, namely what the AP was doing at three
+o'clock this morning when users could not submit.  For that, the
+*condor_schedd* keeps a history of its own daemon ClassAd, in the same spirit
+as the job history file but recording the daemon rather than the jobs that
+passed through it.
+
+This is enabled by default: :macro:`<SUBSYS>_DAEMON_HISTORY` for the schedd
+defaults to ``$(SPOOL)/schedd_daemon_history``.  Every time the schedd sends
+its ad to the *condor_collector* it also appends that ad to this file, but no
+more often than :macro:`SCHEDD_HISTORY_RECORD_INTERVAL` seconds (900 by
+default).  Because the record rides along with the collector update, the real
+interval between records is a multiple of :macro:`SCHEDD_INTERVAL`; with the
+default settings of both knobs, a record lands every twenty minutes.  The file
+is rotated at :macro:`MAX_DAEMON_HISTORY_LOG` bytes (20 MB by default) keeping
+:macro:`MAX_DAEMON_HISTORY_ROTATIONS` older copies (one by default), so it
+takes a bounded amount of space and needs no external cleanup, and
+:tool:`condor_preen` will not remove it from the spool directory.  Setting the
+knob to nothing turns the feature off:
+
+.. code-block:: condor-config
+
+    # Keep a record every five minutes instead, and more of them.
+    SCHEDD_HISTORY_RECORD_INTERVAL = 300
+    MAX_DAEMON_HISTORY_LOG = 200000000
+    MAX_DAEMON_HISTORY_ROTATIONS = 5
+
+    # Or, to disable the schedd's daemon history entirely:
+    # SCHEDD_DAEMON_HISTORY =
+
+Each record holds more than the ad the collector receives.  The schedd adds its
+own verbose statistics, the DaemonCore statistics, and the file transfer queue
+statistics before writing, so attributes that are too voluminous to advertise
+pool-wide are still available afterwards.  Read the file with
+:tool:`condor_history`, whose **-daemon** option displays a table of the
+values most often wanted -- when the record was written, the duty cycle, the
+number of running, idle and held jobs, and the depth of the transfer queues:
+
+.. code-block:: console
+
+    $ condor_history -daemon
+
+Any other attribute of the record can be printed with the usual options, and
+the records can be read from a remote AP with **-name**:
+
+.. code-block:: console
+
+    $ condor_history -daemon -name ap1.example.com -limit 24 \
+          -af RecordWriteDate RecentDaemonCoreDutyCycle TotalRunningJobs TotalIdleJobs
+
+Used this way the daemon history answers questions that no single
+:tool:`condor_status` query can: whether the duty cycle climbed gradually or
+spiked, whether a growing transfer queue preceded the slowdown, and how the
+queue depth on this AP has trended over the past weeks.  It is not a substitute
+for a real monitoring system -- the records are coarse, local to one AP, and
+eventually rotate away -- but it is always there, which the monitoring system
+frequently is not on the day it is needed.
+
+.. note::
+
+    Although :macro:`<SUBSYS>_DAEMON_HISTORY` is named for a subsystem, the
+    *condor_schedd* is the only daemon that writes a daemon history today.
+
 Horizontal Scaling
 ''''''''''''''''''
 
@@ -751,6 +817,132 @@ downloaded from a checkpoint; if any don't match, the checkpoint is considered
 invalid and deleted, and the job is rescheduled (and will resume from the
 "extra" checkpoint(s), if one remains available).
 
+.. _job-epoch-history:
+
+Job Epoch History
+-----------------
+
+:index:`job epoch history`
+:index:`epoch history<single: epoch history; job history>`
+:index:`run instance`
+
+The history file named by :macro:`HISTORY` holds one record per job, written
+when the job leaves the queue.  A job that is evicted and restarted, or that
+fails and is retried, still leaves only that single final record, so questions
+about *individual run attempts*, how many times did this job start, which machine ran
+it the first time, how long did input transfer take on each attempt, which
+transfer plugin failed, cannot be answered from the job history at all.  The
+*job epoch history* addresses this issue.  Every time a *condor_shadow* runs a job it
+appends records describing that one run to a separate archive.  Each run is
+called an *epoch*, or a *run instance*, and is numbered in the record attribute
+``RunInstanceID``, starting at zero for a job's first run.
+
+Epoch history is written by the AP's shadows, and is enabled by default:
+:macro:`JOB_EPOCH_HISTORY` defaults to ``$(SPOOL)/epoch_history``.  The file is
+rotated like the job history file, at :macro:`MAX_EPOCH_HISTORY_LOG` bytes (20
+MB by default) keeping :macro:`MAX_EPOCH_HISTORY_ROTATIONS` older copies (2 by
+default), so it occupies a bounded amount of space and needs no external
+cleanup.  :tool:`condor_preen` knows about the configured file and will not
+remove it from the spool directory.  To move the archive, or to turn the
+feature off entirely by setting it to nothing:
+
+.. code-block:: condor-config
+
+    # Somewhere with more room than SPOOL.
+    JOB_EPOCH_HISTORY = /var/log/condor/epoch_history
+    MAX_EPOCH_HISTORY_LOG = 200000000
+    MAX_EPOCH_HISTORY_ROTATIONS = 5
+
+    # Or, to disable epoch history entirely:
+    # JOB_EPOCH_HISTORY =
+
+A single run of a job produces several records, each one a ClassAd followed by
+a banner line naming its type, the job id, the run instance, and the time it
+was written:
+
+.. code-block:: text
+
+    *** EPOCH ClusterId=12 ProcId=0 RunInstanceId=1 Owner="alice" CurrentTime=1758000000
+
+The types are:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 85
+
+    * - Type
+      - Written
+    * - ``SPAWN``
+      - When the *condor_shadow* starts, before the job runs.  By default this
+        is a small ad identifying the job and the run; see
+        :macro:`SPAWN_JOB_ATTRS`.
+    * - ``INPUT``
+      - When input transfer for the run finishes, with the file transfer
+        plugin invocations and their results.
+    * - ``COMMON``
+      - When a common files transfer finishes, with the same plugin
+        information plus statistics about the common file transfer.
+    * - ``CHECKPOINT``
+      - When a self-checkpointing job transfers a checkpoint.
+    * - ``OUTPUT``
+      - When output transfer for the run finishes.
+    * - ``EPOCH``
+      - When the run ends, whether the job completed, was held, or was
+        evicted.  This is the full job ClassAd as it stood at the end of that
+        run, so it carries the exit status, resource usage, and the machine
+        the job ran on.
+
+The transfer records describe a transfer, not a job, so only a few job
+attributes are copied into them: the job's user, project name, global job id
+and the machine it ran on are always included, and
+:macro:`TRANSFER_JOB_ATTRS` names any others to copy.  A single record type can
+override that list with a knob of its own named after the type --
+``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
+``COMMON_JOB_ATTRS``.  Attributes that a job does not have are skipped.
+
+Read the archive with :tool:`condor_history`.  The **-epochs** option reads the
+epoch history rather than the job history, and by default displays the
+``EPOCH`` records:
+
+.. code-block:: console
+
+    $ condor_history -epochs
+    $ condor_history -epochs 12.0
+
+The **-transfer-history** option displays the ``INPUT``, ``OUTPUT`` and
+``CHECKPOINT`` records instead, optionally narrowed to particular types.  These
+records have no default display format, so one must be given:
+
+.. code-block:: console
+
+    $ condor_history -transfer-history -json
+    $ condor_history -transfer-history:IO -af RunInstanceID RemoteHost TransferSuccess
+
+Epoch records can also be shipped to Elasticsearch by :tool:`condor_adstash`
+with its ``--schedd_job_epoch_history`` and ``--schedd_transfer_epoch_history``
+options; see :ref:`admin-manual/monitoring:elasticsearch`.
+
+Per-job epoch files
+'''''''''''''''''''
+
+Instead of, or in addition to, the single archive, the shadow can write one
+file per job.  Setting :macro:`JOB_EPOCH_HISTORY_DIR` to an existing directory
+makes each job's records go to ``job.runs.<cluster>.<proc>.ads`` in that
+directory, which is convenient when something outside HTCondor consumes the
+records for one job at a time.
+
+These files are neither rotated nor cleaned up, so the directory grows without
+bound until something removes them.  Reading them with ``-epochs:d`` deletes
+each file once it has been read, which makes :tool:`condor_history` the
+consumer that also does the cleanup:
+
+.. code-block:: console
+
+    $ condor_history -epochs:d -directory
+
+Note that :tool:`condor_preen` does not know about this directory, so it should
+be placed outside ``$(SPOOL)`` or added to :macro:`VALID_SPOOL_FILES`.
+
 .. _archive-librarian:
 
 Archive Librarian
@@ -807,7 +999,10 @@ point it discovers. During the update process, if the backing database is found
 to be over the configured size then it will garbage collect old job id and job
 record entries associated with archive files that have already rotated out. This
 process will prioritize removing entries associated with the oldest timestamped
-history files.
+history files. Garbage collection also timestamps any user left with no indexed
+jobs, and removes users that have had no indexed jobs for longer than
+:macro:`LIBRARIAN_USER_RETENTION_DAYS`. A user that has new jobs indexed before
+being removed is retained as normal.
 
 .. note::
 
@@ -903,7 +1098,10 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
            * - ``DateOfLastJob``
              - INTEGER
              - —
-             - Reserved for future garbage collection; not currently populated.
+             - Unix timestamp set by garbage collection when the user's last indexed job is
+               removed. ``NULL`` while the user has indexed jobs, and cleared back to ``NULL``
+               when a new job for the user is indexed. Users are removed once this is older
+               than :macro:`LIBRARIAN_USER_RETENTION_DAYS`.
 
     .. tab:: JobLists
 
@@ -934,6 +1132,7 @@ The librarian maintains a SQLite database with six tables. Five are persistent;
         **Indexes**
 
         - ``idx_unique_cluster_user`` — unique on ``(ClusterId, UserId)``; one ``JobList`` per cluster/owner pair.
+        - ``idx_UserIdInJobLists`` — on ``UserId``; used by garbage collection to check whether a user has any remaining jobs.
 
     .. tab:: Jobs
 

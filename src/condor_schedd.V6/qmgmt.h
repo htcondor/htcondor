@@ -182,6 +182,10 @@ const int CLUSTERPRIVATE_qkey2 = -2;
 // OCU_qkey2 identifies an OCU record.
 const int OCU_qkey2 = -99;
 
+// The magic procid value for slot bundle requests.  Like OCUs, bundle
+// requests are not jobs but are sent to the negotiator.
+const int BUNDLE_qkey2 = -98;
+
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
     if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
@@ -761,7 +765,7 @@ JobQueueJob* GetJobAd(int cluster, int proc);
 JobQueueCluster* GetClusterAd(const PROC_ID& jid);
 JobQueueCluster* GetClusterAd(int cluster);
 JobQueueJobSet* GetJobSetAd(unsigned int jobset_id);
-ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id);
 ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
 #define FreeJobAd(ad) ad = NULL

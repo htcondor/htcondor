@@ -125,9 +125,21 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
+		// Only the job owner's credential is sent, and only if the job
+		// asked for it to be sent.
 	daemonCore->
 		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
-						  &cred_get_cred_handler,
+						  [this](int cmd, Stream *s) -> int {
+							  bool send_credential = false;
+							  if ( ! jobAd->EvaluateAttrBool(ATTR_JOB_SEND_CREDENTIAL, send_credential) || ! send_credential) {
+								  dprintf(D_ALWAYS, "Refusing CREDD_GET_CRED: job does not have %s=true\n",
+										  ATTR_JOB_SEND_CREDENTIAL);
+								  return TRUE;
+							  }
+							  std::string owner_buf;
+							  const char *owner = name_of_user(getJobOwner(), owner_buf);
+							  return cred_get_cred_handler(cmd, s, owner);
+						  },
 						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
 
@@ -717,16 +729,17 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", time(nullptr) );
+		m_transfer_in_queued = time(nullptr);
+		jobAd->Assign( "TransferInQueued", m_transfer_in_queued );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
 		time_t now = time(nullptr);
 		jobAd->Assign( "TransferInStarted", now );
 
-		time_t then;
-		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
-			te.setQueueingDelay( now - then );
+		if( m_transfer_in_queued != 0 ) {
+			te.setQueueingDelay( now - m_transfer_in_queued );
+			m_transfer_in_queued = 0;
 		} else {
 			if( remRes ) { // this should always be true...
 				char * starterAddr = NULL;
@@ -752,16 +765,17 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );
 
-		jobAd->Assign( "TransferOutQueued", time(nullptr) );
+		m_transfer_out_queued = time(nullptr);
+		jobAd->Assign( "TransferOutQueued", m_transfer_out_queued );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_STARTED );
 
 		time_t now = time(nullptr);
 		jobAd->Assign( "TransferOutStarted", now );
 
-		time_t then;
-		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
-			te.setQueueingDelay( now - then );
+		if( m_transfer_out_queued != 0 ) {
+			te.setQueueingDelay( now - m_transfer_out_queued );
+			m_transfer_out_queued = 0;
 		}
 
 		// Increment (or set) number of job output transfer starts

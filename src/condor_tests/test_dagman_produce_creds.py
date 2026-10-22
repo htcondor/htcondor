@@ -18,8 +18,12 @@ TEST_CONFIG = {
     "LOCAL_CREDMON_PROVIDER_NAME":          "scitokens",
     "LOCAL_CREDMON_TOKEN_AUDIENCE":         "https://localhost",
     "ALLOW_DAEMON":                         "*",
-    "LOCAL_CREDMON_PRIVATE_KEY":            "$(LOCAL_DIR)/trust_domain_ca_privkey.pem",
-    "LOCAL_CREDMON_PUBLIC_KEY":             "$(LOCAL_DIR)/trust_domain_ca_pubkey.pem",
+    # Give the credmon its own keypair, which it generates at
+    # startup.  Do NOT point it at TRUST_DOMAIN_CAKEY: the collector
+    # writes that file at startup too, and the credmon can read
+    # it before the collector has finished writing it.
+    "LOCAL_CREDMON_PRIVATE_KEY":            "$(LOCAL_DIR)/scitokens-private.pem",
+    "LOCAL_CREDMON_PUBLIC_KEY":             "$(LOCAL_DIR)/scitokens.pem",
     "CREDD_DEBUG":                          "D_FULLDEBUG",
     "DAGMAN_MAX_SUBMIT_ATTEMPTS":           "1",
     "DAGMAN_PRODUCE_JOB_CREDENTIALS":       "True",

@@ -40,7 +40,7 @@ class CollectorList {
 
 		// Create the list of collectors for the pool
 		// based on configruation settings
-	static CollectorList * create(const char * pool = NULL, DCCollectorAdSequences * adseq = NULL);
+	static CollectorList * create(const char * pool = NULL, DCCollectorAdSequences * adseq = NULL, time_t start=0, time_t reconfig=0);
 
 		// Resort a collector list for locality (for negotiator)
 	int resortLocal( const char *preferred_collector );

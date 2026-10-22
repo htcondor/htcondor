@@ -41,7 +41,7 @@ static const char* qsort_file_base = NULL;
 // Returns true if the filename is a history file, false otherwise.
 // If backup_time is not NULL, returns the time from the timestamp in
 // the file.
-static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base)
+bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base)
 {
     bool       is_history_filename;
     const char *filename;

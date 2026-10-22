@@ -1618,7 +1618,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
 These macros allow a *condor_startd* to directly connect to a *condor_schedd*,
 so that it can run jobs on this startd without sharing it with other
-schedds.
+schedds.  See :ref:`direct-attach` for a description of how direct attach
+works and why an administrator might want to use it.
 
 :macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`
     The name of the *condor_schedd* to which this *condor_startd* should
@@ -1632,7 +1633,7 @@ schedds.
     collector the *condor_schedd* reports to.  If empty, assume that the *condor_schedd*
     reports to the same collector as this *condor_startd*.
 
-:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_SUBMITTER`
+:macro-def:`STARTD_DIRECT_ATTACH_SUBMITTER_NAME`
     If the *condor_schedd* to which this *condor_startd* should directly connect
     should only run jobs from one submitter, this parameter names that submitter.
     If empty, the *condor_startd* will run jobs from any submitter.

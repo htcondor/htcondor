@@ -24,6 +24,8 @@ std::tuple<
 determine_cxfer_type(match_rec * mrec, const PROC_ID & jobID );
 
 void
-start_command_data_slot( match_rec * mrec, const ClassAd & requestAd );
+start_command_data_slot(
+    match_rec * mrec, const ClassAd & requestAd, shadow_rec * srec
+);
 
 #endif /* _CONDOR_CXFER_H */

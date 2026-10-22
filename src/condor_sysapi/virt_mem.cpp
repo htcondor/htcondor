@@ -86,18 +86,74 @@ sysapi_swap_space_raw()
 	return (int)free_swap;
 }
 
-#elif defined(Darwin) || defined(CONDOR_FREEBSD)
+#elif defined(Darwin)
 #include <sys/sysctl.h>
+
+/* Like Linux, report total RAM plus free swap.  macOS creates swap files
+	on demand, so free swap is frequently zero; RAM keeps the answer sane. */
 int
-sysapi_swap_space_raw() {
-        int mib[2];
-        unsigned int usermem;
-        size_t len;   
-        mib[0] = CTL_HW;     
-        mib[1] = HW_USERMEM;        
-        len = sizeof(usermem);   
-        sysctl(mib, 2, &usermem, &len, NULL, 0);   
-	return usermem / 1024;
+sysapi_swap_space_raw()
+{
+	uint64_t memsize = 0;
+	size_t len = sizeof(memsize);
+
+	sysapi_internal_reconfig();
+
+	int r = sysctlbyname("hw.memsize", &memsize, &len, NULL, 0);
+	if (r != 0) {
+		dprintf(D_ALWAYS,
+			"sysapi_swap_space_raw(): error: sysctlbyname(\"hw.memsize\") "
+			"failed: %d(%s)\n",
+			errno, strerror(errno));
+		return -1;
+	}
+
+	struct xsw_usage swap_usage = {};
+	len = sizeof(swap_usage);
+	r = sysctlbyname("vm.swapusage", &swap_usage, &len, NULL, 0);
+	if (r != 0) {
+		dprintf(D_FULLDEBUG,
+			"sysapi_swap_space_raw(): sysctlbyname(\"vm.swapusage\") "
+			"failed: %d(%s), assuming no free swap\n",
+			errno, strerror(errno));
+		swap_usage.xsu_avail = 0;
+	}
+
+	uint64_t free_swap = (memsize + swap_usage.xsu_avail) / 1024;
+	if (free_swap > INT_MAX) {
+		return INT_MAX;
+	}
+
+	return (int)free_swap;
+}
+
+#elif defined(CONDOR_FREEBSD)
+#include <sys/sysctl.h>
+
+/* Reports only total RAM; querying free swap needs libkvm. */
+int
+sysapi_swap_space_raw()
+{
+	unsigned long physmem = 0;
+	size_t len = sizeof(physmem);
+
+	sysapi_internal_reconfig();
+
+	int r = sysctlbyname("hw.physmem", &physmem, &len, NULL, 0);
+	if (r != 0) {
+		dprintf(D_ALWAYS,
+			"sysapi_swap_space_raw(): error: sysctlbyname(\"hw.physmem\") "
+			"failed: %d(%s)\n",
+			errno, strerror(errno));
+		return -1;
+	}
+
+	unsigned long free_swap = physmem / 1024;
+	if (free_swap > INT_MAX) {
+		return INT_MAX;
+	}
+
+	return (int)free_swap;
 }
 
 #else

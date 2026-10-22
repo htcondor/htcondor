@@ -243,6 +243,12 @@ class UniShadow : public BaseShadow
 	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
 	bool transfer_and_remove_requested = false;
 
+	// When this shadow saw the sandbox transfers enter the transfer queue,
+	// or 0 if they haven't.  We can't use TransferInQueued/TransferOutQueued
+	// from the job ad for this, because they persist from earlier runs.
+	time_t m_transfer_in_queued = 0;
+	time_t m_transfer_out_queued = 0;
+
 	//
 	// Internal implementation details specific to pseudo_request_guidance().
 	//

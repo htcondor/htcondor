@@ -139,12 +139,15 @@ public:
 	struct timeval m_last_report;
 	time_t m_next_report;
 	unsigned m_report_interval;
-	unsigned m_recent_bytes_sent;
-	unsigned m_recent_bytes_received;
-	unsigned m_recent_usec_file_read;
-	unsigned m_recent_usec_file_write;
-	unsigned m_recent_usec_net_read;
-	unsigned m_recent_usec_net_write;
+		// 64-bit because the report interval backs off to 64 times
+		// TRANSFER_IO_REPORT_INTERVAL, and a fast transfer moves well
+		// over 4 GiB in that window.
+	uint64_t m_recent_bytes_sent;
+	uint64_t m_recent_bytes_received;
+	uint64_t m_recent_usec_file_read;
+	uint64_t m_recent_usec_file_write;
+	uint64_t m_recent_usec_net_read;
+	uint64_t m_recent_usec_net_write;
 
 	unsigned m_report_count; // numer of reports sent
 	void Init();

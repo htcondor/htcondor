@@ -602,9 +602,11 @@ COMMANDS FOR MATCHMAKING
     resulting in a dynamic slot being created with this many cores.
 
  :subcom-def:`request_disk` = <quantity>
-    The requested amount of disk space in KiB requested for this job. If
-    not specified, it will be set to the job ClassAd attribute
-    :ad-attr:`DiskUsage`. The expression
+    The requested amount of disk space in KiB requested for this job.
+    If not specified, and the job universe is not Scheduler or Local, the value is set
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTDISK`.
+
+    The expression
 
     .. code-block:: condor-classad-expr
 
@@ -636,7 +638,8 @@ COMMANDS FOR MATCHMAKING
 
 
  :subcom-def:`request_memory` = <quantity>
-    The amount of memory this job needs in Mb. If not specified, the value is set 
+    The amount of memory this job needs in Mb. If not specified, and the job universe
+    is not Scheduler or Local, the value is set
     by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
     The actual amount of memory used by a job is represented by the job ClassAd attribute
     :ad-attr:`MemoryUsage`.
@@ -846,6 +849,17 @@ COMMANDS FOR MATCHMAKING
     *condor_q -l*; see the command reference for :doc:`/man-pages/condor_q`.
     Also, see the HTCondor Users Manual for complete information on the syntax
     and available attributes that can be used in the ClassAd expression.
+
+ :subcom-def:`annex_name` = <name>
+    Indicates that these jobs are intended to run on EPs of the named annex.
+    The annex EPs need to be provisioned using the *htcondor annex create*
+    command.
+
+ :subcom-def:`restrict_to_annex` = <True | False>
+    For jobs connected to an annex, this specifies whether the jobs can run
+    only on annex EPs or may also run on non-annex EPs.
+    The default is set by configuration parameter
+    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`, whose default is True.
 
 FILE TRANSFER COMMANDS
 
@@ -1172,6 +1186,10 @@ FILE TRANSFER COMMANDS
     Note that (at present), you may not provide more than one set of
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
+
+ :subcom-def:`transfer_common_input` = < file1,file2,file... >
+    As :subcom:`transfer_input_files`, except that the specified files or URLS
+    are common across more than one job.  See :ref:`common_file_transfer`.
 
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured
@@ -2554,6 +2572,16 @@ ADVANCED COMMANDS
     directory is named ``<cluster>_<proc>_manifest``, to avoid conflicts.
 
     This feature is not presently available for Windows.
+
+ :subcom-def:`min_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is greater than or equal to the version string
+    (e.g., ``26.1.1``).
+
+ :subcom-def:`max_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is strictly less than the version string
+    (e.g., ``26.1.1``).
 
  :subcom-def:`max_job_retirement_time` = <integer expression>
     An integer-valued expression (in seconds) that does nothing unless

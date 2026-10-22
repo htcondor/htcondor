@@ -13,7 +13,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add_old, annex_create_old, create_annex_token, annex_add_new, annex_create_new
+from htcondor_cli.annex_create import annex_add_old, annex_create_old, annex_add_new, annex_create_new, get_my_identity
 from htcondor_cli.annex_validate import SYSTEM_TABLE
 
 create_options_old = {
@@ -141,9 +141,9 @@ create_options_new = {
         },
         "owners": {
             "args": ("--owners",),
-            #"help": "List (comma-separated) of annex owners. Defaults to current user (%(default)s)",
+            #"help": "List (comma-separated) of annex owners. Defaults to current user",
             "help": argparse.SUPPRESS,  # hidden option
-            "default": getpass.getuser(),
+            "default": None,
         },
         "collector": {
             "args": ("--pool",),
@@ -327,6 +327,8 @@ class Status(Verb):
             if job["JobStatus"] == htcondor.JobStatus.IDLE:
                 status[annex_name][request_id] = "granted"
 
+        my_id = get_my_identity()
+
         # TODO Remove this default value and just complain if ANNEX_COLLECTOR
         #   isn't set.
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
@@ -335,13 +337,8 @@ class Status(Verb):
         constraint = 'AnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'AnnexName == "{the_annex_name}"'
-        # TODO Remove this default value and just complain if ANNEX_TOKEN_DOMAIN
-        #   isn't set.
-        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
-        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@{annex_token_domain}"'
+        constraint = f'{constraint} && AuthenticatedIdentity == "{my_id}"'
 
-        #token_file = create_annex_token(logger, "status")
-        #atexit.register(lambda: os.unlink(token_file))
         annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
         annex_attrs = {}
@@ -731,14 +728,14 @@ class Shutdown(Verb):
         if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
             raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
 
+        my_id = get_my_identity()
+
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
 
-        token_file = create_annex_token(logger, "shutdown")
-        atexit.register(lambda: os.unlink(token_file))
         location_ads = collector.query(
             ad_type=htcondor.AdTypes.Master,
-            constraint=f'AnnexName =?= "{annex_name}"',
+            constraint=f'AnnexName =?= "{annex_name}" && AuthenticatedIdentity =?= "{my_id}"',
         )
 
         if len(location_ads) == 0:

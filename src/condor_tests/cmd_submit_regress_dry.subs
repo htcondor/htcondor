@@ -284,6 +284,26 @@ stream_output = true
 transfer_error = true
 queue
 
+==common1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+transfer_common_input=simple.in
+require_common_files=true
+queue
+
+==common2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+transfer_common_input=simple.in
+require_common_files=false
+queue
+
+==commonsif.sub
+universe=Container
+should_transfer_files=yes
+container_image=https://example.com/image.sif
+container_is_common=true
+require_common_files=true
+queue
+
 ==periodic.sub
 executable=$Fp(SUBMIT_FILE)basic.cmd
 arguments=10s

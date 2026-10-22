@@ -44,28 +44,33 @@ def completed_job(default_condor, test_dir, path_to_sleep):
     return handle
 
 
-@action
-def start_log_lines(default_condor, completed_job):
-    with default_condor.startd_log.path.open("r") as f:
-        return f.readlines()
+# The job's terminate event (written by the shadow) can land before the
+# startd has logged its own activity changes, so poll the StartLog rather
+# than reading it once. Each test opens a fresh stream from the start of
+# the log so the tests do not consume each other's lines.
+def wait_for_start_log(default_condor, condition, timeout=60):
+    return default_condor.startd_log.open().wait(
+        condition=lambda msg: condition(msg.message),
+        timeout=timeout,
+    )
 
 
 class TestStartdCleaningActivity:
 
-    def test_enters_cleaning_from_busy(self, start_log_lines):
-        assert any(
-            "Changing activity: Busy -> Cleaning" in line
-            for line in start_log_lines
+    def test_enters_cleaning_from_busy(self, default_condor, completed_job):
+        assert wait_for_start_log(
+            default_condor,
+            lambda line: "Changing activity: Busy -> Cleaning" in line,
         ), "Expected StartLog to record Busy -> Cleaning transition"
 
-    def test_leaves_cleaning_state(self, start_log_lines):
+    def test_leaves_cleaning_state(self, default_condor, completed_job):
         # After the starter is reaped, the slot leaves Cleaning -- usually
         # to Idle for a cleanly-exiting job, but possibly to Preempting if
         # a condor_vacate or policy preemption arrived during cleaning.
-        assert any(
-            ("Changing activity: Cleaning -> " in line) or
-            ("Claimed/Cleaning -> " in line)
-            for line in start_log_lines
+        assert wait_for_start_log(
+            default_condor,
+            lambda line: ("Changing activity: Cleaning -> " in line) or
+                         ("Claimed/Cleaning -> " in line),
         ), "Expected StartLog to record exit from Cleaning"
 
     def test_startd_ad_is_queryable(self, default_condor, completed_job):

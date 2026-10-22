@@ -2,19 +2,24 @@
 
 echo "-------------------------------------------------------------------"
 echo "* NOTE: Attempting to configure a UW-esk build"
-echo "* which will build and link specfic versions of externals"
-echo "* that may not be the version your system distros with!"
-echo "* so if you are not UW, namely a package maintainer for distro xyz"
-echo "* you will likely want to run \"cmake .\""
 echo "*"
 echo "* add -D_DEBUG:BOOL=FALSE to get non-optimized code for debugging"
 echo "* Another option would be to run ccmake or cmake-gui"
 echo "-------------------------------------------------------------------"
-PWD=`pwd`
-# Use cmake3 if it's in the PATH
-if which cmake3 >/dev/null 2>&1 ; then
-  CMAKE=cmake3
+
+export CXXFLAGS
+if type dpkg-buildflags > /dev/null 2>&1
+then
+	CXXFLAGS="$(dpkg-buildflags --get CXXFLAGS) ${CXXFLAGS}"
+	echo "Using dpkg-buildflags to set CXXFLAGS to ${CXXFLAGS}"
 else
-  CMAKE=cmake
+	if type rpm > /dev/null 2>&1
+	then
+		CXXFLAGS="$(rpm --eval '%build_cxxflags') ${CXXFLAGS}"
+		echo "Using rpm to set CXXFLAGS to ${CXXFLAGS}"
+	else
+		echo "No dpkg-buildflags or rpm found, using default CXXFLAGS"
+	fi
 fi
-${CMAKE} -DPROPER:BOOL=FALSE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development "$@"
+
+cmake -DPROPER:BOOL=FALSE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development "$@"

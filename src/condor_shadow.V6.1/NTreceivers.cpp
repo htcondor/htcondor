@@ -2619,6 +2619,13 @@ case CONDOR_getdir:
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
+		// Guidance may kill the starter; if the startd can't be reached,
+		// killStarter() disconnects and deletes the claim socket.
+		if( syscall_sock == nullptr ) {
+			dprintf( D_ALWAYS, "Claim socket closed while computing guidance, not replying.\n" );
+			return RemoteSyscallResult::UnexpectedClose;
+		}
+
 		syscall_sock->encode();
 		result = syscall_sock->code(rval);
 		ASSERT( result );

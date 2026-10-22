@@ -30,32 +30,6 @@
 #include "dag_commands.h"
 #include "stl_string_utils.h"
 
-/**
- * Set whether we should munge the node names (only applies to multi-DAG
- * runs).
- * @param Whether to munge the node names.
- */
-void parseSetDoNameMunge(bool doit);
-
-/**
- * Parse a DAG file.
- * @param The Dag object we'll be adding nodes to.
- * @param The name of the DAG file.
- * @param Run DAGs in directories from DAG file paths if true
- * @param Whether to increment the DAG number (should be true for
- *     "normal" DAG files (on the command line), false for splices
- *     and includes)
- */
-bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagNum = true);
-
-/**
- * Determine whether the given token is a DAGMan reserved word.
- * @param The token we're testing.
- * @return True iff the token is a reserved word.
- */
-bool isReservedWord( const char *token );
-//void DFSVisit (Job * job);
-
 class DagProcessor {
 public:
 	DagProcessor() = delete;

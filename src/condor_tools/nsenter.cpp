@@ -30,6 +30,7 @@
 #include <string.h>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -66,7 +67,8 @@
 // managing GPUs, sets some nvidia-related environment variables that the
 // condor starter doesn't know about.  So, condor_nsenter extracts the environment
 // variables from the contained job process, and sets them in the shell
-// it spawns.
+// it spawns.  Additional variables can be set (or the job's values overridden)
+// with one or more "-e NAME=VALUE" options, like apptainer's --env.
 
 void
 usage( char *cmd )
@@ -76,6 +78,9 @@ usage( char *cmd )
 	fprintf(stderr,"-t target_pid:\n");
 	fprintf(stderr,"-S user_id:\n");
 	fprintf(stderr,"-G group_id:\n");
+	fprintf(stderr,"-groups gid:gid:...:  supplemental groups\n");
+	fprintf(stderr,"-e NAME=VALUE:      set environment variable in the launched process\n");
+	fprintf(stderr,"                    (may be repeated, overrides the job's value)\n");
 	fprintf(stderr,"    -help              Display options\n");
 }
 
@@ -126,6 +131,13 @@ int enter_ns(pid_t pid, const char *ns) {
 	return 0;
 }
 
+// The name part of a NAME=VALUE environment entry
+static std::string_view
+env_name(const std::string &entry)
+{
+	return std::string_view(entry).substr(0, entry.find('='));
+}
+
 int main( int argc, char *argv[] )
 {
 	std::string condor_prefix;
@@ -133,6 +145,7 @@ int main( int argc, char *argv[] )
 	uid_t uid = 0;
 	gid_t gid = 0;
 	const char *supp_groups = nullptr;
+	std::vector<std::string> extra_env; // NAME=VALUE entries from -e
 	int cmd_start = 0; // index into argv where the command begins, 0 = none
 
 	// parse command line args
@@ -169,6 +182,21 @@ int main( int argc, char *argv[] )
 		// supplemental groups, colon separated
 		if(is_arg_prefix(argv[i],"-groups")) {
 			supp_groups = argv[i + 1];
+			i++;
+		}
+
+		// environment variable to set in the launched process
+		if(is_arg_prefix(argv[i],"-e")) {
+			if (i + 1 >= argc) {
+				fprintf(stderr, "-e requires a NAME=VALUE argument\n");
+				exit(1);
+			}
+			const char *eq = strchr(argv[i + 1], '=');
+			if (eq == nullptr || eq == argv[i + 1]) {
+				fprintf(stderr, "-e argument must be of the form NAME=VALUE: %s\n", argv[i + 1]);
+				exit(1);
+			}
+			extra_env.emplace_back(argv[i + 1]);
 			i++;
 		}
 	}
@@ -237,30 +265,44 @@ int main( int argc, char *argv[] )
 		env.replace(eqpos, insidePath.length(), outsidePath);  
 	}
 
-	// make a vector to hold all the pointers to env entries
-	std::vector<const char *> envp;
+	std::vector<std::string> env_entries;
 
 	// copy DISPLAY from outside to inside.  sshd has set this,
 	// it is the only one from the outside we need on the inside,
 	// and one way that an ssh-to-job shell is different than the job.
-
-	std::string display;
+	// It goes first, so it wins over any DISPLAY in the job's environment.
 	if (getenv("DISPLAY")) {
-		formatstr(display, "DISPLAY=%s", getenv("DISPLAY"));
-		envp.push_back(display.c_str());
+		env_entries.emplace_back(std::string("DISPLAY=") + getenv("DISPLAY"));
 	}
 
-	// the first one
-	envp.push_back(env.c_str());
-	auto it = env.cbegin();
-	while (env.cend() != (it = std::find(it, env.cend(), '\0'))) {
-		// skip past null terminator
-		it++;	
-		if (*it != '\0') {
-			envp.push_back(& (*it));
+	// split the job's environment into its NUL-separated entries
+	size_t start = 0;
+	while (start < env.size()) {
+		size_t end = env.find('\0', start);
+		if (end == std::string::npos) {
+			end = env.size();
 		}
+		if (end > start) {
+			env_entries.emplace_back(env, start, end - start);
+		}
+		start = end + 1;
 	}
-	envp.push_back(nullptr);
+
+	// variables from -e replace any existing ones of the same name,
+	// and a later -e for the same name replaces an earlier one
+	for (const auto &extra: extra_env) {
+		std::string_view name = env_name(extra);
+		std::erase_if(env_entries, [&](const std::string &entry) {
+			return env_name(entry) == name;
+		});
+		env_entries.push_back(extra);
+	}
+
+	// make a vector to hold all the pointers to env entries
+	std::vector<const char *> envp;
+	for (const auto &entry: env_entries) {
+		envp.push_back(entry.c_str());
+	}
 	envp.push_back(nullptr);
 
 	std::string filename;

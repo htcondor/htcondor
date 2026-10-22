@@ -100,6 +100,7 @@ htcondor_cli/job.py
 htcondor_cli/job_set.py
 htcondor_cli/noun.py
 htcondor_cli/ocu.py
+htcondor_cli/report.py
 htcondor_cli/server.py
 htcondor_cli/snake.py
 htcondor_cli/utils.py

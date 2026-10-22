@@ -72,6 +72,7 @@ if (NOT WINDOWS)
         install ( FILES common-cloud-attributes-aws.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_aklog condor_credmon_krb DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES condor_docker_pat_producer DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( CODE "EXECUTE_PROCESS(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ../../bin/pelican \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/pelican_plugin)" )
     endif()
 
     install ( FILES condor_qsub DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

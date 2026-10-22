@@ -205,7 +205,8 @@ Claim::~Claim()
 	this->cancelLeaseTimer();
 	if ( c_alive_inprogress_sock ) {
 		daemonCore->Cancel_Socket(c_alive_inprogress_sock);
-		c_alive_inprogress_sock = NULL;
+		delete c_alive_inprogress_sock;
+		c_alive_inprogress_sock = nullptr;
 	}
 
 	// if we were associated with a starter, then we need to check to see if that starter was reaped
@@ -359,9 +360,6 @@ Claim::publish( ClassAd* cad )
 			cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
 			cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
 		}
-		if (c_client->c_cgroupActive) {
-			cad->Assign(ATTR_CGROUP_ENFORCED, true);
-		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -427,7 +425,14 @@ Claim::publish( ClassAd* cad )
 		if (!c_ocu_name.empty()) {
 			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
 		}
-	} 
+	}
+
+	if (c_bundle) {
+		cad->Assign(ATTR_IS_BUNDLE, true);
+		if (!c_bundle_id.empty()) {
+			cad->Assign(ATTR_BUNDLE_ID, c_bundle_id);
+		}
+	}
 
 	publishStateTimes( cad );
 
@@ -449,7 +454,6 @@ Claim::unpublish( ClassAd* cad )
 		ATTR_REMOTE_GROUP,
 		ATTR_REMOTE_NEGOTIATING_GROUP,
 		ATTR_REMOTE_AUTOREGROUP,
-		ATTR_CGROUP_ENFORCED,
 		ATTR_JOB_ID,
 		ATTR_GLOBAL_JOB_ID,
 		ATTR_JOB_START,
@@ -895,7 +899,6 @@ Claim::loadStatistics()
 	if ( c_client ) {
 		c_client->c_numPids = 0;
 		c_jobad->LookupInteger(ATTR_NUM_PIDS, c_client->c_numPids);
-		c_jobad->LookupBool(ATTR_CGROUP_ENFORCED, c_client->c_cgroupActive);
 	}
 }
 

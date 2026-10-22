@@ -58,7 +58,6 @@ the_job_description = """
     transfer_input_files = input-file-$(ProcID)
     transfer_output_files = output-file-$(ProcID)
     should_transfer_files = YES
-    requirements = HasCommonFilesTransfer
     request_cpus = 1
     request_memory = 1024
     log = $(ClusterID).log
@@ -68,14 +67,14 @@ the_job_description = """
 
 @jobs(params={
     "undefined":    f"{the_job_description}",
-    "false":        f"{the_job_description}\nMY.RequireCommonFilesTransfer = False\n",
+    "false":        f"{the_job_description}\n require_common_files = False\n",
 })
 def expect_missing_job(request, default_condor):
     return make_test_job(default_condor, request.param)
 
 
 @jobs(params={
-    "true":        f"{the_job_description}\nMY.RequireCommonFilesTransfer = True\n",
+    "true":        f"{the_job_description}\n require_common_files = True\n",
 })
 def expect_present_job(request, default_condor):
     return make_test_job(default_condor, request.param)

@@ -27,7 +27,6 @@ use Getopt::Long;
 use Cwd;
 
 print "Called with:" . join(" ", @ARGV) . "\n";
-my $btdebug = 1;
 
 my ($help, $noinput, $noextrainput, $extrainput, $onesetout, $long, $forever, $job, $failok, $stderr_str);
 GetOptions (
@@ -74,7 +73,7 @@ if ( $noextrainput ) {
     # test and leave
     my $Ifile = "submit_filetrans_input" . $job . ".txt";
     print "Looking for input file $Ifile\n";
-    system("ls submit_filetrans_input*");
+    print "$_\n" foreach glob("submit_filetrans_input*");
     if( -f "$Ifile" ) {
         print "Input file arrived\n";
         # reverse logic applies failing is good and working is bad. exit(0);
@@ -147,7 +146,7 @@ if(!defined($job)) {
 }
 
 print "PID = $job  (will be used as identifier for files)\n";
-CreateDir("-p dir_$job");
+CreateDir("dir_$job");
 chdir("dir_$job");
 my $out = "submit_filetrans_output";
 my $out1 = $out . $job . "e.txt";
@@ -160,14 +159,14 @@ my $out6 = $out . $job . "j.txt";
 CreateNonEmptyFile("$out1");
 CreateNonEmptyFile("$out2");
 CreateNonEmptyFile("$out3");
-CopyIt("$out1 ..");
-CopyIt("$out2 ..");
-CopyIt("$out3 ..");
+CopyIt($out1, "..");
+CopyIt($out2, "..");
+CopyIt($out3, "..");
 
 if($onesetout) {
     # create and leave
     print "Case onesetout\n";
-	system("ls -la");
+	ListDir(".");
     exit(0);
 }
 
@@ -177,9 +176,9 @@ sleep 20;
 CreateNonEmptyFile("$out4");
 CreateNonEmptyFile("$out5");
 CreateNonEmptyFile("$out6");
-CopyIt("$out4 ..");
-CopyIt("$out5 ..");
-CopyIt("$out6 ..");
+CopyIt($out4, "..");
+CopyIt($out5, "..");
+CopyIt($out6, "..");
 
 if( $long ) { 
     # create and leave
@@ -221,183 +220,42 @@ sub CreateNonEmptyFile {
     close(NF);
 }
 
+# Everything below is done inside this perl process rather than by running
+# cmd/xcopy/ls.  On Windows a child process sharing the job's console can
+# keep condor_softkill from finding the job's window during a vacate.
+
 sub CreateDir
 {
-	my $cmdline = shift;
-	my @argsin = split /\s/, $cmdline;
-	my $cmdcount = @argsin;
-	my $ret = 0;
-	my $fullcmd = "";
-	my $location = Cwd::getcwd();
-	#print  "\n\n\n\n\n******* CreateDir: $cmdline argcout:$cmdcount while here:$location *******\n\n\n\n\n";
-
-	my $amwindows = is_windows();
-
-	my $winpath = "";
-	if($amwindows == 1) {
-		if(is_windows_native_perl()) {
-			#print "CreateDir:windows_native_perl\n";
-			# what if a linux path first?
-			if($argsin[0] eq "-p") {
-				shift @argsin;
-			}
-			foreach my $dir (@argsin) {
-				#print "Want to make:$dir\n";
-				$_ = $dir;
-				s/\//\\/g;
-				s/\\/\\\\/g;
-				$dir = $_;
-				if(-d "$dir") {
-					next;
-				}
-				#print "$dir does not exist yet\n";
-				$fullcmd = "cmd /C mkdir $dir";
-				$ret = system("$fullcmd");
-				if($ret != 0) {
-					print "THIS:$fullcmd Failed\n";
-				} else {
-						#print "THIS:$fullcmd worked\n";
-						#print "If this worked, it should exist now.\n";
-						#if(-d $dir) {
-							#print "Perl says it does.\n";
-						#} else {
-							#print "Perl says it does NOT.\n";
-						#}
-				}
-			}
-			#print "CreateDir returning now: Return value from CreateDir:$ret\n";
-			return($ret);
-		} else {
-			if($argsin[0] eq "-p") {
-				$winpath = `cygpath -w $argsin[1]`;
-				CondorUtils::fullchomp($winpath);
-				$_ = $winpath;
-				s/\\/\\\\/g;
-				$winpath = $_;
-				if(-d "$argsin[1]") {
-					return($ret);
-				}
-			} else {
-				$winpath = `cygpath -w $argsin[0]`;
-				CondorUtils::fullchomp($winpath);
-				$_ = $winpath;
-				s/\\/\\\\/g;
-				$winpath = $_;
-				if(-d "$argsin[0]") {
-					return($ret);
-				}
-			}
-		}
-
-		$fullcmd = "cmd /C mkdir $winpath";
-		$ret = system("$fullcmd");
-	} else {
-		$fullcmd = "mkdir $cmdline"; 	
-		if(-d $cmdline) {
-			return($ret);
-		}
-		$ret = system("$fullcmd");
-		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
+	my $dir = shift;
+	if(-d $dir) {
+		return(0);
 	}
-	return($ret);
-}
-
-
-sub is_windows {
-    if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
-        return 1;
-    }
-    return 0;
-}
-
-sub is_cygwin_perl {
-    if ($^O =~ /cygwin/) {
-        return 1;
-    }
-    return 0;
-}
-
-sub is_windows_native_perl {
-    if ($^O =~ /MSWin32/) {
-         return 1;
-    }
-    return 0;
+	File::Path::make_path($dir, { error => \my $err });
+	if(@$err) {
+		print "CreateDir: failed to create $dir\n";
+		return(1);
+	}
+	return(0);
 }
 
 sub CopyIt
 {
-    my $cmdline = shift;
-    my $ret = 0;
-    my $fullcmd = "";
-    my $dashr = "no";
-	#print  "CopyIt: $cmdline\n";
-    my $winsrc = "";
-    my $windest = "";
-
-    my $amwindows = is_windows();
-    if($cmdline =~ /\-r/) {
-        $dashr = "yes";
-        $_ = $cmdline;
-        s/\-r//;
-        $cmdline = $_;
-    }
-    # this should leave us source and destination
-    my @argsin = split /\s/, $cmdline;
-    my $cmdcount = @argsin;
-
-	if($btdebug == 1) {
-		print "CopyIt command line passed in:$cmdline\n";
+	my ($src, $dest) = @_;
+	my $ret = 0;
+	if(!copy($src, $dest)) {
+		print "CopyIt: copy $src to $dest failed: $!\n";
+		$ret = 1;
 	}
-    if($amwindows == 1) {
-		if(is_windows_native_perl()) {
-			#print "CopyIt: windows_native_perl\n";
-			$winsrc = $argsin[0];
-			$windest = $argsin[1];
-			#print "native perl:\n";
-			# check target
-			$windest =~ s/\//\\/g;
-        	$fullcmd = "xcopy $winsrc $windest /Y";
-			#print "native perl:$fullcmd\n";
-        	if($dashr eq "yes") {
-            	$fullcmd = $fullcmd . " /s /e";
-				#print "native perl -r:$fullcmd\n";
-        	}
-		} else {
-        	$winsrc = `cygpath -w $argsin[0]`;
-        	$windest = `cygpath -w $argsin[1]`;
-        	CondorUtils::fullchomp($winsrc);
-        	CondorUtils::fullchomp($windest);
-        	$_ = $winsrc;
-        	s/\\/\\\\/g;
-        	$winsrc = $_;
-        	$_ = $windest;
-        	s/\\/\\\\/g;
-        	$windest = $_;
-        	$fullcmd = "xcopy $winsrc $windest /Y";
-        	if($dashr eq "yes") {
-            	$fullcmd = $fullcmd . " /s /e";
-        	}
-
-		}
-        $ret = system("$fullcmd");
-		if($btdebug == 1) {
-			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
-		}
-    } else {
-        $fullcmd = "cp ";
-        if($dashr eq "yes") {
-            $fullcmd = $fullcmd . "-r ";
-        }
-        $fullcmd = $fullcmd . "$cmdline";
-		print "About to  execute this<$fullcmd>\n";
-        $ret = system("$fullcmd");
-
-		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
-    }
-	if($btdebug == 1) {
-		print "CopyIt returning:$ret\n";
-	}
-	
-    return($ret);
+	return($ret);
 }
 
+sub ListDir
+{
+	my $dir = shift;
+	opendir(my $dh, $dir) or return;
+	foreach my $entry (sort readdir($dh)) {
+		my $size = -s "$dir/$entry";
+		printf("%10s %s\n", defined($size) ? $size : "", $entry);
+	}
+	closedir($dh);
+}

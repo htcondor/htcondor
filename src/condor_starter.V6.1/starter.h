@@ -31,7 +31,7 @@ enum class WD : bool {
 	OUTER = false,
 };
 
-#if defined(LINUX) || defined(DARWIN)
+#if defined(LINUX) || defined(DARWIN) || defined(WINDOWS)
     // We don't test on BSD, so don't claim the hardlink code works there.
     #define CFT_VERSION 2
 #else
