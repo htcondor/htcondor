@@ -25,9 +25,56 @@ Synopsis
 Description
 -----------
 
-Read historical ClassAds from local history files. By default read
-job ClassAds from the :macro:`HISTORY` files. With the command line
-option ``-name``, read from remote APs.
+Read historical ClassAds from local history files. With the command line
+option ``-name``, read from a remote AP or EP instead.
+
+HTCondor records four distinct kinds of historical ClassAd, in three different
+files, and :tool:`condor_history` reads whichever one the options select.
+Because they answer different questions, knowing which is which matters more
+than it might appear:
+
+**Completed job ads** (the default, or ``-schedd``)
+    One ClassAd per job that has left the queue, whether it ran to completion
+    or was removed, read from the file named by :macro:`HISTORY`. This is the
+    job's final state. A job that was evicted and restarted several times
+    appears here exactly once, describing only its last attempt.
+
+**Job epoch ads** (``-epochs``)
+    One ClassAd per *run attempt*, read from the file named by
+    :macro:`JOB_EPOCH_HISTORY`. An ad is recorded each time a job stops
+    running, whether it finished, was held, or was evicted and returned to
+    idle to run again. Each is a full snapshot of the job ad as it stood at
+    the end of that run.
+
+    The completed job ad already summarizes a job's history through counters
+    and totals such as :ad-attr:`NumJobStarts`, :ad-attr:`NumShadowStarts`,
+    :ad-attr:`TotalSuspensions` and :ad-attr:`RemoteWallClockTime`, so
+    questions answerable by a count or a sum do not need epoch ads. What the
+    completed ad cannot give you is the per-attempt detail behind those
+    numbers, because attributes that describe a single run are overwritten by
+    each new one: :ad-attr:`RemoteHost` names only where the job ran last.
+    Epoch ads keep every run's values separately, so they are what to use when
+    you need to know each individual machine a job ran on, or what the job ad
+    looked like at the end of one particular attempt.
+
+**File transfer ads** (``-transfer-history``)
+    One ClassAd per transfer of a job's input, output or checkpoint files,
+    also read from :macro:`JOB_EPOCH_HISTORY` and carrying a
+    ``TransferClass`` attribute naming which kind it was. These record
+    per-transfer timing, byte counts and file transfer plugin results. The
+    option may be narrowed to just input, output or checkpoint transfers.
+
+**Startd history ads** (``-startd``)
+    One ClassAd per job that ran on a given EP, read on that machine from the
+    file named by :macro:`STARTD_HISTORY`. This is the machine's record rather
+    than the AP's, and remains available on the EP independently of the AP.
+
+The first three are written by the AP, and the fourth by each EP. All of them
+can also be pushed into Elasticsearch or OpenSearch with :tool:`condor_adstash`;
+see :ref:`admin-manual/monitoring:What is in the job archive`.
+
+Separately, ``-daemon`` reads daemon rather than job ClassAds, and
+``-userlog`` reads a job event log instead of any history file.
 
 Options
 -------
