@@ -2176,6 +2176,7 @@ MachAttributes::credd_test()
 				if (sock->end_of_message()) {
 					m_local_credd = credd_host;
 				}
+				delete sock;
 			}
 		}
 		m_last_credd_test = now;
