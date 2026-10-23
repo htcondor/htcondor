@@ -80,9 +80,7 @@ and `shared_fs_config_options`_.
     number. This service is optional, and requires additional
     configuration to enable it. There is no default value for
     :macro:`CONDOR_VIEW_HOST`. If :macro:`CONDOR_VIEW_HOST` is not defined, no
-    HTCondorView server is used. See
-    :ref:`admin-manual/cm-configuration:configuring the
-    htcondorview server` for more details.
+    HTCondorView server is used.
 
 :macro-def:`SCHEDD_HOST`
     The host name of the machine where the *condor_schedd* is running

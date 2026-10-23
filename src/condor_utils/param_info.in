@@ -5405,6 +5405,12 @@ type=int
 description=Port used by metricd to accept incoming HTTP connections for /metrics endpoint; -1 means disable
 tags=metricd
 
+[PROMETHEUS_HTTP_LOCALHOST_ONLY]
+default=true
+type=bool
+description=Should the dedicated /metrics listen socket bind only to the loopback address; consulted only when PROMETHEUS_HTTP_PORT names a port other than SHARED_PORT_PORT
+tags=metricd
+
 [METRICD_DEFAULT_EXPORT_METRIC]
 default=prometheus
 description=Default value for ExportMetric, a comma-seperated list of time-series database backends
