@@ -2298,20 +2298,24 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				if( param( metrics, paramName.c_str() ) ) {
 					for (const auto& pair: StringTokenIterator(metrics)) {
 						StringTokenIterator tn( pair, ":" );
-						/* const char * metricType = */ tn.first();
-						const char * resourceName = tn.next();
+						std::string metricType = * ++tn;
+						std::string resourceName = * ++tn;
+
+						if( metricType == "SUM" ) {
+							m_sum_metrics.emplace_back( resourceName );
+						}
 
 						std::string metricName;
-						formatstr( metricName, "%sUsage", resourceName );
+						formatstr( metricName, "%sUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 
 						// We could use metricType to determine if we need
 						// this attribute or the preceeding one, but for now
 						// don't bother.
-						formatstr( metricName, "%sAverageUsage", resourceName );
+						formatstr( metricName, "%sAverageUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 
-						formatstr( metricName, "Recent%sUsage", resourceName );
+						formatstr( metricName, "Recent%sUsage", resourceName.c_str() );
 						m_job_update_attrs.emplace_back( metricName.c_str() );
 					}
 				}
@@ -2351,6 +2355,48 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				published = true;
 			}
 
+
+			for( const auto & resource : m_sum_metrics ) {
+				std::string resourceName = "Uptime" + resource + "Seconds";
+				std::string timestampName = "LastUpdateUptime" + resource + "Seconds";
+
+				double value;
+				time_t timestamp;
+				if( updateAd.LookupFloat( resourceName, value )
+				    &&
+				    updateAd.LookupInteger( timestampName, timestamp )
+				) {
+					auto & av = AverageUsageByResource[resource];
+
+					if(! av.firstUpdateValueInitialized) {
+						av.firstUpdateValue = value;
+						av.firstUpdateValueInitialized = true;
+					}
+
+					if(! av.firstUpdateTimestampInitialized) {
+						av.firstUpdateTimestamp = timestamp;
+						av.firstUpdateTimestampInitialized = true;
+					}
+
+					double usage = value - av.firstUpdateValue;
+					time_t interval = timestamp - av.firstUpdateTimestamp;
+					if( interval != 0 ) {
+						double average = usage / interval;
+
+						std::string averageUsageName = resource + "AverageUsage";
+						ad->InsertAttr( averageUsageName, average );
+
+						std::string upsau = "Uptime" + resource + "SecondsAverageUsage";
+						ad->InsertAttr( upsau, average );
+					}
+				} /* else {
+					dprintf( D_ALWAYS, "Failed to find %s or %s in following ad.\n", resourceName.c_str(), timestampName.c_str() );
+					dPrintAd( D_ALWAYS, updateAd );
+				} */
+			}
+
+
+/*
 			//
 			// Pure special-case code: if we're sent `UptimeGPUsSeconds` and
 			// `LastUpdateUptimeGPUsSeconds`, either store both as the initial
@@ -2383,6 +2429,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 					ad->InsertAttr( "GPUsAverageUsage", average );
 				}
 			}
+*/
 		} else {
 			dprintf( D_ALWAYS, "Failed to open '%s' to read update ad: %s (%d).\n",
 				updateAdPath.c_str(), strerror(errno), errno );
