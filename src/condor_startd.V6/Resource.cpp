@@ -1678,9 +1678,13 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
+/*
+			// We need this value to work around the current implementation
+			// of the backfill slot type.  See HTCONDOR-4017.
 			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
 				deleteList.push_back( name );
 			}
+*/
 
 			classad::Value v;
 			double uptimeValue;
@@ -1690,9 +1694,26 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				continue;
 			}
 
+			//
+			// Publish `UptimeGPUsSeconds` and `LastUpdateUptimeGPUsSeconds`
+			// so that the starter can correctly compute job lifetime metrics;
+			// see HTCONDOR-4017.
+			//
+			std::string lastUpdateName = "LastUpdate" + name;
+			time_t lastUpdateTime;
+			if( public_ad.LookupInteger( lastUpdateName, lastUpdateTime ) ) {
+				dprintf( D_ALWAYS, "Adding %s = %f to .update.ad\n", name.c_str(), uptimeValue );
+				public_ad.Assign( name, uptimeValue );
+			}
+
+			//
+			// Compute the device's average usage over our uptime.
+			//
+
 			auto birth = daemonCore->getStartTime();
 			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
+
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
 			// have to check the AssignedGPUs attribute.  This will suck
@@ -1731,13 +1752,21 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			if (! v.IsNumber(usageValue)) { continue; }
 			public_ad.Assign(usageName, usageValue);
 
+/*
+			// We need these values to work around the current implementation
+			// of the backfill slot type.  See HTCONDOR-4017.
 			deleteList.push_back(uptimeName);
-			deleteList.push_back(name);
 			deleteList.push_back(lastUpdateName);
+*/
+			deleteList.push_back(name);
 			deleteList.push_back(firstUpdateName);
 
 		} else if( name.find( "StartOfJobUptime" ) == 0
+/*
+		  // We need this value to work around the current implementation
+		  // of the backfill slot type.  See HTCONDOR-4017.
 		  || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+*/
 		  || name.find( "FirstUpdate" ) == 0 ) {
 			deleteList.push_back( name );
 		}

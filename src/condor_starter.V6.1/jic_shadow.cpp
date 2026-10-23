@@ -2258,10 +2258,26 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
-int 
+int
 JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
 	return REMOTE_CONDOR_get_docker_creds(query, creds);
 }
+
+
+//
+// We could extend this set of variables to arbitrary custom machine resource
+// metrics, but as far as I know, nobody's using that feature, so let's just
+// keep things simple.
+//
+// These variables are globals for simplicity; if we ever allow the same
+// starter to run more than one job, they'll have to be made run-instance
+// members, instead.
+//
+double firstUptimeGPUsSecondsValue = 0;
+bool initializedFirstUptimeGPUsSecondsValue = false;
+time_t firstUptimeGPUsSecondsTimestamp = 0;
+bool initializedFirstUptimeGPUsSecondsTimestamp = false;
+
 
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
@@ -2333,6 +2349,37 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName.c_str() );
 				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
+			}
+
+			//
+			// Pure special-case code: if we're sent `UptimeGPUsSeconds` and
+			// `LastUpdateUptimeGPUsSeconds`, either store both as the initial
+			// values for this job (if we haven't yet) or compute a new
+			// `UptimeGPUsSecondsAverageUsage` value and publish it.
+			//
+			double UptimeGPUsSeconds;
+			time_t LastUpdateUptimeGPUsSeconds;
+
+			if( updateAd.LookupFloat( "UptimeGPUsSeconds", UptimeGPUsSeconds )
+			    &&
+			    updateAd.LookupInteger( "LastUpdateUptimeGPUsSeconds", LastUpdateUptimeGPUsSeconds )
+			) {
+				if(! initializedFirstUptimeGPUsSecondsValue) {
+					firstUptimeGPUsSecondsValue = UptimeGPUsSeconds;
+					initializedFirstUptimeGPUsSecondsValue = true;
+				}
+				if(! initializedFirstUptimeGPUsSecondsTimestamp) {
+					firstUptimeGPUsSecondsTimestamp = LastUpdateUptimeGPUsSeconds;
+					initializedFirstUptimeGPUsSecondsTimestamp = true;
+				}
+
+				double usage = UptimeGPUsSeconds - firstUptimeGPUsSecondsValue;
+				time_t interval = LastUpdateUptimeGPUsSeconds - firstUptimeGPUsSecondsTimestamp;
+				if( interval != 0 ) {
+					double average = usage / interval;
+					ad->InsertAttr( "UptimeGPUsSecondsAverageUsage", average );
+					ad->InsertAttr( "GPUsAverageUsage", average );
+				}
 			}
 		} else {
 			dprintf( D_ALWAYS, "Failed to open '%s' to read update ad: %s (%d).\n",
