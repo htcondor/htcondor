@@ -409,6 +409,7 @@
   addition to downloading individual files. Large files are uploaded in
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
+
 - HTCondor Connection Brokering (CCB) now supports a streaming mode that
   brokers connections between two daemons that are *both* behind a CCB,
   without opening any incoming ports. When the requesting daemon is itself
