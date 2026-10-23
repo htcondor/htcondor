@@ -5993,32 +5993,6 @@ jobIsFinished( int cluster, int proc, void* )
 	// Remove related Jobs
 	removeOtherJobs(cluster, proc);
 
-
-		/*
-		  make sure we can switch uids.  if not, there's nothing to
-		  do, so we should exit right away.
-		*/
-	if( ! can_switch_ids() ) {
-		return 0;
-	}
-
-#ifndef WIN32
-
-	if( SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
-		SpooledJobFiles::chownSpoolDirectoryToCondor(job_ad);
-	}
-
-#else	/* WIN32 */
-
-// #    error "directory chowning on Win32.  Do we need it?"
-
-#endif
-
-	// release dynamic accounts here
-
-	FreeJobAd( job_ad );
-	job_ad = NULL;
-
 	return 0;
 }
 
@@ -6793,9 +6767,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 
 	priv_state xfer_priv = PRIV_UNKNOWN;
 #if !defined(WIN32)
-	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
-		xfer_priv = PRIV_USER;
-	}
+	xfer_priv = PRIV_USER;
 #endif
 
 	JobAdsArrayLen = jobs->size();
@@ -6835,25 +6807,14 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		dPrintAd(D_JOB, *ad);
 
 #if !defined(WIN32)
-		if ( xfer_priv == PRIV_USER ) {
-			// JEF Can we assume directory has proper ownership?
-			// If sending the output sandbox, first ensure that it's owned
-			// by the user, in case we were using the old chowning behavior
-			// when the job completed.
-			if ( (mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS) &&
-				 SpooledJobFiles::jobRequiresSpoolDirectory( ad ) )
-			{
-				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
-			}
-			if ( !init_user_ids_from_ad(*ad->ownerinfo) ) {
-				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
-						 "failed to initialize user id for job %d.%d\n",
-						 cluster, proc );
-				s->timeout( 10 ); // avoid hanging due to huge timeout
-				refuse(s);
-				s->timeout(old_timeout);
-				return FALSE;
-			}
+		if ( !init_user_ids_from_ad(*ad->ownerinfo) ) {
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
+					 "failed to initialize user id for job %d.%d\n",
+					 cluster, proc );
+			s->timeout( 10 ); // avoid hanging due to huge timeout
+			refuse(s);
+			s->timeout(old_timeout);
+			return FALSE;
 		}
 #endif
 
@@ -6882,6 +6843,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 
 			// Send or receive files as needed
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
+
+			// Ensure the job's spool directory exists
+			SpooledJobFiles::createJobSpoolDirectory(ad);
+
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
 
@@ -7390,43 +7355,18 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
+	// On unix, switch to user priv to access the file.
 	bool use_user_priv = false;
 #ifndef WIN32
-		// Check the ownership of the job's spool directory and switch
-		// our priv state if needed.
-		// The permissions on the spool directory may prevent us from
-		// stat'ing the proxy file directly as the wrong user.
-		// CRUFT: Once we remove the option to have the schedd chown
-		//   the job's spool directory (CHOWN_JOB_SPOOL_FILES), this
-		//   check can be removed (the files will always be owned by
-		//   the job owner).
-	struct stat si = {};
-	if (stat(SpoolSpace.c_str(), &si) != 0) {
-		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
-			"stat of spool dirctory for job %d.%d failed: %d\n",
-			cmd, jobid.cluster, jobid.proc, errno );
+	TemporaryPrivSentry sentry;
+	if ( !init_user_ids_from_ad(*jobad->ownerinfo) ) {
+		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
+		         jobad->ownerinfo->Name() );
 		refuse(s);
 		return FALSE;
 	}
-	uid_t proxy_uid = si.st_uid;
-		// If the file's uid doesn't match the condor uid, then we need to
-		// switch to user priv to access the proxy file.
-	priv_state priv;
-	if ( proxy_uid == get_condor_uid() ) {
-			// We should already be in condor priv, but we want to save it
-			// in the 'priv' variable.
-		priv = set_condor_priv();
-		use_user_priv = false;
-	} else {
-		if ( !init_user_ids_from_ad(*jobad->ownerinfo) ) {
-			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-			         jobad->ownerinfo->Name() );
-			refuse(s);
-			return FALSE;
-		}
-		priv = set_user_priv();
-		use_user_priv = true;
-	}
+	set_user_priv();
+	use_user_priv = true;
 #endif
 
 		// Decode the proxy off the wire, and store into the
@@ -7471,11 +7411,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		delete continuation;
 	}
 
-#ifndef WIN32
-		// Now switch back to our old priv state
-	set_priv( priv );
-	uninit_user_ids();
-#endif
 	return rc;
 }
 

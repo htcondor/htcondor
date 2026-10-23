@@ -61,7 +61,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	parallelMasterResource = rr;
 
 	std::string dir;
-	SpooledJobFiles::createJobSpoolDirectory(jobAd, PRIV_USER);
+	SpooledJobFiles::createJobSpoolDirectory(jobAd);
 	SpooledJobFiles::getJobSpoolPath(jobAd, dir);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 
