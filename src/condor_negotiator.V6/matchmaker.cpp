@@ -50,6 +50,7 @@
 #endif
 
 #include "matchmaker.h"
+#include "parallel_match.h"
 
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
