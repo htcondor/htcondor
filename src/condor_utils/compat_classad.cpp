@@ -1635,16 +1635,19 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 }
 
 
-int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)
+std::pair<CondorClassAdFileParseHelper::ParseResult, int>
+CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)
 {
 	detected_long = false;
 	if (parse_type < Parse_xml || parse_type > Parse_auto) {
 		// return 0 to indicate this is a -long form (line oriented) parse type
-		return 0;
+		return {ParseResult::LONG_FORM, 0};
 	}
 
 	std::string buffer;
-	int rval = 1;
+
+	auto code = ParseResult::PARSEABLE;
+	int value = -1;
 	switch(parse_type) {
 		case Parse_xml: {
 			classad::ClassAdXMLParser * parser = (classad::ClassAdXMLParser *)new_parser;
@@ -1655,11 +1658,11 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 			ASSERT(parser);
 			bool fok = parser->ParseClassAd(&lexsrc, ad);
 			if (fok) {
-				rval = ad.size();
+				value = ad.size();
 			} else if (lexsrc.AtEnd()) {
-				rval = -99;
+				code = ParseResult::END_OF_FILE;
 			} else {
-				rval = -1;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1685,11 +1688,11 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 				}
 			}
 			if (fok) {
-				rval = ad.size();
+				value = ad.size();
 			} else if (lexsrc.AtEnd()) {
-				rval = -99;
+				code = ParseResult::END_OF_FILE;
 			} else {
-				rval = -1;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1701,15 +1704,15 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 			}
 			ASSERT(parser);
 			if ( ! readLine(buffer, lexsrc, false)) {
-				rval = lexsrc.AtEnd() ? -99 : -1;
+				code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::PARSE_ERROR;
 			} else {
 				bool fok = parser->ParseClassAd(buffer, ad, false);
 				if (fok) {
-					rval = ad.size();
+					value = ad.size();
 				} else if (lexsrc.AtEnd()) {
-					rval = -99;
+					code = ParseResult::END_OF_FILE;
 				} else {
-					rval = -1;
+					code = ParseResult::PARSE_ERROR;
 				}
 			}
 		} break;
@@ -1737,11 +1740,11 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 				}
 			}
 			if (fok) {
-				rval = ad.size();
+				value = ad.size();
 			} else if (lexsrc.AtEnd()) {
-				rval = -99;
+				code = ParseResult::END_OF_FILE;
 			} else {
-				rval = -1;
+				code = ParseResult::PARSE_ERROR;
 			}
 		} break;
 
@@ -1749,7 +1752,8 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 			// get a line from the file
 			for (;;) {
 				if ( ! readLine(buffer, lexsrc, false)) {
-					return lexsrc.AtEnd() ? -99 : -1;
+					code = lexsrc.AtEnd() ? ParseResult::END_OF_FILE : ParseResult::PARSE_ERROR;
+					break;
 				}
 				chomp(buffer);
 				trim(buffer);
@@ -1792,7 +1796,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 						bool fok = parser->ParseClassAd(buffer, ad, false);
 						if (fok) {
 							parse_type = Parse_json_lines;
-							rval = ad.size();
+							value = ad.size();
 							break;
 						}
 					} else if (buffer.size() > 2 && buffer.front()=='[' && buffer.back()==']') {
@@ -1807,7 +1811,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 						bool fok = parser->ParseClassAd(buffer, ad, false);
 						if (fok) {
 							parse_type = Parse_new_l;
-							rval = ad.size();
+							value = ad.size();
 							break;
 						}
 					}
@@ -1816,16 +1820,16 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::Lexe
 					parse_type = Parse_long;
 					errmsg = buffer;
 					detected_long = true;
-					return 0;
+					return {ParseResult::LONG_FORM, 0};
 				}
 			}
-			
+
 		} break;
 
-		default: rval = -1; break;
+		default: code = ParseResult::LONG_FORM; break;
 	}
 
-	return rval;
+	return {code, value};
 }
 
 
@@ -1839,21 +1843,34 @@ int InsertFromStream(classad::LexerSource & lexsrc, classad::ClassAd &ad, bool& 
 		// new classad style parsers do all of the work in the NewParser callback
 		// they will return non-zero to indicate that they are new classad style parsers.
 		bool detected_long = false;
-		cAttrs = phelp->NewParser(ad, lexsrc, detected_long, buffer);
-		if (cAttrs > 0) {
-			error = 0;
-			is_eof = false;
-			return cAttrs;
-		} else if (cAttrs < 0) {
-			if (cAttrs == -99) {
+		// cAttrs = phelp->NewParser(ad, lexsrc, detected_long, buffer);
+
+		auto [code, value] = phelp->NewParser(ad, lexsrc, detected_long, buffer);
+		switch( code ) {
+			case CondorClassAdFileParseHelper::ParseResult::EMPTY_AD:
+				// FIXME:  All of InsertFromStream()'s callers need to be able
+				// to distinguish between the successful parse of an empty ad
+				// and the other cases which (might) return 0, like END_OF_FILE
+				// and some (other) implementations of OnParseError().
+				error = 0;
+				is_eof = false;
+				return 0;
+			case CondorClassAdFileParseHelper::ParseResult::END_OF_FILE:
 				error = 0;
 				is_eof = true;
 				return 0;
-			}
-			is_eof = lexsrc.AtEnd();
-			error = cAttrs;
-			return phelp->OnParseError(buffer, ad, lexsrc);
+			case CondorClassAdFileParseHelper::ParseResult::PARSE_ERROR:
+				error = value;
+				is_eof = lexsrc.AtEnd();
+				return phelp->OnParseError(buffer, ad, lexsrc);
+			case CondorClassAdFileParseHelper::ParseResult::PARSEABLE:
+				error = 0;
+				is_eof = false;
+				return value;
+			case CondorClassAdFileParseHelper::ParseResult::LONG_FORM:
+				break;
 		}
+
 		// got a 0 from NewParser, fall down into the old (-long) style parser
 		if (detected_long && ! buffer.empty()) {
 			// buffer has the first line that we want to parse, jump into the
@@ -1861,6 +1878,7 @@ int InsertFromStream(classad::LexerSource & lexsrc, classad::ClassAd &ad, bool& 
 			goto parse_line;
 		}
 	}
+
 
 	while( 1 ) {
 
