@@ -2377,7 +2377,9 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 				time_t interval = LastUpdateUptimeGPUsSeconds - firstUptimeGPUsSecondsTimestamp;
 				if( interval != 0 ) {
 					double average = usage / interval;
+					// This is the internally-correct name.
 					ad->InsertAttr( "UptimeGPUsSecondsAverageUsage", average );
+					// This is the one that people actually care about.
 					ad->InsertAttr( "GPUsAverageUsage", average );
 				}
 			}
