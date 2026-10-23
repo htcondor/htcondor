@@ -40,6 +40,7 @@
 #include <ranges>
 #include <filesystem>
 #include <system_error>
+#include <numeric>
 
 #include <queue>
 
@@ -302,8 +303,8 @@ public:
 	}
 
 	inline int NumReadyServiceNodes() const {
-		auto IsReady = [](const Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
-		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
+		auto CountReady = [](int ready, const Node* n) { return ready + (n->GetStatus() == Node::STATUS_READY); };
+		return std::accumulate(_service_nodes.begin(), _service_nodes.end(), 0, CountReady);
 	}
 
 	inline int PreRunNodeCount() const { return _preRunNodeCount; }
