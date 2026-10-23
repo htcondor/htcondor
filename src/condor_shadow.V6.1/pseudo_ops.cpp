@@ -1162,10 +1162,17 @@ UniShadow::before_common_file_transfer(
 		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
 	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
+#ifdef WIN32
+	// Create_Thread with the attendant socket duplication is failing on some
+	// Windows machines (re: htcondor-support), and it isn't really non-blocking
+	// on Windows anyway, so lets be explict about using blocking mode.
+	this->commonFTO->SetServerShouldBlock( true );
+#else
 	// This is broken on Windows, but we really want our timer to fire
 	// during the transfer process.  Not clear if the progress function
 	// will always be called often enough to be useful for keeping-alive.
 	this->commonFTO->SetServerShouldBlock( false );
+#endif
 
 
 	ClassAd guidance;
