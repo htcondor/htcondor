@@ -147,6 +147,14 @@ DockerProc::StartJob() {
 		imageID = imageID.substr(9);
 	}
 
+	if (starts_with(imageID, "-")) {
+		std::string message;
+		formatstr(message, "Invalid docker image name '%s'", imageID.c_str());
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+		return FALSE;
+	}
+
 	// Normalize an implicit tag to ":latest" so the local-image comparison
 	// below (and downstream pull/tag) matches Docker's own tag semantics.
 	imageName = normalizeDockerImageTag(imageID);
