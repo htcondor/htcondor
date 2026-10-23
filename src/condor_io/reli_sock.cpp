@@ -194,9 +194,9 @@ ReliSock::listen()
 
 
 /// FALSE means this is an incoming connection
-int ReliSock::listen(condor_protocol proto, int port)
+int ReliSock::listen(condor_protocol proto, int port, bool loopback)
 {
-	if (!bind(proto, false, port, false)) return
+	if (!bind(proto, false, port, loopback)) return
 		FALSE;
 	return listen();
 }
