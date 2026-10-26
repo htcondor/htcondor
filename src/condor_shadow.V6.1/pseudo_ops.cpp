@@ -1823,7 +1823,7 @@ UniShadow::start_mapping_only_conversation(
 
 				if( matches ) {
 					catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
-					dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+					dprintf( D_FULLDEBUG, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
 					break;
 				}
 			}
