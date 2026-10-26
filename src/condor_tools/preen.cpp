@@ -1224,11 +1224,8 @@ lock_dir_cleanup_at(int dirfd, const std::string & dirpath, int depth)
 				close(fd);
 				continue;
 			}
-			// FileLock uses fcntl() locks on the whole file
-			struct flock fl{};
-			fl.l_type = F_WRLCK;
-			fl.l_whence = SEEK_SET;
-			r = fcntl(fd, F_SETLK, &fl);
+			// Non-blocking, so we skip any file someone holds a lock on
+			r = lock_file_plain(fd, WRITE_LOCK, false);
 			if (r != 0) {
 				dprintf(D_FULLDEBUG, "Lock file %s is in use, not removing it\n", path.c_str());
 				close(fd);
