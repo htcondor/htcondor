@@ -60,13 +60,16 @@ getCommonInputCatalogsBySimpleName( const ClassAd & jobAd ) {
 
 static std::string
 getCommonFilesIwd( const ClassAd & jobAd ) {
-	// Spooling rewrites the IWD per-proc, but the common files list is
-	// relative to the IWD the job was submitted from.  (Using the per-proc
-	// spool directory would make every spooled proc's list differ.)
+	// We must resolve relative paths exactly as the transfer will, and both
+	// staging (UniShadow::before_common_file_transfer()) and fallback
+	// transfer use the job's Iwd.  Don't use SUBMIT_Iwd for spooled jobs:
+	// it names a directory on the submit machine, which may not exist on
+	// the AP.  (As of this writing, spooling doesn't upload common files
+	// at all, so spooled jobs with relative common files can't run anyway.
+	// If that changes, note that each proc's spooled Iwd differs, so
+	// per-proc copies of common files wouldn't hash the same.)
 	std::string iwd;
-	if(! jobAd.LookupString( "SUBMIT_" ATTR_JOB_IWD, iwd )) {
-		jobAd.LookupString( ATTR_JOB_IWD, iwd );
-	}
+	jobAd.LookupString( ATTR_JOB_IWD, iwd );
 	return iwd;
 }
 

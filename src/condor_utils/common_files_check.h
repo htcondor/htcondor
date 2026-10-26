@@ -39,8 +39,8 @@
 // What "the same files" means
 // ---------------------------
 // hashCommonFiles() turns each catalog into what transferring it would put
-// in the sandbox.  Each relative path is resolved against the job's IWD (as
-// submitted, before spooling rewrote it), then std::filesystem::canonical()
+// in the sandbox.  Each relative path is resolved against the job's Iwd,
+// exactly as the transfer will resolve it, then std::filesystem::canonical()
 // resolves symlinks and "..".  Each entry also records where it lands in the
 // sandbox, which is how staging lays it out: under the last component of its
 // path as listed (not as resolved), or, with a trailing slash ("the
