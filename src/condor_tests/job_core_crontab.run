@@ -317,7 +317,7 @@ my $success = sub {
 		}
 		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3, {emit_output=>0}) ) {
-			CondorTest::debug("ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n",$debuglevel);
+			CondorTest::debug("ERROR: Unable to get NumJobStarts due to Condor Tool Failure<$h_cmd>\n",$debuglevel);
 			$mystatus = 1;
 		}
 		my $temp = "@result";
@@ -347,7 +347,7 @@ my $success = sub {
 		}
 	} # WHILE
 	if ($h_runcount == -1) { 
-		CondorTest::debug("Bad - Unable to get JobRunCount for Job $cluster.$job!\n",$debuglevel);
+		CondorTest::debug("Bad - Unable to get NumJobStarts for Job $cluster.$job!\n",$debuglevel);
 		exit(1);
 	}
 	

@@ -13312,25 +13312,11 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
 		// For the local universe, "shadow" means local starter.
-	int num = 0;
-	switch (job_univ) {
-	case CONDOR_UNIVERSE_SCHEDULER:
-			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
-		if (GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &num) < 0) {
-			num = 0;
-		}
-		num++;
-		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
-		break;
-
-	default:
-		if (GetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, &num) < 0) {
-			num = 0;
-		}
+	if (job_univ != CONDOR_UNIVERSE_SCHEDULER) {
+		int num = 0;
+		GetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, &num);
 		num++;
 		SetAttributeInt(cluster, proc, ATTR_NUM_SHADOW_STARTS, num);
-			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
-		SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, num);
 	}
 
 		// Scheduler and local universe jobs have no shadow to record
@@ -15997,8 +15983,6 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	}
 
 	if(exited) {
-		SetAttributeInt( job_id.cluster, job_id.proc, 
-						ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
 		SetAttribute( job_id.cluster, job_id.proc,
 					  ATTR_ON_EXIT_BY_SIGNAL, "FALSE" );
 		SetAttributeInt( job_id.cluster, job_id.proc,
