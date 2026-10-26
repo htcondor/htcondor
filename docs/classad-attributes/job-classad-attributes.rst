@@ -764,6 +764,10 @@ all attributes.
     setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
     job event log instead of the system event log.
 
+:classad-attribute-def:`JobBatchId`
+    A string value representing a unique batch identifying number across
+    jobs. This is used by DAGMan to indicate the root DAGMan job of a workflow.
+
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
     string valued attribute will contain the batch name.

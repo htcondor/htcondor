@@ -893,9 +893,9 @@ The types are:
         the job ran on.
 
 The transfer records describe a transfer, not a job, so only a few job
-attributes are copied into them: the job's user, project name, global job id
-and the machine it ran on are always included, and
-:macro:`TRANSFER_JOB_ATTRS` names any others to copy.  A single record type can
+attributes are copied into them: the job's user, project name, global job id,
+DAGMan job id, batch id, batch name, and the machine it ran on are always
+included, and :macro:`TRANSFER_JOB_ATTRS` names any others to copy.  A single record type can
 override that list with a knob of its own named after the type --
 ``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
 ``COMMON_JOB_ATTRS``.  Attributes that a job does not have are skipped.

@@ -40,6 +40,11 @@
   advertised in the slot ad of a running job, has been removed.
   :jira:`3995`
 
+- :tool:`condor_history` now accepts ``-dagid``, ``-batchid``, and ``-batchname``
+  to query all jobs belonging to a DAGMan workflow or job batch. These queries
+  use the :ref:`archive-librarian` database when available.
+  :jira:`4041`
+
 *** 26.2.0 bugs
 
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``

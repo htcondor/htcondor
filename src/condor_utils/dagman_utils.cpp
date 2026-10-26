@@ -148,14 +148,14 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "output      = %s\n", options[shallow::str::LibOut].c_str());
 	fprintf(pSubFile, "error       = %s\n", options[shallow::str::LibErr].c_str());
 	fprintf(pSubFile, "log         = %s\n", options[shallow::str::SchedLog].c_str());
+
 	if ( ! options[deep::str::BatchName].empty()) {
-		fprintf(pSubFile, "My.%s = \"%s\"\n", ATTR_JOB_BATCH_NAME,
-		        options[deep::str::BatchName].c_str());
+		fprintf(pSubFile, "batch_name = \"%s\"\n", options[deep::str::BatchName].c_str());
 	}
 	if ( ! options[deep::str::BatchId].empty()) {
-		fprintf(pSubFile, "My.%s = \"%s\"\n", ATTR_JOB_BATCH_ID,
-		        options[deep::str::BatchId].c_str());
+		fprintf(pSubFile, "batch_id = \"%s\"\n", options[deep::str::BatchId].c_str());
 	}
+
 #if !defined ( WIN32 )
 	fprintf(pSubFile, "remove_kill_sig = SIGUSR1\n" );
 #endif

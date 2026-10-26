@@ -216,7 +216,8 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if (!batchName.empty()) { vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false); }
-	if (!batchId.empty()) { vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false); }
+	// Don't let users override batch id pointing back to root DAG
+	if (!batchId.empty()) { vars.emplace_back(SUBMIT_KEY_BatchId, batchId, true); }
 
 	if (dm.config[conf::b::JobInsertRetry] && retry > 0) { vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false); }
 

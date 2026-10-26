@@ -394,7 +394,7 @@
   Point's :macro:`HISTORY` archive.
   :jira:`3143`
 
-- The archive librarian now stores the :ad-attr:`DAGManJobId`, :attr:`JobBatchId`,
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
   and :ad-attr:`JobBatchName` of job records into the library database.
   This allows database queries at a DAG workflow level to be executed.
   :jira:`3799`

@@ -70,6 +70,17 @@ void DagmanMetrics::CountNodes(const Dag* dag) {
 }
 
 //---------------------------------------------------------------------------
+// Quote and escape a user provided string (e.g. batch name) as a JSON string value
+static std::string JsonQuote(const std::string& str) {
+	std::string buf;
+	classad::Value val;
+	val.SetStringValue(str);
+	classad::ClassAdJsonUnParser unparser;
+	unparser.Unparse(buf, val);
+	return buf;
+}
+
+//---------------------------------------------------------------------------
 bool DagmanMetricsV1::Report(int exitCode, Dagman& dm) {
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
@@ -91,6 +102,8 @@ bool DagmanMetricsV1::Report(int exitCode, Dagman& dm) {
 	fprintf(fp, "    \"exitcode\":%d,\n", exitCode);
 	fprintf(fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str());
 	fprintf(fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str());
+	fprintf(fp, "    \"batch_name\":%s,\n", JsonQuote(dm.options[DagmanDeepOptions::str::BatchName]).c_str());
+	fprintf(fp, "    \"batch_id\":%s,\n", JsonQuote(dm.options[DagmanDeepOptions::str::BatchId]).c_str());
 	fprintf(fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum);
 	fprintf(fp, "    \"jobs\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL]);
 	fprintf(fp, "    \"jobs_failed\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::FAILURE]);
@@ -155,6 +168,8 @@ bool DagmanMetricsV2::Report(int exitCode, Dagman& dm) {
 	fprintf(fp, "    \"exitcode\":%d,\n", exitCode);
 	fprintf(fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str());
 	fprintf(fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str());
+	fprintf(fp, "    \"batch_name\":%s,\n", JsonQuote(dm.options[DagmanDeepOptions::str::BatchName]).c_str());
+	fprintf(fp, "    \"batch_id\":%s,\n", JsonQuote(dm.options[DagmanDeepOptions::str::BatchId]).c_str());
 	fprintf(fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum);
 	fprintf(fp, "    \"has_final_node\":%s,\n", dm.dag->_final_node ? "true" : "false");
 	fprintf(fp, "    \"nodes\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL]);
