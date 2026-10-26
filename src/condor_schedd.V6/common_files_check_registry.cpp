@@ -62,6 +62,51 @@ getScopeAd( const ClassAd & jobAd ) {
 }
 
 
+// A transfer shadow staged copies of the prompting job's catalog which
+// conflict with those already recorded for its scope.  Hold the prompting
+// job now: otherwise, it would be matched again, and held only after its
+// next transfer shadow started and verified its catalogs.  By this point,
+// CmdDirectAttach() has already unblocked the prompting job and handed it
+// the transfer shadow's leftover resources; like any job held while waiting
+// to start, it won't be started (see isStillRunnable()).  We have only the
+// hashes, not the files, so the hold reason can't list them.
+static void
+holdPromptingJobForConflict(
+	const shadow_rec & transferShadow, const std::string & catalog,
+	const std::string & sorted, const CommonFilesFingerprint & first
+) {
+	PROC_ID promptingID( transferShadow.job_id.cluster,
+		transferToPromptingProcID( transferShadow.job_id.proc ) );
+	ClassAd * jobAd = GetJobAd( promptingID );
+	if( jobAd == nullptr ) { return; }
+
+	auto r = determineCIFScopeAndType( * jobAd );
+	if(! r) { return; }
+	auto [scope, type] = * r;
+	bool is_dag = (type == ATTR_DAGMAN_JOB_ID);
+	const char * scope_name = is_dag ? "DAG" : "cluster";
+
+	bool only_order = (sorted == first.sorted);
+	int subcode = 0;
+	if( is_dag ) {
+		subcode = only_order ? COMMON_FILES_MISMATCH_SUB_CODE::DAGOrder : COMMON_FILES_MISMATCH_SUB_CODE::DAG;
+	} else {
+		subcode = only_order ? COMMON_FILES_MISMATCH_SUB_CODE::ClusterOrder : COMMON_FILES_MISMATCH_SUB_CODE::Cluster;
+	}
+
+	std::string reason;
+	formatstr( reason,
+		"Common input files for catalog '%s' %s those of job %s in the same %s (%s %s); "
+		"every job in a %s must list the same files in the same order.",
+		catalog.c_str(),
+		only_order ? "are listed in a different order than" : "do not match",
+		first.jobId.c_str(), scope_name, type.c_str(), scope.c_str(), scope_name
+	);
+	holdJob( promptingID.cluster, promptingID.proc, reason.c_str(),
+		CONDOR_HOLD_CODE::CommonFilesMismatch, subcode, true /* use_transaction */ );
+}
+
+
 void
 CommonFilesCheckRegistry::stagingStarted( shadow_rec & transferShadow, const ClassAd & promptingJobAd ) {
 	transferShadow.cxfer_check.m_scopeID = getScopeID( promptingJobAd );
@@ -112,12 +157,14 @@ CommonFilesCheckRegistry::recordStagedCopies( shadow_rec & transferShadow, const
 	// own catalogs match the scope's (see "Why check against the staged copy
 	// as well as the scope?" in common_files_check.h) -- and we must not
 	// record any of its hashes, because it's the one breaking the rule.  The
-	// job responsible will be held by its next transfer shadow.
+	// caller retires the copies; we hold the prompting job, whose catalogs
+	// are the ones that differ.
 	for( const auto & [internalName, copy] : record.m_stagedCopies ) {
 		auto first = scopeRecord.find( copy.name );
 		if( first != scopeRecord.end() && first->second.ordered != copy.ordered ) {
 			dprintf( D_ALWAYS, "Common files check: %s staged catalog '%s' with different files than job %s in scope %d; retiring the staged copy.\n",
 				promptingJobID.c_str(), copy.name.c_str(), first->second.jobId.c_str(), record.m_scopeID );
+			holdPromptingJobForConflict( transferShadow, copy.name, copy.sorted, first->second );
 			return false;
 		}
 	}

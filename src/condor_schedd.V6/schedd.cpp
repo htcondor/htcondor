@@ -9533,9 +9533,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	// asked for; see common_files_check_registry.h.  (Only a transfer
 	// shadow, identified by its claim ID, above, can get here.)  If they
 	// conflict with the catalogs already staged in the same scope, no job
-	// may map them: retire the transfer shadow, exactly as if its lease had
-	// expired (see mark_catalog_dead()).  Jobs waiting for these catalogs
-	// will be released when it exits.
+	// may map them: the registry holds the prompting job, and we retire the
+	// transfer shadow, exactly as if its lease had expired (see
+	// mark_catalog_dead()).  Jobs blocked waiting for these catalogs are
+	// unblocked when it's reaped (see unregister_shadow_catalogs()).
 	if( transfer_shadow_rec != NULL &&
 		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING &&
 		! CommonFilesCheckRegistry::recordStagedCopies( * transfer_shadow_rec, cmd_ad )

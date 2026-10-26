@@ -74,7 +74,20 @@
 //     the transfer shadow's record, and records the first hashes for each
 //     catalog in the scope in the scope's cluster ad
 //     (ATTR_COMMON_FILES_SCOPE_HASHES).
-//     If the copies conflict with the scope's hashes, it retires them unused.
+//
+//     If the staged copies conflict with the scope's hashes (only possible
+//     when two transfer shadows in a scope staged at once), they are never
+//     used:
+//      - The prompting job is held.  It's the job whose catalogs differ.
+//      - The copies are retired exactly as on lease expiry (see
+//        Scheduler::mark_catalog_dead()): the transfer shadow's data slot is
+//        preempted (its claim is released).  Until the transfer shadow is
+//        reaped, jobs needing these copies aren't started; they're matched
+//        again later.
+//      - When it's reaped, any jobs blocked waiting for these copies are
+//        unblocked (see unregister_shadow_catalogs()) and matched again.
+//        Each then stages its own copy, and is held if its own catalogs also
+//        differ.
 //
 //  4. The schedd starts the shadow for a job which will map catalogs
 //     (CXFER_STATE::MAPPING).  It gives the shadow the hashes of the scope and

@@ -30,7 +30,9 @@
 //     its catalogs: recordStagedCopies() remembers the hashes of the staged
 //     copies, and records the first hashes for each catalog in the scope in
 //     the scope's cluster ad.  If the copies conflict with the scope's
-//     hashes, it returns false, and the caller retires them unused.
+//     hashes, it holds the prompting job and returns false, and the caller
+//     retires them unused.  (See step 3 in condor_utils/common_files_check.h
+//     for what then happens to jobs waiting for them.)
 //
 //   transferShadowExitCode(), when a transfer shadow exits with
 //     JOB_CXFER_FAILED_HOLD because it refused to stage mismatched files:
