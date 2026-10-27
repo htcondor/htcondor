@@ -627,7 +627,7 @@ ClassAdLog<K,AD>::FlushLog()
 {
 	int err = FlushClassAdLog(log_fp, false);
 	if (err) {
-		EXCEPT("flush to %s failed, errno = %d (%s)", logFilename(), err, strerror(err));
+		EXCEPT("flush to %s failed, errno = %d (%s)", logFilename(), err, err > 0 ? strerror(err) : "Unknown error");
 	}
 }
 
@@ -639,7 +639,7 @@ ClassAdLog<K,AD>::ForceLog()
 	// the log from memory buffers, then fsyncing to disk.
 	int err = FlushClassAdLog(log_fp, true);
 	if (err) {
-		EXCEPT("fsync of %s failed, errno = %d (%s)", logFilename(), err, strerror(err));
+		EXCEPT("fsync of %s failed, errno = %d (%s)", logFilename(), err, (err > 0) ? strerror(err) : "Unknown error");
 	}
 }
 
