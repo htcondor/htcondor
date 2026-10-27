@@ -2340,7 +2340,7 @@ case CONDOR_getdir:
 
 			size_t idx = 0;
 			if (allow_specials) {
-				idx = service_name.find_first_of("/\\");
+				idx = service_name.find_first_of("/\\:");
 			} else {
 				idx = service_name.find_first_not_of(OAUTH_CRED_NAME_CHARS);
 			}

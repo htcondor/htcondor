@@ -178,7 +178,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 
 		size_t idx = 0;
 		if (allow_specials) {
-			idx = curr.find_first_of("/\\");
+			idx = curr.find_first_of("/\\:");
 		} else {
 			idx = curr.find_first_not_of(OAUTH_CRED_NAME_CHARS);
 		}
