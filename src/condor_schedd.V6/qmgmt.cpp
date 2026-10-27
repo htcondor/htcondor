@@ -85,21 +85,45 @@ typename ClassAdLog<K,AD>::filter_iterator
 ClassAdLog<K,AD>::filter_iterator::operator++(int)
 {
 	m_found_ad = false;
-	typename ClassAdLog<K,AD>::filter_iterator cur = *this;
 	if (m_done) {
-		return cur;
+		return *this;
 	}
 
+	typename ClassAdLog<K,AD>::filter_iterator cur = *this;
 	HashIterator<K, AD> end = m_table->end();
-	bool boolVal = false;
-	int miss_count = 0;
-	Stopwatch sw;
 	while (!(m_cur == end))
 	{
 		cur = *this;
 		//const K & tmp_key = (*m_cur).first;
-		AD tmp_ad = (*m_cur++).second;
-		if (!tmp_ad) continue;
+		AD tmp_ad;
+		if (m_options & JOB_QUEUE_ITERATOR_OPT_CLUSTER_BEFORE_PROC) {
+			if (m_aux) { // m_aux will be the job ad as we iterate the joblist for a cluster
+				tmp_ad = m_aux;
+				JobQueueJob* job = dynamic_cast<JobQueueJob*>(tmp_ad);
+				JobQueueCluster* cad = job->Cluster();
+				ASSERT(cad->jid.cluster == job->jid.cluster);
+				m_aux = cad->NextJob(job);
+			} else {
+				tmp_ad = (*m_cur).second;
+				if (tmp_ad) {
+					if (tmp_ad->IsCluster()) {
+						// next job is the first proc ad.
+						m_aux = dynamic_cast<JobQueueCluster*>(tmp_ad)->FirstJob();
+					} else if (tmp_ad->IsJob()) {
+						// we skip jobs that we iterate out of the hashtable, because
+						// we also see them as we iterate the joblist for each cluster
+						m_cur++;
+						continue;
+					}
+				}
+			}
+			// when doing Cluster before Proc, we either set m_aux to the next proc ad
+			// or we advance m_cur to point to the next hashtable ad
+			if ( ! m_aux) { m_cur++; }
+		} else {
+			tmp_ad = (*m_cur++).second;
+		}
+		if ( ! tmp_ad) continue;
 
 		//dprintf(D_COMMAND | D_VERBOSE, "ClassAdLog::filter_iterator++ 0x%x key=%d.%d (%d.%d)\n", 
 		//	m_options, tmp_key.cluster, tmp_key.proc, tmp_ad->jid.cluster, tmp_ad->jid.proc);
@@ -125,32 +149,14 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 			//  dprintf(D_COMMAND | D_VERBOSE, "ClassAdLog::filter_iterator++ checking requirements: %s\n", ExprTreeToString(&requirements));
 			//}
 			classad::Value result;
-		#if 1
+			bool boolVal = false;
 			bool eval_ok = classad::ClassAd::EvaluateExpr(tmp_ad, m_requirements, result, classad::Value::ValueType::NUMBER_VALUES);
-		#else
-			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
-			const classad::ClassAd *old_scope = requirements.GetParentScope();
-			requirements.SetParentScope( tmp_ad );
-			bool eval_ok = tmp_ad->EvaluateExpr(requirements, result, classad::Value::ValueType::NUMBER_VALUES);
-			requirements.SetParentScope(old_scope);
-		#endif
 			eval_ok = eval_ok && result.IsBooleanValueEquiv(boolVal);
 			if ( ! eval_ok || ! boolVal) {
 
 				if ( ! eval_ok && IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE)) {
 					dprintf(D_COMMAND | D_VERBOSE, "requirements did not evaluate to bool equivalent: %s\n", ClassAdValueToString(result));
 				}
-
-				// 500 (ish) was chosen here based on a queue of 1M jobs and
-				// estimated 30ns per clock_gettime call - resulting in
-				// an overhead of 0.06 ms from the timing calls to iterate
-				// through a whole queue.  Compared to the cost of doing
-				// the rest of the iteration (6ms per 10k ads, or 600ms)
-				// for the whole queue, I consider this overhead
-				// acceptable.  BB, 09/2014.
-				if ( ! miss_count) { sw.start(); }
-				++miss_count;
-				if ((miss_count & 0x1FF) == 0 && (sw.get_ms() > m_timeslice_ms)) {break;}
 
 				// keep looking
 				continue;
@@ -483,9 +489,9 @@ DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 //static int allow_remote_submit = FALSE;
 JobQueueLogType::filter_iterator
-GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms)
+GetJobQueueIterator(const classad::ExprTree &requirements)
 {
-	return JobQueue->GetFilteredIterator(requirements, timeslice_ms);
+	return JobQueue->GetFilteredIterator(requirements);
 }
 
 JobQueueLogType::filter_iterator

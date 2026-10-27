@@ -7,8 +7,6 @@
 #include "expr_analyze.h"
 #include "adcluster.h"
 
-#define CONDOR_Q_HANDLE_CLUSTER_AD 1
-
 typedef std::unique_ptr<ClassAd> UniqueClassAdPtr;
 
 // structure to track sets of related classads
