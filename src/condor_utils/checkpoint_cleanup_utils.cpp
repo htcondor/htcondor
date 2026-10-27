@@ -188,7 +188,7 @@ spawnCheckpointCleanupProcess(
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
-		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL)
+		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 	);
 
 #if ! defined(WINDOWS)
