@@ -334,6 +334,39 @@ sim_nvmlDeviceGetMigDeviceHandleByIndex(nvmlDevice_t device, unsigned int index,
 }
 
 nvmlReturn_t
+sim_nvmlDeviceGetDeviceHandleFromMigDeviceHandle(nvmlDevice_t migDevice, nvmlDevice_t* device ) {
+	const struct _simulated_cuda_config * config = nullptr;
+	nvmlReturn_t ret = sim_getconfig(migDevice, config);
+	if (ret != NVML_SUCCESS) { return ret; }
+	if ( ! nvmldev_is_mig(migDevice)) { return NVML_ERROR_INVALID_ARGUMENT; }
+	* device = sim_index_to_nvmldev(nvmldev_to_sim_index(migDevice));
+	return NVML_SUCCESS;
+}
+
+// Real GPU instance ids are sparse and depend on the partitioning profile,
+// for simulation, the GPU instance id is the MIG index (matching the /<gi>/<ci>
+// suffix of pre-470 driver MIG uuids), with a single compute instance 0
+nvmlReturn_t
+sim_nvmlDeviceGetGpuInstanceId(nvmlDevice_t device, unsigned int * id ) {
+	const struct _simulated_cuda_config * config = nullptr;
+	nvmlReturn_t ret = sim_getconfig(device, config);
+	if (ret != NVML_SUCCESS) { return ret; }
+	if ( ! nvmldev_is_mig(device)) { return NVML_ERROR_NOT_SUPPORTED; }
+	* id = nvmldev_to_mig_index(device);
+	return NVML_SUCCESS;
+}
+
+nvmlReturn_t
+sim_nvmlDeviceGetComputeInstanceId(nvmlDevice_t device, unsigned int * id ) {
+	const struct _simulated_cuda_config * config = nullptr;
+	nvmlReturn_t ret = sim_getconfig(device, config);
+	if (ret != NVML_SUCCESS) { return ret; }
+	if ( ! nvmldev_is_mig(device)) { return NVML_ERROR_NOT_SUPPORTED; }
+	* id = 0;
+	return NVML_SUCCESS;
+}
+
+nvmlReturn_t
 sim_nvmlDeviceGetUUID(nvmlDevice_t device, char *buf, unsigned int bufsize ) {
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
@@ -484,6 +517,9 @@ setSimulatedNVMLFunctionPointers() {
 		nvmlDeviceGetMaxClockInfo = sim_nvmlDeviceGetMaxClockInfo;
 		nvmlDeviceGetMaxMigDeviceCount = sim_nvmlDeviceGetMaxMigDeviceCount;
 		nvmlDeviceGetMigDeviceHandleByIndex = sim_nvmlDeviceGetMigDeviceHandleByIndex;
+		nvmlDeviceGetDeviceHandleFromMigDeviceHandle = sim_nvmlDeviceGetDeviceHandleFromMigDeviceHandle;
+		nvmlDeviceGetGpuInstanceId = sim_nvmlDeviceGetGpuInstanceId;
+		nvmlDeviceGetComputeInstanceId = sim_nvmlDeviceGetComputeInstanceId;
 	}
 	return sim_enable_mig;
 }

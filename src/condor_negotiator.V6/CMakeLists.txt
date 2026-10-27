@@ -24,6 +24,7 @@ main.cpp
 matchmaker.cpp
 matchmaker_negotiate.cpp
 NegotiatorPluginManager.cpp
+parallel_match.cpp
 )
 
 if (UNIX)
@@ -34,8 +35,17 @@ condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
   LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}" )
 
 condor_exe_test( test_protocol_matching
-  "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;ClassAdLogAccountantDB.cpp;GroupEntry.cpp;matchmaker_negotiate.cpp"
+  "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;ClassAdLogAccountantDB.cpp;GroupEntry.cpp;matchmaker_negotiate.cpp;parallel_match.cpp"
   "${CONDOR_LIBS}" )
+
+# Only parallel_match.cpp uses OpenMP (for NEGOTIATOR_NUM_THREADS), so link
+# it here rather than globally, keeping the runtime out of everything else.
+if (TARGET OpenMP::OpenMP_CXX)
+	target_link_libraries(condor_negotiator PRIVATE OpenMP::OpenMP_CXX)
+	if (TARGET test_protocol_matching)
+		target_link_libraries(test_protocol_matching PRIVATE OpenMP::OpenMP_CXX)
+	endif()
+endif()
 
 condor_exe(accountant_log_fixer "accountant_log_fixer.cpp" ${C_LIBEXEC} "" OFF)
 #condor_exe(hgq_group_tester "hgq_group_tester.cpp;GroupEntry.cpp" ${C_BIN} "${CONDOR_LIBS}" OFF)

@@ -50,6 +50,7 @@
 #endif
 
 #include "matchmaker.h"
+#include "parallel_match.h"
 
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
@@ -1119,7 +1120,7 @@ bool returnPrioFactor(Stream *strm, CondorError &errstack)
 			ad.InsertAttr(ATTR_ERROR_STRING, errstack.message());
 		}
 		strm->encode();
-		if (!putClassAd(strm, ad) || strm->end_of_message()) {
+		if (!putClassAd(strm, ad) || !strm->end_of_message()) {
 			dprintf(D_ALWAYS, "Failed to send response for SET_PRIORITY_FACTOR command.\n");
 			return false;
 		}
@@ -6700,7 +6701,7 @@ Matchmaker::publishBundleStats(ClassAd *ad)
 	// can never be filled -- one asking for more slots than the pool can ever
 	// offer at once -- waits forever by construction, so this climbing without
 	// bound is the signal for that.
-	ad->Assign(ATTR_BUNDLE_MAX_WAIT_SECONDS, (int)oldest);
+	ad->Assign(ATTR_BUNDLE_MAX_WAIT_SECONDS, oldest);
 }
 
 void Matchmaker::StartNewNegotiationCycleStat()

@@ -37,6 +37,14 @@ New Features:
 
 .. include-history:: features 25.0.15
 
+- VM universe now supports the ``user`` type networking with the **passt**
+  backend allowing outbound network connectivity on EL10 execution points.
+  :jira:`3947`
+
+- HTCondor tarballs now contain `Pelican 7.27.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.27.0.
+
 Bugs Fixed:
 
 .. include-history:: bugs 25.0.15

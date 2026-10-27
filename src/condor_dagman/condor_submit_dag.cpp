@@ -21,6 +21,7 @@
 #include "../condor_utils/dagman_utils.h"
 #include "condor_config.h"
 #include "read_multiple_logs.h"
+#include "dag_parser.h"
 #include "condor_version.h"
 #include "my_popen.h"
 #include "setenv.h"
@@ -134,60 +135,31 @@ int doRecursionNew(DagmanOptions& dagOpts) {
 
 	// Go through all DAG files specified on the command line...
 	for (const auto& dagfile : dagOpts[shallow::slist::DagFiles]) {
-
-		// Get logical lines from this DAG file.
-		MultiLogFiles::FileReader reader;
-		std::string errMsg = reader.Open(dagfile);
-		if (!errMsg.empty()) {
-			fprintf(stderr, "Error reading DAG file: %s\n", errMsg.c_str());
+		DagParser parser(dagfile);
+		if (parser.failed()) {
+			fprintf(stderr, "Error reading DAG file: %s\n", parser.error().c_str());
 			return 1;
 		}
 
-		// Find and parse JOB and SUBDAG lines.
-		std::string dagLine;
-		while (reader.NextLogicalLine(dagLine)) {
-			StringTokenIterator tokens(dagLine);
+		// Find and parse SUBDAG lines.
+		parser.SearchFor(DAG::CMD::SUBDAG);
 
-			const char* first = tokens.first();
-			if (first && strcasecmp(first, "SUBDAG") == MATCH) {
+		for (const auto cmd : parser) {
+			if ( ! cmd) { continue; }
 
-				const char* inlineOrExt = tokens.next();
-				if (strcasecmp(inlineOrExt, "EXTERNAL") != MATCH) {
-					fprintf(stderr, "ERROR: only SUBDAG EXTERNAL is supported at this time (line: <%s>)\n", dagLine.c_str());
-					return 1;
-				}
+			const SubdagCommand* subdag = DAG::DERIVE_CMD<SubdagCommand>(cmd);
 
-				const char* nestedDagFile = nullptr;
-				const char* directory = nullptr;
-				const char* tempToken = tokens.next();
-
-				// Next token should be node name
-				if (!tempToken) {
-					fprintf(stderr, "No node name specified in line: <%s>\n", dagLine.c_str());
-					return 1;
-				}
-
-				nestedDagFile = tokens.next();
-				if (!nestedDagFile) {
-					fprintf(stderr, "No DAG file specified in line: <%s>\n", dagLine.c_str());
-					return 1;
-				}
-
-				// Check for DIR <path>
-				tempToken = tokens.next();
-				if (tempToken && strcasecmp(tempToken, "DIR") == MATCH) {
-					directory = tokens.next();
-					if (!directory) {
-						fprintf(stderr, "No directory specified in line: <%s>\n", dagLine.c_str());
-						return 1;
-					}
-				}
-
-				if (dagmanUtils.runSubmitDag(dagOpts, nestedDagFile, directory, priority, false) != 0) { result = 1; }
+			if (dagmanUtils.runSubmitDag(dagOpts, subdag->GetSubmit().c_str(),
+			                             subdag->HasDir() ? subdag->GetDir().c_str() : nullptr,
+			                             priority, false) != 0) {
+				result = 1;
 			}
 		}
 
-		reader.Close();
+		if (parser.failed()) {
+			fprintf(stderr, "Error parsing DAG file %s: %s\n", dagfile.c_str(), parser.error().c_str());
+			return 1;
+		}
 	}
 
 	return result;

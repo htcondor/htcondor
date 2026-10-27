@@ -608,7 +608,8 @@ ClassAdLog<K,AD>::AppendLog(LogRecord *log)
 			//MD: using file pointer
 		if (log_fp!=NULL) {
 			if (log->Write(log_fp) < 0) {
-				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+				int err = errno;
+				EXCEPT("write to %s failed, errno = %d (%s)", logFilename(), err, strerror(err));
 			}
 			if( m_nondurable_level == 0 ) {
 				ForceLog();  // flush and fsync
@@ -626,7 +627,7 @@ ClassAdLog<K,AD>::FlushLog()
 {
 	int err = FlushClassAdLog(log_fp, false);
 	if (err) {
-		EXCEPT("flush to %s failed, errno = %d", logFilename(), err);
+		EXCEPT("flush to %s failed, errno = %d (%s)", logFilename(), err, strerror(err));
 	}
 }
 
@@ -638,7 +639,7 @@ ClassAdLog<K,AD>::ForceLog()
 	// the log from memory buffers, then fsyncing to disk.
 	int err = FlushClassAdLog(log_fp, true);
 	if (err) {
-		EXCEPT("fsync of %s failed, errno = %d", logFilename(), err);
+		EXCEPT("fsync of %s failed, errno = %d (%s)", logFilename(), err, strerror(err));
 	}
 }
 

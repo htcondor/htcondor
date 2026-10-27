@@ -57,13 +57,13 @@ const int HOLD_MASK = (1 << 3); // Set if proc is held
 
 // Constant success value
 const int SUCCESS = 0;
-const short int JOB_EXIT_UNKNOWN = std::numeric_limits<short int>::min();
-const short int JOB_EXIT_ABORT = std::numeric_limits<short int>::max();
+const int JOB_EXIT_UNKNOWN = std::numeric_limits<int>::min();
+const int JOB_EXIT_ABORT = std::numeric_limits<int>::max();
 
 // Information tracked for each job associated with this node
 struct JobDetails {
 	unsigned char events{0}; // State of job tracked via job proc event masks
-	short int exitVal{JOB_EXIT_UNKNOWN}; // Exit code of the job (or aborted value)
+	int exitVal{JOB_EXIT_UNKNOWN}; // Exit code of the job (or aborted value); int because Windows exit codes are 32-bit
 };
 
 /*

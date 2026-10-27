@@ -850,6 +850,17 @@ COMMANDS FOR MATCHMAKING
     Also, see the HTCondor Users Manual for complete information on the syntax
     and available attributes that can be used in the ClassAd expression.
 
+ :subcom-def:`annex_name` = <name>
+    Indicates that these jobs are intended to run on EPs of the named annex.
+    The annex EPs need to be provisioned using the *htcondor annex create*
+    command.
+
+ :subcom-def:`restrict_to_annex` = <True | False>
+    For jobs connected to an annex, this specifies whether the jobs can run
+    only on annex EPs or may also run on non-annex EPs.
+    The default is set by configuration parameter
+    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`, whose default is True.
+
 FILE TRANSFER COMMANDS
 
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
@@ -1175,6 +1186,10 @@ FILE TRANSFER COMMANDS
     Note that (at present), you may not provide more than one set of
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
+
+ :subcom-def:`transfer_common_input` = < file1,file2,file... >
+    As :subcom:`transfer_input_files`, except that the specified files or URLS
+    are common across more than one job.  See :ref:`common_file_transfer`.
 
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured

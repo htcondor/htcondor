@@ -4,19 +4,32 @@
 # "rotation detected" and "rotation fully drained".
 #
 # Scenario:
-#   1. Submit ROTATION_RECOVERY_NUM_JOBS jobs into the active history file,
-#      with the librarian's per-cycle record cap pinned to 0 so it cannot
-#      drain any of them yet.
-#   2. Rotate the history file and confirm the librarian recorded the
+#   1. Index ROTATION_RECOVERY_JOBS_READ jobs from the active history file so
+#      the file has a non-zero LastOffset/RecordsRead.
+#   2. Pin the librarian's per-cycle record cap to 0 (via a librarian-only
+#      restart, so the new cap is in effect before its first update cycle)
+#      and complete ROTATION_RECOVERY_JOBS_UNREAD more jobs it cannot read.
+#   3. Rotate the history file and confirm the librarian recorded the
 #      rotation (DateOfRotation set) without draining it. This is a stable
 #      fixed point, not a timing window: Phase 3 of update() reads zero
 #      records per cycle no matter how many cycles run while the cap is 0,
 #      so there's nothing to race against.
-#   3. Raise the cap back up and restart the whole pool (including
-#      LIBRARIAN) while the rotated file is still fully undrained.
-#   4. Confirm the file eventually reaches FullyRead with no duplicated or
-#      lost records, and that removing it from disk afterwards doesn't
-#      corrupt its recorded name/rotation date.
+#   4. Raise the cap back up and restart the whole pool (including
+#      LIBRARIAN) while the rotated file is partially drained.
+#   5. Confirm the file eventually reaches FullyRead with every record indexed
+#      exactly once -- a lost LastOffset would re-index the first batch, and
+#      a lost RecordsRead would undercount -- and that removing it from disk
+#      afterwards doesn't corrupt its recorded name/rotation date.
+#
+# Second scenario (separate pool): per-file read statistics survive a
+# librarian restart on a partially read active file.
+#   1. Index ACTIVE_RECOVERY_JOBS_BEFORE jobs into the active history file.
+#   2. Restart only the librarian (the schedd keeps appending to the same file).
+#   3. Index ACTIVE_RECOVERY_JOBS_AFTER more jobs.
+#   4. Confirm the same Files row now has RecordsRead == before + after and an
+#      AvgRecordSize consistent with the pre-restart value. If recovery lost
+#      these, the Welford mean would restart from zero and RecordsRead would
+#      only count post-restart records.
 
 import datetime
 import os
@@ -32,8 +45,13 @@ from ornithology import *
 DB_POLL_INTERVAL = 2    # seconds between DB polls
 DB_POLL_TIMEOUT  = 120  # seconds before giving up
 
-ROTATION_RECOVERY_NUM_JOBS        = 3
+ROTATION_RECOVERY_JOBS_READ       = 3  # indexed before the cap is pinned to 0
+ROTATION_RECOVERY_JOBS_UNREAD     = 2  # left unread in the rotated file at restart
+ROTATION_RECOVERY_NUM_JOBS        = ROTATION_RECOVERY_JOBS_READ + ROTATION_RECOVERY_JOBS_UNREAD
 ROTATION_RECOVERY_UPDATE_INTERVAL = 2  # seconds — matches LIBRARIAN_UPDATE_INTERVAL
+
+ACTIVE_RECOVERY_JOBS_BEFORE = 3
+ACTIVE_RECOVERY_JOBS_AFTER  = 2
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -43,34 +61,6 @@ def _get_db_path(condor):
     """Return the LIBRARIAN_DATABASE path from the running pool config."""
     with condor.use_config():
         return Path(htcondor2.param["LIBRARIAN_DATABASE"])
-
-
-def _wait_for_active_file_registered(condor, expected_name, timeout=DB_POLL_TIMEOUT):
-    """
-    Poll until a Files row exists for `expected_name` with DateOfRotation
-    still NULL -- i.e. the librarian has run a reconcile cycle and adopted it
-    as the active file. Deliberately does not wait on any JobRecords being
-    read: with LIBRARIAN_MAX_UPDATES_PER_CYCLE pinned to 0, none ever will be
-    before we rotate below.
-    """
-    db_path = _get_db_path(condor)
-    start = time.time()
-    while True:
-        assert time.time() - start <= timeout, (
-            f"Timed out after {timeout}s waiting for the librarian to "
-            f"register {expected_name!r} as the active archive file"
-        )
-        try:
-            conn = sqlite3.connect(str(db_path))
-            rows = conn.execute(
-                "SELECT FileName FROM Files WHERE DateOfRotation IS NULL"
-            ).fetchall()
-            conn.close()
-        except sqlite3.OperationalError:
-            rows = []
-        if any(Path(row[0]).name == expected_name for row in rows):
-            return
-        time.sleep(DB_POLL_INTERVAL)
 
 
 def _restart_pool_and_wait_for_new_schedd(condor, timeout=60):
@@ -133,6 +123,36 @@ def _wait_for_rotation_recorded(condor, fully_read, timeout=DB_POLL_TIMEOUT):
         time.sleep(DB_POLL_INTERVAL)
 
 
+def _active_file_row(condor):
+    """Return (FileId, RecordsRead, AvgRecordSize, JobRecords count) for the active file, or None."""
+    try:
+        conn = sqlite3.connect(str(_get_db_path(condor)))
+        try:
+            row = conn.execute(
+                r"SELECT FileId, RecordsRead, AvgRecordSize FROM Files WHERE DateOfRotation IS NULL"
+            ).fetchone()
+            records = conn.execute(r"SELECT COUNT(*) FROM JobRecords").fetchone()[0]
+        finally:
+            conn.close()
+    except sqlite3.OperationalError:
+        return None
+    return None if row is None else (*row, records)
+
+
+def _wait_for_indexed_records(condor, expected, timeout=DB_POLL_TIMEOUT):
+    """Poll until JobRecords holds `expected` rows; return _active_file_row()."""
+    start = time.time()
+    row = None
+    while True:
+        assert time.time() - start <= timeout, (
+            f"Timed out waiting for {expected} indexed records (last active file row: {row})"
+        )
+        row = _active_file_row(condor)
+        if row is not None and row[3] >= expected:
+            return row
+        time.sleep(DB_POLL_INTERVAL)
+
+
 def _submit_and_wait(condor, log_path, path_to_sleep, count):
     """Submit `count` instant-exit jobs and wait for all to complete."""
     handle = condor.submit(
@@ -173,16 +193,6 @@ def rotation_recovery_config():
         "config": {
             "DAEMON_LIST": "$(DAEMON_LIST) LIBRARIAN",
             "LIBRARIAN_UPDATE_INTERVAL": ROTATION_RECOVERY_UPDATE_INTERVAL,
-            # Pin ingestion to 0 records/cycle up front. This makes "rotated
-            # but not yet drained" a stable fixed point instead of a narrow
-            # window we'd otherwise have to catch mid-drain: with the cap at
-            # 0, Phase 3 of update() never reads a single record no matter how
-            # many cycles run, so FullyRead is guaranteed to stay 0 until we
-            # deliberately raise the cap back up (see
-            # rotated_file_after_restart). File discovery and rotation
-            # detection (Phase 1/1.5) aren't gated by this cap and keep
-            # running every cycle regardless.
-            "LIBRARIAN_MAX_UPDATES_PER_CYCLE": 0,
         }
     }
 
@@ -196,23 +206,34 @@ def rotation_recovery_condor(rotation_recovery_config, test_dir):
 @action
 def rotated_file_mid_drain(rotation_recovery_condor, test_dir, path_to_sleep):
     """
-    Rotate the active history file while ingestion is capped at 0
-    records/cycle, and confirm the librarian recorded the rotation
-    (DateOfRotation set) without draining it -- the DB state that must
-    survive a daemon restart intact. With the cap at 0 this is a stable
-    fixed point rather than a narrow timing window, so there's nothing to
-    race against.
+    Index a first batch of jobs, pin ingestion to 0 records/cycle, complete a
+    second batch the librarian can't read, then rotate the active history
+    file and confirm the librarian recorded the rotation (DateOfRotation set)
+    without draining it -- the partially read DB state that must survive a
+    daemon restart intact. With the cap at 0 this is a stable fixed point
+    rather than a narrow timing window, so there's nothing to race against.
     """
     _submit_and_wait(
-        rotation_recovery_condor, test_dir / "rr_job.log", path_to_sleep, ROTATION_RECOVERY_NUM_JOBS
+        rotation_recovery_condor, test_dir / "rr_job_read.log", path_to_sleep, ROTATION_RECOVERY_JOBS_READ
+    )
+    _wait_for_indexed_records(rotation_recovery_condor, ROTATION_RECOVERY_JOBS_READ)
+
+    # Pin ingestion to 0 records/cycle. File discovery and rotation detection
+    # (Phase 1/1.5) aren't gated by this cap and keep running every cycle.
+    # A librarian-only restart (rather than condor_reconfig, which gives no
+    # signal of when it has been applied) guarantees the cap is in effect
+    # before the next batch of records is written. The schedd is untouched,
+    # so it keeps appending to the same "history" file.
+    with rotation_recovery_condor.config_file.open("a") as f:
+        f.write("\nLIBRARIAN_MAX_UPDATES_PER_CYCLE = 0\n")
+    rotation_recovery_condor.restart_daemon("librarian")
+
+    _submit_and_wait(
+        rotation_recovery_condor, test_dir / "rr_job_unread.log", path_to_sleep, ROTATION_RECOVERY_JOBS_UNREAD
     )
 
     with rotation_recovery_condor.use_config():
         history_path = Path(htcondor2.param["HISTORY"])
-
-    # Confirms the librarian has run a reconcile cycle and adopted "history"
-    # as the active file -- not that it has read anything from it.
-    _wait_for_active_file_registered(rotation_recovery_condor, history_path.name)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
     rotated_path = history_path.parent / f"{history_path.name}.{timestamp}"
@@ -231,7 +252,23 @@ def rotated_file_mid_drain(rotation_recovery_condor, test_dir, path_to_sleep):
 
 
 @action
-def rotated_file_after_restart(rotated_file_mid_drain, rotation_recovery_condor):
+def rotated_file_before_restart(rotated_file_mid_drain, rotation_recovery_condor):
+    """(FileId, RecordsRead, LastOffset, JobRecords count) of the rotated file before the pool restart."""
+    conn = sqlite3.connect(str(_get_db_path(rotation_recovery_condor)))
+    try:
+        row = conn.execute(
+            r"SELECT FileId, RecordsRead, LastOffset FROM Files WHERE FileName LIKE ?",
+            (f"%{rotated_file_mid_drain.name}%",),
+        ).fetchone()
+        records = conn.execute(r"SELECT COUNT(*) FROM JobRecords").fetchone()[0]
+    finally:
+        conn.close()
+    assert row is not None, f"No Files row for rotated file {rotated_file_mid_drain.name}"
+    return (*row, records)
+
+
+@action
+def rotated_file_after_restart(rotated_file_mid_drain, rotated_file_before_restart, rotation_recovery_condor):
     """
     Restart the whole pool (including LIBRARIAN) while the rotated file from
     `rotated_file_mid_drain` still has unread records, then wait for the
@@ -239,7 +276,7 @@ def rotated_file_after_restart(rotated_file_mid_drain, rotation_recovery_condor)
     Files row: (FileName, DateOfRotation, FullyRead, RecordsRead, DateOfDeletion).
     """
     # Ingestion was pinned to 0/cycle purely to land rotation in a
-    # deterministically undrained state; raise it back up so the post-restart
+    # deterministically partially drained state; raise it back up so the post-restart
     # librarian actually drains the backlog instead of holding at 0 forever.
     # condor_restart re-reads the on-disk config file, so editing it here
     # (rather than e.g. `condor_config_val -rset`, which wouldn't survive a
@@ -269,6 +306,52 @@ def rotated_file_after_restart(rotated_file_mid_drain, rotation_recovery_condor)
 
 
 # ---------------------------------------------------------------------------
+# Pool configuration + fixtures: librarian restart with a partially read active file
+# ---------------------------------------------------------------------------
+
+@config
+def active_recovery_config():
+    return {
+        "config": {
+            "DAEMON_LIST": "$(DAEMON_LIST) LIBRARIAN",
+            "LIBRARIAN_UPDATE_INTERVAL": ROTATION_RECOVERY_UPDATE_INTERVAL,
+        }
+    }
+
+
+@standup
+def active_recovery_condor(active_recovery_config, test_dir):
+    with Condor(local_dir=test_dir / "condor_active_recovery", **active_recovery_config) as condor:
+        yield condor
+
+
+@action
+def active_file_before_restart(active_recovery_condor, test_dir, path_to_sleep):
+    """Index the first batch of jobs; return the active file's row before the restart."""
+    _submit_and_wait(
+        active_recovery_condor, test_dir / "ar_job_before.log", path_to_sleep, ACTIVE_RECOVERY_JOBS_BEFORE
+    )
+    return _wait_for_indexed_records(active_recovery_condor, ACTIVE_RECOVERY_JOBS_BEFORE)
+
+
+@action
+def active_file_after_restart(active_file_before_restart, active_recovery_condor, test_dir, path_to_sleep):
+    """
+    Restart only the librarian, index a second batch into the same active
+    file, and return the active file's row afterwards. The Files row is
+    updated in the same transaction as the JobRecords insert, so once the
+    record count is reached the row reflects the post-restart reads.
+    """
+    active_recovery_condor.restart_daemon("librarian")
+    _submit_and_wait(
+        active_recovery_condor, test_dir / "ar_job_after.log", path_to_sleep, ACTIVE_RECOVERY_JOBS_AFTER
+    )
+    return _wait_for_indexed_records(
+        active_recovery_condor, ACTIVE_RECOVERY_JOBS_BEFORE + ACTIVE_RECOVERY_JOBS_AFTER
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
@@ -292,13 +375,33 @@ class TestLibrarianRestartMidRotation:
             f"Rotated file name was corrupted to {filename!r}"
         )
 
-    def test_no_duplicate_or_lost_records(self, rotated_file_after_restart):
-        """RecordsRead must equal exactly the original job count -- no records
-        re-read (duplicated) or skipped across the restart."""
+    def test_partially_read_before_restart(self, rotated_file_before_restart):
+        """Precondition: the rotated file must be partially read when the pool restarts,
+        otherwise the checks below can't tell recovered progress from lost progress."""
+        _, records_read, last_offset, records = rotated_file_before_restart
+        assert records_read == ROTATION_RECOVERY_JOBS_READ
+        assert last_offset > 0
+        assert records == ROTATION_RECOVERY_JOBS_READ, (
+            f"Expected {ROTATION_RECOVERY_JOBS_READ} JobRecords with ingestion pinned to 0, got {records}"
+        )
+
+    def test_no_duplicate_or_lost_records(self, rotated_file_after_restart, rotation_recovery_condor):
+        """Every record in the rotated file must be indexed exactly once across
+        the restart: a lost LastOffset re-indexes the first batch (duplicates),
+        and a lost RecordsRead undercounts."""
         _, _, _, records_read, _ = rotated_file_after_restart
         assert records_read == ROTATION_RECOVERY_NUM_JOBS, (
             f"Expected exactly {ROTATION_RECOVERY_NUM_JOBS} records read from the "
             f"rotated file, got {records_read} (duplicate or missed reads across restart)"
+        )
+        conn = sqlite3.connect(str(_get_db_path(rotation_recovery_condor)))
+        try:
+            records = conn.execute(r"SELECT COUNT(*) FROM JobRecords").fetchone()[0]
+        finally:
+            conn.close()
+        assert records == ROTATION_RECOVERY_NUM_JOBS, (
+            f"Expected exactly {ROTATION_RECOVERY_NUM_JOBS} JobRecords, got {records} "
+            "(records re-indexed or dropped across restart)"
         )
 
     def test_removal_after_restart_keeps_rotation_metadata(
@@ -336,4 +439,45 @@ class TestLibrarianRestartMidRotation:
         assert not filename.endswith(".REMOVED"), (
             f"A rotated file removed from disk was misrenamed to {filename!r} -- "
             "treated as an unexpectedly-removed active file instead of a rotated one"
+        )
+
+
+class TestLibrarianRestartActiveFileStats:
+    """
+    Regression coverage for per-file read statistics (RecordsRead,
+    AvgRecordSize) being recovered from the DB when the librarian restarts
+    while the active file is only partially read.
+    """
+
+    def test_before_restart_stats(self, active_file_before_restart):
+        _, records_read, avg_size, _ = active_file_before_restart
+        assert records_read == ACTIVE_RECOVERY_JOBS_BEFORE
+        assert avg_size > 0
+
+    def test_same_active_file_after_restart(self, active_file_before_restart, active_file_after_restart):
+        assert active_file_after_restart[0] == active_file_before_restart[0], (
+            "Active file was re-registered under a new FileId after the librarian restart"
+        )
+
+    def test_no_records_reindexed(self, active_file_after_restart):
+        total = ACTIVE_RECOVERY_JOBS_BEFORE + ACTIVE_RECOVERY_JOBS_AFTER
+        assert active_file_after_restart[3] == total, (
+            f"Expected exactly {total} JobRecords, got {active_file_after_restart[3]} "
+            "(records re-read from the start of the file after restart)"
+        )
+
+    def test_records_read_recovered(self, active_file_after_restart):
+        total = ACTIVE_RECOVERY_JOBS_BEFORE + ACTIVE_RECOVERY_JOBS_AFTER
+        records_read = active_file_after_restart[1]
+        assert records_read == total, (
+            f"Expected RecordsRead == {total}, got {records_read}; "
+            f"{ACTIVE_RECOVERY_JOBS_AFTER} would mean the pre-restart count was lost"
+        )
+
+    def test_avg_record_size_recovered(self, active_file_before_restart, active_file_after_restart):
+        # Identical sleep jobs produce near-identical record sizes. A mean that
+        # restarted from 0 with the count kept would land around 0.4x here.
+        before, after = active_file_before_restart[2], active_file_after_restart[2]
+        assert 0.8 * before <= after <= 1.2 * before, (
+            f"AvgRecordSize changed from {before:.1f} to {after:.1f} across the librarian restart"
         )

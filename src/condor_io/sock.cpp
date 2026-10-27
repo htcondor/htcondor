@@ -1163,39 +1163,14 @@ int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 	return TRUE; 
 }
 
-bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
-	dprintf(D_HOSTNAME, "Guess address string for host = %s, port = %d\n",
-			host, port);
-	/* might be in <x.x.x.x:x> notation				*/
-	if (host[0] == '<') {
-		addr.from_sinful(host);
-		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
-				addr.to_ip_string().c_str(), addr.get_port());
-	}
-	/* try to get a decimal notation 	 			*/
-	else if ( addr.from_ip_string(host) ) {
-			// nothing to do here
-		addr.set_port(port);
-	}
-	/* if dotted notation fails, try host database	*/
-	else{
-		std::vector<condor_sockaddr> addrs;
-		addrs = resolve_hostname(host);
-		if (addrs.empty())
-			return false;
-		addr = addrs.front();
-		addr.set_port(port);
-	}
-	return true;
-}
-
 bool routingParametersInitialized = false;
 bool ignoreTargetProtocolPreference = false;
 bool preferOutboundIPv4 = false;
 bool acceptIPv4 = false;
 bool acceptIPv6 = false;
 
-bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condor_sockaddr* saddr ) {
+static void init_routing_params()
+{
 	if(! routingParametersInitialized) {
 		ignoreTargetProtocolPreference = param_boolean( "IGNORE_TARGET_PROTOCOL_PREFERENCE", false );
 		preferOutboundIPv4 = param_boolean( "PREFER_OUTBOUND_IPV4", false );
@@ -1210,9 +1185,52 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 			acceptIPv6 = false;
 		}
 
-		if( (!acceptIPv4) && (!acceptIPv6) ) {
-			EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
+		routingParametersInitialized = true;
+	}
+}
+
+bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
+	dprintf(D_HOSTNAME, "Guess address string for host = %s, port = %d\n",
+			host, port);
+	/* might be in <x.x.x.x:x> notation				*/
+	init_routing_params();
+	if (host[0] == '<') {
+		addr.from_sinful(host);
+		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
+				addr.to_ip_string().c_str(), addr.get_port());
+	}
+	/* try to get a decimal notation 	 			*/
+	else if ( addr.from_ip_string(host) ) {
+			// nothing to do here
+		addr.set_port(port);
+	}
+	/* if dotted notation fails, try host database	*/
+	else{
+		std::vector<condor_sockaddr> addrs;
+		bool found = false;
+		addrs = resolve_hostname(host);
+		for (const auto& next_addr: addrs) {
+			if ((next_addr.is_ipv4() && acceptIPv4) || (next_addr.is_ipv6() && acceptIPv6)) {
+				addr = next_addr;
+				found = true;
+				break;
+			}
 		}
+		if (!found) {
+			dprintf(D_ERROR, "Sock::do_connect() unable to locate address of a compatible protocol in contact string '%s'.\n", host);
+			return false;
+		}
+		addr.set_port(port);
+	}
+	return true;
+}
+
+bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condor_sockaddr* saddr ) {
+	init_routing_params();
+
+	if( (!acceptIPv4) && (!acceptIPv6) ) {
+		dprintf(D_ERROR, "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+		return false;
 	}
 
 	//
@@ -1291,7 +1309,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 	}
 
 	if(! foundAddress) {
-		dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );
+		dprintf(D_ERROR, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host);
 		return FALSE;
 	}
 

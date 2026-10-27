@@ -412,11 +412,42 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	return result;
 }
 
+void
+ScheddNegotiate::resetRRLOfferLimit()
+{
+		// Each request we send counts m_jobs_can_offer down by its resource
+		// request count, but the negotiator may match fewer than we asked for
+		// (or none). So rather than stopping once an auto cluster uses up the
+		// budget, reset the budget to the original limit minus the matches
+		// actually received and move on to the next auto clusters. Otherwise, a
+		// large unmatchable backlog in a high priority auto cluster can consume
+		// the whole budget and starve lower priority auto clusters. Any matches
+		// beyond our internal limits are rejected by scheduler_handleMatch().
+	if ( ! m_rrl_offer_limit_set) {
+		m_jobs_can_offer = scheduler_maxJobsToOffer();
+		m_rrl_offer_limit = m_jobs_can_offer;
+		m_rrl_offer_limit_base_matches = m_jobs_matched;
+		m_rrl_offer_limit_set = true;
+		return;
+	}
+
+	if (m_rrl_offer_limit >= 0) {
+		int matches = m_jobs_matched - m_rrl_offer_limit_base_matches;
+		m_jobs_can_offer = MAX(0, m_rrl_offer_limit - matches);
+		dprintf(D_FULLDEBUG, "Resetting resource request offer limit to %d (limit %d - %d matches).\n",
+		        m_jobs_can_offer, m_rrl_offer_limit, matches);
+	} else {
+		m_jobs_can_offer = -1; // no limit
+	}
+		// Don't exceed any internal limits (MAX_JOBS_RUNNING, etc) that may have tightened since
+	m_jobs_can_offer = scheduler_maxJobsToOffer();
+}
+
 bool
 ScheddNegotiate::sendResourceRequestList(Sock *sock)
 {
 		// The Negotiator wants us to send it a list of resource requests.
-	m_jobs_can_offer = scheduler_maxJobsToOffer();
+	resetRRLOfferLimit();
 
 	while (m_num_resource_reqs_to_send > 0) {
 
@@ -460,6 +491,15 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 
 		extern void IncrementResourceRequestsSent();
 		IncrementResourceRequestsSent();
+
+		// If that request used up the offer budget, reset it and keep going
+		// through the remaining auto clusters instead of ending this list with
+		// NO_MORE_JOBS. A prefetched list that ends in NO_MORE_JOBS is never
+		// followed by another request from the negotiator, so auto clusters
+		// left out of it would not be offered at all this negotiation.
+		if (m_num_resource_reqs_to_send > 0 && m_jobs_can_offer == 0) {
+			resetRRLOfferLimit();
+		}
 	}
 
 	// Set m_num_resource_reqs_to_send to zero, as we are not sending

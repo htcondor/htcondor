@@ -56,6 +56,12 @@ These settings affect the *condor_shadow*.
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor_shadow* to exit after running a single job.
 
+:macro-def:`DEACTIVATE_CLAIM_TIMEOUT`
+    The integer number of seconds the *condor_shadow* waits for the
+    *condor_startd* to accept and answer a request to deactivate a claim.
+    The *condor_shadow* tries three times, five seconds apart, before
+    giving up on the *condor_startd*. The default is 20.
+
 :macro-def:`SHADOW_JOB_CLEANUP_RETRY_DELAY`
     This integer specifies the number of seconds to wait between tries
     to commit the final update to the job ClassAd in the
@@ -184,11 +190,27 @@ These settings affect the *condor_shadow*.
 
         $ condor_history -epochs:d -directory
 
+:macro-def:`SPAWN_JOB_ATTRS`
+    A comma and/or space separated list of job ClassAd attribute names that
+    the *condor_shadow* writes into the ``SPAWN`` record it appends to the job
+    epoch history when it starts a run (see
+    :ref:`admin-manual/ap-policy-configuration:job epoch history`).  The record
+    always identifies the job and the run instance; the attributes named here
+    are added to it.  The special value ``all`` writes the entire job ClassAd
+    into the record instead.  Defaults to an empty list.
+
 :macro-def:`TRANSFER_JOB_ATTRS`
     A comma and/or space separated list of job ClassAd attribute names
     that the *condor_shadow* copies from the job ad into a file transfer
     job epoch history record (the ``INPUT``, ``OUTPUT``, ``CHECKPOINT``,
     and ``COMMON`` record types written when :macro:`JOB_EPOCH_HISTORY` or
-    :macro:`JOB_EPOCH_HISTORY_DIR` is configured). An attribute is only
-    copied into the record if it is actually present on the job ad.
+    :macro:`JOB_EPOCH_HISTORY_DIR` is configured; see
+    :ref:`admin-manual/ap-policy-configuration:job epoch history`). An
+    attribute is only copied into the record if it is actually present on the
+    job ad. The job's ``User``, ``ProjectName``,
+    :ad-attr:`GlobalJobId` and :ad-attr:`RemoteHost` are always copied and need
+    not be listed. A single record type can be given its own list, which
+    replaces this one for that type, by defining a knob named after the type:
+    ``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
+    ``COMMON_JOB_ATTRS``.
     Defaults to ``NumShadowStarts,DAGManJobId,DAGNodeName``.

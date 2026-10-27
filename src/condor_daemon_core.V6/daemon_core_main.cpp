@@ -1650,7 +1650,7 @@ int
 handle_fetch_log(int cmd, Stream *s )
 {
 	char *name = NULL;
-	int  total_bytes = 0;
+	filesize_t total_bytes = 0;
 	int result;
 	int type = -1;
 	ReliSock *stream = (ReliSock *) s;

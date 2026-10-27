@@ -6247,6 +6247,24 @@ Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 		return true;
 	}
 
+		// A job that got as far as COMPLETED already has its terminate event
+		// in the user log: the schedd only moves a job there once it has
+		// reaped the shadow, and the shadow writes that event before it
+		// exits.  Removing such a job (a leave_in_queue job the user is
+		// cleaning up, or one the schedd has not destroyed yet when a tool
+		// reacting to the terminate event condor_rm's it) is fine, but giving
+		// it a second terminal event is not -- it confuses any user log
+		// consumer that expects one per proc.  Remove it quietly instead.
+	int last_status = 0;
+	if( GetAttributeInt(job->jid.cluster, job->jid.proc,
+	                    ATTR_LAST_JOB_STATUS, &last_status) >= 0 &&
+	    last_status == COMPLETED ) {
+		dprintf( D_FULLDEBUG, "Job %d.%d was removed after it completed; "
+		         "not writing an abort event over its terminate event\n",
+		         job->jid.cluster, job->jid.proc );
+		return true;
+	}
+
 	TemporaryPrivSentry sentry;
 	init_user_ids_from_ad(*job->ownerinfo);
 	WriteUserLog* ULog = this->InitializeUserLog(job);
@@ -7948,8 +7966,27 @@ Scheduler::actOnJobs(int, Stream* s)
 		switch( action ) {
 		case JA_REMOVE_JOBS:
 		case JA_TRANSFER_AND_REMOVE_JOBS:
-				// Don't remove removed jobs
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, REMOVED );
+				// Don't remove removed jobs.  Also don't remove a job whose
+				// shadow is in the middle of terminating it: the shadow
+				// updates the queue (setting TerminationPending) and then
+				// writes the terminate event to the user log, so a tool that
+				// reacts to that event -- DAGMan condor_rm's its node jobs as
+				// it exits -- can otherwise remove a job that is already done
+				// and give it a second terminal event.  Nothing parks a job in
+				// these states, so it always leaves the queue on its own
+				// shortly and this cannot strand one.  Note that COMPLETED is
+				// deliberately NOT included: leave_in_queue parks jobs there
+				// indefinitely, still carrying TerminationPending (nothing
+				// ever clears it), and those must stay removable.  A rm that
+				// lands once the job is COMPLETED is handled in
+				// WriteAbortToUserLog() instead, by leaving out the duplicate
+				// event rather than refusing the remove.
+			snprintf( buf, sizeof(buf),
+			          "(ProcId is undefined || (%s!=%d && !(%s=?=true && (%s==%d || %s==%d)))) && (",
+			          ATTR_JOB_STATUS, REMOVED,
+			          ATTR_TERMINATION_PENDING,
+			          ATTR_JOB_STATUS, RUNNING,
+			          ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
@@ -8179,6 +8216,18 @@ Scheduler::actOnJobs(int, Stream* s)
 				results.record( tmp_id, AR_ALREADY_DONE );
 				jobs[i].cluster = -1;
 				continue;
+			}
+				// Same guard as the constraint clause above, for jobs
+				// named by id (condor_rm 123.0), which never see that
+				// clause: don't remove a job the shadow is terminating.
+			if( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
+				bool termination_pending = false;
+				job_ad->LookupBool(ATTR_TERMINATION_PENDING, termination_pending);
+				if( termination_pending ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					jobs[i].cluster = -1;
+					continue;
+				}
 			}
 			break;
 		case JA_REMOVE_X_JOBS:
@@ -10147,6 +10196,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			// this match away now (seems like we could do something better?) - 
 			// while it is not ideal to throw away the match in this instance,
 			// it is consistent with what we current do during negotiation.
+			delete jobAd;
 			DelMrec ( mrec );
 			return;
 		}
@@ -10248,7 +10298,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// Re-enable the job for matching in the PrioRec array
 		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
 		auto * rec = findInPrioRec(match->jid);
-		if (rec) rec->matched = false;
+		if (rec) {
+			rec->matched = false;
+		} else if (JobQueueBase::IsJobId(match->jid)) {
+			// The PrioRec array was rebuilt while this claim request was
+			// in flight, and the rebuild left the job out because it had
+			// a match record.  Nothing else will put it back until some
+			// unrelated job change dirties the array (or the periodic
+			// twenty-minute rebuild), so the job would sit idle and
+			// unmatched.  Force a rebuild instead.
+			DirtyPrioRecArray();
+		}
 		scheduler.DelMrec(match);
 		return;
 	}
@@ -22473,6 +22533,13 @@ Scheduler::post_transform_adjustments(
 	bool /* is_late_mat */,
 	bool /* project_is_cluster_attr */
 ) {
+	// adjustments is cluster only, but we will adjust the proc0 ad
+	// because this called along with the transforms which do not
+	// transform the cluster ad except for factory jobs.
+	// SetAttribute will make sure that attributes written to proc0
+	// that are cluster-only will end up in the cluster ad.
+	if (jid.proc > 0) return 0;
+
 	// Combine ATTR_COMMON_INPUT_FILES (if any) with
 	// ATTR_COMMON_INPUT_CATALOGS (if any) to produce ATTR_REQUESTED_CATALOGS,
 	// a ClassAd list of catalog (simple) name strings.
@@ -22505,14 +22572,26 @@ Scheduler::post_transform_adjustments(
 	}
 
 	if( requested_catalogs.size() > 0 ) {
+
 		auto rc = std::make_unique<classad::ExprList>();
 		auto rcid = std::make_unique<classad::ExprList>();
+
+		// computeCatalogID uses GlobalJobId to get the schedd name
+		// but the cluster ad doesn't have a GlobalJobId, so we will fake
+		// enough of a GlobalJobId to satisfy computeCatalogId for it.
+		// TODO: store in the cluster ad an attribute that computeCatalogId
+		// can use instead of the GLOBAL_JOB_AD for the schedd identifier.
+		// then we can remove this code.
+		bool has_global_job_id = ad->Lookup(ATTR_GLOBAL_JOB_ID);
+		if ( ! has_global_job_id) {
+			std::string global_id = std::string(Name) + "#";
+			ad->Assign(ATTR_GLOBAL_JOB_ID, global_id);
+		}
 
 		std::string empty;
 		for( const auto & catalog : requested_catalogs ) {
 			classad::ExprTree * l = classad::Literal::MakeString( catalog );
 			rc->push_back( l );
-
 
 			auto catalogID = computeCatalogID( * ad, catalog );
 			if( ! catalogID ) {
@@ -22527,6 +22606,9 @@ Scheduler::post_transform_adjustments(
 			rcid->push_back( m );
 		}
 
+		// remove the fake GlobalJobId we put into the cluster ad
+		if ( ! has_global_job_id) { ad->Delete(ATTR_GLOBAL_JOB_ID); }
+
 		// This should be reimplemented to do what the job transforms do
 		// (turn on dirty tracking and call set_dirty_attributes()), only
 		// with set_dirty_attributes() refactored so that it can be used
@@ -22535,9 +22617,8 @@ Scheduler::post_transform_adjustments(
 		// SetAttributeExpr() unparses the expression and does not take
 		// ownership, so rc is freed when it goes out of scope.
 		int rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOGS, rc.get(),
-			SetAttribute_SubmitTransform
-		);
+			jid, ATTR_REQUESTED_CATALOGS, rc.get(),
+			SetAttribute_SubmitTransform);
 		if( rv != 0 ) {
 			if( errorStack ) {
 				errorStack->pushf( "CXFER", 2, "Failed to set job attribute "
@@ -22548,9 +22629,8 @@ Scheduler::post_transform_adjustments(
 		}
 
 		rv = SetAttributeExpr(
-			jid.cluster, jid.proc, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
-			SetAttribute_SubmitTransform
-		);
+			jid, ATTR_REQUESTED_CATALOG_IDS, rcid.get(),
+			SetAttribute_SubmitTransform);
 		if( rv != 0 ) {
 			if( errorStack ) {
 				errorStack->pushf( "CXFER", 3, "Failed to set job attribute "
@@ -22558,6 +22638,16 @@ Scheduler::post_transform_adjustments(
 					"common file transfer: %d.", rv );
 			}
 			return -1;
+		}
+
+		// when we add/update an ad here, SetAttribute will change the transaction
+		// but not the temporary cluster ad we use for transforms, so we need to insert
+		// attributes into that ad explicitly for the benefit of the next ad that gets
+		// transformed.
+		ClassAd * clusterAd = ad->GetChainedParentAd();
+		if (clusterAd) {
+			clusterAd->Insert(ATTR_REQUESTED_CATALOGS, rc.release());
+			clusterAd->Insert(ATTR_REQUESTED_CATALOG_IDS, rcid.release());
 		}
 	}
 

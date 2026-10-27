@@ -30,12 +30,11 @@
 
 #include "stl_string_utils.h"
 #include "condor_debug.h"
+#include "nvidia_utils.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
-
-using uuidMap = std::vector<std::string, dev_t>;
 
 // Return a single std::string with the contents of a file path
 // or empty string if can't read the file
@@ -109,9 +108,9 @@ string_to_nvidia_uuid_and_minor(const std::string &gpu_info) {
 //
 // If no GPUs on the system, or they are inaccesible, return empty
 // vector.
-std::vector<std::pair<std::string, dev_t>>
+uuidMap
 make_nvidia_uuid_to_dev_map() {
-	std::vector<std::pair<std::string, dev_t>> uuid_map;
+	uuidMap uuid_map;
 
 	const std::filesystem::path gpu_root { "/proc/driver/nvidia/gpus" };
 	uint64_t major = nvidia_major_device();
