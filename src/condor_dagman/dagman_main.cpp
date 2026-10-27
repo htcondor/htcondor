@@ -40,7 +40,6 @@
 #include "truncate.h"
 
 #include <filesystem>
-#include <tuple>
 #include "profiling.hpp"
 
 namespace deep = DagmanDeepOptions;
@@ -96,12 +95,12 @@ void Dagman::SetThrottles(Throttles userThrottles) {
 }
 
 // In Config() we get DAGMan-related configuration values via the following steps
-//    1. Query config for administator controlled options (disabled user control inputs by default)
-//    2. Digest the user level configuration (i.e. _CONDOR_* env vars and ~/.condor/config)
-//    3. Read in and digest DAG specific configuration
-//    4. Query config for all DAGMan options
-//    5. Set up log caching if enabled
-//    6. Reload log file details so user defined config takes effect
+//    1. Verify administrator controlled options are only set by the root config
+//       and query them
+//    2. Read in and digest DAG specific configuration
+//    3. Query config for all DAGMan options
+//    4. Set up log caching if enabled
+//    5. Reload log file details so user defined config takes effect
 //
 // Note: debug_printfs are DEBUG_NORMAL here because when we
 // get here we haven't processed command-line arguments yet.
@@ -126,7 +125,37 @@ bool Dagman::Config() {
 
 	int admin_min_scan_int = -1;
 
-	// Check/set admin controlled throttle limits before processing user configuration
+	// Administrator controlled options must only be set by the root config (not USER_CONFIG_FILE or _CONDOR_* environment)
+	std::vector<std::string> admin_only = {
+		"DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING",
+		"DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR",
+	};
+
+	// Add <throttle>_CEILING configuration options
+	for (const auto& [_, config] : throttle_config) {
+		admin_only.emplace_back(std::string(config.opt) + "_CEILING");
+	}
+
+	// Always enforce admin only options not set by user even if they wouldn't come into play
+	// to create consistent behavior/failure
+	bool user_set_admin_option = false;
+	for (const auto& knob : admin_only) {
+		std::string location;
+		if ( ! param_defined_by_root_config(knob.c_str(), &location)) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s is an administrator only configuration option but was set by %s\n",
+			             knob.c_str(), location.c_str());
+			user_set_admin_option = true;
+		}
+	}
+
+	// Cheeky user has violated DAGMan enforcement of administrator only config options (fail)
+	if (user_set_admin_option) {
+		debug_printf(DEBUG_QUIET, "ERROR: Administrator only configuration options can only be set in the HTCondor system configuration. "
+		             "Remove the above options from the user configuration (USER_CONFIG_FILE) and _CONDOR_* environment variables.\n");
+		DC_Exit(EXIT_ERROR);
+	}
+
+	// Check/set admin controlled throttle limits before processing DAG specific configuration
 	if (!param_boolean("DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING", false)) {
 		debug_printf(DEBUG_NORMAL, "Administrator set throttle limits enabled\n");
 		// Allow admin to set min for scan interval since this can increase CPU usage
@@ -137,13 +166,6 @@ bool Dagman::Config() {
 			// Default ceiling is twice the throttles default value
 			adminThrottles[type] = param_integer(knob.c_str(), config.preset * 2, config.min, config.max);
 		}
-	}
-
-	// Now apply the user level config (USER_CONFIG_FILE and _CONDOR_* environment)
-	// that was withheld at startup so users can not override the admin limits above
-	if (!config_digest_user_config()) {
-		debug_printf(DEBUG_QUIET, "ERROR: Failed to apply user configuration\n");
-		DC_Exit(EXIT_ERROR);
 	}
 
 	// Get and process the DAGMan-specific config file (if any)
@@ -1649,8 +1671,6 @@ void condor_event_timer(int /* tid */) {
 
 void main_pre_dc_init(int, char*[]) {
 	DC_Skip_Core_Init();
-	// Withhold user level config until admin limits are read in Dagman::Config()
-	DC_Disable_User_Config();
 #ifdef WIN32
 	_setmaxstdio(2048);
 #endif

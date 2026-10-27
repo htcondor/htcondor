@@ -217,10 +217,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_JOBS_IDLE_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -230,10 +231,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_JOBS_SUBMITTED_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -243,10 +245,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_PRE_SCRIPTS_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -256,10 +259,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_HOLD_SCRIPTS_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -269,10 +273,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_POST_SCRIPTS_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -282,10 +287,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING`
     An integer value that sets the maximum value a user may set for
@@ -295,10 +301,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR`
     An integer value that sets the minimum value a user may set for
@@ -310,10 +317,11 @@ Throttling
 
     .. note::
 
-        This option is only read from the administrator's configuration.
-        Values set in the user configuration file (:macro:`USER_CONFIG_FILE`),
-        ``_CONDOR_*`` environment variables, or a DAG specific configuration
-        file are ignored.
+        This option may only be set in the HTCondor system configuration.
+        DAGMan will exit with an error if this option is set in the user
+        configuration file (:macro:`USER_CONFIG_FILE`) or via a ``_CONDOR_*``
+        environment variable. Values set in a DAG specific configuration file
+        are ignored.
 
 :macro-def:`DAGMAN_MAX_JOBS_IDLE`
     An integer value that controls the maximum number of idle procs

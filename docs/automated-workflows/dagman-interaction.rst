@@ -507,6 +507,17 @@ Throttling at DAG Submission
     **-maxpre** and **-maxpost** options or via the configuration options
     :macro:`DAGMAN_MAX_PRE_SCRIPTS` and :macro:`DAGMAN_MAX_POST_SCRIPTS`.
 
+.. note::
+
+    The administrator may limit the values these throttles can be set to (see
+    :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`). Any throttle value
+    exceeding the administrator's limit will be reduced to that limit. The
+    administrator limit options (i.e. :macro:`DAGMAN_MAX_JOBS_IDLE_CEILING`)
+    may only be set in the HTCondor system configuration. If any of these
+    options are set in the user configuration file (:macro:`USER_CONFIG_FILE`)
+    or via a ``_CONDOR_*`` environment variable then DAGMan will exit with an
+    error at startup. Values set in a DAG specific configuration file are ignored.
+
 :index:`editing DAG throttles<single: DAGMan; Editing DAG throttles>`
 
 .. sidebar:: Editing DAG throttles

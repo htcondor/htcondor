@@ -6,9 +6,12 @@
 #     3. Admin throttle limiting
 #          A. Check that user defined throttles get limited by admin set values
 #          B. Ensure user cannot bypass admin limit via configuration variables
-#             set in the DAGMan config file, _CONDOR_* environment variables,
-#             or the user config file (USER_CONFIG_FILE)
+#             set in the DAGMan config file
 #          C. Verify admin throttle limit disable configuration option functions
+#          D. Verify admin only options set via a root config include are honored
+#          E. Verify DAGMan exits with an error when admin only options are set
+#             via _CONDOR_* environment variables or the user config file
+#             (USER_CONFIG_FILE) including any files it includes
 
 from ornithology import *
 import htcondor2
@@ -47,11 +50,6 @@ ADMIN_LIMITS = {
     "DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING": 10,
 }
 
-LIMITED_CONFIG = {
-    **SHARED_CONFIG,
-    **ADMIN_LIMITS,
-}
-
 # User level configuration attempting to raise/disable the admin limits in ADMIN_LIMITS
 USER_RAISE_LIMITS = {
     "DAGMAN_USER_LOG_SCAN_INTERVAL": 1,
@@ -75,11 +73,14 @@ USER_DISABLE_LIMITS = {
     "DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": True,
 }
 
-def to_env(config: Dict[str, Any]) -> Dict[str, str]:
-    return {f"_CONDOR_{key}": str(value) for key, value in config.items()}
-
 def to_config_text(config: Dict[str, Any]) -> str:
     return "\n".join(f"{key} = {value}" for key, value in config.items()) + "\n"
+
+def write_admin_limits(test_dir: Path) -> Path:
+    """Write the admin limits to a file to be included by the root config"""
+    admin_limits = test_dir / "admin_limits.config"
+    admin_limits.write_text(to_config_text(ADMIN_LIMITS))
+    return admin_limits
 
 # Throttles to set when a user attempts to bypass admin limits
 BYPASS_THROTTLES = {"max_pre": 5}
@@ -146,18 +147,16 @@ class Config(enum.Enum):
     DEFAULT = 0
     LIMITED = 1
     LIMITLESS = 2
-    USER_CONFIG = 3
 
 
 class DagTestCase():
     def __init__(self, exe: Callable[[Condor, int, Any], classad2.ClassAd], throttles: Any, expected: classad2.ClassAd, conf: Config = Config.DEFAULT, extra: str = "",
-                 env: Optional[Dict[str, str]] = None, dag_config: Optional[Dict[str, Any]] = None, scan_limited: bool = False) -> None:
+                 dag_config: Optional[Dict[str, Any]] = None, scan_limited: bool = False) -> None:
         self.execute = exe
         self.throttles = throttles
         self.expected = expected
         self.conf = conf
         self.extra = extra
-        self.env = env if env is not None else dict() # Environment to submit DAG with
         self.dag_config = dag_config # DAGMan config file (CONFIG command) contents
         self.scan_limited = scan_limited # Expect admin minimum log scan interval to be enforced
 
@@ -375,43 +374,18 @@ TEST_CASES = {
         dag_config=USER_DISABLE_LIMITS,
         scan_limited=True,
     ),
-    # Verify user can not raise admin limits via _CONDOR_* environment variables
-    "ENV_RAISE_LIMITS": DagTestCase(
-        throttle_via_python,
-        BYPASS_THROTTLES,
-        BYPASS_EXPECTED,
-        Config.LIMITED,
-        env=to_env(USER_RAISE_LIMITS),
-        scan_limited=True,
-    ),
-    # Verify user can not disable admin limits via _CONDOR_* environment variables
-    "ENV_DISABLE_LIMITS": DagTestCase(
-        throttle_via_python,
-        BYPASS_THROTTLES,
-        BYPASS_EXPECTED,
-        Config.LIMITED,
-        env=to_env(USER_DISABLE_LIMITS),
-        scan_limited=True,
-    ),
-    # Verify user can not raise or disable admin limits via user config file
-    "USER_CONFIG_DISABLE_LIMITS": DagTestCase(
-        throttle_via_python,
-        BYPASS_THROTTLES,
-        BYPASS_EXPECTED,
-        Config.USER_CONFIG,
-        scan_limited=True,
-    ),
 }
 
 #-----------------------------------------------------------------------------------------
 @action
 def limited_condor(test_dir):
-    """Condor configured with low sweeping set of throttle limits"""
+    """Condor configured with low sweeping set of throttle limits (admin limits set via root config include)"""
     local_dir = test_dir / "limited_condor"
 
     with Condor(
         local_dir=local_dir,
-        config=LIMITED_CONFIG,
+        config=SHARED_CONFIG,
+        raw_config=f"include : {write_admin_limits(test_dir)}\n",
     ) as condor:
         yield condor
 
@@ -431,36 +405,16 @@ def limitless_condor(test_dir):
         yield condor
 
 #-----------------------------------------------------------------------------------------
-@action
-def user_config_condor(test_dir):
-    """Condor configured with low sweeping set of throttle limits plus a user config file attempting to bypass them"""
-    local_dir = test_dir / "user_config_condor"
-
-    user_config = test_dir / "user_config"
-    user_config.write_text(to_config_text(USER_DISABLE_LIMITS))
-
-    conf = LIMITED_CONFIG.copy()
-    conf["USER_CONFIG_FILE"] = str(user_config)
-
-    with Condor(
-        local_dir=local_dir,
-        config=conf,
-    ) as condor:
-        yield condor
-
-#-----------------------------------------------------------------------------------------
-def select_condor(conf: Config, default_condor, limited_condor, limitless_condor, user_config_condor) -> Condor:
+def select_condor(conf: Config, default_condor, limited_condor, limitless_condor) -> Condor:
     if conf == Config.LIMITED:
         return limited_condor
     elif conf == Config.LIMITLESS:
         return limitless_condor
-    elif conf == Config.USER_CONFIG:
-        return user_config_condor
     return default_condor
 
 #-----------------------------------------------------------------------------------------
 @action
-def run_dags(default_condor, limited_condor, limitless_condor, user_config_condor, test_dir, path_to_sleep):
+def run_dags(default_condor, limited_condor, limitless_condor, test_dir, path_to_sleep):
     TESTS = dict()
 
     for TEST, DETAILS in TEST_CASES.items():
@@ -488,10 +442,9 @@ JOB LONG @=desc
 """)
 
         # Select which condor to submit to (different configurations)
-        condor = select_condor(DETAILS.conf, default_condor, limited_condor, limitless_condor, user_config_condor)
+        condor = select_condor(DETAILS.conf, default_condor, limited_condor, limitless_condor)
 
-        # DAGMan job inherits _CONDOR_* environment variables at submit time
-        with ChangeDir(TEST), SetEnv(DETAILS.env):
+        with ChangeDir(TEST):
             DAG = htcondor2.Submit.from_dag(str(DAG_FILE))
             HANDLE = condor.submit(DAG)
             TESTS[TEST] = (HANDLE, DETAILS.conf, DETAILS.execute, DETAILS.throttles, DETAILS.expected, DETAILS.scan_limited)
@@ -523,8 +476,8 @@ def test_handle(test_info):
     return test_info[1]
 
 @action
-def test_condor(test_info, default_condor, limited_condor, limitless_condor, user_config_condor):
-    return select_condor(test_info[2], default_condor, limited_condor, limitless_condor, user_config_condor)
+def test_condor(test_info, default_condor, limited_condor, limitless_condor):
+    return select_condor(test_info[2], default_condor, limited_condor, limitless_condor)
 
 @action
 def test_throttle_func(test_info):
@@ -579,3 +532,121 @@ class TestDagThrottling():
         contents = dagman_out.read_text()
         assert "Specified scan interval 1 is less than administrator limit" in contents
         assert "DAGMAN_USER_LOG_SCAN_INTERVAL setting: 10" in contents
+
+
+#=========================================================================================
+# Admin only option source enforcement: DAGMan should exit with an error if any
+# admin only option is set by something other than the root config
+ADMIN_ONLY_ERROR = "is an administrator only configuration option but was set by"
+
+class AdminOnlyCase():
+    def __init__(self, user_config: bool, expected: Dict[str, str], env: Optional[Dict[str, str]] = None) -> None:
+        self.user_config = user_config # Submit to condor with USER_CONFIG_FILE set
+        self.expected = expected # Map of admin only option to expected (partial) location in error message
+        self.env = env if env is not None else dict() # Environment to submit DAG with
+
+
+ADMIN_ONLY_CASES = {
+    # Admin ceiling set via _CONDOR_* environment variable
+    "ENV_CEILING": AdminOnlyCase(
+        False,
+        {"DAGMAN_MAX_JOBS_IDLE_CEILING": "<Environment>"},
+        env={"_CONDOR_DAGMAN_MAX_JOBS_IDLE_CEILING": "500"},
+    ),
+    # Admin limiting disabled and floor lowered via _CONDOR_* environment variables
+    "ENV_DISABLE": AdminOnlyCase(
+        False,
+        {
+            "DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": "<Environment>",
+            "DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": "<Environment>",
+        },
+        env={
+            "_CONDOR_DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": "True",
+            "_CONDOR_DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": "1",
+        },
+    ),
+    # Admin ceilings set directly in the user config and via a file the user config includes
+    "USER_CONFIG": AdminOnlyCase(
+        True,
+        {
+            "DAGMAN_MAX_POST_SCRIPTS_CEILING": "user.config",
+            "DAGMAN_MAX_JOBS_IDLE_CEILING": "user_include.config",
+        },
+    ),
+}
+
+#-----------------------------------------------------------------------------------------
+@action
+def user_config_condor(test_dir):
+    """Condor configured with admin limits via root config include plus a user config that attempts to override them"""
+    local_dir = test_dir / "user_config_condor"
+
+    user_include = test_dir / "user_include.config"
+    user_include.write_text(to_config_text({"DAGMAN_MAX_JOBS_IDLE_CEILING": 500}))
+
+    # Note: avoid file names matching (case insensitive) a test case directory name
+    user_config = test_dir / "user.config"
+    user_config.write_text(to_config_text({"DAGMAN_MAX_POST_SCRIPTS_CEILING": 500}) + f"include : {user_include}\n")
+
+    with Condor(
+        local_dir=local_dir,
+        config={**SHARED_CONFIG, "USER_CONFIG_FILE": str(user_config)},
+        raw_config=f"include : {write_admin_limits(test_dir)}\n",
+    ) as condor:
+        yield condor
+
+#-----------------------------------------------------------------------------------------
+@action
+def run_admin_only_dags(limited_condor, user_config_condor, test_dir, path_to_sleep):
+    DAGS = dict()
+
+    for TEST, DETAILS in ADMIN_ONLY_CASES.items():
+        case_dir = test_dir / TEST
+        if case_dir.exists():
+            rmtree(case_dir)
+
+        os.mkdir(case_dir)
+
+        DAG_FILE = case_dir / DAG_FILENAME
+        DAG_FILE.write_text(f"""
+JOB LONG @=desc
+    executable = {path_to_sleep}
+    arguments  = 1
+@desc
+""")
+
+        condor = user_config_condor if DETAILS.user_config else limited_condor
+
+        # DAGMan job inherits _CONDOR_* environment variables at submit time
+        with ChangeDir(TEST), SetEnv(DETAILS.env):
+            DAG = htcondor2.Submit.from_dag(str(DAG_FILE))
+            DAGS[TEST] = (condor.submit(DAG), DETAILS.expected)
+
+    yield DAGS
+
+@action(params={name: name for name in ADMIN_ONLY_CASES})
+def admin_only_case(request, run_admin_only_dags):
+    return (request.param, *run_admin_only_dags[request.param])
+
+@action
+def admin_only_dagman_out(test_dir, admin_only_case):
+    name, handle, _ = admin_only_case
+    assert handle.wait(condition=ClusterState.all_complete, timeout=TIMEOUT)
+    return (test_dir / name / f"{DAG_FILENAME}.dagman.out").read_text()
+
+
+class TestAdminOnlyConfig():
+    def test_dagman_exits_with_error(self, admin_only_dagman_out):
+        assert "EXITING WITH STATUS 1" in admin_only_dagman_out
+
+    def test_admin_only_options_reported(self, admin_only_case, admin_only_dagman_out):
+        _, _, expected = admin_only_case
+        for knob, location in expected.items():
+            lines = [line for line in admin_only_dagman_out.splitlines() if f"{knob} {ADMIN_ONLY_ERROR}" in line]
+            assert len(lines) == 1, f"Expected error for {knob} not found"
+            assert location in lines[0]
+
+    def test_dag_not_run(self, test_dir, admin_only_case, admin_only_dagman_out):
+        name, _, _ = admin_only_case
+        # DAGMan exits before parsing the DAG so no node jobs are ever submitted
+        assert not (test_dir / name / f"{DAG_FILENAME}.nodes.log").exists()
