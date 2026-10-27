@@ -168,15 +168,13 @@ version history: :doc:`Version 25 Feature Releases <../version-history/feature-v
   :jira:`3764`
 
 - Introducing *condor_metricd*, a new daemon that publishes HTCondor
-  metrics from the *condor_collector* to multiple monitoring backends.
-  The same binary is also installed as *condor_gangliad* for backwards
-  compatibility, and inspects ``argv[0]`` to select its mode at startup.
-  In addition to the Ganglia backend, *condor_metricd* now supports a
-  Prometheus text-format file export backend controlled by the new
-  :macro:`PROMETHEUS_METRICS_FILE`, :macro:`PROMETHEUS_DEFAULT_LABELS`, and
-  :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` knobs. New metric-definition
-  keywords ``ExportMetric``, ``PrometheusLabels``, and ``Counter`` allow
-  per-metric routing and labeling.
+  metrics from the *condor_collector* to multiple monitoring backends
+  including Prometheus and Ganglia.  For Prometheus, the *condor_metricd* supports exporting
+  gauges and counters to Prometheus via file, HTTP, and/or HTTPS.
+  For full documentation, see :ref:`admin-manual/monitoring:Monitor Pool Metrics with Prometheus and Ganglia`.
+  Note: If your HTCSS configuration already uses the (now deprecated) *condor_gangliad*,
+  the same binary is also installed as *condor_gangliad* for full backwards
+  compatibility with older versions of HTCSS.
   :jira:`3374`
 
 - Added CCB tunneling, which lets an entire set of daemons on a restricted host
