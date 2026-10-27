@@ -60,7 +60,8 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 	for( auto *log: ordered_op_log) {
 		if ( fp != nullptr ) {
 			if ( log->Write( fp ) < 0 ) {
-				EXCEPT( "write to %s failed, errno = %d", filename, errno );
+				int err = errno;
+				EXCEPT( "write to %s failed, errno = %d (%s)", filename, err, strerror(err) );
 			}
 		}
 		log->Play(data_structure);
@@ -70,7 +71,8 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 
 		before = time(nullptr);
 		if ( fflush( fp ) != 0 ){
-			EXCEPT( "flush to %s failed, errno = %d", filename, errno );
+			int err = errno;
+			EXCEPT( "flush to %s failed, errno = %d (%s)", filename, err, strerror(err) );
 		}
 		after = time(nullptr);
 		if ( (after - before) > 5 ) {
@@ -81,7 +83,8 @@ Transaction::Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_s
 		fd = fileno( fp );
 		if ( fd >= 0 ) {
 			if ( condor_fdatasync( fd ) < 0 ) {
-				EXCEPT( "fdatasync of %s failed, errno = %d", filename, errno );
+				int err = errno;
+				EXCEPT( "fdatasync of %s failed, errno = %d (%s)", filename, err, strerror(err) );
 			}
 		}
 		after = time(nullptr);
