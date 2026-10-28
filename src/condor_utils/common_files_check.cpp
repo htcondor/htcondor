@@ -6,6 +6,7 @@
 #include "basename.h"
 #include "stl_string_utils.h"
 #include "checksum.h"
+#include "submit_utils.h"
 
 #include <filesystem>
 #include <algorithm>
@@ -28,6 +29,11 @@ static const char * const FIELD_JOB_ID = "JobId";
 static const char * const FIELD_STAGED_ORDERED = "StagedOrdered";
 static const char * const FIELD_STAGED_SORTED = "StagedSorted";
 static const char * const FIELD_STAGED_JOB_ID = "StagedJobId";
+
+// Hashed ahead of the entries of a job with PreserveRelativePaths.  Hashes
+// are recorded in scopes' cluster ads, so this value must never change, even
+// if the attribute or submit command is renamed; don't derive it from them.
+static const char * const HASH_MARKER_PRESERVE_RELATIVE_PATHS = "preserve_relative_paths";
 
 
 ListOfCatalogs
@@ -74,9 +80,19 @@ getCommonFilesIwd( const ClassAd & jobAd ) {
 }
 
 
+// Staging (UniShadow::before_common_file_transfer()) and fallback transfer
+// both honor the job's PreserveRelativePaths.
+static bool
+getCommonFilesPreserveRelativePaths( const ClassAd & jobAd ) {
+	bool preserve_relative_paths = false;
+	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserve_relative_paths );
+	return preserve_relative_paths;
+}
+
+
 // Describe what transferring `entry` would put in the sandbox.
 static std::string
-canonicalizeCommonFile( const std::string & entry, const std::string & iwd ) {
+canonicalizeCommonFile( const std::string & entry, const std::string & iwd, bool preserve_relative_paths ) {
 	if( IsUrl(entry.c_str()) ) {
 		return entry;
 	}
@@ -90,26 +106,36 @@ canonicalizeCommonFile( const std::string & entry, const std::string & iwd ) {
 		trailing_slash = true;
 	}
 
+	bool relative = ! fullpath(path.c_str());
 	std::filesystem::path p(path);
-	if(! fullpath(path.c_str()) && ! iwd.empty()) {
+	if( relative && ! iwd.empty() ) {
 		p = std::filesystem::path(iwd) / p;
 	}
 
 	// Where the entry lands in the sandbox must match how staging transfers
-	// it.  UniShadow::before_common_file_transfer() doesn't pass the job's
-	// PreserveRelativePaths to its FileTransfer, so staged catalogs are
-	// always flattened: an entry lands under the last component of its
-	// path *as listed* (not as resolved), whatever directories precede it.
-	// So "dir/a" from x and "a" from x/dir are the same, and so are "link/a"
-	// and "dir/a" through a symlinked directory, but "b" as a symlink to "a"
-	// is not.  If staging ever honors PreserveRelativePaths, this must
-	// change with it: relative entries would land at their (normalized)
-	// relative paths, and the setting would have to be part of the hash.
+	// it, which is how FileTransfer::ExpandFileTransferList() lays it out.
 	//
-	// An entry with a trailing slash puts the directory's contents in the
-	// sandbox's top level, so its own name doesn't matter: "link/" and "dir/"
-	// are the same.  (See FileTransfer::ExpandFileTransferList().)
-	std::string destination = trailing_slash ? "./" : std::filesystem::path(path).filename().string();
+	// Without PreserveRelativePaths, an entry lands under the last component
+	// of its path *as listed* (not as resolved), whatever directories precede
+	// it.  So "dir/a" from x and "a" from x/dir are the same, and so are
+	// "link/a" and "dir/a" through a symlinked directory, but "b" as a
+	// symlink to "a" is not.  An entry with a trailing slash puts the
+	// directory's contents in the sandbox's top level, so its own name
+	// doesn't matter: "link/" and "dir/" are the same.
+	//
+	// With PreserveRelativePaths, a relative entry lands at its (normalized)
+	// relative path as listed, trailing slash or not, so "dir/a" from x and
+	// "a" from x/dir are different, and so are "link/a" and "dir/a".  An
+	// absolute entry lands as it would without PreserveRelativePaths.
+	// (hashCommonFiles() also hashes the setting itself.)
+	std::string destination;
+	if( preserve_relative_paths && relative ) {
+		destination = std::filesystem::path(path).lexically_normal().string();
+	} else if( trailing_slash ) {
+		destination = "./";
+	} else {
+		destination = std::filesystem::path(path).filename().string();
+	}
 
 	// If the file (or the IWD) is gone, deliberately don't match anything
 	// staged while it existed: the job should go on hold rather than run
@@ -130,21 +156,33 @@ canonicalizeCommonFile( const std::string & entry, const std::string & iwd ) {
 
 
 std::optional<CommonFilesHashes>
-hashCommonFiles( const std::string & commonFiles, const std::string & iwd ) {
+hashCommonFiles( const std::string & commonFiles, const std::string & iwd, bool preserve_relative_paths ) {
 	std::vector<std::string> entries;
 	for( const auto & entry : StringTokenIterator(commonFiles, ",") ) {
-		entries.push_back( canonicalizeCommonFile( entry, iwd ) );
+		entries.push_back( canonicalizeCommonFile( entry, iwd, preserve_relative_paths ) );
 	}
 
 	CommonFilesHashes hashes;
 	hashes.description = join( entries, ", " );
 
+	// Jobs which disagree about PreserveRelativePaths don't share a layout,
+	// even if every entry happens to land in the same place either way.
+	// Leave the hashes unchanged when the setting is off, so that hashes
+	// recorded before it was considered remain valid.  (No entry can be
+	// mistaken for the marker, since every entry contains " -> ".)
+	std::string prefix;
+	if( preserve_relative_paths ) {
+		prefix = HASH_MARKER_PRESERVE_RELATIVE_PATHS;
+		prefix += '\0';
+		hashes.description += " (with " SUBMIT_KEY_PreserveRelativePaths ")";
+	}
+
 	// Paths can't contain NUL, so use it as the separator.
-	std::string ordered;
+	std::string ordered = prefix;
 	for( const auto & e : entries ) { ordered += e; ordered += '\0'; }
 
 	std::ranges::sort( entries );
-	std::string sorted;
+	std::string sorted = prefix;
 	for( const auto & e : entries ) { sorted += e; sorted += '\0'; }
 
 	if(! compute_sha256_checksum( ordered, hashes.ordered ) ||
@@ -175,9 +213,10 @@ addStagedCatalogsReport(
 	// attribute names, so the report is a list.
 	std::vector<ExprTree *> report;
 	std::string iwd = getCommonFilesIwd( jobAd );
+	bool preserve_relative_paths = getCommonFilesPreserveRelativePaths( jobAd );
 	for( const auto & [internalName, contents] : stagedCatalogs ) {
 		auto name = internalToSimpleNameMap.find( internalName );
-		auto hashes = hashCommonFiles( contents, iwd );
+		auto hashes = hashCommonFiles( contents, iwd, preserve_relative_paths );
 		if( name == internalToSimpleNameMap.end() || ! hashes ) {
 			// Jobs mapping this copy will be held, because the schedd
 			// will have no record of what it contains.
@@ -352,6 +391,7 @@ CommonFilesVerifier::verify() const {
 
 	auto expectations = parseExpectations( m_jobAd );
 	std::string iwd = getCommonFilesIwd( m_jobAd );
+	bool preserve_relative_paths = getCommonFilesPreserveRelativePaths( m_jobAd );
 	for( const auto & [name, contents] : catalogs ) {
 		auto it = expectations.find( name );
 		const CommonFilesExpectation * e = (it == expectations.end()) ? nullptr : & it->second;
@@ -364,7 +404,7 @@ CommonFilesVerifier::verify() const {
 			return unverified( "the schedd has no record of the contents of the staged copy of catalog '" + name + "'." );
 		}
 
-		auto hashes = hashCommonFiles( contents, iwd );
+		auto hashes = hashCommonFiles( contents, iwd, preserve_relative_paths );
 		if(! hashes) {
 			return unverified( "failed to hash catalog '" + name + "'." );
 		}
