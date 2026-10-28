@@ -579,11 +579,6 @@ int daemon::RealStart( )
 	if ( !default_id.size() ) {
 		default_id = "collector";
 	}
-		// Windows has a global pipe namespace, meaning that several instances of
-		// HTCondor share the same default ID; we make it unique below.
-#ifdef WIN32
-	formatstr_cat(default_id, "_%d", getpid());
-#endif
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
