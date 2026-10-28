@@ -129,6 +129,8 @@ run_diagnostic_reply_and_request_additional_guidance(
 					.priv(PRIV_USER_FINAL)
 					.std(the_redirects)
 					.env(& diagnostic_env)
+					.wantCommandPort(FALSE)
+					.wantUDPCommandPort(FALSE)
 			);
 
 			logansRun.born( spawned_pid, 20 ); // ... seconds of careful research

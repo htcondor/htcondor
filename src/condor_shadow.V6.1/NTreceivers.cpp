@@ -32,6 +32,7 @@
 #include "condor_holdcodes.h"
 #include "shortfile.h"
 #include "my_popen.h"
+#include "store_cred.h"
 
 #include <optional>
 #include "guidance.h"
@@ -2332,9 +2333,22 @@ case CONDOR_getdir:
 		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
+		bool allow_specials = param_boolean("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", false);
 		bool had_error = false;
 		for (auto& curr: StringTokenIterator(services_needed)) {
 			std::string service_name = curr;
+
+			size_t idx = 0;
+			if (allow_specials) {
+				idx = service_name.find_first_of("/\\:");
+			} else {
+				idx = service_name.find_first_not_of(OAUTH_CRED_NAME_CHARS);
+			}
+			if (idx != std::string::npos) {
+				dprintf(D_ERROR, "Rejecting illegal OAUTH2 service name '%s'\n", service_name.c_str());
+				had_error = true;
+				break;
+			}
 
 			if (service_add_use) {
 				service_name += ".use";
@@ -2362,7 +2376,7 @@ case CONDOR_getdir:
 			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
 			bool rc = read_secure_file(fullname.c_str(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str() );
+				dprintf(D_ERROR, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str());
 				had_error = true;
 				break;
 			}

@@ -188,7 +188,7 @@ spawnCheckpointCleanupProcess(
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
-		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL)
+		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 	);
 
 #if ! defined(WINDOWS)
@@ -198,6 +198,11 @@ spawnCheckpointCleanupProcess(
 		}
 	}
 #endif /* ! defined(WINDOWS) */
+
+	if (pid == FALSE) {
+		dprintf(D_ERROR, "spawnCheckpointCleanupProcess(): Failed to spawn clean-up process for job %d.%d\n", cluster, proc);
+		return false;
+	}
 
 	dprintf( D_TEST, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
