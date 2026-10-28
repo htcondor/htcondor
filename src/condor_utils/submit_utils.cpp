@@ -3640,6 +3640,21 @@ int SubmitHash::ReportCommonMistakes()
 		ABORT_AND_RETURN(1);
 	}
 
+	// There are some additional constraints on common input transfers.  Note
+	// that we don't check for common container images; we just don't generate
+	// them in these two cases.
+	if( job->Lookup(ATTR_COMMON_INPUT_FILES) ) {
+		if( JobUniverse != CONDOR_UNIVERSE_VANILLA ) {
+			push_error(stderr, "Common file transfer only works in vanilla or container universe.\n");
+			ABORT_AND_RETURN(1);
+		}
+
+		if( IsRemoteJob ) {
+			push_error(stderr, "Remote submission is not compatible with common file transfer.\n" );
+			ABORT_AND_RETURN(1);
+		}
+	}
+
 	return abort_code;
 }
 
@@ -6147,7 +6162,7 @@ int SubmitHash::SetRequirements()
 					// we will simply omit the automatic requirements clause for Disk.
 					// This moves the version check from the Startd to submit
 					// but we are willing to live with that.
-					//answer += " && ( || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+					// answer += " && ( || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 				} else {
 					if ( ! answer.empty()) { answer += " && "; }
 					answer += "(TARGET.Disk >= " ATTR_REQUEST_DISK ")";
@@ -7081,37 +7096,44 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image)  {
-		bool container_is_common = param_boolean(
-			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
-			false
-		);
+		bool container_is_common = false;
+		if( JobUniverse == CONDOR_UNIVERSE_VANILLA && (! IsRemoteJob) ) {
+			container_is_common = param_boolean(
+				"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
+				false
+			);
 
-		std::string r;
-		param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
-		if(! r.empty()) {
-			std::regex * re = nullptr;
-			try {
-				re = new std::regex(r);
-			} catch( const std::regex_error & e ) {
-				dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
-			}
-			if( re != NULL ) {
-				std::cmatch match;
-				if( std::regex_match( container_image.ptr(), match, * re ) ) {
-					container_is_common = true;
+			std::string r;
+			param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
+			if(! r.empty()) {
+				std::regex * re = nullptr;
+				try {
+					re = new std::regex(r);
+				} catch( const std::regex_error & e ) {
+					dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
+				}
+				if( re != NULL ) {
+					std::cmatch match;
+					if( std::regex_match( container_image.ptr(), match, * re ) ) {
+						container_is_common = true;
+					}
 				}
 			}
+
+			container_is_common = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, container_is_common);
 		}
 
-		container_is_common = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, container_is_common);
+
 		if(! container_is_common) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
 				*accumulate_size_kb += calc_image_size_kb(container_image);
 			}
 		} else {
-			// FIXME: This does not check to see if the container image varies
-			// per-proc, which it must not for this code to work.
+			// This code assume that the container does not vary by proc;
+			// this is checked elsewhere -- as part of the general checking
+			// of the same for common files transfers -- and in enforced
+			// by the schedd.
 
 			// To avoid colliding inside a DAG when container images are
 			// common, the catalog name we generate here must depend on
@@ -7265,7 +7287,6 @@ int SubmitHash::SetTransferFiles()
 				if (common.size()) common += ",";
 				common += file;
 			}
-			// TODO: universalise paths and determine size of common input files??
 			AssignJobString(ATTR_COMMON_INPUT_FILES, common.c_str());
 			macro_value.clear();
 		}
