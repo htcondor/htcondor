@@ -997,14 +997,6 @@ int daemon::RealStart( )
 				outbound_ccb.c_str(), name_in_config_file);
 	}
 
-	#ifdef WIN32
-	// tell the shared port and collector (via the environment) to use "collector_<master-pid>"
-	// as the default shared port id.
-	if( daemon_is_shared_port || daemon_is_collector ) {
-		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
-	}
-	#endif
-
 	if( daemon_is_shared_port )
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
