@@ -670,17 +670,27 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
-		// Warning! On unix, the following file transfer call returns
-		// immediately after creating a child process to perform the transfer.
-		// On windows, the transfer is done in-process and the function
-		// returns only after the transfer is complete.
+		// On unix, the following file transfer call returns immediately
+		// after creating a child process to perform the transfer.
+		// On windows, Create_Thread() runs the transfer in-process, so a
+		// non-blocking transfer would still block, and it would report its
+		// status through a pipe that nothing reads until the transfer
+		// completes. Large sandboxes overflow that pipe and deadlock the
+		// starter, so be explicit about using blocking mode on windows.
+		// Either way, our callback queues allJobsDone() when the transfer
+		// completes, which calls transferOutputFinish().
+#ifdef WIN32
+		const bool block_transfer = true;
+#else
+		const bool block_transfer = false;
+#endif
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 		if( job_failed && final_transfer ) {
 			// Only attempt failure file upload if we have failure files
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_output_transfer_active = true;
-				m_ft_rval = filetrans->UploadFailureFiles(false);
+				m_ft_rval = filetrans->UploadFailureFiles(block_transfer);
 				// We would otherwise not send any UnreadyReasons we
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
@@ -688,11 +698,13 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			}
 		} else {
 			m_output_transfer_active = true;
-			m_ft_rval = filetrans->UploadFiles(false, final_transfer);
+			m_ft_rval = filetrans->UploadFiles(block_transfer, final_transfer);
 		}
 
 		if (m_output_transfer_active) {
-			if (m_ft_rval) {
+			// A blocking transfer that launched but failed has already
+			// called our callback, so let transferOutputFinish() handle it.
+			if (m_ft_rval || (block_transfer && filetrans->GetInfo().xfer_status == XFER_STATUS_DONE)) {
 				in_progress = true;
 			} else {
 				m_output_transfer_active = false;
