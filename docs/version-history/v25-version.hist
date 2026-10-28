@@ -14,6 +14,9 @@
   to run only only EPs that support common files transfer.
   :jira:`3955`
 
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` false by default.
+  :jira:`4046`
+
 *** 25.15.15 bugs
 
 - Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
