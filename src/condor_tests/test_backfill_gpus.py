@@ -25,28 +25,25 @@ from ornithology import *
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def get_who_ads(default_condor):
-    who_snap = default_condor.run_command(["condor_who", "-startd", "-snap", "-long"])
-
-    # extract the condor_who ads and put them into a dict of dicts by type and name
-    # where slot related ads will be keyed by the slot prefix (i.e. slot1_1)
-    the_ads = {'StartD':{}, 'Machine':{}, 'Slot.Config':{}, 'Slot.State':{}, 'Machine.Extra':{}}
-    for ad in classad.parseAds(who_snap.stdout):
-        mytype = ad.get('MyType')
-        name = ad.get('Name')
-        if mytype != 'Machine.Extra' : name = name.split("@",maxsplit=1)[0]
-        the_ads[mytype][name]=ad
-
-    return the_ads
+# Query the startd directly rather than with condor_who: on Windows condor_who
+# runs tasklist, which can stall past the run_command timeout on a loaded machine.
+# Returns the slot ads keyed by slot name (i.e. slot1)
+def get_slot_ads(default_condor):
+    ads = default_condor.direct_status(
+        htcondor.DaemonType.Startd,
+        htcondor.AdType.Startd,
+        projection=['Name', 'GPUs', 'TotalSlotGPUs', 'AssignedGPUs'],
+    )
+    return {ad['Name'].split("@",maxsplit=1)[0] : ad for ad in ads}
 
 
 @action
 def the_before_ads(default_condor, test_dir):
-    return get_who_ads(default_condor)
+    return get_slot_ads(default_condor)
 
 @action
 def the_after_ads(default_condor, test_dir):
-    return get_who_ads(default_condor)
+    return get_slot_ads(default_condor)
 
 @action
 def reconfig_and_wait(default_condor, test_dir):
@@ -66,9 +63,8 @@ def reconfig_and_wait(default_condor, test_dir):
 class TestBackfillGpus:
 
     def test_slots_have_gpus(self, the_before_ads):
-        who_ads = the_before_ads
-        slot1 = who_ads.get('Machine').get('slot1')
-        slot2 = who_ads.get('Machine').get('slot2')
+        slot1 = the_before_ads.get('slot1')
+        slot2 = the_before_ads.get('slot2')
         expect_assign1 = 'GPU-a0223334,GPU-b1223334,GPU-c2223334'
         expect_assign2 = 'GPU-c2223334,GPU-b1223334,GPU-a0223334'
         assert (slot1.get('GPUs') == 3
@@ -82,9 +78,8 @@ class TestBackfillGpus:
         assert reconfig_and_wait
 
     def test_slots_still_have_gpus(self, the_after_ads):
-        who_ads = the_after_ads
-        slot1 = who_ads.get('Machine').get('slot1')
-        slot2 = who_ads.get('Machine').get('slot2')
+        slot1 = the_after_ads.get('slot1')
+        slot2 = the_after_ads.get('slot2')
         expect_assign1 = 'GPU-a0223334,GPU-b1223334,GPU-c2223334'
         expect_assign2 = 'GPU-c2223334,GPU-b1223334,GPU-a0223334'
         assert (slot1.get('GPUs') == 3
