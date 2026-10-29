@@ -19,7 +19,12 @@
 - Docker universe jobs now have :ad-attr:`DockerImageHash` recorded
   in the job ad for provenance reasons.
   :jira:`974`
-  
+
+- The shared-port id of the primary daemons (i.e. the master and its
+  immediate children) now matches their name in the ``DAEMON_LIST`` and
+  don't change when the daemons restart.
+  :jira:`3984`
+
 *** 26.2.0 bugs
 
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
