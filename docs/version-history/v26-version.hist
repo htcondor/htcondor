@@ -50,6 +50,11 @@
 
 *** 26.2.0 bugs
 
+- Fix several bugs that causes :ad-attr:`CPUsUsage` to be incorrect
+  while the job was running.  It was always correct in the history
+  file.
+  :jira:`4044`
+
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
   config knob from *condor_dagman* and :tool:`condor_submit_dag`.
   :jira:`3971`
