@@ -91,6 +91,10 @@
 #define ATTR_COMMON_INPUT_CATALOGS "CommonInputCatalogs"
 #define ATTR_COMMON_INPUT_FILES "CommonInputFiles"
 #define ATTR_COMMON_INPUT_FILES_SIZE_MB "CommonInputFilesSizeMB"
+// See condor_utils/common_files_check.h.
+#define ATTR_COMMON_FILES_SCOPE_HASHES "CommonFilesScopeHashes"    // scope's cluster ad
+#define ATTR_STAGED_CATALOG_HASHES "StagedCatalogHashes"           // DIRECT_ATTACH command ad
+#define ATTR_COMMON_FILES_HASH_CHECK "_condor_CommonFileHashCheck" // shadow's job ad
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_DURATION "ContainerDuration"
