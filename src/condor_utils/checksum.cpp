@@ -80,3 +80,22 @@ compute_file_sha256_checksum( const std::string & file_name, std::string & check
     close(fd); fd = -1;
     return rv;
 }
+
+bool
+compute_sha256_checksum( const std::string & data, std::string & checksum ) {
+    EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
+    if( context == NULL ) { return false; }
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    memset( hash, 0, sizeof(hash) );
+    bool ok = EVP_DigestInit_ex( context, EVP_sha256(), NULL )
+        && EVP_DigestUpdate( context, data.data(), data.size() )
+        && EVP_DigestFinal_ex( context, hash, NULL );
+    condor_EVP_MD_CTX_free( context );
+    if(! ok) { return false; }
+
+    AWSv4Impl::convertMessageDigestToLowercaseHex(
+        hash, SHA256_DIGEST_LENGTH, checksum
+    );
+    return true;
+}
