@@ -56,13 +56,12 @@ features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
 version history: :doc:`Version 25 Feature Releases <../version-history/feature-versions-25-x>`):
 
-- Common Files
-  In some situations, HTCondor no longer needs to transfer the same file to the same EP once for
+- In some situations, HTCondor no longer needs to transfer the same file to the same EP once for
   each job that uses it.  This can be done automatically for (some) container images, and with the
   help of the submitter for other immutable input files.
-  
   See :ref:`common_file_transfer` in the user manual for an introduction, and
   :ref:`admin_common_file_transfer` in the administrator's manual for details.
+
 - Add new ``self-service`` form of Annex, where the user is responsible for
   submitting the Annex EPs to the Slurm cluster of their choice.
   :jira:`3645`
@@ -210,5 +209,3 @@ version history: :doc:`Version 25 Feature Releases <../version-history/feature-v
   constraints (a cluster, a ``cluster.proc``, a user, or **-constraint**),
   so that only the held jobs among those selected are removed.
   :jira:`3710`
-
-- owned capacity units
