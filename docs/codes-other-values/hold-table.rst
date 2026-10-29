@@ -251,4 +251,17 @@
 |                                  | status code indicated job should be |                    |                             |
 |                                  | held.                               |                    |                             |
 +----------------------------------+-------------------------------------+--------------------+-----------------------------+
+| | 50                             | The job's common input files differ | 1: files differ,   | Make every job in the       |
+| | [CommonFilesMismatch]          | from those of a job which already   | same cluster       | cluster or DAG specify the  |
+|                                  | started in the same cluster or DAG, | 2: files differ,   | same common input files,    |
+|                                  | after resolving relative paths,     | same DAG           | in the same order.          |
+|                                  | ``..``, and symbolic links.         | 3: only the order  |                             |
+|                                  |                                     | differs, same      |                             |
+|                                  |                                     | cluster            |                             |
+|                                  |                                     | 4: only the order  |                             |
+|                                  |                                     | differs, same DAG  |                             |
+|                                  |                                     | 5: the job's       |                             |
+|                                  |                                     | common files could |                             |
+|                                  |                                     | not be verified    |                             |
++----------------------------------+-------------------------------------+--------------------+-----------------------------+
 
