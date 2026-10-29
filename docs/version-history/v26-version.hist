@@ -74,6 +74,10 @@
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
   :jira:`4008`
 
+- Fixed a bug in :macro:`ENVIRONMENT_FOR_Assigned<name>` where it did 
+  not replace the matched text. 
+  :jira:`4052`
+
 *** 26.1.0 features
 
 - Added :tool:`htcondor cluster`, which caches a cluster's job data
