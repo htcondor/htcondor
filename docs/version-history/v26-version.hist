@@ -37,6 +37,11 @@
   in the job ad for provenance reasons.
   :jira:`974`
 
+- The shared-port id of the primary daemons (i.e. the master and its
+  immediate children) now matches their name in the ``DAEMON_LIST`` and
+  don't change when the daemons restart.
+  :jira:`3984`
+
 - The *condor_shadow* now sets :ad-attr:`JobReconnectedDate` to the current
   time in the job ad whenever it successfully reconnects to the
   *condor_starter*.
