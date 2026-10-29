@@ -1547,7 +1547,7 @@ init_daemon_list()
 	// then we need to let the SHARED_PORT daemon know that it should be using the configured collector port
 	// and not the configured shared port port
 	if (have_primary_collector) {
-		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
+		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", true);
 		if (collector_uses_shared_port) {
 			class daemon* d = daemons.FindDaemon("SHARED_PORT");
 			if (d != NULL) {
