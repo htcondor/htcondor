@@ -12629,6 +12629,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	                                  cpArgs.priv(PRIV_ROOT)
 	                                        .reaperID(rid)
 	                                        .env(env)
+	                                        .wantCommandPort(TRUE)
+	                                        .wantUDPCommandPort(TRUE) // TODO do we need this?
 	                                        .familyInfo(fip)
 	                                        .std(std_fds_p)
 	                                        .niceInc(niceness)
@@ -13313,8 +13315,6 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	pid = daemonCore->CreateProcessNew( a_out_name, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
 		 .reaperID(shadowReaperId)
-		 .wantCommandPort(false)
-		 .wantUDPCommandPort(false)
 		 .familyInfo(&fi)
 		 .cwd(iwd.c_str())
 		 .env(&envobject)
@@ -21631,6 +21631,8 @@ Scheduler::launch_local_startd() {
 		 .reaperID(rid)
 		 .env(&env)
 		 .daemonSock(daemon_sock.c_str())
+		 .wantCommandPort(TRUE)
+		 .wantUDPCommandPort(TRUE) // TODO do we need this?
 	);
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
 	return TRUE;

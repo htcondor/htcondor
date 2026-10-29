@@ -1463,8 +1463,6 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		setup_args,
 		cpArgs.priv(PRIV_USER_FINAL)
 			.reaperID(setup_reaper)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&setup_env)
 			.cwd(GetWorkingDir(WD::OUTER))
 			.std(setup_std_fds)

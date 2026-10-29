@@ -1917,8 +1917,7 @@ run_preen_now()
 	preen_pid = daemonCore->CreateProcessNew(
 					FS_Preen,		// program to exec
 					arglist,   		// args
-					cpArgs.priv(PRIV_ROOT)		// privilege level
-					.wantCommandPort(false));	// we do _not_ want this process to have a command port; PREEN is not a daemon core process
+					cpArgs.priv(PRIV_ROOT));	// privilege level
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 	return TRUE;
 }
