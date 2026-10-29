@@ -36,6 +36,11 @@
 #include "ShadowHookMgr.h"
 #include "cred_dir.h"
 #include "call_before_exit.h"
+#include "common_files_check.h"
+
+#include "cxfer_state.h"
+#include "transfer_proc.h"
+extern CXFER_STATE cxfer_type;
 
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
@@ -122,6 +127,10 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	// Before we even try to claim, or activate the claim, check to see if
 	// it's even possible for file transfer to succeed.
 	checkInputFileTransfer();
+
+	// Likewise, make sure this job's common files match those of the
+	// rest of its cluster or DAG.
+	checkCommonFilesHashes();
 
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
@@ -800,6 +809,66 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 
 	if(! uLog.writeEvent( &te, jobAd )) {
 		dprintf( D_ALWAYS, "Unable to log file transfer event.\n" );
+	}
+}
+
+
+void
+UniShadow::holdPromptingJobAndExit( const std::string & reason, int hold_reason_subcode ) {
+	// A transfer shadow's job ad has a synthetic proc ID, so we can't use
+	// holdJobAndExit().  Instead, give the prompting job its hold reason and
+	// let the schedd (which sees our exit code) put it on hold; see
+	// CommonFilesCheckRegistry::holdPromptingJob().  We exit with
+	// JOB_CXFER_FAILED_HOLD rather than JOB_SHOULD_HOLD because the schedd
+	// treats the latter from a transfer shadow as a failed transfer, and
+	// makes the whole cluster or DAG fall back to uncommon transfer.
+	int prompting_proc = transferToPromptingProcID( getProc() );
+	dprintf( D_ALWAYS, "Job %d.%d should go into Hold state (code %d,%d): %s\n",
+		getCluster(), prompting_proc, (int)CONDOR_HOLD_CODE::CommonFilesMismatch,
+		hold_reason_subcode, reason.c_str() );
+
+	ClassAd holdAd;
+	holdAd.Assign( ATTR_CLUSTER_ID, getCluster() );
+	holdAd.Assign( ATTR_PROC_ID, prompting_proc );
+	std::string user;
+	if( jobAd->LookupString( ATTR_USER, user ) ) { holdAd.Assign( ATTR_USER, user ); }
+
+	QmgrJobUpdater updater( & holdAd, getScheddAddr() );
+	holdAd.Assign( ATTR_HOLD_REASON, reason );
+	holdAd.Assign( ATTR_HOLD_REASON_CODE, (int)CONDOR_HOLD_CODE::CommonFilesMismatch );
+	holdAd.Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
+	if(! updater.updateJob( U_HOLD )) {
+		// The schedd will still hold the job, with a generic reason.
+		dprintf( D_ALWAYS, "Failed to update prompting job %d.%d's hold reason.\n", getCluster(), prompting_proc );
+	}
+
+	DC_Exit( JOB_CXFER_FAILED_HOLD );
+}
+
+
+void
+UniShadow::checkCommonFilesHashes() {
+	// See condor_utils/common_files_check.h for the big picture.  Only a
+	// shadow which will stage or map common files is checked; jobs which
+	// fall back to uncommon transfer get the files they asked for.
+	CommonFilesVerifier::Role role;
+	if( cxfer_type == CXFER_STATE::STAGING ) {
+		role = CommonFilesVerifier::Role::TransferShadow;
+	} else if( cxfer_type == CXFER_STATE::MAPPING ) {
+		role = CommonFilesVerifier::Role::JobShadow;
+	} else {
+		return;
+	}
+
+	// We're already running as the job's owner, which verifying requires.
+	auto failure = CommonFilesVerifier( * jobAd, role ).verify();
+	if(! failure) { return; }
+
+	dprintf( D_ALWAYS, "%s\n", failure->reason.c_str() );
+	if( role == CommonFilesVerifier::Role::TransferShadow ) {
+		holdPromptingJobAndExit( failure->reason, failure->subcode );
+	} else {
+		holdJobAndExit( failure->reason.c_str(), CONDOR_HOLD_CODE::CommonFilesMismatch, failure->subcode );
 	}
 }
 
