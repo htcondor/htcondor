@@ -267,13 +267,13 @@ echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
 if [ "$ID" = 'debian' ] || [ "$ID" = 'ubuntu' ]; then
-    $INSTALL pelican condor libnss-myhostname openssh-server
+    $INSTALL condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
 if [ "$ID" = 'almalinux' ] || [ "$ID" = 'amzn' ] || [ "$ID" = 'centos' ] || [ "$ID" = 'fedora' ] || [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
-    $INSTALL pelican condor hostname java openssh-clients openssh-server openssl
+    $INSTALL condor hostname java openssh-clients openssh-server openssl
     if [ "$ID" = 'opensuse-leap' ] || [ "$ID" = 'sles' ]; then
         $INSTALL procps
     else

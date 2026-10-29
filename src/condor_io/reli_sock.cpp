@@ -194,9 +194,9 @@ ReliSock::listen()
 
 
 /// FALSE means this is an incoming connection
-int ReliSock::listen(condor_protocol proto, int port)
+int ReliSock::listen(condor_protocol proto, int port, bool loopback)
 {
-	if (!bind(proto, false, port, false)) return
+	if (!bind(proto, false, port, loopback)) return
 		FALSE;
 	return listen();
 }
@@ -2301,7 +2301,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 	}
 
 	if ( offset ) {
-		int r = lseek( fd, offset, SEEK_SET );
+		off_t r = lseek( fd, offset, SEEK_SET );
 		if (r < 0) {
 			dprintf(D_ALWAYS, "ReliSock: put_file: Seek failed: %s\n", strerror(errno));
 			// Well, not really open failed, but let's reuse this error

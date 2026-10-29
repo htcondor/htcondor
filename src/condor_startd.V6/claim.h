@@ -92,7 +92,6 @@ struct Client
 	std::string c_neggrp;     // the negotiating accounting group
 	std::string c_scheddName; // name of the schedd
 	bool        c_autorg{false}; // true if negotiated via autoregroup policy
-	bool        c_cgroupActive{false}; // true if starter put the job in a cgroup
 	int         c_numPids{0};
 };
 
@@ -114,7 +113,7 @@ public:
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
-	void dprintf( int, const char* ... ) CHECK_PRINTF_FORMAT(3,4);
+	void dprintf( int, const char*, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 	void refuseClaimRequest();
 

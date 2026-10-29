@@ -80,6 +80,17 @@ class UniShadow : public BaseShadow
 
 	virtual void checkInputFileTransfer();
 
+		/** If this shadow will stage or map common files, put the job on
+		 *  hold unless they match the expected hashes the schedd gave us.
+		 */
+	void checkCommonFilesHashes();
+
+		/** A transfer shadow's job ad has a synthetic proc ID; set the
+		 *  prompting job's hold reason and exit with JOB_CXFER_FAILED_HOLD,
+		 *  so that the schedd puts the prompting job on hold.
+		 */
+	void holdPromptingJobAndExit( const std::string & reason, int hold_reason_subcode );
+
 		/** Shadow should spawn a new starter for this job.
 		 *  May be asynchronous if there's a shadow hook defined.
 		 */
@@ -242,6 +253,12 @@ class UniShadow : public BaseShadow
 	// Flag to track if we should do a final file transfer before removing
 	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
 	bool transfer_and_remove_requested = false;
+
+	// When this shadow saw the sandbox transfers enter the transfer queue,
+	// or 0 if they haven't.  We can't use TransferInQueued/TransferOutQueued
+	// from the job ad for this, because they persist from earlier runs.
+	time_t m_transfer_in_queued = 0;
+	time_t m_transfer_out_queued = 0;
 
 	//
 	// Internal implementation details specific to pseudo_request_guidance().

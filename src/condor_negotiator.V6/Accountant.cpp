@@ -150,7 +150,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       RemoteUserPriorityFactor=1;
   }
 
-  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
+  MaxAcctLogSize = param_longlong("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
 
   if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
 	tmp = param("SPOOL");
@@ -174,7 +174,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   dprintf(D_ACCOUNTANT,"DEFAULT_PRIO_FACTOR=%f\n",DefaultPriorityFactor);
   dprintf(D_ACCOUNTANT,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
 				  AccountantLocalDomain.c_str());
-  dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%d\n",
+  dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%lld\n",
 		   MaxAcctLogSize );
 
   if (!db) {
@@ -1140,7 +1140,7 @@ void Accountant::UpdatePriorities()
 		  if( statbuf.st_size * 2 > MaxAcctLogSize ) {
 			  MaxAcctLogSize = statbuf.st_size * 2;
 			  dprintf( D_ACCOUNTANT, "Database has grown, expanding "
-					   "MAX_ACCOUNTANT_DATABASE_SIZE to %d\n", 
+					   "MAX_ACCOUNTANT_DATABASE_SIZE to %lld\n", 
 					   MaxAcctLogSize );
 		  }
 	  }

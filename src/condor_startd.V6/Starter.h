@@ -40,7 +40,7 @@ public:
 
 	static void config();
 
-	void	dprintf( int, const char* ... );
+	void	dprintf( int, const char*, ... );
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
 
 	char*	path() {return s_path;};

@@ -81,7 +81,6 @@
 #define ATTR_CATALOG_SCOPE  "CatalogScope"
 #define ATTR_CATALOG_SCOPE_TYPE  "CatalogScopeType"
 #define ATTR_CATALOG_SIZE  "CatalogSize"
-#define ATTR_CGROUP_ENFORCED  "CgroupEnforced"
 #define ATTR_CE_REQUIREMENTS  "CERequirements"
 #define ATTR_CHIRP_DELAYED_ATTRS  "ChirpDelayedAttrs"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
@@ -91,6 +90,10 @@
 #define ATTR_COMMON_INPUT_CATALOGS "CommonInputCatalogs"
 #define ATTR_COMMON_INPUT_FILES "CommonInputFiles"
 #define ATTR_COMMON_INPUT_FILES_SIZE_MB "CommonInputFilesSizeMB"
+// See condor_utils/common_files_check.h.
+#define ATTR_COMMON_FILES_SCOPE_HASHES "CommonFilesScopeHashes"    // scope's cluster ad
+#define ATTR_STAGED_CATALOG_HASHES "StagedCatalogHashes"           // DIRECT_ATTACH command ad
+#define ATTR_COMMON_FILES_HASH_CHECK "_condor_CommonFileHashCheck" // shadow's job ad
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_DURATION "ContainerDuration"
@@ -297,6 +300,7 @@
 #define ATTR_GRIDMANAGER_SELECTION_VALUE "GridmanagerSelectionValue"
 #define ATTR_MYPROXY_PASSWORD  "MyProxyPassword"
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
+#define ATTR_HAS_CGROUP  "HasCgroup"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
 #define ATTR_HAS_COMMON_FILES_TRANSFER  "HasCommonFilesTransfer"
 #define ATTR_HAS_CONTAINER  "HasContainer"
@@ -503,6 +507,7 @@
 #define ATTR_JOB_REMOTE_USER_CPU  "RemoteUserCpu"
 #define ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU  "CumulativeRemoteSysCpu"
 #define ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU  "CumulativeRemoteUserCpu"
+#define ATTR_JOB_RECONNECTED_DATE  "JobReconnectedDate"
 #define ATTR_JOB_DISCONNECTED_DATE  "JobDisconnectedDate"
 #define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
 #define ATTR_JOB_LAST_REMOTE_WALL_CLOCK "LastRemoteWallClockTime"

@@ -296,6 +296,7 @@ hipError_t hip_getBasicProps(int dev, BasicProps *bp, int fix_guid_magic){
 	const hipDeviceProp_t & dev_props = hip_platforms[dev];
 
 	bp->hipDetection = hip_lib_major_version; // what version of hip (ROCM) libraries we used to get properties.
+	bp->vendor = "AMD";
 
 	if (is_null_uuid(dev_props.uuid)) {
 		print_error(MODE_DIAGNOSTIC_MSG, "diag: dev(%d) UUID is NULL-GUID, ignoring\n", dev);

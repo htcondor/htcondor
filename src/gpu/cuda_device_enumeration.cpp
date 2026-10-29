@@ -67,6 +67,7 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	for( int dev = 0; dev < deviceCount; ++dev ) {
 		BasicProps bp;
 		if( cudaSuccess == getBasicProps( dev, &bp ) ) {
+			bp.vendor = "NVIDIA";
 			devices.push_back(bp);
 		} else {
 			print_error(MODE_DIAGNOSTIC_MSG, "# enumerateCUDADevices: failed to get props for device %d\n", dev);
@@ -709,6 +710,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for MIG %s returns %d\n", bp.uuid.c_str(), r);
 		if( NVML_SUCCESS != r ) { return r; }
 		nvml_getMIGIdentity( migDevice, & bp );
+		bp.vendor = "NVIDIA";
 
 		devices.push_back( bp );
 	}
@@ -739,6 +741,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 			r = nvml_getBasicProps( device, & bp );
 			print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for %s returns %d\n", bp.uuid.c_str(), r);
 			if( NVML_SUCCESS != r ) { return r; }
+			bp.vendor = "NVIDIA";
 
 			devices.push_back( bp );
 		}

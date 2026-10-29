@@ -98,7 +98,6 @@ bool check_cleanup_dir();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
-void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
 void check_syndicate_dir();
@@ -1154,47 +1153,103 @@ check_public_files_webroot_dir()
 }
 #endif
 
-void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 #if !defined(WIN32)
-	FileLock *lock = NULL;
-	if (depth == 0) {
-		lock = new FileLock(path, true, true);
-		delete lock;
-		return ;
-	}
-	Directory *dir = new Directory(path);
-	if (dir == NULL) {
-		// that may be ok as the path could already be cleaned up.
+// Remove unused lock files from the local lock directory, which looks
+// like <lock dir>/<xx>/<yy>/<lock file>.  Any user can create entries
+// anywhere in this tree, so we never follow a symlink: each directory is
+// opened with O_NOFOLLOW, and everything in it is handled relative to
+// that fd.  depth is the number of directory levels, including this one.
+static void
+lock_dir_cleanup_at(int dirfd, const std::string & dirpath, int depth)
+{
+	int iterfd = dup(dirfd);
+	if (iterfd < 0) {
+		dprintf(D_ALWAYS, "Cannot dup fd for %s: %s\n", dirpath.c_str(), strerror(errno));
 		return;
 	}
-	const char *entry;
-	while ((entry = dir->Next()) != 0) {
-		if (!dir->IsDirectory() && depth > 1) { // clean up files floating around randomly -- maybe from older releases
-			lock = new FileLock(path, false, true);
-			bool result = lock->obtain(WRITE_LOCK);
-			if (!result) {
-					dprintf(D_FULLDEBUG, "Cannot lock %s\n", path);
-			}
-			int res = unlink(dir->GetFullPath());
-			if (res != 0) {
-				dprintf(D_FULLDEBUG, "Cannot delete %s (%s) \n", path, strerror(errno));
-			}
-			delete lock;
-		} else {
-			rec_lock_cleanup(dir->GetFullPath(), depth-1, true);
-		}
-	}
-	// make sure, orphaned directories will be deleted as well.
-	if (remove_self) {
-		int res = rmdir(path);
-		if (res != 0) {
-			dprintf(D_FULLDEBUG, "Directory %s could not be removed.\n", path);
-		}
+	DIR *dirp = fdopendir(iterfd);
+	if (dirp == nullptr) {
+		dprintf(D_ALWAYS, "Cannot read directory %s: %s\n", dirpath.c_str(), strerror(errno));
+		close(iterfd);
+		return;
 	}
 
-	delete dir;
-#endif
+	// Collect the names first, since we remove entries as we go.
+	std::vector<std::string> names;
+	struct dirent *de = nullptr;
+	while ((de = readdir(dirp)) != nullptr) {
+		if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
+			continue;
+		}
+		names.emplace_back(de->d_name);
+	}
+	closedir(dirp);
+
+	for (const auto & name: names) {
+		std::string path = dirpath + DIR_DELIM_CHAR + name;
+
+		struct stat sb{};
+		int r = fstatat(dirfd, name.c_str(), &sb, AT_SYMLINK_NOFOLLOW);
+		if (r != 0) {
+			continue; // already gone
+		}
+
+		if (S_ISDIR(sb.st_mode)) {
+			if (depth > 1) {
+				int subfd = openat(dirfd, name.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+				if (subfd >= 0) {
+					lock_dir_cleanup_at(subfd, path, depth - 1);
+					close(subfd);
+				}
+			}
+			// Remove it if it is now empty
+			r = unlinkat(dirfd, name.c_str(), AT_REMOVEDIR);
+			if (r != 0) {
+				dprintf(D_FULLDEBUG, "Directory %s could not be removed: %s\n", path.c_str(), strerror(errno));
+			}
+			continue;
+		}
+
+		if (S_ISREG(sb.st_mode) && depth == 1) {
+			// A lock file: only remove it if no one holds a lock on it.
+			// O_NONBLOCK so that we never hang if it is replaced by a fifo.
+			int fd = openat(dirfd, name.c_str(), O_RDWR | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+			if (fd < 0) {
+				dprintf(D_FULLDEBUG, "Cannot open lock file %s: %s\n", path.c_str(), strerror(errno));
+				continue;
+			}
+			struct stat fsb{};
+			r = fstat(fd, &fsb);
+			if (r != 0 || !S_ISREG(fsb.st_mode) || fsb.st_dev != sb.st_dev || fsb.st_ino != sb.st_ino) {
+				close(fd);
+				continue;
+			}
+			// Non-blocking, so we skip any file someone holds a lock on
+			r = lock_file_plain(fd, WRITE_LOCK, false);
+			if (r != 0) {
+				dprintf(D_FULLDEBUG, "Lock file %s is in use, not removing it\n", path.c_str());
+				close(fd);
+				continue;
+			}
+			r = unlinkat(dirfd, name.c_str(), 0);
+			if (r != 0) {
+				dprintf(D_FULLDEBUG, "Cannot delete %s: %s\n", path.c_str(), strerror(errno));
+			} else {
+				dprintf(D_FULLDEBUG, "Lock file %s has been deleted.\n", path.c_str());
+			}
+			close(fd); // releases our lock
+			continue;
+		}
+
+		// Anything else (a stray file from an older release, a symlink,
+		// a fifo...) is not a lock file, so remove the entry itself.
+		r = unlinkat(dirfd, name.c_str(), 0);
+		if (r != 0) {
+			dprintf(D_FULLDEBUG, "Cannot delete %s: %s\n", path.c_str(), strerror(errno));
+		}
+	}
 }
+#endif
 
 void check_tmp_dir(){
 #if !defined(WIN32)
@@ -1205,7 +1260,20 @@ void check_tmp_dir(){
 		// get temp path for file locking from the FileLock class
 		std::string tmpDir;
 		FileLock::getTempPath(tmpDir);
-		rec_lock_cleanup(tmpDir.c_str(), 3);
+
+		// A trailing slash would make open() follow a symlink
+		while (tmpDir.size() > 1 && tmpDir.back() == DIR_DELIM_CHAR) {
+			tmpDir.pop_back();
+		}
+		int dirfd = open(tmpDir.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+		if (dirfd < 0) {
+			if (errno != ENOENT) {
+				dprintf(D_ALWAYS, "Cannot open lock directory %s: %s\n", tmpDir.c_str(), strerror(errno));
+			}
+			return;
+		}
+		lock_dir_cleanup_at(dirfd, tmpDir, 3);
+		close(dirfd);
 	}
 
 #endif
@@ -1464,6 +1532,87 @@ get_corefile_program( const char* corefile, const char* dir ) {
 using namespace condor;
 
 
+#if ! defined(WIN32)
+// Open <owner_dir>/<job_dir>/.job.ad without following a symlink at any
+// level.  The owner directory, and everything in it, belongs to the job's
+// owner, so they control the contents of the job ad.  Sets writer_uid to
+// the one uid other than root and condor that owns any of the three (or 0
+// if there is none).  Returns nullptr with an empty error if there is no
+// job ad, and nullptr with an error if we should not use it.
+static FILE *
+open_cleanup_job_ad( const std::filesystem::path & owner_dir,
+	const std::filesystem::path & job_dir, uid_t & writer_uid, std::string & error )
+{
+	writer_uid = 0;
+	error.clear();
+
+	int owner_fd = open( owner_dir.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC );
+	if( owner_fd < 0 ) {
+		formatstr( error, "Cannot open %s (%s), ignoring.", owner_dir.string().c_str(), strerror(errno) );
+		return nullptr;
+	}
+	int job_fd = openat( owner_fd, job_dir.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC );
+	if( job_fd < 0 ) {
+		formatstr( error, "Cannot open %s (%s), ignoring.", (owner_dir / job_dir).string().c_str(), strerror(errno) );
+		close( owner_fd );
+		return nullptr;
+	}
+	// O_NONBLOCK so that we never hang if it is a fifo
+	int ad_fd = openat( job_fd, ".job.ad", O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC );
+	if( ad_fd < 0 ) {
+		if( errno != ENOENT ) {
+			formatstr( error, "Cannot open %s (%s), ignoring.", (owner_dir / job_dir / ".job.ad").string().c_str(), strerror(errno) );
+		}
+		close( job_fd );
+		close( owner_fd );
+		return nullptr;
+	}
+
+	uid_t condor_uid = get_condor_uid();
+	bool more_than_one = false;
+	bool not_a_file = false;
+	for( int fd : { owner_fd, job_fd, ad_fd } ) {
+		struct stat sb{};
+		int r = fstat( fd, &sb );
+		if( r != 0 ) {
+			not_a_file = true;
+			continue;
+		}
+		if( fd == ad_fd && ! S_ISREG(sb.st_mode) ) {
+			not_a_file = true;
+		}
+		if( sb.st_uid == 0 || sb.st_uid == condor_uid ) {
+			continue;
+		}
+		if( writer_uid != 0 && writer_uid != sb.st_uid ) {
+			more_than_one = true;
+		}
+		writer_uid = sb.st_uid;
+	}
+	close( job_fd );
+	close( owner_fd );
+
+	if( not_a_file ) {
+		formatstr( error, "%s is not a regular file, ignoring.", (owner_dir / job_dir / ".job.ad").string().c_str() );
+		close( ad_fd );
+		return nullptr;
+	}
+	if( more_than_one ) {
+		formatstr( error, "%s is owned by more than one user, ignoring.", (owner_dir / job_dir).string().c_str() );
+		close( ad_fd );
+		return nullptr;
+	}
+
+	FILE * fp = fdopen( ad_fd, "r" );
+	if(! fp) {
+		formatstr( error, "Cannot read %s (%s), ignoring.", (owner_dir / job_dir / ".job.ad").string().c_str(), strerror(errno) );
+		close( ad_fd );
+	}
+	return fp;
+}
+#endif
+
+
 cr::void_coroutine
 check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	int CLEANUP_TIMEOUT = param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
@@ -1477,20 +1626,37 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	std::error_code ec;
 	auto checkpointCleanupDir = std::filesystem::directory_iterator(checkpointCleanup, ec);
 	for( const auto & entry : checkpointCleanupDir ) {
-		if(! entry.is_directory()) { continue; }
+		// The per-owner directories, and everything in them, are owned
+		// by the job's owner, so never follow a symlink.
+		std::error_code sec;
+		if( entry.is_symlink(sec) || ! entry.is_directory(sec) ) { continue; }
 		// dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
 		auto userSpecificDir = std::filesystem::directory_iterator(entry, ec);
 		for( const auto & jobDir : userSpecificDir ) {
-			if(! jobDir.is_directory()) { continue; }
+			if( jobDir.is_symlink(sec) || ! jobDir.is_directory(sec) ) { continue; }
 			// dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
 
 			auto pathToJobAd = jobDir.path() / ".job.ad";
 			FILE * fp = NULL;
+#if ! defined(WIN32)
+			uid_t writer_uid = 0;
+			std::string open_error;
+			{
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				fp = open_cleanup_job_ad( entry.path(), jobDir.path().filename(), writer_uid, open_error );
+			}
+			if(! fp && ! open_error.empty()) {
+				dprintf( D_ALWAYS, "%s\n", open_error.c_str() );
+				badPathMap[jobDir.path()] = open_error;
+				continue;
+			}
+#else
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
 			}
+#endif
 			if(! fp) {
 					// No .job.ad means we can't determine what to clean up,
 					// but the directory may be an empty orphan left behind by
@@ -1537,6 +1703,23 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 				continue;
 			}
 
+
+#if ! defined(WIN32)
+			// The clean-up runs as the user the job ad names, but a user
+			// who owns any part of this path could have written the ad.
+			// If there is one, run the clean-up as that user instead.
+			if( writer_uid != 0 ) {
+				char * writer_name = nullptr;
+				if(! pcache()->get_user_name( writer_uid, writer_name )) {
+					formatstr( message, "Cannot find the name of user %d, who owns %s, ignoring.", (int)writer_uid, jobDir.path().string().c_str() );
+					dprintf( D_ALWAYS, "%s\n", message.c_str() );
+					badPathMap[jobDir.path()] = message;
+					continue;
+				}
+				jobAd.Assign( ATTR_OS_USER, writer_name );
+				free( writer_name );
+			}
+#endif
 
 			std::string error;
 			int spawned_pid = -1;

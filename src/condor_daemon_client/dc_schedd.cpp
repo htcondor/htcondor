@@ -1659,6 +1659,9 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d not running to be continued",
 					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
+			formatstr( buf, "Job %d.%d is already terminating",
+					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
 			formatstr( buf, "Invalid result for job %d.%d",
@@ -1796,7 +1799,8 @@ int DCSchedd::offerResources(
 	const std::string & submitter_name,
 	int timeout,
 	const char * claimID,
-	long long disk_held_by_claim_in_mb)
+	long long disk_held_by_claim_in_mb,
+	const ClassAd * extra_cmd_attrs)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
@@ -1835,6 +1839,9 @@ int DCSchedd::offerResources(
 	if( claimID != NULL ) {
 		// The CEDAR machinery (in _putClassAd()) encrypts this attribute.
 		cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
+	}
+	if( extra_cmd_attrs != nullptr ) {
+		cmd_ad.Update(*extra_cmd_attrs);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());

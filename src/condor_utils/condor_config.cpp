@@ -400,6 +400,8 @@ extern bool condor_fsync_on;
 std::string global_config_source;
 std::vector<std::string> local_config_sources;
 std::string user_config_source; // which of the files in local_config_sources is the user file
+// config sources with an id >= this were not loaded by the root config (i.e. USER_CONFIG_FILE)
+static size_t root_config_sources_end = 0;
 
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
@@ -939,6 +941,10 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	if(dirlist) { free(dirlist); dirlist = NULL; }
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
+		// Remember where the root config sources end since any sources
+		// loaded after this point are not owned by the root config
+	root_config_sources_end = ConfigMacroSet.sources.size();
+
 		// Now, insert overrides from the user config file (if any)
 	user_config_source.clear();
 	std::string user_config_name;
@@ -1216,6 +1222,11 @@ void do_smart_auto_use(int /*options*/)
 			src.meta_id = (short int)meta_id;
 
 			auto_free_ptr expanded(expand_meta_args(raw_template, args));
+			if ( ! expanded) {
+				fprintf(stderr, "Configuration error while interpreting %s : argument expansion of %s:%s failed (self reference?)\n",
+					name, tags[0].c_str(), tags[1].c_str());
+				continue;
+			}
 			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
 		}
 	}
@@ -2879,6 +2890,28 @@ const char * param_get_info(
 		if (ppmet) { *ppmet = hash_iter_meta(it); }
 	}
 	return val;
+}
+
+bool param_defined_by_root_config(const char * name, std::string * location)
+{
+	if (location) { location->clear(); }
+
+	std::string name_used;
+	const MACRO_META * pmet = nullptr;
+	const char * val = param_get_info(name, get_mySubSystem()->getName(), get_mySubSystem()->getLocalName(),
+	                                  name_used, nullptr, &pmet);
+	// Not defined anywhere so param() will use the caller provided default
+	if ( ! val) { return true; }
+	// Defined but no metadata to verify the source with
+	if ( ! pmet) {
+		if (location) { *location = "<unknown>"; }
+		return false;
+	}
+
+	if (location) { param_get_location(pmet, *location); }
+
+	if (pmet->source_id == EnvMacro.id || pmet->source_id == WireMacro.id) { return false; }
+	return static_cast<size_t>(pmet->source_id) < root_config_sources_end;
 }
 
 void

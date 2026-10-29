@@ -19,6 +19,14 @@
   :macro:`JOB_EPOCH_HISTORY` file at the same time, losing job epoch records.
   :jira:`3977`
 
+- Fixed a bug that could cause the *condor_schedd* to exit when ``$$()``
+  macro expansion in the job ad failed.
+  :jira:`3988`
+
+- Fixed a bug that could cause *condor_userprio* to print bogus values for
+  a user's resoruce usage when they haven't used any resources.
+  :jira:`4018`
+
 *** 25.15.15 features
 
 - Scheduler and Local universe jobs no longer use the Vanilla universe default values for
@@ -138,15 +146,13 @@
   :jira:`3645`
 
 - Introducing *condor_metricd*, a new daemon that publishes HTCondor
-  metrics from the *condor_collector* to multiple monitoring backends.
-  The same binary is also installed as *condor_gangliad* for backwards
-  compatibility, and inspects ``argv[0]`` to select its mode at startup.
-  In addition to the Ganglia backend, *condor_metricd* now supports a
-  Prometheus text-format file export backend controlled by the new
-  :macro:`PROMETHEUS_METRICS_FILE`, :macro:`PROMETHEUS_DEFAULT_LABELS`, and
-  :macro:`PROMETHEUS_METRICS_INCLUDE_TIMESTAMP` knobs. New metric-definition
-  keywords ``ExportMetric``, ``PrometheusLabels``, and ``Counter`` allow
-  per-metric routing and labeling.
+  metrics from the *condor_collector* to multiple monitoring backends
+  including Prometheus and Ganglia.  For Prometheus, the *condor_metricd* supports exporting
+  gauges and counters to Prometheus via file, HTTP, and/or HTTPS.
+  For full documentation, see :ref:`admin-manual/monitoring:Monitor Pool Metrics with Prometheus and Ganglia`.
+  Note: If your HTCSS configuration already uses the (now deprecated) *condor_gangliad*,
+  the same binary is also installed as *condor_gangliad* for full backwards
+  compatibility with older versions of HTCSS.
   :jira:`3374`
 
 - :tool:`condor_adstash` obeys existing index properties and allows for
@@ -388,7 +394,7 @@
   Point's :macro:`HISTORY` archive.
   :jira:`3143`
 
-- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :attr:`JobBatchId`,
   and :ad-attr:`JobBatchName` of job records into the library database.
   This allows database queries at a DAG workflow level to be executed.
   :jira:`3799`
@@ -746,7 +752,7 @@
   the Singularity or Apptainer runtime uses the setuid flow.
   :jira:`3308`
 
-- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
+- The negotiator now has access to the :attr:`RemoteUserFloor` to avoid
   going beneath a user's floor number of resources while preempting.
   :jira:`3226`
 
@@ -782,10 +788,6 @@
   expect.  There should be no changes needed for clients of the python
   bindings.
   :jira:`3553`
-
-- When cgroups are active, *condor_startds* now advertise
-  :ad-attr:`CgroupEnforced` to be true.
-  :jira:`3555`
 
 - Enabling/disabling AP users now requires ADMINISTRATOR authorization.
   Previously, WRITE with queue superuser authorization was required.

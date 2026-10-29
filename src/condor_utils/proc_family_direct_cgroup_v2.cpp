@@ -29,6 +29,9 @@
 
 #include <filesystem>
 #include <charconv>
+#include <chrono>
+#include <thread>
+#include <set>
 
 // For bpf device hiding
 #include <linux/bpf.h>
@@ -48,7 +51,11 @@ static int bpf(enum bpf_cmd cmd, union bpf_attr *attr, unsigned int size)
 namespace stdfs = std::filesystem;
 
 static std::map<pid_t, std::string> cgroup_map;
-static std::vector<pid_t> lifetime_extended_pids;
+
+// Cgroups whose own processes have been killed, but whose directory was
+// left in place because a registered family (e.g. sshd) lives beneath it.
+// Removed once nothing registered remains at or under them.
+static std::set<std::string> deferred_trims;
 
 static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
@@ -123,29 +130,36 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	return dirs;
 }
 
-// given a relative cgroup name, return the 
-// number of processes in the cgroup
-static int
-processesInCgroup(const std::string &cgroup_name) {
-	int count = 0;
-	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+// given a relative cgroup name, return whether any process lives
+// in that cgroup or any cgroup beneath it.  cgroup.procs only lists
+// the processes directly in this cgroup, but cgroup.events "populated"
+// covers the whole subtree.  Returns false if the cgroup doesn't exist.
+static bool
+cgroupIsPopulated(const std::string &cgroup_name) {
+	stdfs::path events = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.events");
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	FILE *f = fopen(procs.c_str(), "r");
+	FILE *f = fopen(events.c_str(), "r");
 	if (!f && (errno == ENOENT)) {
-		return 0; // cgroup was removed, no processes can exist
+		return false; // cgroup was removed, no processes can exist
 	}
 
 	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
-		return -1;
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::cgroupIsPopulated cannot open %s: %d %s\n", events.c_str(), errno, strerror(errno));
+		return false;
 	}
-	pid_t some_pid;
-	while (fscanf(f, "%d", &some_pid) != EOF) {
-		count++;
+
+	bool populated = false;
+	char key[64];
+	int value = 0;
+	while (fscanf(f, "%63s %d", key, &value) == 2) {
+		if (strcmp(key, "populated") == 0) {
+			populated = (value != 0);
+			break;
+		}
 	}
 	fclose(f);
-	return count;
+	return populated;
 }
 
 static bool killCgroupTree(const std::string &cgroup_name) {
@@ -175,15 +189,16 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
 
-	time_t startTime = time(nullptr);
-
-	// Repeat for up to five seconds to let zombies get reaped
-	while ((time(nullptr) - startTime) < 5) {
-		if (processesInCgroup(cgroup_name) == 0) {
+	// Wait up to five seconds for the killed processes to be reaped,
+	// otherwise the caller's rmdir will fail with EBUSY
+	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+	while (std::chrono::steady_clock::now() < deadline) {
+		if (!cgroupIsPopulated(cgroup_name)) {
 			return true;
 		}
-		sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
+	dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::killCgroupTree processes still remain in %s after 5 seconds\n", cgroup_name.c_str());
 
 	return true;
 }
@@ -214,6 +229,44 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	return true;
 }
 
+// The leaf cgroup that actually holds the processes of the given .slice
+// cgroup.  Same basename, but with ".scope" instead of ".slice"
+static std::string
+scopeOf(const std::string &cgroup_name) {
+	stdfs::path slice(cgroup_name);
+	stdfs::path basename = slice.filename();
+	return (slice / basename.replace_extension(".scope")).string();
+}
+
+// Is some registered family's cgroup strictly beneath this one?
+static bool
+hasRegisteredDescendant(const std::string &cgroup_name) {
+	const std::string prefix = cgroup_name + "/";
+	return std::ranges::any_of(cgroup_map, [&](const auto &entry) {
+		return entry.second.starts_with(prefix);
+	});
+}
+
+// Is some registered family's cgroup this one or beneath it?
+static bool
+cgroupInUse(const std::string &cgroup_name) {
+	return std::ranges::any_of(cgroup_map, [&](const auto &entry) {
+		return entry.second == cgroup_name;
+	}) || hasRegisteredDescendant(cgroup_name);
+}
+
+// Remove any deferred cgroups that nothing registered lives in anymore
+static void
+trimDeferredCgroups() {
+	std::erase_if(deferred_trims, [](const std::string &cgroup_name) {
+		if (cgroupInUse(cgroup_name)) {
+			return false;
+		}
+		trimCgroupTree(cgroup_name);
+		return true;
+	});
+}
+
 // Given a cgroup name from the root of the cgroup down to the new one
 // not including /sys/fs/cgroup, make all needed interior and leaf 
 // cgroups, but do not yet enable delegation
@@ -225,8 +278,14 @@ static bool makeCgroup(const std::string &cgroup_name) {
 	stdfs::path cgroup_relative_to_root_dir(cgroup_name);
 
 	// If the full cgroup exists, remove it to clear the various
-	// peak statistics and any existing memory
-	trimCgroupTree(cgroup_name);
+	// peak statistics and any existing memory.  But if a registered
+	// family (e.g. sshd) lives beneath it, only clear out our own leaf,
+	// so as not to kill it.
+	if (hasRegisteredDescendant(cgroup_name)) {
+		trimCgroupTree(scopeOf(cgroup_name));
+	} else {
+		trimCgroupTree(cgroup_name);
+	}
 
 	// Accumulate along path components
 	auto interior_dir_maker = [](const stdfs::path &fulldir, const stdfs::path &next_part) {
@@ -267,8 +326,7 @@ static bool makeCgroup(const std::string &cgroup_name) {
 	// Now the leaf cgroup
 	stdfs::path leaf = cgroup_root_dir / cgroup_relative_to_root_dir;
 	// scope cgroup is subdir with same basename, but with .scope extention instead of ".slice"
-	stdfs::path basename = leaf.filename();
-	stdfs::path scope = leaf / basename.replace_extension(".scope");
+	stdfs::path scope = cgroup_root_dir / scopeOf(cgroup_name);
 
 	bool can_make_cgroup_dir = mkdir_and_parents_if_needed(scope.c_str(), 0755, 0755, PRIV_ROOT);
 	if (!can_make_cgroup_dir) {
@@ -284,6 +342,9 @@ static bool makeCgroup(const std::string &cgroup_name) {
 // also clean up the cgroups.
 ProcFamilyDirectCgroupV2::~ProcFamilyDirectCgroupV2() {
 	for (const auto &[_, name]: cgroup_map) {
+		trimCgroupTree(name);
+	}
+	for (const auto &name: deferred_trims) {
 		trimCgroupTree(name);
 	}
 }
@@ -768,12 +829,19 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
 
 	if (cpu_result) {
-		// Bias for starting values
-		user_usec -= starting_user_usec;
-		sys_usec  -= starting_sys_usec;
+		// Bias for starting values.  Clamp at zero: if the baseline came
+		// from a stale cgroup with larger counters, the unsigned subtraction
+		// would wrap to ~2^64
+		const CpuBaseline &baseline = baselines[cgroup_name];
+		user_usec = (user_usec > baseline.user_usec) ? user_usec - baseline.user_usec : 0;
+		sys_usec  = (sys_usec  > baseline.sys_usec)  ? sys_usec  - baseline.sys_usec  : 0;
 
-		time_t wall_time = time(nullptr) - start_time;
-		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+		// percent_cpu is a percentage, like the procd's, where 100 is one full core
+		time_t wall_time = time(nullptr) - baseline.start_time;
+		usage.percent_cpu = 0.0;
+		if (baseline.start_time > 0 && wall_time > 0) {
+			usage.percent_cpu = 100.0 * double(user_usec + sys_usec) / double(wall_time * 1'000'000);
+		}
 
 		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
 		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
@@ -1026,13 +1094,6 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	return true;
 }
 
-bool
-ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
-{
-	lifetime_extended_pids.emplace_back(pid);
-	return true;
-}
-
 bool 
 ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 
@@ -1043,7 +1104,9 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 		// in the child process
 		std::string cgroup_str = canonicalize_cgroup(fi->cgroup);
 		success = makeCgroup(cgroup_str);
-		get_user_sys_cpu(cgroup_str, starting_user_usec, starting_sys_usec);
+		CpuBaseline &baseline = baselines[cgroup_str];
+		get_user_sys_cpu(cgroup_str, baseline.user_usec, baseline.sys_usec);
+		baseline.start_time = time(nullptr);
 	}
 
 	return success;
@@ -1056,11 +1119,6 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 {
-	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
-		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
-		return true;
-	}
-
 	// Double check that we have an entry
 	if (!cgroup_map.contains(pid)) {
 		dprintf(D_ALWAYS, "unregister_family cgroup not found for pid %d, not unregistering\n", pid);
@@ -1068,13 +1126,31 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 	}
 
 	std::string cgroup_name = cgroup_map[pid];
+	cgroup_map.erase(pid);
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);
-	// Remove this cgroup, so that we clear the various peak statistics it holds
 
-	trimCgroupTree(cgroup_name);
+	if (cgroupInUse(cgroup_name)) {
+		if (std::ranges::any_of(cgroup_map, [&](const auto &entry) { return entry.second == cgroup_name; })) {
+			// Another family has been started in this same cgroup, as when
+			// a self-checkpointing job is restarted from the reaper.
+			// It owns the cgroup now, leave it alone.
+			dprintf(D_FULLDEBUG, "cgroup %s reused by another family, not trimming\n", cgroup_name.c_str());
+		} else {
+			// A registered family (e.g. sshd) lives beneath us.  Kill off
+			// our own processes, but leave the cgroup for later removal.
+			dprintf(D_FULLDEBUG, "cgroup %s has registered children, only trimming its scope\n", cgroup_name.c_str());
+			trimCgroupTree(scopeOf(cgroup_name));
+			deferred_trims.insert(cgroup_name);
+		}
+	} else {
+		// Remove this cgroup, so that we clear the various peak statistics it holds
+		trimCgroupTree(cgroup_name);
+		baselines.erase(cgroup_name);
+	}
 
-	cgroup_map.erase(pid);
+	// We may have been the last thing keeping a parent cgroup alive
+	trimDeferredCgroups();
 	return true;
 }
 

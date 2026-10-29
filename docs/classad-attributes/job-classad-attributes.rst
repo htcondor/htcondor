@@ -207,6 +207,9 @@ all attributes.
     suspension during time in which the job was not evicted.
     This number is updated when the job exits.
 
+:classad-attribute-def:`CommonInputFiles`
+    Like :ad-attr:`TransferInput`, except for :ref:`common files<common_file_transfer>`.
+
 :classad-attribute-def:`CompletionDate`
     The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
@@ -869,6 +872,11 @@ all attributes.
     Integer priority for this job, set by :tool:`condor_submit` or
     :tool:`condor_prio`. The default value is 0. The higher the number, the
     greater (better) the priority.
+
+:classad-attribute-def:`JobReconnectedDate`
+    Time at which the *condor_shadow* and *condor_starter* last reconnected.
+    Set to ``Undefined`` when a new disconnect occurs. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`JobRunCount`
     This attribute is retained for backwards compatibility. It may go
