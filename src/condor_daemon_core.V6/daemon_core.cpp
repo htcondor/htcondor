@@ -6610,17 +6610,6 @@ void CreateProcessForkit::exec() {
 	}
 		// END pid family environment id propogation 
 
-	std::string cookie;
-	bool has_cookie = m_envobject.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", cookie);
-        if (m_want_command_port && !has_cookie) {
-                std::string value;
-                if (SharedPortEndpoint::GetDaemonSocketDir(value)) {
-                        m_envobject.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", value.c_str());
-                }
-        } else if (!m_want_command_port && has_cookie) {
-                m_envobject.DeleteEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-        }
-
 		// The child's environment:
 	m_unix_env = m_envobject.getStringArray();
 
@@ -7343,6 +7332,13 @@ int DaemonCore::Create_Process(
 	// do that instead.  Currently, we only want that if we are not
 	// given a pre-assigned port and if we have permission to write
 	// to the daemon socket directory.
+	if (want_command_port) {
+		std::string shared_port_dir;
+		if (SharedPortEndpoint::GetDaemonSocketDir(shared_port_dir)) {
+			inheritbuf += " SharedPortDir:";
+			inheritbuf += shared_port_dir;
+		}
+	}
 	if ( want_command_port != FALSE && want_command_port <= 1 &&
 		 !HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(job_opt_mask) &&
 		 SharedPortEndpoint::UseSharedPort() )
@@ -9332,6 +9328,11 @@ DaemonCore::Inherit( void )
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
 		auto inherit_list_itr = inherit_list.begin();
+		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPortDir:", 14) == 0) {
+			ptmp = inherit_list_itr->c_str() + 14;
+			SharedPortEndpoint::SetDaemonSocketDir(ptmp);
+			inherit_list_itr++;
+		}
 		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPort:", 11) == 0) {
 			ptmp = inherit_list_itr->c_str() + 11;
 			delete m_shared_port_endpoint;
