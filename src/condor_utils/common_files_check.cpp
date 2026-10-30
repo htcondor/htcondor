@@ -173,6 +173,7 @@ hashCommonFiles( const std::string & commonFiles, const std::string & iwd, bool 
 	std::string prefix;
 	if( preserve_relative_paths ) {
 		prefix = HASH_MARKER_PRESERVE_RELATIVE_PATHS;
+		// Paths can't contain NUL, so use it as the separator.
 		prefix += '\0';
 		hashes.description += " (with " SUBMIT_KEY_PreserveRelativePaths ")";
 	}
