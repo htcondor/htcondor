@@ -602,9 +602,10 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( ATTR_RESULT, result );
 			context.InsertAttr( ATTR_STAGING_DIR, staging->path().string() );
 
-			const bool CORRECTLY = true;
-			s->include_multilink_files_in_disk_usage(true);
-			auto usage = s->GetDiskUsage(CORRECTLY);
+			bool INCLUDE_ALL_FILES = true;
+			ManualExecDirMonitor monitor( staging->path().string() );
+			auto usage = monitor.GetDiskUsage( PRIV_ROOT, INCLUDE_ALL_FILES );
+
 			// To avoid over-complicating the WithInResourceLimits and
 			// quantize-disk expressions, the size here is in KiB
 			// (the units of `Disk`).
