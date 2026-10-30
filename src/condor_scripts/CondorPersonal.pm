@@ -1642,6 +1642,51 @@ sub NewIsDownYet {
 #
 #
 
+# Returns 1 if a condor_master process with the given pid is running,
+# 0 if not, and -1 if we can't tell (bad pid or no process table).
+sub MasterPidState
+{
+	my $pid = shift;
+	if((! defined $pid) || ($pid !~ /^\d+$/)) {
+		return(-1);
+	}
+	if(CondorUtils::is_windows() == 1) {
+		my @tasks = `tasklist`;
+		if(@tasks == 0) {
+			return(-1);
+		}
+		foreach my $process (@tasks) {
+			# image name, pid, session name, ...
+			if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
+				if(($2 eq $pid) && ($1 =~ /condor_master/)) {
+					return(1);
+				}
+			}
+		}
+		return(0);
+	}
+	# ps is kind of expensive.  Skip the wait on linux
+	my $master_name = "";
+	if (-f ("/proc/self/comm")) {
+		if(open(my $fh, "<", "/proc/$pid/comm")) {
+			$master_name = <$fh> // "";
+			close($fh);
+		}
+	} else {
+		my @psdata = `ps $pid`;
+		if(@psdata == 0) {
+			return(-1);
+		}
+		if(@psdata >= 2) {
+			$master_name = $psdata[1];
+		}
+	}
+	if($master_name =~ /condor_master/) {
+		return(1);
+	}
+	return(0);
+}
+
 sub CollectWhoData
 {
 	my $desiredstate = shift;
@@ -1658,6 +1703,15 @@ sub CollectWhoData
 	#$condor->DisplayWhoDataInstances();
 	# condor_who -quick is best before master is alive
 	if($condor != 0) {
+		# Once the master is marked alive, only a parsed condor_who poll can
+		# mark it dead, and those polls can stall or fail, leaving it "alive"
+		# long after it exited. So check the process table directly.
+		if($condor->HasLiveMaster() == 1) {
+			my $masterpid = $condor->GetMasterPid();
+			if(MasterPidState($masterpid) == 0) {
+				CondorTest::LoadWhoData("Master","no",$masterpid,"","","","");
+			}
+		}
 		if(defined $desiredstate) {
 			if($desiredstate eq "down"){
 				print "going down and using quick mode\n";
@@ -1693,48 +1747,10 @@ sub CollectWhoData
 				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
 				#id this is the master is pid real?
 				my $savepid = $2;
-				my $processstring = "";
 				if($1 eq "Master") {
 					#print "Master found\n";
-					if(CondorUtils::is_windows() == 1) {
-				    	my @grift = `tasklist | grep $savepid`;
-						foreach my $process (@grift) {
-							#print "consider:$process saved pid: $savepid\n";
-							if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
-								$processstring = $1;
-								if($2 eq $savepid) {
-									#print "Pids equal:$processstring\n";
-									# does this process have master in binary
-									if($processstring =~ /condor_master/) {
-										#print "Is master, thus master alive\n";
-										CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-									}
-								}
-							}
-						}
-					} else {
-						#print "Master record\n";
-						if($savepid ne "no") {
-							# ps is kind of expensive.  Skip the wait on linux
-							my $master_name;
-							if (-f ("/proc/self/comm")) {
-								open F,"</proc/$savepid/comm";
-								$master_name = <F>;
-								close(F);
-							} else {
-								my @psdata = `ps $savepid`;
-								my $pssize = @psdata;
-								if($pssize >= 2) {
-									$master_name = $psdata[1];
-								}
-							}
-							if($master_name =~ /condor_master/) {
-								#Mark master alive
-								#print "Marking Master Alive*************************************************************\n";
-								#print "Before LoadWhoData:\n";
-								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-							}
-						}
+					if(MasterPidState($savepid) == 1) {
+						CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
 					}
 				} #else {
 					#print "Not Master but $1\n";
