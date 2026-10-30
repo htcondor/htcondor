@@ -13,6 +13,10 @@
   been submitted.
   :jira:`3931`
 
+- Docker Universe jobs on AMD GPU machines should now be able to see 
+  the AMD GPU devices.
+  :jira:`4047`
+
 - When running as root on a cgroup v2 system, if a GPU job is allocated
   an NVIDIA MIG device, hide all the GPUs not part of the allocated MIGs.
   :jira:`3978`
