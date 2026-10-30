@@ -64,6 +64,7 @@
 #include <string>
 #include <optional>
 #include "catalog_utils.h"
+#include "common_files_check_registry.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -160,6 +161,9 @@ struct shadow_rec
 	ListOfCatalogs cxfer_catalogs;
 	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
 	ClassAd * matchInfo {nullptr};
+
+	// For transfer shadows; see common_files_check_registry.h.
+	CommonFilesStagingRecord cxfer_check;
 
 	shadow_rec();
 	~shadow_rec();

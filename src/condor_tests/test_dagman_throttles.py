@@ -6,7 +6,12 @@
 #     3. Admin throttle limiting
 #          A. Check that user defined throttles get limited by admin set values
 #          B. Ensure user cannot bypass admin limit via configuration variables
+#             set in the DAGMan config file
 #          C. Verify admin throttle limit disable configuration option functions
+#          D. Verify admin only options set via a root config include are honored
+#          E. Verify DAGMan exits with an error when admin only options are set
+#             via _CONDOR_* environment variables or the user config file
+#             (USER_CONFIG_FILE) including any files it includes
 
 from ornithology import *
 import htcondor2
@@ -33,6 +38,62 @@ SHARED_CONFIG = {
     "DAGMAN_MAX_POST_SCRIPTS": 10,
     "DAGMAN_MAX_SUBMITS_PER_INTERVAL": 10,
 }
+
+# Administrator set throttle limits (ceilings/floor)
+ADMIN_LIMITS = {
+    "DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": 10,
+    "DAGMAN_MAX_JOBS_IDLE_CEILING": 10,
+    "DAGMAN_MAX_JOBS_SUBMITTED_CEILING": 10,
+    "DAGMAN_MAX_PRE_SCRIPTS_CEILING": 10,
+    "DAGMAN_MAX_HOLD_SCRIPTS_CEILING": 10,
+    "DAGMAN_MAX_POST_SCRIPTS_CEILING": 10,
+    "DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING": 10,
+}
+
+# User level configuration attempting to raise/disable the admin limits in ADMIN_LIMITS
+USER_RAISE_LIMITS = {
+    "DAGMAN_USER_LOG_SCAN_INTERVAL": 1,
+    "DAGMAN_MAX_JOBS_IDLE": 500,
+    "DAGMAN_MAX_JOBS_SUBMITTED": 500,
+    "DAGMAN_MAX_PRE_SCRIPTS": 500,
+    "DAGMAN_MAX_HOLD_SCRIPTS": 500,
+    "DAGMAN_MAX_POST_SCRIPTS": 500,
+    "DAGMAN_MAX_SUBMITS_PER_INTERVAL": 500,
+    "DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": 1,
+    "DAGMAN_MAX_JOBS_IDLE_CEILING": 500,
+    "DAGMAN_MAX_JOBS_SUBMITTED_CEILING": 500,
+    "DAGMAN_MAX_PRE_SCRIPTS_CEILING": 500,
+    "DAGMAN_MAX_HOLD_SCRIPTS_CEILING": 500,
+    "DAGMAN_MAX_POST_SCRIPTS_CEILING": 500,
+    "DAGMAN_MAX_SUBMITS_PER_INTERVAL_CEILING": 500,
+}
+
+USER_DISABLE_LIMITS = {
+    **USER_RAISE_LIMITS,
+    "DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": True,
+}
+
+def to_config_text(config: Dict[str, Any]) -> str:
+    return "\n".join(f"{key} = {value}" for key, value in config.items()) + "\n"
+
+def write_admin_limits(test_dir: Path) -> Path:
+    """Write the admin limits to a file to be included by the root config"""
+    admin_limits = test_dir / "admin_limits.config"
+    admin_limits.write_text(to_config_text(ADMIN_LIMITS))
+    return admin_limits
+
+# Throttles to set when a user attempts to bypass admin limits
+BYPASS_THROTTLES = {"max_pre": 5}
+
+# Expected throttles when user attempts to bypass admin limits
+BYPASS_EXPECTED = classad2.ClassAd({
+    "DAGMan_MaxJobs": 10,
+    "DAGMan_MaxIdle": 10,
+    "DAGMan_MaxPreScripts": 5,
+    "DAGMan_MaxHoldScripts": 10,
+    "DAGMan_MaxPostScripts": 10,
+    "DAGMan_MaxSubmitsPerInterval": 10,
+})
 
 #-----------------------------------------------------------------------------------------
 class SetThrottleError(Exception):
@@ -89,12 +150,15 @@ class Config(enum.Enum):
 
 
 class DagTestCase():
-    def __init__(self, exe: Callable[[Condor, int, Any], classad2.ClassAd], throttles: Any, expected: classad2.ClassAd, conf: Config = Config.DEFAULT, extra: str = "") -> None:
+    def __init__(self, exe: Callable[[Condor, int, Any], classad2.ClassAd], throttles: Any, expected: classad2.ClassAd, conf: Config = Config.DEFAULT, extra: str = "",
+                 dag_config: Optional[Dict[str, Any]] = None, scan_limited: bool = False) -> None:
         self.execute = exe
         self.throttles = throttles
         self.expected = expected
         self.conf = conf
         self.extra = extra
+        self.dag_config = dag_config # DAGMan config file (CONFIG command) contents
+        self.scan_limited = scan_limited # Expect admin minimum log scan interval to be enforced
 
 
 TEST_CASES = {
@@ -118,7 +182,7 @@ TEST_CASES = {
             "DAGMan_MaxSubmitsPerInterval": 10,
         })
     ),
-    # Check setting invalid throttles (outside of admin limit) with default configuration
+    # Check setting invalid throttles (outside of default admin ceilings: 2x the default value) with default configuration
     "SET_INVALID": DagTestCase(
         throttle_via_python,
         {
@@ -131,14 +195,14 @@ TEST_CASES = {
         },
         classad2.ClassAd({
             "DAGMan_MaxJobs": 99999,
-            "DAGMan_MaxIdle": 1000,
-            "DAGMan_MaxPreScripts": 20,
-            "DAGMan_MaxHoldScripts": 20,
-            "DAGMan_MaxPostScripts": 20,
-            "DAGMan_MaxSubmitsPerInterval": 100,
+            "DAGMan_MaxIdle": 2000,
+            "DAGMan_MaxPreScripts": 40,
+            "DAGMan_MaxHoldScripts": 40,
+            "DAGMan_MaxPostScripts": 40,
+            "DAGMan_MaxSubmitsPerInterval": 200,
         })
     ),
-    # Check setting infinite for throttles with default configuration
+    # Check setting infinite for throttles with default configuration (limited to default admin ceilings)
     "SET_INFINITE": DagTestCase(
         throttle_via_python,
         {
@@ -151,11 +215,11 @@ TEST_CASES = {
         },
         classad2.ClassAd({
             "DAGMan_MaxJobs": 0,
-            "DAGMan_MaxIdle": 1000,
-            "DAGMan_MaxPreScripts": 20,
-            "DAGMan_MaxHoldScripts": 20,
-            "DAGMan_MaxPostScripts": 20,
-            "DAGMan_MaxSubmitsPerInterval": 100,
+            "DAGMan_MaxIdle": 2000,
+            "DAGMan_MaxPreScripts": 40,
+            "DAGMan_MaxHoldScripts": 40,
+            "DAGMan_MaxPostScripts": 40,
+            "DAGMan_MaxSubmitsPerInterval": 200,
         })
     ),
     # Check setting valid throttles with lower admin limit configured
@@ -292,17 +356,36 @@ TEST_CASES = {
             "DAGMan_MaxSubmitsPerInterval": 100,
         }),
     ),
+    # Verify user can not raise admin limits via DAGMan config file
+    "DAG_CONFIG_RAISE_LIMITS": DagTestCase(
+        throttle_via_python,
+        BYPASS_THROTTLES,
+        BYPASS_EXPECTED,
+        Config.LIMITED,
+        dag_config=USER_RAISE_LIMITS,
+        scan_limited=True,
+    ),
+    # Verify user can not disable admin limits via DAGMan config file
+    "DAG_CONFIG_DISABLE_LIMITS": DagTestCase(
+        throttle_via_python,
+        BYPASS_THROTTLES,
+        BYPASS_EXPECTED,
+        Config.LIMITED,
+        dag_config=USER_DISABLE_LIMITS,
+        scan_limited=True,
+    ),
 }
 
 #-----------------------------------------------------------------------------------------
 @action
 def limited_condor(test_dir):
-    """Condor configured with low sweeping set of throttle limits"""
+    """Condor configured with low sweeping set of throttle limits (admin limits set via root config include)"""
     local_dir = test_dir / "limited_condor"
 
     with Condor(
         local_dir=local_dir,
         config=SHARED_CONFIG,
+        raw_config=f"include : {write_admin_limits(test_dir)}\n",
     ) as condor:
         yield condor
 
@@ -322,6 +405,14 @@ def limitless_condor(test_dir):
         yield condor
 
 #-----------------------------------------------------------------------------------------
+def select_condor(conf: Config, default_condor, limited_condor, limitless_condor) -> Condor:
+    if conf == Config.LIMITED:
+        return limited_condor
+    elif conf == Config.LIMITLESS:
+        return limitless_condor
+    return default_condor
+
+#-----------------------------------------------------------------------------------------
 @action
 def run_dags(default_condor, limited_condor, limitless_condor, test_dir, path_to_sleep):
     TESTS = dict()
@@ -333,6 +424,12 @@ def run_dags(default_condor, limited_condor, limitless_condor, test_dir, path_to
 
         os.mkdir(case_dir)
 
+        extra = DETAILS.extra
+        if DETAILS.dag_config is not None:
+            DAG_CONFIG = case_dir / "dagman.config"
+            DAG_CONFIG.write_text(to_config_text(DETAILS.dag_config))
+            extra += f"\nCONFIG {DAG_CONFIG}\n"
+
         DAG_FILE = case_dir / DAG_FILENAME
         with open(DAG_FILE, "w") as f:
             f.write(f"""
@@ -341,20 +438,16 @@ JOB LONG @=desc
     arguments  = 1000000
 @desc
 
-{DETAILS.extra}
+{extra}
 """)
 
         # Select which condor to submit to (different configurations)
-        condor = default_condor
-        if DETAILS.conf == Config.LIMITED:
-            condor = limited_condor
-        elif DETAILS.conf == Config.LIMITLESS:
-            condor = limitless_condor
+        condor = select_condor(DETAILS.conf, default_condor, limited_condor, limitless_condor)
 
         with ChangeDir(TEST):
             DAG = htcondor2.Submit.from_dag(str(DAG_FILE))
             HANDLE = condor.submit(DAG)
-            TESTS[TEST] = (HANDLE, DETAILS.conf, DETAILS.execute, DETAILS.throttles, DETAILS.expected)
+            TESTS[TEST] = (HANDLE, DETAILS.conf, DETAILS.execute, DETAILS.throttles, DETAILS.expected, DETAILS.scan_limited)
 
     yield TESTS
 
@@ -371,6 +464,7 @@ def test_info(request, run_dags):
         TEST[2],        # Test case throttle function
         TEST[3],        # Test case throttle information
         TEST[4],        # Test case expected results
+        TEST[5],        # Test case expects admin scan interval enforced
     )
 
 @action
@@ -383,13 +477,7 @@ def test_handle(test_info):
 
 @action
 def test_condor(test_info, default_condor, limited_condor, limitless_condor):
-    condor = default_condor
-    if test_info[2] == Config.LIMITED:
-        condor = limited_condor
-    elif test_info[2] == Config.LIMITLESS:
-        condor = limitless_condor
-
-    return condor
+    return select_condor(test_info[2], default_condor, limited_condor, limitless_condor)
 
 @action
 def test_throttle_func(test_info):
@@ -402,6 +490,10 @@ def test_throttles(test_info):
 @action
 def test_expected(test_info):
     return test_info[5]
+
+@action
+def test_scan_limited(test_info):
+    return test_info[6]
 
 @action
 def throttle_dag(test_case, test_condor, test_handle, test_throttle_func, test_throttles):
@@ -431,3 +523,130 @@ def throttle_dag(test_case, test_condor, test_handle, test_throttle_func, test_t
 class TestDagThrottling():
     def test_setting_dag_throttles(self, throttle_dag, test_expected):
         assert throttle_dag == test_expected
+
+    def test_admin_scan_interval_enforced(self, test_dir, test_case, throttle_dag, test_scan_limited):
+        if not test_scan_limited:
+            pytest.skip("Test case does not attempt to bypass admin minimum log scan interval")
+
+        dagman_out = test_dir / test_case / f"{DAG_FILENAME}.dagman.out"
+        contents = dagman_out.read_text()
+        assert "Specified scan interval 1 is less than administrator limit" in contents
+        assert "DAGMAN_USER_LOG_SCAN_INTERVAL setting: 10" in contents
+
+
+#=========================================================================================
+# Admin only option source enforcement: DAGMan should exit with an error if any
+# admin only option is set by something other than the root config
+ADMIN_ONLY_ERROR = "is an administrator only configuration option but was set by"
+
+class AdminOnlyCase():
+    def __init__(self, user_config: bool, expected: Dict[str, str], env: Optional[Dict[str, str]] = None) -> None:
+        self.user_config = user_config # Submit to condor with USER_CONFIG_FILE set
+        self.expected = expected # Map of admin only option to expected (partial) location in error message
+        self.env = env if env is not None else dict() # Environment to submit DAG with
+
+
+ADMIN_ONLY_CASES = {
+    # Admin ceiling set via _CONDOR_* environment variable
+    "ENV_CEILING": AdminOnlyCase(
+        False,
+        {"DAGMAN_MAX_JOBS_IDLE_CEILING": "<Environment>"},
+        env={"_CONDOR_DAGMAN_MAX_JOBS_IDLE_CEILING": "500"},
+    ),
+    # Admin limiting disabled and floor lowered via _CONDOR_* environment variables
+    "ENV_DISABLE": AdminOnlyCase(
+        False,
+        {
+            "DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": "<Environment>",
+            "DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": "<Environment>",
+        },
+        env={
+            "_CONDOR_DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING": "True",
+            "_CONDOR_DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR": "1",
+        },
+    ),
+    # Admin ceilings set directly in the user config and via a file the user config includes
+    "USER_CONFIG": AdminOnlyCase(
+        True,
+        {
+            "DAGMAN_MAX_POST_SCRIPTS_CEILING": "user.config",
+            "DAGMAN_MAX_JOBS_IDLE_CEILING": "user_include.config",
+        },
+    ),
+}
+
+#-----------------------------------------------------------------------------------------
+@action
+def user_config_condor(test_dir):
+    """Condor configured with admin limits via root config include plus a user config that attempts to override them"""
+    local_dir = test_dir / "user_config_condor"
+
+    user_include = test_dir / "user_include.config"
+    user_include.write_text(to_config_text({"DAGMAN_MAX_JOBS_IDLE_CEILING": 500}))
+
+    # Note: avoid file names matching (case insensitive) a test case directory name
+    user_config = test_dir / "user.config"
+    user_config.write_text(to_config_text({"DAGMAN_MAX_POST_SCRIPTS_CEILING": 500}) + f"include : {user_include}\n")
+
+    with Condor(
+        local_dir=local_dir,
+        config={**SHARED_CONFIG, "USER_CONFIG_FILE": str(user_config)},
+        raw_config=f"include : {write_admin_limits(test_dir)}\n",
+    ) as condor:
+        yield condor
+
+#-----------------------------------------------------------------------------------------
+@action
+def run_admin_only_dags(limited_condor, user_config_condor, test_dir, path_to_sleep):
+    DAGS = dict()
+
+    for TEST, DETAILS in ADMIN_ONLY_CASES.items():
+        case_dir = test_dir / TEST
+        if case_dir.exists():
+            rmtree(case_dir)
+
+        os.mkdir(case_dir)
+
+        DAG_FILE = case_dir / DAG_FILENAME
+        DAG_FILE.write_text(f"""
+JOB LONG @=desc
+    executable = {path_to_sleep}
+    arguments  = 1
+@desc
+""")
+
+        condor = user_config_condor if DETAILS.user_config else limited_condor
+
+        # DAGMan job inherits _CONDOR_* environment variables at submit time
+        with ChangeDir(TEST), SetEnv(DETAILS.env):
+            DAG = htcondor2.Submit.from_dag(str(DAG_FILE))
+            DAGS[TEST] = (condor.submit(DAG), DETAILS.expected)
+
+    yield DAGS
+
+@action(params={name: name for name in ADMIN_ONLY_CASES})
+def admin_only_case(request, run_admin_only_dags):
+    return (request.param, *run_admin_only_dags[request.param])
+
+@action
+def admin_only_dagman_out(test_dir, admin_only_case):
+    name, handle, _ = admin_only_case
+    assert handle.wait(condition=ClusterState.all_complete, timeout=TIMEOUT)
+    return (test_dir / name / f"{DAG_FILENAME}.dagman.out").read_text()
+
+
+class TestAdminOnlyConfig():
+    def test_dagman_exits_with_error(self, admin_only_dagman_out):
+        assert "EXITING WITH STATUS 1" in admin_only_dagman_out
+
+    def test_admin_only_options_reported(self, admin_only_case, admin_only_dagman_out):
+        _, _, expected = admin_only_case
+        for knob, location in expected.items():
+            lines = [line for line in admin_only_dagman_out.splitlines() if f"{knob} {ADMIN_ONLY_ERROR}" in line]
+            assert len(lines) == 1, f"Expected error for {knob} not found"
+            assert location in lines[0]
+
+    def test_dag_not_run(self, test_dir, admin_only_case, admin_only_dagman_out):
+        name, _, _ = admin_only_case
+        # DAGMan exits before parsing the DAG so no node jobs are ever submitted
+        assert not (test_dir / name / f"{DAG_FILENAME}.nodes.log").exists()

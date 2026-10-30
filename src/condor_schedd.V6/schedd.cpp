@@ -9765,7 +9765,24 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 	PROC_ID transfer_shadow_id( jobid.cluster, promptingToTransferProcID( jobid.proc  ) );
 	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
+	// Before any job can map these catalogs, record what they contain, so
+	// that each job's shadow can verify that it would get the files it
+	// asked for; see common_files_check_registry.h.  (Only a transfer
+	// shadow, identified by its claim ID, above, can get here.)  If they
+	// conflict with the catalogs already staged in the same scope, no job
+	// may map them: the registry holds the prompting job, and we retire the
+	// transfer shadow, exactly as if its lease had expired (see
+	// mark_catalog_dead()).  Jobs blocked waiting for these catalogs are
+	// unblocked when it's reaped (see unregister_shadow_catalogs()).
 	if( transfer_shadow_rec != NULL &&
+		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING &&
+		! CommonFilesCheckRegistry::recordStagedCopies( * transfer_shadow_rec, cmd_ad )
+	) {
+		transfer_shadow_rec->cxfer_state = CXFER_STATE::RETIRING;
+		if( transfer_shadow_rec->match ) {
+			send_vacate( transfer_shadow_rec->match, RELEASE_CLAIM );
+		}
+	} else if( transfer_shadow_rec != NULL &&
 		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
 	) {
 		// Setting this allows subsequent matches needing these catalogs
@@ -11412,6 +11429,9 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				transfer_shadow_rec->cxfer_catalogs = catalogs_to_stage;
 				transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGING;
 
+				// See common_files_check_registry.h.
+				CommonFilesCheckRegistry::stagingStarted( * transfer_shadow_rec, * job );
+
 				mrec->shadowRec = transfer_shadow_rec;
 
 				// Otherwise, the schedd won't start the actual job because
@@ -12310,6 +12330,14 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		} else {
 			dprintf( D_ZKM, "Transfer shadow rec had no matchInfo ad; how did that happen?\n" );
 		}
+	}
+
+	// If this shadow will stage or map common files (not fall back), tell
+	// it what to expect, so it can verify that the job gets the files it
+	// asked for; see common_files_check_registry.h.  Reconnecting jobs are
+	// already running.
+	if( srec->cxfer_catalogs.size() > 0 && ! srec->is_reconnect ) {
+		CommonFilesCheckRegistry::addExpectations( * job_ad, * srec );
 	}
 
 	// If we're starting the transfer shadow, we probably don't need to mark
@@ -15274,6 +15302,15 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 		// As far as I can tell, the shadow no longer generates these.
 		case JOB_CKPTED:
 		case JOB_NO_CKPT_FILE:
+
+			// A transfer shadow refused to stage the prompting job's common
+			// files because they don't match the rest of its cluster or DAG
+			// (or couldn't be verified); see common_files_check_registry.h.
+			// (Not JOB_SHOULD_HOLD, above, which would force the whole scope
+			// to fall back to uncommon transfer.)
+			if( exit_code == JOB_CXFER_FAILED_HOLD ) {
+				CommonFilesCheckRegistry::holdPromptingJob( job_id );
+			}
 
 			if( exit_code == JOB_CKPTED
 			 || exit_code == JOB_SHOULD_REQUEUE

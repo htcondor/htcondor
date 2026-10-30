@@ -1,5 +1,13 @@
 *** 26.2.0 features
 
+- Administrators can now cap the DAGMan throttles that users may set via
+  new configuration options such as :macro:`DAGMAN_MAX_JOBS_IDLE_CEILING`
+  and :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL_FLOOR`. These options may only
+  be set in the HTCondor system configuration. DAGMan will exit with an error
+  if they are set via :macro:`USER_CONFIG_FILE` or ``_CONDOR_`` environment
+  variables, and ignores them in a DAG specific configuration file.
+  :jira:`3963`
+
 - The :tool:`htcondor annex` commands *create* and *add* are now treated
   equivalently and can be issued before any jobs for the named annex have
   been submitted.
@@ -29,6 +37,16 @@
   in the job ad for provenance reasons.
   :jira:`974`
 
+- The shared-port id of the primary daemons (i.e. the master and its
+  immediate children) now matches their name in the ``DAEMON_LIST`` and
+  don't change when the daemons restart.
+  :jira:`3984`
+
+- The *condor_shadow* now sets :ad-attr:`JobReconnectedDate` to the current
+  time in the job ad whenever it successfully reconnects to the
+  *condor_starter*.
+  :jira:`4013`
+
 - The *condor_starter* now advertises :ad-attr:`HasCgroup` as ``True``
   when jobs on that execution point will be placed in a per-job cgroup.
   The ``CgroupEnforced`` attribute, which the *condor_startd*
@@ -36,6 +54,11 @@
   :jira:`3995`
 
 *** 26.2.0 bugs
+
+- Fix several bugs that causes :ad-attr:`CPUsUsage` to be incorrect
+  while the job was running.  It was always correct in the history
+  file.
+  :jira:`4044`
 
 - Removed the old DAG file parser and the ``DAGMAN_USE_OLD_FILE_PARSER``
   config knob from *condor_dagman* and :tool:`condor_submit_dag`.
@@ -47,6 +70,13 @@
   :jira:`3970`
 
 *** 26.0.2 bugs
+
+- :tool:`condor_tail` should now work on files larger than 2 Gb in size.
+  :jira:`4008`
+
+- Fixed a bug in :macro:`ENVIRONMENT_FOR_Assigned<name>` where it did 
+  not replace the matched text. 
+  :jira:`4052`
 
 *** 26.1.0 features
 
@@ -121,6 +151,7 @@
   version of the EP to greater than or equal to, or strictly less than,
   respectively, the specified version, e.g. "26.0.1".
   :jira:`3065`
+
 *** 26.0.1 features
 
 - HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_

@@ -3900,20 +3900,25 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid.c_str());
 				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
-					const struct _pcre_vector { int start; int end; } * groups
-						= (const struct _pcre_vector*) pcre2_get_ovector_pointer(matchdata);
-					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
-					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
+					// ovector is pairs of PCRE2_SIZE (size_t) offsets: [2n] = start, [2n+1] = end of group n
+					const PCRE2_SIZE * ovec = pcre2_get_ovector_pointer(matchdata);
+					const PCRE2_SIZE match_start = ovec[0];
+					const PCRE2_SIZE match_end = ovec[1];
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %zu,%zu of pattern: %s\n", tag, env_name.c_str(), match_start, match_end, pat.c_str());
+					if (match_start > 0) { rhs.append(resid, 0, match_start); }
 					const char * ps = psub;
 					while (*++ps && ps < pend) {
 						if (ps[0] == '$' && isdigit(ps[1])) {
 							int ngrp = *++ps - '0';
-							if (ngrp < status) { rhs.append(resid, groups[ngrp].start, groups[ngrp].end - groups[ngrp].start); }
+							// an optional group that did not participate in the match is PCRE2_UNSET
+							if (ngrp < status && ovec[2*ngrp] != PCRE2_UNSET) {
+								rhs.append(resid, ovec[2*ngrp], ovec[2*ngrp+1] - ovec[2*ngrp]);
+							}
 						} else {
 							rhs += *ps;
 						}
 					}
-					if (groups[0].end < cchresid) { rhs.append(resid, groups[0].end, cchresid - groups[0].end); }
+					if (match_end < (PCRE2_SIZE)cchresid) { rhs.append(resid, match_end, cchresid - match_end); }
 				} else {
 					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' no-match of pattern: %s\n", tag, env_name.c_str(), pat.c_str());
 					rhs += resid;

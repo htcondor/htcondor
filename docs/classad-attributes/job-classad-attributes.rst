@@ -862,6 +862,11 @@ all attributes.
     :tool:`condor_prio`. The default value is 0. The higher the number, the
     greater (better) the priority.
 
+:classad-attribute-def:`JobReconnectedDate`
+    Time at which the *condor_shadow* and *condor_starter* last reconnected.
+    Set to ``Undefined`` when a new disconnect occurs. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
 :classad-attribute-def:`JobStartDate`
     Time at which the job first began running. Measured in the number of
     seconds since the epoch (00:00:00 UTC, Jan 1, 1970). Due to a long

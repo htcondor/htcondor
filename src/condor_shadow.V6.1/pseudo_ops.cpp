@@ -49,6 +49,7 @@
 #include <regex>
 
 #include "catalog_utils.h"
+#include "common_files_check.h"
 #include "job_ad_instance_recording.h"
 #include "cxfer_state.h"
 #include "classad_string_utils.h"
@@ -1162,10 +1163,17 @@ UniShadow::before_common_file_transfer(
 		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
 	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
+#ifdef WIN32
+	// Create_Thread with the attendant socket duplication is failing on some
+	// Windows machines (re: htcondor-support), and it isn't really non-blocking
+	// on Windows anyway, so lets be explict about using blocking mode.
+	this->commonFTO->SetServerShouldBlock( true );
+#else
 	// This is broken on Windows, but we really want our timer to fire
 	// during the transfer process.  Not clear if the progress function
 	// will always be called often enough to be useful for keeping-alive.
 	this->commonFTO->SetServerShouldBlock( false );
+#endif
 
 
 	ClassAd guidance;
@@ -1678,13 +1686,22 @@ UniShadow::start_staging_only_conversation(
 		EXCEPT( "start_staging_only_conversation(): failed to acquire original claim ID.\n");
 	}
 
+	//
+	// Tell the schedd what we staged, so that every job which maps these
+	// copies can verify that they're the files it asked for; see
+	// common_files_check.h.  We're already running as the job's owner.
+	//
+	ClassAd extraAttrs;
+	addStagedCatalogsReport( extraAttrs, * jobAd, common_file_catalogs, internalToSimpleNameMap );
+
 	int timeout = 20;
 	std::vector< std::pair< std::string, const ClassAd * > > resources;
 	resources.emplace_back( claimID, slotAd );
 	int rval = schedd.offerResources(
 		resources, user, timeout,
-		originalClaimID
-		/*, sizeOnDiskInMB */
+		originalClaimID,
+		-1 /* sizeOnDiskInMB */,
+		& extraAttrs
 	);
 	free( originalClaimID );
 

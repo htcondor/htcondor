@@ -104,7 +104,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	_executedCMD.clear(); // Clear previous recorded executed command
 
 	size_t numAborted = 0;
-	std::map<short int, size_t> exit_codes;
+	std::map<int, size_t> exit_codes;
 	std::string exitCodes, exitFreq, exitList;
 
 	size_t proc = 0;

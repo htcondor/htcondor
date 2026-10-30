@@ -342,6 +342,9 @@ PrometheusD::initAndReconfig()
 		for( auto const &bad : bad_names ) {
 			m_default_labels.Delete(bad);
 		}
+		// Two legal names can still collide once normalized to snake_case,
+		// leaving one of them unpublishable.
+		Metric::reportLabelNameCollisions(m_default_labels,"PROMETHEUS_DEFAULT_LABELS");
 	}
 
 	// Deliberately no reset-metrics support on this backend.
@@ -388,20 +391,54 @@ PrometheusD::initAndReconfig()
 		// port specified by http_port.  When the ports match, DaemonCore's normal command
 		// socket already carries connections destined for http_port, so no extra socket is needed.
 		if (http_port > 0 && http_port != shared_port_port && !m_http_listen_sock) {
+			// A dedicated port is usually chosen in order to put a reverse
+			// proxy in front of the endpoint, so by default bind it to the
+			// loopback address only: the proxy reaches it, the network does
+			// not.  Set PROMETHEUS_HTTP_LOCALHOST_ONLY to false to listen on
+			// whatever BIND_ALL_INTERFACES/NETWORK_INTERFACE select instead.
+			//
+			// This knob is consulted only here.  When the endpoint is served
+			// on the shared port -- which is the default, since
+			// PROMETHEUS_HTTP_PORT defaults to SHARED_PORT_PORT -- the
+			// listening socket belongs to condor_shared_port and is shared
+			// with the rest of HTCondor, so we have nothing to bind and no
+			// business restricting it.  The warning below covers that case.
+			bool localhost_only = param_boolean("PROMETHEUS_HTTP_LOCALHOST_ONLY", true);
 			ReliSock *rsock = new ReliSock;
-			if (rsock->listen(CP_IPV4, http_port)) {
+			if (rsock->listen(CP_IPV4, http_port, localhost_only)) {
 				daemonCore->Register_Command_Socket((Stream*)rsock,
 					"PrometheusD HTTP listen socket");
 				rsock->set_inheritable(false);
 				m_http_listen_sock = rsock;
 				dprintf(D_ALWAYS,
-				        "PrometheusD: listening for HTTP requests on port %d\n", http_port);
+				        "PrometheusD: listening for HTTP requests on port %d (%s)\n",
+				        http_port,
+				        localhost_only ? "localhost only"
+				                       : "all configured interfaces");
 			} else {
 				dprintf(D_ERROR,
 				        "PrometheusD: failed to listen on HTTP port %d; HTTP disabled\n",
 				        http_port);
 				delete rsock;
 				http_port = -1; // don't register the handler below
+			}
+		} else {
+			// Serving on the shared port, so PROMETHEUS_HTTP_LOCALHOST_ONLY
+			// was not consulted.  State the exposure rather than letting an
+			// admin who set that knob assume the endpoint is restricted when
+			// it is not: failing open and silent is the worst outcome for a
+			// knob whose whole purpose is limiting exposure.  This is a
+			// statement of fact rather than a warning about the knob, because
+			// the knob defaults to true and so would otherwise cry wolf on
+			// every stock installation.
+			if ( !m_output_file.empty() && http_port == shared_port_port && http_port > 0 ) 
+			{
+				dprintf(D_ALWAYS,
+			        "PrometheusD: serving HTTP requests on the shared port (%d), which "
+			        "condor_shared_port binds for all of HTCondor; the endpoint is "
+			        "reachable wherever that port is. PROMETHEUS_HTTP_LOCALHOST_ONLY "
+			        "applies only when PROMETHEUS_HTTP_PORT names a dedicated port.\n",
+			        http_port);
 			}
 		}
 
@@ -432,6 +469,10 @@ PrometheusD::newMetric(Metric const *copy_me)
 std::string
 PrometheusD::buildPrometheusName(const Metric &m) const
 {
+	// Metric names follow the Prometheus convention of snake_case rather than
+	// the CamelCase of the ClassAd attributes they are usually derived from.
+	std::string snake = Metric::toSnakeCase(m.name);
+
 	// Namespace every metric, per Prometheus convention, so that HTCondor's
 	// metrics do not collide with anything else scraped into the same server.
 	// Applied before the suffixes below, giving names of the shape
@@ -440,11 +481,11 @@ PrometheusD::buildPrometheusName(const Metric &m) const
 	// Skipped when the configured name already carries the prefix, so an admin
 	// who writes "htcondor_jobs" does not end up with "htcondor_htcondor_jobs".
 	std::string name;
-	if (m.name.starts_with(PROM_METRIC_PREFIX)) {
-		name = m.name;
+	if (snake.starts_with(PROM_METRIC_PREFIX)) {
+		name = snake;
 	} else {
 		name = PROM_METRIC_PREFIX;
-		name += m.name;
+		name += snake;
 	}
 
 	// best-effort unit suffix
@@ -600,15 +641,20 @@ PrometheusD::publishMetric(Metric const &m_in)
 	// convention is an "info" metric: a gauge whose value carries nothing (1)
 	// and whose label carries the string.  The metric is named "<name>_info"
 	// (done in buildPrometheusName()) and the label is named after the metric,
-	// so a Type="string" metric named condor_version publishes as
-	//     condor_version_info{condor_version="10.2.0"} 1
+	// so a Type="string" metric named CondorVersion publishes as
+	//     htcondor_condor_version_info{condor_version="10.2.0"} 1
+	// Label names were already normalized to snake_case in
+	// Metric::evaluateLabelAd(), which is where it has to happen: doing it
+	// here, after the pool-wide defaults and the per-metric labels have been
+	// merged, would let a default override the per-metric label it collides
+	// with rather than the other way round.
 	std::map<std::string,std::string> labels = m_in.prometheus_labels;
 	const bool is_info = (m_in.type == Metric::STRING);
 	if (is_info) {
 		// Metric names may contain ':' but label names may not, so sanitize.
 		// Use the configured name rather than prom_name so that the unit and
 		// _info suffixes do not leak into the label name.
-		std::string label_name = m_in.name;
+		std::string label_name = Metric::toSnakeCase(m_in.name);
 		for (char &c : label_name) {
 			if (!isalnum((unsigned char)c) && c != '_') c = '_';
 		}

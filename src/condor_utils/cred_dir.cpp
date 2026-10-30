@@ -167,6 +167,7 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 		return true;
 	}
 
+	bool allow_specials = param_boolean("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", false);
 	std::unordered_set<std::string> processed_services;
 	for (auto& curr: StringTokenIterator(services_needed)) {
 		// Don't process the same service twice
@@ -174,6 +175,17 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 			continue;
 		}
 		processed_services.insert(curr);
+
+		size_t idx = 0;
+		if (allow_specials) {
+			idx = curr.find_first_of("/\\:");
+		} else {
+			idx = curr.find_first_not_of(OAUTH_CRED_NAME_CHARS);
+		}
+		if (idx != std::string::npos) {
+			dprintf(D_ERROR, "Rejecting illegal OAUTH2 service name '%s'\n", curr.c_str());
+			return false;
+		}
 
 		CredData cred;
 		if (!GetOAuth2Credential(curr, user, cred, err)) {
