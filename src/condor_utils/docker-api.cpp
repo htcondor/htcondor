@@ -235,52 +235,75 @@ int DockerAPI::createContainer(
 	// look like GPU-XXXXX.
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
+
+	std::string gpus_vendor;
+	machineAd.LookupString("GPUs_Vendor", gpus_vendor);
+	lower_case(gpus_vendor);
+
 	if  (assignedGpus.length() > 0) {
-
-		// Always need to map these two devices
-		runArgs.AppendArg("--device");
-		runArgs.AppendArg("/dev/nvidiactl");
-
-		runArgs.AppendArg("--device");
-		runArgs.AppendArg("/dev/nvidia-uvm");
-
-		// If the startd is configured for the "CUDA" style
-		// GPU names...
-		if (assignedGpus.starts_with("CUDA")) {
-			size_t offset = 0;
-
-			// For each CUDA substring in assignedGpus...
-			while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
-				offset += 4; // strlen("CUDA")
-				size_t comma = assignedGpus.find(",", offset);
-
-				// ...append to command line args -device /dev/nvidiaXX
-				std::string deviceName("/dev/nvidia");
-				deviceName += assignedGpus.substr(offset, comma - offset);
-				runArgs.AppendArg("--device");
-				runArgs.AppendArg(deviceName);
+		// GPUs_Vendor is only published by newer gpu discovery run with
+		// -properties, and is absent for static or custom GPU configs, or
+		// when a slot has GPUs from more than one vendor.  So treat
+		// anything that isn't explicitly AMD as NVidia, as we always have.
+		if (gpus_vendor != "amd") {
+			if (gpus_vendor != "nvidia") {
+				dprintf(D_FULLDEBUG, "GPUs_Vendor is '%s', assuming nvidia devices\n",
+					gpus_vendor.c_str());
 			}
-		} else {
-			// Get a map of long-form uuid device minor.  Assume that device minor
-			// matches the last digit of /dev/nvidiaX
-			bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
-			auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
-			
-			// For each of our short-named assigned GPU, find the device number
-			// n-squared, but should be small.
-			for (const auto &gpu: StringTokenIterator(assignedGpus)) {
-				for (const auto &[uuid, dev]: uuid_dev_map) {
-					if (map_all_gpus || uuid.starts_with(gpu)) {
-						std::string deviceName;
 
-						// and finally append it to our command line args
-						formatstr(deviceName, "/dev/nvidia%u", minor(dev));
-						runArgs.AppendArg("--device");
-						runArgs.AppendArg(deviceName);
-						break; // assume only one matches
+			// Always need to map these two devices
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/nvidiactl");
+
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/nvidia-uvm");
+
+			// If the startd is configured for the "CUDA" style
+			// GPU names...
+			if (assignedGpus.starts_with("CUDA")) {
+				size_t offset = 0;
+
+				// For each CUDA substring in assignedGpus...
+				while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
+					offset += 4; // strlen("CUDA")
+					size_t comma = assignedGpus.find(",", offset);
+
+					// ...append to command line args -device /dev/nvidiaXX
+					std::string deviceName("/dev/nvidia");
+					deviceName += assignedGpus.substr(offset, comma - offset);
+					runArgs.AppendArg("--device");
+					runArgs.AppendArg(deviceName);
+				}
+			} else {
+				// Get a map of long-form uuid device minor.  Assume that device minor
+				// matches the last digit of /dev/nvidiaX
+				bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
+				auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
+
+				// For each of our short-named assigned GPU, find the device number
+				// n-squared, but should be small.
+				for (const auto &gpu: StringTokenIterator(assignedGpus)) {
+					for (const auto &[uuid, dev]: uuid_dev_map) {
+						if (map_all_gpus || uuid.starts_with(gpu)) {
+							std::string deviceName;
+
+							// and finally append it to our command line args
+							formatstr(deviceName, "/dev/nvidia%u", minor(dev));
+							runArgs.AppendArg("--device");
+							runArgs.AppendArg(deviceName);
+							break; // assume only one matches
+						}
 					}
 				}
 			}
+		} else {
+			// For AMD style gpus
+			// Always need to map these two devices for AMD
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/kfd");
+
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg("/dev/dri");
 		}
 	}
 #endif
