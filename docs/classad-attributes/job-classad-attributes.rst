@@ -257,10 +257,6 @@ all attributes.
     A running total of the number of seconds the job has spent in
     suspension for the life of the job.
 
-:classad-attribute-def:`CumulativeTransferTime`
-    The total time, in seconds, that condor has spent transferring the
-    input and output sandboxes for the life of the job.
-
 :classad-attribute-def:`CurrentHosts`
     The number of hosts in the claimed state, due to this job.
 
@@ -580,13 +576,6 @@ all attributes.
     universe jobs, how the job exited is unavailable. In this case,
     :ad-attr:`ExitSignal` will be undefined.
 
-:classad-attribute-def:`ExitStatus`
-    The way that HTCondor previously dealt with a job's exit status.
-    This attribute should no longer be used. It is not always accurate
-    in heterogeneous pools, or if the job exited with a signal. Instead,
-    see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
-    :ad-attr:`ExitSignal`.
-
 :classad-attribute-def:`InitialWaitDuration`
     The number of seconds from when a job was queued until the first time
     execution is attempted.  Undefined for jobs that have not yet started.
@@ -877,12 +866,6 @@ all attributes.
     Time at which the *condor_shadow* and *condor_starter* last reconnected.
     Set to ``Undefined`` when a new disconnect occurs. Measured in the
     number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-
-:classad-attribute-def:`JobRunCount`
-    This attribute is retained for backwards compatibility. It may go
-    away in the future. It is equivalent to :ad-attr:`NumShadowStarts` for all
-    universes except **scheduler**. For the **scheduler** universe, this
-    attribute is equivalent to :ad-attr:`NumJobStarts`.
 
 :classad-attribute-def:`JobStartDate`
     Time at which the job first began running. Measured in the number of

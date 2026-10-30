@@ -159,7 +159,6 @@ sub add_status_ads{
 			$Attr{$i}{NumJobMatches} = 1;
 			$Attr{$i}{NumJobStarts} = 1;
 			$Attr{$i}{NumShadowStarts} = 1;
-			$Attr{$i}{JobRunCount} = $Attr{$i}{NumShadowStarts};
 			$Attr{$i}{OrigMaxHosts} = 1;
 			$Attr{$i}{ResidentSetSize_RAW} = 488;
 			$Attr{$i}{ResidentSetSize} = cal_from_raw($Attr{$i}{ResidentSetSize_RAW});

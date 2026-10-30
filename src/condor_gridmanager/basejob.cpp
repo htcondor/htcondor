@@ -403,7 +403,6 @@ void BaseJob::UpdateRuntimeStats()
 		jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, num_job_starts );
 		num_job_starts++;
 		jobAd->Assign( ATTR_NUM_JOB_STARTS, num_job_starts );
-		jobAd->Assign( ATTR_JOB_RUN_COUNT, num_job_starts );
 
 		requestScheddUpdate( this, false );
 

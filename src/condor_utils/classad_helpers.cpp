@@ -268,7 +268,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
 		// Are these ones really necessary?
-	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
 	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 
 	job_ad->Assign( ATTR_NUM_CKPTS, 0 );
