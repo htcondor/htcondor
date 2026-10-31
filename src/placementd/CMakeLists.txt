@@ -19,7 +19,7 @@
 
 if (WITH_PLACEMENT AND NOT WINDOWS)
 
-    condor_daemon( EXE condor_placementd SOURCES "placementd.cpp"
+    condor_daemon( EXE condor_placementd SOURCES "placementd.cpp;placementd_db.cpp;placementd_reconcile.cpp;placementd_edit.cpp"
       LIBRARIES "${CONDOR_LIBS};${SQLITE3_LIB}" INSTALL "${C_SBIN}")
 
 endif()
