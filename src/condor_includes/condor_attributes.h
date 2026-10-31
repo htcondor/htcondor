@@ -744,6 +744,7 @@
 #define ATTR_QUERY_Q_INCLUDE_CLUSTER_AD "IncludeClusterAd"
 #define ATTR_QUERY_Q_INCLUDE_JOBSET_ADS "IncludeJobsetAds"
 #define ATTR_QUERY_Q_NO_PROC_ADS        "NoProcAds"
+#define ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS "ClusterBeforeProcAds"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"

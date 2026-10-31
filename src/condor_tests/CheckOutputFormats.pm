@@ -1529,7 +1529,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq '_';
 } else {
 	my $batch_done = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1549,7 +1549,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq 1;
 } else {
 	my $batch_run = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1579,7 +1579,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 #	} else {return $_[1] eq '_';}
 } else {
 	my $batch_idle = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1599,7 +1599,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq 4;
 } else {
 	my $batch_hold = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1623,7 +1623,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 },
 'JOB_IDS' => sub {
 if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
-	return $_[1] eq "49.0 ... 55.0";
+	return $_[1] =~ /^49\.0 \.\.\./; # split_fields doesn't handle data with spaces correctly, so we only have the first id
 } elsif ($_[1] =~ /(.+)\.(.+)/){
 	my $temp = $1;
 	return $_[1] eq $cluster_batch{$temp};

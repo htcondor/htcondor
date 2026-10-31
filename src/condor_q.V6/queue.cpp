@@ -96,6 +96,7 @@ bool use_legacy_standard_summary = true;
 const int name_column_index = 2;
 int name_column_width = 14;
 bool is_standard_format = false;
+bool want_cluster_info = false; // true when using CLUSTER_INFO format (i.e. batch mode)
 bool first_col_is_job_id = false;
 bool has_owner_column = false;
 int  max_name_column_width = 14;
@@ -230,6 +231,7 @@ static std::vector<ClassAd> scheddList;
 static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_batch_name(std::string & out, ClassAd*, Formatter &);
+static bool local_render_cluster_info(std::string & out, ClassAd*, Formatter &);
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
 // then insert those into a map which is indexed (and thus ordered) by job id.
@@ -2122,6 +2124,38 @@ local_render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 }
 
 static bool
+local_render_cluster_info(std::string & out, ClassAd* ad, Formatter &)
+{
+	if (ad->LookupString(ATTR_JOB_PREPARING_TASKS, out)) {
+		int status = -1;
+		if (ad->LookupInteger(ATTR_JOB_STATUS, status) && status == JOB_STATUS_PREPARING) {
+			out.insert(0, "Preparing: ");
+			return true;
+		}
+	}
+	int pause_mode = 0;
+	ad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, pause_mode);
+
+	if ((ad->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, out) && out.size()) || pause_mode) {
+		if (pause_mode) {
+			if (pause_mode == 1) {
+				out.insert(0, "Factory Held: ");
+			} else if (pause_mode == 2) {
+				out.insert(0, "Factory Done: ");
+			} else {
+				out.insert(0, ":");
+				out.insert(0, std::to_string(pause_mode));
+				out.insert(0, "Factory Err: ");
+			}
+		} else {
+			out.insert(0, "Factory Paused: ");
+		}
+		return true;
+	}
+	return false;
+}
+
+static bool
 local_render_grid_resource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
@@ -2457,14 +2491,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	// just  in case we re-enter this function, only setup the mask once
 	static bool	setup_mask = false;
 	// TJ: before my 2012 refactoring setup_mask didn't protect summarize, so I'm preserving that.
-#if 1
 	//PRAGMA_REMIND("tj: do I need to do anything to adjust the summarize mask here?")
-#else
-	if ( dash_run || dash_grid )
-		summarize = false;
-	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
-		summarize = false;
-#endif
 
 	if (setup_mask)
 		return;
@@ -2526,6 +2553,9 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 			break;
 		}
 	}
+	// TODO :this enables the schedd query to ask for cluster ads which the CLUSTER_INFO
+	// format needs.  maybe add a better way to trigger this?
+	if ((qdo_mode & QDO_BaseMask) == QDO_Progress) { want_cluster_info = true; }
 
 	if (ixInfo < 0)
 		return;
@@ -2584,20 +2614,13 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
-#if 1
 	//PRAGMA_REMIND("tj: do I need to do anything to adjust the app.headfoot?")
-#else
-	customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_CUSTOM);
-	if (customHeadFoot&HF_NOSUMMARY) summarize = false;
-#endif
 }
 
 
 static void count_job(LiveJobCounters & num, ClassAd *job)
 {
-#ifdef CONDOR_Q_HANDLE_CLUSTER_AD
 	if ( ! job->Lookup(ATTR_PROC_ID)) return;
-#endif
 
 	int status = 0, universe = CONDOR_UNIVERSE_VANILLA;
 	job->LookupInteger(ATTR_JOB_STATUS, status);
@@ -2674,7 +2697,7 @@ static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
 
 	auto pp = pmap->insert(std::pair<long long, UniqueClassAdPtr>(jobid.id,UniqueClassAdPtr()));
 	if ( ! pp.second) {
-		fprintf( stderr, "Error: Two results with the same ID.\n" );
+		fprintf( stderr, "Error: Two results with the same ID. %d.%d\n", jobid.cluster, jobid.proc );
 		// return true to indicate that the caller still owns the ad.
 		return true;
 	} else {
@@ -2880,13 +2903,15 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	if (capture_raw_fp) { dump_long_to_fp(capture_raw_fp, job); }
 
 	union _jobid jobid;
+	bool has_id = false;
 
 	if (dash_autocluster) {
 		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
 		if (dash_autocluster == QueryFetchOpts::fetch_GroupBy) attr_id = "Id";
-		job->LookupInteger(attr_id, jobid.id);
+		has_id = job->LookupInteger(attr_id, jobid.id);
 	} else {
-		if ( ! job->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
+		has_id = job->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+		if ( ! has_id) {
 			// Classads that have no ClusterId, but do have a JobSetId must be JOBSET ads
 			// we will sort these as cluster=0, proc=jobsetid
 			if (job->LookupInteger(ATTR_JOB_SET_ID, jobid.proc)) {
@@ -2895,9 +2920,14 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 				// it is ok to do this here because we will discard the classad afterward
 				job->Assign(ATTR_CLUSTER_ID, jobid.cluster);
 				job->Assign(ATTR_PROC_ID, jobid.proc);
+				has_id = true;
+			} else {
+				jobid.cluster = -1;
+				has_id = false;
 			}
 		}
-		if ( ! job->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
+		// if no ProcId assume it is a cluster ad.
+		if ( ! job->LookupInteger(ATTR_PROC_ID, jobid.proc)) { jobid.proc = -1; }
 	}
 
 	if (append_time_to_source_label && ! queue_time) {
@@ -2908,9 +2938,33 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	if (0 == columns)
 		return true;
 
+	// if the result has no clusterid we cannot add it to the output
+	if ( ! has_id && ! dash_autocluster) {
+		std::string owner;
+		std::string info;
+		int64_t val;
+		if (job->LookupString(ATTR_OWNER, owner)) {
+			info += "Owner:" + owner + " ";
+		}
+		if (job->LookupInteger(ATTR_Q_DATE, val)) {
+			info += "QDate:" + std::to_string(val) + " ";
+		}
+		if (job->LookupInteger(ATTR_JOB_STATUS, val)) {
+			info += "Status:" + std::to_string(val) + " ";
+		}
+		if (job->LookupInteger("JobsPresent", val)) {
+			info += "JobsPresent:" + std::to_string(val) + " ";
+		}
+		if (job->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS, val)) {
+			info += "TotalSubmitProcs=" + std::to_string(val) + " ";
+		}
+		fprintf( stderr, "Error: no cluster id (%s)\n", info.c_str());
+		return true;
+	}
+
 	std::pair<ROD_MAP_BY_ID::iterator,bool> pp = pmap->insert(std::pair<long long, JobRowOfData>(jobid.id,jobid.id));
 	if( ! pp.second ) {
-		fprintf( stderr, "Error: Two results with the same ID.\n" );
+		fprintf( stderr, "Error: Two results with the same ID. %d.%d\n", jobid.cluster, jobid.proc );
 		//tj: 2013 -don't abort without printing jobs
 		// exit( 1 );
 		return true;
@@ -3189,7 +3243,7 @@ static void linkup_nodes_by_id(ROD_MAP_BY_ID & results)
 	}
 
 	int max_cluster = idp.cluster;
-	int max_proc = idp.proc;
+	int max_proc = (idp.proc > 0) ? idp.proc : 0;
 
 	int max_name = max_owner_name; // set by calls to render_owner or render_dag_owner
 
@@ -3295,6 +3349,7 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
 	ATTR_DAG_NODES_TOTAL "?:" ATTR_TOTAL_SUBMIT_PROCS " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
 	ATTR_JOB_STATUS "?:" ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
+	"JobsPresent               AS ALERTS WIDTH 0 PRINTAS CLUSTER_INFO\n"  // 9
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
 //	ATTR_IMAGE_SIZE          " AS SIZE        WIDTH 4    PRINTAS MEMORY_USAGE\n"
 //	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
@@ -3498,6 +3553,9 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 				fmt->options |= FormatOptionHideMe;
 			}
 		}
+	} else if (index == 8) {
+		fmt->width = p->ids_width;
+		fmt->options |= FormatOptionLeftAlign;
 	}
 	if (p->zeros_as_dashes && (index >= 3 && index <= 7)) {
 		fmt->altKind = p->alt_kind;
@@ -3621,9 +3679,17 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
 		if (jmin.id != jmax.id) {
 			if (jmin.cluster == jmax.cluster) {
-				formatstr(tmp, "%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+				if (jmin.proc == INT_MAX) { // if min is INT_MAX, we had no procs at all
+					formatstr(tmp, "%d.", jmin.cluster);
+				} else {
+					formatstr(tmp, "%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+				}
 			} else {
-				formatstr(tmp, "%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+				if (jmin.proc == INT_MAX) { // if min is INT_MAX, we had no procs at all
+					formatstr(tmp, "%d. ... %d.", jmin.cluster, jmax.cluster);
+				} else {
+					formatstr(tmp, "%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+				}
 			}
 		} else {
 			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
@@ -4058,12 +4124,14 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath > 1) && ((fetch_opts & QueryFetchOpts::fetch_FromMask) == QueryFetchOpts::fetch_Jobs)) {
 		if (dash_tot && ! dash_unmatchable) {
 			fetch_opts |= QueryFetchOpts::fetch_SummaryOnly;
-#ifdef CONDOR_Q_HANDLE_CLUSTER_AD 
 		} else if (dash_factory && (dash_long || ! dash_batch)) {
 			fetch_opts |= QueryFetchOpts::fetch_IncludeClusterAd;
-#endif
 		} else if (dash_jobset) {
 			fetch_opts |= QueryFetchOpts::fetch_JobsetAds;
+		} else if (want_cluster_info) {
+			// schedd's before 26.2 will ignore fetch_ClusterBeforeJob
+			//fetch_opts |= QueryFetchOpts::fetch_IncludeClusterAd;
+			fetch_opts |= QueryFetchOpts::fetch_ClusterBeforeJob | QueryFetchOpts::fetch_IncludeClusterAd;
 		}
 	}
 	classad::References no_attrs;
@@ -4234,7 +4302,7 @@ dryFetchQueue(const char * file, const classad::References & proj, int fetch_opt
 		dagman_job_id ? " dag_id" : ""
 	);
 
-	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
+	fprintf(stderr, "Opts: fetch=0x%x limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
 
 	// print projection
 	std::string projection = JoinAttrNames(proj, "\n  ");
@@ -4601,6 +4669,7 @@ const char * const jobsetNormal_PrintFormat = "SELECT\n"
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, local_render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
+	{ "CLUSTER_INFO",    "JobsPresent", 0, local_render_cluster_info, ATTR_JOB_MATERIALIZE_PAUSE_REASON "\0" ATTR_JOB_MATERIALIZE_PAUSED "\0JobFactoryPaused\0" ATTR_JOB_PREPARING_TASKS "\0"},
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_JOB_LAST_REMOTE_WALL_CLOCK "\0"},
 	{ "DAG_OWNER",       ATTR_OWNER, 0, local_render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, local_render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },

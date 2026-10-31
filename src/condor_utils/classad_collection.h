@@ -44,12 +44,12 @@ class GenericClassAdCollection : private ClassAdLog<K, AD> {
 
 public:
 
-  typename ClassAdLog<K,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
-    typename ClassAdLog<K,AD>::filter_iterator it(*this, &requirements, timeslice_ms);
+  typename ClassAdLog<K,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements) {
+    typename ClassAdLog<K,AD>::filter_iterator it(*this, &requirements);
     return it;
   }
   typename ClassAdLog<K,AD>::filter_iterator GetIteratorEnd() {
-    typename ClassAdLog<K,AD>::filter_iterator it(*this, NULL, 0, true);
+    typename ClassAdLog<K,AD>::filter_iterator it(*this, NULL, true);
     return it;
   }
 

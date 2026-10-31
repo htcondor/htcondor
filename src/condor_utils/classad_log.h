@@ -95,28 +95,27 @@ public:
 	// define an stl type iterator, but one that can filter based on a requirements expression
 	class filter_iterator {
 		private:
-			HashTable<K,AD> *m_table;
+			HashTable<K,AD> *m_table{nullptr};
 			HashIterator<K,AD> m_cur;
-			bool m_found_ad;
 			const classad::ExprTree *m_requirements;
-			int m_timeslice_ms;
-			int m_done;
-			int m_options;
+			AD m_aux{NULL}; // aux iter position information, used by the Schedd
+			int m_options{0};
+			bool m_done{0};
+			bool m_found_ad{false};
 
 		public:
-			filter_iterator(ClassAdLog<K,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool at_end=false)
+			filter_iterator(ClassAdLog<K,AD> &log, const classad::ExprTree *requirements, bool at_end=false)
 				: m_table(&log.table)
 				, m_cur(log.table.begin())
-				, m_found_ad(false)
 				, m_requirements(requirements)
-				, m_timeslice_ms(timeslice_ms)
 				, m_done(at_end)
-				, m_options(0) {}
+				{}
 
 			~filter_iterator() {}
 			AD operator *() const {
 				if (m_done || (m_cur == m_table->end()) || !m_found_ad)
 					return NULL;
+				if (m_aux) { return m_aux; }
 				return (*m_cur).second;
 			}
 			AD operator ->() const;
@@ -127,6 +126,7 @@ public:
 				if (m_done && rhs.m_done) return true;
 				if (m_done != rhs.m_done) return false;
 				if (!(m_cur == rhs.m_cur) ) return false;
+				if (m_aux != rhs.m_aux) return false;
 				return true;
 			}
 			bool operator!=(const filter_iterator &rhs) const {return !(*this == rhs);}

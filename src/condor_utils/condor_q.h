@@ -49,25 +49,25 @@ class CondorQ
 {
   public:
 	// ctor/dtor
-	CondorQ ();
-	// CondorQ (const CondorQ &);
-	~CondorQ ();
+	CondorQ () = default;
+	~CondorQ () {};
 
 	// initialize defaults, etc.
 	bool init();  
 
 	// add constraints
 	int add (CondorQStrCategories, const char *);
-	int addAND (const char *);  // custom
-	int addOR (const char *);  // custom
+	int addAND (const char * value) { return query.addCustomOR (value); }
+	int addOR (const char * value) { return query.addCustomAND (value); }
 
-	int addSchedd (const char *);  // what schedd are we querying?
+	void addSchedd (const char * value) { schedd = value; }  // what schedd are we querying?
 
 	int fetchQueueFromHostAndProcess (const char * schedd_host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
+	// returns a QueryResult, 0 (Q_OK) for success
 	int initQueryAd(ClassAd & request_ad, const std::vector<std::string> &attrs, int fetch_opts, int match_limit);
 
-	void useDefaultingOperator(bool enable);
+	void useDefaultingOperator(bool enable) { defaulting_operator = enable; }
 
 	// return the effective query constraint directly to the user.
 	// the caller is responsible for deleting the returned ExprTree.
@@ -80,25 +80,17 @@ class CondorQ
   private:
 	GenericQuery query;
 	
-	// default timeout when talking the schedd (via ConnectQ())
-	int connect_timeout;
-	
-#if 0
-	int *clusterarray;
-	int *procarray;
-	int clusterprocarraysize;
-	int numclusters;
-	int numprocs;
-#endif
-	char owner[MAXOWNERLEN];
-	char schedd[MAXSCHEDDLEN];
-	bool defaulting_operator;
-	bool requestservertime;
+	std::string owner;
+	std::string schedd;
+	bool defaulting_operator{false};
+	bool requestservertime{false};
 	bool for_analysis{false};
-	time_t scheddBirthdate;
+	int connect_timeout{20}; // default timeout when talking the schedd (via ConnectQ())
+	time_t scheddBirthdate{0};
 	
-	// helper functions
+	// use DCSchedd::queryJobs(QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH) to iterate
 	int fetchQueueFromHostAndProcessV2 ( const char * host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
+	// use QMGMT GetAllJobsByConstraint_Start to iterate
 	int getFilterAndProcessAds( const char * constraint, const std::vector<std::string> &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
