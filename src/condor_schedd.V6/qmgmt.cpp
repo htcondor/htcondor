@@ -7765,6 +7765,10 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 				PostCommitJobFactoryProc(clusterad, procad);
 
+				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+					SpooledJobFiles::createJobSpoolDirectory(procad);
+				}
+
 				//don't need to do this... the trigger code below seems to handle it.
 				//IncrementLiveJobCounter(scheduler.liveJobCounts, procad->Universe(), job_status, 1);
 				//if (ownerinfo) { IncrementLiveJobCounter(ownerinfo->live, procad->Universe(), job_status, 1); }
