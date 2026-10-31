@@ -219,6 +219,7 @@ class UniShadow : public BaseShadow
 
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
 		ClassAd * jobAd,
+		bool & cif_in_catalog, // catalog has an entry for CommonInputFiles
 		std::map<std::string, std::string> * internalToSimpleNameMap
 	);
 
