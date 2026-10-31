@@ -121,14 +121,14 @@ HibernatorBase::switchToState ( SLEEP_STATE level,
 	return true;
 }
 
-unsigned short
+unsigned
 HibernatorBase::getStates () const
 {
 	return m_states;
 }
 
 void
-HibernatorBase::setStates ( unsigned short states )
+HibernatorBase::setStates ( unsigned states )
 {
 	m_states = states;
 }

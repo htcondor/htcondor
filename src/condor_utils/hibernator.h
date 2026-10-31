@@ -103,7 +103,7 @@ public:
 		@return a mask of the states supported by the OS.
 		@see SLEEP_STATE
 		*/
-	unsigned short getStates( void ) const;
+	unsigned getStates( void ) const;
 
 	/** Is the given state supported?
 		@return true / false */
@@ -111,7 +111,7 @@ public:
 
     /** Set the supported sleep states
         */
-    void setStates ( unsigned short states );
+    void setStates ( unsigned states );
 
     /** Add to the supported sleep states
         @see SLEEP_STATE
@@ -182,7 +182,7 @@ protected:
 private:
 
 	/* OS agnostic sleep state representation */
-	unsigned short  m_states;
+	unsigned        m_states;
 	bool			m_initialized;
 };
 
