@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "my_popen.h"
+#include "call_before_exit.h"
 #include "submit_utils.h"
 #include "submit_protocol.h"
 #include "condor_version.h"
@@ -33,6 +34,7 @@
 #include "debug.h"
 #include "tmp_dir.h"
 #include "write_user_log.h"
+#include "call_before_exit.h"
 
 namespace deep = DagmanDeepOptions;
 namespace conf = DagmanConfigOptions;
@@ -349,18 +351,96 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	args.AppendArg(cmdFile);
 	// End command construction
 
+	Env myEnv;
+	myEnv.Import();
+
+	// !!!!!!!!!!! Execute dry run for checking cross job details !!!!!!!!!!!
+	// Set up per DAGMan process result file so we don't have to try and scrape the correct
+	// ClassAd from the mixed output
+	std::string dry_run_result;
+	formatstr(dry_run_result, ".%d-dry-run.ads.temp", daemonCore->getpid());
+	if (dagmanUtils.fileExists(dry_run_result)) {
+		dagmanUtils.tolerant_unlink(dry_run_result);
+	}
+
+	// Clean up temporary files on all exit paths
+	CallBeforeExit cleanup_temp_files([&]() {
+		// Only remove submit files if we produced them (i.e. inline description temp written as separate file)
+		if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) {
+			dagmanUtils.tolerant_unlink(cmdFile);
+		}
+
+		dagmanUtils.tolerant_unlink(dry_run_result);
+	});
+
+	std::string cif;
+
+	// Do a dry run so we can pre-analyze the cluster ClassAd
+	ArgList dry_run_args(args);
+	dry_run_args.AppendArg("-dry-run");
+	dry_run_args.AppendArg(dry_run_result);
+
+	// Run the command
+	int dry_run_exit = 0;
+	auto_free_ptr dry_run_output = run_command(180, dry_run_args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &dry_run_exit);
+
+	// Check for command failure
+	if (dry_run_exit != 0 || !dagmanUtils.fileExists(dry_run_result)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to execute dry run of job submission\n%s\n",
+		             dry_run_output.ptr() ? dry_run_output.ptr() : "");
+		err = "Failed to execute 'condor_submit -dry-run' for submit description";
+		return SubmitResult::RETRY;
+	} else { // Explicit else for scoping
+		ClassAd cluster;
+		// Open result file filled with ClassAds (cluster+proc0 proc1 proc2...procN)
+		FILE* fp = safe_fopen_wrapper_follow(dry_run_result.c_str(), "r");
+		if (!fp) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to open dry run results file %s\n", dry_run_result.c_str());
+			err = "Failed to open dry run results file";
+			return SubmitResult::RETRY;
+		}
+
+		// Note: This sets `close_when_done = true` -> takes ownership of file pointer and closes
+		CondorClassAdFileIterator reader;
+		if (!reader.begin(fp, true, CondorClassAdFileParseHelper::Parse_auto)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to initialize ClassAd reader for %s\n", dry_run_result.c_str());
+			err = "Failed to initialize ClassAd file reader for dry run results";
+			return SubmitResult::RETRY;
+		}
+
+		// Read the first ClassAd
+		if (reader.next(cluster) <= 0) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to read result ClassAd from dry run result file %s\n",
+			             dry_run_result.c_str());
+			err = "Failed to read ClassAd from dry run results";
+			return SubmitResult::RETRY;
+		}
+
+		// Verify CIF correctness
+		if (cluster.EvaluateAttrString(ATTR_COMMON_INPUT_FILES, cif)) {
+			if (!dm.dag->cif.empty()) {
+				if (dm.dag->cif != cif) {
+					debug_printf(DEBUG_QUIET, "ERROR: Node %s's common input file list '%s' differs from DAG discovered '%s' list\n",
+					             node.GetNodeName(), cif.c_str(), dm.dag->cif.c_str());
+					err = "Multiple differing common input transfer lists declared in DAG";
+					return SubmitResult::FAILURE;
+				}
+			}
+		}
+	}
+
+	// Best Effort remove the dry-run result file
+	dagmanUtils.tolerant_unlink(dry_run_result);
+	// !!!!!!!!!!! End dry run !!!!!!!!!!!
+
+
 	args.GetArgsStringForDisplay(display);
 	debug_printf(DEBUG_VERBOSE, "Submitting: %s\n", display.c_str());
 
 	// Execute condor_submit command
-	Env myEnv;
-	myEnv.Import();
-
 	int jobProcCount;
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
-
-	if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) { dagmanUtils.tolerant_unlink(cmdFile); }
 
 	if (!output) {
 		if (exit_status != 0) {
@@ -414,6 +494,10 @@ SubmitResult ShellSubmit::SubmitInternal(Node& node, CondorID& condorID, std::st
 	}
 
 	node.SetNumSubmitted(jobProcCount);
+
+	if (!cif.empty()) {
+		dm.dag->cif = cif;
+	}
 
 	return SubmitResult::SUCCESS;
 }

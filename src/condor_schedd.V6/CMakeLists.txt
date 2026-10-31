@@ -30,6 +30,7 @@ set(qmgmtElements
 set(scheddElements
 autocluster.cpp
 checkpoint_cleanup.cpp
+common_files_check_registry.cpp
 cxfer.cpp
 dedicated_scheduler.cpp
 grid_universe.cpp
