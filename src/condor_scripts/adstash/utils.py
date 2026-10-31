@@ -167,7 +167,7 @@ def set_up_logging(args):
 
         try:
             filehandler = logging.handlers.RotatingFileHandler(
-                args.log_file, maxBytes=100000
+                args.log_file, maxBytes=100000, backupCount=1
             )
         except Exception:
             logging.exception(
