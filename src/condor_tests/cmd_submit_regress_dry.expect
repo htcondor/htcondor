@@ -315,7 +315,6 @@ Requirements=!/TARGET\.HasCommonFilesTransfer >= 2/
 ==commonsif.sub
 ContainerImage="image.sif"
 ContainerImageSource="https"
-ContainerImageFullPath="https://example.com/image.sif"
 CommonInputCatalogs=/"container_.*"/
 Requirements=/TARGET\.HasContainer/
 Requirements=/TARGET\.HasSIF/
