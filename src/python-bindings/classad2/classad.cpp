@@ -201,7 +201,7 @@ convert_classad_value_to_python(classad::Value & v) {
             for( auto i = l->begin(); i != l->end(); ++i ) {
                 if( should_convert_to_python(*i) ) {
                     classad::Value v;
-                    if(! (*i)->Evaluate( v )) {
+                    if(! classad::ClassAd::EvaluateExpr(nullptr, *i, v) ) {
                         Py_DecRef(list);
                         // This was ClassAdEvaluationError in version 1.
                         PyErr_SetString( PyExc_ClassAdException, "Failed to evaluate convertible expression" );
@@ -261,7 +261,7 @@ _classad_get_item( PyObject *, PyObject * args ) {
 
     if( want_conversion && should_convert_to_python( expr ) ) {
         classad::Value v;
-        if(! expr->Evaluate( v )) {
+        if(! classAd->EvaluateExpr( expr, v )) {
             // This was ClassAdEvaluationError in version 1.
             PyErr_SetString( PyExc_ClassAdException, "Failed to evaluate convertible expression" );
             return NULL;

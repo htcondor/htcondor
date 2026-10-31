@@ -44,8 +44,6 @@ class Literal: public ExprTree {
 	public:
 		virtual NodeKind GetKind (void) const = 0;
         virtual bool SameAs(const ExprTree *tree) const = 0;
-		virtual const ClassAd *GetParentScope( ) const { return nullptr; }
-
 		static AbstimeLiteral   *MakeAbsTime( abstime_t *now=NULL ); 
 		static AbstimeLiteral   *MakeAbsTime( std::string timestr);
 		static ReltimeLiteral   *MakeRelTime( time_t secs=-1 );
@@ -71,8 +69,6 @@ class Literal: public ExprTree {
 		}
 
 	protected:
-		// no-op for all literals
-		virtual void _SetParentScope(const ClassAd*) {}
 		Literal(): ExprTree() {}
 };
 	// An empty instance.  Could be a singleton, if we cared enough
@@ -157,7 +153,6 @@ class BooleanLiteral: public Literal {
 
 	protected:
 		BooleanLiteral(bool b): _theBoolean(b) {}
-		virtual void _SetParentScope(const ClassAd*) {}
 
 		// Always evaluates to true/false
  		virtual bool _Evaluate(EvalState &, Value &v) const {
