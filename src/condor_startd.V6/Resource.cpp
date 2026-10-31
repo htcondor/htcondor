@@ -1678,9 +1678,6 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
-			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
-				deleteList.push_back( name );
-			}
 
 			classad::Value v;
 			double uptimeValue;
@@ -1690,9 +1687,26 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				continue;
 			}
 
+			//
+			// Publish `UptimeGPUsSeconds` and `LastUpdateUptimeGPUsSeconds`
+			// so that the starter can correctly compute job lifetime metrics;
+			// see HTCONDOR-4017.
+			//
+			std::string lastUpdateName = "LastUpdate" + name;
+			time_t lastUpdateTime;
+			if( public_ad.LookupInteger( lastUpdateName, lastUpdateTime ) ) {
+				dprintf( D_ALWAYS, "Adding %s = %f to .update.ad\n", name.c_str(), uptimeValue );
+				public_ad.Assign( name, uptimeValue );
+			}
+
+			//
+			// Compute the device's average usage over our uptime.
+			//
+
 			auto birth = daemonCore->getStartTime();
 			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
+
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
 			// have to check the AssignedGPUs attribute.  This will suck
@@ -1702,42 +1716,28 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			public_ad.Assign( computedName, average );
 
 		} else if (name.find("StartOfJob") == 0) {
+			// For reasons (see HTCONDOR-4017), we now compute GPUsAverageUsage
+			// in the starter.  We can therefore probably jettison the whole
+			// `StartOfJob` thing entirely, but since we want to replace the
+			// generic CMR code with GPU-specific code anyway, let's not bother
+			// to make this change any larger than we have to.
+			//
+			// Therefore, let's skip doing this computation; the slot's value
+			// should come from the starter, and there's no point in worrying
+			// about accidentally overwriting that value with a buggy one.
 
-			// Compute the SUM metrics' *Usage values.  The PEAK metrics
-			// have already inserted their *Usage values into the ad.
-			std::string usageName;
+			// Remove some of internal implementation-specific attributes
+			// that we don't want to make attractive nuisances.  We should
+			// actually filter the ones the starter needs out when we're
+			// writing to the collector, but since we won't need to do that
+			// after the pending rewrite, don't bother for now.
+
 			std::string uptimeName = name.substr(10);
-			if (! StartdCronJobParams::getResourceNameFromAttributeName(uptimeName, usageName)) { continue; }
-			usageName += "AverageUsage";
-
-			std::string lastUpdateName = "LastUpdate" + uptimeName;
 			std::string firstUpdateName = "FirstUpdate" + uptimeName;
-
-			// Note that we calculate the usage rate only for full
-			// sample intervals.  This eliminates the imprecision of
-			// the sample interval in which the job started; since we
-			// can't include the usage from the sample interval in
-			// which the job ended, we also don't include the time
-			// the job was running in that interval.  The computation
-			// is thus exact for its time period.
-			std::string usageExpr;
-			formatstr(usageExpr, "(%s - %s)/(%s - %s)",
-				uptimeName.c_str(), name.c_str(),
-				lastUpdateName.c_str(), firstUpdateName.c_str());
-
-			classad::Value v;
-			if (! public_ad.EvaluateExpr(usageExpr, v)) { continue; }
-			double usageValue;
-			if (! v.IsNumber(usageValue)) { continue; }
-			public_ad.Assign(usageName, usageValue);
-
-			deleteList.push_back(uptimeName);
-			deleteList.push_back(name);
-			deleteList.push_back(lastUpdateName);
 			deleteList.push_back(firstUpdateName);
 
+			deleteList.push_back(name);
 		} else if( name.find( "StartOfJobUptime" ) == 0
-		  || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
 		  || name.find( "FirstUpdate" ) == 0 ) {
 			deleteList.push_back( name );
 		}
