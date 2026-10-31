@@ -147,6 +147,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
 	{"_startd_vacate_slots", &_startd_vacate_slots, METH_VARARGS, NULL},
 	{"_startd_rehome", &_startd_rehome, METH_VARARGS, NULL},
+	{"_startd_set_controller", &_startd_set_controller, METH_VARARGS, NULL},
+	{"_startd_clear_controller", &_startd_clear_controller, METH_VARARGS, NULL},
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
@@ -168,6 +170,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
 	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_reschedule", &_schedd_reschedule, METH_VARARGS, NULL},
+	{"_schedd_request_controller_token", &_schedd_request_controller_token, METH_VARARGS, NULL},
+	{"_schedd_register_controlled_ep", &_schedd_register_controlled_ep, METH_VARARGS, NULL},
+	{"_schedd_get_controlled_eps", &_schedd_get_controlled_eps, METH_VARARGS, NULL},
 	{"_schedd_export_job_ids", &_schedd_export_job_ids, METH_VARARGS, NULL},
 	{"_schedd_export_job_constraint", &_schedd_export_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_import_exported_job_results", &_schedd_import_exported_job_results, METH_VARARGS, NULL},
