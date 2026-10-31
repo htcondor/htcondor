@@ -34,11 +34,11 @@
  ***************************************************************/
 
 /* auto-detect port number */
-const int
+const unsigned short
 UdpWakeOnLanWaker::detect_port = 0;
 
 /* default port number used when auto-detection fails */
-const int
+const unsigned short
 UdpWakeOnLanWaker::default_port = 9;
 
 
