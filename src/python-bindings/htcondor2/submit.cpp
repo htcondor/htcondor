@@ -16,6 +16,7 @@ struct SubmitBlob {
 
         virtual ~SubmitBlob() { }
 
+        SubmitHash & hash() { return m_hash; }
         void keys( std::string & buffer );
         bool from_lines( const char * lines, std::string & errorMessage );
 

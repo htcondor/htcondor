@@ -1040,13 +1040,23 @@ _schedd_submit( PyObject *, PyObject * args ) {
     bool send_cluster_ad = true;
     bool iter_selected = ! isFactoryJob;
     int numJobs=0, itemIndex=0, step=0;
+#ifdef SUPPORT_FOR_TASK_PACKING
+    int task_packing = 1; // get this from where?
+    sb->hash().want_task_packing(task_packing);
+    ssqa.set_packing(task_packing);
+#endif
 
     JOB_ID_KEY jid(clusterID,0);
     ssqa.begin(jid, ! isFactoryJob);
 
     // loop while we have procs to submit.
     // For late mat we break out of the loop after the cluster ad is sent
+#ifdef SUPPORT_FOR_TASK_PACKING
+    int taskid = 0;
+    while (ssqa.next_impl(iter_selected, jid, itemIndex, step, taskid, ! isFactoryJob) > 0) {
+#else
     while (ssqa.next_impl(iter_selected, jid, itemIndex, step, ! isFactoryJob) > 0) {
+#endif
 
         if ( ! isFactoryJob) {
 
@@ -1148,6 +1158,20 @@ _schedd_submit( PyObject *, PyObject * args ) {
             // break out of the loop, we are done.
             break;
         }
+
+    #ifdef SUPPORT_FOR_TASK_PACKING
+        if (ssqa.packing() > 1) {
+            int task_packing = ssqa.packing();
+            int taskid, item_indexT, stepT;
+            JOB_ID_KEY jidT = jid;
+            for (int ix = 1; ix < task_packing; ++ix) {
+                if (ssqa.next_selected(jidT, item_indexT, stepT, taskid, true)) {
+                    sb->hash().add_job_task(taskid, item_indexT, stepT);
+                }
+            }
+            sb->hash().finalize_job_tasks(task_packing);
+        }
+    #endif
 
         // send the proc ad
         errmsg = myq->send_JobAttributes(jid, *procAd, SetAttribute_NoAck);

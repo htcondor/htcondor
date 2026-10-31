@@ -2641,8 +2641,8 @@ bool Starter::getJobClaimId(std::string &result) const
  * 
  * 
  **/
-int
-Starter::SpawnJob( void )
+UserProc *
+Starter::AllocateJob(int taskid)
 {
 		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
@@ -2658,7 +2658,7 @@ Starter::SpawnJob( void )
 			 CondorUniverseName(jobUniverse), jic->jobCluster(),
 			 jic->jobProc() );
 
-	UserProc *job;
+	UserProc *job = nullptr;
 	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_LOCAL:
@@ -2724,7 +2724,30 @@ Starter::SpawnJob( void )
 			} else if ( wantRemote ) {
 				job = new RemoteProc( jobAd );
 			} else {
+				if (taskid > 0) {
+					// this will allocate a task ad if one does not exist
+					// TODO: maybe move this block of code into PrepareNextTask ?
+					auto & taskAd = m_task_ads[taskid];
+
+					std::string taskattr = "task" + std::to_string(taskid);
+					classad::Value taskval, val;
+					jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES);
+					ClassAd * ad = nullptr;
+					if (taskval.IsClassAdValue(ad) && ad) {
+						for (auto & [attr,expr] : *ad) {
+							// TODO: allow lists ??
+							if (ad->EvaluateAttr(attr, val, classad::Value::SCALAR_EX_VALUES)) {
+								auto * lit = classad::Literal::MakeLiteral(val);
+								if ( ! lit) { lit = classad::Literal::MakeError(); }
+								taskAd.InsertLiteral(attr, lit);
+							}
+						}
+					}
+					taskAd.ChainToAd(jobAd);
+					jobAd = &taskAd;
+				}
 				job = new VanillaProc( jobAd );
+				if (job) { job->set_taskId(taskid); }
 			}
 			} break;
 		case CONDOR_UNIVERSE_JAVA:
@@ -2733,10 +2756,6 @@ Starter::SpawnJob( void )
 	    case CONDOR_UNIVERSE_PARALLEL:
 			job = new ParallelProc( jobAd );
 			break;
-		case CONDOR_UNIVERSE_MPI: {
-			EXCEPT("MPI Universe is no longer supported");
-			break;
-		}
 		case CONDOR_UNIVERSE_VM:
 			job = new VMProc( jobAd );
 			ASSERT(job);
@@ -2744,10 +2763,64 @@ Starter::SpawnJob( void )
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) ); 
-			return FALSE;
+			break;
 	} /* switch */
 
+	return job;
+}
+
+
+bool Starter::PrepareNextTask(pid_t reaped_pid, int reaped_status)
+{
+
+	int taskid = -1;
+	for (const auto * job : m_job_list) {
+		if (job->GetJobPid() == reaped_pid) {
+			taskid = job->taskId();
+			break;
+		}
+	}
+
+	ClassAd* jobAd = jic->jobClassAd();
+
+	// If there is a task<N+1> attribute, assume there will be a next task
+	std::string taskattr = "task" + std::to_string(taskid+1);
+	if (jobAd && jobAd->Lookup(taskattr)) {
+		dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Preparing task %d.\n",
+			reaped_pid, reaped_status, taskid, taskid+1);
+		m_next_job.reset(AllocateJob(taskid+1));
+		return true;
+	}
+
+	dprintf(D_STATUS, "PrepareNextTask(%u,%d) : No next task.\n", reaped_pid, reaped_status);
+	return false;
+}
+
+int
+Starter::SpawnJob(UserProc * job /* = nullptr */)
+{
+	//ClassAd * mad = jic->machClassAd();
+	int taskid = 0;
+	if ( ! job) { 
+		job = AllocateJob(taskid);
+		if ( ! job) {
+			dprintf( D_ALWAYS, "Unsuppored job universe, exiting\n" );
+			main_shutdown_fast();
+			return FALSE;
+		}
+	} else {
+		taskid = job->taskId();
+	}
+
+	// Get the task ad for this job.  This might be the same as jic->jobClassAd()
+	// or it might be a task ad chained to the main job ad.
+	ClassAd* jobAd = job->taskAd();
+
 	if (job->StartJob()) {
+		if ( ! m_reaped_job_list.empty()) {
+			dprintf(D_ZKM, "Setting task %d to not-final\n", m_reaped_job_list.back()->taskId());
+			m_reaped_job_list.back()->set_finalTask(false);
+		}
 		m_job_list.emplace_back(job);
 		
 			//
@@ -3153,6 +3226,7 @@ Starter::Reaper(int pid, int exit_status)
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
 	bool pid_matched = false;
+	bool has_next_task = false;
 	auto listit = stable_job_list.begin();
 	while (listit != stable_job_list.end()) {
 		auto *job = *listit;
@@ -3160,10 +3234,13 @@ Starter::Reaper(int pid, int exit_status)
 		if( job->GetJobPid() == pid ) {
 			auto result = job->JobReaper(pid, exit_status);
 			pid_matched = true;
-			if( result == ReapResult::JobDone ) {
+			if( result == ReapResult::JobDone || result == ReapResult::JobNext ) {
 				handled_jobs++;
 				listit = stable_job_list.erase(listit);
 				stable_reaped_job_list.emplace_back(job);
+				if (result == ReapResult::JobNext && m_next_job.get()) {
+					has_next_task = true;
+				}
 			} else {
 				listit++;
 			}
@@ -3174,6 +3251,11 @@ Starter::Reaper(int pid, int exit_status)
 
 	copyProcList( stable_reaped_job_list, m_reaped_job_list );
 	copyProcList( stable_job_list, m_job_list );
+
+	if (has_next_task && ! ShuttingDown) {
+		all_jobs += 1;
+		SpawnJob(m_next_job.release());
+	}
 
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );

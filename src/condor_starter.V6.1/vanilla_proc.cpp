@@ -1200,6 +1200,13 @@ VanillaProc::JobReaper(int pid, int status)
 	ReapResult result = OsProc::JobReaper( pid, status );
 	if( pid != JobPid ) { return result; }
 
+	// Check to see if the Job classad indicates a task sequence.
+	if (result == ReapResult::JobNext) {
+		if ( ! starter->PrepareNextTask(pid, status)) {
+			result = ReapResult::JobDone;
+		}
+	}
+
 	//
 	// We have three cases to consider:
 	//   * if we're checkpointing; or
@@ -1510,7 +1517,10 @@ int VanillaProc::outputOpenFlags() {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
-		return this->OsProc::outputOpenFlags();
+		int flags = this->OsProc::outputOpenFlags();
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "outputOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }
 
@@ -1524,6 +1534,9 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
-		return this->OsProc::streamingOpenFlags( isOutput );
+		int flags = this->OsProc::streamingOpenFlags( isOutput );
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "streamingOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }
