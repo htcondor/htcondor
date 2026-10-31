@@ -600,3 +600,124 @@ class TestCCBTunnelMultipleUpstream:
         assert proxy_session_count(outside2) > before_survivor, (
             "surviving broker did not relay the failed-over tunnel hop"
         )
+
+
+def _reserve_port():
+    # A TCP port that is free right now, so a broker started LATER can be named in
+    # CCB_OUTBOUND_NEXT_HOP before it exists.  Bound without ever connecting, so
+    # closing it leaves no TIME_WAIT to block the collector's bind.
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+@action
+def late_broker_port():
+    return _reserve_port()
+
+
+@action
+def late_broker_hostport(outside, late_broker_port):
+    # Same host as the other brokers; only the port is ours to pick.
+    host = _broker_hostport(outside).rpartition(":")[0]
+    return "%s:%d" % (host, late_broker_port)
+
+
+@action
+def inside_late(test_dir, outside, late_broker_hostport):
+    # An inside CCB with two next hops, the second of which is NOT running yet.  The
+    # first registration declares the tunnel ready, so the master starts the schedd
+    # and it registers while the tunnel has only one path.  The late broker then
+    # comes up, and the schedd must learn the grown path list without
+    # re-registering.
+    next_hops = "%s <%s>" % (collector_address(outside), late_broker_hostport)
+    with Condor(
+        local_dir=test_dir / "inside_late",
+        config={
+            "ENABLE_IPV6": "FALSE",
+            # Single-host test: see `inside_multi` for why FS channel binding is off.
+            "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
+            "USE_SHARED_PORT": "FALSE",
+            "USE_OUTBOUND_CCB": "TRUE",
+            "CCB_OUTBOUND_NEXT_HOP": next_hops,
+            # Retry the not-yet-running broker quickly once it is started.
+            "CCB_RECONNECT_TIME": "2",
+            # Republish the schedd's changed contact promptly.  This only shortens
+            # the wait: without the server re-sending the registration reply the
+            # schedd never learns the new contact, however often it advertises.
+            "SCHEDD_INTERVAL": "5",
+            "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
+            "SCHEDD.PRIVATE_NETWORK_NAME": "NET_TARGET",
+            "DAEMON_LIST": "MASTER SCHEDD",
+            "COLLECTOR_DEBUG": "D_FULLDEBUG",
+        },
+    ) as condor:
+        yield condor
+
+
+def _schedd_address(condor):
+    p = condor.run_command(["condor_status", "-schedd", "-af", "MyAddress"])
+    if p.returncode == 0 and p.stdout.strip():
+        return p.stdout.strip().splitlines()[0]
+    return ""
+
+
+class TestCCBTunnelLateUpstream:
+    def test_registrant_learns_late_upstream_path(
+        self, test_dir, outside, late_broker_port, late_broker_hostport, inside_late
+    ):
+        # Regression: with several next hops, the inside CCB declared the tunnel
+        # ready on the FIRST upstream registration and never told already-registered
+        # targets when a later hop added a path, so their contacts stayed one path
+        # short forever.
+        want_a = _broker_hostport(outside)
+        want_b = late_broker_hostport
+
+        # Precondition: the schedd registered and advertised while only the first
+        # broker was up, i.e. we are deterministically in the race window.
+        deadline = time.time() + 60
+        addr = ""
+        while time.time() < deadline:
+            addr = _schedd_address(inside_late)
+            if want_a in addr:
+                break
+            time.sleep(1)
+        assert want_a in addr, (
+            "schedd never advertised its path through the first broker %s: %s"
+            % (want_a, addr)
+        )
+        assert want_b not in addr, (
+            "schedd contact names the late broker before it was started: %s" % addr
+        )
+
+        # Start the late broker on the port the inside CCB has been retrying.
+        with Condor(
+            local_dir=test_dir / "late_broker",
+            config={
+                "ENABLE_IPV6": "FALSE",
+                "SEC_FS_ENFORCE_CHANNEL_BINDING": "False",
+                "USE_SHARED_PORT": "FALSE",
+                "COLLECTOR_HOST": "$(CONDOR_HOST):%d" % late_broker_port,
+                "PRIVATE_NETWORK_NAME": "NET_DEFAULT",
+                "DAEMON_LIST": "MASTER COLLECTOR",
+                "COLLECTOR_DEBUG": "D_FULLDEBUG",
+            },
+        ) as late_broker:
+            assert _broker_hostport(late_broker) == want_b, (
+                "late broker did not come up on the reserved port %s: %s"
+                % (want_b, collector_address(late_broker))
+            )
+
+            # The already-registered schedd must pick up the second path.
+            deadline = time.time() + 90
+            while time.time() < deadline:
+                addr = _schedd_address(inside_late)
+                if want_a in addr and want_b in addr:
+                    break
+                time.sleep(1)
+            assert want_a in addr and want_b in addr, (
+                "already-registered schedd never learned the path through the "
+                "late broker %s: %s" % (want_b, addr)
+            )
