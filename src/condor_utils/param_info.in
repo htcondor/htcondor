@@ -1212,7 +1212,7 @@ type=string
 tags=had,AbstractReplicatorStateMachine
 
 [TRANSFER_JOB_ATTRS]
-default=NumShadowStarts,DAGManJobId,DAGNodeName
+default=NumShadowStarts,DAGNodeName
 type=string
 
 [MAX_TRANSFER_LIFETIME]

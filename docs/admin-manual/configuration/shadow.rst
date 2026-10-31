@@ -207,10 +207,11 @@ These settings affect the *condor_shadow*.
     :macro:`JOB_EPOCH_HISTORY_DIR` is configured; see
     :ref:`admin-manual/ap-policy-configuration:job epoch history`). An
     attribute is only copied into the record if it is actually present on the
-    job ad. The job's ``User``, ``ProjectName``,
-    :ad-attr:`GlobalJobId` and :ad-attr:`RemoteHost` are always copied and need
-    not be listed. A single record type can be given its own list, which
-    replaces this one for that type, by defining a knob named after the type:
+    job ad. The job's ``User``, ``ProjectName``, :ad-attr:`GlobalJobId`,
+    :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`, :ad-attr:`JobBatchName`,
+    and :ad-attr:`RemoteHost` are always copied and need not be listed. A
+    single record type can be given its own list, which replaces this one for
+    that type, by defining a knob named after the type:
     ``INPUT_JOB_ATTRS``, ``OUTPUT_JOB_ATTRS``, ``CHECKPOINT_JOB_ATTRS`` or
     ``COMMON_JOB_ATTRS``.
-    Defaults to ``NumShadowStarts,DAGManJobId,DAGNodeName``.
+    Defaults to ``NumShadowStarts,DAGNodeName``.

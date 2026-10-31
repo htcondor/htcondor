@@ -286,6 +286,15 @@ BASIC COMMANDS
     overridden by specifying the **-batch-name** argument on the
     *condor_submit* command line.
 
+ :subcom-def:`batch_id` = <id>
+    Set the :ad-attr:`JobBatchId` for this submit. This is a unique
+    number represented as a string identifying a batch across jobs.
+
+    .. note::
+
+        This is intended for use by :tool:`condor_dagman` to represent
+        the root DAGMan job by its :ad-attr:`ClusterId`.
+
  :subcom-def:`getenv` = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,

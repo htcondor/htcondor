@@ -37,6 +37,7 @@ struct LibrarianClient::Impl {
 #ifdef HAVE_SQLITE3_H
 	sqlite3* db{nullptr};
 	std::string history_base{}; // basename of HISTORY, to recognize rotated archive files
+	int schema_version{0};      // PRAGMA user_version read at open
 
 	~Impl() {
 		if (db) {
@@ -83,7 +84,7 @@ struct LibrarianClient::Impl {
 		return count;
 	}
 
-	// Shared by GetRecords/GetRecordsByCluster/GetRecordsByUser: append
+	// Shared by all GetRecords* methods: append
 	// base_sql's OnlyExisting filter clause (if requested) and prepare it.
 	// Returns nullptr (error already logged) on prepare failure; caller binds
 	// params, fetches rows via fetchRecordRows(), and finalizes the statement.
@@ -100,7 +101,7 @@ struct LibrarianClient::Impl {
 
 	// Step an already-prepared, already-bound statement to completion,
 	// appending one LibrarianRecord per row: column 0 = Offset (int64),
-	// column 1 = FileName (text), column 2 = FileId (int64). Shared row-processing for all three
+	// column 1 = FileName (text), column 2 = FileId (int64). Shared row-processing for all
 	// GetRecords* methods.
 	void fetchRecordRows(sqlite3_stmt* stmt, std::vector<LibrarianRecord>& out) const {
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -138,7 +139,18 @@ LibrarianClient::LibrarianClient() : m_impl(std::make_unique<Impl>()) {
 		        db_path.c_str(), sqlite3_errmsg(m_impl->db));
 		std::ignore = sqlite3_close(m_impl->db);
 		m_impl->db = nullptr;
+		return;
 	}
+
+	sqlite3_stmt* stmt = nullptr;
+	if (sqlite3_prepare_v2(m_impl->db, "PRAGMA user_version;", -1, &stmt, nullptr) == SQLITE_OK) {
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			m_impl->schema_version = sqlite3_column_int(stmt, 0);
+		}
+	} else {
+		dprintf(D_ERROR, "LibrarianClient: failed to read schema version: %s\n", sqlite3_errmsg(m_impl->db));
+	}
+	std::ignore = sqlite3_finalize(stmt);
 #endif
 }
 
@@ -149,6 +161,14 @@ bool LibrarianClient::IsValid() const {
 	return m_impl && m_impl->db != nullptr;
 #else
 	return false;
+#endif
+}
+
+int LibrarianClient::SchemaVersion() const {
+#ifdef HAVE_SQLITE3_H
+	return IsValid() ? m_impl->schema_version : 0;
+#else
+	return 0;
 #endif
 }
 
@@ -252,6 +272,69 @@ std::vector<LibrarianRecord> LibrarianClient::GetRecordsByUser([[maybe_unused]] 
 	if ( ! stmt) { return results; }
 
 	std::ignore = sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+	m_impl->fetchRecordRows(stmt, results);
+	std::ignore = sqlite3_finalize(stmt);
+#endif
+	return results;
+}
+
+std::vector<LibrarianRecord> LibrarianClient::GetRecordsByDagId([[maybe_unused]] int dag_id,
+                                                                 [[maybe_unused]] FileFilter filter) const {
+	std::vector<LibrarianRecord> results;
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid()) { return results; }
+
+	static const char* base_sql =
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
+		" JOIN Files f ON jr.FileId = f.FileId"
+		" WHERE jr.DAGManJobId = ?";
+
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
+
+	std::ignore = sqlite3_bind_int(stmt, 1, dag_id);
+	m_impl->fetchRecordRows(stmt, results);
+	std::ignore = sqlite3_finalize(stmt);
+#endif
+	return results;
+}
+
+std::vector<LibrarianRecord> LibrarianClient::GetRecordsByBatchId([[maybe_unused]] const std::string& batch_id,
+                                                                   [[maybe_unused]] FileFilter filter) const {
+	std::vector<LibrarianRecord> results;
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid()) { return results; }
+
+	static const char* base_sql =
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
+		" JOIN Files f ON jr.FileId = f.FileId"
+		" WHERE jr.JobBatchId = ?";
+
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
+
+	std::ignore = sqlite3_bind_text(stmt, 1, batch_id.c_str(), -1, SQLITE_STATIC);
+	m_impl->fetchRecordRows(stmt, results);
+	std::ignore = sqlite3_finalize(stmt);
+#endif
+	return results;
+}
+
+std::vector<LibrarianRecord> LibrarianClient::GetRecordsByBatchName([[maybe_unused]] const std::string& batch_name,
+                                                                     [[maybe_unused]] FileFilter filter) const {
+	std::vector<LibrarianRecord> results;
+#ifdef HAVE_SQLITE3_H
+	if ( ! IsValid()) { return results; }
+
+	static const char* base_sql =
+		"SELECT jr.Offset, f.FileName, f.FileId FROM JobRecords jr"
+		" JOIN Files f ON jr.FileId = f.FileId"
+		" WHERE jr.JobBatchName = ?";
+
+	sqlite3_stmt* stmt = m_impl->prepareRecordsQuery(base_sql, filter);
+	if ( ! stmt) { return results; }
+
+	std::ignore = sqlite3_bind_text(stmt, 1, batch_name.c_str(), -1, SQLITE_STATIC);
 	m_impl->fetchRecordRows(stmt, results);
 	std::ignore = sqlite3_finalize(stmt);
 #endif
