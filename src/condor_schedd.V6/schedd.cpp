@@ -6844,9 +6844,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// Send or receive files as needed
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 
-			// Ensure the job's spool directory exists
-			SpooledJobFiles::createJobSpoolDirectory(ad);
-
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
 

@@ -7766,6 +7766,8 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				PostCommitJobFactoryProc(clusterad, procad);
 
 				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+					TemporaryPrivSentry sentry;
+					init_user_ids_from_ad(*procad->ownerinfo);
 					SpooledJobFiles::createJobSpoolDirectory(procad);
 				}
 
