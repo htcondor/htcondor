@@ -37,6 +37,7 @@
 #
 
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -122,18 +123,32 @@ def submit_fake_dag(the_condor, test_dir, name, nodes):
     return placeholder, handles
 
 
-def query_jobs(the_condor, handles):
-    constraint = " || ".join(f"ClusterId == {h.clusterid}" for h in handles)
-    results = the_condor.query(
-        constraint=constraint,
-        projection=["ClusterId", "ProcId", "JobStatus", "HoldReasonCode", "HoldReasonSubCode", "HoldReason"],
-    )
-    logger.debug(f"Results: {results}")
-    return results
-
-
 def status_of(result):
     return JobStatus(str(result["JobStatus"]))
+
+
+TERMINAL_STATUSES = {JobStatus.COMPLETED, JobStatus.HELD, JobStatus.REMOVED}
+
+
+def query_jobs(the_condor, handles, timeout=60):
+    # The shadow writes the terminate event (which ends handle.wait()) before
+    # the schedd reaps it and sets JobStatus to COMPLETED, so poll the queue
+    # until the schedd has caught up.
+    constraint = " || ".join(f"ClusterId == {h.clusterid}" for h in handles)
+    deadline = time.time() + timeout
+    while True:
+        results = the_condor.query(
+            constraint=constraint,
+            projection=["ClusterId", "ProcId", "JobStatus", "HoldReasonCode", "HoldReasonSubCode", "HoldReason"],
+        )
+        if all(status_of(r) in TERMINAL_STATUSES for r in results):
+            break
+        if time.time() >= deadline:
+            logger.debug("Timed out waiting for the schedd to finish jobs")
+            break
+        time.sleep(1)
+    logger.debug(f"Results: {results}")
+    return results
 
 
 def assert_one_held_one_completed(results, subcode):
