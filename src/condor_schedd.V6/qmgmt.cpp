@@ -7765,10 +7765,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 				PostCommitJobFactoryProc(clusterad, procad);
 
-				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+				if (job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput && procad->ownerinfo) {
 					TemporaryPrivSentry sentry;
-					init_user_ids_from_ad(*procad->ownerinfo);
-					SpooledJobFiles::createJobSpoolDirectory(procad);
+					if (init_user_ids_from_ad(*procad->ownerinfo)) {
+						SpooledJobFiles::createJobSpoolDirectory(procad);
+					}
 				}
 
 				//don't need to do this... the trigger code below seems to handle it.
