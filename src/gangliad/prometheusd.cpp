@@ -1149,7 +1149,14 @@ PrometheusD::handleHttpCommand(int /*cmd*/, Stream *s)
 	// DaemonCore already confirmed these bytes are available (it peeked them
 	// before routing here), so MSG_PEEK|MSG_DONTWAIT should succeed immediately.
 	unsigned char peek[3] = {0, 0, 0};
-	recv(fd, peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT);
+	ssize_t npeek = recv(fd, peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT);
+	if (npeek != static_cast<ssize_t>(sizeof(peek))) {
+		dprintf(D_FULLDEBUG,
+		        "PrometheusD: could not peek at request from %s"
+		        " (recv returned %zd, errno %d); closing\n",
+		        sock->peer_description(), npeek, errno);
+		return FALSE;
+	}
 	// TLS ClientHello: record type 0x16, legacy version 0x03 0x00–0x04
 	bool is_tls = (peek[0] == 0x16 && peek[1] == 0x03 && peek[2] <= 0x04);
 
