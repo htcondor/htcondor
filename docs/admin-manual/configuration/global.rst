@@ -1925,6 +1925,20 @@ that DaemonCore uses which affect all HTCondor daemons.
     amount of detected memory on the system, regardless
     of any overrides via the :macro:`MEMORY` setting.
 
+:macro-def:`DETECTED_CPUS`
+    A read-only macro that cannot be set, but expands to the number of
+    CPUs detected on the system. Hyperthreaded CPUs are counted when
+    :macro:`COUNT_HYPERTHREAD_CPUS` is ``True``. This is the default value
+    of :macro:`NUM_CPUS`.
+
+:macro-def:`DETECTED_CORES`
+    A read-only macro that cannot be set, but expands to the number of
+    CPUs detected on the system, always including hyperthreaded CPUs.
+
+:macro-def:`DETECTED_PHYSICAL_CPUS`
+    A read-only macro that cannot be set, but expands to the number of
+    physical CPUs detected on the system, never including hyperthreaded CPUs.
+
 :index:`Networking Options<single: Configuration; Networking Options>`
 
 .. _networking_config_options:
@@ -2050,6 +2064,73 @@ More information about networking in HTCondor can be found in
 :macro-def:`CCB_TIMEOUT[Networking]`
     The length, in seconds, that we wait for any CCB operation to complete.
     The default value is 300.
+
+:macro-def:`OUTBOUND_CCB_ADDRESS[Networking]`
+    When set, this daemon or tool routes its outbound connections through
+    the named CCB broker instead of dialing targets directly. The broker
+    dials the target on its behalf and splices the two connections into a
+    transparent relay, over which the normal end-to-end security handshake
+    proceeds. Intended for hosts, such as HPC worker nodes, that cannot make
+    direct outbound TCP connections. Like :macro:`CCB_ADDRESS`, this may be a
+    space-separated list of brokers, which are tried in random order.
+    Loopback and same-host targets are still connected directly. If
+    :macro:`CCB_ADDRESS` is not set, a daemon also uses this value as its
+    inbound CCB. There is no default. See
+    :ref:`admin-manual/networking:ccb tunneling`.
+
+:macro-def:`USE_OUTBOUND_CCB[Networking]`
+    A boolean value that defaults to ``False``. When ``True``, the
+    :tool:`condor_master` runs a local *condor_collector* as an inside CCB
+    (adding it to :macro:`DAEMON_LIST` if absent), waits for it to register
+    with the next-hop broker named by :macro:`CCB_OUTBOUND_NEXT_HOP`, and
+    then sets both :macro:`CCB_ADDRESS` and :macro:`OUTBOUND_CCB_ADDRESS` of
+    the other daemons it starts to that local collector, so that both their
+    inbound and outbound connections are tunneled.
+
+:macro-def:`CCB_OUTBOUND_PROXY[Networking]`
+    A boolean value that defaults to ``False``. When ``True``, this CCB
+    server acts as an outbound proxy for daemons and tools that set
+    :macro:`OUTBOUND_CCB_ADDRESS`: it dials the requested target and splices
+    the two connections together. Requests require ``DAEMON``
+    authorization, and targets are restricted by
+    :macro:`CCB_OUTBOUND_TARGET_ALLOWLIST` and
+    :macro:`CCB_OUTBOUND_TARGET_DENYLIST`. This mode is also enabled
+    implicitly on a CCB server with :macro:`CCB_OUTBOUND_NEXT_HOP` set,
+    which only ever forwards to its next hop.
+
+:macro-def:`CCB_OUTBOUND_TARGET_ALLOWLIST[Networking]`
+    A comma or space separated list of host names or CIDR network patterns
+    that the outbound proxy of this CCB server (see
+    :macro:`CCB_OUTBOUND_PROXY`) is permitted to dial. Host names may
+    contain wildcards, such as ``*.example.com``, and are matched without
+    regard to case. The default, ``*``, permits every target not excluded
+    by :macro:`CCB_OUTBOUND_TARGET_DENYLIST`. An empty list permits nothing.
+
+:macro-def:`CCB_OUTBOUND_TARGET_DENYLIST[Networking]`
+    A comma or space separated list of host names or CIDR network patterns
+    that the outbound proxy of this CCB server will refuse to dial, even
+    when permitted by :macro:`CCB_OUTBOUND_TARGET_ALLOWLIST`. The deny list
+    takes precedence. The default,
+    ``127.0.0.0/8 ::1 fe80::/10 169.254.0.0/16 localhost``, refuses loopback
+    and link-local targets, so that the broker cannot be used to reach
+    services on its own host.
+
+:macro-def:`CCB_OUTBOUND_TTL[Networking]`
+    An integer time-to-live for an outbound proxy request, set by the
+    originating daemon or tool. Each broker that forwards the request
+    decrements it, and the request is refused when it reaches zero. This
+    prevents loops in a misconfigured chain of brokers. The default
+    value is 8, and rarely needs changing.
+
+:macro-def:`CCB_OUTBOUND_NEXT_HOP[Networking]`
+    When set on a CCB server, that server (an inside broker) registers
+    with the named next-hop (outside) broker so that it is reachable
+    through the tunnel, and puts the resulting tunnel address into the
+    contact information it gives its own registrants, so inbound
+    connections to them route through both brokers. It also selects the
+    next hop for outbound proxying. This is normally set automatically by
+    the :tool:`condor_master` (see :macro:`USE_OUTBOUND_CCB`) and rarely
+    needs to be configured by hand. There is no default.
 
 :macro-def:`CCB_SERVER_WRITE_BUFFER[Networking]`
     The size of the kernel TCP write buffer in bytes for all sockets
@@ -2328,6 +2409,11 @@ More information about networking in HTCondor can be found in
     timeouts interfere.
 
     List of possible subsystems to set :macro:`<SUBSYS>` can be found at :macro:`SUBSYSTEM`.
+
+:macro-def:`TIMEOUT_MULTIPLIER[Networking]`
+    An integer value used as :macro:`<SUBSYS>_TIMEOUT_MULTIPLIER` for any
+    subsystem that does not set its own. Intended for use by developers
+    when debugging.
 
 :macro-def:`NONBLOCKING_COLLECTOR_UPDATE[Networking]`
     A boolean value that defaults to ``True``. When ``True``, the
