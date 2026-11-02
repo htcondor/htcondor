@@ -318,7 +318,6 @@ class CCBTarget {
 	std::map<CCBID,CCBServerRequest *> *getRequests() { return m_requests; }
 	void AddRequest(CCBServerRequest *request, CCBServer *ccb_server);
 	void RemoveRequest(CCBServerRequest *request);
-	int NumRequests() { return m_requests ? m_requests->size() : 0; }
 
 	// expecting a response from this target for a request we just sent it
 	void incPendingRequestResults(CCBServer *ccb_server);
