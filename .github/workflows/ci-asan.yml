@@ -26,7 +26,8 @@ jobs:
 
   ubuntu_asan_build:
     needs: resolve-ubunturoot-image
-    runs-on: ubuntu-latest
+    # Ubuntu 26 stack randomization breaks asan.
+    runs-on: ubuntu-24.04
 
     # Use htcondor build containers for the real work
     container:
