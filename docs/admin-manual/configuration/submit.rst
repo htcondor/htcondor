@@ -150,6 +150,11 @@ do not specify their own with:
     IF_NEEDED. If the value is not one of these, then IF_NEEDED will
     be used.
 
+:macro-def:`SUBMIT_DEFAULT_REQUIRE_COMMON_FILES`
+    Provides a default value for the submit command
+    :subcom:`require_common_files[and SUBMIT_DEFAULT_REQUIRE_COMMON_FILES]`
+    if the submit file does not supply a value. The default is ``False``.
+
 :macro-def:`SUBMIT_REQUEST_MISSING_UNITS`
     If set to the string ``error``, it is an error to submit a job with a 
     :subcom:`request_memory` or :subcom:`request_disk` with a unitless

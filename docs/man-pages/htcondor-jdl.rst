@@ -1191,6 +1191,13 @@ FILE TRANSFER COMMANDS
     As :subcom:`transfer_input_files`, except that the specified files or URLS
     are common across more than one job.  See :ref:`common_file_transfer`.
 
+ :subcom-def:`require_common_files` = <True | False>
+    When ``True`` and the job uses :subcom:`transfer_common_input`, the job
+    will only match execution points that support common file transfer.
+    The default is the value of
+    configuration variable :macro:`SUBMIT_DEFAULT_REQUIRE_COMMON_FILES`,
+    which defaults to ``False``.
+
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured
     HTTP server on the AP to transfer. These files will not be encrypted,
@@ -2671,6 +2678,13 @@ ADVANCED COMMANDS
    If **false** then the job may be matched to a machine where the job
    has no access to the networking.  This may allow the job to run in
    more places than it otherwise would. Default is true.
+
+ :subcom-def:`want_io_proxy` = <True | False>
+    When ``True``, the *condor_starter* runs an I/O proxy for the job, which
+    allows the job to use :tool:`condor_chirp` to access files on the access
+    point and to read and write the job ClassAd. Sets job ClassAd attribute
+    ``WantIOProxy``. The default is ``False``. See
+    :doc:`../users-manual/chirp`.
 
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the
