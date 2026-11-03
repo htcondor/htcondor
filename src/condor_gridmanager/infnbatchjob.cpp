@@ -1480,6 +1480,16 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	int cpu_count = 0;
 	int node_count = 0;
+	int request_cpus = 0;
+
+	// Treat RequestCpus>1 as a request for a single machine with the given
+	// number of cores (RequestCpus=1 is often a default not supplied by
+	// the user). The batch-specific attributes should override if they're
+	// present.
+	if (jobAd->LookupInteger(ATTR_REQUEST_CPUS, request_cpus) && request_cpus > 1) {
+		cpu_count = request_cpus;
+		node_count = 1;
+	}
 
 	// NodeNumber in the blahp job ad means total number of cpus
 	if (!jobAd->LookupInteger(ATTR_BATCH_CPU_COUNT, cpu_count)) {
