@@ -2658,6 +2658,28 @@ Starter::AllocateJob(int taskid)
 			 CondorUniverseName(jobUniverse), jic->jobCluster(),
 			 jic->jobProc() );
 
+	if (taskid > 0) {
+		// this will allocate a task ad if one does not exist
+		auto & taskAd = m_task_ads[taskid];
+
+		std::string taskattr = "task" + std::to_string(taskid);
+		classad::Value taskval, val;
+		jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES);
+		ClassAd * ad = nullptr;
+		if (taskval.IsClassAdValue(ad) && ad) {
+			for (auto & [attr,expr] : *ad) {
+				// TODO: allow lists ??
+				if (ad->EvaluateAttr(attr, val, classad::Value::SCALAR_EX_VALUES)) {
+					auto * lit = classad::Literal::MakeLiteral(val);
+					if ( ! lit) { lit = classad::Literal::MakeError(); }
+					taskAd.InsertLiteral(attr, lit);
+				}
+			}
+		}
+		taskAd.ChainToAd(jobAd);
+		jobAd = &taskAd;
+	}
+
 	UserProc *job = nullptr;
 	switch ( jobUniverse )  
 	{
@@ -2724,30 +2746,7 @@ Starter::AllocateJob(int taskid)
 			} else if ( wantRemote ) {
 				job = new RemoteProc( jobAd );
 			} else {
-				if (taskid > 0) {
-					// this will allocate a task ad if one does not exist
-					// TODO: maybe move this block of code into PrepareNextTask ?
-					auto & taskAd = m_task_ads[taskid];
-
-					std::string taskattr = "task" + std::to_string(taskid);
-					classad::Value taskval, val;
-					jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES);
-					ClassAd * ad = nullptr;
-					if (taskval.IsClassAdValue(ad) && ad) {
-						for (auto & [attr,expr] : *ad) {
-							// TODO: allow lists ??
-							if (ad->EvaluateAttr(attr, val, classad::Value::SCALAR_EX_VALUES)) {
-								auto * lit = classad::Literal::MakeLiteral(val);
-								if ( ! lit) { lit = classad::Literal::MakeError(); }
-								taskAd.InsertLiteral(attr, lit);
-							}
-						}
-					}
-					taskAd.ChainToAd(jobAd);
-					jobAd = &taskAd;
-				}
 				job = new VanillaProc( jobAd );
-				if (job) { job->set_taskId(taskid); }
 			}
 			} break;
 		case CONDOR_UNIVERSE_JAVA:
@@ -2766,11 +2765,12 @@ Starter::AllocateJob(int taskid)
 			break;
 	} /* switch */
 
+	if (job) { job->set_taskId(taskid); }
 	return job;
 }
 
 
-bool Starter::PrepareNextTask(pid_t reaped_pid, int reaped_status)
+bool Starter::PrepareNextTask(pid_t reaped_pid, int reaped_status, int abort_code)
 {
 
 	int taskid = -1;
@@ -2786,10 +2786,15 @@ bool Starter::PrepareNextTask(pid_t reaped_pid, int reaped_status)
 	// If there is a task<N+1> attribute, assume there will be a next task
 	std::string taskattr = "task" + std::to_string(taskid+1);
 	if (jobAd && jobAd->Lookup(taskattr)) {
-		dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Preparing task %d.\n",
-			reaped_pid, reaped_status, taskid, taskid+1);
-		m_next_job.reset(AllocateJob(taskid+1));
-		return true;
+		if (abort_code) {
+			dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Future tasks aborted code=%d.\n",
+				reaped_pid, reaped_status, taskid, abort_code);
+		} else {
+			dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Preparing task %d.\n",
+				reaped_pid, reaped_status, taskid, taskid+1);
+			m_next_job.reset(AllocateJob(taskid+1));
+			return true;
+		}
 	}
 
 	dprintf(D_STATUS, "PrepareNextTask(%u,%d) : No next task.\n", reaped_pid, reaped_status);

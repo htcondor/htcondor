@@ -121,6 +121,8 @@ public:
 	int taskId() const { return taskid; }
 	void set_taskId(int id) { taskid = id; } // TODO: move this into constructor?
 	void set_finalTask(bool val) { m_finalTask = val; }
+	void skipFutureTasks(int code) { m_skipFutureTasks = code; }
+	int shouldSkipFutureTasks() { return m_skipFutureTasks; }
 
 		/** Check if user's job process has actually been started yet.
 			For instance, it may not have been forked yet because we're
@@ -145,6 +147,7 @@ protected:
 	int job_universe;
 	int exit_status;
 	int taskid{0};
+	int m_skipFutureTasks{0}; // set when this task fails in such a way that we should not try and run more tasks
 	bool requested_exit;
 	bool m_proc_exited;
 

@@ -358,7 +358,7 @@ void Starter::StarterExit(int code) { EXCEPT("MOCK"); exit(code); }
 int Starter::FinalCleanup(int code) { EXCEPT("MOCK"); return code; }
 void Starter::Config() { EXCEPT("MOCK"); }
 int Starter::SpawnJob(UserProc * /* job = nullptr */) { EXCEPT("MOCK"); return -1; }
-bool Starter::PrepareNextTask(pid_t, int) { EXCEPT("MOCK"); return false; }
+bool Starter::PrepareNextTask(pid_t, int, int) { EXCEPT("MOCK"); return false; }
 UserProc * Starter::AllocateJob(int) { EXCEPT("MOCK"); return nullptr; }
 
 

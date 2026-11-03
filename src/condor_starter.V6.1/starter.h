@@ -99,7 +99,7 @@ public:
 
 	virtual int SpawnJob(UserProc * job = nullptr);
 
-	virtual bool PrepareNextTask(pid_t pid, int status);
+	virtual bool PrepareNextTask(pid_t pid, int status, int abort_code);
 	virtual UserProc* AllocateJob(int taskid=0);
 
 	virtual void WriteRecoveryFile( ClassAd *recovery_ad );

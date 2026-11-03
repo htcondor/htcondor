@@ -458,6 +458,7 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 			TemporaryPrivSentry sentry(PRIV_USER);
 			unlink(".docker_stderror");
 			}
+			skipFutureTasks(status); // if we can't create the container, no point in attempting future tasks
 			return VanillaProc::JobReaper( pid, status );
 		}
 

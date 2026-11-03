@@ -1184,7 +1184,7 @@ VanillaProc::JobReaper(int pid, int status)
 
 	// Check to see if the Job classad indicates a task sequence.
 	if (result == ReapResult::JobNext) {
-		if ( ! starter->PrepareNextTask(pid, status)) {
+		if ( ! starter->PrepareNextTask(pid, status, shouldSkipFutureTasks())) {
 			result = ReapResult::JobDone;
 		}
 	}
