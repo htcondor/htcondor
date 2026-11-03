@@ -1504,7 +1504,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		jobAd->LookupInteger("HostNumber", node_count);
 	}
 	if (node_count > 0) {
-		submit_ad->Assign("HostNumber", cpu_count);
+		submit_ad->Assign("HostNumber", node_count);
 	}
 
 	int cpus_per_node = 0;
