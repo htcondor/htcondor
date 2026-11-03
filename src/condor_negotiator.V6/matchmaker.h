@@ -83,7 +83,7 @@ class Matchmaker : public Service
 		void negotiationTime( int timerID = -1 );
 
 			// the order of values in this enumeration is important!
-		enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
+		enum PreemptState {PREEMPTION_UNSET = -1,PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 
 		/// Invalidate our negotiator ad at the collector(s).
 		void invalidateNegotiatorAd( void );
@@ -411,7 +411,7 @@ class Matchmaker : public Service
 				PreJobRankValue = -(FLT_MAX);
 				PostJobRankValue = -(FLT_MAX);
 				PreemptRankValue = -(FLT_MAX);
-				PreemptStateValue = (Matchmaker::PreemptState)-1;
+				PreemptStateValue = Matchmaker::PREEMPTION_UNSET;
 				ad = NULL;
 			}			  
 			double			RankValue;

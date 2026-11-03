@@ -4712,7 +4712,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 	double			bestPreJobRankValue = -(FLT_MAX);
 	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
-	PreemptState	bestPreemptState = (PreemptState)-1;
+	PreemptState	bestPreemptState = PREEMPTION_UNSET;
 	std::string			bestDslotClaims;
 	bool			newBestFound;
 		// to store results of evaluations
