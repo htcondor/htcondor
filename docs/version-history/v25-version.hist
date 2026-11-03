@@ -14,6 +14,9 @@
   to run only only EPs that support common files transfer.
   :jira:`3955`
 
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` false by default.
+  :jira:`4046`
+
 *** 25.15.15 bugs
 
 - Fixed a bug where query tools could block for up to :macro:`QUERY_TIMEOUT`
@@ -365,7 +368,7 @@
   Point's :macro:`HISTORY` archive.
   :jira:`3143`
 
-- The archive librarian now stores the :ad-attr:`DAGManJobId`, :attr:`JobBatchId`,
+- The archive librarian now stores the :ad-attr:`DAGManJobId`, :ad-attr:`JobBatchId`,
   and :ad-attr:`JobBatchName` of job records into the library database.
   This allows database queries at a DAG workflow level to be executed.
   :jira:`3799`
@@ -409,6 +412,7 @@
   addition to downloading individual files. Large files are uploaded in
   chunks via an upload session. Thanks to Zach McGrew for this contribution.
   :jira:`3792`
+
 - HTCondor Connection Brokering (CCB) now supports a streaming mode that
   brokers connections between two daemons that are *both* behind a CCB,
   without opening any incoming ports. When the requesting daemon is itself
@@ -723,7 +727,7 @@
   the Singularity or Apptainer runtime uses the setuid flow.
   :jira:`3308`
 
-- The negotiator now has access to the :attr:`RemoteUserFloor` to avoid
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
   going beneath a user's floor number of resources while preempting.
   :jira:`3226`
 

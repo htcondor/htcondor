@@ -9,9 +9,9 @@ Version 26.1.0
 
 Release Notes:
 
-.. HTCondor version 26.1.0 released on October 30, 2026.
+.. HTCondor version 26.1.0 released on November 10, 2026.
 
-- HTCondor version 26.1.0 planned release date is October 30, 2026.
+- HTCondor version 26.1.0 planned release date is November 10, 2026.
 
 New Features:
 

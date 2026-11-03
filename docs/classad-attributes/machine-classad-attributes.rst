@@ -235,6 +235,11 @@ Machine ClassAd Attributes
     This is useful for Vanilla universe jobs which require remote file
     access.
 
+:classad-attribute-def:`GPUs`
+    The number of GPUs in this slot. For a partitionable slot, it is
+    the remaining number of GPUs in the partitionable slot. Only present
+    on machines configured with GPU resources.
+
 :classad-attribute-def:`HasContainer`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs.
@@ -997,8 +1002,8 @@ Machine ClassAd Attributes
     An string providing a brief general reason that the slot is broken.
     This attribute will only exist in broken slots and should never be empty.
     Slots that have a ``SlotBrokenReason`` attribute will always advertise
-    0 as the quantity of ad-attr:`Cpus`, ad-attr:`Memory`, ad-attr:`GPUs`
-    and other custom resources, and will override the slot ad-attr:``Requirements``
+    0 as the quantity of :ad-attr:`Cpus`, :ad-attr:`Memory`, :ad-attr:`GPUs`
+    and other custom resources, and will override the slot :ad-attr:`Requirements[type=Machine]`
     with the broken reason string to prevent jobs from matching the slot.
 
 :classad-attribute-def:`SlotID`
