@@ -98,8 +98,9 @@ int main( int argc, char *argv[] )
 	close(dirfd);
 
 	if (rc < 0) {
-		dprintf(D_ALWAYS, "Cannot connect to unix domain socket .docker_sock for docker ssh_to_job: %d\n", errno);
-		return -1;
+		fprintf(stderr, "condor_ssh_to_job: cannot connect to the condor_starter "
+			"to enter the container (.docker_sock): %s\n", strerror(errno));
+		return 1;
 	}
 	fdpass_send(uds, 0);
 	fdpass_send(uds, 1);
@@ -128,10 +129,26 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	char buf[1];
-	rc = read(uds, buf, 1); // wait until other side hangs up
-
-	
+	// Wait until the starter hangs up.  For singularity/apptainer jobs,
+	// the starter first sends condor_nsenter's exit code, as 4 bytes in
+	// network order.  Exit with it, so that ssh, and so condor_ssh_to_job,
+	// do too.  If the starter hangs up without sending one, as it does
+	// for docker jobs, exit 0, as we always have.
+	uint32_t exit_code = 0;
+	size_t got = 0;
+	while (got < sizeof(exit_code)) {
+		ssize_t r = read(uds, reinterpret_cast<char *>(&exit_code) + got, sizeof(exit_code) - got);
+		if (r > 0) {
+			got += r;
+		} else if (r < 0 && errno == EINTR) {
+			continue;
+		} else {
+			break;
+		}
+	}
+	if (got == sizeof(exit_code)) {
+		return (int)(ntohl(exit_code) & 0xff);
+	}
 	return 0;
 }
 
