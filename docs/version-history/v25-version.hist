@@ -18,6 +18,11 @@
   to fail on the metadata server and leak open file handles.
   :jira:`4058`
 
+- Fixed a bug where :tool:`condor_watch_q` would show a self-checkpointing
+  job as stuck transferring output after a checkpoint was transferred, rather
+  than returning the job to the running state.
+  :jira:`4049`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
