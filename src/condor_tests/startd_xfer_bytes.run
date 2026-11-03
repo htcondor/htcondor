@@ -116,11 +116,15 @@ $res = 1 if ($num_ok == 2);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'xfer-jobs-ran');
 
 TLOG("direct querying startd daemon ad to look for transfer totals\n");
-my @lines;
-# my $startd_addr = `condor_who -quick -af STARTD_Addr`;
-# chomp($startd_addr);
-# CondorTest::runCondorTool("condor_status -startd -direct \"$startd_addr\" -long", \@lines, 1, {emit_output => 1} );
-my $totals = `condor_who -startd -af AvgTransferInputMB TotalTransferInputMB AvgTransferOutputMB TotalTransferOutputMB`;
+# Query the startd directly rather than with condor_who: on Windows condor_who
+# runs tasklist, which can stall for minutes on a loaded machine.
+my $startd_address_file = `condor_config_val STARTD_ADDRESS_FILE`;
+chomp($startd_address_file);
+open(my $startd_address_fd, '<', $startd_address_file) or die "Cannot open $startd_address_file: $!";
+my $startd_addr = <$startd_address_fd>;
+close($startd_address_fd);
+chomp($startd_addr);
+my $totals = `condor_status -startd -direct "$startd_addr" -af AvgTransferInputMB TotalTransferInputMB AvgTransferOutputMB TotalTransferOutputMB`;
 
 # expected totals output is about 9.9 19.9 0.0011 0.0023
 # actual output will have more significant digits
