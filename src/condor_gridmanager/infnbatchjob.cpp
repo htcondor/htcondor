@@ -1511,7 +1511,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	if (!jobAd->LookupInteger(ATTR_BATCH_CPUS_PER_NODE, cpus_per_node)) {
 		jobAd->LookupInteger("SMPGranularity", cpus_per_node);
 	}
-	if (node_count > 0) {
+	if (cpus_per_node > 0) {
 		submit_ad->Assign("SMPGranularity", cpus_per_node);
 	}
 
@@ -1519,7 +1519,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	if (!jobAd->LookupBool(ATTR_BATCH_WHOLE_NODES, whole_nodes)) {
 		jobAd->LookupBool("WholeNodes", whole_nodes);
 	}
-	if (node_count > 0) {
+	if (whole_nodes) {
 		submit_ad->Assign("WholeNodes", whole_nodes);
 	}
 
