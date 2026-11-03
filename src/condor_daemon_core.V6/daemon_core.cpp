@@ -7231,6 +7231,13 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	if (priv == PRIV_USER_FINAL || priv == PRIV_CONDOR_FINAL) {
+		if (want_command_port != FALSE || want_udp_command_port != FALSE) {
+			dprintf(D_ERROR, "DaemonCore: Refusing to make command port for non-privileged child '%s'\n", executable);
+		}
+		want_command_port = FALSE;
+		want_udp_command_port = FALSE;
+	}
 
 #ifdef LINUX
 		// Most callers of Create_Process should give us a meaningful

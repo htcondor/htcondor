@@ -2391,8 +2391,6 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		int pid = daemonCore->CreateProcessNew(args.GetArg(0), args,
 					cpArgs.priv(PRIV_CONDOR_FINAL)
 						.reaperID(m_pluginReaperId)
-						.wantCommandPort(FALSE)
-						.wantUDPCommandPort(FALSE)
 						.env(&m_pluginState->m_env)
 						.familyInfo(&fi)
 						.std(std_fds));

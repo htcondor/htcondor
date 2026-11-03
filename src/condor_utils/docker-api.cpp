@@ -529,7 +529,6 @@ int DockerAPI::createContainer(
 
 	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
 		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
-			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment).cwd("/").familyInfo(& fi)
 			.std(childFDs).jobOptMask(DCJOBOPT_NO_ENV_INHERIT) );
 
@@ -566,8 +565,6 @@ int DockerAPI::startContainer(
 	OptionalCreateProcessArgs cpArgs;
 	int childPID = daemonCore->CreateProcessNew( startArgs.GetArg(0), startArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.familyInfo(&fi)
@@ -633,8 +630,6 @@ DockerAPI::pullImage(const std::string &image_name,
 	int childPID = daemonCore->CreateProcessNew( pullArgs.GetArg(0), pullArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(reaperId)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.std(childFDs)
@@ -687,8 +682,6 @@ DockerAPI::execInContainer( const std::string &containerName,
 	int childPID = daemonCore->CreateProcessNew( execArgs.GetArg(0), execArgs,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(reaperid)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&cliEnvironment)
 			.cwd("/")
 			.familyInfo(&fi)

@@ -584,8 +584,6 @@ ProcFamilyProxy::start_procd()
 	                                         args,
 	                                         cpArgs.priv(PRIV_ROOT)
 	                                         	.reaperID(m_reaper_id)
-	                                         	.wantCommandPort(FALSE)
-	                                         	.wantUDPCommandPort(FALSE)
 	                                         	.env(&env)
 	                                         	.std(std_io));
 	if (m_procd_pid == FALSE) {
