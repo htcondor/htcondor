@@ -2935,8 +2935,20 @@ int SubmitHash::SetGridParams()
 		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_BatchCpuCount, ATTR_BATCH_CPU_COUNT)) ) {
+		AssignJobExpr(ATTR_BATCH_CPU_COUNT, tmp);
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchCpusPerNode, ATTR_BATCH_CPUS_PER_NODE)) ) {
+		AssignJobExpr(ATTR_BATCH_CPUS_PER_NODE, tmp);
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchNodeCount, ATTR_BATCH_NODE_COUNT)) ) {
+		AssignJobExpr(ATTR_BATCH_NODE_COUNT, tmp);
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT)) ) {
@@ -2949,6 +2961,10 @@ int SubmitHash::SetGridParams()
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchWholeNodes, ATTR_BATCH_WHOLE_NODES)) ) {
+		AssignJobExpr(ATTR_BATCH_WHOLE_NODES, tmp);
 	}
 
 	// blahp jobs don't get default request resource values from config.
@@ -4956,10 +4972,14 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchCpuCount, ATTR_BATCH_CPU_COUNT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchCpusPerNode, ATTR_BATCH_CPUS_PER_NODE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchNodeCount, ATTR_BATCH_NODE_COUNT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchWholeNodes, ATTR_BATCH_WHOLE_NODES, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
