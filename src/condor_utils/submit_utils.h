@@ -951,6 +951,7 @@ protected:
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
 	int ProcessJobsetAttributes();
+	int ProcessBatchAttributes(); // JobBatchName and JobBatchId must not contain newlines. call after SetForcedAttributes
 
 	// check if the job ad has  Cron attributes set, checked by SetRequirements
 	// return value is NULL if false,

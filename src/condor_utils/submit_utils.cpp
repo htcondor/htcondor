@@ -2685,6 +2685,24 @@ int SubmitHash::SetForcedAttributes()
 	return 0;
 }
 
+// JobBatchName and JobBatchId are written into single line history and epoch banners.
+// Check the evaluated per-job value (set by batch_name/batch_id or MY.*) so this
+// applies both at submit and at late materialization
+int SubmitHash::ProcessBatchAttributes()
+{
+	RETURN_IF_ABORT();
+
+	for (const char * attr : {ATTR_JOB_BATCH_NAME, ATTR_JOB_BATCH_ID}) {
+		std::string val;
+		if (job->LookupString(attr, val) && val.find('\n') != std::string::npos) {
+			push_error(stderr, "%s must not contain a newline.\n", attr);
+			ABORT_AND_RETURN(1);
+		}
+	}
+
+	return 0;
+}
+
 int SubmitHash::ProcessJobsetAttributes()
 {
 	RETURN_IF_ABORT();
@@ -8468,6 +8486,9 @@ ClassAd* SubmitHash::make_job_ad (
 		// process and validate JOBSET.* attributes
 		// and verify that the jobset membership request is valid (i.e. jobset memebership is a cluster attribute, not a job attribute)
 	ProcessJobsetAttributes();
+
+		// validate JobBatchName and JobBatchId. must be after SetForcedAttributes
+	ProcessBatchAttributes();
 
 		// auto-generate/complete require_gpus and like expressions.
 		// must be called before SetRequirements and after SetRequestResources and SetForcedAttributes
