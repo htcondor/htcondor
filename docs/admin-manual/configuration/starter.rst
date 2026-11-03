@@ -635,4 +635,4 @@ These settings affect the *condor_starter*.
 :macro-def:`CHECK_REACTIVATE_AFTER_CHECKPOINT`
     A boolean value.  If true, self-checkpointing jobs will not restart after
     uploading a checkpoint if the slot would not otherwise be reactivatable.
-    Defaults to true.
+    Defaults to false.

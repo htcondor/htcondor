@@ -30,6 +30,10 @@
 #     contents of the same directory ("shared/" and, through a symlink,
 #     "link/"); both must run, because the directory's name doesn't land
 #     in the sandbox.
+#   - dag_preserve_mismatch: two clusters in the same DAG name the same file
+#     by the same relative path, but only one sets preserve_relative_paths,
+#     so the file would land in different places; the second must be held
+#     (by its transfer shadow).
 #
 # We don't run DAGMan, because it (rightly) refuses to submit DAGs whose
 # nodes' common files differ; instead, each "DAGMan job" is a held
@@ -264,6 +268,22 @@ def dag_same_dir_contents(the_condor, test_dir):
         h.remove()
 
 
+@action
+def dag_preserve_mismatch(the_condor, test_dir):
+    base = test_dir / "dag_preserve_mismatch"
+    make_file(base / "dir", "common.txt", "preserve\n")
+
+    placeholder, handles = submit_fake_dag(the_condor, test_dir, "dag_preserve_mismatch", [
+        {"initialdir": base.as_posix(), "transfer_common_input": "dir/common.txt",
+         "preserve_relative_paths": True, "shell": "cat dir/common.txt", "leave_in_queue": True},
+        {"initialdir": base.as_posix(), "transfer_common_input": "dir/common.txt",
+         "leave_in_queue": True},
+    ])
+    yield query_jobs(the_condor, handles), handles
+    for h in handles + [placeholder]:
+        h.remove()
+
+
 class TestCommonFilesMismatchHold:
 
     def test_cluster_match_runs(self, cluster_match):
@@ -295,3 +315,8 @@ class TestCommonFilesMismatchHold:
         results, _ = dag_same_dir_contents
         assert len(results) == 2
         assert all(status_of(r) == JobStatus.COMPLETED for r in results)
+
+    def test_dag_preserve_mismatch_holds_second(self, dag_preserve_mismatch):
+        results, handles = dag_preserve_mismatch
+        h = assert_second_node_held(results, handles, SUBCODE_DAG)
+        assert "do not match" in h["HoldReason"]

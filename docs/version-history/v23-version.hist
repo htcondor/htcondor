@@ -295,7 +295,7 @@
   using the docker runtime.
   :jira:`2866`
 
-- Fixed a bug where referencing :attr:`htcondor2.JobEvent.cluster`
+- Fixed a bug where referencing ``htcondor2.JobEvent.cluster``
   could crash if processed log event was not associated with job(s)
   (i.e. had a negative value).
   :jira:`2881`
