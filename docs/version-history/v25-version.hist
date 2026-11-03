@@ -27,6 +27,12 @@
   a user's resoruce usage when they haven't used any resources.
   :jira:`4018`
 
+- HTCondor daemons now close the job event log with the job owner's identity,
+  matching the identity used to open it. Previously, the *condor_schedd* and
+  other daemons closed it as the condor user, which on Lustre caused the close
+  to fail on the metadata server and leak open file handles.
+  :jira:`4058`
+
 *** 25.15.15 features
 
 - Scheduler and Local universe jobs no longer use the Vanilla universe default values for
