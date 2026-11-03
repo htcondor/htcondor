@@ -1146,6 +1146,14 @@ UniShadow::before_common_file_transfer(
 		ATTR_JOB_IWD, * Shadow->getJobAd()
 	);
 	commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
+	// Stage the files in the same layout that ordinary input transfer would
+	// give them, so the job's sandbox doesn't depend on which method the
+	// schedd picked.  The common files check (common_files_check.cpp)
+	// depends on this.
+	CopyAttribute(
+		ATTR_PRESERVE_RELATIVE_PATHS, commonAd,
+		ATTR_PRESERVE_RELATIVE_PATHS, * Shadow->getJobAd()
+	);
 	// If we neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
 	// job's (non-existent) spool directory to the input list!
 	commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
@@ -1833,7 +1841,7 @@ UniShadow::start_mapping_only_conversation(
 
 				if( matches ) {
 					catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
-					dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+					dprintf( D_FULLDEBUG, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
 					break;
 				}
 			}

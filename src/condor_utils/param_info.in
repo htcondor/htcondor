@@ -38,7 +38,7 @@ default=false
 type=bool
 
 [CHECK_REACTIVATE_AFTER_CHECKPOINT]
-default=true
+default=false
 type=bool
 
 [STARTER_DIAGNOSTIC_send_ep_logs]
