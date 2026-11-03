@@ -45,6 +45,11 @@
 // sandbox, which is how staging lays it out: under the last component of its
 // path as listed (not as resolved), or, with a trailing slash ("the
 // directory's contents" rather than "the directory"), in the top level.
+// If the job sets preserve_relative_paths (PreserveRelativePaths), which
+// staging honors just as ordinary transfer does, a relative entry instead
+// lands at its normalized relative path as listed, and the setting itself
+// is hashed: jobs in a scope which disagree about it break the rule, even if
+// their entries would land in the same places.
 // URLs are compared exactly.  A path which can't be resolved (e.g., the
 // file was deleted) is hashed as unresolvable, so it won't match.
 //
@@ -153,7 +158,7 @@ struct CommonFilesHashes {
 
 // Does filesystem I/O; call only as the job's owner.
 std::optional<CommonFilesHashes>
-hashCommonFiles( const std::string & commonFiles, const std::string & iwd );
+hashCommonFiles( const std::string & commonFiles, const std::string & iwd, bool preserve_relative_paths );
 
 // The job's catalogs as (simple name, contents) pairs, including the one
 // implied by ATTR_COMMON_INPUT_FILES.  Empty if the job has no common files
