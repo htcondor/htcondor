@@ -54,6 +54,22 @@ all attributes.
     not computed until complete. Like the above attribute, it represents
     only the most recent launch, not the sum of all prior launches.
 
+:classad-attribute-def:`ActivationRequestMemory`
+    The value, in MiB, that :ad-attr:`RequestMemory` evaluated to when the
+    most recent activation started, evaluated against the slot the job was
+    matched to (or, for local universe jobs, against the *condor_schedd*'s
+    local starter ad).  It is usually an integer, but is a real number if
+    :ad-attr:`RequestMemory` evaluates to one.  It is set by the *condor_schedd* each time the job
+    starts running, and is not changed when the *condor_schedd* reconnects
+    to a running job.
+
+    Because :ad-attr:`RequestMemory` may be an expression, such as one
+    that references :ad-attr:`MemoryUsage`, or may be changed between
+    activations, for example by :subcom:`retry_request_memory`, this
+    attribute records the memory that the activation actually requested.
+    Each epoch record in the job epoch history has the value for that
+    epoch's activation.
+
 :classad-attribute-def:`ActivationSetupDuration`
     The length of time in seconds from when the shadow sends a
     claim activation to when the shadow it notified that the job was

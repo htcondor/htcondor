@@ -57,6 +57,13 @@
   advertised in the slot ad of a running job, has been removed.
   :jira:`3995`
 
+- The job ad now includes :ad-attr:`ActivationRequestMemory`, the value
+  :ad-attr:`RequestMemory` evaluated to when the job's most recent
+  activation started, so the memory each activation actually requested
+  is recorded in the job epoch history and the job history even when
+  :ad-attr:`RequestMemory` is an expression.
+  :jira:`4062`
+
 *** 26.2.0 bugs
 
 - Fix several bugs that causes :ad-attr:`CPUsUsage` to be incorrect

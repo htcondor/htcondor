@@ -13278,6 +13278,47 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 	return new_rec;
 }
 
+// Record in the job ad, as ATTR_JOB_ACTIVATION_REQUEST_MEMORY, the value
+// RequestMemory evaluates to for the activation that is starting.  This is
+// the same value GetExpandedJobAd() hands the shadow or local starter, but
+// unlike that, it is persisted, so it is still known after a reconnect and
+// is in every epoch and history ad even when RequestMemory is an expression.
+// Must be called within a transaction.
+static void
+setActivationRequestMemory(const shadow_rec &srec)
+{
+	const PROC_ID &job_id = srec.job_id;
+	JobQueueJob *job = GetJobAd(job_id);
+	if ( ! job || srec.universe == CONDOR_UNIVERSE_SCHEDULER) {
+		return;
+	}
+
+	ClassAd *startd_ad = nullptr;
+	if (srec.match) {
+		startd_ad = srec.match->my_match_ad;
+	} else if (srec.universe == CONDOR_UNIVERSE_LOCAL) {
+		startd_ad = scheduler.getLocalStarterAd();
+	}
+
+	classad::Value val;
+	long long ival = 0;
+	double rval = 0.0;
+		// Evaluating the unexpanded job ad is fine: $$() can't appear in a
+		// numeric RequestMemory, since the ClassAd parser rejects it outside
+		// a string, and a string RequestMemory never matches a slot anyway.
+		// dollarDollarExpand() evaluates the unexpanded ad the same way.
+		// The result may be real-valued, e.g. for MemoryUsage * 1.5.
+	bool evaluated = EvalAttr(ATTR_REQUEST_MEMORY, job, startd_ad, val);
+	if (evaluated && val.IsIntegerValue(ival)) {
+		SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY, ival);
+	} else if (evaluated && val.IsRealValue(rval)) {
+		SetAttributeFloat(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY, rval);
+	} else {
+			// Don't leave behind the value from a previous activation.
+		DeleteAttribute(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY);
+	}
+}
+
 void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 {
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
@@ -13674,6 +13715,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 	if(! transfer_proc) {
 		GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
+		if ( ! new_rec->is_reconnect) {
+			setActivationRequestMemory( *new_rec );
+		}
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 		CommitTransactionOrDieTrying();
 

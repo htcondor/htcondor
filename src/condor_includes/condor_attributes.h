@@ -377,6 +377,7 @@
 #define ATTR_JOB_ACTIVATION_EXECUTION_DURATION  "ActivationExecutionDuration"
 #define ATTR_JOB_ACTIVATION_SETUP_DURATION  "ActivationSetupDuration"
 #define ATTR_JOB_ACTIVATION_TEARDOWN_DURATION  "ActivationTeardownDuration"
+#define ATTR_JOB_ACTIVATION_REQUEST_MEMORY  "ActivationRequestMemory"
 #define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
 #define ATTR_JOB_ALLOWED_EXECUTE_DURATION "AllowedExecuteDuration"
 #define ATTR_JOB_EPOCH_WRITE_DATE "EpochWriteDate"
