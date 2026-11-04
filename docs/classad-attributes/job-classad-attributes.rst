@@ -136,11 +136,11 @@ all attributes.
     SCITOKENS) used to submit the job.
 
 :classad-attribute-def:`BatchCpuCount`
-    For **batch** grid universe jobs, the total nubmer of cpus to request
+    For **batch** grid universe jobs, the total number of cpus to request
     in the remote batch system.
 
 :classad-attribute-def:`BatchCpusPerNode`
-    For **batch** grid universe jobs, the nubmer of cpus to request on
+    For **batch** grid universe jobs, the number of cpus to request on
     each machine in the remote batch system.
 
 :classad-attribute-def:`BatchExtraSubmitArgs`
@@ -148,7 +148,7 @@ all attributes.
     to be given to the target batch system's job submission command.
 
 :classad-attribute-def:`BatchNodeCount`
-    For **batch** grid universe jobs, the nubmer of machines to request
+    For **batch** grid universe jobs, the number of machines to request
     in the remote batch system.
 
 :classad-attribute-def:`BatchProject`

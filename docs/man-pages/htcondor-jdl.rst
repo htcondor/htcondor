@@ -1768,8 +1768,9 @@ COMMANDS FOR THE GRID
 
  :subcom-def:`batch_whole_nodes` = <True | False>
     Used for **batch** grid universe jobs.
-    Specifies whether the PBS/LSF/SGE/SLURM job can run on machines
-    that are running other jobs. The default is False.
+    Specifies whether the PBS/LSF/SGE/SLURM job must run on machines
+    with no other jobs. The default is False (the job can share
+    machines with other jobs).
 
  :subcom-def:`cloud_label_names` = <name0,name1,name...>
     For grid type **gce** jobs, specifies the case of tag names that
