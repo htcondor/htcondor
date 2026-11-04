@@ -138,6 +138,7 @@ jobs:
     outputs:
       stale: ${{ steps.diff.outputs.stale }}
       diff_note: ${{ steps.diff.outputs.diff_note }}
+      # Empty when the model produced no output; publish is then skipped.
       sarif: ${{ steps.sarif.outputs.sarif }}
     env:
       PR_NUMBER: ${{ needs.verify.outputs.pr_number }}
@@ -248,6 +249,7 @@ jobs:
             < /dev/null > .pr-review/raw.txt 2> .pr-review/stderr.txt
           rc=$?
           set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
           echo "opencode exit code: $rc"
           # Don't print the model's stdout or stderr: the log is public.
           echo "output: $(stat -c %s .pr-review/raw.txt) bytes, stderr: $(stat -c %s .pr-review/stderr.txt) bytes"
@@ -255,9 +257,11 @@ jobs:
       - name: Convert report to SARIF
         id: sarif
         if: always() && steps.review.outcome != 'skipped'
+        env:
+          OPENCODE_RC: ${{ steps.review.outputs.rc }}
         run: |
           python3 - <<'PY'
-          import base64, gzip, json, os, re
+          import base64, gzip, json, os, re, sys
 
           raw = ""
           try:
@@ -266,6 +270,16 @@ jobs:
           except FileNotFoundError:
               pass
           raw = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", raw)
+
+          # No output at all (e.g. opencode hit the 20m timeout, exit 124)
+          # means there is nothing to report, so don't raise an alert. With
+          # no sarif output, the publish job is skipped: nothing is uploaded
+          # and no PR comment claims a review ran. Output that is present
+          # but unparseable is still delivered below as an alert.
+          if not raw.strip():
+              rc = os.environ.get("OPENCODE_RC") or "unknown"
+              print(f"No model output (opencode exit code {rc}); not publishing a review.")
+              sys.exit(0)
 
           changed = []
           try:
