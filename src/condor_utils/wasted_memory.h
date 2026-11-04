@@ -1,0 +1,46 @@
+/***************************************************************
+ *
+ * Copyright (C) 2026, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#ifndef _WASTED_MEMORY_H
+#define _WASTED_MEMORY_H
+
+#include "condor_classad.h"
+
+// Set ATTR_CURRENT_WASTED_MEMORY_GB_HOURS in job_ad to the memory wasted
+// so far by the activation that started at activation_start, in
+// gigabyte-hours (where one gigabyte is 1024 MiB):
+//
+//   max(ActivationRequestMemory - MemoryUsage, 0) / 1024 * (now - activation_start) / 3600
+//
+// ATTR_JOB_ACTIVATION_REQUEST_MEMORY is what RequestMemory evaluated to
+// when the activation started; if it's missing (e.g. the job was started
+// by an older schedd), RequestMemory is evaluated instead.  MemoryUsage
+// in job_ad must be the max seen over the lifetime of the job.
+//
+// If activation_ended is true, now is when the activation ended, and the
+// value is also copied into ATTR_LAST_WASTED_MEMORY_GB_HOURS.  If the
+// value can't be computed then, ATTR_LAST_WASTED_MEMORY_GB_HOURS is set
+// to undefined, so it doesn't claim a previous activation's value.
+//
+// Returns false if the value can't be computed (because RequestMemory or
+// MemoryUsage is unknown).
+bool UpdateWastedMemoryAttrs(classad::ClassAd &job_ad, time_t activation_start,
+                             time_t now, bool activation_ended);
+
+#endif

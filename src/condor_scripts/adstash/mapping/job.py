@@ -193,11 +193,13 @@ NON_INDEXED_KEYWORD_ATTRS = set()
 FLOAT_ATTRS = {
     "ActivationRequestMemory",
     "CPUsUsage",
+    "CurrentWastedMemoryGBHours",
     "GPUsAverageUsage",
     "GPUsMemoryUsage",
     "JobBatchId",
     "JobDuration",
     "JobVMCpuUtilization",
+    "LastWastedMemoryGBHours",
     "NetworkInputMb",
     "NetworkOutputMb",
     "Rank",

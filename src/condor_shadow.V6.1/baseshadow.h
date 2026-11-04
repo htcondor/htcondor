@@ -250,6 +250,16 @@ class BaseShadow : public Service
 	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
 	virtual bool exitDelayed( int & /*reason*/ ) { return false; }
 
+		/** The current activation is over (or about to be, because
+			we're putting the job on hold, removing it, etc.), so set the
+			final value of CurrentWastedMemoryGBHours, and copy it to
+			LastWastedMemoryGBHours, if that hasn't been done already.
+			Call this before the final update to the job queue.  The
+			default implementation does nothing; shadows that support
+			this override it.
+		*/
+	virtual void recordActivationEndForWastedMemory() { }
+
 		/** The total number of bytes sent over the network on
 			behalf of this job.
 			Each shadow class should override this function and

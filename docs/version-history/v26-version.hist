@@ -64,6 +64,13 @@
   :ad-attr:`RequestMemory` is an expression.
   :jira:`4062`
 
+- The job ad now includes :ad-attr:`CurrentWastedMemoryGBHours`, the
+  gigabyte-hours of requested but unused memory so far in the job's
+  current activation, updated as the job runs, and
+  :ad-attr:`LastWastedMemoryGBHours`, its final value for the most
+  recent activation to have ended.
+  :jira:`4062`
+
 *** 26.2.0 bugs
 
 - Fix several bugs that causes :ad-attr:`CPUsUsage` to be incorrect

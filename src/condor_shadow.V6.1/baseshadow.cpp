@@ -693,6 +693,8 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	jobAd->Assign( ATTR_HOLD_REASON_CODE, hold_reason_code );
 	jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
 
+	recordActivationEndForWastedMemory();
+
 		// try to send email (if the user wants it)
 	emailHoldEvent( reason );
 
@@ -778,6 +780,8 @@ void BaseShadow::removeJobPre( const char* reason )
 
 	// Put the reason in our job ad.
 	jobAd->Assign( ATTR_REMOVE_REASON, reason );
+
+	recordActivationEndForWastedMemory();
 
 	emailRemoveEvent( reason );
 
@@ -935,6 +939,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 	CommitSuspensionTime(jobAd);
 
+	recordActivationEndForWastedMemory();
+
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...
@@ -1079,6 +1085,8 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
+	recordActivationEndForWastedMemory();
+
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...
@@ -1125,6 +1133,8 @@ BaseShadow::requeueJob( const char* reason )
 
 		// Put the reason in our job ad.
 	jobAd->Assign( ATTR_REQUEUE_REASON, reason );
+
+	recordActivationEndForWastedMemory();
 
 		// write stuff to user log:
 	logRequeueEvent( reason );

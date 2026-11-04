@@ -530,6 +530,7 @@ endif()
 			endif()
 			condor_pl_test(test_activation_metrics "Test activation metrics" "quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_activation_request_memory "Test ActivationRequestMemory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_wasted_memory "Test CurrentWastedMemoryGBHours and LastWastedMemoryGBHours" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# HTCONDOR-1365 changed the behavior of output_destination so
 			# that it no longer sends standard output and error to the
 			# destination.  HTCONDOR-955 made output_destination respect

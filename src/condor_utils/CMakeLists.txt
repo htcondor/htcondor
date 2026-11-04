@@ -494,6 +494,8 @@ wait_for_user_log.cpp
 wait_for_user_log.h
 waker.cpp
 waker.h
+wasted_memory.cpp
+wasted_memory.h
 which.cpp
 which.h
 write_eventlog.cpp

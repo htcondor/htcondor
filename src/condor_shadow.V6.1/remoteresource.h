@@ -418,6 +418,14 @@ class RemoteResource : public Service {
 
 	void recordActivationExitExecutionTime( time_t when );
 
+		/** Update ATTR_CURRENT_WASTED_MEMORY_GB_HOURS in the job ad to
+			cover this activation so far.  If activation_ended, the
+			activation is over, so measure it until it ended and also
+			set ATTR_LAST_WASTED_MEMORY_GB_HOURS; once that has been
+			done, later calls do nothing.
+		*/
+	void updateWastedMemory( bool activation_ended );
+
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
 	std::string starter_version;
@@ -513,6 +521,13 @@ class RemoteResource : public Service {
         time_t ExitExecutionTime;
         time_t TerminationTime;
     } activation;
+
+		// Has updateWastedMemory() recorded the end of this activation?
+	bool m_wasted_memory_activation_ended{false};
+
+		// Should we compute wasted memory?  Not for the parallel universe,
+		// whose node 0 shares its job ad with the shadow.
+	virtual bool tracksWastedMemory() const { return true; }
 
 	void abortFileTransfer();
 

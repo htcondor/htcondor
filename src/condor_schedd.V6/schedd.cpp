@@ -13717,6 +13717,12 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
 		if ( ! new_rec->is_reconnect) {
 			setActivationRequestMemory( *new_rec );
+				// A new activation is starting, so don't let the value
+				// from the previous one linger until the first update.
+			JobQueueJob *job = GetJobAd( cluster, proc );
+			if ( job && job->Lookup( ATTR_CURRENT_WASTED_MEMORY_GB_HOURS ) ) {
+				DeleteAttribute( cluster, proc, ATTR_CURRENT_WASTED_MEMORY_GB_HOURS );
+			}
 		}
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 		CommitTransactionOrDieTrying();
