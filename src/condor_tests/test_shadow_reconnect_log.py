@@ -17,16 +17,23 @@
 #
 # Successful-reconnect strategy:
 #   1. Submit a second long sleep job with a job lease duration
-#   2. Once it is running, SIGSTOP its shadow, wait, then fast-restart
-#      the schedd (which SIGKILLs the shadow).  Merely killing the shadow
-#      is not enough: a running schedd treats that as a shadow crash and
-#      tries to start the job afresh rather than reconnecting.
+#   2. Once it is running, fast-restart the schedd (which SIGKILLs the
+#      shadow).  Merely killing the shadow is not enough: a running schedd
+#      treats that as a shadow crash and tries to start the job afresh
+#      rather than reconnecting.
 #   3. The restarted schedd spawns a shadow in reconnect mode, which
 #      reconnects to the still-running starter and logs a successful
 #      CSV record
-#   4. T2 (last contact) must predate the shadow being stopped, and T3
-#      (reconnect time) must follow the kill.  A regression once made
-#      T2 always equal to T3 on success.
+#   4. T3 (reconnect time) must follow the restart, and T2 (last contact)
+#      must strictly precede T3.  A regression once made T2 always equal
+#      to T3 on success.
+#
+#      T2 cannot be bounded more tightly from here.  The replacement
+#      shadow takes T2 from the job ad's LastJobLeaseRenewal, and the
+#      schedd's checkClaimLeases() timer refreshes that attribute for as
+#      long as the old shadow process exists.  So T2 can be as late as the
+#      schedd's shutdown, which itself can be delayed if the schedd is
+#      busy.
 #
 
 import os
@@ -162,28 +169,13 @@ def reconnected_job(condor, test_dir, path_to_sleep):
     # queue update (which includes LastJobLeaseRenewal).
     time.sleep(3)
 
-    # Every ShadowLog line for a job is prefixed "(cluster.proc) (pid):",
-    # so the most recent such line names this job's current shadow.
-    log_dir = Path(
-        condor.run_command(["condor_config_val", "LOG"]).stdout.strip()
-    )
     job_id = f"{handle.clusterid}.0"
-    shadow_pids = re.findall(
-        rf"\({re.escape(job_id)}\) \((\d+)\):",
-        (log_dir / "ShadowLog").read_text(),
-    )
-    assert shadow_pids, f"Could not find a shadow PID for job {job_id}"
-    shadow_pid = int(shadow_pids[-1])
-    logger.info(f"Found shadow PID {shadow_pid} for job {job_id}")
 
-    # Freeze the shadow first, so it cannot record any further contact
-    # with the starter, then wait so that the reconnect clearly happens
-    # later than that last contact.  Then fast-restart the schedd, which
-    # SIGKILLs the (stopped) shadow; the new schedd starts a shadow in
-    # reconnect mode because the job's lease has not expired.
-    stop_time = int(time.time())
-    os.kill(shadow_pid, signal.SIGSTOP)
-    time.sleep(3)
+    # Fast-restart the schedd, which SIGKILLs the shadow; the new schedd
+    # starts a shadow in reconnect mode because the job's lease has not
+    # expired.  Don't SIGSTOP the shadow first: if it is frozen with a
+    # queue-management connection open, the schedd blocks reading from it
+    # until the connection times out.
     kill_time = int(time.time())
     condor.restart_daemon("schedd", mode=RestartMode.FAST)
 
@@ -196,7 +188,6 @@ def reconnected_job(condor, test_dir, path_to_sleep):
 
     return {
         "job_id": job_id,
-        "stop_time": stop_time,
         "kill_time": kill_time,
     }
 
@@ -279,8 +270,7 @@ class TestShadowReconnectLogSuccess:
 
     def test_successful_reconnect_record(self, reconnected_job, reconnect_log_path):
         """Verify a successful reconnect logs a record whose last-contact
-        time (T2) predates the disconnect, rather than equalling the
-        reconnect time (T3)."""
+        time (T2) precedes, rather than equals, the reconnect time (T3)."""
         logger.info(f"ShadowReconnectLog contents:\n{reconnect_log_path.read_text()}")
 
         records = records_for(reconnect_log_path, reconnected_job["job_id"])
@@ -297,10 +287,9 @@ class TestShadowReconnectLogSuccess:
         assert r["t1"] > 0, f"T1 should be set, got {r['t1']}"
         assert r["t2"] >= r["t1"], f"T2 ({r['t2']}) should be >= T1 ({r['t1']})"
 
-        # T2 is the last contact before the disconnect, so it must not be
-        # later than when we froze the shadow; T3 must follow the kill.
-        assert r["t2"] <= reconnected_job["stop_time"], \
-            f"T2 ({r['t2']}) should be <= shadow stop time ({reconnected_job['stop_time']})"
+        # T3 must follow the restart, and T2 (the last contact before the
+        # disconnect) must strictly precede T3.  See the header comment for
+        # why T2 can't be bounded against the restart time itself.
         assert r["t3"] >= reconnected_job["kill_time"], \
             f"T3 ({r['t3']}) should be >= shadow kill time ({reconnected_job['kill_time']})"
         assert r["t3"] > r["t2"], f"T3 ({r['t3']}) should be > T2 ({r['t2']})"
