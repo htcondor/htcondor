@@ -2389,10 +2389,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 						std::string upsau = "Uptime" + resource + "SecondsAverageUsage";
 						ad->InsertAttr( upsau, average );
 					}
-				} /* else {
-					dprintf( D_ALWAYS, "Failed to find %s or %s in following ad.\n", resourceName.c_str(), timestampName.c_str() );
-					dPrintAd( D_ALWAYS, updateAd );
-				} */
+				}
 			}
 
 

@@ -1695,7 +1695,6 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			std::string lastUpdateName = "LastUpdate" + name;
 			time_t lastUpdateTime;
 			if( public_ad.LookupInteger( lastUpdateName, lastUpdateTime ) ) {
-				dprintf( D_ALWAYS, "Adding %s = %f to .update.ad\n", name.c_str(), uptimeValue );
 				public_ad.Assign( name, uptimeValue );
 			}
 
