@@ -68,9 +68,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_PROC_ID);
 
 
-	ad->Delete(ATTR_BUFFER_BLOCK_SIZE);
-	ad->Delete(ATTR_BUFFER_SIZE);
-	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete("CondorPlatform"); // TODO: Find #define
 	ad->Delete(ATTR_CONDOR_VERSION);  // TODO: Find #define
 	ad->Delete(ATTR_CORE_SIZE);

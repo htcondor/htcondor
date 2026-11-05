@@ -317,9 +317,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	//job_ad->Assign( ATTR_TRANSFER_ERROR, false );
 	//job_ad->Assign( ATTR_TRANSFER_EXECUTABLE, false );
 
-	job_ad->Assign( ATTR_BUFFER_SIZE, 512*1024 );
-	job_ad->Assign( ATTR_BUFFER_BLOCK_SIZE, 32*1024 );
-
 	job_ad->Assign( ATTR_SHOULD_TRANSFER_FILES,
 					getShouldTransferFilesString( STF_YES ) );
 	job_ad->Assign( ATTR_WHEN_TO_TRANSFER_OUTPUT,
