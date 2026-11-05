@@ -104,9 +104,13 @@
   using both LVM and SELinux.
   :jira:`3337`
 
-- HTCondor tarballs now contain `Apptainer 1.5.4 <https://github.com/apptainer/apptainer/releases/tag/v1.5.4>`_
+- HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
 
-- The condor RPM package now requires at least apptainer version 1.5.4.
+- The condor package now requires pelican-26.0.0.
+
+- HTCondor tarballs now contain `Apptainer 1.5.5 <https://github.com/apptainer/apptainer/releases/tag/v1.5.5>`_
+
+- The condor RPM package now requires at least apptainer version 1.5.5.
 
 *** 25.0.15 bugs
 
