@@ -1,8 +1,10 @@
-Version 25.x Feature Releases
-=============================
+Version 25.x LTS Releases
+=========================
 
-We release new features in these releases of HTCondor. The details of each
-version are described below.
+HTCondor 25.x transitioned from feature to LTS with the release of 25.15.16.
+These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
+(and potentially, ports to new platforms) will be provided in future
+25.15.y versions. New features will be added in the 26.x.y feature versions.
 
 Version 25.15.16
 ----------------
@@ -20,6 +22,12 @@ New Features:
 Bugs Fixed:
 
 .. include-history:: bugs 25.15.16 25.0.16
+
+Version 25.x Feature Releases
+=============================
+
+We release new features in these releases of HTCondor. The details of each
+version are described below.
 
 Version 25.15.15
 ----------------
