@@ -3579,31 +3579,31 @@ struct QueryJobAdsContinuation : Service {
 	std::string my_name;
 	ClassAd analysisAd;
 	JobQueueLogType::filter_iterator it;
-	int match_limit;
-	int match_count;
-	bool summary_only;
-	bool unfinished_eom;
-	bool registered_socket;
-	bool send_server_time;
+	int match_limit{-1};
+	int match_count{0};
+	bool summary_only{false};
+	bool unfinished_eom{false};
+	bool registered_socket{false};
+	bool send_server_time{false};
 	bool for_analysis{false};
+	bool cluster_before_proc{false};
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0, bool server_time=true, bool for_anal=false);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int iter_opts=0, bool server_time=true, bool for_anal=false);
 	int finish(Stream *);
 	// add job analysis to the analysisAd that will be sent with the query summary
 	void analyze_job(JobQueueJob * job);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts, bool server_time, bool for_anal)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int iter_opts, bool server_time, bool for_anal)
 	: requirements(requirements_),
-	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
+	  it(GetJobQueueIterator(*requirements)),
 	  match_limit(limit),
-	  match_count(0),
-	  summary_only(false),
-	  unfinished_eom(false),
-	  registered_socket(false),
 	  send_server_time(server_time),
 	  for_analysis(for_anal)
 {
+	if (iter_opts & JOB_QUEUE_ITERATOR_OPT_CLUSTER_BEFORE_PROC) {
+		cluster_before_proc = true;
+	}
 	it.set_options(iter_opts);
 	my_job_counts.clear_counters();
 }
@@ -3913,7 +3913,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 
 	int iter_options = 0;
-	bool include_cluster = false, include_jobsets = false, no_proc_ads = false;
+	bool include_cluster = false, include_jobsets = false, no_proc_ads = false, cluster_before_proc = false;
 	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, include_cluster) && include_cluster) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
 	}
@@ -3923,6 +3923,12 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_NO_PROC_ADS, no_proc_ads) && no_proc_ads) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS;
 	}
+	if (queryAd.EvaluateAttrBool(ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS, cluster_before_proc) && cluster_before_proc) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_CLUSTER_BEFORE_PROC;
+		// tell the filter iterator to return cluster ads only, we will iterate the proc ads off the cluster ads
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
+	}
+
 	std::string ids;
 	if (queryAd.LookupString(ATTR_QUERY_Q_IDS, ids) && ! ids.empty()) {
 		// TODO: add a ID based QueryJobAdsContinuation instead of the current JobQueue iteration based
@@ -3933,7 +3939,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(
-		requirements_ptr, resultLimit, 1000, iter_options, send_server_time, query_for_analysis);
+		requirements_ptr, resultLimit, iter_options, send_server_time, query_for_analysis);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
