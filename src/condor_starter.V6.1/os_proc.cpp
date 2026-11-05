@@ -1415,7 +1415,9 @@ OsProc::SingEnterReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "condor_nsenter (pid %d) for condor_ssh_to_job exited with %d\n",
 				pid, exit_code);
 		}
+#ifdef LINUX
 		send_enter_exit_code(sns, exit_code);
+#endif
 		delete sns;
 		sns = nullptr;
 		return false;
