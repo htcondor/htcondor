@@ -2204,10 +2204,8 @@ int SubmitHash::SetLeaveInQueue()
 	if ( ! erc)
 	{
 		if ( ! job->Lookup(ATTR_JOB_LEAVE_IN_QUEUE)) {
-			/* user didn't have one, so add one */
-			if (! IsRemoteJob) {
-				AssignJobVal(ATTR_JOB_LEAVE_IN_QUEUE, false);
-			} else {
+			/* user didn't have one, so add one if spooling */
+			if (IsRemoteJob) {
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
@@ -8205,8 +8203,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 #endif
 
 	baseJob.Assign(ATTR_JOB_REMOTE_WALL_CLOCK, 0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,    0.0);
 
@@ -8219,10 +8215,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Assign(ATTR_COMMITTED_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_TOTAL_SUSPENSIONS, 0);
-	baseJob.Assign(ATTR_LAST_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_COMMITTED_SUSPENSION_TIME, 0);
-	baseJob.Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 #if 0
 	// can't use this because of +attrs and My.attrs in SUBMIT_ATTRS
