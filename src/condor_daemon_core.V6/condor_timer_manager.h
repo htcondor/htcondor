@@ -41,22 +41,13 @@
 #endif
 
 //-----------------------------------------------------------------------------
-/** @name Typedefs for Service
- */
-//@{
-/** Function
-*/
-/// Service Method
+
 using TimerHandler = void (*)(int);
 using TimerHandlercpp = void (Service::*)(int);
-
 using StdTimerHandler = std::function<void (int)>;
-
-//@}
 
 // This value, passed for "when", will cause the timer to never expire
 const time_t TIMER_NEVER	 = std::numeric_limits<time_t>::max();
-
 
 //-----------------------------------------------------------------------------
 /// Not_Yet_Documented
