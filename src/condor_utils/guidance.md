@@ -1,5 +1,4 @@
-Guidance
---------
+# Guidance
 
 From time to time, we want "the AP" to decide what "the EP" should do.  In
 practice, this always means the starter asking the shadow what to do, and then
@@ -19,8 +18,7 @@ election/broadcast algorithm -- the SingleProviderSyndicate -- in the shadow
 that was previously used to coordinate between shadows, but that doesn't help
 in gathering global data for decision-making.)
 
-Wire Protocol
-=============
+## Wire Protocol
 
 The wire protocol is implemented in ``condor_starter.V6.1/NTsenders.cpp`` and
 ``condor_shadow.V6.1/NTreceivers.cpp``, as you'd expect.  It is blocking --
@@ -29,8 +27,7 @@ in either direction ("the quey" to the shadow, "the guidance" to the
 starter).  The implementation (``REMOTE_CONDOR_request_guidance()``)
 is uninteresting.
 
-Starter Implementation
-======================
+## Starter Implementation
 
 The starter generally invokes the raw guidance pseudo-operation via a set of
 small special-purpose functions, all of which channel through
@@ -59,8 +56,7 @@ parts of the starter code.
 The special-purpose functions and the corresponding ``handle*()`` functions
 are all blocking and (implicitly) define the default "carry on" behavior.
 
-Shadow Implementation
-=====================
+## Shadow Implementation
 
 The shadow side does not block between calls to
 ``REMOTE_CONDOR_request_guidance()``, even in the middle of a conversation.
@@ -74,8 +70,7 @@ The guidance functions are all implemented in
 ``condor_shadow.V6.1/pseudo_ops.cpp``, but should really be moved into their
 own file.
 
-Types of Guidance
-=================
+## Types of Guidance
 
 To make sure the shadow and starter don't drift out of synch, there's a header
 in ``condor_utils``, ``guidance.h``.  If defines constants used in the request
@@ -108,8 +103,7 @@ commands:
 * COMMAND_RESTART
   - Restart the checkpointed job (don't evict).
 
-Tests
-=====
+## Tests
 
 * ``test_starter_guidance.cpp``
 * ``test_guidance_commands.py``
