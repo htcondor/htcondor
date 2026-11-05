@@ -809,8 +809,6 @@ GahpServer::Startup(bool force)
 			gahp_args,		// Args
 			cpArgs.priv(PRIV_USER_FINAL)	// Priv State ---- drop root if we have it
 				.reaperID(m_reaperid)		// id for our registered reaper
-				.wantCommandPort(FALSE)		// do not want a command port
-				.wantUDPCommandPort(FALSE)	// do not want a command port
 				.env(&newenv)				// env
 				.std(io_redirect)			// redirect stdin/out/err
 				.jobOptMask(job_opt_mask)	// job option flags

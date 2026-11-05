@@ -61,10 +61,19 @@
 #define ATTR_AZURE_VM_ID  "AzureVmId"
 #define ATTR_BADPUT_CAUSED_BY_DRAINING  "BadputCausedByDraining"
 #define ATTR_BADPUT_CAUSED_BY_PREEMPTION  "BadputCausedByPreemption"
+#define ATTR_BATCH_CPU_COUNT  "BatchCpuCount"
+#define ATTR_BATCH_CPUS_PER_NODE  "BatchCpusPerNode"
 #define ATTR_BATCH_EXTRA_SUBMIT_ARGS  "BatchExtraSubmitArgs"
+#define ATTR_BATCH_NODE_COUNT  "BatchNodeCount"
 #define ATTR_BATCH_PROJECT  "BatchProject"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
 #define ATTR_BATCH_RUNTIME  "BatchRuntime"
+#define ATTR_BATCH_WHOLE_NODES "BatchWholeNodes"
+//#define ATTR_BUFFER_SIZE  "BufferSize"                   // Removed in 26.2
+//#define ATTR_BUFFER_FILES  "BufferFiles"                 // Removed in 26.2
+//#define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"        // Removed in 26.2
+//#define ATTR_BUFFER_BLOCKS_USED  "BufferBlocksUsed"      // Removed in 26.2
+//#define ATTR_BUFFER_PREFETCH_SIZE  "BufferPrefetchSize"  // Removed in 26.2
 #define ATTR_BYTES_SENT  "BytesSent"
 #define ATTR_BYTES_RECVD  "BytesRecvd"
 #define ATTR_CAN_HIBERNATE  "CanHibernate"

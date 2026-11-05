@@ -73,40 +73,19 @@ fi
 [ -z "$bls_opt_queue" ] || grep -q "^#SBATCH -p" $bls_tmp_file || echo "#SBATCH -p $bls_opt_queue" >> $bls_tmp_file
 [ -z "$cluster_name" ] || grep -q "^#SBATCH -M" $bls_tmp_file || echo "#SBATCH -M $cluster_name" >> $bls_tmp_file
 
-# Extended support for MPI attributes
+# support for multi-core/host attributes
 if [ "x$bls_opt_wholenodes" == "xyes" ] ; then
-  bls_opt_hostsmpsize=${bls_opt_hostsmpsize:-1}
-  if [[ ! -z "$bls_opt_smpgranularity" ]] ; then
-    if [[ -z "$bls_opt_hostnumber" ]] ; then
-      echo "#SBATCH -N 1" >> $bls_tmp_file
-      echo "#SBATCH --ntasks-per-node $bls_opt_smpgranularity" >> $bls_tmp_file
-    else
-      echo "#SBATCH -N $bls_opt_hostnumber" >> $bls_tmp_file
-      echo "#SBATCH --ntasks-per-node $bls_opt_smpgranularity" >> $bls_tmp_file
-    fi
     echo "#SBATCH --exclusive" >> $bls_tmp_file
-  else
-    if [[ ! -z "$bls_opt_hostnumber" ]] ; then
-      if [[ $bls_opt_mpinodes -gt 0 ]] ; then
-        echo "#SBATCH -N $bls_opt_hostnumber" >> $bls_tmp_file
-        echo "#SBATCH -n $bls_opt_mpinodes" >> $bls_tmp_file
-      else
-        echo "#SBATCH -N $bls_opt_hostnumber" >> $bls_tmp_file
-      fi
-      echo "#SBATCH --exclusive" >> $bls_tmp_file
-    fi
-  fi
-else
-  if [[ ! -z "$bls_opt_mpinodes" ]] ; then
-    echo "#SBATCH -n $bls_opt_mpinodes" >> $bls_tmp_file
-  fi
-  if [[ ! -z "$bls_opt_smpgranularity" ]] ; then
-    echo "#SBATCH --ntasks-per-node $bls_opt_smpgranularity" >> $bls_tmp_file
-  elif [[ ! -z "$bls_opt_hostnumber" ]] ; then
-    echo "#SBATCH -N $bls_opt_hostnumber" >> $bls_tmp_file
-  fi
 fi
-# --- End of MPI directives
+if [[ ! -z "$bls_opt_mpinodes" ]] ; then
+    echo "#SBATCH -n $bls_opt_mpinodes" >> $bls_tmp_file
+fi
+if [[ ! -z "$bls_opt_smpgranularity" ]] ; then
+    echo "#SBATCH --ntasks-per-node $bls_opt_smpgranularity" >> $bls_tmp_file
+fi
+if [[ ! -z "$bls_opt_hostnumber" ]] ; then
+    echo "#SBATCH -N $bls_opt_hostnumber" >> $bls_tmp_file
+fi
 
 # add GPU support
 [ -z "$bls_opt_gpunumber" ] || [ -z "$bls_opt_gpumodel" ] || echo "#SBATCH --gres=gpu:${bls_opt_gpumodel}:${bls_opt_gpunumber}" >> $bls_tmp_file

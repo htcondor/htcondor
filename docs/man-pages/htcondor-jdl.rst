@@ -1734,10 +1734,25 @@ COMMANDS FOR THE GRID
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
 
+ :subcom-def:`batch_cpu_count` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies the total number of cpus to request for the
+    PBS/LSF/SGE/SLURM job.
+
+ :subcom-def:`batch_cpus_per_node` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies how many cpus on each machine to request for the
+    PBS/LSF/SGE/SLURM job.
+
  :subcom-def:`batch_extra_submit_args` = <command-line arguments>
     Used for **batch** grid universe jobs.
     Specifies additional command-line arguments to be given to the target
     batch system's job submission command.
+
+ :subcom-def:`batch_node_count` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies the number of machines requested for the
+    PBS/LSF/SGE/SLURM job.
 
  :subcom-def:`batch_project` = <projectname>
     Used for **batch** grid universe jobs.
@@ -1757,6 +1772,12 @@ COMMANDS FOR THE GRID
     Used for **batch** grid universe jobs.
     Specifies a limit in seconds on the execution time of the job.
     This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
+
+ :subcom-def:`batch_whole_nodes` = <True | False>
+    Used for **batch** grid universe jobs.
+    Specifies whether the PBS/LSF/SGE/SLURM job must run on machines
+    with no other jobs. The default is False (the job can share
+    machines with other jobs).
 
  :subcom-def:`cloud_label_names` = <name0,name1,name...>
     For grid type **gce** jobs, specifies the case of tag names that

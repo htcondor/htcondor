@@ -25,6 +25,15 @@
   gpu attributes when running on a mig-enabled NVidia gpu.
   :jira:`3978`
 
+- Add submit commands for **batch** grid :subcom:`universe` jobs to
+  specify the number of cpus and machines for the job:
+  :subcom:`batch_cpu_count`, :subcom:`batch_node_count`,
+  :subcom:`batch_cpus_per_node`, and :subcom:`batch_whole_nodes`.
+  Setting :subcom:`request_cpus` to a value greater than ``1`` is now
+  equivalent to setting :subcom:`batch_cpu_count` to the given value and
+  setting :subcom:`batch_node_count` to ``1``.
+  :jira:`4053`
+
 - :tool:`condor_gpu_discovery` now publishes a ``Vendor`` property
   for each GPU, such as ``"NVIDIA"`` or ``"AMD"``, so that jobs and
   HTCondor itself can tell GPU types apart.
