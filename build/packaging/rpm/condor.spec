@@ -247,7 +247,7 @@ Requires: rsync
 
 %if %uw_build
 # Require tested Pelican packages
-Requires: (pelican >= 25.9.9 or pelican-debug >= 25.9.9)
+Requires: (pelican >= 26.0.0 or pelican-debug >= 26.0.0)
 %endif
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
@@ -256,7 +256,12 @@ Requires: (pelican >= 25.9.9 or pelican-debug >= 25.9.9)
 # Unfortunately, Apptainer is lagging behind on openSUSE 15
 Requires: apptainer >= 1.4.5
 %else
-Requires: apptainer >= 1.5.4
+%if 0%{?suse_version} == 1600
+# Unfortunately, Apptainer is lagging behind on openSUSE 16
+Requires: apptainer >= 1.5.3
+%else
+Requires: apptainer >= 1.5.5
+%endif
 %endif
 %endif
 
