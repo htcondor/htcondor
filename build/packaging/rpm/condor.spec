@@ -247,7 +247,7 @@ Requires: rsync
 
 %if %uw_build
 # Require tested Pelican packages
-Requires: (pelican >= 7.27.0 or pelican-debug >= 7.27.0)
+Requires: (pelican >= 26.0.0 or pelican-debug >= 26.0.0)
 %endif
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
