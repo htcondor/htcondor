@@ -1137,7 +1137,7 @@ struct SubmitStepFromQArgs {
 		if (selected && ! m_fea.items.empty()) {
 			// convert item_index from [0...n] to [slice start... end]
 			// we are done iterating when translate returns false
-			if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+			if ( ! m_fea.slice.translate(item_index, static_cast<int>(m_fea.items.size()))) {
 				m_done = true;
 				return 0;
 			}
