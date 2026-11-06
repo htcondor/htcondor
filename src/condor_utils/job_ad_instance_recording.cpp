@@ -154,6 +154,9 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
     attributeList.emplace_back(ATTR_PROJECT_NAME);
     attributeList.emplace_back(ATTR_USER);
     attributeList.emplace_back(ATTR_GLOBAL_JOB_ID);
+    attributeList.emplace_back(ATTR_DAGMAN_JOB_ID);
+    attributeList.emplace_back(ATTR_JOB_BATCH_ID);
+    attributeList.emplace_back(ATTR_JOB_BATCH_NAME);
 
     // Special case attributes to copy into all transfer records
     if( isXfer ) {
@@ -235,10 +238,34 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
 	time_t currentTime = time(nullptr); //Get current time to print in banner
-	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld" ,
 					 banner_name, info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
+
+	// Add DAGManJobId to banner for quick lookup (not required)
+	int dagid = -1;
+	if (job_ad->LookupInteger(ATTR_DAGMAN_JOB_ID, dagid) && dagid > 0) {
+		formatstr_cat(banner, " %s=%d", ATTR_DAGMAN_JOB_ID, dagid);
+	}
+
+	// Add batch id to banner for quick lookup (not required)
+	std::string batchid, quoted;
+	if (job_ad->LookupString(ATTR_JOB_BATCH_ID, batchid) && !batchid.empty()) {
+		formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_ID, QuoteAdStringValue(batchid.c_str(), quoted));
+	}
+
+	// Add batch name to banner for quick lookup (not required)
+	std::string batchname;
+	if (job_ad->LookupString(ATTR_JOB_BATCH_NAME, batchname) && !batchname.empty()) {
+		formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_NAME, QuoteAdStringValue(batchname.c_str(), quoted));
+	}
+
+	banner += '\n'; // Add final newline
+
+	// Add newline to record in string buffer if missing
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
+	// Add the epoch record write date as a record attribute directly into the string buffer
 	info.buffer += std::string(ATTR_JOB_EPOCH_WRITE_DATE) + " = " + std::to_string(currentTime) + "\n";
+	// Append banner to record to complete string buffer of write data
 	info.buffer += banner;
 
 	return ! info.buffer.empty();

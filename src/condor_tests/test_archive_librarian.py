@@ -9,6 +9,7 @@
 #   4. Simulate history rotation, submit 1 more job.
 #   5. Poll until the DB reflects the post-rotation state (with timeout).
 #   6. Check final DB state: new job added, original jobs unchanged.
+#   7. Submit 1 job with DAG/batch attributes and check they are ingested.
 
 import datetime
 import os
@@ -78,17 +79,17 @@ def _reconfig_schedd(condor):
     assert p.returncode == 0, f"condor_reconfig -schedd failed: {p.stderr}"
 
 
-def _submit_and_wait(condor, log_path, path_to_sleep, count):
-    """Submit `count` instant-exit jobs and wait for all to complete."""
-    handle = condor.submit(
-        description={
-            "executable": path_to_sleep,
-            "universe": "vanilla",
-            "arguments": "0",
-            "log": str(log_path),
-        },
-        count=count,
-    )
+def _submit_and_wait(condor, log_path, path_to_sleep, count, extra=None):
+    """Submit `count` instant-exit jobs and wait for all to complete.
+    `extra` adds submit commands (e.g. batch_name) to the description."""
+    description = {
+        "executable": path_to_sleep,
+        "universe": "vanilla",
+        "arguments": "0",
+        "log": str(log_path),
+    }
+    description.update(extra or {})
+    handle = condor.submit(description=description, count=count)
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
@@ -212,6 +213,22 @@ def post_rotation_db(post_rotation_handle, condor):
     conn = sqlite3.connect(str(db_path))
     yield conn
     conn.close()
+
+
+FAKE_DAG_ID = 424242
+
+
+@action
+def dag_batch_job(post_rotation_db, condor, test_dir, path_to_sleep):
+    """
+    After the post-rotation checks, complete one job carrying DAG/batch
+    attributes (DAGManJobId is a fake id, not a real DAGMan job) and wait
+    for the librarian to ingest it.
+    """
+    handle = _submit_and_wait(condor, test_dir / "job_dag_batch.log", path_to_sleep, 1, extra={
+        "dagman_job_id": str(FAKE_DAG_ID), "batch_id": "1001", "batch_name": "Alpha"})
+    _wait_for_db_job_count(condor, NUM_JOBS + 2)
+    return handle
 
 
 # ---------------------------------------------------------------------------
@@ -417,3 +434,14 @@ class TestLibrarianIngestion:
             f"Expected all DAG/batch columns to be NULL for plain jobs, "
             f"but {non_null} row(s) had a non-NULL value"
         )
+
+    def test_dag_batch_columns_ingested(self, dag_batch_job, condor):
+        """A job's DAGManJobId, JobBatchId, and JobBatchName are stored in its JobRecords row."""
+        conn = sqlite3.connect(str(_get_db_path(condor)))
+        rows = conn.execute(
+            r"SELECT jr.DAGManJobId, jr.JobBatchId, jr.JobBatchName FROM JobRecords jr "
+            r"JOIN Jobs j ON jr.JobId = j.JobId WHERE j.ClusterId = ?",
+            (dag_batch_job.clusterid,),
+        ).fetchall()
+        conn.close()
+        assert rows == [(FAKE_DAG_ID, "1001", "Alpha")]

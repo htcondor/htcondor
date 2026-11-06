@@ -170,12 +170,33 @@ AppendHistory(ClassAd* ad)
 		  if (!ad->LookupString("Owner", owner)) {
 			  owner = "?";
 		  }
+
 		  // CurrentTime is the actual time this record was appended, which unlike CompletionDate
 		  // (delayed arbitrarily by e.g. LeaveJobInQueue) is guaranteed to be monotonic across
 		  // records in this file; condor_history uses it to safely bound backwards scans.
-		  fprintf(LogFile,
-                      "*** Offset = %lld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d CurrentTime = %lld\n",
-				  (long long)offset, cluster, proc, owner.c_str(), completion, (long long)time(nullptr));
+		  std::string banner;
+		  formatstr(banner, "*** Offset=%lld ClusterId=%d ProcId=%d Owner=\"%s\" CompletionDate=%d CurrentTime=%lld",
+		           (long long)offset, cluster, proc, owner.c_str(), completion, (long long)time(nullptr));
+
+		  // Add DAGManJobId to banner for quick lookup (not required)
+		  int dagid = -1;
+		  if (ad->LookupInteger(ATTR_DAGMAN_JOB_ID, dagid) && dagid > 0) {
+			  formatstr_cat(banner, " %s=%d", ATTR_DAGMAN_JOB_ID, dagid);
+		  }
+
+		  // Add batch id to banner for quick lookup (not required)
+		  std::string batchid, quoted;
+		  if (ad->LookupString(ATTR_JOB_BATCH_ID, batchid) && !batchid.empty()) {
+			  formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_ID, QuoteAdStringValue(batchid.c_str(), quoted));
+		  }
+
+		  // Add batch name to banner for quick lookup (not required)
+		  std::string batchname;
+		  if (ad->LookupString(ATTR_JOB_BATCH_NAME, batchname) && !batchname.empty()) {
+			  formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_NAME, QuoteAdStringValue(batchname.c_str(), quoted));
+		  }
+
+		  fprintf(LogFile, "%s\n", banner.c_str());
 		  fflush( LogFile );
       }
   }
