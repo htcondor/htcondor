@@ -17,7 +17,7 @@ docker://htcondor/nmi-build:x86_64_Debian13-26000101,x86-D13,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_openSUSE16-26000101,x86-OS16,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_Ubuntu24-26000101,x86-U24,ubuntu-latest,all:ubunturoot
 docker://htcondor/nmi-build:x86_64_Ubuntu26-26000101,x86-U26,ubuntu-latest,all:ubunturoot
-x86_64_macOS13,macos,batlab,batlabonly
+x86_64_macOS26,macos,batlab,batlabonly
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9,win,batlab,batlabonly
 # We want to build on Fedora because it is our "warning check" platform
