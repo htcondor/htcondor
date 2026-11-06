@@ -1179,6 +1179,39 @@ OsProc::SetupSingularitySsh() {
 #endif
 }
 
+#ifdef LINUX
+// Send condor_docker_enter the exit code of condor_nsenter, so that it can
+// exit with it, and so the condor_ssh_to_job command sees it.
+static void
+send_enter_exit_code(ReliSock *sock, int exit_code)
+{
+	if (sock == nullptr) {
+		return;
+	}
+	uint32_t code = htonl((uint32_t)exit_code);
+	ssize_t r = write(sock->get_file_desc(), &code, sizeof(code));
+	if (r != (ssize_t)sizeof(code)) {
+		dprintf(D_ALWAYS, "Failed to send exit code %d to condor_docker_enter: %s\n",
+			exit_code, strerror(errno));
+	}
+}
+
+// Log why we could not enter the container, and tell the
+// condor_ssh_to_job user, via the ssh session's stderr.
+static void
+report_enter_failure(int user_stderr, const std::string &msg)
+{
+	dprintf(D_ALWAYS, "condor_ssh_to_job cannot enter the container: %s\n", msg.c_str());
+	if (user_stderr >= 0) {
+		std::string line = "condor_ssh_to_job: cannot enter the container: " + msg + "\n";
+		ssize_t r = write(user_stderr, line.data(), line.size());
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Failed to send error to condor_ssh_to_job user: %s\n", strerror(errno));
+		}
+	}
+}
+#endif
+
 int
 OsProc::AcceptSingSshClient(Stream *stream) {
 #ifdef LINUX
@@ -1198,6 +1231,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
+
+	if (fds[0] < 0 || fds[1] < 0 || fds[2] < 0) {
+		report_enter_failure(fds[2], "the condor_starter did not receive the ssh session's stdin, stdout and stderr");
+		send_enter_exit_code(sns, 1);
+		for (int fd: fds) {
+			if (fd >= 0) {
+				close(fd);
+			}
+		}
+		delete sns;
+		sns = nullptr;
+		return KEEP_STREAM;
+	}
 
 	// Read the length-prefixed command string from docker_enter.
 	// Length 0 means interactive shell; otherwise run the command.
@@ -1327,6 +1373,16 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
 
+	if (singExecPid == FALSE) {
+		std::string msg;
+		formatstr(msg, "the condor_starter failed to run %s: %s", bin_dir.c_str(),
+			create_process_err_msg.empty() ? "unknown error" : create_process_err_msg.c_str());
+		report_enter_failure(fds[2], msg);
+		send_enter_exit_code(sns, 1);
+		delete sns;
+		sns = nullptr;
+	}
+
 	// Close the ssh session fds in the starter; the child has inherited them.
 	// If we keep them open, sshd won't detect the command has finished.
 	for (int i = 0; i <= 2; i++) {
@@ -1346,7 +1402,22 @@ OsProc::SingEnterReaper( int pid, int status ) {
 	dprintf(D_FULLDEBUG, "OsProc:singEnterReaper called with pid %d status = %d\n", pid, status);
 		
 	if (pid == singExecPid) {
+		// Pass condor_nsenter's exit code back to condor_ssh_to_job
+		int exit_code = 1;
+		if (WIFEXITED(status)) {
+			exit_code = WEXITSTATUS(status);
+		} else if (WIFSIGNALED(status)) {
+			exit_code = 128 + WTERMSIG(status);
+		}
+		if (exit_code != 0) {
+			dprintf(D_ALWAYS, "condor_nsenter (pid %d) for condor_ssh_to_job exited with %d\n",
+				pid, exit_code);
+		}
+#ifdef LINUX
+		send_enter_exit_code(sns, exit_code);
+#endif
 		delete sns;
+		sns = nullptr;
 		return false;
 	} else {
 		dprintf(D_ALWAYS, "OsProc::singEnterReaper called for unknown pid %d\n", pid);
