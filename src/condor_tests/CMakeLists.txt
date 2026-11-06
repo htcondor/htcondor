@@ -274,6 +274,10 @@ if (BUILD_TESTING)
 			condor_pl_test (test_ccb_proxy_bench "Benchmark CCB streaming/proxy relay throughput" "ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
+		if (WITH_PLACEMENT AND (LINUX OR APPLE))
+			condor_pl_test(test_placementd_db "Test placementd database, reconcile, query and edit" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif()
+
 		if (LINUX OR APPLE)
 			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Fail.  We can't build this on Windows because of bad target names.
