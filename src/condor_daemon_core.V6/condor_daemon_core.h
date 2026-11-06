@@ -126,24 +126,11 @@ extern void (*dc_main_shutdown_graceful)();
 extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
 extern void (*dc_main_pre_command_sock_init)();
 
-typedef int     (*CommandHandler)(int,Stream*);
-typedef int     (Service::*CommandHandlercpp)(int,Stream*);
+
 using StdCommandHandler = std::function<int(int, Stream*)>;
-
-typedef int     (*SignalHandler)(int);
-typedef int     (Service::*SignalHandlercpp)(int);
 using StdSignalHandler = std::function<int(int)>;
-
-typedef int     (*SocketHandler)(Stream*);
-typedef int     (Service::*SocketHandlercpp)(Stream*);
 using StdSocketHandler = std::function<int (Stream *)>;
-
-typedef int     (*PipeHandler)(int);
-typedef int     (Service::*PipeHandlercpp)(int);
 using StdPipeHandler = std::function<int (int)>;
-
-typedef int     (*ReaperHandler)(int pid,int exit_status);
-typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 using StdReaperHandler = std::function<int (int, int )>;
 
 
