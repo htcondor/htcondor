@@ -243,8 +243,8 @@ QmgrJobUpdater::startUpdateTimer( )
 
 	q_update_tid = daemonCore->
 		Register_Timer( q_interval, q_interval,
-                        (TimerHandlercpp)&QmgrJobUpdater::periodicUpdateQ,
-                        "periodicUpdateQ", this );
+                        [this](int timerID) -> void { this->periodicUpdateQ(timerID); },
+                        "periodicUpdateQ");
 	ASSERT(q_update_tid >= 0);
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
 			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );

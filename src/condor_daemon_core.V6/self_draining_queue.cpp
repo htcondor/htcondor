@@ -215,8 +215,8 @@ SelfDrainingQueue::registerTimer( void )
 
 	tid = daemonCore->
 		Register_Timer( period, 
-						(TimerHandlercpp)&SelfDrainingQueue::timerHandler,
-						timer_name, this );
+						[this](int timerID) -> void { this->timerHandler(timerID); },
+						timer_name);
 	ASSERT(tid >= 0);
 	dprintf( D_FULLDEBUG, "Registered timer for SelfDrainingQueue %s, "
 			 "period: %d (id: %d)\n", name, period, tid );

@@ -1163,15 +1163,14 @@ OsProc::SetupSingularitySsh() {
 	rc = daemonCore->Register_Socket(
 		&sshListener,
 		"Singularity sshd listener",
-		(SocketHandlercpp)&OsProc::AcceptSingSshClient,
-		"OsProc::AcceptSingSshClient",
-		this);
+		[this](Stream* stream) -> int { return this->AcceptSingSshClient(stream); },
+		"OsProc::AcceptSingSshClient");
 	ASSERT( rc >= 0 );
 
 
 	// and a reaper 
-	singReaperId = daemonCore->Register_Reaper("SingEnterReaper", (ReaperHandlercpp)&OsProc::SingEnterReaper,
-		"ExecReaper", this);
+	singReaperId = daemonCore->Register_Reaper("SingEnterReaper", [this](int pid, int status) -> int { return this->SingEnterReaper(pid, status); },
+		"ExecReaper");
 
 #else
 	// Shut the compiler up

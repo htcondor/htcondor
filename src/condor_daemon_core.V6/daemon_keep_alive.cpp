@@ -91,8 +91,8 @@ DaemonKeepAlive::reconfig(void)
 
 			send_child_alive_timer = daemonCore->Register_Timer(first_alive_delay,
 					(unsigned)m_child_alive_period,
-					(TimerHandlercpp)&DaemonKeepAlive::SendAliveToParentFromTimer,
-					"DaemonKeepAlive::SendAliveToParent", this );
+					[this](int timerID) -> void { this->SendAliveToParentFromTimer(timerID); },
+					"DaemonKeepAlive::SendAliveToParent");
 
 				// Send this immediately, because if we hang before
 				// sending this message, our parent will not kill us.
@@ -117,8 +117,8 @@ DaemonKeepAlive::reconfig(void)
 		interval.setMaxInterval(600);
 		interval.setTimeslice(0.01);
 		scan_for_hung_children_timer = daemonCore->Register_Timer(interval,
-				(TimerHandlercpp)&DaemonKeepAlive::ScanForHungChildrenFromTimer,
-				"DaemonKeepAlive::ScanForHungChildren", this );
+				[this](int timerID) -> void { this->ScanForHungChildrenFromTimer(timerID); },
+				"DaemonKeepAlive::ScanForHungChildren");
 	}
 
 }

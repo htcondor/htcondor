@@ -2425,7 +2425,7 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	min = tot_secs / 60;
 	secs = tot_secs % 60;
 
-	char strval[25];
+	char strval[26];
 	if ( days != 0 ) {
 		snprintf(strval, sizeof(strval), "%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
 	} else if ( hours != 0 ) {

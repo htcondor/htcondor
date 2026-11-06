@@ -683,9 +683,8 @@ Claim::start_match_timer()
 
 	c_match_tid = 
 		daemonCore->Register_Timer( match_timeout, 0, 
-								   (TimerHandlercpp)
-								   &Claim::match_timed_out,
-								   "match_timed_out", this );
+								   [this](int timerID) -> void { this->match_timed_out(timerID); },
+								   "match_timed_out");
 	ASSERT(c_match_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started match timer (%d) for %d seconds.\n", 
 			 c_match_tid, match_timeout );
@@ -1041,8 +1040,8 @@ Claim::startLeaseTimer()
 	}
 	c_lease_tid =
 		daemonCore->Register_Timer( when, 0,
-				(TimerHandlercpp)&Claim::leaseExpired,
-				"Claim::leaseExpired", this );
+				[this](int timerID) -> void { this->leaseExpired(timerID); },
+				"Claim::leaseExpired");
 	ASSERT(c_lease_tid >= 0);
 
 	// Figure out who should sending keep alives
@@ -1079,8 +1078,8 @@ Claim::startLeaseTimer()
 		c_sendalive_tid =
 			daemonCore->Register_Timer( c_lease_duration / 3, 
 				c_lease_duration / 3, 
-				(TimerHandlercpp)&Claim::sendAlive,
-				"Claim::sendAlive", this );
+				[this](int timerID) -> void { this->sendAlive(timerID); },
+				"Claim::sendAlive");
 	}
 
 	dprintf( D_FULLDEBUG, "Started ClaimLease timer (%d) w/ %d second "
@@ -1171,8 +1170,8 @@ Claim::sendAlive( int /* timerID */ )
 
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
-			  (SocketHandlercpp)&Claim::sendAliveConnectHandler,
-			  to_schedd, this );
+			  [this](Stream* stream) -> int { return this->sendAliveConnectHandler(stream); },
+			  to_schedd);
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
@@ -1254,8 +1253,8 @@ Claim::sendAliveConnectHandler(Stream *s)
 	snprintf ( to_schedd, 256, "Alive to schedd %s", c_addr );
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
-			  (SocketHandlercpp)&Claim::sendAliveResponseHandler,
-			  to_schedd, this );
+			  [this](Stream* stream) -> int { return this->sendAliveResponseHandler(stream); },
+			  to_schedd);
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
@@ -1457,9 +1456,8 @@ Claim::setRequestStream(Stream* stream)
 		int register_rc = daemonCore->Register_Socket(
 			c_request_stream,
 			desc.c_str(),
-			(SocketHandlercpp)&Claim::requestClaimSockClosed,
-			"requestClaimSockClosed",
-			this );
+			[this](Stream* stream) -> int { return this->requestClaimSockClosed(stream); },
+			"requestClaimSockClosed");
 
 		if( register_rc < 0 ) {
 			dprintf(D_ALWAYS,
@@ -1526,17 +1524,16 @@ Claim::setDeactivateStream(Stream* stream)
 		const int deactivate_reply_timeout = 10;
 		c_deactivate_reply_tid = 
 			daemonCore->Register_Timer( 10, 0,
-				(TimerHandlercpp) &Claim::send_deactivate_reply_timed_out,
-				"send_deactivate_reply_timed_out", this );
+				[this](int timerID) -> void { this->send_deactivate_reply_timed_out(timerID); },
+				"send_deactivate_reply_timed_out");
 		ASSERT(c_deactivate_reply_tid >= 0);
 		dprintf( D_FULLDEBUG, "Started deactivate reply timer (%d) for %d seconds.\n",  c_deactivate_reply_tid, deactivate_reply_timeout );
 
 		int register_rc = daemonCore->Register_Socket(
 			c_deactivate_stream,
 			desc.c_str(),
-			(SocketHandlercpp)&Claim::deactivateClaimSockClosed,
-			"deactivateClaimSockClosed",
-			this );
+			[this](Stream* stream) -> int { return this->deactivateClaimSockClosed(stream); },
+			"deactivateClaimSockClosed");
 
 		if( register_rc < 0 ) {
 			dprintf(D_ALWAYS,

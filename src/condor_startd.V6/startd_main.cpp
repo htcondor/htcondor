@@ -362,8 +362,8 @@ main_init( int, char* argv[] )
 	if (history_queue_mgr) {
 		daemonCore->Register_CommandWithPayload(GET_HISTORY,
 			"GET_HISTORY",
-			(CommandHandlercpp)&HistoryHelperQueue::command_handler,
-			"command_get_history", history_queue_mgr, READ);
+			[](int command, Stream* stream) -> int { return history_queue_mgr->command_handler(command, stream); },
+			"command_get_history", READ);
 	}
 
 		// DAEMON permission commands
@@ -814,7 +814,7 @@ void register_cleanup_reminder_timer()
 		dprintf( D_ALWAYS, "Starting timer for cleanup reminders.\n" );
 		int id = daemonCore->Register_Timer(cleanup_reminder_timer_interval,
 								cleanup_reminder_timer_interval,
-								(TimerHandler)CleanupReminderTimerCallback,
+								[](int /* timerID */) -> void { CleanupReminderTimerCallback(); },
 								"CleanupReminderTimerCallback");
 		ASSERT(id >= 0);
 		cleanup_reminder_timer_id = id;

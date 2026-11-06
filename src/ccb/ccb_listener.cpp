@@ -228,9 +228,8 @@ CCBListener::Connected()
 	int rc = daemonCore->Register_Socket(
 		m_sock,
 		m_sock->peer_description(),
-		(SocketHandlercpp)&CCBListener::HandleCCBMsg,
-		"CCBListener::HandleCCBMsg",
-		this);
+		[this](Stream* stream) -> int { return this->HandleCCBMsg(stream); },
+		"CCBListener::HandleCCBMsg");
 
 	ASSERT( rc >= 0 );
 
@@ -269,9 +268,8 @@ CCBListener::Disconnected()
 
 	m_reconnect_timer = daemonCore->Register_Timer(
 		reconnect_time,
-		(TimerHandlercpp)&CCBListener::ReconnectTime,
-		"CCBListener::ReconnectTime",
-		this );
+		[this](int timerID) -> void { this->ReconnectTime(timerID); },
+		"CCBListener::ReconnectTime");
 
 	ASSERT( m_reconnect_timer != -1 );
 }
@@ -322,9 +320,8 @@ CCBListener::RescheduleHeartbeat()
 			m_heartbeat_timer = daemonCore->Register_Timer(
 				next_time,
 				m_heartbeat_interval,
-				(TimerHandlercpp)&CCBListener::HeartbeatTime,
-				"CCBListener::HeartbeatTime",
-				this );
+				[this](int timerID) -> void { this->HeartbeatTime(timerID); },
+				"CCBListener::HeartbeatTime");
 			ASSERT( m_heartbeat_timer != -1 );
 		}
 		else {
@@ -522,9 +519,8 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 	int rc = daemonCore->Register_Socket(
 		sock,
 		sock->peer_description(),
-		(SocketHandlercpp)&CCBListener::ReverseConnected,
-		"CCBListener::ReverseConnected",
-		this);
+		[this](Stream* stream) -> int { return this->ReverseConnected(stream); },
+		"CCBListener::ReverseConnected");
 
 	if( rc < 0 ) {
 		ReportReverseConnectResult(msg_ad,false,"failed to register socket for non-blocking reversed connection");

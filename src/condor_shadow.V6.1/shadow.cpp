@@ -197,9 +197,8 @@ UniShadow::spawn()
 		} else if (rval == 1) {
 			dprintf(D_FULLDEBUG, "Hook successfully spawned.\n");
 			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getHookTimeout(HOOK_SHADOW_PREPARE_JOB, 120),
-				(TimerHandlercpp)&UniShadow::hookTimeout,
-				"hookTimeout",
-				this);
+				[this](int timerID) -> void { this->hookTimeout(timerID); },
+				"hookTimeout");
 		} else {
 			EXCEPT("Hook manager returned an invalid code");
 		}
@@ -682,8 +681,8 @@ UniShadow::exitAfterEvictingJob( int reason ) {
 		this->delayedExitReason = reason;
 		remRes->setExitReason( reason );
 		daemonCore->Register_Timer( 20, 0,
-				(TimerHandlercpp)&UniShadow::exitLeaseHandler,
-				"exit lease handler", this );
+				[this](int timerID) -> void { this->exitLeaseHandler(timerID); },
+				"exit lease handler");
 	}
 }
 

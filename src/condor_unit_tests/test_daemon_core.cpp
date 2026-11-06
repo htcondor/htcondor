@@ -118,8 +118,8 @@ int reaper(Service*, int pid, int exit_status)
 Foo::Foo()
 {
 
-	daemonCore->Register_Timer(3,(TimerHandlercpp)&Foo::timerone,"One-Time Timer",this);
-	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)&Foo::com1,"com1()",this);
+	daemonCore->Register_Timer(3,[this](int timerID) -> void { this->timerone(timerID); },"One-Time Timer");
+	daemonCore->Register_Command(1,"Command One",[this](int command, Stream* stream) -> int { return this->com1(command, stream); },"com1()");
 
 // Can't catch signal 9 on unix.
 #ifdef WIN32
@@ -187,7 +187,7 @@ main_init(int argc, char ** /*argv*/)
 		if ( !daemonCore->Send_Signal(result,10) ) {
 			printf("*** Send_Signal 10 to child failed!!!\n");
 		}
-		daemonCore->Register_Timer(5,5,(TimerHandlercpp)&Foo::timer5,"Five Second Timer",f);
+		daemonCore->Register_Timer(5,5,[f](int timerID) -> void { f->timer5(timerID); },"Five Second Timer");
 	}
 }
 

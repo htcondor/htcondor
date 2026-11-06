@@ -56,9 +56,8 @@ ProcFamilyDirect::register_subfamily(pid_t pid,
 	//
 	int timer_id = daemonCore->Register_Timer(2,
 	                                          snapshot_interval,
-	                                          (TimerHandlercpp)&KillFamily::takesnapshot,
-	                                          "KillFamily::takesnapshot",
-	                                          family);
+	                                          [family](int timerID) -> void { family->takesnapshot(timerID); },
+	                                          "KillFamily::takesnapshot");
 	if (timer_id == -1) {
 		dprintf(D_ALWAYS,
 		        "failed to register snapshot timer for family of pid %u\n",

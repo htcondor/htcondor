@@ -47,8 +47,8 @@ void HistoryHelperQueue::setup(int request_max, int concurrency_max) {
 	m_max_concurrency = concurrency_max;
 	if (m_rid < 0) {
 		m_rid = daemonCore->Register_Reaper("history_reaper",
-			(ReaperHandlercpp)&HistoryHelperQueue::reaper,
-			"HistoryHelperQueue::reaper", this);
+			[this](int pid, int status) -> int { return this->reaper(pid, status); },
+			"HistoryHelperQueue::reaper");
 	}
 }
 

@@ -167,9 +167,8 @@ void Defrag::config()
 		m_polling_timer = daemonCore->Register_Timer(
 			first_time,
 			m_polling_interval,
-			(TimerHandlercpp)&Defrag::poll,
-			"Defrag::poll",
-			this );
+			[this](int timerID) -> void { this->poll(timerID); },
+			"Defrag::poll");
 	}
 	if( old_polling_interval != m_polling_interval && m_polling_interval > 0 )
 	{
@@ -275,9 +274,8 @@ void Defrag::config()
 			m_public_ad_update_timer = daemonCore->Register_Timer(
 				0,
 				m_public_ad_update_interval,
-				(TimerHandlercpp)&Defrag::updateCollector,
-				"Defrag::updateCollector",
-				this);
+				[this](int timerID) -> void { this->updateCollector(timerID); },
+				"Defrag::updateCollector");
 		}
 	}
 

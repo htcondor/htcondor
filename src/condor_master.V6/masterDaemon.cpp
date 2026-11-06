@@ -269,8 +269,8 @@ int daemon::Restart(bool by_command)
 		daemonCore->Cancel_Timer( start_tid );
 	}
 	start_tid = daemonCore->
-		Register_Timer( n, (TimerHandlercpp)&daemon::DoStart,
-						"daemon::DoStart()", this );
+		Register_Timer( n, [this](int timerID) -> void { this->DoStart(timerID); },
+						"daemon::DoStart()");
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
 
 		// Update the CM now so we see that this daemon is down.
@@ -1074,8 +1074,8 @@ int daemon::RealStart( )
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
 		recover_tid = daemonCore->Register_Timer( m_recover_time,
-						(TimerHandlercpp)&daemon::Recover,
-						"daemon::Recover()", this );
+						[this](int timerID) -> void { this->Recover(timerID); },
+						"daemon::Recover()");
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
@@ -1219,8 +1219,8 @@ daemon::Stop( bool never_forward )
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
-									(TimerHandlercpp)&daemon::StopFastTimer,
-									"daemon::StopFastTimer()", this );
+									[this](int timerID) -> void { this->StopFastTimer(timerID); },
+									"daemon::StopFastTimer()");
 }
 
 
@@ -1315,8 +1315,8 @@ daemon::StopFast( bool never_forward )
 
 	hard_kill_tid = 
 		daemonCore->Register_Timer( shutdown_fast_timeout, 0, 
-									(TimerHandlercpp)&daemon::HardKill,
-									"daemon::HardKill()", this );
+									[this](int timerID) -> void { this->HardKill(timerID); },
+									"daemon::HardKill()");
 }
 
 void
@@ -2287,8 +2287,8 @@ Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
 		// start a timer if one is not already running
 		if (m_deferred_query_ready_tid < 0) {
 			m_deferred_query_ready_tid = daemonCore->Register_Timer(1, 1,
-				(TimerHandlercpp)&Daemons::DeferredQueryReadyReply,
-				"Daemons::DeferredQueryReadyReply", this);
+				[this](int timerID) -> void { this->DeferredQueryReadyReply(timerID); },
+				"Daemons::DeferredQueryReadyReply");
 			if (m_deferred_query_ready_tid < 0) {
 				return FALSE;
 			}
@@ -2516,9 +2516,8 @@ Daemons::ScheduleRetryStartAllDaemons( int min_delay )
 		}
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
 			delay,
-			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
-			"Daemons::RetryStartAllDaemons",
-			this);
+			[this](int timerID) -> void { this->RetryStartAllDaemons(timerID); },
+			"Daemons::RetryStartAllDaemons");
 		ASSERT( m_retry_start_all_daemons_tid != -1 );
 	}
 }
@@ -2730,7 +2729,7 @@ Daemons::DoPeacefulShutdown(
 	// to give the messages a chance to arrive.
 	bool fTimer = false;
 	if (messages > 0) {
-		int tid = daemonCore->Register_Timer(timeout+1, 0, (TimerHandlercpp)pfn, lbl, this);
+		int tid = daemonCore->Register_Timer(timeout+1, 0, [this, pfn](int timerID) -> void { (this->*pfn)(timerID); }, lbl);
 		if (tid == -1) {
 			dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );
 		} else {
@@ -2893,8 +2892,8 @@ Daemons::FinishRestartMaster()
 				 new_bin_delay );
 		daemonCore->
 			Register_Timer( new_bin_delay, 0, 
-							(TimerHandlercpp)&Daemons::FinalRestartMaster,
-							"Daemons::FinalRestartMaster()", this );
+							[this](int timerID) -> void { this->FinalRestartMaster(timerID); },
+							"Daemons::FinalRestartMaster()");
 	}
 }
 
@@ -3249,8 +3248,8 @@ Daemons::SetAllReaper(bool fStartdsFirst)
 		return;
 	}
 	daemonCore->Reset_Reaper( 1, "All Daemon Reaper",
-							  (ReaperHandlercpp)&Daemons::AllReaper,
-							  "Daemons::AllReaper()",this);
+							  [this](int pid, int status) -> int { return this->AllReaper(pid, status); },
+							  "Daemons::AllReaper()");
 	reaper = ALL_R;
 	stop_other_daemons_when_startds_gone = fStartdsFirst ? GRACEFUL : NONE;
 	// setting the all reaper cancels a post-drain command
@@ -3275,13 +3274,13 @@ Daemons::SetDefaultReaper()
 	static int already_registered_reaper = 0;
 	if ( already_registered_reaper ) {
 		daemonCore->Reset_Reaper( 1, "Default Daemon Reaper",
-							  (ReaperHandlercpp)&Daemons::DefaultReaper,
-							  "Daemons::DefaultReaper()",this);
+							  [this](int pid, int status) -> int { return this->DefaultReaper(pid, status); },
+							  "Daemons::DefaultReaper()");
 	} else {
 		already_registered_reaper = 1;
 		daemonCore->Register_Reaper( "Default Daemon Reaper",
-								 (ReaperHandlercpp)&Daemons::DefaultReaper,
-								 "Daemons::DefaultReaper()", this );
+								 [this](int pid, int status) -> int { return this->DefaultReaper(pid, status); },
+								 "Daemons::DefaultReaper()");
 	}
 	reaper = DEFAULT_R;
 }
@@ -3382,8 +3381,8 @@ Daemons::StartTimers()
 			// collector before we try to send an update to it.
 		update_tid = daemonCore->
 			Register_Timer( 5, update_interval,
-							(TimerHandlercpp)&Daemons::UpdateCollector,
-							"Daemons::UpdateCollector()", this );
+							[this](int timerID) -> void { this->UpdateCollector(timerID); },
+							"Daemons::UpdateCollector()");
 		old_update_int = update_interval;
 	}
 
@@ -3429,8 +3428,8 @@ Daemons::StartNewExecTimer( void )
 	}
 	check_new_exec_tid = daemonCore->
 		Register_Timer( 5, check_new_exec_interval,
-						(TimerHandlercpp)&Daemons::CheckForNewExecutable,
-						"Daemons::CheckForNewExecutable()", this );
+						[this](int timerID) -> void { this->CheckForNewExecutable(timerID); },
+						"Daemons::CheckForNewExecutable()");
 	if( check_new_exec_tid == -1 ) {
 		dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );
 	}
