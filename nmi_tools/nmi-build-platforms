@@ -20,7 +20,7 @@ docker://htcondor/nmi-build:x86_64_SLES15SP5-25001505
 docker://htcondor/nmi-build:x86_64_Ubuntu22-25001505
 docker://htcondor/nmi-build:x86_64_Ubuntu24-25001505
 docker://htcondor/nmi-build:x86_64_Ubuntu26-25001505
-x86_64_macOS13
+x86_64_macOS26
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
 
