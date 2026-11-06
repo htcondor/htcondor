@@ -264,12 +264,8 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_Q_DATE, time(nullptr));
 
 	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
 		// Are these ones really necessary?
-	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-
 	job_ad->Assign( ATTR_NUM_CKPTS, 0 );
 	job_ad->Assign( ATTR_NUM_JOB_STARTS, 0 );
 	job_ad->Assign( ATTR_NUM_JOB_COMPLETIONS, 0 );
@@ -279,7 +275,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
 	job_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
 	job_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
-	job_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	job_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
 	job_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
 
@@ -317,9 +312,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	//job_ad->Assign( ATTR_TRANSFER_ERROR, false );
 	//job_ad->Assign( ATTR_TRANSFER_EXECUTABLE, false );
 
-	job_ad->Assign( ATTR_BUFFER_SIZE, 512*1024 );
-	job_ad->Assign( ATTR_BUFFER_BLOCK_SIZE, 32*1024 );
-
 	job_ad->Assign( ATTR_SHOULD_TRANSFER_FILES,
 					getShouldTransferFilesString( STF_YES ) );
 	job_ad->Assign( ATTR_WHEN_TO_TRANSFER_OUTPUT,
@@ -338,17 +330,10 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
 
-	job_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
-
 	job_ad->AssignExpr( ATTR_REQUEST_MEMORY, "ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)" );
 	job_ad->AssignExpr( ATTR_REQUEST_DISK, "DiskUsage" );
 	job_ad->Assign( ATTR_DISK_USAGE, 1 );
 	job_ad->Assign( ATTR_REQUEST_CPUS, 1 );
-
-	// Without these, the starter will not automatically remap the stdout/err (look at sha 422735d9)
-	// and possibly won't put them in the correct directory.
-	job_ad->Assign( ATTR_STREAM_OUTPUT, false );
-	job_ad->Assign( ATTR_STREAM_ERROR, false );
 
 	job_ad->Assign( ATTR_VERSION, CondorVersion() );
 	job_ad->Assign( ATTR_PLATFORM, CondorPlatform() );

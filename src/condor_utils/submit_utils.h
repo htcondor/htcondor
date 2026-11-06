@@ -130,16 +130,7 @@
 #define SUBMIT_KEY_BatchRuntime "batch_runtime"
 #define SUBMIT_KEY_BatchWholeNodes "batch_whole_nodes"
 
-#define SUBMIT_KEY_FileRemaps "file_remaps"
-#define SUBMIT_KEY_BufferFiles "buffer_files"
-#define SUBMIT_KEY_BufferSize "buffer_size"
-#define SUBMIT_KEY_BufferBlockSize "buffer_block_size"
-
 #define SUBMIT_KEY_StackSize "stack_size"
-#define SUBMIT_KEY_FetchFiles "fetch_files"
-#define SUBMIT_KEY_CompressFiles "compress_files"
-#define SUBMIT_KEY_AppendFiles "append_files"
-#define SUBMIT_KEY_LocalFiles "local_files"
 
 #define SUBMIT_KEY_EncryptExecuteDir "encrypt_execute_directory"
 #define SUBMIT_KEY_StarterDebug "starter_debug"

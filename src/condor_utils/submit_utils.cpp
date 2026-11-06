@@ -1540,16 +1540,6 @@ int SubmitHash::check_open(_submit_file_role role,  const std::string &name, int
 	}
 
 
-	/* If this file as marked as append-only, do not truncate it here */
-
-	auto_free_ptr append_files(submit_param( SUBMIT_KEY_AppendFiles, ATTR_APPEND_FILES ));
-	if (append_files.ptr()) {
-		std::vector<std::string> file_list = split(append_files.ptr(), ",");
-		if(contains_withwildcard(file_list, name)) {
-			flags = flags & ~O_TRUNC;
-		}
-	}
-
 	bool dryrun_create = FakeFileCreationChecks && ((flags & (O_CREAT|O_TRUNC)) != 0);
 	if (FakeFileCreationChecks) {
 		flags = flags & ~(O_CREAT|O_TRUNC);
@@ -2214,10 +2204,8 @@ int SubmitHash::SetLeaveInQueue()
 	if ( ! erc)
 	{
 		if ( ! job->Lookup(ATTR_JOB_LEAVE_IN_QUEUE)) {
-			/* user didn't have one, so add one */
-			if (! IsRemoteJob) {
-				AssignJobVal(ATTR_JOB_LEAVE_IN_QUEUE, false);
-			} else {
+			/* user didn't have one, so add one if spooling */
+			if (IsRemoteJob) {
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
@@ -4849,19 +4837,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetLoadProfile
 	{SUBMIT_KEY_LoadProfile,  ATTR_JOB_LOAD_PROFILE, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_PrimaryUnixGroup,  ATTR_JOB_PRIMARY_UNIX_GROUP, SimpleSubmitKeyword::f_as_string},
-	// formerly SetFileOptions
-	{SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS, SimpleSubmitKeyword::f_as_expr}, // TODO: should this be a string rather than an expression?
-	{SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_BufferSize, ATTR_BUFFER_SIZE, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_BufferBlockSize, ATTR_BUFFER_BLOCK_SIZE, SimpleSubmitKeyword::f_as_expr},
-	// formerly SetFetchFiles
-	{SUBMIT_KEY_FetchFiles, ATTR_FETCH_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetCompressFiles
-	{SUBMIT_KEY_CompressFiles, ATTR_COMPRESS_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetAppendFiles
-	{SUBMIT_KEY_AppendFiles, ATTR_APPEND_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetLocalFiles
-	{SUBMIT_KEY_LocalFiles, ATTR_LOCAL_FILES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserLog
 	{SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
 	{SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
@@ -8248,8 +8223,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 #endif
 
 	baseJob.Assign(ATTR_JOB_REMOTE_WALL_CLOCK, 0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,    0.0);
 
@@ -8262,10 +8235,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Assign(ATTR_COMMITTED_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_TOTAL_SUSPENSIONS, 0);
-	baseJob.Assign(ATTR_LAST_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_COMMITTED_SUSPENSION_TIME, 0);
-	baseJob.Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 #if 0
 	// can't use this because of +attrs and My.attrs in SUBMIT_ATTRS
