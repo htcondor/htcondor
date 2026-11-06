@@ -57,8 +57,8 @@ class CondorQ
 
 	// add constraints
 	int add (CondorQStrCategories, const char *);
-	int addAND (const char * value) { return query.addCustomOR (value); }
-	int addOR (const char * value) { return query.addCustomAND (value); }
+	int addAND (const char * value) { return query.addCustomAND (value); }
+	int addOR (const char * value) { return query.addCustomOR (value); }
 
 	void addSchedd (const char * value) { schedd = value; }  // what schedd are we querying?
 
