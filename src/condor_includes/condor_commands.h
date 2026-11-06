@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 212> makeCommandTable() {
+std::array<std::pair<int, const char *>, 217> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -426,6 +426,16 @@ std::array<std::pair<int, const char *>, 212> makeCommandTable() {
 		{REHOME, "REHOME"},
 #define COMMAND_DATA_SLOT (SCHED_VERS+163)
 		{COMMAND_DATA_SLOT, "COMMAND_DATA_SLOT"},
+#define SET_CONTROLLER (SCHED_VERS+164)	// set the AP that controls this startd
+		{SET_CONTROLLER, "SET_CONTROLLER"},
+#define CLEAR_CONTROLLER (SCHED_VERS+165)	// clear this startd's controller
+		{CLEAR_CONTROLLER, "CLEAR_CONTROLLER"},
+#define REQUEST_CONTROLLER_TOKEN (SCHED_VERS+166)	// ask an AP to mint a controller token
+		{REQUEST_CONTROLLER_TOKEN, "REQUEST_CONTROLLER_TOKEN"},
+#define REGISTER_CONTROLLED_EP (SCHED_VERS+167)	// tell an AP it now controls (or no longer controls) an EP
+		{REGISTER_CONTROLLED_EP, "REGISTER_CONTROLLED_EP"},
+#define QUERY_CONTROLLED_EPS (SCHED_VERS+168)	// ask an AP for the list of EPs it controls
+		{QUERY_CONTROLLED_EPS, "QUERY_CONTROLLED_EPS"},
 
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
