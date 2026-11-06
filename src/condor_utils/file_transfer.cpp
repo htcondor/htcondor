@@ -2191,9 +2191,8 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 		if (-1 == daemonCore->Register_Pipe(TransferPipe[0],
 											"Download Results",
-											(PipeHandlercpp)&FileTransfer::TransferPipeHandler,
-											"TransferPipeHandler",
-											this)) {
+											[this](int pipe) -> int { return this->TransferPipeHandler(pipe); },
+											"TransferPipeHandler")) {
 			dprintf(D_ALWAYS,"FileTransfer::Download() failed to register pipe.\n");
 			return FALSE;
 		}
@@ -3872,9 +3871,8 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 
 		if (-1 == daemonCore->Register_Pipe(TransferPipe[0],
 											"Upload Results",
-											(PipeHandlercpp)&FileTransfer::TransferPipeHandler,
-											"TransferPipeHandler",
-											this)) {
+											[this](int pipe) -> int { return this->TransferPipeHandler(pipe); },
+											"TransferPipeHandler")) {
 			dprintf(D_ALWAYS,"FileTransfer::Upload() failed to register pipe.\n");
 			return FALSE;
 		}

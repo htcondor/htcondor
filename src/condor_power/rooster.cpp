@@ -73,9 +73,8 @@ void Rooster::config()
 		m_polling_timer = daemonCore->Register_Timer(
 			m_polling_interval,
 			m_polling_interval,
-			(TimerHandlercpp)&Rooster::poll,
-			"Rooster::poll",
-			this );
+			[this](int timerID) -> void { this->poll(timerID); },
+			"Rooster::poll");
 	}
 	if( old_polling_interval != m_polling_interval && m_polling_interval > 0 )
 	{

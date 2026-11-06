@@ -75,8 +75,8 @@ condor_status(	const char * annexName, const char * sURL,
 		commandState, commandID, scratchpad );
 
 	int timer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-		(void (Service::*)(int)) & FunctorSequence::timer,
-		"annex-status", fs );
+		[fs](int timerID) -> void { fs->timer(timerID); },
+		"annex-status");
 	ec2Gahp->setNotificationTimerId( timer );
 
 

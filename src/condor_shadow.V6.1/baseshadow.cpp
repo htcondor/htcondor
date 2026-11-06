@@ -811,8 +811,8 @@ BaseShadow::retryJobCleanup()
 	}
 	ASSERT(m_cleanup_retry_tid == -1);
 	m_cleanup_retry_tid = daemonCore->Register_Timer(m_cleanup_retry_delay, 0,
-					(TimerHandlercpp)&BaseShadow::retryJobCleanupHandler,
-					"retry job cleanup", this);
+					[this](int timerID) -> void { this->retryJobCleanupHandler(timerID); },
+					"retry job cleanup");
 	dprintf(D_FULLDEBUG, "Will retry job cleanup in "
 	        "SHADOW_JOB_CLEANUP_RETRY_DELAY=%d seconds\n",
 	        m_cleanup_retry_delay);
@@ -1682,9 +1682,8 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 	int allowed_job_duration;
 	if( jobAd->LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowed_job_duration ) ) {
 		int tid = daemonCore->Register_Timer( allowed_job_duration + 1, 0,
-			(TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
-			"check_for_allowed_job_duration",
-			& shadow_user_policy );
+			[this](int timerID) -> void { this->shadow_user_policy.checkPeriodic(timerID); },
+			"check_for_allowed_job_duration");
 		if( tid < 0 ) {
 			dprintf( D_ALWAYS, "Failed to register timer to check for allowed job duration, jobs may run a little long.\n" );
 		}

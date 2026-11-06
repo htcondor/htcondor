@@ -1021,9 +1021,8 @@ int Starter::execDCStarter(
 	int rc = daemonCore->Register_Socket(
 			s_job_update_sock,
 			"starter ClassAd update socket",
-			(SocketHandlercpp)&Starter::receiveJobClassAdUpdate,
-			"receiveJobClassAdUpdate",
-			this);
+			[this](Stream* stream) -> int { return this->receiveJobClassAdUpdate(stream); },
+			"receiveJobClassAdUpdate");
 	ASSERT(rc >= 0);
 
 	int reaper_id;
@@ -1281,8 +1280,8 @@ Starter::startKillTimer( time_t timeout )
 	s_kill_tid = 
 		daemonCore->Register_Timer( timeout,
 									std::max((time_t)1,timeout),
-						(TimerHandlercpp)&Starter::sigkillStarter,
-						"sigkillStarter", this );
+						[this](int timerID) -> void { this->sigkillStarter(timerID); },
+						"sigkillStarter");
 	ASSERT(s_kill_tid >= 0);
 	return TRUE;
 }
@@ -1300,8 +1299,8 @@ Starter::startSoftkillTimeout( time_t timeout )
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
-						(TimerHandlercpp)&Starter::softkillTimeout,
-						"softkillTimeout", this );
+						[this](int timerID) -> void { this->softkillTimeout(timerID); },
+						"softkillTimeout");
 	ASSERT(s_softkill_tid >= 0);
 	dprintf(D_FULLDEBUG,"Using max vacate time of %llds for this job.\n",(long long)softkill_timeout);
 	return TRUE;

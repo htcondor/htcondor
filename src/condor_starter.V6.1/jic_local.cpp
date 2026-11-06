@@ -536,9 +536,8 @@ JICLocal::initUserCredentials()
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICLocal::refreshSandboxCredentials_from_timer,
-				"refreshSandboxCredentials",
-				this );
+				[this](int timerID) -> void { this->refreshSandboxCredentials_from_timer(timerID); },
+				"refreshSandboxCredentials");
 		} else {
 			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
 		}

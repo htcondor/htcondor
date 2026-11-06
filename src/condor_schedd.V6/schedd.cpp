@@ -3691,8 +3691,8 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	}
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
-			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
-			"Query Job Ads Continuation", this, HANDLE_WRITE);
+			[this](Stream* stream) -> int { return this->finish(stream); },
+			"Query Job Ads Continuation", HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -4112,8 +4112,8 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	}
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
-			(SocketHandlercpp)&QueryAggregatesContinuation::finish,
-			"Query Aggregates Continuation", this, HANDLE_WRITE);
+			[this](Stream* stream) -> int { return this->finish(stream); },
+			"Query Aggregates Continuation", HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -6719,8 +6719,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 	daemonCore->Register_Timer( 0, 
-						(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
-						"Scheduler::reschedule_negotiator", this );
+						[this](int timerID) -> void { this->reschedule_negotiator_timer(timerID); },
+						"Scheduler::reschedule_negotiator");
 
 	spoolJobFileWorkers.erase(spit);
 	delete jobs;
@@ -7179,10 +7179,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			if ( spool_reaper_id == -1 ) {
 				spool_reaper_id = daemonCore->Register_Reaper(
 						"spoolJobFilesReaper",
-						(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
-						"spoolJobFilesReaper",
-						this
-					);
+						[this](int pid, int status) -> int { return this->spoolJobFilesReaper(pid, status); },
+						"spoolJobFilesReaper");
 			}
 
 
@@ -7201,10 +7199,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			if ( transfer_reaper_id == -1 ) {
 				transfer_reaper_id = daemonCore->Register_Reaper(
 						"transferJobFilesReaper",
-						(ReaperHandlercpp) &Scheduler::transferJobFilesReaper,
-						"transferJobFilesReaper",
-						this
-					);
+						[this](int pid, int status) -> int { return this->transferJobFilesReaper(pid, status); },
+						"transferJobFilesReaper");
 			}
 
 			// Start a new thread (process on Unix) to do the work
@@ -7400,8 +7396,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	int rc = 1;
 	if (result == ReliSock::delegation_continue) {
 		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
-			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
-			"UpdateGSI Response Continuation", continuation, HANDLE_READ);
+			[continuation](Stream* stream) -> int { return continuation->finish(stream); },
+			"UpdateGSI Response Continuation", HANDLE_READ);
 			// If we fail to register the socket, continue in blocking mode.
 		if (retval < 0) {
 			continuation->finish_update(rsock, result);
@@ -9095,8 +9091,8 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	int rval =
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
-			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler);
+			[](Stream* stream) -> int { return scheduler.negotiatorSocketHandler(stream); },
+			"<Negotiator Command>");
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -10452,8 +10448,8 @@ Scheduler::rescheduleContactQueue()
 		 */
 	if( checkContactQueue_tid == -1 ) {
 		checkContactQueue_tid = daemonCore->Register_Timer( 0,
-			(TimerHandlercpp)&Scheduler::checkContactQueue,
-			"checkContactQueue", this );
+			[this](int timerID) -> void { this->checkContactQueue(timerID); },
+			"checkContactQueue");
 	}
 	ASSERT(checkContactQueue_tid >= 0);
 }
@@ -10502,8 +10498,8 @@ Scheduler::enqueueReconnectJob( PROC_ID job )
 		 */
 	if( checkReconnectQueue_tid == -1 ) {
 		checkReconnectQueue_tid = daemonCore->Register_Timer( 0,
-			(TimerHandlercpp)&Scheduler::checkReconnectQueue,
-			"checkReconnectQueue", this );
+			[this](int timerID) -> void { this->checkReconnectQueue(timerID); },
+			"checkReconnectQueue");
 	}
 	ASSERT(checkReconnectQueue_tid >= 0);
 	return true;
@@ -10760,8 +10756,8 @@ PostInitJobQueue()
 	load_job_factories();
 
 	daemonCore->Register_Timer( 0,
-						(TimerHandlercpp)&Scheduler::WriteRestartReport,
-						"Scheduler::WriteRestartReport", &scheduler );
+						[](int timerID) -> void { scheduler.WriteRestartReport(timerID); },
+						"Scheduler::WriteRestartReport");
 
 		// The below must happen _after_ InitJobQueue is called.
 	if ( scheduler.autocluster.config(scheduler.MinimalSigAttrs) ) {
@@ -12175,8 +12171,8 @@ Scheduler::tryNextJob()
 		// Queue the next job start via the daemoncore timer.  jobThrottle()
 		// implements job bursting, and returns the proper delay for the timer.
 			Register_Timer( jobThrottle(),
-							(TimerHandlercpp)&Scheduler::StartJobHandler,
-							"start_job", this );
+							[this](int timerID) -> void { this->StartJobHandler(timerID); },
+							"start_job");
 	} else {
 		ExpediteStartJobs();
 	}
@@ -12536,8 +12532,8 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 		// proper delay for the timer.
 		StartJobTimer = daemonCore->
 			Register_Timer( jobThrottle(), 
-							(TimerHandlercpp)&Scheduler::StartJobHandler,
-							"StartJobHandler", this );
+							[this](int timerID) -> void { this->StartJobHandler(timerID); },
+							"StartJobHandler");
 	}
 }
 
@@ -17209,45 +17205,44 @@ Scheduler::Register()
 	 // message handlers for schedd commands
 	 daemonCore->Register_CommandWithPayload( NEGOTIATE, 
 		 "NEGOTIATE", 
-		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
-		 this, NEGOTIATOR );
+		 [this](int command, Stream* stream) -> int { return this->negotiate(command, stream); }, "negotiate", NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
-			(CommandHandlercpp)&Scheduler::external_reschedule_request, // this is now (mostly) a dummy command
-			"reschedule_negotiator", this, WRITE);
+			[this](int command, Stream* stream) -> int { return this->external_reschedule_request(command, stream); }, // this is now (mostly) a dummy command
+			"reschedule_negotiator", WRITE);
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
-			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->actOnJobs(command, stream); }, 
+			"actOnJobs", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(GET_CONTACT_INFO, "GET_CONTACT_INFO",
-			(CommandHandlercpp)&Scheduler::getChildConctactInfo,
-			"getChildConctactInfo", this, READ,
+			[this](int command, Stream* stream) -> int { return this->getChildConctactInfo(command, stream); },
+			"getChildConctactInfo", READ,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
-			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->spoolJobFiles(command, stream); }, 
+			"spoolJobFiles", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA, "TRANSFER_DATA", 
-			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->spoolJobFiles(command, stream); }, 
+			"spoolJobFiles", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
-			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->spoolJobFiles(command, stream); }, 
+			"spoolJobFiles", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
-			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->spoolJobFiles(command, stream); }, 
+			"spoolJobFiles", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
-			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->updateGSICred(command, stream); },
+			"updateGSICred", WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
-			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->updateGSICred(command, stream); },
+			"updateGSICred", WRITE,
 			true /*force authentication*/);
 	 // CRUFT This is for the condor_transferd, which is no longer supported
 	 //daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
@@ -17257,13 +17252,13 @@ Scheduler::Register()
 	 //		true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
-			(CommandHandlercpp)&Scheduler::RecycleShadow,
-			"RecycleShadow", this, DAEMON,
+			[this](int command, Stream* stream) -> int { return this->RecycleShadow(command, stream); },
+			"RecycleShadow", DAEMON,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(DIRECT_ATTACH,
 			"DIRECT_ATTACH",
-			(CommandHandlercpp)&Scheduler::CmdDirectAttach,
-			"DirectAttach", this, WRITE,
+			[this](int command, Stream* stream) -> int { return this->CmdDirectAttach(command, stream); },
+			"DirectAttach", WRITE,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -17274,11 +17269,11 @@ Scheduler::Register()
 		 // so it is deemed safe to open these commands up to READ
 		 // access.
 	daemonCore->Register_CommandWithPayload(RELEASE_CLAIM, "RELEASE_CLAIM", 
-			(CommandHandlercpp)&Scheduler::release_claim_command_handler,
-			"release_claim", this, READ);
+			[this](int command, Stream* stream) -> int { return this->release_claim_command_handler(command, stream); },
+			"release_claim", READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
-			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, READ);
+			[this](int command, Stream* stream) -> int { return this->receive_startd_alive(command, stream); },
+			"receive_startd_alive", READ);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -17296,49 +17291,49 @@ Scheduler::Register()
     // command handler in support of condor_status -direct query of our ads
     //
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
-                                (CommandHandlercpp)&Scheduler::command_query_ads,
-                                 "command_query_ads", this, READ);
+                                [this](int command, Stream* stream) -> int { return this->command_query_ads(command, stream); },
+                                 "command_query_ads", READ);
 	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
-                                (CommandHandlercpp)&Scheduler::command_query_ads,
-                                 "command_query_ads", this, READ);
+                                [this](int command, Stream* stream) -> int { return this->command_query_ads(command, stream); },
+                                 "command_query_ads", READ);
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
-                                (CommandHandlercpp)&Scheduler::command_query_ads,
-                                 "command_query_ads", this, READ);
+                                [this](int command, Stream* stream) -> int { return this->command_query_ads(command, stream); },
+                                 "command_query_ads", READ);
 
 	// Command handler for remote history	
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_HISTORY,"QUERY_SCHEDD_HISTORY",
-				(CommandHandlercpp)&HistoryHelperQueue::command_handler,
-				"command_history", &HistoryQue, READ);
+				[this](int command, Stream* stream) -> int { return this->HistoryQue.command_handler(command, stream); },
+				"command_history", READ);
 
 	// Command handler for 'condor_q' queries.  Broken out from QMGMT for the 8.1.4 series.
 	// QMGMT is a massive hulk of global variables - we want to make this non-blocking and have
 	// multiple queries active in-process at once.
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS, "QUERY_JOB_ADS",
-				(CommandHandlercpp)&Scheduler::command_query_job_ads,
-				"command_query_job_ads", this, READ);
+				[this](int command, Stream* stream) -> int { return this->command_query_job_ads(command, stream); },
+				"command_query_job_ads", READ);
 
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
-				(CommandHandlercpp)&Scheduler::command_query_job_ads,
-				"command_query_job_ads", this, READ, true /*force authentication*/);
+				[this](int command, Stream* stream) -> int { return this->command_query_job_ads(command, stream); },
+				"command_query_job_ads", READ, true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload(QUERY_USERREC_ADS, "QUERY_USERREC_ADS",
-		(CommandHandlercpp)&Scheduler::command_query_user_ads,
-		"command_query_user_ads", this, READ, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_query_user_ads(command, stream); },
+		"command_query_user_ads", READ, true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
-		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_user_ads(command, stream); },
+		"command_act_on_user_ads", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_user_ads(command, stream); },
+		"command_act_on_user_ads", ADMINISTRATOR, true /*force authentication*/);
 
 	//disable these until we decide permissions
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_user_ads(command, stream); },
+		"command_act_on_user_ads", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(RESET_USERREC, "RESET_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_user_ads(command, stream); },
+		"command_act_on_user_ads", ADMINISTRATOR, true /*force authentication*/);
 
 	// Startup limit management (admin use)
 	daemonCore->Register_CommandWithPayload(CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT",
@@ -17348,19 +17343,19 @@ Scheduler::Register()
 		&HandleQueryStartupLimitsCommand,
 		"HandleQueryStartupLimitsCommand", READ, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_user_ads(command, stream); },
+		"command_act_on_user_ads", ADMINISTRATOR, true /*force authentication*/);
 
 	// commands for creating/deleting/querying OCUs
 	daemonCore->Register_CommandWithPayload(CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_ocus", this, WRITE, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_ocus(command, stream); },
+		"command_act_on_ocus", WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_ocus", this, WRITE, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_ocus(command, stream); },
+		"command_act_on_ocus", WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC",
-		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_ocus", this, READ, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_act_on_ocus(command, stream); },
+		"command_act_on_ocus", READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
@@ -17380,39 +17375,39 @@ Scheduler::Register()
 								  true /* force authentication */ );
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
-								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
-								  "get_job_connect_info", this, WRITE,
+								  [this](int command, Stream* stream) -> int { return this->get_job_connect_info_handler(command, stream); },
+								  "get_job_connect_info", WRITE,
 								  true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
-								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
-								  "clear_dirty_job_attrs_handler", this, WRITE );
+								  [this](int command, Stream* stream) -> int { return this->clear_dirty_job_attrs_handler(command, stream); },
+								  "clear_dirty_job_attrs_handler", WRITE );
 
 	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
-								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
-								  "export_jobs_handler", this, WRITE,
+								  [this](int command, Stream* stream) -> int { return this->export_jobs_handler(command, stream); },
+								  "export_jobs_handler", WRITE,
 								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
-								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
-								  "import_exported_job_results_handler", this, WRITE,
+								  [this](int command, Stream* stream) -> int { return this->import_exported_job_results_handler(command, stream); },
+								  "import_exported_job_results_handler", WRITE,
 								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
-								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
-								  "unexport_jobs_handler", this, WRITE,
+								  [this](int command, Stream* stream) -> int { return this->unexport_jobs_handler(command, stream); },
+								  "unexport_jobs_handler", WRITE,
 								  true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
-        						  (CommandHandlercpp)&Scheduler::receive_startd_update,
-								  "receive_startd_update",this,ADVERTISE_STARTD_PERM);
+        						  [this](int command, Stream* stream) -> int { return this->receive_startd_update(command, stream); },
+								  "receive_startd_update",ADVERTISE_STARTD_PERM);
 
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-        						  (CommandHandlercpp)&Scheduler::receive_startd_invalidate,
-								  "receive_startd_invalidate",this,ADVERTISE_STARTD_PERM);
+        						  [this](int command, Stream* stream) -> int { return this->receive_startd_invalidate(command, stream); },
+								  "receive_startd_invalidate",ADVERTISE_STARTD_PERM);
 
 	daemonCore->Register_CommandWithPayload( REASSIGN_SLOT, "REASSIGN_SLOT",
-			(CommandHandlercpp)&Scheduler::reassign_slot_handler,
-			"reassign_slot_handler", this, WRITE);
+			[this](int command, Stream* stream) -> int { return this->reassign_slot_handler(command, stream); },
+			"reassign_slot_handler", WRITE);
 
 
 		//
@@ -17421,14 +17416,14 @@ Scheduler::Register()
 		// in the command handler itself.
 		//
 	daemonCore->Register_CommandWithPayload( COLLECTOR_TOKEN_REQUEST, "DC_COLLECTOR_TOKEN_REQUEST",
-			(CommandHandlercpp)&Scheduler::handle_collector_token_request,
-			"handle_collector_token_request()", this, ALLOW, true );
+			[this](int command, Stream* stream) -> int { return this->handle_collector_token_request(command, stream); },
+			"handle_collector_token_request()", ALLOW, true );
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
 		"reaper",
-		(ReaperHandlercpp)&Scheduler::child_exit_from_reaper,
-		"child_exit", this );
+		[this](int pid, int status) -> int { return this->child_exit_from_reaper(pid, status); },
+		"child_exit");
 
 	// register all the timers
 	RegisterTimers();
@@ -17476,12 +17471,12 @@ Scheduler::RegisterTimers()
 	 // timer handlers
 	if (timeoutid < 0) {
 		timeoutid = daemonCore->Register_Timer(10, 10,
-			(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
+			[this](int timerID) -> void { this->timeout(timerID); },"timeout");
 	}
 	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
-		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
+		[this](int timerID) -> void { this->StartJobs(timerID); },"StartJobs");
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
-		(TimerHandlercpp)&Scheduler::checkClaimLeases,"checkClaimLeases", this);
+		[this](int timerID) -> void { this->checkClaimLeases(timerID); },"checkClaimLeases");
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
@@ -17525,7 +17520,7 @@ Scheduler::RegisterTimers()
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
-			(TimerHandlercpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+			[this](int timerID) -> void { this->PeriodicExprHandler(timerID); },"PeriodicExpr");
 		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
 				 "callback in %u seconds\n", time_to_next_run );
 	} else {
@@ -17645,8 +17640,8 @@ Scheduler::shutdown_graceful()
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
 	daemonCore->Register_Timer( 0, MAX(JobStopDelay,1), 
-					(TimerHandlercpp)&Scheduler::attempt_shutdown,
-					"attempt_shutdown()", this );
+					[this](int timerID) -> void { this->attempt_shutdown(timerID); },
+					"attempt_shutdown()");
 
 	// Shut down the cron logic
 	if( CronJobMgr ) {
@@ -17853,9 +17848,8 @@ Scheduler::sendReschedule( int /* timerID */ )
 		if( m_send_reschedule_timer == -1 ) {
 			m_send_reschedule_timer = daemonCore->Register_Timer(
 				m_negotiate_timeslice.getTimeToNextRun(),
-				(TimerHandlercpp)&Scheduler::sendReschedule,
-				"Scheduler::sendReschedule",
-				this);
+				[this](int timerID) -> void { this->sendReschedule(timerID); },
+				"Scheduler::sendReschedule");
 		}
 		dprintf( D_FULLDEBUG,
 				 "Delaying sending RESCHEDULE to negotiator for %d seconds.\n",
@@ -19873,8 +19867,8 @@ bool Scheduler::addTimeDelayPreparingCompletionTime(const JOB_ID_KEY & jid, time
 	// TODO: add config for timer rate
 	if (checkJobPrepareDelay_tid == -1) {
 		checkJobPrepareDelay_tid = daemonCore->Register_Timer(60,60,
-			(TimerHandlercpp)&Scheduler::HandleTimeDelayPreparingCompletions,
-			"Scheduler::HandlePreparingTimeDelayCompletions", this);
+			[this](int timerID) -> void { this->HandleTimeDelayPreparingCompletions(timerID); },
+			"Scheduler::HandlePreparingTimeDelayCompletions");
 	}
 	if (checkJobPrepareDelay_tid == -1) {
 		return false;
@@ -21298,9 +21292,8 @@ Scheduler::launch_local_startd() {
 
 	int rid = daemonCore->Register_Reaper(
 						"localStartdReaper",
-						(ReaperHandlercpp) &Scheduler::local_startd_reaper,
-						"localStartdReaper",
-						this);
+						[this](int pid, int status) -> int { return this->local_startd_reaper(pid, status); },
+						"localStartdReaper");
 
 	ASSERT(rid >= 0);
 
@@ -21519,8 +21512,8 @@ Scheduler::WriteRestartReport( int /* timerID */ )
 	}
 
 	daemonCore->Register_Timer( 60,
-						(TimerHandlercpp)&Scheduler::WriteRestartReport,
-						"Scheduler::WriteRestartReport", this );
+						[this](int timerID) -> void { this->WriteRestartReport(timerID); },
+						"Scheduler::WriteRestartReport");
 }
 
 

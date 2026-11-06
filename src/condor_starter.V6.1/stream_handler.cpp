@@ -105,7 +105,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 		handler_mode = HANDLE_WRITE;
 	}
 
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",[this](int pipe) -> int { return this->Handler(pipe); },"Stream I/O Handler",handler_mode);
 
 	done = false;
 	connected = true;
@@ -319,7 +319,7 @@ StreamHandler::Reconnect() {
 		EXCEPT("%s", err_msg.c_str());
 	}
 
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",[this](int pipe) -> int { return this->Handler(pipe); },"Stream I/O Handler",handler_mode);
 
 	connected = true;
 

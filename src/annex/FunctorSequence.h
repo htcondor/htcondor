@@ -14,8 +14,9 @@
 // std::queue< Functor * > sequence = { functorA, functorB, functorC };
 // FunctorSequence * fs = new FunctorSequence( sequence, cleanupFunctor );
 // timerID = daemonCore->Register_Timer( 0, TIMER_NEVER,
-//     (void (Service::*)()) & FunctorSequence::operator(),
-//     description, fs );
+//     [fs](int timerID) -> void { fs->timer(timerID); },
+//     description
+// );
 //
 // A FunctorSequence calls a sequence of functors on a timer, returning
 // to DaemonCore between calls.  Each functor is called (on each timer

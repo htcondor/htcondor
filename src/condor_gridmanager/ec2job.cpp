@@ -2429,8 +2429,8 @@ void EC2Job::NotifyResourceDown() {
 
 	if( leaseDuration > 0 ) {
 		resourceLeaseTID = daemonCore->Register_Timer( leaseDuration,
-			(TimerHandlercpp) & EC2Job::ResourceLeaseExpired,
-			"ResourceLeaseExpired", (Service *) this );
+			[this](int timerID) -> void { this->ResourceLeaseExpired(timerID); },
+			"ResourceLeaseExpired");
 	} else {
 		ResourceLeaseExpired(-1);
 	}

@@ -362,8 +362,8 @@ DockerProc::LaunchContainer() {
 int
 DockerProc::PullImage() {
 	CondorError err;
-	int pullReaperId = daemonCore->Register_Reaper("PullReaper", (ReaperHandlercpp)&DockerProc::PullReaper,
-			"PullReaper", this);
+	int pullReaperId = daemonCore->Register_Reaper("PullReaper", [this](int pid, int status) -> int { return this->PullReaper(pid, status); },
+			"PullReaper");
 	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(WD::OUTER), *JobAd, pullReaperId, err);
 	if (r == 0) {
 		return TRUE;
@@ -554,8 +554,8 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 		// Start a timer to poll for job usage updates.
 		int polling_interval = param_integer("POLLING_INTERVAL",5);
 		updateTid = daemonCore->Register_Timer(2,
-				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
-					"DockerProc::getStats",this);
+				polling_interval, [this](int timerID) -> void { this->getStats(timerID); }, 
+					"DockerProc::getStats");
 
 		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
 		if( ssh_enabled ) {
@@ -810,14 +810,13 @@ DockerProc::SetupDockerSsh() {
 	rc = daemonCore->Register_Socket(
 		&listener,
 		"Docker sshd listener",
-		(SocketHandlercpp)&DockerProc::AcceptSSHClient,
-		"DockerProc::AcceptSSHClient",
-		this);
+		[this](Stream* stream) -> int { return this->AcceptSSHClient(stream); },
+		"DockerProc::AcceptSSHClient");
 	ASSERT( rc >= 0 );
 
 	// and a reaper 
-	execReaperId = daemonCore->Register_Reaper("ExecReaper", (ReaperHandlercpp)&DockerProc::ExecReaper,
-		"ExecReaper", this);
+	execReaperId = daemonCore->Register_Reaper("ExecReaper", [this](int pid, int status) -> int { return this->ExecReaper(pid, status); },
+		"ExecReaper");
 #else
 	// Shut the compiler up
 	(void)execReaperId;

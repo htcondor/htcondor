@@ -222,8 +222,8 @@ scheduleHousekeeper (int timeout)
 		// schedule housekeeper
 		housekeeperTimerID = daemonCore->Register_Timer(machineUpdateInterval,
 						machineUpdateInterval,
-						(TimerHandlercpp)&CollectorEngine::housekeeper,
-						"CollectorEngine::housekeeper",this);
+						[this](int timerID) -> void { this->housekeeper(timerID); },
+						"CollectorEngine::housekeeper");
 		if (housekeeperTimerID == -1)
 			return 0;
 	}

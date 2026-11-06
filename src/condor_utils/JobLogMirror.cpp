@@ -58,8 +58,8 @@ JobLogMirror::config() {
 	log_reader_polling_timer = daemonCore->Register_Timer(
 		0, 
 		log_reader_polling_period,
-		(TimerHandlercpp)&JobLogMirror::TimerHandler_JobLogPolling, 
-		"JobLogMirror::TimerHandler_JobLogPolling", this);
+		[this](int timerID) -> void { this->TimerHandler_JobLogPolling(timerID); }, 
+		"JobLogMirror::TimerHandler_JobLogPolling");
 }
 
 void

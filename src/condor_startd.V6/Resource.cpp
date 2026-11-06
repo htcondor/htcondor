@@ -3603,8 +3603,8 @@ Resource::startTimerToEndCODLoadHack( void )
 {
 	ASSERT( r_cod_load_hack_tid == -1 );
 	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0,
-					(TimerHandlercpp)&Resource::endCODLoadHack,
-					"endCODLoadHack", this );
+					[this](int timerID) -> void { this->endCODLoadHack(timerID); },
+					"endCODLoadHack");
 	ASSERT(r_cod_load_hack_tid >= 0);
 }
 
@@ -3978,8 +3978,8 @@ Resource::resetFetchWorkTimer(time_t next_fetch)
 	if (m_next_fetch_work_tid == -1) {
 			// Never registered.
 		m_next_fetch_work_tid = daemonCore->Register_Timer(
-			next, 100000, (TimerHandlercpp)&Resource::tryFetchWork,
-			"Resource::tryFetchWork", this);
+			next, 100000, [this](int timerID) -> void { this->tryFetchWork(timerID); },
+			"Resource::tryFetchWork");
 	}
 	else {
 			// Already registered, just reset it.

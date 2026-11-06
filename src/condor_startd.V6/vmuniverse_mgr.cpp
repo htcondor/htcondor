@@ -790,8 +790,8 @@ VMUniverseMgr::docheckVMUniverse( int /* timerID */ )
 			daemonCore->Reset_Timer( m_check_tid, m_check_interval );
 		} else {
 			m_check_tid = daemonCore->Register_Timer(m_check_interval,
-				(TimerHandlercpp)&VMUniverseMgr::docheckVMUniverse,
-				"VMUniverseMgr::docheckVMUniverse", this);
+				[this](int timerID) -> void { this->docheckVMUniverse(timerID); },
+				"VMUniverseMgr::docheckVMUniverse");
 		}
 		dprintf( D_ALWAYS, "Started a timer to test VM universe after "
 			   "%d(seconds)\n", m_check_interval);

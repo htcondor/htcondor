@@ -53,12 +53,12 @@ bool
 HookClientMgr::initialize() {
 	m_reaper_output_id = daemonCore->
 		Register_Reaper("HookClientMgr Output Reaper",
-						(ReaperHandlercpp) &HookClientMgr::reaperOutput,
-						"HookClientMgr Output Reaper", this);
+						[this](int pid, int status) -> int { return this->reaperOutput(pid, status); },
+						"HookClientMgr Output Reaper");
 	m_reaper_ignore_id = daemonCore->
 		Register_Reaper("HookClientMgr Ignore Reaper",
-						(ReaperHandlercpp) &HookClientMgr::reaperIgnore,
-						"HookClientMgr Ignore Reaper", this);
+						[this](int pid, int status) -> int { return this->reaperIgnore(pid, status); },
+						"HookClientMgr Ignore Reaper");
 
 	return (m_reaper_output_id != FALSE && m_reaper_ignore_id != FALSE);
 }

@@ -55,7 +55,6 @@ struct tagTimer {
     /** Not_Yet_Documented */ time_t            period;
     /** Not_Yet_Documented */ int               id;
     /** Not_Yet_Documented */ StdTimerHandler          std_handler;
-    /** Not_Yet_Documented */ class Service*    service;
     /** Not_Yet_Documented */ struct tagTimer*  next;
     /** Not_Yet_Documented */ char*             event_descrip;
     /** Not_Yet_Documented */ void*             data_ptr;
@@ -99,23 +98,6 @@ class TimerManager
                  StdTimerHandler    f,
                  const char *       event_description);
 
-    /** Not_Yet_Documented.
-        @param s              Not_Yet_Documented.
-        @param deltawhen      Not_Yet_Documented.
-        @param handler        Not_Yet_Documented.
-        @param event_descrip  Not_Yet_Documented.
-        @return The ID of the new timer, or -1 on failure
-    */
-    int NewTimer (Service*     s,
-                  time_t deltawhen,
-                  TimerHandlercpp handler,
-                  const char * event_descrip,
-                  time_t       period          =  0) {
-		return NewTimer(deltawhen, period,
-				[s, handler](int id) { return (s->*handler)(id);},
-				event_descrip);
-	}
-
     /** Create a timer using a timeslice object to control interval.
         @param timeslice      Timeslice object specifying interval parameters
         @param handler        Function to call when timer fires.
@@ -125,22 +107,6 @@ class TimerManager
     int NewTimer (const Timeslice &timeslice,
                   StdTimerHandler handler,
                   const char * event_descrip);
-
-    /** Create a timer using a timeslice object to control interval.
-        @param s              Service object of which function is a member.
-        @param timeslice      Timeslice object specifying interval parameters
-        @param handler        Function to call when timer fires.
-        @param event_descrip  String describing the function.
-        @return The ID of the new timer, or -1 on failure
-    */
-    int NewTimer (Service*     s,
-                  const Timeslice &timeslice,
-                  TimerHandlercpp handler,
-                  const char * event_descrip) {
-		return NewTimer(timeslice, 
-				[s, handler](int id) { return (s->*handler)(id);},
-				event_descrip);
-	}
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
@@ -212,12 +178,11 @@ class TimerManager
     ///
     TimerManager();
 
-    int NewTimer (Service*   s,
-                  time_t   deltawhen,
+    int NewTimer (time_t   deltawhen,
                   const char *event_descrip,
-                  time_t     period          =  0,
-				  const Timeslice *timeslice = NULL,
-				  StdTimerHandler * f = nullptr );
+                  time_t     period,
+				  const Timeslice *timeslice,
+				  StdTimerHandler * f );
 
 	void RemoveTimer( Timer *timer, Timer *prev );
 	void InsertTimer( Timer *new_timer );
