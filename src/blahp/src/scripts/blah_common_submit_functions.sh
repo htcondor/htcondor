@@ -22,7 +22,8 @@
 # limitations under the License.
 #
 
-. `dirname $0`/blah_load_config.sh
+# shellcheck source=./blah_load_config.sh
+. "$(dirname "$0")"/blah_load_config.sh
 
 #
 # Functions to handle the file mapping tables
@@ -301,7 +302,7 @@ function bls_parse_submit_options ()
   ###############################################################
   # Parse parameters
   ###############################################################
-  while getopts "a:i:o:e:c:s:v:V:dw:q:n:N:z:h:g:G:M:P:S:r:p:l:x:u:j:T:I:O:R:C:D:m:A:t:" arg 
+  while getopts "a:i:o:e:c:s:v:V:dk:w:q:n:N:z:h:g:G:M:P:S:r:p:l:x:u:j:T:I:O:R:C:D:m:A:t:" arg
   do
       case "$arg" in
       a) bls_opt_xtra_args="$OPTARG" ;;
@@ -313,6 +314,7 @@ function bls_parse_submit_options ()
       c) bls_opt_the_command="$OPTARG" ;;
       s) bls_opt_stgcmd="$OPTARG" ;;
       d) bls_opt_debug="yes" ;;
+      k) bls_opt_credential="$OPTARG";;
       w) bls_opt_workdir="$OPTARG";;
       q) bls_opt_queue="$OPTARG";;
       n) bls_opt_mpinodes="$OPTARG";;
@@ -346,21 +348,21 @@ function bls_parse_submit_options ()
   done
 
 # Command is mandatory
-  if [ "x$bls_opt_the_command" == "x" ]
+  if [[ -z "$bls_opt_the_command" ]]
   then
       echo $usage_string
       exit 1
   fi
 
 # Make sure we can survive without a proxy
-  if [ "x$bls_opt_proxy_string" == "x" ]
+  if [[ -z "$bls_opt_proxy_string" ]]
   then
       bls_opt_proxyrenew="no"
       bls_opt_stgproxy="no"
   fi
 
   bls_opt_proxyrenew_numeric=0
-  if [ "x$bls_opt_proxyrenew" == "xyes" ] ; then
+  if [[ "$bls_opt_proxyrenew" == "yes" ]] ; then
       bls_opt_proxyrenew_numeric=1
   fi
 
@@ -852,7 +854,7 @@ function bls_set_up_local_and_extra_args ()
       if echo "$bls_opt_xtra_args" | grep -q -v "^$bls_submit_args_prefix" ; then
           prefix="$bls_submit_args_prefix "
       fi
-      echo -e ${prefix}${bls_opt_xtra_args} >> $bls_tmp_file 2> /dev/null
+      echo -e "${prefix}${bls_opt_xtra_args}" >> $bls_tmp_file 2> /dev/null
   fi
 }
 

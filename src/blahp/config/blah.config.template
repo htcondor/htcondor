@@ -47,10 +47,15 @@ blah_shared_directories=/
 #blah_wn_inputsandbox=/tmp
 #blah_wn_outputsandbox=/tmp
 
+#A directory to save scripts log messages, for debugging.
+#Warning: these files are not log-rotated; you will have to
+#clean up the files yourself.
+#blah_debug=/tmp/blah
+
 #A directory to save each generated submit file in, for debugging.
 #Warning: This creates a new file for each job; you will have to
 #clean up the files yourself.
-#blah_debug_save_submit_info=/tmp
+#blah_debug_save_submit_info=/tmp/blah
 
 #The following configuration attributes allow for additional
 #submit command attributes to be set in the local shell callout

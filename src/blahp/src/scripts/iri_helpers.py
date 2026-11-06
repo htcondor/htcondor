@@ -1,32 +1,49 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import time
 from pathlib import Path
+import ast  # parsing dictionary from command line argument
 import json
 from authlib.integrations.requests_client import OAuth2Session
 from authlib.oauth2.rfc7523 import PrivateKeyJWT
-import http.client
 import urllib
 import requests
 import logging
 
-logging.basicConfig(level=logging.INFO)
-
-class IriApiHelperError(Exception):
-    """Raised for errors encountered in iri_helpers operations."""
-    pass
-
+# Default settings
 token_url = "https://oidc.nersc.gov/c2id/token"
 key_path = Path.home() / ".condor" / "irikey.pem"
-access_token = None
 
+# IRI service
 iri_host = "api.iri.nersc.gov"
 iri_storage_rsc = "scratch"
 iri_compute_rsc = "compute"
 iri_storage_id = None
 iri_compute_id = None
 iri_service = f"{iri_host},{iri_compute_rsc},{iri_storage_rsc}"
+
+# Set the env variable before invoking the python helper
+# Format: logging_level;log_secure;log_file
+# Set log_secure to True/true to log also credentials
+IRI_LOGGING = os.getenv("BLAH_HELPER_LOGGING", "INFO;False;/dev/null")
+log_level, LOG_SECURE, log_file = IRI_LOGGING.split(";", 2)
+log_level = log_level.upper()
+LOG_SECURE = LOG_SECURE.lower() == "true"
+logging.basicConfig(filename=log_file, level=log_level)
+
+# Aux functions
+def log_secure(msg: str)  -> str:
+    if LOG_SECURE:
+        return msg
+    return ""
+
+
+class IriApiHelperError(Exception):
+    """Raised for errors encountered in iri_helpers operations."""
+    pass
+
 
 def deep_merge(dict1, dict2):
     """
@@ -47,29 +64,32 @@ def deep_merge(dict1, dict2):
 
 # This is specific to NERSC
 def get_access_token():
-    global access_token
-    global key_path
-    global token_url
-    if access_token is None:
-
-        with Path(key_path).open() as secret:
-            priv_key = secret.read()
-            client_id = priv_key.split("\n")[0]
-
-        session = OAuth2Session(client_id, priv_key, PrivateKeyJWT(token_url), grant_type="client_credentials", token_endpoint=token_url)
-        token = session.fetch_token()
-        access_token = token["access_token"]
-        logging.debug(access_token)
-
-    return access_token
+    if hasattr(get_access_token, "access_token"):
+        # TODO: check also for validity. Add token caching in a file
+        logging.debug(f"returning available access token{log_secure(f' = {get_access_token.access_token}')}")
+        return get_access_token.access_token
+    logging.debug(f"Requesting new access token")
+    logging.debug(f"token_url = {token_url}")
+    logging.debug(f"key_path = {key_path}")
+    # TODO: handle failures (missing file, no reply, ...)
+    with Path(key_path).open() as secret:
+        priv_key = secret.read()
+        client_id = priv_key.split("\n")[0]
+        logging.debug(f"read private key for {client_id}")
+        if LOG_SECURE:
+            logging.debug(priv_key)
+    session = OAuth2Session(client_id, priv_key, PrivateKeyJWT(token_url), grant_type="client_credentials", token_endpoint=token_url)
+    token = session.fetch_token()
+    logging.debug(f"retrieved token{log_secure(f' = {token}')}")
+    get_access_token.access_token = token["access_token"]
+    logging.debug(f"new access token{log_secure(f' = {get_access_token.access_token}')}")
+    return get_access_token.access_token
 
 def do_request(method, url_path, req_body=None, req_filename=None):
     logging.debug(f"Doing {method} {url_path}")
     access_token = get_access_token()
     url = f"https://{iri_host}{url_path}"
-    headers = {}
-    headers["accept"] = "application/json"
-    headers["Authorization"] = f"Bearer {access_token}"
+    headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
     payload_files = None
     if req_filename is not None:
         payload_files = {"file": open(req_filename, "rb")}
@@ -82,7 +102,7 @@ def do_request(method, url_path, req_body=None, req_filename=None):
         return None
 
     body_json = ""
-    if resp_body != "":
+    if resp_body:
         body_json = json.loads(resp_body)
 
     if isinstance(body_json, dict) and "task_id" in body_json:
@@ -131,9 +151,11 @@ def get_compute_id():
     return iri_compute_id
 
 def cmd_resource_status(name):
+    # logging.debug(f"IRI name to cmd_resource_status = {name}")
     quoted_name = urllib.parse.quote(name, safe="")
     url_path = f"/api/v1/status/resources?name={quoted_name}"
     resp = do_request("GET", url_path)
+    logging.debug(f"IRI resource status ({resp[0]['current_status']}) = {resp}")
     print(resp[0]["current_status"])
 
 def cmd_download(remote_path, local_path):
@@ -147,8 +169,8 @@ def cmd_download(remote_path, local_path):
 def cmd_upload(local_path, remote_path):
     logging.info(f"cmd_upload({local_path, remote_path})")
     quoted_path = urllib.parse.quote(remote_path, safe="")
-    with open(local_path, "r") as file:
-        req_body = file.read()
+    # with open(local_path, "rb") as file:
+    #     req_body = file.read()
     resource_id = get_storage_id()
     url_path = f"/api/v1/filesystem/upload/{resource_id}?path={quoted_path}"
     resp = do_request("POST", url_path, req_filename=local_path)
@@ -178,14 +200,29 @@ def cmd_rmdir(remote_path):
     logging.info(resp)
 
 def cmd_submit(job_name, base_dir, inputs, script, xtra_args):
+    logging.debug(f"IRI cmd_submit method: {job_name}, {base_dir}, {inputs}, {script}, {xtra_args}")
     job_dir = f"{base_dir}/{job_name}"
+    logging.debug(f"job_dir = {job_dir}")
+    # Arguments come from command line arguments and are all strings
+    if xtra_args:
+        try:
+            # JSON would be safer, but the syntax is more restricted (double quotes)
+            xtra_args = ast.literal_eval(xtra_args)
+            if not isinstance(xtra_args, dict):
+                raise TypeError("xtra_args must be a dict")
+        except:
+            logging.warning(f"IRI cmd_submit method: xtra_args is not a valid dictionary: {xtra_args}")
+            xtra_args = {}
 
     storage_id = get_storage_id()
+    logging.debug(f"storage_id = {storage_id}")
     cmd_mkdir(job_dir)
 
     input_files = [f.strip() for f in inputs.split(",") if f.strip()]
     input_files.append(script)
+    logging.debug(f"input_files = {input_files}")
     for file in input_files:
+        # logging.debug(f"file = {file}")
         basename = file.split("/")[-1]
         cmd_upload(file, f"{job_dir}/{basename}")
 
@@ -197,20 +234,23 @@ def cmd_submit(job_name, base_dir, inputs, script, xtra_args):
     cmd_chmod("755", remote_cmd)
 
     compute_id = get_compute_id()
-    req_body = {}
-    req_body["name"] = job_name
-    req_body["executable"] = remote_cmd
-    req_body["directory"] = job_dir
-    req_body["inherit_environment"] = True
-    req_body["stdin_path"] = "/dev/null"
-    req_body["stdout_path"] = remote_stdout
-    req_body["stderr_path"] = remote_stderr
-    req_body["resources"] = {}
-    req_body["resources"]["node_count"] = 1
-    req_body["attributes"] = {}
-    req_body["attributes"]["duration"] = 30
+    req_body = {
+        "name": job_name,
+        "executable": remote_cmd,
+        "directory": job_dir,
+        "inherit_environment": True,
+        "stdin_path": "/dev/null",
+        "stdout_path": remote_stdout,
+        "stderr_path": remote_stderr,
+        "resources": {
+            "node_count": 1
+        },
+        "attributes": {
+            "duration": 30
+        },
+    }
     #req_body["attributes"]["custom_attributes"] = { "constraint": "cpu" }
-    if isinstance(xtra_args, dict):
+    if xtra_args:
         req_body = deep_merge(req_body, xtra_args)
     req_json = json.dumps(req_body)
     logging.info(f"request json: {req_json}")
@@ -218,6 +258,7 @@ def cmd_submit(job_name, base_dir, inputs, script, xtra_args):
     resp = do_request("POST", url_path, req_json)
     logging.info(resp)
     job_id = resp["id"]
+    logging.debug(f"IRI submit: IRI_RESULT:{job_id}:{job_dir}:{remote_stdout}:{remote_stderr}")
     print(f"IRI_RESULT:{job_id}:{job_dir}:{remote_stdout}:{remote_stderr}")
 
 def cmd_status(job_id):
@@ -228,6 +269,7 @@ def cmd_status(job_id):
     # TODO print addl info (exit code, resource usage)
     state=resp["status"]["state"]
     exit_code=resp["status"]["exit_code"]
+    # logging.debug(f"IRI  status: {state} ExitCode={exit_code};Foo=true")
     print(f"{state} ExitCode={exit_code};Foo=true")
 
 def cmd_cancel(job_id):
@@ -277,18 +319,28 @@ def cmd_delete_job_dir(job_id):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: iri.py <cmd> <arg>")
+        print("Usage: iri.py <cmd> <arg> [<other_args>]")
         return 1
+    logging.debug(f"Invoked IRI helper: {sys.argv}")
 
     service = sys.argv[1]
     cmd = sys.argv[2]
 
-    if service != "":
+    if service:
+        global iri_service
+        global iri_host
+        global iri_compute_rsc
+        global iri_storage_rsc
         iri_service = service
-        iri_host, iri_compute_rsc, iri_storage_rsc = service.split(",")
+        try:
+            iri_host, iri_compute_rsc, iri_storage_rsc = service.split(",")
+        except ValueError:
+            print(f"Wrong service definition (should have 3 comma separated elements): {service}")
+            return 1
 
     if cmd == "resource-id":
         id = get_resource_id(sys.argv[3])
+        # logging.debug(f"IRI resource-id: {id}")
         print(id)
     elif cmd == "resource-status":
         cmd_resource_status(sys.argv[3])
@@ -304,6 +356,9 @@ def main():
         cmd_rmdir(sys.argv[3])
     elif cmd == "get_resource_id":
         print(get_resource_id(sys.argv[3]))
+        # gr_id = get_resource_id(sys.argv[3])
+        # logging.debug(f"IRI get-resource-id: {gr_id}")
+        # print(f"{gr_id}")
     elif cmd == "submit":
         cmd_submit(sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
     elif cmd == "status":

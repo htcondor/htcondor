@@ -28,12 +28,14 @@
 # limitations under the License.
 #
 
-. `dirname $0`/blah_load_config.sh
-. `dirname $0`/iri_setup.sh
+# shellcheck source=./blah_load_config.sh
+. "$(dirname "$0")"/blah_load_config.sh
+# shellcheck source=./iri_setup.sh
+. "$(dirname "$0")"/iri_setup.sh
 
-echo $(/bin/date) status "$@" >>${blah_debug_save_submit_info}/scripts.log
+bls_iri_scripts_log $(/bin/date) status "$@"
 
-iri_helpers_dir=`dirname $0`
+iri_helpers_dir=$(dirname "$0")
 
 usage_string="Usage: $0 [-w] [-n] iri/<service>/<jobid> [iri/<service>/<jobid> ...]"
 
@@ -108,10 +110,7 @@ for reqfull in $pars ; do
     job_id=${tmp##*/}
     service=${tmp%%/*}
 
-    out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" status $job_id)
-    retcode=$?
-
-    if [ "$retcode" != "0" ] ; then
+    if ! out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" status "$job_id") ; then
         # check for unknown job error
         job_not_found=$(echo "$out" | grep "IriApiError: Job not found:")
         if [ -n "$job_not_found" ] ; then
@@ -123,7 +122,7 @@ for reqfull in $pars ; do
         fi
     fi
 
-    if [ "x$iri_state" == "x" ] ; then
+    if [[ -z "$iri_state" ]] ; then
       # Expected output line: "<state>"
       # TODO Allow additional information in output
       iri_state=${out%% *}
@@ -132,7 +131,7 @@ for reqfull in $pars ; do
       fi
     fi
 
-    if [ -z "$iri_state" ] ; then
+    if [[ -z "$iri_state" ]] ; then
         echo "1Error: could not parse job state from: $out"
         continue
     fi
@@ -145,20 +144,17 @@ for reqfull in $pars ; do
     jobstate_file="${iri_state_dir}/${service}_${job_id}"
 
     # Download remote output files when the job is done (status 4)
-    if [ "$blahp_status" == "4" ] ; then
-        dl_out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" download-output "$job_id" 2>&1)
-        if [ "$?" != "0" ] ; then
+    if [[ "$blahp_status" == "4" ]] ; then
+        if ! dl_out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" download-output "$job_id" 2>&1) ; then
             echo "1Error: job $job_id is done but output download mentioned in {$reqfull} failed: $dl_out" >&2
         else
-            del_out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" delete-job-dir "$job_id" 2>&1)
-            if [ "$?" != "0" ] ; then
+            if ! del_out=$(python3 "$iri_helpers_dir/iri_helpers.py" "$service" delete-job-dir "$job_id" 2>&1) ; then
                 echo "Warning: job $job_id output downloaded but remote directory deletion failed: $del_out" >&2
             fi
         fi
-
         # cleanup the job state file ~/.blah/iri_jobs
-        if [ -f "${jobstate_file}" ] ; then
-            rm -f ${jobstate_file}
+        if [[ -f "${jobstate_file}" ]] ; then
+            rm -f "${jobstate_file}"
         fi
 
         # TODO: Ask Jaime how to trigger failure / job hold here
