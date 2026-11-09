@@ -50,6 +50,7 @@
 #endif
 
 #include "matchmaker.h"
+#include "parallel_match.h"
 
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
@@ -1119,7 +1120,7 @@ bool returnPrioFactor(Stream *strm, CondorError &errstack)
 			ad.InsertAttr(ATTR_ERROR_STRING, errstack.message());
 		}
 		strm->encode();
-		if (!putClassAd(strm, ad) || strm->end_of_message()) {
+		if (!putClassAd(strm, ad) || !strm->end_of_message()) {
 			dprintf(D_ALWAYS, "Failed to send response for SET_PRIORITY_FACTOR command.\n");
 			return false;
 		}
@@ -4845,7 +4846,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 	double			bestPreJobRankValue = -(FLT_MAX);
 	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
-	PreemptState	bestPreemptState = (PreemptState)-1;
+	PreemptState	bestPreemptState = PREEMPTION_UNSET;
 	std::string			bestDslotClaims;
 	bool			newBestFound;
 		// to store results of evaluations

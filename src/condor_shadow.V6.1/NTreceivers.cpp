@@ -32,6 +32,7 @@
 #include "condor_holdcodes.h"
 #include "shortfile.h"
 #include "my_popen.h"
+#include "store_cred.h"
 
 #include <optional>
 #include "guidance.h"
@@ -784,17 +785,15 @@ do_REMOTE_syscall()
 
 	case CONDOR_get_file_info_new:
 	  {
-		char *  logical_name;
-		char *  actual_url;
+		// This call used to perform an optional transformation of the
+		// given pathname. Now, we just echo back the given value.
+		std::string logical_name;
  
-		actual_url = NULL;
-		logical_name = NULL;
 		ASSERT( syscall_sock->code(logical_name) );
 		ASSERT( syscall_sock->end_of_message() );;
  
-		errno = (condor_errno_t)0;
-		rval = pseudo_get_file_info_new( logical_name , actual_url );
-		terrno = (condor_errno_t)errno;
+		rval = 0;
+		terrno = (condor_errno_t)0;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
  
 		syscall_sock->encode();
@@ -803,10 +802,8 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ASSERT( syscall_sock->code(actual_url) );
+			ASSERT( syscall_sock->code(logical_name) );
 		}
-		free( (char *)actual_url );
-		free( (char *)logical_name );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return RemoteSyscallResult::SyscallOK;
 	}
@@ -2332,9 +2329,22 @@ case CONDOR_getdir:
 		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
+		bool allow_specials = param_boolean("CREDMON_ALLOW_SPECIAL_CHAR_NAMES", false);
 		bool had_error = false;
 		for (auto& curr: StringTokenIterator(services_needed)) {
 			std::string service_name = curr;
+
+			size_t idx = 0;
+			if (allow_specials) {
+				idx = service_name.find_first_of("/\\:");
+			} else {
+				idx = service_name.find_first_not_of(OAUTH_CRED_NAME_CHARS);
+			}
+			if (idx != std::string::npos) {
+				dprintf(D_ERROR, "Rejecting illegal OAUTH2 service name '%s'\n", service_name.c_str());
+				had_error = true;
+				break;
+			}
 
 			if (service_add_use) {
 				service_name += ".use";
@@ -2362,7 +2372,7 @@ case CONDOR_getdir:
 			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
 			bool rc = read_secure_file(fullname.c_str(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str() );
+				dprintf(D_ERROR, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str());
 				had_error = true;
 				break;
 			}

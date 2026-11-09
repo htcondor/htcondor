@@ -1373,7 +1373,8 @@ incorporates.
        Sets configuration that enables :tool:`condor_adstash` to run as a daemon.
        :tool:`condor_adstash` polls job history ClassAds and pushes them to an
        Elasticsearch index, see section
-       :ref:`admin-manual/cm-configuration:Elasticsearch` for more information.
+       :ref:`admin-manual/monitoring:Searching Job History in Elasticsearch and OpenSearch`
+       for more information.
 
     -  :config-template:`UWCS_Desktop_Policy_Values<FEATURE>`
 

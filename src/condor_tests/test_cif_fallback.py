@@ -21,6 +21,18 @@ import shutil
 import htcondor2
 
 
+def submit_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'tlmiller'
+    else:
+        return None
+
+def condor_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'condor'
+    else:
+        return None
+
 def try_shutil_chown( * p, ** v ):
     try:
         shutil.chown( * p, ** v )
@@ -28,6 +40,8 @@ def try_shutil_chown( * p, ** v ):
         logger.debug(pe)
     except LookupError as le:
         logger.debug(le)
+    except ValueError as ve:
+        logger.debug(ve)
 
 
 # ---- test_one_cif_job -------------------------------------------------------
@@ -36,7 +50,7 @@ def try_shutil_chown( * p, ** v ):
 def user_dir(test_dir):
     the_user_dir = test_dir / "user"
     the_user_dir.mkdir(exist_ok=True)
-    try_shutil_chown( the_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    try_shutil_chown( the_user_dir.as_posix(), user=submit_user(), group=submit_user() )
     return the_user_dir
 
 
@@ -53,8 +67,8 @@ def the_condor(test_dir, the_lock_dir):
     cred_dir.mkdir(parents=True, exist_ok=True)
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
@@ -102,7 +116,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
         timeout=60,
         echo=True,
-        as_user='tlmiller',
+        as_user=submit_user(),
     )
     assert cp.returncode == 0
 
@@ -155,8 +169,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
     local_dir = test_dir / "big-condor"
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
@@ -311,8 +325,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
     local_dir = test_dir / "multi-condor"
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",

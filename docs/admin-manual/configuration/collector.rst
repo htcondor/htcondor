@@ -129,32 +129,6 @@ These macros affect the *condor_collector*.
 
         See the note for :macro:`COLLECTOR_SOCKET_BUFSIZE`.
 
-:macro-def:`KEEP_POOL_HISTORY`
-    This boolean macro is used to decide if the collector will write out
-    statistical information about the pool to history files. The default
-    is ``False``. The location, size, and frequency of history logging
-    is controlled by the other macros.
-
-:macro-def:`POOL_HISTORY_DIR`
-    This macro sets the name of the directory where the history files
-    reside (if history logging is enabled). The default is the :macro:`SPOOL`
-    directory.
-
-:macro-def:`POOL_HISTORY_MAX_STORAGE`
-    This macro sets the maximum combined size of the history files. When
-    the size of the history files is close to this limit, the oldest
-    information will be discarded. Thus, the larger this parameter's
-    value is, the larger the time range for which history will be
-    available. The default value is 10000000 (10 MB).
-
-:macro-def:`POOL_HISTORY_SAMPLING_INTERVAL`
-    This macro sets the interval, in seconds, between samples for
-    history logging purposes. When a sample is taken, the collector goes
-    through the information it holds, and summarizes it. The information
-    is written to the history file once for each 4 samples. The default
-    (and recommended) value is 60 seconds. Setting this macro's value
-    too low will increase the load on the collector, while setting it too high will produce less precise statistical information.
-
 :macro-def:`FLOCK_FROM`
     The macro contains a comma-separated list of schedd names that
     should be allowed to flock to this central manager.  Defaults

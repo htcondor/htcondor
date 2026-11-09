@@ -1,7 +1,7 @@
 Version 25.x LTS Releases
 =========================
 
-HTCondor 25.x transitioned from feature to LTS with the release of 25.15.15.
+HTCondor 25.x transitioned from feature to LTS with the release of 25.15.16.
 These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 25.15.y versions. New features will be added in the 26.x.y feature versions.
@@ -11,9 +11,9 @@ Version 25.15.16
 
 Release Notes:
 
-.. HTCondor version 25.15.16 released on November 19, 2026.
+.. HTCondor version 25.15.16 released on December 3, 2026.
 
-- HTCondor version 25.15.16 planned release date is November 19, 2026.
+- HTCondor version 25.15.16 planned release date is December 3, 2026.
 
 New Features:
 
@@ -23,32 +23,28 @@ Bugs Fixed:
 
 .. include-history:: bugs 25.15.16 25.0.16
 
-Version 25.15.15
-----------------
-
-Release Notes:
-
-.. HTCondor version 25.15.15 released on October 22, 2026.
-
-- HTCondor version 25.15.15 planned release date is October 22, 2026.
-
-New Features:
-
-.. include-history:: features 25.15.15 25.0.15
-
-- HTCondor tarballs now contain `Pelican 7.27.0 <https://pelicanplatform.org/releases>`_
-
-- The condor package now requires pelican-7.27.0.
-
-Bugs Fixed:
-
-.. include-history:: bugs 25.15.15 25.0.15
-
 Version 25.x Feature Releases
 =============================
 
 We release new features in these releases of HTCondor. The details of each
 version are described below.
+
+Version 25.15.15
+----------------
+
+Release Notes:
+
+.. HTCondor version 25.15.15 released on November 12, 2026.
+
+- HTCondor version 25.15.15 planned release date is November 12, 2026.
+
+New Features:
+
+.. include-history:: features 25.15.15 25.0.15
+
+Bugs Fixed:
+
+.. include-history:: bugs 25.15.15 25.0.15
 
 Version 25.14.1
 ---------------

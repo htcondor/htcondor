@@ -187,12 +187,12 @@ talking to collectors so configured, the ``name`` parameter must be name of
 the daemon, which defaults to the full-qualified domain name; the query will
 not return slot ads.
 
-In either case, the :attr:`Machine` attribute will be the fully-qualified
+In either case, the :ad-attr:`Machine` attribute will be the fully-qualified
 domain name of the host on which the *condor_startd* is running, so you can
 use that to look for *condor_startd*\ s without knowing the precise configuration
 of the collector(s) you're asking.
 
-As of :ref:`version-history/feature-versions-24-x:Version 24.12.4`, this is
+As of version 24.12.4, this is
 done for you if the ``name`` parameter does not contain an ``@`` character.
 
 For earlier versions, something like the following will work.

@@ -233,7 +233,6 @@ INT_ATTRS = {
     "CumulativeRemoteUserCpu",
     "CumulativeSlotTime",
     "CumulativeSuspensionTime",
-    "CumulativeTransferTime",
     "CurrentHosts",
     "DAG_JobsCompleted",
     "DAG_JobsHeld",

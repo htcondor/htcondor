@@ -47,12 +47,12 @@ public:
 		   If CHOWN_JOB_SPOOL_FILES=False, desired_priv_state is forced
 		   to PRIV_USER.
 		 */
-	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
+	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad);
 
 		/* Like createJobSpoolDirectory, but just create the .swap directory.
 		 * Assumes the other (parent) directories have already been created.
 		 */
-	static bool createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
+	static bool createJobSwapSpoolDirectory(classad::ClassAd const *job_ad);
 
 		/* Create the shared spool directories but not the actual
 		 * per-job directories.
@@ -64,27 +64,17 @@ public:
 		 * This also removes the shared proc directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeJobSpoolDirectory( classad::ClassAd * ad);
+	static void removeJobSpoolDirectory(const classad::ClassAd * ad);
 
 		/* Remove the .swap spool directory belonging to a job.
 		 */
-	static void removeJobSwapSpoolDirectory( classad::ClassAd * ad);
+	static void removeJobSwapSpoolDirectory(const classad::ClassAd * ad);
 
 		/* Remove files spooled for a job cluster.
 		 * This also removes the shared cluster directory from the
 		 * hierarchy if possible.
 		 */
 	static void removeClusterSpooledFiles(int cluster, const char * submit_digest=NULL);
-
-		/* Restore ownership of spool directory to condor after job ran.
-		   Returns true on success.
-		   If CHOWN_JOB_SPOOL_FILES=False, this function does nothing.
-		 */
-	static bool chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad);
-
-		/* Returns true if this job requires a spool directory.
-		 */
-	static bool jobRequiresSpoolDirectory(classad::ClassAd const *job_ad);
 };
 
 /* Given the location of the SPOOL directory and a job id, return the

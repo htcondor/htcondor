@@ -276,6 +276,50 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 }
 
 bool
+Metric::evaluateOptionalBool(char const *attr_name,bool &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,BOOLEAN,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsBooleanValue(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalInt(char const *attr_name,int &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	// Checked as DOUBLE rather than INT32 so that IsNumber() accepts a real
+	// and converts, matching what ClassAd::EvaluateAttrInt() used to do here.
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
+Metric::evaluateOptionalDouble(char const *attr_name,double &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups)
+{
+	classad::Value val;
+	if( !evaluate(attr_name,val,metric_ad,daemon_ad,DOUBLE,regex_groups) ) {
+		return false;
+	}
+	if( val.IsUndefinedValue() ) {
+		return true;
+	}
+	ASSERT( val.IsNumber(result) );
+	return true;
+}
+
+bool
 Metric::isValidLabelName(std::string const &label_name)
 {
 	// Prometheus label names must match [a-zA-Z_][a-zA-Z0-9_]* and names
@@ -287,6 +331,84 @@ Metric::isValidLabelName(std::string const &label_name)
 		if( !isalnum((unsigned char)c) && c != '_' ) return false;
 	}
 	return true;
+}
+
+// Convert a CamelCase HTCondor name to the snake_case Prometheus conventionally
+// uses.  HTCondor ClassAd attributes -- which is where most metric names come
+// from -- are CamelCase with embedded all-caps acronyms, so a naive "insert an
+// underscore before every capital" turns MonitorSelfCPUUsage into the unreadable
+// monitor_self_c_p_u_usage.
+//
+// Instead, insert a separator only at a real word boundary, of which there are
+// exactly two kinds:
+//
+//   lower|digit -> Upper    TotalJobs      -> total_jobs
+//   Upper -> Upper + lower  MonitorSelfCPUUsage -> monitor_self_cpu_usage
+//
+// The second rule is what handles acronyms: in a run of capitals, the boundary
+// falls before the *last* one, because that capital is the start of the next
+// word only if a lowercase letter follows it.  So "CPUUsage" splits as
+// CPU|Usage, while "CPU" at the end of a name does not split at all.  The same
+// rule gets HTTPSProxyURL -> https_proxy_url and IOWait -> io_wait for free,
+// with no table of known acronyms to maintain.
+//
+// Characters that are already separators pass through: an existing underscore
+// never doubles, and ':' (legal in a Prometheus metric name, and reserved by
+// convention for recording rules) is left alone and suppresses a split after
+// it.  The transform is idempotent, so a name an admin already wrote in
+// snake_case is unchanged.
+std::string
+Metric::toSnakeCase(const std::string &in)
+{
+	std::string out;
+	out.reserve(in.size() + 8);
+	for (size_t i = 0; i < in.size(); i++) {
+		const unsigned char c = (unsigned char)in[i];
+		if (isupper(c) && i > 0) {
+			const unsigned char prev = (unsigned char)in[i-1];
+			const unsigned char next = (i+1 < in.size()) ? (unsigned char)in[i+1] : 0;
+			const bool boundary = islower(prev) || isdigit(prev) ||
+			                      (isupper(prev) && islower(next));
+			if (boundary && !out.empty() && out.back() != '_') {
+				out += '_';
+			}
+		}
+		if (c == '_' && !out.empty() && out.back() == '_') {
+			continue; // never emit a run of underscores
+		}
+		out += (char)tolower(c);
+	}
+	return out;
+}
+
+int
+Metric::reportLabelNameCollisions(classad::ClassAd const &label_ad, char const *source)
+{
+	// Two attribute names that differ by more than case -- AccountingGroup and
+	// Accounting_Group, say -- are distinct to ClassAds but normalize to the
+	// same Prometheus label name, so only one of them can ever be published.
+	// evaluateLabelAd() resolves that by keeping the first, which is stable but
+	// arbitrary from the admin's point of view; say so here, once per reconfig,
+	// rather than leaving them to wonder which label went missing.
+	std::map<std::string,std::string> first_seen;   // normalized -> as written
+	int collisions = 0;
+
+	for( auto const &[label_name,label_expr] : label_ad ) {
+		if( !label_expr ) continue;
+		if( !isValidLabelName(label_name) ) continue;   // reported separately
+
+		std::string norm_name = toSnakeCase(label_name);
+		auto [it,inserted] = first_seen.emplace(norm_name,label_name);
+		if( !inserted ) {
+			collisions++;
+			dprintf(D_ERROR,
+			        "CONFIGURATION ERROR: '%s' and '%s' in %s both name the Prometheus "
+			        "label '%s'; only '%s' will be published\n",
+			        it->second.c_str(),label_name.c_str(),source,
+			        norm_name.c_str(),it->second.c_str());
+		}
+	}
+	return collisions;
 }
 
 // Render an evaluated label expression as a label value string.  Returns
@@ -341,12 +463,32 @@ Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const 
 	if( !pool.empty() )    overlay.InsertAttr(ATTR_METRIC_POOL,pool);
 	overlay.SetParentScope(&daemon_ad);
 
+	// Label names are normalized to snake_case as they go in, not after the
+	// caller has merged the sources together.  Normalizing afterwards would
+	// decide precedence by the collation order of the merged map: a default
+	// of accounting_group and a per-metric AccountingGroup survive the merge
+	// as two distinct keys, and whichever sorted later would win -- which is
+	// the default, exactly backwards.  Normalizing here means the two are the
+	// same key by the time the caller merges, so the documented rule that
+	// per-metric labels override pool-wide defaults actually holds.
+	//
+	// Within one source, two attributes can still normalize together (say
+	// AccountingGroup and Accounting_Group, which ClassAds treat as distinct
+	// since they differ by more than case).  That is a configuration mistake,
+	// reported once per reconfig by the config-read checks; here we keep the
+	// first and skip the rest, so the choice is at least not silently made by
+	// map order.
+	std::set<std::string> seen_here;
+
 	for( auto const &[label_name,label_expr] : label_ad ) {
 		if( !label_expr ) continue;
 
 		// Bad label names are reported once at config-read time; here we
 		// just skip them rather than emitting invalid exposition text.
 		if( !isValidLabelName(label_name) ) continue;
+
+		std::string norm_name = toSnakeCase(label_name);
+		if( !seen_here.insert(norm_name).second ) continue;
 
 		// Evaluate in the overlay/daemon-ad scope rather than in label_ad's
 		// own scope.  ClassAd attribute lookup is case-insensitive, so
@@ -376,7 +518,7 @@ Metric::evaluateLabelAd(classad::ClassAd const &label_ad,classad::ClassAd const 
 			continue;
 		}
 
-		result[label_name] = label_value;
+		result[norm_name] = label_value;
 	}
 }
 
@@ -434,13 +576,13 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	if( !evaluateOptionalString(ATTR_NAME,name,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+	if( !evaluateOptionalInt(ATTR_VERBOSITY,verbosity,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( verbosity > max_verbosity ) {
 		// avoid doing more work; this metric requires higher verbosity
 		return false;
 	}
 
-	metric_ad.EvaluateAttrInt(ATTR_LIFETIME, lifetime);
+	if( !evaluateOptionalInt(ATTR_LIFETIME,lifetime,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -497,7 +639,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				std::vector<std::string> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					std::shared_ptr<Metric> metric(statsd.newMetric());
+					std::unique_ptr<Metric> metric(statsd.newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -553,18 +695,27 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 
 	if( isAggregateMetric() ) {
-		// This is like GROUP BY in SQL.
-		// By default, group by the name of the metric.
-		// If this GangliaD is configured to monitor multiple pools, however, then
-		// the default is the name of the metric PLUS the collector name since we typically 
-		// want an aggregate metric per pool.
+		// This is like GROUP BY in SQL: one aggregate result per distinct key.
+		//
+		// The key always begins with this metric's own name.  StatsD keeps a
+		// single map of aggregates keyed by this string and shared by every
+		// metric, so two metrics whose keys collided would silently accumulate
+		// into one another -- which is why AggregateGroup names only the
+		// dimension to group by (the submitter, the accounting group, ...)
+		// rather than having to spell out the metric name as well.
+		aggregate_group = name;
+		std::string group_by;
+		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,group_by,metric_ad,daemon_ad,regex_groups) ) return false;
+		if( !group_by.empty() ) {
+			aggregate_group += "/" + group_by;
+		}
+		// If this daemon came from one of several monitored pools, append the
+		// collector name as well: we want an aggregate per pool however the
+		// group was chosen.
 		std::string collector_name;
 		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
-			aggregate_group = name + "/" + collector_name;
-		} else {
-			aggregate_group = name;
+			aggregate_group += "/" + collector_name;
 		}
-		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
 	if( !evaluateOptionalString(ATTR_GROUP,group,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -577,11 +728,15 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	export_systems = split(export_str);
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
-	if (!derivative) {
-		metric_ad.EvaluateAttrBool(ATTR_COUNTER, derivative);
+	// Counter is an alias for Derivative; either marks the metric as one.
+	// Both go through the override-aware evaluator, so Prometheus_Counter
+	// marks a counter for Prometheus only, Ganglia_Derivative for Ganglia
+	// only, and so on.
+	if( !evaluateOptionalBool(ATTR_DERIVATIVE,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
+	if( !derivative ) {
+		if( !evaluateOptionalBool(ATTR_COUNTER,derivative,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
-    metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
+	if( !evaluateOptionalDouble(ATTR_SCALE,scale,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	std::string type_str;
 	if( !evaluateOptionalString(ATTR_TYPE,type_str,metric_ad,daemon_ad,regex_groups) ) return false;
@@ -1153,8 +1308,40 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		delete ad;
 		ad = ad2;
 
+		// Pre-filter on Verbosity, honoring backend-decorated overrides the
+		// same way Metric::evaluate() does at publication time.  Without that
+		// a metric carrying both Verbosity and, say, Prometheus_Verbosity
+		// would be discarded here on the strength of the undecorated value,
+		// and the override would never get a chance to apply.
+		//
+		// A backend instance uses its own decorated value if there is one.
+		// MetricD has no backend of its own, but it is the instance that
+		// queries the collector and so computes the projection on behalf of
+		// all of them; dropping a metric here would strip the attributes that
+		// metric references from the query and leave some backend publishing
+		// UNDEFINED.  So MetricD takes the most permissive value it can find.
 		int verbosity = 0;
-		ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+		char const *backend_name = backendName();
+		if( backend_name ) {
+			std::string decorated = std::string(backend_name) + "_" + ATTR_VERBOSITY;
+			if( !ad->Lookup(decorated) || !ad->EvaluateAttrInt(decorated,verbosity) ) {
+				ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			}
+		} else {
+			ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
+			std::string const suffix = std::string("_") + ATTR_VERBOSITY;
+			for( auto const &[attr,_] : *ad ) {
+				if( attr.size() <= suffix.size() ) continue;
+				if( strcasecmp(attr.c_str() + attr.size() - suffix.size(),
+				               suffix.c_str()) != 0 ) continue;
+				int decorated_verbosity = 0;
+				if( ad->EvaluateAttrInt(attr,decorated_verbosity) &&
+				    decorated_verbosity < verbosity )
+				{
+					verbosity = decorated_verbosity;
+				}
+			}
+		}
 		if( verbosity > m_verbosity ) {
 			delete ad;
 			continue;
@@ -1246,6 +1433,13 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 							        label_name.c_str(),ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
 						}
 					}
+					// Two legal names can still collide once normalized to
+					// snake_case, leaving one of them unpublishable.
+					std::string source;
+					formatstr(source,"%s of metric %s defined in %s",
+					          ATTR_PROMETHEUS_LABELS,metric_name.c_str(),param_name);
+					Metric::reportLabelNameCollisions(
+						*static_cast<classad::ClassAd *>(labels_expr),source.c_str());
 				}
 			}
 		}
@@ -1322,13 +1516,25 @@ StatsD::getCollectorsToMonitor()
 	if (monitor_collector.empty()) {
 		return false;
 	}
-	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
-	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	// The historical spelling of these three knobs has a typo in it.  Honor it
+	// when it is explicitly set, so existing configurations keep working, but
+	// fall back to the correctly spelled name, which is what is documented.
+	// Test param()'s return value rather than whether the string is empty:
+	// param() assigns the default argument when the knob is undefined, so the
+	// string is never empty here and an emptiness test would never fire.
+	if (!param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME)) {
+		param(collector_name_attr,"MONITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	}
+	if (!param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST)) {
+		param(collector_addr_attr,"MONITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	}
 	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
-	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	if (!param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD))) {
+		param(collector_ad_type,"MONITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	}
 	AdTypes type = StringToAdType(collector_ad_type.c_str());
 	if (type == NO_AD) {
-		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_AD_TYPE");
 	}
 	
 	// First, formulate the query we will send to the collector(s)
@@ -1633,7 +1839,7 @@ StatsD::publishDaemonMetrics(ClassAd& daemon_ad)
 		 itr != m_metrics.end();
 		 itr++ )
 	{
-		std::shared_ptr<Metric> metric(newMetric());
+		std::unique_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
 		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, *this);
 	}

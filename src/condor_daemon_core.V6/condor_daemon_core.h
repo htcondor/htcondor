@@ -337,8 +337,8 @@ class OptionalCreateProcessArgs {
 
   public:
     OptionalCreateProcessArgs(/*very not-const*/ std::string &_err_return_msg) :
-        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
-        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(FALSE),
+        want_udp_command_port(FALSE), _env(NULL), _cwd(NULL), family_info(NULL),
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
@@ -346,8 +346,8 @@ class OptionalCreateProcessArgs {
         initial_hung_timeout(0)
 	{}
     OptionalCreateProcessArgs() :
-        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
-        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(FALSE),
+        want_udp_command_port(FALSE), _env(NULL), _cwd(NULL), family_info(NULL),
         socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
         nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
         affinity_mask(NULL), daemon_sock(NULL),
@@ -1511,8 +1511,8 @@ class DaemonCore : public Service
         ArgList const   &arglist,
         priv_state      priv                 = PRIV_UNKNOWN,
         int             reaper_id            = 1,
-        int             want_commanand_port  = TRUE,
-        int             want_udp_comm_port   = TRUE,
+        int             want_commanand_port  = FALSE,
+        int             want_udp_comm_port   = FALSE,
         Env const       *env                 = NULL,
         const char      *cwd                 = NULL,
         FamilyInfo      *family_info         = NULL,
@@ -1560,7 +1560,6 @@ class DaemonCore : public Service
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
-    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.

@@ -345,22 +345,37 @@ The batch GAHP supports translating certain job ClassAd attributes into the corr
 
 The following table summarizes how job ClassAd attributes will be translated into the corresponding Slurm job parameters.
 
-+--------------------+-------------------+---------------------+
-| Submit File        | Job ClassAd       | Slurm               |
-+====================+===================+=====================+
-| ``request_memory`` | ``RequestMemory`` | ``--mem``           |
-+--------------------+-------------------+---------------------+
-| ``batch_runtime``  | ``BatchRuntime``  | ``--time``          |
-+--------------------+-------------------+---------------------+
-| ``batch_project``  | ``BatchProject``  | ``--account``       |
-+--------------------+-------------------+---------------------+
-| ``batch_queue``    | ``Queue``         | ``--partition``     |
-+--------------------+-------------------+---------------------+
-| ``batch_queue``    | ``Queue``         | ``--clusters``      |
-+--------------------+-------------------+---------------------+
++-------------------------+----------------------+-----------------------+
+| Submit File             | Job ClassAd          | Slurm                 |
++=========================+======================+=======================+
+| ``request_memory``      | ``RequestMemory``    | ``--mem``             |
++-------------------------+----------------------+-----------------------+
+| ``request_cpus``        | ``RequestCpus``      | ``--ntasks``          |
++-------------------------+----------------------+-----------------------+
+| ``batch_runtime``       | ``BatchRuntime``     | ``--time``            |
++-------------------------+----------------------+-----------------------+
+| ``batch_project``       | ``BatchProject``     | ``--account``         |
++-------------------------+----------------------+-----------------------+
+| ``batch_queue``         | ``Queue``            | ``--partition``       |
++-------------------------+----------------------+-----------------------+
+| ``batch_queue``         | ``Queue``            | ``--clusters``        |
++-------------------------+----------------------+-----------------------+
+| ``batch_cpu_count``     | ``BatchCpuCount``    | ``--ntasks``          |
++-------------------------+----------------------+-----------------------+
+| ``batch_node_count``    | ``BatchNodeCount``   | ``--nodes``           |
++-------------------------+----------------------+-----------------------+
+| ``batch_cpus_per_node`` | ``BatchCpusPerNode`` | ``--ntasks-per-node`` |
++-------------------------+----------------------+-----------------------+
+| ``batch_whole_nodes``   | ``BatchWholeNodes``  | ``--exclusive``       |
++-------------------------+----------------------+-----------------------+
 
 Note that ``batch_runtime`` is expressed in seconds. The value will be
 converted appropriately for the target batch system.
+
+Note that ``request_cpus`` is ignored if it's set to ``1``. Otherwise,
+it acts like setting ``batch_cpu_count`` to the given value and setting
+``batch_node_count`` to ``1`` (i.e. requesting the given number of cpus
+all on a single machine).
 
 Note that for Slurm, ``batch_queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
 

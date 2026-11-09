@@ -126,6 +126,7 @@ class SharedPortEndpoint: Service {
 	void DoListenerAccept(ReliSock *return_remote_sock);
 
 	static void InitializeDaemonSocketDir();
+	static void SetDaemonSocketDir(const char* val);
 	static bool GetDaemonSocketDir(std::string &result);
 	static bool GetAltDaemonSocketDir(std::string &result);
 	static bool CreatedSharedPortDirectory() {return m_created_shared_port_dir;}
@@ -133,6 +134,7 @@ class SharedPortEndpoint: Service {
  private:
 	static bool m_created_shared_port_dir;
 	static bool m_initialized_socket_dir;
+	static std::string m_daemon_socket_dir;
 
 	bool m_is_file_socket; // Set to false if we are using a Linux abstract socket.
 	bool m_listening;

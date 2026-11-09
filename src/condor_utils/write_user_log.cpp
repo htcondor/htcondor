@@ -247,12 +247,20 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				// is called in the destructor of the log_file object, we need to set a flag inside
 				// that object as well. -zmiller
 				//
+				// regardless of keyring sessions, always close() the file with the same
+				// identity that opened it.  some filesystems (e.g. Lustre) fail the close
+				// on the metadata server when the closing uid differs from the opening uid,
+				// leaking the open handle on the server.
+				//
+				bool opened_as_user = (get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL);
+				if (opened_as_user) {
+					log->set_user_priv_flag(true);
+				}
 				if(should_use_keyring_sessions_for_log()) {
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
-					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
+					if (opened_as_user) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
 						m_set_user_priv = true;
-						log->set_user_priv_flag(true);
 					}
 				}
 			}
@@ -504,8 +512,11 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 		if(!copied) {
 			if(fd >= 0) {
 				priv_state priv = PRIV_UNKNOWN;
+				// If user ids are no longer inited (e.g. a cached log file
+				// freed later), we can't switch, so close in the current priv.
+				bool close_as_user = user_priv_flag && user_ids_are_inited();
 				dprintf( D_FULLDEBUG, "WriteUserLog::user_priv_flag (=) is %i\n", user_priv_flag);
-				if ( user_priv_flag ) {
+				if ( close_as_user ) {
 					priv = set_user_priv();
 				}
 				if(close(fd) != 0) {
@@ -514,7 +525,7 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 							 "close() failed - errno %d (%s)\n",
 							 errno, strerror(errno) );
 				}
-				if ( user_priv_flag ) {
+				if ( close_as_user ) {
 					set_priv( priv );
 				}
 			}
@@ -541,8 +552,11 @@ WriteUserLog::log_file::~log_file()
 	if(!copied) {
 		if(fd >= 0) {
 			priv_state priv = PRIV_UNKNOWN;
+			// If user ids are no longer inited (e.g. a cached log file
+			// freed later), we can't switch, so close in the current priv.
+			bool close_as_user = user_priv_flag && user_ids_are_inited();
 			dprintf( D_FULLDEBUG, "WriteUserLog::user_priv_flag (~) is %i\n", user_priv_flag);
-			if ( user_priv_flag ) {
+			if ( close_as_user ) {
 				priv = set_user_priv();
 			}
 			if(close(fd) != 0) {
@@ -551,7 +565,7 @@ WriteUserLog::log_file::~log_file()
 						 "close() failed - errno %d (%s)\n",
 						 errno, strerror(errno) );
 			}
-			if ( user_priv_flag ) {
+			if ( close_as_user ) {
 				set_priv( priv );
 			}
 			fd = -1;

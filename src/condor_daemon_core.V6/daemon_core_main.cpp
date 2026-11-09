@@ -47,6 +47,7 @@
 #include "condor_scitokens.h"
 
 #include <chrono>
+#include <thread>
 #include <algorithm>
 
 #ifdef LINUX
@@ -1005,11 +1006,31 @@ drop_addr_file()
 				}
 				fputs( adbuf.c_str(), ADDR_FILE );
 				fclose( ADDR_FILE );
-				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
+
+				// On Windows, renaming over the address file fails with
+				// ERROR_ACCESS_DENIED while a tool has it open to look up
+				// our address.  Nothing rewrites the file until the next
+				// reconfig or contact-info change, so a single failure can
+				// leave a stale address (e.g. port 0 from before shared port
+				// was up) in place indefinitely.  Readers hold the file only
+				// briefly, so retry a few times with a short sleep.
+				const int max_rotate_attempts = 5;
+				int r = -1;
+				for (int attempt = 1; attempt <= max_rotate_attempts; attempt++) {
+					r = rotate_file(newAddrFile.c_str(), addrFile[i]);
+					if (r == 0) {
+						break;
+					}
+					if (attempt < max_rotate_attempts) {
+						std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					}
+				}
+				if (r != 0) {
 					dprintf( D_ALWAYS,
-							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+							 "DaemonCore: ERROR: failed to rotate %s to %s after %d attempts\n",
 							 newAddrFile.c_str(),
-							 addrFile[i]);
+							 addrFile[i],
+							 max_rotate_attempts);
 				}
 			} else {
 				dprintf( D_ALWAYS,
@@ -1640,7 +1661,7 @@ int
 handle_fetch_log(int cmd, Stream *s )
 {
 	char *name = NULL;
-	int  total_bytes = 0;
+	filesize_t total_bytes = 0;
 	int result;
 	int type = -1;
 	ReliSock *stream = (ReliSock *) s;
@@ -4202,6 +4223,9 @@ int dc_main( int argc, char** argv )
 
 
 		// SETUP COMMAND SOCKET
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) && daemon_sock_name == nullptr) {
+		daemon_sock_name = "master";
+	}
 	daemonCore->SetDaemonSockName( daemon_sock_name );
 	daemonCore->InitDCCommandSocket( command_port );
 

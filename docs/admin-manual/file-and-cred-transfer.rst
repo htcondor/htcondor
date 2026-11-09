@@ -498,7 +498,7 @@ Note that this setting disables support for user-supplied handles.
 .. _admin_common_file_transfer:
 
 Common File Transfer for Administrators
---------------------------------------
+---------------------------------------
 
 The concept and limitations of :ref:`common_file_transfer` are explained in
 the user manual.

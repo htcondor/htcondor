@@ -171,7 +171,7 @@ private:
   std::string AccountantLocalDomain;
   double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   std::string LogFileName;      // Name of Log file
-  int	MaxAcctLogSize;		// Max size of log file
+  long long MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
   bool  UseSlotWeights; 
 

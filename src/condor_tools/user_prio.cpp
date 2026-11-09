@@ -53,7 +53,7 @@ enum {
    DetailFactor    = 0x0004,
    DetailGroup     = 0x0008,
    DetailResUsed   = 0x0010,
-   DetailWtResUsed = 0x0020,
+   DetailAccUsage  = 0x0020,
    DetailUseTime1  = 0x0040, // usage start time
    DetailUseTime2  = 0x0080, // usage end time
    DetailEffQuota  = 0x0100,
@@ -68,7 +68,7 @@ enum {
    DetailCeiling   = 0x20000,
    DetailFloor     = 0x40000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
-   DetailUsage     = DetailResUsed | DetailWtResUsed,
+   DetailUsage     = DetailResUsed | DetailAccUsage,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
    DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus | DetailRequested,
    DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT | DetailRequested | DetailCeiling | DetailFloor,
@@ -85,28 +85,27 @@ enum {
 };
 
 struct LineRec {
-  std::string Name;
-  double Priority;
-  int Res;
-  double wtRes;
-  double AccUsage;
-  double Requested;
-  double Factor;
-  time_t BeginUsage;
-  time_t LastUsage;
-  std::string AcctGroup;
-  bool IsAcctGroup;
-  int   HasDetail;      // one or more of Detailxxx flags indicating the that data exists.
-  double EffectiveQuota;
-  double ConfigQuota;
-  double SubtreeQuota;
-  double Ceiling;
-  double Floor;
-  double SortKey;
-  int   Surplus;       // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
-  int   index;
-  int   GroupId;
-  double DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
+	std::string Name;
+	double Priority {0};
+	double wtRes {0};
+	double AccUsage {0};
+	double Requested {0};
+	double Factor {0};
+	time_t BeginUsage {0};
+	time_t LastUsage {0};
+	std::string AcctGroup;
+	bool IsAcctGroup {false};
+	int   HasDetail {0};  // one or more of Detailxxx flags indicating the that data exists.
+	double EffectiveQuota {0};
+	double ConfigQuota {0};
+	double SubtreeQuota {0};
+	double Ceiling {-1};
+	double Floor {-1};
+	double SortKey {0};
+	int   Surplus {SurplusUnset};   // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
+	int   index {0};
+	int   GroupId {0};
+	double DisplayOrder {0};  // used to flexibly control sort order in Hier sort mode.
 };
 
 //-----------------------------------------------------------------
@@ -242,7 +241,7 @@ struct LineRecLT {
         // Order submitters by accumulated usage or priority or name depending on CL flags
         if (detail_flag & DetailPriority) {
             return a.Priority < b.Priority;
-        } else if (detail_flag & DetailUsage) {
+        } else if (detail_flag & DetailAccUsage) {
             return a.AccUsage < b.AccUsage;
         } else {
             return a.Name < b.Name;
@@ -1366,7 +1365,7 @@ static void ProcessInfo(ClassAd* ad, std::vector<ClassAd> &accountingAds, bool G
   if (HierFlag) {
      none_last = (GlobalSurplusPolicy == SurplusRegroup);
      order = SortHierByGroupId;
-     if (DetailFlag & (DetailPriority | DetailUsage))
+     if (DetailFlag & (DetailPriority | DetailAccUsage))
         order = SortHierByDisplayOrder;
   } else if (GroupOrder) {
      order = SortGroupsFirstByIndex;
@@ -1407,39 +1406,12 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   std::string attrIsAcctGroup;
   std::string attrFloor;
   std::string attrCeiling;
-  char  name[128], policy[32];
-  double priority = 0;
-  double Factor = 0;
-  double AccUsage = -1;
-  double ceiling = -1;
-  double floor = -1;
-  int   resUsed = 0;
-  time_t BeginUsage = 0;
-  int   LastUsage = 0;
-  double wtResUsed, requested = 0;
-  std::string AcctGroup;
-  bool IsAcctGroup;
-  double effective_quota = 0, config_quota = 0, subtree_quota = 0;
+  char  policy[32];
   bool fNeedGroupIdFixup = false;
 
   for( int i=1; i<=numElem; i++) {
-    LR[i-1].Priority=0;
-    LR[i-1].index = i;
-    LR[i-1].GroupId=0;
-    LR[i-1].SortKey = 0;
-    LR[i-1].Surplus = SurplusUnset;
-    LR[i-1].DisplayOrder = 0;
-    LR[i-1].HasDetail = 0;
-    LR[i-1].LastUsage=MinLastUsageTime;
-    LR[i-1].Requested=0.0;
-    LR[i-1].Ceiling=-1;
-    LR[i-1].Floor=-1;
-
-	// These values can be used even if the relevant Detail flag isn't set,
-	// so ensure values from a previous ad don't bleed through if the
-	// attribute isn't present in the current ad.
-	resUsed = 0;
-	AccUsage = 0;
+    LineRec& LRentry = LR[i-1];
+    LRentry.index = i;
 
 	char strI[32];
 
@@ -1452,144 +1424,128 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 		ad = & accountingAds[i - 1];
 	}
 
-	snprintf(attrName, sizeof(attrName), "Name%s", strI);
-	snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
-	snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
-	snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
-	snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
-	snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
-	snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
-	snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
-	snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
-    formatstr(attrAcctGroup, "AccountingGroup%s", strI);
-    formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
-    formatstr(attrCeiling, "Ceiling%s", strI);
-    formatstr(attrFloor, "Floor%s", strI);
-
-    if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
-		!ad->LookupFloat	( attrPrio, priority ) )
-			continue;
-
-    LR[i-1].HasDetail |= DetailPriority | DetailName;
-
-    if( ad->LookupFloat( attrFactor, Factor ) ) {
-       LR[i-1].HasDetail |= DetailFactor;
-       if (Factor > 0)
-          LR[i-1].HasDetail |= DetailRealPrio;
-       }
-	if( ad->LookupFloat( attrAccUsage, AccUsage ) ) LR[i-1].HasDetail |= DetailUsage;
-	if( ad->LookupFloat( attrCeiling, ceiling ) ) LR[i-1].HasDetail |= DetailCeiling;
-	if( ad->LookupFloat( attrFloor, floor ) ) LR[i-1].HasDetail |= DetailFloor;
-	if( ad->LookupFloat( attrRequested, requested ) ) LR[i-1].HasDetail |= DetailRequested;
-	if( ad->LookupInteger( attrBeginUsage, BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
-	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
-	if( ad->LookupInteger( attrResUsed, resUsed ) ) LR[i-1].HasDetail |= DetailUsage;
-
-	if( !ad->LookupFloat( attrWtResUsed, wtResUsed ) ) {
-		wtResUsed = resUsed;
-	} else {
-		LR[i-1].HasDetail |= DetailWtResUsed;
+	if (accountingAds.empty() || i == 1) {
+		snprintf(attrName, sizeof(attrName), "Name%s", strI);
+		snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
+		snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
+		snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
+		snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
+		snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
+		snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
+		snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
+		snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
+		formatstr(attrAcctGroup, "AccountingGroup%s", strI);
+		formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
+		formatstr(attrCeiling, "Ceiling%s", strI);
+		formatstr(attrFloor, "Floor%s", strI);
 	}
 
-    if (!ad->LookupString(attrAcctGroup, AcctGroup)) {
-        AcctGroup = "<none>";
+	if( !ad->LookupString(attrName, LRentry.Name) ||
+	    !ad->LookupFloat(attrPrio, LRentry.Priority) ) {
+			continue;
+	}
+
+    LRentry.HasDetail |= DetailPriority | DetailName;
+
+    if( ad->LookupFloat(attrFactor, LRentry.Factor) ) {
+       LRentry.HasDetail |= DetailFactor;
+       if (LRentry.Factor > 0)
+          LRentry.HasDetail |= DetailRealPrio;
+       }
+	if( ad->LookupFloat( attrAccUsage, LRentry.AccUsage ) ) LRentry.HasDetail |= DetailAccUsage;
+	if( ad->LookupFloat( attrCeiling, LRentry.Ceiling ) ) LRentry.HasDetail |= DetailCeiling;
+	if( ad->LookupFloat( attrFloor, LRentry.Floor ) ) LRentry.HasDetail |= DetailFloor;
+	if( ad->LookupFloat( attrRequested, LRentry.Requested ) ) LRentry.HasDetail |= DetailRequested;
+	if( ad->LookupInteger( attrBeginUsage, LRentry.BeginUsage ) ) LRentry.HasDetail |= DetailUseTime1;
+	if( ad->LookupInteger( attrLastUsage, LRentry.LastUsage ) ) LRentry.HasDetail |= DetailUseTime2 | DetailUseDeltaT;
+
+	if (ad->LookupFloat(attrWtResUsed, LRentry.wtRes) || ad->LookupFloat(attrResUsed, LRentry.wtRes)) {
+		LRentry.HasDetail |= DetailResUsed;
+	}
+
+    if (!ad->LookupString(attrAcctGroup, LRentry.AcctGroup)) {
+        LRentry.AcctGroup = "<none>";
     }
-    if (!ad->LookupBool(attrIsAcctGroup, IsAcctGroup)) {
-        IsAcctGroup = false;
+    if (!ad->LookupBool(attrIsAcctGroup, LRentry.IsAcctGroup)) {
+        LRentry.IsAcctGroup = false;
     }
 
     char attr[64];
     snprintf( attr, sizeof(attr), "EffectiveQuota%s", strI );
-    if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
+    if (ad->LookupFloat(attr, LRentry.EffectiveQuota)) LRentry.HasDetail |= DetailEffQuota;
     snprintf( attr, sizeof(attr), "ConfigQuota%s", strI );
-    if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
+    if (ad->LookupFloat(attr, LRentry.ConfigQuota)) LRentry.HasDetail |= DetailCfgQuota;
 
-    if (IsAcctGroup) {
-        LR[i-1].GroupId = -i;
-        if (!strcmp(name,"<none>") || !strcmp(name,"."))
-           LR[i-1].GroupId = 0;
+    if (LRentry.IsAcctGroup) {
+        LRentry.GroupId = -i;
+        if (LRentry.Name == "<none>" || LRentry.Name == ".")
+           LRentry.GroupId = 0;
 
         snprintf( attr, sizeof(attr), "GroupAutoRegroup%s", strI );
         bool regroup = false;
-        if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
-        LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
+        if (ad->LookupBool(attr, regroup)) LRentry.HasDetail |= DetailSurplus;
+        LRentry.Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
            GlobalSurplusPolicy = SurplusRegroup;
 
         snprintf( attr, sizeof(attr), "SurplusPolicy%s", strI );
         if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
-           LR[i-1].HasDetail |= DetailSurplus;
+           LRentry.HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
               GlobalSurplusPolicy = SurplusRegroup;
-              LR[i-1].Surplus = SurplusRegroup;
+              LRentry.Surplus = SurplusRegroup;
            } else if (MATCH == strcasecmp(policy, "byquota")) {
               GlobalSurplusPolicy = SurplusByQuota;
-              LR[i-1].Surplus = SurplusByQuota;
+              LRentry.Surplus = SurplusByQuota;
            } else if (MATCH == strcasecmp(policy, "no")) {
-              LR[i-1].Surplus = SurplusNone;
+              LRentry.Surplus = SurplusNone;
               } else {
-              LR[i-1].Surplus = SurplusUnknown;
+              LRentry.Surplus = SurplusUnknown;
            }
         }
 
-        double sort_key = LR[i-1].SortKey;
+        double sort_key = LRentry.SortKey;
         snprintf( attr, sizeof(attr), "GroupSortKey%s", strI );
-        if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
-        LR[i-1].SortKey = sort_key;
+        if (ad->LookupFloat(attr, sort_key)) LRentry.HasDetail |= DetailSortKey;
+        LRentry.SortKey = sort_key;
 
         snprintf( attr, sizeof(attr), "SubtreeQuota%s", strI );
-        if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
-        if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
-           LR[i-1].HasDetail &= ~DetailPrios;
+        if (ad->LookupFloat(attr, LRentry.SubtreeQuota)) LRentry.HasDetail |= DetailTreeQuota;
+        if (GroupRollup && !(LRentry.HasDetail & DetailEffQuota)) {
+           LRentry.HasDetail &= ~DetailPrios;
         }
 
         if (GroupPrioIsMeaningless) {
-           LR[i-1].HasDetail &= ~DetailPriority;
+           LRentry.HasDetail &= ~DetailPriority;
         }
 
     } else {
        // if this is not a group, then it's in a group, if it's in the none
        // group we can set it's group id now, but if not we need to stuff 
        // in a bogus value and set a flag to turn on groupid fixup later.
-       if (AcctGroup == "<none>" || AcctGroup == ".")
-          LR[i-1].GroupId = 0;
+       if (LRentry.AcctGroup == "<none>" || LRentry.AcctGroup == ".")
+          LRentry.GroupId = 0;
        else {
           // set to large negative number so we know we have to fix it
-          LR[i-1].GroupId = -numElem*2;
+          LRentry.GroupId = -numElem*2;
           fNeedGroupIdFixup = true;
        }
-       if (LR[i-1].HasDetail & (DetailEffQuota | DetailCfgQuota))
+       if (LRentry.HasDetail & (DetailEffQuota | DetailCfgQuota))
           UsersHaveQuotas = true;
     }
 
-    if (LR[i-1].GroupId != 0)
-       LR[i-1].HasDetail |= DetailGroup;
+    if (LRentry.GroupId != 0)
+       LRentry.HasDetail |= DetailGroup;
 
-	if (LastUsage==0) LastUsage=-1;
+    DetailAvailFlag |= LRentry.HasDetail;
 
-    DetailAvailFlag |= LR[i-1].HasDetail;
-
-    LR[i-1].Name=name;
-    LR[i-1].Priority=priority;
-    LR[i-1].Res=resUsed;
-    LR[i-1].wtRes=wtResUsed;
-    LR[i-1].Requested=requested;
-    LR[i-1].Factor=Factor;
-    LR[i-1].BeginUsage=BeginUsage;
-    LR[i-1].LastUsage=LastUsage;
-    LR[i-1].AccUsage=AccUsage;
-    LR[i-1].Ceiling=ceiling;
-    LR[i-1].Floor=floor;
-    LR[i-1].AcctGroup=AcctGroup;
-    LR[i-1].IsAcctGroup=IsAcctGroup;
-    LR[i-1].EffectiveQuota = effective_quota;
-    LR[i-1].ConfigQuota = config_quota;
-    LR[i-1].SubtreeQuota = subtree_quota;
   }
  
   // don't print colums if the negotiator didn't send us any data for them.
-  if ( ! (DetailAvailFlag & DetailUsage))
-    DetailFlag &= ~DetailUsage;
+  if ( ! (DetailAvailFlag & DetailAccUsage))
+    DetailFlag &= ~DetailAccUsage;
+  if ( ! (DetailAvailFlag & DetailResUsed))
+    DetailFlag &= ~DetailResUsed;
   if ( ! (DetailAvailFlag & DetailFactor))
     DetailFlag &= ~DetailFactor;
   if ( ! (DetailAvailFlag & DetailUseTime1))
@@ -1627,7 +1583,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
               LR[i].DisplayOrder = LR[i].SortKey;
            else
               LR[i].DisplayOrder = LR[i].GroupId ? LR[i].Priority : FLT_MAX;
-        } else if (DetailFlag & DetailUsage) {
+        } else if (DetailFlag & DetailAccUsage) {
            LR[i].DisplayOrder = LR[i].AccUsage / 3600.0;
         } else {
            LR[i].DisplayOrder = LR[i].GroupId ? (float)LR[i].GroupId : FLT_MAX;
@@ -1771,7 +1727,7 @@ static const struct {
    { DetailRealPrio,   8, "Real\0Priority" },
    { DetailFactor,     9, "Priority\0Factor" },
    { DetailResUsed,    6, "Wghted\0In Use" },
-   { DetailWtResUsed, 12, "Total Usage\0(wghted-hrs)" },
+   { DetailAccUsage,  12, "Total Usage\0(wghted-hrs)" },
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
@@ -1802,10 +1758,6 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
    printf("Last Priority Update: %s\n",format_date(tmLast));
 
    LineRec Totals;
-   Totals.Res=0;
-   Totals.wtRes=0.0;
-   Totals.BeginUsage=0;
-   Totals.AccUsage=0;
 
    int cols_max_width = 0;
    for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
@@ -1967,7 +1919,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
                break;
             case DetailRequested:    FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].Requested);
                break;
-            case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
+            case DetailAccUsage:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
                break;
             case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, LR[j].BeginUsage, "");
                break;
@@ -2048,7 +2000,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
             break;
          case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
             break;
-         case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
+         case DetailAccUsage:  FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
             break;
          case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, Totals.BeginUsage, "");
             break;

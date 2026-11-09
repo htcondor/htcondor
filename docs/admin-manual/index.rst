@@ -13,6 +13,6 @@ Administrators' Manual
    ap-policy-configuration
    cm-configuration
    security
+   monitoring
    networking
-   logging
    file-and-cred-transfer 

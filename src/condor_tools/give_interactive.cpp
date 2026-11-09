@@ -290,7 +290,6 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 		
 	requestAd.Assign(ATTR_JOB_REMOTE_USER_CPU, 0.0);
 	requestAd.Assign(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
-	requestAd.Assign(ATTR_JOB_EXIT_STATUS, 0);
 	requestAd.Assign(ATTR_NUM_CKPTS, 0);
 	requestAd.Assign(ATTR_NUM_RESTARTS, 0);
 	requestAd.Assign(ATTR_JOB_COMMITTED_TIME, 0);

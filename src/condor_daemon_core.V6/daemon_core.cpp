@@ -6610,17 +6610,6 @@ void CreateProcessForkit::exec() {
 	}
 		// END pid family environment id propogation 
 
-	std::string cookie;
-	bool has_cookie = m_envobject.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", cookie);
-        if (m_want_command_port && !has_cookie) {
-                std::string value;
-                if (SharedPortEndpoint::GetDaemonSocketDir(value)) {
-                        m_envobject.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", value.c_str());
-                }
-        } else if (!m_want_command_port && has_cookie) {
-                m_envobject.DeleteEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-        }
-
 		// The child's environment:
 	m_unix_env = m_envobject.getStringArray();
 
@@ -7242,6 +7231,13 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	if (priv == PRIV_USER_FINAL || priv == PRIV_CONDOR_FINAL) {
+		if (want_command_port != FALSE || want_udp_command_port != FALSE) {
+			dprintf(D_ERROR, "DaemonCore: Refusing to make command port for non-privileged child '%s'\n", executable);
+		}
+		want_command_port = FALSE;
+		want_udp_command_port = FALSE;
+	}
 
 #ifdef LINUX
 		// Most callers of Create_Process should give us a meaningful
@@ -7343,6 +7339,13 @@ int DaemonCore::Create_Process(
 	// do that instead.  Currently, we only want that if we are not
 	// given a pre-assigned port and if we have permission to write
 	// to the daemon socket directory.
+	if (want_command_port) {
+		std::string shared_port_dir;
+		if (SharedPortEndpoint::GetDaemonSocketDir(shared_port_dir)) {
+			inheritbuf += " SharedPortDir:";
+			inheritbuf += shared_port_dir;
+		}
+	}
 	if ( want_command_port != FALSE && want_command_port <= 1 &&
 		 !HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(job_opt_mask) &&
 		 SharedPortEndpoint::UseSharedPort() )
@@ -8237,11 +8240,11 @@ int DaemonCore::Create_Process(
 	}
 
 	if (remap) {
-		if (executable_fullpath) {
-			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
-			if (alt_executable_fullpath.compare(executable_fullpath))
-				dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
-		}
+			// executable_fullpath is never null here: executable was
+			// null-checked above, and it is either executable or a buffer.
+		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+		if (alt_executable_fullpath.compare(executable_fullpath))
+			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
 		if (cwd) {
 			alt_cwd = remap->RemapDir(cwd);
 			if (alt_cwd.compare(cwd))
@@ -8457,14 +8460,13 @@ int DaemonCore::Create_Process(
 				else if ((errno == ENOENT) && (priv == PRIV_USER_FINAL))
 				{
 					TemporaryPrivSentry tps(PRIV_USER);
-					struct stat statbuf;
 					int script_fd = -1;
 					const static size_t buflen = 1024;
 					char script_buf[buflen + 1]; script_buf[buflen] = '\0';
 					ssize_t read_bytes = 0;
-					if ((stat(executable_fullpath, &statbuf) == 0) &&
-						(access(executable_fullpath, R_OK | X_OK) == 0) &&
-						((script_fd = open(executable_fullpath, O_RDONLY)) >= 0) &&
+						// Just open and read; a separate stat()/access()
+						// beforehand is redundant and a TOCTOU window.
+					if (((script_fd = safe_open_wrapper_follow(executable_fullpath, O_RDONLY)) >= 0) &&
 						((read_bytes = full_read(script_fd, script_buf, buflen)) > 1) &&
 						(script_buf[0] == '#' && script_buf[1] == '!') )
 					{
@@ -9081,14 +9083,6 @@ DaemonCore::Kill_Family(pid_t pid)
 
 
 int
-DaemonCore::Extend_Family_Lifetime(pid_t pid)
-{
-	if (m_proc_family != nullptr) {
-		return m_proc_family->extend_family_lifetime(pid);
-	}
-	return true;
-}
-int
 DaemonCore::Signal_Process(pid_t pid, int sig)
 {
 	ASSERT(m_proc_family != NULL);
@@ -9340,6 +9334,11 @@ DaemonCore::Inherit( void )
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
 		auto inherit_list_itr = inherit_list.begin();
+		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPortDir:", 14) == 0) {
+			ptmp = inherit_list_itr->c_str() + 14;
+			SharedPortEndpoint::SetDaemonSocketDir(ptmp);
+			inherit_list_itr++;
+		}
 		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPort:", 11) == 0) {
 			ptmp = inherit_list_itr->c_str() + 11;
 			delete m_shared_port_endpoint;

@@ -684,6 +684,10 @@ sysapi_find_linux_name( const char *info_str )
         else if ( strstr(distro_name_lc, "suse") )
         {
                 distro = strdup("SUSE");
+        }
+        else if ( strstr(distro_name_lc, "amd ryzen ai developer") )
+        {
+                distro = strdup("Debian");
         } else 
 	{
                 distro = strdup("LINUX");

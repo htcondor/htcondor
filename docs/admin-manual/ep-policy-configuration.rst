@@ -1101,6 +1101,8 @@ machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
 
+.. _condor_startd_health_expression:
+
 The Healthy Expression
 ''''''''''''''''''''''
 
@@ -1370,7 +1372,7 @@ is described below.
     E
        The transition from Unclaimed to Backfill happens if the machine
        is configured to run backfill computations (see
-       the :ref:`admin-manual/ep-policy-configuration:configuring htcondor for running backfill jobs` section)
+       the :ref:`admin-manual/ep-policy-configuration:configuring htcondor for backfill` section)
        and the :macro:`START_BACKFILL` expression evaluates to TRUE.
     P
        The transition from Unclaimed to Drained happens if draining of
@@ -1865,7 +1867,7 @@ skipped, and the machine goes directly to the Claimed/Idle state
 state (transition **6**), even if it is only for a brief period of time.
 
 If the machine has been configured to perform backfill jobs (see the
-:ref:`admin-manual/ep-policy-configuration:configuring htcondor for running backfill jobs`
+:ref:`admin-manual/ep-policy-configuration:configuring htcondor for backfill`
 section), while it is in Unclaimed/Idle it will evaluate the
 :macro:`START_BACKFILL` expression. Once :macro:`START_BACKFILL` evaluates to
 TRUE, the machine will enter the Backfill/Idle state (transition **7**) to
@@ -2142,7 +2144,7 @@ The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
 about backfill support in HTCondor, see the
 :ref:`admin-manual/ep-policy-configuration:configuring htcondor for
-running backfill jobs` section. This state is only used if the machine has been
+backfill` section. This state is only used if the machine has been
 configured to enable backfill computation, if a specific backfill manager has
 been installed and configured, and if the machine is otherwise idle (not being
 used interactively or for regular HTCondor computations). If the machine

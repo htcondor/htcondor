@@ -69,6 +69,21 @@ public:
 	// and not beginning with "__" (that prefix is reserved by Prometheus).
 	static bool isValidLabelName(std::string const &name);
 
+	// Convert a CamelCase HTCondor name to the snake_case Prometheus uses.
+	// Applied to metric names and to label names, the latter early enough
+	// that two spellings of one label collide before precedence is decided
+	// rather than after; see evaluateLabelAd().
+	static std::string toSnakeCase(std::string const &in);
+
+	// Report, at D_ERROR, any two attributes of a label ad whose names
+	// normalize to the same Prometheus label name -- only one of them can be
+	// published, so the admin needs to know which.  'source' names the ad for
+	// the message (e.g. "PROMETHEUS_DEFAULT_LABELS").  Returns the number of
+	// collisions found.  Call this at config-read time: the attribute names
+	// are static, so nothing about this needs re-checking per cycle.
+	static int reportLabelNameCollisions(classad::ClassAd const &label_ad,
+	                                     char const *source);
+
 	// This is called to contribute another datapoint to an aggregate
 	// metric (e.g. SUM, AVG, MIN, MAX)
 	void addToAggregateValue(Metric const &datapoint);
@@ -154,7 +169,18 @@ private:
 	// If this is a regex metric, performs substitutions of regex groups
 	// into strings that reference them.
 	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr=NULL) const;
+
+	// Typed wrappers around evaluate() for keywords that may be absent: each
+	// leaves 'result' untouched if the attribute is not defined, and returns
+	// false only if it is defined but does not evaluate to the right type.
+	// Every metric-definition keyword goes through one of these, so that all
+	// of them honor backend-decorated overrides (Prometheus_Counter and the
+	// like) uniformly -- reading an attribute straight off the metric ad
+	// would silently bypass that.
 	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalBool(char const *attr_name,bool &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalInt(char const *attr_name,int &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
+	bool evaluateOptionalDouble(char const *attr_name,double &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
 
 	// Resolve prometheus_labels from the pool-wide default label ad (may be
 	// NULL) and the metric ad's attr_name attribute, which must be a nested

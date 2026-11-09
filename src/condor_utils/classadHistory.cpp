@@ -43,7 +43,7 @@ static void RemoveExtraHistoryFiles(int max_backups, const char* filename);
 static int MaybeDeleteOneHistoryBackup(int max_backups, const char* original_filename);
 static bool IsHistoryFilename(const char* original_filename, const char *filename, time_t *backup_time);
 static void RotateHistory(bool isHistory, const char* filename, const char* new_path);
-static int findHistoryOffset(FILE *LogFile);
+static int64_t findHistoryOffset(FILE *LogFile);
 static FILE* OpenHistoryFile();
 static void CloseJobHistoryFile();
 static void RelinquishHistoryFile(FILE *fp);
@@ -148,7 +148,7 @@ AppendHistory(ClassAd* ad)
 			  JobHistoryFileName, strerror(errno));
 	  failed = true;
   } else {
-	  int offset = findHistoryOffset(LogFile);
+	  int64_t offset = findHistoryOffset(LogFile);
 	  if (fputs(ad_string.c_str(), LogFile) == EOF) {
 		  dprintf(D_ALWAYS, 
 				  "ERROR: failed to write job class ad to history file %s\n",
@@ -174,8 +174,8 @@ AppendHistory(ClassAd* ad)
 		  // (delayed arbitrarily by e.g. LeaveJobInQueue) is guaranteed to be monotonic across
 		  // records in this file; condor_history uses it to safely bound backwards scans.
 		  fprintf(LogFile,
-                      "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d CurrentTime = %lld\n",
-				  offset, cluster, proc, owner.c_str(), completion, (long long)time(nullptr));
+                      "*** Offset = %lld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d CurrentTime = %lld\n",
+				  (long long)offset, cluster, proc, owner.c_str(), completion, (long long)time(nullptr));
 		  fflush( LogFile );
       }
   }
@@ -606,15 +606,35 @@ RotateHistory(bool isHistory, const char* filename, const char* new_path)
 // history file is. We assume that the file is open. We reset the file pointer
 // to the end of the file when we are done.
 // --------------------------------------------------------------------------
+static int64_t
+ftell_64b(FILE* f)
+{
+#ifdef WIN32
+	return _ftelli64(f);
+#else
+	return (int64_t)ftello(f);
+#endif
+}
+
 static int
+fseek_64b(FILE* f, int64_t offset, int origin)
+{
+#ifdef WIN32
+	return _fseeki64(f, offset, origin);
+#else
+	return fseeko(f, (off_t)offset, origin);
+#endif
+}
+
+static int64_t
 findHistoryOffset(FILE *LogFile)
 {
-    int offset=0;
-    int file_size;
+    int64_t offset=0;
+    int64_t file_size;
     const int JUMP = 200;
 
     fseek(LogFile, 0, SEEK_END);
-    file_size = ftell(LogFile);
+    file_size = ftell_64b(LogFile);
     if (file_size == 0 || file_size == -1) {
         // If there is nothing in the file, the offset of the previous
         // line is 0. 
@@ -623,7 +643,7 @@ findHistoryOffset(FILE *LogFile)
         bool found = false;
         char *buffer = (char *) malloc(JUMP + 1);
         ASSERT( buffer )
-        int current_offset; 
+        int64_t current_offset;
 
         // We need to skip the last newline
         if (file_size > 1) {
@@ -637,7 +657,7 @@ findHistoryOffset(FILE *LogFile)
                 current_offset = 0;
             }
             memset(buffer, 0, JUMP+1);
-            if (fseek(LogFile, current_offset, SEEK_SET)) {
+            if (fseek_64b(LogFile, current_offset, SEEK_SET)) {
                 // We failed for some reason
                 offset = -1;
                 break;

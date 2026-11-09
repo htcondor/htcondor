@@ -865,17 +865,10 @@ These macros control the *condor_schedd*.
 
     .. code-block:: condor-config
 
-        if version > 9.5
-           # use hold names if the version supports it
-           SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
-           SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
-           SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
-           SYSTEM_PERIODIC_HOLD = JobStatus == 1 && JobRunCount > 10
-        else
-           SYSTEM_PERIODIC_HOLD = \
-          (JobStatus == 1 || JobStatus == 2) && \
-          (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
-        endif
+        SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
+        SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
+        SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
+        SYSTEM_PERIODIC_HOLD = JobStatus == 1 && NumJobStarts > 10
 
 :macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
     .. faux-definition::
@@ -929,7 +922,7 @@ These macros control the *condor_schedd*.
     .. code-block:: condor-config
 
         SYSTEM_PERIODIC_RELEASE = \
-          (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
+          (NumJobStarts < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
 :macro-def:`SYSTEM_PERIODIC_REMOVE_NAMES`

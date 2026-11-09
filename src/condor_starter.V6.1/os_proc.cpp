@@ -632,7 +632,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( JobName, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 		.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
 		.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
@@ -1324,7 +1323,6 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
 		 cpArgs.priv(PRIV_ROOT)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);

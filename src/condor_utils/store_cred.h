@@ -29,6 +29,14 @@
 void SecureZeroMemory(void *, size_t);
 #endif
 
+// This is the set of allowed characters in the name of an OAUTH credential
+// managed by the credd (when CREDMON_ALLOW_SPECIAL_CHAR_NAMES=false).
+// Note that this is for the name as it appears in OAuthServicesNeeded in the
+// job ad and network communications. For the credential's filename on disk,
+// the '*' is replaced by '_'. These two characters seperate the service
+// and optional handle portions of the full name.
+#define OAUTH_CRED_NAME_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-*"
+
 // store cred return codes
 const int SUCCESS = 1; 					// it worked!
 const int FAILURE = 0;					// communication error

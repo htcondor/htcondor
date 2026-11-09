@@ -1799,7 +1799,8 @@ int DCSchedd::offerResources(
 	const std::string & submitter_name,
 	int timeout,
 	const char * claimID,
-	long long disk_held_by_claim_in_mb)
+	long long disk_held_by_claim_in_mb,
+	const ClassAd * extra_cmd_attrs)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
@@ -1838,6 +1839,9 @@ int DCSchedd::offerResources(
 	if( claimID != NULL ) {
 		// The CEDAR machinery (in _putClassAd()) encrypts this attribute.
 		cmd_ad.InsertAttr(ATTR_CLAIM_ID, claimID);
+	}
+	if( extra_cmd_attrs != nullptr ) {
+		cmd_ad.Update(*extra_cmd_attrs);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());
@@ -2250,6 +2254,9 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 		}
 		if (fetch_opts & fetch_NoProcAds) {
 			request_ad.InsertAttr(ATTR_QUERY_Q_NO_PROC_ADS, true);
+		}
+		if (fetch_opts & fetch_ClusterBeforeJob) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS, true);
 		}
 	}
 

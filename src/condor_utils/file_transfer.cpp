@@ -2501,7 +2501,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	}
 
 	if( !final_transfer && IsServer() ) {
-		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_,desired_priv_state);
+		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_);
 	}
 
 	std::string outputDirectory = Iwd;
@@ -3781,7 +3781,7 @@ FileTransfer::CommitFiles()
 
 		std::string SwapSpoolSpace;
 		formatstr(SwapSpoolSpace,"%s.swap",SpoolSpace);
-		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_,desired_priv_state);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_);
 		if( !swap_dir_ready ) {
 			EXCEPT("Failed to create %s",SwapSpoolSpace.c_str());
 		}

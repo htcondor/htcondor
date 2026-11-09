@@ -796,7 +796,7 @@ prevent the job from using more scratch space than provisioned.
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/ep-policy-configuration:configuring
-htcondor for running backfill jobs` for details.
+htcondor for backfill` for details.
 
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
@@ -993,7 +993,7 @@ needs.
 
     Backfill slots will have the attribute :ad-attr:`ResourceConflict` set to a list
     of resource names whenever the current slot conflicts with another slot.
-    This attribute can be used by the :macro-def:`PREEMPT`
+    This attribute can be used by the :macro:`PREEMPT`
     policy expression to evict jobs from the backfill slot when a non-backfill slot begins
     to use the same resources.
 

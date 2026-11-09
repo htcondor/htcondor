@@ -270,6 +270,16 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 								const char ** pdef_value,
 								const MACRO_META **ppmet);
 
+	// Returns true if the value param() would use for name (including SUBSYS. and LOCALNAME. prefixed
+	// forms) comes only from the root config (i.e. the global and local config files, detected values,
+	// or the param table default). Returns false if the value was set by USER_CONFIG_FILE, _CONDOR_*
+	// environment variables, a runtime/persistent config, or any config source processed after the
+	// root config (i.e. a daemon specific config file). Also returns false if config metadata was not
+	// loaded (see CONFIG_OPT_WANT_META) since the source can not be verified.
+	// Note: only checks where name was defined, not the sources of any macros its value references.
+	// If location is not NULL it is set to the location (source file and line) that set name.
+	bool param_defined_by_root_config(const char * name, std::string * location = nullptr);
+
 	MACRO_SET * param_get_macro_set();
 	void init_param_context(MACRO_EVAL_CONTEXT & ctx);
 

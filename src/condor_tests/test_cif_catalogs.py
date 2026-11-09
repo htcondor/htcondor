@@ -30,6 +30,17 @@ from libcontainer import (
     EMPTY_SIF_BIND_EXPR,
 )
 
+def submit_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'tlmiller'
+    else:
+        return None
+
+def condor_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'condor'
+    else:
+        return None
 
 def try_shutil_chown( * p, ** v ):
     try:
@@ -38,6 +49,8 @@ def try_shutil_chown( * p, ** v ):
         logger.debug(pe)
     except LookupError as le:
         logger.debug(le)
+    except ValueError as ve:
+        logger.debug(ve)
 
 
 #
@@ -81,7 +94,7 @@ def the_cs_local_dir(test_dir):
 def the_cs_user_dir(the_cs_local_dir):
     the_cs_user_dir = the_cs_local_dir / "user.d"
     the_cs_user_dir.mkdir(exist_ok=True)
-    try_shutil_chown( the_cs_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    try_shutil_chown( the_cs_user_dir.as_posix(), user=submit_user(), group=submit_user() )
     return the_cs_user_dir
 
 
@@ -93,8 +106,8 @@ def the_cs_lock_dir(the_cs_local_dir):
 @action
 def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=the_cs_local_dir,
         config={
             # Set both of these to require the use COPY mapping.
@@ -242,7 +255,7 @@ def the_dagman_local_dir(test_dir):
 def the_dagman_user_dir(the_dagman_local_dir):
     the_dagman_user_dir = the_dagman_local_dir / "user.d"
     the_dagman_user_dir.mkdir(exist_ok=True)
-    try_shutil_chown( the_dagman_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    try_shutil_chown( the_dagman_user_dir.as_posix(), user=submit_user(), group=submit_user() )
     return the_dagman_user_dir
 
 
@@ -254,8 +267,8 @@ def the_dagman_lock_dir(the_dagman_local_dir):
 @action
 def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=the_dagman_local_dir,
         config={
             # Set both of these to require the use COPY mapping.
@@ -396,7 +409,7 @@ def the_container_local_dir(test_dir):
 def the_container_user_dir(the_container_local_dir):
     the_container_user_dir = the_container_local_dir / "user.d"
     the_container_user_dir.mkdir(exist_ok=True)
-    try_shutil_chown( the_container_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    try_shutil_chown( the_container_user_dir.as_posix(), user=submit_user(), group=submit_user() )
     return the_container_user_dir
 
 
@@ -415,8 +428,8 @@ def the_container_lock_dir(the_container_local_dir):
 @action
 def the_container_condor(the_container_local_dir, the_container_lock_dir, the_container_kill_dir):
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=the_container_local_dir,
         config={
             # Set both of these to require the use COPY mapping.

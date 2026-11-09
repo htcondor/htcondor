@@ -931,7 +931,8 @@ private:
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS      0x0002
 #define JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS          0x0004
-JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
+#define JOB_QUEUE_ITERATOR_OPT_CLUSTER_BEFORE_PROC  0x0008
+JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 

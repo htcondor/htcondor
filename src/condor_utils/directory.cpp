@@ -1173,25 +1173,31 @@ static bool recursive_chown_impl(const char * path,
 /** Helper function. See recursive_chown.
 
 This implements "fast" chowning of a file or directory.
-That is, it assumes that it has permission and just uses "chown()"
+That is, it assumes that it has permission and just uses "lchown()"
+
+Symlinks are never followed: a symlink is checked and chowned as
+itself, and we never descend through one.  The tree being chowned
+may be writable by the user, who could otherwise point a symlink
+at a file owned by the source uid and have us chown that file.
 */
 static bool recursive_chown_impl_fast(const char * path,
 	uid_t src_uid, uid_t dst_uid, gid_t dst_gid)
 {
-	StatInfo si(path);
-	if(si.Error() != SIGood) {
-		if(si.Error() == SINoFile) {
+	struct stat sb{};
+	int r = lstat(path, &sb);
+	if (r != 0) {
+		if (errno == ENOENT) {
 			dprintf(D_FULLDEBUG, "Attempting to chown '%s', "
-				"but it doesn't appear to exist.\n", path); 
+				"but it doesn't appear to exist.\n", path);
 		} else {
 			dprintf(D_ALWAYS, "Attempting to chown '%s', "
 				"but encountered an error inspecting it (errno %d)\n",
-				path, si.Errno()); 
+				path, errno);
 		}
 		return false;
 	}
 
-	uid_t real_uid = si.GetOwner();
+	uid_t real_uid = sb.st_uid;
 	if(real_uid != src_uid && real_uid != dst_uid) {
 		dprintf(D_ALWAYS, "Attempting to chown '%s' from %d to %d.%d,"
 			" but the path was unexpectedly owned by %d\n", 
@@ -1200,13 +1206,13 @@ static bool recursive_chown_impl_fast(const char * path,
 		return false;
 	}
 
-	if( IsDirectory(path) ) {
+	// lstat() reports a symlink as S_IFLNK, never S_IFDIR, so this
+	// does not descend through symlinks to directories
+	if (S_ISDIR(sb.st_mode)) {
 		Directory dir(path);
-		const char * filename = 0;
-		while( (filename = dir.Next()) ) {
+		const char * filename = nullptr;
+		while ((filename = dir.Next())) {
 				// Directory skips . and .. for us.  Keen.
-			//if(strcmp(filename, ".") == 0) { continue; }
-			//if(strcmp(filename, "..") == 0) { continue; }
 			filename = dir.GetFullPath();
 			if( ! recursive_chown_impl(filename, src_uid,
 					dst_uid, dst_gid) ) {
@@ -1220,12 +1226,14 @@ static bool recursive_chown_impl_fast(const char * path,
 	// root level is already correctly owned, skip it.  In this
 	// case we'll do the right thing if we redo the chown
 	// after crashing mid-way through.
-	if( chown(path, dst_uid, dst_gid) != 0 ) {
+	r = lchown(path, dst_uid, dst_gid);
+	if (r != 0) {
+		dprintf(D_FULLDEBUG, "lchown(%s, %d, %d) failed: %s (errno %d)\n",
+			path, (int)dst_uid, (int)dst_gid, strerror(errno), errno);
 		return false;
 	}
 	return true;
 }
-
 
 /// Helper function. See recursive_chown.
 static bool recursive_chown_impl(const char * path, 

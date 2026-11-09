@@ -24,5 +24,7 @@
 
 bool compute_sha256_checksum( int fd, std::string & checksum );
 bool compute_file_sha256_checksum( const std::string & file_name, std::string & checksum );
+// Sets `checksum` to the lowercase hex SHA-256 of `data`.
+bool compute_sha256_checksum( const std::string & data, std::string & checksum );
 
 #endif /* _COMPUTE_CHECKSUM_H */

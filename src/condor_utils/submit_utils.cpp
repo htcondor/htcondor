@@ -58,6 +58,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <memory>
 #include <string>
 #include <set>
 #include <regex>
@@ -1130,10 +1131,9 @@ void SubmitHash::set_submit_param( const char *name, const char *value )
 std::string SubmitHash::submit_param_string( const char * name, const char * alt_name ) const
 {
 	std::string ret;
-	char * result = submit_param(name, alt_name);
+	auto_free_ptr result(submit_param(name, alt_name));
 	if (result) {
-		ret = result;
-		free(result);
+		ret = result.ptr();
 	}
 	return ret;
 }
@@ -1166,7 +1166,7 @@ int SubmitHash::submit_param_int(const char* name, const char * alt_name, int de
 
 int SubmitHash::submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists) const
 {
-	char * result = submit_param(name, alt_name);
+	auto_free_ptr result(submit_param(name, alt_name));
 	if ( ! result) {
 		if (pexists) *pexists = false;
 		return def_value;
@@ -1174,13 +1174,13 @@ int SubmitHash::submit_param_bool(const char* name, const char * alt_name, bool 
 	if (pexists) *pexists = true;
 
 	bool value = def_value;
-	if (*result) {
+	if ( ! result.empty()) {
 		if ( ! string_is_boolean_param(result, value)) {
-			push_error(stderr, "%s=%s is invalid, must eval to a boolean.\n", name, result);
-			ABORT_AND_RETURN(1);
+			push_error(stderr, "%s=%s is invalid, must eval to a boolean.\n", name, result.ptr());
+			abort_code = 1;
+			return def_value;
 		}
 	}
-	free(result);
 	return value;
 }
 
@@ -1437,11 +1437,11 @@ int SubmitHash::SetJavaVMArgs()
 	ArgList args;
 	std::string error_msg;
 	std::string value;
-	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
-	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
+	auto_free_ptr args1(submit_param(SUBMIT_KEY_JavaVMArgs)); // for backward compatibility
+	auto_free_ptr args1_ext(submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1));
 		// NOTE: no ATTR_JOB_JAVA_VM_ARGS2 in the following,
 		// because that is the same as JavaVMArguments1.
-	char *args2 = submit_param( SUBMIT_KEY_JavaVMArguments2 );
+	auto_free_ptr args2(submit_param( SUBMIT_KEY_JavaVMArguments2 ));
 	bool allow_arguments_v1 = submit_param_bool(SUBMIT_CMD_AllowArgumentsV1, NULL, false);
 
 	if(args1_ext && args1) {
@@ -1451,9 +1451,7 @@ int SubmitHash::SetJavaVMArgs()
 	RETURN_IF_ABORT();
 
 	if(args1_ext) {
-		free(args1);
-		args1 = args1_ext;
-		args1_ext = NULL;
+		args1 = std::move(args1_ext);
 	}
 
 	if(args2 && args1 && ! allow_arguments_v1) {
@@ -1478,7 +1476,7 @@ int SubmitHash::SetJavaVMArgs()
 	if(!args_success) {
 		push_error(stderr,"failed to parse java VM arguments: %s\n"
 				"The full arguments you specified were %s\n",
-				error_msg.c_str(),args2 ? args2 : args1);
+				error_msg.c_str(),args2 ? args2.ptr() : args1.ptr());
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -1504,10 +1502,6 @@ int SubmitHash::SetJavaVMArgs()
 				"ClassAd: %s\n",error_msg.c_str());
 		ABORT_AND_RETURN( 1 );
 	}
-
-	free(args1);
-	free(args2);
-	free(args1_ext);
 
 	return 0;
 }
@@ -1545,16 +1539,6 @@ int SubmitHash::check_open(_submit_file_role role,  const std::string &name, int
 		replace_str(strPathname, "#pArAlLeLnOdE#", "0");
 	}
 
-
-	/* If this file as marked as append-only, do not truncate it here */
-
-	auto_free_ptr append_files(submit_param( SUBMIT_KEY_AppendFiles, ATTR_APPEND_FILES ));
-	if (append_files.ptr()) {
-		std::vector<std::string> file_list = split(append_files.ptr(), ",");
-		if(contains_withwildcard(file_list, name)) {
-			flags = flags & ~O_TRUNC;
-		}
-	}
 
 	bool dryrun_create = FakeFileCreationChecks && ((flags & (O_CREAT|O_TRUNC)) != 0);
 	if (FakeFileCreationChecks) {
@@ -2214,16 +2198,14 @@ int SubmitHash::SetLeaveInQueue()
 {
 	RETURN_IF_ABORT();
 
-	char *erc = submit_param(SUBMIT_KEY_LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
+	auto_free_ptr erc(submit_param(SUBMIT_KEY_LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE));
 	std::string buffer;
 
-	if (erc == NULL)
+	if ( ! erc)
 	{
 		if ( ! job->Lookup(ATTR_JOB_LEAVE_IN_QUEUE)) {
-			/* user didn't have one, so add one */
-			if (! IsRemoteJob) {
-				AssignJobVal(ATTR_JOB_LEAVE_IN_QUEUE, false);
-			} else {
+			/* user didn't have one, so add one if spooling */
+			if (IsRemoteJob) {
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
@@ -2245,7 +2227,6 @@ int SubmitHash::SetLeaveInQueue()
 	{
 		/* user had a value for it, leave it alone */
 		AssignJobExpr(ATTR_JOB_LEAVE_IN_QUEUE, erc);
-		free(erc);
 	}
 
 	RETURN_IF_ABORT();
@@ -2261,21 +2242,20 @@ const char * SubmitHash::getIWD()
 
 int SubmitHash::ComputeIWD()
 {
-	char	*shortname;
 	std::string	iwd;
 	std::string	cwd;
 
-	shortname = submit_param( SUBMIT_KEY_InitialDir, ATTR_JOB_IWD );
+	auto_free_ptr shortname(submit_param( SUBMIT_KEY_InitialDir, ATTR_JOB_IWD ));
 	if( ! shortname ) {
 			// neither "initialdir" nor "iwd" were there, try some
 			// others, just to be safe:
-		shortname = submit_param( SUBMIT_KEY_InitialDirAlt, SUBMIT_KEY_JobIwd );
+		shortname.set(submit_param( SUBMIT_KEY_InitialDirAlt, SUBMIT_KEY_JobIwd ));
 	}
 
 	// for factories initalized with a cluster ad, we NEVER want to use the current working directory
 	// as IWD, instead use FACTORY.Iwd
 	if ( ! shortname && clusterAd) {
-		shortname = submit_param("FACTORY.Iwd");
+		shortname.set(submit_param("FACTORY.Iwd"));
 	}
 
 	if( shortname  ) {
@@ -2286,7 +2266,7 @@ int SubmitHash::ComputeIWD()
 			if( shortname[0] == '/' ) 
 #endif
 			{
-				iwd = shortname;
+				iwd = shortname.ptr();
 			}
 			else {
 				if (clusterAd) {
@@ -2328,9 +2308,6 @@ int SubmitHash::ComputeIWD()
 	JobIwdInitialized = true;
 	if ( ! JobIwd.empty()) { mctx.cwd = JobIwd.c_str(); }
 
-	if ( shortname )
-		free(shortname);
-
 	return 0;
 }
 
@@ -2360,23 +2337,22 @@ int SubmitHash::SetGSICredentials()
 		// then check the usual locations (as defined by GSI) and
 		// bomb out if we can't find it.
 
-	char *proxy_file = submit_param( SUBMIT_KEY_X509UserProxy );
+	auto_free_ptr proxy_file(submit_param( SUBMIT_KEY_X509UserProxy ));
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
 
-	if ( proxy_file == NULL && use_proxy && ! clusterAd) {
+	if ( ! proxy_file && use_proxy && ! clusterAd) {
 
-		proxy_file = get_x509_proxy_filename();
-		if ( proxy_file == NULL ) {
+		proxy_file.set(get_x509_proxy_filename());
+		if ( ! proxy_file ) {
 
 			push_error(stderr, "Can't determine proxy filename\nX509 user proxy is required for this job.\n" );
 			ABORT_AND_RETURN( 1 );
 		}
 	}
 
-	if (proxy_file != NULL && ! clusterAd) {
+	if (proxy_file && ! clusterAd) {
 		std::string full_proxy_file = full_path( proxy_file );
-		free(proxy_file);
-		proxy_file = NULL;
+		proxy_file.clear();
 #if !defined(WIN32)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
@@ -2395,26 +2371,23 @@ int SubmitHash::SetGSICredentials()
 				submit_sends_x509 = false;
 			}
 
-			X509Credential* proxy_handle = x509_proxy_read( full_proxy_file.c_str() );
-			if ( proxy_handle == NULL ) {
+			std::unique_ptr<X509Credential> proxy_handle(x509_proxy_read( full_proxy_file.c_str() ));
+			if ( ! proxy_handle ) {
 				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
 			}
 
 			/* Insert the proxy expiration time into the ad */
 			time_t proxy_expiration;
-			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
+			proxy_expiration = x509_proxy_expiration_time(proxy_handle.get());
 			if (proxy_expiration == -1) {
 				push_error(stderr, "%s\n", x509_error_string() );
-				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time ) {
 				push_error( stderr, "proxy has expired\n" );
-				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
 				push_error( stderr, "proxy lifetime too short\n" );
-				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2423,25 +2396,20 @@ int SubmitHash::SetGSICredentials()
 				AssignJobVal(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration);
 
 				/* Insert the proxy subject name into the ad */
-				char *proxy_subject;
-				proxy_subject = x509_proxy_identity_name(proxy_handle);
+				auto_free_ptr proxy_subject(x509_proxy_identity_name(proxy_handle.get()));
 
 				if ( !proxy_subject ) {
 					push_error(stderr, "%s\n", x509_error_string() );
-					delete proxy_handle;
 					ABORT_AND_RETURN( 1 );
 				}
 
 				(void) AssignJobString(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-				free( proxy_subject );
 
 				/* Insert the proxy email into the ad */
-				char *proxy_email;
-				proxy_email = x509_proxy_email(proxy_handle);
+				auto_free_ptr proxy_email(x509_proxy_email(proxy_handle.get()));
 
 				if ( proxy_email ) {
 					AssignJobString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
-					free( proxy_email );
 				}
 
 				/* Insert the VOMS attributes into the ad */
@@ -2449,7 +2417,7 @@ int SubmitHash::SetGSICredentials()
 				char *firstfqan = NULL;
 				char *quoted_DN_and_FQAN = NULL;
 
-				int error = extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
+				int error = extract_VOMS_info( proxy_handle.get(), 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
 				if ( error ) {
 					if (error == 1) {
 						// no attributes, skip silently.
@@ -2471,8 +2439,6 @@ int SubmitHash::SetGSICredentials()
 				// When new classads arrive, all this should be replaced with a
 				// classad holding the VOMS atributes.  -zmiller
 			}
-
-			delete proxy_handle;
 		}
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
@@ -2483,18 +2449,15 @@ int SubmitHash::SetGSICredentials()
 		AssignJobString(ATTR_X509_USER_PROXY, full_proxy_file.c_str());
 	}
 
-	free(proxy_file);
-
-	char* tmp = submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
+	auto_free_ptr tmp(submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME));
 	if( tmp ) {
 		char *endptr=NULL;
 		int lifetime = strtol(tmp,&endptr,10);
 		if( !endptr || *endptr != '\0' ) {
-			push_error(stderr, "invalid integer setting %s = %s\n",SUBMIT_KEY_DelegateJobGSICredentialsLifetime,tmp);
+			push_error(stderr, "invalid integer setting %s = %s\n",SUBMIT_KEY_DelegateJobGSICredentialsLifetime,tmp.ptr());
 			ABORT_AND_RETURN( 1 );
 		}
 		AssignJobVal(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
-		free(tmp);
 	}
 
 	// ScitokenPath
@@ -2590,49 +2553,38 @@ int SubmitHash::SetKillSig()
 {
 	RETURN_IF_ABORT();
 
-	char* sig_name;
-	char* timeout;
-
-	sig_name = fixupKillSigName(submit_param(SUBMIT_KEY_KillSig, ATTR_KILL_SIG));
+	auto_free_ptr sig_name(fixupKillSigName(submit_param(SUBMIT_KEY_KillSig, ATTR_KILL_SIG)));
 	RETURN_IF_ABORT();
 	if( ! sig_name ) {
 		switch(JobUniverse) {
 		case CONDOR_UNIVERSE_VANILLA:
 			// Don't define sig_name for Vanilla Universe
-			sig_name = NULL;
 			break;
 		default:
-			sig_name = strdup( "SIGTERM" );
+			sig_name.set(strdup( "SIGTERM" ));
 			break;
 		}
 	}
 
 	if ( sig_name ) {
 		AssignJobString(ATTR_KILL_SIG, sig_name);
-		free( sig_name );
 	}
 
-	sig_name = fixupKillSigName(submit_param(SUBMIT_KEY_RmKillSig, ATTR_REMOVE_KILL_SIG));
+	sig_name.set(fixupKillSigName(submit_param(SUBMIT_KEY_RmKillSig, ATTR_REMOVE_KILL_SIG)));
 	RETURN_IF_ABORT();
 	if( sig_name ) {
 		AssignJobString(ATTR_REMOVE_KILL_SIG, sig_name);
-		free( sig_name );
-		sig_name = NULL;
 	}
 
-	sig_name = fixupKillSigName(submit_param(SUBMIT_KEY_HoldKillSig, ATTR_HOLD_KILL_SIG));
+	sig_name.set(fixupKillSigName(submit_param(SUBMIT_KEY_HoldKillSig, ATTR_HOLD_KILL_SIG)));
 	RETURN_IF_ABORT();
 	if( sig_name ) {
 		AssignJobString(ATTR_HOLD_KILL_SIG, sig_name);
-		free( sig_name );
-		sig_name = NULL;
 	}
 
-	timeout = submit_param( SUBMIT_KEY_KillSigTimeout, ATTR_KILL_SIG_TIMEOUT );
+	auto_free_ptr timeout(submit_param( SUBMIT_KEY_KillSigTimeout, ATTR_KILL_SIG_TIMEOUT ));
 	if( timeout ) {
 		AssignJobVal(ATTR_KILL_SIG_TIMEOUT, atoi(timeout));
-		free( timeout );
-		sig_name = NULL;
 	}
 	return 0;
 }
@@ -2674,11 +2626,10 @@ int SubmitHash::SetForcedSubmitAttrs()
 	if (clusterAd) return 0;
 
 	for (classad::References::const_iterator cit = forcedSubmitAttrs.begin(); cit != forcedSubmitAttrs.end(); ++cit) {
-		char * value = param(cit->c_str());
+		auto_free_ptr value(param(cit->c_str()));
 		if (! value)
 			continue;
 		AssignJobExpr(cit->c_str(), value, "SUBMIT_ATTRS or SUBMIT_EXPRS value");
-		free(value);
 	}
 
 	return abort_code;
@@ -2702,14 +2653,12 @@ int SubmitHash::SetForcedAttributes()
 			continue;
 		}
 
-		char * value = NULL;
+		auto_free_ptr value;
 		if (raw_value && raw_value[0]) {
-			value = expand_macro(raw_value);
+			value.set(expand_macro(raw_value));
 		}
-		AssignJobExpr(name, (value && value[0]) ? value : "undefined" );
+		AssignJobExpr(name, value.empty() ? "undefined" : value.ptr() );
 		RETURN_IF_ABORT();
-
-		if (value) free(value);
 	}
 	hash_iter_delete(&it);
 
@@ -2845,11 +2794,10 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 	// their own case preference. Ours will always be lower-cased.
 	//
 
-	char * tmp;
 	std::vector<std::string> tagNames;
-	if ((tmp = submit_param(submitKey, jobKey))) {
-		tagNames = split(tmp);
-		free(tmp); tmp = NULL;
+	auto_free_ptr tmp(submit_param(submitKey, jobKey));
+	if (tmp) {
+		tagNames = split(tmp.ptr());
 	} else {
 		std::string names;
 		if (job->LookupString(jobKey, names)) {
@@ -2884,10 +2832,9 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 		// XXX: Check that tagName does not contain an equal sign (=)
 		std::string submitKey(submitPrefix); submitKey.append(tagName);
 		std::string jobKey(jobPrefix); jobKey.append(tagName);
-		char *value = NULL;
-		if ((value = submit_param(submitKey.c_str(), jobKey.c_str()))) {
+		auto_free_ptr value(submit_param(submitKey.c_str(), jobKey.c_str()));
+		if (value) {
 			AssignJobString(jobKey.c_str(), value);
-			free(value); value = NULL;
 		} else {
 			// this should only happen when tagNames is initialized from the base job ad
 			// i.e. when make procid > 0, especially when doing late materialization
@@ -2921,13 +2868,13 @@ void SubmitHash::handleAVPairs( const char * submitKey, const char * jobKey,
 int SubmitHash::SetGridParams()
 {
 	RETURN_IF_ABORT();
-	char *tmp;
+	auto_free_ptr tmp;
 	FILE* fp;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return 0;
 
-	tmp = submit_param( SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE );
+	tmp.set(submit_param( SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE ));
 	if ( tmp ) {
 			// TODO validate number of fields in grid_resource?
 
@@ -2942,7 +2889,6 @@ int SubmitHash::SetGridParams()
 		// whenever we have a grid_resource keyword in the submit file
 		JobGridType.clear();
 
-		free( tmp );
 
 	} else if ( ! job->Lookup(ATTR_GRID_RESOURCE)) {
 			// TODO Make this allowable, triggering matchmaking for
@@ -2963,42 +2909,50 @@ int SubmitHash::SetGridParams()
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcResources, ATTR_ARC_RESOURCES)) ) {
 		AssignJobString(ATTR_ARC_RESOURCES, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcApplication, ATTR_ARC_APPLICATION)) ) {
 		AssignJobString(ATTR_ARC_APPLICATION, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcDataStaging, ATTR_ARC_DATA_STAGING)) ) {
 		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
-		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchCpuCount, ATTR_BATCH_CPU_COUNT)) ) {
+		AssignJobExpr(ATTR_BATCH_CPU_COUNT, tmp);
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchCpusPerNode, ATTR_BATCH_CPUS_PER_NODE)) ) {
+		AssignJobExpr(ATTR_BATCH_CPUS_PER_NODE, tmp);
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
-		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchNodeCount, ATTR_BATCH_NODE_COUNT)) ) {
+		AssignJobExpr(ATTR_BATCH_NODE_COUNT, tmp);
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT)) ) {
 		AssignJobString ( ATTR_BATCH_PROJECT, tmp );
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE)) ) {
 		AssignJobString ( ATTR_BATCH_QUEUE, tmp );
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
-		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchWholeNodes, ATTR_BATCH_WHOLE_NODES)) ) {
+		AssignJobExpr(ATTR_BATCH_WHOLE_NODES, tmp);
 	}
 
 	// blahp jobs don't get default request resource values from config.
@@ -3014,7 +2968,6 @@ int SubmitHash::SetGridParams()
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
-			free( tmp );
 		} else {
 			// check public key file can be opened
 			if ( !DisableFileChecks ) {
@@ -3033,7 +2986,6 @@ int SubmitHash::SetGridParams()
 				}
 			}
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, full_path(tmp));
-			free( tmp );
 		}
 	}
 
@@ -3042,7 +2994,6 @@ int SubmitHash::SetGridParams()
 		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
 			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
-			free( tmp );
 		} else {
 			// check private key file can be opened
 			if ( !DisableFileChecks ) {
@@ -3061,7 +3012,6 @@ int SubmitHash::SetGridParams()
 				}
 			}
 			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp));
-			free( tmp );
 		}
 	}
 
@@ -3080,7 +3030,6 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param( SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR )) ||
 		(tmp = submit_param( SUBMIT_KEY_EC2KeyPairAlt, ATTR_EC2_KEY_PAIR ))) {
 		AssignJobString(ATTR_EC2_KEY_PAIR, tmp);
-		free( tmp );
 	}
 
 	// EC2KeyPairFile is not a necessary parameter
@@ -3092,25 +3041,21 @@ int SubmitHash::SetGridParams()
 		} else {
 			AssignJobString(ATTR_EC2_KEY_PAIR_FILE, full_path(tmp));
 		}
-		free( tmp );
 	}
 
 
 	// Optional.
 	if( (tmp = submit_param( SUBMIT_KEY_EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
 		AssignJobString(ATTR_EC2_SECURITY_GROUPS, tmp);
-		free( tmp );
 	}
 
 	// Optional.
 	if( (tmp = submit_param( SUBMIT_KEY_EC2SecurityIDs, ATTR_EC2_SECURITY_IDS )) ) {
 		AssignJobString(ATTR_EC2_SECURITY_IDS, tmp);
-		free( tmp );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_EC2AmiID, ATTR_EC2_AMI_ID )) ) {
 		AssignJobString(ATTR_EC2_AMI_ID, tmp);
-		free( tmp );
 	} else if (gridType == "ec2" && ! job->Lookup(ATTR_EC2_AMI_ID)) {
 		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AmiID );
 		ABORT_AND_RETURN( 1 );
@@ -3119,31 +3064,26 @@ int SubmitHash::SetGridParams()
 	// EC2InstanceType is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2InstanceType, ATTR_EC2_INSTANCE_TYPE )) ) {
 		AssignJobString(ATTR_EC2_INSTANCE_TYPE, tmp);
-		free( tmp );
 	}
 
 	// EC2VpcSubnet is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2VpcSubnet, ATTR_EC2_VPC_SUBNET )) ) {
 		AssignJobString(ATTR_EC2_VPC_SUBNET , tmp);
-		free( tmp );
 	}
 
 	// EC2VpcIP is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2VpcIP, ATTR_EC2_VPC_IP )) ) {
 		AssignJobString(ATTR_EC2_VPC_IP , tmp);
-		free( tmp );
 	}
 
 	// EC2ElasticIP is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
 		AssignJobString(ATTR_EC2_ELASTIC_IP, tmp);
-		free( tmp );
 	}
 
 	// EC2AvailabilityZone is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2AvailabilityZone, ATTR_EC2_AVAILABILITY_ZONE )) ) {
 		AssignJobString(ATTR_EC2_AVAILABILITY_ZONE, tmp);
-		free( tmp );
 	}
 
 	// EC2EBSVolumes is not a necessary parameter
@@ -3166,25 +3106,21 @@ int SubmitHash::SetGridParams()
 		}
 
 		AssignJobString(ATTR_EC2_EBS_VOLUMES, tmp);
-		free( tmp );
 	}
 
 	// EC2SpotPrice is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2SpotPrice, ATTR_EC2_SPOT_PRICE )) ) {
 		AssignJobString(ATTR_EC2_SPOT_PRICE, tmp);
-		free( tmp );
 	}
 
 	// EC2BlockDeviceMapping is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2BlockDeviceMapping, ATTR_EC2_BLOCK_DEVICE_MAPPING )) ) {
 		AssignJobString(ATTR_EC2_BLOCK_DEVICE_MAPPING, tmp);
-		free( tmp );
 	}
 
 	// EC2UserData is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2UserData, ATTR_EC2_USER_DATA )) ) {
 		AssignJobString(ATTR_EC2_USER_DATA, tmp);
-		free( tmp );
 	}
 
 	// EC2UserDataFile is not a necessary parameter
@@ -3199,14 +3135,12 @@ int SubmitHash::SetGridParams()
 			fclose(fp);
 		}
 		AssignJobString(ATTR_EC2_USER_DATA_FILE, full_path(tmp));
-		free( tmp );
 	}
 
 	// You can only have one IAM [Instance] Profile, so you can only use
 	// one of the ARN or the Name.
 	if( (tmp = submit_param( SUBMIT_KEY_EC2IamProfileArn, ATTR_EC2_IAM_PROFILE_ARN )) ) {
 		AssignJobString(ATTR_EC2_IAM_PROFILE_ARN, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param( SUBMIT_KEY_EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME )) ) {
@@ -3215,7 +3149,6 @@ int SubmitHash::SetGridParams()
 		} else {
 			AssignJobString(ATTR_EC2_IAM_PROFILE_NAME, tmp);
 		}
-		free( tmp );
 	}
 
 	//
@@ -3223,8 +3156,7 @@ int SubmitHash::SetGridParams()
 	//
 	std::vector<std::string> paramNames;
 	if( (tmp = submit_param( SUBMIT_KEY_EC2ParamNames, ATTR_EC2_PARAM_NAMES )) ) {
-		paramNames = split(tmp);
-		free( tmp );
+		paramNames = split(tmp.ptr());
 	} else {
 		std::string names;
 		if (job->LookupString(ATTR_EC2_PARAM_NAMES, names)) {
@@ -3302,17 +3234,14 @@ int SubmitHash::SetGridParams()
 			}
 		}
 		AssignJobString(ATTR_GCE_AUTH_FILE, full_path(tmp));
-		free( tmp );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT )) ) {
 		AssignJobString(ATTR_GCE_ACCOUNT, tmp);
-		free( tmp );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_GceImage, ATTR_GCE_IMAGE )) ) {
 		AssignJobString(ATTR_GCE_IMAGE, tmp);
-		free( tmp );
 	} else if (gridType == "gce" && ! job->Lookup(ATTR_GCE_IMAGE)) {
 		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceImage );
 		ABORT_AND_RETURN( 1 );
@@ -3320,7 +3249,6 @@ int SubmitHash::SetGridParams()
 
 	if ( (tmp = submit_param( SUBMIT_KEY_GceMachineType, ATTR_GCE_MACHINE_TYPE )) ) {
 		AssignJobString(ATTR_GCE_MACHINE_TYPE, tmp);
-		free( tmp );
 	} else if (gridType == "gce" && ! job->Lookup(ATTR_GCE_MACHINE_TYPE)) {
 		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceMachineType );
 		ABORT_AND_RETURN( 1 );
@@ -3329,10 +3257,9 @@ int SubmitHash::SetGridParams()
 	// GceMetadata is not a necessary parameter
 	// This is a comma-separated list of name/value pairs
 	if( (tmp = submit_param( SUBMIT_KEY_GceMetadata, ATTR_GCE_METADATA )) ) {
-		std::vector<std::string> list = split(tmp, ",");
+		std::vector<std::string> list = split(tmp.ptr(), ",");
 		std::string list_str = join(list, ",");
 		AssignJobString(ATTR_GCE_METADATA, list_str.c_str());
-		free(tmp);
 	}
 
 	// GceMetadataFile is not a necessary parameter
@@ -3347,7 +3274,6 @@ int SubmitHash::SetGridParams()
 			fclose(fp);
 		}
 		AssignJobString(ATTR_GCE_METADATA_FILE, full_path(tmp));
-		free( tmp );
 	}
 
 	// GcePreemptible is not a necessary parameter
@@ -3369,7 +3295,6 @@ int SubmitHash::SetGridParams()
 			fclose(fp);
 		}
 		AssignJobString( ATTR_GCE_JSON_FILE, full_path( tmp ) );
-		free( tmp );
 	}
 
 	//
@@ -3393,12 +3318,10 @@ int SubmitHash::SetGridParams()
 			}
 		}
 		AssignJobString(ATTR_AZURE_AUTH_FILE, full_path(tmp));
-		free( tmp );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureImage, ATTR_AZURE_IMAGE )) ) {
 		AssignJobString(ATTR_AZURE_IMAGE, tmp);
-		free( tmp );
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_IMAGE)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureImage );
 		ABORT_AND_RETURN( 1 );
@@ -3406,7 +3329,6 @@ int SubmitHash::SetGridParams()
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureLocation, ATTR_AZURE_LOCATION )) ) {
 		AssignJobString(ATTR_AZURE_LOCATION, tmp);
-		free( tmp );
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_LOCATION)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureLocation );
 		ABORT_AND_RETURN( 1 );
@@ -3414,7 +3336,6 @@ int SubmitHash::SetGridParams()
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureSize, ATTR_AZURE_SIZE )) ) {
 		AssignJobString(ATTR_AZURE_SIZE, tmp);
-		free( tmp );
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_SIZE)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureSize );
 		ABORT_AND_RETURN( 1 );
@@ -3422,7 +3343,6 @@ int SubmitHash::SetGridParams()
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminUsername, ATTR_AZURE_ADMIN_USERNAME )) ) {
 		AssignJobString(ATTR_AZURE_ADMIN_USERNAME, tmp);
-		free( tmp );
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_ADMIN_USERNAME)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminUsername );
 		ABORT_AND_RETURN( 1 );
@@ -3430,7 +3350,6 @@ int SubmitHash::SetGridParams()
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminKey, ATTR_AZURE_ADMIN_KEY )) ) {
 		AssignJobString(ATTR_AZURE_ADMIN_KEY, tmp);
-		free( tmp );
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_ADMIN_KEY)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminKey );
 		ABORT_AND_RETURN( 1 );
@@ -3442,15 +3361,15 @@ int SubmitHash::SetGridParams()
 int SubmitHash::SetNotification()
 {
 	RETURN_IF_ABORT();
-	char *how = submit_param( SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION );
+	auto_free_ptr how(submit_param( SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION ));
 	int notification;
 	
-	if( how == NULL ) {
+	if( ! how ) {
 		// if late materializing, just use the value from the cluster ad.
 		if (clusterAd) return 0;
-		how = param ( "JOB_DEFAULT_NOTIFICATION" );
+		how.set(param( "JOB_DEFAULT_NOTIFICATION" ));
 	}
-	if( (how == NULL) || (strcasecmp(how, "NEVER") == 0) ) {
+	if( ! how || (strcasecmp(how, "NEVER") == 0) ) {
 		notification = NOTIFY_NEVER;
 	} 
 	else if( strcasecmp(how, "COMPLETE") == 0 ) {
@@ -3473,9 +3392,6 @@ int SubmitHash::SetNotification()
 
 	AssignJobVal(ATTR_JOB_NOTIFICATION, notification);
 
-	if ( how ) {
-		free(how);
-	}
 	return 0;
 }
 
@@ -3640,6 +3556,21 @@ int SubmitHash::ReportCommonMistakes()
 		ABORT_AND_RETURN(1);
 	}
 
+	// There are some additional constraints on common input transfers.  Note
+	// that we don't check for common container images; we just don't generate
+	// them in these two cases.
+	if( job->Lookup(ATTR_COMMON_INPUT_FILES) ) {
+		if( JobUniverse != CONDOR_UNIVERSE_VANILLA ) {
+			push_error(stderr, "Common file transfer only works in vanilla or container universe.\n");
+			ABORT_AND_RETURN(1);
+		}
+
+		if( IsRemoteJob ) {
+			push_error(stderr, "Remote submission is not compatible with common file transfer.\n" );
+			ABORT_AND_RETURN(1);
+		}
+	}
+
 	return abort_code;
 }
 
@@ -3647,11 +3578,11 @@ int SubmitHash::SetArguments()
 {
 	RETURN_IF_ABORT();
 	ArgList arglist;
-	char	*args1 = submit_param( SUBMIT_KEY_Arguments1, ATTR_JOB_ARGUMENTS1 );
+	auto_free_ptr args1(submit_param( SUBMIT_KEY_Arguments1, ATTR_JOB_ARGUMENTS1 ));
 		// NOTE: no ATTR_JOB_ARGUMENTS2 in the following,
 		// because that is the same as Arguments1
-	char    *args2 = submit_param( SUBMIT_KEY_Arguments2 );
-	char    *shell = submit_param(SUBMIT_KEY_Shell);
+	auto_free_ptr args2(submit_param( SUBMIT_KEY_Arguments2 ));
+	auto_free_ptr shell(submit_param(SUBMIT_KEY_Shell));
 
 	bool allow_arguments_v1 = submit_param_bool( SUBMIT_CMD_AllowArgumentsV1, NULL, false );
 	bool args_success = true;
@@ -3660,8 +3591,7 @@ int SubmitHash::SetArguments()
 	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
-		free(shell);
-		shell = nullptr;
+		shell.clear();
 		std::string value;
 		args_success = arglist.GetArgsStringV2Raw(value);
 		if (args_success) {
@@ -3672,8 +3602,7 @@ int SubmitHash::SetArguments()
 			ABORT_AND_RETURN(1);
 		}
 	}
-	free(shell);
-	shell = nullptr;
+	shell.clear();
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3698,7 +3627,7 @@ int SubmitHash::SetArguments()
 		}
 		push_error(stderr, "%s\nThe full arguments you specified were: %s\n",
 				error_msg.c_str(),
-				args2 ? args2 : args1);
+				args2 ? args2.ptr() : args1.ptr());
 		ABORT_AND_RETURN(1);
 	}
 
@@ -3751,8 +3680,6 @@ int SubmitHash::SetArguments()
 		}
 	}
 
-	if(args1) free(args1);
-	if(args2) free(args2);
 	return 0;
 }
 
@@ -3789,8 +3716,8 @@ int SubmitHash::SetJobDeferral()
 		// We will only be able to validate the deferral time when the
 		// Starter evaluates it and tries to set the timer for it
 		//
-	char *temp = submit_param( SUBMIT_KEY_DeferralTime, ATTR_DEFERRAL_TIME );
-	if ( temp != NULL ) {
+	auto_free_ptr temp(submit_param( SUBMIT_KEY_DeferralTime, ATTR_DEFERRAL_TIME ));
+	if ( temp ) {
 		// make certain the input is valid
 		long long dtime = 0;
 		bool valid = AssignJobExpr(ATTR_DEFERRAL_TIME, temp) == 0;
@@ -3799,11 +3726,10 @@ int SubmitHash::SetJobDeferral()
 			valid = value.IsIntegerValue(dtime) && dtime >= 0;
 		}
 		if ( ! valid) {
-			push_error(stderr, SUBMIT_KEY_DeferralTime " = %s is invalid, must eval to a non-negative integer.\n", temp );
+			push_error(stderr, SUBMIT_KEY_DeferralTime " = %s is invalid, must eval to a non-negative integer.\n", temp.ptr() );
 			ABORT_AND_RETURN( 1 );
 		}
 			
-		free( temp );
 	}
 	
 		//
@@ -3827,14 +3753,14 @@ int SubmitHash::SetJobDeferral()
 			// not the other. CronWindow overrides DeferralWindow if they
 			// both are set. The manual should talk about this.
 			//
-		temp = submit_param( SUBMIT_KEY_CronWindow, ATTR_CRON_WINDOW );
+		temp.set(submit_param( SUBMIT_KEY_CronWindow, ATTR_CRON_WINDOW ));
 		if ( ! temp) {
-			temp = submit_param( SUBMIT_KEY_DeferralWindow, ATTR_DEFERRAL_WINDOW );
+			temp.set(submit_param( SUBMIT_KEY_DeferralWindow, ATTR_DEFERRAL_WINDOW ));
 		}
 			//
 			// If we have a parameter from the job file, use that value
 			//
-		if ( temp != NULL ){
+		if ( temp ){
 			
 			// make certain the input is valid
 			long long dtime = 0;
@@ -3844,10 +3770,9 @@ int SubmitHash::SetJobDeferral()
 				valid = value.IsIntegerValue(dtime) && dtime >= 0;
 			}
 			if (!valid) {
-				push_error(stderr, SUBMIT_KEY_DeferralWindow " = %s is invalid, must eval to a non-negative integer.\n", temp );
+				push_error(stderr, SUBMIT_KEY_DeferralWindow " = %s is invalid, must eval to a non-negative integer.\n", temp.ptr() );
 				ABORT_AND_RETURN( 1 );
 			}
-			free( temp );
 			//
 			// Otherwise, use the default value
 			//
@@ -3867,14 +3792,14 @@ int SubmitHash::SetJobDeferral()
 			// not the other. CronPrepTime overrides DeferralPrepTime if they
 			// both are set. The manual should talk about this.
 			//
-		temp = submit_param(SUBMIT_KEY_CronPrepTime, ATTR_CRON_PREP_TIME);
+		temp.set(submit_param(SUBMIT_KEY_CronPrepTime, ATTR_CRON_PREP_TIME));
 		if ( ! temp) {
-			temp = submit_param(SUBMIT_KEY_DeferralPrepTime, ATTR_DEFERRAL_PREP_TIME);
+			temp.set(submit_param(SUBMIT_KEY_DeferralPrepTime, ATTR_DEFERRAL_PREP_TIME));
 		}
 			//
 			// If we have a parameter from the job file, use that value
 			//
-		if ( temp != NULL ){
+		if ( temp ){
 			// make certain the input is valid
 			long long dtime = 0;
 			bool valid = AssignJobExpr(ATTR_DEFERRAL_PREP_TIME, temp) == 0;
@@ -3883,10 +3808,9 @@ int SubmitHash::SetJobDeferral()
 				valid = value.IsIntegerValue(dtime) && dtime >= 0;
 			}
 			if (!valid) {
-				push_error(stderr, SUBMIT_KEY_DeferralPrepTime " = %s is invalid, must eval to a non-negative integer.\n", temp );
+				push_error(stderr, SUBMIT_KEY_DeferralPrepTime " = %s is invalid, must eval to a non-negative integer.\n", temp.ptr() );
 				ABORT_AND_RETURN( 1 );
 			}
-			free( temp );
 			//
 			// Otherwise, use the default value
 			//
@@ -4379,8 +4303,7 @@ int SubmitHash::SetExecutable()
 	bool	transfer_it = true;
 	bool	ignore_it = false;
 	bool	empty_job_exe = false; // set to true when there is no executable for an interactive job
-	char	*ename = NULL;
-	char	*macro_value = NULL;
+	auto_free_ptr ename;
 	_submit_file_role role = SFR_EXECUTABLE;
 	std::string	full_ename;
 
@@ -4457,23 +4380,20 @@ int SubmitHash::SetExecutable()
 		role = SFR_PSEUDO_EXECUTABLE;
 	}
 
-	char *shell = submit_param(SUBMIT_KEY_Shell);
+	auto_free_ptr shell(submit_param(SUBMIT_KEY_Shell));
 	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
-			free(shell);
-			shell = nullptr;
 			return 0;
 	}
-	free(shell);
-	shell = nullptr;
+	shell.clear();
 
-	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
+	ename.set(submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD ));
 	if ( ! ename && IsInteractiveJob) {
-		ename = submit_param(SUBMIT_KEY_INTERACTIVE_Executable);
+		ename.set(submit_param(SUBMIT_KEY_INTERACTIVE_Executable));
 		empty_job_exe = true;
 	}
-	if( ename == NULL ) {
+	if( ! ename ) {
 		// if no executable keyword, but the job already has an executable we are done.
 		if (job->Lookup(ATTR_JOB_CMD)) {
 			return abort_code;
@@ -4496,13 +4416,12 @@ int SubmitHash::SetExecutable()
 		}
 	}
 
-	macro_value = submit_param( SUBMIT_KEY_TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
+	auto_free_ptr macro_value(submit_param( SUBMIT_KEY_TransferExecutable, ATTR_TRANSFER_EXECUTABLE ));
 	if ( macro_value ) {
-		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
+		if ( macro_value.ptr()[0] == 'F' || macro_value.ptr()[0] == 'f' ) {
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			transfer_it = false;
 		}
-		free( macro_value );
 	} else {
 		// For Docker Universe, if xfer_exe not set at all, and we have an exe
 		// heuristically set xfer_exe to false if is a absolute path
@@ -4513,7 +4432,7 @@ int SubmitHash::SetExecutable()
 		// Now, in Year of Our Container, 2024, RCFs now do not want this, so put a knob In
 		// to support the old way.
 		bool never_xfer_abspath_cmd = param_boolean("SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD", false);
-		if ((never_xfer_abspath_cmd) && (IsDockerJob || IsContainerJob)  && (ename && ename[0] == '/')) {
+		if ((never_xfer_abspath_cmd) && (IsDockerJob || IsContainerJob)  && (ename && ename.ptr()[0] == '/')) {
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			transfer_it = false;
 			ignore_it = true;
@@ -4532,7 +4451,7 @@ int SubmitHash::SetExecutable()
 	if ( transfer_it ) {
 		full_ename = full_path( ename, false );
 	} else {
-		full_ename = ename ? ename : "";
+		full_ename = ename ? ename.ptr() : "";
 	}
 	if ( !ignore_it ) {
 		check_and_universalize_path(full_ename);
@@ -4559,11 +4478,9 @@ int SubmitHash::SetExecutable()
 	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
 		if (rval) { 
-			if (ename) free(ename);
 			ABORT_AND_RETURN( rval );
 		}
 	}
-	if (ename) free(ename);
 	return 0;
 }
 
@@ -4920,19 +4837,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetLoadProfile
 	{SUBMIT_KEY_LoadProfile,  ATTR_JOB_LOAD_PROFILE, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_PrimaryUnixGroup,  ATTR_JOB_PRIMARY_UNIX_GROUP, SimpleSubmitKeyword::f_as_string},
-	// formerly SetFileOptions
-	{SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS, SimpleSubmitKeyword::f_as_expr}, // TODO: should this be a string rather than an expression?
-	{SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_BufferSize, ATTR_BUFFER_SIZE, SimpleSubmitKeyword::f_as_expr},
-	{SUBMIT_KEY_BufferBlockSize, ATTR_BUFFER_BLOCK_SIZE, SimpleSubmitKeyword::f_as_expr},
-	// formerly SetFetchFiles
-	{SUBMIT_KEY_FetchFiles, ATTR_FETCH_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetCompressFiles
-	{SUBMIT_KEY_CompressFiles, ATTR_COMPRESS_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetAppendFiles
-	{SUBMIT_KEY_AppendFiles, ATTR_APPEND_FILES, SimpleSubmitKeyword::f_as_string},
-	// formerly SetLocalFiles
-	{SUBMIT_KEY_LocalFiles, ATTR_LOCAL_FILES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetUserLog
 	{SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
 	{SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_logfile},
@@ -5058,10 +4962,14 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchCpuCount, ATTR_BATCH_CPU_COUNT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchCpusPerNode, ATTR_BATCH_CPUS_PER_NODE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchNodeCount, ATTR_BATCH_NODE_COUNT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchWholeNodes, ATTR_BATCH_WHOLE_NODES, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5779,15 +5687,19 @@ int SubmitHash::SetRequestResources()
 			continue;
 		}
 		// could get this from 'it', but this prevents unused-line warnings:
-		char * val = submit_param(key);
-		if (val[0] == '\"')
+		auto_free_ptr val(submit_param(key));
+		RETURN_IF_ABORT();
+		// submit_param returns NULL for an empty value
+		if ( ! val) {
+			continue;
+		}
+		if (val.ptr()[0] == '\"')
 		{
 			stringReqRes.insert(rname);
 		}
 
 		attr = ATTR_REQUEST_PREFIX; attr.append(rname);
 		AssignJobExpr(attr.c_str(), val);
-		free(val);
 		RETURN_IF_ABORT();
 	}
 	hash_iter_delete(&it);
@@ -6154,7 +6066,7 @@ int SubmitHash::SetRequirements()
 					// we will simply omit the automatic requirements clause for Disk.
 					// This moves the version check from the Startd to submit
 					// but we are willing to live with that.
-					//answer += " && ( || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
+					// answer += " && ( || (TARGET.Disk >= " ATTR_REQUEST_DISK "))";
 				} else {
 					if ( ! answer.empty()) { answer += " && "; }
 					answer += "(TARGET.Disk >= " ATTR_REQUEST_DISK ")";
@@ -7106,37 +7018,44 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image)  {
-		bool container_is_common = param_boolean(
-			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
-			false
-		);
+		bool container_is_common = false;
+		if( JobUniverse == CONDOR_UNIVERSE_VANILLA && (! IsRemoteJob) ) {
+			container_is_common = param_boolean(
+				"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
+				false
+			);
 
-		std::string r;
-		param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
-		if(! r.empty()) {
-			std::regex * re = nullptr;
-			try {
-				re = new std::regex(r);
-			} catch( const std::regex_error & e ) {
-				dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
-			}
-			if( re != NULL ) {
-				std::cmatch match;
-				if( std::regex_match( container_image.ptr(), match, * re ) ) {
-					container_is_common = true;
+			std::string r;
+			param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
+			if(! r.empty()) {
+				std::regex * re = nullptr;
+				try {
+					re = new std::regex(r);
+				} catch( const std::regex_error & e ) {
+					dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
+				}
+				if( re != NULL ) {
+					std::cmatch match;
+					if( std::regex_match( container_image.ptr(), match, * re ) ) {
+						container_is_common = true;
+					}
 				}
 			}
+
+			container_is_common = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, container_is_common);
 		}
 
-		container_is_common = submit_param_bool(SUBMIT_KEY_ContainerIsCommon, NULL, container_is_common);
+
 		if(! container_is_common) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
 				*accumulate_size_kb += calc_image_size_kb(container_image);
 			}
 		} else {
-			// FIXME: This does not check to see if the container image varies
-			// per-proc, which it must not for this code to work.
+			// This code assume that the container does not vary by proc;
+			// this is checked elsewhere -- as part of the general checking
+			// of the same for common files transfers -- and in enforced
+			// by the schedd.
 
 			// To avoid colliding inside a DAG when container images are
 			// common, the catalog name we generate here must depend on
@@ -7290,7 +7209,6 @@ int SubmitHash::SetTransferFiles()
 				if (common.size()) common += ",";
 				common += file;
 			}
-			// TODO: universalise paths and determine size of common input files??
 			AssignJobString(ATTR_COMMON_INPUT_FILES, common.c_str());
 			macro_value.clear();
 		}
@@ -7713,10 +7631,10 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString (ATTR_TRANSFER_INPUT_FILES, input_files.c_str());
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
-		char *public_input_files = 
-			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
+		auto_free_ptr public_input_files(
+			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES));
 		if (public_input_files) {
-			std::vector<std::string> pub_inp_file_list = split(public_input_files, ",");
+			std::vector<std::string> pub_inp_file_list = split(public_input_files.ptr(), ",");
 			// Process file list, but output string is for ATTR_TRANSFER_INPUT_FILES,
 			// so it's not used here.
 			// we don't count public files as part of the transfer size
@@ -7725,7 +7643,6 @@ int SubmitHash::SetTransferFiles()
 				std::string inp_file_str = join(pub_inp_file_list, ",");
 				AssignJobString(ATTR_PUBLIC_INPUT_FILES, inp_file_str.c_str());
 			}
-			free(public_input_files);
 		} 
 #endif
 
@@ -8306,12 +8223,9 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 #endif
 
 	baseJob.Assign(ATTR_JOB_REMOTE_WALL_CLOCK, 0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
-	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,    0.0);
 
-	baseJob.Assign(ATTR_JOB_EXIT_STATUS, 0);
 	baseJob.Assign(ATTR_NUM_CKPTS, 0);
 	baseJob.Assign(ATTR_NUM_JOB_STARTS, 0);
 	baseJob.Assign(ATTR_NUM_JOB_COMPLETIONS, 0);
@@ -8321,10 +8235,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Assign(ATTR_COMMITTED_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SLOT_TIME, 0);
 	baseJob.Assign(ATTR_TOTAL_SUSPENSIONS, 0);
-	baseJob.Assign(ATTR_LAST_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
 	baseJob.Assign(ATTR_COMMITTED_SUSPENSION_TIME, 0);
-	baseJob.Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 #if 0
 	// can't use this because of +attrs and My.attrs in SUBMIT_ATTRS
@@ -9649,7 +9561,7 @@ int SubmitHash::load_external_q_foreach_items (
 	if (submit_param_bool("SubmitAllowDuplicateMatches", "submit_allow_duplicate_matches", false)) {
 		expand_options |= EXPAND_GLOBS_ALLOW_DUPS;
 	}
-	char* parm = submit_param("SubmitMatchDirectories", "submit_match_directories");
+	auto_free_ptr parm(submit_param("SubmitMatchDirectories", "submit_match_directories"));
 	if (parm) {
 		if (MATCH == strcasecmp(parm, "never") || MATCH == strcasecmp(parm, "no") || MATCH == strcasecmp(parm, "false")) {
 			expand_options |= EXPAND_GLOBS_TO_FILES;
@@ -9658,11 +9570,10 @@ int SubmitHash::load_external_q_foreach_items (
 		} else if (MATCH == strcasecmp(parm, "yes") || MATCH == strcasecmp(parm, "true")) {
 			// nothing to do.
 		} else {
-			errmsg = parm;
+			errmsg = parm.ptr();
 			errmsg += " is not a valid value for SubmitMatchDirectories";
 			return -1;
 		}
-		free(parm); parm = NULL;
 	}
 
 	if ( ! o.items_filename.empty()) {

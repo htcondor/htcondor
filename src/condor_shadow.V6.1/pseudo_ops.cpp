@@ -49,6 +49,7 @@
 #include <regex>
 
 #include "catalog_utils.h"
+#include "common_files_check.h"
 #include "job_ad_instance_recording.h"
 #include "cxfer_state.h"
 #include "classad_string_utils.h"
@@ -60,11 +61,6 @@ extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 extern CXFER_STATE cxfer_type;
 
-static void append_buffer_info( std::string &url, const char *method, char const *path );
-static int use_append( const char *method, const std::string &path );
-static int use_compress( const char *method, const std::string &path );
-static int use_fetch( const char *method, const std::string &path );
-static int use_local_access( const std::string &file );
 
 int
 pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
@@ -271,223 +267,6 @@ pseudo_job_termination( ClassAd *ad )
 	return 0;
 }
 
-
-/*
-If short_path is an absolute path, copy it to full path.
-Otherwise, tack the current directory on to the front
-of short_path, and copy it to full_path.
-Notice that the old shadow kept track of the job as it
-moved around, but there is no such notion in this shadow,
-so CurrentWorkingDir is replaced with the job's iwd.
-*/
- 
-static void complete_path( const char *short_path, std::string &full_path )
-{
-	if ( fullpath(short_path) ) {
-		full_path = short_path;
-	} else {
-		formatstr(full_path, "%s%s%s",
-						  Shadow->getIwd(),
-						  DIR_DELIM_STRING,
-						  short_path);
-	}
-}
-
-/*
-This call translates a logical path name specified by a user job
-into an actual url which describes how and where to fetch
-the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
-*/
-
-int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
-{
-	std::string remap_list;
-	std::string split_dir;
-	std::string split_file;
-	std::string full_path;
-	std::string remap;
-	std::string urlbuf;
-	const char	*method = NULL;
-
-	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
-
-	ASSERT( actual_url == NULL );
-
-	/* The incoming logical name might be a simple, relative, or complete path */
-	/* We need to examine both the full path and the simple name. */
-
-	filename_split( logical_name, split_dir, split_file );
-	complete_path( logical_name, full_path );
-
-	/* Any name comparisons must check the logical name, the simple name, and the full path */
-
-	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list.c_str(), logical_name, remap ) ||
-	   filename_remap_find( remap_list.c_str(), split_file.c_str(), remap ) ||
-	   filename_remap_find( remap_list.c_str(), full_path.c_str(), remap ))) {
-
-		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.c_str());
-
-		/* If the remap is a full URL, return right away */
-		/* Otherwise, continue processing */
-
-		if(strchr(remap.c_str(),':')) {
-			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			actual_url = strdup(remap.c_str());
-			return 0;
-		} else {
-			dprintf(D_SYSCALLS,"\tremap is simple file\n");
-			complete_path( remap.c_str(), full_path );
-		}
-	} else {
-		dprintf(D_SYSCALLS,"\tnot remapped\n");
-	}
-
-	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path.c_str() );
-
-	/* Now, we have a full pathname. */
-	/* Figure out what url modifiers to slap on it. */
-
-	if( use_local_access(full_path) ) {
-		method = "local";
-	} else {
-		method = "remote";
-	}
-
-	if( use_fetch(method,full_path) ) {
-		urlbuf += "fetch:";
-	}
-
-	if( use_compress(method,full_path) ) {
-		urlbuf += "compress:";
-	}
-
-	append_buffer_info(urlbuf,method,full_path.c_str());
-
-	if( use_append(method,full_path) ) {
-		urlbuf += "append:";
-	}
-
-	if (method) {
-		urlbuf += method;
-		urlbuf += ":";
-	}
-	urlbuf += full_path;
-	actual_url = strdup(urlbuf.c_str());
-
-	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
-
-	return 0;
-}
-
-static void append_buffer_info( std::string &url, const char *method, char const *path )
-{
-	std::string buffer_list;
-	std::string buffer_string;
-	std::string dir;
-	std::string file;
-	int s,bs,ps;
-	int result;
-
-	filename_split(path,dir,file);
-
-	/* Do not buffer special device files, whether local or remote */
-	if(!strncmp(path,"/dev/",5)) return;
-
-	/* Get the default buffer setting */
-	pseudo_get_buffer_info( &s, &bs, &ps );
-
-	/* Now check for individual file overrides */
-	/* These lines have the same syntax as a remap list */
-
-	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list.c_str(),path,buffer_string) ||
-			filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
-
-			/* If the file is merely mentioned, turn on the default buffer */
-			url += "buffer:";
-
-			/* If there is also a size setting, use that */
-			result = sscanf(buffer_string.c_str(),"(%d,%d)",&s,&bs);
-			if( result==2 ) url += buffer_string;
-
-			return;
-		}
-	}
-
-	/* Turn on buffering if the value is set and is not special or local */
-	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
-
-	if (s>0 && bs>0 && method && strcmp(method,"local")) {
-		url += "buffer:";
-	}
-}
-
-/* Return true if this JobAd attribute contains this path */
-
-static int attr_list_has_file( const char *attr, const std::string &path )
-{
-	std::string str;
-
-	const char *file = condor_basename(path.c_str());
-
-	Shadow->getJobAd()->LookupString(attr,str);
-	std::vector<std::string> list = split(str);
-
-	if( contains_withwildcard(list, path) || contains_withwildcard(list, file) ) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-static int use_append( const char * /* method */, const std::string &path )
-{
-	return attr_list_has_file( ATTR_APPEND_FILES, path );
-}
-
-static int use_compress( const char * /* method */, const std::string &path )
-{
-	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
-}
-
-static int use_fetch( const char * /* method */, const std::string &path )
-{
-	return attr_list_has_file( ATTR_FETCH_FILES, path );
-}
-
-/*
-Return the buffer configuration.  If the classad contains nothing,
-assume it is zero.
-*/
-
-int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out )
-{
-	int bytes=0, block_size=0;
-
-	Shadow->getJobAd()->LookupInteger(ATTR_BUFFER_SIZE,bytes);
-	Shadow->getJobAd()->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
-
-	if( bytes<0 ) bytes = 0;
-	if( block_size<0 ) block_size = 0;
-	if( bytes<block_size ) block_size = bytes;
-
-	*bytes_out = bytes;
-	*block_size_out = block_size;
-	*prefetch_bytes_out = 0;
-
-	dprintf(D_SYSCALLS,"\tbuffer configuration is bytes=%d block_size=%d\n",bytes, block_size );
-
-	return 0;
-}
-
-static int use_local_access( const std::string &file )
-{
-	return
-		file == "/dev/null" ||
-		file == "/dev/zero" ||
-		attr_list_has_file( ATTR_LOCAL_FILES, file );
-}
 
 int
 pseudo_ulog( ClassAd *ad )
@@ -1145,6 +924,14 @@ UniShadow::before_common_file_transfer(
 		ATTR_JOB_IWD, * Shadow->getJobAd()
 	);
 	commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
+	// Stage the files in the same layout that ordinary input transfer would
+	// give them, so the job's sandbox doesn't depend on which method the
+	// schedd picked.  The common files check (common_files_check.cpp)
+	// depends on this.
+	CopyAttribute(
+		ATTR_PRESERVE_RELATIVE_PATHS, commonAd,
+		ATTR_PRESERVE_RELATIVE_PATHS, * Shadow->getJobAd()
+	);
 	// If we neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
 	// job's (non-existent) spool directory to the input list!
 	commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
@@ -1162,10 +949,17 @@ UniShadow::before_common_file_transfer(
 		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
 	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
+#ifdef WIN32
+	// Create_Thread with the attendant socket duplication is failing on some
+	// Windows machines (re: htcondor-support), and it isn't really non-blocking
+	// on Windows anyway, so lets be explict about using blocking mode.
+	this->commonFTO->SetServerShouldBlock( true );
+#else
 	// This is broken on Windows, but we really want our timer to fire
 	// during the transfer process.  Not clear if the progress function
 	// will always be called often enough to be useful for keeping-alive.
 	this->commonFTO->SetServerShouldBlock( false );
+#endif
 
 
 	ClassAd guidance;
@@ -1678,13 +1472,22 @@ UniShadow::start_staging_only_conversation(
 		EXCEPT( "start_staging_only_conversation(): failed to acquire original claim ID.\n");
 	}
 
+	//
+	// Tell the schedd what we staged, so that every job which maps these
+	// copies can verify that they're the files it asked for; see
+	// common_files_check.h.  We're already running as the job's owner.
+	//
+	ClassAd extraAttrs;
+	addStagedCatalogsReport( extraAttrs, * jobAd, common_file_catalogs, internalToSimpleNameMap );
+
 	int timeout = 20;
 	std::vector< std::pair< std::string, const ClassAd * > > resources;
 	resources.emplace_back( claimID, slotAd );
 	int rval = schedd.offerResources(
 		resources, user, timeout,
-		originalClaimID
-		/*, sizeOnDiskInMB */
+		originalClaimID,
+		-1 /* sizeOnDiskInMB */,
+		& extraAttrs
 	);
 	free( originalClaimID );
 
@@ -1816,7 +1619,7 @@ UniShadow::start_mapping_only_conversation(
 
 				if( matches ) {
 					catalogAd->LookupString( ATTR_CATALOG_PATH, stagingDir );
-					dprintf( D_ALWAYS, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
+					dprintf( D_FULLDEBUG, "Found %s = %s\n", ATTR_CATALOG_PATH, stagingDir.c_str() );
 					break;
 				}
 			}

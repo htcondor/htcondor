@@ -579,11 +579,6 @@ int daemon::RealStart( )
 	if ( !default_id.size() ) {
 		default_id = "collector";
 	}
-		// Windows has a global pipe namespace, meaning that several instances of
-		// HTCondor share the same default ID; we make it unique below.
-#ifdef WIN32
-	formatstr_cat(default_id, "_%d", getpid());
-#endif
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -1002,14 +997,6 @@ int daemon::RealStart( )
 				outbound_ccb.c_str(), name_in_config_file);
 	}
 
-	#ifdef WIN32
-	// tell the shared port and collector (via the environment) to use "collector_<master-pid>"
-	// as the default shared port id.
-	if( daemon_is_shared_port || daemon_is_collector ) {
-		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
-	}
-	#endif
-
 	if( daemon_is_shared_port )
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
@@ -1044,7 +1031,6 @@ int daemon::RealStart( )
 			// need to further uniquify them with a sequence number, and
 			// not doing so makes it possible to construct certain
 			// addresses, rather than discover them.
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}

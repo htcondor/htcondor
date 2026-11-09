@@ -1,0 +1,39 @@
+name: PR Security Review Trigger
+
+# Stage 1 of 2 of the opencode + NRP LLM PR security review.
+#
+# This runs in the unprivileged pull_request context (no secrets, read-only
+# token) and only records which PR to review. Stage 2,
+# pr-security-review.yml, is triggered by this workflow's completion via
+# workflow_run, runs from the trusted default branch with secrets, and does
+# the actual review.
+#
+# Because a PR can modify this file, stage 2 treats everything uploaded here
+# as untrusted and verifies it against the GitHub API before use.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  record-pr:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record PR number
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p pr-info
+          echo "$PR_NUMBER" > pr-info/pr_number
+
+      - name: Upload PR info
+        uses: actions/upload-artifact@v6
+        with:
+          name: pr-security-review-info
+          path: pr-info/
+          retention-days: 1
