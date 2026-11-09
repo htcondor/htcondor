@@ -134,10 +134,6 @@ BuildRequires: gcc14-c++
 %endif
 
 %if 0%{?suse_version}
-%if %{suse_version} == 1500
-BuildRequires: gcc12
-BuildRequires: gcc12-c++
-%endif
 %if %{suse_version} == 1600
 BuildRequires: gcc15
 BuildRequires: gcc15-c++
@@ -558,10 +554,6 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?suse_version}
-%if %{suse_version} == 1500
-export CC=/usr/bin/gcc-12
-export CXX=/usr/bin/g++-12
-%endif
 %if %{suse_version} == 1600
 export CC=/usr/bin/gcc-15
 export CXX=/usr/bin/g++-15

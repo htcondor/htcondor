@@ -51,18 +51,6 @@ size_t Edge::AppendArc(const node_id_t id, const unsigned int meta) {
 	return idx;
 }
 
-const DagArc& Edge::GetArc(const node_id_t id) const {
-	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
-
-	if (it != m_arcs.end()) { return *it; }
-
-	EXCEPT("Invalid node id provided");
-}
-
-DagArc& Edge::GetArc(const node_id_t id) {
-	return const_cast<DagArc&>(std::as_const(*this).GetArc(id));
-}
-
 bool Edge::Contains(const node_id_t id) const {
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 	return it != m_arcs.end();
@@ -98,20 +86,6 @@ edge_id_t EdgeTable::NewEdge(const Edge* duplicate) {
 	return static_cast<edge_id_t>(idx);
 }
 
-const Edge& EdgeTable::GetEdge(const edge_id_t id) const {
-	if (id < 0) {
-		return m_edges[0];
-	} else if (id > 0) {
-		return m_edges[id];
-	}
-
-	EXCEPT("Invalid edge id provided");
-}
-
-Edge& EdgeTable::GetEdge(const edge_id_t id) {
-	return const_cast<Edge&>(std::as_const(*this).GetEdge(id));
-}
-
 bool EdgeTable::IsDirect(const edge_id_t id) { return id < 0; }
 
 size_t EdgeTable::DirectIdToOffset(edge_id_t id) {
@@ -127,29 +101,10 @@ edge_id_t EdgeTable::AddDirectArc(const node_id_t id, const unsigned int meta) {
 	return EdgeTable::DirectOffsetToId(idx);
 }
 
-const DagArc& EdgeTable::GetDirectArc(const edge_id_t id) const {
-	ASSERT(EdgeTable::IsDirect(id));
-	size_t idx = EdgeTable::DirectIdToOffset(id);
-	return m_edges[0][idx];
-}
-
-DagArc& EdgeTable::GetDirectArc(const edge_id_t id) {
-	return const_cast<DagArc&>(std::as_const(*this).GetDirectArc(id));
-}
-
 edge_id_t EdgeTable::NewWaitEdge() {
 	edge_id_t id = static_cast<edge_id_t>(m_wait_edges.size()) + 1;
 	m_wait_edges.emplace_back();
 	return id;
-}
-
-const Edge& EdgeTable::GetWaitEdge(const edge_id_t id) const {
-	ASSERT(id >= 1 && id <= static_cast<edge_id_t>(m_wait_edges.size()));
-	return m_wait_edges[id - 1];
-}
-
-Edge& EdgeTable::GetWaitEdge(const edge_id_t id) {
-	return const_cast<Edge&>(std::as_const(*this).GetWaitEdge(id));
 }
 
 std::vector<size_t> Edge::CompactPool() {

@@ -46,22 +46,13 @@ jobs:
 
       - name: Build
         run: |
-          # Hackery for using toolset gcc instead of default
+          # Hackery for using toolset gcc instead of default.
+          # The source requires C++23 "deducing this" (gcc >= 14), so never
+          # select an older gcc here; platforms whose default gcc is too old
+          # must point at a gcc 14+ install (toolset, gcc14-*, etc.).
           if [ -f "/opt/rh/gcc-toolset-15/root/usr/bin/gcc" ]; then
             export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
             export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
-          fi
-
-          if [ -f "/usr/bin/gcc-11" ] 
-          then
-            export CC=/usr/bin/gcc-11
-            export CXX=/usr/bin/g++-11
-          fi
-
-          if [ -f "/usr/bin/gcc-12" ] 
-          then
-            export CC=/usr/bin/gcc-12
-            export CXX=/usr/bin/g++-12
           fi
 
           if [ -f "/usr/bin/gcc14-gcc" ]
