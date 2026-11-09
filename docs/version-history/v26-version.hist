@@ -7,6 +7,18 @@
   not replace the matched text. 
   :jira:`4052`
 
+- The kernel tuning script run by the :tool:`condor_master` (see
+  :macro:`ENABLE_KERNEL_TUNING`) now sets ``/proc/sys/vm/dirty_bytes``
+  to 100 MB only on cgroup v1 machines that run a *condor_startd*.
+  This limit was a workaround for jobs being OOM killed for writing
+  files under cgroup v1, which cgroup v2 does not need, and it could
+  greatly slow down file writes, especially to FUSE filesystems such as
+  those used by Apptainer.  Machines where the limit was already set
+  keep it until reboot.  The new configuration knob
+  :macro:`KERNEL_TUNING_LIMIT_DIRTY_BYTES` sets the limit on any
+  machine, for rare cgroup v2 cases that still need it.
+  :jira:`4065`
+
 *** 26.0.1 bugs
 
 - Fixed a bug that incorrectly calculated :ad-attr:`TransferOutQueued`

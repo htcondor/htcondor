@@ -57,6 +57,11 @@ tag=startd
 default=true
 type=bool
 
+[KERNEL_TUNING_LIMIT_DIRTY_BYTES]
+default=false
+type=bool
+description=When true, the kernel tuning script limits /proc/sys/vm/dirty_bytes even on machines without cgroup v1 or a startd
+
 [KERNEL_TUNING_LOG]
 default=$(LOG)/KernelTuning.log
 type=path
