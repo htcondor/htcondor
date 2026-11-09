@@ -8008,11 +8008,11 @@ int DaemonCore::Create_Process(
 	}
 
 	if (remap) {
-		if (executable_fullpath) {
-			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
-			if (alt_executable_fullpath.compare(executable_fullpath))
-				dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
-		}
+			// executable_fullpath is never null here: executable was
+			// null-checked above, and it is either executable or a buffer.
+		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+		if (alt_executable_fullpath.compare(executable_fullpath))
+			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
 		if (cwd) {
 			alt_cwd = remap->RemapDir(cwd);
 			if (alt_cwd.compare(cwd))
@@ -8228,14 +8228,13 @@ int DaemonCore::Create_Process(
 				else if ((errno == ENOENT) && (priv == PRIV_USER_FINAL))
 				{
 					TemporaryPrivSentry tps(PRIV_USER);
-					struct stat statbuf;
 					int script_fd = -1;
 					const static size_t buflen = 1024;
 					char script_buf[buflen + 1]; script_buf[buflen] = '\0';
 					ssize_t read_bytes = 0;
-					if ((stat(executable_fullpath, &statbuf) == 0) &&
-						(access(executable_fullpath, R_OK | X_OK) == 0) &&
-						((script_fd = open(executable_fullpath, O_RDONLY)) >= 0) &&
+						// Just open and read; a separate stat()/access()
+						// beforehand is redundant and a TOCTOU window.
+					if (((script_fd = safe_open_wrapper_follow(executable_fullpath, O_RDONLY)) >= 0) &&
 						((read_bytes = full_read(script_fd, script_buf, buflen)) > 1) &&
 						(script_buf[0] == '#' && script_buf[1] == '!') )
 					{

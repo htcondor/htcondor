@@ -1982,8 +1982,9 @@ local_render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 static bool
 local_render_cpu_time (double & cputime, ClassAd *ad, Formatter &)
 {
-	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
-		return false;
+	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime)) {
+		cputime = 0.0;
+	}
 
 	cputime = job_time(cputime, ad);
 	//return format_time( (int) job_time(utime,(ClassAd *)ad) );
