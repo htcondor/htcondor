@@ -740,7 +740,7 @@ public:
 			// but that is overkill for our current uses of this code.
 		if( now > this->recent_start_time ) {
 			time_t interval = now - this->recent_start_time;
-			double recent_rate = (double)this->recent_sum/interval;
+			double recent_rate = static_cast<double>(this->recent_sum) / static_cast<double>(interval);
 
 			for(size_t i = this->ema.size(); i--; ) {
 				this->ema[i].Update(recent_rate,interval,this->ema_config->horizons[i]);

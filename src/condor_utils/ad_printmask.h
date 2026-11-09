@@ -148,7 +148,7 @@ class AttrListPrintMask
 	// clear all formats
 	void clearFormats (void);
 	bool IsEmpty(void) { return formats.empty(); }
-	int  ColCount(void) { return formats.size(); }
+	int  ColCount(void) { return static_cast<int>(formats.size()); }
 
 	// for debugging, dump the current config
 	void dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const char *> * pheadings=NULL);
