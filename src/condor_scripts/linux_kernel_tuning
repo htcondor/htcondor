@@ -64,10 +64,15 @@ MAX_RECEIVE_BUFFER=10485760
 # Maximum amount of dirty filesystem bytes to buffer in the kernel
 # before processes writing to the filesystem are blocked, and made
 # to do their own i/o synchronously.  Set to 0 to undo.
-# If we are running with cgroups on, there's a Linux kernel bug
-# that causes spurious OOM events sent to a cgroup with a hard memory limit
-# if it writes a lot of data to the filesystem quickly.  Limitting
-# the buffering to 100M works around the problem
+# With cgroup v1, dirty page throttling is global only, so a job in a
+# cgroup with a hard memory limit can be OOM killed just by writing a
+# lot of data to the filesystem quickly.  Limiting the buffering to 100M
+# works around the problem.  This is only set on cgroup v1 machines
+# running a startd.  Cgroup v2 throttles dirty pages per cgroup, so the
+# workaround is not needed there, and such a small limit badly slows
+# writers, especially FUSE filesystems (as used by apptainer), which
+# are limited to 1% of it.  Set the HTCondor configuration knob
+# KERNEL_TUNING_LIMIT_DIRTY_BYTES to true to set it on any machine.
 DIRTY_BYTES=100000000
 
 # Set root user quota for max number of kernel session keys and
@@ -164,6 +169,8 @@ setKernelParameter() {
 increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FDS}
 
 # Set GLOBAL_MAX_PROCESSES and LOCAL_PORT_TRANGE only for schedd machines.
+# Note whether a startd runs here, for DIRTY_BYTES below.
+hasStartd=false
 daemonList=`condor_config_val DAEMON_LIST | sed -e's/,/ /g'`
 for daemon in $daemonList; do
 	daemonFile=`condor_config_val ${daemon}`
@@ -173,6 +180,9 @@ for daemon in $daemonList; do
 			increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
 			setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
 		fi
+		if [ "${baseName}" = "condor_startd" ]; then
+			hasStartd=true
+		fi
 	fi
 done
 
@@ -181,9 +191,20 @@ increaseKernelParameter "ROOT_MAXKEYS" "/proc/sys/kernel/keys/root_maxkeys" ${RO
 increaseKernelParameter "ROOT_MAXKEYS_BYTES" "/proc/sys/kernel/keys/root_maxbytes" ${ROOT_MAXKEYS_BYTES}
 increaseKernelParameter "PIPE_USER_PAGES_SOFT" "/proc/sys/fs/pipe-user-pages-soft" ${PIPE_USER_PAGES_SOFT}
 
-if condor_config_val BASE_CGROUP > /dev/null 2>&1
-then
+# Only cgroup v1 startd machines need DIRTY_BYTES; cgroup v2 mounts
+# /sys/fs/cgroup with a cgroup.controllers file at the root.  Setting
+# KERNEL_TUNING_LIMIT_DIRTY_BYTES to true sets it regardless, for rare
+# cgroup v2 cases that still need it, such as an EXECUTE directory on NFS.
+forceDirtyBytes=false
+case `condor_config_val KERNEL_TUNING_LIMIT_DIRTY_BYTES 2>/dev/null | tr 'A-Z' 'a-z'` in
+	true|t|yes|y|1) forceDirtyBytes=true ;;
+esac
+if [ "${forceDirtyBytes}" = "true" ] || { [ "${hasStartd}" = "true" ] && [ ! -f /sys/fs/cgroup/cgroup.controllers ]; }; then
 	setKernelParameter "FS_CACHE_DIRTY_BYTES" "/proc/sys/vm/dirty_bytes" "${DIRTY_BYTES}"
+else
+	echo "Not changing FS_CACHE_DIRTY_BYTES (/proc/sys/vm/dirty_bytes): only needed on cgroup v1 machines running a startd, unless KERNEL_TUNING_LIMIT_DIRTY_BYTES is true."
+	echo "# Not changing FS_CACHE_DIRTY_BYTES (/proc/sys/vm/dirty_bytes): only needed on cgroup v1 machines running a startd, unless KERNEL_TUNING_LIMIT_DIRTY_BYTES is true." >> ${LOG}
+	echo "Not changing FS_CACHE_DIRTY_BYTES (/proc/sys/vm/dirty_bytes): only needed on cgroup v1 machines running a startd, unless KERNEL_TUNING_LIMIT_DIRTY_BYTES is true." | ${LOGGER}
 fi
 
 # FIXME: Only on the collector.
