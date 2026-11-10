@@ -130,8 +130,90 @@ the clean up work needs to be quick. If the job takes too long to exit
 after getting the :subcom:`kill_sig`, HTCondor sends a SIGKILL signal 
 which immediately terminates the process.
 
-The default value for :ad-attr:`KillSig` is SIGTERM, the usual method 
+The default value for :ad-attr:`KillSig` is SIGTERM, the usual method
 to nicely terminate a Unix program.
+
+..
+   The following section is commented out until slot bundles are ready
+   to be documented for users.  Remove this comment and un-indent the
+   text below to publish it.
+
+   .. _job-bundles:
+
+   Job Bundles: Starting a Group of Jobs Together
+   ----------------------------------------------
+
+   :index:`job bundles<single: job bundles; scheduling jobs>`
+   :index:`slot bundles<single: slot bundles; scheduling jobs>`
+
+   Normally, HTCondor matches and starts each job of a cluster
+   independently: some jobs of the cluster may run while others are
+   still idle, waiting for a slot.  Some workloads cannot make progress
+   unless every one of their jobs is running at the same time, for
+   example a set of cooperating processes that connect to each other
+   when they start.  A *job bundle* (also called a *slot bundle*) asks
+   HTCondor to start all of the jobs of a cluster together, or none of
+   them.
+
+   To make a cluster into a bundle, add ``+IsBundle = true`` to the
+   submit description file.  The cluster *is* the bundle, and the
+   number of jobs queued is the number of slots the bundle needs.  For
+   example, this submit description file asks for four slots that will
+   all be held at once:
+
+   .. code-block:: condor-submit
+
+       executable     = worker
+       arguments      = $(Process)
+       request_cpus   = 1
+       request_memory = 1GB
+       +IsBundle      = true
+
+       queue 4
+
+   HTCondor does not start any job of the bundle until it has claimed a
+   slot for every one of them.  As slots are matched, the access point
+   holds them, idle, on behalf of the bundle.  Once it holds a slot for
+   each job, all of the jobs start on those slots.  While a bundle is
+   being filled, its jobs remain in the idle state.
+
+   A few things to keep in mind when using job bundles:
+
+   -  Every job of the bundle should request the same resources and have
+      the same requirements.  HTCondor negotiates for the bundle using
+      one job of the cluster as a template for all of them.
+   -  A bundle lives exactly as long as its jobs.  Only idle and running
+      jobs count toward the bundle, so as each job completes, is
+      removed, or is held, the bundle shrinks and the slot it was using
+      is released.  When no such jobs remain, the bundle is gone.  There
+      is no separate step to create or remove a bundle.
+   -  A bundle is all-or-nothing.  A bundle that asks for more slots than
+      the pool can ever provide at the same time will never start.
+      Holding or removing the whole cluster gives back any slots it has
+      claimed so far.
+   -  Slots held by a bundle are claimed ahead of normal fair-share
+      matchmaking and are not charged against your user priority.
+      Because of this, job bundles are disabled by default, and must be
+      enabled by the administrator of the access point with
+      :macro:`ENABLE_SLOT_BUNDLES`.  When bundles are not enabled,
+      ``IsBundle`` is ignored and the jobs are scheduled normally, one at
+      a time.
+
+   The progress of a bundle is shown in the cluster's job ClassAd:
+   ``BundleNumRequested`` is the number of slots the bundle needs, and
+   ``BundleNumSatisfied`` is the number of slots it currently holds.
+   For example:
+
+   .. code-block:: console
+
+       $ condor_q 42 -af:j BundleNumSatisfied BundleNumRequested
+       42.0 3 4
+       42.1 3 4
+       42.2 3 4
+       42.3 3 4
+
+   Slots claimed for a bundle advertise ``IsBundle`` and ``BundleId`` in
+   their slot ClassAds, so they can be found with :tool:`condor_status`.
 
 .. _crontab:
 
