@@ -412,14 +412,17 @@ JobQueueUserRec::removeOCU(const ClassAd &ocu) {
 		auto match = [ocu_id] (const OCU &ocu) {
 			int id = -1;
 			ocu.ad.LookupInteger(ATTR_OCU_ID, id);
-			if (id == ocu_id) {
-				if (ocu.mrec) {
-					scheduler.DelMrec(ocu.mrec);
-				}
-				return true;
-			}
-			return false;
+			return id == ocu_id;
 		};
+
+		// Release the OCU's claim before forgetting the OCU.  DelMrec
+		// unlinks the claim from the OCU (it looks the OCU up by id),
+		// so do it while the OCU is still in the list, and not from
+		// inside erase_if.
+		auto it = std::ranges::find_if(ocus, match);
+		if (it != ocus.end() && it->mrec) {
+			scheduler.DelMrec(it->mrec);
+		}
 		std::erase_if(ocus, match);
 		//
 		syncOCUs();
@@ -10124,8 +10127,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	std::set<int> PrioRecAutoClusterRejected;
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
+	// Set to scan the same job list again, for an OCU claim whose owner
+	// has nothing to run on it: the second scan is for borrowers.
+	bool rescan_for_borrowers = false;
 
 	do {
+		rescan_for_borrowers = false;
 		auto first = PrioRec.begin();
 		auto end = PrioRec.end();
 
@@ -10352,8 +10359,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 		// If we got here and ocu true and match_any_user is false, then
 		// no job from our priority user matched.  Try again for someone else.
+		// (Not a bare continue: that would jump to the loop condition, which
+		// ends the loop whenever the job list was reused rather than rebuilt.)
 		if (is_ocu && !match_any_user) {
 			match_any_user = true;
+			rescan_for_borrowers = true;
 			continue;
 		}
 
@@ -10366,8 +10376,10 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			// are about to throw away a match.
 		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
 		PrioRecAutoClusterRejected.clear();
+			// On the new list, an OCU claim again prefers its owner's jobs.
+		match_any_user = (user == nullptr);
 
-	} while( rebuilt_prio_rec_array );
+	} while( rescan_for_borrowers || rebuilt_prio_rec_array );
 
 	// No runnable job found for this match; record ignores only for new matches
 	if (is_new_match && !blocked_limits.empty()) {

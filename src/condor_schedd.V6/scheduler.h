@@ -575,6 +575,7 @@ class Scheduler : public Service
 	void			shutdown_fast();
 	void			shutdown_graceful();
 	void			schedd_exit();
+	void			release_idle_claims_for_exit();
 	void			invalidate_ads();
 	void			update_local_ad_file(); // warning, may be removed
 
@@ -912,6 +913,7 @@ class Scheduler : public Service
 	// If owner is non-null, it is set to the user record that holds the OCU
 	// (or nullptr if there is no such OCU)
 	OCU *getOCU(int ocu_id, OwnerInfo ** owner = nullptr);
+	std::string ocu_submitter_name(const OwnerInfo & owner, const OCU & ocu) const;
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
 	// Maintains the invariant that all entries in the map are valid pointers.
