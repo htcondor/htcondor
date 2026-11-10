@@ -100,16 +100,25 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     // Split the strings by '.' character, iterate through each sub-component.
     run1 = nullptr;
     run2 = nullptr;
+    bool first_entry = true;
     for (tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2);
          tok1 && tok2;
          tok1 = strtok_r(NULL, ".", &run1), tok2 = strtok_r(NULL, ".", &run2))
     {
         // Match non-wildcard bits
         while (*tok1 && *tok2 && *tok1 == *tok2) {
-            if (*tok2 == '*')
+            if (*tok2 == '*') {
                return false;
-            if (*tok1 == '*')
-                break;
+            }
+            if (*tok1 == '*'){
+                // A wildcard in the pattern can only appear in the first
+                // entry (i.e. before the first dot).
+                if (first_entry) {
+                    break;
+                } else {
+                    return false;
+                }
+            }
             tok1++;
             tok2++;
         }
@@ -131,6 +140,7 @@ bool hostname_match(const char *match_pattern, const char *hostname)
         else if (*tok1 || *tok2) {
             return false;
         }
+        first_entry = false;
     }
     return !tok1 && !tok2;
 }
