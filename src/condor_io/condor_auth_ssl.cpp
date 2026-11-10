@@ -1678,6 +1678,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
 	std::string fqdn;
+	bool saw_san_dns_name = false;
 	bool success = false;
 	ouch("post_connection_check.\n");
 
@@ -1792,8 +1793,10 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 			memcpy(san_fqdn, ASN1_STRING_get0_data(cstr), san_fqdn_len);
 #endif
 			san_fqdn[san_fqdn_len] = '\0';
-			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) // Avoid embedded null's.
+			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) { // Avoid embedded null's.
 				continue;
+			}
+			saw_san_dns_name = true;
 			if (hostname_match(san_fqdn, fqdn.c_str())) {
 				dprintf(D_SECURITY, "SSL host check: host alias %s matches certificate SAN %s.\n",
 					fqdn.c_str(), san_fqdn);
@@ -1813,7 +1816,9 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	}
 
 skip_san:
-	{
+	// If we saw any SAN DNS entries, then we ignore the CN for hostname
+	// verification.
+	if (!saw_san_dns_name) {
 		char cn_fqdn[256];
 		X509_NAME *subj = nullptr;
 		if (!success && (subj = X509_get_subject_name(cert)) &&
