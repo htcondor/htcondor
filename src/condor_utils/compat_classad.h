@@ -512,6 +512,11 @@ char* sPrintExpr(const classad::ClassAd &ad, const char* name);
  */
 char const *QuoteAdStringValue(char const *val, std::string &buf);
 
+/** True if QuoteAdStringValue(val) stays on a single line, i.e. val has no
+ *  newline or carriage return (old ClassAd quoting writes them literally)
+ */
+bool CanQuoteAdStringValueInline(std::string_view val);
+
 	/** Set the MyType attribute */
 void SetMyTypeName(classad::ClassAd &ad, const char *);
 	/** Get the value of the MyType attribute */

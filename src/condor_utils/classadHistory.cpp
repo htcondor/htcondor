@@ -184,15 +184,17 @@ AppendHistory(ClassAd* ad)
 			  formatstr_cat(banner, " %s=%d", ATTR_DAGMAN_JOB_ID, dagid);
 		  }
 
-		  // Add batch id to banner for quick lookup (not required)
+		  // Add batch id to banner for quick lookup (not required). Omit values with a
+		  // newline (would split the single line banner); readers then fall back
+		  // to checking the full ad
 		  std::string batchid, quoted;
-		  if (ad->LookupString(ATTR_JOB_BATCH_ID, batchid) && !batchid.empty()) {
+		  if (ad->LookupString(ATTR_JOB_BATCH_ID, batchid) && !batchid.empty() && CanQuoteAdStringValueInline(batchid)) {
 			  formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_ID, QuoteAdStringValue(batchid.c_str(), quoted));
 		  }
 
 		  // Add batch name to banner for quick lookup (not required)
 		  std::string batchname;
-		  if (ad->LookupString(ATTR_JOB_BATCH_NAME, batchname) && !batchname.empty()) {
+		  if (ad->LookupString(ATTR_JOB_BATCH_NAME, batchname) && !batchname.empty() && CanQuoteAdStringValueInline(batchname)) {
 			  formatstr_cat(banner, " %s=%s", ATTR_JOB_BATCH_NAME, QuoteAdStringValue(batchname.c_str(), quoted));
 		  }
 

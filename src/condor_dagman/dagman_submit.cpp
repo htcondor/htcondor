@@ -216,8 +216,6 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if (!batchName.empty()) { vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false); }
-	// Don't let users override batch id pointing back to root DAG
-	if (!batchId.empty()) { vars.emplace_back(SUBMIT_KEY_BatchId, batchId, true); }
 
 	if (dm.config[conf::b::JobInsertRetry] && retry > 0) { vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false); }
 
@@ -270,6 +268,17 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	if (node.GetType() == NodeType::SERVICE) { vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true); }
 
 	for (const auto& dagVar : node.GetVars()) { vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend); }
+
+	// Don't let users override batch id pointing back to root DAG. The root DAGMan
+	// job's JobBatchId (user set or defaulted to its cluster) is the only source.
+	// Also force MY.JobBatchId since +JobBatchId/MY.JobBatchId in a node submit file
+	// are applied after the batch_id command and would otherwise win. Must be last
+	// so DAG file VARS (which may set My.JobBatchId) cannot override either
+	if (!batchId.empty()) {
+		std::string quoted;
+		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, true);
+		vars.emplace_back("My." ATTR_JOB_BATCH_ID, QuoteAdStringValue(batchId.c_str(), quoted), true);
+	}
 
 	return vars;
 }

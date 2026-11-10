@@ -4805,6 +4805,36 @@ int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const 
 }
 
 
+// Return true if attr_name is JobBatchName or JobBatchId and attr_value
+// evaluates (in the context of the job, if it is already in the queue)
+// to a string containing a newline or carriage return
+static bool
+BatchAttrValueHasNewline(const JOB_ID_KEY &key, const char *attr_name, const char *attr_value)
+{
+	if ( ! attr_value || (strcasecmp(attr_name, ATTR_JOB_BATCH_NAME) != MATCH &&
+	                      strcasecmp(attr_name, ATTR_JOB_BATCH_ID) != MATCH)) {
+		return false;
+	}
+
+	classad::ExprTree *tree = nullptr;
+	if (ParseClassAdRvalExpr(attr_value, tree) != 0 || ! tree) {
+		delete tree;
+		return false; // unparseable values are handled elsewhere
+	}
+
+	JobQueueJob *job = nullptr;
+	ClassAd empty_ad;
+	ClassAd *scope = (JobQueue && JobQueue->Lookup(key, job) && job) ? job : &empty_ad;
+
+	classad::Value val;
+	std::string str;
+	bool has_newline = EvalExprToString(tree, scope, nullptr, val) &&
+	                   val.IsStringValue(str) &&
+	                   str.find_first_of("\r\n") != std::string::npos;
+	delete tree;
+	return has_newline;
+}
+
 // Check whether modification of a job attribute should be allowed.
 // return <0 : reject, return error to client
 // return 0 : ignore, return success to client
@@ -4858,6 +4888,19 @@ ModifyAttrCheck(const JOB_ID_KEY &key, const char *attr_name, const char *attr_v
 			if (err) err->pushf("QMGMT", EINVAL, "Received invalid attribute value '%s' for "
 				"job %d.%d; ignoring",
 				attr_value ? attr_value : "(null)", key.cluster, key.proc);
+			errno = EINVAL;
+			return -1;
+		}
+
+		// JobBatchName and JobBatchId are written into single line history and
+		// epoch banners. IsValidAttrValue() only checks the unparsed text, so an
+		// escaped literal ("a\nb") or an expression can still produce a newline
+		if (BatchAttrValueHasNewline(key, attr_name, attr_value)) {
+			dprintf(D_ALWAYS,
+				"%s received value for %s containing a newline for job %d.%d, ignoring\n",
+				func_name, attr_name, key.cluster, key.proc);
+			if (err) err->pushf("QMGMT", EINVAL, "Value of %s must not contain a newline "
+				"(job %d.%d); ignoring", attr_name, key.cluster, key.proc);
 			errno = EINVAL;
 			return -1;
 		}

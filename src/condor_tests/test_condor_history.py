@@ -801,9 +801,12 @@ def writeCompletionOrderFile(test_dir, jobAd):
 # 603.0 7 / 400  / alpha                    7 / 400  / alpha    <- batch name case differs from 600.0
 # 604.0 - / -    / -                        - / -    / -        <- 2 proc cluster w/o DAG/batch info
 # 604.1 - / -    / -                        - / -    / -
+# 605.0 7 / 500  / team DAGManJobId=8 note  7 / 500  / team DAGManJobId=8 note
 #
 # 601.0 can only be excluded if condor_history trusts the banner: a full ad scan
 # would match it. 602.0 confirms a banner match is still checked against the ad.
+# 605.0 has attribute-like text inside its quoted batch name, which the banner parser
+# must not read as a DAGManJobId=8 that overwrites the real one (ruling out -dagid 7).
 DAG_BATCH_CLUSTER_NO_INFO = 604
 DAG_BATCH_RECORDS = [
     # (cluster, proc, banner (dag, id, name), body (dag, id, name)); None = no DAG/batch attributes
@@ -813,6 +816,7 @@ DAG_BATCH_RECORDS = [
     (603, 0, (7, "400", "alpha"), (7, "400", "alpha")),
     (DAG_BATCH_CLUSTER_NO_INFO, 0, None, None),
     (DAG_BATCH_CLUSTER_NO_INFO, 1, None, None),
+    (605, 0, (7, "500", "team DAGManJobId=8 note"), (7, "500", "team DAGManJobId=8 note")),
 ]
 
 DAG_BATCH_CASES = {
@@ -822,13 +826,14 @@ DAG_BATCH_CASES = {
     "batchid"               : (["-batchid", "100"], ["600.0"]),
     "batchid_other"         : (["-batchid", "400"], ["603.0"]),
     "batchid_no_match"      : (["-batchid", "999"], []),
-    "dagid"                 : (["-dagid", "7"], ["600.0", "603.0"]),
+    "dagid"                 : (["-dagid", "7"], ["600.0", "603.0", "605.0"]),
     "dagid_no_match"        : (["-dagid", "8"], []),
+    "batchname_attr_text"   : (["-batchname", "team DAGManJobId=8 note"], ["605.0"]),
     "multi_term"            : (["-batchname", "Alpha", "-batchid", "400"], ["600.0", "603.0"]),
     # Finding every proc of the requested cluster must not end the scan early
     # while other (non job id) terms may still match older records.
     "cluster_and_batchname" : ([str(DAG_BATCH_CLUSTER_NO_INFO), "-batchname", "Alpha"], ["600.0", "604.0", "604.1"]),
-    "cluster_and_dagid"     : ([str(DAG_BATCH_CLUSTER_NO_INFO), "-dagid", "7"], ["600.0", "603.0", "604.0", "604.1"]),
+    "cluster_and_dagid"     : ([str(DAG_BATCH_CLUSTER_NO_INFO), "-dagid", "7"], ["600.0", "603.0", "604.0", "604.1", "605.0"]),
 }
 
 def writeDagBatchRecords(filename, jobAd, epoch):
