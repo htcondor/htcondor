@@ -898,10 +898,12 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 
 // Brute force search.  Will improve performance later if needed.
 OCU *
-Scheduler::getOCU(int ocu_id) {
+Scheduler::getOCU(int ocu_id, OwnerInfo ** owner) {
+		if (owner) { *owner = nullptr; }
 		for (const auto &[_, oi]: OwnersInfo) {
 			for (auto &ocu: oi->ocus) {
 				if (ocu.ocu_id == ocu_id) {
+					if (owner) { *owner = oi; }
 					return &ocu;
 				}
 			}
@@ -10157,7 +10159,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			OCU *ocu = scheduler.getOCU(slot->jid);
+			OwnerInfo *ocu_owner = nullptr;
+			OCU *ocu = scheduler.getOCU(slot->jid.cluster, &ocu_owner);
 			if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
@@ -10169,7 +10172,26 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 				// ATTR_OCU should already be true on newer startds, but May
 				// not be for older ones.  Force to true just to be sure.
-				slot->my_match_ad->Assign(ATTR_OCU, true);
+				slot->m_added_attrs.Assign(ATTR_OCU, true);
+
+				// Record whose claim this is, so FindRunnableJob can tell the
+				// OCU's owner from a borrower.  An idle claim has no
+				// RemoteOwner -- and RemoteOwner means "who is running here
+				// now" to the rest of the schedd, so we must not write it.
+				// Take the names from the user and project records so the
+				// spelling is the one FindRunnableJob compares against.
+				slot->m_added_attrs.Assign(ATTR_OCU_ID, ocu->ocu_id);
+				if (ocu_owner) {
+					slot->m_added_attrs.Assign(ATTR_OCU_OWNER, ocu_owner->Name());
+				}
+				std::string ocu_project;
+				if (ocu->ad.LookupString(ATTR_PROJECT_NAME, ocu_project) && ! ocu_project.empty()) {
+					const JobQueueProjectRec * pjrec = scheduler.find_projectinfo(ocu_project.c_str());
+					slot->m_added_attrs.Assign(ATTR_OCU_PROJECT, pjrec ? pjrec->Name() : ocu_project.c_str());
+				}
+				// m_added_attrs is reapplied whenever the match ad is refreshed
+				// from a new slot ad, so these survive that.
+				slot->my_match_ad->Update(slot->m_added_attrs);
 
 				// If we already have a match for this OCU, then delete this match
 				if (ocu->mrec) {

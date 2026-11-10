@@ -909,7 +909,9 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
-	OCU *getOCU(int ocu_id);
+	// If owner is non-null, it is set to the user record that holds the OCU
+	// (or nullptr if there is no such OCU)
+	OCU *getOCU(int ocu_id, OwnerInfo ** owner = nullptr);
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
 	// Maintains the invariant that all entries in the map are valid pointers.

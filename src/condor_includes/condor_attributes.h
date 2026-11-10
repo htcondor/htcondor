@@ -413,6 +413,8 @@
 #define ATTR_OCU_HOLDER  "IsOCUHolder"
 #define ATTR_OCU_ID  "OCUId"
 #define ATTR_OCU_NAME  "OCUName"
+#define ATTR_OCU_OWNER  "OCUOwner"
+#define ATTR_OCU_PROJECT  "OCUProject"
 #define ATTR_OCU_WANTED  "OCUWanted"
 #define ATTR_OCU_STATE  "OCUState"
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
