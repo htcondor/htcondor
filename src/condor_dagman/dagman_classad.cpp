@@ -152,8 +152,6 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 		std::string batchId, batchName, acctGroup, acctUser;
 		if (!GetAttribute(ATTR_JOB_BATCH_ID, batchId, false)) {
 			batchId = std::to_string(_jobId._cluster);
-			batchId += ".";
-			batchId += std::to_string(_jobId._proc);
 			SetAttribute(ATTR_JOB_BATCH_ID, batchId);
 		}
 		dagOpts[str::BatchId] = batchId;

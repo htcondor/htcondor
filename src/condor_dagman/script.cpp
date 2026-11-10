@@ -219,7 +219,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	args.GetArgsStringForDisplay(_executedCMD);
 
 	OptionalCreateProcessArgs cpArgs;
-	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE).fdInheritList(0);
+	cpArgs.reaperID(reaperId).fdInheritList(0);
 	int std_fds[3] = {-1, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
 	int null_fd = -1;
 	if (_output != DAG::ScriptOutput::NONE) {

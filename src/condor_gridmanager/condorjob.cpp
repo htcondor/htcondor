@@ -1479,8 +1479,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_Q_DATE, now );
 	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
-	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
 	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
 	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
@@ -1488,10 +1486,8 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
 	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
 	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
-	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
-	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 

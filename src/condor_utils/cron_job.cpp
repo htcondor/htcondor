@@ -551,8 +551,6 @@ CronJob::StartJobProcess( void )
 		final_args,			// argv
 		cpArgs.priv(priv)				// Privilege level
 			.reaperID(m_reaperId)		// ID Of reaper
-			.wantCommandPort(FALSE)		// Command port?  No
-			.wantUDPCommandPort(FALSE)	// Command port?  No
 			.env(&Params().GetEnv())	// Env to give to child
 			.cwd(Params().GetCwd())		// Starting CWD
 			.std(m_childFds));			// Stdin/stdout/stderr

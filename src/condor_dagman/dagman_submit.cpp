@@ -216,7 +216,6 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if (!batchName.empty()) { vars.emplace_back(SUBMIT_KEY_BatchName, batchName, false); }
-	if (!batchId.empty()) { vars.emplace_back(SUBMIT_KEY_BatchId, batchId, false); }
 
 	if (dm.config[conf::b::JobInsertRetry] && retry > 0) { vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false); }
 
@@ -269,6 +268,17 @@ std::vector<CustomVar> DagSubmit::InitVars(const Node& node) {
 	if (node.GetType() == NodeType::SERVICE) { vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true); }
 
 	for (const auto& dagVar : node.GetVars()) { vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend); }
+
+	// Don't let users override batch id pointing back to root DAG. The root DAGMan
+	// job's JobBatchId (user set or defaulted to its cluster) is the only source.
+	// Also force MY.JobBatchId since +JobBatchId/MY.JobBatchId in a node submit file
+	// are applied after the batch_id command and would otherwise win. Must be last
+	// so DAG file VARS (which may set My.JobBatchId) cannot override either
+	if (!batchId.empty()) {
+		std::string quoted;
+		vars.emplace_back(SUBMIT_KEY_BatchId, batchId, true);
+		vars.emplace_back("My." ATTR_JOB_BATCH_ID, QuoteAdStringValue(batchId.c_str(), quoted), true);
+	}
 
 	return vars;
 }
@@ -509,6 +519,10 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	long long max_materialize = INT_MAX;
 	int selected_job_count = 0; // number of jobs we will be submitting (including unmaterialized jobs)
+#ifdef SUPPORT_FOR_TASK_PACKING
+	int task_packing = 1;
+#endif
+
 	bool success = false;
 	SubmitResult result = SubmitResult::RETRY;
 	std::string errmsg;
@@ -648,6 +662,10 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 		submitHash.attachTransferMap(dm._protectedUrlMap);
 	}
 
+#ifdef SUPPORT_FOR_TASK_PACKING
+	submitHash.want_task_packing(task_packing);
+#endif
+
 	selected_job_count = ssi.selected_job_count();
 	if (submitHash.want_factory_submit(max_materialize)) {
 		int late_ver = 0;
@@ -686,12 +704,20 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 		int proc_id = 0, item_index = 0, step = 0;
 
 		JOB_ID_KEY jid(cluster_id, proc_id);
-		ssi.begin(jid, !is_factory);
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		ssi.set_packing(task_packing);
+	#endif
+		ssi.begin(jid, ! is_factory);
 
 		// for late-mat we want to iter all items, for regular submit we iter only selected ones
 		bool iter_selected = !is_factory;
 
+	#ifdef SUPPORT_FOR_TASK_PACKING
+		int taskid = 0;
+		while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, taskid, iter_selected)) > 0) {
+	#else
 		while ((rval = ssi.next_impl(iter_selected, jid, item_index, step, iter_selected)) > 0) {
+	#endif
 			bool send_cluster = (rval == 2); // rval tells us when we need to send the cluster ad
 
 			if (!is_factory) {
@@ -814,6 +840,20 @@ SubmitResult DirectSubmit::SubmitInternal(Node& node, CondorID& condorID, std::s
 				// break out of the loop, we are done.
 				break;
 			}
+
+		#ifdef SUPPORT_FOR_TASK_PACKING
+			if (ssi.packing() > 1) {
+				int task_packing = ssi.packing();
+				int taskid, item_indexT, stepT;
+				JOB_ID_KEY jidT = jid;
+				for (int ix = 1; ix < task_packing; ++ix) {
+					if (ssi.next_selected(jidT, item_indexT, stepT, taskid, true)) {
+						submitHash.add_job_task(taskid, item_indexT, stepT);
+					}
+				}
+				submitHash.finalize_job_tasks(task_packing);
+			}
+		#endif
 
 			// send procad attributes
 			errmsg = MyQ->send_JobAttributes(jid, *proc_ad, SetAttribute_NoAck);

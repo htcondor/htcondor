@@ -25,6 +25,7 @@
 #include <tuple>
 #include <ranges>
 #include <numeric>
+#include <utility>
 
 size_t Edge::AddArc(const DagArc& arc) { return AddArc(arc.id, arc.metadata); }
 
@@ -50,15 +51,7 @@ size_t Edge::AppendArc(const node_id_t id, const unsigned int meta) {
 	return idx;
 }
 
-DagArc& Edge::GetArc(const node_id_t id) {
-	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
-
-	if (it != m_arcs.end()) { return *it; }
-
-	EXCEPT("Invalid node id provided");
-}
-
-bool Edge::Contains(const node_id_t id) {
+bool Edge::Contains(const node_id_t id) const {
 	auto it = std::ranges::find(m_arcs, id, &DagArc::id);
 	return it != m_arcs.end();
 }
@@ -93,16 +86,6 @@ edge_id_t EdgeTable::NewEdge(const Edge* duplicate) {
 	return static_cast<edge_id_t>(idx);
 }
 
-Edge& EdgeTable::GetEdge(const edge_id_t id) {
-	if (id < 0) {
-		return m_edges[0];
-	} else if (id > 0) {
-		return m_edges[id];
-	}
-
-	EXCEPT("Invalid edge id provided");
-}
-
 bool EdgeTable::IsDirect(const edge_id_t id) { return id < 0; }
 
 size_t EdgeTable::DirectIdToOffset(edge_id_t id) {
@@ -118,21 +101,10 @@ edge_id_t EdgeTable::AddDirectArc(const node_id_t id, const unsigned int meta) {
 	return EdgeTable::DirectOffsetToId(idx);
 }
 
-DagArc& EdgeTable::GetDirectArc(const edge_id_t id) {
-	ASSERT(EdgeTable::IsDirect(id));
-	size_t idx = EdgeTable::DirectIdToOffset(id);
-	return m_edges[0][idx];
-}
-
 edge_id_t EdgeTable::NewWaitEdge() {
 	edge_id_t id = static_cast<edge_id_t>(m_wait_edges.size()) + 1;
 	m_wait_edges.emplace_back();
 	return id;
-}
-
-Edge& EdgeTable::GetWaitEdge(const edge_id_t id) {
-	ASSERT(id >= 1 && id <= static_cast<edge_id_t>(m_wait_edges.size()));
-	return m_wait_edges[id - 1];
 }
 
 std::vector<size_t> Edge::CompactPool() {

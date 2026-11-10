@@ -10,7 +10,8 @@ Synopsis
 
 **condor_history** [**-help**]
 
-**condor_history** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
+**condor_history** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*... |
+**-dagid** *id*... | **-batchid** *id*... | **-batchname** *name*...]
 
 **condor_history** [**-debug**] [**-name** *name*] [**-pool** *hostname[:port]*]
 [**-backwards** | **-forwards**] [**-constraint**] [**-since** *jobid | expr*]
@@ -27,6 +28,10 @@ Description
 
 Read historical ClassAds from local history files. With the command line
 option ``-name``, read from a remote AP or EP instead.
+
+The *cluster*, *cluster.proc*, *user*, **-dagid**, **-batchid**, and
+**-batchname** restrictions may each be given multiple times and in any
+combination; a ClassAd is displayed if it matches any one of them.
 
 HTCondor records four distinct kinds of historical ClassAd, in three different
 files, and :tool:`condor_history` reads whichever one the options select.
@@ -98,7 +103,7 @@ Options
     history file is last.
 **-no-librarian**
     Ignore using the *condor_librarian* record index database regardless of
-    :macro:`USING_LIBRARIAN` being ``True``. The database is also not used when
+    :macro:`USING_LIBRARIAN` being ``True``. The database is not used when
     **-file**, **-search**, or **-dir** is specified.
 *cluster*
     Only display ClassAds containing the specified :ad-attr:`ClusterId`'s.
@@ -107,6 +112,16 @@ Options
     (:ad-attr:`ClusterId`\. :ad-attr:`ProcId`).
 *user*
     Only display ClassAds containing the specified :ad-attr:`Owner`.
+**-dagid** *id*
+    Only display ClassAds whose :ad-attr:`DAGManJobId` is *id*. This
+    will show all jobs associated with a specific DAGMan job.
+**-batchid** *id*
+    Only display ClassAds whose :ad-attr:`JobBatchId` is *id*. This
+    will show all jobs associated with a specific DAGMan workflow when
+    *id* is the root DAGMan :ad-attr:`ClusterId`.
+**-batchname** *name*
+    Only display ClassAds whose :ad-attr:`JobBatchName` is *name*. The
+    comparison is case-sensitive.
 **-constraint** *expr*
     Display ClassAds that satisfy the expression.
 **-since** *jobid or expr*

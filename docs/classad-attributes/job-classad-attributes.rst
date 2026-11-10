@@ -135,9 +135,21 @@ all attributes.
     A string recording the unique identifier of the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
+:classad-attribute-def:`BatchCpuCount`
+    For **batch** grid universe jobs, the total number of cpus to request
+    in the remote batch system.
+
+:classad-attribute-def:`BatchCpusPerNode`
+    For **batch** grid universe jobs, the number of cpus to request on
+    each machine in the remote batch system.
+
 :classad-attribute-def:`BatchExtraSubmitArgs`
     For **batch** grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
+
+:classad-attribute-def:`BatchNodeCount`
+    For **batch** grid universe jobs, the number of machines to request
+    in the remote batch system.
 
 :classad-attribute-def:`BatchProject`
     For **batch** grid universe jobs, the name of the
@@ -151,6 +163,10 @@ all attributes.
 :classad-attribute-def:`BatchRuntime`
     For **batch** grid universe jobs, a limit in seconds on the job's
     execution time, enforced by the remote batch system.
+
+:classad-attribute-def:`BatchWholeNodes`
+    For **batch** grid universe jobs, whether the job can share machines
+    with other jobs in the remote batch system.
 
 :classad-attribute-def:`BlockReadKbytes`
     The integer number of KiB read from disk for this job.
@@ -752,6 +768,10 @@ all attributes.
     being written to the log. This is the same as the configuration
     setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
     job event log instead of the system event log.
+
+:classad-attribute-def:`JobBatchId`
+    A string value representing a unique batch identifying number across
+    jobs. This is used by DAGMan to indicate the root DAGMan job of a workflow.
 
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 

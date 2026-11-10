@@ -49,7 +49,6 @@
 #define ATTR_ACTIVITY  "Activity"
 #define ATTR_ALL_REMOTE_HOSTS  "AllRemoteHosts"
 #define ATTR_ANNEX_NAME  "AnnexName"
-#define ATTR_APPEND_FILES  "AppendFiles"
 #define ATTR_DONT_APPEND "EraseOutputAndErrorOnRestart"
 #define ATTR_ARCH  "Arch"
 #define ATTR_AZURE_ADMIN_USERNAME  "AzureAdminUsername"
@@ -62,15 +61,19 @@
 #define ATTR_AZURE_VM_ID  "AzureVmId"
 #define ATTR_BADPUT_CAUSED_BY_DRAINING  "BadputCausedByDraining"
 #define ATTR_BADPUT_CAUSED_BY_PREEMPTION  "BadputCausedByPreemption"
+#define ATTR_BATCH_CPU_COUNT  "BatchCpuCount"
+#define ATTR_BATCH_CPUS_PER_NODE  "BatchCpusPerNode"
 #define ATTR_BATCH_EXTRA_SUBMIT_ARGS  "BatchExtraSubmitArgs"
+#define ATTR_BATCH_NODE_COUNT  "BatchNodeCount"
 #define ATTR_BATCH_PROJECT  "BatchProject"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
 #define ATTR_BATCH_RUNTIME  "BatchRuntime"
-#define ATTR_BUFFER_SIZE  "BufferSize"
-#define ATTR_BUFFER_FILES  "BufferFiles"
-#define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"
-#define ATTR_BUFFER_BLOCKS_USED  "BufferBlocksUsed"
-#define ATTR_BUFFER_PREFETCH_SIZE  "BufferPrefetchSize"
+#define ATTR_BATCH_WHOLE_NODES "BatchWholeNodes"
+//#define ATTR_BUFFER_SIZE  "BufferSize"                   // Removed in 26.2
+//#define ATTR_BUFFER_FILES  "BufferFiles"                 // Removed in 26.2
+//#define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"        // Removed in 26.2
+//#define ATTR_BUFFER_BLOCKS_USED  "BufferBlocksUsed"      // Removed in 26.2
+//#define ATTR_BUFFER_PREFETCH_SIZE  "BufferPrefetchSize"  // Removed in 26.2
 #define ATTR_BYTES_SENT  "BytesSent"
 #define ATTR_BYTES_RECVD  "BytesRecvd"
 #define ATTR_CAN_HIBERNATE  "CanHibernate"
@@ -94,7 +97,6 @@
 #define ATTR_COMMON_FILES_SCOPE_HASHES "CommonFilesScopeHashes"    // scope's cluster ad
 #define ATTR_STAGED_CATALOG_HASHES "StagedCatalogHashes"           // DIRECT_ATTACH command ad
 #define ATTR_COMMON_FILES_HASH_CHECK "_condor_CommonFileHashCheck" // shadow's job ad
-#define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_DURATION "ContainerDuration"
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
@@ -236,16 +238,10 @@
 #define ATTR_EXCEPTION_TYPE  "ExceptionType"
 #define ATTR_EXECUTABLE_SIZE  "ExecutableSize"
 #define ATTR_EXIT_REASON  "ExitReason"
-#define ATTR_FETCH_FILES  "FetchFiles"
 #define ATTR_FETCH_WORK_DELAY  "FetchWorkDelay"
 #define ATTR_FILE_NAME  "FileName"
 #define ATTR_FILE_SIZE  "FileSize"
 #define ATTR_FILE_SYSTEM_DOMAIN  "FileSystemDomain"
-#define ATTR_FILE_REMAPS  "FileRemaps"
-#define ATTR_FILE_READ_COUNT  "FileReadCount"
-#define ATTR_FILE_READ_BYTES  "FileReadBytes"
-#define ATTR_FILE_WRITE_COUNT  "FileWriteCount"
-#define ATTR_FILE_WRITE_BYTES  "FileWriteBytes"
 #define ATTR_BLOCK_READ_KBYTES  "BlockReadKbytes"
 #define ATTR_BLOCK_WRITE_KBYTES  "BlockWriteKbytes"
 #define ATTR_BLOCK_READ_BYTES  "BlockReadBytes"
@@ -254,13 +250,11 @@
 #define ATTR_BLOCK_WRITES "BlockWrites"
 #define ATTR_CLOUD_LABEL_NAMES "CloudLabelNames"
 #define ATTR_CLOUD_LABEL_PREFIX "CloudLabel"
-#define ATTR_FILE_SEEK_COUNT  "FileSeekCount"
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLOCK_TO "FlockTo"
 #define ATTR_EFFECTIVE_FLOCK_LIST "EffectiveFlockList"
 #define ATTR_FIRST_JOB_MATCH_DATE "FirstJobMatchDate"
 #define ATTR_FLAVOR  "Flavor"
-#define ATTR_FORCE  "Force"
 #define ATTR_GAHP_PID "GahpPid"
 #define ATTR_GCE_ACCOUNT  "GceAccount"
 #define ATTR_GCE_AUTH_FILE  "GceAuthFile"
@@ -586,7 +580,6 @@
 #define ATTR_LAST_SLOT_NAME  "LastSlotName"
 #define ATTR_LAST_UPDATE  "LastUpdate"
 #define ATTR_LOCAL_CREDD  "LocalCredd"
-#define ATTR_LOCAL_FILES  "LocalFiles"
 #define ATTR_LOCATION_QUERY  "LocationQuery"
 #define ATTR_LOAD_AVG  "LoadAvg"
 #define ATTR_LVM_USE_LOOPBACK "LvmUsingLoopback"
@@ -744,6 +737,7 @@
 #define ATTR_QUERY_Q_INCLUDE_CLUSTER_AD "IncludeClusterAd"
 #define ATTR_QUERY_Q_INCLUDE_JOBSET_ADS "IncludeJobsetAds"
 #define ATTR_QUERY_Q_NO_PROC_ADS        "NoProcAds"
+#define ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS "ClusterBeforeProcAds"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"

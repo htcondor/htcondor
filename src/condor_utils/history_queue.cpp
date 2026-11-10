@@ -284,8 +284,6 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 	pid_t pid = daemonCore->CreateProcessNew(history_helper.ptr(), args,
 		cpArgs.priv(PRIV_ROOT)
 			.reaperID(m_rid)
-			.wantCommandPort(false)
-			.wantUDPCommandPort(false)
 			.socketInheritList(inherit_list));
 	if (!pid) {
 		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");

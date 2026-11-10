@@ -1835,20 +1835,29 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 
 skip_san:
 	{
-		char cn_fqdn[256];
-#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
-		X509_NAME *subj = nullptr;
-#else
-		const X509_NAME *subj = nullptr;
-#endif
-		if (!success && (subj = X509_get_subject_name(cert)) &&
-			X509_NAME_get_text_by_NID(subj, NID_commonName, cn_fqdn, 256) > 0)
+		std::string cn_fqdn;
+		if (!success) {
+			auto *subj = X509_get_subject_name(cert);
+			int idx = subj ? X509_NAME_get_index_by_NID(subj, NID_commonName, -1) : -1;
+			auto *entry = (idx >= 0) ? X509_NAME_get_entry(subj, idx) : nullptr;
+			auto *data = entry ? X509_NAME_ENTRY_get_data(entry) : nullptr;
+			unsigned char *utf8 = nullptr;
+			int len = data ? ASN1_STRING_to_UTF8(&utf8, data) : -1;
+			if (len > 0) {
+				cn_fqdn.assign(reinterpret_cast<char *>(utf8), len);
+				// Reject a CN with an embedded NUL
+				if (cn_fqdn.find('\0') != std::string::npos) {
+					cn_fqdn.clear();
+				}
+			}
+			OPENSSL_free(utf8);
+		}
+		if (!success && !cn_fqdn.empty())
 		{
-		        cn_fqdn[255] = '\0';
-			dprintf(D_SECURITY|D_FULLDEBUG, "Common Name: '%s'; host: '%s'\n", cn_fqdn, fqdn.c_str());
-			if (strcasecmp(cn_fqdn, fqdn.c_str()) != 0) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Common Name: '%s'; host: '%s'\n", cn_fqdn.c_str(), fqdn.c_str());
+			if (strcasecmp(cn_fqdn.c_str(), fqdn.c_str()) != 0) {
 				dprintf(D_SECURITY, "Certificate common name (CN), %s, does not match host %s.\n",
-					cn_fqdn, fqdn.c_str());
+					cn_fqdn.c_str(), fqdn.c_str());
 				goto err_occured;
 			} else {
 				success = true;
@@ -2391,8 +2400,6 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		int pid = daemonCore->CreateProcessNew(args.GetArg(0), args,
 					cpArgs.priv(PRIV_CONDOR_FINAL)
 						.reaperID(m_pluginReaperId)
-						.wantCommandPort(FALSE)
-						.wantUDPCommandPort(FALSE)
 						.env(&m_pluginState->m_env)
 						.familyInfo(&fi)
 						.std(std_fds));

@@ -108,14 +108,25 @@ ArchiveReader::ParseBanner(const std::string& banner, ClassAd& ad) {
 	const char * rhs = nullptr;
 	std::string attr;
 	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
-		ExprTree * tree = parser.ParseExpression(rhs);
+		// Find the end of this value. A quoted string is consumed whole so
+		// spaces or attribute-like text inside it (e.g. JobBatchName="a X=1 b")
+		// are not mistaken for the next key=value pair. As in the old ClassAd
+		// lexer, a quote preceded by a backslash does not end the string
+		const char * val_end = rhs;
+		if (*val_end == '"') {
+			++val_end;
+			while (*val_end && ! (*val_end == '"' && val_end[-1] != '\\')) { ++val_end; }
+			if (*val_end) { ++val_end; } // closing quote
+		}
+		while (*val_end && ! isspace(static_cast<unsigned char>(*val_end))) { ++val_end; }
+
+		ExprTree * tree = parser.ParseExpression(std::string(rhs, val_end), true);
 		if ( ! tree) { break; }
 
 		ad.Insert(attr, tree);
 
 		// advance p to point to the next key=value pair
-		size_t dist = strcspn(rhs, " ");
-		p = rhs + dist;
+		p = val_end;
 		while (isspace(static_cast<unsigned char>(*p))) { ++p; }
 	}
 }
