@@ -978,7 +978,7 @@ else()
 	# If already set, let's trust that they set it to the right value
 	# otherwise set it to 2 (most portable)
 
-	if (LINUX)
+	if (LINUX AND NOT _DEBUG)
 		string(FIND "${CMAKE_CXX_FLAGS}" "-D_FORTIFY_SOURCE" ALREADY_FORTIFIED)
 		if (${ALREADY_FORTIFIED} EQUAL -1)
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2")

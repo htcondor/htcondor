@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+
+# To start a local RabbitMQ broker for testing:
+#   docker run -d --name rabbitmq -p 5672:5672 rabbitmq:4
+# Access at localhost:5672 with login guest:guest
+
+import sys
+import time
+import contextlib
+
+from collections.abc import Iterator
+
+import pika
+import classad2
+import htcondor2
+
+
+# FIXME: This should be common code between the source and sink scripts.
+@contextlib.contextmanager
+def open_mq_channel(
+    host: str, port: int, username: str, password: str
+) -> Iterator[pika.adapters.blocking_connection.BlockingChannel]:
+    # PlainCredentials uses username/password (PLAIN mechanism). For production
+    # deployments consider ExternalCredentials with TLS client certificates
+    # or reading and passing a token as the password.
+    # See: https://pika.readthedocs.io/en/stable/modules/credentials.html
+    credentials = pika.PlainCredentials(username, password)
+    params = pika.ConnectionParameters(host=host, port=port, credentials=credentials)
+    connection = pika.BlockingConnection(params)
+
+    try:
+        yield connection.channel()
+    finally:
+        connection.close()
+
+
+def main():
+    htcondor2.set_subsystem('DASHBOARD_SINK')
+    htcondor2.enable_log()
+
+    host = htcondor2.param['DASHBOARD_AMQP_HOST']
+    port = htcondor2.param['DASHBOARD_AMQP_PORT']
+    username = htcondor2.param['DASHBOARD_AMQP_USERNAME']
+    password = htcondor2.param['DASHBOARD_AMQP_PASSWORD']
+    queue = htcondor2.param['DASHBOARD_AMQP_QUEUE']
+
+    pool = htcondor2.param.get('DASHBOARD_SINK_COLLECTOR')
+
+
+    collector = htcondor2.Collector(pool=pool)
+
+    def on_message(
+        channel: pika.adapters.blocking_connection.BlockingChannel,
+        method_frame: pika.spec.Basic.Deliver,
+        properties: pika.spec.BasicProperties,
+        body: bytes,
+    ) -> None:
+        # properties.headers could carry an x-intended-recipient set by the
+        # producer. If consumer-side filtering is needed in the future, check
+        # that header here before processing.
+
+        # On failure to decode, tell the broker:
+        # - we failed to process this message, and
+        # - do not requeue it (would lead to infinite loop of failure)
+        try:
+            encoding = properties.content_encoding or "utf-8"
+            body = body.decode(encoding)
+            ad = classad2.ClassAd(body)
+        except (UnicodeDecodeError, LookupError):
+            channel.basic_nack(method_frame.delivery_tag, requeue=False)
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Failed to decode message body with encoding {encoding}"
+            )
+            return
+        except classad2.ClassAdException:
+            channel.basic_nack(method_frame.delivery_tag, requeue=False)
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Failed to parse message as ClassAd:\n{body}"
+            )
+            return
+        channel.basic_ack(method_frame.delivery_tag)
+
+        htcondor2.log(
+            htcondor2.LogLevel.Always,
+            f"Fetched an ad from the channel."
+        )
+
+        try:
+            collector.advertise( [ad], 'UPDATE_STARTD_AD' )
+        except htcondor2.HTCondorException:
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Failed to advertise valid ad."
+            )
+
+    try:
+        with open_mq_channel(
+            host, port, username, password
+        ) as channel:
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Connected to AMQP server at {host}:{port}"
+            )
+
+            # Create the queue if it doesn't already exist.
+            # durable=False (the default) means the queue does not survive
+            # a broker restart, but doesn't work with the RabbitMQ broker
+            # specified above for testing.
+            channel.queue_declare(queue=queue, durable=True)
+
+            htcondor2.log(
+                htcondor2.LogLevel.Always,
+                f"Created/confirmed queue {queue}."
+            )
+
+            channel.basic_consume(queue=queue, on_message_callback=on_message)
+            try:
+                channel.start_consuming()
+            except KeyboardInterrupt:
+                print("\nCaught Ctrl-C, exiting...")
+                channel.stop_consuming()
+
+    except pika.exceptions.AMQPConnectionError:
+        htcondor2.log(
+            htcondor2.LogLevel.Always,
+            f"Could not connect to AMQP server at {host}:{port}"
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
