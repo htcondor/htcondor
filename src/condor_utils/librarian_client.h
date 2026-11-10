@@ -60,6 +60,10 @@ public:
 	// and the database file was opened successfully.
 	bool IsValid() const;
 
+	// The database's schema version (PRAGMA user_version), or 0 if not valid.
+	// The DAG/batch lookups below require schema version 3 or newer.
+	int SchemaVersion() const;
+
 	// Count JobRecords associated with a cluster ID.
 	// With OnlyExisting (default), excludes records in files that have
 	// been marked deleted (DateOfDeletion IS NOT NULL).
@@ -82,6 +86,14 @@ public:
 	// Return the file offset and file path for every JobRecord associated with a
 	// username. Same file-existence filtering as CountByUser.
 	std::vector<LibrarianRecord> GetRecordsByUser(const std::string& username, FileFilter filter = FileFilter::OnlyExisting) const;
+
+	// Return the file offset and file path for every JobRecord whose DAGManJobId,
+	// JobBatchId, or JobBatchName (case-sensitive) matches.
+	// Same file-existence filtering as CountByCluster. Records ingested before
+	// the schema v3 migration have NULL for these columns and are never returned.
+	std::vector<LibrarianRecord> GetRecordsByDagId(int dag_id, FileFilter filter = FileFilter::OnlyExisting) const;
+	std::vector<LibrarianRecord> GetRecordsByBatchId(const std::string& batch_id, FileFilter filter = FileFilter::OnlyExisting) const;
+	std::vector<LibrarianRecord> GetRecordsByBatchName(const std::string& batch_name, FileFilter filter = FileFilter::OnlyExisting) const;
 
 private:
 	struct Impl;
