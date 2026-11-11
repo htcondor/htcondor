@@ -69,8 +69,6 @@ stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Va
 FunctionCall::
 FunctionCall( )
 {
-	parentScope = NULL;
-
 	function = NULL;
 
 	if( !initialized ) {
@@ -228,8 +226,6 @@ CopyFrom(const FunctionCall &functioncall)
 	ExprTree *newArg;
 
     success      = true;
-	parentScope = functioncall.parentScope;
-
     ExprTree::CopyFrom(functioncall);
     functionName = functioncall.functionName;
 	function     = functioncall.function;
@@ -397,17 +393,6 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
     return false;
 #endif /* end !UNIX */
 }
-
-void FunctionCall::
-_SetParentScope( const ClassAd* parent )
-{
-	parentScope = parent;
-
-	for( auto arg : arguments ) {
-		arg->SetParentScope( parent );
-	}
-}
-	
 
 FunctionCall *FunctionCall::
 MakeFunctionCall( const string &str, vector<ExprTree*> &args )

@@ -27,7 +27,6 @@ namespace classad {
 AttributeReference::
 AttributeReference( ExprTree *tree, const std::string &attrname, bool absolut )
 {
-	parentScope = NULL;
 	attributeStr = attrname;
 	expr = tree;
 	absolute = absolut;
@@ -81,7 +80,6 @@ CopyFrom(const AttributeReference &ref)
 
     success = true;
 
-	parentScope = ref.parentScope;
 	attributeStr = ref.attributeStr;
 	if( ref.expr && ( expr=ref.expr->Copy( ) ) == NULL ) {
         success = false;
@@ -139,14 +137,6 @@ operator==(const AttributeReference &ref1, const AttributeReference &ref2)
 {
     return ref1.SameAs(&ref2);
 }
-
-void AttributeReference::
-_SetParentScope( const ClassAd *parent ) 
-{
-	parentScope = parent;
-	if( expr ) expr->SetParentScope( parent );
-}
-
 
 void AttributeReference::
 GetComponents( ExprTree *&tree, std::string &attr, bool &abs ) const
@@ -515,7 +505,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 			return EVAL_OK;
 		}
 	}
-		// lookup with scope; this may side-affect state		
+		// lookup with scope; this may side-affect state
 
 		/* ClassAd::alternateScope is intended for transitioning Condor from
 		 * old to new ClassAds. It allows unscoped attribute references
@@ -525,6 +515,15 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 * Expect alternateScope to be removed from a future release.
 		 */
 	if (!current) { return EVAL_UNDEF; }
+
+	// If we descended into a nested ClassAd via expr.attr, record the
+	// parent scope relationship so LookupInScope can walk up the chain.
+	if (expr && current && state.curAd) {
+		if (state.parentMap.find(current) == state.parentMap.end()) {
+			state.parentMap[current] = state.curAd;
+		}
+	}
+
 	int rc = current->LookupInScope( attributeStr, tree, state );
 	if ( !expr && !absolute && rc == EVAL_UNDEF && current->alternateScope ) {
 		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );

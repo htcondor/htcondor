@@ -118,7 +118,6 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
-	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -143,7 +142,6 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
-	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -177,7 +175,6 @@ Copy( ) const
 		if (e1) delete e1;
 		if (e2) delete e2;
 	}
-	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -220,7 +217,6 @@ Copy( ) const
 		if (e2) delete e2;
 		if (e2) delete e3;
 	}
-	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -290,22 +286,6 @@ SameChildren(const Operation* pop1, const Operation* pop2)
 	}
 	return false;
 }
-
-void Operation::
-_SetParentScope( const ClassAd* parent ) 
-{
-	parentScope = parent;
-	// PRAGMA_REMIND("fix this for derived classes")
-	ExprTree* e1 = NULL;
-	ExprTree* e2 = NULL;
-	ExprTree* e3 = NULL;
-	OpKind op = __NO_OP__;
-	this->GetComponents(op, e1, e2, e3);
-	if (e1) e1->SetParentScope(parent);
-	if (e2) e2->SetParentScope(parent);
-	if (e3) e3->SetParentScope(parent);
-}
-
 
 void Operation::
 Operate (OpKind op, Value &op1, Value &op2, Value &result)

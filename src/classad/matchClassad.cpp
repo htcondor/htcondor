@@ -36,7 +36,6 @@ MatchClassAd()
 {
 	lCtx = rCtx = NULL;
 	lad = rad = NULL;
-	ladParent = radParent = NULL;
 	symmetric_match = NULL;
 	right_matches_left = NULL;
 	left_matches_right = NULL;
@@ -48,7 +47,6 @@ MatchClassAd::
 MatchClassAd( ClassAd *adl, ClassAd *adr ) : ClassAd()
 {
 	lad = rad = lCtx = rCtx = NULL;
-	ladParent = radParent = NULL;
 	InitMatchClassAd( adl, adr );
 }
 
@@ -147,20 +145,17 @@ bool MatchClassAd::
 ReplaceLeftAd( ClassAd *ad )
 {
 	lad = ad;
-	ladParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
 		if( !Insert( "LEFT", ad ) ) {
 			lad = NULL;
-			ladParent = NULL;
 			Delete( "LEFT" );
 			return false;
 		}
-		
-		// For the ability to efficiently reference the ad via
-		// .LEFT, it is inserted in the top match ad, but we want
-		// its parent scope to be the context ad.
-		lCtx->SetParentScope(this);
-		lad->SetParentScope(lCtx);
+
+		// Set parentAd pointers so PopulateScopeMap can walk up
+		// the scope chain: lad -> lCtx -> this (MatchClassAd)
+		lad->parentAd = lCtx;
+		lCtx->parentAd = this;
 
 		if ( _useOldClassAdSemantics ) {
 			lad->alternateScope = rad;
@@ -179,21 +174,17 @@ bool MatchClassAd::
 ReplaceRightAd( ClassAd *ad )
 {
 	rad = ad;
-	radParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
 		if( !Insert( "RIGHT", ad ) ) {
 			rad = NULL;
-			radParent = NULL;
 			Delete( "RIGHT" );
 			return false;
 		}
-		
-	
-		// For the ability to efficiently reference the ad via
-		// .RIGHT, it is inserted in the top match ad, but we want
-		// its parent scope to be the context ad.
-		rCtx->SetParentScope(this);
-		rad->SetParentScope(rCtx);
+
+		// Set parentAd pointers so PopulateScopeMap can walk up
+		// the scope chain: rad -> rCtx -> this (MatchClassAd)
+		rad->parentAd = rCtx;
+		rCtx->parentAd = this;
 
 		if ( _useOldClassAdSemantics ) {
 			rad->alternateScope = lad;
@@ -242,13 +233,12 @@ RemoveLeftAd( )
 	ClassAd *ad = lad;
 	std::ignore = Remove( "LEFT" );
 	if( lad ) {
-		lad->SetParentScope( ladParent );
+		lad->parentAd = nullptr;
 		if ( _useOldClassAdSemantics && rad ) {
 			lad->alternateScope = NULL;
 			rad->alternateScope = NULL;
 		}
 	}
-	ladParent = NULL;
 	lad = NULL;
 	return( ad );
 }
@@ -260,13 +250,12 @@ RemoveRightAd( )
 	ClassAd	*ad = rad;
 	std::ignore = Remove( "RIGHT" );
 	if( rad ) {
-		rad->SetParentScope( radParent );
+		rad->parentAd = nullptr;
 		if ( _useOldClassAdSemantics && lad ) {
 			lad->alternateScope = NULL;
 			rad->alternateScope = NULL;
 		}
 	}
-	radParent = NULL;
 	rad = NULL;
 	return( ad );
 }
@@ -483,6 +472,17 @@ bool MatchClassAd::
 leftMatchesRight()
 {
 	return EvalMatchExpr( left_matches_right );
+}
+
+void MatchClassAd::
+PopulateScopeMap(EvalState& state) const
+{
+	// Set up the scope chain for LEFT: lad -> lCtx -> matchAd
+	if (lad) state.parentMap[lad] = lCtx;
+	if (lCtx) state.parentMap[lCtx] = this;
+	// Set up the scope chain for RIGHT: rad -> rCtx -> matchAd
+	if (rad) state.parentMap[rad] = rCtx;
+	if (rCtx) state.parentMap[rCtx] = this;
 }
 
 } // classad
