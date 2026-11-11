@@ -1368,6 +1368,19 @@ fi
 # configuration
 
 %changelog
+* Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 25.15.15-1
+- Initial implementation of the common files feature, where immutable files
+  may only be transferred once when jobs run on the same execution point
+- Client tools fail over quickly in High Availability installations
+- Checkpointed jobs do not consider claim work-life when restarting
+- Fix condor_adstash to not crash when it sees an unknown field type
+- Fix HOOK_JOB_EXIT to not fail the job and requeue it
+
+* Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-1
+- Fix condor_ssh_to_job with using SELinux and LVM disk enforcement
+- Fix issue where the condor_defrag daemon might not be able to drain EPs
+- Fix enforcement of execute duration for scheduler(DAGMan) and local jobs
+
 * Wed Sep 23 2026 Tim Theisen <tim@cs.wisc.edu> - 25.14.1-1
 - HTCondor no longer accepts multiple queue statements in a submit file
 - The credmon can now obtain and renew OAuth2 access tokens from Pelican
@@ -1380,7 +1393,7 @@ fi
 - condor_watch_q now restores the terminal after exiting
 - Fix condor_q crash when using both -batch and -af
 
-* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.14-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
 - condor_q no longer crashes when using both the -batch and -af options
