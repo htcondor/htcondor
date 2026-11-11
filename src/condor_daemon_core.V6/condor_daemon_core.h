@@ -126,24 +126,11 @@ extern void (*dc_main_shutdown_graceful)();
 extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
 extern void (*dc_main_pre_command_sock_init)();
 
-typedef int     (*CommandHandler)(int,Stream*);
-typedef int     (Service::*CommandHandlercpp)(int,Stream*);
+
 using StdCommandHandler = std::function<int(int, Stream*)>;
-
-typedef int     (*SignalHandler)(int);
-typedef int     (Service::*SignalHandlercpp)(int);
 using StdSignalHandler = std::function<int(int)>;
-
-typedef int     (*SocketHandler)(Stream*);
-typedef int     (Service::*SocketHandlercpp)(Stream*);
 using StdSocketHandler = std::function<int (Stream *)>;
-
-typedef int     (*PipeHandler)(int);
-typedef int     (Service::*PipeHandlercpp)(int);
 using StdPipeHandler = std::function<int (int)>;
-
-typedef int     (*ReaperHandler)(int pid,int exit_status);
-typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 using StdReaperHandler = std::function<int (int, int )>;
 
 
@@ -521,7 +508,6 @@ class DaemonCore : public Service
         @param com_descrip     Not_Yet_Documented
         @param handler         Not_Yet_Documented
         @param handler_descrip Not_Yet_Documented
-        @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
 		@param force_authentication This command _must_ be authenticated.
         @param wait_for_payload Do a non-blocking select for read for this
@@ -529,17 +515,6 @@ class DaemonCore : public Service
                                 command handler.
         @return Not_Yet_Documented
     */
-    int Register_Command (int               command,
-                          const char *      com_descrip,
-                          CommandHandler    handler,
-                          const char *      handler_descrip,
-                          DCpermission      perm,
-                          bool              force_authentication = false,
-                          int               wait_for_payload = 0,
-                          std::vector<DCpermission> *
-                                            alternate_perms = nullptr
-    );
-
     int Register_Command( int               command,
                           const char *      command_description,
                           StdCommandHandler
@@ -551,33 +526,9 @@ class DaemonCore : public Service
                           std::vector<DCpermission> *
                                             alternate_permissions = nullptr );
 
-    /** Not_Yet_Documented
-        @param command         Not_Yet_Documented
-        @param com_descrip     Not_Yet_Documented
-        @param handlercpp      Not_Yet_Documented
-        @param handler_descrip Not_Yet_Documented
-        @param s               Not_Yet_Documented
-        @param perm            Not_Yet_Documented
-		@param force_authentication This command _must_ be authenticated.
-        @param wait_for_payload Do a non-blocking select for read for this
-                                many seconds (0 means none) before calling
-                                command handler.
-        @return Not_Yet_Documented
-    */
-    int Register_Command (int                command,
-                          const char *       com_descript,
-                          CommandHandlercpp  handlercpp, 
-                          const char *       handler_descrip,
-                          Service *          s,
-                          DCpermission       perm,
-                          bool               force_authentication = false,
-                          int                wait_for_payload = 0,
-                          std::vector<DCpermission> * alternate_perms = nullptr);
-
     int Register_UnregisteredCommandHandler (
-		CommandHandlercpp handlercpp,
+		StdCommandHandler handlercpp,
 		const char       *handler_descrip,
-		Service          *s,
 		bool              include_auth);
 
 	int Register_HTTP_CommandHandler(
@@ -586,7 +537,7 @@ class DaemonCore : public Service
 
 	bool HandleHTTP() const { return m_httpCommand.num; }
 	bool HandleUnregistered() const {return m_unregisteredCommand.num;}
-	bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
+	bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommandIncludesAuth;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
@@ -599,23 +550,12 @@ class DaemonCore : public Service
     int Register_CommandWithPayload (
                           int             command,
                           const char *    com_descrip,
-                          CommandHandler  handler, 
+                          StdCommandHandler handler,
                           const char *    handler_descrip,
                           DCpermission    perm,
                           bool            force_authentication = false,
                           int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> *alternate_perms = nullptr);
-
-    int Register_CommandWithPayload (
-                          int                command,
-                          const char *       com_descript,
-                          CommandHandlercpp  handlercpp, 
-                          const char *       handler_descrip,
-                          Service *          s,
-                          DCpermission       perm,
-                          bool               force_authentication = false,
-                          int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
-                          std::vector<DCpermission> * alternate_perms = nullptr);
 
 
     /** Not_Yet_Documented
@@ -753,27 +693,12 @@ class DaemonCore : public Service
         @param sig_descrip      Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
-                         SignalHandler   handler,
+                         StdSignalHandler handler,
                          const char *    handler_descrip);
-    
-    /** Not_Yet_Documented
-        @param sig              Not_Yet_Documented
-        @param sig_descrip      Not_Yet_Documented
-        @param handlercpp       Not_Yet_Documented
-        @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Signal (int                 sig,
-                         const char *        sig_descript,
-                         SignalHandlercpp    handlercpp, 
-                         const char *        handler_descrip,
-                         Service*            s);
 
     // If except_if_duplicate is true:
     //      EXCEPT() if a handler has already been registered for `signal`;
@@ -850,25 +775,8 @@ class DaemonCore : public Service
         @param reap_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Reaper (const char *    reap_descrip,
-                         ReaperHandler   handler,
-                         const char *    handler_descrip);
-    
-    /** Not_Yet_Documented
-        @param reap_descrip     Not_Yet_Documented
-        @param handlercpp       Not_Yet_Documented
-        @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-     int Register_Reaper (const char *      reap_descript,
-                          ReaperHandlercpp  handlercpp,
-                          const char *      handler_descrip,
-                          Service*          s);
-
     int Register_Reaper (const char *     reap_descrip,
                          StdReaperHandler handler,
                          const char *     handler_descrip);
@@ -878,27 +786,12 @@ class DaemonCore : public Service
         @param reap_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Reset_Reaper (int              rid,
                       const char *     reap_descrip,
-                      ReaperHandler    handler, 
+                      StdReaperHandler handler,
                       const char *     handler_descrip);
-    
-    /** Not_Yet_Documented
-        @param rid The Reaper ID
-        @param reap_descrip     Not_Yet_Documented
-        @param handlercpp       Not_Yet_Documented
-        @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Reset_Reaper (int                    rid,
-                      const char *           reap_descript,
-                      ReaperHandlercpp       handlercpp, 
-                      const char *           handler_descrip,
-                      Service*               s);
 
     /** Not_Yet_Documented
         @param rid The Reaper ID
@@ -939,49 +832,14 @@ class DaemonCore : public Service
         @param iosock_descrip   Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
-    int Register_Socket (Stream*           iosock,
-                         const char *      iosock_descrip,
-                         SocketHandler     handler,
-                         const char *      handler_descrip,
-                         HandlerType       handler_type = HANDLE_READ,
-                         void **           prev_entry = NULL);
-
-    /** Not_Yet_Documented
-        @param iosock           Not_Yet_Documented
-        @param iosock_descrip   Not_Yet_Documented
-        @param handlercpp       Not_Yet_Documented
-        @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
-        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
-    */
-    int Register_Socket (Stream*              iosock,
-                         const char *         iosock_descrip,
-                         SocketHandlercpp     handlercpp,
-                         const char *         handler_descrip,
-                         Service*             s,
-                         HandlerType          handler_type = HANDLE_READ,
-                         void **              prev_entry = NULL);
-
     int Register_Socket (Stream*           iosock,
                          const char *      iosock_descrip,
                          StdSocketHandler  handler,
                          const char *      handler_descrip,
                          HandlerType       handler_type = HANDLE_READ,
-                         void **           prev_entry = NULL) {
-        return Register_Socket (iosock,
-                                iosock_descrip,
-                                (SocketHandler)nullptr,
-                                (SocketHandlercpp)nullptr,
-                                handler_descrip,
-                                nullptr, // Service
-                                handler_type,
-								false,
-                                prev_entry,
-								&handler);
-	}
+                         void **           prev_entry = NULL);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -993,12 +851,10 @@ class DaemonCore : public Service
 	m_dirty_command_sock_sinfuls = true;
         return Register_Socket (iosock,
                                 descrip,
-                                (SocketHandler)NULL,
-                                (SocketHandlercpp)NULL,
+                                StdSocketHandler(),
                                 "DC Command Handler",
-                                NULL,
 				HANDLE_READ,
-                                0);
+                                nullptr);
     }
 
     /** Not_Yet_Documented
@@ -1090,34 +946,12 @@ class DaemonCore : public Service
 	 */
 	//@{
     /** Not_Yet_Documented
-        @param pipe_end            Not_Yet_Documented
+        @param pipe_end         Not_Yet_Documented
         @param pipe_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Pipe (int		           pipe_end,
-                         const char *      pipe_descrip,
-                         PipeHandler       handler,
-                         const char *      handler_descrip,
-                         HandlerType       handler_type     = HANDLE_READ);
-
-    /** Not_Yet_Documented
-        @param pipe_end         Not_Yet_Documented
-        @param pipe_descrip     Not_Yet_Documented
-        @param handlercpp       Not_Yet_Documented
-        @param handler_descrip  Not_Yet_Documented
-        @param s                Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Pipe (int					  pipe_end,
-                         const char *         pipe_descrip,
-                         PipeHandlercpp       handlercpp,
-                         const char *         handler_descrip,
-                         Service*             s,
-                         HandlerType          handler_type = HANDLE_READ);
-
     int Register_Pipe (int		           pipe_end,
                          const char *      pipe_descrip,
                          StdPipeHandler    handler,
@@ -1282,20 +1116,8 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Timer (time_t     deltawhen,
-                        TimerHandler handler,
+                        StdTimerHandler handler,
                         const char * event_descrip);
-
-    /** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (time_t     deltawhen,
-                        TimerHandlercpp handler,
-                        const char * event_descrip,
-                        Service*     s);
 
     int Register_Timer( time_t        deltawhen,
                         time_t        period,
@@ -1310,20 +1132,6 @@ class DaemonCore : public Service
         void* cls, // intended to be the 'this' pointer when registering a static method in a class
         void* data); // intended for use as the data pointer
 
-    /** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param period          Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (time_t     deltawhen,
-                        time_t       period,
-                        TimerHandlercpp handler,
-                        const char * event_descrip,
-                        Service *    s);
-
     /** 
         @param timeslice       Timeslice object specifying interval parameters
         @param event           Function to call when timer fires.
@@ -1331,20 +1139,8 @@ class DaemonCore : public Service
         @return                Timer id or -1 on error
     */
     int Register_Timer (const Timeslice &timeslice,
-                        TimerHandler handler,
+                        StdTimerHandler handler,
                         const char * event_descrip);
-
-	/** 
-        @param timeslice       Timeslice object specifying interval parameters
-        @param event           Function to call when timer fires.
-        @param event_descrip   String describing the function.
-        @param s               Service object of which function is a member.
-        @return                Timer id or -1 on error
-    */
-    int Register_Timer (const Timeslice &timeslice,
-                        TimerHandlercpp handler,
-                        const char * event_descrip,
-                        Service*     s);
 
     /** Not_Yet_Documented
         @param id The timer's ID
@@ -2049,47 +1845,10 @@ class DaemonCore : public Service
 
     void callSignalHandlers(double & runtime);
 
-    int Register_Command(int command, const char *com_descip,
-                         CommandHandler handler,
-                         CommandHandlercpp handlercpp,
-                         const char *handler_descrip,
-                         Service* s,
-                         DCpermission perm,
-                         int is_cpp,
-                         bool force_authentication,
-                         int wait_for_payload,
-                         std::vector<DCpermission> *alternate_perm,
-                         StdCommandHandler * handler_f = nullptr );
-
-    int Register_Socket(Stream* iosock,
-                        const char *iosock_descrip,
-                        SocketHandler handler,
-                        SocketHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s,
-                        HandlerType handler_type,
-                        int is_cpp,
-                        void **prev_entry = nullptr,
-                        StdSocketHandler *handler_f = nullptr);
-
-    int Register_Pipe(int pipefd,
-                        const char *pipefd_descrip,
-                        PipeHandler handler,
-                        PipeHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s,
-					    HandlerType handler_type,
-                        int is_cpp,
-                        StdPipeHandler *handler_f = nullptr);
-
     int Register_Reaper(int rid,
                         const char *reap_descip,
-                        ReaperHandler handler,
-                        ReaperHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s,
-                        int is_cpp,
-                        StdReaperHandler *handle_f = nullptr);
+                        StdReaperHandler handler,
+                        const char *handler_descrip);
 
 	bool Register_Family(pid_t child_pid,
 	                     pid_t parent_pid,
@@ -2121,13 +1880,9 @@ class DaemonCore : public Service
 	struct CommandEnt
 	{
 		int             num{0};
-		bool            is_cpp{true};
 		bool            force_authentication{false};
-		CommandHandler  handler{nullptr};
-		CommandHandlercpp   handlercpp{nullptr};
 		StdCommandHandler   std_handler;
 		DCpermission    perm{ALLOW};
-		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
 		char*           handler_descrip{nullptr};
 		void*           data_ptr{nullptr};
@@ -2140,6 +1895,9 @@ class DaemonCore : public Service
     void                DumpCommandTable(int, const char* = NULL);
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
+    // Whether the unregistered command handler wants DaemonCore to
+    // authenticate the connection before handing it off.
+    bool                m_unregisteredCommandIncludesAuth{false};
     CommandEnt          m_httpCommand;
 
     struct SignalEnt
@@ -2168,14 +1926,10 @@ class DaemonCore : public Service
     struct SockEnt
     {
         Sock*           iosock;
-        SocketHandler   handler;
-        SocketHandlercpp    handlercpp;
 		StdSocketHandler std_handler;
-        Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-        bool            is_cpp;
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
 		bool			call_handler;
@@ -2212,17 +1966,13 @@ class DaemonCore : public Service
 	class PidEntry;  // forward reference
     struct PipeEnt
     {
-        PipeHandler		handler;
-        PipeHandlercpp  handlercpp;
         StdPipeHandler  std_handler;
-        Service*        service;
         char*           pipe_descrip;
         char*           handler_descrip;
         void*           data_ptr;
 		PidEntry*		pentry;
         int				index;		// index into the pipeHandleTable
 		HandlerType		handler_type;
-        bool            is_cpp;
 		bool			call_handler;
 		bool			in_handler;
     };
@@ -2231,11 +1981,7 @@ class DaemonCore : public Service
     struct ReapEnt
     {
         int             num;
-        bool            is_cpp;
-        ReaperHandler   handler;
-        ReaperHandlercpp    handlercpp;
         StdReaperHandler    std_handler;
-        Service*        service; 
         char*           reap_descrip;
         char*           handler_descrip;
         void*           data_ptr;

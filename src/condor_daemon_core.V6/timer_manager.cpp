@@ -75,12 +75,12 @@ void TimerManager::reconfig()
 
 int TimerManager::NewTimer (const Timeslice &timeslice,StdTimerHandler handler,const char * event_descrip)
 {
-	return NewTimer(nullptr,0,event_descrip,0,&timeslice, &handler);
+	return NewTimer(0,event_descrip,0,&timeslice, &handler);
 }
 
 int TimerManager::NewTimer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
-	return NewTimer( nullptr, deltawhen,
+	return NewTimer( deltawhen,
 		event_description, period,
 		nullptr, & f
 	);
@@ -88,7 +88,7 @@ int TimerManager::NewTimer( time_t deltawhen, time_t period, StdTimerHandler f, 
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
-int TimerManager::NewTimer(Service* s, time_t deltawhen,
+int TimerManager::NewTimer(time_t deltawhen,
 						   const char *event_descrip, time_t period,
 						   const Timeslice *timeslice,
 						   StdTimerHandler * f)
@@ -109,7 +109,6 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 		new_timer->std_handler = * f;
 	}
 	new_timer->period = period;
-	new_timer->service = s;
 
 	if( timeslice ) {
 		new_timer->timeslice = new Timeslice( *timeslice );
@@ -437,10 +436,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			in_timeout->timeslice->setStartTimeNow();
 		}
 
-		// Now we call the registered handler.  If we were told that the handler
-		// is a c++ method, we call the handler from the c++ object referenced 
-		// by service*.  If we were told the handler is a c function, we call
-		// it and pass the service* as a parameter.
+		// Now we call the registered handler.
 		if( in_timeout->std_handler ) {
 			in_timeout->std_handler(in_timeout->id);
 		}

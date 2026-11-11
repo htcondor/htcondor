@@ -372,7 +372,7 @@ public:
 
 		if (m_token_requests_tid == -1) {
 			m_token_requests_tid = daemonCore->Register_Timer( 0,
-			(TimerHandler)&TokenRequest::tryTokenRequests,
+			[](int /* timerID */) -> void { TokenRequest::tryTokenRequests(); },
 			"TokenRequest::tryTokenRequests" );
 		}
 
@@ -4241,12 +4241,12 @@ int dc_main( int argc, char** argv )
 								 "handle_dc_sigterm()" );
 
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
-								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
-								"HandleDC_SERVICEWAITPIDS()",daemonCore);
+								[](int sig) -> int { return daemonCore->HandleDC_SERVICEWAITPIDS(sig); },
+								"HandleDC_SERVICEWAITPIDS()");
 #ifndef WIN32
 	daemonCore->Register_Signal( SIGCHLD, "SIGCHLD",
-								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
-								 "HandleDC_SIGCHLD()",daemonCore);
+								 [](int sig) -> int { return daemonCore->HandleDC_SIGCHLD(sig); },
+								 "HandleDC_SIGCHLD()");
 #endif
 
 		// Install DaemonCore timers common to all daemons.

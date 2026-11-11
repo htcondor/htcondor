@@ -105,9 +105,8 @@ ForkWork::Initialize( void )
 	// Register my reaper
 	reaperId = daemonCore->Register_Reaper( 
 		"ForkWork_Reaper",
-		(ReaperHandlercpp) &ForkWork::Reaper,
-		"ForkWork Reaper",
-		this );
+		[this](int pid, int status) -> int { return this->Reaper(pid, status); },
+		"ForkWork Reaper");
     daemonCore->Set_Default_Reaper( reaperId );
 	return 0;
 }

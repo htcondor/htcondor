@@ -229,9 +229,8 @@ CronJobMgr::JobExited( const CronJob & /*job*/ )
 	if (  (m_cur_job_load < GetMaxJobLoad()) && (m_schedule_timer < 0)  ) {
 		m_schedule_timer = daemonCore->Register_Timer(
 			0,
-			(TimerHandlercpp)& CronJobMgr::ScheduleJobsFromTimer,
-			"ScheduleJobs",
-			this );
+			[this](int timerID) -> void { this->ScheduleJobsFromTimer(timerID); },
+			"ScheduleJobs");
 		if ( m_schedule_timer < 0 ) {
 			dprintf( D_ERROR, "CronJobMgr: Failed to register job scheduler timer\n" );
 			return false;

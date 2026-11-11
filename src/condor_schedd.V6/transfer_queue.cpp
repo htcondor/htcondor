@@ -209,8 +209,8 @@ TransferQueueManager::InitAndReconfig() {
 			m_update_iostats_timer = daemonCore->Register_Timer(
 				m_update_iostats_interval,
 				m_update_iostats_interval,
-				(TimerHandlercpp)&TransferQueueManager::UpdateIOStats,
-				"UpdateIOStats",this);
+				[this](int timerID) -> void { this->UpdateIOStats(timerID); },
+				"UpdateIOStats");
 			ASSERT( m_update_iostats_timer != -1 );
 		}
 	}
@@ -270,9 +270,8 @@ TransferQueueManager::RegisterHandlers() {
 	int rc = daemonCore->Register_Command(
 		TRANSFER_QUEUE_REQUEST,
 		"TRANSFER_QUEUE_REQUEST",
-		(CommandHandlercpp)&TransferQueueManager::HandleRequest,
+		[this](int command, Stream* stream) -> int { return this->HandleRequest(command, stream); },
 		"TransferQueueManager::HandleRequest",
-		this,
 		WRITE );
 	ASSERT( rc >= 0 );
 }
@@ -354,8 +353,8 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 
 	int rc = daemonCore->Register_Socket(client->m_sock,
 		"<file transfer request>",
-		(SocketHandlercpp)&TransferQueueManager::HandleReport,
-		"TransferQueueManager::HandleReport TRANSFER_QUEUE_REQUEST", this);
+		[this](Stream* stream) -> int { return this->HandleReport(stream); },
+		"TransferQueueManager::HandleReport TRANSFER_QUEUE_REQUEST");
 
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,
@@ -471,8 +470,8 @@ TransferQueueManager::TransferQueueChanged() {
 		return;
 	}
 	m_check_queue_timer = daemonCore->Register_Timer(
-		0,(TimerHandlercpp)&TransferQueueManager::CheckTransferQueue,
-		"CheckTransferQueue",this);
+		0,[this](int timerID) -> void { this->CheckTransferQueue(timerID); },
+		"CheckTransferQueue");
 }
 
 void

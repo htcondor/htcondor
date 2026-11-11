@@ -671,8 +671,8 @@ VMProc::StartJob()
 
 	m_vmstatus_tid = daemonCore->Register_Timer(m_vmstatus_interval, 
 			m_vmstatus_interval, 
-			(TimerHandlercpp)&VMProc::CheckStatus, 
-			"VMProc::CheckStatus", this);
+			[this](int timerID) -> void { this->CheckStatus(timerID); }, 
+			"VMProc::CheckStatus");
 
 	// Set job_start_time in user_proc.h
 	condor_gettimestamp( job_start_time );
@@ -896,8 +896,8 @@ VMProc::CheckStatus( int /* timerID */ )
 	m_status_req->setTimeout(m_vmstatus_interval - 3);
 
 	m_vmstatus_notify_tid = daemonCore->Register_Timer( m_vmstatus_interval - 1,
-			(TimerHandlercpp)&VMProc::notify_status_fn,
-			"VMProc::notify_status_fn", this);
+			[this](int timerID) -> void { this->notify_status_fn(timerID); },
+			"VMProc::notify_status_fn");
 
 	if( m_vmstatus_notify_tid == -1 ) {
 		dprintf( D_ALWAYS, "Failed to regiseter timer for vm status Timeout\n");

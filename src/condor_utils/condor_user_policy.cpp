@@ -88,9 +88,8 @@ BaseUserPolicy::startTimer( void )
 		this->tid = daemonCore->
 			Register_Timer( this->interval,
 							this->interval,
-							(TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
-							"checkPeriodic",
-							this );
+							[this](int timerID) -> void { this->checkPeriodic(timerID); },
+							"checkPeriodic");
 		if ( this->tid < 0 ) {
 			EXCEPT( "Can't register DC timer!" );
 		}

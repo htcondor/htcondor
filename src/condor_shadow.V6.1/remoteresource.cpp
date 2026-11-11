@@ -228,8 +228,8 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 				// Now, register it for remote system calls.
 				// It's a bit funky, but works.
 			daemonCore->Register_Socket( claim_sock, "RSC Socket",
-				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
-				   "HandleSyscalls", this );
+				   [this](Stream* stream) -> int { return this->handleSysCalls(stream); },
+				   "HandleSyscalls");
 			setResourceState( RR_STARTUP );
 
 			// clear out reconnect attempt
@@ -524,8 +524,8 @@ RemoteResource::attemptShutdown()
 		}
 		else {
 			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
-				(TimerHandlercpp)&RemoteResource::attemptShutdownTimeout,
-				"attempt shutdown", this);
+				[this](int timerID) -> void { this->attemptShutdownTimeout(timerID); },
+				"attempt shutdown");
 			if( m_attempt_shutdown_tid != -1 ) {
 				dprintf(D_FULLDEBUG,"Delaying shutdown of shadow, because file transfer is still active.\n");
 				return;
@@ -1297,9 +1297,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if (maxinterval > 0) {
 		no_update_received_tid = daemonCore->Register_Timer(
 			maxinterval * 3,  // should receive another update in maxinterval secs, x3 to be sure
-			(TimerHandlercpp)&RemoteResource::updateFromStarterTimeout,
-			"RemoteResource::updateFromStarterTimeout()", this
-		);
+			[this](int timerID) -> void { this->updateFromStarterTimeout(timerID); },
+			"RemoteResource::updateFromStarterTimeout()");
 	}
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter() maxinterval=%d\n",
@@ -2147,8 +2146,8 @@ RemoteResource::startCheckingProxy()
 		// potentially upload a renewed one.
 		int PROXY_CHECK_INTERVAL = param_integer("SHADOW_CHECKPROXY_INTERVAL",60*10,1);
 		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
-							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
-							"RemoteResource::checkX509Proxy()", this );
+							[this](int timerID) -> void { this->checkX509Proxy(timerID); },
+							"RemoteResource::checkX509Proxy()");
 	}
 }
 
@@ -2302,8 +2301,8 @@ RemoteResource::reconnect( void )
 	}
 	next_reconnect_tid = daemonCore->
 		Register_Timer( delay,
-						(TimerHandlercpp)&RemoteResource::attemptReconnect,
-						"RemoteResource::attemptReconnect()", this );
+						[this](int timerID) -> void { this->attemptReconnect(timerID); },
+						"RemoteResource::attemptReconnect()");
 
 	ASSERT(next_reconnect_tid >= 0);
 }
@@ -2791,8 +2790,8 @@ RemoteResource::requestReconnect( void )
 	claim_sock = rsock;
 	claim_sock->timeout( 300 );
 	daemonCore->Register_Socket( claim_sock, "RSC Socket", 
-				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
-				   "HandleSyscalls", this );
+				   [this](Stream* stream) -> int { return this->handleSysCalls(stream); }, 
+				   "HandleSyscalls");
 
 		// Read all the info out of the reply ad and stash it in our
 		// private data members, just like we do when we get the

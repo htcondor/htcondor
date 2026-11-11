@@ -95,8 +95,8 @@ ArcResource::ArcResource( const char *resource_name,
 
 	m_jobStatusTid = TIMER_UNSET;
 	m_jobStatusTid = daemonCore->Register_Timer( 0,
-							(TimerHandlercpp)&ArcResource::DoJobStatus,
-							"ArcResource::DoJobStatus", (Service*)this );
+							[this](int timerID) -> void { this->DoJobStatus(timerID); },
+							"ArcResource::DoJobStatus");
 
 	m_statusGahp = new GahpClient( buff.c_str() );
 	m_statusGahp->setNotificationTimerId( m_jobStatusTid );

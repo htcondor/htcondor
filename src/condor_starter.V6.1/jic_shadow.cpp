@@ -2668,9 +2668,8 @@ JICShadow::syscall_sock_disconnect()
 	}
 	syscall_sock_lost_tid = daemonCore->Register_Timer(
 			lease_duration,
-			(TimerHandlercpp)&JICShadow::job_lease_expired,
-			"job_lease_expired",
-			this );
+			[this](int timerID) -> void { this->job_lease_expired(timerID); },
+			"job_lease_expired");
 	dprintf(D_ALWAYS,
 		"Lost connection to shadow, last activity was %lld secs ago, waiting %lld secs for reconnect\n",
 		(long long) (now - syscall_last_rpc_time), (long long)lease_duration);
@@ -2710,8 +2709,8 @@ JICShadow::syscall_sock_reconnect()
 	if (syscall_sock_registered == false) {
 		int reg_rc = daemonCore->
 			Register_Socket( syscall_sock, "syscall sock to shadow",
-			  (SocketHandlercpp)&JICShadow::syscall_sock_handler,
-			  "JICShadow::syscall_sock_handler", this );
+			  [this](Stream* stream) -> int { return this->syscall_sock_handler(stream); },
+			  "JICShadow::syscall_sock_handler");
 		if(reg_rc < 0) {
 			dprintf( D_ALWAYS,
 		         "Failed to register syscall socket to shadow\n" );
@@ -2857,7 +2856,7 @@ JICShadow::beginInputTransfer( void )
 		int delay = param_integer("STARTER_XFER_LAST_ALIVE_DELAY", 20);
 		int interval = param_integer("STARTER_XFER_LAST_ALIVE_INTERVAL", 300);
 		this->file_xfer_last_alive_tid =
-			daemonCore->Register_Timer(delay, interval, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this);
+			daemonCore->Register_Timer(delay, interval, [this](int timerID) -> void { this->verifyXferProgressing(timerID); }, "verify xfer progress");
 #endif
 		return true;
 	}
@@ -3611,9 +3610,8 @@ resettimer:
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsKRB_from_timer,
-				"refreshSandboxCredentialsKRB",
-				this );
+				[this](int timerID) -> void { this->refreshSandboxCredentialsKRB_from_timer(timerID); },
+				"refreshSandboxCredentialsKRB");
 		} else {
 			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
 		}
@@ -3642,9 +3640,8 @@ JICShadow::refreshSandboxCredentialsOAuth()
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsOAuth_from_timer,
-				"refreshSandboxCredentialsOAuth",
-				this );
+				[this](int timerID) -> void { this->refreshSandboxCredentialsOAuth_from_timer(timerID); },
+				"refreshSandboxCredentialsOAuth");
 		} else {
 			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
 		}

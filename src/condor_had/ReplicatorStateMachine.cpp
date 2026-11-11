@@ -181,28 +181,28 @@ ReplicatorStateMachine::reinitialize()
 
         m_updateCollectorTimerId = daemonCore->Register_Timer ( 0,
                m_updateInterval,
-               (TimerHandlercpp) &ReplicatorStateMachine::updateCollectors,
-               "ReplicatorStateMachine::updateCollectors", this );
+               [this](int timerID) -> void { this->updateCollectors(timerID); },
+               "ReplicatorStateMachine::updateCollectors");
     }
 
     // set a timer to replication routine
     dprintf( D_ALWAYS, "ReplicatorStateMachine::reinitialize setting "
                                       "replication timer\n" );
     m_replicationTimerId = daemonCore->Register_Timer( m_replicationInterval,
-            (TimerHandlercpp) &ReplicatorStateMachine::replicationTimer,
-            "Time to replicate file", this );
+            [this](int timerID) -> void { this->replicationTimer(timerID); },
+            "Time to replicate file");
     // register the download/upload reaper for the transferer process
     if( m_downloadReaperId == -1 ) {
 		m_downloadReaperId = daemonCore->Register_Reaper(
         	"downloadReplicaTransfererReaper",
-        (ReaperHandlercpp)&ReplicatorStateMachine::downloadReplicaTransfererReaper,
-        	"downloadReplicaTransfererReaper", this );
+        [this](int pid, int status) -> int { return this->downloadReplicaTransfererReaper(pid, status); },
+        	"downloadReplicaTransfererReaper");
 	}
     if( m_uploadReaperId == -1 ) {
 		m_uploadReaperId = daemonCore->Register_Reaper(
         	"uploadReplicaTransfererReaper",
-        (ReaperHandlercpp) &ReplicatorStateMachine::uploadReplicaTransfererReaper,
-        	"uploadReplicaTransfererReaper", this );
+        [this](int pid, int status) -> int { return this->uploadReplicaTransfererReaper(pid, status); },
+        	"uploadReplicaTransfererReaper");
     }
 	// for debugging purposes only
 	printDataMembers( );
@@ -264,8 +264,8 @@ ReplicatorStateMachine::beforePassiveStateHandler()
 			"registering version requesting timer\n" );
     m_versionRequestingTimerId = daemonCore->Register_Timer( 
 		m_newlyJoinedWaitingVersionInterval,
-       (TimerHandlercpp) &ReplicatorStateMachine::versionRequestingTimer,
-       "Time to pass to VERSION_DOWNLOADING state", this );
+       [this](int timerID) -> void { this->versionRequestingTimer(timerID); },
+       "Time to pass to VERSION_DOWNLOADING state");
 }
 
 void
@@ -702,8 +702,8 @@ ReplicatorStateMachine::registerCommand(int command)
 {
     daemonCore->Register_Command(
         command, getCommandStringSafe( command ),
-        (CommandHandlercpp) &ReplicatorStateMachine::commandHandler,
-        "commandHandler", this, DAEMON );
+        [this](int command, Stream* stream) -> int { return this->commandHandler(command, stream); },
+        "commandHandler", DAEMON );
 }
 /* Function   : killStuckDownloadingTransferer
  * Description: kills downloading transferer process, if its working time
@@ -809,8 +809,8 @@ ReplicatorStateMachine::replicationTimer( int /* timerID */ )
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicationTimer "
                        "registering timer once again\n" );
     m_replicationTimerId = daemonCore->Register_Timer ( m_replicationInterval,
-                    (TimerHandlercpp) &ReplicatorStateMachine::replicationTimer,
-                    "Time to replicate file", this );
+                    [this](int timerID) -> void { this->replicationTimer(timerID); },
+                    "Time to replicate file");
     if( m_state == VERSION_REQUESTING ) {
         return ;
     }
@@ -884,8 +884,8 @@ ReplicatorStateMachine::versionRequestingTimer( int /* timerID */ )
 				"registering version downloading timer\n" );
         m_versionDownloadingTimerId = daemonCore->Register_Timer( 
 			m_maxTransfererLifeTime,
-            (TimerHandlercpp) &ReplicatorStateMachine::versionDownloadingTimer,
-            "Time to pass to BACKUP state", this );
+            [this](int timerID) -> void { this->versionDownloadingTimer(timerID); },
+            "Time to pass to BACKUP state");
     } else {
         versionDownloadingTimer( );
     }

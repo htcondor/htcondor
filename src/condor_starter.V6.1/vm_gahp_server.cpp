@@ -422,8 +422,8 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	if( m_include_gahp_log ) {
 		result = daemonCore->Register_Pipe(m_vmgahp_errorfd,
 				"m_vmgahp_errorfd",
-				(PipeHandlercpp)&VMGahpServer::err_pipe_ready_from_pipe,
-				"VMGahpServer::err_pipe_ready",this);
+				[this](int pipe) -> int { return this->err_pipe_ready_from_pipe(pipe); },
+				"VMGahpServer::err_pipe_ready");
 
 		if( result == -1 ) { 
 			dprintf(D_ALWAYS,"Failed to register vmgahp stderr pipe\n"); 
@@ -432,8 +432,8 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 				m_stderr_tid = -1;
 			}
 			m_stderr_tid = daemonCore->Register_Timer(2, 
-					2, (TimerHandlercpp)&VMGahpServer::err_pipe_ready_from_timer, 
-					"VMGahpServer::err_pipe_ready",this);
+					2, [this](int timerID) -> void { this->err_pipe_ready_from_timer(timerID); }, 
+					"VMGahpServer::err_pipe_ready");
 			if( m_stderr_tid == -1 ) {
 				start_err_msg = "Internal vmgahp server error";
 				dprintf(D_ALWAYS,"Failed to register stderr timer\n");
@@ -453,8 +453,8 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		// command worked... register the pipe and stop polling
 		result = daemonCore->Register_Pipe(m_vmgahp_readfd,
 				"m_vmgahp_readfd",
-				static_cast<PipeHandlercpp>(&VMGahpServer::pipe_ready),
-				"VMGahpServer::pipe_ready",this);
+				[this](int pipe) -> int { return this->pipe_ready(pipe); },
+				"VMGahpServer::pipe_ready");
 		if( result == -1 ) {
 			// failed to register the pipe for some reason; fall 
 			// back on polling (yuck).
@@ -673,8 +673,8 @@ VMGahpServer::setPollInterval(unsigned int interval)
 	if( m_pollInterval > 0 ) {
 		m_poll_tid = daemonCore->Register_Timer(m_pollInterval, 
 				m_pollInterval, 
-				(TimerHandlercpp)&VMGahpServer::poll_from_timer, 
-				"VMGahpServer::poll",this); 
+				[this](int timerID) -> void { this->poll_from_timer(timerID); }, 
+				"VMGahpServer::poll"); 
 	}
 }
 
@@ -987,8 +987,8 @@ VMGahpServer::poll_real_soon()
 	// to poll for results is already pending
 	if( m_poll_real_soon_tid == -1) {
 		m_poll_real_soon_tid = daemonCore->Register_Timer(0,
-				(TimerHandlercpp)&VMGahpServer::poll_now,
-				"VMGhapServer::poll from poll_real_soon", this);
+				[this](int timerID) -> void { this->poll_now(timerID); },
+				"VMGhapServer::poll from poll_real_soon");
 	}
 }
 

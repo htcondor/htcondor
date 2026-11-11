@@ -304,7 +304,7 @@ VanillaProc::StartJob()
 		if (fi.cgroup_active) {
 			int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
 			procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
-				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
+				[this](int timerID) -> void { this->pollFamilyUsage(timerID); }, "cgroup usage poller");
 		}
 	}
 

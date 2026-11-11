@@ -1583,9 +1583,8 @@ time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
 
 	if (send_updates_tid < 0) {
 		send_updates_tid = daemonCore->Register_Timer(1,0,
-			(TimerHandlercpp)&ResMgr::send_updates_and_clear_dirty,
-			"send_updates_and_clear_dirty",
-			this );
+			[this](int timerID) -> void { this->send_updates_and_clear_dirty(timerID); },
+			"send_updates_and_clear_dirty");
 	}
 
 	return cur_time;
@@ -2212,8 +2211,8 @@ ResMgr::start_sweep_timer( void )
 	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
-							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
-							"sweep_timer_handler", this );
+							[this](int timerID) -> void { this->sweep_timer_handler(timerID); },
+							"sweep_timer_handler");
 	return TRUE;
 }
 
@@ -2237,9 +2236,8 @@ ResMgr::start_update_timer( void )
 	up_tid = daemonCore->Register_Timer(
 		initial_interval,
 		update_interval,
-		(TimerHandlercpp)&ResMgr::eval_and_update_all,
-		"eval_and_update_all",
-		this );
+		[this](int timerID) -> void { this->eval_and_update_all(timerID); },
+		"eval_and_update_all");
 	ASSERT(up_tid >= 0);
 	return TRUE;
 }
@@ -2255,8 +2253,8 @@ ResMgr::start_poll_timer( void )
 	poll_tid =
 		daemonCore->Register_Timer( polling_interval,
 							polling_interval,
-							(TimerHandlercpp)&ResMgr::eval_all,
-							"poll_resources", this );
+							[this](int timerID) -> void { this->eval_all(timerID); },
+							"poll_resources");
 	ASSERT(poll_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started polling timer.\n" );
 	return TRUE;
@@ -2830,8 +2828,8 @@ ResMgr::startHibernateTimer( void )
 	int interval = m_hibernation_manager->getCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer(
 		interval, interval,
-		(TimerHandlercpp)&ResMgr::checkHibernate,
-		"ResMgr::startHibernateTimer()", this );
+		[this](int timerID) -> void { this->checkHibernate(timerID); },
+		"ResMgr::startHibernateTimer()");
 	ASSERT(m_hibernate_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started hibernation timer.\n" );
 	return TRUE;
@@ -3612,8 +3610,8 @@ ResMgr::checkForRehomeReboot()
 		// starter-exit state-change callback, and the reconfig below can
 		// rebuild slot objects, which would invalidate the caller's state.
 	daemonCore->Register_Timer(0,
-		(TimerHandlercpp)&ResMgr::doRehomeReboot,
-		"ResMgr::doRehomeReboot", this);
+		[this](int timerID) -> void { this->doRehomeReboot(timerID); },
+		"ResMgr::doRehomeReboot");
 }
 
 void
