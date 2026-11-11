@@ -35,16 +35,30 @@
 #     removed, and Last is set to Current's final value.
 #   - held: the job is put on hold with condor_hold, so the starter reports
 #     that the job has exited before the shadow sets the final value.
-#   - policy held: the shadow puts the job on hold itself, because of
-#     periodic_hold, without waiting for the starter to report back, so the
-#     shadow sets the final value before its final update to the job queue.
+#   - policy held: the shadow puts the job on hold itself, because of a
+#     periodic_hold on CurrentWastedMemoryGBHours, without waiting for the
+#     starter to report back, so the shadow sets the final value before its
+#     final update to the job queue.
 #   - local universe: Current and Last are not set while the job runs (the
 #     local starter doesn't update the job queue then), but are set when the
 #     job completes, is removed, or is put on hold.
 #
-# For jobs ended by removal or hold, we can't know exactly when the
-# activation ended, so we check that the value is between what the formula
-# gives for how long we let the job run and how long until we saw it end.
+# Where we can't know exactly how long the activation lasted (jobs we remove
+# or hold, and local universe jobs, which have no ActivationDuration), we
+# check that the value is between two bounds.  The test may run on a heavily
+# loaded machine, so the bounds never assume that anything happens quickly:
+#
+#   - The lower bound comes from something that must have happened before
+#     the activation ended: a CurrentWastedMemoryGBHours we saw while the
+#     job ran, the periodic_hold threshold, or (for local universe, where
+#     the local starter measures from JobCurrentStartDate) how long the job
+#     sleeps or we let it run.
+#   - The upper bound comes from a time that must be after the activation
+#     ended: when we saw that the job had ended, or (for completed local
+#     universe jobs) when the schedd marked it completed.
+#
+# To keep the test quick, all of the jobs are submitted at once (see the
+# jobs fixture) and run concurrently; each case then waits for its own job.
 #
 
 import time
@@ -66,6 +80,21 @@ logger.setLevel(logging.DEBUG)
 CURRENT = "CurrentWastedMemoryGBHours"
 LAST = "LastWastedMemoryGBHours"
 
+# How much memory (MiB) the first activation of the lifetime max jobs uses,
+# how much less than that we'll accept as measured, and the most we expect
+# to be measured.
+PEAK_MB = 200
+PEAK_MIN_MB = 190
+PEAK_MAX_MB = 400
+LIFETIME_REQUEST_MB = 1024
+# How long the second activation of the local universe lifetime max job
+# runs.  It must be long enough for the test to tell the lifetime max from
+# the second activation's own memory usage; see
+# test_local_universe_lifetime_max_memory_usage().  The vanilla job's
+# second activation can be short, since we know its exact duration.
+LOCAL_SECOND_RUN_SECONDS = 20
+VANILLA_SECOND_RUN_SECONDS = 2
+
 
 @standup
 def condor(test_dir):
@@ -78,6 +107,13 @@ def condor(test_dir):
             "STARTER_INITIAL_UPDATE_INTERVAL": 1,
             "STARTER_UPDATE_INTERVAL": 2,
             "SHADOW_QUEUE_UPDATE_INTERVAL": 2,
+            # Enough room for every vanilla job to run at once, whatever
+            # the size of the machine.
+            "NUM_CPUS": 16,
+            "MEMORY": 16384,
+            # The schedd starts local universe jobs, including restarting
+            # them (for max_retries), on this interval.
+            "SCHEDD_INTERVAL": 5,
         },
     ) as condor:
         yield condor
@@ -99,7 +135,7 @@ def peak_script(test_dir):
     # The first time it runs (when the marker file doesn't exist yet), use
     # about PEAK_MB of memory for long enough that the starter measures it,
     # then fail, so the job runs again.  The second time, use little
-    # memory and succeed.
+    # memory, run for the given number of seconds, and succeed.
     return write_file(test_dir / "peak.py", format_script(
         f"""
         #!/usr/bin/python3
@@ -111,22 +147,14 @@ def peak_script(test_dir):
         if not os.path.exists(marker):
             open(marker, "w").close()
             data = b"x" * ({PEAK_MB} * 1024 * 1024)
-            time.sleep(10)
+            # Long enough for the starter to measure it, even on a heavily
+            # loaded machine.
+            time.sleep(15)
             sys.exit(1)
-        time.sleep({SECOND_RUN_SECONDS})
+        time.sleep(int(sys.argv[2]))
         sys.exit(0)
         """
     ))
-
-
-# How much memory (MiB) the first activation of the lifetime max jobs uses,
-# how much less than that we'll accept as measured, and the most we expect
-# to be measured.
-PEAK_MB = 200
-PEAK_MIN_MB = 190
-PEAK_MAX_MB = 400
-LIFETIME_REQUEST_MB = 1024
-SECOND_RUN_SECONDS = 20
 
 
 def expected_gb_hours(request_memory, memory_usage, duration):
@@ -138,19 +166,72 @@ def implied_memory_usage(request_memory, gb_hours, duration):
     return request_memory - gb_hours * 1024.0 * 3600.0 / duration
 
 
-def submit_job(condor, test_dir, executable, name, request_memory, sleep, extra=None, universe="vanilla"):
+def local_activation_upper_bound(ad):
+    # The local starter measures the activation from JobCurrentStartDate
+    # until the job exits, after which the schedd marks the job completed,
+    # setting EnteredCurrentStatus.  (Allow a second for rounding.)
+    return ad["EnteredCurrentStatus"] - ad["JobCurrentStartDate"] + 1
+
+
+# The jobs we end ourselves must have run at least this long first.
+MIN_RUN_SECONDS = 5
+# The policy_held job's periodic_hold fires when its wasted memory reaches
+# this.  Using CurrentWastedMemoryGBHours, rather than a time, means we
+# know the final value is at least this, however late the activation
+# started.
+POLICY_HOLD_THRESHOLD = expected_gb_hours(512, 128, MIN_RUN_SECONDS)
+
+
+def submit_job(condor, test_dir, executable, name, request_memory, arguments, extra=None, universe="vanilla"):
     description = {
         "log":                      test_dir / f"{name}.log",
         "leave_in_queue":           True,
         "universe":                 universe,
         "should_transfer_files":    True,
         "executable":               executable,
-        "arguments":                sleep,
+        "arguments":                arguments,
         "request_memory":           request_memory,
     }
     if extra:
         description.update(extra)
     return condor.submit(description=description, count=1)
+
+
+@action
+def jobs(condor, test_dir, path_to_sleep, fail_script, peak_script):
+    # Submit every job up front, so they run concurrently.  Jobs that
+    # complete on their own sleep for 5 seconds; the others sleep for 600
+    # seconds, and the test removes or holds them.
+    def submit(name, executable, request_memory, arguments, extra=None, universe="vanilla"):
+        return submit_job(condor, test_dir, executable, name, request_memory,
+                          arguments, extra, universe)
+
+    def lifetime_max(name, seconds, universe):
+        return submit(name, peak_script, LIFETIME_REQUEST_MB,
+                      f"{test_dir / (name + '.marker')} {seconds}",
+                      {"max_retries": 1}, universe)
+
+    test_usage = {"+TestMemoryUsage": 128}
+    return {
+        "completed":          submit("completed", path_to_sleep, 512, 5, test_usage),
+        "overused":           submit("overused", path_to_sleep, 128, 5, {"+TestMemoryUsage": 1024}),
+        # No TestMemoryUsage, so MemoryUsage is the measured RSS.
+        "measured":           submit("measured", path_to_sleep, 512, 5),
+        # Two activations, each of which exits with code 1.
+        "retried":            submit("retried", fail_script, 512, "",
+                                     {**test_usage, "max_retries": 1}),
+        "lifetime_max":       lifetime_max("lifetime_max", VANILLA_SECOND_RUN_SECONDS, "vanilla"),
+        "local_lifetime_max": lifetime_max("local_lifetime_max", LOCAL_SECOND_RUN_SECONDS, "local"),
+        "running":            submit("running", path_to_sleep, 512, 600, test_usage),
+        "held":               submit("held", path_to_sleep, 512, 600, test_usage),
+        # The shadow puts the job on hold itself, without waiting for the
+        # starter to report that the job has exited.
+        "policy_held":        submit("policy_held", path_to_sleep, 512, 600,
+                                     {**test_usage, "periodic_hold": f"{CURRENT} >= {POLICY_HOLD_THRESHOLD!r}"}),
+        "local_completed":    submit("local_completed", path_to_sleep, 512, 5, test_usage, "local"),
+        "local_removed":      submit("local_removed", path_to_sleep, 512, 600, test_usage, "local"),
+        "local_held":         submit("local_held", path_to_sleep, 512, 600, test_usage, "local"),
+    }
 
 
 def wait_for_attr(handle, attr, timeout=60):
@@ -164,29 +245,49 @@ def wait_for_attr(handle, attr, timeout=60):
     return ad
 
 
-def complete_job(condor, test_dir, executable, name, request_memory, extra=None, universe="vanilla"):
-    handle = submit_job(condor, test_dir, executable, name, request_memory, 5, extra, universe)
+def wait_for_completion(handle):
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
         verbose=True,
-        timeout=120,
+        timeout=180,
     )
     return wait_for_attr(handle, LAST)
 
 
-def start_long_job(condor, test_dir, path_to_sleep, name, extra=None, universe="vanilla"):
-    job_extra = {"+TestMemoryUsage": 128}
-    if extra:
-        job_extra.update(extra)
-    handle = submit_job(condor, test_dir, path_to_sleep, name, 512, 600, job_extra, universe)
+def wait_for_running(handle):
     assert handle.wait(
         condition=ClusterState.any_running,
         fail_condition=ClusterState.any_terminal,
         verbose=True,
-        timeout=120,
+        timeout=180,
     )
-    return handle
+
+
+def let_run(handle, universe):
+    # Let the job's activation run for at least MIN_RUN_SECONDS, and return
+    # a lower bound for its final wasted memory.  The jobs run concurrently,
+    # so by the time we get to it, it may have run that long already.
+    #
+    # This must not depend on how quickly things happen, since the test
+    # machine may be heavily loaded.  For vanilla jobs, the shadow may
+    # start the activation well after JobCurrentStartDate, so instead we
+    # wait until the job queue has a CurrentWastedMemoryGBHours that covers
+    # that long, and use it as the lower bound: the final value can only be
+    # bigger.  The local starter measures from JobCurrentStartDate itself.
+    wait_for_running(handle)
+    if universe == "local":
+        start_date = handle.query()[0]["JobCurrentStartDate"]
+        time.sleep(max(start_date + MIN_RUN_SECONDS - time.time(), 0))
+        return expected_gb_hours(512, 128, MIN_RUN_SECONDS)
+    threshold = expected_gb_hours(512, 128, MIN_RUN_SECONDS)
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        current = handle.query()[0].get(CURRENT)
+        if current is not None and current >= threshold:
+            return current
+        time.sleep(1)
+    assert False, f"{CURRENT} never reached {threshold}"
 
 
 def end_long_job(handle, end, condition):
@@ -196,29 +297,11 @@ def end_long_job(handle, end, condition):
     return ad, time.time()
 
 
-@action
-def completed_ad(condor, test_dir, path_to_sleep):
-    return complete_job(condor, test_dir, path_to_sleep, "completed", 512,
-                        {"+TestMemoryUsage": 128})
-
-
-@action
-def overused_ad(condor, test_dir, path_to_sleep):
-    return complete_job(condor, test_dir, path_to_sleep, "overused", 128,
-                        {"+TestMemoryUsage": 1024})
-
-
-@action
-def measured_ad(condor, test_dir, path_to_sleep):
-    # No TestMemoryUsage, so MemoryUsage is the measured RSS.
-    return complete_job(condor, test_dir, path_to_sleep, "measured", 512)
-
-
-@action
-def retried_ad(condor, test_dir, fail_script):
-    # Two activations, each of which exits with code 1.
-    return complete_job(condor, test_dir, fail_script, "retried", 512,
-                        {"+TestMemoryUsage": 128, "max_retries": 1})
+def hold_long_job(handle, universe):
+    lower = let_run(handle, universe)
+    ad, done_time = end_long_job(handle, handle.hold, ClusterState.all_held)
+    handle.remove()
+    return ad, done_time, lower
 
 
 def epoch_ads(condor, ad):
@@ -231,25 +314,33 @@ def epoch_ads(condor, ad):
 
 
 @action
+def completed_ad(jobs):
+    return wait_for_completion(jobs["completed"])
+
+
+@action
+def overused_ad(jobs):
+    return wait_for_completion(jobs["overused"])
+
+
+@action
+def measured_ad(jobs):
+    return wait_for_completion(jobs["measured"])
+
+
+@action
+def retried_ad(jobs):
+    return wait_for_completion(jobs["retried"])
+
+
+@action
 def retried_epoch_ads(condor, retried_ad):
     return epoch_ads(condor, retried_ad)
 
 
-def run_lifetime_max_job(condor, test_dir, peak_script, name, universe):
-    handle = submit_job(condor, test_dir, peak_script, name, LIFETIME_REQUEST_MB,
-                        test_dir / f"{name}.marker", {"max_retries": 1}, universe)
-    assert handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        verbose=True,
-        timeout=180,
-    )
-    return handle.query()[0]
-
-
 @action
-def lifetime_max_ad(condor, test_dir, peak_script):
-    return run_lifetime_max_job(condor, test_dir, peak_script, "lifetime_max", "vanilla")
+def lifetime_max_ad(jobs):
+    return wait_for_completion(jobs["lifetime_max"])
 
 
 @action
@@ -258,8 +349,75 @@ def lifetime_max_epoch_ads(condor, lifetime_max_ad):
 
 
 @action
-def local_lifetime_max_ad(condor, test_dir, peak_script):
-    return run_lifetime_max_job(condor, test_dir, peak_script, "local_lifetime_max", "local")
+def local_lifetime_max_ad(jobs):
+    return wait_for_completion(jobs["local_lifetime_max"])
+
+
+@action
+def running_samples(jobs):
+    # Watch CurrentWastedMemoryGBHours while the job runs, then remove it.
+    handle = jobs["running"]
+    wait_for_running(handle)
+    samples = []
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        ad = handle.query()[0]
+        if CURRENT in ad and (not samples or ad[CURRENT] != samples[-1][0][CURRENT]):
+            samples.append((ad, time.time()))
+            if len(samples) >= 3:
+                break
+        time.sleep(1)
+    ad, done_time = end_long_job(handle, handle.remove, ClusterState.all_terminal)
+    # The final value can only be bigger than the last one we saw.
+    lower = samples[-1][0][CURRENT] if samples else 0.0
+    return samples, (ad, done_time, lower)
+
+
+@action
+def held_ad(jobs):
+    return hold_long_job(jobs["held"], "vanilla")
+
+
+@action
+def policy_held_ad(jobs):
+    handle = jobs["policy_held"]
+    assert handle.wait(condition=ClusterState.all_held, verbose=True, timeout=180)
+    ad = wait_for_attr(handle, LAST)
+    done_time = time.time()
+    handle.remove()
+    # The job's periodic_hold fires once CurrentWastedMemoryGBHours
+    # reaches the threshold, so the final value is at least that.
+    return ad, done_time, POLICY_HOLD_THRESHOLD
+
+
+@action
+def local_completed_ad(jobs):
+    return wait_for_completion(jobs["local_completed"])
+
+
+@action
+def local_running_and_removed(jobs):
+    handle = jobs["local_removed"]
+    lower = let_run(handle, "local")
+    # The local starter doesn't update the job queue while the job runs.
+    running = handle.query()[0]
+    ad, done_time = end_long_job(handle, handle.remove, ClusterState.all_terminal)
+    return running, (ad, done_time, lower)
+
+
+@action
+def local_held_ad(jobs):
+    return hold_long_job(jobs["local_held"], "local")
+
+
+def check_ended_long_job(result):
+    ad, done_time, lower = result
+    logger.info(f"{CURRENT} = {ad.get(CURRENT)}, {LAST} = {ad[LAST]}")
+    assert ad[LAST] == ad[CURRENT]
+    # The activation lasted at least as long as we let it run before
+    # ending it, and at most until we saw that it had ended.
+    upper = expected_gb_hours(512, 128, done_time - ad["JobCurrentStartDate"] + 1)
+    assert lower <= ad[LAST] <= upper
 
 
 def check_peak_measured(ad):
@@ -269,80 +427,6 @@ def check_peak_measured(ad):
     logger.info(f"NumJobStarts = {ad['NumJobStarts']}, ResidentSetSize = {rss_kb} KiB")
     assert ad["NumJobStarts"] == 2
     assert rss_kb >= PEAK_MIN_MB * 1024
-
-
-@action
-def running_samples(condor, test_dir, path_to_sleep):
-    # Watch CurrentWastedMemoryGBHours while the job runs, then remove it.
-    handle = start_long_job(condor, test_dir, path_to_sleep, "running")
-    samples = []
-    deadline = time.time() + 60
-    while time.time() < deadline:
-        ad = handle.query()[0]
-        if CURRENT in ad and (not samples or ad[CURRENT] != samples[-1][0][CURRENT]):
-            samples.append((ad, time.time()))
-            if len(samples) >= 3:
-                break
-        time.sleep(1)
-    removed = end_long_job(handle, handle.remove, ClusterState.all_terminal)
-    return samples, removed
-
-
-def hold_long_job(condor, test_dir, path_to_sleep, name, universe="vanilla"):
-    handle = start_long_job(condor, test_dir, path_to_sleep, name, universe=universe)
-    time.sleep(5)
-    result = end_long_job(handle, handle.hold, ClusterState.all_held)
-    handle.remove()
-    return result
-
-
-@action
-def held_ad(condor, test_dir, path_to_sleep):
-    return hold_long_job(condor, test_dir, path_to_sleep, "held")
-
-
-@action
-def local_completed_ad(condor, test_dir, path_to_sleep):
-    return complete_job(condor, test_dir, path_to_sleep, "local_completed", 512,
-                        {"+TestMemoryUsage": 128}, "local")
-
-
-@action
-def local_running_and_removed(condor, test_dir, path_to_sleep):
-    handle = start_long_job(condor, test_dir, path_to_sleep, "local_removed", universe="local")
-    time.sleep(5)
-    # The local starter doesn't update the job queue while the job runs.
-    running = handle.query()[0]
-    removed = end_long_job(handle, handle.remove, ClusterState.all_terminal)
-    return running, removed
-
-
-@action
-def local_held_ad(condor, test_dir, path_to_sleep):
-    return hold_long_job(condor, test_dir, path_to_sleep, "local_held", "local")
-
-
-@action
-def policy_held_ad(condor, test_dir, path_to_sleep):
-    # The shadow puts the job on hold itself, without waiting for the
-    # starter to report that the job has exited.
-    handle = start_long_job(condor, test_dir, path_to_sleep, "policy_held",
-                            {"periodic_hold": "time() - JobCurrentStartDate > 5"})
-    assert handle.wait(condition=ClusterState.all_held, verbose=True, timeout=120)
-    ad = wait_for_attr(handle, LAST)
-    done_time = time.time()
-    handle.remove()
-    return ad, done_time
-
-
-def check_ended_long_job(result, lower):
-    ad, done_time = result
-    logger.info(f"{CURRENT} = {ad.get(CURRENT)}, {LAST} = {ad[LAST]}")
-    assert ad[LAST] == ad[CURRENT]
-    # The activation lasted at least as long as we let it run before
-    # ending it, and at most until we saw that it had ended.
-    upper = expected_gb_hours(512, 128, done_time - ad["JobCurrentStartDate"] + 1)
-    assert lower <= ad[LAST] <= upper
 
 
 class TestWastedMemory:
@@ -398,15 +482,15 @@ class TestWastedMemory:
         ad = local_lifetime_max_ad
         check_peak_measured(ad)
         # Local universe jobs have no ActivationDuration or epoch records,
-        # so bound the second activation's duration by JobCurrentStartDate
-        # and CompletionDate, give or take a couple of seconds.  The second
-        # activation runs long enough that a value computed from its own
-        # memory usage would be above the upper bound.
-        duration = ad["CompletionDate"] - ad["JobCurrentStartDate"]
-        lower = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MAX_MB, duration - 2)
-        upper = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MIN_MB, duration + 2)
-        logger.info(f"{LAST} = {ad[LAST]}, duration = {duration}, bounds = [{lower}, {upper}]")
-        assert duration >= SECOND_RUN_SECONDS
+        # so bound the second activation's duration below by how long it
+        # sleeps, and above by when the schedd marked it completed.  The
+        # second activation runs long enough that a value computed from its
+        # own memory usage would be above the upper bound, unless the
+        # schedd takes several seconds to notice that the job exited (in
+        # which case the test passes without proving much, but doesn't fail).
+        lower = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MAX_MB, LOCAL_SECOND_RUN_SECONDS)
+        upper = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MIN_MB, local_activation_upper_bound(ad))
+        logger.info(f"{LAST} = {ad[LAST]}, bounds = [{lower}, {upper}]")
         assert lower <= ad[LAST] <= upper
 
     def test_current_grows_while_running(self, running_samples):
@@ -421,26 +505,26 @@ class TestWastedMemory:
                 512, 128, sample_time - ad["JobCurrentStartDate"] + 1)
 
     def test_removed_job(self, running_samples):
-        samples, removed = running_samples
-        check_ended_long_job(removed, samples[-1][0][CURRENT])
+        _, removed = running_samples
+        check_ended_long_job(removed)
 
     def test_held_job(self, held_ad):
-        check_ended_long_job(held_ad, expected_gb_hours(512, 128, 5))
+        check_ended_long_job(held_ad)
 
     def test_policy_held_job(self, policy_held_ad):
-        # JobCurrentStartDate is a little before the activation started.
-        check_ended_long_job(policy_held_ad, expected_gb_hours(512, 128, 4))
+        check_ended_long_job(policy_held_ad)
 
     def test_local_universe_completed_job(self, local_completed_ad):
         ad = local_completed_ad
         # Local universe jobs have no ActivationDuration; the local starter
-        # measures from JobCurrentStartDate until the job has exited,
-        # which is within a second or so of CompletionDate.
-        duration = ad["CompletionDate"] - ad["JobCurrentStartDate"]
-        logger.info(f"{LAST} = {ad[LAST]}, duration = {duration}")
-        assert duration > 0
-        assert ad[LAST] == pytest.approx(expected_gb_hours(512, 128, duration),
-                                         abs=expected_gb_hours(512, 128, 2))
+        # measures from JobCurrentStartDate until the job has exited.  The
+        # job sleeps for 5 seconds, so it ran at least that long, and the
+        # schedd only marked it completed (EnteredCurrentStatus) after it
+        # exited.
+        lower = expected_gb_hours(512, 128, 5)
+        upper = expected_gb_hours(512, 128, local_activation_upper_bound(ad))
+        logger.info(f"{LAST} = {ad[LAST]}, bounds = [{lower}, {upper}]")
+        assert lower <= ad[LAST] <= upper
         assert ad[CURRENT] == ad[LAST]
 
     def test_local_universe_not_set_while_running(self, local_running_and_removed):
@@ -450,7 +534,7 @@ class TestWastedMemory:
 
     def test_local_universe_removed_job(self, local_running_and_removed):
         _, removed = local_running_and_removed
-        check_ended_long_job(removed, expected_gb_hours(512, 128, 5))
+        check_ended_long_job(removed)
 
     def test_local_universe_held_job(self, local_held_ad):
-        check_ended_long_job(local_held_ad, expected_gb_hours(512, 128, 5))
+        check_ended_long_job(local_held_ad)
