@@ -33,7 +33,8 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
 
-	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
+	bool cif_in_catalog = false;
+	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, cif_in_catalog, m_rec->peer );
 	if(! common_file_catalogs) {
 		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, {}};
@@ -42,7 +43,7 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	// transferred by a slightly older version of the starter, we still need
 	// call this function to add `MY.CommonFiles` to the list of catalogs.
 	int required_version = 2;
-	if(! computeCommonInputFiles( jobAd, m_rec->peer, * common_file_catalogs, required_version )) {
+	if(! cif_in_catalog && ! computeCommonInputFiles( jobAd, m_rec->peer, * common_file_catalogs, required_version )) {
 		dprintf( D_ERROR, "cxfer: Failed to construct unique name for " ATTR_COMMON_INPUT_FILES " catalog, falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, {}};
 	}

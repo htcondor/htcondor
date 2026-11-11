@@ -171,6 +171,7 @@
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
 #define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input"
 #define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_CommonInputFilesScope "common_input_files_scope"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
 #define SUBMIT_KEY_RequireCommonFiles "require_common_files"
 
