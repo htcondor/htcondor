@@ -155,7 +155,7 @@ to nicely terminate a Unix program.
    HTCondor to start all of the jobs of a cluster together, or none of
    them.
 
-   To make a cluster into a bundle, add ``+IsBundle = true`` to the
+   To make a cluster into a bundle, add :jdl:`+IsBundle = true` to the
    submit description file.  The cluster *is* the bundle, and the
    number of jobs queued is the number of slots the bundle needs.  For
    example, this submit description file asks for four slots that will
