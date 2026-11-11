@@ -250,15 +250,16 @@ class BaseShadow : public Service
 	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
 	virtual bool exitDelayed( int & /*reason*/ ) { return false; }
 
-		/** The current activation is over (or about to be, because
-			we're putting the job on hold, removing it, etc.), so set the
-			final value of CurrentWastedMemoryGBHours, and copy it to
-			LastWastedMemoryGBHours, if that hasn't been done already.
-			Call this before the final update to the job queue.  The
-			default implementation does nothing; shadows that support
-			this override it.
+		/** We're ending the current activation (putting the job on hold,
+			removing it, etc.), so bring CurrentWastedMemoryGBHours up to
+			date, and copy it to LastWastedMemoryGBHours, in case we exit
+			before the starter reports that the activation has ended.  If
+			the starter does report, the final values are measured until
+			then.  Call this before the job queue update for whatever is
+			ending the activation.  The default implementation does
+			nothing; shadows that support this override it.
 		*/
-	virtual void recordActivationEndForWastedMemory() { }
+	virtual void recordActivationEndingForWastedMemory() { }
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.

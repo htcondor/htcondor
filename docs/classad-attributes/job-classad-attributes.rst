@@ -301,7 +301,12 @@ all attributes.
     :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` seconds).  When the activation
     ends, for whatever reason, it is set to its final value, measured
     until the end of the activation, and that value is also copied to
-    :ad-attr:`LastWastedMemoryGBHours`.  It is removed when the next
+    :ad-attr:`LastWastedMemoryGBHours`.  When the *condor_shadow* ends the
+    activation itself (for example, to put the job on hold because of a
+    policy expression), the activation lasts until the *condor_starter*
+    reports that the job has been cleaned up; but if the
+    *condor_shadow* exits before then, the value is measured only until
+    the *condor_shadow* ended the activation.  It is removed when the next
     activation starts.  It is not set until the job's memory usage has
     been reported, nor if :ad-attr:`ActivationRequestMemory` is not
     known (for example, because the activation was started by an older

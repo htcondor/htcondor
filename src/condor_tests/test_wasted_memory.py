@@ -36,9 +36,13 @@
 #   - held: the job is put on hold with condor_hold, so the starter reports
 #     that the job has exited before the shadow sets the final value.
 #   - policy held: the shadow puts the job on hold itself, because of a
-#     periodic_hold on CurrentWastedMemoryGBHours, without waiting for the
-#     starter to report back, so the shadow sets the final value before its
-#     final update to the job queue.
+#     periodic_hold on CurrentWastedMemoryGBHours, so it brings the values
+#     up to date then, before the starter reports that the job has exited.
+#   - slow exit: like policy held, but the job takes several seconds to
+#     exit after it's told to, so the activation goes on well after the
+#     shadow puts it on hold.  The final value must be measured until the
+#     starter reports that the activation is over, like ActivationDuration,
+#     not until the shadow put it on hold.
 #   - local universe: Current and Last are not set while the job runs (the
 #     local starter doesn't update the job queue then), but are set when the
 #     job completes, is removed, or is put on hold.
@@ -114,6 +118,9 @@ def condor(test_dir):
             # The schedd starts local universe jobs, including restarting
             # them (for max_retries), on this interval.
             "SCHEDD_INTERVAL": 5,
+            # Give the slow_exit job time to exit when told to, rather than
+            # killing it (the test configuration's default is 2 seconds).
+            "MachineMaxVacateTime": 60,
         },
     ) as condor:
         yield condor
@@ -157,6 +164,33 @@ def peak_script(test_dir):
     ))
 
 
+@action
+def slow_exit_script(test_dir):
+    # Run until told to stop (SIGTERM), then take SLOW_EXIT_SECONDS to exit.
+    return write_file(test_dir / "slow_exit.py", format_script(
+        f"""
+        #!/usr/bin/python3
+        import signal
+        import sys
+        import time
+
+        def on_term(signum, frame):
+            time.sleep({SLOW_EXIT_SECONDS})
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, on_term)
+        time.sleep(600)
+        """
+    ))
+
+
+# How long the slow_exit job takes to exit after it's told to.  It must be
+# less than the job's job_max_vacate_time and the slot's
+# MachineMaxVacateTime (both set in this test), after which the job is
+# killed.
+SLOW_EXIT_SECONDS = 6
+
+
 def expected_gb_hours(request_memory, memory_usage, duration):
     return max((request_memory - memory_usage) / 1024.0, 0.0) * duration / 3600.0
 
@@ -198,7 +232,7 @@ def submit_job(condor, test_dir, executable, name, request_memory, arguments, ex
 
 
 @action
-def jobs(condor, test_dir, path_to_sleep, fail_script, peak_script):
+def jobs(condor, test_dir, path_to_sleep, fail_script, peak_script, slow_exit_script):
     # Submit every job up front, so they run concurrently.  Jobs that
     # complete on their own sleep for 5 seconds; the others sleep for 600
     # seconds, and the test removes or holds them.
@@ -224,10 +258,17 @@ def jobs(condor, test_dir, path_to_sleep, fail_script, peak_script):
         "local_lifetime_max": lifetime_max("local_lifetime_max", LOCAL_SECOND_RUN_SECONDS, "local"),
         "running":            submit("running", path_to_sleep, 512, 600, test_usage),
         "held":               submit("held", path_to_sleep, 512, 600, test_usage),
-        # The shadow puts the job on hold itself, without waiting for the
-        # starter to report that the job has exited.
+        # The shadow puts the job on hold itself.
         "policy_held":        submit("policy_held", path_to_sleep, 512, 600,
                                      {**test_usage, "periodic_hold": f"{CURRENT} >= {POLICY_HOLD_THRESHOLD!r}"}),
+        # Likewise, but the job takes a while to exit.  With graceful
+        # removal, the starter tells the job to exit (SIGTERM) and waits
+        # for it, rather than killing it.
+        "slow_exit":          submit("slow_exit", slow_exit_script, 512, "",
+                                     {**test_usage,
+                                      "periodic_hold": f"{CURRENT} >= {POLICY_HOLD_THRESHOLD!r}",
+                                      "want_graceful_removal": True,
+                                      "job_max_vacate_time": 60}),
         "local_completed":    submit("local_completed", path_to_sleep, 512, 5, test_usage, "local"),
         "local_removed":      submit("local_removed", path_to_sleep, 512, 600, test_usage, "local"),
         "local_held":         submit("local_held", path_to_sleep, 512, 600, test_usage, "local"),
@@ -378,16 +419,33 @@ def held_ad(jobs):
     return hold_long_job(jobs["held"], "vanilla")
 
 
+def wait_for_policy_hold(handle):
+    assert handle.wait(condition=ClusterState.all_held, verbose=True, timeout=180)
+    # The shadow sets Last when it puts the job on hold, and again, to its
+    # final value, when the starter reports that the activation is over,
+    # which is also when it sets ActivationDuration.
+    wait_for_attr(handle, "ActivationDuration")
+    return wait_for_attr(handle, LAST)
+
+
 @action
 def policy_held_ad(jobs):
     handle = jobs["policy_held"]
-    assert handle.wait(condition=ClusterState.all_held, verbose=True, timeout=180)
-    ad = wait_for_attr(handle, LAST)
+    ad = wait_for_policy_hold(handle)
     done_time = time.time()
     handle.remove()
     # The job's periodic_hold fires once CurrentWastedMemoryGBHours
     # reaches the threshold, so the final value is at least that.
     return ad, done_time, POLICY_HOLD_THRESHOLD
+
+
+@action
+def slow_exit_ads(condor, jobs):
+    handle = jobs["slow_exit"]
+    ad = wait_for_policy_hold(handle)
+    epochs = epoch_ads(condor, ad)
+    handle.remove()
+    return ad, epochs
 
 
 @action
@@ -513,6 +571,21 @@ class TestWastedMemory:
 
     def test_policy_held_job(self, policy_held_ad):
         check_ended_long_job(policy_held_ad)
+
+    def test_slow_exit_measured_until_starter_reports(self, slow_exit_ads):
+        ad, epochs = slow_exit_ads
+        duration = ad["ActivationDuration"]
+        logger.info(f"{LAST} = {ad[LAST]}, ActivationDuration = {duration}")
+        # Measured until the starter reported, the same span as
+        # ActivationDuration...
+        assert ad[LAST] == pytest.approx(expected_gb_hours(512, 128, duration))
+        assert ad[CURRENT] == ad[LAST]
+        # ...which includes the time the job took to exit after the hold,
+        # which came after at least MIN_RUN_SECONDS of the activation.
+        assert ad[LAST] >= expected_gb_hours(512, 128, MIN_RUN_SECONDS + SLOW_EXIT_SECONDS)
+        # And the epoch record has the final value too.
+        assert len(epochs) == 1
+        assert epochs[0][LAST] == pytest.approx(ad[LAST])
 
     def test_local_universe_completed_job(self, local_completed_ad):
         ad = local_completed_ad

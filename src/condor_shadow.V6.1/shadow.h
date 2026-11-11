@@ -135,7 +135,7 @@ class UniShadow : public BaseShadow
 		 */
 	int handleJobRemoval(int sig);
 
-	virtual void recordActivationEndForWastedMemory();
+	virtual void recordActivationEndingForWastedMemory();
 
 		/// Log an execute event to the UserLog
 	void logExecuteEvent( void );

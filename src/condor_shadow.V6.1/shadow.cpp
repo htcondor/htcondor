@@ -364,9 +364,9 @@ UniShadow::requestJobRemoval() {
 }
 
 void
-UniShadow::recordActivationEndForWastedMemory()
+UniShadow::recordActivationEndingForWastedMemory()
 {
-	remRes->updateWastedMemory( true );
+	remRes->updateWastedMemory( RemoteResource::ActivationPhase::Ending );
 }
 
 int UniShadow::handleJobRemoval(int sig) {

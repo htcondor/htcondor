@@ -34,8 +34,10 @@
 // may now evaluate differently than it did then.  MemoryUsage in job_ad
 // must be the max seen over the lifetime of the job.
 //
-// If activation_ended is true, now is when the activation ended, and the
-// value is also copied into ATTR_LAST_WASTED_MEMORY_GB_HOURS.
+// If activation_ended is true, the activation has ended (or is ending, and
+// the caller may not get another chance), now is when it ended as far as
+// the caller knows, and the value is also copied into
+// ATTR_LAST_WASTED_MEMORY_GB_HOURS.
 //
 // If the value can't be computed, ATTR_CURRENT_WASTED_MEMORY_GB_HOURS, if
 // an earlier call set it, is set to undefined, so it doesn't keep a value

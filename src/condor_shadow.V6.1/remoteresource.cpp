@@ -1406,7 +1406,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 		// MemoryUsage may have changed, and time has passed.
-	updateWastedMemory(false);
+	updateWastedMemory(ActivationPhase::Running);
 
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
@@ -2065,7 +2065,7 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		shadow->updateJobInQueue( U_STATUS );
 	}
 
-	updateWastedMemory(true);
+	updateWastedMemory(ActivationPhase::Ended);
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
@@ -3078,7 +3078,7 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
 }
 
 void
-RemoteResource::updateWastedMemory( bool activation_ended )
+RemoteResource::updateWastedMemory( ActivationPhase phase )
 {
 		// Nothing to do if the activation never started, or if we
 		// already recorded its end.
@@ -3089,16 +3089,20 @@ RemoteResource::updateWastedMemory( bool activation_ended )
 
 		// The activation spans from when the startd accepted it until
 		// the starter reported that it's done (after output transfer),
-		// the same span as ActivationDuration.  If the activation is
-		// ending without the starter reporting (e.g. the job is put on
-		// hold by the shadow), it ends now.
+		// the same span as ActivationDuration.  Until the starter
+		// reports, measure until now.
 	time_t now = time(nullptr);
-	if (activation_ended) {
+	if (phase == ActivationPhase::Ending) {
+		m_wasted_memory_activation_ending = true;
+	} else if (phase == ActivationPhase::Ended) {
 		if (activation.TerminationTime > 0) {
 			now = activation.TerminationTime;
 		}
 		m_wasted_memory_activation_ended = true;
 	}
 
-	UpdateWastedMemoryAttrs(*jobAd, activation.StartTime, now, activation_ended);
+		// Once the activation is ending, keep Last up to date too, since
+		// the shadow may exit before the activation has ended.
+	bool set_last = m_wasted_memory_activation_ending || m_wasted_memory_activation_ended;
+	UpdateWastedMemoryAttrs(*jobAd, activation.StartTime, now, set_last);
 }
