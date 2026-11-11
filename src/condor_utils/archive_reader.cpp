@@ -227,6 +227,7 @@ ArchiveReader::SeekForward(int64_t offset) {
 	m_fwd_buf_pos = 0;
 	m_fwd_buf_base = offset;
 	m_fwd_eof = false;
+	m_fwd_resume_offset = offset;
 	return true;
 }
 
@@ -248,6 +249,12 @@ ArchiveReader::Tellp() const {
 		return m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf_pos);
 	}
 	return ftell_64b(m_file.get());
+}
+
+int64_t
+ArchiveReader::ResumeOffset() const {
+	if ( ! m_file || m_dir != Direction::Forward) { return -1; }
+	return m_fwd_resume_offset;
 }
 
 int64_t
@@ -346,16 +353,12 @@ ArchiveReader::NextForwardLine(std::string& line, int64_t& offset) {
 		}
 
 		if (m_fwd_eof) {
-			// A trailing partial line with no newline still counts (matches
-			// the schedd never appending a final incomplete line under normal
-			// operation, but a truncated/in-progress file can still have one).
-			if (m_fwd_buf_pos < m_fwd_buf.size()) {
-				offset = m_fwd_buf_base + static_cast<int64_t>(m_fwd_buf_pos);
-				line.assign(m_fwd_buf, m_fwd_buf_pos, std::string::npos);
-				line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-				m_fwd_buf_pos = m_fwd_buf.size();
-				return true;
-			}
+			// Any trailing bytes with no newline are a line the writer has
+			// not finished yet (e.g. the schedd's buffered history write
+			// flushed mid-line). Leave them unconsumed in the buffer: after
+			// ClearEOF() the next call appends the rest of the line and
+			// returns it whole. Returning the fragment now would split one
+			// line into two and corrupt the record body.
 			return false;
 		}
 
@@ -406,6 +409,7 @@ ArchiveReader::NextForward(ArchiveRecord& record) {
 			// Reset for the next record.
 			m_fwd_accumulated.clear();
 			m_fwd_record_start = -1;
+			m_fwd_resume_offset = Tellp();
 			return true;
 		}
 

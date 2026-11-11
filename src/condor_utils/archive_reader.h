@@ -144,8 +144,17 @@ public:
 	// the file is not open, or the seek fails.
 	bool SeekForward(int64_t offset);
 
-	// Get current reader offset
+	// Get current reader offset. In Forward direction this is the position
+	// of the next unconsumed line, which may be inside a record whose banner
+	// has not been written yet.
 	int64_t Tellp() const;
+
+	// Forward direction only: the file offset just past the banner of the
+	// last record returned by Next() (or the SeekForward() target, or 0).
+	// Unlike Tellp() it never points inside a record, so it is the offset to
+	// persist and later pass to SeekForward() to resume without losing the
+	// head of a partially written record. Returns -1 if not Forward or not open.
+	int64_t ResumeOffset() const;
 
 	int64_t Size();
 
@@ -213,6 +222,7 @@ private:
 	std::string m_fwd_buf{};        // buffered bytes not yet split into lines
 	size_t      m_fwd_buf_pos{0};   // next unconsumed index within m_fwd_buf
 	int64_t     m_fwd_buf_base{0};  // file offset corresponding to m_fwd_buf[0]
+	int64_t     m_fwd_resume_offset{0}; // just past the last emitted record (see ResumeOffset())
 	bool        m_fwd_eof{false};   // underlying stream is at EOF (buffer may still hold unconsumed bytes)
 
 	// ---- backward reading ----
