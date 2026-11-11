@@ -32,6 +32,7 @@
 #include "jic_local.h"
 #include "jic_local_schedd.h"
 #include "condor_version.h"
+#include "wasted_memory.h"
 
 extern class Starter *starter;
 
@@ -315,6 +316,20 @@ JICLocalSchedd::notifyJobExit( int, int reason,
 	m_tried_notify_job_exit = true;
  
 	if (!did_final_ad_publish) {
+			// For other universes, the shadow keeps ResidentSetSize and
+			// ProportionalSetSize at the max seen over the lifetime of
+			// the job, but what we publish below only covers this
+			// activation.  So remember the values from prior activations
+			// (preferring the unrounded values the schedd keeps in *_RAW).
+		const char *lifetime_max_attrs[] = { ATTR_RESIDENT_SET_SIZE, ATTR_PROPORTIONAL_SET_SIZE };
+		long long prev_values[] = { -1, -1 };
+		for (size_t i = 0; i < std::size(lifetime_max_attrs); ++i) {
+			std::string raw_attr = std::string(lifetime_max_attrs[i]) + "_RAW";
+			if ( ! job_ad->LookupInteger(raw_attr, prev_values[i])) {
+				job_ad->LookupInteger(lifetime_max_attrs[i], prev_values[i]);
+			}
+		}
+
 			// Prepare to update the job queue.  In this case, we want
 			// to publish all the same attribute we'd otherwise send
 			// to the shadow, but instead, just stick them directly
@@ -324,6 +339,22 @@ JICLocalSchedd::notifyJobExit( int, int reason,
 			user_proc->PublishUpdateAd( job_ad );
 		}
 		starter->publishPostScriptUpdateAd( job_ad );
+
+		for (size_t i = 0; i < std::size(lifetime_max_attrs); ++i) {
+			long long value = 0;
+			if (job_ad->LookupInteger(lifetime_max_attrs[i], value) && value < prev_values[i]) {
+				job_ad->Assign(lifetime_max_attrs[i], prev_values[i]);
+			}
+		}
+
+			// We don't update the job queue while the job runs, so
+			// CurrentWastedMemoryGBHours is only set now, when the
+			// activation ends.  The schedd set JobCurrentStartDate when
+			// it spawned us, which is when the activation started.
+		time_t start_date = 0;
+		if (job_ad->LookupInteger(ATTR_JOB_CURRENT_START_DATE, start_date) && start_date > 0) {
+			UpdateWastedMemoryAttrs(*job_ad, start_date, time(nullptr), true);
+		}
 		did_final_ad_publish = true;
 	}
 	

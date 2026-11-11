@@ -303,8 +303,11 @@ all attributes.
     until the end of the activation, and that value is also copied to
     :ad-attr:`LastWastedMemoryGBHours`.  It is removed when the next
     activation starts.  It is not set until the job's memory usage has
-    been reported, nor for grid, scheduler, parallel, or local universe
-    jobs.
+    been reported, nor for grid, scheduler, or parallel universe jobs.
+
+    For local universe jobs, the job queue is not updated while the job
+    runs, so this attribute is set only when the activation ends, and the
+    activation time is measured from :ad-attr:`JobCurrentStartDate`.
 
 :classad-attribute-def:`DAGLifetimeJob`
     A boolean value denoting job(s) in a DAG node are to not be removed when the

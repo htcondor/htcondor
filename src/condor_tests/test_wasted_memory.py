@@ -7,7 +7,8 @@
 #   ((ActivationRequestMemory - MemoryUsage) / 1024) * (activation time so far / 3600)
 #
 # clamped to zero, and set to its final value when the activation ends, at
-# which point it is also copied to LastWastedMemoryGBHours.  To make
+# which point it is also copied to LastWastedMemoryGBHours.  (For local
+# universe jobs, both are set only when the activation ends.)  To make
 # MemoryUsage deterministic, we configure the starter's MEMORY_USAGE_METRIC
 # to use the job attribute TestMemoryUsage when the job defines it.
 #
@@ -63,10 +64,11 @@ def expected_gb_hours(request_memory, memory_usage, duration):
     return max((request_memory - memory_usage) / 1024.0, 0.0) * duration / 3600.0
 
 
-def submit_job(condor, test_dir, executable, name, request_memory, sleep, extra=None):
+def submit_job(condor, test_dir, executable, name, request_memory, sleep, extra=None, universe="vanilla"):
     description = {
         "log":                      test_dir / f"{name}.log",
         "leave_in_queue":           True,
+        "universe":                 universe,
         "should_transfer_files":    True,
         "executable":               executable,
         "arguments":                sleep,
@@ -88,8 +90,8 @@ def wait_for_attr(handle, attr, timeout=60):
     return ad
 
 
-def complete_job(condor, test_dir, executable, name, request_memory, extra=None):
-    handle = submit_job(condor, test_dir, executable, name, request_memory, 5, extra)
+def complete_job(condor, test_dir, executable, name, request_memory, extra=None, universe="vanilla"):
+    handle = submit_job(condor, test_dir, executable, name, request_memory, 5, extra, universe)
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
@@ -99,11 +101,11 @@ def complete_job(condor, test_dir, executable, name, request_memory, extra=None)
     return wait_for_attr(handle, LAST)
 
 
-def start_long_job(condor, test_dir, path_to_sleep, name, extra=None):
+def start_long_job(condor, test_dir, path_to_sleep, name, extra=None, universe="vanilla"):
     job_extra = {"+TestMemoryUsage": 128}
     if extra:
         job_extra.update(extra)
-    handle = submit_job(condor, test_dir, path_to_sleep, name, 512, 600, job_extra)
+    handle = submit_job(condor, test_dir, path_to_sleep, name, 512, 600, job_extra, universe)
     assert handle.wait(
         condition=ClusterState.any_running,
         fail_condition=ClusterState.any_terminal,
@@ -172,13 +174,38 @@ def running_samples(condor, test_dir, path_to_sleep):
     return samples, removed
 
 
-@action
-def held_ad(condor, test_dir, path_to_sleep):
-    handle = start_long_job(condor, test_dir, path_to_sleep, "held")
+def hold_long_job(condor, test_dir, path_to_sleep, name, universe="vanilla"):
+    handle = start_long_job(condor, test_dir, path_to_sleep, name, universe=universe)
     time.sleep(5)
     result = end_long_job(handle, handle.hold, ClusterState.all_held)
     handle.remove()
     return result
+
+
+@action
+def held_ad(condor, test_dir, path_to_sleep):
+    return hold_long_job(condor, test_dir, path_to_sleep, "held")
+
+
+@action
+def local_completed_ad(condor, test_dir, path_to_sleep):
+    return complete_job(condor, test_dir, path_to_sleep, "local_completed", 512,
+                        {"+TestMemoryUsage": 128}, "local")
+
+
+@action
+def local_running_and_removed(condor, test_dir, path_to_sleep):
+    handle = start_long_job(condor, test_dir, path_to_sleep, "local_removed", universe="local")
+    time.sleep(5)
+    # The local starter doesn't update the job queue while the job runs.
+    running = handle.query()[0]
+    removed = end_long_job(handle, handle.remove, ClusterState.all_terminal)
+    return running, removed
+
+
+@action
+def local_held_ad(condor, test_dir, path_to_sleep):
+    return hold_long_job(condor, test_dir, path_to_sleep, "local_held", "local")
 
 
 @action
@@ -259,3 +286,27 @@ class TestWastedMemory:
     def test_policy_held_job(self, policy_held_ad):
         # JobCurrentStartDate is a little before the activation started.
         check_ended_long_job(policy_held_ad, expected_gb_hours(512, 128, 4))
+
+    def test_local_universe_completed_job(self, local_completed_ad):
+        ad = local_completed_ad
+        # Local universe jobs have no ActivationDuration; the local starter
+        # measures from JobCurrentStartDate until the job has exited,
+        # which is within a second or so of CompletionDate.
+        duration = ad["CompletionDate"] - ad["JobCurrentStartDate"]
+        logger.info(f"{LAST} = {ad[LAST]}, duration = {duration}")
+        assert duration > 0
+        assert ad[LAST] == pytest.approx(expected_gb_hours(512, 128, duration),
+                                         abs=expected_gb_hours(512, 128, 2))
+        assert ad[CURRENT] == ad[LAST]
+
+    def test_local_universe_not_set_while_running(self, local_running_and_removed):
+        running, _ = local_running_and_removed
+        assert CURRENT not in running
+        assert LAST not in running
+
+    def test_local_universe_removed_job(self, local_running_and_removed):
+        _, removed = local_running_and_removed
+        check_ended_long_job(removed, expected_gb_hours(512, 128, 5))
+
+    def test_local_universe_held_job(self, local_held_ad):
+        check_ended_long_job(local_held_ad, expected_gb_hours(512, 128, 5))
