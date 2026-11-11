@@ -133,7 +133,7 @@ which immediately terminates the process.
 The default value for :ad-attr:`KillSig` is SIGTERM, the usual method
 to nicely terminate a Unix program.
 
-..
+.. hidden::
    The following section is commented out until slot bundles are ready
    to be documented for users.  Remove this comment and un-indent the
    text below to publish it.
