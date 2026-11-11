@@ -3,3 +3,38 @@ to run in the local SLURM system.
 If it completes successfully, it will create the SLURM batch script
 hpc.slurm. You can edit this file as needed to add SBATCH options, load
 modules, etc. Then you should submit it using sbatch.
+
+You can create the following files to customize how the Annex operates:
+
+* ~/.condor/annex_config
+
+  This file is source'd by the annex-setup.sh script when it's run.
+  You can set the following variables, which will affect the setup
+  process:
+
+  SCRATCH
+    By default, annex jobs are run under the directory in which you run
+    annex-setup.sh. Many HPC systems have a large scratch filesystem
+    where jobs should be run. You can use the SCRATCH variable to
+    specify where the jobs should run, while the annex log files will be
+    placed under where you run annex-setup.sh.
+
+  BINARIES_URL
+    The annex setup script determines the best HTCondor binaries to use
+    for the annex and downloads a tarball of them from our public web
+    server. The binaries will match the linux distro of the HPC system and
+    the HTCondor version of the Access Point where the annex was requested.
+    You can set BINARIES_URL to specify an alternate set of binaries.
+
+* ~/.condor/annex_slurm_args
+
+  The contents of this file are placed near the top of the hpc.slurm
+  Slurm job script created by annex-setup.sh. You can use it to set
+  #SBATCH options and supply commands that need to be run before
+  your application job. This can reduce the amount of manually editing
+  you need to do to the hpc.slurm script for each new annex request.
+
+* ~/.condor/annex_pilot_config
+
+  This file becomes part of the HTCondor configuration files for the EPs
+  of the annex.
