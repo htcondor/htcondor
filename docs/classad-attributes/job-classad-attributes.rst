@@ -306,6 +306,8 @@ all attributes.
     been reported, nor if :ad-attr:`ActivationRequestMemory` is not
     known (for example, because the activation was started by an older
     *condor_schedd*), nor for grid, scheduler, or parallel universe jobs.
+    If either becomes unknown after the attribute has been set, it
+    becomes ``undefined``.
 
     For local universe jobs, the job queue is not updated while the job
     runs, so this attribute is set only when the activation ends, and the

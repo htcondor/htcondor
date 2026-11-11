@@ -35,9 +35,15 @@
 // must be the max seen over the lifetime of the job.
 //
 // If activation_ended is true, now is when the activation ended, and the
-// value is also copied into ATTR_LAST_WASTED_MEMORY_GB_HOURS.  If the
-// value can't be computed then, ATTR_LAST_WASTED_MEMORY_GB_HOURS is set
-// to undefined, so it doesn't claim a previous activation's value.
+// value is also copied into ATTR_LAST_WASTED_MEMORY_GB_HOURS.
+//
+// If the value can't be computed, ATTR_CURRENT_WASTED_MEMORY_GB_HOURS, if
+// an earlier call set it, is set to undefined, so it doesn't keep a value
+// computed from inputs we no longer have; and if activation_ended,
+// ATTR_LAST_WASTED_MEMORY_GB_HOURS is set to undefined, so it doesn't
+// claim a previous activation's value.  (Undefined, rather than deleted,
+// because the job queue updates that carry these attributes can't
+// delete one.)
 //
 // Returns false if the value can't be computed (because
 // ActivationRequestMemory or MemoryUsage is unknown).

@@ -43,6 +43,14 @@ UpdateWastedMemoryAttrs(classad::ClassAd &job_ad, time_t activation_start,
 		dprintf(D_FULLDEBUG, "Not setting %s: %s or %s is unknown\n",
 		        ATTR_CURRENT_WASTED_MEMORY_GB_HOURS,
 		        ATTR_JOB_ACTIVATION_REQUEST_MEMORY, ATTR_MEMORY_USAGE);
+			// If an earlier update computed a value, it's stale now.  Our
+			// callers' job queue updates can't delete an attribute, so make
+			// it undefined instead.  (Only if it's a number, so we don't
+			// dirty the attribute, and so resend it, on every update.)
+		double stale = 0;
+		if (job_ad.EvaluateAttrNumber(ATTR_CURRENT_WASTED_MEMORY_GB_HOURS, stale)) {
+			job_ad.AssignExpr(ATTR_CURRENT_WASTED_MEMORY_GB_HOURS, "undefined");
+		}
 		if (activation_ended) {
 			job_ad.AssignExpr(ATTR_LAST_WASTED_MEMORY_GB_HOURS, "undefined");
 		}
