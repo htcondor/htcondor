@@ -29,17 +29,18 @@
 //   max(ActivationRequestMemory - MemoryUsage, 0) / 1024 * (now - activation_start) / 3600
 //
 // ATTR_JOB_ACTIVATION_REQUEST_MEMORY is what RequestMemory evaluated to
-// when the activation started; if it's missing (e.g. the job was started
-// by an older schedd), RequestMemory is evaluated instead.  MemoryUsage
-// in job_ad must be the max seen over the lifetime of the job.
+// when the activation started.  If it's missing (e.g. the job was started
+// by an older schedd), the value can't be computed: RequestMemory itself
+// may now evaluate differently than it did then.  MemoryUsage in job_ad
+// must be the max seen over the lifetime of the job.
 //
 // If activation_ended is true, now is when the activation ended, and the
 // value is also copied into ATTR_LAST_WASTED_MEMORY_GB_HOURS.  If the
 // value can't be computed then, ATTR_LAST_WASTED_MEMORY_GB_HOURS is set
 // to undefined, so it doesn't claim a previous activation's value.
 //
-// Returns false if the value can't be computed (because RequestMemory or
-// MemoryUsage is unknown).
+// Returns false if the value can't be computed (because
+// ActivationRequestMemory or MemoryUsage is unknown).
 bool UpdateWastedMemoryAttrs(classad::ClassAd &job_ad, time_t activation_start,
                              time_t now, bool activation_ended);
 

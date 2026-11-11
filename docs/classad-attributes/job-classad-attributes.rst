@@ -303,7 +303,9 @@ all attributes.
     until the end of the activation, and that value is also copied to
     :ad-attr:`LastWastedMemoryGBHours`.  It is removed when the next
     activation starts.  It is not set until the job's memory usage has
-    been reported, nor for grid, scheduler, or parallel universe jobs.
+    been reported, nor if :ad-attr:`ActivationRequestMemory` is not
+    known (for example, because the activation was started by an older
+    *condor_schedd*), nor for grid, scheduler, or parallel universe jobs.
 
     For local universe jobs, the job queue is not updated while the job
     runs, so this attribute is set only when the activation ends, and the
@@ -1049,7 +1051,8 @@ all attributes.
     completing, being evicted, being put on hold, or being removed.
     While a later activation is running, it keeps the value from the
     previous one.  If the value could not be computed when the activation
-    ended (because the job's memory usage was never reported), it is
+    ended (because the job's memory usage was never reported, or
+    :ad-attr:`ActivationRequestMemory` was not known), it is
     ``undefined``.  Each epoch record in the job epoch history has the
     value for that epoch's activation.
 
