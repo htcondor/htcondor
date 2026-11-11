@@ -23,6 +23,12 @@
   than returning the job to the running state.
   :jira:`4049`
 
+- Fixed a bug where the Python bindings could crash with a segmentation
+  fault, instead of raising an exception, if a signal (such as the one sent
+  by pressing Ctrl-C) arrived while they were creating a ClassAd.  This
+  most commonly affected :tool:`condor_watch_q`.
+  :jira:`4076`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space

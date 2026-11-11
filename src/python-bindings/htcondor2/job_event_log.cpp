@@ -128,11 +128,18 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             }
 
 
-            // Return the event serialization and event data.
-            PyObject * pyEventAd = py_new_classad2_classad(eventAd->Copy());
-            delete eventAd;
-
             delete event;
+
+            // Return the event serialization and event data.  If a signal
+            // arrived while we were reading (with the GIL released), the
+            // signal handler will run during the ClassAd constructor and
+            // may raise (e.g., KeyboardInterrupt); pass that exception on.
+            PyObject * pyEventAd = py_new_classad2_classad(eventAd);
+            if( pyEventAd == NULL ) {
+                // py_new_classad2_classad() has already set an exception
+                // for us (and deleted eventAd).
+                return NULL;
+            }
             return Py_BuildValue( "zN", event_text.c_str(), pyEventAd );
         }
 

@@ -1,33 +1,73 @@
 #define CLASSAD2_MODULE_NAME  "classad2"
 #define HTCONDOR2_MODULE_NAME "htcondor2"
 
+//
+// Returns NULL, with a Python exception set, if `py` is NULL (because the
+// call which should have produced it raised an exception) or has no handle.
+//
 PyObject_Handle *
 get_handle_from(PyObject * py) {
+	if( py == NULL ) {
+		if(! PyErr_Occurred()) {
+			PyErr_SetString( PyExc_SystemError, "get_handle_from(): NULL object" );
+		}
+		return NULL;
+	}
+
 	auto * py_handle = PyObject_GetAttrString( py, "_handle" );
+	if( py_handle == NULL ) {
+		// PyObject_GetAttrString() has already set an exception for us.
+		return NULL;
+	}
 	Py_DecRef(py_handle);
 	return (PyObject_Handle *)py_handle;
 }
 
 
+//
+// Takes ownership of `classAd`, even on failure.  Returns NULL, with a
+// Python exception set, on failure.  Note that failure is possible even
+// in normal operation: if a signal arrived while we were in C++ code with
+// the GIL released, the Python signal handler runs (and may raise, e.g.,
+// KeyboardInterrupt) when the ClassAd constructor executes.
+//
 PyObject *
 py_new_classad2_classad(void * classAd) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
+		 if( py_htcondor2_module == NULL ) {
+			delete (ClassAd *)classAd;
+			return NULL;
+		 }
 	}
 
 	static PyObject * py_htcondor2_classad_module = NULL;
 	if( py_htcondor2_classad_module == NULL ) {
 		py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
+		if( py_htcondor2_classad_module == NULL ) {
+			delete (ClassAd *)classAd;
+			return NULL;
+		}
 	}
 
 	static PyObject * py_ClassAd_class = NULL;
 	if( py_ClassAd_class == NULL ) {
 		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
+		if( py_ClassAd_class == NULL ) {
+			delete (ClassAd *)classAd;
+			return NULL;
+		}
 	}
 
 	PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
 	auto * handle = get_handle_from(pyClassAd);
+	if( handle == NULL ) {
+		// An exception has already been set for us.
+		Py_DecRef(pyClassAd);
+		delete (ClassAd *)classAd;
+		return NULL;
+	}
 
 	// If we were given a C++ ClassAd object to create a Python ClassAd object
 	// for, set handle->t appropriately.  We expect handle->t to be set (to
@@ -107,21 +147,21 @@ py_new_classad_exprtree( ExprTree * original ) {
 	static PyObject * py_classad2_module = NULL;
 	if( py_classad2_module == NULL ) {
 		 py_classad2_module = PyImport_ImportModule( CLASSAD2_MODULE_NAME );
+		 if( py_classad2_module == NULL ) { return NULL; }
 	}
 
 	static PyObject * py_exprtree_class = NULL;
 	if( py_exprtree_class == NULL ) {
 		py_exprtree_class = PyObject_GetAttrString( py_classad2_module, "ExprTree" );
+		if( py_exprtree_class == NULL ) { return NULL; }
 	}
 
 	static PyObject * py_exprtree_nill = NULL;
 	if( py_exprtree_nill == NULL ) {
 		py_exprtree_nill = PyObject_GetAttrString( py_exprtree_class, "_Nill" );
+		if( py_exprtree_nill == NULL ) { return NULL; }
 	}
 
-
-	ExprTree * copy = original->Copy();
-	copy->SetParentScope(NULL);
 
 	PyObject * pyArgsTuple = Py_BuildValue( "(O)", py_exprtree_nill );
 	if( pyArgsTuple == NULL ) {
@@ -131,6 +171,15 @@ py_new_classad_exprtree( ExprTree * original ) {
 	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, pyArgsTuple );
 	Py_DecRef(pyArgsTuple);
 	auto * handle = get_handle_from(pyExprTree);
+	if( handle == NULL ) {
+		// An exception has already been set for us; see the comment
+		// on py_new_classad2_classad().
+		Py_DecRef(pyExprTree);
+		return NULL;
+	}
+
+	ExprTree * copy = original->Copy();
+	copy->SetParentScope(NULL);
 
 	// PyObject_CallObject() should have called __init__() for us, which
 	// should call _exprtree_init(), which should have made sure that the
@@ -286,15 +335,31 @@ py_new_htcondor2_spooled_proc_ad_list( std::vector< ClassAd * > * spooledProcAds
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
+		 if( py_htcondor2_module == NULL ) {
+			delete spooledProcAds;
+			return NULL;
+		 }
 	}
 
 	static PyObject * py_SpooledProcAdList_class = NULL;
 	if( py_SpooledProcAdList_class == NULL ) {
 		py_SpooledProcAdList_class = PyObject_GetAttrString( py_htcondor2_module, "_SpooledProcAdList" );
+		if( py_SpooledProcAdList_class == NULL ) {
+			delete spooledProcAds;
+			return NULL;
+		}
 	}
 
+	// Takes ownership of `spooledProcAds`, even on failure.
 	PyObject * result = PyObject_CallFunction( py_SpooledProcAdList_class, NULL );
 	auto * handle = get_handle_from(result);
+	if( handle == NULL ) {
+		// An exception has already been set for us; see the comment
+		// on py_new_classad2_classad().
+		Py_DecRef(result);
+		delete spooledProcAds;
+		return NULL;
+	}
 
 	handle->t = (void *)spooledProcAds;
 	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[_SpooledProcAdList]\n" ); delete (std::vector<ClassAd *> *)v; v = NULL; };

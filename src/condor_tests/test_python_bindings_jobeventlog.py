@@ -267,3 +267,24 @@ class TestJobEventLog:
 		with htcondor.JobEventLog(negative_cluster_log) as jel:
 			for event in jel.events(stop_after=0):
 				assert event.cluster == -1
+
+	# HTCONDOR-4076: if a signal arrives while JobEventLog is reading (with
+	# the GIL released), the Python signal handler runs when the C++ code
+	# constructs the event's ClassAd.  If the handler raises (for instance,
+	# KeyboardInterrupt), that exception must propagate instead of crashing.
+	def test_exception_in_classad_construction_propagates(self, logfile, monkeypatch):
+		class Interrupted(BaseException):
+			pass
+
+		def raising_init(self, *args, **kwargs):
+			raise Interrupted()
+
+		with htcondor.JobEventLog(logfile) as jel:
+			events = jel.events(stop_after=0)
+			monkeypatch.setattr(htcondor.classad.ClassAd, "__init__", raising_init)
+			with pytest.raises(Interrupted):
+				next(events)
+			monkeypatch.undo()
+
+			# The log should still be usable afterwards.
+			assert next(events) is not None
