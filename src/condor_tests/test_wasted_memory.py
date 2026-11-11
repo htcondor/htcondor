@@ -12,6 +12,40 @@
 # MemoryUsage deterministic, we configure the starter's MEMORY_USAGE_METRIC
 # to use the job attribute TestMemoryUsage when the job defines it.
 #
+# The cases tested are:
+#
+#   - completed: a vanilla job that runs to completion, where the final
+#     value is exactly what the formula gives for ActivationDuration, and
+#     Current equals Last.
+#   - overused: a job that uses more memory than it requested, where the
+#     value is clamped to zero.
+#   - measured: a job without TestMemoryUsage, so MemoryUsage is computed
+#     from the measured ResidentSetSize.
+#   - retried: a job with two activations (max_retries), where each
+#     epoch record in the job epoch history has the value for its own
+#     activation, and the job ad has the value for the last one.
+#   - lifetime max: a job (vanilla, and local universe) whose first
+#     activation uses much more memory than its second, where the second
+#     activation's value is computed from the memory usage of the first,
+#     since MemoryUsage is the max over the lifetime of the job.  These
+#     jobs use the default MEMORY_USAGE_METRIC, so they test the real
+#     ResidentSetSize bookkeeping rather than TestMemoryUsage.
+#   - running: while the job runs, Current is updated and grows, and Last
+#     isn't set (this is the job's first activation); then the job is
+#     removed, and Last is set to Current's final value.
+#   - held: the job is put on hold with condor_hold, so the starter reports
+#     that the job has exited before the shadow sets the final value.
+#   - policy held: the shadow puts the job on hold itself, because of
+#     periodic_hold, without waiting for the starter to report back, so the
+#     shadow sets the final value before its final update to the job queue.
+#   - local universe: Current and Last are not set while the job runs (the
+#     local starter doesn't update the job queue then), but are set when the
+#     job completes, is removed, or is put on hold.
+#
+# For jobs ended by removal or hold, we can't know exactly when the
+# activation ended, so we check that the value is between what the formula
+# gives for how long we let the job run and how long until we saw it end.
+#
 
 import time
 import logging
@@ -60,8 +94,48 @@ def fail_script(test_dir):
     ))
 
 
+@action
+def peak_script(test_dir):
+    # The first time it runs (when the marker file doesn't exist yet), use
+    # about PEAK_MB of memory for long enough that the starter measures it,
+    # then fail, so the job runs again.  The second time, use little
+    # memory and succeed.
+    return write_file(test_dir / "peak.py", format_script(
+        f"""
+        #!/usr/bin/python3
+        import os
+        import sys
+        import time
+
+        marker = sys.argv[1]
+        if not os.path.exists(marker):
+            open(marker, "w").close()
+            data = b"x" * ({PEAK_MB} * 1024 * 1024)
+            time.sleep(10)
+            sys.exit(1)
+        time.sleep({SECOND_RUN_SECONDS})
+        sys.exit(0)
+        """
+    ))
+
+
+# How much memory (MiB) the first activation of the lifetime max jobs uses,
+# how much less than that we'll accept as measured, and the most we expect
+# to be measured.
+PEAK_MB = 200
+PEAK_MIN_MB = 190
+PEAK_MAX_MB = 400
+LIFETIME_REQUEST_MB = 1024
+SECOND_RUN_SECONDS = 20
+
+
 def expected_gb_hours(request_memory, memory_usage, duration):
     return max((request_memory - memory_usage) / 1024.0, 0.0) * duration / 3600.0
+
+
+def implied_memory_usage(request_memory, gb_hours, duration):
+    # The MemoryUsage that, by the formula, gives gb_hours.
+    return request_memory - gb_hours * 1024.0 * 3600.0 / duration
 
 
 def submit_job(condor, test_dir, executable, name, request_memory, sleep, extra=None, universe="vanilla"):
@@ -147,14 +221,54 @@ def retried_ad(condor, test_dir, fail_script):
                         {"+TestMemoryUsage": 128, "max_retries": 1})
 
 
-@action
-def retried_epoch_ads(condor, retried_ad):
+def epoch_ads(condor, ad):
     with condor.use_config():
-        epoch_ads = htcondor.Schedd().jobEpochHistory(
-            f"ClusterId == {retried_ad['ClusterId']}",
+        ads = htcondor.Schedd().jobEpochHistory(
+            f"ClusterId == {ad['ClusterId']}",
             ["NumShadowStarts", "ActivationDuration", CURRENT, LAST],
         )
-    return sorted(epoch_ads, key=lambda a: a["NumShadowStarts"])
+    return sorted(ads, key=lambda a: a["NumShadowStarts"])
+
+
+@action
+def retried_epoch_ads(condor, retried_ad):
+    return epoch_ads(condor, retried_ad)
+
+
+def run_lifetime_max_job(condor, test_dir, peak_script, name, universe):
+    handle = submit_job(condor, test_dir, peak_script, name, LIFETIME_REQUEST_MB,
+                        test_dir / f"{name}.marker", {"max_retries": 1}, universe)
+    assert handle.wait(
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held,
+        verbose=True,
+        timeout=180,
+    )
+    return handle.query()[0]
+
+
+@action
+def lifetime_max_ad(condor, test_dir, peak_script):
+    return run_lifetime_max_job(condor, test_dir, peak_script, "lifetime_max", "vanilla")
+
+
+@action
+def lifetime_max_epoch_ads(condor, lifetime_max_ad):
+    return epoch_ads(condor, lifetime_max_ad)
+
+
+@action
+def local_lifetime_max_ad(condor, test_dir, peak_script):
+    return run_lifetime_max_job(condor, test_dir, peak_script, "local_lifetime_max", "local")
+
+
+def check_peak_measured(ad):
+    # If this fails, the starter never measured the first activation's
+    # peak, so the rest of the lifetime max test would prove nothing.
+    rss_kb = ad.get("ResidentSetSize_RAW", ad["ResidentSetSize"])
+    logger.info(f"NumJobStarts = {ad['NumJobStarts']}, ResidentSetSize = {rss_kb} KiB")
+    assert ad["NumJobStarts"] == 2
+    assert rss_kb >= PEAK_MIN_MB * 1024
 
 
 @action
@@ -264,6 +378,36 @@ class TestWastedMemory:
                 expected_gb_hours(512, 128, epoch_ad["ActivationDuration"]))
             assert epoch_ad[CURRENT] == epoch_ad[LAST]
         assert retried_ad[LAST] == retried_epoch_ads[-1][LAST]
+
+    def test_lifetime_max_memory_usage(self, lifetime_max_ad, lifetime_max_epoch_ads):
+        check_peak_measured(lifetime_max_ad)
+        assert len(lifetime_max_epoch_ads) == 2
+        # Both activations' values must be computed from the first
+        # activation's peak.  If the second's were computed from its own
+        # memory usage, the implied usage would be far below the peak.
+        for epoch_ad in lifetime_max_epoch_ads:
+            usage = implied_memory_usage(LIFETIME_REQUEST_MB, epoch_ad[LAST],
+                                         epoch_ad["ActivationDuration"])
+            logger.info(f"epoch {epoch_ad['NumShadowStarts']}: {LAST} = {epoch_ad[LAST]}, "
+                        f"ActivationDuration = {epoch_ad['ActivationDuration']}, "
+                        f"implied MemoryUsage = {usage}")
+            assert PEAK_MIN_MB <= usage <= PEAK_MAX_MB
+        assert lifetime_max_ad[LAST] == lifetime_max_epoch_ads[-1][LAST]
+
+    def test_local_universe_lifetime_max_memory_usage(self, local_lifetime_max_ad):
+        ad = local_lifetime_max_ad
+        check_peak_measured(ad)
+        # Local universe jobs have no ActivationDuration or epoch records,
+        # so bound the second activation's duration by JobCurrentStartDate
+        # and CompletionDate, give or take a couple of seconds.  The second
+        # activation runs long enough that a value computed from its own
+        # memory usage would be above the upper bound.
+        duration = ad["CompletionDate"] - ad["JobCurrentStartDate"]
+        lower = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MAX_MB, duration - 2)
+        upper = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MIN_MB, duration + 2)
+        logger.info(f"{LAST} = {ad[LAST]}, duration = {duration}, bounds = [{lower}, {upper}]")
+        assert duration >= SECOND_RUN_SECONDS
+        assert lower <= ad[LAST] <= upper
 
     def test_current_grows_while_running(self, running_samples):
         samples, _ = running_samples
