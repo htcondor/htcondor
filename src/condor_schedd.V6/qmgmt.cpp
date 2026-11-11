@@ -10069,7 +10069,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	// this is true only when we are claiming the local startd
 	// because the negotiator went missing for too long.
-	bool match_any_user = (user == nullptr) ? true : false;
+// This may be true when claiming the local startd
+// (because the negotiator went missing for too long)
+// or when the match is OCU but the OCU's owner
+// had no matching jobs.
+bool match_any_user = user == nullptr;
 	// Stringify the user to make comparison faster
 	std::string user_str = user ? user : "";
 
