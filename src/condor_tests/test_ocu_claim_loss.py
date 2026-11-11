@@ -10,6 +10,8 @@
 import logging
 import time
 
+import htcondor2 as htcondor
+
 from ornithology import *
 
 from ocu_helpers import *
@@ -54,6 +56,15 @@ def alice_known(condor, test_dir, users, path_to_sleep):
 VACATE_ROUNDS = 3
 
 
+def execute_slots(log_path):
+	"""SlotName of each EXECUTE event in the job's event log, in order"""
+	if not log_path.exists():
+		return []
+	with htcondor.JobEventLog(log_path.as_posix()) as events:
+		return [e.get("SlotName") for e in events.events(stop_after=0)
+			if e.type == htcondor.JobEventType.EXECUTE]
+
+
 @action
 def claim_loss(condor, test_dir, users, path_to_sleep, alice_known):
 	"""Repeatedly kill the claim under alice's running OCU job, at varying
@@ -66,22 +77,26 @@ def claim_loss(condor, test_dir, users, path_to_sleep, alice_known):
 	cluster = users["alice"].submit(sleep_job(path_to_sleep, test_dir, 3600,
 		log_name="alice_claim_loss.log", extra={"+OCUWanted": "true"}))
 
+	# "Running again" means a new EXECUTE event in the job's log.  Neither
+	# JobStatus nor NumShadowStarts will do: the schedd sets JobStatus=2
+	# when it queues a shadow, before it sets RemoteHost, and when the
+	# shadow exits before the startd's RELEASE_CLAIM arrives, the schedd
+	# reuses the dying claim for a shadow that bumps NumShadowStarts but
+	# is refused by the startd and never runs the job.
+	log_path = test_dir / "alice_claim_loss.log"
 	rounds = []
-	starts = 0
+	seen = 0
 	for i in range(VACATE_ROUNDS):
-		def running_again():
-			ad = job_ads(condor, cluster)[0]
-			if ad["JobStatus"] == 2 and ad.get("NumShadowStarts", 0) > starts:
-				return ad
-			return None
 		try:
-			ad = wait_for(running_again, timeout=120, what=f"alice's job running (round {i})")
+			slots = wait_for(lambda: (lambda s: s if len(s) > seen else None)(execute_slots(log_path)),
+				timeout=120, what=f"alice's job running (round {i})")
 		except AssertionError:
 			rounds.append({"round": i, "ran": False, "job": job_ads(condor, cluster)[0],
 				"ocus": query_ocus(condor), "slots": ocu_slots(condor)})
 			break
-		starts = ad.get("NumShadowStarts", 0)
-		slot = ad["RemoteHost"]
+		seen = len(slots)
+		slot = slots[-1]
+		ad = job_ads(condor, cluster)[0]
 		time.sleep(i % 3)   # 0, 1, 2 seconds into the job
 		# A brand-new dslot may not be in the collector yet; retry until
 		# condor_vacate can find it.
@@ -98,7 +113,7 @@ def claim_loss(condor, test_dir, users, path_to_sleep, alice_known):
 
 	# and once more: it must come back after the last vacate
 	try:
-		wait_for(lambda: (lambda a: a["JobStatus"] == 2 and a.get("NumShadowStarts", 0) > starts)(job_ads(condor, cluster)[0]),
+		wait_for(lambda: len(execute_slots(log_path)) > seen,
 			timeout=120, what="alice's job running after the last vacate")
 		final_ran = True
 	except AssertionError:
