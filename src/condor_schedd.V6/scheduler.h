@@ -66,6 +66,11 @@
 #include "catalog_utils.h"
 #include "common_files_check_registry.h"
 
+#ifdef WIN32
+ // use the condor_spool_input tool as the schedd side for spooling input (instead of Create_Thread - i.e. fork)
+ #define USE_EXEC_FOR_SPOOLING_INPUT 1
+#endif
+
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
@@ -664,6 +669,7 @@ class Scheduler : public Service
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);
 	static int		generalJobFilesWorkerThread(void *, Stream *);
+	pid_t			spawnJobFilesWorker(void*, Stream*, int reaper_id);
 	int				spoolJobFilesReaper(int,int);
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( int timerID = -1 );
@@ -1361,7 +1367,21 @@ private:
 	time_t m_bundle_oldest_qdate = 0;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
+#define MORE_SPOOL_WORKER_INFO 1
+#ifdef MORE_SPOOL_WORKER_INFO
+	struct spool_job_files_worker_info {
+		DPF_IDENT sock_ident{0};
+		int success_exit{0};
+		int spare{0}; // spare to align struct
+		std::unique_ptr< std::vector<PROC_ID> > jobs{nullptr};
+		spool_job_files_worker_info() = default;
+		spool_job_files_worker_info(DPF_IDENT ident, int success, std::vector<PROC_ID> * _jobs)
+			: sock_ident(ident), success_exit(success), jobs(_jobs) {}
+	};
+	std::map<int, spool_job_files_worker_info> spoolJobFileWorkers;
+#else
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;
+#endif
 	int				numMatches;
 	int				numShadows;
 	std::vector<DCCollector> FlockCollectors;

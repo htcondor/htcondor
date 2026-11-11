@@ -1021,6 +1021,7 @@ rm -rf %{buildroot}
 %_bindir/condor_who
 %_bindir/condor_now
 %_bindir/condor_prio
+%_bindir/condor_spool_input
 %_bindir/condor_transfer_data
 %_bindir/condor_check_userlogs
 %_bindir/condor_q

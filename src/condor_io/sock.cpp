@@ -68,6 +68,15 @@ void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
     va_end( args );
 }
 
+// the FormerSock is so we can dprintf using a sock identifier after the sock is gone.
+void dprintf ( int flags, const FormerSock & sock, const char *fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	_condor_dprintf_va( flags|D_IDENT, (DPF_IDENT)sock.ident, fmt, args );
+	va_end( args );
+}
+
 unsigned int Sock::m_nextUniqueId = 1;
 
 Sock::Sock() : Stream(), _policy_ad(NULL) {

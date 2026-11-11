@@ -151,6 +151,7 @@ int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
 //bool	NewExecutable = false;
 int		dash_remote=0;
+int		spool_later=0; // when -spool:later is set, submit for spooling, but don't spool
 int		dash_factory=0;
 int		default_to_factory=0;
 const char *create_local_factory_file=NULL; // create a copy of the submit digest in the current directory
@@ -475,8 +476,9 @@ main( int argc, const char *argv[] )
 					--argc; ++ptr;
 				}
 
-			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
+			} else if (is_dash_arg_colon_prefix(ptr[0], "spool", &pcolon, 1)) {
 				dash_remote++;
+				if (pcolon && is_arg_prefix(++pcolon, "later", 1)) { spool_later = true; }
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_prefix(ptr[0], "file", 2)) {
 				if (!(--argc) || !(*(++ptr))) {
@@ -1056,7 +1058,7 @@ main( int argc, const char *argv[] )
 	// we don't want to spool jobs if we are simply writing the ClassAds to 
 	// a file, so we just skip this block entirely if we are doing this...
 	if ( MySchedd && !DumpClassAdToFile ) {
-		if ( dash_remote && JobAdsArray.size() > 0 ) {
+		if ( dash_remote && JobAdsArray.size() > 0  && ! spool_later) {
 			bool result;
 			CondorError errstack;
 
@@ -1069,6 +1071,8 @@ main( int argc, const char *argv[] )
 				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 				exit(1);
 			}
+		} else if (spool_later && JobAdsArray.size()) {
+			fprintf(stderr, "Jobs are waiting for spooled input files. Use condor_spool_input to complete the submission.\n");
 		}
 	}
 
