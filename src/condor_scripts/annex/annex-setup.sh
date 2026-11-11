@@ -209,6 +209,8 @@ fi
 # Don't do shell macro expansion here
 cat << 'EOF' >> ${IWD}/hpc.slurm
 
+################### Don't edit anything after this line ###################
+
 echo "$(date) $(hostname) Annex job starting"
 export ANNEX_JOBID=${SLURM_JOBID:-pid-$$}
 SCRATCH=${PWD}
