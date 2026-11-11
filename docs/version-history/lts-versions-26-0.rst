@@ -12,16 +12,13 @@ Version 26.0.1
 
 Release Notes:
 
-.. HTCondor version 26.0.1 released on November 12, 2026.
-
-- HTCondor version 26.0.1 planned release date is November 12, 2026.
+- HTCondor version 26.0.1 released on November 12, 2026.
 
 Known Issues:
 
 - You can not specify :subcom:`transfer_plugins` for use by
   :ref:`common_file_transfer`; the transfer will fail.
   :jira:`4001`
-
 
 New Features:
 
