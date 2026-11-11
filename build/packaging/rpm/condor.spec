@@ -1320,7 +1320,12 @@ fi
 # configuration
 
 %changelog
-* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+* Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-1
+- Fix condor_ssh_to_job with using SELinux and LVM disk enforcement
+- Fix issue where the condor_defrag daemon might not be able to drain EPs
+- Fix enforcement of execute duration for scheduler(DAGMan) and local jobs
+
+* Sun Aug 30 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.14-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2026-0002.html
 - condor_q no longer crashes when using both the -batch and -af options
