@@ -103,8 +103,18 @@ These settings affect the *condor_starter*.
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
     updates that the *condor_starter* daemon sends to the
-    *condor_shadow* and *condor_startd* daemons. Defaults to 300 (5
-    minutes).
+    *condor_shadow* daemon. Defaults to 300 (5 minutes).  Updates of the
+    job's resource usage to the *condor_startd* are sent separately, on the
+    cadence controlled by :macro:`STARTER_UPDATE_INTERVAL_STARTD`.
+
+:macro-def:`STARTER_UPDATE_INTERVAL_STARTD`
+    An integer value representing the number of seconds between ClassAd
+    updates that the *condor_starter* daemon sends to the *condor_startd*
+    daemon with the job's current resource usage (CPU, memory, and disk).
+    This is separate from, and typically much shorter than,
+    :macro:`STARTER_UPDATE_INTERVAL` (which controls updates to the
+    *condor_shadow*), so that the *condor_startd* has fresh usage
+    information for timely policy decisions.  Defaults to 5 seconds.
 
 :macro-def:`STARTER_INITIAL_UPDATE_INTERVAL`
     An integer value representing the number of seconds before the
