@@ -439,7 +439,13 @@ _send_generic_payload_command( PyObject *, PyObject * args ) {
 		return result_tuple;
 	}
 
-	PyTuple_SetItem(result_tuple, 0, py_new_classad2_classad(returnPayload.Copy()));
+	PyObject * pyClassAd = py_new_classad2_classad(returnPayload.Copy());
+	if( pyClassAd == NULL ) {
+		// py_new_classad2_classad() has already set an exception for us.
+		Py_DecRef(result_tuple);
+		return NULL;
+	}
+	PyTuple_SetItem(result_tuple, 0, pyClassAd);
 	PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(0));
 	PyTuple_SetItem(result_tuple, 2, Py_None);
 

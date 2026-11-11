@@ -209,6 +209,12 @@ convert_classad_value_to_python(classad::Value & v) {
                     }
 
                     PyObject * py_v = convert_classad_value_to_python(v);
+                    if( py_v == NULL ) {
+                        // convert_classad_value_to_python() has already
+                        // set an exception for us.
+                        Py_DecRef(list);
+                        return NULL;
+                    }
                     if(PyList_Append( list, py_v ) != 0) {
                         Py_DecRef(py_v);
                         Py_DecRef(list);
@@ -218,6 +224,12 @@ convert_classad_value_to_python(classad::Value & v) {
                     Py_DecRef(py_v);
                 } else {
                     PyObject * py_v = py_new_classad_exprtree( *i );
+                    if( py_v == NULL ) {
+                        // py_new_classad_exprtree() has already set an
+                        // exception for us.
+                        Py_DecRef(list);
+                        return NULL;
+                    }
                     if(PyList_Append( list, py_v ) != 0) {
                         Py_DecRef(py_v);
                         Py_DecRef(list);

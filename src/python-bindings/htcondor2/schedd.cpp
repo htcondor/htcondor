@@ -15,8 +15,16 @@ static int
 _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<PyObject*>(r);
 
-    // py_new_classad2_classad takes ownership of the ad
-    PyObject * pyClassAd = py_new_classad2_classad(ad);
+    // DCSchedd::queryUsers() deletes the ad if we return non-zero, but
+    // returning -1 is the only way to abort the query.  Since
+    // py_new_classad2_classad() takes ownership of its argument even
+    // when it fails, give it a copy, and let our caller always delete
+    // the original; this avoids a double free when we abort.
+    PyObject * pyClassAd = py_new_classad2_classad(ad->Copy());
+    if( pyClassAd == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        return -1;
+    }
     auto rv = PyList_Append(results, pyClassAd);
     Py_DecRef(pyClassAd);
 
@@ -26,8 +34,8 @@ _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
         return -1;
     }
 
-    // return 0 to indicate that the results list took ownership of the ad
-    return 0;
+    // Return 1 so that our caller deletes the original ad.
+    return 1;
 }
 
 
@@ -115,6 +123,11 @@ _schedd_query(PyObject *, PyObject * args) {
 
     for( auto & classAd : results ) {
         PyObject * pyClassAd = py_new_classad2_classad(classAd);
+        if( pyClassAd == NULL ) {
+            // py_new_classad2_classad() has already set an exception for us.
+            Py_DecRef(list);
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -204,9 +217,12 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
             Py_DecRef(results);
             results = nullptr;
         }
+        // If the callback aborted the query (by returning -1, which
+        // queryUsers() returns as 1), Python has already set an exception;
+        // don't replace it.
+        if (PyErr_Occurred()) { return nullptr; }
         switch (rv) {
             case 0: break;  // should never get here on success, this is just for clarity.
-            case -1: break; // error already set by python (in callback)
 
             case Q_UNSUPPORTED_OPTION_ERROR:
                 // This was HTCondorIOError in version 1.
@@ -997,6 +1013,12 @@ _schedd_submit( PyObject *, PyObject * args ) {
     PyObject * pySpooledProcAds = Py_None;
     if( spooledProcAds ) {
         pySpooledProcAds = py_new_htcondor2_spooled_proc_ad_list( spooledProcAds );
+        if( pySpooledProcAds == NULL ) {
+            // py_new_htcondor2_spooled_proc_ad_list() has already set an
+            // exception for us.
+            sb->cleanup_submit();
+            return NULL;
+        }
     }
 
     //
@@ -1021,6 +1043,11 @@ _schedd_submit( PyObject *, PyObject * args ) {
     //
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
     sb->cleanup_submit();
+    if( pyClusterAd == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        Py_DecRef( pySpooledProcAds );
+        return NULL;
+    }
     PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
     Py_DecRef( pyClusterAd );
     Py_DecRef( pySpooledProcAds );
@@ -1196,6 +1223,11 @@ _history_query(PyObject *, PyObject * args) {
         // result ads on the heap in the first place, but that would
         // require more attention to clean-up in the preceeding loop.
         PyObject * pyClassAd = py_new_classad2_classad(classAd.Copy());
+        if( pyClassAd == NULL ) {
+            // py_new_classad2_classad() has already set an exception for us.
+            Py_DecRef(list);
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -1447,6 +1479,11 @@ _schedd_get_claims(PyObject *, PyObject * args) {
     for (auto & classAd : results ) {
         //PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(*classAd));
         PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        if( pyClassAd == NULL ) {
+            // py_new_classad2_classad() has already set an exception for us.
+            Py_DecRef(list);
+            return nullptr;
+        }
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
