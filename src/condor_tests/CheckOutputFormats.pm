@@ -1529,7 +1529,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq '_';
 } else {
 	my $batch_done = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1549,7 +1549,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq 1;
 } else {
 	my $batch_run = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1579,7 +1579,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 #	} else {return $_[1] eq '_';}
 } else {
 	my $batch_idle = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1599,7 +1599,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 	return $_[1] eq 4;
 } else {
 	my $batch_hold = 0;
-	$fields[(scalar @fields)-1][$_[0]+1] =~ /(.+)\.(.*)/;
+	$fields[(scalar @fields)-2][$_[0]+1] =~ /(.+)\.(.*)/;
 	my $temp_id = $1;
 	for my $i (0..((scalar keys %Attr)-1)){
 		if ($Attr{$i}{ClusterId} eq $temp_id){
@@ -1623,7 +1623,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 },
 'JOB_IDS' => sub {
 if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
-	return $_[1] eq "49.0 ... 55.0";
+	return $_[1] =~ /^49\.0 \.\.\./; # split_fields doesn't handle data with spaces correctly, so we only have the first id
 } elsif ($_[1] =~ /(.+)\.(.+)/){
 	my $temp = $1;
 	return $_[1] eq $cluster_batch{$temp};
@@ -2173,7 +2173,7 @@ sub check_transform {
 	} else {
 	if ($option eq 'general'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{TransferIn} ne $Attr{$i}{ExitBySignal} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
+			if ($Attr{$i}{ClusterId} ne 200 || $Attr{$i}{Fooo} ne "\"test\"" || $Attr{$i}{MirrorUniverse} ne $Attr{$i}{JobUniverse} || defined $Attr{$i}{TransferInputSizeMB} || defined $Attr{$i}{TransferErr} || !(defined $Attr{$i}{Err})){
 				return 0;
 			}
 		}
@@ -2195,9 +2195,9 @@ sub check_transform {
 	}
 	if ($option eq 'regex'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{RequestCpus} || defined $Attr{$i}{RequestDisk} || defined $Attr{$i}{RequestMemory}){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteHost} || defined $Attr{$i}{RequestCpus} || defined $Attr{$i}{RequestDisk} || defined $Attr{$i}{RequestMemory}){
 				return 0;
-			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeCpus} && defined $Attr{$i}{TimeMemory} && defined $Attr{$i}{TimeDisk}){
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteHost}&& defined $Attr{$i}{TimeCpus} && defined $Attr{$i}{TimeMemory} && defined $Attr{$i}{TimeDisk}){
 				return 1;
 			} else {return 0;}
 		}

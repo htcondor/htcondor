@@ -883,7 +883,7 @@ if [ $rc -ne 0 ] ; then
     fi
 fi
 # Next, check for pre-releases (beta, alpha, snapshot)
-if [ $rc -ne 0 ] ; then
+if [ ! -z "$beta_url" -a $rc -ne 0 ] ; then
     show_progress "Downloading beta build for $remote_host" curl -L -f -s -S -o $tmp_dir/bosco-download.tar.gz $beta_url
     rc=$?
     if [ $rc -ne 0 ] ; then
@@ -897,7 +897,7 @@ if [ ! -z "$alpha_url" -a $rc -ne 0 ] ; then
         echo "Failed to download alpha build."
     fi
 fi
-if [ ! -z "$snapshot_url" ] ; then
+if [ ! -z "$snapshot_url" -a $rc -ne 0 ] ; then
     show_progress "Downloading snapshot build for $remote_host" curl -L -f -s -S -o $tmp_dir/bosco-download.tar.gz $snapshot_url
     rc=$?
     if [ $rc -ne 0 ] ; then

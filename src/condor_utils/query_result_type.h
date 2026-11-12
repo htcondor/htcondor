@@ -52,12 +52,14 @@ enum QueryFetchOpts {
 	fetch_Jobs=0,
 	fetch_DefaultAutoCluster=1,
 	fetch_GroupBy=2,
-	fetch_FromMask=0x03,         // mask off the 'from' bits
-	fetch_MyJobs=0x04,           // modifies fetch_Jobs
-	fetch_SummaryOnly=0x08,      // modifies fetch_Jobs
-	fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs
-	fetch_IncludeJobsetAds=0x20, // modifies fetch_Jobs
-	fetch_NoProcAds=0x40,
+	fetch_FromMask=0x03,         // mask off the 'from' bits. 0=Jobs, 1=AutoCluster, 2=GroupBy
+	fetch_MyJobs=0x04,           // modifies fetch_Jobs. return only my jobs
+	fetch_SummaryOnly=0x08,      // modifies fetch_Jobs. return summary ad only
+	fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs. include ClusterAds that match the constraint
+	fetch_IncludeJobsetAds=0x20, // modifies fetch_Jobs. include JobSetAds that match the constraint
+	fetch_NoProcAds=0x40,        // modifies fetch_Jobs
+	fetch_ClusterBeforeJob=0x80, // modifies fetch_Jobs. return cluster ad before matching job ads (26.X or later)
+	// composite
 	fetch_ClusterAds=fetch_IncludeClusterAd | fetch_NoProcAds,
 	fetch_JobsetAds=fetch_IncludeJobsetAds | fetch_NoProcAds,
 };

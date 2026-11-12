@@ -24,6 +24,9 @@
 #       the old active row to the oldest rotated file, inserts the current
 #       active file, and only then inserts the intervening rotated file,
 #       leaving FileIds out of chronological order.
+#     - LibrarianClient::GetRecordsByDagId/ByBatchId/ByBatchName(): -dagid,
+#       -batchid, and -batchname resolve via the DB (batch name is
+#       case-sensitive) and match the file-scan path.
 
 import datetime
 import os
@@ -72,17 +75,17 @@ def _wait_for_db_job_count(condor, expected_count, timeout=DB_POLL_TIMEOUT):
         time.sleep(DB_POLL_INTERVAL)
 
 
-def _submit_and_wait(condor, log_path, path_to_sleep, count=1):
-    """Submit `count` instant-exit jobs and wait for all to complete."""
-    handle = condor.submit(
-        description={
-            "executable": path_to_sleep,
-            "universe": "vanilla",
-            "arguments": "0",
-            "log": str(log_path),
-        },
-        count=count,
-    )
+def _submit_and_wait(condor, log_path, path_to_sleep, count=1, extra=None):
+    """Submit `count` instant-exit jobs and wait for all to complete.
+    `extra` adds submit commands (e.g. batch_name) to the description."""
+    description = {
+        "executable": path_to_sleep,
+        "universe": "vanilla",
+        "arguments": "0",
+        "log": str(log_path),
+    }
+    description.update(extra or {})
+    handle = condor.submit(description=description, count=count)
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
@@ -211,18 +214,30 @@ def condor(condor_config, test_dir):
 #
 # On restart the librarian assigns FileIds T1 < history(E) < T3, so FileId
 # order is not archive order.
+#
+# DAG/batch attributes (DAGManJobId is a fake id, not a real DAGMan job):
+#
+#   A      DAGManJobId=FAKE_DAG_ID  batch_id="1001"  batch_name="Alpha"
+#   B                               batch_id="1002"  batch_name="alpha"
+#   C (x3) DAGManJobId=FAKE_DAG_ID                      batch_name="Alpha"
+#   D                               batch_id="1001"
+#   E      (none)
 # ---------------------------------------------------------------------------
+
+FAKE_DAG_ID = 424242
 
 @action
 def cluster_a(condor, test_dir, path_to_sleep):
-    return _submit_and_wait(condor, test_dir / "a.log", path_to_sleep)
+    return _submit_and_wait(condor, test_dir / "a.log", path_to_sleep, extra={
+        "dagman_job_id": str(FAKE_DAG_ID), "batch_id": "1001", "batch_name": "Alpha"})
 
 
 @action
 def cluster_b(condor, test_dir, path_to_sleep, cluster_a):
     # Depending on cluster_a just keeps submission (and DB ingest) order
     # predictable; not required for correctness of the assertions below.
-    return _submit_and_wait(condor, test_dir / "b.log", path_to_sleep)
+    return _submit_and_wait(condor, test_dir / "b.log", path_to_sleep, extra={
+        "batch_id": "1002", "batch_name": "alpha"})
 
 
 @action
@@ -248,7 +263,8 @@ NUM_C_PROCS = 3
 @action
 def cluster_c(condor, test_dir, path_to_sleep, history_rotated):
     """Multi-proc cluster written to the new active archive file after rotation."""
-    return _submit_and_wait(condor, test_dir / "c.log", path_to_sleep, NUM_C_PROCS)
+    return _submit_and_wait(condor, test_dir / "c.log", path_to_sleep, NUM_C_PROCS, extra={
+        "dagman_job_id": str(FAKE_DAG_ID), "batch_name": "Alpha"})
 
 
 @action
@@ -264,7 +280,7 @@ def librarian_stopped(condor, cluster_c_indexed):
 @action
 def cluster_d(condor, test_dir, path_to_sleep, librarian_stopped):
     _rotate_history(condor)
-    return _submit_and_wait(condor, test_dir / "d.log", path_to_sleep)
+    return _submit_and_wait(condor, test_dir / "d.log", path_to_sleep, extra={"batch_id": "1001"})
 
 
 @action
@@ -300,6 +316,31 @@ def file_scan_backwards(condor, all_jobs_indexed, owner):
 def file_scan_forwards(condor, all_jobs_indexed, owner):
     """Reference output order from the normal file-scan path (oldest first)."""
     return _run_history(condor, ["-no-librarian", "-forwards", owner])
+
+
+@action
+def dag_batch_expected(cluster_a, cluster_b, cluster_c, cluster_d, cluster_e):
+    """Expected job ids for each DAG/batch restriction (see table above)."""
+    a = [f"{cluster_a.clusterid}.0"]
+    b = [f"{cluster_b.clusterid}.0"]
+    c = [f"{cluster_c.clusterid}.{p}" for p in range(NUM_C_PROCS)]
+    d = [f"{cluster_d.clusterid}.0"]
+    e = [f"{cluster_e.clusterid}.0"]
+    return {
+        "dagid":          (["-dagid", str(FAKE_DAG_ID)], a + c),
+        "batchid":        (["-batchid", "1001"], a + d),
+        "batchid_other":  (["-batchid", "1002"], b),
+        "batchname":      (["-batchname", "Alpha"], a + c),
+        "batchname_case": (["-batchname", "alpha"], b),
+        "no_match":       (["-batchname", "ALPHA"], []),
+        # A is returned by all three terms but must print once
+        "mixed":          (["-dagid", str(FAKE_DAG_ID), "-batchid", "1001", "-batchname", "alpha"], a + b + c + d),
+        # Job id terms are unioned with DAG/batch terms
+        "cluster_and_batchname": ([str(cluster_e.clusterid), "-batchname", "Alpha"], e + a + c),
+    }
+
+
+DAG_BATCH_CASES = ["dagid", "batchid", "batchid_other", "batchname", "batchname_case", "no_match", "mixed", "cluster_and_batchname"]
 
 
 # ---------------------------------------------------------------------------
@@ -478,3 +519,24 @@ class TestCondorHistoryLibrarianFastpath:
         assert len(rotated) == 3, f"Expected 3 rotated history files, found {rotated}"
         expected = [f"{cluster_b.clusterid}.0", f"{cluster_a.clusterid}.0"]
         assert _run_history(condor, ["-search", str(rotated[0]), owner]) == expected
+
+    # -----------------------------------------------------------------------
+    # -dagid / -batchid / -batchname
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.parametrize("direction", [[], ["-forwards"]], ids=["backwards", "forwards"])
+    @pytest.mark.parametrize("case", DAG_BATCH_CASES)
+    def test_dag_batch_matches_file_scan(self, condor, all_jobs_indexed, dag_batch_expected, case, direction):
+        """Librarian lookups return the expected jobs, in the same order as the
+        file-scan (banner quick scan) path, with each job printed once."""
+        args, expected = dag_batch_expected[case]
+        reference = _run_history(condor, ["-no-librarian"] + direction + args)
+        assert sorted(reference) == sorted(expected)
+        assert _run_history(condor, direction + args) == reference
+
+    @pytest.mark.parametrize("direction", [[], ["-forwards"]], ids=["backwards", "forwards"])
+    def test_dag_batch_limit(self, condor, all_jobs_indexed, direction):
+        args = direction + ["-limit", "2", "-dagid", str(FAKE_DAG_ID)]
+        reference = _run_history(condor, ["-no-librarian"] + args)
+        assert len(reference) == 2
+        assert _run_history(condor, args) == reference

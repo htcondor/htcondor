@@ -1547,7 +1547,7 @@ init_daemon_list()
 	// then we need to let the SHARED_PORT daemon know that it should be using the configured collector port
 	// and not the configured shared port port
 	if (have_primary_collector) {
-		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
+		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", true);
 		if (collector_uses_shared_port) {
 			class daemon* d = daemons.FindDaemon("SHARED_PORT");
 			if (d != NULL) {
@@ -1917,8 +1917,7 @@ run_preen_now()
 	preen_pid = daemonCore->CreateProcessNew(
 					FS_Preen,		// program to exec
 					arglist,   		// args
-					cpArgs.priv(PRIV_ROOT)		// privilege level
-					.wantCommandPort(false));	// we do _not_ want this process to have a command port; PREEN is not a daemon core process
+					cpArgs.priv(PRIV_ROOT));	// privilege level
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 	return TRUE;
 }

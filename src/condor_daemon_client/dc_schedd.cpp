@@ -2255,6 +2255,9 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 		if (fetch_opts & fetch_NoProcAds) {
 			request_ad.InsertAttr(ATTR_QUERY_Q_NO_PROC_ADS, true);
 		}
+		if (fetch_opts & fetch_ClusterBeforeJob) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_CLUSTER_BEFORE_PROC_ADS, true);
+		}
 	}
 
 	if (match_limit >= 0) {

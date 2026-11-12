@@ -474,6 +474,17 @@ probably will not want to change them for any reason.
     :macro:`LINUX_KERNEL_TUNING_SCRIPT` once as root when the
     :tool:`condor_master` daemon starts up.
 
+:macro-def:`KERNEL_TUNING_LIMIT_DIRTY_BYTES`
+    Relevant only to Linux platforms, a boolean value that defaults to
+    ``False``. The kernel tuning script (see :macro:`ENABLE_KERNEL_TUNING`)
+    sets ``/proc/sys/vm/dirty_bytes`` to 100 MB on cgroup v1 machines
+    that run a *condor_startd*, to keep jobs with memory limits from
+    being OOM killed when they write files quickly.  Cgroup v2 machines
+    usually do not need this limit, and it can greatly slow down file
+    writes, especially to FUSE filesystems.  When ``True``, the script
+    sets the limit on any machine, which may help in rare cases on
+    cgroup v2, such as when :macro:`EXECUTE` is on NFS.
+
 :macro-def:`KERNEL_TUNING_LOG`
     A string value that defaults to ``$(LOG)/KernelTuningLog``. If the
     kernel tuning script runs, its output will be logged to this file.

@@ -785,17 +785,15 @@ do_REMOTE_syscall()
 
 	case CONDOR_get_file_info_new:
 	  {
-		char *  logical_name;
-		char *  actual_url;
+		// This call used to perform an optional transformation of the
+		// given pathname. Now, we just echo back the given value.
+		std::string logical_name;
  
-		actual_url = NULL;
-		logical_name = NULL;
 		ASSERT( syscall_sock->code(logical_name) );
 		ASSERT( syscall_sock->end_of_message() );;
  
-		errno = (condor_errno_t)0;
-		rval = pseudo_get_file_info_new( logical_name , actual_url );
-		terrno = (condor_errno_t)errno;
+		rval = 0;
+		terrno = (condor_errno_t)0;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
  
 		syscall_sock->encode();
@@ -804,10 +802,8 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ASSERT( syscall_sock->code(actual_url) );
+			ASSERT( syscall_sock->code(logical_name) );
 		}
-		free( (char *)actual_url );
-		free( (char *)logical_name );
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return RemoteSyscallResult::SyscallOK;
 	}

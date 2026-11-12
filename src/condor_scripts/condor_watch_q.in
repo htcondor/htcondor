@@ -956,6 +956,9 @@ class Cluster:
     def __getitem__(self, item):
         return self.job_to_state[item]
 
+    def get(self, key, default=None):
+        return self.job_to_state.get(key, default)
+
     def items(self):
         return self.job_to_state.items()
 
@@ -1054,6 +1057,20 @@ class JobStateTracker:
                             new_status = JobStatus.TRANSFERRING_INPUT
                         elif "output" in msg:
                             new_status = JobStatus.TRANSFERRING_OUTPUT
+                    elif "finished" in msg and "output" in msg:
+                        # Output transfer finished... this may actually be a checkpoint
+                        # so set back to RUNNING state and let expected later events
+                        # correctly update.
+                        # WARNING: This means the tool will switch back to running after
+                        #          final output transfer (briefly)
+
+                        # Ensure associated cluster is being tracked before setting status
+                        check = self.cluster_id_to_cluster.get(event.cluster)
+                        if check is not None:
+                            # Ensure specific job is being tracked and state is transferring output
+                            old_status = check.get(event.proc)
+                            if old_status and old_status == JobStatus.TRANSFERRING_OUTPUT:
+                                new_status = JobStatus.RUNNING
                 else:
                     new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
 
@@ -1380,6 +1397,7 @@ HEADERS = list(JobStatus.ordered()) + [TOTAL, ACTIVE_JOBS]
 
 # NOTE: TRANSFERRING_(IN/OUT)PUT are handle specially in process_events()
 #       due to all transfers sharing a single job event type (#40)
+# NOTE: Checkpointing looks like repeated output transfer to user log
 JOB_EVENT_STATUS_TRANSITIONS = {
     htcondor.JobEventType.SUBMIT: JobStatus.IDLE,
     htcondor.JobEventType.JOB_EVICTED: JobStatus.IDLE,

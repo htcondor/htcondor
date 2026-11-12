@@ -25,6 +25,15 @@
   gpu attributes when running on a mig-enabled NVidia gpu.
   :jira:`3978`
 
+- Add submit commands for **batch** grid :subcom:`universe` jobs to
+  specify the number of cpus and machines for the job:
+  :subcom:`batch_cpu_count`, :subcom:`batch_node_count`,
+  :subcom:`batch_cpus_per_node`, and :subcom:`batch_whole_nodes`.
+  Setting :subcom:`request_cpus` to a value greater than ``1`` is now
+  equivalent to setting :subcom:`batch_cpu_count` to the given value and
+  setting :subcom:`batch_node_count` to ``1``.
+  :jira:`4053`
+
 - :tool:`condor_gpu_discovery` now publishes a ``Vendor`` property
   for each GPU, such as ``"NVIDIA"`` or ``"AMD"``, so that jobs and
   HTCondor itself can tell GPU types apart.
@@ -70,6 +79,11 @@
   :ad-attr:`LastWastedMemoryGBHours`, its final value for the most
   recent activation to have ended.
   :jira:`4062`
+  
+- :tool:`condor_history` now accepts ``-dagid``, ``-batchid``, and ``-batchname``
+  to query all jobs belonging to a DAGMan workflow or job batch. These queries
+  use the :ref:`archive-librarian` database when available.
+  :jira:`4041`
 
 *** 26.2.0 bugs
 
@@ -95,6 +109,18 @@
 - Fixed a bug in :macro:`ENVIRONMENT_FOR_Assigned<name>` where it did 
   not replace the matched text. 
   :jira:`4052`
+
+- The kernel tuning script run by the :tool:`condor_master` (see
+  :macro:`ENABLE_KERNEL_TUNING`) now sets ``/proc/sys/vm/dirty_bytes``
+  to 100 MB only on cgroup v1 machines that run a *condor_startd*.
+  This limit was a workaround for jobs being OOM killed for writing
+  files under cgroup v1, which cgroup v2 does not need, and it could
+  greatly slow down file writes, especially to FUSE filesystems such as
+  those used by Apptainer.  Machines where the limit was already set
+  keep it until reboot.  The new configuration knob
+  :macro:`KERNEL_TUNING_LIMIT_DIRTY_BYTES` sets the limit on any
+  machine, for rare cgroup v2 cases that still need it.
+  :jira:`4065`
 
 *** 26.1.0 features
 
@@ -169,12 +195,6 @@
   version of the EP to greater than or equal to, or strictly less than,
   respectively, the specified version, e.g. "26.0.1".
   :jira:`3065`
-
-*** 26.0.1 features
-
-- HTCondor tarballs now contain `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_
-
-- The condor package now requires pelican-26.0.0.
 
 *** 26.0.1 bugs
 

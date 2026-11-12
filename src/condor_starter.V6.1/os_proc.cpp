@@ -632,7 +632,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( JobName, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 		.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
 		.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
@@ -778,7 +777,9 @@ OsProc::JobExit( void )
 {
 	int reason;	
 
-	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
+	//dprintf( D_ZKM | D_BACKTRACE, "Inside OsProc::JobExit() taskid=%d %s\n",
+	//	taskid, m_finalTask?"final":"" );
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit() taskid=%d%s\n", taskid, m_finalTask?" final":"" );
 
 	if( requested_exit == true ) {
 		if( starter->jic->hadHold() || starter->jic->hadRemove() ) {
@@ -810,8 +811,10 @@ OsProc::JobExit( void )
     set_priv ( old );
 
 #endif
-
-	return starter->jic->notifyJobExit( exit_status, reason, this );
+	if (m_finalTask) {
+		return starter->jic->notifyJobExit( exit_status, reason, this );
+	}
+	return true;
 }
 
 
@@ -1324,7 +1327,6 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
 		 cpArgs.priv(PRIV_ROOT)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
