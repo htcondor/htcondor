@@ -111,11 +111,29 @@ _collector_query( PyObject *, PyObject * args ) {
 		}
 
 		for( auto & classAd : adList ) {
-			PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+			ClassAd * c = classAd.release();
+			PyObject * pyClassAd = py_new_classad2_classad(c);
+			if( pyClassAd == NULL ) {
+				// At this point, every ClassAd originally in adList:
+				//    (a) is owned by `adList`; or
+				//    (b) was just deleted by py_new_classad2_classad(); or
+				//    (b) is owned by `list`.
+				//
+				// (FIXME: We presume that release()ing a unique_ptr accessed
+				// via an iterator unsets the unique_ptr and that cleaning up
+				// the local doesn't lead to a double-free.)
+				//
+				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
+				// py_new_classad2_classad() has already set an exception for us.
+				return NULL;
+			}
 			auto rv = PyList_Append( list, pyClassAd );
 			Py_DecRef(pyClassAd);
 
 			if(rv != 0) {
+				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
 				// PyList_Append() has already set an exception for us.
 				return NULL;
 			}
@@ -173,8 +191,11 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 			return NULL;
 		}
 
-		PyObject * pyClassAd = py_new_classad2_classad(locateOnlyAd->Copy());
-		// PyObject * list = Py_BuildValue( "[N]", pyClassAd );
+		PyObject * pyClassAd = py_new_classad2_classad_via_copy(locateOnlyAd);
+		if( pyClassAd == NULL ) {
+			// py_new_classad2_classad_via_copy() has already set an exception for us.
+			return NULL;
+		}
 		return pyClassAd;
 	} else {
 		// This was HTCondorLocateError in version 1.

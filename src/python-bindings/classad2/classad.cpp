@@ -137,7 +137,7 @@ convert_classad_value_to_python(classad::Value & v) {
             ClassAd * c;
             (void) v.IsClassAdValue(c);
 
-            return py_new_classad2_classad(c->Copy());
+            return py_new_classad2_classad_via_copy(c);
             } break;
 
         case classad::Value::BOOLEAN_VALUE: {
@@ -641,7 +641,11 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     }
 
 
-    auto py_class_ad = py_new_classad2_classad(result);
+    PyObject * py_class_ad = py_new_classad2_classad(result);
+    if( py_class_ad == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        return NULL;
+    }
     return Py_BuildValue("Nl", py_class_ad, offset);
 }
 

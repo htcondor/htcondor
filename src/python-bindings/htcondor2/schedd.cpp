@@ -15,8 +15,11 @@ static int
 _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<PyObject*>(r);
 
-    // py_new_classad2_classad takes ownership of the ad
     PyObject * pyClassAd = py_new_classad2_classad(ad);
+    if( pyClassAd == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        return NULL;
+    }
     auto rv = PyList_Append(results, pyClassAd);
     Py_DecRef(pyClassAd);
 
@@ -115,6 +118,21 @@ _schedd_query(PyObject *, PyObject * args) {
 
     for( auto & classAd : results ) {
         PyObject * pyClassAd = py_new_classad2_classad(classAd);
+        if( pyClassAd == NULL ) {
+            // At this point, every ClassAd originally in `results`:
+            //    (a) is owned by `list`; or
+            //    (b) has just been deleted by py_new_classad2_classad(); or
+            //    (c) is owned by `results`.
+            //
+            // FIXME: follow the model in _collector_query so that iterating
+            // through the list unowns the pointers; otherwise the above
+            // analysis and this whole loop appear to be nonsense.
+            //
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
+            // py_new_classad2_classad() has already set an exception for us.
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -1227,7 +1245,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     // but our experience with Python memory management is that magical
     // behavior is bad for us.
     //
-    PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
+    PyObject * pyClusterAd = py_new_classad2_classad_via_copy(clusterAd);
     sb->cleanup_submit();
     PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
     Py_DecRef( pyClusterAd );
@@ -1403,7 +1421,7 @@ _history_query(PyObject *, PyObject * args) {
         // We could probably dispense with the copy by allocating the
         // result ads on the heap in the first place, but that would
         // require more attention to clean-up in the preceeding loop.
-        PyObject * pyClassAd = py_new_classad2_classad(classAd.Copy());
+        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -1653,8 +1671,13 @@ _schedd_get_claims(PyObject *, PyObject * args) {
     }
 
     for (auto & classAd : results ) {
-        //PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(*classAd));
         PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        if( pyClassAd == NULL ) {
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
+            // py_new_classad2_classad() has already set an exception for us.
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -1693,8 +1716,8 @@ _schedd_create_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
-    return pyClassAd;
+    // We could probably construct this on the heap initially and skip this copy.
+	return py_new_classad2_classad_via_copy(& result);
 }
 
 static PyObject *
@@ -1721,8 +1744,8 @@ _schedd_remove_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
-    return pyClassAd;
+    // We could probably construct this on the heap initially and skip this copy.
+	return py_new_classad2_classad_via_copy(& result);
 }
 
 static PyObject *
@@ -1752,13 +1775,20 @@ _schedd_query_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    for (auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(classAd));
-        //PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+    for( auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
+        if( pyClassAd == NULL ) {
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
+            // py_new_classad2_classad_via_copy() has already set an exception for us.
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
-        //Py_DecRef(pyClassAd);
+        Py_DecRef(pyClassAd);
 
         if( rv != 0 ) {
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
             // PyList_Append() has already set an exception for us.
             return nullptr;
         }

@@ -9,8 +9,20 @@ get_handle_from(PyObject * py) {
 }
 
 
+//
+// Because (at least) PyObject_CallObject() may raise an exception unrelated
+// to the function being called (e.g., delayed signal handling can raise
+// a `KeyboardInterrupt`), we need to propagate (arbitrary?) exceptions.
+//
+// To that end, we must either return NULL if and only if an exception has
+// been set, or change the function signature.
+//
+// The object returned by this function owns the ClassAd passed into it; this
+// functions deletes the ClassAd before returning NULL to deduplicate a bunch
+// of code.
+//
 PyObject *
-py_new_classad2_classad(void * classAd) {
+py_new_classad2_classad(ClassAd * classAd) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
@@ -26,7 +38,19 @@ py_new_classad2_classad(void * classAd) {
 		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
 	}
 
+	// The ClassAd constructor itself should only ever raise an exception
+	// if given an invalid argument; NULL is a valid argument.  However,
+	// any time we give control back to the Python interpreter, as we do
+	// here, it can elect to do signal handling (instead), which may lead
+	// to an exception.
 	PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
+	if( pyClassAd == NULL ) {
+		delete classAd;
+
+		// PyObject_CallObject() has already set an exception for us.
+		return NULL;
+	}
+
 	auto * handle = get_handle_from(pyClassAd);
 
 	// If we were given a C++ ClassAd object to create a Python ClassAd object
@@ -41,6 +65,20 @@ py_new_classad2_classad(void * classAd) {
 
 	// _classad_init() correctly set handle->f already.
 	return pyClassAd;
+}
+
+
+//
+// FIXME: Handle the error cases.
+//
+PyObject *
+py_new_classad2_classad_via_copy(ClassAd * classAd) {
+	// if( classAd == NULL ) { /* ??? */ }
+	auto * c = classAd->Copy();
+	// if( copy == NULL ) { /* out of memory */ }
+	ClassAd * copy = dynamic_cast<ClassAd *>(c);
+	// if ( copy == NULL ) { /* run in circles, scream and shout */ }
+	return py_new_classad2_classad(copy);
 }
 
 
