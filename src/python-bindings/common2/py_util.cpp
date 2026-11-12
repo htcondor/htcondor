@@ -68,16 +68,46 @@ py_new_classad2_classad(ClassAd * classAd) {
 }
 
 
-//
-// FIXME: Handle the error cases.
-//
 PyObject *
 py_new_classad2_classad_via_copy(ClassAd * classAd) {
-	// if( classAd == NULL ) { /* ??? */ }
+	// It is a programming error to pass this function a null pointer, so
+	// blowing an assert would justified here.  However, if we _have_ made
+	// such a mistake, it seems rather possible that it was the result of
+	// an unexpected Python exception being raised.  If so, we don't want
+	// to replace that exception with our own.  Otherwise, raising an
+	// exception probably our least user-hostile option.
+	if( classAd == NULL ) {
+		if( PyErr_Occurred() == NULL ) {
+			// Using RuntimeError instead of HTCondorException to avoid
+			// deciding how to deal with a global pointer that doesn't
+			// exist in the classad2 module.
+			PyErr_SetString( PyExc_RuntimeError, "Internal error: attempted to make a classad2.ClassAd from a NULL pointer" );
+		}
+		return NULL;
+	}
+
 	auto * c = classAd->Copy();
-	// if( copy == NULL ) { /* out of memory */ }
+	if( c == NULL ) {
+		// Presently, ClassAd::Copy() only fails if memory allocation fails.
+		PyErr_SetString( PyExc_MemoryError, "ClassAd::Copy() failed" );
+		return NULL;
+	}
+
+	// It is a programming error for this cast to fail, so blowing an assert
+	// here would be justified.  That (should) also generate a C++ stack trace,
+	// which might help us figure out what went wrong.  Conversely, that
+	// removes the option for the script developer to try something else.  The
+	// ideal option would probably be to generate the C++ stack trace but put
+	// it in the Python exception to improve the bug report.
 	ClassAd * copy = dynamic_cast<ClassAd *>(c);
-	// if ( copy == NULL ) { /* run in circles, scream and shout */ }
+	if( copy == NULL ) {
+		// Using RuntimeError instead of HTCondorException to avoid
+		// deciding how to deal with a global pointer that doesn't
+		// exist in the classad2 module.
+		PyErr_SetString( PyExc_RuntimeError, "Internal error: ClassAd::Copy() did not return a ClassAd *" );
+		return NULL;
+	}
+
 	return py_new_classad2_classad(copy);
 }
 
