@@ -27,6 +27,10 @@
   a user's resoruce usage when they haven't used any resources.
   :jira:`4018`
 
+- Improve the validation rules when examining an X.509 host certificate
+  during SSL authentication.
+  :jira:`4074`
+
 - HTCondor daemons now close the job event log with the job owner's identity,
   matching the identity used to open it. Previously, the *condor_schedd* and
   other daemons closed it as the condor user, which on Lustre caused the close
