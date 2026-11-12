@@ -18,7 +18,7 @@ _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
     PyObject * pyClassAd = py_new_classad2_classad(ad);
     if( pyClassAd == NULL ) {
         // py_new_classad2_classad() has already set an exception for us.
-        return NULL;
+        return -1;
     }
     auto rv = PyList_Append(results, pyClassAd);
     Py_DecRef(pyClassAd);
