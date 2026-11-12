@@ -920,17 +920,17 @@ Scheduler::ocu_submitter_name(const OwnerInfo & owner, const OCU & ocu) const
 // Brute force search.  Will improve performance later if needed.
 OCU *
 Scheduler::getOCU(int ocu_id, OwnerInfo ** owner) {
-		if (owner) { *owner = nullptr; }
-		for (const auto &[_, oi]: OwnersInfo) {
-			for (auto &ocu: oi->ocus) {
-				if (ocu.ocu_id == ocu_id) {
-					if (owner) { *owner = oi; }
-					return &ocu;
-				}
+	if (owner) { *owner = nullptr; }
+	for (const auto &[_, oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.ocu_id == ocu_id) {
+				if (owner) { *owner = oi; }
+				return &ocu;
 			}
 		}
-		return nullptr;
 	}
+	return nullptr;
+}
 
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
