@@ -101,9 +101,18 @@ def unfillable_bundle(condor, test_dir, path_to_sleep):
 @action
 def stats(condor, unfillable_bundle):
 	"""The negotiator ad, read once the bundle has been in progress long enough
-	for a nonzero wait time to be reportable."""
-	time.sleep(3)
-	return negotiator_ad(condor)
+	for a nonzero wait time to be reportable.
+
+	The first ad showing the bundle is typically sent milliseconds after the
+	cycle that first saw it, so it reports a wait of zero; and the ad is only
+	refreshed every NEGOTIATOR_UPDATE_INTERVAL.  Poll for a refreshed ad rather
+	than sleeping a fixed time and hoping it has been re-sent."""
+	start = time.time()
+	ad = negotiator_ad(condor)
+	while int(ad.get("BundleMaxWaitSeconds", 0)) <= 0 and (time.time() - start) < 60:
+		time.sleep(1)
+		ad = negotiator_ad(condor)
+	return ad
 
 
 @action
