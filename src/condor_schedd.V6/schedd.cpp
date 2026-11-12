@@ -1716,8 +1716,15 @@ Scheduler::count_jobs()
 	for (auto & [name, owni] : OwnersInfo) {
 		for (const OCU & ocu : owni->ocus) {
 			std::string submitter = ocu_submitter_name(*owni, ocu);
+			if (submitter.empty()) {
+				// Shouldn't happen, but if it does this OCU will never be
+				// negotiated for, so say so loudly.
+				dprintf(D_ERROR, "OCU %d of owner '%s' has no submitter name; it cannot be negotiated for\n",
+					ocu.ocu_id, owni->Name());
+				continue;
+			}
+			// insert_submitter() finds or creates the record; it never returns null.
 			SubmitterData * SubDat = insert_submitter(submitter.c_str());
-			if ( ! SubDat) { continue; }
 			SubDat->owners.insert(owni->Name());
 			SubDat->num.Hits += 1;
 			SubDat->LastHitTime = current_time;
