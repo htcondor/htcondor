@@ -60,6 +60,12 @@
   *condor_starter*.
   :jira:`4013`
 
+- :tool:`condor_history` and :tool:`condor_q` now include :ad-attr:`JobBatchName`,
+  :ad-attr:`DAGNodeName`, :ad-attr:`JobStartDate`, :ad-attr:`JobCurrentStartExecutingDate`,
+  :ad-attr:`NumJobCompletions` in the resulting ClassAds generated from a
+  user log provided by the ``-userlog`` option.
+  :jira:`4081`
+
 - The *condor_starter* now advertises :ad-attr:`HasCgroup` as ``True``
   when jobs on that execution point will be placed in a per-job cgroup.
   The ``CgroupEnforced`` attribute, which the *condor_startd*
