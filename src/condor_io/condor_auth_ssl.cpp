@@ -100,16 +100,25 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     // Split the strings by '.' character, iterate through each sub-component.
     run1 = nullptr;
     run2 = nullptr;
+    bool first_entry = true;
     for (tok1 = strtok_r(match_copy, ".", &run1), tok2 = strtok_r(host_copy, ".", &run2);
          tok1 && tok2;
          tok1 = strtok_r(NULL, ".", &run1), tok2 = strtok_r(NULL, ".", &run2))
     {
         // Match non-wildcard bits
         while (*tok1 && *tok2 && *tok1 == *tok2) {
-            if (*tok2 == '*')
+            if (*tok2 == '*') {
                return false;
-            if (*tok1 == '*')
-                break;
+            }
+            if (*tok1 == '*'){
+                // A wildcard in the pattern can only appear in the first
+                // entry (i.e. before the first dot).
+                if (first_entry) {
+                    break;
+                } else {
+                    return false;
+                }
+            }
             tok1++;
             tok2++;
         }
@@ -131,6 +140,7 @@ bool hostname_match(const char *match_pattern, const char *hostname)
         else if (*tok1 || *tok2) {
             return false;
         }
+        first_entry = false;
     }
     return !tok1 && !tok2;
 }
@@ -1699,6 +1709,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
 	std::string fqdn;
+	bool saw_san_dns_name = false;
 	bool success = false;
 	ouch("post_connection_check.\n");
 
@@ -1813,8 +1824,10 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 			memcpy(san_fqdn, ASN1_STRING_get0_data(cstr), san_fqdn_len);
 #endif
 			san_fqdn[san_fqdn_len] = '\0';
-			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) // Avoid embedded null's.
+			if (strlen(san_fqdn) != static_cast<size_t>(san_fqdn_len)) { // Avoid embedded null's.
 				continue;
+			}
+			saw_san_dns_name = true;
 			if (hostname_match(san_fqdn, fqdn.c_str())) {
 				dprintf(D_SECURITY, "SSL host check: host alias %s matches certificate SAN %s.\n",
 					fqdn.c_str(), san_fqdn);
@@ -1834,7 +1847,9 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	}
 
 skip_san:
-	{
+	// If we saw any SAN DNS entries, then we ignore the CN for hostname
+	// verification.
+	if (!saw_san_dns_name) {
 		char cn_fqdn[256];
 #if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		X509_NAME *subj = nullptr;
