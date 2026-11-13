@@ -67,7 +67,7 @@ class Negotiator():
         Retrieve the pool accounting information as a list of
         `accounting ClassAds <http://htcondor.readthedocs.io/en/latest/classad-attributes/accounting-classad-attributes.html>`_.
 
-        :param rollup:  It :py:obj:`True`, the accounting information
+        :param rollup:  If :py:obj:`True`, the accounting information
             that applies to heirarchical group quotas will be summed for
             groups and subgroups.
         """
@@ -207,7 +207,7 @@ class Negotiator():
 
 
 def _convert_numbered_attributes_to_list_of_ads(legacy_ad : classad.ClassAd):
-    c = re.compile( r'(.*)(\d+)' )
+    c = re.compile( r'(.*[^\d])(\d+)' )
 
     ads = defaultdict(classad.ClassAd)
     for attr in legacy_ad.keys():
@@ -216,4 +216,4 @@ def _convert_numbered_attributes_to_list_of_ads(legacy_ad : classad.ClassAd):
             (name, index) = m.groups()
             ads[index][name] = legacy_ad[attr]
 
-    return ads.values()
+    return list(ads.values())
