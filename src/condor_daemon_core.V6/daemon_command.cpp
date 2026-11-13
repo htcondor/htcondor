@@ -1566,7 +1566,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
 				}
 			}
-			if (!authz_policy.empty()) {
+			// A capability token authorizes only what it lists, so an empty
+			// list authorizes nothing (beyond ALLOW, which needs nothing).
+			if (has_capability || !authz_policy.empty()) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
