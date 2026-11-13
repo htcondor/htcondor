@@ -332,8 +332,9 @@ class CondorQClassAdFileParseHelper : public ClassAdFileParseHelper
  public:
 	virtual int PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
 	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
-	// return non-zero if new parser, o if old (line oriented) parser, non-zero is returned the above functions will never be called.
-	virtual int NewParser(classad::ClassAd & /*ad*/,classad::LexerSource & lexsrc /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+
+	virtual std::pair<ParseResult, int> NewParser(classad::ClassAd & /*ad*/,classad::LexerSource & lexsrc /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return {ParseResult::LONG_FORM, 0}; }
+
 	std::string schedd_name;
 	std::string schedd_addr;
 };
