@@ -42,6 +42,11 @@
   than returning the job to the running state.
   :jira:`4049`
 
+- Fixed a bug where reading a JSON or XML formatted job event log could crash
+  or read freed memory when an event contained structured submit notes or
+  execute event properties.
+  :jira:`4082`
+
 *** 25.15.15 features
 
 - In some situations, HTCondor no longer needs to transfer the same file to the same EP once for
