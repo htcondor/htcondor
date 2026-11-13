@@ -57,8 +57,9 @@ _placement_user_login(PyObject *, PyObject * args) {
 
 	delete sock;
 
-	PyObject * pyClassAd = py_new_classad2_classad(result_ad.Copy());
-	return pyClassAd;
+	// We could probably construct this on the heap initially, pass the
+	// dereferenced pointer to getClassAd(), and skip this copy.
+	return py_new_classad2_classad_via_copy(& result_ad);
 }
 
 static PyObject *
@@ -122,10 +123,22 @@ _placement_query_users(PyObject *, PyObject * args) {
 			break;
 		}
 
-		PyObject * pyClassAd = py_new_classad2_classad(result_ad.Copy());
+		// We could probably construct this on the heap initially, pass the
+		// dereferenced pointer to getClassAd(), and skip this copy.
+		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
+		if( pyClassAd == NULL ) {
+			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+			delete sock;
+
+			// py_new_classad2_classad_via_copy() has already set an exception for us.
+			return NULL;
+		}
+
 		auto rv = PyList_Append(list, pyClassAd);
 		Py_DecRef(pyClassAd);
 		if (rv != 0) {
+			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
 			// PyList_Append() has already set an exception for us.
 			delete sock;
 			return nullptr;
@@ -204,12 +217,23 @@ _placement_query_tokens(PyObject *, PyObject * args) {
 			break;
 		}
 
-		PyObject * pyClassAd = py_new_classad2_classad(result_ad.Copy());
+		// We could probably construct this on the heap initially, pass the
+		// dereferenced pointer to getClassAd(), and skip this copy.
+		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
+		if( pyClassAd == NULL ) {
+			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+			delete sock;
+
+			// py_new_classad2_classad_via_copy() has already set an exception for us.
+			return NULL;
+		}
 		auto rv = PyList_Append(list, pyClassAd);
 		Py_DecRef(pyClassAd);
 		if (rv != 0) {
 			// PyList_Append() has already set an exception for us.
 			delete sock;
+
+			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
 			return nullptr;
 		}
 	} while (true);
@@ -280,7 +304,16 @@ _placement_query_authorizations(PyObject *, PyObject * args) {
 			break;
 		}
 
-		PyObject * pyClassAd = py_new_classad2_classad(result_ad.Copy());
+		// We could probably construct this on the heap initially, pass the
+		// dereferenced pointer to getClassAd(), and skip this copy.
+		PyObject * pyClassAd = py_new_classad2_classad_via_copy(& result_ad);
+		if( pyClassAd == NULL ) {
+			// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+			delete sock;
+
+			// py_new_classad2_classad_via_copy() has already set an exception for us.
+			return NULL;
+		}
 		auto rv = PyList_Append(list, pyClassAd);
 		Py_DecRef(pyClassAd);
 		if (rv != 0) {

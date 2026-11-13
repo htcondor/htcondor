@@ -129,6 +129,11 @@ should_convert_to_python(classad::ExprTree * e) {
 }
 
 
+//
+// We now depend on convert_classad_value_to_python() returning NULL if and
+// only if a Python exception has been raised.
+//
+
 PyObject *
 convert_classad_value_to_python(classad::Value & v) {
     switch( v.GetType() ) {
@@ -137,7 +142,7 @@ convert_classad_value_to_python(classad::Value & v) {
             ClassAd * c;
             (void) v.IsClassAdValue(c);
 
-            return py_new_classad2_classad(c->Copy());
+            return py_new_classad2_classad_via_copy(c);
             } break;
 
         case classad::Value::BOOLEAN_VALUE: {
@@ -209,6 +214,10 @@ convert_classad_value_to_python(classad::Value & v) {
                     }
 
                     PyObject * py_v = convert_classad_value_to_python(v);
+                    if( py_v == NULL ) {
+                        Py_DecRef(list);
+                        return NULL;
+                    }
                     if(PyList_Append( list, py_v ) != 0) {
                         Py_DecRef(py_v);
                         Py_DecRef(list);
@@ -641,7 +650,11 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     }
 
 
-    auto py_class_ad = py_new_classad2_classad(result);
+    PyObject * py_class_ad = py_new_classad2_classad(result);
+    if( py_class_ad == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        return NULL;
+    }
     return Py_BuildValue("Nl", py_class_ad, offset);
 }
 
