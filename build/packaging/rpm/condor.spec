@@ -1476,6 +1476,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Nov 12 2026 Tim Theisen <tim@cs.wisc.edu> - 23.10.35-1
+- Special CentOS7 build with Pelican 26.0.0 in the tarball
+
 * Thu Oct 08 2026 Tim Theisen <tim@cs.wisc.edu> - 23.10.34-1
 - Special CentOS7 build with Pelican 7.27.0 in the tarball
 

@@ -1,3 +1,7 @@
+*** 23.10.35 features
+
+- Special CentOS7 build with `Pelican 26.0.0 <https://pelicanplatform.org/releases>`_ in the tarball.
+
 *** 23.10.34 features
 
 - Special CentOS7 build with `Pelican 7.27.0 <https://pelicanplatform.org/releases>`_ in the tarball.
