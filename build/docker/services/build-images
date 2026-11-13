@@ -477,9 +477,9 @@ org.htcondor.version="%s"
             args.append(f"--build-arg=VERSION={self.version}")
 
         base = 'base'
-        base_arch = 'base'
+        base_arch = 'base_amd64'
         if image.startswith('arm64'):
-            base_arch = base_arch + '_arm64'
+            base_arch = 'base_arm64'
 
         # We don't know up front what the version of the installed software will be.
         # Give the image a temporary name (better than parsing `docker build` output
@@ -746,7 +746,7 @@ def main(argv) -> Union[int,str]:
         for arch in arches:
             if arch == 'x86_64':
                 distro_image = X86_64_DISTRO_IMAGE[distro]
-                suffix = ''
+                suffix = '_amd64'
             elif arch == 'arm64':
                 distro_image = ARM64_DISTRO_IMAGE[distro]
                 suffix = '_arm64'
