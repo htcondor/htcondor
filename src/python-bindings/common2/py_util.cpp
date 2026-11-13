@@ -9,8 +9,20 @@ get_handle_from(PyObject * py) {
 }
 
 
+//
+// Because (at least) PyObject_CallObject() may raise an exception unrelated
+// to the function being called (e.g., delayed signal handling can raise
+// a `KeyboardInterrupt`), we need to propagate (arbitrary?) exceptions.
+//
+// To that end, we must either return NULL if and only if an exception has
+// been set, or change the function signature.
+//
+// The object returned by this function owns the ClassAd passed into it; this
+// functions deletes the ClassAd before returning NULL to deduplicate a bunch
+// of code.
+//
 PyObject *
-py_new_classad2_classad(void * classAd) {
+py_new_classad2_classad(ClassAd * classAd) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
@@ -26,7 +38,19 @@ py_new_classad2_classad(void * classAd) {
 		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
 	}
 
+	// The ClassAd constructor itself should only ever raise an exception
+	// if given an invalid argument; NULL is a valid argument.  However,
+	// any time we give control back to the Python interpreter, as we do
+	// here, it can elect to do signal handling (instead), which may lead
+	// to an exception.
 	PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
+	if( pyClassAd == NULL ) {
+		delete classAd;
+
+		// PyObject_CallObject() has already set an exception for us.
+		return NULL;
+	}
+
 	auto * handle = get_handle_from(pyClassAd);
 
 	// If we were given a C++ ClassAd object to create a Python ClassAd object
@@ -41,6 +65,50 @@ py_new_classad2_classad(void * classAd) {
 
 	// _classad_init() correctly set handle->f already.
 	return pyClassAd;
+}
+
+
+PyObject *
+py_new_classad2_classad_via_copy(ClassAd * classAd) {
+	// It is a programming error to pass this function a null pointer, so
+	// blowing an assert would justified here.  However, if we _have_ made
+	// such a mistake, it seems rather possible that it was the result of
+	// an unexpected Python exception being raised.  If so, we don't want
+	// to replace that exception with our own.  Otherwise, raising an
+	// exception probably our least user-hostile option.
+	if( classAd == NULL ) {
+		if( PyErr_Occurred() == NULL ) {
+			// Using RuntimeError instead of HTCondorException to avoid
+			// deciding how to deal with a global pointer that doesn't
+			// exist in the classad2 module.
+			PyErr_SetString( PyExc_RuntimeError, "Internal error: attempted to make a classad2.ClassAd from a NULL pointer" );
+		}
+		return NULL;
+	}
+
+	auto * c = classAd->Copy();
+	if( c == NULL ) {
+		// Presently, ClassAd::Copy() only fails if memory allocation fails.
+		PyErr_SetString( PyExc_MemoryError, "ClassAd::Copy() failed" );
+		return NULL;
+	}
+
+	// It is a programming error for this cast to fail, so blowing an assert
+	// here would be justified.  That (should) also generate a C++ stack trace,
+	// which might help us figure out what went wrong.  Conversely, that
+	// removes the option for the script developer to try something else.  The
+	// ideal option would probably be to generate the C++ stack trace but put
+	// it in the Python exception to improve the bug report.
+	ClassAd * copy = dynamic_cast<ClassAd *>(c);
+	if( copy == NULL ) {
+		// Using RuntimeError instead of HTCondorException to avoid
+		// deciding how to deal with a global pointer that doesn't
+		// exist in the classad2 module.
+		PyErr_SetString( PyExc_RuntimeError, "Internal error: ClassAd::Copy() did not return a ClassAd *" );
+		return NULL;
+	}
+
+	return py_new_classad2_classad(copy);
 }
 
 
@@ -120,9 +188,6 @@ py_new_classad_exprtree( ExprTree * original ) {
 	}
 
 
-	ExprTree * copy = original->Copy();
-	copy->SetParentScope(NULL);
-
 	PyObject * pyArgsTuple = Py_BuildValue( "(O)", py_exprtree_nill );
 	if( pyArgsTuple == NULL ) {
 		// Py_BuildValue() has already set an exception for us.
@@ -130,7 +195,15 @@ py_new_classad_exprtree( ExprTree * original ) {
 	}
 	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, pyArgsTuple );
 	Py_DecRef(pyArgsTuple);
+
+	if( pyExprTree == NULL ) {
+		// PyObject_CallObject() has already set an exception for us.
+		return NULL;
+	}
 	auto * handle = get_handle_from(pyExprTree);
+
+	ExprTree * copy = original->Copy();
+	copy->SetParentScope(NULL);
 
 	// PyObject_CallObject() should have called __init__() for us, which
 	// should call _exprtree_init(), which should have made sure that the
@@ -361,3 +434,58 @@ py_list_to_projection( PyObject * l, classad::References & attrs, const char * n
 	return 0;
 }
 
+
+//
+// Returns either NULL after having raised a Python exception, or a pointer
+// to a PyList object containing-and-owning the classad2.ClassAds created
+// from the vector of unique pointers to classad::ClassAds.
+//
+// On return, each unique_ptr in the vector will either be the original one,
+// an empty one whose former pointer has been freed, or an empty one whose
+// former pointer is now owned by the PyList object (via a Python ClassAd
+// object).
+//
+// This allows the callers, if they pass a local vector, to just return this
+// function call: either everything worked; or NULL is returned, an exception
+// has been raised, and all of the C++ objects have been delete'd.
+//
+
+PyObject *
+py_list_from_vector( std::vector<std::unique_ptr<ClassAd>> & adList, const char * where ) {
+	PyObject * list = PyList_New(0);
+	if( list == NULL ) {
+		PyErr_SetString( PyExc_MemoryError, where );
+		return NULL;
+	}
+
+	for( auto & classAd : adList ) {
+		ClassAd * c = classAd.release();
+		// `c` is now a loose, unowned pointer.  If it does not become
+		// owned by something before going out of scope, it must be
+		// delete()d.
+
+		PyObject * pyClassAd = py_new_classad2_classad(c);
+		if( pyClassAd == NULL ) {
+			// At this point, every ClassAd originally in adList:
+			//    (a) is owned by `adList`; or
+			//    (b) was just deleted by py_new_classad2_classad(); or
+			//    (b) is owned by `list`.
+			//
+			Py_DecRef(list);
+
+			// py_new_classad2_classad() has already set an exception for us.
+			return NULL;
+		}
+		auto rv = PyList_Append( list, pyClassAd );
+		Py_DecRef(pyClassAd);
+
+		if(rv != 0) {
+			Py_DecRef(list);
+
+			// PyList_Append() has already set an exception for us.
+			return NULL;
+		}
+	}
+
+	return list;
+}

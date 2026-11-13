@@ -539,3 +539,52 @@ def test_output_of_printJson_can_be_parsed(ad):
         "undefined": None,
         "error": "/Expr(error)/",
     }
+
+
+#
+# Test raising an exception in the classad2.ClassAd constructor, as if
+# delayed signal handling had occurred.
+#
+
+
+class _ConstructorInterrupted(BaseException):
+    pass
+
+
+def _raising_init(self, *args, **kwargs):
+    raise _ConstructorInterrupted()
+
+
+def test_exception_classad_constructor(monkeypatch):
+    monkeypatch.setattr(classad.ClassAd, "__init__", _raising_init)
+    with pytest.raises(_ConstructorInterrupted):
+        ad = classad.ClassAd()
+    monkeypatch.undo()
+
+
+def test_exception_in_nested_classad_construction_propagates(monkeypatch):
+    ad = classad.ClassAd()
+    ad["nested"] = classad.ClassAd({"a": 1})
+    ad["list"] = [classad.ClassAd({"b": 2})]
+
+    monkeypatch.setattr(classad.ClassAd, "__init__", _raising_init)
+    with pytest.raises(_ConstructorInterrupted):
+        ad["nested"]
+    with pytest.raises(_ConstructorInterrupted):
+        ad["list"]
+    monkeypatch.undo()
+
+    assert ad["nested"]["a"] == 1
+    assert ad["list"][0]["b"] == 2
+
+
+def test_exception_in_exprtree_construction_propagates(monkeypatch):
+    ad = classad.ClassAd()
+    ad["expr"] = classad.ExprTree("2 + x")
+
+    monkeypatch.setattr(classad.ExprTree, "__init__", _raising_init)
+    with pytest.raises(_ConstructorInterrupted):
+        ad.lookup("expr")
+    monkeypatch.undo()
+
+    assert str(ad.lookup("expr")) == "2 + x"

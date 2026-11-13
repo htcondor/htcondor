@@ -2,8 +2,8 @@
 
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
-    auto * results = static_cast<std::vector<ClassAd *> *>(r);
-    results->push_back( ad );
+    auto * results = static_cast<std::vector<std::unique_ptr<ClassAd>> *>(r);
+    results->push_back(std::unique_ptr<ClassAd>(ad));
 
     // Don't delete the pointers.  The `results` local below
     // will do that when it goes out of scope, after we've
@@ -11,12 +11,24 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     return false;
 }
 
+
+//
+// FIXME
+// There might be a good reason to have written this function this way,
+// but it seems like it would be easier to rewrite the caller to match
+// _schedd_query_callback() and use py_list_to_vector() rather than fix
+// all of this function's omissions.
+//
+
 static int
 _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<PyObject*>(r);
 
-    // py_new_classad2_classad takes ownership of the ad
     PyObject * pyClassAd = py_new_classad2_classad(ad);
+    if( pyClassAd == NULL ) {
+        // py_new_classad2_classad() has already set an exception for us.
+        return -1;
+    }
     auto rv = PyList_Append(results, pyClassAd);
     Py_DecRef(pyClassAd);
 
@@ -69,7 +81,7 @@ _schedd_query(PyObject *, PyObject * args) {
 
     CondorError errStack;
     ClassAd * summaryAd = NULL;
-    std::vector<ClassAd *> results;
+    std::vector<std::unique_ptr<ClassAd>> results;
     rv = q.fetchQueueFromHostAndProcess(
         addr, attributes, opts, limit,
         _schedd_query_callback, & results,
@@ -110,21 +122,10 @@ _schedd_query(PyObject *, PyObject * args) {
     if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
-        results.push_back(summaryAd);
+        results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
 
-    for( auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(classAd);
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return NULL;
-        }
-    }
-
-    return list;
+    return py_list_from_vector( results, "_schedd_query" );
 }
 
 static PyObject *
@@ -1251,7 +1252,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     // but our experience with Python memory management is that magical
     // behavior is bad for us.
     //
-    PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
+    PyObject * pyClusterAd = py_new_classad2_classad_via_copy(clusterAd);
     sb->cleanup_submit();
     PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
     Py_DecRef( pyClusterAd );
@@ -1427,7 +1428,7 @@ _history_query(PyObject *, PyObject * args) {
         // We could probably dispense with the copy by allocating the
         // result ads on the heap in the first place, but that would
         // require more attention to clean-up in the preceeding loop.
-        PyObject * pyClassAd = py_new_classad2_classad(classAd.Copy());
+        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
         auto rv = PyList_Append(list, pyClassAd);
         Py_DecRef(pyClassAd);
 
@@ -1670,25 +1671,7 @@ _schedd_get_claims(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    PyObject * list = PyList_New(0);
-    if( list == nullptr ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_get_claims" );
-        return nullptr;
-    }
-
-    for (auto & classAd : results ) {
-        //PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(*classAd));
-        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return nullptr;
-        }
-    }
-
-    return list;
+    return py_list_from_vector(results, "_schedd_get_claims");
 }
 
 // DCSchedd::createOCUs supports passing in multiple OCU ClassAds at once
@@ -1717,8 +1700,8 @@ _schedd_create_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
-    return pyClassAd;
+    // We could probably construct this on the heap initially and skip this copy.
+	return py_new_classad2_classad_via_copy(& result);
 }
 
 static PyObject *
@@ -1745,8 +1728,8 @@ _schedd_remove_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
-    return pyClassAd;
+    // We could probably construct this on the heap initially and skip this copy.
+	return py_new_classad2_classad_via_copy(& result);
 }
 
 static PyObject *
@@ -1776,13 +1759,20 @@ _schedd_query_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    for (auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(classAd));
-        //PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+    for( auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
+        if( pyClassAd == NULL ) {
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
+            // py_new_classad2_classad_via_copy() has already set an exception for us.
+            return NULL;
+        }
         auto rv = PyList_Append(list, pyClassAd);
-        //Py_DecRef(pyClassAd);
+        Py_DecRef(pyClassAd);
 
         if( rv != 0 ) {
+            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+
             // PyList_Append() has already set an exception for us.
             return nullptr;
         }
