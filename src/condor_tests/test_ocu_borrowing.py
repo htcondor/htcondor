@@ -21,6 +21,8 @@ import time
 
 import pytest
 
+import htcondor2 as htcondor
+
 from ornithology import *
 
 from ocu_helpers import *
@@ -164,13 +166,14 @@ class TestOCUBorrowing:
 		assert ad.get("MachineAttrOCU0") is True, ad
 		assert ran_on(ad) == ocu_slot_name, ad
 
-	def test_borrower_evicted_for_owner(self, alice_reclaim, borrowed):
+	def test_borrower_evicted_for_owner(self, test_dir, alice_reclaim, borrowed):
 		if borrowed is None:
 			pytest.skip("no borrowing happened")
-		bob = alice_reclaim["bob"][0]
-		# bob's job was vacated (it went back to idle at least once, or
-		# started again later)
-		assert bob.get("NumJobStarts", 0) >= 1, bob
+		# Look for the eviction event, not NumJobStarts: the borrower may be
+		# evicted while its starter is still setting up, before the job ever
+		# executes, and then NumJobStarts stays 0.
+		events = htcondor.JobEventLog((test_dir / "bob_borrower.log").as_posix()).events(stop_after=0)
+		assert any(e.type == htcondor.JobEventType.JOB_EVICTED for e in events), alice_reclaim["bob"]
 		assert alice_reclaim["done"].get("MachineAttrOCU0") is True
 
 	def test_held_ocuwanted_does_not_evict_borrower(self, held_wanted_churn, borrowed):
