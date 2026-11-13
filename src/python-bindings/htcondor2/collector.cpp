@@ -112,6 +112,10 @@ _collector_query( PyObject *, PyObject * args ) {
 
 		for( auto & classAd : adList ) {
 			ClassAd * c = classAd.release();
+			// `c` is now a loose, unowned pointer.  If it does not become
+			// owned by something before going out of scope, it must be
+			// delete()d.
+
 			PyObject * pyClassAd = py_new_classad2_classad(c);
 			if( pyClassAd == NULL ) {
 				// At this point, every ClassAd originally in adList:
@@ -119,11 +123,7 @@ _collector_query( PyObject *, PyObject * args ) {
 				//    (b) was just deleted by py_new_classad2_classad(); or
 				//    (b) is owned by `list`.
 				//
-				// (FIXME: We presume that release()ing a unique_ptr accessed
-				// via an iterator unsets the unique_ptr and that cleaning up
-				// the local doesn't lead to a double-free.)
-				//
-				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+				Py_DecRef(list);
 
 				// py_new_classad2_classad() has already set an exception for us.
 				return NULL;
@@ -132,7 +132,7 @@ _collector_query( PyObject *, PyObject * args ) {
 			Py_DecRef(pyClassAd);
 
 			if(rv != 0) {
-				// FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
+				Py_DecRef(list);
 
 				// PyList_Append() has already set an exception for us.
 				return NULL;
