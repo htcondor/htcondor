@@ -116,34 +116,7 @@ _schedd_query(PyObject *, PyObject * args) {
         results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
 
-    for( auto & classAd : results ) {
-        ClassAd * c = classAd.release();
-        PyObject * pyClassAd = py_new_classad2_classad(c);
-        if( pyClassAd == NULL ) {
-            // At this point, every ClassAd originally in `results`:
-            //    (a) is owned by `list`; or
-            //    (b) has just been deleted by py_new_classad2_classad(); or
-            //    (c) is owned by `results`.
-            //
-            // FIXME: follow the model in _collector_query so that iterating
-            // through the list unowns the pointers; otherwise the above
-            // analysis and this whole loop appear to be nonsense.
-            //
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // py_new_classad2_classad() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return NULL;
-        }
-    }
-
-    return list;
+    return py_list_from_vector( results );
 }
 
 static PyObject *

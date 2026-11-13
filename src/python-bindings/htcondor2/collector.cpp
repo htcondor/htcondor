@@ -104,42 +104,7 @@ _collector_query( PyObject *, PyObject * args ) {
 	}
 
 	if( result == Q_OK ) {
-		PyObject * list = PyList_New(0);
-		if( list == NULL ) {
-			PyErr_SetString( PyExc_MemoryError, "_collector_query" );
-			return NULL;
-		}
-
-		for( auto & classAd : adList ) {
-			ClassAd * c = classAd.release();
-			// `c` is now a loose, unowned pointer.  If it does not become
-			// owned by something before going out of scope, it must be
-			// delete()d.
-
-			PyObject * pyClassAd = py_new_classad2_classad(c);
-			if( pyClassAd == NULL ) {
-				// At this point, every ClassAd originally in adList:
-				//    (a) is owned by `adList`; or
-				//    (b) was just deleted by py_new_classad2_classad(); or
-				//    (b) is owned by `list`.
-				//
-				Py_DecRef(list);
-
-				// py_new_classad2_classad() has already set an exception for us.
-				return NULL;
-			}
-			auto rv = PyList_Append( list, pyClassAd );
-			Py_DecRef(pyClassAd);
-
-			if(rv != 0) {
-				Py_DecRef(list);
-
-				// PyList_Append() has already set an exception for us.
-				return NULL;
-			}
-		}
-
-		return list;
+	    return py_list_from_vector( adList );
 	} else {
 		switch (result) {
 			case Q_COMMUNICATION_ERROR:
