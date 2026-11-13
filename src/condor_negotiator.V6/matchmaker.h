@@ -305,7 +305,7 @@ class Matchmaker : public Service
 		// Note: these are called by trimStartdAds as required
 		int trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const;
 		int trimStartdAds_ShutdownLogic(std::vector<ClassAd *> &startdAds);
-		int trimStartdAds_ClaimedPslotLogic(std::vector<ClassAd *> &startdAds);
+		int trimStartdAds_UnmatchableClaimedLogic(std::vector<ClassAd *> &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(std::vector<ClassAd *> &startdAds,double *minSlotWeight, ExprTree* constraint);

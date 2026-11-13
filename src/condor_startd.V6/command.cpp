@@ -1082,6 +1082,12 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
 					goto abort;
 				}
+					// An OCU claim is a guarantee to its owner; it is
+					// only given up by draining or by its holder.
+				if ( dslots[i]->r_cur && dslots[i]->r_cur->isOCU() ) {
+					dprintf( D_ALWAYS, "Error: slot %s holds an OCU claim, which can't be preempted\n", dslots[i]->r_name );
+					goto abort;
+				}
 			}
 			Resource *parent = dslots[0]->get_parent();
 
@@ -1292,6 +1298,16 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 	} else if (rip->state() == claimed_state) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
+			// ...unless it is an OCU claim.  That is a guarantee to the
+			// OCU's owner, so neither user priority nor machine rank can
+			// take it away; only draining or the claim's holder can.
+		if( rip->r_cur && rip->r_cur->isOCU() ) {
+			rip->dprintf( D_ALWAYS,
+				"Refusing to preempt OCU claim %s.\n",
+				rip->r_cur->publicClaimId() );
+			reply(stream, NOT_OK);
+			goto abort;
+		}
 		if( !rip->r_pre ) {
 			rip->dprintf( D_ALWAYS, 
 			   "In CLAIMED state without preempting claim object, aborting.\n" );

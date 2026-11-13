@@ -7,6 +7,9 @@
   not replace the matched text. 
   :jira:`4052`
 
+- Fixed several bugs that prevented OCU claims from being made.
+  :jira:`4073
+
 - The kernel tuning script run by the :tool:`condor_master` (see
   :macro:`ENABLE_KERNEL_TUNING`) now sets ``/proc/sys/vm/dirty_bytes``
   to 100 MB only on cgroup v1 machines that run a *condor_startd*.

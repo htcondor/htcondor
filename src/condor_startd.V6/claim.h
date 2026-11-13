@@ -306,6 +306,7 @@ public:
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
 	void setOCU( bool ocu ) { c_ocu = ocu; }
+	bool isOCU() const { return c_ocu; }
 	void setOCUName(const std::string &name) { c_ocu_name = name; }
 
 	bool waitingForActivation() const;

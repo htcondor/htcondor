@@ -412,14 +412,17 @@ JobQueueUserRec::removeOCU(const ClassAd &ocu) {
 		auto match = [ocu_id] (const OCU &ocu) {
 			int id = -1;
 			ocu.ad.LookupInteger(ATTR_OCU_ID, id);
-			if (id == ocu_id) {
-				if (ocu.mrec) {
-					scheduler.DelMrec(ocu.mrec);
-				}
-				return true;
-			}
-			return false;
+			return id == ocu_id;
 		};
+
+		// Release the OCU's claim before forgetting the OCU.  DelMrec
+		// unlinks the claim from the OCU (it looks the OCU up by id),
+		// so do it while the OCU is still in the list, and not from
+		// inside erase_if.
+		auto it = std::ranges::find_if(ocus, match);
+		if (it != ocus.end() && it->mrec) {
+			scheduler.DelMrec(it->mrec);
+		}
 		std::erase_if(ocus, match);
 		//
 		syncOCUs();
@@ -10066,7 +10069,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	// this is true only when we are claiming the local startd
 	// because the negotiator went missing for too long.
-	bool match_any_user = (user == nullptr) ? true : false;
+// This may be true when claiming the local startd
+// (because the negotiator went missing for too long)
+// or when the match is OCU but the OCU's owner
+// had no matching jobs.
+bool match_any_user = user == nullptr;
 	// Stringify the user to make comparison faster
 	std::string user_str = user ? user : "";
 
@@ -10089,10 +10096,15 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	double current_startd_rank = 0.0;
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
-	std::string remoteOwner;
-	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
-	std::string remoteProject;
-	my_match_ad->LookupString(ATTR_REMOTE_PROJECT, remoteProject);
+	// For an OCU claim, whose claim it is -- written by claimedStartd.
+	// Not RemoteOwner/RemoteProject: those say who is running on the slot
+	// now, and an idle OCU claim has nobody running on it.
+	std::string ocuOwner;
+	std::string ocuProject;
+	if (is_ocu) {
+		my_match_ad->LookupString(ATTR_OCU_OWNER, ocuOwner);
+		my_match_ad->LookupString(ATTR_OCU_PROJECT, ocuProject);
+	}
 
 #ifdef USE_VANILLA_START
 	std::string job_attr("JOB");
@@ -10119,8 +10131,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	std::set<int> PrioRecAutoClusterRejected;
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
+	// Set to scan the same job list again, for an OCU claim whose owner
+	// has nothing to run on it: the second scan is for borrowers.
+	bool rescan_for_borrowers = false;
 
 	do {
+		rescan_for_borrowers = false;
 		auto first = PrioRec.begin();
 		auto end = PrioRec.end();
 
@@ -10172,11 +10188,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			bool OCUWanted = false;
 			job->LookupBool(ATTR_OCU_WANTED, OCUWanted);
 			if (is_ocu) {
-				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
-				// ... or, the job should belong to a project that has an OCU claim
+				// The job is the OCU owner's if it has the same owner,
+				// or belongs to the OCU's project.
 
-				if ((remoteOwner == job->ownerinfo->Name()) ||
-					(job->project ? remoteProject == job->project->Name() : false)) {
+				if (( ! ocuOwner.empty() && ocuOwner == job->ownerinfo->Name()) ||
+					( ! ocuProject.empty() && job->project && ocuProject == job->project->Name())) {
 					// Only match our own OCU claim if OCUWanted is true
 					if (!OCUWanted) {
 						continue;
@@ -10347,8 +10363,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 		// If we got here and ocu true and match_any_user is false, then
 		// no job from our priority user matched.  Try again for someone else.
+		// (Not a bare continue: that would jump to the loop condition, which
+		// ends the loop whenever the job list was reused rather than rebuilt.)
 		if (is_ocu && !match_any_user) {
 			match_any_user = true;
+			rescan_for_borrowers = true;
 			continue;
 		}
 
@@ -10361,8 +10380,10 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			// are about to throw away a match.
 		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
 		PrioRecAutoClusterRejected.clear();
+			// On the new list, an OCU claim again prefers its owner's jobs.
+		match_any_user = (user == nullptr);
 
-	} while( rebuilt_prio_rec_array );
+	} while( rescan_for_borrowers || rebuilt_prio_rec_array );
 
 	// No runnable job found for this match; record ignores only for new matches
 	if (is_new_match && !blocked_limits.empty()) {

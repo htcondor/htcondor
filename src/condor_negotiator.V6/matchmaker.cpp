@@ -2861,7 +2861,7 @@ trimStartdAds(std::vector<ClassAd *> &startdAds)
 
 	removed += trimStartdAds_PreemptionLogic(startdAds);
 	removed += trimStartdAds_ShutdownLogic(startdAds);
-	removed += trimStartdAds_ClaimedPslotLogic(startdAds);
+	removed += trimStartdAds_UnmatchableClaimedLogic(startdAds);
 
 	return removed;
 }
@@ -3015,45 +3015,46 @@ trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const
 
 
 int Matchmaker::
-trimStartdAds_ClaimedPslotLogic(std::vector<ClassAd *> &startdAds)
+trimStartdAds_UnmatchableClaimedLogic(std::vector<ClassAd *> &startdAds)
 {
 	size_t removed = 0;
 	std::string cur_state;
 	const char* claimed_state_str = state_to_string(claimed_state);
 
 	/*
-	 * Trim out claimed partitionable slots when any of the following
-	 * is true:
-	 * 1) WantMatching is false in the ad
-	 * 2) WorkingCM is set in the ad and MatchWorkingCmSlots is false
+	 * Trim out claimed slots that don't want to be matched by us:
+	 * 1) WantMatching is false in the ad (any claimed slot; e.g. a slot
+	 *    holding an OCU claim, which only its holding schedd may use)
+	 * 2) a claimed partitionable slot with WorkingCM set in the ad,
+	 *    and MatchWorkingCmSlots is false
 	*/
 
-	auto isClaimedPslot = [&](ClassAd *ad) {
+	auto isUnmatchableClaimedSlot = [&](ClassAd *ad) {
+		ad->LookupString(ATTR_STATE, cur_state);
+		if (strcmp(cur_state.c_str(), claimed_state_str) != 0) {
+			return false;
+		}
+		bool want_matching = true;
+		ad->LookupBool(ATTR_WANT_MATCHING, want_matching);
+		if ( ! want_matching) {
+			return true;
+		}
 		bool is_pslot = false;
 		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
-		if (is_pslot) {
-			ad->LookupString(ATTR_STATE, cur_state);
-			if (strcmp(cur_state.c_str(), claimed_state_str) != 0) {
-				return false;;
-			}
+		if (is_pslot && ! MatchWorkingCmSlots) {
 			std::string working_cm;
-			bool want_matching = true;
 			ad->LookupString("WorkingCM", working_cm);
-			ad->LookupBool(ATTR_WANT_MATCHING, want_matching);
-			if (want_matching && (MatchWorkingCmSlots || working_cm.empty())) {
-				return false;;
-			}
-			return true;
+			return ! working_cm.empty();
 		}
 		return false;
 	};
-	
-	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isClaimedPslot);
+
+	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isUnmatchableClaimedSlot);
 	removed = std::distance(lastGood, startdAds.end());
 	startdAds.erase(lastGood, startdAds.end());
 
 	dprintf(D_FULLDEBUG,
-	        "Trimmed out %zu startd ads that are claimed pslots that don't want to be matched by us\n",
+	        "Trimmed out %zu startd ads that are claimed slots that don't want to be matched by us\n",
 	        removed);
 
 	return removed;
@@ -6611,6 +6612,19 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		}
 		if ( child_claims[i] == "" ) {
 			continue;
+		}
+			// Skip dslots whose own ad says not to match them (e.g. one
+			// holding an OCU claim).  trimStartdAds() dropped those ads from
+			// the match list, but we reach the dslot here via its pslot.
+		std::string dslot_name;
+		if ( dslotLookupString( machine, ATTR_NAME, i, dslot_name ) ) {
+			auto it = m_slotNameToAdMap.find(dslot_name);
+			bool want_matching = true;
+			if ( it != m_slotNameToAdMap.end() &&
+				 it->second->LookupBool(ATTR_WANT_MATCHING, want_matching) &&
+				 ! want_matching ) {
+				continue;
+			}
 		}
 		ranks.emplace_back(i, currentRank );
 	}
