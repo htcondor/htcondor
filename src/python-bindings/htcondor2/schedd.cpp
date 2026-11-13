@@ -11,6 +11,15 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     return false;
 }
 
+
+//
+// FIXME
+// There might be a good reason to have written this function this way,
+// but it seems like it would be easier to rewrite the caller to match
+// _schedd_query_callback() and use py_list_to_vector() rather than fix
+// all of this function's omissions.
+//
+
 static int
 _schedd_userrec_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<PyObject*>(r);
@@ -116,7 +125,7 @@ _schedd_query(PyObject *, PyObject * args) {
         results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
 
-    return py_list_from_vector( results );
+    return py_list_from_vector( results, "_schedd_query" );
 }
 
 static PyObject *
@@ -1638,30 +1647,7 @@ _schedd_get_claims(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    PyObject * list = PyList_New(0);
-    if( list == nullptr ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_get_claims" );
-        return nullptr;
-    }
-
-    for (auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
-        if( pyClassAd == NULL ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // py_new_classad2_classad() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return nullptr;
-        }
-    }
-
-    return list;
+    return py_list_from_vector(results, "_schedd_get_claims");
 }
 
 // DCSchedd::createOCUs supports passing in multiple OCU ClassAds at once

@@ -104,7 +104,7 @@ _collector_query( PyObject *, PyObject * args ) {
 	}
 
 	if( result == Q_OK ) {
-	    return py_list_from_vector( adList );
+	    return py_list_from_vector( adList, "_collector_query" );
 	} else {
 		switch (result) {
 			case Q_COMMUNICATION_ERROR:

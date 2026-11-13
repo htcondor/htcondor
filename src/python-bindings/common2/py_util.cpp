@@ -451,10 +451,10 @@ py_list_to_projection( PyObject * l, classad::References & attrs, const char * n
 //
 
 PyObject *
-py_list_from_vector( std::vector<std::unique_ptr<ClassAd>> & adList ) {
+py_list_from_vector( std::vector<std::unique_ptr<ClassAd>> & adList, const char * where ) {
 	PyObject * list = PyList_New(0);
 	if( list == NULL ) {
-		PyErr_SetString( PyExc_MemoryError, "_collector_query" );
+		PyErr_SetString( PyExc_MemoryError, where );
 		return NULL;
 	}
 
