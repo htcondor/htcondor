@@ -129,6 +129,11 @@ should_convert_to_python(classad::ExprTree * e) {
 }
 
 
+//
+// We now depend on convert_classad_value_to_python() returning NULL if and
+// only if a Python exception has been raised.
+//
+
 PyObject *
 convert_classad_value_to_python(classad::Value & v) {
     switch( v.GetType() ) {
