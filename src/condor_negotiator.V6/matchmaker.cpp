@@ -343,6 +343,36 @@ struct rankSorter {
 	};
 };
 
+// The order of the slot-bundle round: oldest bundle first.  Bundles hold the
+// slots they have matched while they wait for the rest, so two bundles that
+// each want most of the pool deadlock unless every cycle fills them in the same
+// order -- priority, which changes from cycle to cycle, is not used at all.
+struct bundleSubmitterLessThan {
+	bool operator()(ClassAd *ad1, ClassAd *ad2) const {
+		long long qdate1 = LLONG_MAX, qdate2 = LLONG_MAX;
+		if ( ! ad1->LookupInteger(ATTR_BUNDLE_OLDEST_QDATE, qdate1) || qdate1 <= 0) {
+			qdate1 = LLONG_MAX;
+		}
+		if ( ! ad2->LookupInteger(ATTR_BUNDLE_OLDEST_QDATE, qdate2) || qdate2 <= 0) {
+			qdate2 = LLONG_MAX;
+		}
+		if (qdate1 != qdate2) return qdate1 < qdate2;
+
+		// Break every remaining tie on the schedd name, which is unique per
+		// schedd.  Leaving ties here would put us back where we started:
+		// std::sort is not stable, so equal keys are ordered by the input
+		// sequence, which is the order the collector happened to return the
+		// ads in and can differ from cycle to cycle.
+		std::string schedd1, schedd2;
+		ad1->LookupString(ATTR_SCHEDD_NAME, schedd1);
+		ad2->LookupString(ATTR_SCHEDD_NAME, schedd2);
+		return schedd1 < schedd2;
+	}
+};
+
+// The order of the floor and fair-share rounds: best priority first.  Slot
+// bundle submitters never reach this; negotiateBundleRound() takes them out of
+// the submitter list first.
 struct submitterLessThan {
 	Matchmaker *mm;
 	submitterLessThan(Matchmaker *mm) : mm(mm) {}
@@ -355,43 +385,6 @@ struct submitterLessThan {
 		// nameless submitters are filtered elsewhere
 		ad1->LookupString(ATTR_NAME, subname1);
 		ad2->LookupString(ATTR_NAME, subname2);
-
-		// Slot bundle requests are negotiated first, ahead of all real
-		// submitters, regardless of accountant priority.  Key on the explicit
-		// marker the schedd sets, not the submitter name.
-		//
-		// Ordering bundles ahead of everyone else is a backstop:
-		// negotiationTime() normally extracts the bundle submitters and
-		// negotiates them in a round of their own before any of this runs.  The
-		// bundle-versus-bundle ordering below, however, is *not* a backstop --
-		// it is how the bundle round itself is ordered.
-		bool bundle1 = false, bundle2 = false;
-		ad1->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle1);
-		ad2->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, bundle2);
-		if (bundle1 != bundle2) return bundle1;
-
-		if (bundle1) {
-			// Two bundle submitters.  They must be ordered the same way in
-			// every negotiation cycle.
-			long long qdate1 = LLONG_MAX, qdate2 = LLONG_MAX;
-			if ( ! ad1->LookupInteger(ATTR_BUNDLE_OLDEST_QDATE, qdate1) || qdate1 <= 0) {
-				qdate1 = LLONG_MAX;
-			}
-			if ( ! ad2->LookupInteger(ATTR_BUNDLE_OLDEST_QDATE, qdate2) || qdate2 <= 0) {
-				qdate2 = LLONG_MAX;
-			}
-			if (qdate1 != qdate2) return qdate1 < qdate2;
-
-			// Break every remaining tie on the schedd name, which is unique per
-			// schedd.  Leaving ties here would put us back where we started:
-			// std::sort is not stable, so equal keys are ordered by the input
-			// sequence, which is the order the collector happened to return the
-			// ads in and can differ from cycle to cycle.
-			std::string schedd1, schedd2;
-			ad1->LookupString(ATTR_SCHEDD_NAME, schedd1);
-			ad2->LookupString(ATTR_SCHEDD_NAME, schedd2);
-			return schedd1 < schedd2;
-		}
 
 		double prio1 = mm->accountant.GetPriority(subname1);
 		double prio2 = mm->accountant.GetPriority(subname2);
@@ -1915,9 +1908,10 @@ CountMatches(const std::vector<ClassAd *> &ads, classad::ExprTree* constraint) {
 // Move the reserved slot-bundle submitter ads out of submitterAds and into
 // bundleAds.  A bundle needs all N of its slots before any of them are useful,
 // and it holds them off-the-books, so it is negotiated in a round of its own
-// ahead of every real submitter -- see negotiationTime().  Keying on
+// ahead of every real submitter -- see negotiateBundleRound().  Keying on
 // ATTR_IS_BUNDLE_SUBMITTER rather than on the submitter name keeps this working
-// however that name happens to be qualified.
+// however that name happens to be qualified.  This is the only place the
+// marker is consulted: inside the round, the round itself says what to do.
 static void
 extractBundleSubmitters(std::vector<ClassAd *> &submitterAds, std::vector<ClassAd *> &bundleAds)
 {
@@ -1929,6 +1923,82 @@ extractBundleSubmitters(std::vector<ClassAd *> &submitterAds, std::vector<ClassA
 	auto first_bundle = std::stable_partition(submitterAds.begin(), submitterAds.end(), isNotBundle);
 	bundleAds.assign(first_bundle, submitterAds.end());
 	submitterAds.erase(first_bundle, submitterAds.end());
+}
+
+// ----- Slot bundles are negotiated first, ahead of every real submitter.
+//
+// A slot bundle only becomes useful once it holds all N of its slots, and it
+// holds each one idle until then, so it must not have to wait behind a floor
+// round, an accounting group, or another submitter's fair share -- any of which
+// could leave it permanently short while its claims sit idle.  Pull the
+// reserved bundle submitters out of the list and negotiate for them in a round
+// of their own.  Slots matched here are removed from the cycle's slot list, so
+// the rounds after this one see only what is left.
+//
+// Extracting the ads (rather than just sorting them to the front) is what makes
+// this hold in the cases the sort could not reach: the floor round runs before
+// the fair-share round, and under HGQ each group is negotiated in turn, with the
+// bundle submitter landing in whichever group its name maps to.  It also keeps
+// bundles out of the group tree entirely, which is right -- a bundle match is
+// never charged to the accountant, so it has no business consuming any group's
+// quota.
+//
+// The schedd only advertises this submitter while a bundle is unsatisfied, so
+// a pool with no bundles skips the round.
+void
+Matchmaker::negotiateBundleRound(const NegotiationCycle &cycle, std::vector<ClassAd *> &submitterAds)
+{
+	std::vector<ClassAd *> bundleSubmitterAds;
+	extractBundleSubmitters(submitterAds, bundleSubmitterAds);
+	if (bundleSubmitterAds.empty()) {
+		return;
+	}
+
+	dprintf(D_ALWAYS, "Phase 3.5:  Negotiating slot bundles for %zu submitter(s) ...\n",
+		bundleSubmitterAds.size());
+	negotiation_cycle_stats[0]->bundle_submitters = (int)bundleSubmitterAds.size();
+	time_t start_time_bundles = time(nullptr);
+	NegotiationRound round;
+	round.kind = RoundKind::Bundle;
+	negotiateWithGroup(cycle, round, bundleSubmitterAds);
+	negotiation_cycle_stats[0]->bundle_duration = time(nullptr) - start_time_bundles;
+}
+
+// If there are any submitters who have a floor defined, and their current
+// usage is below their floor, negotiate for just those, and only up to their
+// floor.  Without group quotas this runs once over every submitter; with them,
+// once per group, just before that group's fair-share round.
+void
+Matchmaker::negotiateFloor(const NegotiationCycle &cycle, std::vector<ClassAd *> &submitterAds,
+	double quota, const char *groupName)
+{
+	std::vector<ClassAd *> submittersBelowFloor;
+	findBelowFloorSubmitters(submitterAds, submittersBelowFloor);
+	if (submittersBelowFloor.empty()) {
+		return;
+	}
+
+	dprintf(D_FULLDEBUG, "   %zu submitters have a floor defined and are below it, running a floor round for them\n",
+			submittersBelowFloor.size());
+	NegotiationRound round;
+	round.kind = RoundKind::Floor;
+	round.quota = quota;
+	round.groupName = groupName;
+	negotiateWithGroup(cycle, round, submittersBelowFloor);
+	dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
+}
+
+// Negotiate for every submitter by fair share.  Without group quotas this runs
+// once over every submitter; with them, once per group.
+void
+Matchmaker::negotiateFairShare(const NegotiationCycle &cycle, std::vector<ClassAd *> &submitterAds,
+	double quota, const char *groupName)
+{
+	NegotiationRound round;
+	round.kind = RoundKind::FairShare;
+	round.quota = quota;
+	round.groupName = groupName;
+	negotiateWithGroup(cycle, round, submitterAds);
 }
 
 void
@@ -2128,55 +2198,21 @@ Matchmaker::negotiationTime( int /* timerID */ )
 
 	SetupMatchSecurity(submitterAds);
 
-	// ----- Slot bundles are negotiated first, ahead of every real submitter.
-	//
-	// A slot bundle only becomes useful once it holds all N of its slots, and it
-	// holds each one idle until then, so it must not have to wait behind a floor
-	// round, an accounting group, or another submitter's fair share -- any of
-	// which could leave it permanently short while its claims sit idle.  Pull the
-	// reserved bundle submitters out of the list and negotiate for them in a
-	// round of their own.  Slots matched here are removed from startdAds, so the
-	// rounds below see only what is left.
-	//
-	// Extracting the ads (rather than just sorting them to the front) is what
-	// makes this hold in the cases the sort could not reach: the floor round runs
-	// before the main round, and under HGQ each group is negotiated in turn, with
-	// the bundle submitter landing in whichever group its name maps to.  It also
-	// keeps bundles out of the group tree entirely, which is right -- a bundle
-	// match is never charged to the accountant, so it has no business consuming
-	// any group's quota.
-	//
-	// The schedd only advertises this submitter while a bundle is unsatisfied,
-	// so a pool with no bundles skips the round.
-	std::vector<ClassAd *> bundleSubmitterAds;
-	extractBundleSubmitters(submitterAds, bundleSubmitterAds);
-	if (!bundleSubmitterAds.empty()) {
-		dprintf(D_ALWAYS, "Phase 3.5:  Negotiating slot bundles for %zu submitter(s) ...\n",
-			bundleSubmitterAds.size());
-		negotiation_cycle_stats[0]->bundle_submitters = (int)bundleSubmitterAds.size();
-		time_t start_time_bundles = time(nullptr);
-		negotiateWithGroup(false /*isFloorRound*/, cPoolsize, weightedPoolsize,
-			minSlotWeight, startdAds, claimIds, bundleSubmitterAds);
-		negotiation_cycle_stats[0]->bundle_duration = time(nullptr) - start_time_bundles;
-	}
+	NegotiationCycle cycle;
+	cycle.startdAds = &startdAds;
+	cycle.claimIds = &claimIds;
+	cycle.poolSize = cPoolsize;
+	cycle.weightedPoolSize = weightedPoolsize;
+	cycle.minSlotWeight = minSlotWeight;
+
+	negotiateBundleRound(cycle, submitterAds);
 
     if (hgq_groups.size() <= 1) {
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case.
-
-		// If there are any submitters who have a floor defined, and their current usage is below
-		// their floor, negotiator for just those, and only up to their floor.
-		std::vector<ClassAd *> submittersBelowFloor;
-		findBelowFloorSubmitters(submitterAds,submittersBelowFloor);
-		if (submittersBelowFloor.size() > 0) {
-			dprintf(D_FULLDEBUG, "   %zu submitters have a floor defined and are below it, running a floor round for them\n",
-					submittersBelowFloor.size());
-			negotiateWithGroup(true /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submittersBelowFloor);
-			dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
-		}
-
-        negotiateWithGroup(false /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
+		negotiateFloor(cycle, submitterAds);
+		negotiateFairShare(cycle, submitterAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
@@ -2195,31 +2231,8 @@ Matchmaker::negotiationTime( int /* timerID */ )
 				if (autoregroup && (g == hgq_root_group)) {
 					name = nullptr;
 				}
-
-				std::vector<ClassAd*> submittersBelowFloor;
-				findBelowFloorSubmitters(*(g->submitterAds), submittersBelowFloor);
-				if (submittersBelowFloor.size() > 0) {
-					dprintf(D_FULLDEBUG, "   %zu submitters have a floor defined and are below it, running a floor round for them\n",
-							submittersBelowFloor.size());
-					negotiateWithGroup(true /*isFloorRound*/, cPoolsize, 
-							weightedPoolsize, 
-							minSlotWeight, 
-							startdAds, 
-							claimIds, 
-							submittersBelowFloor,
-							slots,
-							name);
-
-				}
-				dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
-				negotiateWithGroup(false, cPoolsize,
-								weightedPoolsize,
-								minSlotWeight,
-								startdAds,
-								claimIds,
-								*(g->submitterAds),
-								slots,
-								name);
+				negotiateFloor(cycle, *(g->submitterAds), slots, name);
+				negotiateFairShare(cycle, *(g->submitterAds), slots, name);
 		};
 
 		GroupEntry::hgq_negotiate_with_all_groups(
@@ -2547,15 +2560,16 @@ consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) co
 }
 
 int Matchmaker::
-negotiateWithGroup ( bool isFloorRound,
-					 int untrimmed_num_startds,
-					 double untrimmedSlotWeightTotal,
-					 double minSlotWeight,
-					 std::vector<ClassAd *>& startdAds,
-					 ClaimIdHash& claimIds,
-					 std::vector<ClassAd *>& submitterAds,
-					 double groupQuota, const char* groupName)
+negotiateWithGroup(const NegotiationCycle &cycle,
+                   const NegotiationRound &round,
+                   std::vector<ClassAd *> &submitterAds)
 {
+	std::vector<ClassAd *> &startdAds = *cycle.startdAds;
+	ClaimIdHash &claimIds = *cycle.claimIds;
+	const double minSlotWeight = cycle.minSlotWeight;
+	const char *groupName = round.groupName;
+	const double groupQuota = round.quota;
+
 	std::string    submitterName;
 	std::string    scheddName;
 	std::string    scheddAddr;
@@ -2617,19 +2631,18 @@ negotiateWithGroup ( bool isFloorRound,
 
 		calculateNormalizationFactor( submitterAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
-		numStartdAds = untrimmed_num_startds;
+		numStartdAds = cycle.poolSize;
 			// If operating on a group with a quota, consider the size of
 			// the "pie" to be limited to the groupQuota, so each user in
 			// the group gets a reasonable sized slice.
-		slotWeightTotal = untrimmedSlotWeightTotal;
+		slotWeightTotal = cycle.weightedPoolSize;
 		if ( slotWeightTotal > groupQuota ) {
 			slotWeightTotal = groupQuota;
 		}
 
 		calculatePieLeft(
 			submitterAds,
-			groupName,
-			groupQuota,
+			round,
 			groupusage,
 			maxPrioValue,
 			maxAbsPrioValue,
@@ -2658,7 +2671,11 @@ negotiateWithGroup ( bool isFloorRound,
 			double start_usage_phase3 = get_rusage_utime();
             dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
 
-			std::sort(submitterAds.begin(), submitterAds.end(), submitterLessThan(this));
+			if (round.isBundle()) {
+				std::sort(submitterAds.begin(), submitterAds.end(), bundleSubmitterLessThan());
+			} else {
+				std::sort(submitterAds.begin(), submitterAds.end(), submitterLessThan(this));
+			}
 
 			// Now that the submitter ad list (submitterAds) is sorted, we can
 			// scan through it looking for globaljobprio submitter ads, consolidating
@@ -2741,15 +2758,13 @@ negotiateWithGroup ( bool isFloorRound,
 
 			calculateSubmitterLimit(
 				submitterName,
-				groupName,
-				groupQuota,
+				round,
 				groupusage,
 				maxPrioValue,
 				maxAbsPrioValue,
 				normalFactor,
 				normalAbsFactor,
 				slotWeightTotal,
-				isFloorRound,
 					/* result parameters: */
 				submitterLimit,
                 submitterLimitUnclaimed,
@@ -2798,10 +2813,9 @@ negotiateWithGroup ( bool isFloorRound,
 			// Slot bundle requests are matched off-the-books at best priority:
 			// give the reserved bundle submitter the full remaining pie and no
 			// ceiling, so it can grab its N slots ahead of fair share.  The
-			// accountant is not charged for these matches (see AddMatch below).
-			bool is_bundle_submitter = false;
-			submitter_ad->LookupBool(ATTR_IS_BUNDLE_SUBMITTER, is_bundle_submitter);
-			if (is_bundle_submitter) {
+			// accountant is not charged for these matches (see AddMatch in
+			// matchmakingProtocol).
+			if (round.isBundle()) {
 				submitterLimit = pieLeft;
 				submitterLimitUnclaimed = pieLeft;
 				submitterCeiling = INT_MAX;
@@ -2958,7 +2972,7 @@ negotiateWithGroup ( bool isFloorRound,
 	} while ( ( pieLeft < pieLeftOrig || submitterAds.size() < submitterAdsCountOrig )
 			  && (submitterAds.size() > 0)
 			  && (startdAds.size() > 0)
-		   	  && !isFloorRound);
+			  && !round.isFloor());
 
 	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %zu \n", submitterAds.size());
 
@@ -5667,15 +5681,13 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 void
 Matchmaker::calculateSubmitterLimit(
 	const std::string &submitterName,
-	char const *groupAccountingName,
-	float groupQuota,
+	const NegotiationRound &round,
 	float groupusage,
 	double maxPrioValue,
 	double maxAbsPrioValue,
 	double normalFactor,
 	double normalAbsFactor,
 	double slotWeightTotal,
-	bool isFloorRound,
 		/* result parameters: */
 	double &submitterLimit,
     double& submitterLimitUnclaimed,
@@ -5700,7 +5712,8 @@ Matchmaker::calculateSubmitterLimit(
 	}
 
     submitterLimitUnclaimed = submitterLimit;
-	if (groupAccountingName) {
+	if (round.groupName) {
+		const float groupQuota = static_cast<float>(round.quota);
 		float maxAllowed = groupQuota - groupusage;
 		dprintf(D_FULLDEBUG, "   maxAllowed= %g   groupQuota= %g   groupusage=  %g\n", maxAllowed, groupQuota, groupusage);
 		if (maxAllowed < 0) maxAllowed = 0.0;
@@ -5721,7 +5734,7 @@ Matchmaker::calculateSubmitterLimit(
 		// submitter.  Might get more in subseqent rounds
 		// but the floor round is to try to get everyone up
 		// to their floor.
-	if (isFloorRound) {
+	if (round.isFloor()) {
 		double floor = accountant.GetFloor(submitterName);
 		submitterLimit = std::min(floor, submitterLimit);
 		dprintf(D_FULLDEBUG, "   Floor Round: %g\n", floor);
@@ -5731,8 +5744,7 @@ Matchmaker::calculateSubmitterLimit(
 void
 Matchmaker::calculatePieLeft(
 	std::vector<ClassAd *> &submitterAds,
-	char const *groupAccountingName,
-	float groupQuota,
+	const NegotiationRound &round,
 	float groupusage,
 	double maxPrioValue,
 	double maxAbsPrioValue,
@@ -5745,6 +5757,11 @@ Matchmaker::calculatePieLeft(
 
 		// Calculate sum of submitterLimits in this spin of the pie.
 	pieLeft = 0;
+
+		// The pie is sized as for a fair-share round, whatever kind of round
+		// this is: a floor round's pie ignores the floors.
+	NegotiationRound pieRound = round;
+	pieRound.kind = RoundKind::FairShare;
 
 	for (ClassAd *submitter: submitterAds) {
 		double submitterShare = 0.0;
@@ -5760,15 +5777,13 @@ Matchmaker::calculatePieLeft(
 
 		calculateSubmitterLimit(
 			submitterName,
-			groupAccountingName,
-			groupQuota,
+			pieRound,
 			groupusage,
 			maxPrioValue,
 			maxAbsPrioValue,
 			normalFactor,
 			normalAbsFactor,
 			slotWeightTotal,
-			false, /* is floor round */
 				/* result parameters: */
 			submitterLimit,
             submitterLimitUnclaimed,
