@@ -2,8 +2,8 @@
 
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
-    auto * results = static_cast<std::vector<ClassAd *> *>(r);
-    results->push_back( ad );
+    auto * results = static_cast<std::vector<std::unique_ptr<ClassAd>> *>(r);
+    results->push_back(std::unique_ptr<ClassAd>(ad));
 
     // Don't delete the pointers.  The `results` local below
     // will do that when it goes out of scope, after we've
@@ -72,7 +72,7 @@ _schedd_query(PyObject *, PyObject * args) {
 
     CondorError errStack;
     ClassAd * summaryAd = NULL;
-    std::vector<ClassAd *> results;
+    std::vector<std::unique_ptr<ClassAd>> results;
     rv = q.fetchQueueFromHostAndProcess(
         addr, attributes, opts, limit,
         _schedd_query_callback, & results,
@@ -113,11 +113,12 @@ _schedd_query(PyObject *, PyObject * args) {
     if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
-        results.push_back(summaryAd);
+        results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
 
     for( auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(classAd);
+        ClassAd * c = classAd.release();
+        PyObject * pyClassAd = py_new_classad2_classad(c);
         if( pyClassAd == NULL ) {
             // At this point, every ClassAd originally in `results`:
             //    (a) is owned by `list`; or
