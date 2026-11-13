@@ -188,9 +188,6 @@ py_new_classad_exprtree( ExprTree * original ) {
 	}
 
 
-	ExprTree * copy = original->Copy();
-	copy->SetParentScope(NULL);
-
 	PyObject * pyArgsTuple = Py_BuildValue( "(O)", py_exprtree_nill );
 	if( pyArgsTuple == NULL ) {
 		// Py_BuildValue() has already set an exception for us.
@@ -198,7 +195,15 @@ py_new_classad_exprtree( ExprTree * original ) {
 	}
 	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, pyArgsTuple );
 	Py_DecRef(pyArgsTuple);
+
+	if( pyExprTree == NULL ) {
+		// PyObject_CallObject() has already set an exception for us.
+		return NULL;
+	}
 	auto * handle = get_handle_from(pyExprTree);
+
+	ExprTree * copy = original->Copy();
+	copy->SetParentScope(NULL);
 
 	// PyObject_CallObject() should have called __init__() for us, which
 	// should call _exprtree_init(), which should have made sure that the

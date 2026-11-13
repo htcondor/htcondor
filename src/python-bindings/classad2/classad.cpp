@@ -209,6 +209,10 @@ convert_classad_value_to_python(classad::Value & v) {
                     }
 
                     PyObject * py_v = convert_classad_value_to_python(v);
+                    if( py_v == NULL ) {
+                        Py_DecRef(list);
+                        return NULL;
+                    }
                     if(PyList_Append( list, py_v ) != 0) {
                         Py_DecRef(py_v);
                         Py_DecRef(list);
