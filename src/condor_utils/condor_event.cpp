@@ -1668,6 +1668,8 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ExprTree * tree = ad->Lookup(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES);
 	if (tree && tree->isClassad(&notes)) {
 		structuredNotes = static_cast<ClassAd*>(notes->Copy());
+		// Copy() keeps the parent scope, which is the source ad the caller may free
+		structuredNotes->SetParentScope(nullptr);
 	}
 }
 
@@ -2082,6 +2084,8 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 	ExprTree * tree = ad->Lookup("ExecuteProps");
 	if (tree && tree->isClassad(&props)) {
 		executeProps = static_cast<ClassAd*>(props->Copy());
+		// Copy() keeps the parent scope, which is the source ad the caller may free
+		executeProps->SetParentScope(nullptr);
 	}
 }
 
@@ -3931,6 +3935,8 @@ NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 	ExprTree * tree = ad->Lookup("ExecuteProps");
 	if (tree && tree->isClassad(&props)) {
 		executeProps = static_cast<ClassAd*>(props->Copy());
+		// Copy() keeps the parent scope, which is the source ad the caller may free
+		executeProps->SetParentScope(nullptr);
 	}
 }
 
@@ -5556,6 +5562,8 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 	ExprTree * tree = ad->Lookup(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES);
 	if (tree && tree->isClassad(&notes)) {
 		structuredNotes = static_cast<ClassAd*>(notes->Copy());
+		// Copy() keeps the parent scope, which is the source ad the caller may free
+		structuredNotes->SetParentScope(nullptr);
 	}
 }
 

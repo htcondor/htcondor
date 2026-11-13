@@ -27,6 +27,11 @@
   than returning the job to the running state.
   :jira:`4049`
 
+- Fixed a bug where reading a JSON or XML formatted job event log could crash
+  or read freed memory when an event contained structured submit notes or
+  execute event properties.
+  :jira:`4082`
+
 *** 25.0.15 features
 
 - For Execution Points using the Logical Manager (LVM) for disk space
