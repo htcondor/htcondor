@@ -52,6 +52,7 @@ bool FTEST_stl_string_utils(void);
 bool FTEST_string_vector();
 bool FTEST_your_string(void);
 bool FTEST_tokener(void);
+bool FTEST_wasted_memory(void);
 bool OTEST_HashTable(void);
 bool OTEST_Regex(void);
 bool OTEST_Old_Classads(void);
@@ -95,6 +96,7 @@ const static struct {
 	map(FTEST_string_vector),
 	map(FTEST_your_string),
 	map(FTEST_tokener),
+	map(FTEST_wasted_memory),
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_Regex),

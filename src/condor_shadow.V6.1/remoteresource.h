@@ -418,6 +418,30 @@ class RemoteResource : public Service {
 
 	void recordActivationExitExecutionTime( time_t when );
 
+		/// How far along the activation is, for updateWastedMemory().
+	enum class ActivationPhase {
+			/// Still running.
+		Running,
+			/// The shadow is ending it (holding, removing, evicting, or
+			/// requeueing the job), but the starter hasn't reported that
+			/// it's done.  The shadow may exit before the starter does.
+		Ending,
+			/// The starter reported that it's done.
+		Ended,
+	};
+
+		/** Update ATTR_CURRENT_WASTED_MEMORY_GB_HOURS in the job ad to
+			cover this activation so far.  Once the activation is
+			Ending, also copy it to ATTR_LAST_WASTED_MEMORY_GB_HOURS, so
+			that if the shadow exits before the starter reports, Last
+			has this activation's value as of when the shadow ended it,
+			rather than the previous activation's.  Later updates keep
+			both current until the activation has Ended, when they're
+			measured until it ended (the same span as
+			ATTR_JOB_ACTIVATION_DURATION) and don't change again.
+		*/
+	void updateWastedMemory( ActivationPhase phase );
+
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
 	std::string starter_version;
@@ -513,6 +537,15 @@ class RemoteResource : public Service {
         time_t ExitExecutionTime;
         time_t TerminationTime;
     } activation;
+
+		// Has updateWastedMemory() been told this activation is
+		// ending, or has ended?
+	bool m_wasted_memory_activation_ending{false};
+	bool m_wasted_memory_activation_ended{false};
+
+		// Should we compute wasted memory?  Not for the parallel universe,
+		// whose node 0 shares its job ad with the shadow.
+	virtual bool tracksWastedMemory() const { return true; }
 
 	void abortFileTransfer();
 

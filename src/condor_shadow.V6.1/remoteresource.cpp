@@ -41,6 +41,7 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "wasted_memory.h"
 #include <utility>
 #include <string>
 #include <optional>
@@ -1404,6 +1405,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+		// MemoryUsage may have changed, and time has passed.
+	updateWastedMemory(ActivationPhase::Running);
+
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
@@ -2060,6 +2064,8 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
 		shadow->updateJobInQueue( U_STATUS );
 	}
+
+	updateWastedMemory(ActivationPhase::Ended);
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
@@ -3069,4 +3075,34 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
+}
+
+void
+RemoteResource::updateWastedMemory( ActivationPhase phase )
+{
+		// Nothing to do if the activation never started, or if we
+		// already recorded its end.
+	if ( ! tracksWastedMemory() || activation.StartTime <= 0 ||
+		m_wasted_memory_activation_ended) {
+		return;
+	}
+
+		// The activation spans from when the startd accepted it until
+		// the starter reported that it's done (after output transfer),
+		// the same span as ActivationDuration.  Until the starter
+		// reports, measure until now.
+	time_t now = time(nullptr);
+	if (phase == ActivationPhase::Ending) {
+		m_wasted_memory_activation_ending = true;
+	} else if (phase == ActivationPhase::Ended) {
+		if (activation.TerminationTime > 0) {
+			now = activation.TerminationTime;
+		}
+		m_wasted_memory_activation_ended = true;
+	}
+
+		// Once the activation is ending, keep Last up to date too, since
+		// the shadow may exit before the activation has ended.
+	bool set_last = m_wasted_memory_activation_ending || m_wasted_memory_activation_ended;
+	UpdateWastedMemoryAttrs(*jobAd, activation.StartTime, now, set_last);
 }
