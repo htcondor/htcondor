@@ -6217,6 +6217,8 @@ CommonFilesEvent::initFromClassAd( ClassAd * ad ) {
 	ExprTree * tree = ad->Lookup("ExecuteProps");
 	if (tree && tree->isClassad(&props)) {
 		executeProps.reset(static_cast<ClassAd*>(props->Copy()));
+		// Copy() keeps the parent scope, which is the source ad the caller may free
+		executeProps->SetParentScope(nullptr);
 	} else {
 		executeProps.reset(nullptr);
 	}
