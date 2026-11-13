@@ -425,6 +425,10 @@ Claim::publish( ClassAd* cad )
 
 	if (c_ocu) {
 		cad->Assign(ATTR_OCU, true);
+			// An OCU claim belongs to the schedd holding it, which
+			// schedules its own jobs onto it.  Tell the negotiator not to
+			// match (and hence not to try to preempt) this slot.
+		cad->Assign(ATTR_WANT_MATCHING, false);
 		if (!c_ocu_name.empty()) {
 			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
 		}
