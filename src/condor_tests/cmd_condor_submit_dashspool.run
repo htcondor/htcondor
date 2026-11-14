@@ -31,9 +31,24 @@ my $testname =  "cmd_condor_submit_dashspool";
 my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 5
-	ALL_DEBUG = 
+	ALL_DEBUG = D_CAT D_SUB_SECOND
+	SCHEDD_DEBUG = D_ZKM
 CONDOR_TESTREQ_CONFIG
 #endtestreq
+
+# x_condorsubmitdashspool.pl script
+my $jobexe = '#! /usr/bin/env perl
+	my $cmd = $ARGV[0];
+	if($cmd eq "1") {
+		system("touch dashspool.file1");
+		system("touch dashspool.file2");
+	}
+	if($cmd eq "3") {
+		system("cp realdata dashspool.file1");
+		system("touch dashspool.file2");
+	}
+';
+
 
 # arguments == 0, don't muck with any files and no return files
 my $submitdashpool1 = '
@@ -123,10 +138,9 @@ my $dummydata = "dummydata";
 open(DD,">$dummydata") or die "Can not create <$sleepf1>:$!\n";
 print DD "$file3";
 
-print "First test basic job\n";
 SimpleJob::RunCheck();
 
-print "Starting sleep forever job\n";
+############### check 1 ####################
 
 my $sleepf1 = $$ . "sf1";
 open(SF1,">$sleepf1") or die "Can not create <$sleepf1>\n";
@@ -135,13 +149,12 @@ close(SF1);
 
 dashspoolreset();
 
-
-print "Basic condor_submit -spool job started\n";
+TLOG "Basic condor_submit -spool job (check 1)\n";
 $plain = SubmitReturnCluster($sleepf1,"-spool");
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
 $numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 
-print "\nBasic condor_submit -spool job starts to run and completes:";
+TLOG("\nBasic condor_submit -spool job starts to run and completes:");
 if($numberinstate != 1) {
 	$result = 0;
 	print " Failed\n\n";
@@ -150,15 +163,17 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 runToolNTimes("condor_rm $plain",1);
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '1 basic spool');
 dashspoolreset();
+
+############### check 2 ####################
 
 my $sleepf2 = $$ . "sf2";
 open(SF2,">$sleepf2") or die "Can not create <$sleepf2>\n";
 print SF2 "$submitdashpool2";
 close(SF2);
 
-print "Basic condor_submit -spool job started\n";
+TLOG("Basic condor_submit -spool job (check 2)\n");
 $plain = SubmitReturnCluster($sleepf2,"-spool");
 
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
@@ -174,7 +189,7 @@ if($missing != 2) {
 	$result = 1;
 	print "Passed\n\n";
 }
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '2 no output before transfer_data');
 dashspoolreset();
 
 runToolNTimes("condor_transfer_data $plain",1,1);
@@ -189,15 +204,17 @@ if($present != 2) {
 	$result = 1;
 	print "Passed\n\n";
 }
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '2 output after transfer_data');
 runToolNTimes("condor_rm $plain",1,1);
 dashspoolreset();
+
+############### check 3 ####################
 
 my $sleepf3 = $$ . "sf3";
 open(SF1,">$sleepf3") or die "Can not create <$sleepf3>\n";
 print SF1 "$submitdashpool3";
 
-print "Basic condor_submit -spool job started with transfer input file\n";
+TLOG("Basic condor_submit -spool job with transfer input file (check 3)\n");
 $plain = SubmitReturnCluster($sleepf3,"-spool");
 
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
@@ -212,14 +229,54 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 runToolNTimes("condor_rm $plain",1,0);
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '3 Spool with TIF');
 dashspoolreset();
 
+############### check 3b ####################
+
+TLOG("Basic condor_submit -spool job with transfer input file and deferred spooling (check 3b)\n");
+$plain = SubmitReturnCluster($sleepf3,"-spool:later");
+print "Check that the job is in spooling hold\n";
+
+   # > condor_q -hold -af:j HoldReasonCode HoldReason
+   # 16 Spooling input data files
+my $spooling_hold = 0;
+my @lines = ();
+$res = runCondorTool("condor_q -hold $plain -af HoldReasonCode HoldReason",\@lines,2);
+foreach my $line (@lines) {
+	print "$line";
+	if ($line =~ /^\s*16\s+Spooling/) { $spooling_hold = 1; }
+}
+if ( ! $spooling_hold) {
+	print "\nJob is not in spooling hold : Failed\n";
+	$result = 0;
+} else {
+	print "Now spooling input files\n";
+	my $res = runCondorTool("condor_spool_input $plain", \@spool_output, 2);
+	print "condor_spool_input result from call: $res\n";
+
+	$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
+	$numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
+
+	print "\nBasic condor_submit -spool job (check 3b) starts to run and completes with an input file:";
+	if($numberinstate != 1) {
+		$result = 0;
+		print " Failed\n\n";
+	} else {
+		$result = 1;
+		print " Passed\n\n";
+	}
+}
+runToolNTimes("condor_rm $plain",1,0);
+CondorTest::RegisterResult($result, check_name => '3b Deferred Spool with TIF');
+dashspoolreset();
+
+############### check 4 ####################
 my $sleepf4 = $$ . "sf4";
 open(SF1,">$sleepf4") or die "Can not create <$sleepf4>\n";
 print SF1 "$submitdashpool4";
 
-print "Basic condor_submit -spool job started with transfer input file\n";
+TLOG("Basic condor_submit -spool job started with transfer input file (check 4)\n");
 $plain = SubmitReturnCluster($sleepf4,"-spool");
 
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
@@ -250,12 +307,14 @@ if($gooddata != 1) {
 	print " Passed\n\n";
 }
 runToolNTimes("condor_rm $plain",1,0);
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '4 Real output files');
+
+############### check 4b ####################
 
 # this test is just like last except we are going to copy
 # bad data onto the imput file after the submit to test that
 # all the job files were spooled.
-print "Basic condor_submit -spool job started with transfer input file\n";
+TLOG("Basic condor_submit -spool job started with transfer input file (check 4b)\n");
 $plain = SubmitReturnCluster($sleepf4,"-spool");
 system("cp dummydata realdata");
 
@@ -288,7 +347,7 @@ if($gooddata != 1) {
 }
 #system(" condor_q");
 runToolNTimes("condor_rm $plain",1,0);
-CondorTest::RegisterResult($result);
+CondorTest::RegisterResult($result, check_name => '4b Input becomes output');
 dashspoolreset();
 
 
@@ -368,7 +427,7 @@ sub SubmitReturnCluster
 
 	my @output = ();
 	my $res = runCondorTool("condor_submit $submitargs $submitfile", \@output, 2);
-	print "SubmitReturnCluster result from call: SubmitReturnCluster <<<< $res >>>>>\n";
+	# print "SubmitReturnCluster result from call: exit_code = $res\n";
 
 	foreach my $line (@output) {
 		chomp($line);

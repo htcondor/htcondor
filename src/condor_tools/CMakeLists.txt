@@ -70,6 +70,7 @@ endif()
 condor_exe(condor_tail "tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_spool_input "spool_input.cpp" ${C_BIN} "${CONDOR_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

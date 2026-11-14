@@ -845,9 +845,12 @@ Scheduler::~Scheduler()
 	for (const auto &[pid, rec]: shadowsByPid) {
 		delete rec;
 	}
+#ifdef MORE_SPOOL_WORKER_INFO
+#else
 	for (const auto &[pid, rec]: spoolJobFileWorkers) {
 		delete rec;
 	}
+#endif
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
@@ -6605,6 +6608,9 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 {
 	dprintf(D_FULLDEBUG,"transferJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
+	if ( ! IsFulldebug(D_ALWAYS)) {
+		dprintf(D_ZKM,"transferJobFilesReaper tid=%d status=%d\n", tid,exit_status);
+	}
 
 		// find the list of jobs which we just finished receiving the files
 	auto spit = spoolJobFileWorkers.find(tid);
@@ -6614,10 +6620,16 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 			"ERROR - transferJobFilesReaper no entry for tid %d\n",tid);
 		return FALSE;
 	}
-	std::vector<PROC_ID> *jobs = spit->second;;
+#ifdef MORE_SPOOL_WORKER_INFO
+	std::vector<PROC_ID> *jobs = spit->second.jobs.release();
+	int success_exit = spit->second.success_exit;
+	//FormerSock former_sock(spit->second.sock_ident);
+#else
+	std::vector<PROC_ID> *jobs = spit->second;
+	int success_exit = TRUE;
+#endif
 
-
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != success_exit)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		delete jobs;
 		spoolJobFileWorkers.erase(spit);
@@ -6659,10 +6671,22 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		return false;
 	}
 
+#ifdef MORE_SPOOL_WORKER_INFO
+	//detach the jobs from the worker info so we don't have to refactor the code below that deletes it.
+	std::vector<PROC_ID> *jobs = spit->second.jobs.release();
+	int success_exit = spit->second.success_exit;
+	FormerSock former_sock(spit->second.sock_ident);
+#else
 	std::vector<PROC_ID> *jobs = spit->second;;
+	int success_exit = TRUE;
+#endif
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != success_exit)) {
+	#ifdef USE_EXEC_FOR_SPOOLING_INPUT
+		dprintf( D_AUDIT | D_ERROR_ALSO, former_sock, "Spooling of input files failed!\n" );
+	#else
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
+	#endif
 		spoolJobFileWorkers.erase(spit);
 		size_t len = (*jobs).size();
 		for(size_t jobIndex = 0; jobIndex < len; ++jobIndex) {
@@ -6718,6 +6742,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		CommitTransactionOrDieTrying();
 	}
 
+#ifdef USE_EXEC_FOR_SPOOLING_INPUT
+	dprintf( D_AUDIT, former_sock, "Spooling of input files completed\n" );
+#endif
+
 	daemonCore->Register_Timer( 0, 
 						(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
 						"Scheduler::reschedule_negotiator", this );
@@ -6751,6 +6779,131 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 		dprintf(D_ALWAYS,"Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s) NAP TIME\n");
 	sleep(1);
 	return ret_val;
+}
+
+pid_t Scheduler::spawnJobFilesWorker(void* arg, Stream* stream, int reaper_id)
+{
+	// ReliSock* rsock = (ReliSock*)stream;
+	std::vector<PROC_ID> *jobs = ((job_data_transfer_t *)arg)->jobs;
+	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
+	//int mode = ((job_data_transfer_t *)arg)->mode;
+
+	auto_free_ptr helper_exe(param("SPOOL_HELPER"));
+	if ( ! helper_exe) {
+#ifdef WIN32
+		helper_exe.set(expand_param("$(BIN)\\condor_spool_input.exe"));
+#else
+		helper_exe.set(expand_param("$(BIN)/condor_spool_input"));
+#endif
+	}
+	ArgList args;
+	args.AppendArg("spool_helper");
+	// tell it to write to an inherited socket, providing the peer version if it is known
+	if (peer_version && *peer_version) {
+		std::string inherit_arg("-inherit:");
+		CondorVersionInfo ver(peer_version);
+		formatstr_cat(inherit_arg, "%d.%d.%d", ver.getMajorVer(), ver.getMinorVer(), ver.getSubMinorVer() );
+		args.AppendArg(inherit_arg);
+	} else {
+		args.AppendArg("-inherit");
+	}
+
+	Stream *inherit_list[] = {stream, NULL};
+
+	// Setup the array of fds for stdin, stdout, stderr
+	// we want a stdin pipe that we will write the spooling job ads into
+	int* std_fds_p = NULL;
+	int std_fds[3];
+	int pipe_fds[2];
+	pipe_fds[0] = -1;
+	pipe_fds[1] = -1;
+	if (!daemonCore->Create_Pipe(pipe_fds, false, false, false, false)) {
+		dprintf( D_ALWAYS, "ERROR: Can't create DC pipe for writing job ClassAd to the spool_helper, aborting\n");
+		return FALSE;
+	}
+	// pipe_fds[0] is the read-end of the pipe.  we want that
+	// setup as STDIN for the handler.  we'll hold onto the
+	// write end of it so we can write the job ad there.
+	std_fds[0] = pipe_fds[0];
+	std_fds[1] = -1;
+	std_fds[2] = -1;
+	std_fds_p = std_fds;
+
+	// tell it to read jobads from the stdin pipe
+	args.AppendArg("-jobads");
+	args.AppendArg("-");
+
+	// create the spool_helper process
+	OptionalCreateProcessArgs cpArgs;
+	pid_t pid = daemonCore->CreateProcessNew(helper_exe.ptr(), args,
+		cpArgs.priv(PRIV_ROOT)
+		.reaperID(reaper_id)
+		.std(std_fds_p)
+		.socketInheritList(inherit_list));
+	if ( ! pid) {
+
+		std::string arg_string;
+		args.GetArgsStringForDisplay(arg_string);
+		dprintf( D_ERROR, "spawnJobFilesWorker: CreateProcess(%s, %s) failed\n", helper_exe.ptr(), arg_string.c_str() );
+		// create process failed, we need to close the pipe handles
+		for( int i = 0; i < 2; i++ ) {
+			if( pipe_fds[i] >= 0 ) {
+				daemonCore->Close_Pipe( pipe_fds[i] );
+			}
+		}
+
+	} else {
+
+		// Now that the handler has been spawned, we need to close
+		// our copy of the other end of the pipe
+		daemonCore->Close_Pipe(pipe_fds[0]);
+
+		// And write the stream of job ads to the pipe
+		size_t num_sent = 0;
+		std::string ad_str;
+		for (const auto & jid : *jobs) {
+			JobQueueJob * job_ad = GetJobAd(jid);
+			if ( ! job_ad) {
+				continue;
+			}
+
+			if (num_sent == 0 && IsFulldebug(D_ALWAYS)) {
+				dprintf(D_FULLDEBUG, "Sending ads for cluster %d to the spool helper (size=%d)\n", jid.cluster, (int)jobs->size());
+			} else {
+				dprintf(D_ZKM, "Sending ad for %d.%d to spool helper\n", jid.cluster, jid.proc);
+			}
+			++num_sent;
+
+			// TODO: add a projection for the job ads that we are sending
+			// ADVANCED TODO: send a stream of chained ads, sending the cluster ad only once.
+
+			ad_str.clear();
+			sPrintAd(ad_str, *job_ad);
+			ad_str += "\n"; // ad separator
+
+			const char* ptr = ad_str.c_str();
+			int len = (int)ad_str.length();
+			while (len) {
+				int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
+				if (bytes_written == -1) {
+					dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
+					break;
+				}
+				ptr += bytes_written;
+				len -= bytes_written;
+			}
+
+			dprintf(D_ZKM | D_VERBOSE, "Ad sent %d bytes remain\n", len);
+		}
+
+		// Now that all the data is written to the pipe, we can safely close our copy of the other end.
+		daemonCore->Close_Pipe(pipe_fds[1]);
+		if (num_sent < jobs->size()) {
+			dprintf(D_ALWAYS, "Warning, some jobs no longer present."
+				" %d of %d ads sent to spool helper\n", (int)num_sent, (int)jobs->size());
+		}
+	}
+	return pid;
 }
 
 int
@@ -6956,6 +7109,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	int tid;
 	std::string peer_version;
 	std::string job_ids_string;
+	int success_exit = TRUE; // the exit code the reaper interprets as success
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -7185,7 +7339,11 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					);
 			}
 
-
+		#ifdef USE_EXEC_FOR_SPOOLING_INPUT
+			dprintf( D_AUDIT, *rsock, "spoolJobFiles(): starting worker\n");
+			success_exit = 0;
+			tid = Scheduler::spawnJobFilesWorker(thread_arg, s, spool_reaper_id);
+		#else
 			// Start a new thread (process on Unix) to do the work
 			tid = daemonCore->Create_Thread(
 					(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
@@ -7193,6 +7351,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					s,
 					spool_reaper_id
 					);
+		#endif
 			break;
 
 		// downloading files from the schedd
@@ -7230,7 +7389,12 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	}
 
 		// Place this tid into a hashtable so our reaper can finish up.
+#ifdef MORE_SPOOL_WORKER_INFO
+		// this also transfers ownership of the jobs vector to the reaper
+	spoolJobFileWorkers.emplace(tid, spool_job_files_worker_info(rsock->getUniqueId(), success_exit, jobs));
+#else
 	spoolJobFileWorkers.emplace(tid, jobs);
+#endif
 	
 	dprintf( D_AUDIT, *rsock, "spoolJobFiles(): started worker process\n");
 
@@ -12415,7 +12579,6 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	std_fds[1] = -1;
 	std_fds[2] = -1;
 	std_fds_p = std_fds;
-
 
 	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
