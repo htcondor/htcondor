@@ -72,6 +72,13 @@
   advertised in the slot ad of a running job, has been removed.
   :jira:`3995`
 
+- When :tool:`condor_ssh_to_job` cannot enter a Singularity or Apptainer
+  container job, it now prints an error saying which step failed and the
+  likely cause, rather than always blaming a setuid container runtime,
+  and exits with a non-zero status.  Also, when running a command in a
+  Singularity or Apptainer job, :tool:`condor_ssh_to_job` now exits with
+  the exit status of that command, rather than always exiting with zero.
+  :jira:`4060`
 - :tool:`condor_history` now accepts ``-dagid``, ``-batchid``, and ``-batchname``
   to query all jobs belonging to a DAGMan workflow or job batch. These queries
   use the :ref:`archive-librarian` database when available.

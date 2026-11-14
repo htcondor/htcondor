@@ -161,6 +161,13 @@ def ssh_to_container_job(condor, running_ssh_job):
     cp = condor.run_command(['condor_ssh_to_job', '-auto-retry', f'{running_ssh_job.clusterid}.0', '/bin/echo', 'hello_from_container'])
     return cp
 
+# The exit code of the command run inside the container should make it
+# all the way back to condor_ssh_to_job
+@action
+def ssh_false_to_container_job(condor, running_ssh_job):
+    cp = condor.run_command(['condor_ssh_to_job', '-auto-retry', f'{running_ssh_job.clusterid}.0', '/bin/false'])
+    return cp
+
 @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
 @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
 @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
@@ -172,3 +179,5 @@ class TestSingularitySIF:
     def test_ssh_to_container_job(self, sif_file_fixture, ssh_to_container_job):
             assert ssh_to_container_job.returncode == 0
             assert "hello_from_container" in ssh_to_container_job.stdout
+    def test_ssh_to_container_job_exit_code(self, sif_file_fixture, ssh_false_to_container_job):
+            assert ssh_false_to_container_job.returncode == 1
