@@ -3149,6 +3149,18 @@ default=true
 type=bool
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT]
+default=
+type=string
+description=Submitters matching this expression are negotiated first, in a priority round
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT]
+default=
+type=string
+description=The priority round only matches slots matching this expression
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT]
 aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=

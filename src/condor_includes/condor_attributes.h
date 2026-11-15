@@ -1309,6 +1309,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_SLOTS_WANTED  "LastNegotiationCycleBundleSlotsWanted"
 #define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_MATCHES  "LastNegotiationCycleBundleMatches"
 #define ATTR_LAST_NEGOTIATION_CYCLE_BUNDLE_DURATION  "LastNegotiationCycleBundleDuration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_SUBMITTERS  "LastNegotiationCyclePrioritySubmitters"
+#define ATTR_LAST_NEGOTIATION_CYCLE_PRIORITY_DURATION  "LastNegotiationCyclePriorityDuration"
 
 #define ATTR_JOB_MACHINE_ATTRS  "JobMachineAttrs"
 #define ATTR_MACHINE_ATTR_PREFIX  "MachineAttr"

@@ -107,8 +107,10 @@ the negotiation cycle is to match slots to submitters and their jobs.
 
 #. Iterate until the negotiator runs out of slots or jobs.
 
-       For each submitter below their floor, if any; after those, for all 
-       submitters, both in EUP order:
+       For each submitter matching
+       :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT`, if any; then for
+       each submitter below their floor, if any; after those, for all
+       submitters, each in EUP order:
 
            Fetch an idle job from a *condor_schedd* holding jobs from
            that submitter.  The *condor_schedd* will present the jobs
@@ -524,6 +526,15 @@ SlotWeight (by default, cores) of all currently available slots, and
 using the ratios of the user priorities, it calculates the number of 
 cores each user could get. This is their pie slice.
 (See: SLOT_WEIGHT in :ref:`startd_config_options`)
+
+If :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT` is set, the
+submitters it matches (for example, every submitter from one access point)
+go first, in a priority round of their own. They share the unclaimed
+slots among themselves by fair share, without preempting anyone. They
+are negotiated for again in the rounds that follow. The priority round
+comes before the floor round, and it does not enforce group quotas.
+:macro:`NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT` can limit the priority round
+to a subset of the slots, such as one partition of the pool.
 
 If any users have a floor defined via :tool:`condor_userprio` -set-floor
 , and their current allocation of cores is below the floor, a 

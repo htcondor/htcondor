@@ -266,6 +266,67 @@ These macros affect the *condor_negotiator*.
     The *condor_negotiator* will ignore the jobs of submitters whose
     submitter ads don't match this constraint.
 
+:macro-def:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT`
+    An expression, evaluated against each submitter ClassAd, that picks
+    the submitters negotiated for in a priority round, for example
+    ``ScheddName == "ap1.example.com"`` to favor one access point.
+    There is no default; if it is unset, there is no priority round.
+
+    The priority round runs once per negotiation cycle, after any slot
+    bundles and before the floor round and the fair-share round. The
+    submitters it picks share the free slots among themselves by fair
+    share, and their matches are charged to the accountant as usual.
+    :macro:`NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT` can limit the round to
+    some of the slots. They also take part
+    in the floor and fair-share rounds that follow. The priority round
+    only matches slots that are not claimed; it never preempts a job.
+
+    Note the following:
+
+    - The priority round runs before the floor round, so it can take
+      slots that a floor set with :tool:`condor_userprio` ``-setfloor``
+      would otherwise have guaranteed.
+    - The priority round does not enforce group quotas, so a favored
+      submitter's accounting group can go over its quota.
+    - Other submitters keep reusing the claims they hold until
+      :macro:`CLAIM_WORKLIFE` ends them, so the favored submitters' share
+      of the pool grows as those claims end.
+    - Without :macro:`NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT`, every slot
+      that becomes free goes to the favored submitters while they have
+      idle jobs that match it.
+    - When :macro:`NEGOTIATOR_CONSIDER_PREEMPTION` is ``True``, the
+      fair-share round of a later cycle can preempt the jobs that the
+      priority round started, if their submitters are over their fair
+      share. To protect jobs from the favored access point, add a clause
+      on the slot's ``RemoteScheddName`` to
+      :macro:`PREEMPTION_REQUIREMENTS`:
+
+      .. code-block:: condor-config
+
+          PREEMPTION_REQUIREMENTS = ($(PREEMPTION_REQUIREMENTS)) && \
+              (MY.RemoteScheddName =!= "ap1.example.com")
+
+:macro-def:`NEGOTIATOR_PRIORITY_SLOT_CONSTRAINT`
+    An expression, evaluated against each slot ClassAd, that limits the
+    priority round to the slots it matches, much as
+    :macro:`NEGOTIATOR_SLOT_CONSTRAINT` limits the whole negotiator. For
+    example, ``Partition == "fast"`` gives the submitters picked by
+    :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT` first claim on just
+    the slots whose startds advertise that attribute. The other slots are
+    left for the floor and fair-share rounds, where the favored submitters
+    compete like everyone else. There is no default; if it is unset, the
+    priority round may match any unclaimed slot. It has no effect unless
+    :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT` is set. If it does
+    not parse, there is no priority round.
+
+    In the priority round, each favored submitter gets its fair share of
+    the slots this expression matches. The round's pie is the weight of
+    those slots, claimed or not, and only what a submitter holds on them
+    counts against its share. What it holds elsewhere in the pool does
+    not, so the priority round can put a favored submitter over its
+    pool-wide fair share. The floor and fair-share rounds that follow
+    still count everything it holds.
+
 :macro-def:`NEGOTIATOR_JOB_CONSTRAINT`
     An expression which constrains which job ClassAds are considered for
     matchmaking by the *condor_negotiator*. This parameter is read by

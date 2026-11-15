@@ -156,6 +156,20 @@ Negotiator ClassAd Attributes
     schedulers. The number ``<X>`` appended to the attribute name
     indicates how many negotiation cycles ago this cycle happened.
 
+:classad-attribute-def:`LastNegotiationCyclePriorityDuration<X>`
+    The number of seconds the *condor_negotiator* spent in the priority
+    round of the negotiation cycle; see
+    :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT`. The number ``<X>``
+    appended to the attribute name indicates how many negotiation cycles ago
+    this cycle happened.
+
+:classad-attribute-def:`LastNegotiationCyclePrioritySubmitters<X>`
+    The integer number of submitters the priority round of the negotiation
+    cycle was given, counting each submitter name once; see
+    :macro:`NEGOTIATOR_PRIORITY_SUBMITTER_CONSTRAINT`. The number ``<X>``
+    appended to the attribute name indicates how many negotiation cycles ago
+    this cycle happened.
+
 :classad-attribute-def:`LastNegotiationCycleRejections<X>`
     The number of rejections that occurred in the negotiation cycle. The
     number ``<X>`` appended to the attribute name indicates how many
