@@ -616,6 +616,7 @@ class Scheduler : public Service
 	void			shutdown_fast();
 	void			shutdown_graceful();
 	void			schedd_exit();
+	void			release_idle_claims_for_exit();
 	void			invalidate_ads();
 	void			update_local_ad_file(); // warning, may be removed
 
@@ -950,7 +951,10 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
-	OCU *getOCU(int ocu_id);
+	// If owner is non-null, it is set to the user record that holds the OCU
+	// (or nullptr if there is no such OCU)
+	OCU *getOCU(int ocu_id, OwnerInfo ** owner = nullptr);
+	std::string ocu_submitter_name(const OwnerInfo & owner, const OCU & ocu) const;
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
 
 	// Look up a slot bundle by the job cluster that defines it.
