@@ -552,10 +552,8 @@ ProcFamilyProxy::start_procd()
 	if (m_reaper_id == FALSE) {
 		m_reaper_id = daemonCore->Register_Reaper(
 			"condor_procd reaper",
-			(ReaperHandlercpp)&ProcFamilyProxyReaperHelper::procd_reaper,
-			"condor_procd reaper",
-			m_reaper_helper
-		);
+			[this](int pid, int status) -> int { return m_reaper_helper->procd_reaper(pid, status); },
+			"condor_procd reaper");
 	}
 	if (m_reaper_id == FALSE) {
 		dprintf(D_ALWAYS,

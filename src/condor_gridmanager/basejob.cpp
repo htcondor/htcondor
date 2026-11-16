@@ -106,8 +106,8 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
-								(TimerHandlercpp)&BaseJob::doEvaluateState,
-								"doEvaluateState", (Service*) this );;
+								[this](int timerID) -> void { this->doEvaluateState(timerID); },
+								"doEvaluateState");;
 
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
@@ -507,8 +507,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 		if ( jobLeaseSentExpiredTid == TIMER_UNSET ) {
 			jobLeaseSentExpiredTid = daemonCore->Register_Timer(
 								when,
-								(TimerHandlercpp)&BaseJob::JobLeaseSentExpired,
-								"JobLeaseSentExpired", (Service*) this );
+								[this](int timerID) -> void { this->JobLeaseSentExpired(timerID); },
+								"JobLeaseSentExpired");
 		} else {
 			daemonCore->Reset_Timer( jobLeaseSentExpiredTid, when );
 		}
@@ -531,8 +531,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 		if ( jobLeaseReceivedExpiredTid == TIMER_UNSET ) {
 			jobLeaseReceivedExpiredTid = daemonCore->Register_Timer(
 							when,
-							(TimerHandlercpp)&BaseJob::JobLeaseReceivedExpired,
-							"JobLeaseReceivedExpired", (Service*) this );
+							[this](int timerID) -> void { this->JobLeaseReceivedExpired(timerID); },
+							"JobLeaseReceivedExpired");
 		} else {
 			daemonCore->Reset_Timer( jobLeaseReceivedExpiredTid, when );
 		}

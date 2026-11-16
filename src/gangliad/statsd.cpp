@@ -1133,9 +1133,8 @@ StatsD::base_initAndReconfig(char const *service_name, bool as_backend)
 			m_stats_pub_timer = daemonCore->Register_Timer(
 				m_stats_heartbeat_interval,
 				m_stats_heartbeat_interval,
-				(TimerHandlercpp)&StatsD::publishMetrics,
-				"Statsd::publishMetrics",
-				this );
+				[this](int timerID) -> void { this->publishMetrics(timerID); },
+				"Statsd::publishMetrics");
 		}
 		if( old_stats_pub_interval != m_stats_pub_interval && m_stats_pub_interval > 0 )
 		{

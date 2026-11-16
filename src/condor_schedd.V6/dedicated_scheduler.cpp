@@ -520,8 +520,8 @@ DedicatedScheduler::initialize( )
 		// Next, register our special MPI shadow reaper
 	rid = daemonCore->
 		Register_Reaper( "MPI reaper", 
-						 (ReaperHandlercpp)&DedicatedScheduler::reaper,
-						 "DedicatedScheduler::reaper", this );
+						 [this](int pid, int status) -> int { return this->reaper(pid, status); },
+						 "DedicatedScheduler::reaper");
 		// This is lame, but Register_Reaper returns FALSE on
 		// failure, even though it seems like reaper id 0 is
 		// valid... who knows.
@@ -532,8 +532,8 @@ DedicatedScheduler::initialize( )
 		// the matches for a given cluster.proc
 	daemonCore->
 		Register_Command( GIVE_MATCHES, "GIVE_MATCHES", 
-						  (CommandHandlercpp)&DedicatedScheduler::giveMatches,
-						  "DedicatedScheduler::giveMatches", this, 
+						  [this](int command, Stream* stream) -> int { return this->giveMatches(command, stream); },
+						  "DedicatedScheduler::giveMatches", 
 						  DAEMON );
 
 	return TRUE;
@@ -760,8 +760,8 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	int rval =
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
-			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler);
+			[](Stream* stream) -> int { return scheduler.negotiatorSocketHandler(stream); },
+			"<Negotiator Command>");
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -808,8 +808,8 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 	}
 	hdjt_tid = daemonCore->
 		Register_Timer( seconds, 0,
-				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
-						"callHandleDedicatedJobs", this );
+				[this](int timerID) -> void { this->callHandleDedicatedJobs(timerID); },
+						"callHandleDedicatedJobs");
 	ASSERT(hdjt_tid >= 0);
 	dprintf( D_FULLDEBUG, 
 			 "Started timer (%d) to call handleDedicatedJobs() in %d secs\n",
@@ -3724,8 +3724,8 @@ DedicatedScheduler::checkSanity( int /* timerID */ )
 				// checkSanity(), so we actually have to register a
 				// timer, instead of just resetting it.
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
-  				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
-						 "checkSanity", this );
+  				         [this](int timerID) -> void { this->checkSanity(timerID); },
+						 "checkSanity");
 			ASSERT(sanity_tid >= 0);
 		} else {
 				// We've already got a timer.  Whether we got here b/c
@@ -3874,8 +3874,8 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 		*/
 	if( reconnect_tid == -1 ) {
 		reconnect_tid = daemonCore->Register_Timer( 0,
-			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
-			   "checkReconnectQueue", this );
+			  [this](int timerID) -> void { this->checkReconnectQueue(timerID); },
+			   "checkReconnectQueue");
 	}
 	ASSERT(reconnect_tid >= 0);
 	return true;
@@ -4116,8 +4116,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 	if (jobsToReconnect.size() > 0) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
-			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
-			   "checkReconnectQueue", this );
+			  [this](int timerID) -> void { this->checkReconnectQueue(timerID); },
+			   "checkReconnectQueue");
 		ASSERT(reconnect_tid >= 0);
 	}
 }	

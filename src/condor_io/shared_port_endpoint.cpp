@@ -434,9 +434,8 @@ SharedPortEndpoint::StartListener()
 	rc = daemonCore->Register_Socket(
 		&m_listener_sock,
 		m_full_name.c_str(),
-		(SocketHandlercpp)&SharedPortEndpoint::HandleListenerAccept,
-		"SharedPortEndpoint::HandleListenerAccept",
-		this);
+		[this](Stream* stream) -> int { return this->HandleListenerAccept(stream); },
+		"SharedPortEndpoint::HandleListenerAccept");
 	ASSERT( rc >= 0 );
 
 	if( m_socket_check_timer == -1 ) {
@@ -448,9 +447,8 @@ SharedPortEndpoint::StartListener()
 		m_socket_check_timer = daemonCore->Register_Timer(
 			socket_check_interval + fuzz,
 			socket_check_interval + fuzz,
-			(TimerHandlercpp)&SharedPortEndpoint::SocketCheck,
-			"SharedPortEndpoint::SocketCheck",
-			this );
+			[this](int timerID) -> void { this->SocketCheck(timerID); },
+			"SharedPortEndpoint::SocketCheck");
 	}
 
 	dprintf(D_ALWAYS,"SharedPortEndpoint: waiting for connections to named socket %s\n",
@@ -897,9 +895,8 @@ SharedPortEndpoint::RetryInitRemoteAddress(int /* timerID */)
 
 			m_retry_remote_addr_timer = daemonCore->Register_Timer(
 				remote_addr_refresh_time + fuzz,
-				(TimerHandlercpp)&SharedPortEndpoint::RetryInitRemoteAddress,
-				"SharedPortEndpoint::RetryInitRemoteAddress",
-				this );
+				[this](int timerID) -> void { this->RetryInitRemoteAddress(timerID); },
+				"SharedPortEndpoint::RetryInitRemoteAddress");
 
 			if( m_remote_addr != orig_remote_addr ) {
 					// Inform daemonCore that our address has changed.
@@ -921,9 +918,8 @@ SharedPortEndpoint::RetryInitRemoteAddress(int /* timerID */)
 
 		m_retry_remote_addr_timer = daemonCore->Register_Timer(
 			remote_addr_retry_time,
-			(TimerHandlercpp)&SharedPortEndpoint::RetryInitRemoteAddress,
-			"SharedPortEndpoint::RetryInitRemoteAddress",
-			this );
+			[this](int timerID) -> void { this->RetryInitRemoteAddress(timerID); },
+			"SharedPortEndpoint::RetryInitRemoteAddress");
 	}
 	else {
 		dprintf(D_ALWAYS,

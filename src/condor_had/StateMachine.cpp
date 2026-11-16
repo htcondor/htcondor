@@ -262,13 +262,13 @@ HADStateMachine::initialize(void)
     reinitialize ();
     daemonCore->Register_Command (
 		HAD_ALIVE_CMD, "ALIVE command",
-		(CommandHandlercpp) &HADStateMachine::commandHandlerHad,
-		"commandHandler", (Service*) this, DAEMON );
+		[this](int command, Stream* stream) -> int { return this->commandHandlerHad(command, stream); },
+		"commandHandler", DAEMON );
 
     daemonCore->Register_Command (
 		HAD_SEND_ID_CMD, "SEND ID command",
-		(CommandHandlercpp) &HADStateMachine::commandHandlerHad,
-		"commandHandler", (Service*) this, DAEMON );
+		[this](int command, Stream* stream) -> int { return this->commandHandlerHad(command, stream); },
+		"commandHandler", DAEMON );
 }
 
 void
@@ -362,14 +362,14 @@ HADStateMachine::reinitialize(void)
 	// initializing the timers
     m_stateMachineTimerID = daemonCore->Register_Timer (
 		0,
-		(TimerHandlercpp) &HADStateMachine::cycle,
-		"Time to check HAD", this);
+		[this](int timerID) -> void { this->cycle(timerID); },
+		"Time to check HAD");
     dprintf( D_ALWAYS,"** Register on m_stateMachineTimerID, interval = %d\n",
             m_hadInterval/(MESSAGES_PER_INTERVAL_FACTOR));
 	m_updateCollectorTimerId = daemonCore->Register_Timer (
         0, m_updateCollectorInterval,
-        (TimerHandlercpp) &HADStateMachine::updateCollectors,
-        "Update collector", this );
+        [this](int timerID) -> void { this->updateCollectors(timerID); },
+        "Update collector");
 
     if( m_standAloneMode ) {
          //printParamsInformation();
@@ -400,9 +400,8 @@ HADStateMachine::cycle( int /* timerID */ )
     utilCancelTimer( m_stateMachineTimerID );
 	m_stateMachineTimerID = daemonCore->Register_Timer (
 		m_hadInterval/(MESSAGES_PER_INTERVAL_FACTOR),
-		(TimerHandlercpp) &HADStateMachine::cycle,
-		"Time to check HAD",
-		this);
+		[this](int timerID) -> void { this->cycle(timerID); },
+		"Time to check HAD");
 
     if(m_callsCounter == 0){ //  once in m_hadInterval
         // step of HAD state machine
@@ -1053,8 +1052,8 @@ HADStateMachine::updateCollectors( int /* timerID */ )
     utilCancelTimer( m_updateCollectorTimerId );
     m_updateCollectorTimerId = daemonCore->Register_Timer (
 		m_updateCollectorInterval,
-		(TimerHandlercpp) &HADStateMachine::updateCollectors,
-		"Update collector", this);
+		[this](int timerID) -> void { this->updateCollectors(timerID); },
+		"Update collector");
 }
 /* Function  : updateCollectorsClassAd
  * Arguments : isHadActive - designates whether the current HAD is active

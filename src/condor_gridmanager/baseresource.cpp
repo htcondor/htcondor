@@ -45,8 +45,8 @@ BaseResource::BaseResource( const char *resource_name )
 	firstPingDone = false;
 	pingActive = false;
 	pingTimerId = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&BaseResource::Ping,
-								"BaseResource::Ping", (Service*)this );
+								[this](int timerID) -> void { this->Ping(timerID); },
+								"BaseResource::Ping");
 	lastPing = 0;
 	lastStatusChange = 0;
 	m_pingErrCode = GRU_PING_FAILED;
@@ -55,8 +55,8 @@ BaseResource::BaseResource( const char *resource_name )
 
 	hasLeases = false;
 	updateLeasesTimerId = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&BaseResource::UpdateLeases,
-								"BaseResource::UpdateLeases", (Service*)this );
+								[this](int timerID) -> void { this->UpdateLeases(timerID); },
+								"BaseResource::UpdateLeases");
 	lastUpdateLeases = 0;
 	updateLeasesActive = false;
 	updateLeasesCmdActive = false;
@@ -66,9 +66,8 @@ BaseResource::BaseResource( const char *resource_name )
 
 	_updateCollectorTimerId = daemonCore->Register_Timer ( 
 		0,
-		(TimerHandlercpp)&BaseResource::UpdateCollector,
-		"BaseResource::UpdateCollector",
-		(Service*)this );
+		[this](int timerID) -> void { this->UpdateCollector(timerID); },
+		"BaseResource::UpdateCollector");
 	_lastCollectorUpdate = 0;
 	_firstCollectorUpdate = true;
 	_collectorUpdateInterval = param_integer ( 
@@ -378,8 +377,8 @@ void BaseResource::UnregisterJob( BaseJob *job )
 			delay = 0;
 		}
 		deleteMeTid = daemonCore->Register_Timer( delay,
-								(TimerHandlercpp)&BaseResource::DeleteMe,
-								"BaseResource::DeleteMe", (Service*)this );
+								[this](int timerID) -> void { this->DeleteMe(timerID); },
+								"BaseResource::DeleteMe");
 	}
 }
 
@@ -736,8 +735,8 @@ void BaseResource::StartBatchStatusTimer()
 	ASSERT(m_batchPollTid == TIMER_UNSET);
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
 	m_batchPollTid = daemonCore->Register_Timer( 0,
-		(TimerHandlercpp)&BaseResource::DoBatchStatus,
-		"BaseResource::DoBatchStatus", (Service*)this );
+		[this](int timerID) -> void { this->DoBatchStatus(timerID); },
+		"BaseResource::DoBatchStatus");
 }
 
 int BaseResource::BatchStatusInterval() const

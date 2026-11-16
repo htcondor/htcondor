@@ -163,8 +163,8 @@ public:
 			Timeslice ts;
 			ts.setDefaultInterval(watchdog_secs);
 			m_watchdog_timer = daemonCore->Register_Timer(ts,
-					static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
-					"systemd status updater", this);
+					[this](int timerID) -> void { this->status_handler(timerID); },
+					"systemd status updater");
 			if (m_watchdog_timer < 0) {
 				dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
 			} else {
@@ -843,7 +843,7 @@ do_basic_admin_command(int cmd)
 			int timeout = 5;
 			if (daemons.SetPeacefulShutdown(timeout) > 0) {
 				int tid = daemonCore->Register_Timer(timeout+1, 0,
-								(TimerHandler)main_shutdown_graceful,
+								[](int /* timerID */) -> void { main_shutdown_graceful(); },
 								"main_shutdown_graceful");
 				if (tid != -1)
 					return TRUE;
@@ -1733,7 +1733,7 @@ main_shutdown_normal()
 		int timeout = 5;
 		if (daemons.SetPeacefulShutdown(timeout) > 0) {
 			int tid = daemonCore->Register_Timer(timeout+1, 0,
-							(TimerHandler)main_shutdown_graceful,
+							[](int /* timerID */) -> void { main_shutdown_graceful(); },
 							"main_shutdown_graceful");
 			if (tid == -1)
 				dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );

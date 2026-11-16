@@ -65,9 +65,8 @@ CronJob::CronJob( CronJobParams *params, CronJobMgr &mgr )
 	// Register my reaper
 	m_reaperId = daemonCore->Register_Reaper( 
 		"Cron_Reaper",
-		(ReaperHandlercpp) &CronJob::Reaper,
-		"Cron Reaper",
-		this );
+		[this](int pid, int status) -> int { return this->Reaper(pid, status); },
+		"Cron Reaper");
 }
 
 // CronJob destructor
@@ -706,9 +705,8 @@ CronJob::OpenFds ( void )
 	m_childFds[1] = tmpfds[1];
 	daemonCore->Register_Pipe( m_stdOut,
 							   "Standard Out",
-							   static_cast<PipeHandlercpp>(&CronJob::StdoutHandler),
-							   "Standard Out Handler",
-							   this );
+							   [this](int pipe) -> int { return this->StdoutHandler(pipe); },
+							   "Standard Out Handler");
 
 	// Pipe to stderr
 	if ( !daemonCore->Create_Pipe( tmpfds,	// pipe ends	
@@ -726,9 +724,8 @@ CronJob::OpenFds ( void )
 	m_childFds[2] = tmpfds[1];
 	daemonCore->Register_Pipe( m_stdErr,
 							   "Standard Error",
-							   static_cast<PipeHandlercpp>(&CronJob::StderrHandler),
-							   "Standard Error Handler",
-							   this );
+							   [this](int pipe) -> int { return this->StderrHandler(pipe); },
+							   "Standard Error Handler");
 
 	// Done; all ok
 	return 0;
@@ -857,16 +854,17 @@ CronJob::SetTimer( time_t first, time_t period_arg )
 		// Debug
 		dprintf( D_FULLDEBUG, 
 				 "CronJob: Creating timer for job '%s'\n", GetName() );
-		TimerHandlercpp handler =
-			(  ( IsWaitForExit() ) ? 
-			   (TimerHandlercpp)& CronJob::StartJobFromTimer :
-			   (TimerHandlercpp)& CronJob::RunJobFromTimer );
+		StdTimerHandler handler;
+		if ( IsWaitForExit() ) {
+			handler = [this](int timerID) -> void { this->StartJobFromTimer(timerID); };
+		} else {
+			handler = [this](int timerID) -> void { this->RunJobFromTimer(timerID); };
+		}
 		m_run_timer = daemonCore->Register_Timer(
 			first,
 			period_arg,
 			handler,
-			"RunJob",
-			this );
+			"RunJob");
 		if ( m_run_timer < 0 ) {
 			dprintf( D_ALWAYS, "CronJob: Failed to create timer\n" );
 			return -1;
@@ -916,9 +914,8 @@ CronJob::KillTimer( time_t seconds )
 		m_killTimer = daemonCore->Register_Timer(
 			seconds,
 			0,
-			(TimerHandlercpp)& CronJob::KillHandler,
-			"KillJob",
-			this );
+			[this](int timerID) -> void { this->KillHandler(timerID); },
+			"KillJob");
 		if ( m_killTimer < 0 ) {
 			dprintf( D_ALWAYS, "CronJob: Failed to create kill timer\n" );
 			return -1;

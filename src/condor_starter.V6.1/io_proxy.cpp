@@ -162,8 +162,8 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 	fclose(file);
 
 	daemonCore->Register_Socket( server, "IOProxy listen socket", 
-		(SocketHandlercpp) &IOProxy::connect_callback, 
-		"IOProxy connect callback", this );
+		[this](Stream* stream) -> int { return this->connect_callback(stream); }, 
+		"IOProxy connect callback");
 	socket_registered = true;
 	return true;
 

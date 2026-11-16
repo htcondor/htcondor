@@ -302,8 +302,8 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 
 	if( m_reaper_id < 0 ) {
 		m_reaper_id = daemonCore->Register_Reaper( "BOINC reaper",
-			(ReaperHandlercpp)&BOINC_BackfillMgr::reaper,
-			"BOINC_BackfillMgr::reaper()", this );
+			[this](int pid, int status) -> int { return this->reaper(pid, status); },
+			"BOINC_BackfillMgr::reaper()");
 		ASSERT( m_reaper_id != FALSE );
 	}
 

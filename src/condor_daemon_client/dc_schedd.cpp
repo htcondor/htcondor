@@ -2191,9 +2191,8 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 
 				// Now, we must register a callback to wait for a response.
 			auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
-				(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
-				"Finish impersonation token request",
-				callback_ptr.get(), HANDLE_READ);
+				[p = callback_ptr.get()](Stream* stream) -> int { return p->finish(stream); },
+				"Finish impersonation token request", HANDLE_READ);
 			if (rc < 0) {
 				errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
 				callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);

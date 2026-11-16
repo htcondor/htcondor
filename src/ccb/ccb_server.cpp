@@ -296,9 +296,8 @@ CCBServer::RegisterHandlers()
 	int rc = daemonCore->Register_CommandWithPayload(
 		CCB_REGISTER,
 		"CCB_REGISTER",
-		(CommandHandlercpp)&CCBServer::HandleRegistration,
+		[this](int command, Stream* stream) -> int { return this->HandleRegistration(command, stream); },
 		"CCBServer::HandleRegistration",
-		this,
 		DAEMON,
 		false,
 		STANDARD_COMMAND_PAYLOAD_TIMEOUT,
@@ -308,9 +307,8 @@ CCBServer::RegisterHandlers()
 	rc = daemonCore->Register_CommandWithPayload(
 		CCB_REQUEST,
 		"CCB_REQUEST",
-		(CommandHandlercpp)&CCBServer::HandleRequest,
+		[this](int command, Stream* stream) -> int { return this->HandleRequest(command, stream); },
 		"CCBServer::HandleRequest",
-		this,
 		READ);
 	ASSERT( rc >= 0 );
 
@@ -322,9 +320,8 @@ CCBServer::RegisterHandlers()
 		rc = daemonCore->Register_CommandWithPayload(
 			CCB_REVERSE_CONNECT,
 			"CCB_REVERSE_CONNECT",
-			(CommandHandlercpp)&CCBServer::HandleReverseConnect,
+			[this](int command, Stream* stream) -> int { return this->HandleReverseConnect(command, stream); },
 			"CCBServer::HandleReverseConnect",
-			this,
 			ALLOW);
 		ASSERT( rc >= 0 );
 	}
@@ -349,9 +346,8 @@ CCBServer::RegisterHandlers()
 		rc = daemonCore->Register_CommandWithPayload(
 			CCB_PROXY_CONNECT,
 			"CCB_PROXY_CONNECT",
-			(CommandHandlercpp)&CCBServer::HandleProxyConnect,
+			[this](int command, Stream* stream) -> int { return this->HandleProxyConnect(command, stream); },
 			"CCBServer::HandleProxyConnect",
-			this,
 			DAEMON);
 		ASSERT( rc >= 0 );
 	}
@@ -482,7 +478,7 @@ CCBServer::InitAndReconfig()
 			m_epfd = pipes[0];
 
 			// Inform DC we want to receive notifications from this FD.
-			daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
+			daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", [this](int pipe) -> int { return this->EpollSockets(pipe); },"CCB Epoll Handler", HANDLE_READ);
 		}
 	}
 #endif
@@ -505,9 +501,8 @@ CCBServer::InitAndReconfig()
 
 	m_polling_timer = daemonCore->Register_Timer(
 		poll_slice,
-		(TimerHandlercpp)&CCBServer::PollSockets,
-		"CCBServer::PollSockets",
-		this);
+		[this](int timerID) -> void { this->PollSockets(timerID); },
+		"CCBServer::PollSockets");
 
 	RegisterHandlers();
 }
@@ -2832,9 +2827,8 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 	int rc = daemonCore->Register_Socket (
 		request->getSock(),
 		request->getSock()->peer_description(),
-		(SocketHandlercpp)&CCBServer::HandleRequestDisconnect,
-		"CCBServer::HandleRequestDisconnect",
-		this );
+		[this](Stream* stream) -> int { return this->HandleRequestDisconnect(stream); },
+		"CCBServer::HandleRequestDisconnect");
 
 	ASSERT( rc >= 0 );
 	rc = daemonCore->Register_DataPtr(request);
@@ -2913,9 +2907,8 @@ CCBTarget::incPendingRequestResults(CCBServer *ccb_server)
 		int rc = daemonCore->Register_Socket (
 			m_sock,
 			m_sock->peer_description(),
-			(SocketHandlercpp)(int (CCBServer::*)(Stream*))&CCBServer::HandleRequestResultsMsg,
-			"CCBServer::HandleRequestResultsMsg",
-			ccb_server );
+			[ccb_server](Stream* stream) -> int { return ccb_server->HandleRequestResultsMsg(stream); },
+			"CCBServer::HandleRequestResultsMsg");
 
 		ASSERT( rc >= 0 );
 		rc = daemonCore->Register_DataPtr(this);

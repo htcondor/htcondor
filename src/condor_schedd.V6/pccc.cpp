@@ -93,8 +93,8 @@ pcccWants( PROC_ID nowJob, match_rec * match ) {
 		pcccTimerSelfMap[ nowJob ] = pcd;
 		pcccTimerMap[ nowJob ] = daemonCore->Register_Timer(
 			vacate_timeout,
-			(TimerHandlercpp) & pcccDoneCallback::callback,
-			"pcccDoneCallback", pcd );
+			[pcd](int timerID) -> void { pcd->callback(timerID); },
+			"pcccDoneCallback");
 		dprintf( D_FULLDEBUG, "pcccWants( %d.%d, %p ): started timer %d (data %p)\n", nowJob.cluster, nowJob.proc, match, pcccTimerMap[ nowJob ], pcd );
 	} else {
 		// Reschedule the timer for 20 seconds from now, instead?
@@ -194,7 +194,7 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	// Annoyingly, the deadline only applies to /sending/ the message.
 	pcccTimerMap[ nowJob ] = daemonCore->Register_Timer(
 		20 /* years of careful research */,
-		(TimerHandlercpp) & pcccStopCallback::callback, "pcccStop", pcs );
+		[pcs](int timerID) -> void { pcs->callback(timerID); }, "pcccStop");
 	pcccTimerSelfMap[ nowJob ] = pcs;
 	cMsg->setCallback( std::make_shared<DCMsgCallback>( (DCMsgCallback::CppFunction) & pcccStopCallback::dcMessageCallback, pcs ) );
 	cMsg->setDeadlineTimeout( 20 /* years of careful research */ );
@@ -401,8 +401,8 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 					// Retry one second from now.
 					SlowRetryCallback * srcb = new SlowRetryCallback( nowJob, retriesRemaining );
 					daemonCore->Register_Timer( 1,
-						(TimerHandlercpp) & SlowRetryCallback::callback,
-						"SlowRetryCallBack", srcb );
+						[srcb](int timerID) -> void { srcb->callback(timerID); },
+						"SlowRetryCallBack");
 
 					// Kill the timer from this attempt.  Deletes this.
 					if( pcccTimerMap.find( nowJob ) != pcccTimerMap.end() ) {

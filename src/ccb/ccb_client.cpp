@@ -1624,9 +1624,8 @@ CCBClient::RegisterReverseConnectCallback()
 		}
 		m_deadline_timer = daemonCore->Register_Timer (
 			timeout,
-			(TimerHandlercpp)&CCBClient::DeadlineExpired,
-			"CCBClient::DeadlineExpired",
-			this );
+			[this](int timerID) -> void { this->DeadlineExpired(timerID); },
+			"CCBClient::DeadlineExpired");
 	}
 
 	waiting_for_reverse_connect.emplace(m_connect_id, this);

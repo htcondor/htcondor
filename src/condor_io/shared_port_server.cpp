@@ -89,16 +89,14 @@ SharedPortServer::InitAndReconfig() {
 		int rc = daemonCore->Register_Command(
 			SHARED_PORT_CONNECT,
 			"SHARED_PORT_CONNECT",
-			(CommandHandlercpp)&SharedPortServer::HandleConnectRequest,
+			[this](int command, Stream* stream) -> int { return this->HandleConnectRequest(command, stream); },
 			"SharedPortServer::HandleConnectRequest",
-			this,
 			ALLOW );
 		ASSERT( rc >= 0 );
 
 		rc = daemonCore->Register_UnregisteredCommandHandler(
-			(CommandHandlercpp)&SharedPortServer::HandleDefaultRequest,
+			[this](int command, Stream* stream) -> int { return this->HandleDefaultRequest(command, stream); },
 			"SharedPortServer::HandleDefaultRequest",
-			this,
 			true);
 		ASSERT( rc >= 0 );
 	}
@@ -149,9 +147,8 @@ SharedPortServer::InitAndReconfig() {
 		m_publish_addr_timer = daemonCore->Register_Timer(
 			publish_addr_period,
 			publish_addr_period,
-			(TimerHandlercpp)&SharedPortServer::PublishAddress,
-			"SharedPortServer::PublishAddress",
-			this );
+			[this](int timerID) -> void { this->PublishAddress(timerID); },
+			"SharedPortServer::PublishAddress");
 	}
 
 	forker.Initialize();

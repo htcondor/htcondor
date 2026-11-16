@@ -605,73 +605,73 @@ initialize (const char *neg_name)
     std::vector<DCpermission> alt_reschedulePerms{ADVERTISE_SCHEDD_PERM, ADMINISTRATOR};
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule",
-            (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler,
-             "RESCHEDULE_commandHandler", (Service*) this, DAEMON,
+            [this](int command, Stream* stream) -> int { return this->RESCHEDULE_commandHandler(command, stream); },
+             "RESCHEDULE_commandHandler", DAEMON,
              false, 0, &alt_reschedulePerms);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
-            (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler,
-			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->RESET_ALL_USAGE_commandHandler(command, stream); },
+			"RESET_ALL_USAGE_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (RESET_USAGE, "ResetUsage",
-            (CommandHandlercpp) &Matchmaker::RESET_USAGE_commandHandler,
-			"RESET_USAGE_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->RESET_USAGE_commandHandler(command, stream); },
+			"RESET_USAGE_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (DELETE_USER, "DeleteUser",
-            (CommandHandlercpp) &Matchmaker::DELETE_USER_commandHandler,
-			"DELETE_USER_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->DELETE_USER_commandHandler(command, stream); },
+			"DELETE_USER_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
-            (CommandHandlercpp) &Matchmaker::SET_PRIORITYFACTOR_commandHandler,
-			"SET_PRIORITYFACTOR_commandHandler", this, WRITE);
+            [this](int command, Stream* stream) -> int { return this->SET_PRIORITYFACTOR_commandHandler(command, stream); },
+			"SET_PRIORITYFACTOR_commandHandler", WRITE);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
-            (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler,
-			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_PRIORITY_commandHandler(command, stream); },
+			"SET_PRIORITY_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_CEILING, "SetCeiling",
-            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
-			"SET_CEILING_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_CEILING_or_FLOOR_commandHandler(command, stream); },
+			"SET_CEILING_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_FLOOR, "SetFloor",
-            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
-			"SET_FLOOR_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_CEILING_or_FLOOR_commandHandler(command, stream); },
+			"SET_FLOOR_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (MANAGE_CEILING, "ManageCeilingLease",
-            (CommandHandlercpp) &Matchmaker::MANAGE_CEILING_commandHandler,
-			"MANAGE_CEILING_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->MANAGE_CEILING_commandHandler(command, stream); },
+			"MANAGE_CEILING_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (MANAGE_FLOOR, "ManageFloorLease",
-            (CommandHandlercpp) &Matchmaker::MANAGE_FLOOR_commandHandler,
-			"MANAGE_FLOOR_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->MANAGE_FLOOR_commandHandler(command, stream); },
+			"MANAGE_FLOOR_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (MANAGE_PRIORITY_FACTOR, "ManagePriorityFactorLease",
-            (CommandHandlercpp) &Matchmaker::MANAGE_PRIORITY_FACTOR_commandHandler,
-			"MANAGE_PRIORITY_FACTOR_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->MANAGE_PRIORITY_FACTOR_commandHandler(command, stream); },
+			"MANAGE_PRIORITY_FACTOR_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
-            (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler,
-			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_ACCUMUSAGE_commandHandler(command, stream); },
+			"SET_ACCUMUSAGE_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_BEGINTIME, "SetBeginUsageTime",
-            (CommandHandlercpp) &Matchmaker::SET_BEGINTIME_commandHandler,
-			"SET_BEGINTIME_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_BEGINTIME_commandHandler(command, stream); },
+			"SET_BEGINTIME_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (SET_LASTTIME, "SetLastUsageTime",
-            (CommandHandlercpp) &Matchmaker::SET_LASTTIME_commandHandler,
-			"SET_LASTTIME_commandHandler", this, ADMINISTRATOR);
+            [this](int command, Stream* stream) -> int { return this->SET_LASTTIME_commandHandler(command, stream); },
+			"SET_LASTTIME_commandHandler", ADMINISTRATOR);
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
-		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_commandHandler,
-			"GET_PRIORITY_commandHandler", this, READ);
+		[this](int command, Stream* stream) -> int { return this->GET_PRIORITY_commandHandler(command, stream); },
+			"GET_PRIORITY_commandHandler", READ);
     daemonCore->Register_Command (GET_PRIORITY_ROLLUP, "GetPriorityRollup",
-		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler,
-			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
+		[this](int command, Stream* stream) -> int { return this->GET_PRIORITY_ROLLUP_commandHandler(command, stream); },
+			"GET_PRIORITY_ROLLUP_commandHandler", READ);
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
-		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler,
-			"GET_RESLIST_commandHandler", this, READ);
+		[this](int command, Stream* stream) -> int { return this->GET_RESLIST_commandHandler(command, stream); },
+			"GET_RESLIST_commandHandler", READ);
     daemonCore->Register_Command (QUERY_NEGOTIATOR_ADS, "QUERY_NEGOTIATOR_ADS",
-		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
-			"QUERY_ADS_commandHandler", this, READ);
+		[this](int command, Stream* stream) -> int { return this->QUERY_ADS_commandHandler(command, stream); },
+			"QUERY_ADS_commandHandler", READ);
     daemonCore->Register_Command (QUERY_ACCOUNTING_ADS, "QUERY_ACCOUNTING_ADS",
-		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
-			"QUERY_ADS_commandHandler", this, READ);
+		[this](int command, Stream* stream) -> int { return this->QUERY_ADS_commandHandler(command, stream); },
+			"QUERY_ADS_commandHandler", READ);
 
 	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
-			(TimerHandlercpp) &Matchmaker::negotiationTime,
-			"Time to negotiate", this);
+			[this](int timerID) -> void { this->negotiationTime(timerID); },
+			"Time to negotiate");
 
 	update_collector_tid = daemonCore->Register_Timer (
 			0, update_interval,
-			(TimerHandlercpp) &Matchmaker::updateCollector,
-			"Update Collector", this );
+			[this](int timerID) -> void { this->updateCollector(timerID); },
+			"Update Collector");
 
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)

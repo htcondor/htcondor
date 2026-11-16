@@ -328,9 +328,8 @@ JobInfoCommunicator::allJobsDone( void )
 				// finishAllJobsDone() when the hook returns.
 			// Create a timer to exit if the hook takes too long
 			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getExitHookTimeout(),
-							(TimerHandlercpp)&JobInfoCommunicator::hookJobExitTimedOut,
-							"hookJobExitTimedOut",
-							this);
+							[this](int timerID) -> void { this->hookJobExitTimedOut(timerID); },
+							"hookJobExitTimedOut");
 			return false;
 			break;
 		}
@@ -967,8 +966,8 @@ JobInfoCommunicator::startUpdateTimer( void )
 	}
 	m_periodic_job_update_tid = daemonCore->
 		Register_Timer(interval,
-	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
-		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
+	      [this](int timerID) -> void { this->periodicJobUpdateTimerHandler(timerID); },
+		  "JobInfoCommunicator::periodicJobUpdateTimerHandler");
 	ASSERT(m_periodic_job_update_tid >= 0);
 }
 

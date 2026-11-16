@@ -524,8 +524,8 @@ JICLocalSchedd::retryJobCleanup( void )
 		return;
 	}
 	m_cleanup_retry_tid = daemonCore->Register_Timer(m_cleanup_retry_delay, 0,
-					(TimerHandlercpp)&JICLocalSchedd::retryJobCleanupHandler,
-					"retry job cleanup", this);
+					[this](int timerID) -> void { this->retryJobCleanupHandler(timerID); },
+					"retry job cleanup");
 	dprintf(D_FULLDEBUG, "Will retry job cleanup in "
 	        "LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY=%d seconds\n",
 	        m_cleanup_retry_delay);

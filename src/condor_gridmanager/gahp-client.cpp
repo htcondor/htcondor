@@ -677,8 +677,8 @@ GahpServer::RemoveGahpClient()
 
 	if ( m_reference_count <= 0 ) {
 		m_deleteMeTid = daemonCore->Register_Timer( 30,
-								(TimerHandlercpp)&GahpServer::DeleteMe,
-								"GahpServer::DeleteMe", (Service*)this );
+								[this](int timerID) -> void { this->DeleteMe(timerID); },
+								"GahpServer::DeleteMe");
 	}
 }
 
@@ -761,9 +761,7 @@ GahpServer::Startup(bool force)
 	}
 
 		// Now register a reaper, if we haven't already done so.
-		// Note we use ReaperHandler instead of ReaperHandlercpp
-		// for the callback prototype, because our handler is 
-		// a static method.
+		// Our handler is a static method, so no Service object is needed.
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
@@ -875,8 +873,8 @@ GahpServer::Startup(bool force)
 	} else {
 		// command worked... register the pipe and stop polling
 		int result = daemonCore->Register_Pipe(m_gahp_readfd,
-			"m_gahp_readfd",static_cast<PipeHandlercpp>(&GahpServer::pipe_ready),
-			"&GahpServer::pipe_ready",this);
+			"m_gahp_readfd",[this](int pipe) -> int { return this->pipe_ready(pipe); },
+			"&GahpServer::pipe_ready");
 		if ( result == -1 ) {
 			// failed to register the pipe for some reason; fall 
 			// back on polling (yuck).
@@ -889,8 +887,8 @@ GahpServer::Startup(bool force)
 		}
 
 		result = daemonCore->Register_Pipe(m_gahp_errorfd,
-			  "m_gahp_errorfd",static_cast<PipeHandlercpp>(&GahpServer::err_pipe_ready),
-			   "&GahpServer::err_pipe_ready",this);
+			  "m_gahp_errorfd",[this](int pipe) -> int { return this->err_pipe_ready(pipe); },
+			   "&GahpServer::err_pipe_ready");
 		// If this fails, too fucking bad
 	}
 		
@@ -1248,8 +1246,8 @@ GahpServer::ProxyCallback()
 {
 	if ( m_gahp_pid > 0 ) {
 		proxy_check_tid = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&GahpServer::doProxyCheck,
-								"GahpServer::doProxyCheck", (Service*)this );
+								[this](int timerID) -> void { this->doProxyCheck(timerID); },
+								"GahpServer::doProxyCheck");
 	}
 }
 
@@ -1382,8 +1380,8 @@ GahpServer::setPollInterval(unsigned int interval)
 	if ( m_pollInterval > 0 ) {
 		poll_tid = daemonCore->Register_Timer(m_pollInterval,
 											m_pollInterval,
-											(TimerHandlercpp)&GahpServer::poll,
-											"GahpServer::poll",this);
+											[this](int timerID) -> void { this->poll(timerID); },
+											"GahpServer::poll");
 	}
 }
 
@@ -1536,8 +1534,8 @@ GahpServer::poll_real_soon()
 	// to poll for resuts is already pending.
 	if (!poll_pending) {
 		int tid = daemonCore->Register_Timer(0,
-			(TimerHandlercpp)&GahpServer::poll,
-			"GahpServer::poll from poll_real_soon",this);
+			[this](int timerID) -> void { this->poll(timerID); },
+			"GahpServer::poll from poll_real_soon");
 		if ( tid != -1 ) {
 			poll_pending = true;
 		}
@@ -1974,8 +1972,8 @@ GenericGahpClient::now_pending(const char *command,const char *buf,
 
 	if (pending_timeout) {
 		pending_timeout_tid = daemonCore->Register_Timer(pending_timeout + 1,
-			(TimerHandlercpp)&GenericGahpClient::reset_user_timer_alarm,
-			"GahpClient::reset_user_timer_alarm",this);
+			[this](int timerID) -> void { this->reset_user_timer_alarm(timerID); },
+			"GahpClient::reset_user_timer_alarm");
 		pending_timeout += time(NULL);
 	}
 }

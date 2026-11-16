@@ -107,25 +107,25 @@ PlacementDaemon::Init()
 	}
 
 	daemonCore->Register_CommandWithPayload(PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN",
-		(CommandHandlercpp)&PlacementDaemon::command_user_login,
-		"command_user_login", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_user_login(command, stream); },
+		"command_user_login", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS",
-		(CommandHandlercpp)&PlacementDaemon::command_query_users,
-		"command_query_users", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_query_users(command, stream); },
+		"command_query_users", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS",
-		(CommandHandlercpp)&PlacementDaemon::command_query_tokens,
-		"command_query_tokens", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_query_tokens(command, stream); },
+		"command_query_tokens", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS",
-		(CommandHandlercpp)&PlacementDaemon::command_query_authorizations,
-		"command_query_authorizations", this, ADMINISTRATOR, true /*force authentication*/);
+		[this](int command, Stream* stream) -> int { return this->command_query_authorizations(command, stream); },
+		"command_query_authorizations", ADMINISTRATOR, true /*force authentication*/);
 
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
-				(TimerHandlercpp)&PlacementDaemon::update_collector, "update_collector", this);
+				[this](int timerID) -> void { this->update_collector(timerID); }, "update_collector");
 
 	m_read_mapfiles_tid = daemonCore->Register_Timer(0, 300,
-			(TimerHandlercpp)&PlacementDaemon::timer_read_mapfiles,
-			"timer_read_mapfiles", this);
+			[this](int timerID) -> void { this->timer_read_mapfiles(timerID); },
+			"timer_read_mapfiles");
 
 	Config();
 

@@ -359,8 +359,8 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		// use TIMER_NEVER to ensure that the timer hasn't been reaped when the
 		// GAHP client needs to fire it.
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)(int)) & FunctorSequence::timer,
-			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
+			[fs](int timerID) -> void { fs->timer(timerID); },
+			"GetFunction, PutRule, PutTarget, BulkRequest");
 		gahp->setNotificationTimerId( functorSequenceTimer );
 		eventsGahp->setNotificationTimerId( functorSequenceTimer );
 		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
@@ -435,8 +435,8 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		}
 
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
-			(void (Service::*)(int)) & FunctorSequence::timer,
-			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
+			[fs](int timerID) -> void { fs->timer(timerID); },
+			"GetFunction, PutRule, PutTarget, OnDemandRequest");
 		gahp->setNotificationTimerId( functorSequenceTimer );
 		eventsGahp->setNotificationTimerId( functorSequenceTimer );
 		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
