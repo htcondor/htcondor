@@ -102,7 +102,7 @@ bool LookupToken([[maybe_unused]] const std::string& jti, [[maybe_unused]] const
 		return false;
 	}
 
-	rc = sqlite3_prepare_v2(db, "SELECT token_sub, token_scope FROM idtokens_minting WHERE token_kid=? AND token_jti=? ;", -1, &stmt, nullptr);
+	rc = sqlite3_prepare_v2(db, "SELECT token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, capability FROM idtokens_minting WHERE token_kid=? AND token_jti=? ;", -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		goto db_done;
 	}
@@ -116,9 +116,18 @@ bool LookupToken([[maybe_unused]] const std::string& jti, [[maybe_unused]] const
 		found = true;
 		const char* value;
 		value = (const char*)sqlite3_column_text(stmt, 0);
-		token.sub = value ? value : "";
+		token.iss = value ? value : "";
 		value = (const char*)sqlite3_column_text(stmt, 1);
+		token.kid = value ? value : "";
+		value = (const char*)sqlite3_column_text(stmt, 2);
+		token.jti = value ? value : "";
+		token.iat = (long long)sqlite3_column_int64(stmt, 3);
+		token.exp = (long long)sqlite3_column_int64(stmt, 4);
+		value = (const char*)sqlite3_column_text(stmt, 5);
+		token.sub = value ? value : "";
+		value = (const char*)sqlite3_column_text(stmt, 6);
 		token.scope = value ? value : "";
+		token.cap = (bool)sqlite3_column_int64(stmt, 7);
 	}
 	if (rc != SQLITE_DONE) {
 		goto db_done;
@@ -136,6 +145,7 @@ bool LookupToken([[maybe_unused]] const std::string& jti, [[maybe_unused]] const
 		goto db_done;
 	}
 
+	token.extra_claims.clear();
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		const char* claim = (const char*)sqlite3_column_text(stmt, 0);
 		const char* value = (const char*)sqlite3_column_text(stmt, 1);
