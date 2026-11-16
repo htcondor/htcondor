@@ -36,6 +36,7 @@ FTEST_string_to_port.cpp
 FTEST_strlwr.cpp
 FTEST_strupr.cpp
 FTEST_tokener.cpp
+FTEST_wasted_memory.cpp
 FTEST_your_string.cpp
 )
 set( OTSrcs

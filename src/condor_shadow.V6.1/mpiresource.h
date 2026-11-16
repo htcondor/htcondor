@@ -66,6 +66,9 @@ class MpiResource : public RemoteResource {
 
 	virtual bool supportsReconnect( void );
 
+ protected:
+
+	virtual bool tracksWastedMemory() const { return false; }
 
  private:
 
