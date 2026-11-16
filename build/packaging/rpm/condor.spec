@@ -256,7 +256,12 @@ Requires: apptainer >= 1.4.5
 # Unfortunately, Apptainer is lagging behind on openSUSE 16
 Requires: apptainer >= 1.5.3
 %else
+%if 0%{?rhel} == 10
+# EPEL 10.3 does not have apptainer 1.5.5
+Requires: apptainer >= 1.5.4
+%else
 Requires: apptainer >= 1.5.5
+%endif
 %endif
 %endif
 %endif
@@ -1361,6 +1366,18 @@ fi
 # configuration
 
 %changelog
+* Mon Nov 16 2026 Tim Theisen <tim@cs.wisc.edu> - 26.1.0-2
+- For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
+
+* Mon Nov 16 2026 Tim Theisen <tim@cs.wisc.edu> - 26.0.1-2
+- For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
+
+* Mon Nov 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.15.15-2
+- For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
+
+* Mon Nov 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-2
+- For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
+
 * Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 26.1.0-1
 - Add htcondor cluster tool to profile jobs and identify problems
 - condor_gpu_discovery identifies integrated GPUs that share host memory
