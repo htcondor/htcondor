@@ -254,7 +254,12 @@ Requires: apptainer >= 1.4.5
 # Unfortunately, Apptainer is lagging behind on openSUSE 16
 Requires: apptainer >= 1.5.3
 %else
+%if 0%{?rhel} == 10
+# EPEL 10.3 does not have apptainer 1.5.5
+Requires: apptainer >= 1.5.4
+%else
 Requires: apptainer >= 1.5.5
+%endif
 %endif
 %endif
 %endif
@@ -1320,6 +1325,9 @@ fi
 # configuration
 
 %changelog
+* Mon Nov 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-2
+- For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
+
 * Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-1
 - Fix condor_ssh_to_job with using SELinux and LVM disk enforcement
 - Fix issue where the condor_defrag daemon might not be able to drain EPs
