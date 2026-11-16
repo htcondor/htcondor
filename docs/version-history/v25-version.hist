@@ -13,6 +13,10 @@
   the shadow had difficulty communicating with a starter.
   :jira:`3967`
 
+- Fixed a bug in the :macro:`HOLD_IF_DISK_EXCEEDED` policy that prevented
+  it from ever evicting jobs.
+  :jira:`4090`
+
 *** 25.0.16 bugs
 
 - Fixed a bug where multiple *condor_shadow* processes could rotate the
