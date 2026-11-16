@@ -5755,13 +5755,10 @@ Matchmaker::calculatePieLeft(
 	double &pieLeft)
 {
 
-		// Calculate sum of submitterLimits in this spin of the pie.
+		// Calculate sum of submitterLimits in this spin of the pie.  The
+		// limits are the round's own, so in a floor round the pie is the sum
+		// of the floor-capped limits negotiateWithGroup() will hand out.
 	pieLeft = 0;
-
-		// The pie is sized as for a fair-share round, whatever kind of round
-		// this is: a floor round's pie ignores the floors.
-	NegotiationRound pieRound = round;
-	pieRound.kind = RoundKind::FairShare;
 
 	for (ClassAd *submitter: submitterAds) {
 		double submitterShare = 0.0;
@@ -5777,7 +5774,7 @@ Matchmaker::calculatePieLeft(
 
 		calculateSubmitterLimit(
 			submitterName,
-			pieRound,
+			round,
 			groupusage,
 			maxPrioValue,
 			maxAbsPrioValue,
