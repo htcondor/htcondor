@@ -200,6 +200,15 @@ def implied_memory_usage(request_memory, gb_hours, duration):
     return request_memory - gb_hours * 1024.0 * 3600.0 / duration
 
 
+def in_bounds(lower, value, upper):
+    # The job queue keeps reals to only 16 significant digits (see
+    # ClassAdUnParser), so a value that is exactly a bound, which happens
+    # whenever the activation lasted exactly the whole number of seconds a
+    # bound assumes, can come back just outside it.
+    return (lower <= value or value == pytest.approx(lower)) and \
+           (value <= upper or value == pytest.approx(upper))
+
+
 def local_activation_upper_bound(ad):
     # The local starter measures the activation from JobCurrentStartDate
     # until the job exits, after which the schedd marks the job completed,
@@ -488,7 +497,7 @@ def check_ended_long_job(result):
     # The activation lasted at least as long as we let it run before
     # ending it, and at most until we saw that it had ended.
     upper = expected_gb_hours(512, 128, done_time - ad["JobCurrentStartDate"] + 1)
-    assert lower <= ad[LAST] <= upper
+    assert in_bounds(lower, ad[LAST], upper)
 
 
 def check_peak_measured(ad):
@@ -562,7 +571,7 @@ class TestWastedMemory:
         lower = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MAX_MB, LOCAL_SECOND_RUN_SECONDS)
         upper = expected_gb_hours(LIFETIME_REQUEST_MB, PEAK_MIN_MB, local_activation_upper_bound(ad))
         logger.info(f"{LAST} = {ad[LAST]}, bounds = [{lower}, {upper}]")
-        assert lower <= ad[LAST] <= upper
+        assert in_bounds(lower, ad[LAST], upper)
 
     def test_current_grows_while_running(self, running_samples):
         samples, _ = running_samples
@@ -595,7 +604,9 @@ class TestWastedMemory:
         assert ad[CURRENT] == ad[LAST]
         # ...which includes the time the job took to exit after the hold,
         # which came after at least MIN_RUN_SECONDS of the activation.
-        assert ad[LAST] >= expected_gb_hours(512, 128, MIN_RUN_SECONDS + SLOW_EXIT_SECONDS)
+        # (Check the duration, a whole number of seconds, rather than the
+        # value, which the job queue may round to just below the bound.)
+        assert duration >= MIN_RUN_SECONDS + SLOW_EXIT_SECONDS
         # And the epoch record has the final value too.
         assert len(epochs) == 1
         assert epochs[0][LAST] == pytest.approx(ad[LAST])
@@ -610,7 +621,7 @@ class TestWastedMemory:
         lower = expected_gb_hours(512, 128, 5)
         upper = expected_gb_hours(512, 128, local_activation_upper_bound(ad))
         logger.info(f"{LAST} = {ad[LAST]}, bounds = [{lower}, {upper}]")
-        assert lower <= ad[LAST] <= upper
+        assert in_bounds(lower, ad[LAST], upper)
         assert ad[CURRENT] == ad[LAST]
 
     def test_local_universe_not_set_while_running(self, local_running_and_removed):
