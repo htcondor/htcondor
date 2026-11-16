@@ -44,12 +44,15 @@ sqlite3* acquireTokensDbHandle()
 		return nullptr;
 	}
 
-		// TODO consider adding a short busy wait
 	rc = sqlite3_open_v2(cfg_db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", cfg_db_file.c_str(), sqlite3_errmsg(db));
 		return nullptr;
 	}
+	// Wait a short time if another daemon is holding a write lock instead
+	// of failing immediately. Not too long, since we're probably in the
+	// middle of authentication.
+	sqlite3_busy_timeout(db, 2000);
 
 	if (cfg_db_file != tokens_db_file) {
 		// First time opening this database file. Check that our tables exist.
@@ -111,8 +114,11 @@ bool LookupToken([[maybe_unused]] const std::string& jti, [[maybe_unused]] const
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		found = true;
-		token.sub = (const char*)sqlite3_column_text(stmt, 0);
-		token.scope = (const char*)sqlite3_column_text(stmt, 1);
+		const char* value;
+		value = (const char*)sqlite3_column_text(stmt, 0);
+		token.sub = value ? value : "";
+		value = (const char*)sqlite3_column_text(stmt, 1);
+		token.scope = value ? value : "";
 	}
 	if (rc != SQLITE_DONE) {
 		goto db_done;
@@ -131,7 +137,11 @@ bool LookupToken([[maybe_unused]] const std::string& jti, [[maybe_unused]] const
 	}
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
-		token.extra_claims[(const char*)sqlite3_column_text(stmt, 0)] = (const char*)sqlite3_column_text(stmt, 1);
+		const char* claim = (const char*)sqlite3_column_text(stmt, 0);
+		const char* value = (const char*)sqlite3_column_text(stmt, 1);
+		if (claim && value) {
+			token.extra_claims[claim] = value;
+		}
 	}
 	if (rc != SQLITE_DONE) {
 		goto db_done;
