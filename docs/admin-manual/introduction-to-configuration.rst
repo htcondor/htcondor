@@ -379,7 +379,6 @@ those specified separately.
 .. code-block:: condor-config
 
     XYZZY.SCHEDD_NAME = XYZZY
-    XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
     XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to the
@@ -388,13 +387,6 @@ Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to th
 different requirements for which parameters need to be specified
 individually. This example works for the *condor_schedd*, and more
 local configuration can, and likely would be specified.
-
-Also note that each daemon's log file must be specified individually,
-and in two places: one specification is for use by the :tool:`condor_master`,
-and the other is for use by the daemon itself. In the example, the
-``XYZZY`` *condor_schedd* configuration variable
-``XYZZY.SCHEDD_LOG`` definition references the :tool:`condor_master`
-daemon's ``XYZZY_LOG``.
 
 Comments and Line Continuations
 -------------------------------
