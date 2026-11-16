@@ -22,6 +22,10 @@
   machine, for rare cgroup v2 cases that still need it.
   :jira:`4065`
 
+- Fixed a bug in the :macro:`HOLD_IF_DISK_EXCEEDED` policy that prevented
+  it from ever evicting jobs.
+  :jira:`4090`
+
 *** 26.0.1 bugs
 
 - Fixed a bug that incorrectly calculated :ad-attr:`TransferOutQueued`
