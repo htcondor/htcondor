@@ -52,7 +52,7 @@ sqlite3* acquireTokensDbHandle()
 	// Wait a short time if another daemon is holding a write lock instead
 	// of failing immediately. Not too long, since we're probably in the
 	// middle of authentication.
-	sqlite3_busy_timeout(db, 2000);
+	sqlite3_busy_timeout(db, 200);
 
 	if (cfg_db_file != tokens_db_file) {
 		// First time opening this database file. Check that our tables exist.
