@@ -263,7 +263,7 @@ Requires: apptainer >= 1.5.3
 %if 0%{?rhel} == 10
 # EPEL 10.3 does not have apptainer 1.5.5
 Requires: apptainer >= 1.5.4
-else
+%else
 Requires: apptainer >= 1.5.5
 %endif
 %endif
