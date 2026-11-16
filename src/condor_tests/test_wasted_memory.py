@@ -275,15 +275,19 @@ def jobs(condor, test_dir, path_to_sleep, fail_script, peak_script, slow_exit_sc
     }
 
 
-def wait_for_attr(handle, attr, timeout=60):
+def wait_for_ad(handle, ready, timeout=60):
     # The final update to the job queue may land slightly after the
     # event that tells us the job is done.
     deadline = time.time() + timeout
     ad = handle.query()[0]
-    while attr not in ad and time.time() < deadline:
+    while not ready(ad) and time.time() < deadline:
         time.sleep(1)
         ad = handle.query()[0]
     return ad
+
+
+def wait_for_attr(handle, attr, timeout=60):
+    return wait_for_ad(handle, lambda ad: attr in ad, timeout)
 
 
 def wait_for_completion(handle):
@@ -293,7 +297,16 @@ def wait_for_completion(handle):
         verbose=True,
         timeout=180,
     )
-    return wait_for_attr(handle, LAST)
+    # The terminate event, and the starter's (or shadow's) final update
+    # to the job queue, come before the schedd reaps the starter (or
+    # shadow) and marks the job completed, setting EnteredCurrentStatus.
+    # So until JobStatus is COMPLETED, EnteredCurrentStatus is still when
+    # the job started running, and for a job with more than one activation,
+    # LastWastedMemoryGBHours may still be the previous activation's.
+    ad = wait_for_ad(handle, lambda ad:
+                     ad.get("JobStatus") == htcondor.JobStatus.COMPLETED and LAST in ad)
+    assert ad["JobStatus"] == htcondor.JobStatus.COMPLETED
+    return ad
 
 
 def wait_for_running(handle):
