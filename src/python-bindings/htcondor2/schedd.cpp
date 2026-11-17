@@ -1729,30 +1729,26 @@ _schedd_query_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    PyObject * list = PyList_New(0);
-    if( list == nullptr ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu" );
-        return nullptr;
-    }
 
-    for( auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
-        if( pyClassAd == NULL ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // py_new_classad2_classad_via_copy() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // PyList_Append() has already set an exception for us.
+    // GregT contends that we won't ever have enough of these to go through
+    // the trouble of adding a DCSchedd method that reads from the wire into
+    // the heap.
+    std::vector<std::unique_ptr<ClassAd>> r;
+    for( const auto & result : results ) {
+        ClassAd * c = new ClassAd(result);
+        if( c == NULL ) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu: classad" );
             return nullptr;
         }
+        auto u = std::unique_ptr<ClassAd>(c);
+        if(! u) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu: unique_ptr" );
+            return nullptr;
+        }
+
+        r.push_back(std::move(u));
     }
 
-    return list;
+
+    return py_list_from_vector(r, "_schedd_query_ocu");
 }
