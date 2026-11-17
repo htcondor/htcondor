@@ -7,14 +7,31 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 26.0.3
+--------------
+
+Release Notes:
+
+.. HTCondor version 26.0.3 released on January 7, 2027.
+
+- HTCondor version 26.0.3 planned release date is January 7, 2027.
+
+New Features:
+
+.. include-history:: features 26.0.3 25.15.17 25.0.17
+
+Bugs Fixed:
+
+.. include-history:: bugs 26.0.3 25.15.17 25.0.17
+
 Version 26.0.2
 --------------
 
 Release Notes:
 
-.. HTCondor version 26.0.2 released on December 3, 2026.
+.. HTCondor version 26.0.2 released on December 10, 2026.
 
-- HTCondor version 26.0.2 planned release date is December 3, 2026.
+- HTCondor version 26.0.2 planned release date is December 10, 2026.
 
 New Features:
 
