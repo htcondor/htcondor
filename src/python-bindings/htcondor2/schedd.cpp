@@ -112,18 +112,12 @@ _schedd_query(PyObject *, PyObject * args) {
             return NULL;
     }
 
-
-    PyObject * list = PyList_New(0);
-    if( list == NULL ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_query" );
-        return NULL;
-    }
-
     if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
         results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
+
 
     return py_list_from_vector( results, "_schedd_query" );
 }
