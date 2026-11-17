@@ -11,38 +11,6 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     return false;
 }
 
-
-//
-// FIXME
-// There might be a good reason to have written this function this way,
-// but it seems like it would be easier to rewrite the caller to match
-// _schedd_query_callback() and use py_list_to_vector() rather than fix
-// all of this function's omissions.
-//
-
-static int
-_schedd_userrec_query_callback( void * r, ClassAd * ad ) {
-    auto * results = static_cast<PyObject*>(r);
-
-    PyObject * pyClassAd = py_new_classad2_classad(ad);
-    if( pyClassAd == NULL ) {
-        // py_new_classad2_classad() has already set an exception for us.
-        return -1;
-    }
-    auto rv = PyList_Append(results, pyClassAd);
-    Py_DecRef(pyClassAd);
-
-    if (rv != 0) {
-        // pthon set an error, we need to break out of the query
-        // and return a negative code so that the caller knows.
-        return -1;
-    }
-
-    // return 0 to indicate that the results list took ownership of the ad
-    return 0;
-}
-
-
 static PyObject *
 _schedd_query(PyObject *, PyObject * args) {
     // _schedd_query(addr, constraint, projection, limit, opts)
@@ -81,6 +49,10 @@ _schedd_query(PyObject *, PyObject * args) {
 
     CondorError errStack;
     ClassAd * summaryAd = NULL;
+    // The argument, here and in _schedd_userrec_query(), is that as a local,
+    // this vector will be cleaned up no matter how we exit this function,
+    // and that since py_list_from_vector() calls release() and not get(),
+    // this vector will be the only one to delete those pointers.
     std::vector<std::unique_ptr<ClassAd>> results;
     rv = q.fetchQueueFromHostAndProcess(
         addr, attributes, opts, limit,
@@ -153,8 +125,7 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
     ClassAd queryAd;
     CondorError errStack;
     ClassAd *summaryAd = nullptr;
-
-    PyObject * results = nullptr;
+    std::vector<std::unique_ptr<ClassAd>> results;
 
     rv = schedd.makeUsersQueryAd(queryAd, constraint, attributes, limit);
     if (0 == rv) {
@@ -166,50 +137,34 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
         case 3: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE); break;
         }
 
-        results = PyList_New(0);
-        if( results == NULL ) {
-            PyErr_SetString( PyExc_MemoryError, "_schedd_userrec_query" );
-            return NULL;
-        }
-
         int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
         rv = schedd.queryUsers(
-            queryAd, _schedd_userrec_query_callback, results,
+            queryAd, _schedd_query_callback, & results,
             connect_timeout, &errStack, &summaryAd);
     }
 
-    if (0 == rv) {
-        // success, we just want to return the results
-    } else {
-        // failure, free any results and set an error into python if needed
-        if (results) {
-            Py_DecRef(results);
-            results = nullptr;
-        }
-        switch (rv) {
-            case 0:   // should never get here on success, this is just for clarity.
-            case -1:  // error already set by python (in callback)
-                break;
+    switch (rv) {
+        case Q_OK:
+            break;
 
-            case Q_UNSUPPORTED_OPTION_ERROR:
-                // This was HTCondorIOError in version 1.
-                PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
-                break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
+            break;
 
-            case SC_ERR_BAD_CONSTRAINT:
-                PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
-                break;
+        case SC_ERR_BAD_CONSTRAINT:
+            PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
+            break;
 
-            default:
-                // This was HTCondorIOError in version 1.
-                std::string error = "Failed to fetch ads from schedd, errmsg="
-                                  + errStack.getFullText();
-                PyErr_SetString(PyExc_HTCondorException, error.c_str());
-                break;
-        }
+        default:
+            // This was HTCondorIOError in version 1.
+            std::string error = "Failed to fetch ads from schedd, errmsg="
+                              + errStack.getFullText();
+            PyErr_SetString(PyExc_HTCondorException, error.c_str());
+            break;
     }
 
-    return results;
+    return py_list_from_vector(results, "_schedd_userrec_query");
 }
 
 

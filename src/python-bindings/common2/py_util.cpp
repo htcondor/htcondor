@@ -75,7 +75,7 @@ py_new_classad2_classad_via_copy(ClassAd * classAd) {
 	// such a mistake, it seems rather possible that it was the result of
 	// an unexpected Python exception being raised.  If so, we don't want
 	// to replace that exception with our own.  Otherwise, raising an
-	// exception probably our least user-hostile option.
+	// exception is probably our least user-hostile option.
 	if( classAd == NULL ) {
 		if( PyErr_Occurred() == NULL ) {
 			// Using RuntimeError instead of HTCondorException to avoid
