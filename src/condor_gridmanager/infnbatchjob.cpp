@@ -1348,7 +1348,8 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	// Need to set ATTR_ON_EXIT_SIGNAL for a completed job. The blahp
 	// doesn't set it in the status update ad.
-	if (new_remote_state == COMPLETED) {
+	bool bool_value;
+	if (new_remote_state == COMPLETED && !jobAd->LookupBool(ATTR_ON_EXIT_SIGNAL, bool_value)) {
 		int value;
 		if (jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, value)) {
 			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, true);
