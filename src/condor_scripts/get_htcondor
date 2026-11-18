@@ -178,7 +178,12 @@ do_start_service() {
                 set -x
             fi
             $sh_c "systemctl enable condor"
-            $sh_c "systemctl start condor"
+            if [[ $ROLE ]]; then
+                # Package installation may have started condor before the role was configured.
+                $sh_c "systemctl restart condor"
+            else
+                $sh_c "systemctl start condor"
+            fi
         )
     fi
 }
