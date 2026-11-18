@@ -106,7 +106,7 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
         nonlocal data
         duplicate_count = 0
 
-        for ad in query_func(constraint=f"ClusterId=={cluster_id}", projection=REQUIRED_ATTRS, **query_func_kwargs):
+        for ad in query_func(projection=REQUIRED_ATTRS, **query_func_kwargs):
             jid = str(ad["ClusterId"]) + "." + str(ad["ProcId"])
 
             if jid in data:
@@ -119,7 +119,7 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
     print("Querying current queue...", file=sys.stderr)
     queue_job_count = 0
     try:
-        _get_job_info(schedd.query)
+        _get_job_info(schedd.query, constraint=f"ClusterId=={cluster_id}")
     except Exception as e:
         print(f"Warning: Error querying queue: {e}", file=sys.stderr)
     finally:
@@ -129,7 +129,7 @@ def _fetch_cluster_jobs(cluster_id: int, filepath: Path) -> int:
     history_job_count = 0
     try:
         # Update queued count by removing jobs that transitioned into the history
-        queue_job_count = queue_job_count - _get_job_info(schedd.history)
+        queue_job_count = queue_job_count - _get_job_info(schedd.history, jobs=cluster_id)
     except Exception as e:
         print(f"Warning: Error querying history: {e}", file=sys.stderr)
     finally:
@@ -193,7 +193,7 @@ def _validate_cluster_exists(cluster_id: int) -> bool:
         pass
 
     try:
-        if len(list(schedd.history(f"ClusterId=={cluster_id}", ["ClusterId"], match=1))) == 1:
+        if len(list(schedd.history(jobs=cluster_id, projection=["ClusterId"], match=1))) == 1:
             return True
     except Exception:
         pass
@@ -290,6 +290,8 @@ class Dashboard(Verb):
     }
 
     def __init__(self, logger, cluster_id, **options):
+        if cluster_id <= 0:
+            raise RuntimeError(f"Invalid cluster ID {cluster_id}.")
         counts = Dashboard.fetch_counts(cluster_id)
         print(f"\nCluster {cluster_id} Status Dashboard\n")
         Dashboard.draw_bars(counts)
@@ -304,7 +306,7 @@ class Dashboard(Verb):
         total_found = 0
 
         for ad in schedd.history(
-            constraint=f"ClusterId == {cluster_id}",
+            jobs=cluster_id,
             projection=["JobStatus"],
             match=-1,
         ):

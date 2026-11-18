@@ -31,6 +31,9 @@ def get_job_ad(logger, job_id, options):
         cluster_id = int(job_id)
         proc_id = 0
 
+    if cluster_id <= 0 or proc_id < 0:
+        raise RuntimeError(f"Invalid job ID {job_id}.")
+
     # Get schedd
     schedd = htcondor.Schedd()
 
@@ -54,7 +57,8 @@ def get_job_ad(logger, job_id, options):
         try:
             logger.info(f"Job {job_id} was not found in the active queue, checking history...")
             logger.info("(This may take a while, Ctrl-C to cancel.)")
-            job = list(schedd.history(constraint=constraint, projection=projection, match=1))
+            # Use the job id filter so the schedd can use the librarian index
+            job = list(schedd.history(jobs=f"{cluster_id}.{proc_id}", projection=projection, match=1))
         except KeyboardInterrupt:
             logger.warning("History check cancelled.")
             job = []

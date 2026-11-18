@@ -277,8 +277,9 @@ def dagman_wall_clock(schedd, clusterID):
     # history, or if history is not readable.
     #
     try:
+        # Use the job id filter so the schedd can use the librarian index
         ads = schedd.history(
-            constraint=f'ClusterID == {clusterID}',
+            jobs=clusterID,
             projection=[
                 'ClusterID', 'ProcID', 'QDate', 'JobStartDate',
                 'CompletionDate', 'RemoteWallClockTime', 'JobStatus',
