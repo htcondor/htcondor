@@ -978,8 +978,14 @@ when the Access Point is configured with :config:`USING_LIBRARIAN = True`
       - Conditions
     * - :tool:`condor_history`
       - ``-no-librarian``
-      - When asked to query final job records for a specific user or cluster
-        and for a set of specific job ids.
+      - When asked to query final job records for a specific user or cluster,
+        a set of specific job ids, or the jobs of a DAGMan workflow or batch
+        (``-dagid``, ``-batchid``, ``-batchname``). This includes remote
+        queries of a *condor_schedd* (``-name``) version 26.3.0 or newer.
+    * - :meth:`htcondor2.Schedd.history`
+      - ``use_librarian=False``
+      - When given the ``users``, ``jobs``, ``batchnames``, ``batchids``,
+        or ``dagids`` filters.
 
 .. note::
 

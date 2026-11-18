@@ -1,3 +1,16 @@
+*** 26.3.0 features
+
+- Remote history queries from :tool:`condor_history` **-name** and the new
+  ``users``, ``jobs``, ``batchnames``, ``batchids``, and ``dagids`` filters of
+  :meth:`htcondor2.Schedd.history` can now use the :ref:`archive-librarian`
+  database.
+  :jira:`4006`
+
+*** 26.3.0 bugs
+
+- Remote history queries are now answered as the condor user instead of root.
+  :jira:`4006`
+
 *** 26.2.0 features
 
 - Administrators can now cap the DAGMan throttles that users may set via
