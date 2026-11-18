@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # Description:
 #   Submission script for Integrated Research Infrastructure (IRI) API,

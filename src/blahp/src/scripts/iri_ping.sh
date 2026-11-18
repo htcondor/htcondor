@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # Copyright (c) HTCondor Team, Computer Sciences Department,
 #   University of Wisconsin-Madison, WI. 2026.

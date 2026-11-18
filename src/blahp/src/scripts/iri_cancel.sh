@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # Description:
 #   Cancel a job via the Integrated Research Infrastructure (IRI) API,

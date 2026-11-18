@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # Description:
 #   Status script for jobs submitted via the Integrated Research

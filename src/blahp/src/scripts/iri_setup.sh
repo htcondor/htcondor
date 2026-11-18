@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # Description:
 #   The iri scripts rely on the Python package authlib.
