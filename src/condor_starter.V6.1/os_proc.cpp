@@ -63,7 +63,7 @@ ReliSock *sns = 0;
 
 /* OsProc class implementation */
 
-OsProc::OsProc( ClassAd* ad ) : howCode(-1), cgroupActive(false)
+OsProc::OsProc( ClassAd* ad ) : howCode(-1)
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
@@ -632,7 +632,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( JobName, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 		.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
 		.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
@@ -720,9 +719,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	dprintf(D_ALWAYS,"Create_Process succeeded, pid=%d\n",JobPid);
 
-	if (family_info->cgroup_active) {
-		this->cgroupActive = true;
-	}
 	condor_gettimestamp( job_start_time );
 
 	return 1;
@@ -781,7 +777,9 @@ OsProc::JobExit( void )
 {
 	int reason;	
 
-	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
+	//dprintf( D_ZKM | D_BACKTRACE, "Inside OsProc::JobExit() taskid=%d %s\n",
+	//	taskid, m_finalTask?"final":"" );
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit() taskid=%d%s\n", taskid, m_finalTask?" final":"" );
 
 	if( requested_exit == true ) {
 		if( starter->jic->hadHold() || starter->jic->hadRemove() ) {
@@ -813,8 +811,10 @@ OsProc::JobExit( void )
     set_priv ( old );
 
 #endif
-
-	return starter->jic->notifyJobExit( exit_status, reason, this );
+	if (m_finalTask) {
+		return starter->jic->notifyJobExit( exit_status, reason, this );
+	}
+	return true;
 }
 
 
@@ -1015,10 +1015,6 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 			ad->Assign( ATTR_JOB_CORE_DUMPED, true );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
-
-	if (cgroupActive) {
-		ad->Assign(ATTR_CGROUP_ENFORCED, true );
-	} 
 	return UserProc::PublishUpdateAd( ad );
 }
 
@@ -1291,25 +1287,24 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 
 	Env env;
-	std::string env_errors;
-	if (!starter->GetJobEnv(JobAd,&env, env_errors)) {
-		dprintf(D_ALWAYS, "Warning -- cannot put environment into singularity job: %s\n", env_errors.c_str());
-	}
+	std::string scratch_dir = starter->GetWorkingDir(WD::INNER);
 
 	std::string target_dir;
 	bool has_target = htcondor::Singularity::hasTargetDir(*JobAd, target_dir);
 
 	if (has_target) {
-		htcondor::Singularity::retargetEnvs(env, target_dir, "");
-		// nsenter itself uses _CONDOR_SCRATCH_DIR to decide where the
-		// home directory is, so leave this one behind, set to the
-		// old non-prefixed value
+		// nsenter rewrites the outside path to the inside one in the
+		// job's environment, and uses _CONDOR_SCRATCH_DIR as the
+		// directory to start the shell in.
 		//
 		// But if STARTER_NESTED_SCRATCH is true, we need to append /scratch
 		if (param_boolean("STARTER_NESTED_SCRATCH",false)) {
 			target_dir += "/scratch";
 		}
+		env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", scratch_dir);
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
+	} else {
+		env.SetEnv("_CONDOR_SCRATCH_DIR", scratch_dir);
 	}
 
 	if (!ssh_command.empty()) {
@@ -1332,7 +1327,6 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
 		 cpArgs.priv(PRIV_ROOT)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
 	);
 	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);

@@ -137,6 +137,16 @@ YourString expand(const char * value) {
 	return ystr;
 }
 
+// expand using the std::string overload of expand_macro, which has its own macro function evaluation
+std::string gsstr;
+YourString expand_str(const char * value) {
+	gexcmsg.clear();
+	gsstr = value;
+	expand_macro(gsstr, 0, TestingMacroSet, def_ctx);
+	ystr = gsstr.c_str();
+	return ystr;
+}
+
 YourString expand_as(const char * prefix, const char * value) {
 	MACRO_EVAL_CONTEXT ctx = def_ctx;
 	ctx.subsys = prefix;
@@ -265,6 +275,15 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"List6c", "aa,bb, cc,dd,ee,ff"},
 		{"MASTER.List6c", "JMK,Vvv,XX,YY,ZKM,ZA"},
 		{"List6cq", "$Fq(list6c)"},
+		{"fileEmptyQuoted", "\"\""},
+		{"fileEmptySQuoted", "''"},
+
+		// for expansion limit tests
+		{"CycleA", "$(CycleB)"},
+		{"CycleB", "$(CycleA)"},
+		{"SelfInt", "$INT(SelfInt)"},
+		{"SelfInt2", "$INT(SelfInt2)$INT(SelfInt2)"},
+		{"SelfString", "$STRING(SelfString)"},
 
 		// for $INT and $REAL tests
 		{"DoubleVanilla", "$(VANILLA)*2"},
@@ -372,6 +391,17 @@ void testparse_lcl_as(const char * local, const char *prefix, int lineno, MACRO_
 	testparse(lineno, set, ctx, source, verbose, tag, params, expected);
 }
 
+// parse text in config syntax the way a config file is parsed, using Parse_macros
+// rather than Parse_config_string, so that it goes through getline
+static int parse_mem(MACRO_SET & set, const char * text)
+{
+	MACRO_SOURCE source{};
+	insert_source("parse_mem", set, source);
+	MacroStreamMemoryFile ms(text, -1, source);
+	std::string errmsg;
+	return Parse_macros(ms, 0, set, 0, &def_ctx, errmsg, nullptr, nullptr);
+}
+
 //
 //   UNIT TESTS FOLLOW THIS BANNER
 //
@@ -406,6 +436,15 @@ void testing_parser(bool verbose)
 	testparse_as("NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub2", n1, n1e1);
 	testparse_lcl("N1", __LINE__, set, def_ctx, source, verbose, "subsys.self sub3", n1, n1e2);
 	testparse_lcl_as("N1", "NEGOTIATOR", __LINE__, set, def_ctx, source, verbose, "subsys.self sub4", n1, n1e2);
+
+	// parse errors must not free getline's static line buffer, which the next parse reuses
+	// and frees again at end of input. #opt:strict makes param assignment with : an error
+	MACRO_SET mset;
+	mset.initialize(CONFIG_OPT_SMART_COM_IN_CONT | CONFIG_OPT_COLON_IS_META_ONLY); // errors go into mset.errors
+	mset.defaults = &TestingMacroDefaults;
+	REQUIRE( parse_mem(mset, "#opt:strict\nfoo : bar\n") < 0 );
+	REQUIRE( parse_mem(mset, "A = 1\nB = 2\n") == 0 );
+	REQUIRE( (ystr = lookup_macro("B", mset, def_ctx)) == "2" );
 }
 
 void testing_lookups(bool verbose)
@@ -907,6 +946,39 @@ void testing_$F_regressions(bool verbose)
 
 	REQUIRE( expand("$F(Items5) ff") == "aa bb cc dd ee ff" );
 	REQUIRE( expand("\"$F(Items5Quoted) ff\"") == "\"aa bb cc dd ee ff\"" );
+
+	// a value that is only a pair of quotes used to underflow the copy length in strcpy_quoted
+	REQUIRE( expand("$F(\"\")") == "" );
+	REQUIRE( expand("$F(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fn(fileEmptyQuoted)") == "" );
+	REQUIRE( expand("$Fq(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fqn(fileEmptyQuoted)") == "\"\"" );
+	REQUIRE( expand("$Fa(fileEmptySQuoted)") == "" );
+	REQUIRE( expand("$Fqa(fileEmptySQuoted)") == "''" );
+
+	// asking for more dirs than the path has used to pop_back on an empty vector
+	REQUIRE( expand("$Fdddddddd(fileAbsDeep)") == "/six/five/four/three/two/one/" );
+	REQUIRE( expand("$Fdddddd(fileRelDeep)") == "a/b/c/d/e/" );
+	REQUIRE( expand("$Fddddddb(fileRelDeep)") == "a/b/c/d/e" );
+	REQUIRE( expand("$Fddd(fileDirs)") == "/dur/" );
+	REQUIRE( expand("$Fddnx(fileDirs)") == "/dur/der" );
+}
+
+void testing_expand_limits(bool verbose)
+{
+	if (verbose) {
+		fprintf( stdout, "\n----- testing_expand_limits ----\n\n");
+	}
+	// circular references used to hang, self references through a macro function used to overflow the stack
+	REQUIRE_EXCEPT( expand("$(CycleA)") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("x$(CycleA)y") == "", iteration limit exceeded );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("$INT(SelfInt2)") == "", nested too deeply );
+	REQUIRE_EXCEPT( expand("x$STRING(SelfString)y") == "", nested too deeply );
+
+	// a failed expansion should not affect the next one
+	REQUIRE( expand("$INT(VANILLA)") == "5" );
+	REQUIRE( expand("$INT(DoubleVanilla,%d)") == "10" );
 }
 
 void testing_$CHOICE_expand(bool verbose)
@@ -1003,6 +1075,13 @@ void testing_$STRING_expand(bool verbose)
 	// exception cases
 	REQUIRE_EXCEPT( expand("$STRING(FOO,%f)") == "%f" , not a valid format );
 
+	// the std::string expand_macro used to return a pointer into a destroyed classad::Value,
+	// which showed up for strings too long for the small string buffer
+	REQUIRE( expand_str("$STRING(ITEMS5quoted)") == "aa bb cc dd ee" );
+	REQUIRE( expand_str("$STRING(Items6)") == "aa bb cc dd ee ff" );
+	REQUIRE( expand_str("$STRING(FullVerNum)") == "8.5.6.998822" );
+	REQUIRE( expand_str("$STRING(Items6,%-20s)") == "aa bb cc dd ee ff   " );
+	REQUIRE( expand_str("[$STRING(fileRelSpaces)]") == "[ein/zw ei/dr ei.fir]" );
 }
 
 void testing_$INT_expand(bool verbose)
@@ -1147,6 +1226,7 @@ int main( int /*argc*/, const char ** argv) {
 					case 'v': test_flags |= 0x0400; break; // $EVAL
 					case 'r': test_flags |= 0x0800; break; // $RANDOM_INTEGER and $RANDOM_CHOICE
 					case 'p': test_flags |= 0x1000; break; // parse
+					case 'x': test_flags |= 0x2000; break; // expansion limits
 					}
 				}
 			} else {
@@ -1170,6 +1250,7 @@ int main( int /*argc*/, const char ** argv) {
 				"      v $EVAL expansion/evaluation\n"
 				"      r $RANDOM_INTEGER and $RANDOM_CHOICE expansion/evaluation\n"
 				"      p config parsing\n"
+				"      x expansion limits\n"
 				"   default is to run all tests\n"
 				"   If -verbose is specified, all tests show output, otherwise\n"
 				"   only failed tests produce output\n"
@@ -1208,6 +1289,7 @@ int main( int /*argc*/, const char ** argv) {
 	if (test_flags & 0x0800) testing_$RAND_expand(dash_verbose);
 
 	if (test_flags & 0x1000) testing_parser(dash_verbose);
+	if (test_flags & 0x2000) testing_expand_limits(dash_verbose);
 
 	return fail_count > 0;
 }

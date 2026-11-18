@@ -81,9 +81,17 @@ def check_logs(condor, test_dir):
 
 @action
 def startd_ads(condor):
-    cp = condor.run_command(['condor_who', '-snapshot', '-long'])
-    assert cp.returncode == 0
-    return cp.stdout
+    # Query the collector rather than the startd directly (condor_who),
+    # which can stall on Windows.  The first startd update can go out
+    # before the cron jobs finish, so poll until both attributes appear.
+    deadline = time.time() + 60
+    while True:
+        results = condor.status(ad_type=htcondor.AdTypes.Startd, projection=["GoodCron", "BadCron"])
+        if results and "GoodCron" in results[0] and "BadCron" in results[0]:
+            return results[0]
+        if time.time() > deadline:
+            return results[0] if results else {}
+        time.sleep(1)
 
 
 class TestStartdCron:
@@ -92,6 +100,6 @@ class TestStartdCron:
         assert check_logs
 
     def test_startd_cron_ads(self, startd_ads):
-        assert 'GoodCron = 123' in startd_ads
+        assert startd_ads.get("GoodCron") == 123
         # This is counter-intuitive, but we don't have a knob to fix it.
-        assert 'BadCron = 123' in startd_ads
+        assert startd_ads.get("BadCron") == 123

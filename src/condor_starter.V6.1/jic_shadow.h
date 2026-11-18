@@ -588,6 +588,18 @@ private:
 	bool m_job_update_attrs_set;
 	std::vector<std::string> m_job_update_attrs;
 
+
+    class AverageUsage {
+    public:
+        double firstUpdateValue = 0;
+        bool firstUpdateValueInitialized = false;
+        time_t firstUpdateTimestamp = 0;
+        bool firstUpdateTimestampInitialized = false;
+    };
+    std::map<std::string, AverageUsage> AverageUsageByResource;
+	std::vector<std::string> m_sum_metrics;
+
+
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;
 

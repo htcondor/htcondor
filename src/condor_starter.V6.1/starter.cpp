@@ -1463,8 +1463,6 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		setup_args,
 		cpArgs.priv(PRIV_USER_FINAL)
 			.reaperID(setup_reaper)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.env(&setup_env)
 			.cwd(GetWorkingDir(WD::OUTER))
 			.std(setup_std_fds)
@@ -2641,8 +2639,8 @@ bool Starter::getJobClaimId(std::string &result) const
  * 
  * 
  **/
-int
-Starter::SpawnJob( void )
+UserProc *
+Starter::AllocateJob(int taskid)
 {
 		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
@@ -2658,7 +2656,29 @@ Starter::SpawnJob( void )
 			 CondorUniverseName(jobUniverse), jic->jobCluster(),
 			 jic->jobProc() );
 
-	UserProc *job;
+	if (taskid > 0) {
+		// this will allocate a task ad if one does not exist
+		auto & taskAd = m_task_ads[taskid];
+
+		std::string taskattr = "task" + std::to_string(taskid);
+		classad::Value taskval, val;
+		jobAd->EvaluateAttr(taskattr, taskval, classad::Value::ALL_VALUES);
+		ClassAd * ad = nullptr;
+		if (taskval.IsClassAdValue(ad) && ad) {
+			for (auto & [attr,expr] : *ad) {
+				// TODO: allow lists ??
+				if (ad->EvaluateAttr(attr, val, classad::Value::SCALAR_EX_VALUES)) {
+					auto * lit = classad::Literal::MakeLiteral(val);
+					if ( ! lit) { lit = classad::Literal::MakeError(); }
+					taskAd.InsertLiteral(attr, lit);
+				}
+			}
+		}
+		taskAd.ChainToAd(jobAd);
+		jobAd = &taskAd;
+	}
+
+	UserProc *job = nullptr;
 	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_LOCAL:
@@ -2733,10 +2753,6 @@ Starter::SpawnJob( void )
 	    case CONDOR_UNIVERSE_PARALLEL:
 			job = new ParallelProc( jobAd );
 			break;
-		case CONDOR_UNIVERSE_MPI: {
-			EXCEPT("MPI Universe is no longer supported");
-			break;
-		}
 		case CONDOR_UNIVERSE_VM:
 			job = new VMProc( jobAd );
 			ASSERT(job);
@@ -2744,10 +2760,70 @@ Starter::SpawnJob( void )
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) ); 
-			return FALSE;
+			break;
 	} /* switch */
 
+	if (job) { job->set_taskId(taskid); }
+	return job;
+}
+
+
+bool Starter::PrepareNextTask(pid_t reaped_pid, int reaped_status, int abort_code)
+{
+
+	int taskid = -1;
+	for (const auto * job : m_job_list) {
+		if (job->GetJobPid() == reaped_pid) {
+			taskid = job->taskId();
+			break;
+		}
+	}
+
+	ClassAd* jobAd = jic->jobClassAd();
+
+	// If there is a task<N+1> attribute, assume there will be a next task
+	std::string taskattr = "task" + std::to_string(taskid+1);
+	if (jobAd && jobAd->Lookup(taskattr)) {
+		if (abort_code) {
+			dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Future tasks aborted code=%d.\n",
+				reaped_pid, reaped_status, taskid, abort_code);
+		} else {
+			dprintf(D_STATUS, "PrepareNextTask(%u,%d) : task %d is done. Preparing task %d.\n",
+				reaped_pid, reaped_status, taskid, taskid+1);
+			m_next_job.reset(AllocateJob(taskid+1));
+			return true;
+		}
+	}
+
+	dprintf(D_STATUS, "PrepareNextTask(%u,%d) : No next task.\n", reaped_pid, reaped_status);
+	return false;
+}
+
+int
+Starter::SpawnJob(UserProc * job /* = nullptr */)
+{
+	//ClassAd * mad = jic->machClassAd();
+	int taskid = 0;
+	if ( ! job) { 
+		job = AllocateJob(taskid);
+		if ( ! job) {
+			dprintf( D_ALWAYS, "Unsuppored job universe, exiting\n" );
+			main_shutdown_fast();
+			return FALSE;
+		}
+	} else {
+		taskid = job->taskId();
+	}
+
+	// Get the task ad for this job.  This might be the same as jic->jobClassAd()
+	// or it might be a task ad chained to the main job ad.
+	ClassAd* jobAd = job->taskAd();
+
 	if (job->StartJob()) {
+		if ( ! m_reaped_job_list.empty()) {
+			dprintf(D_ZKM, "Setting task %d to not-final\n", m_reaped_job_list.back()->taskId());
+			m_reaped_job_list.back()->set_finalTask(false);
+		}
 		m_job_list.emplace_back(job);
 		
 			//
@@ -3153,6 +3229,7 @@ Starter::Reaper(int pid, int exit_status)
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
 	bool pid_matched = false;
+	bool has_next_task = false;
 	auto listit = stable_job_list.begin();
 	while (listit != stable_job_list.end()) {
 		auto *job = *listit;
@@ -3160,10 +3237,13 @@ Starter::Reaper(int pid, int exit_status)
 		if( job->GetJobPid() == pid ) {
 			auto result = job->JobReaper(pid, exit_status);
 			pid_matched = true;
-			if( result == ReapResult::JobDone ) {
+			if( result == ReapResult::JobDone || result == ReapResult::JobNext ) {
 				handled_jobs++;
 				listit = stable_job_list.erase(listit);
 				stable_reaped_job_list.emplace_back(job);
+				if (result == ReapResult::JobNext && m_next_job.get()) {
+					has_next_task = true;
+				}
 			} else {
 				listit++;
 			}
@@ -3174,6 +3254,11 @@ Starter::Reaper(int pid, int exit_status)
 
 	copyProcList( stable_reaped_job_list, m_reaped_job_list );
 	copyProcList( stable_job_list, m_job_list );
+
+	if (has_next_task && ! ShuttingDown) {
+		all_jobs += 1;
+		SpawnJob(m_next_job.release());
+	}
 
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );
@@ -3900,20 +3985,25 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid.c_str());
 				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
-					const struct _pcre_vector { int start; int end; } * groups
-						= (const struct _pcre_vector*) pcre2_get_ovector_pointer(matchdata);
-					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
-					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
+					// ovector is pairs of PCRE2_SIZE (size_t) offsets: [2n] = start, [2n+1] = end of group n
+					const PCRE2_SIZE * ovec = pcre2_get_ovector_pointer(matchdata);
+					const PCRE2_SIZE match_start = ovec[0];
+					const PCRE2_SIZE match_end = ovec[1];
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %zu,%zu of pattern: %s\n", tag, env_name.c_str(), match_start, match_end, pat.c_str());
+					if (match_start > 0) { rhs.append(resid, 0, match_start); }
 					const char * ps = psub;
 					while (*++ps && ps < pend) {
 						if (ps[0] == '$' && isdigit(ps[1])) {
 							int ngrp = *++ps - '0';
-							if (ngrp < status) { rhs.append(resid, groups[ngrp].start, groups[ngrp].end - groups[ngrp].start); }
+							// an optional group that did not participate in the match is PCRE2_UNSET
+							if (ngrp < status && ovec[2*ngrp] != PCRE2_UNSET) {
+								rhs.append(resid, ovec[2*ngrp], ovec[2*ngrp+1] - ovec[2*ngrp]);
+							}
 						} else {
 							rhs += *ps;
 						}
 					}
-					if (groups[0].end < cchresid) { rhs.append(resid, groups[0].end, cchresid - groups[0].end); }
+					if (match_end < (PCRE2_SIZE)cchresid) { rhs.append(resid, match_end, cchresid - match_end); }
 				} else {
 					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' no-match of pattern: %s\n", tag, env_name.c_str(), pat.c_str());
 					rhs += resid;

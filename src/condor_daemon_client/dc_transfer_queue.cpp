@@ -425,15 +425,15 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	if( interval < 0 ) {
 		interval = 0;
 	}
-	formatstr(report,"%lld %u %u %u %u %u %u %u",
+	formatstr(report,"%lld %llu %llu %llu %llu %llu %llu %llu",
 			  (long long)now,
-			  (unsigned)interval,
-			  m_recent_bytes_sent,
-			  m_recent_bytes_received,
-			  m_recent_usec_file_read,
-			  m_recent_usec_file_write,
-			  m_recent_usec_net_read,
-			  m_recent_usec_net_write);
+			  (unsigned long long)interval,
+			  (unsigned long long)m_recent_bytes_sent,
+			  (unsigned long long)m_recent_bytes_received,
+			  (unsigned long long)m_recent_usec_file_read,
+			  (unsigned long long)m_recent_usec_file_write,
+			  (unsigned long long)m_recent_usec_net_read,
+			  (unsigned long long)m_recent_usec_net_write);
 
 	if( m_xfer_queue_sock ) {
 		m_xfer_queue_sock->encode();

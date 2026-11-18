@@ -262,8 +262,6 @@ Rooster::wakeUp(ClassAd *startd_ad)
 		m_wakeup_args,
 		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(0)
-			.wantCommandPort(FALSE)
-			.wantUDPCommandPort(FALSE)
 			.std(std_fds));
 
 	daemonCore->Close_Pipe(stdin_pipe_fds[0]);

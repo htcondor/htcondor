@@ -68,9 +68,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_PROC_ID);
 
 
-	ad->Delete(ATTR_BUFFER_BLOCK_SIZE);
-	ad->Delete(ATTR_BUFFER_SIZE);
-	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete("CondorPlatform"); // TODO: Find #define
 	ad->Delete(ATTR_CONDOR_VERSION);  // TODO: Find #define
 	ad->Delete(ATTR_CORE_SIZE);
@@ -106,9 +103,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 
 	// Stuff to reset
 	ad->InsertAttr(ATTR_JOB_STATUS, 1); // Idle
-	ad->InsertAttr(ATTR_JOB_REMOTE_USER_CPU, 0.0);
-	ad->InsertAttr(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
-	ad->InsertAttr(ATTR_JOB_EXIT_STATUS, 0);
 	ad->InsertAttr(ATTR_COMPLETION_DATE, 0);
 	ad->InsertAttr(ATTR_NUM_CKPTS, 0);
 	ad->InsertAttr(ATTR_NUM_RESTARTS, 0);
@@ -117,11 +111,8 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->InsertAttr(ATTR_COMMITTED_SLOT_TIME, 0);
 	ad->InsertAttr(ATTR_CUMULATIVE_SLOT_TIME, 0);
 	ad->InsertAttr(ATTR_TOTAL_SUSPENSIONS, 0);
-	ad->InsertAttr(ATTR_LAST_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_CUMULATIVE_SUSPENSION_TIME, 0);
 	ad->InsertAttr(ATTR_COMMITTED_SUSPENSION_TIME, 0);
-	ad->InsertAttr(ATTR_ON_EXIT_BY_SIGNAL, false);
-
 
 	//ad->Delete(ATTR_MY_TYPE); // Should be implied
 	//ad->Delete(ATTR_TARGET_TYPE); // Should be implied.
@@ -277,7 +268,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
 		ATTR_COMPLETION_DATE,
-		ATTR_JOB_RUN_COUNT,
 		ATTR_JOB_START_DATE,
 		ATTR_ON_EXIT_BY_SIGNAL,
 		ATTR_ON_EXIT_SIGNAL,

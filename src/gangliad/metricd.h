@@ -24,8 +24,6 @@
 #include "gangliad.h"
 #include "prometheusd.h"
 
-class ClassAd;  // forward declaration to avoid including classad headers in this file
-
 class MetricD: public StatsD {
  public:
 	MetricD();

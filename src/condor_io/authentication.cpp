@@ -872,14 +872,36 @@ int Authentication::exchangeKey(KeyInfo *& key)
                 !mySock->code(inputLen)) {
                 return 0;
             }
+            // keyLength and inputLen arrive in cleartext, outside the wrapped
+            // blob, so the peer (or anyone on the path) controls them.
+            // Session keys are 24 or 32 bytes, and wrapping adds at most a
+            // few dozen bytes of IV/MAC/trailer, so 64KB is a generous cap.
+            const int max_wrapped_key_len = 64 * 1024;
+            if (inputLen <= 0 || inputLen > max_wrapped_key_len) {
+                dprintf(D_ALWAYS, "Authentication::exchangeKey: invalid wrapped key length %d\n", inputLen);
+                return 0;
+            }
             encryptedKey = (char *) malloc(inputLen);
-            mySock->get_bytes(encryptedKey, inputLen);
-            mySock->end_of_message();
+            ASSERT(encryptedKey);
+            int bytes_read = mySock->get_bytes(encryptedKey, inputLen);
+            if (bytes_read != inputLen || !mySock->end_of_message()) {
+                dprintf(D_ALWAYS, "Authentication::exchangeKey: failed to read wrapped key\n");
+                free(encryptedKey);
+                return 0;
+            }
 
-            // Now, unwrap it.  
+            // Now, unwrap it.
             if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
-					// Success
-				key = new KeyInfo((unsigned char *)decryptedKey, keyLength, (Protocol)protocol, duration);
+				// KeyInfo copies keyLength bytes out of decryptedKey, which
+				// only holds outputLen bytes.  outputLen may exceed keyLength
+				// (e.g. SSPI's fixed trailer size), so don't require equality.
+				if (keyLength <= 0 || keyLength > outputLen) {
+					dprintf(D_ALWAYS, "Authentication::exchangeKey: key length %d does not fit unwrapped key of %d bytes\n", keyLength, outputLen);
+					retval = 0;
+					key = NULL;
+				} else {
+					key = new KeyInfo((unsigned char *)decryptedKey, keyLength, (Protocol)protocol, duration);
+				}
 			} else {
 					// Failure!
 				retval = 0;

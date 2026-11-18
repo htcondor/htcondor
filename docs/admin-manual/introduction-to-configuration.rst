@@ -344,14 +344,17 @@ variable.
 
 The ordering used to look up a variable, called <parameter name>:
 
-#. <subsystem name>.<local name>.<parameter name>
 #. <local name>.<parameter name>
 #. <subsystem name>.<parameter name>
 #. <parameter name>
 
-If this local name is not specified on the command line, numbers 1 and 2
-are skipped. As soon as the first match is found, the search is
+If this local name is not specified on the command line, number 1 is
+skipped. As soon as the first match is found, the search is
 completed, and the corresponding value is used.
+
+A definition prefixed with a local name applies to any daemon started
+with that local name, whatever its subsystem, so give each daemon
+instance its own local name.
 
 This example configures a :tool:`condor_master` to run 2 *condor_schedd*
 daemons. The :tool:`condor_master` daemon needs the configuration:
@@ -375,9 +378,8 @@ those specified separately.
 
 .. code-block:: condor-config
 
-    SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
-    SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
-    SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
+    XYZZY.SCHEDD_NAME = XYZZY
+    XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to the
 *condor_schedd* daemon, as opposed to a different daemon such as the
@@ -385,13 +387,6 @@ Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to th
 different requirements for which parameters need to be specified
 individually. This example works for the *condor_schedd*, and more
 local configuration can, and likely would be specified.
-
-Also note that each daemon's log file must be specified individually,
-and in two places: one specification is for use by the :tool:`condor_master`,
-and the other is for use by the daemon itself. In the example, the
-``XYZZY`` *condor_schedd* configuration variable
-``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the :tool:`condor_master`
-daemon's ``XYZZY_LOG``.
 
 Comments and Line Continuations
 -------------------------------
@@ -1373,7 +1368,8 @@ incorporates.
        Sets configuration that enables :tool:`condor_adstash` to run as a daemon.
        :tool:`condor_adstash` polls job history ClassAds and pushes them to an
        Elasticsearch index, see section
-       :ref:`admin-manual/cm-configuration:Elasticsearch` for more information.
+       :ref:`admin-manual/monitoring:Searching Job History in Elasticsearch and OpenSearch`
+       for more information.
 
     -  :config-template:`UWCS_Desktop_Policy_Values<FEATURE>`
 

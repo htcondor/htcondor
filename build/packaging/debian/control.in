@@ -78,7 +78,7 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.26.0),
+         pelican (>= 26.0.0),
 #endif
 #if !defined(JAMMY)
          libjs-bootstrap5,

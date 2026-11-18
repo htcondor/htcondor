@@ -1346,7 +1346,7 @@ bail_out:
 }
 
 int
-cred_get_cred_handler(int /*i*/, Stream *s)
+cred_get_cred_handler(int /*i*/, Stream *s, const char *job_owner)
 {
 	char *client_user = NULL;
 	char *client_domain = NULL;
@@ -1427,6 +1427,18 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
 	client_ipaddr = strdup(sock->peer_addr().to_sinful().c_str());
+
+	// The peer is only authorized as a daemon, which may be an untrusted
+	// EP (e.g. a glidein).  Only send the credential of the job's owner,
+	// never that of whatever user the peer names.
+	if (!job_owner || !*job_owner || strcmp(user, job_owner) != MATCH) {
+		dprintf(D_ALWAYS,
+			"WARNING - refusing to fetch cred for %s@%s requested by %s@%s at %s: "
+			"not the job owner (%s)\n",
+			user, domain, client_user, client_domain, client_ipaddr,
+			job_owner ? job_owner : "(none)");
+		goto bail_out;
+	}
 
 	// Now fetch the password from the secure store --
 	// If not LocalSystem, this step will fail.

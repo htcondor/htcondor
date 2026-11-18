@@ -428,17 +428,17 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 		return false;
 	}
 
-	unsigned report_time = 0;
-	unsigned report_interval_usec = 0;
-	unsigned recent_bytes_sent = 0;
-	unsigned recent_bytes_received = 0;
-	unsigned recent_usec_file_read = 0;
-	unsigned recent_usec_file_write = 0;
-	unsigned recent_usec_net_read = 0;
-	unsigned recent_usec_net_write = 0;
+	long long report_time = 0;
+	unsigned long long report_interval_usec = 0;
+	unsigned long long recent_bytes_sent = 0;
+	unsigned long long recent_bytes_received = 0;
+	unsigned long long recent_usec_file_read = 0;
+	unsigned long long recent_usec_file_write = 0;
+	unsigned long long recent_usec_net_read = 0;
+	unsigned long long recent_usec_net_write = 0;
 	IOStats iostats;
 
-	int rc = sscanf(report.c_str(),"%u %u %u %u %u %u %u %u",
+	int rc = sscanf(report.c_str(),"%lld %llu %llu %llu %llu %llu %llu %llu",
 					&report_time,
 					&report_interval_usec,
 					&recent_bytes_sent,

@@ -270,7 +270,6 @@ ToolDaemonProc::StartJob()
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( DaemonName, DaemonArgs,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(&fi)
 		.std(fds).niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
 	);

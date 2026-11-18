@@ -32,6 +32,7 @@
 #include "dc_transfer_queue.h"
 #include <vector>
 #include <map>
+#include <string_view>
 
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;

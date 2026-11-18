@@ -46,6 +46,8 @@ set(CONDOR_API_AND_UTILS_SRC
 basename.cpp
 catalog_utils.h
 catalog_utils.cpp
+common_files_check.h
+common_files_check.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
@@ -471,6 +473,8 @@ tmp_dir.h
 token_cache.h
 tokener.cpp
 tokener.h
+tokens_db.cpp
+tokens_db.h
 token_utils.cpp
 token_utils.h
 to_string_si_units.cpp
@@ -492,6 +496,8 @@ wait_for_user_log.cpp
 wait_for_user_log.h
 waker.cpp
 waker.h
+wasted_memory.cpp
+wasted_memory.h
 which.cpp
 which.h
 write_eventlog.cpp
@@ -801,3 +807,4 @@ condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_classad_log "test_classad_log.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_make_hardlink "test_make_hardlink.cpp" "${CONDOR_TOOL_LIBS}" )

@@ -286,6 +286,15 @@ BASIC COMMANDS
     overridden by specifying the **-batch-name** argument on the
     *condor_submit* command line.
 
+ :subcom-def:`batch_id` = <id>
+    Set the :ad-attr:`JobBatchId` for this submit. This is a unique
+    number represented as a string identifying a batch across jobs.
+
+    .. note::
+
+        This is intended for use by :tool:`condor_dagman` to represent
+        the root DAGMan job by its :ad-attr:`ClusterId`.
+
  :subcom-def:`getenv` = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
@@ -457,6 +466,13 @@ BASIC COMMANDS
     **<file name> | <list of items>**] Places zero or more copies of
     the job in the queue based on lines from the submit file or from
     **<file name>**
+ queue
+    [**<int expr>** ] [**<list of varnames>** ] **from** 
+    **table** [ **(<table options>)** ] [**slice** ] **<file name> | <table contents>** Places zero or more copies of
+    the job in the queue based on lines from the submit file or from **<file name>**. Optional
+    **(<table options>)** in the table keyword control how the table is parsed.
+    When using the **table** keyword, by default the **<list of varnames>** will be taken from the
+    column headings on the first row of the table.
 
     The optional argument *<int expr>* specifies how many times to
     repeat the job submission for a given set of arguments. It may be an
@@ -493,25 +509,59 @@ BASIC COMMANDS
        with \|, then it will be executed as a script whatever the script
        writes to ``stdout`` will be the list of items.
 
+    -  *from* *table[(<table options>)]* **<file name> | <table contents>**
+       Lines from **<file name>** or **<table contents>** will be treated as
+       rows of the table and interpreted according to **<table options>**.
+
     The optional argument *<varname>* or *<list of varnames>* is the
     name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
-    the variable ITEM will be used. Leading and trailing whitespace be
+    variables may be taken from the **table**.
+    If no **table** or the table does not provide varnames,
+    the variable ITEM will be used. Leading and trailing whitespace will be
     trimmed. The optional argument *<slice>* is a python style slice
     selecting only some of the items in the list of items. Negative step
     values are not supported.
 
-    A submit file may contain more than one
-    **queue** statement, and if
-    desired, any commands may be placed between subsequent
-    **queue** commands, such as
-    new **input**,
-    **output**, 
-    **error**,
-    **initialdir**, or
-    **arguments** commands.
-    This is handy when submitting multiple runs into one cluster with
-    one submit description file.
+    The **table** keyword allows finer control over how the lines of **<file name>**
+    or **<table contents>** are interpreted.  Table options are specified by adding parens
+    after the **table** keyword with table options within the parens. Options may be
+    a comma separated list of the following options.
+
+    - **standard** Columns are split on comma and space and whitespace is trimmed. Sets header=none and skip=0.
+
+    - **csv** Columns are split on comma only, then leading and trailing whitespace is trimmed.
+      Equivalent to ``comma_sep=true,trim=true,header=none,skip=0``
+
+    - **header=<number> | none** If not *none*, rows before **<number>** are skipped, and the
+      column headings at row **<number>** are treated as a **<list of varnames>**.  The column headings
+      must be valid for use as varnames and so may not contain any character other than letters, numbers
+      and ``_``.
+
+    - **skip=<count>** After reading the header row (if any), skip the indicated number of rows.
+      The remaining rows specify items for submit.
+
+    - **sep=<char>** Use only the character **<char>** as the column separator. **sep=,** is not allowed,
+      use **comma_sep=true** instead.
+
+    - **comma_sep=true** Use only comma as the column separator.
+
+    - **trim=true|false** When true, trim whitespace from columns.
+
+    Example using **QUEUE FROM TABLE**:
+
+    .. code-block:: text
+
+        ...
+        transfer_input_files = $(FILENAME)
+
+        # use FROM TABLE to read queue itemdata and vars with comma separated columns
+        # specifying the submit var names from the first row of the table
+        QUEUE FROM TABLE(header=0,comma_sep=true,trim=true) (
+            FILENAME                , ARGS
+            filename with spaces.dat, -process "$(FILENAME)"
+        )
+
 
  :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
@@ -602,9 +652,11 @@ COMMANDS FOR MATCHMAKING
     resulting in a dynamic slot being created with this many cores.
 
  :subcom-def:`request_disk` = <quantity>
-    The requested amount of disk space in KiB requested for this job. If
-    not specified, it will be set to the job ClassAd attribute
-    :ad-attr:`DiskUsage`. The expression
+    The requested amount of disk space in KiB requested for this job.
+    If not specified, and the job universe is not Scheduler or Local, the value is set
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTDISK`.
+
+    The expression
 
     .. code-block:: condor-classad-expr
 
@@ -636,7 +688,8 @@ COMMANDS FOR MATCHMAKING
 
 
  :subcom-def:`request_memory` = <quantity>
-    The amount of memory this job needs in Mb. If not specified, the value is set 
+    The amount of memory this job needs in Mb. If not specified, and the job universe
+    is not Scheduler or Local, the value is set
     by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
     The actual amount of memory used by a job is represented by the job ClassAd attribute
     :ad-attr:`MemoryUsage`.
@@ -846,6 +899,17 @@ COMMANDS FOR MATCHMAKING
     *condor_q -l*; see the command reference for :doc:`/man-pages/condor_q`.
     Also, see the HTCondor Users Manual for complete information on the syntax
     and available attributes that can be used in the ClassAd expression.
+
+ :subcom-def:`annex_name` = <name>
+    Indicates that these jobs are intended to run on EPs of the named annex.
+    The annex EPs need to be provisioned using the *htcondor annex create*
+    command.
+
+ :subcom-def:`restrict_to_annex` = <True | False>
+    For jobs connected to an annex, this specifies whether the jobs can run
+    only on annex EPs or may also run on non-annex EPs.
+    The default is set by configuration parameter
+    :macro:`ANNEX_RESTRICT_JOB_DEFAULT`, whose default is True.
 
 FILE TRANSFER COMMANDS
 
@@ -1172,6 +1236,17 @@ FILE TRANSFER COMMANDS
     Note that (at present), you may not provide more than one set of
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
+
+ :subcom-def:`transfer_common_input` = < file1,file2,file... >
+    As :subcom:`transfer_input_files`, except that the specified files or URLS
+    are common across more than one job.  See :ref:`common_file_transfer`.
+
+ :subcom-def:`require_common_files` = <True | False>
+    When ``True`` and the job uses :subcom:`transfer_common_input`, the job
+    will only match execution points that support common file transfer.
+    The default is the value of
+    configuration variable :macro:`SUBMIT_DEFAULT_REQUIRE_COMMON_FILES`,
+    which defaults to ``False``.
 
  :subcom-def:`public_input_files` = <file, file2>
     A list of files on the AP that HTCondor should use a pre-configured
@@ -1709,10 +1784,25 @@ COMMANDS FOR THE GRID
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
 
+ :subcom-def:`batch_cpu_count` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies the total number of cpus to request for the
+    PBS/LSF/SGE/SLURM job.
+
+ :subcom-def:`batch_cpus_per_node` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies how many cpus on each machine to request for the
+    PBS/LSF/SGE/SLURM job.
+
  :subcom-def:`batch_extra_submit_args` = <command-line arguments>
     Used for **batch** grid universe jobs.
     Specifies additional command-line arguments to be given to the target
     batch system's job submission command.
+
+ :subcom-def:`batch_node_count` = <count>
+    Used for **batch** grid universe jobs.
+    Specifies the number of machines requested for the
+    PBS/LSF/SGE/SLURM job.
 
  :subcom-def:`batch_project` = <projectname>
     Used for **batch** grid universe jobs.
@@ -1732,6 +1822,12 @@ COMMANDS FOR THE GRID
     Used for **batch** grid universe jobs.
     Specifies a limit in seconds on the execution time of the job.
     This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
+
+ :subcom-def:`batch_whole_nodes` = <True | False>
+    Used for **batch** grid universe jobs.
+    Specifies whether the PBS/LSF/SGE/SLURM job must run on machines
+    with no other jobs. The default is False (the job can share
+    machines with other jobs).
 
  :subcom-def:`cloud_label_names` = <name0,name1,name...>
     For grid type **gce** jobs, specifies the case of tag names that
@@ -2555,6 +2651,16 @@ ADVANCED COMMANDS
 
     This feature is not presently available for Windows.
 
+ :subcom-def:`min_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is greater than or equal to the version string
+    (e.g., ``26.1.1``).
+
+ :subcom-def:`max_condor_version` = <x.y.z version string>
+    To aid in debugging; adds a requirement that the HTCondor version of the
+    EP this job runs on is strictly less than the version string
+    (e.g., ``26.1.1``).
+
  :subcom-def:`max_job_retirement_time` = <integer expression>
     An integer-valued expression (in seconds) that does nothing unless
     the machine that runs the job has been configured to provide
@@ -2643,6 +2749,13 @@ ADVANCED COMMANDS
    If **false** then the job may be matched to a machine where the job
    has no access to the networking.  This may allow the job to run in
    more places than it otherwise would. Default is true.
+
+ :subcom-def:`want_io_proxy` = <True | False>
+    When ``True``, the *condor_starter* runs an I/O proxy for the job, which
+    allows the job to use :tool:`condor_chirp` to access files on the access
+    point and to read and write the job ClassAd. Sets job ClassAd attribute
+    ``WantIOProxy``. The default is ``False``. See
+    :doc:`../users-manual/chirp`.
 
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the

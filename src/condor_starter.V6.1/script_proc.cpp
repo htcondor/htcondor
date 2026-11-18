@@ -249,7 +249,6 @@ ScriptProc::StartJob()
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	JobPid = daemonCore->CreateProcessNew( exe_path, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(starter->jic->jobIWD()).coreHardLimit(core_size_ptr)
 		.niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
 	);

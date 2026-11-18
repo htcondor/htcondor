@@ -8,6 +8,11 @@
 # 4. Wait for the OCU-wanting job to start running on the OCU slot
 # 5. While the OCU job is still running (so the OCU slot persists),
 #    submit a non-OCU job and verify it does NOT run on the OCU slot
+#
+# Negotiator preemption is off, so the negotiator cannot give the
+# OCUWanted job the OCU slot by preempting the OCU's own claim.  The job
+# can only run by the schedd reusing the idle OCU claim, which requires
+# FindRunnableJob to recognize the job as the OCU owner's.
 
 import logging
 import time
@@ -32,6 +37,7 @@ def condor(test_dir):
 			"DISK": "4096000",
 			"NEGOTIATOR_CYCLE_DELAY": "2",
 			"NEGOTIATOR_INTERVAL": "2",
+			"NEGOTIATOR_CONSIDER_PREEMPTION": "False",
 		},
 	) as condor:
 		yield condor
@@ -104,6 +110,16 @@ def ocu_slot_name(condor, ocu_job_handle, the_ocu):
 
 
 @action
+def ocu_ad(condor, the_ocu, ocu_slot_name):
+	"""The OCU's ad, queried while the OCU job is running on it."""
+	schedd = condor.get_local_schedd()
+	for ad in schedd.query_ocu(classad.ClassAd()):
+		if ad.get("OCUId") == the_ocu["OCUId"]:
+			return ad
+	return None
+
+
+@action
 def non_ocu_job_handle(condor, test_dir, path_to_sleep, ocu_slot_name):
 	"""Submit a normal job (no OCUWanted) and wait for completion."""
 	handle = condor.submit(
@@ -156,6 +172,11 @@ class TestOCUBasic:
 	def test_ocu_job_ran_on_ocu_slot(self, ocu_slot_name):
 		"""Verify a job with OCUWanted=true was matched to a slot."""
 		assert ocu_slot_name is not None
+
+	def test_ocu_state_is_running(self, ocu_ad):
+		"""Verify the OCU left Idle when the owner's job started on it."""
+		assert ocu_ad is not None
+		assert ocu_ad.get("OCUState") == "R"
 
 	def test_non_ocu_job_avoided_ocu_slot(self, non_ocu_job_ad, ocu_slot_name):
 		"""Verify a normal job did NOT run on the OCU slot."""

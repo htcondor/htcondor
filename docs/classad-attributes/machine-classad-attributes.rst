@@ -73,10 +73,6 @@ Machine ClassAd Attributes
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
 
-:classad-attribute-def:`CgroupEnforced`
-    If a job is running inside a per-job cgroup, this boolean attribute
-    is ``True``.
-
 :classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
     Currently, this only applies to partitionable slots.
@@ -235,6 +231,15 @@ Machine ClassAd Attributes
     This is useful for Vanilla universe jobs which require remote file
     access.
 
+:classad-attribute-def:`GPUs`
+    The number of GPUs in this slot. For a partitionable slot, it is
+    the remaining number of GPUs in the partitionable slot. Only present
+    on machines configured with GPU resources.
+
+:classad-attribute-def:`HasCgroup`
+    A boolean attribute that is ``True`` if jobs run on this slot will
+    be placed in a per-job cgroup, and ``Undefined`` otherwise.
+
 :classad-attribute-def:`HasContainer`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs.
@@ -354,6 +359,12 @@ Machine ClassAd Attributes
 :classad-attribute-def:`IsDataSlot`
     When ``True``, the slot is in use by the AP to transfer and then store
     common files, rather than run a job.
+
+:classad-attribute-def:`IsDirectAttach`
+    Defined only when the *condor_startd* is configured to directly attach to
+    an AP; see :ref:`direct-attach`.  The value is the name of the
+    *condor_schedd* named by :macro:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`, to
+    which this slot is offered when it is unclaimed.
 
 :classad-attribute-def:`IsEnforcingDiskUsage`
     A boolean value that when ``True`` identifies that the machine is
@@ -991,8 +1002,8 @@ Machine ClassAd Attributes
     An string providing a brief general reason that the slot is broken.
     This attribute will only exist in broken slots and should never be empty.
     Slots that have a ``SlotBrokenReason`` attribute will always advertise
-    0 as the quantity of ad-attr:`Cpus`, ad-attr:`Memory`, ad-attr:`GPUs`
-    and other custom resources, and will override the slot ad-attr:``Requirements``
+    0 as the quantity of :ad-attr:`Cpus`, :ad-attr:`Memory`, :ad-attr:`GPUs`
+    and other custom resources, and will override the slot :ad-attr:`Requirements[type=Machine]`
     with the broken reason string to prevent jobs from matching the slot.
 
 :classad-attribute-def:`SlotID`
@@ -1445,10 +1456,6 @@ the value of configuration variable  :macro:`MACHINE_RESOURCE_INVENTORY_GPUs`
 and what GPUs are detected. In the name of the attribute, ``<name>`` is
 substituted with the *prefix string* assigned for the GPU.
 
-:classad-attribute-def:`<name>BoardTempC`
-    For NVIDIA devices, a dynamic attribute representing the temperature
-    in Celsius of the board containing the GPU.
-
 :classad-attribute-def:`<name>Capability`
     The CUDA-defined capability for the GPU.
 
@@ -1501,6 +1508,16 @@ substituted with the *prefix string* assigned for the GPU.
     This is the case for unified-memory devices such as the NVIDIA
     DGX Spark.
 
+:classad-attribute-def:`<name>MigComputeInstanceId`
+    For NVIDIA MIG instances, the integer compute instance id of this
+    instance within its GPU instance. Not present for GPUs which are not
+    MIG instances.
+
+:classad-attribute-def:`<name>MigGpuInstanceId`
+    For NVIDIA MIG instances, the integer GPU instance id of this instance
+    within its physical GPU. Not present for GPUs which are not MIG
+    instances.
+
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
@@ -1508,10 +1525,23 @@ substituted with the *prefix string* assigned for the GPU.
     For Open CL devices, a string representing the manufacturer's
     version number.
 
-:classad-attribute-def:`<name>RuntimeVersion`
-    For CUDA devices, a string representing the manufacturer's version
-    number.
-    
+:classad-attribute-def:`<name>ParentUuid`
+    For NVIDIA MIG instances, a string holding the NVML UUID, of the form
+    ``GPU-<uuid>``, of the physical GPU which hosts this instance. Not
+    present for GPUs which are not MIG instances.
+
+:classad-attribute-def:`<name>PowerUsage_mw`
+    For NVIDIA devices, a dynamic attribute representing the integer power
+    draw of the GPU in milliwatts.
+
+:classad-attribute-def:`<name>Rocm`
+    For AMD devices, the integer major version of the HIP (ROCm) library
+    used to discover the GPU.
+
+:classad-attribute-def:`<name>Vendor`
+    For CUDA and HIP devices, a string naming the manufacturer of the
+    GPU, either ``"NVIDIA"`` or ``"AMD"``.
+
 :classad-attribute-def:`DeviceGPUsAverageUsage`
     The number of seconds executed by GPUs assigned to this slot,
     divided by the number of seconds since the startd started up.

@@ -1,3 +1,58 @@
+condor (26.1.0-1) stable; urgency=medium
+
+  * Add htcondor cluster tool to profile jobs and identify problems
+  * condor_gpu_discovery identifies integrated GPUs that share host memory
+  * The DAGMan Node Status file can be written in JSON format
+  * Can now limit job's usage of compressed swap (zswap) on newer platforms
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 11 Nov 2026 08:44:00 -0500
+
+condor (26.0.1-1) stable; urgency=medium
+
+  * Initial implementation of the common files feature, where immutable files
+    may only be transferred once when jobs run on the same execution point
+  * New self-service annex mode that works with any Slurm cluster
+  * condor_dag_checker can now check submit files, sub-DAGs, and scripts
+  * Several improvements to throttle and monitor DAGMan resource usage
+  * New DAGMan TOLERANCE which gives fine control over what is a failure
+  * Added weak dependencies to DAGMan
+  * HTCondor now detects AMD GPUs that use ROCM 7
+  * Container universe adds the detected GPU flag the container command line
+  * Several improvements to the condor_credmon
+  * Administrators can now require units on memory and disk requests
+  * Can now append columns to condor_(q|qusers|status|who) output
+  * Can now automatically retry a job with a larger disk request
+  * Initial support for EP health checks
+  * condor_config_val --trace finds a definition in a complex configuration
+  * Can now set a duration for a user's ceiling, floor, or priority factor
+  * New metric daemon that can export metrics to Prometheus and Ganglia
+  * Add CCB Tunneling for daemons with no outbound network connectivity
+  * The CCB can now proxy connections with both ends on private networks
+  * Maintains a job index to speed up condor history queries
+  * Can now maintain a job index to speed up common condor history queries
+  * condor_rm now accepts the -held option
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 11 Nov 2026 08:37:00 -0500
+
+condor (25.15.15-1) stable; urgency=medium
+
+  * Initial implementation of the common files feature, where immutable files
+    may only be transferred once when jobs run on the same execution point
+  * Client tools fail over quickly in High Availability installations
+  * Check-pointed jobs do not consider claim work-life when restarting
+  * Fix condor_adstash to not crash when it sees an unknown field type
+  * Fix HOOK_JOB_EXIT to not fail the job and requeue it
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 11 Nov 2026 08:31:00 -0500
+
+condor (25.0.15-1) stable; urgency=medium
+
+  * Fix condor_ssh_to_job with using SELinux and LVM disk enforcement
+  * Fix issue where the condor_defrag daemon might not be able to drain EPs
+  * Fix enforcement of execute duration for scheduler(DAGMan) and local jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 11 Nov 2026 08:18:00 -0500
+
 condor (25.14.1-1) stable; urgency=medium
 
   * HTCondor no longer accepts multiple queue statements in a submit file

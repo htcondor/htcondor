@@ -485,7 +485,9 @@ sysapi_get_darwin_info(void)
 	opsys_major_version = major;
 
 	const char *osname = "Unknown";
-	if ( major == 26 ) {
+	if ( major == 27 ) {
+		osname = "GoldenGate";
+	} else if ( major == 26 ) {
 		osname = "Tahoe";
 	} else if ( major == 15 ) {
 		osname = "Sequoia";
@@ -684,6 +686,10 @@ sysapi_find_linux_name( const char *info_str )
         else if ( strstr(distro_name_lc, "suse") )
         {
                 distro = strdup("SUSE");
+        }
+        else if ( strstr(distro_name_lc, "amd ryzen ai developer") )
+        {
+                distro = strdup("Debian");
         } else 
 	{
                 distro = strdup("LINUX");

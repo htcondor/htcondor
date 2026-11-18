@@ -64,6 +64,7 @@
 #include <string>
 #include <optional>
 #include "catalog_utils.h"
+#include "common_files_check_registry.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -140,7 +141,6 @@ struct shadow_rec
     match_rec*	    match;
     bool            preempted;
 	bool            preempt_pending;
-    int             conn_fd;
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
@@ -161,6 +161,9 @@ struct shadow_rec
 	ListOfCatalogs cxfer_catalogs;
 	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
 	ClassAd * matchInfo {nullptr};
+
+	// For transfer shadows; see common_files_check_registry.h.
+	CommonFilesStagingRecord cxfer_check;
 
 	shadow_rec();
 	~shadow_rec();
@@ -292,6 +295,9 @@ class match_rec
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
 	bool is_ocu{false}; // when true, hold forever, hand out to others
+	bool is_bundle{false}; // when true, this claim is held for a slot bundle
+	int  bundle_cluster{-1}; // job cluster of the bundle this claim belongs to
+	bool bundle_counted{false}; // true once this claim was counted as satisfied
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -545,8 +551,47 @@ private:
 	ClassAd owner_ad;
 };
 
+// True if this job asked to join a slot bundle ("+IsBundle = true") and its
+// owner is permitted to create one.  Defined in schedd.cpp.
+bool jobIsBundleJob(JobQueueJob * job);
+
 class JobSets; // forward reference - declared in jobsets.h
 class OCU; // forward reference - declared in qmgmt.h
+
+// A slot bundle: N slots that all match one resource request, held by the
+// schedd as idle claims until all N are in hand, at which point the bundle's
+// jobs are allowed to run on them.
+//
+// A bundle is not created explicitly; it *is* a job cluster whose jobs carry
+// IsBundle = true (a normal submission with "+IsBundle = true").  N is the
+// number of live (idle or running) jobs in the cluster, so the bundle lives
+// exactly as long as its jobs do: as each job leaves the queue its slot is
+// released, and when the last one goes the bundle disappears.
+//
+// The schedd is authoritative: it re-injects each incomplete bundle into the
+// negotiation Resource Request List every cycle with a count of N minus the
+// claims already held, and stops when the bundle is full.
+struct BundleRequest {
+	int cluster = 0;            // the job cluster that *is* this bundle
+	std::string bundle_id;      // <schedd-name>#<cluster>, for display/slot ads
+	std::string owner;          // owner of the bundle's jobs
+	PROC_ID rep_jid{-1,-1};     // a live job of the cluster, used as the
+	                            // resource-request template for negotiating
+	                            // and claiming
+	int num_requested = 0;      // N: live jobs in the cluster == slots wanted
+	int num_satisfied = 0;      // claims currently held (claimed) for this bundle
+	int num_inflight = 0;       // matches granted but not yet claimed (in flight)
+	int census = 0;             // live jobs counted by the in-progress queue walk
+	time_t qdate = 0;           // ATTR_Q_DATE of the bundle's cluster.
+
+	// Slots we still need the negotiator to hand us this cycle.
+	int remaining() const {
+		int r = num_requested - num_satisfied - num_inflight;
+		return r > 0 ? r : 0;
+	}
+	// True once every job of the bundle has a slot waiting for it.
+	bool isComplete() const { return num_satisfied >= num_requested; }
+};
 
 class Scheduler : public Service
 {
@@ -571,6 +616,7 @@ class Scheduler : public Service
 	void			shutdown_fast();
 	void			shutdown_graceful();
 	void			schedd_exit();
+	void			release_idle_claims_for_exit();
 	void			invalidate_ads();
 	void			update_local_ad_file(); // warning, may be removed
 
@@ -773,7 +819,7 @@ class Scheduler : public Service
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
-									int fd, const char* secret );
+									const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec*, shadow_rec * = NULL );
@@ -905,8 +951,39 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
-	OCU *getOCU(int ocu_id);
+	// If owner is non-null, it is set to the user record that holds the OCU
+	// (or nullptr if there is no such OCU)
+	OCU *getOCU(int ocu_id, OwnerInfo ** owner = nullptr);
+	std::string ocu_submitter_name(const OwnerInfo & owner, const OCU & ocu) const;
 	OCU *getOCU(const JOB_ID_KEY & job_id) { return getOCU(job_id.cluster); }
+
+	// Look up a slot bundle by the job cluster that defines it.
+	// Returns nullptr if that cluster is not a bundle.
+	BundleRequest *getBundle(int cluster);
+
+	// Bundle discovery.  Bundles are found by walking the job queue in
+	// count_jobs(): beginBundleCensus() clears the per-cycle counts,
+	// countBundleJob() is called for each live job carrying IsBundle, and
+	// endBundleCensus() applies the new sizes -- releasing claims for jobs
+	// that have left the queue and forgetting bundles whose jobs are all gone.
+	void beginBundleCensus();
+	void countBundleJob(JobQueueJob * job);
+	void endBundleCensus();
+
+	// Release (and destroy) up to num_to_release of this bundle's *idle* held
+	// claims; a claim running a job is left for the next census, after its
+	// shadow exits.  Returns the number released.
+	int releaseBundleClaims(BundleRequest & bundle, int num_to_release);
+
+	// Pick an idle job of the bundle's cluster to run on a held bundle claim.
+	// Returns false (leaving the claim idle) while the bundle is incomplete.
+	bool findBundleJobForClaim(match_rec * mrec, PROC_ID & new_job_id);
+
+	// Turn a copy of one of a bundle's job ads into the bundle's resource
+	// request: mark it as a bundle request and attribute the resulting claim
+	// to the reserved bundle submitter.  Used both when negotiating for the
+	// bundle and when claiming a slot it was granted.
+	void stampBundleRequestAd(ClassAd & ad, const BundleRequest & bundle);
 
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
@@ -1167,6 +1244,9 @@ private:
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	// Get (creating if need be) the bundle for a job cluster.
+	BundleRequest & makeBundle(int cluster, const OwnerInfo * owner);
+
 	int			command_act_on_ocus(int, Stream* stream);
     ClassAd     act_on_ocu_create(const ClassAd &request);
     ClassAd     act_on_ocu_remove(const ClassAd &request);
@@ -1275,6 +1355,14 @@ private:
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;
+
+	// Slot bundles, keyed by the job cluster that defines them.  The schedd is the
+	// authoritative owner of these.  Note that the map key gives the schedd a
+	// stable order to inject bundle requests in: ascending cluster is oldest
+	// first, every cycle.
+	std::map<int, BundleRequest> m_bundles;
+
+	time_t m_bundle_oldest_qdate = 0;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;
@@ -1385,34 +1473,6 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool write_to_user_log = true);
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 extern bool locate_and_advertise_local_credd(bool force);
-
-/** Hook to call whenever we're going to give a job to a "job
-	handler", be that a shadow, starter (local univ), or gridmanager.
-	it takes the optional shadow record as a void* so this can be
-	seamlessly used for Create_Thread_With_Data().  In fact, we don't
-	need the srec at all for the function itself, but we'll need it as
-	our data pointer in the reaper (so we can actually spawn the right
-	handler), so we ignore it here, but will need it later...
-*/
-int aboutToSpawnJobHandler( int cluster, int proc, void* srec=NULL );
-
-
-/** For use as a reaper with Create_Thread_With_Data(), or to call
-	directly after aboutToSpawnJobHandler() if there's no thread. 
-*/
-int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
-								int exit_status = 0 );
-
-
-/** A helper function that wraps the call to jobPrepNeedsThread() and
-	invokes aboutToSpawnJobHandler() as appropriate, either in its own
-	thread using Create_Thread_With_Data(), or calling it and then
-	aboutToSpawnJobHandlerDone() directly.  Returns false if srec was deleted
-	during a synchronous call (job no longer runnable, or no match); the
-	caller must not reuse srec once this returns false.
-*/
-bool callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
-
 
 /** Hook to call whenever a job enters a "finished" state, something
 	it can never get out of (namely, COMPLETED or REMOVED).  Like the

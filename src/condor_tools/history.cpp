@@ -42,8 +42,10 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <charconv> // for std::from_chars
 #include <utility> // for std::move
 #include <map>
+#include <tuple>
 
 #include "classad_helpers.h"
 #include "history_utils.h"
@@ -78,6 +80,9 @@ void Usage(const char* name, int iExitCode)
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-dagid <id>\t\tInformation about jobs whose DAGManJobId is <id>\n"
+		"\t-batchid <id>\t\tInformation about jobs whose JobBatchId is <id>\n"
+		"\t-batchname <name>\tInformation about jobs whose JobBatchName is <name>\n"
 		"\t-constraint <expr>\tInformation about jobs matching <expr>\n"
 		"\t-scanlimit <num>\tStop scanning when <num> jobs have been read\n"
 		"\t-since <jobid>|<expr>\tStop scanning when <expr> is true or <jobid> is read\n"
@@ -213,6 +218,22 @@ static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static std::deque<std::string> batchNameList;
+static std::deque<std::string> batchIdList;
+static std::deque<int> dagIdList;
+
+// True if the restriction list has DAGMan job ID, batch ID, or batch name terms
+static bool hasDagBatchSearch() {
+	return ! dagIdList.empty() || ! batchIdList.empty() || ! batchNameList.empty();
+}
+
+// True if the restriction list has terms (owner, DAGMan job ID, batch ID, batch name)
+// that can match jobs outside the requested clusters, so finding every requested
+// cluster/cluster.proc is not a reason to stop searching.
+static bool hasNonJobIdSearch() {
+	return ! ownersList.empty() || hasDagBatchSearch();
+}
+
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
 static std::set<std::string> ALL_XFER_TYPES = {"INPUT", "OUTPUT", "CHECKPOINT"};
@@ -711,6 +732,50 @@ main(int argc, const char* argv[])
 
 		extractionFile = argv[i];
 	}
+	else if (is_dash_arg_prefix(argv[i], "batchname", 6)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -batchname requires another parameter.\n");
+			exit(1);
+		}
+
+		std::string batch(argv[i]);
+		std::string batchconst, quoted;
+		formatstr(batchconst, "%s =?= %s", ATTR_JOB_BATCH_NAME, QuoteAdStringValue(batch.c_str(), quoted));
+		batchNameList.push_back(batch);
+		constraint.addCustomOR(batchconst.c_str());
+	}
+	else if (is_dash_arg_prefix(argv[i], "batchid", 6)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -batchid requires another parameter.\n");
+			exit(1);
+		}
+
+		std::string batch(argv[i]);
+		std::string batchconst, quoted;
+		formatstr(batchconst, "%s =?= %s", ATTR_JOB_BATCH_ID, QuoteAdStringValue(batch.c_str(), quoted));
+		batchIdList.push_back(batch);
+		constraint.addCustomOR(batchconst.c_str());
+	}
+	else if (is_dash_arg_prefix(argv[i], "dagid", 3)) {
+		if (++i >= argc) {
+			fprintf(stderr, "Error: Argument -dagid requires another parameter.\n");
+			exit(1);
+		}
+
+		// Whole argument must be a positive integer (reject trailing junk like "12abc")
+		int dagid = -1;
+		const char* arg_end = argv[i] + strlen(argv[i]);
+		auto [ptr, ec] = std::from_chars(argv[i], arg_end, dagid);
+		if (ec != std::errc() || ptr != arg_end || dagid <= 0) {
+			fprintf(stderr, "Error: Invalid DAGMan job id '%s' provided to -dagid. Valid cluster id for DAGMan job expected\n", argv[i]);
+			exit(1);
+		}
+
+		std::string dagconst;
+		formatstr(dagconst, "%s == %d", ATTR_DAGMAN_JOB_ID, dagid);
+		dagIdList.push_back(dagid);
+		constraint.addCustomOR(dagconst.c_str());
+	}
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 		std::string jobconst;
 		formatstr (jobconst, "%s == %d && %s == %d", 
@@ -898,10 +963,11 @@ main(int argc, const char* argv[])
       }
 
       // Direct-seek path: resolve the restriction list via the librarian DB instead
-      // of scanning the history files. See readHistoryFromLibrarian().
+      // of scanning the history files. See readHistoryFromLibrarian(). The librarian
+      // only indexes HISTORY, so an explicit -search path takes precedence.
       bool tookDirectPath = false;
-      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! readFromDir && ! noLibrarian
-          && (! jobIdFilterInfo.empty() || ! ownersList.empty())) {
+      if (recordSrc == HRS_SCHEDD_JOB_HIST && ! JobHistoryFileName && ! searchPath && ! readFromDir && ! noLibrarian
+          && (! jobIdFilterInfo.empty() || hasNonJobIdSearch())) {
           tookDirectPath = readHistoryFromLibrarian(my_constraint.c_str(), constraintExpr);
       }
 
@@ -1360,50 +1426,66 @@ static bool checkMatchJobIdsFound(const ArchiveRecord &arec, ClassAd *ad = NULL,
 
 static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, const ArchiveRecord &arec);
 
-// Group librarian-supplied records by archive file and print each one by seeking
-// directly to its offset, reusing one ArchiveReader per file.
+// Print librarian-supplied records by seeking directly to each one's offset.
+// Records are put in chronological archive order, reversed unless reading
+// -forwards, so output order and -limit/-scanlimit/-since behave the same as a
+// normal file scan. Files are ordered like findHistoryFiles(): rotated files by
+// rotation time, then the active file (rotation_time 0) last. FileId only breaks
+// ties; it is not chronological after a restart that missed multiple rotations.
 static void printLibrarianRecords(const char* constraint, ExprTree *constraintExpr,
-                                  const std::vector<LibrarianRecord>& records)
+                                  std::vector<LibrarianRecord>& records)
 {
-	if (records.size()) {
-		std::map<std::string, std::vector<int64_t>> file_offsets;
-		for (const auto& rec : records) {
-			file_offsets[rec.file_path].push_back(rec.offset);
+	auto key = [](const LibrarianRecord& rec) {
+		return std::make_tuple(rec.rotation_time == 0, rec.rotation_time, rec.file_id, rec.offset);
+	};
+	std::ranges::sort(records, {}, key);
+	// Dedup: the same record can come back from more than one librarian query.
+	auto dups = std::ranges::unique(records, {}, [](const LibrarianRecord& rec) {
+		return std::make_pair(rec.file_id, rec.offset);
+	});
+	records.erase(dups.begin(), dups.end());
+	if (backwards) { std::ranges::reverse(records); }
+
+	// Reuse one ArchiveReader for each consecutive run of records in the same file
+	std::unique_ptr<ArchiveReader> reader;
+	int64_t reader_file_id = -1;
+
+	for (const auto& rec : records) {
+		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds) || abort_transfer) {
+			break;
 		}
 
-		for (auto& [file_path, offsets] : file_offsets) {
-			std::ranges::sort(offsets);
-			// Dedup: the same record can come back from more than one librarian query.
-			offsets.erase(std::unique(offsets.begin(), offsets.end()), offsets.end());
-
-			ArchiveReader reader(file_path, ArchiveReader::Direction::Forward);
-			if ( ! reader.IsOpen()) { continue; }
-
-			for (int64_t offset : offsets) {
-				if ( ! reader.SeekForward(offset)) { continue; }
-
-				ArchiveRecord arec;
-				if ( ! reader.Next(arec)) { continue; }
-
-				ClassAd* ad = arec.GetAd();
-				if ( ! ad) { continue; }
-
-				printJobIfConstraint(*ad, constraint, constraintExpr, arec);
-
-				delete ad;
-			}
+		if ( ! reader || reader_file_id != rec.file_id) {
+			reader = std::make_unique<ArchiveReader>(rec.file_path, ArchiveReader::Direction::Forward);
+			reader_file_id = rec.file_id;
 		}
+		if ( ! reader->IsOpen() || ! reader->SeekForward(rec.offset)) { continue; }
+
+		ArchiveRecord arec;
+		if ( ! reader->Next(arec)) { continue; }
+
+		ClassAd* ad = arec.GetAd();
+		if ( ! ad) { continue; }
+
+		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, arec);
+
+		delete ad;
+		if (done) { break; }
 	}
 }
 
-// Resolve every restriction-list term (cluster.proc, bare cluster ID, owner name)
-// via the librarian DB instead of scanning the history files, unioning results the
-// same way the restriction list itself is OR'd. Returns false if the librarian is
-// unavailable, so the caller can fall back to the normal file-scan path.
+// Resolve every restriction-list term (cluster.proc, bare cluster ID, owner name,
+// DAGMan job ID, batch ID, batch name) via the librarian DB instead of scanning the
+// history files, unioning results the same way the restriction list itself is OR'd.
+// Returns false if the librarian is unavailable (or its schema predates the DAG/batch
+// columns when those are requested), so the caller can fall back to the file scan.
 static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constraintExpr)
 {
 	LibrarianClient librarian;
 	if ( ! librarian.IsValid()) { return false; }
+
+	// DAG/batch columns were added in librarian schema v3
+	if (hasDagBatchSearch() && librarian.SchemaVersion() < 3) { return false; }
 
 	std::vector<LibrarianRecord> records;
 	std::vector<std::pair<int,int>> job_ids;
@@ -1421,6 +1503,18 @@ static bool readHistoryFromLibrarian(const char* constraint, ExprTree *constrain
 	}
 	for (const auto& name : ownersList) {
 		auto recs = librarian.GetRecordsByUser(name);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto dag_id : dagIdList) {
+		auto recs = librarian.GetRecordsByDagId(dag_id);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& batch_id : batchIdList) {
+		auto recs = librarian.GetRecordsByBatchId(batch_id);
+		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+	}
+	for (const auto& batch_name : batchNameList) {
+		auto recs = librarian.GetRecordsByBatchName(batch_name);
 		records.insert(records.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
 	}
 
@@ -1514,7 +1608,8 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 		}
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
-		if (checkMatchJobIdsFound(arec, &ad)) { //Check if all possible ads have been displayed
+		//Check if all possible ads have been displayed (owner terms can still match more ads)
+		if (checkMatchJobIdsFound(arec, &ad) && ! hasNonJobIdSearch()) {
 			maxAds = adCount;
 			return true;
 		}
@@ -1549,18 +1644,43 @@ static bool processAd(const ArchiveRecord& arec) {
 		return false;
 	}
 
-	if (jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
+	if (jobIdFilterInfo.empty() && ! hasNonJobIdSearch()) { return true; } //If no searches were specified then return true to print job ad
 
 	int cluster = 0;
 	std::string owner;
 
-	if ( ! (bannerAd.LookupInteger("ClusterId", cluster) && cluster > 0) && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
-	else if ( ! (bannerAd.LookupString("Owner", owner) && ! owner.empty()) && !ownersList.empty()) { return true; }//If failed to parse owner and we are searching for an owner return true
+	if ( ! (bannerAd.LookupInteger(ATTR_CLUSTER_ID, cluster) && cluster > 0) && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
+	else if ( ! (bannerAd.LookupString(ATTR_OWNER, owner) && ! owner.empty()) && !ownersList.empty()) { return true; } //If failed to parse owner and we are searching for an owner return true
 
 	//Check to see if cluster exists in matching job info
 	for(auto& item : jobIdFilterInfo) { if(cluster == item.jid.cluster){ return true; } }
 	//Check to see if owner is being searched for
 	for(auto& name : ownersList) { if(strcasecmp(owner.c_str(),name.c_str()) == MATCH){ return true; } }
+
+	// DAGManJobId, JobBatchId, and JobBatchName are optional banner attributes (older
+	// banners never have them), so a banner missing one can't rule out the ad.
+
+	// Check to see if batch name is being searched for
+	if ( ! batchNameList.empty()) {
+		std::string batchname;
+		if ( ! bannerAd.LookupString(ATTR_JOB_BATCH_NAME, batchname) || batchname.empty()) { return true; }
+		for (auto& batch : batchNameList) { if (batch == batchname) { return true; } }
+	}
+
+	// Check to see if batch id is being searched for
+	if ( ! batchIdList.empty()) {
+		std::string batchid;
+		if ( ! bannerAd.LookupString(ATTR_JOB_BATCH_ID, batchid) || batchid.empty()) { return true; }
+		for (auto& id : batchIdList) { if (id == batchid) { return true; } }
+	}
+
+	// Check to see if dag man job id is being searched for
+	if ( ! dagIdList.empty()) {
+		int dag = -1;
+		if ( ! bannerAd.LookupInteger(ATTR_DAGMAN_JOB_ID, dag) || dag <= 0) { return true; }
+		for (auto id : dagIdList) { if (dag == id) { return true; } }
+	}
+
 	//If here then no match
 	return false;
 }
@@ -1600,7 +1720,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		}
 
 		// No ad was built; still check completion date vs QDate for an early exit.
-		if ( ! printed && read_backwards && cluster > 0 && checkMatchJobIdsFound(arec, NULL, true)) {
+		if ( ! printed && read_backwards && cluster > 0 && checkMatchJobIdsFound(arec, NULL, true) && ! hasNonJobIdSearch()) {
 			break;
 		}
 

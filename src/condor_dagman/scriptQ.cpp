@@ -110,17 +110,20 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 	// If we are to only start one script then manually try non-deferred script execution
 	// until the first success
 	if (justOne) {
-		auto it = _waitingQueue.begin();
-		auto end = defer_partition.begin();
-		while (it != end) {
-			Script* script = *it;
+		// Index based: erasing from the middle of a deque invalidates all
+		// iterators, so we can not hold onto the partition point across an erase.
+		size_t ready_count = (size_t)(defer_partition.begin() - _waitingQueue.begin());
+		size_t i = 0;
+		while (i < ready_count) {
+			Script* script = _waitingQueue[i];
 			ASSERT(script != nullptr);
 			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
 			if (res != ScriptExecResult::DEFERRED) {
-				it = _waitingQueue.erase(it);
+				_waitingQueue.erase(_waitingQueue.begin() + i);
+				ready_count--;
 				if (res == ScriptExecResult::EXECUTED) { return 1; }
 			} else {
-				it++;
+				i++;
 			}
 		}
 
@@ -128,35 +131,41 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 		return 0;
 	}
 
-	// If here: We want to attempt running all non-deferred scripts
-	int scriptsRun = 0;
+	// If here: We want to attempt running all non-deferred scripts.
+	//
+	// Run() can reenter this queue: a script that fails to spawn is faux reaped
+	// inline, and the reaper may retry the node (Dag::RestartNode() ->
+	// Dag::StartNode()) or unblock a child, either of which pushes a new script
+	// onto _waitingQueue.  A push_back invalidates every iterator into the deque,
+	// so we must not hold iterators (nor run an algorithm over the deque) across
+	// a Run() call.  Detach the ready scripts from the queue first, run them from
+	// our own copy, then put back the ones that deferred.
+	const size_t ready_count = (size_t)(defer_partition.begin() - _waitingQueue.begin());
+	std::vector<Script*> ready(_waitingQueue.begin(), _waitingQueue.begin() + ready_count);
+	_waitingQueue.erase(_waitingQueue.begin(), _waitingQueue.begin() + ready_count);
 
-	// Use std::stable_partition as a driver to Run Scripts that are not deferred
-	// Executed scripts will be removed from the waiting queue in a following erase
-	// call. NOTE: This will iterate over all non-deferred scripts unfortunately (even if justOne is true)
-	auto executed_end = std::stable_partition(_waitingQueue.begin(), defer_partition.begin(), [this, &scriptsRun](Script* script) {
-		// Partition: executed (true) before skipped/deferred (false)
+	int scriptsRun = 0;
+	std::vector<Script*> still_waiting;
+
+	for (Script* script : ready) {
 		ASSERT(script != nullptr);
-		bool remove_from_q = false;
 
 		switch (Run(script, ScriptDeferAction::DO_NOTHING)) {
 		case ScriptExecResult::EXECUTED:
 			scriptsRun++;
-			[[fallthrough]];
+			break;
 		// NOTE: Script execution error means DAGMan has faux reaped the script as a failure (thus consider it as executed)
 		case ScriptExecResult::FAUX_REAPED:
-			remove_from_q = true;
 			break;
 		default:
+			// Deferred again: keep it queued, ahead of the time-deferred scripts
+			still_waiting.push_back(script);
 			break;
 		}
+	}
 
-		return remove_from_q;
-	});
-
-	// Erase scripts that executed from the waiting queue
-	// Waiting Queue Partitioning: [ Executed | Waiting (skipped) | Deferred ]
-	_waitingQueue.erase(_waitingQueue.begin(), executed_end);
+	// Waiting Queue: [ Waiting (skipped) | Deferred | anything queued while running ]
+	_waitingQueue.insert(_waitingQueue.begin(), still_waiting.begin(), still_waiting.end());
 
 	debug_printf(DEBUG_DEBUG_1, "Started %d deferred scripts\n", scriptsRun);
 	return scriptsRun;

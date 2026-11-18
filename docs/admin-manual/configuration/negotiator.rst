@@ -150,6 +150,15 @@ These macros affect the *condor_negotiator*.
     *condor_negotiator* should be configured not to attempt to contact
     these *condor_startd* daemons by using the default value.
 
+:macro-def:`NEGOTIATOR_INFORM_STARTD_OF_BUNDLE_MATCH`
+    Boolean setting that controls if the *condor_negotiator* should inform
+    the *condor_startd* when it has been matched for a slot bundle request,
+    even when :macro:`NEGOTIATOR_INFORM_STARTD` is ``False``. The default is
+    ``False``. This allows an administrator to enable startd match
+    notification for slot bundle matches specifically, without enabling it
+    for all matches. The same UDP command socket considerations described
+    for :macro:`NEGOTIATOR_INFORM_STARTD` apply.
+
 :macro-def:`NEGOTIATOR_PRE_JOB_RANK`
     Resources that match a request are first sorted by this expression.
     If there are any ties in the rank of the top choice, the top

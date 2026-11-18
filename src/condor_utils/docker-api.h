@@ -178,8 +178,11 @@ class DockerAPI {
 		static int64_t imageCacheUsed();
 
 		static bool imageArchIsCompatible(const std::string &);
-		/* Return the cpu architecture of a cached image, or empty string */
-		static int getImageArch(const std::string &image_name, std::string &arch);
+		/* Return the cpu architecture and the content hash (the "sha256:..."
+		 * id) of a cached image.  Either may be set to the empty string if
+		 * docker doesn't report it.
+		 */
+		static int getImageArchAndId(const std::string &image_name, std::string &arch, std::string &image_id);
 
 		static int removeImagesInImageFile();
 

@@ -798,7 +798,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
-include_directories(${CONDOR_SOURCE_DIR}/src/vendor/jwt-cpp/include)
+include_directories(SYSTEM ${CONDOR_SOURCE_DIR}/src/vendor/jwt-cpp/include)
 # set these so contrib modules can add to their include path without being reliant on specific directory names.
 set (CONDOR_MASTER_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_master.V6)
 set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
@@ -847,13 +847,6 @@ message(STATUS "----- Begin compiler options/flags check -----")
 
 if (CONDOR_C_FLAGS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONDOR_C_FLAGS}")
-endif()
-
-if (OPENMP_FOUND)
-	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>)
-	add_compile_options($<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
 if(MSVC)

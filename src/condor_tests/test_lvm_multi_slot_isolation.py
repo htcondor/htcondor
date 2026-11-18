@@ -74,14 +74,13 @@ def overfill_job_hash(job_a_mount_file, thin_provisioning):
     return {
         "shell": (
             f"findmnt -no SOURCE . > {job_a_mount_file}; "
-            # oflag=direct keeps the dd fallback out of the LV's own page
-            # cache, but the loop device backing the LV isn't opened with
-            # direct-io, so a buffered write can still pile onto the job's
+            # The dd fallback's buffered writes can pile onto the job's
             # cgroup memory limit -- request_memory is sized well above
-            # overfill_mb (see OVERFILL_JOB_REQUEST_MEMORY_MB) as the real
-            # protection. See test_lvm_disk_quota_enforcement.py for the
-            # OOM-race this avoids.
-            f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} oflag=direct); "
+            # overfill_mb (see OVERFILL_JOB_REQUEST_MEMORY_MB) as the
+            # protection. No oflag=direct: uutils dd (Ubuntu 26.04+) issues
+            # misaligned O_DIRECT writes that fail. See
+            # test_lvm_disk_quota_enforcement.py for the OOM-race this avoids.
+            f"(fallocate -l {overfill_mb}M overfill.bin || dd if=/dev/zero of=overfill.bin bs=1M count={overfill_mb} conv=fsync); "
             "sleep 60"
         ),
         "universe": "vanilla",

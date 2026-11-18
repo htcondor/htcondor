@@ -1076,6 +1076,8 @@ int Starter::execDCStarter(
 		                cpArgs.priv(PRIV_ROOT)
 		                	.reaperID(reaper_id)
 		                	.env(env)
+		                	.wantCommandPort(TRUE)
+		                	.wantUDPCommandPort(TRUE) // TODO do we need this?
 		                	.familyInfo(&fi)
 		                	.socketInheritList(inherit_list)
 		                	.std(std_fds)

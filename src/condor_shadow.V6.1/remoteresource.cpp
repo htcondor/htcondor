@@ -41,6 +41,7 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "wasted_memory.h"
 #include <utility>
 #include <string>
 #include <optional>
@@ -670,6 +671,11 @@ void
 RemoteResource::closeClaimSock( void )
 {
 	if( claim_sock ) {
+			// do_REMOTE_syscall() may still be on the stack using the
+			// global alias; null it so it can tell the socket is gone.
+		if( syscall_sock == claim_sock ) {
+			syscall_sock = nullptr;
+		}
 		daemonCore->Cancel_Socket( claim_sock );
 		delete claim_sock;
 		claim_sock = NULL;
@@ -1399,6 +1405,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+		// MemoryUsage may have changed, and time has passed.
+	updateWastedMemory(ActivationPhase::Running);
+
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
@@ -1491,6 +1500,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( long_value > scratch_dir_file_count ) {
 			scratch_dir_file_count = long_value;
 			jobAd->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, scratch_dir_file_count);
+		}
+	}
+
+		// The docker image the starter actually ran, identified by its
+		// content hash.  While it doesn't change during any particular
+		// instance, it may change from instance to instance, so update
+		// it if it's new or if it changed.
+	if( update_ad->LookupString(ATTR_DOCKER_IMAGE_HASH, string_value) ) {
+		std::string prev_hash;
+		if( ! jobAd->LookupString(ATTR_DOCKER_IMAGE_HASH, prev_hash) || prev_hash != string_value ) {
+			jobAd->Assign(ATTR_DOCKER_IMAGE_HASH, string_value);
 		}
 	}
 
@@ -2045,6 +2065,8 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		shadow->updateJobInQueue( U_STATUS );
 	}
 
+	updateWastedMemory(ActivationPhase::Ended);
+
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
@@ -2177,7 +2199,6 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
-	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2219,6 +2240,15 @@ RemoteResource::reconnect( void )
 		}
 		shadow->m_reconnect_record.m_activation_time = activation.StartTime;
 	}
+
+		// T2 in the ShadowReconnectLog is the last contact before the
+		// disconnect.  Nothing renews the lease while we're reconnecting,
+		// so last_job_lease_renewal still holds that time (or the value
+		// from the job ad, if this shadow was started in reconnect mode).
+		// Don't set this in hadContact(), because the successful reconnect
+		// itself calls hadContact() right before the record is logged.
+	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
+
 	if( lease_duration < 0 ) {
 			// if it's our first time, figure out what we've got to
 			// work with...
@@ -3045,4 +3075,34 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
+}
+
+void
+RemoteResource::updateWastedMemory( ActivationPhase phase )
+{
+		// Nothing to do if the activation never started, or if we
+		// already recorded its end.
+	if ( ! tracksWastedMemory() || activation.StartTime <= 0 ||
+		m_wasted_memory_activation_ended) {
+		return;
+	}
+
+		// The activation spans from when the startd accepted it until
+		// the starter reported that it's done (after output transfer),
+		// the same span as ActivationDuration.  Until the starter
+		// reports, measure until now.
+	time_t now = time(nullptr);
+	if (phase == ActivationPhase::Ending) {
+		m_wasted_memory_activation_ending = true;
+	} else if (phase == ActivationPhase::Ended) {
+		if (activation.TerminationTime > 0) {
+			now = activation.TerminationTime;
+		}
+		m_wasted_memory_activation_ended = true;
+	}
+
+		// Once the activation is ending, keep Last up to date too, since
+		// the shadow may exit before the activation has ended.
+	bool set_last = m_wasted_memory_activation_ending || m_wasted_memory_activation_ended;
+	UpdateWastedMemoryAttrs(*jobAd, activation.StartTime, now, set_last);
 }

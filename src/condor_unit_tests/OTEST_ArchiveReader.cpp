@@ -1116,6 +1116,164 @@ static bool test_cleareof_picks_up_appended_record() {
 	PASS;
 }
 
+// Write (mode "w") or append (mode "a") text to path; false on any failure.
+static bool write_text(const char* path, const char* mode, const std::string& text) {
+	FILE* f = fopen(path, mode);
+	if ( ! f) { return false; }
+	bool ok = (fwrite(text.data(), 1, text.size(), f) == text.size());
+	ok = (fclose(f) == 0) && ok;
+	return ok;
+}
+
+// Regression test: the schedd's buffered history write can flush mid-line,
+// so a reader tailing the live file sees an unterminated last line. That
+// fragment must not be consumed as a whole line; once the writer finishes
+// it, the record must come back with the line intact and a parseable ad.
+static bool test_cleareof_completes_partial_trailing_line() {
+	emit_test("A trailing line with no newline is held back until ClearEOF() and the rest of the line arrive");
+	emit_input_header();
+	emit_param("Initial contents", "complete record, then 'Cmd = \"/a/ornit' with no newline");
+	emit_param("Appended", "'hology/sleep.py\"\\nJobBatchName = \"alpha\"\\n*** ClusterId = 2\\n'");
+	emit_output_expected_header();
+	emit_retval("2nd record: Cmd=\"/a/ornithology/sleep.py\", JobBatchName=\"alpha\"");
+
+	const char* tmpfile = "unit-test-archive-partial-line.log";
+	const std::string first_record = "Foo = 1\n*** ClusterId = 1\n";
+	const std::string body_head    = "In = \"/dev/null\"\nCmd = \"/a/ornit";
+	const std::string body_tail    = "hology/sleep.py\"\nJobBatchName = \"alpha\"\n";
+	const std::string banner       = "*** ClusterId = 2\n";
+
+	if ( ! write_text(tmpfile, "w", first_record + body_head)) {
+		emit_comment("Failed to create temp file"); FAIL;
+	}
+
+	ArchiveReader r(tmpfile, ArchiveReader::Direction::Forward);
+	if ( ! r.IsOpen()) { emit_comment("Reader failed to open"); FAIL; }
+
+	ArchiveRecord rec;
+	int before = 0;
+	while (r.Next(rec)) { ++before; }
+	if (before != 1) { emit_comment("Expected exactly 1 complete record before append"); FAIL; }
+
+	// The unterminated "Cmd = ..." fragment must not have been consumed.
+	int64_t cmd_line_off = static_cast<int64_t>(first_record.size() + body_head.find("Cmd"));
+	if (r.Tellp() != cmd_line_off) {
+		emit_comment("Tellp() advanced into the unterminated line"); FAIL;
+	}
+
+	if ( ! write_text(tmpfile, "a", body_tail + banner)) {
+		emit_comment("Failed to append to temp file"); FAIL;
+	}
+
+	r.ClearEOF();
+	bool got_record = r.Next(rec);
+
+	std::string cmd, batch_name;
+	bool had_ad = false;
+	if (got_record) {
+		std::unique_ptr<ClassAd> ad(rec.GetAd());
+		had_ad = (ad != nullptr);
+		if (ad) {
+			ad->LookupString("Cmd", cmd);
+			ad->LookupString("JobBatchName", batch_name);
+		}
+	}
+
+	emit_output_actual_header();
+	std::string actual = got_record
+	    ? ("got record, had_ad=" + std::string(had_ad ? "T" : "F") +
+	       " Cmd=\"" + cmd + "\" JobBatchName=\"" + batch_name + "\"")
+	    : "no record returned";
+	emit_retval(actual.c_str());
+
+	if ( ! got_record || ! had_ad) { FAIL; }
+	if (rec.GetRawRecord() != body_head + body_tail) { emit_comment("Raw record body differs"); FAIL; }
+	if (cmd != "/a/ornithology/sleep.py" || batch_name != "alpha") { FAIL; }
+	PASS;
+}
+
+// Regression test: ResumeOffset() (what the librarian persists) must never
+// point inside a record that has no banner yet, even when complete body lines
+// of that record have been consumed. Resuming there with a fresh reader (a
+// librarian restart) must return the whole record, not just its tail.
+static bool test_resume_offset_excludes_unfinished_record() {
+	emit_test("ResumeOffset() stays at the end of the last complete record while a record is unfinished");
+	emit_input_header();
+	emit_param("Initial contents", "complete record, then 2 complete body lines with no banner");
+	emit_output_expected_header();
+	emit_retval("ResumeOffset() == end of 1st record; fresh reader seeked there returns the full 2nd record");
+
+	const char* tmpfile = "unit-test-archive-resume-offset.log";
+	const std::string first_record = "Foo = 1\n*** ClusterId = 1\n";
+	const std::string second_body  = "JobBatchId = \"1002\"\nJobBatchName = \"alpha\"\n";
+	const std::string banner       = "*** ClusterId = 2\n";
+	const int64_t first_end = static_cast<int64_t>(first_record.size());
+
+	if ( ! write_text(tmpfile, "w", first_record + second_body)) {
+		emit_comment("Failed to create temp file"); FAIL;
+	}
+
+	ArchiveReader r(tmpfile, ArchiveReader::Direction::Forward);
+	if ( ! r.IsOpen()) { emit_comment("Reader failed to open"); FAIL; }
+	if (r.ResumeOffset() != 0) { emit_comment("ResumeOffset() not 0 before reading"); FAIL; }
+
+	ArchiveRecord rec;
+	int count = 0;
+	while (r.Next(rec)) { ++count; }
+	if (count != 1) { emit_comment("Expected exactly 1 complete record"); FAIL; }
+
+	int64_t resume = r.ResumeOffset();
+	int64_t tellp  = r.Tellp();
+
+	if ( ! write_text(tmpfile, "a", banner)) {
+		emit_comment("Failed to append to temp file"); FAIL;
+	}
+
+	// Simulate a restart: a fresh reader resumes from the persisted offset.
+	ArchiveReader fresh(tmpfile, ArchiveReader::Direction::Forward);
+	if ( ! fresh.IsOpen() || ! fresh.SeekForward(resume)) {
+		emit_comment("Fresh reader failed to open/seek"); FAIL;
+	}
+	bool seek_ok = (fresh.ResumeOffset() == resume);
+	bool got_record = fresh.Next(rec);
+	std::string batch_id;
+	if (got_record) {
+		std::unique_ptr<ClassAd> ad(rec.GetAd());
+		if (ad) { ad->LookupString("JobBatchId", batch_id); }
+	}
+	int64_t file_end = first_end + static_cast<int64_t>(second_body.size() + banner.size());
+
+	emit_output_actual_header();
+	std::string actual = "ResumeOffset()=" + std::to_string(resume) +
+	                     " Tellp()=" + std::to_string(tellp) +
+	                     " first_end=" + std::to_string(first_end) +
+	                     " JobBatchId=\"" + batch_id + "\"";
+	emit_retval(actual.c_str());
+
+	if (resume != first_end) { FAIL; }
+	if (tellp <= resume) { emit_comment("Test setup: body lines were not consumed"); FAIL; }
+	if ( ! seek_ok) { emit_comment("ResumeOffset() != SeekForward() target"); FAIL; }
+	if ( ! got_record || rec.GetRawRecord() != second_body || batch_id != "1002") { FAIL; }
+	if (fresh.ResumeOffset() != file_end) { emit_comment("ResumeOffset() not at end after full record"); FAIL; }
+	PASS;
+}
+
+static bool test_resume_offset_backward_is_negative() {
+	emit_test("ResumeOffset() returns -1 for a Backward reader");
+	emit_output_expected_header();
+	emit_retval("-1");
+
+	ArchiveReader r(ARCHIVE_FILE, ArchiveReader::Direction::Backward);
+	if ( ! r.IsOpen()) { emit_comment("Reader failed to open"); FAIL; }
+	int64_t pos = r.ResumeOffset();
+
+	emit_output_actual_header();
+	emit_retval(std::to_string(pos).c_str());
+
+	if (pos != -1) { FAIL; }
+	PASS;
+}
+
 static bool test_cleareof_on_closed_reader_is_noop() {
 	emit_test("ClearEOF() on a closed/failed reader does not crash");
 	emit_input_header();
@@ -1491,7 +1649,12 @@ bool OTEST_ArchiveReader() {
 
 	// ClearEOF(): resume after append
 	driver.register_function(test_cleareof_picks_up_appended_record);
+	driver.register_function(test_cleareof_completes_partial_trailing_line);
 	driver.register_function(test_cleareof_on_closed_reader_is_noop);
+
+	// ResumeOffset(): never inside an unfinished record
+	driver.register_function(test_resume_offset_excludes_unfinished_record);
+	driver.register_function(test_resume_offset_backward_is_negative);
 
 	// SeekForward(): offset-based resume
 	driver.register_function(test_seekforward_skips_to_second_record);

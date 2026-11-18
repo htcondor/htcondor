@@ -2952,6 +2952,12 @@ QuoteAdStringValue(char const *val, std::string &buf)
     return buf.c_str();
 }
 
+bool
+CanQuoteAdStringValueInline(std::string_view val)
+{
+	return val.find_first_of("\r\n") == std::string_view::npos;
+}
+
 void
 ChainCollapse(classad::ClassAd &ad)
 {

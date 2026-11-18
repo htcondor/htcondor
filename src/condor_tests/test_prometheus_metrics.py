@@ -247,6 +247,84 @@ METRIC_DEFS = r"""
   PrometheusLabels = [ tricky = "l_bs\\ l_nl\n l_dq\" end" ];
 ]
 [
+  /* Metric and label names are published in snake_case.  The name mixes a
+     normal CamelCase word boundary with an embedded all-caps acronym, which
+     must split as ...Self|CPU|Usage and not as one letter per underscore. */
+  Name = "MonitorSelfCPUUsageSnakeTest";
+  Value = 19;
+  Desc = "CamelCase name and label published as snake_case";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "somegroup" ];
+]
+[
+  /* PROMETHEUS_DEFAULT_LABELS sets accounting_group; this sets the same label
+     spelled AccountingGroup. They are distinct ClassAd attributes that
+     normalize to one Prometheus label name, and the per-metric value must
+     win -- normalizing after the merge instead of before would hand the
+     default the win, since "accounting_group" sorts after "AccountingGroup". */
+  Name = "label_precedence_test_metric";
+  Value = 41;
+  Desc = "Per-metric label must beat a differently spelled default";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "from_metric" ];
+]
+[
+  /* Two attributes of one label ad that normalize to the same label name.
+     Only one can be published; metricd keeps the first and reports the
+     clash once at config-read time rather than letting map order decide
+     silently. */
+  Name = "label_collision_test_metric";
+  Value = 43;
+  Desc = "Two label names that normalize to one";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+  PrometheusLabels = [ AccountingGroup = "first"; Accounting_Group = "second" ];
+]
+[
+  /* Backend-decorated overrides must work for EVERY keyword, not just the
+     ones that happen to go through the string evaluator. Counter, Scale and
+     Verbosity used to be read straight off the metric ad, which silently
+     bypassed the override. Each of these three is decorated for Prometheus
+     only, so the Ganglia side of the same metric shows the undecorated
+     behavior and the two can be compared. */
+  Name = "override_counter_test_metric";
+  Value = 47;
+  Desc = "Prometheus_Counter must mark this a counter for Prometheus only";
+  Prometheus_Counter = true;
+  TargetType = "Scheduler";
+]
+[
+  Name = "override_scale_test_metric";
+  Value = 3;
+  Desc = "Prometheus_Scale must apply for Prometheus only";
+  Scale = 1;
+  Prometheus_Scale = 1000;
+  TargetType = "Scheduler";
+]
+[
+  /* Verbosity 99 is above METRICD_VERBOSITY, so this metric is filtered out
+     for Ganglia; the Prometheus override brings it back for Prometheus. This
+     also covers the config-read-time pre-filter, which drops metrics before
+     any override is consulted. */
+  Name = "override_verbosity_test_metric";
+  Value = 53;
+  Desc = "Prometheus_Verbosity must requalify this for Prometheus only";
+  Verbosity = 99;
+  Prometheus_Verbosity = 0;
+  TargetType = "Scheduler";
+]
+[
+  /* A name already written in snake_case must come through untouched: the
+     conversion has to be idempotent, since an admin may well write either. */
+  Name = "already_snake_case_test";
+  Value = 29;
+  Desc = "Already snake_case, must be unchanged";
+  TargetType = "Scheduler";
+  ExportMetric = "prometheus";
+]
+[
   Name = "both_backend_test_metric";
   Value = 13;
   Desc = "Default-export-everywhere metric";
@@ -274,7 +352,12 @@ def condor_with_metricd(test_dir):
         # nothing else in this test references and that is not in metricd's
         # hardcoded projection set, so the platform label only resolves if
         # PrometheusD::extraProjectionRefs() contributed it to the projection.
-        "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform ]',
+        # accounting_group is here in snake_case so that a metric below can
+        # supply the same label spelled AccountingGroup. Both normalize to
+        # accounting_group, and the per-metric one must win; see
+        # test_per_metric_label_overrides_differently_spelled_default.
+        "PROMETHEUS_DEFAULT_LABELS":            '[ pool = "testpool"; platform = CondorPlatform;'
+                                                '  accounting_group = "from_default" ]',
         # Several metrics below carry no ExportMetric and are expected to reach
         # BOTH backends. That is what an empty METRICD_DEFAULT_EXPORT_METRIC
         # means; it has to be set explicitly here because the shipped default
@@ -663,6 +746,97 @@ class TestPrometheusMetrics:
         # left exactly as configured.
         assert "publishing ganglia_only_test_jobs=" in ganglia_log_contents
         assert PROM_PREFIX + "ganglia_only_test_jobs" not in ganglia_log_contents
+
+    # --- snake_case conversion ----------------------------------------------
+
+    def test_camelcase_name_becomes_snake_case(self, prom_file_contents):
+        # MonitorSelfCPUUsageSnakeTest splits at the two kinds of word
+        # boundary: lower->Upper (Self|CPU is not one, but Monitor|Self and
+        # Usage|Snake are) and Upper->Upper+lower, which is what keeps the
+        # CPU acronym intact instead of yielding c_p_u.
+        assert (
+            PROM_PREFIX + "monitor_self_cpu_usage_snake_test" in prom_file_contents
+        )
+        assert "c_p_u" not in prom_file_contents
+        assert "MonitorSelfCPUUsageSnakeTest" not in prom_file_contents
+
+    def test_camelcase_label_name_becomes_snake_case(self, prom_file_contents):
+        labels = self._labels(prom_file_contents, "monitor_self_cpu_usage_snake_test")
+        assert labels is not None
+        assert 'accounting_group="somegroup"' in labels
+        assert "AccountingGroup" not in labels
+
+    def test_snake_case_conversion_is_idempotent(self, prom_file_contents):
+        # A name an admin already wrote in snake_case must survive untouched:
+        # no doubled underscores, nothing appended or trimmed.
+        assert _prom_sample_value(prom_file_contents, "already_snake_case_test") == 29
+
+    def test_per_metric_label_overrides_differently_spelled_default(self, prom_file_contents):
+        # PROMETHEUS_DEFAULT_LABELS has accounting_group="from_default"; this
+        # metric has AccountingGroup="from_metric". Normalizing label names
+        # after merging the two sources would make the default win, because
+        # the merged map still holds both spellings as distinct keys and
+        # "accounting_group" collates after "AccountingGroup".
+        labels = self._labels(prom_file_contents, "label_precedence_test_metric")
+        assert labels is not None
+        assert 'accounting_group="from_metric"' in labels
+        assert "from_default" not in labels
+
+    def test_default_label_still_applies_where_metric_is_silent(self, prom_file_contents):
+        # The flip side: a metric that does not set the label at all still
+        # gets the pool-wide default.
+        labels = self._labels(prom_file_contents, "already_snake_case_test")
+        assert 'accounting_group="from_default"' in labels
+
+    def test_colliding_label_names_publish_once(self, prom_file_contents):
+        # AccountingGroup and Accounting_Group normalize together; exactly one
+        # label is published, and it is not an arbitrary merge of the two.
+        labels = self._labels(prom_file_contents, "label_collision_test_metric")
+        assert labels is not None
+        assert labels.count("accounting_group=") == 1
+        assert 'accounting_group="first"' in labels
+
+    # --- backend-decorated overrides on non-string keywords ------------------
+    #
+    # Counter, Scale and Verbosity were read directly off the metric ad,
+    # bypassing the override-aware evaluator, so Prometheus_Counter and
+    # friends were silently ignored. Each metric below decorates one of them
+    # for Prometheus only, so Ganglia shows what the undecorated value does.
+
+    def test_prometheus_counter_override_applies(self, prom_file_contents):
+        assert ("# TYPE " + PROM_PREFIX + "override_counter_test_metric_total counter"
+                in prom_file_contents)
+
+    def test_prometheus_counter_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        # Same metric, Ganglia side: no decoration matches, so it stays a gauge.
+        line = _ganglia_publish_line(ganglia_log_contents, "override_counter_test_metric")
+        assert line is not None
+        assert "derivative=0" in line
+
+    def test_prometheus_scale_override_applies(self, prom_file_contents):
+        # Value 3 scaled by Prometheus_Scale=1000, not by Scale=1.
+        assert _prom_sample_value(prom_file_contents, "override_scale_test_metric") == 3000
+
+    def test_prometheus_scale_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        line = _ganglia_publish_line(ganglia_log_contents, "override_scale_test_metric")
+        assert line is not None
+        assert "publishing override_scale_test_metric=3," in line
+
+    def test_prometheus_verbosity_override_applies(self, prom_file_contents):
+        # Verbosity=99 is above METRICD_VERBOSITY; Prometheus_Verbosity=0
+        # requalifies it, including past the config-read-time pre-filter.
+        assert _prom_sample_value(prom_file_contents, "override_verbosity_test_metric") == 53
+
+    def test_prometheus_verbosity_override_does_not_reach_ganglia(self, ganglia_log_contents):
+        assert _ganglia_publish_line(ganglia_log_contents,
+                                     "override_verbosity_test_metric") is None
+
+    def test_colliding_label_names_reported_once(self, ganglia_log_contents):
+        # Reported at config-read time, where the attribute names are static,
+        # rather than on every publication cycle.
+        needle = "both name the Prometheus label 'accounting_group'"
+        assert needle in ganglia_log_contents
+        assert ganglia_log_contents.count(needle) == 1
 
     # --- exposition-format escaping -----------------------------------------
     #
@@ -1600,6 +1774,26 @@ def _pick_free_tcp_port():
         s.close()
 
 
+def _routable_local_ipv4():
+    """Return one non-loopback IPv4 address of this host, or None.
+
+    Used to prove a loopback-only listen socket really is unreachable off
+    127.0.0.1. Connecting a UDP socket sends nothing but makes the kernel
+    select a source address, which is the address a peer would reach us on.
+    A host with no route (or only loopback) yields nothing to test against,
+    and the caller skips.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("192.0.2.1", 9))   # TEST-NET-1; no packet is sent
+        ip = s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+    return None if ip.startswith("127.") else ip
+
+
 class _HardTimeout(BaseException):
     """Raised by _hard_deadline when its wall-clock budget is exceeded.
 
@@ -1783,11 +1977,11 @@ def condor_dedicated_http_port(test_dir):
 
 @action
 def dedicated_host_port(condor_dedicated_http_port):
-    # Connect on the same interface metricd binds its command socket to; the
-    # dedicated HTTP socket uses that same interface, on the port we chose.
+    # A dedicated HTTP socket binds the loopback address by default
+    # (PROMETHEUS_HTTP_LOCALHOST_ONLY), so that is where it is reachable --
+    # unlike metricd's command socket, which binds the regular interfaces.
     condor, port = condor_dedicated_http_port
-    host, _cmd_port = _metricd_http_port(condor)
-    return host, port
+    return "127.0.0.1", port
 
 
 @action
@@ -1903,6 +2097,31 @@ class TestPrometheusHTTPDedicatedPort:
             status, body = _http_get(host, port, "/metrics")
             assert status == 200
             assert "port_test_gauge" in body
+
+    # --- PROMETHEUS_HTTP_LOCALHOST_ONLY --------------------------------------
+    #
+    # A dedicated port is normally chosen in order to front the endpoint with a
+    # reverse proxy, so it binds loopback only by default. These assert that
+    # default from both sides: the endpoint answers on 127.0.0.1, and it is NOT
+    # reachable on this host's routable address.
+
+    def test_metricd_logged_localhost_only_bind(self, condor_dedicated_http_port):
+        condor, port = condor_dedicated_http_port
+        log_text = (condor.log_dir / "MetricdLog").read_text(errors="replace")
+        assert f"listening for HTTP requests on port {port} (localhost only)" in log_text
+
+    def test_not_reachable_on_routable_address(self, condor_dedicated_http_port,
+                                               dedicated_metrics_ready):
+        _condor, port = condor_dedicated_http_port
+        local_ip = _routable_local_ipv4()
+        if local_ip is None:
+            pytest.skip("host has no non-loopback IPv4 address to test against")
+        # Loopback works (the fixture already proved metricd bound the port),
+        # so a refusal here is the bind address at work rather than a dead
+        # daemon or a port that was never bound.
+        with pytest.raises(OSError):
+            s = socket.create_connection((local_ip, port), timeout=5)
+            s.close()
 
 
 class TestPrometheusHTTPDisabled:

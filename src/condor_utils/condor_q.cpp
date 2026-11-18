@@ -45,25 +45,6 @@ static const char *strKeywordsModern[] =
 	"(" ATTR_ACCOUNTING_GROUP "?:" ATTR_OWNER ")"
 };
 
-CondorQ::
-CondorQ(void)
-{
-	connect_timeout = 20;
-
-	owner[0] = '\0';
-	schedd[0] = '\0';
-	scheddBirthdate = 0;
-	useDefaultingOperator(false);
-	requestservertime = false;
-}
-
-void CondorQ::useDefaultingOperator(bool enable)
-{
-	defaulting_operator = enable;
-}
-
-CondorQ::~CondorQ () {}
-
 bool CondorQ::
 init()
 {
@@ -78,7 +59,7 @@ add (CondorQStrCategories cat, const char *value)
 	switch (cat) {
 	case CQ_OWNER:
 	case CQ_SUBMITTER:
-		strncpy(owner, value, MAXOWNERLEN - 1);
+		owner = value;
 		if (defaulting_operator) {
 			attr = strKeywordsModern[cat];
 		} else {
@@ -100,25 +81,6 @@ add (CondorQStrCategories cat, const char *value)
 	expr.insert(0,attr);
 
 	return query.addCustomOR (expr.c_str());
-}
-
-int CondorQ::
-addOR (const char *value)
-{
-	return query.addCustomOR (value);
-}
-
-int CondorQ::
-addAND (const char *value)
-{
-	return query.addCustomAND (value);
-}
-
-int CondorQ::
-addSchedd (const char *value)
-{  
-	strncpy(schedd, value, MAXSCHEDDLEN - 1);
-	return 0;
 }
 
 int
@@ -229,95 +191,6 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	return schedd.queryJobs(cmd, request_ad, process_func, process_func_data, connect_timeout, errstack, psummary_ad);
 }
 
-#if 0 // moved to DCSChedd object
-int CondorQ::fetchQueueV2(
-	DCSchedd & schedd,
-	int cmd,
-	ClassAd & request_ad,
-	condor_q_process_func process_func,
-	void * process_func_data,
-	int connect_timeout,
-	CondorError *errstack,
-	ClassAd ** psummary_ad)
-{
-	Sock* sock;
-	if (!(sock = schedd.startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
-
-	classad_shared_ptr<Sock> sock_sentry(sock);
-
-	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
-	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
-
-	ClassAd *ad = NULL;	// job ad result
-	int rval = 0;
-	do {
-		ad = new ClassAd();
-		if ( ! getClassAd(sock, *ad) || ! sock->end_of_message()) {
-			rval = Q_SCHEDD_COMMUNICATION_ERROR;
-			break;
-		}
-		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
-		long long intVal;
-		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
-		{ // Last ad.
-			sock->close();
-			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
-			std::string errorMsg;
-			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
-			{
-				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
-				rval = Q_REMOTE_ERROR;
-			}
-			if (psummary_ad && rval == 0) {
-				std::string val;
-				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
-					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
-					*psummary_ad = ad; // return the final ad, because it has summary information
-					ad = NULL; // so we don't delete it below.
-				}
-			}
-			break;
-		}
-		// Note: According to condor_q.h, process_func() will return false if taking
-		// ownership of ad, so only delete if it returns true, else set to NULL
-		// so we don't delete it here.  Either way, next set ad to NULL since either
-		// it has been deleted or will be deleted later by process_func().
-		if (process_func(process_func_data, ad)) {
-			delete ad;
-		}
-		ad = NULL;
-	} while (true);
-
-	// Make sure ad is not leaked no matter how we break out of the above loop.
-	delete ad;
-
-	return rval;
-}
-#endif
-
-#if 0
-int
-CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
-									  char *&lastUpdate,
-									  condor_q_process_func process_func,
-									  void * process_func_data,
-									  CondorError*  /*errstack*/ )
-{
-	(void) dbconn;
-	(void) lastUpdate;
-	(void) process_func;
-	(void) process_func_data;
-
-	return Q_OK;
-}
-
-void
-CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
-{
-	(void) dbconn;
-	(void) qType;
-}
-#endif
 
 int
 CondorQ::getFilterAndProcessAds( const char *constraint,

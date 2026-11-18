@@ -140,7 +140,10 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	int listen(condor_protocol proto, int port);
+	/// @param loopback if true, bind only to the loopback address rather than
+	///        to whatever BIND_ALL_INTERFACES/NETWORK_INTERFACE select, so the
+	///        resulting listen socket is reachable only from this host.
+	int listen(condor_protocol proto, int port, bool loopback = false);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///

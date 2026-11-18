@@ -9,6 +9,7 @@
 #   4. Simulate history rotation, submit 1 more job.
 #   5. Poll until the DB reflects the post-rotation state (with timeout).
 #   6. Check final DB state: new job added, original jobs unchanged.
+#   7. Submit 1 job with DAG/batch attributes and check they are ingested.
 
 import datetime
 import os
@@ -68,55 +69,27 @@ def _safe_job_count(db_path):
         return 0
 
 
-def _restart_pool_and_wait_for_new_schedd(condor, timeout=60):
+def _reconfig_schedd(condor):
     """
-    Restart every daemon under condor_master (including LIBRARIAN, since it's
-    in DAEMON_LIST) and block until a new SCHEDD process is confirmed alive.
-    SCHEDD's pid is used as the restart signal since condor_who reports it
-    reliably; LIBRARIAN restarts as part of the same condor_restart call.
+    Reconfig the schedd so it closes its cached handle to the history file
+    (Scheduler::Init() -> InitJobHistoryFile()); otherwise it would keep
+    appending to the renamed/removed file instead of creating a new one.
     """
-    who = condor.run_command(["condor_who", "-quick"])
-    assert who.returncode == 0, "Failed to query daemon information with condor_who"
-    old_pid = None
-    for line in who.stdout.split("\n"):
-        if line.startswith("SCHEDD_PID"):
-            old_pid = line.split("=")[1]
-            break
-    assert old_pid is not None, "Failed to get schedd pid before restart"
-
-    condor.run_command(["condor_restart", "-fast"])
-
-    start = time.time()
-    while True:
-        assert time.time() - start <= timeout, "Failed to restart condor"
-
-        who = condor.run_command(["condor_who", "-quick"])
-        if who.returncode == 0:
-            alive = False
-            pid = None
-            for line in who.stdout.split("\n"):
-                if line.startswith("SCHEDD_PID"):
-                    pid = line.split("=")[1]
-                elif line.startswith("SCHEDD =") and '"alive"' in line.lower():
-                    alive = True
-
-            if alive and pid is not None and pid != old_pid:
-                return
-
-        time.sleep(1)
+    p = condor.run_command(["condor_reconfig", "-schedd"])
+    assert p.returncode == 0, f"condor_reconfig -schedd failed: {p.stderr}"
 
 
-def _submit_and_wait(condor, log_path, path_to_sleep, count):
-    """Submit `count` instant-exit jobs and wait for all to complete."""
-    handle = condor.submit(
-        description={
-            "executable": path_to_sleep,
-            "universe": "vanilla",
-            "arguments": "0",
-            "log": str(log_path),
-        },
-        count=count,
-    )
+def _submit_and_wait(condor, log_path, path_to_sleep, count, extra=None):
+    """Submit `count` instant-exit jobs and wait for all to complete.
+    `extra` adds submit commands (e.g. batch_name) to the description."""
+    description = {
+        "executable": path_to_sleep,
+        "universe": "vanilla",
+        "arguments": "0",
+        "log": str(log_path),
+    }
+    description.update(extra or {})
+    handle = condor.submit(description=description, count=count)
     assert handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
@@ -217,9 +190,8 @@ def post_rotation_handle(initial_db_snapshot, condor, test_dir, path_to_sleep):
 
     os.utime(str(rotated_path), None)
 
-    # Restart the schedd (and, incidentally, every other daemon in DAEMON_LIST)
-    # to close its file handle to the rotated file.
-    _restart_pool_and_wait_for_new_schedd(condor)
+    # Close the schedd's file handle to the rotated file.
+    _reconfig_schedd(condor)
 
     handle = _submit_and_wait(condor, test_dir / "job_post_rotation.log", path_to_sleep, 1)
 
@@ -241,6 +213,22 @@ def post_rotation_db(post_rotation_handle, condor):
     conn = sqlite3.connect(str(db_path))
     yield conn
     conn.close()
+
+
+FAKE_DAG_ID = 424242
+
+
+@action
+def dag_batch_job(post_rotation_db, condor, test_dir, path_to_sleep):
+    """
+    After the post-rotation checks, complete one job carrying DAG/batch
+    attributes (DAGManJobId is a fake id, not a real DAGMan job) and wait
+    for the librarian to ingest it.
+    """
+    handle = _submit_and_wait(condor, test_dir / "job_dag_batch.log", path_to_sleep, 1, extra={
+        "dagman_job_id": str(FAKE_DAG_ID), "batch_id": "1001", "batch_name": "Alpha"})
+    _wait_for_db_job_count(condor, NUM_JOBS + 2)
+    return handle
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +374,7 @@ class TestLibrarianIngestion:
         assert count >= 1, "Rotated file not marked FullyRead"
 
     def test_post_rotation_status_updated(self, post_rotation_db, condor):
-        """The daemon must keep writing Status rows after the schedd restart.
+        """The daemon must keep writing Status rows after the rotation.
 
         Asserted as a delta on MAX(TimeOfUpdate) so retention pruning (which
         keeps the live count near 1) cannot mask a stalled daemon.
@@ -410,26 +398,24 @@ class TestLibrarianIngestion:
             f"Status TimeOfUpdate did not advance: was {initial_max}, now {new_max}"
         )
 
-    def test_post_rotation_avg_record_size_persisted(self, post_rotation_db):
-        """AvgRecordSize must remain > 0 for all files after a daemon restart (DB persistence)."""
-        rows = post_rotation_db.execute(r"SELECT FileName, AvgRecordSize FROM Files").fetchall()
-        assert len(rows) >= 2, "Expected at least 2 Files entries after rotation"
-        bad = [(r[0], r[1]) for r in rows if r[1] <= 0]
-        assert not bad, \
-            f"AvgRecordSize reset to 0 after restart for: {bad}"
-
     def test_post_rotation_records_read_total(self, post_rotation_db):
         """Total RecordsRead across all files must be >= NUM_JOBS + 1 after the post-rotation ingest."""
         total = post_rotation_db.execute(r"SELECT SUM(RecordsRead) FROM Files").fetchone()[0] or 0
         assert total >= NUM_JOBS + 1, \
             f"Expected SUM(RecordsRead) >= {NUM_JOBS + 1}, got {total}"
 
-    # --- Schema v3 checks ---
+    # --- Schema checks ---
 
     def test_schema_version(self, librarian_db):
-        """Database must be at schema version 3."""
+        """Database must be at schema version 4."""
         version = librarian_db.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 3, f"Expected schema version 3, got {version}"
+        assert version == 4, f"Expected schema version 4, got {version}"
+
+    def test_user_has_no_last_job_time(self, librarian_db):
+        """A user with indexed jobs must have a NULL DateOfLastJob (schema v4)."""
+        rows = librarian_db.execute(r"SELECT UserName, DateOfLastJob FROM Users").fetchall()
+        assert len(rows) == 1
+        assert rows[0][1] is None, f"Expected NULL DateOfLastJob for active user, got {rows[0]}"
 
     def test_dag_batch_columns_exist(self, librarian_db):
         """JobRecords must have DAGManJobId, JobBatchId, and JobBatchName columns (schema v3)."""
@@ -448,3 +434,14 @@ class TestLibrarianIngestion:
             f"Expected all DAG/batch columns to be NULL for plain jobs, "
             f"but {non_null} row(s) had a non-NULL value"
         )
+
+    def test_dag_batch_columns_ingested(self, dag_batch_job, condor):
+        """A job's DAGManJobId, JobBatchId, and JobBatchName are stored in its JobRecords row."""
+        conn = sqlite3.connect(str(_get_db_path(condor)))
+        rows = conn.execute(
+            r"SELECT jr.DAGManJobId, jr.JobBatchId, jr.JobBatchName FROM JobRecords jr "
+            r"JOIN Jobs j ON jr.JobId = j.JobId WHERE j.ClusterId = ?",
+            (dag_batch_job.clusterid,),
+        ).fetchall()
+        conn.close()
+        assert rows == [(FAKE_DAG_ID, "1001", "Alpha")]

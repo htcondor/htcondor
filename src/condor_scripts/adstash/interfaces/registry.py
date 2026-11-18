@@ -26,6 +26,9 @@ def opensearch_interface():
 def json_file_interface():
     from adstash.interfaces.json_file import JSONFileInterface
     return JSONFileInterface
+def ndjson_file_interface():
+    from adstash.interfaces.ndjson_file import NDJSONFileInterface
+    return NDJSONFileInterface
 
 
 ADSTASH_INTERFACE_REGISTRY = {
@@ -33,5 +36,6 @@ ADSTASH_INTERFACE_REGISTRY = {
     "elasticsearch": elasticsearch_interface,
     "opensearch": opensearch_interface,
     "jsonfile": json_file_interface,
+    "ndjsonfile": ndjson_file_interface,
 }
 ADSTASH_INTERFACES = list(ADSTASH_INTERFACE_REGISTRY.keys())

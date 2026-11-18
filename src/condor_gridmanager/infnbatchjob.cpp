@@ -1358,6 +1358,18 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		}
 	}
 
+	// Need to set ATTR_ON_EXIT_SIGNAL for a completed job. The blahp
+	// doesn't set it in the status update ad.
+	bool bool_value;
+	if (new_remote_state == COMPLETED && !jobAd->LookupBool(ATTR_ON_EXIT_SIGNAL, bool_value)) {
+		int value;
+		if (jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, true);
+		} else if (jobAd->LookupInteger(ATTR_ON_EXIT_CODE, value)) {
+			jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, false);
+		}
+	}
+
 	requestScheddUpdate( this, false );
 
 	return;
@@ -1392,10 +1404,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		ATTR_REQUEST_MEMORY,
-		"NodeNumber",
-		"HostNumber",
-		"SMPGranularity",
-		"WholeNodes",
 		"HostSMPSize",
 		ATTR_BATCH_EXTRA_SUBMIT_ARGS,
 		"StageCmd",
@@ -1492,6 +1500,51 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
 	if ( !expr.empty() ) {
 		submit_ad->Assign( "Queue", expr );
+	}
+
+	int cpu_count = 0;
+	int node_count = 0;
+	int request_cpus = 0;
+
+	// Treat RequestCpus>1 as a request for a single machine with the given
+	// number of cores (RequestCpus=1 is often a default not supplied by
+	// the user). The batch-specific attributes should override if they're
+	// present.
+	if (jobAd->LookupInteger(ATTR_REQUEST_CPUS, request_cpus) && request_cpus > 1) {
+		cpu_count = request_cpus;
+		node_count = 1;
+	}
+
+	// NodeNumber in the blahp job ad means total number of cpus
+	if (!jobAd->LookupInteger(ATTR_BATCH_CPU_COUNT, cpu_count)) {
+		jobAd->LookupInteger("NodeNumber", cpu_count);
+	}
+	if (cpu_count > 0) {
+		submit_ad->Assign("NodeNumber", cpu_count);
+	}
+
+	// HostNumber ion the blahp job ad means number of machines
+	if (!jobAd->LookupInteger(ATTR_BATCH_NODE_COUNT, node_count)) {
+		jobAd->LookupInteger("HostNumber", node_count);
+	}
+	if (node_count > 0) {
+		submit_ad->Assign("HostNumber", node_count);
+	}
+
+	int cpus_per_node = 0;
+	if (!jobAd->LookupInteger(ATTR_BATCH_CPUS_PER_NODE, cpus_per_node)) {
+		jobAd->LookupInteger("SMPGranularity", cpus_per_node);
+	}
+	if (cpus_per_node > 0) {
+		submit_ad->Assign("SMPGranularity", cpus_per_node);
+	}
+
+	bool whole_nodes = false;
+	if (!jobAd->LookupBool(ATTR_BATCH_WHOLE_NODES, whole_nodes)) {
+		jobAd->LookupBool("WholeNodes", whole_nodes);
+	}
+	if (whole_nodes) {
+		submit_ad->Assign("WholeNodes", whole_nodes);
 	}
 
 	int gpus = 0;

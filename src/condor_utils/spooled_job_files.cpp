@@ -198,7 +198,7 @@ SpooledJobFiles::getJobSpoolPath(const classad::ClassAd *job_ad, std::string &sp
 }
 
 static bool
-createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state,char const *spool_path)
+createJobSpoolDirectory(classad::ClassAd const *job_ad, char const *spool_path)
 {
 	int cluster=-1,proc=-1;
 
@@ -245,26 +245,20 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 #endif
 	}
 
-	if( !can_switch_ids() ||
-		desired_priv_state == PRIV_UNKNOWN ||
-		desired_priv_state == PRIV_CONDOR )
+	if( !can_switch_ids() )
 	{
 		return true; // no need/desire for chowning
 	}
 
-	ASSERT( desired_priv_state == PRIV_USER );
-
 	TemporaryPrivSentry sentry;
 
 	if (!user_ids_are_inited()) {
-		if (!init_user_ids_from_ad(*job_ad)) {
-			std::string owner;
-			job_ad->LookupString(ATTR_USER, owner);
-			dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
-				 "user %s. Cannot chown %s to user.\n",
-				 cluster, proc, owner.c_str(), spool_path );
-			return false;
-		}
+		std::string owner;
+		job_ad->LookupString(ATTR_USER, owner);
+		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
+			 "user %s. Cannot chown %s to user.\n",
+			 cluster, proc, owner.c_str(), spool_path );
+		return false;
 	}
 
 #ifndef WIN32
@@ -298,13 +292,9 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 }
 
 bool
-SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state )
+SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad)
 {
 	int cluster=-1,proc=-1;
-
-	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
-		desired_priv_state = PRIV_USER;
-	}
 
 	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID,cluster);
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
@@ -313,7 +303,7 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 	spool_path += ".swap";
 
-	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) )
+	if( !::createJobSpoolDirectory(job_ad, spool_path.c_str()) )
 	{
 		return false;
 	}
@@ -322,12 +312,8 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 }
 
 bool
-SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state )
+SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad)
 {
-	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
-		desired_priv_state = PRIV_USER;
-	}
-
 	int cluster=-1,proc=-1;
 
 	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID,cluster);
@@ -339,8 +325,8 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	std::string spool_path_tmp = spool_path;
 	spool_path_tmp += ".tmp";
 
-	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) ||
-		!::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path_tmp.c_str()) )
+	if( !::createJobSpoolDirectory(job_ad, spool_path.c_str()) ||
+		!::createJobSpoolDirectory(job_ad, spool_path_tmp.c_str()) )
 	{
 		return false;
 	}
@@ -413,7 +399,7 @@ remove_spool_directory(const char * dir)
 }
 
 void
-SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
+SpooledJobFiles::removeJobSpoolDirectory(const classad::ClassAd * ad)
 {
 	ASSERT(ad);
 	int cluster = -1;
@@ -435,7 +421,6 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 	// if we should pay attention to it if we know we're cleaning up after
 	// a job with a checkpoint destination.
 
-	chownSpoolDirectoryToCondor(ad);
 	remove_spool_directory(spool_path.c_str());
 
 	std::string tmp_spool_path = spool_path;
@@ -473,7 +458,7 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 }
 
 void
-SpooledJobFiles::removeJobSwapSpoolDirectory(classad::ClassAd * ad)
+SpooledJobFiles::removeJobSwapSpoolDirectory(const classad::ClassAd * ad)
 {
 	ASSERT(ad);
 	int cluster = -1;
@@ -551,87 +536,4 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster, const char * submit_dige
 			}
 		}
 	}
-}
-
-bool
-SpooledJobFiles::chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad)
-{
-	bool result = true;
-
-#ifndef WIN32
-	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
-		return true;
-	}
-
-	std::string sandbox;
-	int cluster=-1,proc=-1;
-
-	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID,cluster);
-	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
-
-	_getJobSpoolPath(cluster, proc, job_ad, sandbox);
-
-	uid_t src_uid = 0;
-	uid_t dst_uid = get_condor_uid();
-	gid_t dst_gid = get_condor_gid();
-
-	TemporaryPrivSentry sentry;
-
-	if (!user_ids_are_inited()) {
-		if (!init_user_ids_from_ad(*job_ad)) {
-			std::string jobOwner;
-			job_ad->LookupString(ATTR_USER, jobOwner);
-			dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
-				 "for user %s.  Cannot chown \"%s\".  User may "
-				 "run into permissions problems when fetching "
-				 "job sandbox.\n", cluster, proc, jobOwner.c_str(),
-				 sandbox.c_str() );
-			return false;
-		}
-	}
-	src_uid = get_user_uid();
-
-	if( ! recursive_chown(sandbox.c_str(), src_uid, dst_uid, dst_gid, true) )
-	{
-		dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
-				 "%d to %d.%d.  User may run into permissions "
-				 "problems when fetching sandbox.\n",
-				 cluster, proc, sandbox.c_str(),
-				 src_uid, dst_uid, dst_gid );
-		result = false;
-	}
-
-#endif
-
-	return result;
-}
-
-bool
-SpooledJobFiles::jobRequiresSpoolDirectory(classad::ClassAd const *job_ad)
-{
-	ASSERT(job_ad);
-	int stage_in_start = 0;
-
-	job_ad->EvaluateAttrInt( ATTR_STAGE_IN_START, stage_in_start );
-	if( stage_in_start > 0 ) {
-		return true;
-	}
-
-	int univ = CONDOR_UNIVERSE_VANILLA;
-	job_ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, univ );
-
-		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
-		// because they use the spool directory for chirp stuff to make
-		// sshd work.  For backward compatibility with prior releases,
-		// we assume all parallel jobs require this unless they explicitly
-		// specify otherwise.
-	bool job_requires_sandbox_expr = false;
-	bool requires_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
-
-	if( job_ad->EvaluateAttrBool(ATTR_JOB_REQUIRES_SANDBOX, job_requires_sandbox_expr) )
-	{
-		requires_sandbox = job_requires_sandbox_expr;
-	}
-
-	return requires_sandbox;
 }

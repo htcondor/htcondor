@@ -583,11 +583,39 @@ CCBServer::OnUpstreamRegistered()
 			// No upstream ccbid yet (should not happen from this callback, but be safe).
 		return;
 	}
+	std::string old_tunnel_contacts = m_tunnel_contacts;
 	m_tunnel_contacts = tunnel_list;
 
 	dprintf(D_ALWAYS,
 			"CCB: registered with next-hop CCB(s); tunnel address(es) for local "
 			"registrants: %s\n", m_tunnel_contacts.c_str());
+
+		// This callback fires once per upstream listener, so with several next hops
+		// the tunnel is declared ready as soon as the FIRST one registers, and the
+		// path list grows as the rest come up (or changes when an upstream broker
+		// re-registers with a new ccbid).  Targets that registered in between hold a
+		// contact stamped with the old list, and would keep advertising it until they
+		// next re-register.  Re-send every registered target its reply so each picks
+		// up the new contact (CCBListener accepts an unsolicited CCB_REGISTER and
+		// republishes its address).  The pending list below can only be non-empty
+		// when there was no previous list, so nothing gets two replies.
+	if( !old_tunnel_contacts.empty() && old_tunnel_contacts != m_tunnel_contacts ) {
+		std::vector<CCBID> registered;
+		registered.reserve( m_targets.size() );
+		for( const auto &[ccbid, target] : m_targets ) {
+			registered.push_back( ccbid );
+		}
+			// SendRegistrationReply removes a target whose socket fails, so look
+			// each one up again rather than holding iterators into m_targets.
+		for( CCBID ccbid : registered ) {
+			if( CCBTarget *t = GetTarget( ccbid ) ) {
+				SendRegistrationReply( t );
+			}
+		}
+		dprintf(D_ALWAYS,
+				"CCB: tunnel address(es) changed; re-sent registration reply to "
+				"%zu registered target(s).\n", registered.size());
+	}
 
 		// Flush any registrations we deferred while the tunnel was coming up: now
 		// their replies carry a reachable, nested contact.  (A registrant that

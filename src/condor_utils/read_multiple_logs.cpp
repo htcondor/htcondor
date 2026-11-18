@@ -344,7 +344,7 @@ MultiLogFiles::readFileToString(const std::string &strFilename)
 		fclose(pFile);
 		return "";
 	}
-	int iLength = ftell(pFile);
+	long iLength = ftell(pFile);
 	if ( iLength == -1 ) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"ftell(%s) failed with errno %d (%s)\n", strFilename.c_str(),
@@ -372,7 +372,7 @@ MultiLogFiles::readFileToString(const std::string &strFilename)
 			the file is opened in text mode.  
 		*/
 	memset(psBuf,0,iLength+1);
-	int ret = fread(psBuf, 1, iLength, pFile);
+	size_t ret = fread(psBuf, 1, iLength, pFile);
 	psBuf[iLength] = '\0'; // static analysis doesn't know memset?
 
 	if (ret == 0) {

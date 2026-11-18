@@ -191,12 +191,15 @@ INDEXED_KEYWORD_ATTRS = {
 NON_INDEXED_KEYWORD_ATTRS = set()
 
 FLOAT_ATTRS = {
+    "ActivationRequestMemory",
     "CPUsUsage",
+    "CurrentWastedMemoryGBHours",
     "GPUsAverageUsage",
     "GPUsMemoryUsage",
     "JobBatchId",
     "JobDuration",
     "JobVMCpuUtilization",
+    "LastWastedMemoryGBHours",
     "NetworkInputMb",
     "NetworkOutputMb",
     "Rank",
@@ -233,7 +236,6 @@ INT_ATTRS = {
     "CumulativeRemoteUserCpu",
     "CumulativeSlotTime",
     "CumulativeSuspensionTime",
-    "CumulativeTransferTime",
     "CurrentHosts",
     "DAG_JobsCompleted",
     "DAG_JobsHeld",

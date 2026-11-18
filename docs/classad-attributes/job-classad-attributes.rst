@@ -54,6 +54,22 @@ all attributes.
     not computed until complete. Like the above attribute, it represents
     only the most recent launch, not the sum of all prior launches.
 
+:classad-attribute-def:`ActivationRequestMemory`
+    The value, in MiB, that :ad-attr:`RequestMemory` evaluated to when the
+    most recent activation started, evaluated against the slot the job was
+    matched to (or, for local universe jobs, against the *condor_schedd*'s
+    local starter ad).  It is usually an integer, but is a real number if
+    :ad-attr:`RequestMemory` evaluates to one.  It is set by the *condor_schedd* each time the job
+    starts running, and is not changed when the *condor_schedd* reconnects
+    to a running job.
+
+    Because :ad-attr:`RequestMemory` may be an expression, such as one
+    that references :ad-attr:`MemoryUsage`, or may be changed between
+    activations, for example by :subcom:`retry_request_memory`, this
+    attribute records the memory that the activation actually requested.
+    Each epoch record in the job epoch history has the value for that
+    epoch's activation.
+
 :classad-attribute-def:`ActivationSetupDuration`
     The length of time in seconds from when the shadow sends a
     claim activation to when the shadow it notified that the job was
@@ -135,9 +151,21 @@ all attributes.
     A string recording the unique identifier of the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
+:classad-attribute-def:`BatchCpuCount`
+    For **batch** grid universe jobs, the total number of cpus to request
+    in the remote batch system.
+
+:classad-attribute-def:`BatchCpusPerNode`
+    For **batch** grid universe jobs, the number of cpus to request on
+    each machine in the remote batch system.
+
 :classad-attribute-def:`BatchExtraSubmitArgs`
     For **batch** grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
+
+:classad-attribute-def:`BatchNodeCount`
+    For **batch** grid universe jobs, the number of machines to request
+    in the remote batch system.
 
 :classad-attribute-def:`BatchProject`
     For **batch** grid universe jobs, the name of the
@@ -151,6 +179,10 @@ all attributes.
 :classad-attribute-def:`BatchRuntime`
     For **batch** grid universe jobs, a limit in seconds on the job's
     execution time, enforced by the remote batch system.
+
+:classad-attribute-def:`BatchWholeNodes`
+    For **batch** grid universe jobs, whether the job can share machines
+    with other jobs in the remote batch system.
 
 :classad-attribute-def:`BlockReadKbytes`
     The integer number of KiB read from disk for this job.
@@ -207,6 +239,9 @@ all attributes.
     suspension during time in which the job was not evicted.
     This number is updated when the job exits.
 
+:classad-attribute-def:`CommonInputFiles`
+    Like :ad-attr:`TransferInput`, except for :ref:`common files<common_file_transfer>`.
+
 :classad-attribute-def:`CompletionDate`
     The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
@@ -254,12 +289,50 @@ all attributes.
     A running total of the number of seconds the job has spent in
     suspension for the life of the job.
 
-:classad-attribute-def:`CumulativeTransferTime`
-    The total time, in seconds, that condor has spent transferring the
-    input and output sandboxes for the life of the job.
-
 :classad-attribute-def:`CurrentHosts`
     The number of hosts in the claimed state, due to this job.
+
+:classad-attribute-def:`CurrentWastedMemoryGBHours`
+    A floating point value giving the memory wasted so far by the job's
+    current activation, in gigabyte-hours (where one gigabyte is 1024
+    megabytes).  It is computed as
+
+    .. code-block:: text
+
+        (ActivationRequestMemory - MemoryUsage) / 1024 * (activation time so far) / 3600
+
+    where :ad-attr:`ActivationRequestMemory` is the value
+    :ad-attr:`RequestMemory` evaluated to when the activation started,
+    :ad-attr:`MemoryUsage` is the maximum memory usage observed over the
+    lifetime of the job, and the activation time is in seconds.  If the
+    job used more memory than it requested, the value is zero.  The
+    activation time covers the whole activation, including the transfer
+    of input and output files, the same span as
+    :ad-attr:`ActivationDuration`.
+
+    This attribute is updated each time the *condor_shadow* receives an
+    update from the *condor_starter*, so while the job is running it
+    may be out of date by up to :macro:`STARTER_UPDATE_INTERVAL` seconds
+    (and in the *condor_schedd*'s copy of the job ad, by up to
+    :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` seconds).  When the activation
+    ends, for whatever reason, it is set to its final value, measured
+    until the end of the activation, and that value is also copied to
+    :ad-attr:`LastWastedMemoryGBHours`.  When the *condor_shadow* ends the
+    activation itself (for example, to put the job on hold because of a
+    policy expression), the activation lasts until the *condor_starter*
+    reports that the job has been cleaned up; but if the
+    *condor_shadow* exits before then, the value is measured only until
+    the *condor_shadow* ended the activation.  It is removed when the next
+    activation starts.  It is not set until the job's memory usage has
+    been reported, nor if :ad-attr:`ActivationRequestMemory` is not
+    known (for example, because the activation was started by an older
+    *condor_schedd*), nor for grid, scheduler, or parallel universe jobs.
+    If either becomes unknown after the attribute has been set, it
+    becomes ``undefined``.
+
+    For local universe jobs, the job queue is not updated while the job
+    runs, so this attribute is set only when the activation ends, and the
+    activation time is measured from :ad-attr:`JobCurrentStartDate`.
 
 :classad-attribute-def:`DAGLifetimeJob`
     A boolean value denoting job(s) in a DAG node are to not be removed when the
@@ -373,6 +446,13 @@ all attributes.
 :classad-attribute-def:`DockerImage`
     For Docker and Container universe jobs, a string that names the docker image to run
     inside the container.
+
+:classad-attribute-def:`DockerImageHash`
+    For Docker universe jobs, and Container universe jobs which run under
+    Docker, a string set by the *condor_starter* naming the content hash
+    (as reported by ``docker inspect``, e.g. ``sha256:0a1b2c...``) of the
+    image the job actually ran.  Because a tag such as ``:latest`` may name
+    different images over time, this records precisely which image was used.
 
 :classad-attribute-def:`EC2AccessKeyId`
     Used for grid type ec2 jobs; a string taken from the definition of
@@ -570,13 +650,6 @@ all attributes.
     universe jobs, how the job exited is unavailable. In this case,
     :ad-attr:`ExitSignal` will be undefined.
 
-:classad-attribute-def:`ExitStatus`
-    The way that HTCondor previously dealt with a job's exit status.
-    This attribute should no longer be used. It is not always accurate
-    in heterogeneous pools, or if the job exited with a signal. Instead,
-    see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
-    :ad-attr:`ExitSignal`.
-
 :classad-attribute-def:`InitialWaitDuration`
     The number of seconds from when a job was queued until the first time
     execution is attempted.  Undefined for jobs that have not yet started.
@@ -754,6 +827,10 @@ all attributes.
     setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
     job event log instead of the system event log.
 
+:classad-attribute-def:`JobBatchId`
+    A string value representing a unique batch identifying number across
+    jobs. This is used by DAGMan to indicate the root DAGMan job of a workflow.
+
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
     string valued attribute will contain the batch name.
@@ -863,11 +940,10 @@ all attributes.
     :tool:`condor_prio`. The default value is 0. The higher the number, the
     greater (better) the priority.
 
-:classad-attribute-def:`JobRunCount`
-    This attribute is retained for backwards compatibility. It may go
-    away in the future. It is equivalent to :ad-attr:`NumShadowStarts` for all
-    universes except **scheduler**. For the **scheduler** universe, this
-    attribute is equivalent to :ad-attr:`NumJobStarts`.
+:classad-attribute-def:`JobReconnectedDate`
+    Time at which the *condor_shadow* and *condor_starter* last reconnected.
+    Set to ``Undefined`` when a new disconnect occurs. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
 :classad-attribute-def:`JobStartDate`
     Time at which the job first began running. Measured in the number of
@@ -993,7 +1069,20 @@ all attributes.
     Time at which the job was last evicted from a remote workstation.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
     1, 1970).
-    
+
+:classad-attribute-def:`LastWastedMemoryGBHours`
+    A floating point value giving the memory wasted by the job's most
+    recent activation to have ended, in gigabyte-hours: the final value
+    of :ad-attr:`CurrentWastedMemoryGBHours` for that activation.  It is
+    set when an activation ends for any reason, including the job
+    completing, being evicted, being put on hold, or being removed.
+    While a later activation is running, it keeps the value from the
+    previous one.  If the value could not be computed when the activation
+    ended (because the job's memory usage was never reported, or
+    :ad-attr:`ActivationRequestMemory` was not known), it is
+    ``undefined``.  Each epoch record in the job epoch history has the
+    value for that epoch's activation.
+
 :classad-attribute-def:`LeaveJobInQueue`
     A boolean expression that defaults to ``False``, causing the job to
     leave the queue upon completion.

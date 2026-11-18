@@ -38,7 +38,7 @@
   strings with extra trailing characters.
   :jira:`3809`
 
-- Fixed :macro:`SEC_FS_ENFORCE_CHANNEL_BINDING` to work when
+- Fixed ``SEC_FS_ENFORCE_CHANNEL_BINDING`` to work when
   :macro:`TCP_FORWARDING_HOST` is being used.
   Before, FS authentication could fail incorrectly.
   :jira:`3860`
@@ -573,8 +573,8 @@
 
 *** 24.12.4 features
 
-- :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
-  (instead of :attr:`Name`) when trying to find *condor_startd* daemons,
+- :meth:`htcondor2.Collector.locate` now checks the :ad-attr:`Machine` attribute
+  (instead of :ad-attr:`Name`) when trying to find *condor_startd* daemons,
   if the ``name`` argument is not the name of a slot.  This allows programmers
   to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
   name and get a result from a collector whether or not

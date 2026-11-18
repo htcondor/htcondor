@@ -52,6 +52,7 @@ bool FTEST_stl_string_utils(void);
 bool FTEST_string_vector();
 bool FTEST_your_string(void);
 bool FTEST_tokener(void);
+bool FTEST_wasted_memory(void);
 bool OTEST_HashTable(void);
 bool OTEST_Regex(void);
 bool OTEST_Old_Classads(void);
@@ -69,6 +70,8 @@ bool OTEST_Timeslice();
 bool OTEST_DagFileParser();
 bool OTEST_DagLexer();
 bool OTEST_ArchiveReader();
+bool OTEST_Edge();
+bool OTEST_Dag();
 bool OTEST_ClaimId();
 
 	// function map that maps testing function names to testing functions
@@ -93,6 +96,7 @@ const static struct {
 	map(FTEST_string_vector),
 	map(FTEST_your_string),
 	map(FTEST_tokener),
+	map(FTEST_wasted_memory),
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_Regex),
@@ -111,6 +115,8 @@ const static struct {
 	map(OTEST_DagFileParser),
 	map(OTEST_DagLexer),
 	map(OTEST_ArchiveReader),
+	map(OTEST_Edge),
+	map(OTEST_Dag),
 	map(OTEST_ClaimId),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);

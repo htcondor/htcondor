@@ -105,6 +105,8 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_JOB_ACTIVATION_EXECUTION_DURATION,
 		ATTR_JOB_ACTIVATION_SETUP_DURATION,
 		ATTR_JOB_ACTIVATION_TEARDOWN_DURATION,
+		ATTR_CURRENT_WASTED_MEMORY_GB_HOURS,
+		ATTR_LAST_WASTED_MEMORY_GB_HOURS,
 
 		"TransferInQueued",
 		"TransferInStarted",
@@ -119,7 +121,6 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_TRANSFER_COMMON_STATS,
 		ATTR_NUM_JOB_STARTS,
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
-		ATTR_CUMULATIVE_TRANSFER_TIME,
 		ATTR_LAST_JOB_LEASE_RENEWAL,
 		ATTR_JOB_COMMITTED_TIME,
 		ATTR_JOB_STDOUT_MTIME,
@@ -154,6 +155,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_IO_WAIT,
 		ATTR_JOB_CURRENT_RECONNECT_ATTEMPT,
 		ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS,
+		ATTR_DOCKER_IMAGE_HASH,
 
 		// FIXME: What I'd actually like is a way to queue all attributes
 		// not in any whitelist for delivery with the last update.
@@ -203,7 +205,6 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 
 	terminate_job_queue_attrs = {
 		ATTR_EXIT_REASON,
-		ATTR_JOB_EXIT_STATUS,
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_ON_EXIT_BY_SIGNAL,
 		ATTR_ON_EXIT_SIGNAL,

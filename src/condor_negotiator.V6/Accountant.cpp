@@ -150,7 +150,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       RemoteUserPriorityFactor=1;
   }
 
-  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
+  MaxAcctLogSize = param_longlong("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
 
   if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
 	tmp = param("SPOOL");
@@ -174,7 +174,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   dprintf(D_ACCOUNTANT,"DEFAULT_PRIO_FACTOR=%f\n",DefaultPriorityFactor);
   dprintf(D_ACCOUNTANT,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
 				  AccountantLocalDomain.c_str());
-  dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%d\n",
+  dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%lld\n",
 		   MaxAcctLogSize );
 
   if (!db) {
@@ -1105,14 +1105,16 @@ void Accountant::UpdatePriorities()
   }
   double AgingFactor=::pow(0.5,double(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
-  db->SetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%lld\n",AgingFactor,(long long)TimePassed);
 
 	  // Each iteration of the loop should be atomic for consistency,
 	  // but instead of doing one transaction per iteration, wrap the
-	  // whole loop in one transaction for efficiency.
+	  // whole loop in one transaction for efficiency.  LastUpdateTime goes
+	  // in the same transaction, so that it is atomic with the aging it
+	  // describes, and so that it doesn't cost an fsync of its own.
   db->BeginTransaction();
+  db->SetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   db->ForEachInTable(AccountantTable::Customer, [&](const std::string& customerName, ClassAd* ad) -> bool {
 		UpdateOnePriority(T, TimePassed, AgingFactor, customerName, ad);
@@ -1140,7 +1142,7 @@ void Accountant::UpdatePriorities()
 		  if( statbuf.st_size * 2 > MaxAcctLogSize ) {
 			  MaxAcctLogSize = statbuf.st_size * 2;
 			  dprintf( D_ACCOUNTANT, "Database has grown, expanding "
-					   "MAX_ACCOUNTANT_DATABASE_SIZE to %d\n", 
+					   "MAX_ACCOUNTANT_DATABASE_SIZE to %lld\n", 
 					   MaxAcctLogSize );
 		  }
 	  }
@@ -1331,7 +1333,9 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
             return true;
         }
     );
-    db->CommitTransaction();
+    // These are recomputed from scratch every cycle, so like the other
+    // commits in this function, they don't need an fsync.
+    db->CommitNondurableTransaction();
 
   // Scan startd ads and add matches that are not registered
   for (ClassAd *ResourceAd: ResourceList) {

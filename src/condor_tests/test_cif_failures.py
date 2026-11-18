@@ -19,6 +19,18 @@ import shutil
 import htcondor2
 from htcondor2 import JobEventType
 
+def submit_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'tlmiller'
+    else:
+        return None
+
+def condor_user():
+    if os.name != 'nt' and os.geteuid() == 0:
+        return 'condor'
+    else:
+        return None
+
 @action
 def the_lock_dir(test_dir):
     return test_dir / "lock.d"
@@ -29,8 +41,8 @@ def the_condor(test_dir, the_lock_dir):
     local_dir = test_dir / "condor"
 
     with Condor(
-        submit_user='tlmiller',
-        condor_user='condor',
+        submit_user=submit_user(),
+        condor_user=condor_user(),
         local_dir=local_dir,
         config={
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",

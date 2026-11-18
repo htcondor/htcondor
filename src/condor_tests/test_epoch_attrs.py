@@ -4,6 +4,9 @@ from ornithology import *
 
 import classad2 as classad
 
+import time
+from pathlib import Path
+
 
 TEST_CASES = {
     "blank": { },
@@ -76,10 +79,12 @@ def the_completed_job(the_test_name, the_condor, path_to_sleep, test_dir):
             "output_destination": "null://input.txt",
             "My.TestAttr1": 10,
             "My.TestAttr2": False,
-            # So ProjectName/DAGManJobId/DAGNodeName are present to be copied into epoch records.
+            # So ProjectName/DAGManJobId/DAGNodeName/JobBatchId/JobBatchName are present to be copied into epoch records.
             "project_name": "TestProject",
             "My.DAGManJobId": 1,
             "My.DAGNodeName": '"TestNode"',
+            "batch_id": "12345",
+            "batch_name": "TestBatchName",
         },
         count=1,
     )
@@ -98,9 +103,10 @@ class EpochLogEntry:
 
     def __init__(self,
         TYPE, ClusterID, ProcID, RunInstanceID, Owner,
-        entry_text
+        entry_text, banner=None
     ):
         self.TYPE = TYPE
+        self.banner = banner
         self.ClusterID = ClusterID
         self.ProcID = ProcID
         self.RunInstanceID = RunInstanceID
@@ -138,7 +144,7 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
                 TYPE,
                 headerAd['ClusterID'], headerAd['ProcID'],
                 headerAd['RunInstanceID'], headerAd['Owner'],
-                buffer
+                buffer, headerAd
             )
             buffer = ''
 
@@ -146,7 +152,7 @@ EXPECTED_ALL_RECORDS = [ "RunInstanceID", "EpochAdType", "EpochWriteDate", "Owne
 EXPECTED_TRANSFER_RECORDS = [ "TransferClass", "RemoteHost" ]
 
 # Always copied into INPUT/OUTPUT/CHECKPOINT/COMMON records, regardless of *_JOB_ATTRS. Not SPAWN.
-ALWAYS_COPIED_RECORDS = [ "GlobalJobId", "User", "ProjectName" ]
+ALWAYS_COPIED_RECORDS = [ "GlobalJobId", "User", "ProjectName", "DAGManJobId", "JobBatchId", "JobBatchName" ]
 
 ALWAYS_KEYS = {
     "INPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + ALWAYS_COPIED_RECORDS + [ "InputPluginResultList", "InputPluginInvocations" ],
@@ -158,9 +164,9 @@ ALWAYS_KEYS = {
 
 # We could generate this by interrogating the param table.
 DEFAULT_KEYS = {
-    "INPUT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
-    "OUTPUT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
-    "CHECKPOINT": [ "NumShadowStarts", "DAGManJobId", "DAGNodeName" ],
+    "INPUT": [ "NumShadowStarts", "DAGNodeName" ],
+    "OUTPUT": [ "NumShadowStarts", "DAGNodeName" ],
+    "CHECKPOINT": [ "NumShadowStarts", "DAGNodeName" ],
     "SPAWN": [],
 }
 
@@ -169,6 +175,11 @@ class TestEpochAttrs:
     def test_epoch_log(self, the_completed_job, the_job_epoch_file, the_test_case):
         with open(the_job_epoch_file, 'r') as f:
             for entry in readNextEpochLogEntry(f):
+                # Every banner carries the job's DAG/batch info for condor_history quick scans
+                assert entry.banner.get("DAGManJobId") == 1
+                assert entry.banner.get("JobBatchId") == "12345"
+                assert entry.banner.get("JobBatchName") == "TestBatchName"
+
                 if entry.TYPE == "EPOCH" or entry.TYPE == "STARTER":
                     continue
 
@@ -185,3 +196,23 @@ class TestEpochAttrs:
                     expectedKeys.extend(typeInfo)
 
                 assert(sorted(entry.ad.keys()) == sorted(expectedKeys))
+
+    def test_history_banner(self, the_completed_job, the_condor):
+        """The schedd's history banner carries the same DAG/batch info as the epoch banners."""
+        p = the_condor.run_command(["condor_config_val", "HISTORY"])
+        history = Path(p.stdout.strip())
+        cluster = the_completed_job.clusterid
+        # The history record is written when the job leaves the queue, shortly after completion
+        banner = None
+        deadline = time.time() + 60
+        while banner is None and time.time() < deadline:
+            if history.exists():
+                for line in history.read_text().splitlines():
+                    if line.startswith("***") and f" ClusterId={cluster} " in line:
+                        banner = classad.parseOne(line[4:].replace(" ", "\n"))
+            if banner is None:
+                time.sleep(1)
+        assert banner is not None, f"No history banner for cluster {cluster} in {history}"
+        assert banner.get("DAGManJobId") == 1
+        assert banner.get("JobBatchId") == "12345"
+        assert banner.get("JobBatchName") == "TestBatchName"

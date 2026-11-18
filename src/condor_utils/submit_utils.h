@@ -23,6 +23,14 @@
 #include "condor_config.h" // for MACRO_SOURCE
 #include <dc_schedd.h> // for ShouldTransferFiles_t
 
+// comment/uncomment to enable/disable submit_utils stuff that
+// supports multiple queue statements in condor_q
+// (hopefully we wont need to enable this again!)
+//#define SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
+
+// comment/uncomment this line to enable/disable submit option
+// to pack multiple queue foreach items (tasks) into a job.
+#define SUPPORT_FOR_TASK_PACKING 1
 
 /*
 **	submit keywords that control submit behavior
@@ -121,24 +129,19 @@
 #define SUBMIT_KEY_ArcResources "arc_resources"
 #define SUBMIT_KEY_ArcDataStaging "arc_data_staging"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
+#define SUBMIT_KEY_BatchCpuCount "batch_cpu_count"
+#define SUBMIT_KEY_BatchCpusPerNode "batch_cpus_per_node"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
+#define SUBMIT_KEY_BatchNodeCount "batch_node_count"
 #define SUBMIT_KEY_BatchProject "batch_project"
 #define SUBMIT_KEY_BatchQueue "batch_queue"
 #define SUBMIT_KEY_BatchRuntime "batch_runtime"
+#define SUBMIT_KEY_BatchWholeNodes "batch_whole_nodes"
 #define SUBMIT_KEY_IriService "iri_service"
 #define SUBMIT_KEY_IriCredential "iri_credential"
 #define SUBMIT_KEY_IriDirectory "iri_directory"
 
-#define SUBMIT_KEY_FileRemaps "file_remaps"
-#define SUBMIT_KEY_BufferFiles "buffer_files"
-#define SUBMIT_KEY_BufferSize "buffer_size"
-#define SUBMIT_KEY_BufferBlockSize "buffer_block_size"
-
 #define SUBMIT_KEY_StackSize "stack_size"
-#define SUBMIT_KEY_FetchFiles "fetch_files"
-#define SUBMIT_KEY_CompressFiles "compress_files"
-#define SUBMIT_KEY_AppendFiles "append_files"
-#define SUBMIT_KEY_LocalFiles "local_files"
 
 #define SUBMIT_KEY_EncryptExecuteDir "encrypt_execute_directory"
 #define SUBMIT_KEY_StarterDebug "starter_debug"
@@ -172,8 +175,10 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
-#define SUBMIT_KEY_CommonInputFiles "transfer_common_input"
+#define SUBMIT_KEY_TransferCommonInputFiles "transfer_common_input"
+#define SUBMIT_KEY_CommonInputFiles "common_input_files"
 #define SUBMIT_KEY_ContainerIsCommon "container_is_common"
+#define SUBMIT_KEY_RequireCommonFiles "require_common_files"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -236,6 +241,9 @@
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
 #define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
+#define SUBMIT_KEY_MaxCondorVersion "max_condor_version"
+#define SUBMIT_KEY_MinCondorVersion "min_condor_version"
 
 //
 // Job Deferral Parameters
@@ -393,6 +401,9 @@
 #define SUBMIT_KEY_RmKillSig "remove_kill_sig"
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
+
+#define SUBMIT_KEY_AnnexName "annex_name"
+#define SUBMIT_KEY_RestrictToAnnex "restrict_to_annex"
 
 //Temporary function to get a mapfile object point to protected url map
 MapFile* getProtectedURLMap();
@@ -946,6 +957,7 @@ protected:
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
 	int ProcessJobsetAttributes();
+	int ProcessBatchAttributes(); // JobBatchName and JobBatchId must not contain newlines. call after SetForcedAttributes
 
 	// check if the job ad has  Cron attributes set, checked by SetRequirements
 	// return value is NULL if false,
@@ -994,7 +1006,6 @@ private:
 };
 
 //#ifdef SUPPORT_FOR_MULTIPLE_QUEUE_STATEMENTS
-//#ifdef SUPPORT_FOR_TASK_PACKING
 
 struct SubmitStepFromQArgs {
 
@@ -1128,7 +1139,7 @@ struct SubmitStepFromQArgs {
 		if (selected && ! m_fea.items.empty()) {
 			// convert item_index from [0...n] to [slice start... end]
 			// we are done iterating when translate returns false
-			if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+			if ( ! m_fea.slice.translate(item_index, static_cast<int>(m_fea.items.size()))) {
 				m_done = true;
 				return 0;
 			}

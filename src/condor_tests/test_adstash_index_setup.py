@@ -23,6 +23,7 @@ else:
 
 from adstash.index_setup import init_index
 from adstash.interfaces.json_file import JSONFileInterface
+from adstash.interfaces.ndjson_file import NDJSONFileInterface
 from adstash.mapping.functions import get_default_mappings, merge_properties, count_total_fields
 from adstash.mapping import job
 from adstash.settings import SearchEngineSettings, calculate_field_limit
@@ -63,6 +64,58 @@ class TestJSONFileMakeBulkBody:
         body = interface.make_bulk_body(sample_docs)
         parsed = json.loads(body)
         assert parsed[0]["metadata"] == {}
+
+
+class TestNDJSONFileMakeBulkBody:
+    """#1b. NDJSON file interface produces valid NDJSON output"""
+
+    @pytest.fixture
+    def interface(self):
+        return NDJSONFileInterface(json_dir=Path("."))
+
+    @pytest.fixture
+    def sample_docs(self):
+        return [
+            ("doc1", {"Owner": "testuser", "ClusterId": 1}),
+            ("doc2", {"Owner": "testuser", "ClusterId": 2}),
+        ]
+
+    def test_output_is_valid_ndjson(self, interface, sample_docs):
+        body = interface.make_bulk_body(sample_docs)
+        lines = body.strip().split("\n")
+        assert len(lines) == 2
+        for line in lines:
+            parsed = json.loads(line)
+            assert isinstance(parsed, dict)
+
+    def test_no_indentation(self, interface, sample_docs):
+        body = interface.make_bulk_body(sample_docs)
+        for line in body.strip().split("\n"):
+            assert "\n" not in line.strip()
+            assert line == line.strip()
+
+    def test_doc_ids_included(self, interface, sample_docs):
+        body = interface.make_bulk_body(sample_docs)
+        lines = body.strip().split("\n")
+        assert json.loads(lines[0])["_id"] == "doc1"
+        assert json.loads(lines[1])["_id"] == "doc2"
+
+    def test_metadata_attached(self, interface, sample_docs):
+        body = interface.make_bulk_body(sample_docs, metadata={"source": "test"})
+        lines = body.strip().split("\n")
+        assert json.loads(lines[0])["metadata"]["source"] == "test"
+
+    def test_empty_metadata_when_none(self, interface, sample_docs):
+        body = interface.make_bulk_body(sample_docs)
+        lines = body.strip().split("\n")
+        assert json.loads(lines[0])["metadata"] == {}
+
+    def test_single_doc(self, interface):
+        docs = [("doc1", {"Owner": "testuser"})]
+        body = interface.make_bulk_body(docs)
+        lines = body.strip().split("\n")
+        assert len(lines) == 1
+        assert json.loads(lines[0])["_id"] == "doc1"
 
 
 class TestMergeProperties:

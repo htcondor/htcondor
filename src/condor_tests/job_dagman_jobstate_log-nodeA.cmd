@@ -1,5 +1,5 @@
 executable   = job_dagman_jobstate_log-nodeA.pl
-arguments    = $(ProcId)
+arguments    = $(ProcId) $(ClusterId)
 universe     = local
 output       = $(nodename).out
 error        = $(nodename).err

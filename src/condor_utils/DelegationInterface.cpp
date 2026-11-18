@@ -820,11 +820,23 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   };
   validity_start -= validity_start_adjustment;
   //Set "notBefore"
-  if( X509_cmp_time(X509_getm_notBefore((X509*)cert_), &validity_start) < 0) {
+  { // scoped so the gotos to err below don't cross these initializations
+#if defined(LIBRESSL_VERSION_NUMBER)
+  // LibreSSL (e.g. macOS) lacks ASN1_TIME_cmp_time_t; X509_cmp_time is
+  // not deprecated there.  Returns -1 for before-or-equal, 1 after, 0 error.
+  bool nb_not_after_start = X509_cmp_time(X509_getm_notBefore((X509*)cert_), &validity_start) < 0;
+#else
+  // X509_cmp_time is deprecated in OpenSSL 4.0.
+  // ASN1_TIME_cmp_time_t returns -1/0/1 for before/equal/after, -2 on error
+  int nb_cmp = ASN1_TIME_cmp_time_t(X509_getm_notBefore((X509*)cert_), validity_start);
+  bool nb_not_after_start = (nb_cmp == -1 || nb_cmp == 0);
+#endif
+  if (nb_not_after_start) {
     X509_time_adj(X509_getm_notBefore(cert), 0L, &validity_start);
   }
   else {
     X509_set1_notBefore(cert, X509_getm_notBefore((X509*)cert_));
+  }
   }
   //Set "not After"
   if(validity_end == (time_t)(-1)) {

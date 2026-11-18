@@ -19,6 +19,14 @@ HPC Annex Configuration Options
         tricky, and we recommend that you add :macro:`use feature:HPC_ANNEX`
         instead, which sets this macro.
 
+:macro-def:`ANNEX_RESTRICT_JOB_DEFAULT`
+    When ``True``, annex jobs will only run on EPs that are part of their
+    named annex.
+    When ``False``, annex jobs can also run on non-annex EPs.
+    The user can override this setting with the submit command
+    :subcom:`restrict_to_annex`.
+    Defaults to ``True``.
+
 :index:`Cloud Annex Options<single: Configuration; Cloud Annex Options>`
 
 .. _cloud_annex_config_options:

@@ -16,6 +16,7 @@ namespace LibrarianConfigOptions {
 		StatusRetentionSeconds,                       // How long (seconds) to retain Status rows in the DB
 		GCBackoffSeconds,                             // How long to wait before retrying GC after a pass that didn't shrink the DB
 		DBBusyTimeoutMs,                              // sqlite3_busy_timeout value (ms) for the librarian's DB connection
+		UserRetentionDays,                            // Days to keep a user with no indexed jobs (0 = remove immediately, < 0 = never)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -49,6 +50,7 @@ public:
 		intOpts[static_cast<size_t>(i::StatusRetentionSeconds)] = 300;
 		intOpts[static_cast<size_t>(i::GCBackoffSeconds)] = 1800;
 		intOpts[static_cast<size_t>(i::DBBusyTimeoutMs)] = 30'000;
+		intOpts[static_cast<size_t>(i::UserRetentionDays)] = 365;
 		int64Opts[static_cast<size_t>(ll::DBMaxSizeBytes)] = 2LL * 1024 * 1024 * 1024;
 		doubleOpts[static_cast<size_t>(dbl::DBHighWaterMark)] = 0.97;
 		doubleOpts[static_cast<size_t>(dbl::DBLowWaterMark)] = 0.80;

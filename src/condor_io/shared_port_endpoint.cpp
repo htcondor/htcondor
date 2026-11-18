@@ -49,6 +49,7 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 
 bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
+std::string SharedPortEndpoint::m_daemon_socket_dir;
 
 std::string
 SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
@@ -1532,7 +1533,7 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
 		// shared port "directory" in the abstract Unix namespace.
-	char *keybuf = Condor_Crypt_Base::randomHexKey(32);
+	char *keybuf = Condor_Crypt_Base::randomHexKey(8);
 	if (keybuf == NULL) {
 		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.");
 	}
@@ -1540,7 +1541,8 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 	free(keybuf);
 	keybuf = NULL;
 #elif defined(WIN32)
-	return;
+	unsigned short rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
+	formatstr(result, "%s_%lu_%04hx", WINDOWS_DAEMON_SOCKET_DIR, (unsigned long)getpid(), rand_tag);
 #else
 	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
@@ -1569,17 +1571,35 @@ SharedPortEndpoint::InitializeDaemonSocketDir()
 		}
 		free( default_name );
 	}
+	// A path containing a space is not suitable for passing to a child via
+	// the DaemonCore inherit environment variable. The value will still be
+	// accessible via the Alt call.
+	if (strchr(result.c_str(), ' ')) {
+		result.clear();
+	}
 #endif
-#ifndef WIN32
-	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.c_str(), 1);
-#endif
+	m_daemon_socket_dir = result;
 }
 
+
+void
+SharedPortEndpoint::SetDaemonSocketDir(const char* val)
+{
+	// When dir value is inherited from a parent, just set it.
+	if (val == nullptr) {
+		m_daemon_socket_dir.clear();
+	} else {
+		m_daemon_socket_dir = val;
+	}
+}
 
 bool
 SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 {
-#ifndef WIN32
+#ifdef WIN32
+	result = WINDOWS_DAEMON_SOCKET_DIR;
+	return true;
+#else
 	if (!param(result, "DAEMON_SOCKET_DIR") )
 	{
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
@@ -1602,23 +1622,17 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 	result = default_name;
 	return true;
 #endif
-	return false;
 }
 
 
 bool
 SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 {
-#ifdef WIN32
-	result = WINDOWS_DAEMON_SOCKET_DIR;
-#else
-	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-	if (known_dir == NULL) {
+	if (m_daemon_socket_dir.empty()) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");
 		return false;
 	}
-	result = known_dir;
-#endif
+	result = m_daemon_socket_dir;
 	return true;
 }
 

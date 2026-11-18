@@ -481,6 +481,7 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	// ATTR_DAEMON_START_TIME is injected by the dc_collector object, for a direct query we ask daemonCore
 	if (last_heard_from) {
 		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		// TODO: remove this, should no longer be necessary
 		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
 	}
 

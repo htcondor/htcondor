@@ -191,6 +191,7 @@ auto sz = std::filesystem::file_size(path, ec);  // never throws
 if (ec) { /* handle: safe default or return error */ }
 ```
 **Value semantics**: Prefer value semantics over raw pointers for ownership and lifetime management.
+**References for non-null parameters**: When a function parameter can never legitimately be `nullptr`, take it by reference (`Foo &foo`, or `const Foo &foo`) rather than by pointer. Reserve pointer parameters for arguments where `nullptr` is a meaningful, handled value.
 
 ### Safe File I/O (SECURITY-CRITICAL)
 

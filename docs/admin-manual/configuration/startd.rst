@@ -796,7 +796,7 @@ prevent the job from using more scratch space than provisioned.
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/ep-policy-configuration:configuring
-htcondor for running backfill jobs` for details.
+htcondor for backfill` for details.
 
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
@@ -993,7 +993,7 @@ needs.
 
     Backfill slots will have the attribute :ad-attr:`ResourceConflict` set to a list
     of resource names whenever the current slot conflicts with another slot.
-    This attribute can be used by the :macro-def:`PREEMPT`
+    This attribute can be used by the :macro:`PREEMPT`
     policy expression to evict jobs from the backfill slot when a non-backfill slot begins
     to use the same resources.
 
@@ -1618,7 +1618,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
 
 These macros allow a *condor_startd* to directly connect to a *condor_schedd*,
 so that it can run jobs on this startd without sharing it with other
-schedds.
+schedds.  See :ref:`direct-attach` for a description of how direct attach
+works and why an administrator might want to use it.
 
 :macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_NAME`
     The name of the *condor_schedd* to which this *condor_startd* should
@@ -1632,7 +1633,7 @@ schedds.
     collector the *condor_schedd* reports to.  If empty, assume that the *condor_schedd*
     reports to the same collector as this *condor_startd*.
 
-:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_SUBMITTER`
+:macro-def:`STARTD_DIRECT_ATTACH_SUBMITTER_NAME`
     If the *condor_schedd* to which this *condor_startd* should directly connect
     should only run jobs from one submitter, this parameter names that submitter.
     If empty, the *condor_startd* will run jobs from any submitter.

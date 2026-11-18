@@ -37,10 +37,8 @@ public:
 private:
     StatusData statusData_{};
     double EstimatedBytesPerJobInArchive_{0.0};
-    int    EstimatedJobsPerFileInArchive_{0};
-    double EstimatedBytesPerJobInDatabase_{1024};
 
-    // Set whenever a GC pass fails to shrink the database file (e.g. auto_vacuum
+    // Set whenever a GC pass fails to shrink the database (e.g. auto_vacuum
     // couldn't be enabled, or nothing was eligible for deletion); suppresses further
     // GC attempts until this time so we don't retry every single cycle for nothing.
     std::chrono::steady_clock::time_point nextGCAttempt_{};
@@ -48,7 +46,6 @@ private:
     // update() helpers
     bool readJobRecords(std::vector<ArchiveRecord>& records, const std::string& path, ArchiveFile& info, int64_t limit = -1);
     void reconcileArchiveFiles(const std::vector<std::string>& archive_files);
-    bool calculateEstimatedBytesPerJob();
     void updateBytesPerJobEstimate();
     int  calculateBacklogFromBytes(const Status& status);
     bool updateStatusData(Status status);

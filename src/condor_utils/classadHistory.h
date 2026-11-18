@@ -38,6 +38,7 @@ struct HistoryFileRotationInfo {
 void WritePerJobHistoryFile(ClassAd*, bool);
 void AppendHistory(ClassAd*);
 void InitJobHistoryFile(const char *, const char *);
-void MaybeRotateHistory(const HistoryFileRotationInfo&, int, const char*, const char* new_filepath = NULL);
+void MaybeRotateHistory(const HistoryFileRotationInfo&, const size_t, const char*, const char* new_filepath = nullptr);
+bool CheckHistoryRotationNeeded(const HistoryFileRotationInfo& fri, const size_t size_to_append, const char* filename);
 
 #endif

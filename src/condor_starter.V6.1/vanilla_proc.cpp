@@ -436,6 +436,12 @@ const char * Starter::ChooseCGroup(FamilyInfo & fi, int job_universe, const std:
 		replace_str(cgroup_uniq, dir_delim, "_");
 		formatstr(cgroup_str, "%s%c%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.c_str());
+		if (hasCgroupV2() && !suffix.empty()) {
+			// The v2 tracker appends ".slice" to the job's cgroup name.
+			// Nest sidecars (e.g. sshd) inside that, so they share the
+			// job's limits, rather than in a sibling directory.
+			cgroup_str += ".slice";
+		}
 		cgroup_str += suffix;
 		
 		cgroup_cstr.reset(strdup(cgroup_str.c_str()));
@@ -457,12 +463,26 @@ const char * Starter::ChooseCGroup(FamilyInfo & fi, int job_universe, const std:
 		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
 			// Potentially disable GPU devices from job
 			std::string available_gpus;
-			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+
+			// AvailableGpus is a list of attribute names all the gpus provisioned 
+			// to this slot.  Each attribute itself has a classad with various attributes
+			// about that gpu.  For MIG devices, one of the attributes is ParentUuid, 
+			// which is the GPU device.  We can't hide the MIG device directly, so
+			// if there is a ParentUuid defined in the nested classad, use that instead.
+
+			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",(ParentUuid ?: DeviceUuid)),AvailableGPUs))";
 			classad::Value v;
+
 			// if the expression does not evaluate to a string, available_gpus
 			// remains empty, which means hide all (see below)
 			std::ignore = mad->EvaluateExpr(gpu_expr, v);
 			std::ignore = v.IsStringValue(available_gpus);
+
+			// Hack.  Work around the fact that a mig device has a reference to the
+			// parent device in the ParentUuid entry, but that already has the
+			// GPU- prefix, unlike the DeviceUuid entry.  Thus the strcat above
+			// gives us a double "GPU-GPU-" prefix for mig devices.
+			replace_str(available_gpus, "GPU-GPU-", "GPU-");
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
@@ -778,6 +798,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
 	reported_usage += m_current_usage;
+	reported_usage.percent_cpu = m_current_usage.percent_cpu; // fix percent_cpu, which is damaged by +=
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
@@ -786,6 +807,18 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Publish the info we care about into the ad.
 	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
+	if (m_proc_exited) {
+		double job_duration = timersub_double( job_exit_time, job_start_time );
+		if (job_duration > 0) {
+			// job_start_time is reset on each self-checkpoint restart, so
+			// divide only this run's cpu, not that of all runs, by it
+			ad->Assign(ATTR_CPUS_USAGE, ((double)m_current_usage.sys_cpu_time + (double)m_current_usage.user_cpu_time) / job_duration);
+		} else {
+			ad->AssignExpr(ATTR_CPUS_USAGE, "undefined");
+		}
+	} else {
+		ad->Assign(ATTR_CPUS_USAGE, usage->percent_cpu / 100.0);
+	}
 
 	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
 
@@ -945,12 +978,10 @@ void VanillaProc::killFamilyIfWarranted() {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
 		daemonCore->Kill_Family(JobPid);
 	} else {
+		// With cgroup v2, unregistering the family will still kill the
+		// job's own processes, leaving the nested sshd cgroup alone.
 		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
 			"(perhaps due to ssh_to_job)\n" );
-		// Tell DC not to kill this process tree on exit, As
-		// it might kill child cgroups
-		// This is a hack until we have proper nested cgroup v2s
-		daemonCore->Extend_Family_Lifetime(JobPid);
 	}
 }
 
@@ -961,12 +992,10 @@ bool VanillaProc::restartCheckpointedJob() {
 	// on cgroup systems, this kills everything in the cgroup.
 	//
 	// We call restartCheckpointedJob from the reaper, so the
-	// unregistration hasn't happened yet. We start a new job here In
-	// the reaper, but when we return, daemon core will unregister
-	// and kill all the processes in this cgroup, including the ones 
-	// we just starts.  Extend_Family_Lifetime turns off the unregistration
-
-	daemonCore->Extend_Family_Lifetime(JobPid);
+	// unregistration hasn't happened yet. We start a new job here in
+	// the reaper, in the same cgroup.  When we return, daemon core will
+	// unregister the old family, but the cgroup tracker sees that the
+	// new job now owns that cgroup and leaves it alone.
 
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
@@ -997,7 +1026,7 @@ bool VanillaProc::restartCheckpointedJob() {
 	// equivalent to reactivating a claim, so ask the startd if a claim
 	// reactivation would succeed.
 	//
-	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", true ) )
+	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", false ) )
 	{
 		DCStartd startd((const char *)nullptr);
 		if(! startd.locate()) {
@@ -1170,6 +1199,13 @@ VanillaProc::JobReaper(int pid, int status)
 	}
 	ReapResult result = OsProc::JobReaper( pid, status );
 	if( pid != JobPid ) { return result; }
+
+	// Check to see if the Job classad indicates a task sequence.
+	if (result == ReapResult::JobNext) {
+		if ( ! starter->PrepareNextTask(pid, status, shouldSkipFutureTasks())) {
+			result = ReapResult::JobDone;
+		}
+	}
 
 	//
 	// We have three cases to consider:
@@ -1481,7 +1517,10 @@ int VanillaProc::outputOpenFlags() {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
-		return this->OsProc::outputOpenFlags();
+		int flags = this->OsProc::outputOpenFlags();
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "outputOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }
 
@@ -1495,6 +1534,9 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
-		return this->OsProc::streamingOpenFlags( isOutput );
+		int flags = this->OsProc::streamingOpenFlags( isOutput );
+		if (taskid > 0) { flags &= ~O_TRUNC; } // only the first task should truncate
+		dprintf(D_ZKM, "streamingOpenFlags() 0x%x for taskid=%d\n", flags, taskid);
+		return flags;
 	}
 }

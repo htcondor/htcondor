@@ -263,7 +263,26 @@ class TestJobEventLog:
 
 		assert(e["ExecuteHost"] == "<128.105.165.12:32779>")
 
+
 	def test_non_job_event_handling(self, negative_cluster_log):
 		with htcondor.JobEventLog(negative_cluster_log) as jel:
 			for event in jel.events(stop_after=0):
 				assert event.cluster == -1
+
+
+	def test_exception_in_classad_construction_propagates(self, logfile, monkeypatch):
+		class Interrupted(BaseException):
+			pass
+
+		def raising_init(self, *args, **kwargs):
+			raise Interrupted()
+
+		with htcondor.JobEventLog(logfile) as jel:
+			events = jel.events(stop_after=0)
+			monkeypatch.setattr(htcondor.classad.ClassAd, "__init__", raising_init)
+			with pytest.raises(Interrupted):
+				next(events)
+			monkeypatch.undo()
+
+			# The log should still be usable afterwards.
+			assert next(events) is not None

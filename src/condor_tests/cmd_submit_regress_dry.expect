@@ -19,13 +19,8 @@ ProcId=2
 Args="30s"
 
 ==allprune.sub
-AppendFiles="cluster.log"
 Arguments=""
-BufferBlockSize=200
-BufferFiles=false
-BufferSize=100000
 ClusterId=3
-CompressFiles="c.dat"
 #CoreSize=34 * 1024
 CronDayOfMonth="2"
 CronDayOfWeek="1"
@@ -43,7 +38,6 @@ EmailAttributes="not,spam"
 EncryptExecuteDirectory=true
 EncryptInputFiles="a.dat, b.dat"
 EncryptOutputFiles="a.out"
-FetchFiles="d.dat"
 IsNoopJob=false
 JarFiles="basic.jar, stuff.jar"
 JobAdInformationAttrs="MemoryUsage, DiskUsage"
@@ -58,7 +52,6 @@ JobPrio=3
 KeepClaimIdle=3 * 60
 LastMatchListLength=4
 LoadProfile=true
-LocalFiles="local.file"
 MaxJobRetirementTime=6 * 60
 NextJobStartDelay=2 * 60
 NoopJobExitCode=5
@@ -304,6 +297,24 @@ Out=/".+\d+xfer8.sub.\d+_0.out"/
 StreamErr=false
 StreamOut=true
 
+==common1.sub
+CommonInputFiles="simple.in"
+Requirements=/TARGET\.HasCommonFilesTransfer >= 2/
+
+==common2.sub
+CommonInputFiles="simple.in"
+Requirements=!/TARGET\.HasCommonFilesTransfer >= 2/
+
+==commonsif.sub
+ContainerImage="image.sif"
+ContainerImageSource="https"
+ContainerImageFullPath="https://example.com/image.sif"
+CommonInputCatalogs=/"container_.*"/
+Requirements=/TARGET\.HasContainer/
+Requirements=/TARGET\.HasSIF/
+Requirements=/TARGET\.HasCommonFilesTransfer >= 2/
+Requirements=/stringListIMember\("https",TARGET\.HasFileTransferPluginMethods\)/
+
 ==periodic.sub
 OnExitHold=ExitCode > 42
 OnExitHoldReason="job fooled by succeeding to well"
@@ -413,7 +424,7 @@ WantParallelScheduling=true
 RequestCpus=max({ TARGET.TotalCpus - 1,3 })
 RequestDisk=3145728
 RequestMemory=2253
-Requirements=/TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET\.Cpus >= RequestCpus/
+Requirements=/TARGET\.Memory >= RequestMemory.+TARGET\.Cpus >= RequestCpus/
 
 ==customattr.sub
 CustomExpr=99 / Bottles || Beer
@@ -451,7 +462,7 @@ Out="prediction_script_data_70.out"
 PeriodicHold=(NumJobCompletions > 10)
 RequestDisk=716800
 RequestMemory=1741
-Requirements=/OpSysMajorVer == 7.+TARGET\.Disk >= RequestDisk.+TARGET\.Memory >= RequestMemory.+TARGET.HasFileTransfer/
+Requirements=/OpSysMajorVer == 7.+TARGET\.Memory >= RequestMemory.+TARGET.HasFileTransfer/
 ShouldTransferFiles="YES"
 TransferInput="110.txt,grid_i.txt,my_env.RData,../../R_v2.tar.gz,../prediction_script_data.R,../../SLIBS.tar.gz"
 UserLog=/".+Multilevel_Thesis_WheatData/70.prediction_script_data_70.log"/

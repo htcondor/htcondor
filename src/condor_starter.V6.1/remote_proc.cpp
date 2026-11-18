@@ -88,7 +88,6 @@ int RemoteProc::StartJob()
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	int pid = daemonCore->CreateProcessNew( args.GetArg(0), args,
 		 cpArgs.priv(PRIV_USER_FINAL)
-		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&env).cwd(scratch_dir.c_str()).familyInfo(&fi)
 		.std(childFDs)
 	);
