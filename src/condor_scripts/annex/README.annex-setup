@@ -31,7 +31,7 @@ You can create the following files to customize how the Annex operates:
   The contents of this file are placed near the top of the hpc.slurm
   Slurm job script created by annex-setup.sh. You can use it to set
   #SBATCH options and supply commands that need to be run before
-  your application job. This can reduce the amount of manually editing
+  your application job. This can reduce the amount of manual editing
   you need to do to the hpc.slurm script for each new annex request.
 
 * ~/.condor/annex_pilot_config
