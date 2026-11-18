@@ -61,6 +61,7 @@ public:
 	bool m_streamresults{false};
 	bool m_searchdir{false};
 	bool m_searchForwards{false};
+	bool m_noLibrarian{false};
 
 private:
 	Stream *m_stream_ptr;

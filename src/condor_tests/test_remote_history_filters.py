@@ -266,6 +266,7 @@ def raw_query(addr, filters):
     return _history_query(
         addr, "", ",".join(PROJECTION), -1, "", "",
         HistorySrc.ScheddJob, CMD_SCHEDD_HISTORY, *lists,
+        True, # use_librarian
     )
 
 #===============================================================================================
@@ -476,6 +477,13 @@ class TestPythonJobSpecFilters:
         with condor.use_config():
             schedd.history(projection=PROJECTION, users="alice", jobs="12.1")
         assert has_helper_args(schedd_log.new_text(), ["alice", "12.1"])
+        assert not has_helper_args(schedd_log.new_text(), ["-no-librarian"])
+
+    def test_no_librarian_passed_to_helper(self, condor, schedd, schedd_log):
+        schedd_log.mark()
+        with condor.use_config():
+            schedd.history(projection=PROJECTION, users="alice", use_librarian=False)
+        assert has_helper_args(schedd_log.new_text(), ["alice", "-no-librarian"])
 
 
 class TestPythonWorkflowFilters:
@@ -522,6 +530,13 @@ class TestCondorHistoryRemoteFilters:
         found = {".".join(line.split()) for line in p.stdout.splitlines() if line.strip()}
         assert found == expected
         assert has_helper_args(schedd_log.new_text(), helper_args)
+
+    def test_condor_history_remote_no_librarian(self, condor, history_file, schedd_log):
+        schedd_log.mark()
+        p = condor.run_command(["condor_history", "-name", SCHEDD_NAME, "-no-librarian", "alice",
+                                "-af", "ClusterId", "ProcId"])
+        assert p.returncode == 0
+        assert has_helper_args(schedd_log.new_text(), ["alice", "-no-librarian"])
 
     def test_condor_history_remote_rejects_option_like_value(self, condor, history_file, schedd_log):
         # A -batchid value that looks like an option is rejected by the schedd

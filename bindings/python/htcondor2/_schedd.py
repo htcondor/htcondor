@@ -627,6 +627,7 @@ class Schedd():
         batchnames : Optional[Union[str, List[str]]] = None,
         batchids : Optional[Union[str, int, List[Union[str, int]]]] = None,
         dagids : Optional[Union[int, str, List[Union[int, str]]]] = None,
+        use_librarian : bool = True,
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's job history.
@@ -668,6 +669,11 @@ class Schedd():
             Return jobs whose :ad-attr:`DAGManJobId` matches one of the given
             IDs, i.e. the node jobs submitted directly by that DAGMan job
             (not the jobs of its nested sub-DAGs).
+        :param use_librarian:  If :py:obj:`False`, do not use the librarian
+            index (:macro:`USING_LIBRARIAN`) to answer this query; read the
+            history file(s) instead.  This always finds jobs that completed
+            since the librarian's last update, but may be much slower.
+
         :return: List of ClassAds.
         :raises HTCondorException:  If a problem occurs querying the
             *condor_schedd*'s history.
@@ -697,6 +703,7 @@ class Schedd():
             batchnames=batchnames,
             batchids=batchids,
             dagids=dagids,
+            use_librarian=use_librarian,
         )
 
 

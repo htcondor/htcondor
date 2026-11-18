@@ -180,6 +180,9 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 	bool searchForwards;
 	if ( ! queryAd.EvaluateAttrBool("HistoryReadForwards", searchForwards)) { searchForwards = false; }
 
+	bool noLibrarian = false;
+	if ( ! queryAd.EvaluateAttrBool(ATTR_HISTORY_NO_LIBRARIAN, noLibrarian)) { noLibrarian = false; }
+
 	std::string scanLimit;
 	if (queryAd.EvaluateAttr("ScanLimit", value) && value.IsIntegerValue()) {
 		unparser.Unparse(scanLimit, value);
@@ -237,6 +240,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_streamresults = streamresults;
 		state.m_searchdir = searchDir;
 		state.m_searchForwards = searchForwards;
+		state.m_noLibrarian = noLibrarian;
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
 		state.m_daemonSubsys = daemon_subsys;
@@ -249,6 +253,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_streamresults = streamresults;
 		state.m_searchdir = searchDir;
 		state.m_searchForwards = searchForwards;
+		state.m_noLibrarian = noLibrarian;
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
 		state.m_daemonSubsys = daemon_subsys;
@@ -322,6 +327,9 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		}
 		if (state.m_searchForwards) {
 			args.AppendArg("-forwards");
+		}
+		if (state.m_noLibrarian) {
+			args.AppendArg("-no-librarian");
 		}
 		args.AppendArg("-scanlimit");
 		if (state.m_scanLimit.empty()) {

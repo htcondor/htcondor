@@ -222,6 +222,12 @@ class TestRemoteCondorHistoryLibrarian:
         assert len(found) == NUM_JOBS
         assert REMOTE_SCAN_MSG in debug
 
+    def test_remote_no_librarian_scans_files(self, condor, query_case):
+        args, _, expected = query_case
+        found, debug = run_remote_history(condor, ["-no-librarian", *args])
+        assert found == expected
+        assert REMOTE_SCAN_MSG in debug
+
 
 class TestPythonHistoryLibrarian:
 
@@ -235,6 +241,12 @@ class TestPythonHistoryLibrarian:
         # Without filters there is nothing to look up in the librarian index
         found, used_librarian = python_history(condor, tool_log)
         assert len(found) == NUM_JOBS
+        assert not used_librarian
+
+    def test_python_no_librarian_scans_files(self, condor, tool_log, query_case):
+        _, kwargs, expected = query_case
+        found, used_librarian = python_history(condor, tool_log, use_librarian=False, **kwargs)
+        assert found == expected
         assert not used_librarian
 
 

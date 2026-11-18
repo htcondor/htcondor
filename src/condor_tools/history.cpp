@@ -124,7 +124,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, bool no_librarian, Daemon& daemon);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -994,7 +994,7 @@ main(int argc, const char* argv[])
     }
   }
   else {
-      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, history_daemon);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir, noLibrarian, history_daemon);
   }
   delete constraintExpr;
 
@@ -1166,7 +1166,7 @@ addRemoteJobFilters(ClassAd &ad)
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, Daemon& daemon)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir, bool no_librarian, Daemon& daemon)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1182,6 +1182,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
 	if ( ! backwards) { ad.InsertAttr("HistoryReadForwards", true); }
+	// Older versions ignore this, but their history helper never uses the librarian
+	if (no_librarian) { ad.InsertAttr(ATTR_HISTORY_NO_LIBRARIAN, true); }
 	if (maxAds >= 0) { ad.InsertAttr("ScanLimit", maxAds); }
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);

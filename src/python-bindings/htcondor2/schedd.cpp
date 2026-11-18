@@ -1282,7 +1282,8 @@ static PyObject *
 _history_query(PyObject *, PyObject * args) {
     // _history_query( addr, constraint, projection, match, since, ad_filter,
     //                 history_record_source, command,
-    //                 jobspec_filter, dagid_filter, batchid_filter, batchname_filter )
+    //                 jobspec_filter, dagid_filter, batchid_filter, batchname_filter,
+    //                 use_librarian )
     // The four trailing filters are each the string form of a ClassAd list
     // of strings (i.e. {"a", "b"}) or the empty string for no filter.
 
@@ -1298,8 +1299,9 @@ _history_query(PyObject *, PyObject * args) {
     const char * dagIdFilter = NULL;
     const char * batchIdFilter = NULL;
     const char * batchNameFilter = NULL;
-    if(! PyArg_ParseTuple( args, "zzzlzzllzzzz", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command,
-                           & jobspecFilter, & dagIdFilter, & batchIdFilter, & batchNameFilter )) {
+    int useLibrarian = 1;
+    if(! PyArg_ParseTuple( args, "zzzlzzllzzzzp", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command,
+                           & jobspecFilter, & dagIdFilter, & batchIdFilter, & batchNameFilter, & useLibrarian )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -1316,6 +1318,10 @@ _history_query(PyObject *, PyObject * args) {
     }
 
     commandAd.Assign(ATTR_NUM_MATCHES, match);
+
+    if (! useLibrarian) {
+        commandAd.InsertAttr(ATTR_HISTORY_NO_LIBRARIAN, true);
+    }
 
     std::string prefix = "";
     std::string projectionList = "{";

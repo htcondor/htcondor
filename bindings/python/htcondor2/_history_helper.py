@@ -238,6 +238,7 @@ def _history_internal(
     batchnames : Optional[Union[str, List[str]]] = None,
     batchids : Optional[Union[str, int, List[Union[str, int]]]] = None,
     dagids : Optional[Union[int, str, List[Union[int, str]]]] = None,
+    use_librarian : bool = True,
 ) -> List[classad.ClassAd]:
     """
     Internal handler for all history queries to Schedd/Startd.
@@ -266,6 +267,9 @@ def _history_internal(
     :param batchnames: A batch name or list of batch names to filter on.
     :param batchids: A batch id or list of batch ids to filter on.
     :param dagids: A DAGMan job id or list of DAGMan job ids to filter on.
+    :param use_librarian: If :py:obj:`False`, the remote history helper does
+        not use the librarian index. Older daemons ignore this, but their
+        history helper never uses the librarian.
     :return: List of ClassAds.
 
     :meta private:
@@ -341,4 +345,6 @@ def _history_internal(
         _to_classad_list(dagid_filter),
         _to_classad_list(batchid_filter),
         _to_classad_list(batchname_filter),
+        # Allow the remote history helper to use the librarian index
+        bool(use_librarian),
     )
