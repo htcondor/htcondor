@@ -70,6 +70,7 @@ with _add_dll_dir():
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config_usermaps as reload_config_usermaps
     from .htcondor2_impl import _load_a_config_usermap_file as load_a_config_usermap_file
+    from .htcondor2_impl import _initialize_module_refcounts as _initialize_module_refcounts
 
     from ._security_context import SecurityContext
 

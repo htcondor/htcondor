@@ -2,37 +2,14 @@
 
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
-    auto * results = static_cast<std::vector<ClassAd *> *>(r);
-    results->push_back( ad );
+    auto * results = static_cast<std::vector<std::unique_ptr<ClassAd>> *>(r);
+    results->push_back(std::unique_ptr<ClassAd>(ad));
 
     // Don't delete the pointers.  The `results` local below
     // will do that when it goes out of scope, after we've
     // copied everything into Python.
     return false;
 }
-
-static int
-_schedd_userrec_query_callback( void * r, ClassAd * ad ) {
-    auto * results = static_cast<PyObject*>(r);
-
-    PyObject * pyClassAd = py_new_classad2_classad(ad);
-    if( pyClassAd == NULL ) {
-        // py_new_classad2_classad() has already set an exception for us.
-        return -1;
-    }
-    auto rv = PyList_Append(results, pyClassAd);
-    Py_DecRef(pyClassAd);
-
-    if (rv != 0) {
-        // pthon set an error, we need to break out of the query
-        // and return a negative code so that the caller knows.
-        return -1;
-    }
-
-    // return 0 to indicate that the results list took ownership of the ad
-    return 0;
-}
-
 
 static PyObject *
 _schedd_query(PyObject *, PyObject * args) {
@@ -72,7 +49,11 @@ _schedd_query(PyObject *, PyObject * args) {
 
     CondorError errStack;
     ClassAd * summaryAd = NULL;
-    std::vector<ClassAd *> results;
+    // The argument, here and in _schedd_userrec_query(), is that as a local,
+    // this vector will be cleaned up no matter how we exit this function,
+    // and that since py_list_from_vector() calls release() and not get(),
+    // this vector will be the only one to delete those pointers.
+    std::vector<std::unique_ptr<ClassAd>> results;
     rv = q.fetchQueueFromHostAndProcess(
         addr, attributes, opts, limit,
         _schedd_query_callback, & results,
@@ -103,46 +84,14 @@ _schedd_query(PyObject *, PyObject * args) {
             return NULL;
     }
 
-
-    PyObject * list = PyList_New(0);
-    if( list == NULL ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_query" );
-        return NULL;
-    }
-
     if( opts == QueryFetchOpts::fetch_SummaryOnly ) {
         ASSERT(summaryAd != NULL);
         ASSERT(results.size() == 0);
-        results.push_back(summaryAd);
+        results.push_back(std::unique_ptr<ClassAd>(summaryAd));
     }
 
-    for( auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(classAd);
-        if( pyClassAd == NULL ) {
-            // At this point, every ClassAd originally in `results`:
-            //    (a) is owned by `list`; or
-            //    (b) has just been deleted by py_new_classad2_classad(); or
-            //    (c) is owned by `results`.
-            //
-            // FIXME: follow the model in _collector_query so that iterating
-            // through the list unowns the pointers; otherwise the above
-            // analysis and this whole loop appear to be nonsense.
-            //
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
 
-            // py_new_classad2_classad() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return NULL;
-        }
-    }
-
-    return list;
+    return py_list_from_vector( results, "_schedd_query" );
 }
 
 static PyObject *
@@ -176,8 +125,7 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
     ClassAd queryAd;
     CondorError errStack;
     ClassAd *summaryAd = nullptr;
-
-    PyObject * results = nullptr;
+    std::vector<std::unique_ptr<ClassAd>> results;
 
     rv = schedd.makeUsersQueryAd(queryAd, constraint, attributes, limit);
     if (0 == rv) {
@@ -189,50 +137,34 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
         case 3: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE); break;
         }
 
-        results = PyList_New(0);
-        if( results == NULL ) {
-            PyErr_SetString( PyExc_MemoryError, "_schedd_userrec_query" );
-            return NULL;
-        }
-
         int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
         rv = schedd.queryUsers(
-            queryAd, _schedd_userrec_query_callback, results,
+            queryAd, _schedd_query_callback, & results,
             connect_timeout, &errStack, &summaryAd);
     }
 
-    if (0 == rv) {
-        // success, we just want to return the results
-    } else {
-        // failure, free any results and set an error into python if needed
-        if (results) {
-            Py_DecRef(results);
-            results = nullptr;
-        }
-        switch (rv) {
-            case 0:   // should never get here on success, this is just for clarity.
-            case -1:  // error already set by python (in callback)
-                break;
+    switch (rv) {
+        case Q_OK:
+            break;
 
-            case Q_UNSUPPORTED_OPTION_ERROR:
-                // This was HTCondorIOError in version 1.
-                PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
-                break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
+            break;
 
-            case SC_ERR_BAD_CONSTRAINT:
-                PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
-                break;
+        case SC_ERR_BAD_CONSTRAINT:
+            PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
+            break;
 
-            default:
-                // This was HTCondorIOError in version 1.
-                std::string error = "Failed to fetch ads from schedd, errmsg="
-                                  + errStack.getFullText();
-                PyErr_SetString(PyExc_HTCondorException, error.c_str());
-                break;
-        }
+        default:
+            // This was HTCondorIOError in version 1.
+            std::string error = "Failed to fetch ads from schedd, errmsg="
+                              + errStack.getFullText();
+            PyErr_SetString(PyExc_HTCondorException, error.c_str());
+            break;
     }
 
-    return results;
+    return py_list_from_vector(results, "_schedd_userrec_query");
 }
 
 
@@ -1688,30 +1620,7 @@ _schedd_get_claims(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    PyObject * list = PyList_New(0);
-    if( list == nullptr ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_get_claims" );
-        return nullptr;
-    }
-
-    for (auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
-        if( pyClassAd == NULL ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // py_new_classad2_classad() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // PyList_Append() has already set an exception for us.
-            return nullptr;
-        }
-    }
-
-    return list;
+    return py_list_from_vector(results, "_schedd_get_claims");
 }
 
 // DCSchedd::createOCUs supports passing in multiple OCU ClassAds at once
@@ -1793,30 +1702,26 @@ _schedd_query_ocu(PyObject *, PyObject * args) {
         return nullptr;
     }
 
-    PyObject * list = PyList_New(0);
-    if( list == nullptr ) {
-        PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu" );
-        return nullptr;
-    }
 
-    for( auto & classAd : results ) {
-        PyObject * pyClassAd = py_new_classad2_classad_via_copy(& classAd);
-        if( pyClassAd == NULL ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // py_new_classad2_classad_via_copy() has already set an exception for us.
-            return NULL;
-        }
-        auto rv = PyList_Append(list, pyClassAd);
-        Py_DecRef(pyClassAd);
-
-        if( rv != 0 ) {
-            // FIXME: Do we need to Py_DecRef(list) here to make sure it's cleaned up?
-
-            // PyList_Append() has already set an exception for us.
+    // GregT contends that we won't ever have enough of these to go through
+    // the trouble of adding a DCSchedd method that reads from the wire into
+    // the heap.
+    std::vector<std::unique_ptr<ClassAd>> r;
+    for( const auto & result : results ) {
+        ClassAd * c = new ClassAd(result);
+        if( c == NULL ) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu: classad" );
             return nullptr;
         }
+        auto u = std::unique_ptr<ClassAd>(c);
+        if(! u) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu: unique_ptr" );
+            return nullptr;
+        }
+
+        r.push_back(std::move(u));
     }
 
-    return list;
+
+    return py_list_from_vector(r, "_schedd_query_ocu");
 }
