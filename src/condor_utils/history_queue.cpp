@@ -25,6 +25,9 @@
 #include "condor_io.h"
 #include "history_queue.h"
 
+#include <algorithm>
+#include <functional>
+
 static bool
 sendHistoryErrorAd(Stream *stream, int errorCode, std::string errorString)
 {
@@ -52,6 +55,72 @@ void HistoryHelperQueue::setup(int request_max, int concurrency_max) {
 	}
 }
 
+
+// Filter values from the query ad are passed to condor_history as
+// command line arguments, so every value must be checked to ensure it
+// can never be interpreted as a command line option.
+
+static bool isDigits(const std::string &str) {
+	return ! str.empty() && std::ranges::all_of(str, [](unsigned char c) { return isdigit(c); });
+}
+
+// Non-flag job spec: N, N.M, or a username (user or user@domain)
+static bool isValidJobSpecToken(const std::string &token) {
+	if (token.empty()) { return false; }
+
+	size_t dot = token.find('.');
+	if (dot != std::string::npos && isDigits(token.substr(0, dot)) && isDigits(token.substr(dot + 1))) {
+		return true;
+	}
+	if (isDigits(token)) { return true; }
+
+	// Usernames may contain any printable ASCII character except '"' and
+	// '\\': condor_history puts the name unescaped into an Owner == "name"
+	// constraint.
+	if (token[0] == '-') { return false; }
+	return std::ranges::all_of(token, [](unsigned char c) {
+		return c >= 0x20 && c < 0x7f && c != '"' && c != '\\';
+	});
+}
+
+// Batch ids are free form, but must not look like an option
+static bool isValidBatchId(const std::string &token) {
+	return ! token.empty() && token[0] != '-';
+}
+
+// Batch names are any non-empty string. condor_history always takes the
+// argument following -batchname as its value, so it can never be read as an option.
+static bool isValidBatchName(const std::string &token) {
+	return ! token.empty();
+}
+
+// Extract a ClassAd list of strings from the query ad, validating each element.
+// A missing attribute is an empty filter. Returns false and sets err on failure.
+static bool getFilterList(ClassAd &queryAd, const char *attr, const std::function<bool(const std::string &)> &valid, std::vector<std::string> &out, std::string &err) {
+	classad::ExprTree *expr = queryAd.Lookup(attr);
+	if ( ! expr) { return true; }
+
+	classad::Value value;
+	classad::ExprList *list = nullptr;
+	if ( ! queryAd.EvaluateExpr(expr, value) || ! value.IsListValue(list)) {
+		formatstr(err, "%s must be a list of strings", attr);
+		return false;
+	}
+
+	for (auto *item : *list) {
+		std::string token;
+		if ( ! ExprTreeIsLiteralString(item, token)) {
+			formatstr(err, "%s must be a list of strings", attr);
+			return false;
+		}
+		if ( ! valid(token)) {
+			formatstr(err, "Invalid %s value '%s'", attr, token.c_str());
+			return false;
+		}
+		out.push_back(std::move(token));
+	}
+	return true;
+}
 
 int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 {
@@ -137,6 +206,28 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		searchDir = false;
 	}
 
+	// Verify user specified filters are valid to prevent command injection
+	// i.e. user passes "-search" "path/to/secret/condor/ad/file" that is read and returned
+	std::vector<std::string> jobspecs;
+	std::vector<std::pair<std::string, std::string>> workflow_filters;
+	std::string filter_err;
+	if ( ! getFilterList(queryAd, ATTR_HISTORY_JOB_SPEC_FILTER, isValidJobSpecToken, jobspecs, filter_err)) {
+		return sendHistoryErrorAd(stream, 12, filter_err);
+	}
+
+	const struct { const char *attr; const char *flag; std::function<bool(const std::string &)> valid; } workflow_attrs[] = {
+		{ ATTR_HISTORY_DAG_ID_FILTER, "-dagid", isDigits },
+		{ ATTR_HISTORY_BATCH_ID_FILTER, "-batchid", isValidBatchId },
+		{ ATTR_HISTORY_BATCH_NAME_FILTER, "-batchname", isValidBatchName },
+	};
+	for (const auto &wf : workflow_attrs) {
+		std::vector<std::string> values;
+		if ( ! getFilterList(queryAd, wf.attr, wf.valid, values, filter_err)) {
+			return sendHistoryErrorAd(stream, 12, filter_err);
+		}
+		for (auto &v : values) { workflow_filters.emplace_back(wf.flag, std::move(v)); }
+	}
+
 	if (m_requests >= m_max_concurrency) {
 		if (m_queue.size() >= static_cast<size_t>(m_max_requests)) {
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than " + std::to_string(m_max_requests) + " requests.");
@@ -149,6 +240,8 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
 		state.m_daemonSubsys = daemon_subsys;
+		state.m_jobspecs = std::move(jobspecs);
+		state.m_workflowFilters = std::move(workflow_filters);
 		m_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
@@ -159,6 +252,8 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
 		state.m_daemonSubsys = daemon_subsys;
+		state.m_jobspecs = std::move(jobspecs);
+		state.m_workflowFilters = std::move(workflow_filters);
 		return launcher(state);
 	}
 }
@@ -186,6 +281,10 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 	ArgList args;
 	if (m_allow_legacy_helper && strstr(history_helper.ptr(), "_helper")) {
 		dprintf(D_ALWAYS, "Using obsolete condor_history_helper arguments\n");
+		if (state.HasJobFilters()) {
+			// The legacy helper has no way to apply these, so they are ignored
+			dprintf(D_ALWAYS, "Ignoring job/user and DAG/batch filters not supported by condor_history_helper\n");
+		}
 		args.AppendArg("condor_history_helper");
 		args.AppendArg("-f");
 		args.AppendArg("-t");
@@ -267,6 +366,16 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			formatstr(errmsg, "%s undefined in remote configuration. No such related history to be queried.", searchKnob.c_str());
 			return sendHistoryErrorAd(state.GetStream(), 5, errmsg);
 		}
+
+		for (const auto& jobspec : state.m_jobspecs) {
+			args.AppendArg(jobspec);
+		}
+
+		for (const auto& [flag, value] : state.m_workflowFilters) {
+			args.AppendArg(flag);
+			args.AppendArg(value);
+		}
+
 		std::string myargs;
 		args.GetArgsStringForLogging(myargs);
 		if (myargs.size() > 100000) {
@@ -282,7 +391,7 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 
 	OptionalCreateProcessArgs cpArgs;
 	pid_t pid = daemonCore->CreateProcessNew(history_helper.ptr(), args,
-		cpArgs.priv(PRIV_ROOT)
+		cpArgs.priv(PRIV_CONDOR_FINAL)
 			.reaperID(m_rid)
 			.socketInheritList(inherit_list));
 	if (!pid) {

@@ -344,6 +344,11 @@
 #define ATTR_HISTORY_RECORD_SOURCE  "HistoryRecordSource"
 #define ATTR_DAEMON_HISTORY_SUBSYS  "DaemonHistorySubsys"
 #define ATTR_HISTORY_AD_TYPE_FILTER  "HistoryAdTypeFilter"
+// Remote history query filters: each is a ClassAd list of strings
+#define ATTR_HISTORY_JOB_SPEC_FILTER  "HistoryJobSpecFilter"
+#define ATTR_HISTORY_DAG_ID_FILTER  "HistoryDagIdFilter"
+#define ATTR_HISTORY_BATCH_ID_FILTER  "HistoryBatchIdFilter"
+#define ATTR_HISTORY_BATCH_NAME_FILTER  "HistoryBatchNameFilter"
 #define ATTR_IDLE_JOBS  "IdleJobs"
 #define ATTR_IMAGE_SIZE  "ImageSize"
 #define ATTR_IO_WAIT  "IOWait"

@@ -22,6 +22,9 @@
 #define _HISTORY_QUEUE_H_
 
 #include <deque>
+#include <string>
+#include <utility>
+#include <vector>
 
 class HistoryHelperState
 {
@@ -43,9 +46,18 @@ public:
 	const std::string & Projection() const { return m_proj; }
 	const std::string & MatchCount() const { return m_match; }
 	const std::string & RecordSrc() const { return m_recordSrc; }
+
+	bool HasJobFilters() const { return ! m_jobspecs.empty() || ! m_workflowFilters.empty(); }
+
+	// Usernames, cluster ids, & job ids (X.Y) passed as non-flag arguments
+	std::vector<std::string> m_jobspecs{};
+	// (flag, value) pairs for -dagid, -batchid, & -batchname
+	std::vector<std::pair<std::string, std::string>> m_workflowFilters{};
+
 	std::string m_adTypeFilter{};
 	std::string m_scanLimit{};
 	std::string m_daemonSubsys{};
+
 	bool m_streamresults{false};
 	bool m_searchdir{false};
 	bool m_searchForwards{false};
