@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import random
+import signal
+import threading
 import time
 import logging
 import multiprocessing
@@ -41,6 +45,86 @@ AD_TYPE_CONVERTERS = {
 }
 
 
+def run_workers(named_procs, max_workers, soft_timeout, hard_timeout=20, label="worker"):
+    """Manage pre-built multiprocessing.Processes with bounded concurrency and timeout enforcement.
+
+    Args:
+        named_procs: List of (name, Process) pairs. Processes should not be started.
+        max_workers: Maximum number of concurrent processes.
+        soft_timeout: Seconds before sending SIGTERM to a process.
+        hard_timeout: Seconds after SIGTERM before sending SIGKILL.
+        label: Label for log messages.
+
+    Returns:
+        dict with keys "succeeded", "timed_out", "errored", "leaked_pids".
+    """
+    slots = threading.Semaphore(max_workers)
+    active = {}  # name -> {"proc": Process, "soft_timeout": float, "hard_timeout": float, "sent_sigterm": bool}
+    succeeded = []
+    timed_out = []
+    killed = []
+    errored = []
+    leaked_pids = []
+
+    def _reap():
+        now = time.time()
+        for name in list(active):
+            w = active[name]
+            if not w["proc"].is_alive():
+                w["proc"].join()
+                if w["sent_sigterm"]:
+                    timed_out.append(name)
+                elif w["proc"].exitcode != 0:
+                    logging.warning(f"Error in {label} {name} (exit code {w['proc'].exitcode}).")
+                    errored.append(name)
+                else:
+                    succeeded.append(name)
+                active.pop(name)
+                slots.release()
+            elif not w["sent_sigterm"] and now > w["soft_timeout"]:
+                logging.warning(f"Timed out waiting for {label} {name}, sending SIGTERM (pid {w['proc'].pid}).")
+                os.kill(w["proc"].pid, signal.SIGTERM)
+                w["sent_sigterm"] = True
+            elif w["sent_sigterm"] and now > w["hard_timeout"]:
+                logging.warning(f"{label} {name} did not exit after SIGTERM, sending SIGKILL (pid {w['proc'].pid}).")
+                os.kill(w["proc"].pid, signal.SIGKILL)
+                w["proc"].join(timeout=hard_timeout)
+                killed.append(name)
+                timed_out.append(name)
+                if w["proc"].is_alive():
+                    logging.warning(f"{label} {name} (pid {w['proc'].pid}) did not exit after SIGKILL, possibly in D-state, skipping.")
+                    leaked_pids.append((name, w["proc"].pid))
+                active.pop(name)
+                slots.release()
+
+    for name, proc in named_procs:
+        while not slots.acquire(timeout=0.2):
+            _reap()
+
+        proc.start()
+        start_time = time.time()
+        active[name] = {
+            "proc": proc,
+            "soft_timeout": start_time + soft_timeout,
+            "hard_timeout": start_time + soft_timeout + hard_timeout,
+            "sent_sigterm": False,
+        }
+
+    while active:
+        _reap()
+        if active:
+            time.sleep(1)
+
+    return {
+        "total": len(named_procs),
+        "succeeded": succeeded,
+        "timed_out": timed_out,
+        "killed": killed,
+        "errored": errored,
+        "leaked_pids": leaked_pids,
+    }
+
+
 def _ckpt_updater(args, checkpoint_queue, ad_source, daemon_type="unknown daemon"):
     """
     This function watches the checkpoint queue and updates as checkpoints are added
@@ -64,6 +148,36 @@ def _ckpt_updater(args, checkpoint_queue, ad_source, daemon_type="unknown daemon
                 break
             logging.debug(f"Got {daemon_type} checkpoint {checkpoint}")
             ad_source.update_checkpoint(checkpoint)
+
+
+def history_processor(src, daemon_type, daemon_ad, ckpt_queue, ckpt_key, iface, converter, metadata, args, ad_source_kwargs):
+    """Fetch condor_history from the given daemon, push docs to the given
+    interface, and put checkpoint updates onto ckpt_queue as batches complete."""
+    set_up_logging(args)
+    metadata = metadata.copy()
+    metadata["condor_history_runtime"] = int(time.time())
+    metadata["condor_history_host_version"] = daemon_ad.get("CondorVersion", "UNKNOWN")
+    metadata["condor_history_host_platform"] = daemon_ad.get("CondorPlatform", "UNKNOWN")
+    metadata["condor_history_host_machine"] = daemon_ad.get("Machine", "UNKNOWN")
+    metadata["condor_history_host_name"] = daemon_ad.get("Name", "UNKNOWN")
+    daemon_name = daemon_ad.get("Name", daemon_ad.get("Machine", "UNKNOWN"))
+    try:
+        logging.debug("Started fetching ads")
+        ads = src.fetch_ads(daemon_ad, max_ads=vars(args)[f"{daemon_type}_history_max_ads"], projection=vars(args)[f"{daemon_type}_history_projection"])
+        logging.debug("Finished fetching ads")
+    except Exception as e:
+        logging.error(f"Could not fetch ads from {daemon_name}: {e.__class__.__name__}: {str(e)}")
+        return
+    if ads is None:
+        logging.info(f"{daemon_type} {daemon_name} did not return any ads")
+        return
+    try:
+        logging.info(f"Processing ads from {daemon_type} {daemon_name}")
+        for ckpt in src.process_ads(iface, converter, ads, daemon_ad, metadata=metadata, **ad_source_kwargs):
+            if ckpt is not None:
+                ckpt_queue.put({ckpt_key: ckpt})
+    except Exception as e:
+        logging.exception(f"Could not push ads from {daemon_name}: {e.__class__.__name__}: {str(e)}")
 
 
 def adstash(args):
@@ -137,93 +251,55 @@ def adstash(args):
                 ad_source = source_cls()(checkpoint_file=args.checkpoint_file)
 
                 # Get daemon ads
-                daemon_ads = []
                 daemon_ads = {"schedd": get_schedds, "startd": get_startds}[daemon_type](args)
+                random.shuffle(daemon_ads)  # shuffle the list of daemons
                 logging.warning(f"There are {len(daemon_ads)} {daemon_type}s to query")
 
-                futures = []
                 manager = multiprocessing.Manager()
                 checkpoint_queue = manager.Queue()
 
-                with multiprocessing.Pool(processes=args.threads, maxtasksperchild=1) as pool:
+                ckpt_updater = multiprocessing.Process(target=_ckpt_updater, args=(args, checkpoint_queue, ad_source, daemon_type))
+                ckpt_updater.start()
 
-                    if len(daemon_ads) > 0:
-                        for daemon_ad in daemon_ads:
-                            daemon_name = daemon_ad[name_attr]
-                            checkpoint_key = CHECKPOINT_KEY_TEMPLATE[source_type].format(name=daemon_name)
+                soft_timeout = vars(args)[f"{daemon_type}_history_timeout"]
+                named_procs = []
+                for daemon_ad in daemon_ads:
+                    daemon_name = daemon_ad[name_attr]
+                    checkpoint_key = CHECKPOINT_KEY_TEMPLATE[source_type].format(name=daemon_name)
+                    proc = multiprocessing.Process(
+                        target=history_processor,
+                        args=(ad_source, daemon_type, daemon_ad, checkpoint_queue, checkpoint_key, interface, converter, metadata, args, ad_source_kwargs),
+                    )
+                    named_procs.append((daemon_name, proc))
 
-                            future = pool.apply_async(
-                                history_processor,
-                                (ad_source, daemon_type, daemon_ad, checkpoint_queue, checkpoint_key, interface, converter, metadata, args, ad_source_kwargs),
-                            )
-                            futures.append((daemon_name, future))
+                results = run_workers(named_procs, args.threads, soft_timeout, label=daemon_type.capitalize())
 
-                    ckpt_updater = multiprocessing.Process(target=_ckpt_updater, args=(args, checkpoint_queue, ad_source, daemon_type))
-                    ckpt_updater.start()
+                summary = f"{len(results['succeeded'])}/{results['total']} {daemon_type}s completed"
+                if results["timed_out"]:
+                    summary += f", {len(results['timed_out'])} timed out: {', '.join(results['timed_out'])}"
+                if results["errored"]:
+                    summary += f", {len(results['errored'])} errored: {', '.join(results['errored'])}"
+                logging.warning(summary)
 
-                    # Report processes if they timeout or error
-                    timeout = vars(args)[f"{daemon_type}_history_timeout"]
-                    succeeded = 0
-                    timed_out = []
-                    errored = []
-                    for daemon_name, future in futures:
+                checkpoint_queue.put(None)  # Cap the checkpoint queue now
+                logging.warning(f"Joining the {daemon_type} checkpoint queue.")
+                ckpt_updater.join(timeout=(len(daemon_ads) * soft_timeout))
+                logging.warning(f"Shutting down the {daemon_type} checkpoint queue.")
+                ckpt_updater.terminate()
+                manager.shutdown()
+
+                if results["leaked_pids"]:  # Log if any SIGKILL'd pids are still running
+                    still_alive = []
+                    for name, pid in results["leaked_pids"]:
                         try:
-                            if not future.ready():
-                                logging.warning(f"Waiting for {daemon_type.capitalize()} {daemon_name} to finish (timeout: {timeout}s).")
-                            future.get(timeout)
-                            succeeded += 1
-                        except multiprocessing.TimeoutError:
-                            logging.warning(f"Waited too long for {daemon_type.capitalize()} {daemon_name}; it may still complete in the background.")
-                            timed_out.append(daemon_name)
-                        except Exception:
-                            logging.exception(f"Error getting progress from {daemon_type.capitalize()} {daemon_name}.")
-                            errored.append(daemon_name)
-                    total = len(futures)
-                    summary = f"{succeeded}/{total} {daemon_type}s completed"
-                    if timed_out:
-                        summary += f", {len(timed_out)} timed out: {', '.join(timed_out)}"
-                    if errored:
-                        summary += f", {len(errored)} errored: {', '.join(errored)}"
-                    logging.warning(summary)
-
-                    checkpoint_queue.put(None)
-                    logging.warning(f"Joining the {daemon_type} checkpoint queue.")
-                    ckpt_updater.join(timeout=(len(daemon_ads) * vars(args)[f"{daemon_type}_history_timeout"]))
-                    logging.warning(f"Shutting down the {daemon_type} checkpoint queue.")
-                    ckpt_updater.terminate()
-                    manager.shutdown()
-                    logging.warning(f"Shutting down the {daemon_type} multiprocessing pool.")
+                            os.kill(pid, 0)  # check if pid is still running
+                            still_alive.append((name, pid))
+                        except ProcessLookupError:
+                            pass
+                    if still_alive:
+                        logging.warning(f"Leaked {len(still_alive)} {daemon_type} PIDs that survived SIGKILL: {', '.join(f'{n} (pid {p})' for n, p in still_alive)}")
 
                 logging.warning(f"Processing time for {daemon_type} history: {(time.time()-source_starttime)/60:.2f} mins")
 
     processing_time = int(time.time() - starttime)
     return processing_time
-
-
-def history_processor(src, daemon_type, daemon_ad, ckpt_queue, ckpt_key, iface, converter, metadata, args, ad_source_kwargs):
-    """Fetch condor_history from the given daemon and push docs to the given interface"""
-    set_up_logging(args)
-    metadata = metadata.copy()
-    metadata["condor_history_runtime"] = int(time.time())
-    metadata["condor_history_host_version"] = daemon_ad.get("CondorVersion", "UNKNOWN")
-    metadata["condor_history_host_platform"] = daemon_ad.get("CondorPlatform", "UNKNOWN")
-    metadata["condor_history_host_machine"] = daemon_ad.get("Machine", "UNKNOWN")
-    metadata["condor_history_host_name"] = daemon_ad.get("Name", "UNKNOWN")
-    daemon_name = daemon_ad.get("Name", daemon_ad.get("Machine", "UNKNOWN"))
-    try:
-        logging.debug("Started fetching ads")
-        ads = src.fetch_ads(daemon_ad, max_ads=vars(args)[f"{daemon_type}_history_max_ads"], projection=vars(args)[f"{daemon_type}_history_projection"])
-        logging.debug("Finished fetching ads")
-    except Exception as e:
-        logging.error(f"Could not fetch ads from {daemon_name}: {e.__class__.__name__}: {str(e)}")
-        return
-    if ads is None:
-        logging.info(f"{daemon_type} {daemon_name} did not return any ads")
-        return
-    try:
-        logging.info(f"Processing ads from {daemon_type} {daemon_name}")
-        for ckpt in src.process_ads(iface, converter, ads, daemon_ad, metadata=metadata, **ad_source_kwargs):
-            if ckpt is not None:
-                ckpt_queue.put({ckpt_key: ckpt})
-    except Exception as e:
-        logging.exception(f"Could not push ads from {daemon_name}: {e.__class__.__name__}: {str(e)}")
