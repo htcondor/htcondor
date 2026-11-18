@@ -564,3 +564,18 @@ queue item from (
 aaaa
 bbbb
 )
+
+==organized2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+organized_output=true
+
+queue 2
+
+==organized3.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+batch_name=sweep
+organized_output_directory=outbase
+
+queue 2

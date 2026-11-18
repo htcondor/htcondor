@@ -516,3 +516,17 @@ ProcId=0
 OutputDirectory=/^".+bbbb/1"$/
 ProcId=1
 
+==organized2.sub
+OutputDirectory=/^".+/(\d+)/\1\.0"$/
+ProcId=0
+.
+OutputDirectory=/^".+/(\d+)/\1\.1"$/
+ProcId=1
+
+==organized3.sub
+OutputDirectory=/^".+outbase/sweep/\d+\.0"$/
+ProcId=0
+.
+OutputDirectory=/^".+outbase/sweep/\d+\.1"$/
+ProcId=1
+

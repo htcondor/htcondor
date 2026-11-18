@@ -1186,8 +1186,21 @@ FILE TRANSFER COMMANDS
     that gives a unique subdirectory for the output of each submission and/or each job
     in the submission.  The base directory will be the current directory of submit
     or the value of :subcom:`organized_output_directory`.  The per-job pattern will be the value
-    of :subcom:`organized_output_pattern` or a default given by the configuration.
-    If no pattern is specified in either location, use of this submit command will generate an error message.
+    of :subcom:`organized_output_pattern` or a default given by the configuration variable
+    :macro:`ORGANIZED_OUTPUT_PATTERN`, which defaults to ``$(batch_name:$(ClusterId))/$(JobId)``.
+    For example, with the default pattern, submitting with ``organized_output = true`` and
+    ``batch_name = sweep`` would put the output of job 95.0 in the directory ``sweep/95.0/``,
+    while submitting without a batch name would use ``95/95.0/``.
+    If the pattern is empty in both locations, use of this submit command will generate an error message.
+
+    Jobs submitted by :tool:`condor_dagman` always have a batch name, so with the default
+    pattern the output of every node job in a DAG workflow will be placed together under
+    a single subdirectory named for the workflow.  Unless a batch name is given with the
+    **-batch-name** option of :tool:`condor_submit_dag`, DAGMan uses the name of the DAG
+    file followed by ``+`` and the DAGMan job's ClusterId.  For example, a node job with
+    job id 96.0 in the workflow ``diamond.dag`` run by DAGMan job 95.0 would put its output
+    in ``diamond.dag+95/96.0/``.  A :subcom:`batch_name` set in the node's own submit
+    description takes precedence over the one supplied by DAGMan.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
     The **should_transfer_files**
