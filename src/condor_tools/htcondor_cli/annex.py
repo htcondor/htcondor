@@ -915,5 +915,7 @@ class Annex(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
-
+        if htcondor.param.get("ANNEX_USE_OLD_CREATE", False):
+            return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
+        else:
+            return [cls.create, cls.add, cls.status, cls.shutdown]
