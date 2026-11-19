@@ -39,16 +39,12 @@ if [[ -n "${iri_venv}" ]] ; then
     . "${iri_venv}/bin/activate"
 fi
 
-echo "$(/bin/date) Checking blah_debug: $blah_debug" >>/tmp/iri.jfrey
-echo "$(/bin/date) blah_debug_show_sensitive=$blah_debug_show_sensitive" >>/tmp/iri.jfrey
 if [[ -n "$blah_debug" ]]; then
-    echo "$(/bin/date) Config bls_iri_log" >>/tmp/iri.jfrey
     if [[ ! -d "${blah_debug}" ]]; then
         mkdir -p "${blah_debug}"
     fi
     bls_iri_log() { echo "$@" >> "${blah_debug}"/iri_scripts.log; }
     export BLAH_HELPER_LOGGING="DEBUG;${blah_debug_show_sensitive:-no};${blah_debug}/iri_helper.log"
-    echo "BLAH_HELPER_LOGGING=$BLAH_HELPER_LOGGING" >>/tmp/iri.jfrey
 else
     bls_iri_log() { :; }
 fi
