@@ -321,7 +321,6 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			}
 		}
 		if (!client_ext_matches) {
-			Sinful my_sinful = daemonCore->InfoCommandSinfulStringMyself(false);
 			dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Client extension (%s) doesn't match our endpoint\n", (remote_?"_REMOTE":""), client_ext.c_str());
 			dprintf(D_SECURITY, "  My socket endpoint: %s\n", mySock_->get_sinful());
 			if (my_dc_sinful_str) {
