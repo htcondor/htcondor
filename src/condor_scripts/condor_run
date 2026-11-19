@@ -116,8 +116,11 @@ for sig in HUP INT QUIT TERM; do
 	trap "abort 'Killed by SIG$sig.'" "$sig"
 done
 
-# Use the user's shell in the script we submit to Condor
-shell=${SHELL:-/bin/sh}
+# Use the user's shell in the script we submit to Condor.  Only honor SHELL
+# if it came from the environment: when it is unset, bash fills it in from
+# the passwd entry, which for accounts like nobody is /usr/bin/false.
+shell=$(printenv SHELL)
+shell=${shell:-/bin/sh}
 
 # Get any requirements from the user's environment
 requirements=
