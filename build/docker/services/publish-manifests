@@ -1,0 +1,9 @@
+#!/bin/bash
+rm -rf ~/.docker/manifests/*
+for image in $(docker image ls --format 'table {{.Repository}}:{{.Tag}}' | grep '_a[rm][dm]64'); do
+    image=${image/_a[rm][dm]64/}
+    amd64_image=${image/:/_amd64:}
+    arm64_image=${image/:/_arm64:}
+    docker manifest create "$image" "$amd64_image" "$arm64_image"
+    docker manifest push "$image"
+done

@@ -13,6 +13,10 @@
   the shadow had difficulty communicating with a starter.
   :jira:`3967`
 
+- Fixed a bug in the :macro:`HOLD_IF_DISK_EXCEEDED` policy that prevented
+  it from ever evicting jobs.
+  :jira:`4090`
+
 *** 25.0.16 bugs
 
 - Fixed a bug where multiple *condor_shadow* processes could rotate the
@@ -27,6 +31,10 @@
   a user's resoruce usage when they haven't used any resources.
   :jira:`4018`
 
+- Improve the validation rules when examining an X.509 host certificate
+  during SSL authentication.
+  :jira:`4074`
+
 - HTCondor daemons now close the job event log with the job owner's identity,
   matching the identity used to open it. Previously, the *condor_schedd* and
   other daemons closed it as the condor user, which on Lustre caused the close
@@ -38,7 +46,16 @@
   than returning the job to the running state.
   :jira:`4049`
 
+- Fixed a bug where reading a JSON or XML formatted job event log could crash
+  or read freed memory when an event contained structured submit notes or
+  execute event properties.
+  :jira:`4082`
+
 *** 25.15.15 features
+
+- In some situations, HTCondor no longer needs to transfer the same file to the same EP once for
+  each job that uses it.  This can be done automatically for (some) container images, and with the
+  help of the submitter for other immutable input files.
 
 - Scheduler and Local universe jobs no longer use the Vanilla universe default values for
   :subcom:`request_cpus`, :subcom:`request_memory` and :subcom:`request_disk`.  Instead,

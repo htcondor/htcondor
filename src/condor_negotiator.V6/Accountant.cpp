@@ -1105,14 +1105,16 @@ void Accountant::UpdatePriorities()
   }
   double AgingFactor=::pow(0.5,double(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
-  db->SetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%lld\n",AgingFactor,(long long)TimePassed);
 
 	  // Each iteration of the loop should be atomic for consistency,
 	  // but instead of doing one transaction per iteration, wrap the
-	  // whole loop in one transaction for efficiency.
+	  // whole loop in one transaction for efficiency.  LastUpdateTime goes
+	  // in the same transaction, so that it is atomic with the aging it
+	  // describes, and so that it doesn't cost an fsync of its own.
   db->BeginTransaction();
+  db->SetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   db->ForEachInTable(AccountantTable::Customer, [&](const std::string& customerName, ClassAd* ad) -> bool {
 		UpdateOnePriority(T, TimePassed, AgingFactor, customerName, ad);
@@ -1331,7 +1333,9 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
             return true;
         }
     );
-    db->CommitTransaction();
+    // These are recomputed from scratch every cycle, so like the other
+    // commits in this function, they don't need an fsync.
+    db->CommitNondurableTransaction();
 
   // Scan startd ads and add matches that are not registered
   for (ClassAd *ResourceAd: ResourceList) {

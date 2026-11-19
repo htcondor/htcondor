@@ -167,7 +167,7 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
     int64_t prevPos = info.last_offset;
     bool limit_reached = false;
     while (info.reader->Next(rec)) {
-        int64_t curPos = info.reader->Tellp();
+        int64_t curPos = info.reader->ResumeOffset();
         int64_t recordBytes = curPos - prevPos;
         if (recordBytes > 0) {
             info.records_read++;
@@ -188,10 +188,12 @@ bool Librarian::readJobRecords(std::vector<ArchiveRecord>& records,
         return false;
     }
 
-    // Store the position *after* the last processed byte so that
+    // Store the position just past the last complete record (not Tellp(),
+    // which may sit inside a record the schedd is still writing) so that
     // calculateBacklogFromBytes sees fileSize - last_offset == 0 when fully
-    // caught up, and recovery seeks directly to the next unread record.
-    info.last_offset = info.reader->Tellp();
+    // caught up, and recovery seeks directly to the start of the next unread
+    // record rather than into the middle of it.
+    info.last_offset = info.reader->ResumeOffset();
 
     // A rotated file that reached clean EOF is done; release the file descriptor.
     if ( ! limit_reached && ! info.rotation_time.empty()) {

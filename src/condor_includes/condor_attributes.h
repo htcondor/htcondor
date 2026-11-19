@@ -371,6 +371,9 @@
 #define ATTR_JOB_ACTIVATION_EXECUTION_DURATION  "ActivationExecutionDuration"
 #define ATTR_JOB_ACTIVATION_SETUP_DURATION  "ActivationSetupDuration"
 #define ATTR_JOB_ACTIVATION_TEARDOWN_DURATION  "ActivationTeardownDuration"
+#define ATTR_JOB_ACTIVATION_REQUEST_MEMORY  "ActivationRequestMemory"
+#define ATTR_CURRENT_WASTED_MEMORY_GB_HOURS  "CurrentWastedMemoryGBHours"
+#define ATTR_LAST_WASTED_MEMORY_GB_HOURS  "LastWastedMemoryGBHours"
 #define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
 #define ATTR_JOB_ALLOWED_EXECUTE_DURATION "AllowedExecuteDuration"
 #define ATTR_JOB_EPOCH_WRITE_DATE "EpochWriteDate"
@@ -408,6 +411,8 @@
 #define ATTR_OCU_HOLDER  "IsOCUHolder"
 #define ATTR_OCU_ID  "OCUId"
 #define ATTR_OCU_NAME  "OCUName"
+#define ATTR_OCU_OWNER  "OCUOwner"
+#define ATTR_OCU_PROJECT  "OCUProject"
 #define ATTR_OCU_WANTED  "OCUWanted"
 #define ATTR_OCU_STATE  "OCUState"
 #define ATTR_IS_BUNDLE_REQUEST  "IsBundleRequest" // marks a resource request as a slot-bundle request

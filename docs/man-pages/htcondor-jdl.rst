@@ -466,6 +466,13 @@ BASIC COMMANDS
     **<file name> | <list of items>**] Places zero or more copies of
     the job in the queue based on lines from the submit file or from
     **<file name>**
+ queue
+    [**<int expr>** ] [**<list of varnames>** ] **from** 
+    **table** [ **(<table options>)** ] [**slice** ] **<file name> | <table contents>** Places zero or more copies of
+    the job in the queue based on lines from the submit file or from **<file name>**. Optional
+    **(<table options>)** in the table keyword control how the table is parsed.
+    When using the **table** keyword, by default the **<list of varnames>** will be taken from the
+    column headings on the first row of the table.
 
     The optional argument *<int expr>* specifies how many times to
     repeat the job submission for a given set of arguments. It may be an
@@ -502,25 +509,59 @@ BASIC COMMANDS
        with \|, then it will be executed as a script whatever the script
        writes to ``stdout`` will be the list of items.
 
+    -  *from* *table[(<table options>)]* **<file name> | <table contents>**
+       Lines from **<file name>** or **<table contents>** will be treated as
+       rows of the table and interpreted according to **<table options>**.
+
     The optional argument *<varname>* or *<list of varnames>* is the
     name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
-    the variable ITEM will be used. Leading and trailing whitespace be
+    variables may be taken from the **table**.
+    If no **table** or the table does not provide varnames,
+    the variable ITEM will be used. Leading and trailing whitespace will be
     trimmed. The optional argument *<slice>* is a python style slice
     selecting only some of the items in the list of items. Negative step
     values are not supported.
 
-    A submit file may contain more than one
-    **queue** statement, and if
-    desired, any commands may be placed between subsequent
-    **queue** commands, such as
-    new **input**,
-    **output**, 
-    **error**,
-    **initialdir**, or
-    **arguments** commands.
-    This is handy when submitting multiple runs into one cluster with
-    one submit description file.
+    The **table** keyword allows finer control over how the lines of **<file name>**
+    or **<table contents>** are interpreted.  Table options are specified by adding parens
+    after the **table** keyword with table options within the parens. Options may be
+    a comma separated list of the following options.
+
+    - **standard** Columns are split on comma and space and whitespace is trimmed. Sets header=none and skip=0.
+
+    - **csv** Columns are split on comma only, then leading and trailing whitespace is trimmed.
+      Equivalent to ``comma_sep=true,trim=true,header=none,skip=0``
+
+    - **header=<number> | none** If not *none*, rows before **<number>** are skipped, and the
+      column headings at row **<number>** are treated as a **<list of varnames>**.  The column headings
+      must be valid for use as varnames and so may not contain any character other than letters, numbers
+      and ``_``.
+
+    - **skip=<count>** After reading the header row (if any), skip the indicated number of rows.
+      The remaining rows specify items for submit.
+
+    - **sep=<char>** Use only the character **<char>** as the column separator. **sep=,** is not allowed,
+      use **comma_sep=true** instead.
+
+    - **comma_sep=true** Use only comma as the column separator.
+
+    - **trim=true|false** When true, trim whitespace from columns.
+
+    Example using **QUEUE FROM TABLE**:
+
+    .. code-block:: text
+
+        ...
+        transfer_input_files = $(FILENAME)
+
+        # use FROM TABLE to read queue itemdata and vars with comma separated columns
+        # specifying the submit var names from the first row of the table
+        QUEUE FROM TABLE(header=0,comma_sep=true,trim=true) (
+            FILENAME                , ARGS
+            filename with spaces.dat, -process "$(FILENAME)"
+        )
+
 
  :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The

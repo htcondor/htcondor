@@ -72,6 +72,8 @@ _negotiator_command_return(PyObject *, PyObject * args) {
     s->close();
 
     if( rv ) {
+        delete( returnAd );
+
         // This was HTCondorIOError in version 1.
         PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;

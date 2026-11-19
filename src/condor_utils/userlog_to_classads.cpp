@@ -26,6 +26,7 @@
 #include "condor_event.h"
 #include "condor_id.h"
 #include "userlog_to_classads.h"
+#include "condor_attributes.h"
 
 typedef long condor_time_t;
 static condor_time_t getEventTime(const ULogEvent *event)
@@ -92,7 +93,21 @@ bool userlog_to_classads(const char *filename,
         continue;
       }
     }
-     
+
+	auto increment_int_attr = [](ClassAd& ad, const char* attr) -> void {
+		classad::Value v;
+		int i = 0;
+
+		std::string expression(attr);
+		expression += "+1";
+
+		if (ad.EvaluateExpr(expression.c_str(), v) && v.IsIntegerValue(i)) {
+			ad.InsertAttr(attr, i);
+		} else {
+			ad.InsertAttr(attr, 1);
+		}
+	};
+
     switch(eventNumber) {
     case ULOG_SUBMIT:
       {
@@ -161,6 +176,7 @@ bool userlog_to_classads(const char *filename,
 	jobClassAd->InsertAttr("CompletionDate",0);
 
 	jobClassAd->InsertAttr("NumJobStarts",0);
+	jobClassAd->InsertAttr(ATTR_NUM_JOB_COMPLETIONS, 0);
 	jobClassAd->InsertAttr("TotalSuspensions",0);
 	jobClassAd->InsertAttr("NumSystemHolds",0);
 
@@ -169,6 +185,13 @@ bool userlog_to_classads(const char *filename,
 	jobClassAd->InsertAttr("LocalSysCpu",0.0);
 	jobClassAd->InsertAttr("RemoteSysCpu",0.0);
 	jobClassAd->InsertAttr("RemoteWallClockTime",0.0);
+
+	// Add structured submit notes ad for DAGMan information (node name, batchname, etc)
+	if (submit_event->hasStructuredNotes()) {
+		// The nested ad attributes are generated from the root classad
+		// at submission time so just copy the actual attributes into the job ad
+		jobClassAd->Update(*submit_event->structuredNotes);
+	}
 
 	// ignoring file transfer for now
 	// ignoring checkpointing for now
@@ -194,17 +217,13 @@ bool userlog_to_classads(const char *filename,
 	  condor_time_t eventTime = getEventTime(event);
 	  jobClassAd->InsertAttr("EnteredCurrentStatus",eventTime);
 	  jobClassAd->InsertAttr("JobCurrentStartDate",eventTime);
-	}
-
-	{
-	  classad::Value v;
-	  int i = 0;
-	  if (jobClassAd->EvaluateExpr("NumJobStarts+1",v) && v.IsIntegerValue(i)) {
-	    jobClassAd->InsertAttr("NumJobStarts",i);
-	  } else {
-	    jobClassAd->InsertAttr("NumJobStarts",1);
+	  jobClassAd->InsertAttr(ATTR_JOB_CURRENT_START_EXECUTING_DATE, eventTime);
+	  if ( ! jobClassAd->Lookup(ATTR_JOB_START_DATE)) {
+		  jobClassAd->InsertAttr(ATTR_JOB_START_DATE, eventTime);
 	  }
 	}
+
+	increment_int_attr(*jobClassAd, ATTR_NUM_JOB_STARTS);
 
 	jobClassAd->InsertAttr("StartdIpAddr",start_event->getExecuteHost());
 	// the execute host is the best we have (unless we have the expanded execute event)
@@ -278,6 +297,8 @@ bool userlog_to_classads(const char *filename,
 	      }
 	    }
 	}
+
+	increment_int_attr(*jobClassAd, ATTR_NUM_JOB_COMPLETIONS);
 
 	jobClassAd->InsertAttr("LocalUserCpu",tmval2double(term_event->total_local_rusage.ru_utime));
 	jobClassAd->InsertAttr("RemoteUserCpu",tmval2double(term_event->total_remote_rusage.ru_utime));
@@ -373,7 +394,13 @@ bool userlog_to_classads(const char *filename,
 	  }
 	}
 
-	// ignoring checkpointing and requeuing for now
+	// A job that exited on its own but was requeued by policy (on_exit_remove,
+	// max_retries) logs an evict event rather than a terminate event
+	if (evict_event->terminate_and_requeued) {
+	  increment_int_attr(*jobClassAd, ATTR_NUM_JOB_COMPLETIONS);
+	}
+
+	// ignoring checkpointing for now
 	// ignoring file transfer for now
 
       }

@@ -363,6 +363,12 @@ UniShadow::requestJobRemoval() {
 	remRes->killStarter( job_wants_graceful_removal, transfer_and_remove_requested );
 }
 
+void
+UniShadow::recordActivationEndingForWastedMemory()
+{
+	remRes->updateWastedMemory( RemoteResource::ActivationPhase::Ending );
+}
+
 int UniShadow::handleJobRemoval(int sig) {
 	dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;

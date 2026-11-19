@@ -54,6 +54,22 @@ all attributes.
     not computed until complete. Like the above attribute, it represents
     only the most recent launch, not the sum of all prior launches.
 
+:classad-attribute-def:`ActivationRequestMemory`
+    The value, in MiB, that :ad-attr:`RequestMemory` evaluated to when the
+    most recent activation started, evaluated against the slot the job was
+    matched to (or, for local universe jobs, against the *condor_schedd*'s
+    local starter ad).  It is usually an integer, but is a real number if
+    :ad-attr:`RequestMemory` evaluates to one.  It is set by the *condor_schedd* each time the job
+    starts running, and is not changed when the *condor_schedd* reconnects
+    to a running job.
+
+    Because :ad-attr:`RequestMemory` may be an expression, such as one
+    that references :ad-attr:`MemoryUsage`, or may be changed between
+    activations, for example by :subcom:`retry_request_memory`, this
+    attribute records the memory that the activation actually requested.
+    Each epoch record in the job epoch history has the value for that
+    epoch's activation.
+
 :classad-attribute-def:`ActivationSetupDuration`
     The length of time in seconds from when the shadow sends a
     claim activation to when the shadow it notified that the job was
@@ -275,6 +291,48 @@ all attributes.
 
 :classad-attribute-def:`CurrentHosts`
     The number of hosts in the claimed state, due to this job.
+
+:classad-attribute-def:`CurrentWastedMemoryGBHours`
+    A floating point value giving the memory wasted so far by the job's
+    current activation, in gigabyte-hours (where one gigabyte is 1024
+    megabytes).  It is computed as
+
+    .. code-block:: text
+
+        (ActivationRequestMemory - MemoryUsage) / 1024 * (activation time so far) / 3600
+
+    where :ad-attr:`ActivationRequestMemory` is the value
+    :ad-attr:`RequestMemory` evaluated to when the activation started,
+    :ad-attr:`MemoryUsage` is the maximum memory usage observed over the
+    lifetime of the job, and the activation time is in seconds.  If the
+    job used more memory than it requested, the value is zero.  The
+    activation time covers the whole activation, including the transfer
+    of input and output files, the same span as
+    :ad-attr:`ActivationDuration`.
+
+    This attribute is updated each time the *condor_shadow* receives an
+    update from the *condor_starter*, so while the job is running it
+    may be out of date by up to :macro:`STARTER_UPDATE_INTERVAL` seconds
+    (and in the *condor_schedd*'s copy of the job ad, by up to
+    :macro:`SHADOW_QUEUE_UPDATE_INTERVAL` seconds).  When the activation
+    ends, for whatever reason, it is set to its final value, measured
+    until the end of the activation, and that value is also copied to
+    :ad-attr:`LastWastedMemoryGBHours`.  When the *condor_shadow* ends the
+    activation itself (for example, to put the job on hold because of a
+    policy expression), the activation lasts until the *condor_starter*
+    reports that the job has been cleaned up; but if the
+    *condor_shadow* exits before then, the value is measured only until
+    the *condor_shadow* ended the activation.  It is removed when the next
+    activation starts.  It is not set until the job's memory usage has
+    been reported, nor if :ad-attr:`ActivationRequestMemory` is not
+    known (for example, because the activation was started by an older
+    *condor_schedd*), nor for grid, scheduler, or parallel universe jobs.
+    If either becomes unknown after the attribute has been set, it
+    becomes ``undefined``.
+
+    For local universe jobs, the job queue is not updated while the job
+    runs, so this attribute is set only when the activation ends, and the
+    activation time is measured from :ad-attr:`JobCurrentStartDate`.
 
 :classad-attribute-def:`DAGLifetimeJob`
     A boolean value denoting job(s) in a DAG node are to not be removed when the
@@ -1011,7 +1069,20 @@ all attributes.
     Time at which the job was last evicted from a remote workstation.
     Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
     1, 1970).
-    
+
+:classad-attribute-def:`LastWastedMemoryGBHours`
+    A floating point value giving the memory wasted by the job's most
+    recent activation to have ended, in gigabyte-hours: the final value
+    of :ad-attr:`CurrentWastedMemoryGBHours` for that activation.  It is
+    set when an activation ends for any reason, including the job
+    completing, being evicted, being put on hold, or being removed.
+    While a later activation is running, it keeps the value from the
+    previous one.  If the value could not be computed when the activation
+    ended (because the job's memory usage was never reported, or
+    :ad-attr:`ActivationRequestMemory` was not known), it is
+    ``undefined``.  Each epoch record in the job epoch history has the
+    value for that epoch's activation.
+
 :classad-attribute-def:`LeaveJobInQueue`
     A boolean expression that defaults to ``False``, causing the job to
     leave the queue upon completion.

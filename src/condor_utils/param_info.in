@@ -3386,7 +3386,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes AuthTokenProject OsUser
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes AuthTokenProject OsUser IsOCUHolder
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -7037,7 +7037,7 @@ default : @end
   # any retirement time.  VM universe jobs can't go over their
   # disk allocations, so we ignore them.
   #
-  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  DISK_EXCEEDED = (JobUniverse != 13 && !(MY.IsDataSlot ?: false) && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
   use POLICY : PREEMPT_IF(DISK_EXCEEDED)
 @end
 
@@ -7050,7 +7050,7 @@ default : @end
   # universe jobs can't go over their disk allocations, so
   # we ignore them.
   #
-  DISK_EXCEEDED = (JobUniverse != 13 && MY.IsDataSlot ?: false && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  DISK_EXCEEDED = (JobUniverse != 13 && !(MY.IsDataSlot ?: false) && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
   HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
   use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
 @end

@@ -473,6 +473,8 @@ tmp_dir.h
 token_cache.h
 tokener.cpp
 tokener.h
+tokens_db.cpp
+tokens_db.h
 token_utils.cpp
 token_utils.h
 to_string_si_units.cpp
@@ -494,6 +496,8 @@ wait_for_user_log.cpp
 wait_for_user_log.h
 waker.cpp
 waker.h
+wasted_memory.cpp
+wasted_memory.h
 which.cpp
 which.h
 write_eventlog.cpp

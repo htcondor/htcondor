@@ -897,18 +897,41 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 	return false;
 }
 
+// The submitter that negotiates for an OCU's claim: the one named in the
+// OCU, or else the one the owner's jobs would use (see count_a_job).
+std::string
+Scheduler::ocu_submitter_name(const OwnerInfo & owner, const OCU & ocu) const
+{
+	std::string submitter;
+	if (ocu.ad.LookupString(ATTR_SUBMITTER, submitter) && ! submitter.empty()) {
+		return submitter;
+	}
+	std::string real_owner = owner.Name();
+	auto last_at = real_owner.find_last_of('@');
+	if (last_at != std::string::npos) { real_owner.erase(last_at); }
+	std::string alias;
+	ocu.ad.LookupString(ATTR_ACCOUNTING_GROUP, alias);
+	if ( ! alias.empty() && (alias != real_owner)) {
+		if (user_is_the_new_owner) { alias += std::string("@") + AccountingDomain; }
+		return alias;
+	}
+	return real_owner;
+}
+
 // Brute force search.  Will improve performance later if needed.
 OCU *
-Scheduler::getOCU(int ocu_id) {
-		for (const auto &[_, oi]: OwnersInfo) {
-			for (auto &ocu: oi->ocus) {
-				if (ocu.ocu_id == ocu_id) {
-					return &ocu;
-				}
+Scheduler::getOCU(int ocu_id, OwnerInfo ** owner) {
+	if (owner) { *owner = nullptr; }
+	for (const auto &[_, oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.ocu_id == ocu_id) {
+				if (owner) { *owner = oi; }
+				return &ocu;
 			}
 		}
-		return nullptr;
 	}
+	return nullptr;
+}
 
 // Look up the slot bundle defined by a job cluster, if that cluster is one.
 BundleRequest *
@@ -1958,6 +1981,31 @@ Scheduler::count_jobs()
 					jobs_on_borrowed_claims[SubDat->Name()].emplace_back(rec->jid);
 				}
 			}
+		}
+	}
+
+	// An OCU needs its owner's submitter to negotiate for its claim even
+	// when the owner has no jobs in the queue -- for instance, right after
+	// a schedd restart, when the claim is gone and the submitter would
+	// otherwise not exist.  Count each OCU as a hit on its owner and on
+	// its submitter.
+	for (auto & [name, owni] : OwnersInfo) {
+		for (const OCU & ocu : owni->ocus) {
+			std::string submitter = ocu_submitter_name(*owni, ocu);
+			if (submitter.empty()) {
+				// Shouldn't happen, but if it does this OCU will never be
+				// negotiated for, so say so loudly.
+				dprintf(D_ERROR, "OCU %d of owner '%s' has no submitter name; it cannot be negotiated for\n",
+					ocu.ocu_id, owni->Name());
+				continue;
+			}
+			// insert_submitter() finds or creates the record; it never returns null.
+			SubmitterData * SubDat = insert_submitter(submitter.c_str());
+			SubDat->owners.insert(owni->Name());
+			SubDat->num.Hits += 1;
+			SubDat->LastHitTime = current_time;
+			owni->num.Hits += 1;
+			owni->LastHitTime = current_time;
 		}
 	}
 
@@ -3347,12 +3395,15 @@ Scheduler::act_on_ocu_remove(const ClassAd &request) {
 			int ocu_id = 0;
 			ocu.ad.LookupInteger(ATTR_OCU_ID, ocu_id);
 			if (ocu_id == ocu_id_to_remove) {
-				result = oi->removeOCU(request);
-				break;
+				// removeOCU erases from the list we are iterating, so
+				// return its result right away.
+				return oi->removeOCU(request);
 			}
 		}
 	}
-	result.Assign(ATTR_RESULT, 0);
+	result.Assign(ATTR_RESULT, -1);
+	result.Assign(ATTR_OCU_ID, ocu_id_to_remove);
+	result.Assign(ATTR_ERROR_STRING, "No OCU with id " + std::to_string(ocu_id_to_remove));
 	return result;
 }
 
@@ -4441,11 +4492,15 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	// Update OCU job counters
 	bool OCUWantedJob = false;
 	job->LookupBool("OCUWanted", OCUWantedJob);
-	if (OCUWantedJob) {
+	// Only idle and running jobs want an OCU claim: a held (or removed,
+	// or completed) job can't use one, so it must not cause borrowers to
+	// be evicted from the OCU.
+	const bool ocu_job_running = (status == RUNNING || status == TRANSFERRING_OUTPUT);
+	if (OCUWantedJob && (status == IDLE || ocu_job_running)) {
 		SubData->num.OCUWantedJobs += 1;
 	}
 
-	if (OCUWantedJob && (status == RUNNING || status == TRANSFERRING_OUTPUT)) {
+	if (OCUWantedJob && ocu_job_running) {
 		SubData->num.OCURunningJobs += 1;
 	}
 
@@ -9895,13 +9950,7 @@ Scheduler::release_claim(int, Stream *sock)
 		mrec = it->second;
 		mrec->needs_release_claim = false;
 
-		// If this is an OCU request, need to unlink it from the OCU
-		if (mrec->is_ocu) {
-			OCU *ocu = getOCU(mrec->ocu_originator.cluster);
-			if (ocu) {
-				ocu->mrec = nullptr;
-			} 
-		}
+		// DelMrec unlinks an OCU's claim from its OCU.
 		DelMrec( mrec );
 	}
 	free(claim_id);
@@ -9949,9 +9998,17 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		// not really a job ad, but close enough for claiming purposes
 
 		// We delete this later, so dup it up here.
-		OCU *ocu = scheduler.getOCU(mrec->jid);
+		OwnerInfo *ocu_owner = nullptr;
+		OCU *ocu = scheduler.getOCU(mrec->jid.cluster, &ocu_owner);
 		if (ocu) {
 			jobAd = new ClassAd(ocu->ad);
+			// The startd takes the claim's user from the request.  Without
+			// it, the claimed slot has no RemoteUser, and the negotiator
+			// treats it as unclaimed: any job can match it, and the startd
+			// will hand the slot over, preempting the OCU's claim.
+			if (ocu_owner && ! jobAd->LookupExpr(ATTR_USER)) {
+				jobAd->Assign(ATTR_USER, ocu_owner->Name());
+			}
 		}
 	}
 
@@ -10365,7 +10422,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// this at the lookup rather than in the branch below matters,
 			// because getBundle() can fail here (the bundle was removed while
 			// the match was in flight) and the OCU branch would then run.
-			OCU *ocu = slot->is_bundle ? nullptr : scheduler.getOCU(slot->jid);
+			OwnerInfo *ocu_owner = nullptr;
+			OCU *ocu = slot->is_bundle ? nullptr : scheduler.getOCU(slot->jid.cluster, &ocu_owner);
 			BundleRequest *bundle = slot->is_bundle ? scheduler.getBundle(slot->bundle_cluster) : nullptr;
 			if (bundle != nullptr) {
 				// This claim satisfies one slot of a bundle.  Hold it with no
@@ -10399,7 +10457,26 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 				// ATTR_OCU should already be true on newer startds, but May
 				// not be for older ones.  Force to true just to be sure.
-				slot->my_match_ad->Assign(ATTR_OCU, true);
+				slot->m_added_attrs.Assign(ATTR_OCU, true);
+
+				// Record whose claim this is, so FindRunnableJob can tell the
+				// OCU's owner from a borrower.  An idle claim has no
+				// RemoteOwner -- and RemoteOwner means "who is running here
+				// now" to the rest of the schedd, so we must not write it.
+				// Take the names from the user and project records so the
+				// spelling is the one FindRunnableJob compares against.
+				slot->m_added_attrs.Assign(ATTR_OCU_ID, ocu->ocu_id);
+				if (ocu_owner) {
+					slot->m_added_attrs.Assign(ATTR_OCU_OWNER, ocu_owner->Name());
+				}
+				std::string ocu_project;
+				if (ocu->ad.LookupString(ATTR_PROJECT_NAME, ocu_project) && ! ocu_project.empty()) {
+					const JobQueueProjectRec * pjrec = scheduler.find_projectinfo(ocu_project.c_str());
+					slot->m_added_attrs.Assign(ATTR_OCU_PROJECT, pjrec ? pjrec->Name() : ocu_project.c_str());
+				}
+				// m_added_attrs is reapplied whenever the match ad is refreshed
+				// from a new slot ad, so these survive that.
+				slot->my_match_ad->Update(slot->m_added_attrs);
 
 				// If we already have a match for this OCU, then delete this match
 				if (ocu->mrec) {
@@ -13284,6 +13361,47 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 	return new_rec;
 }
 
+// Record in the job ad, as ATTR_JOB_ACTIVATION_REQUEST_MEMORY, the value
+// RequestMemory evaluates to for the activation that is starting.  This is
+// the same value GetExpandedJobAd() hands the shadow or local starter, but
+// unlike that, it is persisted, so it is still known after a reconnect and
+// is in every epoch and history ad even when RequestMemory is an expression.
+// Must be called within a transaction.
+static void
+setActivationRequestMemory(const shadow_rec &srec)
+{
+	const PROC_ID &job_id = srec.job_id;
+	JobQueueJob *job = GetJobAd(job_id);
+	if ( ! job || srec.universe == CONDOR_UNIVERSE_SCHEDULER) {
+		return;
+	}
+
+	ClassAd *startd_ad = nullptr;
+	if (srec.match) {
+		startd_ad = srec.match->my_match_ad;
+	} else if (srec.universe == CONDOR_UNIVERSE_LOCAL) {
+		startd_ad = scheduler.getLocalStarterAd();
+	}
+
+	classad::Value val;
+	long long ival = 0;
+	double rval = 0.0;
+		// Evaluating the unexpanded job ad is fine: $$() can't appear in a
+		// numeric RequestMemory, since the ClassAd parser rejects it outside
+		// a string, and a string RequestMemory never matches a slot anyway.
+		// dollarDollarExpand() evaluates the unexpanded ad the same way.
+		// The result may be real-valued, e.g. for MemoryUsage * 1.5.
+	bool evaluated = EvalAttr(ATTR_REQUEST_MEMORY, job, startd_ad, val);
+	if (evaluated && val.IsIntegerValue(ival)) {
+		SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY, ival);
+	} else if (evaluated && val.IsRealValue(rval)) {
+		SetAttributeFloat(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY, rval);
+	} else {
+			// Don't leave behind the value from a previous activation.
+		DeleteAttribute(job_id.cluster, job_id.proc, ATTR_JOB_ACTIVATION_REQUEST_MEMORY);
+	}
+}
+
 void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 {
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
@@ -13680,6 +13798,15 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 	if(! transfer_proc) {
 		GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
+		if ( ! new_rec->is_reconnect) {
+			setActivationRequestMemory( *new_rec );
+				// A new activation is starting, so don't let the value
+				// from the previous one linger until the first update.
+			JobQueueJob *job = GetJobAd( cluster, proc );
+			if ( job && job->Lookup( ATTR_CURRENT_WASTED_MEMORY_GB_HOURS ) ) {
+				DeleteAttribute( cluster, proc, ATTR_CURRENT_WASTED_MEMORY_GB_HOURS );
+			}
+		}
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 		CommitTransactionOrDieTrying();
 
@@ -14872,7 +14999,9 @@ Scheduler::child_exit(int pid, int status)
 					ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 					ocu_claimed_time += now - srec->match->entered_current_status;
 					ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
-					ocu->state = 'I';
+					if (ocu->mrec == srec->match) {
+						ocu->state = 'I';
+					}
 				}
 			}
 		}
@@ -17707,6 +17836,11 @@ Scheduler::schedd_exit()
 		CronJobMgr = NULL;
 	}
 
+		// Give back claims we are not using.  The next incarnation of
+		// the schedd doesn't know about them, so otherwise they are
+		// stranded on the startd until their lease expires.
+	release_idle_claims_for_exit();
+
 		// write a clean job queue on graceful shutdown so we can
 		// quickly recover on restart
 	CleanJobQueue();
@@ -17726,6 +17860,48 @@ Scheduler::schedd_exit()
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 	DC_Exit(0);
+}
+
+
+// On graceful exit, release every claim that has no shadow: idle claims,
+// such as an OCU's claim or a claim kept while idle.  By the time we get
+// here all shadows are gone.  A claim whose job we expect to reconnect to
+// after the restart was already forgotten (without being released) when
+// its shadow record was deleted, so it is not in the matches table.
+// Send the release synchronously, since we are about to exit, but give up
+// after a fixed time so an unresponsive startd can't hold up the exit.
+void
+Scheduler::release_idle_claims_for_exit()
+{
+	const time_t deadline = time(nullptr) + param_integer("SCHEDD_EXIT_RELEASE_CLAIMS_TIMEOUT", 20, 0);
+	int released = 0;
+	int skipped = 0;
+	for (const auto & [id, mrec] : matches) {
+		if (mrec->shadowRec || mrec->is_dedicated || !mrec->needs_release_claim) {
+			continue;
+		}
+		if (time(nullptr) >= deadline) {
+			skipped++;
+			continue;
+		}
+		classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(), nullptr, mrec->peer, mrec->claimId());
+		classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg(RELEASE_CLAIM, mrec->claimId());
+		msg->setSuccessDebugLevel(D_ALWAYS);
+		msg->setTimeout(2);
+		msg->setStreamType(Stream::reli_sock);
+		if (mrec->use_sec_session) {
+			std::string sessbuf;
+			msg->setSecSessionId(mrec->secSessionId(sessbuf));
+		}
+		dprintf(D_ALWAYS, "Releasing idle claim %s%s before exiting\n",
+			mrec->description(), mrec->is_ocu ? " (OCU)" : "");
+		startd->sendBlockingMsg(msg.get());
+		mrec->needs_release_claim = false;
+		released++;
+	}
+	if (released || skipped) {
+		dprintf(D_ALWAYS, "Released %d idle claims before exiting; ran out of time for %d more\n", released, skipped);
+	}
 }
 
 
@@ -18122,19 +18298,28 @@ Scheduler::unlinkMrec(match_rec* match)
 
 	PROC_ID jobId{match->jid};
 
-	// If this match was an ocu holder, make sure to update the
-	// correct job.
-	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
-		jobId = match->ocu_originator;
-		OCU *ocu = scheduler.getOCU(jobId.cluster);
-		if (ocu) {
-			time_t ocu_claimed_time = 0;
-			ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
-			ocu_claimed_time += time(0) - match->entered_current_status;
-			ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+	// If this match holds a claim for an OCU, unlink it from the OCU,
+	// whether the claim is idle or running a job, so the OCU never points
+	// at a deleted match and will negotiate for a new claim.  Only touch
+	// the OCU if this is its current match: a second (duplicate) claim for
+	// the same OCU must not mark the OCU unclaimed.
+	if (match->is_ocu) {
+		OCU *ocu = scheduler.getOCU(match->ocu_originator.cluster);
+		if (ocu && ocu->mrec == match) {
+			if (match->status == M_CLAIMED) {
+				time_t ocu_claimed_time = 0;
+				ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+				ocu_claimed_time += time(nullptr) - match->entered_current_status;
+				ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			}
+			dprintf(D_ALWAYS, "OCU %d lost its claim %s\n", ocu->ocu_id, match->description());
+			ocu->mrec = nullptr;
 			ocu->state = 'U';
+			dirtyJobQueue();
 		}
-		dirtyJobQueue();
+		if (jobId.cluster == -1 && jobId.proc == -1) {
+			jobId = match->ocu_originator;
+		}
 	}
 
 	// If this match was holding (or on its way to holding) a slot for a bundle,
