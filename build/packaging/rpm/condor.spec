@@ -1324,7 +1324,7 @@ fi
 - For EL10, depend on apptainer 1.5.4, 1.5.5 not in EPEL
 
 * Wed Nov 11 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.15-1
-- Fix condor_ssh_to_job with using SELinux and LVM disk enforcement
+- Fix condor_ssh_to_job when using SELinux and LVM disk enforcement
 - Fix issue where the condor_defrag daemon might not be able to drain EPs
 - Fix enforcement of execute duration for scheduler(DAGMan) and local jobs
 
