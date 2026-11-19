@@ -825,6 +825,14 @@ class Condor:
         return self._get_log_path("JOB_QUEUE")
 
     @property
+    def local_univ_execute_dir(self) -> Path:
+        """
+        The :class:`pathlib.Path` to the directory where the schedd's local
+        universe starters create their ``dir_<starter pid>`` scratch directories.
+        """
+        return self._get_path_from_condor_config_val("LOCAL_UNIV_EXECUTE")
+
+    @property
     def startd_address(self):
         """The address of the pool's startd."""
         return self._get_address_file("STARTD").read_text().splitlines()[0]
