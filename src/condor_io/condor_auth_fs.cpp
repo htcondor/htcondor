@@ -300,8 +300,10 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		// TCP_FORWARDING_HOST.
 		// This also checks whether the shared_port id used by the client
 		// matches ours.
+		const char* my_dc_sinful_str = nullptr;
 		if (!client_ext_matches && daemonCore && daemonCore->InfoCommandSinfulStringMyself(false)) {
-			Sinful myself(daemonCore->InfoCommandSinfulStringMyself(false));
+			my_dc_sinful_str = daemonCore->InfoCommandSinfulStringMyself(false);
+			Sinful myself(my_dc_sinful_str);
 			Sinful client_peer_sinful(client_ext.c_str());
 			if (sock_pos == std::string::npos) {
 				myself.setSharedPortID(nullptr);
@@ -325,6 +327,10 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 		}
 		if (!client_ext_matches) {
 			dprintf(D_SECURITY, "AUTHENTICATE_FS%s: Client extension (%s) doesn't match our endpoint\n", (remote_?"_REMOTE":""), client_ext.c_str());
+			dprintf(D_SECURITY, "  My socket endpoint: %s\n", mySock_->get_sinful());
+			if (my_dc_sinful_str) {
+				dprintf(D_SECURITY, "  My DaemonCore sinful: %s\n", my_dc_sinful_str);
+			}
 			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1004,
 		                "Client extension (%s) doesn't match our endpoint", client_ext.c_str());
 			server_result = -1;

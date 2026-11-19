@@ -15075,6 +15075,19 @@ Scheduler::child_exit(int pid, int status)
 		if( IsLocalUniverse(srec) ) {
 			daemonCore->Kill_Family(pid);
 			srec_was_local_universe = true;
+
+			// The local starter normally removes its own scratch
+			// directory, but if it crashed, it may have left it behind.
+			std::string scratch_name = "dir_" + std::to_string(pid);
+			Directory execute_dir(LocalUnivExecuteDir, PRIV_ROOT);
+			if (execute_dir.Find_Named_Entry(scratch_name.c_str())) {
+				dprintf(D_ALWAYS, "Local starter pid %d left behind %s, removing it\n",
+						pid, execute_dir.GetFullPath());
+				if ( ! execute_dir.Remove_Current_File()) {
+					dprintf(D_ERROR, "Failed to remove local universe scratch directory %s\n",
+							execute_dir.GetFullPath());
+				}
+			}
 			name = "Local starter";
 			//
 			// Following the scheduler universe example, we need

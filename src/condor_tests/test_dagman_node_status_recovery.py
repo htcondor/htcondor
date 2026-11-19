@@ -48,7 +48,7 @@ RESTART_CASES = [
 ]
 
 
-def parse_node_statuses(status_path):
+def _read_node_statuses_once(status_path):
     """{node_name: NodeStatus code} for every NodeStatus ClassAd currently in the file."""
     statuses = {}
     try:
@@ -58,6 +58,28 @@ def parse_node_statuses(status_path):
     except (FileNotFoundError, OSError):
         pass
     return statuses
+
+
+def parse_node_statuses(status_path, timeout: int = 30):
+    """
+    {node_name: NodeStatus code}, retried until the file yields any NodeStatus ad.
+
+    A momentarily unreadable status file is not a wrong answer: DAGMan may
+    be replacing it right then, and on Windows something else (an AV
+    scanner, the indexer) may briefly hold it open exclusively, so opening
+    it can fail with something other than FileNotFoundError. Only an empty
+    read is retried, so a file that *says* something wrong still fails the
+    caller's assertion immediately.
+    """
+    deadline = time.time() + timeout
+    while True:
+        try:
+            statuses = _read_node_statuses_once(status_path)
+        except OSError:
+            statuses = {}
+        if statuses or time.time() >= deadline:
+            return statuses
+        time.sleep(0.2)
 
 
 def write_status_dag(dag_path, script_path, status_path, long_node_proceed_file):

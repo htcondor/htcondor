@@ -117,6 +117,12 @@
 
 *** 26.0.2 bugs
 
+- Fixed an unlikely bug where if a local universe starter crashes,
+  the *condor_schedd* now cleans up the job's scratch directory
+  immediately at job exit time, instead of waiting for the *condor_schedd*
+  to restart.
+  :jira:`4096`
+
 - :tool:`condor_tail` should now work on files larger than 2 Gb in size.
   :jira:`4008`
 
