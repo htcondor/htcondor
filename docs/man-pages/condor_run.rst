@@ -152,20 +152,9 @@ machines.
 :index:`SHELL` environment variable, if one exists. Otherwise, it
 will use */bin/sh* to execute the shell command-line.
 
-By default, *condor_run* expects Perl to be installed in
-``/usr/bin/perl``. If Perl is installed in another path, ask the Condor
-administrator to edit the path in the *condor_run* script, or
-explicitly call Perl from the command line:
-
-.. code-block:: bash
-
-    $ perl path-to-condor/bin/condor_run "shell-cmd"
-
 Exit Status
 -----------
 
 *condor_run* exits with a status value of 0 (zero) upon complete
 success. The exit status of *condor_run* will be non-zero upon failure.
-The exit status in the case of a single error due to a system call will
-be the error number (``errno``) of the failed call.
 
