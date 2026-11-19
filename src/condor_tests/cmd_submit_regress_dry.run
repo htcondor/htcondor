@@ -31,6 +31,7 @@ my $testname = "cmd_submit_regress_dry";
 my %expect;
 my %expect_warn;
 my %dont_expect;
+my %expect_fail; # submits that should fail, each line is a substring that must appear in stderr
 
 mkdir("${testname}_scratchdir$$");
 chdir("${testname}_scratchdir$$");
@@ -49,7 +50,7 @@ if ( ! -d "Multilevel_Thesis_WheatData") {
 
 
 TLOG "Loading expectations from $testname.expect\n";
-load_expectations("../$testname.expect", \%expect, \%expect_warn, \%dont_expect);
+load_expectations("../$testname.expect", \%expect, \%expect_warn, \%dont_expect, \%expect_fail);
 
 # print the loaded expectations
 #
@@ -112,6 +113,26 @@ foreach my $sub (@subs) {
 		print("\t----stderr----\n");
 		foreach (@error) { print $_; }
 		print("\t----end stderr----\n");
+	}
+
+	# for submits that are expected to fail, check only the exit code and the error messages
+	if (defined $expect_fail{$tag}) {
+		TLOG "$tag: Checking Expected Failure\n";
+		$result = $exitcode != 0;
+		if ( ! $result) { print "\tFAILURE: submit succeeded but was expected to fail\n"; }
+		my $errtext = join("", @error);
+		foreach my $msg (@{$expect_fail{$tag}}) {
+			my $tmp = $msg; $tmp =~ s/[ \t\r\n]*$//;
+			next if $tmp eq "" || $tmp =~ /^#/;
+			if (index($errtext, $tmp) < 0) {
+				print "\tFAILURE: stderr does not contain expected error: $tmp\n";
+				$result = 0;
+			} elsif ($verbose) {
+				print "\tstderr contains expected error: $tmp\n";
+			}
+		}
+		RegisterResult($result,test_name=>$testname, check_name=>"$sub");
+		next;
 	}
 
 	# print the raw command output only if we are in verbose mode
@@ -395,6 +416,7 @@ sub load_expectations {
 	my $expectref = shift;
 	my $warnref = shift;
 	my $noexpectref = shift;
+	my $failref = shift;
 
 	my $name;
 	my $aryref;
@@ -412,6 +434,10 @@ sub load_expectations {
 		} elsif ($_ =~ /^=!=(\S+)/) {
 			$aryref = [];
 			${$noexpectref}{$1} = $aryref;
+			next;
+		} elsif ($_ =~ /^=fail=(\S+)/) {
+			$aryref = [];
+			${$failref}{$1} = $aryref;
 			next;
 		}
 		push @{$aryref}, $_;

@@ -86,6 +86,11 @@
   recent activation to have ended.
   :jira:`4062`
   
+- Added new submit commands :subcom:`organized_output`, :subcom:`organized_output_directory`
+  and :subcom:`organized_output_pattern` which is a simplified way to put the output
+  of the jobs in a joblist into a separate subdirectory for each job.
+  :jira:`3618`
+
 - :tool:`condor_history` now accepts ``-dagid``, ``-batchid``, and ``-batchname``
   to query all jobs belonging to a DAGMan workflow or job batch. These queries
   use the :ref:`archive-librarian` database when available.

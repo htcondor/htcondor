@@ -2278,6 +2278,12 @@ default=false
 type=bool
 tags=submit
 
+[ORGANIZED_OUTPUT_PATTERN]
+description=Default pattern for the  organized_output submit command
+default=$(batch_name:$(ClusterId))/$(JobId)
+type=string
+tags=submit
+
 [DEFAULT_UNIVERSE]
 default=
 type=string

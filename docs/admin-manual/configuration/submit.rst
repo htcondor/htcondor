@@ -243,3 +243,18 @@ do not specify their own with:
     The default value is /cvmfs.  When a container universe job lists
     a *condor_image* that is under one of these directories, HTCondor
     knows not to try to transfer the file to the execution point.
+
+:macro-def:`ORGANIZED_OUTPUT_PATTERN`
+    Defines the default value for :subcom:`organized_output_pattern`
+    for when organized output is enabled in a submit file, but the
+    submit file does not specify the pattern.  The pattern is expanded
+    in the context of the submit file, so it may reference submit variables
+    such as ``$(ClusterId)``, ``$(ProcId)``, ``$(JobId)`` and ``$(batch_name)``.
+    The default value is ``$(batch_name:$(ClusterId))/$(JobId)``, which
+    places the output of each job in a subdirectory named for its job id,
+    under a directory named for the batch name of the submission, or for the
+    cluster id if no batch name was specified.  Since :tool:`condor_dagman`
+    always gives its node jobs a batch name (by default the DAG file name
+    followed by ``+`` and the DAGMan job's ClusterId), the default pattern
+    places the output of all of the node jobs of a DAG workflow together in
+    a single subdirectory named for that workflow.
