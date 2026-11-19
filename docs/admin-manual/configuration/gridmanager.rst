@@ -214,7 +214,7 @@ These macros affect the *condor_gridmanager*.
 
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
-    used for Slurm, PBS, LSF, SGE, and similar batch systems. The default
+    used for Slurm, PBS, LSF, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
 
 :macro-def:`ARC_GAHP`

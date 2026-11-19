@@ -1787,12 +1787,12 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_cpu_count` = <count>
     Used for **batch** grid universe jobs.
     Specifies the total number of cpus to request for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_cpus_per_node` = <count>
     Used for **batch** grid universe jobs.
     Specifies how many cpus on each machine to request for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_extra_submit_args` = <command-line arguments>
     Used for **batch** grid universe jobs.
@@ -1802,16 +1802,16 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_node_count` = <count>
     Used for **batch** grid universe jobs.
     Specifies the number of machines requested for the
-    PBS/LSF/SGE/SLURM job.
+    PBS/LSF/SLURM job.
 
  :subcom-def:`batch_project` = <projectname>
     Used for **batch** grid universe jobs.
-    Specifies the name of the PBS/LSF/SGE/SLURM project, account, or
+    Specifies the name of the PBS/LSF/SLURM project, account, or
     allocation that should be charged for the resources used by the job.
 
  :subcom-def:`batch_queue` = <queuename>
     Used for **batch** grid universe jobs.
-    Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
+    Specifies the name of the PBS/LSF/SLURM job queue into which the
     job should be submitted. If not specified, the default queue is used.
     For a multi-cluster SLURM configuration, which cluster to use can be
     specified by supplying the name after an ``@`` symbol.
@@ -1821,11 +1821,11 @@ COMMANDS FOR THE GRID
  :subcom-def:`batch_runtime` = <seconds>
     Used for **batch** grid universe jobs.
     Specifies a limit in seconds on the execution time of the job.
-    This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
+    This limit is enforced by the PBS/LSF/SLURM scheduler.
 
  :subcom-def:`batch_whole_nodes` = <True | False>
     Used for **batch** grid universe jobs.
-    Specifies whether the PBS/LSF/SGE/SLURM job must run on machines
+    Specifies whether the PBS/LSF/SLURM job must run on machines
     with no other jobs. The default is False (the job can share
     machines with other jobs).
 
@@ -2034,7 +2034,7 @@ COMMANDS FOR THE GRID
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    ``slurm``, or ``sge``.
+    or ``slurm``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is

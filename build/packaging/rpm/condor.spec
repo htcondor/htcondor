@@ -1150,7 +1150,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
 %config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
 %config %_sysconfdir/blahp/sfapi_local_submit_attributes.sh
-%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
 %dir %_libexecdir/blahp

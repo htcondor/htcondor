@@ -41,7 +41,7 @@ Options
  **-add** *<host> [scheduler]*
     Install and add a cluster defined by *<host>*. The optional
     *scheduler* specifies the scheduler on the cluster. Valid values are
-    ``pbs``, ``lsf``, ``condor``, ``sge`` or ``slurm``. If not given,
+    ``pbs``, ``lsf``, ``condor``, or ``slurm``. If not given,
     the default will be ``pbs``.
  **-status** *<host>*
     Query and print the status of an already installed cluster, where

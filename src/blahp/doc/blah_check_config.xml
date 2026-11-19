@@ -62,10 +62,6 @@
 	<para>Check if lsf_binpath exists  and that the programs that use it are executables.</para>
 	<para>For Condor:</para>
 	<para>Check if condor_binpath exists  and that the programs that use it are executables.</para>
-	<para>For SGE:</para>
-	<para>Check if sge_root,sge_cell and sge_helper exists  and that the programs that use it are executables.</para>
-	<para>Check if sge_cellname exists and is accessible.</para>
-	<para>Check if sge_rootpath exists and is accessible.</para>	
 	
                 
     </refsect1>
