@@ -10426,7 +10426,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 	const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(str, true);
 	if (unexpanded_out_dir) {
 		rhs = unexpanded_out_dir;
-		int iret = selective_expand_macro(rhs, skip_knobs, SubmitMacroSet, mctx);
+		int iret = selective_expand_macro(rhs, skip_knobs, mctx);
 		if (iret < 0) {
 			// there was an error in selective expansion.
 			// the SubmitMacroSet will have the error message already
