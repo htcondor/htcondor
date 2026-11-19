@@ -579,3 +579,55 @@ batch_name=sweep
 organized_output_directory=outbase
 
 queue 2
+
+==organized4.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+batch_name=../sweep
+organized_output=true
+
+queue 2
+
+==organized5.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+arguments=$(item)
+organized_output_pattern=$(item)/$(ProcId)
+
+queue item from (
+../aaaa
+bbbb
+)
+
+==organized6.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+max_materialize=2
+batch_name=../sweep
+organized_output_directory=outbase
+
+queue 4
+
+==organized7.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+organized_output_pattern=/tmp/$(ProcId)
+
+queue 2
+
+==organized8.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+batch_name=proj/run..1
+organized_output_directory=outbase
+
+queue 2
+
+==organized9.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+max_materialize=2
+batch_name=sweep
+organized_output_directory=outbase
+
+queue 4

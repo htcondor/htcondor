@@ -2534,9 +2534,34 @@ int SubmitHash::SetKillSig()
 	return 0;
 }
 
-// helper for organized output
-const char* SubmitHash::UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors)
+// returns true if path is a relative path that stays at or below the directory that it is
+// relative to. i.e. it is not a full path and none of its path components are ".."
+// Note: FileTransfer::LegalPathInSandbox() does a similar check for paths sent by a file transfer peer.
+// This version also rejects Windows drive relative paths like "c:foo", because our full_path()
+// method treats them as full paths. These could be consolidated into a common helper in the future.
+static bool is_contained_relative_path(const char * path)
 {
+	if (fullpath(path)) return false;
+#ifdef WIN32
+	if (path[0] && path[1] == ':') return false;
+	auto is_delim = [](char ch) { return ch == '/' || ch == '\\'; };
+#else
+	auto is_delim = [](char ch) { return ch == '/'; };
+#endif
+	const char * p = path;
+	while (*p) {
+		const char * end = p;
+		while (*end && ! is_delim(*end)) ++end;
+		if (end - p == 2 && p[0] == '.' && p[1] == '.') return false;
+		p = *end ? end + 1 : end;
+	}
+	return true;
+}
+
+// helper for organized output
+const char* SubmitHash::UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors, const char ** pattern_out)
+{
+	if (pattern_out) { *pattern_out = nullptr; }
 	auto_free_ptr organized_output_base(submit_param(SUBMIT_KEY_OrganizedOutputBase));
 	// lookup pattern without expanding it (we expand later)
 	const char * pattern = lookup(SUBMIT_KEY_OrganizedOutputPattern);
@@ -2561,6 +2586,7 @@ const char* SubmitHash::UnexpandedOrganizedOutputDirectory(std::string & buffer,
 	}
 
 	if (organized_output) {
+		if (pattern_out) { *pattern_out = pattern; }
 		if (organized_output_base) {
 			if (pattern) {
 				dircat(organized_output_base, pattern, buffer);
@@ -2586,13 +2612,32 @@ int SubmitHash::SetOutputDirSpecial()
 	// If this is not late materialization, check for the alternate way of specifying the
 	// output directory by setting an output base and a subdir pattern. In the late materialization case
 	// out_dir will already have been set to the base/pattern when the submit digest was created.
+	// The pattern is checked after $() expansion to make sure that it stays below the base directory.
+	// This check happens for every job in a non-late-materialization submit, but for late materialization
+	// it happens only for job 0 (when the cluster ad is made). Later jobs are expanded by the schedd,
+	// where the base and the pattern are no longer separate.
 	if ( ! clusterAd) {
-		const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(buffer);
+		const char * unexpanded_pattern = nullptr;
+		const char * unexpanded_out_dir = UnexpandedOrganizedOutputDirectory(buffer, false, &unexpanded_pattern);
 		RETURN_IF_ABORT();
 		if (unexpanded_out_dir) {
 			if (out_dir) {
 				push_warning(stderr, SUBMIT_KEY_OrganizedOutput " will be ignored in favor of " SUBMIT_KEY_OutputDirectory "\n");
 			} else {
+				if (unexpanded_pattern) {
+					auto_free_ptr pattern(expand_macro(unexpanded_pattern));
+					if (pattern && ! is_contained_relative_path(pattern)) {
+						// name the base that the pattern escapes from, either the organized output base directory
+						// or the job's initial working directory when there is no organized output base
+						auto_free_ptr base(submit_param(SUBMIT_KEY_OrganizedOutputBase));
+						push_error(stderr, "Cannot do " SUBMIT_KEY_OrganizedOutput " because the pattern %s expands to %s"
+							" which is not a subdirectory of the %s %s\n",
+							unexpanded_pattern, pattern.ptr(),
+							base ? SUBMIT_KEY_OrganizedOutputBase : "job's initial working directory",
+							base ? base.ptr() : JobIwd.c_str());
+						ABORT_AND_RETURN(1);
+					}
+				}
 				out_dir.set(expand_macro(unexpanded_out_dir));
 			}
 		}

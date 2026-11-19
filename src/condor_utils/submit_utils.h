@@ -950,8 +950,10 @@ private:
 	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 	int SetBuiltInOnEvictCheck(const char * attr, const char * subkey, int scale, const char * line, const char * incr=nullptr);
 
-	// helper for organized output
-	const char* UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors=false);
+	// helper for organized output. returns the unexpanded output directory (base/pattern)
+	// or nullptr if organized output is not in effect. if pattern_out is not null, it is
+	// set to the unexpanded pattern (without the base) so that it can be validated after expansion
+	const char* UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors=false, const char ** pattern_out=nullptr);
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,

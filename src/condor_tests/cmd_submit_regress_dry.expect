@@ -530,3 +530,30 @@ ProcId=0
 OutputDirectory=/^".+outbase/sweep/\d+\.1"$/
 ProcId=1
 
+# batch_name that escapes the base directory
+=fail=organized4.sub
+expands to ../sweep/
+which is not a subdirectory of the job's initial working directory
+
+# queue item that escapes the base directory. it is the first item, because
+# late materialization only checks job 0 (this file is also used by cmd_submit_factory_regress_dry)
+=fail=organized5.sub
+expands to ../aaaa/0
+
+# late materialization, rejected when making job 0 (the cluster ad)
+=fail=organized6.sub
+expands to ../sweep/
+which is not a subdirectory of the organized_output_directory outbase
+
+# pattern that expands to a full path
+=fail=organized7.sub
+expands to /tmp/0
+
+# nested batch name, and .. that is not a whole path component, are allowed
+==organized8.sub
+OutputDirectory=/^".+outbase/proj/run\.\.1/\d+\.0"$/
+ProcId=0
+.
+OutputDirectory=/^".+outbase/proj/run\.\.1/\d+\.1"$/
+ProcId=1
+

@@ -1178,7 +1178,9 @@ FILE TRANSFER COMMANDS
     unique sub-directory name for each submission and/or each job.  This pattern
     should use $() expansion of automatic submit variables such as $(JobId), $(ClusterId),
     and $(ProcId); Or variables specified on the command line such as $(batch_name); Or
-    variables specified in the QUEUE statement such as $(Item).
+    variables specified in the QUEUE statement such as $(Item).  After expansion, the pattern
+    must be a relative path that stays below the base directory; if it expands to a full
+    path or contains a ``..`` path component, the submit will fail with an error.
 
  :subcom-def:`organized_output` = < true | false >
     When present and true, enables organized output.  Organized output sets the
